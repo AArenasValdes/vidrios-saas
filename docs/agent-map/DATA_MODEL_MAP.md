@@ -432,8 +432,9 @@ Dominio separado de `solicitudes_contacto` y multi-tenant SaaS. Acceso via RLS +
 | `growth_prospects` | Prospectos comerciales Ventora; opcional `converted_organization_id` |
 | `growth_activities` | Historial auditable por prospecto |
 | `growth_tasks` | Trabajo diario (follow-ups, trials, pagos) |
+| `growth_content_items` | Cola editorial interna: pieza, guion, CTA, estado, revisión humana de claim y UTM de cuatro parámetros |
 
-Migracion: `supabase/migrations/20260627120000_growth_workspace.sql`
+Migraciones: `supabase/migrations/20260627120000_growth_workspace.sql`, `supabase/migrations/20260820185724_growth_content_items.sql`. La cola editorial tiene RLS por `growth_workspace_members` activa y rol `admin`; no contiene datos de clientes ni publica contenido externamente.
 
 ---
 

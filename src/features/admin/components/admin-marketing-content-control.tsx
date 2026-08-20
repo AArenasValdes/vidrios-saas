@@ -1,0 +1,336 @@
+"use client";
+
+import { FormEvent, useMemo, useState } from "react";
+import { LuChevronDown, LuPlus, LuSave, LuTrash2 } from "react-icons/lu";
+
+import { useGrowthContent } from "@/features/growth/hooks/use-growth-content";
+import {
+  GROWTH_CLAIM_REVIEW_STATUSES,
+  GROWTH_CONTENT_CHANNELS,
+  GROWTH_CONTENT_FORMATS,
+  GROWTH_CONTENT_OBJECTIVES,
+  GROWTH_CONTENT_PILLARS,
+  GROWTH_CONTENT_STATUSES,
+  type CreateGrowthContentItemInput,
+  type GrowthContentItem,
+  type UpdateGrowthContentItemInput,
+} from "@/features/growth/types/growth-content";
+import s from "./admin-marketing-content-control.module.css";
+
+type ContentForm = {
+  contentId: string;
+  titulo: string;
+  pilar: CreateGrowthContentItemInput["pilar"];
+  formato: CreateGrowthContentItemInput["formato"];
+  canal: CreateGrowthContentItemInput["canal"];
+  objetivo: NonNullable<CreateGrowthContentItemInput["objetivo"]>;
+  hook: string;
+  cta: string;
+  guion: string;
+  caption: string;
+  campaignKey: string;
+  utmSource: string;
+  utmMedium: string;
+  utmCampaign: string;
+  utmContent: string;
+  estado: NonNullable<CreateGrowthContentItemInput["estado"]>;
+  claimReviewStatus: NonNullable<CreateGrowthContentItemInput["claimReviewStatus"]>;
+  claimReviewNotes: string;
+  programadoPara: string;
+};
+
+const PILLAR_LABELS = {
+  dolor_transformacion: "Dolor → transformación",
+  demo_producto: "Demo de producto",
+  onboarding: "Onboarding",
+  objecion: "Objeción",
+  oferta: "Oferta",
+} as const;
+
+const OBJECTIVE_LABELS = {
+  generar_demos: "Generar demos",
+  activar_prueba: "Activar prueba",
+  primera_cotizacion: "Primera cotización",
+  primer_pdf: "Primer PDF",
+  configurar_lineas: "Configurar líneas",
+  aclarar_objecion: "Aclarar objeción",
+} as const;
+
+const STATUS_LABELS = {
+  borrador: "Borrador",
+  revision: "En revisión",
+  aprobado: "Aprobado",
+  programado: "Programado",
+  publicado: "Publicado",
+  pausado: "Pausado",
+  ganador: "Ganador",
+  archivado: "Archivado",
+} as const;
+
+const CLAIM_LABELS = {
+  pendiente: "Claim pendiente",
+  aprobado: "Claim aprobado",
+  bloqueado: "Claim bloqueado",
+} as const;
+
+function emptyForm(): ContentForm {
+  return {
+    contentId: "",
+    titulo: "",
+    pilar: "demo_producto",
+    formato: "reel",
+    canal: "instagram",
+    objetivo: "generar_demos",
+    hook: "",
+    cta: "Escríbeme DEMO",
+    guion: "",
+    caption: "",
+    campaignKey: "",
+    utmSource: "instagram",
+    utmMedium: "organic",
+    utmCampaign: "",
+    utmContent: "",
+    estado: "borrador",
+    claimReviewStatus: "pendiente",
+    claimReviewNotes: "",
+    programadoPara: "",
+  };
+}
+
+function itemToForm(item: GrowthContentItem): ContentForm {
+  return {
+    contentId: item.contentId,
+    titulo: item.titulo,
+    pilar: item.pilar,
+    formato: item.formato,
+    canal: item.canal,
+    objetivo: item.objetivo,
+    hook: item.hook ?? "",
+    cta: item.cta,
+    guion: item.guion ?? "",
+    caption: item.caption ?? "",
+    campaignKey: item.campaignKey ?? "",
+    utmSource: item.utmSource ?? "",
+    utmMedium: item.utmMedium ?? "",
+    utmCampaign: item.utmCampaign ?? "",
+    utmContent: item.utmContent ?? "",
+    estado: item.estado,
+    claimReviewStatus: item.claimReviewStatus,
+    claimReviewNotes: item.claimReviewNotes ?? "",
+    programadoPara: item.programadoPara ? item.programadoPara.slice(0, 16) : "",
+  };
+}
+
+function formToInput(form: ContentForm): CreateGrowthContentItemInput {
+  return {
+    ...form,
+    hook: form.hook || null,
+    guion: form.guion || null,
+    caption: form.caption || null,
+    campaignKey: form.campaignKey || null,
+    utmSource: form.utmSource || null,
+    utmMedium: form.utmMedium || null,
+    utmCampaign: form.utmCampaign || null,
+    utmContent: form.utmContent || null,
+    claimReviewNotes: form.claimReviewNotes || null,
+    programadoPara: form.programadoPara || null,
+  };
+}
+
+function statusClass(status: GrowthContentItem["estado"]) {
+  if (status === "publicado" || status === "ganador") return s.statusLive;
+  if (status === "programado" || status === "aprobado") return s.statusReady;
+  if (status === "pausado" || status === "archivado") return s.statusMuted;
+  return s.statusDraft;
+}
+
+function claimClass(status: GrowthContentItem["claimReviewStatus"]) {
+  if (status === "aprobado") return s.claimApproved;
+  if (status === "bloqueado") return s.claimBlocked;
+  return s.claimPending;
+}
+
+export function AdminMarketingContentControl() {
+  const content = useGrowthContent();
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [composer, setComposer] = useState<ContentForm>(emptyForm);
+  const [drafts, setDrafts] = useState<Record<string, ContentForm>>({});
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const summary = useMemo(() => ({
+    total: content.items.length,
+    ready: content.items.filter((item) => item.estado === "programado" || item.estado === "publicado").length,
+    pendingClaims: content.items.filter((item) => item.claimReviewStatus !== "aprobado").length,
+  }), [content.items]);
+
+  function setComposerField<K extends keyof ContentForm>(key: K, value: ContentForm[K]) {
+    setComposer((current) => ({ ...current, [key]: value }));
+  }
+
+  function draftFor(item: GrowthContentItem) {
+    return drafts[item.id] ?? itemToForm(item);
+  }
+
+  function setDraftField<K extends keyof ContentForm>(item: GrowthContentItem, key: K, value: ContentForm[K]) {
+    setDrafts((current) => ({
+      ...current,
+      [item.id]: { ...draftFor(item), [key]: value },
+    }));
+  }
+
+  async function createItem(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setActionError(null);
+    setIsSaving(true);
+    try {
+      await content.create(formToInput(composer));
+      setComposer(emptyForm());
+      setIsComposerOpen(false);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "No pudimos guardar la pieza.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function saveItem(item: GrowthContentItem) {
+    setActionError(null);
+    setIsSaving(true);
+    try {
+      const input: UpdateGrowthContentItemInput = { id: item.id, ...formToInput(draftFor(item)) };
+      await content.update(input);
+      setDrafts((current) => {
+        const next = { ...current };
+        delete next[item.id];
+        return next;
+      });
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "No pudimos actualizar la pieza.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function removeItem(item: GrowthContentItem) {
+    if (!window.confirm(`Archivar “${item.titulo}”? La pieza no se borrará de forma definitiva.`)) return;
+    setActionError(null);
+    try {
+      await content.update({ id: item.id, eliminado: true });
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "No pudimos archivar la pieza.");
+    }
+  }
+
+  return (
+    <section className={s.section} aria-label="Control editorial de marketing">
+      <div className={s.heading}>
+        <div>
+          <p className={s.eyebrow}>Fase A · Control editorial</p>
+          <h2>Videos, UTMs y claims en un solo lugar</h2>
+          <p>Una pieza solo puede quedar programada o publicada con sus 4 UTMs y claim aprobado.</p>
+        </div>
+        <button className={s.primaryButton} type="button" onClick={() => setIsComposerOpen((open) => !open)}>
+          <LuPlus aria-hidden /> Nueva pieza
+        </button>
+      </div>
+
+      <div className={s.summary}>
+        <span><strong>{summary.total}</strong> piezas</span>
+        <span><strong>{summary.ready}</strong> programadas/publicadas</span>
+        <span><strong>{summary.pendingClaims}</strong> claims por revisar</span>
+      </div>
+
+      {actionError ? <p className={s.error}>{actionError}</p> : null}
+      {content.error ? <p className={s.error}>{content.error}</p> : null}
+
+      {isComposerOpen ? (
+        <form className={s.composer} onSubmit={createItem}>
+          <div className={s.composerTitle}>
+            <h3>Nueva pieza</h3>
+            <p>Parte por la promesa, define el CTA y deja la atribución lista antes de publicar.</p>
+          </div>
+          <ContentFields form={composer} onChange={setComposerField} />
+          <div className={s.formActions}>
+            <button className={s.secondaryButton} type="button" onClick={() => setIsComposerOpen(false)}>Cancelar</button>
+            <button className={s.primaryButton} type="submit" disabled={isSaving}>{isSaving ? "Guardando…" : "Guardar borrador"}</button>
+          </div>
+        </form>
+      ) : null}
+
+      {content.isLoading ? <div className={s.empty}>Cargando cola editorial…</div> : null}
+      {!content.isLoading && content.items.length === 0 ? (
+        <div className={s.empty}>
+          Aún no hay piezas. Crea primero el video móvil principal: cotizar en obra → PDF por WhatsApp.
+        </div>
+      ) : null}
+
+      <div className={s.itemList}>
+        {content.items.map((item) => {
+          const draft = draftFor(item);
+          const isUtmReady = Boolean(draft.utmSource && draft.utmMedium && draft.utmCampaign && draft.utmContent);
+          return (
+            <details className={s.item} key={item.id}>
+              <summary>
+                <span className={s.itemMain}>
+                  <strong>{item.titulo}</strong>
+                  <span>{item.contentId} · {PILLAR_LABELS[item.pilar]} · {item.canal}</span>
+                </span>
+                <span className={s.badges}>
+                  <span className={`${s.badge} ${statusClass(item.estado)}`}>{STATUS_LABELS[item.estado]}</span>
+                  <span className={`${s.badge} ${claimClass(item.claimReviewStatus)}`}>{CLAIM_LABELS[item.claimReviewStatus]}</span>
+                  <LuChevronDown className={s.chevron} aria-hidden />
+                </span>
+              </summary>
+              <div className={s.itemEditor}>
+                <ContentFields form={draft} onChange={(key, value) => setDraftField(item, key, value)} />
+                <p className={isUtmReady ? s.readyHint : s.pendingHint}>
+                  {isUtmReady ? "UTM completa: source, medium, campaña y contenido listos." : "Faltan UTMs: completa las 4 antes de programar o publicar."}
+                </p>
+                <div className={s.formActions}>
+                  <button className={s.deleteButton} type="button" onClick={() => void removeItem(item)}><LuTrash2 aria-hidden /> Archivar</button>
+                  <button className={s.primaryButton} type="button" disabled={isSaving} onClick={() => void saveItem(item)}><LuSave aria-hidden /> Guardar cambios</button>
+                </div>
+              </div>
+            </details>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function ContentFields({
+  form,
+  onChange,
+}: {
+  form: ContentForm;
+  onChange: <K extends keyof ContentForm>(key: K, value: ContentForm[K]) => void;
+}) {
+  return (
+    <div className={s.fields}>
+      <label><span>ID de pieza</span><input value={form.contentId} onChange={(event) => onChange("contentId", event.target.value)} placeholder="reel-cotiza-obra-01" required /></label>
+      <label><span>Título</span><input value={form.titulo} onChange={(event) => onChange("titulo", event.target.value)} placeholder="Cotiza en obra desde tu teléfono" required /></label>
+      <label><span>Pilar</span><select value={form.pilar} onChange={(event) => onChange("pilar", event.target.value as ContentForm["pilar"])}>{GROWTH_CONTENT_PILLARS.map((value) => <option key={value} value={value}>{PILLAR_LABELS[value]}</option>)}</select></label>
+      <label><span>Formato</span><select value={form.formato} onChange={(event) => onChange("formato", event.target.value as ContentForm["formato"])}>{GROWTH_CONTENT_FORMATS.map((value) => <option key={value} value={value}>{value.replace("_", " ")}</option>)}</select></label>
+      <label><span>Canal</span><select value={form.canal} onChange={(event) => onChange("canal", event.target.value as ContentForm["canal"])}>{GROWTH_CONTENT_CHANNELS.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+      <label><span>Objetivo</span><select value={form.objetivo} onChange={(event) => onChange("objetivo", event.target.value as ContentForm["objetivo"])}>{GROWTH_CONTENT_OBJECTIVES.map((value) => <option key={value} value={value}>{OBJECTIVE_LABELS[value]}</option>)}</select></label>
+      <label className={s.full}><span>Hook</span><input value={form.hook} onChange={(event) => onChange("hook", event.target.value)} placeholder="¿Todavía llegas a casa a hacer presupuestos?" /></label>
+      <label><span>CTA</span><input value={form.cta} onChange={(event) => onChange("cta", event.target.value)} required /></label>
+      <label><span>Estado</span><select value={form.estado} onChange={(event) => onChange("estado", event.target.value as ContentForm["estado"])}>{GROWTH_CONTENT_STATUSES.map((value) => <option key={value} value={value}>{STATUS_LABELS[value]}</option>)}</select></label>
+      <label><span>Revisión de claim</span><select value={form.claimReviewStatus} onChange={(event) => onChange("claimReviewStatus", event.target.value as ContentForm["claimReviewStatus"])}>{GROWTH_CLAIM_REVIEW_STATUSES.map((value) => <option key={value} value={value}>{CLAIM_LABELS[value]}</option>)}</select></label>
+      <label><span>Programar para</span><input type="datetime-local" value={form.programadoPara} onChange={(event) => onChange("programadoPara", event.target.value)} /></label>
+      <label className={s.full}><span>Campaña</span><input value={form.campaignKey} onChange={(event) => onChange("campaignKey", event.target.value)} placeholder="reels_cotiza_obra_aug26" /></label>
+      <div className={`${s.utmFields} ${s.full}`}>
+        <span>UTM de esta pieza</span>
+        <label><input value={form.utmSource} onChange={(event) => onChange("utmSource", event.target.value)} placeholder="source" /></label>
+        <label><input value={form.utmMedium} onChange={(event) => onChange("utmMedium", event.target.value)} placeholder="medium" /></label>
+        <label><input value={form.utmCampaign} onChange={(event) => onChange("utmCampaign", event.target.value)} placeholder="campaign" /></label>
+        <label><input value={form.utmContent} onChange={(event) => onChange("utmContent", event.target.value)} placeholder="content" /></label>
+      </div>
+      <label className={s.full}><span>Guion</span><textarea value={form.guion} onChange={(event) => onChange("guion", event.target.value)} placeholder="Qué mostrar, en qué orden y qué decir." rows={4} /></label>
+      <label className={s.full}><span>Caption</span><textarea value={form.caption} onChange={(event) => onChange("caption", event.target.value)} placeholder="Texto del post y CTA." rows={3} /></label>
+      <label className={s.full}><span>Notas de revisión de claim</span><textarea value={form.claimReviewNotes} onChange={(event) => onChange("claimReviewNotes", event.target.value)} placeholder="Fuente, alcance y frase aprobada para publicar." rows={2} /></label>
+    </div>
+  );
+}

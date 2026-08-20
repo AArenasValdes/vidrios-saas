@@ -548,29 +548,6 @@ export function FabricacionLineWorkspace({
       sourceReference: recipe.sourceReference,
       lineName: recipe.lineName,
     });
-    // #region agent log
-    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "b7371a",
-      },
-      body: JSON.stringify({
-        sessionId: "b7371a",
-        runId: "pre-fix",
-        hypothesisId: "B",
-        location: "fabricacion-line-workspace.tsx:openEditor",
-        message: "openEditor draft",
-        data: {
-          recipeId: recipe.id,
-          lineName: recipe.lineName,
-          step,
-          codesAfterEnrich: enriched.perfiles.map((p) => p.codigoPerfil),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     setSelectedId(recipe.id);
     setDraft(enriched);
     setProviderName(recipe.providerName);
@@ -822,28 +799,6 @@ export function FabricacionLineWorkspace({
         selectedId === recipe.id &&
         draft
       ) {
-        // #region agent log
-        fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Debug-Session-Id": "b7371a",
-          },
-          body: JSON.stringify({
-            sessionId: "b7371a",
-            runId: "pre-fix",
-            hypothesisId: "B",
-            location: "fabricacion-line-workspace.tsx:navigateToRecipeStep",
-            message: "reutiliza draft en memoria sin openEditor",
-            data: {
-              recipeId: recipe.id,
-              step,
-              codesInDraft: draft.perfiles.map((p) => p.codigoPerfil),
-            },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
         setView("edit");
         setActiveStep(step);
         window.scrollTo({ top: 0, behavior: "smooth" });

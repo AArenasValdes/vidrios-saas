@@ -12,6 +12,7 @@ import {
 import { AdminMarketingFiltersPanel } from "@/features/admin/components/admin-marketing-filters-panel";
 import { AdminMarketingKpiRow } from "@/features/admin/components/admin-marketing-kpi-row";
 import { AdminMarketingPublicActionCell } from "@/features/admin/components/admin-marketing-public-action-cell";
+import { AdminMarketingContentControl } from "@/features/admin/components/admin-marketing-content-control";
 import { useAdminHeaderActions } from "@/features/admin/components/admin-header-context";
 import { CONFIGURED_ACQUISITION_SOURCES } from "@/features/admin/services/admin-marketing.logic";
 import {
@@ -231,6 +232,8 @@ export function AdminMarketingWorkspace() {
           ? ` · ${workspace.periodSummary.totalPublicSolicitudes} solicitudes públicas`
           : ""}
       </div>
+
+      <AdminMarketingContentControl />
 
       <section className={s.sectionBlock} aria-label="Adquisición de Ventora">
         <div className={s.sectionHeading}>

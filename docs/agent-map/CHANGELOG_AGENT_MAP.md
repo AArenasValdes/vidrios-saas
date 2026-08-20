@@ -2,6 +2,13 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-08-20 - Fase A del Command Center de Marketing
+
+- `/admin/marketing` incorpora una cola editorial interna para registrar pieza, pilar, hook, guion, caption, CTA, campaña, cuatro parámetros UTM y estado.
+- La pieza no puede quedar `programado` o `publicado` sin revisión humana de claim `aprobado` y sin `source`, `medium`, `campaign` y `content` UTM completos.
+- La persistencia `growth_content_items` usa el workspace fundador y RLS por membresía admin; no publica contenido ni guarda información de clientes.
+- API: `/api/admin/marketing/content`; migración pendiente de aplicar según el runbook de despliegue.
+
 ## 2026-08-19 - Códigos de perfiles en plantillas L5000, L20 y L25
 
 - Las plantillas sugeridas precargan códigos editables: L5000 `5001`–`5007`, L20 `2001`, `2002`, `2009`, `2004`, `2005`, `2010`, `2019` y L25 `2501`, `2502`, `2509`, `2504`, `2505`, `2510`, `2507`.

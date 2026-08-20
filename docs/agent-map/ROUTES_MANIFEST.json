@@ -182,6 +182,12 @@
       "source": "app/api/admin/marketing/route.ts"
     },
     {
+      "path": "/api/admin/marketing/content",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/marketing/content/route.ts"
+    },
+    {
       "path": "/api/admin/pagos",
       "type": "api",
       "area": "api",

@@ -627,6 +627,7 @@ Generado desde app/ y verificado por pnpm docs:check. El detalle funcional de ca
 | `/api/admin/growth/work-today` | api | api | `app/api/admin/growth/work-today/route.ts` |
 | `/api/admin/growth/workspace` | api | api | `app/api/admin/growth/workspace/route.ts` |
 | `/api/admin/marketing` | api | api | `app/api/admin/marketing/route.ts` |
+| `/api/admin/marketing/content` | api | api | `app/api/admin/marketing/content/route.ts` |
 | `/api/admin/pagos` | api | api | `app/api/admin/pagos/route.ts` |
 | `/api/admin/pagos/confirm` | api | api | `app/api/admin/pagos/confirm/route.ts` |
 | `/api/admin/pagos/reject` | api | api | `app/api/admin/pagos/reject/route.ts` |

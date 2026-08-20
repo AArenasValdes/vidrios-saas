@@ -1,7 +1,7 @@
 # Ventora Marketing Operating System
 
-**Versión:** 1.0  
-**Fecha:** 17 de agosto de 2026  
+**Versión:** 1.1
+**Fecha:** 20 de agosto de 2026
 **Objetivo:** convertir contenido entretenido y demostrable en solicitudes calificadas, trials activados y clientes pagados.
 
 ## 1. Decisión estratégica
@@ -349,6 +349,144 @@ Criterios de aceptación:
 4. Implementar eventos y UTMs antes de escalar publicidad.
 5. Publicar 30 días sin cambiar el posicionamiento cada tres días.
 6. Revisar resultados cada viernes usando solicitudes, activación y pagos; no likes.
+
+## 13. Posicionamiento 2026: celular para vender, computador para configurar
+
+### Audiencia exacta
+
+Ventora habla a **carpinteros de aluminio, vidrierías, talleres de PVC, instaladores de ventanas, shower door y cierres de terraza**. No se presenta como software para carpintería de madera genérica.
+
+### Mensaje rector
+
+> **Cotiza en terreno desde el celular. En computador configura tus líneas y trabaja con tu taller con más orden.**
+
+Mensaje ampliado y demostrable:
+
+> **Ventora te deja cotizar y enviar PDF por WhatsApp desde el celular. Desde computador partes con plantillas iniciales de aluminio, configuras tus propias líneas y, cuando tu taller valida sus recetas, revisas cubicación, despiece, tiras y pauta interna.**
+
+Reglas no negociables:
+
+- Las plantillas iniciales son sugeridas; no se llaman universales ni verificadas para cualquier taller.
+- Solo una receta validada por el taller se comunica como disponible para cubicación y pauta interna.
+- La pauta es interna y revisable; no es optimización, nesting, CNC ni corte exacto de máquina.
+- La cotización, el PDF y WhatsApp siguen siendo el primer valor comercial.
+
+### Precio y agresividad comercial
+
+Ventora puede competir de forma agresiva por **precio de entrada y valor comercial**, no por superlativos sin prueba.
+
+- Claim permitido en Chile: `Founder desde CLP 8.990/mes`.
+- Claim permitido con comparación fechada: `Precio de entrada competitivo para cotizar, enviar PDF y ordenar tu operación comercial`.
+- Claim suspendido hasta contar con benchmark regional: `el más barato de Latinoamérica`, `el mejor cotizador de Latinoamérica` y equivalentes absolutos.
+
+Latinoamérica es mercado objetivo. Antes de publicar un superlativo regional, mantener un benchmark mensual por país, producto, alcance, moneda, impuestos, fecha y evidencia pública.
+
+## 14. Workflow único: adquisición, demo, onboarding y activación
+
+```text
+Pieza / anuncio con UTM
+  -> Conversación "DEMO"
+  -> Clasificación por perfil y dispositivo
+  -> Demo específica
+  -> Cuenta provisionada
+  -> Bienvenida adaptada a celular o computador
+  -> Primera cotización
+  -> Primer PDF / WhatsApp
+  -> Configuración de líneas (si aplica)
+  -> Receta validada y pauta interna (solo si aplica)
+  -> Seguimiento y pago
+```
+
+### Clasificación antes de demo
+
+Pregunta obligatoria:
+
+> `¿Cotizas más en terreno desde el celular o desde computador al final del día?`
+
+| Perfil | Demo inicial | Primer resultado |
+|---|---|---|
+| Maestro o instalador | Celular: cotización rápida, PDF y WhatsApp | PDF enviado |
+| Dueño de taller | Computador: catálogo, líneas y cotización | Primera línea/precio configurado + cotización |
+| Equipo comercial | Solicitud -> cotización -> PDF | Solicitud respondida y presupuesto compartido |
+| Taller con receta propia | Comercial primero; receta después | Receta validada internamente, no promesa pública |
+
+### Bienvenida por dispositivo
+
+| Entrada | Video | Duración | CTA | Regla de mensaje |
+|---|---|---:|---|---|
+| Celular | `Bienvenida móvil` | 45-60 s | `Crear mi primera cotización` | Cotiza en terreno, guarda, genera PDF y envía por WhatsApp; puede continuar en computador con la misma cuenta. |
+| Computador | `Bienvenida escritorio` | 45-60 s | `Crear mi primera cotización` | Ordena cotizaciones, configura líneas y revisa detalle interno; puede continuar en terreno desde celular. |
+
+No afirmar que ambos dispositivos tienen las mismas herramientas. Celular prioriza capturar, cotizar y enviar. Computador prioriza configurar, ordenar y revisar.
+
+### Biblioteca mínima de onboarding
+
+1. `Qué hace Ventora en este dispositivo` — 45-60 s.
+2. `Primera cotización` — 90-120 s.
+3. `PDF y WhatsApp` — 45-60 s.
+4. `Configura líneas y precios` — 2 min, computador.
+5. `Solicitudes y clientes` — 90 s.
+6. `Cotizar por items y constructor` — 2-3 min.
+7. `Cubicación y pauta interna: qué hace y qué no hace` — 2-3 min, computador.
+
+Mostrar un video por necesidad. Nunca entregar la biblioteca completa como requisito de entrada.
+
+## 15. Command Center de Marketing: extensión de `/admin/marketing`
+
+`/admin/marketing` es el panel rector de la operación. No crear un CRM o dashboard paralelo.
+
+### Módulos de destino
+
+| Módulo | Qué administra | Salida operativa |
+|---|---|---|
+| Embudo | prospectos, demos, trials, primera cotización, PDF y pagos | cuello de botella semanal |
+| Contenido | idea, pilar, hook, guion, formato, CTA, content_id, estado y publicación | cola semanal aprobada |
+| Campañas | campaña, audiencia, presupuesto aprobado, UTM, piezas y estado | enlaces trazables |
+| Onboarding | video, dispositivo, paso, estado y fricción observada | activación por cliente |
+| Experimentos | hipótesis, variante, periodo, resultado y decisión | mantener, iterar o cortar |
+| Benchmark | país, competidor, plan, alcance, precio, moneda, impuestos, URL y fecha | claims comparativos revisables |
+
+### Estados obligatorios
+
+Contenido: `borrador -> revisión -> aprobado -> programado -> publicado -> pausado -> ganador -> archivado`.
+
+Experimento: `hipótesis -> listo -> corriendo -> revisión -> mantener | iterar | cortar`.
+
+Ninguna campaña ni pieza se publica desde el panel sin revisión humana. Windsor provee métricas; no se asume como publicador de contenido.
+
+### Fases de implementación
+
+1. **Fase A — Control editorial:** contenido, UTM, estado y checklist de claims dentro de `/admin/marketing`. Implementación local: `growth_content_items` + API interna; requiere aplicar la migración antes de usarla en producción. La responsabilidad operativa se mantiene en el admin fundador hasta incorporar asignación explícita de responsables.
+2. **Fase B — Onboarding medible:** catálogo de videos, versión móvil/escritorio, asignación por cliente y eventos de primera cotización/PDF.
+3. **Fase C — Campañas y Windsor:** importar gasto, alcance, clics y campaña; unirlo con UTM y embudo interno sin copiar datos personales.
+4. **Fase D — Benchmark regional:** panel de evidencia comparativa y bloqueo automático de claims absolutos sin fuente vigente.
+
+### Revisión semanal dentro del panel
+
+| Día | Acción | Decisión |
+|---|---|---|
+| Lunes | revisar embudo, Windsor y fricciones de onboarding | elegir una hipótesis semanal |
+| Martes | aprobar 2-5 piezas y enlaces UTM | publicar o dejar cola lista |
+| Miércoles-Jueves | demos, seguimiento y revisión de mensajes | corregir CTA, demo o video |
+| Viernes | atribución: contenido -> solicitud -> cotización -> PDF -> pago | mantener, iterar o cortar |
+
+KPI rector: `mensajes -> demos -> trials -> primera cotización -> PDF enviado -> pagos`.
+
+## 16. Criterio de salida antes de escalar anuncios
+
+No aumentar presupuesto hasta que tres a cinco pilotos completos hayan pasado por:
+
+1. bienvenida según dispositivo;
+2. primera cotización;
+3. primer PDF o WhatsApp;
+4. seguimiento manual;
+5. registro de fricción en el Command Center.
+
+Objetivos operativos iniciales, no benchmarks universales:
+
+- 70% de pilotos crea primera cotización en 24 horas.
+- 50% de primeras cotizaciones genera o comparte PDF.
+- Cada fricción repetida tres veces genera un video corto, cambio de copy o mejora de producto con workflow documentado.
 
 ## Fuentes externas consultadas
 

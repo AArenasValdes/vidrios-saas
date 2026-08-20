@@ -199,32 +199,6 @@ export function resolveFabricacionDespieceForQuoteItem(input: {
     resolution.estado === "receta_no_validada" || recipe.status !== "validated";
 
   const cubication = fabricacionSnapshotToLegacyCubicationSnapshot(formal);
-  // #region agent log
-  fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "b7371a",
-    },
-    body: JSON.stringify({
-      sessionId: "b7371a",
-      runId: "pre-fix",
-      hypothesisId: "D",
-      location: "fabricacion-despiece-cotizacion.service.ts:resolveDespiece",
-      message: "despiece cotizacion calculado",
-      data: {
-        recipeId: recipe.id,
-        lineName: recipe.lineName,
-        cutCodes: cubication.cuts.slice(0, 3).map((c) => ({
-          functionLabel: c.functionLabel,
-          profileCode: c.profileCode,
-          label: c.label,
-        })),
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
 
   return {
     estado: "calculado",

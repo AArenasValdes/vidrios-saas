@@ -68,52 +68,11 @@ export function resolvePlantillaVentoraIdForRecipe(input: {
     sourceReference: input.sourceReference,
   });
   if (procedencia.plantillaId && isPlantillaVentoraId(procedencia.plantillaId)) {
-    // #region agent log
-    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "b7371a",
-      },
-      body: JSON.stringify({
-        sessionId: "b7371a",
-        runId: "pre-fix",
-        hypothesisId: "A",
-        location: "fabricacion-receta-codigos.service.ts:resolvePlantilla",
-        message: "plantilla resuelta por procedencia",
-        data: {
-          plantillaId: procedencia.plantillaId,
-          sourceType: input.sourceType ?? "manual",
-          sourceReference: input.sourceReference ?? null,
-          lineName: input.lineName ?? null,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     return procedencia.plantillaId;
   }
 
   const fromLine = plantillaIdFromRecipeText(input.lineName);
   if (fromLine) {
-    // #region agent log
-    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "b7371a",
-      },
-      body: JSON.stringify({
-        sessionId: "b7371a",
-        runId: "pre-fix",
-        hypothesisId: "A",
-        location: "fabricacion-receta-codigos.service.ts:resolvePlantilla",
-        message: "plantilla resuelta por lineName",
-        data: { plantillaId: fromLine, lineName: input.lineName ?? null },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     return fromLine;
   }
 
@@ -131,30 +90,6 @@ export function resolvePlantillaVentoraIdForRecipe(input: {
       if (fromNote) return fromNote;
     }
   }
-
-  // #region agent log
-  fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "b7371a",
-    },
-    body: JSON.stringify({
-      sessionId: "b7371a",
-      runId: "pre-fix",
-      hypothesisId: "A",
-      location: "fabricacion-receta-codigos.service.ts:resolvePlantilla",
-      message: "plantilla NO resuelta",
-      data: {
-        sourceType: input.sourceType ?? "manual",
-        sourceReference: input.sourceReference ?? null,
-        lineName: input.lineName ?? null,
-        profileCount: input.receta?.perfiles.length ?? 0,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
 
   return null;
 }
@@ -225,36 +160,5 @@ export function enriquecerCodigosPerfilRecetaFabricacion(input: {
     receta: input.receta,
   });
   if (!plantillaId) return input.receta;
-  const enriched = enriquecerCodigosPerfilPlantillaVentora(input.receta, plantillaId);
-  // #region agent log
-  fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "b7371a",
-    },
-    body: JSON.stringify({
-      sessionId: "b7371a",
-      runId: "pre-fix",
-      hypothesisId: "A",
-      location: "fabricacion-receta-codigos.service.ts:enriquecerReceta",
-      message: "enriquecimiento receta",
-      data: {
-        plantillaId,
-        lineName: input.lineName ?? null,
-        beforeCodes: input.receta.perfiles.map((p) => ({
-          funcion: p.funcion,
-          codigo: p.codigoPerfil,
-        })),
-        afterCodes: enriched.perfiles.map((p) => ({
-          funcion: p.funcion,
-          codigo: p.codigoPerfil,
-        })),
-        changed: enriched !== input.receta,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
-  return enriched;
+  return enriquecerCodigosPerfilPlantillaVentora(input.receta, plantillaId);
 }

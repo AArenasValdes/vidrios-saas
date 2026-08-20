@@ -277,7 +277,7 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
 
 ## Feature: Founder Growth Panel
 
-- **Que hace**: Panel privado del fundador con tabs operativas: trabajo de hoy, prospectos, clientes/pagos y marketing/tareas. Persiste en Supabase (`growth_*`) con import idempotente desde `localStorage` v3 y separa `Real`, `Manual` y `Mock`.
+- **Que hace**: Panel privado del fundador con tabs operativas: trabajo de hoy, prospectos, clientes/pagos y marketing/tareas. Persiste en Supabase (`growth_*`) con import idempotente desde `localStorage` v3 y separa `Real`, `Manual` y `Mock`. El control editorial de `/admin/marketing` usa la misma membresía, pero no mezcla contenido con prospectos.
 - **Rutas involucradas**: `/admin/growth`, `/api/admin/growth/*`
 - **Archivos principales**:
   - `app/admin/growth/page.tsx`
@@ -286,6 +286,12 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
   - `app/api/admin/growth/**`
   - `src/features/growth/hooks/useGrowthDashboard.ts`
   - `src/features/growth/client/growth-api.client.ts`
+  - `src/features/growth/client/growth-content-api.client.ts`
+  - `src/features/growth/hooks/use-growth-content.ts`
+  - `src/features/growth/services/growth-content.service.ts`
+  - `src/features/growth/repositories/growth-content.repository.ts`
+  - `src/features/growth/types/growth-content.ts`
+  - `src/features/admin/components/admin-marketing-content-control.tsx`
   - `src/features/growth/services/growth-*.service.ts`
   - `src/features/growth/repositories/growth-*.repository.ts`
   - `src/features/growth/types/growth-dashboard.ts`
@@ -294,9 +300,9 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
   - `proxy.ts`
 - **Componentes principales**: `GrowthPageClient`
 - **Hooks/servicios/actions**: `useGrowthDashboard`, `growthApiClient`, `resolveGrowthRouteContext`, repositories Supabase
-- **Tablas Supabase**: `growth_workspaces`, `growth_workspace_members`, `growth_prospects`, `growth_activities`, `growth_tasks`
+- **Tablas Supabase**: `growth_workspaces`, `growth_workspace_members`, `growth_prospects`, `growth_activities`, `growth_tasks`, `growth_content_items`
 - **Flujo de datos**: guard founder -> hook -> fetch API -> service -> repository Supabase (RLS por membership)
-- **Estados importantes**: tabs `trabajo`, `prospectos`, `clientes`, `marketing`; colas server-side en `growth-work-today.service.ts`
+- **Estados importantes**: tabs `trabajo`, `prospectos`, `clientes`, `marketing`; cola editorial `borrador -> revisión -> aprobado -> programado -> publicado -> pausado -> ganador -> archivado`. El servidor bloquea `programado`/`publicado` sin claim aprobado y UTM `source`, `medium`, `campaign`, `content`.
 - **Donde editar UI**: `app/admin/growth/`
 - **Donde editar logica**: `src/features/growth/services/`
 - **Donde editar persistencia**: `src/features/growth/repositories/` + migraciones SQL
