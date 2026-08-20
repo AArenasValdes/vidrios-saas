@@ -499,6 +499,36 @@ export function RecipeGuidedEditor({
     return plantillaId ? buildPlantillaSuggestedPerfilRefs(plantillaId) : [];
   }, [lineName, recipe, sourceReference, sourceType]);
 
+  useEffect(() => {
+    if (desktopActiveStep !== "components" && desktopActiveStep !== "rules") return;
+    // #region agent log
+    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "b7371a",
+      },
+      body: JSON.stringify({
+        sessionId: "b7371a",
+        runId: "pre-fix",
+        hypothesisId: "E",
+        location: "recipe-guided-editor.tsx:pieceListRender",
+        message: "UI piezas render",
+        data: {
+          lineName,
+          sourceReference,
+          columnLayout: "codigo-v2",
+          profileCodes: recipe.perfiles.map((p) => ({
+            funcion: p.funcion,
+            codigo: p.codigoPerfil,
+          })),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }, [desktopActiveStep, lineName, recipe.perfiles, sourceReference]);
+
   const frequentLargos = useMemo(
     () => collectFrequentLargosMm([recipe, ...workshopRecipes]),
     [recipe, workshopRecipes]

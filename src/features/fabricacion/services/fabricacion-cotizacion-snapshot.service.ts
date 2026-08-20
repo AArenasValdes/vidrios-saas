@@ -76,6 +76,31 @@ export function construirSnapshotFabricacionCotizacion(input: {
     lineName: input.recipe.lineName,
   });
   const result = calcularCubicacionYPauta(definition, input.entrada);
+  // #region agent log
+  fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "b7371a",
+    },
+    body: JSON.stringify({
+      sessionId: "b7371a",
+      runId: "pre-fix",
+      hypothesisId: "D",
+      location: "fabricacion-cotizacion-snapshot.service.ts:construirSnapshot",
+      message: "snapshot calculado",
+      data: {
+        recipeId: input.recipe.id,
+        lineName: input.recipe.lineName,
+        pautaCodes: result.perfiles.slice(0, 3).map((p) => ({
+          funcion: p.funcion,
+          codigo: p.codigoPerfil,
+        })),
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
   const pautaBarras = construirPautaBarrasFabricacion({
     receta: definition,
     resultado: result,
