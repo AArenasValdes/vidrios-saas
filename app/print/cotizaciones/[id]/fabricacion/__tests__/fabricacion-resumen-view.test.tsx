@@ -239,10 +239,10 @@ describe("FabricacionResumenView", () => {
     expect(screen.getAllByText("1.900 mm necesarios").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("2.394 mm necesarios")).toBeInTheDocument();
     expect(screen.getAllByText("1 tira de 5,95 m")).toHaveLength(7);
-    expect(screen.getByText("Tira 1")).toBeInTheDocument();
+    expect(screen.getByText(/Tira 1 · Usado/i)).toBeInTheDocument();
     const cubicacion = screen.getByLabelText(/Cubicación de V1/i);
-    expect(within(cubicacion).queryByText(/sobrantes/i)).not.toBeInTheDocument();
-    expect(screen.getAllByText(/sobrantes/i).length).toBeGreaterThan(0);
+    expect(within(cubicacion).queryByText(/Sobra/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/Sobra/i).length).toBeGreaterThan(0);
   });
 
   it("mantiene línea y cubicación propias por pieza", () => {
@@ -358,9 +358,9 @@ describe("FabricacionResumenView", () => {
 
     expect(screen.getAllByText("5001 · Riel superior").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("5002 · Riel inferior").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("Tira 1")).toBeInTheDocument();
-    expect(screen.getByText("Tira 2")).toBeInTheDocument();
-    expect(screen.getByText("Tira 3")).toBeInTheDocument();
+    expect(screen.getByText(/Tira 1 · Usado/i)).toBeInTheDocument();
+    expect(screen.getByText(/Tira 2 · Usado/i)).toBeInTheDocument();
+    expect(screen.getByText(/Tira 3 · Usado/i)).toBeInTheDocument();
     expect(screen.getAllByText("Tiras necesarias").length).toBeGreaterThan(0);
     expect(screen.getAllByText("3 × 6,00 m").length).toBeGreaterThan(0);
   });

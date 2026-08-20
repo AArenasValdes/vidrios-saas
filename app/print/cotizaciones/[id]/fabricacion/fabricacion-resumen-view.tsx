@@ -130,15 +130,15 @@ export function formatPautaProfileHeading(code: string, label: string) {
 
 export function formatBarUsedDetail(bar: CotizacionLineTemplateCuttingBar) {
   if (bar.cuts.length === 0) {
-    return `${formatMm(bar.usedMm)} usados`;
+    return `Usado ${formatMm(bar.usedMm)}`;
   }
 
   if (bar.cuts.length === 1) {
     const cut = bar.cuts[0]!;
     const qty = cut.quantity > 0 ? cut.quantity : 1;
     return qty > 1
-      ? `${formatMm(cut.lengthMm)} × ${qty}`
-      : `${formatMm(cut.lengthMm)} usados`;
+      ? `Usado ${formatMm(cut.lengthMm)} × ${qty}`
+      : `Usado ${formatMm(cut.lengthMm)}`;
   }
 
   const byLength = new Map<number, number>();
@@ -149,10 +149,17 @@ export function formatBarUsedDetail(bar: CotizacionLineTemplateCuttingBar) {
 
   if (byLength.size === 1) {
     const [length, qty] = Array.from(byLength.entries())[0]!;
-    return qty > 1 ? `${formatMm(length)} × ${qty}` : `${formatMm(length)} usados`;
+    return qty > 1 ? `Usado ${formatMm(length)} × ${qty}` : `Usado ${formatMm(length)}`;
   }
 
-  return `${formatMm(bar.usedMm)} usados`;
+  return `Usado ${formatMm(bar.usedMm)}`;
+}
+
+export function formatPautaBarLine(
+  bar: CotizacionLineTemplateCuttingBar,
+  cutCount: number
+) {
+  return `Tira ${bar.index} · ${formatBarUsedDetail(bar)} · Sobra ${formatMm(bar.wasteMm)} · ${formatBarCutsLabel(cutCount || bar.cuts.length)}`;
 }
 
 export { isUnassignedProfileLabel };
@@ -417,13 +424,15 @@ function CubicacionTirasPorPerfil({ row }: { row: FabricationSummaryItem }) {
           <li
             key={`${row.itemId}-${profileRow.identityKey}-${profileRow.barLengthMm ?? "na"}`}
           >
-            <span>
-              {formatPautaProfileHeading(profileRow.code, profileRow.label)}
-            </span>
-            <span>{formatMm(profileRow.materialNeededMm)} necesarios</span>
-            <strong>
+            <div className={s.profileStripMain}>
+              <strong>
+                {formatPautaProfileHeading(profileRow.code, profileRow.label)}
+              </strong>
+              <span>{formatMm(profileRow.materialNeededMm)} necesarios</span>
+            </div>
+            <em className={s.tiraPill}>
               {formatTirasPerfilDetail(profileRow.barCount, profileRow.barLengthMm)}
-            </strong>
+            </em>
           </li>
         ))}
       </ul>
@@ -486,12 +495,9 @@ function PautaRows({ row }: { row: FabricationSummaryItem }) {
               );
               return (
                 <li key={`${row.itemId}-bar-${bar.index}`} className={s.pautaBarRow}>
-                  <strong className={s.pautaBarTitle}>Tira {bar.index}</strong>
-                  <div className={s.pautaBarMeta}>
-                    <span>{formatBarUsedDetail(bar)}</span>
-                    <span>{formatMm(bar.wasteMm)} sobrantes</span>
-                    <em>{formatBarCutsLabel(cutCount || bar.cuts.length)}</em>
-                  </div>
+                  <span className={s.pautaBarLine}>
+                    {formatPautaBarLine(bar, cutCount)}
+                  </span>
                 </li>
               );
             })}
@@ -697,7 +703,6 @@ export function FabricacionResumenView({
                     <h3 className={s.cubicTitle}>
                       <span>1.</span> Cubicación
                     </h3>
-                    <p className={s.blockHint}>Material necesario para fabricar esta pieza.</p>
                     <CubicacionMetrics row={row} />
                     <CubicacionTirasPorPerfil row={row} />
                   </section>
@@ -730,10 +735,6 @@ export function FabricacionResumenView({
                     <h3>
                       <span>3.</span> Pauta de corte
                     </h3>
-                    <p className={s.blockHint}>
-                      Cómo distribuir los cortes en las tiras. Verificar medidas en obra
-                      antes de cortar.
-                    </p>
                     <PautaRows row={row} />
                   </section>
                 </div>
