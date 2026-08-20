@@ -188,6 +188,12 @@
       "source": "app/api/admin/marketing/content/route.ts"
     },
     {
+      "path": "/api/admin/marketing/onboarding",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/marketing/onboarding/route.ts"
+    },
+    {
       "path": "/api/admin/pagos",
       "type": "api",
       "area": "api",
@@ -288,6 +294,12 @@
       "type": "api",
       "area": "api",
       "source": "app/api/onboarding/activation/status/route.ts"
+    },
+    {
+      "path": "/api/onboarding/videos",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/onboarding/videos/route.ts"
     },
     {
       "path": "/api/organization-assets/upload",

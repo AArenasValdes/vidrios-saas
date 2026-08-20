@@ -335,3 +335,24 @@ Si la respuesta a 1-4 no es sí: detenerse y reportar.
 - Consulta remota posterior al backfill: 31 perfiles de organización existentes están en Chile (`CL`, `CLP`, `es-CL`, `IVA`, `19%`) y no hay organizaciones activas sin `organization_profile`.
 - La aplicación usa el snapshot regional al calcular totales de cotizaciones nuevas. Chile mantiene IVA 19% y redondeo comercial a $1.000; los otros presets usan su tasa propia y no heredan ese redondeo.
 - No se aplicó una migración adicional: el esquema de Fases 4 y 5 ya contenía los campos necesarios. La deuda histórica de versiones sigue impidiendo `supabase db push` global.
+
+---
+
+## Addendum 2026-08-20 - Reconciliación de historial y hardening crítico
+
+- Se verificó el proyecto remoto `yrtrwgkaopfumpidjthk`: 37 tablas `public` con RLS habilitado, sin huérfanos multi-tenant en las cadenas comerciales revisadas, sin locks en espera ni índices inválidos. No se detectaron errores PostgreSQL ni HTTP 5xx en las últimas 24 horas de logs revisados.
+- Se reconcilió el ledger de migraciones local/remoto: 80 versiones históricas quedaron 1:1. La colisión local `20260619120000` se resolvió renombrando la migración de `responsable_comercial` a `20260619120001`; la variación remota `20260813201525` se normalizó contra el archivo local equivalente `20260813201500`. Desde este punto `supabase db push --linked` vuelve a ser el flujo válido para migraciones incrementales, precedido por `--dry-run`.
+- Se aplicaron y verificaron `20260820193644_database_critical_hardening` y `20260820193904_fix_quote_request_foreign_key_index`: `users` y `cotizaciones` ahora limitan sus policies de lectura/escritura a `authenticated` y usan `WITH CHECK` de `organization_id = get_org_id()` al escribir; `touch_growth_updated_at()` fija `search_path = pg_catalog, public`; el FK compuesto de solicitudes en cotizaciones tiene índice `(solicitud_id, organization_id)`.
+- El bucket público `organization-assets` sigue público porque alimenta landing, pero ahora acepta sólo `image/jpeg`, `image/png` e `image/webp`, con máximo de 20 MB. La API normaliza las subidas a JPEG/PNG antes de almacenarlas.
+- El advisor de seguridad ya no reporta `touch_growth_updated_at`. Permanecen tres avisos conocidos: `payment_webhook_events` tiene RLS sin policy porque es server-only, y `get_org_id()` / `reserve_next_cotizacion_code(...)` son `SECURITY DEFINER` intencionales con validación de tenant. `auth_leaked_password_protection` continúa desactivado y requiere activación explícita desde Supabase Auth.
+- Los avisos de rendimiento restantes son FKs secundarias sin índice y métricas de índices sin uso; no eliminar índices ni ampliar esta auditoría mientras el foco sea el plan de marketing.
+
+---
+
+## Addendum 2026-08-20 - Fase B onboarding medible
+
+- Migración aplicada y registrada en remoto: `20260820194620_growth_onboarding_measurement`.
+- Crea `growth_onboarding_videos`, `growth_onboarding_assignments` y `growth_onboarding_events`. Las tres tablas tienen RLS y `FORCE RLS`; el acceso founder se resuelve por `growth_workspace_members` con rol `admin` y una empresa sólo puede leer sus propias asignaciones/eventos.
+- Los triggers de `cotizaciones` registran de forma idempotente `primera_cotizacion_creada` y `primer_pdf_descargado`. Se hizo baseline histórico: 19 organizaciones con primera cotización y 13 con primer PDF al momento de aplicar.
+- Las funciones trigger usan `SECURITY DEFINER` con `search_path` fijo, pero `anon` y `authenticated` no tienen EXECUTE; sólo `postgres` y `service_role` figuran en ACL. No llamar estas funciones como RPC.
+- Un video `listo` exige URL HTTPS; no se cargaron enlaces inventados ni se alteró el flujo de cotización/PDF existente.

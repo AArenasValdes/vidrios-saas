@@ -22,6 +22,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
 import type { CotizacionWorkflowRecord } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { useActivationGate } from "@/features/onboarding/hooks/useActivationGate";
+import { OnboardingVideoGuide } from "@/features/onboarding/components/onboarding-video-guide";
 import {
   ACTIVATION_DEMO,
   buildActivationDemoDraft,
@@ -754,6 +755,7 @@ function ActivacionPageContent() {
               No necesitas configurar precios ni lineas todavia. Genera un PDF profesional listo
               para enviar por WhatsApp.
             </p>
+            <OnboardingVideoGuide />
           </div>
           <div className={s.activationWelcomePreview} aria-label="Vista previa de una cotizacion en PDF">
             <div className={s.activationWelcomePreviewTop}>

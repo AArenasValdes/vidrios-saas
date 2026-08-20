@@ -456,8 +456,8 @@ Ninguna campaña ni pieza se publica desde el panel sin revisión humana. Windso
 
 ### Fases de implementación
 
-1. **Fase A — Control editorial:** contenido, UTM, estado y checklist de claims dentro de `/admin/marketing`. Implementación local: `growth_content_items` + API interna; requiere aplicar la migración antes de usarla en producción. La responsabilidad operativa se mantiene en el admin fundador hasta incorporar asignación explícita de responsables.
-2. **Fase B — Onboarding medible:** catálogo de videos, versión móvil/escritorio, asignación por cliente y eventos de primera cotización/PDF.
+1. **Fase A — Control editorial:** contenido, UTM, estado y checklist de claims dentro de `/admin/marketing`. La persistencia remota `growth_content_items` y API interna están listas; falta desplegar la interfaz local antes de operarla en producción. La responsabilidad operativa se mantiene en el admin fundador hasta incorporar asignación explícita de responsables.
+2. **Fase B — Onboarding medible:** implementada y registrada en remoto mediante `growth_onboarding_videos`, `growth_onboarding_assignments` y `growth_onboarding_events`. `/admin/marketing` permite registrar videos, dejarlos disponibles sólo con URL HTTPS, asignarlos a una empresa y ver primeros hitos. `/activacion` muestra únicamente la guía publicada que coincide con celular o computador; los eventos de primera cotización y PDF se capturan desde PostgreSQL, no desde el navegador. Falta cargar y validar videos reales con pilotos antes de escalar.
 3. **Fase C — Campañas y Windsor:** importar gasto, alcance, clics y campaña; unirlo con UTM y embudo interno sin copiar datos personales.
 4. **Fase D — Benchmark regional:** panel de evidencia comparativa y bloqueo automático de claims absolutos sin fuente vigente.
 

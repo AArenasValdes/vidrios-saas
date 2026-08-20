@@ -138,11 +138,11 @@ Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell` (variante **minimal**: sin bottom nav)
 - **Proposito**: Wizard de **primera activacion** separado del dashboard. Guia al admin sin cotizaciones hasta crear su primera cotizacion, ver PDF y opcionalmente cargar datos de empresa.
 - **Usuario objetivo**: Admin nuevo (`quoteCount === 0`, step `activation_complete` pendiente)
-- **Funcionalidades visibles**: Bienvenida, elegir demo vs real, rapida por total vs con componentes, resumen con desglose neto/IVA, Ver PDF, datos empresa (opcionales), entrar a Ventora
-- **Componentes principales**: Wizard inline en `page.tsx` (sin componentes externos aun)
+- **Funcionalidades visibles**: Bienvenida, guía opcional asignada según móvil/escritorio, elegir demo vs real, rápida por total vs con componentes, resumen con desglose neto/IVA, Ver PDF, datos empresa (opcionales), entrar a Ventora
+- **Componentes principales**: Wizard inline en `page.tsx` + `OnboardingVideoGuide` opcional
 - **Hooks/servicios**: `useActivationGate`, `useCotizacionesStore`, `useOrganizationProfile`, `onboarding-activation-flow.service.ts`
-- **API**: `GET/POST /api/onboarding/activation/status`
-- **Tablas Supabase**: `onboarding_checklists` (`activation_complete`), `cotizaciones`, `cotizacion_items`, `organization_profile`
+- **API**: `GET/POST /api/onboarding/activation/status`, `GET/POST /api/onboarding/videos`
+- **Tablas Supabase**: `onboarding_checklists` (`activation_complete`), `cotizaciones`, `cotizacion_items`, `organization_profile`, `growth_onboarding_*`
 - **Query QA**: `?replay=1` o `?activacion_preview=1` (no persiste complete/skip; bypass gate)
 - **Navegacion PDF**: `?from=activacion` -> boton **Volver a la guia**
 - **Archivos a tocar**: `app/(pwa-app)/activacion/*`, `src/features/onboarding/services/onboarding-activation-flow.service.ts`, `src/features/onboarding/hooks/useActivationGate.ts`, `app/api/onboarding/activation/status/route.ts`, `app/print/cotizaciones/[id]/page.tsx` (solo back nav)
@@ -628,6 +628,7 @@ Generado desde app/ y verificado por pnpm docs:check. El detalle funcional de ca
 | `/api/admin/growth/workspace` | api | api | `app/api/admin/growth/workspace/route.ts` |
 | `/api/admin/marketing` | api | api | `app/api/admin/marketing/route.ts` |
 | `/api/admin/marketing/content` | api | api | `app/api/admin/marketing/content/route.ts` |
+| `/api/admin/marketing/onboarding` | api | api | `app/api/admin/marketing/onboarding/route.ts` |
 | `/api/admin/pagos` | api | api | `app/api/admin/pagos/route.ts` |
 | `/api/admin/pagos/confirm` | api | api | `app/api/admin/pagos/confirm/route.ts` |
 | `/api/admin/pagos/reject` | api | api | `app/api/admin/pagos/reject/route.ts` |
@@ -645,6 +646,7 @@ Generado desde app/ y verificado por pnpm docs:check. El detalle funcional de ca
 | `/api/dashboard/summary` | api | api | `app/api/dashboard/summary/route.ts` |
 | `/api/fabricacion/asistente-texto` | api | api | `app/api/fabricacion/asistente-texto/route.ts` |
 | `/api/onboarding/activation/status` | api | api | `app/api/onboarding/activation/status/route.ts` |
+| `/api/onboarding/videos` | api | api | `app/api/onboarding/videos/route.ts` |
 | `/api/organization-assets/upload` | api | api | `app/api/organization-assets/upload/route.ts` |
 | `/api/public-landing/revalidate` | api | api | `app/api/public-landing/revalidate/route.ts` |
 | `/api/pwa/push-subscriptions` | api | api | `app/api/pwa/push-subscriptions/route.ts` |

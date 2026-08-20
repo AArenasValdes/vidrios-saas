@@ -984,3 +984,12 @@ auth.users (1) ──── (N) users
 - `cotizaciones.regional_snapshot` guarda un objeto JSON v1 con pais, moneda, locale, zona horaria y etiqueta/tasa tributaria comercial.
 - La migracion `20260813023403_billing_phase_5_quote_region_snapshots.sql` fue aplicada y registrada en remoto; el dump `current_schema.sql` ya la incluye.
 - No se hace backfill: un registro sin snapshot se trata explicitamente como cotizacion Chile historica, para no reinterpretar documentos ni mensajes con el perfil actual de la empresa.
+
+---
+
+## Addendum 2026-08-20 - Onboarding medible Fase B
+
+- `growth_onboarding_videos` es la biblioteca global founder: paso comercial, dispositivo, duracion, URL HTTPS y estado editorial. No guarda contenido ficticio.
+- `growth_onboarding_assignments` relaciona una guia lista con una `organization_id` y conserva su estado de consumo. La app de cada empresa solo lee sus propias asignaciones.
+- `growth_onboarding_events` almacena apertura de video y los hitos de primera cotizacion/PDF. Estos dos ultimos se capturan con triggers de `cotizaciones`, por lo que no dependen del navegador.
+- Las tres tablas tienen RLS y `FORCE ROW LEVEL SECURITY`; los triggers operan con funciones `SECURITY DEFINER` de ACL exclusiva para `postgres` y `service_role`.

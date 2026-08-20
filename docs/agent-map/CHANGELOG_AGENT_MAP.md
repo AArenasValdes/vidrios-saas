@@ -2,12 +2,26 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-08-20 - Fase B de onboarding medible
+
+- `/admin/marketing` incorpora biblioteca de videos, asignación por empresa y lectura de primeras cotizaciones/PDF; no crea un panel paralelo ni un CRM.
+- `/activacion` muestra una guía opcional según celular o computador sólo cuando el founder la asigna y publica con URL HTTPS.
+- `growth_onboarding_events` recibe los hitos comerciales desde triggers en `cotizaciones`, con baseline histórico e idempotencia por organización; los videos abiertos se registran desde la ruta autenticada.
+- Migración remota aplicada: `20260820194620_growth_onboarding_measurement`.
+
+## 2026-08-20 - Historial Supabase reconciliado y hardening crítico
+
+- El historial local/remoto quedó reconciliado 1:1 con 82 migraciones; las nuevas migraciones pueden usar `supabase db push --linked` con `--dry-run` previo.
+- Se endurecieron las policies de `users` y `cotizaciones` a `authenticated` y se agregó el `WITH CHECK` tenant en updates.
+- Se corrigió el `search_path` de `touch_growth_updated_at`, se agregó el índice compuesto del FK de solicitudes y se limitó `organization-assets` a imágenes de máximo 20 MB.
+- La deuda restante de base se deja como secundaria: activar protección de contraseñas filtradas en Auth y revisar índices/FKs sólo si existe señal de uso o rendimiento.
+
 ## 2026-08-20 - Fase A del Command Center de Marketing
 
 - `/admin/marketing` incorpora una cola editorial interna para registrar pieza, pilar, hook, guion, caption, CTA, campaña, cuatro parámetros UTM y estado.
 - La pieza no puede quedar `programado` o `publicado` sin revisión humana de claim `aprobado` y sin `source`, `medium`, `campaign` y `content` UTM completos.
 - La persistencia `growth_content_items` usa el workspace fundador y RLS por membresía admin; no publica contenido ni guarda información de clientes.
-- API: `/api/admin/marketing/content`; migración pendiente de aplicar según el runbook de despliegue.
+- API: `/api/admin/marketing/content`; migración `20260820185724_growth_content_items.sql` ya aplicada y registrada en remoto. Falta desplegar la interfaz local antes de operarla en producción.
 
 ## 2026-08-19 - Códigos de perfiles en plantillas L5000, L20 y L25
 

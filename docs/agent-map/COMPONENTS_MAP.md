@@ -454,6 +454,13 @@ Responsable: ingeniería
 - **Usado en**: Remotion compositions `VentoraExplainer` y `VentoraExplainerVertical`
 - **Props importantes**: `layout?: "landscape" | "portrait"`
 
+### Componente: OnboardingVideoGuide
+
+- **Archivo**: `src/features/onboarding/components/onboarding-video-guide.tsx`
+- **Proposito**: Muestra en la bienvenida de `/activacion` una sola guia asignada, coincidente con el dispositivo; registra su apertura sin bloquear el flujo comercial.
+- **Usado en**: `app/(pwa-app)/activacion/page.tsx`
+- **Contrato**: si no existe una asignacion lista, no renderiza contenido ni cambia la activacion existente.
+
 ### Componente: SceneWrapper
 
 - **Archivo**: `src/features/video/components.tsx`

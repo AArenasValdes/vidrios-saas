@@ -1,12 +1,12 @@
 # Data Model Map - Ventora
 
 Estado: vigente
-Actualizado: 2026-08-14
+Actualizado: 2026-08-20
 Responsable: ingeniería + Supabase
 
 Fuente de verdad, en orden: base remota verificada, migraciones registradas, `supabase/docs/database_map.md` y `supabase/docs/rls_policies.md`; `supabase/docs/current_schema.sql` es baseline historico hasta regenerarlo.
 
-Seguridad pendiente de verificacion remota: `20260814201536_security_hardening_payments_auth.sql` (privilegios por columna en `organization_profile`, ledger de pagos solo servidor, replay durable de webhooks y provisionamiento de identidad sin reclamo por correo).
+Seguridad remota verificada 2026-08-20: el historial de 82 migraciones local/remoto está reconciliado 1:1. `users` y `cotizaciones` exigen rol `authenticated` y `WITH CHECK` tenant al escribir; `organization-assets` conserva visibilidad pública sólo para imágenes normalizadas (JPEG/PNG/WebP, 20 MB). Quedan secundarios: protección de contraseñas filtradas en Auth y avisos de índices aún sin uso.
 
 Verificación documental remota: 2026-08-13.
 Clasificación: tablas activas core, tablas activas growth, tablas legacy/dormidas y tablas propuestas separadas explícitamente abajo.
@@ -433,8 +433,11 @@ Dominio separado de `solicitudes_contacto` y multi-tenant SaaS. Acceso via RLS +
 | `growth_activities` | Historial auditable por prospecto |
 | `growth_tasks` | Trabajo diario (follow-ups, trials, pagos) |
 | `growth_content_items` | Cola editorial interna: pieza, guion, CTA, estado, revisión humana de claim y UTM de cuatro parámetros |
+| `growth_onboarding_videos` | Biblioteca interna de guías por paso y dispositivo; sólo `listo` con URL HTTPS se puede asignar |
+| `growth_onboarding_assignments` | Guía asignada por empresa, estado de visualización y pausa operativa |
+| `growth_onboarding_events` | Hitos auditables de guía, primera cotización y primer PDF; no duplica datos comerciales |
 
-Migraciones: `supabase/migrations/20260627120000_growth_workspace.sql`, `supabase/migrations/20260820185724_growth_content_items.sql`. La cola editorial tiene RLS por `growth_workspace_members` activa y rol `admin`; no contiene datos de clientes ni publica contenido externamente.
+Migraciones: `supabase/migrations/20260627120000_growth_workspace.sql`, `supabase/migrations/20260820185724_growth_content_items.sql`, `supabase/migrations/20260820194620_growth_onboarding_measurement.sql`. La cola editorial y el onboarding medible existen y están registrados en remoto; los videos y asignaciones tienen RLS por membresía admin, mientras una empresa sólo puede leer su propia asignación/evento. Los triggers de cotizaciones registran los dos primeros hitos y sus funciones no son ejecutables por `anon` ni `authenticated`.
 
 ---
 

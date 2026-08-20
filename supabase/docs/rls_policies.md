@@ -11,6 +11,8 @@ Ultima verificacion remota relevante: 2026-08-13.
 
 Todas las tablas de `public` tienen RLS habilitado. El event trigger `rls_auto_enable` fuerza ese comportamiento para tablas nuevas. La función principal de aislamiento es `get_org_id()`, que resuelve la organización activa del usuario autenticado desde `public.users`.
 
+**Addendum 2026-08-20 — Fase B onboarding:** `growth_onboarding_videos`, `growth_onboarding_assignments` y `growth_onboarding_events` tienen RLS forzado. El founder administra por membresía `growth_workspace_members` con `rol='admin'`; una organización autenticada sólo puede leer asignaciones y eventos donde `organization_id = get_org_id()`. Los eventos de primer valor se insertan sólo desde triggers protegidos.
+
 **Total tablas con RLS habilitado:** 26 versionadas por migraciones recientes.
 **Total tablas con policies definidas:** 24+ segun migraciones locales; verificacion remota parcial con CLI el 2026-07-29.
 **Total tablas con RLS habilitado pero sin acceso cliente efectivo:** `formula_variables` tiene deny-all confirmado en remoto; `material_types` debe re-verificarse si vuelve a exponerse.
@@ -53,7 +55,9 @@ Riesgo residual:
 |---|---|---|---|
 | `cotizaciones_select` | SELECT | `organization_id = get_org_id()` | — |
 | `cotizaciones_insert` | INSERT | — | `organization_id = get_org_id()` |
-| `cotizaciones_update` | UPDATE | `organization_id = get_org_id()` | — |
+| `cotizaciones_update` | UPDATE | `organization_id = get_org_id()` | `organization_id = get_org_id()` |
+
+Las tres policies aplican al rol `authenticated` desde la migración remota `20260820193644_database_critical_hardening`; las rutas de aprobación pública usan servidor y no requieren acceso directo `anon` a esta tabla.
 
 **Verificacion 2026-07-08 (Quote Studio financial snapshots, aplicado remoto):** la migracion `add_quote_studio_financial_snapshot` se aplico en el proyecto remoto `yrtrwgkaopfumpidjthk`. Agrega solo columnas nullable en `cotizaciones`. No requiere policies nuevas: `cotizaciones_select`, `cotizaciones_insert` y `cotizaciones_update` siguen aislando por `organization_id = get_org_id()` para lectura y escritura de los campos snapshot.
 
@@ -79,7 +83,9 @@ Riesgo residual:
 |---|---|---|---|
 | `users_select` | SELECT | `organization_id = get_org_id()` | — |
 | `users_insert` | INSERT | — | `organization_id = get_org_id()` |
-| `users_update` | UPDATE | `organization_id = get_org_id()` | — |
+| `users_update` | UPDATE | `organization_id = get_org_id()` | `organization_id = get_org_id()` |
+
+Las tres policies aplican al rol `authenticated` desde la migración remota `20260820193644_database_critical_hardening`.
 
 Riesgo:
 - No hay diferenciación por `rol`. Un usuario autenticado de la org puede ver y editar otros usuarios de su misma org.
