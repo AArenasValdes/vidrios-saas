@@ -33,6 +33,9 @@ import {
   herrajeDisplayLabel,
 } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type {
+  CotizacionItemCubicationSnapshot,
+} from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import type { CotizacionLineTemplateCuttingBar } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { getQuoteConstructorItemConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
@@ -166,6 +169,15 @@ type ProfileBarGroup = {
   bars: CotizacionLineTemplateCuttingBar[];
 };
 
+export type CubicacionPerfilRow = {
+  identityKey: string;
+  code: string;
+  label: string;
+  materialNeededMm: number;
+  barCount: number;
+  barLengthMm: number | null;
+};
+
 function normalizeProfileText(value: string | null | undefined) {
   return value?.trim() ?? "";
 }
@@ -202,6 +214,91 @@ function resolveBarIdentity(bar: CotizacionLineTemplateCuttingBar) {
         : null;
 
   return { code, label, barLengthMm };
+}
+
+function resolveProfileIdentityKey(input: {
+  code?: string | null;
+  functionLabel?: string | null;
+  label?: string | null;
+}) {
+  const code = normalizeProfileText(input.code);
+  if (code && !isUnassignedProfileLabel(code)) {
+    return `code:${code}`;
+  }
+  const functionLabel =
+    normalizeProfileText(input.functionLabel) || normalizeProfileText(input.label);
+  return `fn:${functionLabel || "unknown"}`;
+}
+
+function resolveCutIdentityKey(
+  cut: CotizacionItemCubicationSnapshot["cuts"][number]
+) {
+  return resolveProfileIdentityKey({
+    code: resolveCutProfileCode(cut),
+    functionLabel: cut.functionLabel,
+    label: resolveCutProfileName(cut),
+  });
+}
+
+function resolveBarGroupIdentityKey(group: ProfileBarGroup) {
+  return resolveProfileIdentityKey({
+    code: group.code,
+    label: group.label,
+  });
+}
+
+export function formatTirasPerfilDetail(barCount: number, barLengthMm: number | null) {
+  const tiraWord = barCount === 1 ? "tira" : "tiras";
+  if (barLengthMm && barLengthMm > 0) {
+    return `${barCount} ${tiraWord} de ${formatCommercialBarLengthMeters(barLengthMm)} m`;
+  }
+  return `${barCount} ${tiraWord}`;
+}
+
+/** Resume tiras por perfil físico desde la pauta existente (sin recalcular). */
+export function buildCubicacionPerfilRows(
+  snapshot: CotizacionItemCubicationSnapshot
+): CubicacionPerfilRow[] {
+  const materialByKey = new Map<string, number>();
+  const orderKeys: string[] = [];
+
+  snapshot.cuts.forEach((cut) => {
+    const key = resolveCutIdentityKey(cut);
+    materialByKey.set(
+      key,
+      (materialByKey.get(key) ?? 0) + (cut.totalLinealMm > 0 ? cut.totalLinealMm : 0)
+    );
+    if (!orderKeys.includes(key)) {
+      orderKeys.push(key);
+    }
+  });
+
+  const groups = groupBarsByProfile(snapshot.bars);
+  const rows = groups.map((group) => ({
+    identityKey: resolveBarGroupIdentityKey(group),
+    code: group.code,
+    label: group.label,
+    materialNeededMm: materialByKey.get(resolveBarGroupIdentityKey(group)) ?? 0,
+    barCount: group.bars.length,
+    barLengthMm: group.barLengthMm,
+  }));
+
+  rows.sort((left, right) => {
+    const leftIndex = orderKeys.indexOf(left.identityKey);
+    const rightIndex = orderKeys.indexOf(right.identityKey);
+    const normalizedLeft = leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex;
+    const normalizedRight = rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex;
+    if (normalizedLeft !== normalizedRight) {
+      return normalizedLeft - normalizedRight;
+    }
+    return (left.barLengthMm ?? 0) - (right.barLengthMm ?? 0);
+  });
+
+  return rows;
+}
+
+export function sumCubicacionPerfilBarCount(rows: CubicacionPerfilRow[]) {
+  return rows.reduce((sum, row) => sum + row.barCount, 0);
 }
 
 export function groupBarsByProfile(
@@ -302,6 +399,34 @@ function CubicacionMetrics({ row }: { row: FabricationSummaryItem }) {
         <span>Tiras necesarias</span>
         <strong>{tirasLabel}</strong>
       </div>
+    </div>
+  );
+}
+
+function CubicacionTirasPorPerfil({ row }: { row: FabricationSummaryItem }) {
+  const profileRows = buildCubicacionPerfilRows(row.snapshot);
+  if (profileRows.length === 0) return null;
+
+  return (
+    <div className={s.profileStripSummary} aria-label="Tiras por perfil">
+      <div className={s.profileStripSummaryHead}>
+        <span>Tiras por perfil</span>
+      </div>
+      <ul>
+        {profileRows.map((profileRow) => (
+          <li
+            key={`${row.itemId}-${profileRow.identityKey}-${profileRow.barLengthMm ?? "na"}`}
+          >
+            <span>
+              {formatPautaProfileHeading(profileRow.code, profileRow.label)}
+            </span>
+            <span>{formatMm(profileRow.materialNeededMm)} necesarios</span>
+            <strong>
+              {formatTirasPerfilDetail(profileRow.barCount, profileRow.barLengthMm)}
+            </strong>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -574,6 +699,7 @@ export function FabricacionResumenView({
                     </h3>
                     <p className={s.blockHint}>Material necesario para fabricar esta pieza.</p>
                     <CubicacionMetrics row={row} />
+                    <CubicacionTirasPorPerfil row={row} />
                   </section>
 
                   <section className={s.block} aria-label={`Despiece de ${row.codigo}`}>

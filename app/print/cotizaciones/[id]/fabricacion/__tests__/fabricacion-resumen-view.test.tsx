@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { useRef, useState } from "react";
 
 import {
@@ -10,14 +10,81 @@ import {
 import type { CotizacionLineTemplateCuttingBar } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { buildFabricationQuoteSummary } from "@/features/cotizaciones/line-templates/types/fabrication-quote-summary";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import { crearRecetaPlantillaVentoraCorredera2H } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
+import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
+import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
+import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
+import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 
 import {
   FabricacionResumenView,
+  buildCubicacionPerfilRows,
   formatBarCutsLabel,
   formatTirasNecesariasLabel,
+  formatTirasPerfilDetail,
   groupBarsByProfile,
   isUnassignedProfileLabel,
+  sumCubicacionPerfilBarCount,
 } from "../fabricacion-resumen-view";
+
+function buildL5000Snapshot(input?: {
+  widthMm?: number;
+  heightMm?: number;
+  quantity?: number;
+  largoComercialMm?: number;
+}): CotizacionItemCubicationSnapshot {
+  let nextId = 0;
+  const receta = crearRecetaPlantillaVentoraCorredera2H("L5000", {
+    createId: () => `l5000-${nextId++}`,
+  });
+  const largoComercialMm = input?.largoComercialMm ?? 5950;
+  receta.perfiles = receta.perfiles.map((profile) => ({
+    ...profile,
+    largoComercialMm,
+  }));
+
+  const widthMm = input?.widthMm ?? 1900;
+  const heightMm = input?.heightMm ?? 1200;
+  const quantity = input?.quantity ?? 1;
+
+  const resultado = calcularCubicacionYPauta(receta, {
+    anchoTotalMm: widthMm,
+    altoTotalMm: heightMm,
+    cantidad: quantity,
+    hojas: 2,
+    modulos: 2,
+    variante: "estandar",
+  });
+  const pautaBarras = construirPautaBarrasFabricacion({ receta, resultado });
+
+  const formal: FabricacionCotizacionSnapshot = {
+    lineTemplateId: 10,
+    recipeStatus: "validated",
+    recipeIdentity: {
+      recetaId: receta.identidad.recetaId,
+      codigo: receta.identidad.codigo,
+      nombre: receta.identidad.nombre,
+      tipologia: receta.identidad.tipologia,
+      hojas: receta.identidad.hojas,
+      modulos: receta.identidad.modulos,
+      apertura: receta.identidad.apertura,
+      herraje: receta.identidad.herraje,
+      variante: receta.identidad.variante,
+    },
+    input: {
+      anchoTotalMm: widthMm,
+      altoTotalMm: heightMm,
+      cantidad: quantity,
+    },
+    calculatedAt: "2026-08-20T00:00:00.000Z",
+    result: resultado,
+    pauta: resultado.perfiles,
+    pautaBarras,
+    vidrios: [],
+  };
+
+  return fabricacionSnapshotToLegacyCubicationSnapshot(formal);
+}
 
 function snapshot(
   overrides: Partial<CotizacionItemCubicationSnapshot> = {}
@@ -153,6 +220,31 @@ function ViewHarness(props: {
 }
 
 describe("FabricacionResumenView", () => {
+  it("muestra tiras por perfil en cubicación sin mezclar pauta ni despiece", () => {
+    const cubication = buildL5000Snapshot();
+    const item = workflowItem(
+      "item-l5000",
+      "V1",
+      "Ventana corredera",
+      "L5000",
+      "Aluminio",
+      cubication
+    );
+
+    render(<ViewHarness extraItems={[item]} />);
+
+    expect(screen.getByText("Tiras por perfil")).toBeInTheDocument();
+    expect(screen.getAllByText("5001 · Riel superior").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("5003 · Jamba").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("1.900 mm necesarios").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("2.394 mm necesarios")).toBeInTheDocument();
+    expect(screen.getAllByText("1 tira de 5,95 m")).toHaveLength(7);
+    expect(screen.getByText("Tira 1")).toBeInTheDocument();
+    const cubicacion = screen.getByLabelText(/Cubicación de V1/i);
+    expect(within(cubicacion).queryByText(/sobrantes/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/sobrantes/i).length).toBeGreaterThan(0);
+  });
+
   it("mantiene línea y cubicación propias por pieza", () => {
     render(<ViewHarness />);
 
@@ -264,8 +356,8 @@ describe("FabricacionResumenView", () => {
 
     render(<ViewHarness extraItems={[item]} />);
 
-    expect(screen.getByText("5001 · Riel superior")).toBeInTheDocument();
-    expect(screen.getByText("5002 · Riel inferior")).toBeInTheDocument();
+    expect(screen.getAllByText("5001 · Riel superior").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("5002 · Riel inferior").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Tira 1")).toBeInTheDocument();
     expect(screen.getByText("Tira 2")).toBeInTheDocument();
     expect(screen.getByText("Tira 3")).toBeInTheDocument();
@@ -372,6 +464,112 @@ describe("helpers de fabricación", () => {
         { index: 1, usedMm: 1900, wasteMm: 4050, barLengthMm: 5950, cuts: [] },
       ])
     ).toBe("7 × 5,95 m");
+  });
+
+  it("L5000 1900×1200 resume 7 tiras desde la pauta real del motor", () => {
+    const snapshotData = buildL5000Snapshot();
+    const rows = buildCubicacionPerfilRows(snapshotData);
+
+    expect(rows).toHaveLength(7);
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "5001",
+          label: "Riel superior",
+          materialNeededMm: 1900,
+          barCount: 1,
+          barLengthMm: 5950,
+        }),
+        expect.objectContaining({
+          code: "5003",
+          label: "Jamba",
+          materialNeededMm: 2394,
+          barCount: 1,
+          barLengthMm: 5950,
+        }),
+        expect.objectContaining({
+          code: "5007",
+          label: "Traslapo",
+          materialNeededMm: 2364,
+          barCount: 1,
+          barLengthMm: 5950,
+        }),
+      ])
+    );
+    expect(sumCubicacionPerfilBarCount(rows)).toBe(snapshotData.bars.length);
+    expect(sumCubicacionPerfilBarCount(rows)).toBe(7);
+  });
+
+  it("consolida cantidad > 1 sin mezclar perfiles distintos", () => {
+    const snapshotData = buildL5000Snapshot({ quantity: 2 });
+    const rows = buildCubicacionPerfilRows(snapshotData);
+
+    expect(rows.find((row) => row.code === "5001")).toMatchObject({
+      materialNeededMm: 3800,
+      barCount: 1,
+    });
+    expect(rows.find((row) => row.code === "5003")).toMatchObject({
+      materialNeededMm: 4788,
+    });
+    expect(sumCubicacionPerfilBarCount(rows)).toBe(snapshotData.bars.length);
+  });
+
+  it("separa perfiles con largos comerciales distintos", () => {
+    let nextId = 0;
+    const receta = crearRecetaPlantillaVentoraCorredera2H("L5000", {
+      createId: () => `mix-${nextId++}`,
+    });
+    receta.perfiles = receta.perfiles.map((profile) => ({
+      ...profile,
+      largoComercialMm: profile.codigoPerfil === "5003" ? 6000 : 5950,
+    }));
+
+    const resultado = calcularCubicacionYPauta(receta, {
+      anchoTotalMm: 1900,
+      altoTotalMm: 1200,
+      cantidad: 1,
+      hojas: 2,
+      modulos: 2,
+      variante: "estandar",
+    });
+    const pautaBarras = construirPautaBarrasFabricacion({ receta, resultado });
+    const snapshotData = fabricacionSnapshotToLegacyCubicationSnapshot({
+      lineTemplateId: 10,
+      recipeStatus: "validated",
+      recipeIdentity: {
+        recetaId: receta.identidad.recetaId,
+        codigo: receta.identidad.codigo,
+        nombre: receta.identidad.nombre,
+        tipologia: receta.identidad.tipologia,
+        hojas: receta.identidad.hojas,
+        modulos: receta.identidad.modulos,
+        apertura: receta.identidad.apertura,
+        herraje: receta.identidad.herraje,
+        variante: receta.identidad.variante,
+      },
+      input: { anchoTotalMm: 1900, altoTotalMm: 1200, cantidad: 1 },
+      calculatedAt: "2026-08-20T00:00:00.000Z",
+      result: resultado,
+      pauta: resultado.perfiles,
+      pautaBarras,
+      vidrios: [],
+    });
+
+    const rows = buildCubicacionPerfilRows(snapshotData);
+    const jambaRows = rows.filter((row) => row.code === "5003");
+
+    expect(jambaRows).toHaveLength(1);
+    expect(jambaRows[0]?.barLengthMm).toBe(6000);
+    expect(formatTirasPerfilDetail(jambaRows[0]!.barCount, jambaRows[0]!.barLengthMm)).toBe(
+      "1 tira de 6,00 m"
+    );
+    expect(sumCubicacionPerfilBarCount(rows)).toBe(snapshotData.bars.length);
+  });
+
+  it("formatea detalle de tiras por perfil", () => {
+    expect(formatTirasPerfilDetail(1, 5950)).toBe("1 tira de 5,95 m");
+    expect(formatTirasPerfilDetail(2, 6000)).toBe("2 tiras de 6,00 m");
+    expect(formatTirasPerfilDetail(3, null)).toBe("3 tiras");
   });
 
   it("usa la identidad de los cortes en snapshots legacy y marca barras mixtas", () => {

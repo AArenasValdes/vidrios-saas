@@ -7,11 +7,19 @@ import {
   type BaseTipologicaVentora,
   type PlantillaVentoraCorrederaId,
 } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
+import {
+  crearRecetaPlantillaVentoraProyectante,
+  PLANTILLAS_VENTORA_PROYECTANTE,
+  type PlantillaVentoraProyectanteId,
+} from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
 import { buildProcedenciaPersistence } from "@/features/fabricacion/types/fabricacion-receta-procedencia";
 import type { CreateFabricationRecipeInput } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { CreateCotizacionLineTemplateInput } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 
-export type CatalogoInicioRapidoKind = "plantilla_ventora" | "base_estructural";
+export type CatalogoInicioRapidoKind =
+  | "plantilla_ventora"
+  | "plantilla_verificada"
+  | "base_estructural";
 
 export type CatalogoInicioRapidoItem = {
   kind: CatalogoInicioRapidoKind;
@@ -27,6 +35,7 @@ export type CatalogoInicioRapidoItem = {
   hojas: number;
   modulos: number;
   plantillaId?: PlantillaVentoraCorrederaId;
+  plantillaVerificadaId?: PlantillaVentoraProyectanteId;
 };
 
 /** @deprecated Usar CatalogoInicioRapidoItem */
@@ -65,6 +74,27 @@ function buildBaseRecommendation(
     hojas,
     modulos: base.modulosSugeridos,
   };
+}
+
+export function listarPlantillasVerificadasVentoraParaCatalogo(): CatalogoInicioRapidoItem[] {
+  return (
+    Object.values(PLANTILLAS_VENTORA_PROYECTANTE) as Array<
+      (typeof PLANTILLAS_VENTORA_PROYECTANTE)[PlantillaVentoraProyectanteId]
+    >
+  ).map((plantilla) => ({
+    kind: "plantilla_verificada" as const,
+    id: `plantilla-verificada-${plantilla.id.toLowerCase()}`,
+    lineName: plantilla.title,
+    title: plantilla.title,
+    subtitle: "Aluminio",
+    badge: "Base estructural",
+    meta: "Pendiente validar medidas de taller",
+    actionLabel: "Usar plantilla",
+    tipologia: "proyectante",
+    hojas: 1,
+    modulos: 1,
+    plantillaVerificadaId: plantilla.id,
+  }));
 }
 
 /**
@@ -106,6 +136,7 @@ export function listarBasesVentoraParaCatalogo(): CatalogoInicioRapidoItem[] {
 export function listarInicioRapidoCatalogo(): CatalogoInicioRapidoItem[] {
   return [
     ...listarPlantillasVentoraParaCatalogo(),
+    ...listarPlantillasVerificadasVentoraParaCatalogo(),
     ...listarBasesVentoraParaCatalogo(),
   ];
 }
@@ -135,9 +166,11 @@ export function buildLineTemplatePayloadFromInicioRapido(input: {
   const lineSystem =
     input.item.kind === "plantilla_ventora"
       ? input.item.plantillaId ?? input.item.title
-      : input.item.tipologia === "corredera"
-        ? "Corredera"
-        : input.item.title;
+      : input.item.kind === "plantilla_verificada"
+        ? input.item.plantillaVerificadaId ?? input.item.title
+        : input.item.tipologia === "corredera"
+          ? "Corredera"
+          : input.item.title;
 
   return {
     nombre,
@@ -184,6 +217,15 @@ export function buildFabricationRecipeInputFromInicioRapido(input: {
       ? crearRecetaPlantillaVentoraCorredera2H(input.item.plantillaId, {
           createId: input.createId,
         })
+      : input.item.kind === "plantilla_verificada" &&
+          input.item.plantillaVerificadaId
+        ? crearRecetaPlantillaVentoraProyectante(
+            input.item.plantillaVerificadaId,
+            {
+              createId: input.createId,
+              lineName: input.lineName,
+            }
+          )
       : crearBaseTipologicaVentora({
           tipologia: input.item.tipologia,
           hojas: input.item.hojas,
@@ -206,6 +248,13 @@ export function buildFabricationRecipeInputFromInicioRapido(input: {
       ? buildProcedenciaPersistence("plantilla_ventora", {
           plantillaId: input.item.plantillaId,
         })
+      : input.item.kind === "plantilla_verificada"
+        ? buildProcedenciaPersistence("plantilla_verificada", {
+            plantillaId:
+              PLANTILLAS_VENTORA_PROYECTANTE[
+                input.item.plantillaVerificadaId ?? "L32"
+              ].sourceReferenceId,
+          })
       : buildProcedenciaPersistence("base_ventora", {
           tipologica: input.item.tipologia,
           hojas: input.item.hojas,

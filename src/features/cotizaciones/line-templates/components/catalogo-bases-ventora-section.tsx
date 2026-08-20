@@ -36,7 +36,9 @@ export function CatalogoBasesVentoraSection({
   if (recommendations.length === 0) return null;
 
   const plantillas = recommendations.filter(
-    (entry) => entry.kind === "plantilla_ventora"
+    (entry) =>
+      entry.kind === "plantilla_ventora" ||
+      entry.kind === "plantilla_verificada"
   );
   const bases = recommendations.filter(
     (entry) => entry.kind === "base_estructural"
@@ -55,7 +57,10 @@ export function CatalogoBasesVentoraSection({
             Plantillas
           </span>
           <h2>Empieza más rápido</h2>
-          <p>Usa una plantilla con ajustes conocidos o una base estructural y adáptala a tu taller.</p>
+          <p>
+            Ventora prepara los perfiles habituales. Revisa las medidas de fabricación
+            antes de activar.
+          </p>
         </div>
         {shouldCollapseByDefault ? (
           <button
@@ -73,7 +78,7 @@ export function CatalogoBasesVentoraSection({
       {expanded ? (
         <div className={s.basesDiscoverStacks}>
           {plantillas.length > 0 ? (
-            <div className={s.basesDiscoverGrid} aria-label="Plantillas Ventora con ajustes">
+            <div className={s.basesDiscoverGrid} aria-label="Plantillas Ventora">
               {plantillas.map((recommendation) => (
                 <article
                   key={recommendation.id}

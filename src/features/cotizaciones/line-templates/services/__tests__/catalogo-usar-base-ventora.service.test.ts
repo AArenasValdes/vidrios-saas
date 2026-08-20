@@ -6,6 +6,7 @@ import {
   listarBasesVentoraParaCatalogo,
   listarInicioRapidoCatalogo,
   listarPlantillasVentoraParaCatalogo,
+  listarPlantillasVerificadasVentoraParaCatalogo,
 } from "@/features/cotizaciones/line-templates/services/catalogo-usar-base-ventora.service";
 
 describe("catalogo inicio rápido Ventora", () => {
@@ -16,9 +17,12 @@ describe("catalogo inicio rápido Ventora", () => {
       "L5000",
       "L20",
       "L25",
+      "L32 · Proyectante",
+      "L42 · Proyectante",
       "Corredera · 2 hojas",
     ]);
     expect(listarPlantillasVentoraParaCatalogo()).toHaveLength(3);
+    expect(listarPlantillasVerificadasVentoraParaCatalogo()).toHaveLength(2);
     expect(listarBasesVentoraParaCatalogo()).toHaveLength(1);
     expect(items[0]).toMatchObject({
       kind: "plantilla_ventora",
@@ -28,6 +32,13 @@ describe("catalogo inicio rápido Ventora", () => {
       subtitle: "Corredera · 2 hojas",
     });
     expect(items[3]).toMatchObject({
+      kind: "plantilla_verificada",
+      title: "L32 · Proyectante",
+      badge: "Base estructural",
+      meta: "Pendiente validar medidas de taller",
+      actionLabel: "Usar plantilla",
+    });
+    expect(items[5]).toMatchObject({
       kind: "base_estructural",
       badge: "Base estructural",
       meta: "Ajustes por confirmar",

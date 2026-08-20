@@ -1,4 +1,8 @@
 import {
+  crearRecetaPlantillaVentoraProyectante,
+  PLANTILLAS_VENTORA_PROYECTANTE,
+} from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
+import {
   COMMERCIAL_SUGGESTED_TEMPLATES,
   createCommercialSuggestedRecipe,
 } from "@/features/cotizaciones/line-templates/types/fabrication-recipe-commercial-templates";
@@ -150,7 +154,23 @@ const RECOGNIZED_WITHOUT_RULES: BibliotecaRecetaSugerida[] = [
   crearDefinicion: null,
 }));
 
+const VENTORA_PROYECTANTE_TEMPLATES: BibliotecaRecetaSugerida[] = (
+  Object.keys(PLANTILLAS_VENTORA_PROYECTANTE) as Array<
+    keyof typeof PLANTILLAS_VENTORA_PROYECTANTE
+  >
+).map((plantillaId) => ({
+  id: `ventora:plantilla-verificada-${plantillaId.toLowerCase()}`,
+  proveedor: "Ventora",
+  linea: plantillaId,
+  variante: "Proyectante",
+  tipologia: "proyectante",
+  estado: "sugerida",
+  motivoPendiente: null,
+  crearDefinicion: () => crearRecetaPlantillaVentoraProyectante(plantillaId),
+}));
+
 export const BIBLIOTECA_RECETAS_PRIORIZADAS: BibliotecaRecetaSugerida[] = [
   ...ALAR_TEMPLATES,
+  ...VENTORA_PROYECTANTE_TEMPLATES,
   ...RECOGNIZED_WITHOUT_RULES,
 ];
