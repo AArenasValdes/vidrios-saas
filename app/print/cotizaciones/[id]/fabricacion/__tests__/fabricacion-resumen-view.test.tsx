@@ -14,6 +14,7 @@ import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotiz
 import {
   FabricacionResumenView,
   formatBarCutsLabel,
+  formatTirasNecesariasLabel,
   groupBarsByProfile,
   isUnassignedProfileLabel,
 } from "../fabricacion-resumen-view";
@@ -221,7 +222,7 @@ describe("FabricacionResumenView", () => {
     expect(screen.queryByRole("button", { name: "Ocultar detalle de V2" })).not.toBeInTheDocument();
   });
 
-  it("muestra en la vista las cantidades reales por perfil", () => {
+  it("muestra tiras agrupadas por perfil con jerarquía clara", () => {
     const item = workflowItem(
       "item-real-bars",
       "V1",
@@ -237,7 +238,7 @@ describe("FabricacionResumenView", () => {
             barLengthMm: 6000,
             usedMm: 5982,
             wasteMm: 18,
-            cuts: [],
+            cuts: [{ label: "5001", functionLabel: "Riel superior", quantity: 1, lengthMm: 5982, totalLinealMm: 5982 }],
           },
           {
             index: 2,
@@ -246,7 +247,7 @@ describe("FabricacionResumenView", () => {
             barLengthMm: 6000,
             usedMm: 3994,
             wasteMm: 2006,
-            cuts: [],
+            cuts: [{ label: "5001", functionLabel: "Riel superior", quantity: 1, lengthMm: 3994, totalLinealMm: 3994 }],
           },
           {
             index: 3,
@@ -255,7 +256,7 @@ describe("FabricacionResumenView", () => {
             barLengthMm: 6000,
             usedMm: 5982,
             wasteMm: 18,
-            cuts: [],
+            cuts: [{ label: "5002", functionLabel: "Riel inferior", quantity: 1, lengthMm: 5982, totalLinealMm: 5982 }],
           },
         ],
       })
@@ -263,9 +264,13 @@ describe("FabricacionResumenView", () => {
 
     render(<ViewHarness extraItems={[item]} />);
 
-    expect(screen.getByText("5001 · Tira 1")).toBeInTheDocument();
-    expect(screen.getByText("5001 · Tira 2")).toBeInTheDocument();
-    expect(screen.getByText("5002 · Tira 3")).toBeInTheDocument();
+    expect(screen.getByText("5001 · Riel superior")).toBeInTheDocument();
+    expect(screen.getByText("5002 · Riel inferior")).toBeInTheDocument();
+    expect(screen.getByText("Tira 1")).toBeInTheDocument();
+    expect(screen.getByText("Tira 2")).toBeInTheDocument();
+    expect(screen.getByText("Tira 3")).toBeInTheDocument();
+    expect(screen.getAllByText("Tiras necesarias").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("3 × 6,00 m").length).toBeGreaterThan(0);
   });
 
   it("muestra código y nombre propios del snapshot, o Por asignar si no existe código", () => {
@@ -359,6 +364,14 @@ describe("helpers de fabricación", () => {
     expect(groups[1]).toMatchObject({ label: "Riel inferior", code: "5002" });
     expect(groups[1]?.bars).toHaveLength(1);
     expect(groups.reduce((sum, group) => sum + group.bars.length, 0)).toBe(3);
+  });
+
+  it("formatea tiras necesarias con largo comercial resuelto", () => {
+    expect(
+      formatTirasNecesariasLabel(7, [
+        { index: 1, usedMm: 1900, wasteMm: 4050, barLengthMm: 5950, cuts: [] },
+      ])
+    ).toBe("7 × 5,95 m");
   });
 
   it("usa la identidad de los cortes en snapshots legacy y marca barras mixtas", () => {

@@ -609,39 +609,51 @@
 }
 
 .pautaGroupHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 2px;
-}
-
-.pautaGroupHead div {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  min-width: 0;
+  margin-bottom: 4px;
 }
 
 .pautaGroupHead strong {
+  display: block;
   min-width: 0;
-  overflow: hidden;
   color: #12325a;
   font-size: 12.5px;
   font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.pautaGroupHead > span {
-  color: #6b7b91;
-  font-size: 11px;
+.barList li.pautaBarRow {
+  display: grid;
+  gap: 3px;
+  padding: 7px 0 8px;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.pautaBarTitle {
+  color: #12325a;
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+.pautaBarMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: baseline;
+  font-size: 12.5px;
+}
+
+.pautaBarMeta span {
+  color: #35506f;
+  font-variant-numeric: tabular-nums;
+}
+
+.pautaBarMeta em {
+  color: #5d7190;
+  font-style: normal;
   font-weight: 700;
   white-space: nowrap;
 }
 
-.barList li {
+.barList li:not(.pautaBarRow) {
   display: grid;
   grid-template-columns: 58px minmax(0, 1fr) minmax(0, 1fr) auto;
   gap: 8px 10px;

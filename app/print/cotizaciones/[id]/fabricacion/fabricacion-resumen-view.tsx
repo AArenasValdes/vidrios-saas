@@ -62,6 +62,96 @@ export function formatBarCutsLabel(count: number) {
   return `${count} ${count === 1 ? "corte" : "cortes"}`;
 }
 
+export function formatCommercialBarLengthMeters(barLengthMm: number) {
+  return (barLengthMm / 1000).toLocaleString("es-CL", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+export function resolveCommercialBarLengthMm(
+  bars: CotizacionLineTemplateCuttingBar[]
+): number | null {
+  if (bars.length === 0) return null;
+
+  const lengths = bars
+    .map((bar) => {
+      if (typeof bar.barLengthMm === "number" && bar.barLengthMm > 0) {
+        return bar.barLengthMm;
+      }
+      const inferred = bar.usedMm + bar.wasteMm;
+      return inferred > 0 ? inferred : null;
+    })
+    .filter((value): value is number => typeof value === "number" && value > 0);
+
+  if (lengths.length === 0) return null;
+
+  const counts = new Map<number, number>();
+  lengths.forEach((length) => {
+    counts.set(length, (counts.get(length) ?? 0) + 1);
+  });
+
+  let dominant = lengths[0]!;
+  let dominantCount = 0;
+  counts.forEach((count, length) => {
+    if (count > dominantCount) {
+      dominant = length;
+      dominantCount = count;
+    }
+  });
+
+  return dominant;
+}
+
+export function formatTirasNecesariasLabel(
+  barCount: number,
+  bars: CotizacionLineTemplateCuttingBar[]
+) {
+  const barLengthMm = resolveCommercialBarLengthMm(bars);
+  if (barLengthMm) {
+    return `${barCount} × ${formatCommercialBarLengthMeters(barLengthMm)} m`;
+  }
+  return String(barCount);
+}
+
+export function formatPautaProfileHeading(code: string, label: string) {
+  const resolvedCode =
+    code && !isUnassignedProfileLabel(code) ? code : "Por asignar";
+  const resolvedLabel = normalizeProfileText(label);
+  if (resolvedCode !== "Por asignar" && resolvedLabel) {
+    return `${resolvedCode} · ${resolvedLabel}`;
+  }
+  if (resolvedLabel) return resolvedLabel;
+  return resolvedCode;
+}
+
+export function formatBarUsedDetail(bar: CotizacionLineTemplateCuttingBar) {
+  if (bar.cuts.length === 0) {
+    return `${formatMm(bar.usedMm)} usados`;
+  }
+
+  if (bar.cuts.length === 1) {
+    const cut = bar.cuts[0]!;
+    const qty = cut.quantity > 0 ? cut.quantity : 1;
+    return qty > 1
+      ? `${formatMm(cut.lengthMm)} × ${qty}`
+      : `${formatMm(cut.lengthMm)} usados`;
+  }
+
+  const byLength = new Map<number, number>();
+  bar.cuts.forEach((cut) => {
+    const qty = cut.quantity > 0 ? cut.quantity : 1;
+    byLength.set(cut.lengthMm, (byLength.get(cut.lengthMm) ?? 0) + qty);
+  });
+
+  if (byLength.size === 1) {
+    const [length, qty] = Array.from(byLength.entries())[0]!;
+    return qty > 1 ? `${formatMm(length)} × ${qty}` : `${formatMm(length)} usados`;
+  }
+
+  return `${formatMm(bar.usedMm)} usados`;
+}
+
 export { isUnassignedProfileLabel };
 
 export function isValidatedFabricationStatus(label: string) {
@@ -192,11 +282,13 @@ function StatusBadge({ label }: { label: string }) {
 }
 
 function CubicacionMetrics({ row }: { row: FabricationSummaryItem }) {
+  const tirasLabel = formatTirasNecesariasLabel(row.barCount, row.snapshot.bars);
+
   return (
     <div className={s.cubicMetrics}>
       <div>
         <span>Perfiles</span>
-        <strong>{formatMl(row.profilesMl)}</strong>
+        <strong>{formatMl(row.profilesMl)} utilizados</strong>
       </div>
       <div>
         <span>Vidrio</span>
@@ -207,8 +299,8 @@ function CubicacionMetrics({ row }: { row: FabricationSummaryItem }) {
         <strong>{row.accessoryUnits} unidades</strong>
       </div>
       <div>
-        <span>Tiras reales</span>
-        <strong>{row.barCount}</strong>
+        <span>Tiras necesarias</span>
+        <strong>{tirasLabel}</strong>
       </div>
     </div>
   );
@@ -249,26 +341,39 @@ function DespieceTable({ row }: { row: FabricationSummaryItem }) {
 
 function PautaRows({ row }: { row: FabricationSummaryItem }) {
   if (row.snapshot.bars.length === 0) {
-    return <p className={s.pautaEmpty}>Esta pieza aún no tiene tiras sugeridas.</p>;
+    return <p className={s.pautaEmpty}>Esta pieza aún no tiene pauta de tiras.</p>;
   }
 
+  const groups = groupBarsByProfile(row.snapshot.bars);
+
   return (
-    <ul className={s.barList}>
-      {row.snapshot.bars.map((bar, index) => {
-        const identity = resolveBarIdentity(bar);
-        return (
-          <li key={`${row.itemId}-bar-${bar.index}`}>
-            <strong>
-              {identity.code ? `${identity.code} · ` : ""}
-              Tira {index + 1}
-            </strong>
-            <span>Usado {formatMm(bar.usedMm)}</span>
-            <span>Sobra {formatMm(bar.wasteMm)}</span>
-            <em>{formatBarCutsLabel(bar.cuts.length)}</em>
-          </li>
-        );
-      })}
-    </ul>
+    <div className={s.pautaGroups}>
+      {groups.map((group) => (
+        <section key={group.key} className={s.pautaGroup} aria-label={group.label}>
+          <header className={s.pautaGroupHead}>
+            <strong>{formatPautaProfileHeading(group.code, group.label)}</strong>
+          </header>
+          <ul className={s.barList}>
+            {group.bars.map((bar) => {
+              const cutCount = bar.cuts.reduce(
+                (sum, cut) => sum + (cut.quantity > 0 ? cut.quantity : 1),
+                0
+              );
+              return (
+                <li key={`${row.itemId}-bar-${bar.index}`} className={s.pautaBarRow}>
+                  <strong className={s.pautaBarTitle}>Tira {bar.index}</strong>
+                  <div className={s.pautaBarMeta}>
+                    <span>{formatBarUsedDetail(bar)}</span>
+                    <span>{formatMm(bar.wasteMm)} sobrantes</span>
+                    <em>{formatBarCutsLabel(cutCount || bar.cuts.length)}</em>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
+    </div>
   );
 }
 
@@ -371,7 +476,7 @@ export function FabricacionResumenView({
           </div>
           <div>
             <LuRuler aria-hidden />
-            <span>Tiras sugeridas</span>
+            <span>Tiras necesarias</span>
             <strong>{summary.totalBars}</strong>
           </div>
           <div>
@@ -440,8 +545,8 @@ export function FabricacionResumenView({
                       <dd>{row.accessoryUnits}</dd>
                     </div>
                     <div>
-                      <dt>Tiras</dt>
-                      <dd>{row.barCount}</dd>
+                      <dt>Tiras nec.</dt>
+                      <dd>{formatTirasNecesariasLabel(row.barCount, row.snapshot.bars)}</dd>
                     </div>
                   </dl>
 
@@ -500,7 +605,8 @@ export function FabricacionResumenView({
                       <span>3.</span> Pauta de corte
                     </h3>
                     <p className={s.blockHint}>
-                      Pauta sugerida de tiras. Verificar medidas en obra antes de cortar.
+                      Cómo distribuir los cortes en las tiras. Verificar medidas en obra
+                      antes de cortar.
                     </p>
                     <PautaRows row={row} />
                   </section>
