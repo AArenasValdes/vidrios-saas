@@ -9,11 +9,11 @@ import type {
 } from "@/features/fabricacion/types/fabricacion-domain";
 import {
   createTallerPerfilRef,
-  profileReferenceLabel,
   splitTallerPerfilCatalog,
   type TallerPerfilRef,
   upsertStoredTallerPerfil,
 } from "@/features/fabricacion/services/taller-perfiles.service";
+import { profileManufacturerCodeLabel } from "@/features/fabricacion/services/fabricacion-receta-codigos.service";
 
 import s from "./fabricacion-workspace.module.css";
 
@@ -21,6 +21,7 @@ type Props = {
   profile: FabricacionComponentePerfil;
   recipe: FabricacionReceta;
   catalog: TallerPerfilRef[];
+  suggestedProfiles?: TallerPerfilRef[];
   readOnly?: boolean;
   onSelect: (perfil: TallerPerfilRef) => void;
 };
@@ -29,6 +30,7 @@ export function RecipeProfileReferencePicker({
   profile,
   recipe,
   catalog,
+  suggestedProfiles = [],
   readOnly = false,
   onSelect,
 }: Props) {
@@ -41,11 +43,19 @@ export function RecipeProfileReferencePicker({
   const [largo, setLargo] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const label = profileReferenceLabel(profile) || "Por asignar";
+  const manufacturerCode = profileManufacturerCodeLabel(profile);
+  const label = manufacturerCode || "Por asignar";
   const { recent, others } = useMemo(
     () => splitTallerPerfilCatalog({ catalog, recipe }),
     [catalog, recipe]
   );
+  const suggestedCatalog = useMemo(() => {
+    const usedIds = new Set([
+      ...recent.map((entry) => entry.id),
+      ...others.map((entry) => entry.id),
+    ]);
+    return suggestedProfiles.filter((entry) => !usedIds.has(entry.id));
+  }, [others, recent, suggestedProfiles]);
 
   useEffect(() => {
     if (!open) return;
@@ -116,7 +126,7 @@ export function RecipeProfileReferencePicker({
           setError(null);
         }}
       >
-        <span data-empty={!profileReferenceLabel(profile)}>{label}</span>
+        <span data-empty={!manufacturerCode}>{label}</span>
       </button>
 
       {open ? (
@@ -128,6 +138,28 @@ export function RecipeProfileReferencePicker({
         >
           {mode === "list" ? (
             <>
+              {suggestedCatalog.length > 0 ? (
+                <div className={s.recipeBuildPickerGroup}>
+                  <p>Sugeridos plantilla Ventora</p>
+                  <ul>
+                    {suggestedCatalog.map((entry) => (
+                      <li key={entry.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onSelect(entry);
+                            setOpen(false);
+                          }}
+                        >
+                          <strong>{entry.codigoComercial || entry.nombre}</strong>
+                          <small>{entry.nombre}</small>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
               {recent.length > 0 ? (
                 <div className={s.recipeBuildPickerGroup}>
                   <p>Usados en esta línea</p>

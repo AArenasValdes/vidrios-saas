@@ -54,6 +54,11 @@ import {
   reorderFabricacionItems,
 } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
+import {
+  buildPlantillaSuggestedPerfilRefs,
+  profileManufacturerCodeLabel,
+  resolvePlantillaVentoraIdForRecipe,
+} from "@/features/fabricacion/services/fabricacion-receta-codigos.service";
 import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
 import {
   applyLargoToAllProfiles,
@@ -76,9 +81,8 @@ import {
   resolveTiraEstandarRecetaLabel,
   type FabricacionSheetGroupId,
 } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
-import {
-  type CotizacionLineTemplateMaterial,
-} from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import type { CotizacionLineTemplateMaterial } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import type { FabricationRecipeSourceType } from "@/features/fabricacion/types/fabricacion-persistence";
 import {
   FABRICACION_BASES_MEDIDA,
   FABRICACION_REGLAS_CANTIDAD,
@@ -349,6 +353,8 @@ type Props = {
   providerOptions?: string[];
   /** Otras recetas del taller para reutilizar perfiles y largos frecuentes. */
   workshopRecipes?: FabricacionReceta[];
+  sourceType?: FabricationRecipeSourceType;
+  sourceReference?: string | null;
   startMode?: "ventora" | "ai" | "blank";
   preferAiAssist?: boolean;
   readOnly?: boolean;
@@ -372,6 +378,8 @@ export function RecipeGuidedEditor({
   material = "Aluminio",
   providerOptions = [],
   workshopRecipes = [],
+  sourceType = "manual",
+  sourceReference = null,
   startMode,
   preferAiAssist = false,
   readOnly = false,
@@ -480,6 +488,16 @@ export function RecipeGuidedEditor({
       ),
     [recipe, workshopRecipes]
   );
+
+  const plantillaSuggestedProfiles = useMemo(() => {
+    const plantillaId = resolvePlantillaVentoraIdForRecipe({
+      sourceType,
+      sourceReference,
+      lineName,
+      receta: recipe,
+    });
+    return plantillaId ? buildPlantillaSuggestedPerfilRefs(plantillaId) : [];
+  }, [lineName, recipe, sourceReference, sourceType]);
 
   const frequentLargos = useMemo(
     () => collectFrequentLargosMm([recipe, ...workshopRecipes]),
@@ -1077,6 +1095,7 @@ export function RecipeGuidedEditor({
                 profile={profile}
                 recipe={recipe}
                 catalog={tallerPerfilCatalog}
+                suggestedProfiles={plantillaSuggestedProfiles}
                 readOnly={readOnly}
                 onSelect={(tallerPerfil) =>
                   assignTallerPerfil(profile.id, tallerPerfil)
@@ -2069,6 +2088,7 @@ export function RecipeGuidedEditor({
                 <div className={s.fabPieceCols} aria-hidden="true">
                   <span />
                   <span>Pieza</span>
+                  <span>Código</span>
                   <span>Descuento</span>
                   <span>Tira</span>
                   <span />
@@ -2192,6 +2212,12 @@ export function RecipeGuidedEditor({
                           {tallerResumen.cortesMedida}
                         </span>
                       </div>
+                      <span
+                        className={s.fabPieceCode}
+                        data-empty={!profileManufacturerCodeLabel(profile)}
+                      >
+                        {profileManufacturerCodeLabel(profile) || "—"}
+                      </span>
                       <span
                         className={s.fabPieceDiscount}
                         data-pending={

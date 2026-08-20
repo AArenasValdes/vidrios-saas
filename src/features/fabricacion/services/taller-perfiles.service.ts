@@ -76,10 +76,10 @@ export function profileReferenceLabel(
     "nombrePerfil" | "codigoPerfil" | "tallerPerfilId"
   >
 ): string {
-  const name = profile.nombrePerfil.trim();
-  if (name) return name;
   const code = profile.codigoPerfil.trim();
   if (code) return code;
+  const name = profile.nombrePerfil.trim();
+  if (name) return name;
   return "";
 }
 

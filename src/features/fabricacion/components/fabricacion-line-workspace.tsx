@@ -47,6 +47,7 @@ import {
   VENTORA_LARGO_COMERCIAL_PRESET_MM,
 } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import { applyLargoToProfilesWithoutLength } from "@/features/fabricacion/services/taller-perfiles.service";
+import { enriquecerCodigosPerfilRecetaFabricacion } from "@/features/fabricacion/services/fabricacion-receta-codigos.service";
 import type {
   FabricacionEntradaCalculo,
   FabricacionReceta,
@@ -541,7 +542,14 @@ export function FabricacionLineWorkspace({
 
   const openEditor = useCallback((recipe: FabricationRecipeRecord, step: RecipeWorkflowStepId = "base") => {
     setSelectedId(recipe.id);
-    setDraft(cloneRecipe(recipe.definition));
+    setDraft(
+      enriquecerCodigosPerfilRecetaFabricacion({
+        receta: cloneRecipe(recipe.definition),
+        sourceType: recipe.sourceType,
+        sourceReference: recipe.sourceReference,
+        lineName: recipe.lineName,
+      })
+    );
     setProviderName(recipe.providerName);
     setLineName(recipe.lineName);
     setLineMaterial(template?.material ?? "Aluminio");
@@ -1117,6 +1125,8 @@ export function FabricacionLineWorkspace({
               material={lineMaterial}
               providerOptions={providerOptions}
               startMode={recipeStartMode}
+              sourceType={selected?.sourceType}
+              sourceReference={selected?.sourceReference ?? null}
               readOnly={readOnly}
               desktopActiveStep="base"
               onRecipeChange={setDraft}
@@ -1204,6 +1214,8 @@ export function FabricacionLineWorkspace({
               lineName={lineName}
               readOnly={readOnly}
               startMode={recipeStartMode}
+              sourceType={selected?.sourceType}
+              sourceReference={selected?.sourceReference ?? null}
               preferAiAssist={false}
               desktopActiveStep={editorStep}
               pautaInput={selectedTests[0]?.input ?? null}

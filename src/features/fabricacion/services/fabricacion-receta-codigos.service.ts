@@ -4,8 +4,15 @@ import {
   type CommercialProfileFunction,
 } from "@/features/cotizaciones/line-templates/types/fabrication-recipe-commercial-templates";
 import type { PlantillaVentoraCorrederaId } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
+import {
+  createTallerPerfilRef,
+  type TallerPerfilRef,
+} from "@/features/fabricacion/services/taller-perfiles.service";
 import { resolveProcedenciaFromSource } from "@/features/fabricacion/types/fabricacion-receta-procedencia";
-import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
+import type {
+  FabricacionComponentePerfil,
+  FabricacionReceta,
+} from "@/features/fabricacion/types/fabricacion-domain";
 import type { FabricationRecipeSourceType } from "@/features/fabricacion/types/fabricacion-persistence";
 
 const FUNCTION_KEY_BY_LABEL: Record<string, CommercialProfileFunction> = {
@@ -113,6 +120,29 @@ export function enriquecerCodigosPerfilPlantillaVentora(
   });
 
   return changed ? { ...receta, perfiles } : receta;
+}
+
+export function profileManufacturerCodeLabel(
+  profile: Pick<FabricacionComponentePerfil, "codigoPerfil">
+): string {
+  return profile.codigoPerfil.trim();
+}
+
+export function recipeProfileCodesComplete(receta: FabricacionReceta) {
+  return receta.perfiles.every((profile) => profile.codigoPerfil.trim());
+}
+
+export function buildPlantillaSuggestedPerfilRefs(
+  plantillaId: PlantillaVentoraCorrederaId
+): TallerPerfilRef[] {
+  const catalog = COMMERCIAL_TEMPLATE_PROFILE_CATALOG[plantillaId];
+  return Object.values(catalog.defaults).map((option) =>
+    createTallerPerfilRef({
+      id: `plantilla-${plantillaId.toLowerCase()}-${option.code}`,
+      nombre: option.label,
+      codigoComercial: option.code,
+    })
+  );
 }
 
 export function enriquecerCodigosPerfilRecetaFabricacion(input: {

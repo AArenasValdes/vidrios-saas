@@ -9067,7 +9067,7 @@
 .fabPieceCols,
 .fabPrepFlow .fabPieceRow {
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) 88px 64px 52px 118px;
+  grid-template-columns: 18px minmax(0, 1fr) 52px 88px 64px 52px 118px;
   gap: 0 10px;
   align-items: center;
   width: 100%;
@@ -9086,12 +9086,25 @@
   border-bottom: 1px solid var(--fab-line);
 }
 
-.fabPieceCols > span:nth-child(3),
 .fabPieceCols > span:nth-child(4),
+.fabPieceCols > span:nth-child(5),
 .fabPieceDiscount,
 .fabPieceTira {
   text-align: right;
   justify-self: stretch;
+}
+
+.fabPieceCode {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #111827;
+  letter-spacing: 0.02em;
+}
+
+.fabPieceCode[data-empty="true"] {
+  color: #8a96a6;
+  font-weight: 600;
 }
 
 .fabPrepFlow article.fabPieceRow {
@@ -9666,15 +9679,15 @@
 
   .fabPrepFlow .fabPieceRow,
   .fabPieceCols {
-    grid-template-columns: 18px minmax(0, 1fr) minmax(84px, auto) auto;
+    grid-template-columns: 18px minmax(0, 1fr) 44px minmax(72px, auto) auto;
   }
 
   .fabPieceTira,
   .fabPrepBadgeSpacer,
   .fabPrepBadge,
-  .fabPieceCols span:nth-child(4),
   .fabPieceCols span:nth-child(5),
-  .fabPieceCols span:nth-child(6) {
+  .fabPieceCols span:nth-child(6),
+  .fabPieceCols span:nth-child(7) {
     display: none;
   }
 

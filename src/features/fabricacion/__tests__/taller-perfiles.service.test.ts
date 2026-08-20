@@ -6,6 +6,7 @@ import {
   applyTallerPerfilToComponent,
   collectFrequentLargosMm,
   createTallerPerfilRef,
+  profileReferenceLabel,
   resolvePerfilMaterialKey,
 } from "@/features/fabricacion/services/taller-perfiles.service";
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
@@ -59,6 +60,16 @@ function baseRecipe(): FabricacionReceta {
 }
 
 describe("taller-perfiles.service", () => {
+  it("prioriza el código comercial sobre el nombre al rotular referencia", () => {
+    expect(
+      profileReferenceLabel({
+        codigoPerfil: "5001",
+        nombrePerfil: "Riel superior",
+        tallerPerfilId: null,
+      })
+    ).toBe("5001");
+  });
+
   it("crea perfil rápido sin código y reutiliza la misma identidad en dos funciones", () => {
     const tallerPerfil = createTallerPerfilRef({
       nombre: "Perfil hoja L5000",
