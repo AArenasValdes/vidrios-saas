@@ -270,6 +270,44 @@ describe("FabricacionResumenView", () => {
     expect(screen.getByText("Tira 2 de 2")).toBeInTheDocument();
     expect(screen.getByText("Tira 1 de 1")).toBeInTheDocument();
   });
+
+  it("muestra código y nombre propios del snapshot, o Por asignar si no existe código", () => {
+    const item = workflowItem(
+      "item-profile-code",
+      "V1",
+      "Ventana corredera",
+      "Otra línea",
+      "Aluminio",
+      snapshot({
+        cuts: [
+          {
+            label: "RS01",
+            profileCode: "RS01",
+            profileName: "Riel superior propio",
+            functionLabel: "Riel superior",
+            quantity: 1,
+            lengthMm: 1200,
+            totalLinealMm: 1200,
+          },
+          {
+            label: "Por asignar",
+            functionLabel: "Riel inferior",
+            quantity: 1,
+            lengthMm: 1200,
+            totalLinealMm: 1200,
+          },
+        ],
+      })
+    );
+
+    render(<ViewHarness extraItems={[item]} />);
+
+    expect(screen.getByRole("columnheader", { name: "Código" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Perfil" })).toBeInTheDocument();
+    expect(screen.getByText("RS01")).toBeInTheDocument();
+    expect(screen.getByText("Riel superior propio")).toBeInTheDocument();
+    expect(screen.getAllByText("Por asignar").length).toBeGreaterThan(0);
+  });
 });
 
 describe("helpers de fabricación", () => {

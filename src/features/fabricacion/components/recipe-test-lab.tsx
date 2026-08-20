@@ -51,7 +51,7 @@ function groupBarrasByPerfil(barras: FabricacionBarraPauta[]) {
     }
     groups.set(key, {
       key,
-      label: bar.nombrePerfil.trim() || bar.codigoPerfil,
+      label: bar.nombrePerfil.trim() || "Perfil",
       largoComercialMm: bar.largoComercialMm,
       barras: [bar],
     });
@@ -633,9 +633,9 @@ export function RecipeTestLab({
                   {barPlan?.barras.length ? (
                     <ul className={s.fabPautaCutList}>
                       {barPlan.barras.map((bar) => (
-                        <li key={`${bar.codigoPerfil}-${bar.indice}`}>
+                        <li key={`${bar.materialKey ?? bar.codigoPerfil}-${bar.indice}`}>
                           <strong>
-                            {bar.nombrePerfil || bar.codigoPerfil} · Tira{" "}
+                            {bar.nombrePerfil || "Perfil"} · {bar.codigoPerfil || "Por asignar"} · Tira{" "}
                             {bar.indice} ·{" "}
                             {bar.largoComercialMm.toLocaleString("es-CL")} mm
                           </strong>

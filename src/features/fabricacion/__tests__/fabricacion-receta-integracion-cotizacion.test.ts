@@ -3,6 +3,7 @@ import { serializeCubicationSnapshot } from "@/features/cotizaciones/line-templa
 import { RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO } from "@/features/fabricacion/fixtures/receta-corredera-dos-hojas.fixture";
 import {
   construirSnapshotFabricacionCotizacion,
+  fabricacionSnapshotMatchesCalculatedOutput,
 } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
 import { resolverRecetaFabricacionCompatible } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
@@ -229,5 +230,60 @@ describe("integracion receta fabricacion -> cotizacion", () => {
     expect(summary.totalProfilesMl).toBeGreaterThan(0);
     expect(legacy.bars.every((bar) => bar.profileCode)).toBe(true);
     expect(legacy.bars.some((bar) => bar.profileCode === "EJ-RS")).toBe(true);
+    expect(legacy.cuts[0]).toMatchObject({
+      profileCode: "EJ-RS",
+      profileName: "Riel superior ejemplo",
+    });
+  });
+
+  it("propaga un código propio y detecta su cambio aunque las medidas no cambien", () => {
+    const definition = validatedDefinition();
+    definition.perfiles = definition.perfiles.map((profile) =>
+      profile.funcion === "Riel superior"
+        ? {
+            ...profile,
+            tallerPerfilId: "taller-profile-1",
+            codigoPerfil: "AL-20-01",
+            nombrePerfil: "Riel superior aluminio 20",
+          }
+        : profile
+    );
+    const original = construirSnapshotFabricacionCotizacion({
+      recipe: recipeRecord({ definition }),
+      entrada: {
+        anchoTotalMm: 1200,
+        altoTotalMm: 1000,
+        cantidad: 1,
+        hojas: 2,
+        modulos: 2,
+        variante: "estandar",
+      },
+    });
+    const changedDefinition = {
+      ...definition,
+      perfiles: definition.perfiles.map((profile) =>
+        profile.funcion === "Riel superior"
+          ? { ...profile, codigoPerfil: "RS01" }
+          : profile
+      ),
+    };
+    const changed = construirSnapshotFabricacionCotizacion({
+      recipe: recipeRecord({ definition: changedDefinition }),
+      entrada: original.input,
+    });
+    const legacy = fabricacionSnapshotToLegacyCubicationSnapshot(changed);
+
+    expect(original.pauta.find((row) => row.funcion === "Riel superior")?.codigoPerfil).toBe(
+      "AL-20-01"
+    );
+    expect(changed.pautaBarras?.barras.find((bar) => bar.codigoPerfil === "RS01")).toMatchObject({
+      materialKey: "taller-profile-1",
+      nombrePerfil: "Riel superior aluminio 20",
+    });
+    expect(legacy.cuts.find((cut) => cut.profileCode === "RS01")).toMatchObject({
+      profileName: "Riel superior aluminio 20",
+    });
+    expect(fabricacionSnapshotMatchesCalculatedOutput(original, changed)).toBe(false);
+    expect(fabricacionSnapshotMatchesCalculatedOutput(changed, changed)).toBe(true);
   });
 });

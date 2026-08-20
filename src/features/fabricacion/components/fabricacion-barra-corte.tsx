@@ -50,7 +50,8 @@ export function FabricacionBarraCorte({
       : []),
   ];
 
-  const label = bar.nombrePerfil.trim() || bar.codigoPerfil || "Perfil";
+  const label = bar.nombrePerfil.trim() || "Perfil";
+  const code = bar.codigoPerfil.trim() || "Por asignar";
 
   return (
     <article
@@ -63,6 +64,8 @@ export function FabricacionBarraCorte({
         <header className={s.fabCutBarHeader}>
           <strong>
             {label}
+            {" · "}
+            {code}
             {" · "}
             Tira {bar.indice}
             {tirasCount && tirasCount > 1 ? ` de ${tirasCount}` : ""}
@@ -144,7 +147,7 @@ export function FabricacionPerfilTirasVisual({
       <div className={s.fabPerfilTirasBars}>
         {barras.map((bar, index) => (
           <FabricacionBarraCorte
-            key={`${bar.codigoPerfil}-${bar.indice}`}
+            key={`${bar.materialKey ?? bar.codigoPerfil}-${bar.indice}`}
             bar={bar}
             tirasCount={tiras}
             index={startIndex + index}

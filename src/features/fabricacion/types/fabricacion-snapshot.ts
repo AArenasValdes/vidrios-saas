@@ -21,6 +21,8 @@ export type FabricacionCorteBarra = {
 };
 
 export type FabricacionBarraPauta = {
+  /** Clave interna para agrupar material real; nunca se muestra como código comercial. */
+  materialKey?: string;
   codigoPerfil: string;
   nombrePerfil: string;
   indice: number;

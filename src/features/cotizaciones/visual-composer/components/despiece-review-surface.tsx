@@ -39,6 +39,7 @@ import {
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
+import { fabricacionSnapshotMatchesCalculatedOutput } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import {
   resolveFabricacionDespieceForQuoteItem,
   type FabricacionDespieceCotizacionResult,
@@ -426,19 +427,9 @@ export function DespieceReviewSurface({
       if (!resolution || resolution.estado !== "calculado" || !resolution.formal) {
         return;
       }
-      const current = item.fabricacionSnapshot;
-      const alreadySynced =
-        current?.recipeId === resolution.formal.recipeId &&
-        current?.recipeVersion === resolution.formal.recipeVersion &&
-        current?.input.anchoTotalMm === resolution.formal.input.anchoTotalMm &&
-        current?.input.altoTotalMm === resolution.formal.input.altoTotalMm &&
-        current?.input.cantidad === resolution.formal.input.cantidad &&
-        current?.result.totalLinealMm === resolution.formal.result.totalLinealMm &&
-        Boolean(current?.pautaBarras?.calculable) ===
-          Boolean(resolution.formal.pautaBarras?.calculable) &&
-        (current?.pautaBarras?.barras.length ?? 0) ===
-          (resolution.formal.pautaBarras?.barras.length ?? 0);
-      if (alreadySynced) return;
+      if (fabricacionSnapshotMatchesCalculatedOutput(item.fabricacionSnapshot, resolution.formal)) {
+        return;
+      }
       onUpdateItem(item.id, {
         fabricacionSnapshot: resolution.formal,
         cubicationSnapshot: resolution.cubication,

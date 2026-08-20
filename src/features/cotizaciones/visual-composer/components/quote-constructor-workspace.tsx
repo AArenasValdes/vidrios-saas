@@ -1,6 +1,9 @@
 "use client";
 
 import {
+  fabricacionSnapshotMatchesCalculatedOutput,
+} from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
+import {
   useEffect,
   useMemo,
   useRef,
@@ -547,15 +550,10 @@ export function QuoteConstructorWorkspace({
     ) {
       return;
     }
-    const current = activeItem.fabricacionSnapshot;
     const next = activeFabricationResolution.formal;
-    const alreadySynced =
-      current?.recipeId === next.recipeId &&
-      current?.input.anchoTotalMm === next.input.anchoTotalMm &&
-      current?.input.altoTotalMm === next.input.altoTotalMm &&
-      current?.input.cantidad === next.input.cantidad &&
-      current?.result.totalLinealMm === next.result.totalLinealMm;
-    if (alreadySynced) return;
+    if (fabricacionSnapshotMatchesCalculatedOutput(activeItem.fabricacionSnapshot, next)) {
+      return;
+    }
     onUpdateItem(activeItem.id, {
       fabricacionSnapshot: next,
       cubicationSnapshot: activeFabricationResolution.cubication,

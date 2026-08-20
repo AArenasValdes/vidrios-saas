@@ -1763,9 +1763,12 @@ export function RecipeGuidedEditor({
             {pautaPreview?.barras.length ? (
               <div className={s.barPlanList}>
                 {pautaPreview.barras.map((bar) => (
-                  <article className={s.barRow} key={`${bar.codigoPerfil}-${bar.indice}`}>
+                  <article
+                    className={s.barRow}
+                    key={`${bar.materialKey ?? bar.codigoPerfil}-${bar.indice}`}
+                  >
                     <div className={s.barLabel}>
-                      <strong>Barra {bar.indice} · {bar.codigoPerfil}</strong>
+                      <strong>Barra {bar.indice} · {bar.codigoPerfil || "Por asignar"}</strong>
                       <span>{bar.largoComercialMm.toLocaleString("es-CL")} mm</span>
                     </div>
                     <div className={s.barTrack} aria-label={`Cortes de barra ${bar.indice}`}>

@@ -87,7 +87,7 @@ function resolveBarIdentity(bar: CotizacionLineTemplateCuttingBar) {
   const cutLabels = Array.from(
     new Set(
       bar.cuts
-        .map((cut) => normalizeProfileText(cut.label))
+        .map((cut) => normalizeProfileText(cut.profileCode) || normalizeProfileText(cut.label))
         .filter((label) => label && !isUnassignedProfileLabel(label))
     )
   );
@@ -98,6 +98,8 @@ function resolveBarIdentity(bar: CotizacionLineTemplateCuttingBar) {
       ? ""
       : cutLabels[0] ?? "";
   const functionLabel = normalizeProfileText(
+    bar.cuts.find((cut) => normalizeProfileText(cut.profileName))?.profileName
+  ) || normalizeProfileText(
     bar.cuts.find((cut) => normalizeProfileText(cut.functionLabel))?.functionLabel
   );
   const explicitName = normalizeProfileText(bar.profileName);
@@ -245,8 +247,8 @@ function DespieceTable({ row }: { row: FabricationSummaryItem }) {
       <table className={s.cutsTable}>
         <thead>
           <tr>
+            <th>Código</th>
             <th>Perfil</th>
-            <th>Función</th>
             <th>Medida</th>
             <th>Cant.</th>
             <th>Total lineal</th>
@@ -254,12 +256,13 @@ function DespieceTable({ row }: { row: FabricationSummaryItem }) {
         </thead>
         <tbody>
           {row.snapshot.cuts.map((cut, index) => {
-            const profile = cut.label || "Por asignar";
-            const unassigned = isUnassignedProfileLabel(profile);
+            const code = cut.profileCode?.trim() || cut.label || "Por asignar";
+            const unassigned = isUnassignedProfileLabel(code);
+            const profile = cut.profileName?.trim() || cut.functionLabel || "—";
             return (
               <tr key={`${row.itemId}-${cut.label}-${index}`}>
-                <td className={unassigned ? s.profileMuted : undefined}>{profile}</td>
-                <td className={s.functionCell}>{cut.functionLabel || "—"}</td>
+                <td className={unassigned ? s.profileMuted : undefined}>{code}</td>
+                <td className={s.functionCell}>{profile}</td>
                 <td>{formatMm(cut.lengthMm)}</td>
                 <td>{cut.quantity}</td>
                 <td>{formatMm(cut.totalLinealMm)}</td>

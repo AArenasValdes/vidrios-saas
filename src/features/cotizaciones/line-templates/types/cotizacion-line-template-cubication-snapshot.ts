@@ -131,6 +131,8 @@ function parseCut(value: unknown): CotizacionLineTemplateCut | null {
   const label = typeof value.label === "string" ? value.label.trim() : "";
   const functionLabel =
     typeof value.functionLabel === "string" ? value.functionLabel.trim() : "";
+  const profileCode = normalizeMetadataText(value.profileCode);
+  const profileName = normalizeMetadataText(value.profileName);
   const quantity = normalizePositiveInteger(value.quantity, 0);
   const lengthMm = normalizePositiveInteger(value.lengthMm, 0);
   if (!label || !functionLabel || quantity <= 0 || lengthMm <= 0) return null;
@@ -144,6 +146,8 @@ function parseCut(value: unknown): CotizacionLineTemplateCut | null {
     quantity,
     lengthMm,
     totalLinealMm: normalizePositiveInteger(value.totalLinealMm, lengthMm * quantity),
+    ...(profileCode ? { profileCode } : {}),
+    ...(profileName ? { profileName } : {}),
     ...(measureExplanation ? { measureExplanation } : {}),
   };
 }

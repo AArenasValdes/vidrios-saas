@@ -696,7 +696,8 @@ export function aplicarAjustesPlantillaVentora(
         .trim();
       return {
         ...profile,
-        // Código sugerido editable; el taller puede reemplazarlo o quitarlo.
+        // Solo aplica referencias documentadas de la plantilla elegida; el taller
+        // puede reemplazarlas o quitarlas, sin heredar códigos de otra línea.
         codigoPerfil: profile.codigoPerfil || profileDefault?.code || "",
         nombrePerfil:
           profile.nombrePerfil || profileDefault?.label || profile.funcion,

@@ -115,4 +115,28 @@ describe("pauta referencial de barras", () => {
       result.advertencias.some((entry) => entry.codigo === "PAUTA_BARRAS_INCOMPLETA")
     ).toBe(false);
   });
+
+  it("mantiene el código comercial de receta aunque use una identidad interna de taller", () => {
+    const definition = recipe();
+    definition.perfiles[0] = {
+      ...definition.perfiles[0]!,
+      tallerPerfilId: "perfil-taller-interno-42",
+      codigoPerfil: "RS01",
+      nombrePerfil: "Riel superior propio",
+    };
+    const result = construirPautaBarrasFabricacion({
+      receta: definition,
+      resultado: calcularCubicacionYPauta(definition, input),
+    });
+
+    expect(result.barras).toHaveLength(2);
+    expect(result.barras[0]).toMatchObject({
+      materialKey: "perfil-taller-interno-42",
+      codigoPerfil: "RS01",
+      nombrePerfil: "Riel superior propio",
+    });
+    expect(result.barras.flatMap((barra) => barra.cortes)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ codigoPerfil: "RS01" })])
+    );
+  });
 });

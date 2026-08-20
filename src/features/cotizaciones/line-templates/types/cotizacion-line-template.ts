@@ -202,6 +202,10 @@ export type CotizacionLineTemplateCuttingRules = {
 export type CotizacionLineTemplateCut = {
   label: string;
   functionLabel: string;
+  /** Referencia comercial persistida. Los snapshots anteriores pueden no traerla. */
+  profileCode?: string;
+  /** Nombre de perfil persistido, separado de la función de corte. */
+  profileName?: string;
   quantity: number;
   lengthMm: number;
   totalLinealMm: number;

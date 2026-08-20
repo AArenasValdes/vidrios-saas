@@ -15,14 +15,18 @@ describe("código comercial opcional y largo progresivo", () => {
     const recipe = crearRecetaPlantillaVentoraCorredera2H("L5000", {
       createId: () => `opt-${nextId++}`,
     });
+    const recipeWithoutCodes = {
+      ...recipe,
+      perfiles: recipe.perfiles.map((profile) => ({ ...profile, codigoPerfil: "" })),
+    };
 
-    expect(recipe.perfiles.every((profile) => !profile.codigoPerfil.trim())).toBe(
+    expect(recipeWithoutCodes.perfiles.every((profile) => !profile.codigoPerfil.trim())).toBe(
       true
     );
-    expect(contarBloqueosCriticosReceta(recipe)).toBe(0);
-    expect(tieneLargosComercialesPendientes(recipe)).toBe(false);
+    expect(contarBloqueosCriticosReceta(recipeWithoutCodes)).toBe(0);
+    expect(tieneLargosComercialesPendientes(recipeWithoutCodes)).toBe(false);
 
-    const resultado = calcularCubicacionYPauta(recipe, {
+    const resultado = calcularCubicacionYPauta(recipeWithoutCodes, {
       anchoTotalMm: 1200,
       altoTotalMm: 1000,
       cantidad: 1,
@@ -34,7 +38,7 @@ describe("código comercial opcional y largo progresivo", () => {
     expect(resultado.totalLinealMm).toBe(10714);
 
     const validation = validarRecetaFabricacion({
-      ...recipe,
+      ...recipeWithoutCodes,
       estado: "validada",
     });
     expect(validation.ok).toBe(true);
@@ -53,8 +57,12 @@ describe("código comercial opcional y largo progresivo", () => {
     const recipe = crearRecetaPlantillaVentoraCorredera2H("L5000", {
       createId: () => `bar-${nextId++}`,
     });
+    const recipeWithoutCodes = {
+      ...recipe,
+      perfiles: recipe.perfiles.map((profile) => ({ ...profile, codigoPerfil: "" })),
+    };
 
-    const resultado = calcularCubicacionYPauta(recipe, {
+    const resultado = calcularCubicacionYPauta(recipeWithoutCodes, {
       anchoTotalMm: 1200,
       altoTotalMm: 1000,
       cantidad: 1,
@@ -63,7 +71,7 @@ describe("código comercial opcional y largo progresivo", () => {
       variante: "estandar",
     });
     const pauta = construirPautaBarrasFabricacion({
-      receta: recipe,
+      receta: recipeWithoutCodes,
       resultado,
     });
 
@@ -78,6 +86,10 @@ describe("código comercial opcional y largo progresivo", () => {
     const recipe = crearRecetaPlantillaVentoraCorredera2H("L5000", {
       createId: () => `act-${nextId++}`,
     });
+    const recipeWithoutCodes = {
+      ...recipe,
+      perfiles: recipe.perfiles.map((profile) => ({ ...profile, codigoPerfil: "" })),
+    };
     const input = {
       anchoTotalMm: 1200,
       altoTotalMm: 1000,
@@ -86,7 +98,7 @@ describe("código comercial opcional y largo progresivo", () => {
       modulos: 2,
       variante: "estandar" as const,
     };
-    const output = calcularCubicacionYPauta(recipe, input);
+    const output = calcularCubicacionYPauta(recipeWithoutCodes, input);
     const tests = [
       {
         id: "t1",
@@ -105,6 +117,6 @@ describe("código comercial opcional y largo progresivo", () => {
       },
     ] satisfies FabricationRecipeTestRecord[];
 
-    expect(isRecipeReadyToActivate(recipe, tests)).toBe(true);
+    expect(isRecipeReadyToActivate(recipeWithoutCodes, tests)).toBe(true);
   });
 });

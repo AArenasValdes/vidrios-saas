@@ -26,8 +26,12 @@ export function fabricacionSnapshotToLegacyCubicationSnapshot(
     quantity: snapshot.input.cantidad,
     capturedAt: snapshot.calculatedAt,
     cuts: snapshot.pauta.map((row) => ({
-      label: row.codigoPerfil.trim() || row.nombrePerfil.trim() || "Por asignar",
+      // El label queda por compatibilidad con snapshots legacy. La identidad
+      // explícita evita que el nombre de perfil se presente como código.
+      label: row.codigoPerfil.trim() || "Por asignar",
       functionLabel: row.funcion,
+      profileCode: row.codigoPerfil.trim(),
+      profileName: row.nombrePerfil.trim() || row.funcion,
       quantity: row.cantidadPiezas,
       lengthMm: row.medidaMm,
       totalLinealMm: row.totalLinealMm,
@@ -41,8 +45,9 @@ export function fabricacionSnapshotToLegacyCubicationSnapshot(
       profileName: barra.nombrePerfil,
       barLengthMm: barra.largoComercialMm,
       cuts: barra.cortes.map((corte) => ({
-        label: corte.codigoPerfil,
+        label: corte.codigoPerfil.trim() || "Por asignar",
         functionLabel: corte.funcion,
+        profileCode: corte.codigoPerfil.trim(),
         quantity: 1,
         lengthMm: corte.largoMm,
         totalLinealMm: corte.largoMm,

@@ -13,6 +13,9 @@ import { resolveLargoComercialMm } from "@/features/fabricacion/services/fabrica
 
 type CorteExpandido = {
   componenteId: string;
+  /** Identidad interna del material para no mezclar barras de perfiles distintos. */
+  materialKey: string;
+  /** Referencia comercial visible que viene de la receta. */
   codigoPerfil: string;
   nombrePerfil: string;
   funcion: string;
@@ -76,13 +79,16 @@ export function construirPautaBarrasFabricacion(input: {
       return;
     }
 
-    // Misma identidad de perfil de taller = mismo material de barra.
-    const barraKey = resolvePerfilMaterialKey(perfil);
+    // La clave de material sirve solo para calcular/agrupar barras. El código
+    // mostrado al maestro sigue siendo la referencia configurada en receta.
+    const materialKey = resolvePerfilMaterialKey(perfil);
+    const codigoPerfil = perfil.codigoPerfil.trim();
 
     for (let index = 0; index < fila.cantidadPiezas; index += 1) {
       cortes.push({
         componenteId: fila.componenteId,
-        codigoPerfil: barraKey,
+        materialKey,
+        codigoPerfil,
         nombrePerfil: perfil.nombrePerfil.trim() || fila.nombrePerfil || fila.funcion,
         funcion: fila.funcion,
         largoMm: fila.medidaMm,
@@ -110,17 +116,20 @@ export function construirPautaBarrasFabricacion(input: {
 
     const existente = barras.find(
       (barra) =>
-        barra.codigoPerfil === corte.codigoPerfil &&
+        (barra.materialKey ?? barra.codigoPerfil) === corte.materialKey &&
         barra.largoComercialMm === corte.largoComercialMm &&
         barra.usadoMm + consumo <= barra.largoComercialMm
     );
     const barra =
       existente ??
       ({
+        materialKey: corte.materialKey,
         codigoPerfil: corte.codigoPerfil,
         nombrePerfil: corte.nombrePerfil,
         indice:
-          barras.filter((entry) => entry.codigoPerfil === corte.codigoPerfil)
+          barras.filter(
+            (entry) => (entry.materialKey ?? entry.codigoPerfil) === corte.materialKey
+          )
             .length + 1,
         largoComercialMm: corte.largoComercialMm,
         despunteInicialMm: configuracion.despunteInicialMm,
