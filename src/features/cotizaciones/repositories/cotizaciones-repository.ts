@@ -8,6 +8,7 @@ import type {
 } from "@/features/cotizaciones/types/cotizacion-item";
 import type { EntityId } from "@/types/common";
 import { normalizeQuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
+import { normalizeQuoteCreationSurface } from "@/features/cotizaciones/types/quote-creation-surface";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import { parseQuoteRegionSnapshot } from "@/features/organization-region/services/quote-region-snapshot.service";
 
@@ -45,6 +46,7 @@ type CotizacionRow = {
   financial_snapshot_calculado_en: string | null;
   cost_basis_status: string | null;
   pricing_mode?: string | null;
+  creation_surface?: string | null;
   estado_comercial: string | null;
   approval_token: string | null;
   approval_token_expires_at: string | null;
@@ -109,11 +111,11 @@ type CotizacionItemBreakdownRow = {
 };
 
 const COTIZACION_DETAIL_SELECT =
-  "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, costo_materiales_total, costo_mano_obra_total, costo_traslado_total, costo_otros_total, merma_pct, merma_total, margen_objetivo_pct, precio_recomendado_neto, iva_pct, financial_snapshot_version, financial_snapshot_calculado_en, cost_basis_status, pricing_mode, estado_comercial, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, pdf_descargado_en, regional_snapshot, solicitud_id, creado_en, total";
+  "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, costo_materiales_total, costo_mano_obra_total, costo_traslado_total, costo_otros_total, merma_pct, merma_total, margen_objetivo_pct, precio_recomendado_neto, iva_pct, financial_snapshot_version, financial_snapshot_calculado_en, cost_basis_status, pricing_mode, creation_surface, estado_comercial, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, pdf_descargado_en, regional_snapshot, solicitud_id, creado_en, total";
 const COTIZACION_DETAIL_SELECT_LEGACY =
   "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, estado_comercial, creado_en, total";
 const COTIZACION_LIST_SELECT =
-  "id, proyecto_id, organization_id, numero, estado, pricing_mode, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, pdf_descargado_en, creado_en, actualizado_en, total";
+  "id, proyecto_id, organization_id, numero, estado, pricing_mode, creation_surface, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, pdf_descargado_en, creado_en, actualizado_en, total";
 const COTIZACION_LIST_SELECT_LEGACY =
   "id, proyecto_id, organization_id, numero, estado, creado_en, actualizado_en, total";
 const COTIZACION_ITEM_SELECT =
@@ -420,6 +422,7 @@ function mapCotizacion(row: CotizacionRow): Cotizacion {
     financialSnapshotCalculadoEn: row.financial_snapshot_calculado_en ?? null,
     costBasisStatus: row.cost_basis_status ?? null,
     pricingMode: normalizeQuotePricingMode(row.pricing_mode),
+    creationSurface: normalizeQuoteCreationSurface(row.creation_surface),
     estadoComercial: row.estado_comercial ?? null,
     approvalToken: row.approval_token ?? null,
     approvalTokenExpiresAt: row.approval_token_expires_at ?? null,
@@ -648,6 +651,7 @@ function buildCotizacionUpdatePayload(input: CrearCotizacionInput) {
     financial_snapshot_calculado_en: input.financialSnapshotCalculadoEn ?? null,
     cost_basis_status: input.costBasisStatus ?? null,
     pricing_mode: input.pricingMode ?? "por_item",
+    creation_surface: input.creationSurface ?? null,
     estado_comercial: input.estadoComercial ?? null,
     approval_token: input.approvalToken ?? null,
     approval_token_expires_at: input.approvalTokenExpiresAt ?? null,
@@ -691,6 +695,7 @@ function stripLegacyCotizacionExtensionFields(payload: CotizacionWritePayload) {
     financial_snapshot_calculado_en: financialSnapshotCalculadoEn,
     cost_basis_status: costBasisStatus,
     solicitud_id: solicitudId,
+    creation_surface: creationSurface,
     ...legacyPayload
   } = payload;
 
@@ -712,6 +717,7 @@ function stripLegacyCotizacionExtensionFields(payload: CotizacionWritePayload) {
   void financialSnapshotCalculadoEn;
   void costBasisStatus;
   void solicitudId;
+  void creationSurface;
 
   return legacyPayload;
 }
@@ -834,6 +840,7 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
       financialSnapshotCalculadoEn: snapshot.financialSnapshotCalculadoEn,
       costBasisStatus: snapshot.costBasisStatus,
       pricingMode: snapshot.pricingMode,
+      creationSurface: snapshot.creationSurface ?? null,
       estadoComercial: snapshot.estadoComercial,
       approvalToken: snapshot.approvalToken,
       approvalTokenExpiresAt: snapshot.approvalTokenExpiresAt,

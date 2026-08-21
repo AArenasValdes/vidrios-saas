@@ -1,6 +1,7 @@
 import type { EntityId } from "@/types/common";
 import type { CotizacionItem, CrearCotizacionItemInput } from "./cotizacion-item";
 import type { QuotePricingMode } from "./quote-pricing-mode";
+import type { QuoteCreationSurface } from "./quote-creation-surface";
 import type { QuoteRegionSnapshot } from "@/features/organization-region/types/quote-region-snapshot";
 
 export type EstadoCotizacion =
@@ -40,6 +41,7 @@ export type Cotizacion = {
   financialSnapshotCalculadoEn?: string | null;
   costBasisStatus?: "sin_costos" | "estimado" | "manual" | string | null;
   pricingMode: QuotePricingMode;
+  creationSurface?: QuoteCreationSurface | null;
   estadoComercial: string | null;
   approvalToken: string | null;
   approvalTokenExpiresAt: string | null;
@@ -83,6 +85,7 @@ export type CrearCotizacionInput = {
   financialSnapshotCalculadoEn?: string | null;
   costBasisStatus?: "sin_costos" | "estimado" | "manual" | string | null;
   pricingMode?: QuotePricingMode;
+  creationSurface?: QuoteCreationSurface | null;
   estadoComercial?: string | null;
   approvalToken?: string | null;
   approvalTokenExpiresAt?: string | null;

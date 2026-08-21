@@ -2,6 +2,8 @@ import {
   buildAcquisitionFunnel,
   buildAcquisitionKpis,
   buildChannelRows,
+  buildMarketingQuoteUsage,
+  buildMarketingQuoteUsageKpis,
   countProspectsWithOriginInPeriod,
   hasAcquisitionMeasurementBase,
   normalizeMarketingChannel,
@@ -114,5 +116,27 @@ describe("admin-marketing.logic", () => {
     expect(channels.rows.every((row) => row.prospects > 0)).toBe(true);
     expect(channels.rows.some((row) => row.id === "instagram")).toBe(true);
     expect(channels.rows.some((row) => row.id === "facebook")).toBe(false);
+  });
+
+  it("separa rápida por ítems del histórico no clasificable", () => {
+    const usage = buildMarketingQuoteUsage([
+      { pricingMode: "por_item", creationSurface: "desktop_rapida", pdfDownloadedAt: "2026-06-10" },
+      { pricingMode: "por_item", creationSurface: "desktop_guiada", pdfDownloadedAt: null },
+      { pricingMode: "por_item", creationSurface: null, pdfDownloadedAt: null },
+      { pricingMode: "total_global", creationSurface: "total_global", pdfDownloadedAt: null },
+    ]);
+
+    expect(usage).toMatchObject({
+      totalQuotes: 4,
+      itemQuotes: 3,
+      rapidItemQuotes: 1,
+      rapidItemPdfs: 1,
+      historicalUnclassifiedItemQuotes: 1,
+    });
+
+    const quickPdf = buildMarketingQuoteUsageKpis({ usage, period }).find(
+      (item) => item.id === "quick_pdf"
+    );
+    expect(quickPdf?.displayValue).toBe("100%");
   });
 });

@@ -79,6 +79,7 @@ type PasoDosSeccionProps = {
   onClosePieceEditors?: () => void;
   isSaving?: boolean;
   preferredWorkspaceMode?: QuoteDesktopWorkspaceMode | null;
+  onDesktopWorkspaceModeChange?: (mode: QuoteDesktopWorkspaceMode) => void;
 };
 
 export function PasoDosSeccion({
@@ -107,6 +108,7 @@ export function PasoDosSeccion({
   onClosePieceEditors,
   isSaving = false,
   preferredWorkspaceMode = null,
+  onDesktopWorkspaceModeChange,
 }: PasoDosSeccionProps) {
   const [isCambiarModoDialogOpen, setIsCambiarModoDialogOpen] = useState(false);
   const [isFullBudgetPreviewOpen, setIsFullBudgetPreviewOpen] = useState(false);
@@ -159,7 +161,20 @@ export function PasoDosSeccion({
     }
     setDesktopWorkspaceMode(mode);
     writeQuoteDesktopWorkspaceModePreference(mode);
+    onDesktopWorkspaceModeChange?.(mode);
   };
+
+  useEffect(() => {
+    if (!isMobileViewport && quoteModeChosen && quotePricingMode === "por_item") {
+      onDesktopWorkspaceModeChange?.(desktopWorkspaceMode);
+    }
+  }, [
+    desktopWorkspaceMode,
+    isMobileViewport,
+    onDesktopWorkspaceModeChange,
+    quoteModeChosen,
+    quotePricingMode,
+  ]);
 
   useEffect(() => {
     if (

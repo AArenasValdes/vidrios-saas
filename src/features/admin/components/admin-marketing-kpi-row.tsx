@@ -4,10 +4,12 @@ import type { ComponentType } from "react";
 import {
   LuArrowUpRight,
   LuBadgePercent,
+  LuFileText,
   LuGlobe,
   LuMegaphone,
   LuTarget,
   LuUsers,
+  LuZap,
 } from "react-icons/lu";
 
 import type { MarketingKpi } from "@/features/admin/types/admin-marketing";
@@ -24,6 +26,10 @@ const KPI_ICONS: Record<string, ComponentType<{ className?: string; "aria-hidden
   public_requests: LuMegaphone,
   clients_with_requests: LuUsers,
   pending_review: LuTarget,
+  real_quotes: LuFileText,
+  items_quotes: LuFileText,
+  quick_items: LuZap,
+  quick_pdf: LuBadgePercent,
 };
 
 type AdminMarketingKpiRowProps = {

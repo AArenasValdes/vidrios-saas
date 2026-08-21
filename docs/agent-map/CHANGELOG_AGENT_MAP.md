@@ -86,6 +86,14 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-08-21 - Métrica de superficie de cotización en Marketing
+
+- `cotizaciones.creation_surface` registra solo creaciones nuevas como rápida desktop, guiada desktop, móvil por ítems o total global; histórico queda nulo, sin inferencias.
+- `/admin/marketing` suma un bloque de adopción del cotizador y excluye dinámicamente cualquier cuenta marcada `is_test_account`.
+- La métrica rápida por ítems no reemplaza `pricing_mode`: ambos datos se conservan para distinguir precio por ítems de la superficie usada para crearlo.
+
+---
+
 ## 2026-08-13 - Billing LATAM Fase 5 snapshots regionales de cotizacion
 
 - Migracion remota `20260813023403_billing_phase_5_quote_region_snapshots.sql`: `cotizaciones.regional_snapshot jsonb` con CHECK de objeto, sin tablas ni policies nuevas.

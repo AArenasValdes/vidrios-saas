@@ -54,6 +54,7 @@ import {
   normalizeQuotePricingMode,
   type QuotePricingMode,
 } from "@/features/cotizaciones/types/quote-pricing-mode";
+import type { QuoteCreationSurface } from "@/features/cotizaciones/types/quote-creation-surface";
 import {
   buildItemFromForm,
   buildNextComponentCode,
@@ -673,6 +674,13 @@ function NuevaCotizacionPageContent() {
   ) => {
     if (mode === quotePricingMode) {
       setQuoteModeChosen(true);
+      if (isMobileViewport) {
+        setDraft((current) => ({
+          ...current,
+          quoteCreationSurface:
+            mode === "total_global" ? "total_global" : "mobile_por_items",
+        }));
+      }
       if (mode === "por_item" && draft.items.length === 0 && (!isMobileViewport || quoteModeChosen)) {
         handleOpenAddGroupSheet();
       }
@@ -691,6 +699,12 @@ function NuevaCotizacionPageContent() {
     setDraft((current) => ({
       ...current,
       quotePricingMode: mode,
+      quoteCreationSurface:
+        mode === "total_global"
+          ? "total_global"
+          : isMobileViewport
+            ? "mobile_por_items"
+            : current.quoteCreationSurface,
       totalClienteManual: null,
       costoTotalFabricacion: 0,
       margenGlobalPct: 0,
@@ -712,6 +726,16 @@ function NuevaCotizacionPageContent() {
     if (isMobileViewport && mode === "por_item" && draft.items.length === 0 && quoteModeChosen) {
       handleOpenAddGroupSheet();
     }
+  };
+
+  const handleDesktopWorkspaceModeChange = (mode: "rapida" | "guiada") => {
+    const surface: QuoteCreationSurface =
+      mode === "rapida" ? "desktop_rapida" : "desktop_guiada";
+    setDraft((current) =>
+      current.quoteCreationSurface === surface
+        ? current
+        : { ...current, quoteCreationSurface: surface }
+    );
   };
 
   const handleGlobalTotalClienteChange = (value: string) => {
@@ -3186,6 +3210,7 @@ function goNextFromStep1() {
             },
             isSaving,
             preferredWorkspaceMode: requestedConstructorEntry ? "rapida" : null,
+            onDesktopWorkspaceModeChange: handleDesktopWorkspaceModeChange,
           }}
           stepThreeProps={{ ...flujo.propsPasoTres, saveIntent: pasoTresGuardado.saveIntent }}
           sideSummaryProps={flujo.propsResumenDesktop}

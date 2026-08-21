@@ -7,6 +7,8 @@ import {
   buildAcquisitionKpis,
   buildChannelRows,
   buildMarketingPeriodSummary,
+  buildMarketingQuoteUsage,
+  buildMarketingQuoteUsageKpis,
   buildMeasurementGaps,
   buildPublicCompanyRows,
   buildPublicPageKpis,
@@ -17,6 +19,7 @@ import {
   QUOTES_FROM_REQUESTS_AVAILABLE,
   resolveMarketingPeriodWindow,
   SOLICITUD_REVISION_STATE_AVAILABLE,
+  type MarketingQuoteUsageRow,
 } from "@/features/admin/services/admin-marketing.logic";
 import {
   fetchPublicChannelSummaries,
@@ -42,6 +45,36 @@ type LinkedQuoteRow = {
   organization_id: number;
   solicitud_id: string | null;
 };
+
+type QuoteUsageRow = {
+  pricing_mode: string | null;
+  creation_surface: MarketingQuoteUsageRow["creationSurface"];
+  pdf_descargado_en: string | null;
+};
+
+async function fetchQuoteUsage(
+  organizationIds: number[],
+  period: { start: string; end: string }
+): Promise<MarketingQuoteUsageRow[]> {
+  if (organizationIds.length === 0) return [];
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("cotizaciones")
+    .select("pricing_mode, creation_surface, pdf_descargado_en")
+    .in("organization_id", organizationIds)
+    .is("eliminado_en", null)
+    .gte("creado_en", period.start)
+    .lte("creado_en", period.end);
+
+  if (error) throw error;
+
+  return ((data ?? []) as QuoteUsageRow[]).map((row) => ({
+    pricingMode: row.pricing_mode,
+    creationSurface: row.creation_surface ?? null,
+    pdfDownloadedAt: row.pdf_descargado_en,
+  }));
+}
 
 async function fetchLinkedQuotes(organizationIds: number[]) {
   if (organizationIds.length === 0) {
@@ -97,10 +130,11 @@ export async function getAdminMarketingWorkspace(input?: {
     .filter((client) => !client.isTestAccount)
     .map((client) => client.organizationId);
 
-  const [summaries, solicitudesByOrg, linkedQuotes] = await Promise.all([
+  const [summaries, solicitudesByOrg, linkedQuotes, quoteUsageRows] = await Promise.all([
     fetchPublicChannelSummaries(organizationIds),
     fetchPublicSolicitudesForOrganizations(organizationIds),
     fetchLinkedQuotes(organizationIds),
+    fetchQuoteUsage(organizationIds, period),
   ]);
 
   const prospects = ((prospectsResult.data ?? []) as ProspectRow[]).map(mapProspectRow);
@@ -146,6 +180,7 @@ export async function getAdminMarketingWorkspace(input?: {
     solicitudesByOrg,
     period,
   });
+  const quoteUsage = buildMarketingQuoteUsage(quoteUsageRows);
 
   return {
     syncedAt: new Date().toISOString(),
@@ -166,6 +201,8 @@ export async function getAdminMarketingWorkspace(input?: {
     publicCompanies,
     recentSolicitudes,
     measurementGaps,
+    quoteUsage,
+    quoteUsageKpis: buildMarketingQuoteUsageKpis({ usage: quoteUsage, period }),
     prospects,
   };
 }

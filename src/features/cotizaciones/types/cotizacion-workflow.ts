@@ -1,4 +1,5 @@
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
+import type { QuoteCreationSurface } from "@/features/cotizaciones/types/quote-creation-surface";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import type { QuoteRegionSnapshot } from "@/features/organization-region/types/quote-region-snapshot";
 
@@ -93,6 +94,7 @@ export type CotizacionWorkflowRecord = {
   redondeoComercial?: number;
   total: number;
   quotePricingMode?: QuotePricingMode;
+  quoteCreationSurface?: QuoteCreationSurface | null;
   costoTotalFabricacion?: number;
   margenGlobalPct?: number;
   utilidadTotal?: number;
@@ -115,6 +117,7 @@ export type CotizacionWorkflowDraft = {
   condicionesDePago?: string;
   items: CotizacionWorkflowItem[];
   quotePricingMode?: QuotePricingMode;
+  quoteCreationSurface?: QuoteCreationSurface | null;
   costoTotalFabricacion?: number;
   margenGlobalPct?: number;
   utilidadTotal?: number;

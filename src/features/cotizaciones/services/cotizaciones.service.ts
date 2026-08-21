@@ -1188,6 +1188,8 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
         numero: codigo,
         estado: input.estado,
         pricingMode: quotePricingMode,
+        creationSurface:
+          existingCotizacion?.creationSurface ?? input.draft.quoteCreationSurface ?? null,
         descuentoPct,
         notas: input.draft.observaciones,
         validoHasta: resolveValidoHasta(input.draft.validez),

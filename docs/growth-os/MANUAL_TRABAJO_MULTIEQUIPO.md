@@ -219,3 +219,15 @@ git checkout -- .
 [ ] Validé antes de publicar.
 [ ] Lo importante quedó documentado en el repo.
 ```
+Sí. Si ya hiciste push:
+git clone <URL_DEL_REPOSITORIO> ~/proyectos/vidrios-saas
+cd ~/proyectos/vidrios-saas
+corepack enable
+pnpm install --frozen-lockfile
+Después:
+1. Crear .env.local con tus variables seguras. No viene en Git.
+2. Si tocarás Supabase:
+supabase login
+supabase link --project-ref yrtrwgkaopfumpidjthk
+3. Abrir Codex en esa carpeta. Pegar el prompt del manual.
+No ejecutes supabase db push. No hace falta para bajar lo que ya subiste.

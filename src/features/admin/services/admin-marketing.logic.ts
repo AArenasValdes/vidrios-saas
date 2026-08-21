@@ -17,8 +17,10 @@ import type {
   MarketingPublicCompanyRow,
   MarketingPublicPrimaryAction,
   MarketingPublicRecommendedStatus,
+  MarketingQuoteUsage,
   MarketingRecentSolicitudEvent,
 } from "@/features/admin/types/admin-marketing";
+import type { QuoteCreationSurface } from "@/features/cotizaciones/types/quote-creation-surface";
 
 const MS_DAY = 24 * 60 * 60 * 1000;
 
@@ -76,6 +78,83 @@ const ALL_CHANNELS: MarketingChannelId[] = [
   "grupos",
   "otro",
 ];
+
+export type MarketingQuoteUsageRow = {
+  pricingMode: string | null;
+  creationSurface: QuoteCreationSurface | null;
+  pdfDownloadedAt: string | null;
+};
+
+export function buildMarketingQuoteUsage(rows: MarketingQuoteUsageRow[]): MarketingQuoteUsage {
+  const itemQuotes = rows.filter((row) => row.pricingMode === "por_item");
+  const rapidItemQuotes = itemQuotes.filter(
+    (row) => row.creationSurface === "desktop_rapida"
+  );
+  const classifiedItemQuotes = itemQuotes.filter((row) => row.creationSurface !== null);
+
+  return {
+    totalQuotes: rows.length,
+    itemQuotes: itemQuotes.length,
+    totalGlobalQuotes: rows.filter((row) => row.pricingMode === "total_global").length,
+    rapidItemQuotes: rapidItemQuotes.length,
+    rapidItemPdfs: rapidItemQuotes.filter((row) => row.pdfDownloadedAt !== null).length,
+    classifiedItemQuotes: classifiedItemQuotes.length,
+    historicalUnclassifiedItemQuotes: itemQuotes.length - classifiedItemQuotes.length,
+  };
+}
+
+export function buildMarketingQuoteUsageKpis(input: {
+  usage: MarketingQuoteUsage;
+  period: MarketingPeriodWindow;
+}): MarketingKpi[] {
+  const itemShare = formatPct(input.usage.itemQuotes, input.usage.totalQuotes);
+  const rapidPdfShare = formatPct(input.usage.rapidItemPdfs, input.usage.rapidItemQuotes);
+
+  return [
+    {
+      id: "real_quotes",
+      label: "Cotizaciones reales",
+      value: input.usage.totalQuotes,
+      displayValue: String(input.usage.totalQuotes),
+      subtitle: input.period.label,
+      insight: "Cuentas demo excluidas",
+      tone: "blue",
+    },
+    {
+      id: "items_quotes",
+      label: "Por ítems",
+      value: input.usage.itemQuotes,
+      displayValue: String(input.usage.itemQuotes),
+      subtitle: itemShare === null ? "Sin cotizaciones" : `${itemShare}% del uso real`,
+      insight: `${input.usage.totalGlobalQuotes} por total global`,
+      tone: "cyan",
+    },
+    {
+      id: "quick_items",
+      label: "Rápida por ítems",
+      value: input.usage.rapidItemQuotes,
+      displayValue: String(input.usage.rapidItemQuotes),
+      subtitle: "Escritorio · desde esta medición",
+      insight:
+        input.usage.classifiedItemQuotes === 0
+          ? "Aún sin datos nuevos"
+          : `${input.usage.classifiedItemQuotes} cotizaciones por ítems clasificadas`,
+      tone: "violet",
+    },
+    {
+      id: "quick_pdf",
+      label: "PDF tras rápida",
+      value: rapidPdfShare ?? 0,
+      displayValue: rapidPdfShare === null ? "—" : `${rapidPdfShare}%`,
+      subtitle: "Rápida → PDF",
+      insight:
+        input.usage.rapidItemQuotes === 0
+          ? "Esperando primeras cotizaciones rápidas"
+          : `${input.usage.rapidItemPdfs} de ${input.usage.rapidItemQuotes} con PDF`,
+      tone: "green",
+    },
+  ];
+}
 
 /** Estados reales en solicitudes_contacto.estado */
 export const SOLICITUD_REVISION_STATES = [

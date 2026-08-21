@@ -71,6 +71,7 @@ export function AdminMarketingWorkspace() {
   );
   const [activeAcquisitionKpiId, setActiveAcquisitionKpiId] = useState<string | null>(null);
   const [activePublicKpiId, setActivePublicKpiId] = useState<string | null>(null);
+  const [activeQuoteUsageKpiId, setActiveQuoteUsageKpiId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [syncedAt, setSyncedAt] = useState<string | null>(null);
@@ -399,6 +400,27 @@ export function AdminMarketingWorkspace() {
             </p>
           </article>
         )}
+      </section>
+
+      <section className={s.sectionBlock} aria-label="Uso real del cotizador">
+        <div className={s.sectionHeading}>
+          <h2>Uso real del cotizador</h2>
+          <p>Solo cuentas reales. La rápida por ítems se mide desde hoy; el histórico no se inventa.</p>
+        </div>
+
+        <AdminMarketingKpiRow
+          kpis={workspace.quoteUsageKpis}
+          activeKpiId={activeQuoteUsageKpiId}
+          ariaLabel="KPIs de adopción del cotizador"
+          onKpiClick={setActiveQuoteUsageKpiId}
+        />
+
+        {workspace.quoteUsage.historicalUnclassifiedItemQuotes > 0 ? (
+          <p className={s.funnelInsightMuted}>
+            {workspace.quoteUsage.historicalUnclassifiedItemQuotes} cotizaciones históricas por ítems
+            no distinguen rápida de guiada. Se excluyen de esa comparación.
+          </p>
+        ) : null}
       </section>
 
       <section className={s.sectionBlock} aria-label="Rendimiento de páginas públicas">

@@ -150,6 +150,16 @@ export type MarketingMeasurementGap = {
   priority: "alta" | "media" | "baja";
 };
 
+export type MarketingQuoteUsage = {
+  totalQuotes: number;
+  itemQuotes: number;
+  totalGlobalQuotes: number;
+  rapidItemQuotes: number;
+  rapidItemPdfs: number;
+  classifiedItemQuotes: number;
+  historicalUnclassifiedItemQuotes: number;
+};
+
 export type MarketingWorkspace = {
   syncedAt: string;
   period: MarketingPeriodWindow;
@@ -169,5 +179,7 @@ export type MarketingWorkspace = {
   publicCompanies: MarketingPublicCompanyRow[];
   recentSolicitudes: MarketingRecentSolicitudEvent[];
   measurementGaps: MarketingMeasurementGap[];
+  quoteUsage: MarketingQuoteUsage;
+  quoteUsageKpis: MarketingKpi[];
   prospects: MarketingProspectSnapshot[];
 };

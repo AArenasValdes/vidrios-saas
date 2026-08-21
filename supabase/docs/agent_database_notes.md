@@ -358,3 +358,12 @@ Si la respuesta a 1-4 no es sí: detenerse y reportar.
 - Un video `listo` exige URL HTTPS; no se cargaron enlaces inventados ni se alteró el flujo de cotización/PDF existente.
 - Corrección escalable: `20260820205800_growth_onboarding_automatic_defaults` agrega `es_predeterminado`; existe un único default listo por `workspace_id + dispositivo` (`movil` o `escritorio`). No crear asignaciones por empresa para el onboarding normal.
 - `20260820210606_growth_onboarding_scale_hardening` agrega índices de FKs de pilotos/eventos y descompone la policy `FOR ALL` heredada para no duplicar el SELECT de RLS.
+
+---
+
+## Addendum 2026-08-21 - Métricas de adopción del cotizador
+
+- Migración aplicada y verificada en remoto: `20260821163629_quote_creation_surface_metrics`.
+- `cotizaciones.creation_surface` es nullable y distingue `desktop_rapida`, `desktop_guiada`, `mobile_por_items` y `total_global` al crear nuevas cotizaciones. No se hace backfill: las cotizaciones anteriores quedan sin clasificación confiable.
+- No cambia RLS, grants ni ownership. El índice parcial `cotizaciones_creation_surface_active_idx` sirve al panel founder para leer adopción sin incluir soft deletes.
+- El panel `/admin/marketing` filtra primero por `organization_profile.is_test_account=false`; no excluir cuentas por correo ni nombre.
