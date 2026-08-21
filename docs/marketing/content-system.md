@@ -70,6 +70,14 @@ Temas:
 - 3 a 5 stories
 - 1 post tipo insight o texto corto
 
+## Primeras piezas para salir a vender
+
+1. Reutilizar el video de celular: `Cotiza desde la obra → PDF → WhatsApp`.
+2. Demostración de computador: `Configura líneas y precios → cotiza por ítems`.
+3. Solo después de revisar uso real: video específico de `Constructor de piezas` si hay adopción suficiente.
+
+Cada una parte en `/admin/marketing` desde una plantilla de guion. Al publicarla, completar `utm_source`, `utm_medium`, `utm_campaign` y `utm_content`; sin esos datos no se puede atribuir el resultado al contenido.
+
 ## Ideas de piezas
 
 - "Llegaste a casa y todavia tienes presupuestos pendientes"

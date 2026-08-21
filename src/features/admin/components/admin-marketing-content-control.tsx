@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { LuChevronDown, LuPlus, LuSave, LuTrash2 } from "react-icons/lu";
+import { LuChevronDown, LuMonitor, LuPlus, LuSave, LuSmartphone, LuTrash2 } from "react-icons/lu";
 
 import { useGrowthContent } from "@/features/growth/hooks/use-growth-content";
 import {
@@ -72,6 +72,49 @@ const CLAIM_LABELS = {
   aprobado: "Claim aprobado",
   bloqueado: "Claim bloqueado",
 } as const;
+
+const CONTENT_STARTERS: Array<{
+  id: string;
+  label: string;
+  description: string;
+  device: "movil" | "escritorio";
+  form: Partial<ContentForm>;
+}> = [
+  {
+    id: "cotizacion-celular",
+    label: "Demostración desde celular",
+    description: "Cotización rápida → PDF → WhatsApp.",
+    device: "movil",
+    form: {
+      contentId: "reel-cotiza-celular-01",
+      titulo: "Cotiza desde la obra y envía un PDF",
+      pilar: "demo_producto",
+      objetivo: "generar_demos",
+      hook: "¿Todavía llegas a casa a hacer presupuestos?",
+      campaignKey: "onboarding_celular",
+      utmCampaign: "onboarding_celular",
+      utmContent: "reel_cotiza_celular_01",
+      guion: "1. Nueva cotización.\n2. Cliente y precio del trabajo.\n3. Resumen y PDF.\n4. Envío por WhatsApp.\n5. CTA: Escríbeme DEMO.",
+    },
+  },
+  {
+    id: "lineas-escritorio",
+    label: "Demostración desde computador",
+    description: "Líneas y precios → cotización por ítems.",
+    device: "escritorio",
+    form: {
+      contentId: "reel-lineas-escritorio-01",
+      titulo: "Configura tus líneas y cotiza por ítems",
+      pilar: "demo_producto",
+      objetivo: "configurar_lineas",
+      hook: "Configura tu línea una vez y úsala al cotizar.",
+      campaignKey: "lineas_escritorio",
+      utmCampaign: "lineas_escritorio",
+      utmContent: "reel_lineas_escritorio_01",
+      guion: "1. Abre una línea común.\n2. Ajusta precio y datos comerciales.\n3. Crea una cotización por ítems.\n4. Muestra que también puede continuar desde el celular.\n5. CTA: Te muestro una cotización real.",
+    },
+  },
+];
 
 function emptyForm(): ContentForm {
   return {
@@ -168,6 +211,11 @@ export function AdminMarketingContentControl() {
     setComposer((current) => ({ ...current, [key]: value }));
   }
 
+  function startFromTemplate(template: (typeof CONTENT_STARTERS)[number]) {
+    setComposer({ ...emptyForm(), ...template.form });
+    setIsComposerOpen(true);
+  }
+
   function draftFor(item: GrowthContentItem) {
     return drafts[item.id] ?? itemToForm(item);
   }
@@ -226,9 +274,9 @@ export function AdminMarketingContentControl() {
     <section className={s.section} aria-label="Control editorial de marketing">
       <div className={s.heading}>
         <div>
-          <p className={s.eyebrow}>Fase A · Control editorial</p>
-          <h2>Videos, UTMs y claims en un solo lugar</h2>
-          <p>Una pieza solo puede quedar programada o publicada con sus 4 UTMs y claim aprobado.</p>
+          <p className={s.eyebrow}>Paso 2 · Publica contenido</p>
+          <h2>Crea la siguiente demostración</h2>
+          <p>Parte con un video real. Antes de programarlo, completa la UTM y revisa el claim.</p>
         </div>
         <button className={s.primaryButton} type="button" onClick={() => setIsComposerOpen((open) => !open)}>
           <LuPlus aria-hidden /> Nueva pieza
@@ -239,6 +287,24 @@ export function AdminMarketingContentControl() {
         <span><strong>{summary.total}</strong> piezas</span>
         <span><strong>{summary.ready}</strong> programadas/publicadas</span>
         <span><strong>{summary.pendingClaims}</strong> claims por revisar</span>
+      </div>
+
+      <div className={s.starters} aria-label="Piezas recomendadas para empezar">
+        <div className={s.startersCopy}>
+          <strong>No empieces desde cero</strong>
+          <span>Elige una base y deja el guion listo para editar.</span>
+        </div>
+        <div className={s.starterActions}>
+          {CONTENT_STARTERS.map((starter) => {
+            const Icon = starter.device === "movil" ? LuSmartphone : LuMonitor;
+            return (
+              <button key={starter.id} type="button" className={s.starterButton} onClick={() => startFromTemplate(starter)}>
+                <Icon aria-hidden />
+                <span><strong>{starter.label}</strong><small>{starter.description}</small></span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {actionError ? <p className={s.error}>{actionError}</p> : null}

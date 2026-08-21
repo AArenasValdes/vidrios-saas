@@ -5,17 +5,19 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { LuArrowLeft, LuCircleCheck, LuMonitor, LuPlay, LuSmartphone, LuVideo, LuX } from "react-icons/lu";
 
 import type {
-  GrowthOnboardingDevice,
   GrowthOnboardingVideo,
   GrowthOnboardingWorkspace,
 } from "@/features/growth/types/growth-onboarding";
+import {
+  ONBOARDING_VIDEO_BLUEPRINTS,
+  type AutomaticOnboardingDevice,
+} from "@/features/growth/config/onboarding-video-blueprints";
 import s from "./admin-marketing-onboarding-control.module.css";
 
-type AutomaticDevice = Exclude<GrowthOnboardingDevice, "ambos">;
 type VideoForm = { slug: string; titulo: string; resumen: string; duracionSegundos: string; videoUrl: string };
-type EditorState = { device: AutomaticDevice; video: GrowthOnboardingVideo | null };
+type EditorState = { device: AutomaticOnboardingDevice; video: GrowthOnboardingVideo | null };
 
-const DEVICE_COPY: Record<AutomaticDevice, {
+const DEVICE_COPY: Record<AutomaticOnboardingDevice, {
   label: string;
   description: string;
   Icon: typeof LuSmartphone;
@@ -32,12 +34,13 @@ const DEVICE_COPY: Record<AutomaticDevice, {
   },
 };
 
-function buildForm(device: AutomaticDevice, video: GrowthOnboardingVideo | null): VideoForm {
+function buildForm(device: AutomaticOnboardingDevice, video: GrowthOnboardingVideo | null): VideoForm {
+  const blueprint = ONBOARDING_VIDEO_BLUEPRINTS[device];
   return {
     slug: video?.slug ?? `bienvenida-${device}-v1`,
-    titulo: video?.titulo ?? (device === "movil" ? "Así cotizas desde el celular" : "Así ordenas líneas y precios en Ventora"),
-    resumen: video?.resumen ?? DEVICE_COPY[device].description,
-    duracionSegundos: String(video?.duracionSegundos ?? (device === "movil" ? 55 : 75)),
+    titulo: video?.titulo ?? blueprint.title,
+    resumen: video?.resumen ?? blueprint.summary,
+    duracionSegundos: String(video?.duracionSegundos ?? blueprint.durationSeconds),
     videoUrl: video?.videoUrl ?? "",
   };
 }
@@ -101,7 +104,7 @@ export function AdminMarketingOnboardingControl() {
     };
   }, [workspace]);
 
-  function openEditor(device: AutomaticDevice, video: GrowthOnboardingVideo | null) {
+  function openEditor(device: AutomaticOnboardingDevice, video: GrowthOnboardingVideo | null) {
     setError(null); setMessage(null); setEditor({ device, video }); setForm(buildForm(device, video));
   }
 
@@ -168,6 +171,7 @@ export function AdminMarketingOnboardingControl() {
       <section className={s.deviceGrid} aria-label="Videos predeterminados por dispositivo">
         {(["movil", "escritorio"] as const).map((device) => {
           const config = DEVICE_COPY[device]; const video = defaults.get(device) ?? null; const Icon = config.Icon;
+          const blueprint = ONBOARDING_VIDEO_BLUEPRINTS[device];
           return <article className={s.deviceCard} key={device}>
             <div className={s.deviceIcon}><Icon aria-hidden /></div>
             <div className={s.deviceHeading}><span>Ruta automática</span><h3>{config.label}</h3></div>
@@ -181,7 +185,10 @@ export function AdminMarketingOnboardingControl() {
               </div>
             </> : <>
               <strong>Aún no hay video activo</strong>
-              <p>{config.description}</p>
+              <p>{blueprint.objective}</p>
+              <ol className={s.recordingSteps}>
+                {blueprint.recordingSteps.map((step) => <li key={step}>{step}</li>)}
+              </ol>
               <button type="button" className={s.primary} onClick={() => openEditor(device, null)} disabled={isSaving}><LuVideo aria-hidden /> Configurar una vez</button>
             </>}
           </article>;

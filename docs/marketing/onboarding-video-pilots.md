@@ -28,6 +28,17 @@ Promesa narrativa:
 - Musica: baja, sobria, sin competir con la voz.
 - CTA final comun: "Prueba Ventora y cotiza mas rapido desde el celular."
 
+## Orden de grabación y asignación automática
+
+No grabar la biblioteca completa antes de activar onboarding. El primer paquete son **dos videos base**, configurados una vez en `/admin/marketing/onboarding`; Ventora muestra el correspondiente al dispositivo con el que entra cada cuenta nueva.
+
+| Prioridad | Dispositivo | Video base | Duración | Resultado que debe mostrar |
+|---|---|---|---:|---|
+| 1 | Celular | `Cotiza desde el celular y envía tu PDF` | 90 s | Nueva cotización → trabajo/precio simple → resumen → PDF y WhatsApp. |
+| 2 | Computador | `Configura líneas y cotiza por ítems` | 120 s | Línea/precio comercial → cotización por ítems → aclaración de continuidad desde celular. |
+
+El **Constructor de piezas** no es parte de la bienvenida inicial. Se graba como tercer video solo cuando el panel de `Uso real del cotizador` confirme que vale la pena priorizarlo. Los videos 3 y 4 de este documento quedan como biblioteca de ayuda/contenido, no como requisito para salir a vender.
+
 ## Pantallas reales a capturar
 
 - `/dashboard`: resumen y CTA nueva cotizacion.

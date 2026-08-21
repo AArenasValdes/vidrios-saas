@@ -282,7 +282,7 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
 
 ## Feature: Founder Growth Panel
 
-- **Que hace**: Panel privado del fundador con tabs operativas: trabajo de hoy, prospectos, clientes/pagos y marketing/tareas. Persiste en Supabase (`growth_*`) con import idempotente desde `localStorage` v3 y separa `Real`, `Manual` y `Mock`. El control editorial vive en `/admin/marketing`; muestra adopción real del cotizador excluyendo cuentas `is_test_account`, incluida rápida por ítems desde su instrumentación. Su bloque de prospectos se etiqueta como prospección saliente: no confundirlo con leads captados ni usarlo para atribuir anuncios. El onboarding automático vive en `/admin/marketing/onboarding`, sin mezclar contenido, activación y datos personales de clientes.
+- **Que hace**: Panel privado del fundador con tabs operativas: trabajo de hoy, prospectos, clientes/pagos y marketing/tareas. Persiste en Supabase (`growth_*`) con import idempotente desde `localStorage` v3 y separa `Real`, `Manual` y `Mock`. El control editorial vive en `/admin/marketing`; comienza con dos videos base de onboarding, creación de una pieza desde guiones base y uso real del cotizador; prospección y páginas públicas quedan como datos secundarios. La adopción excluye cuentas `is_test_account`, incluida rápida por ítems desde su instrumentación. Su bloque de prospectos se etiqueta como prospección saliente: no confundirlo con leads captados ni usarlo para atribuir anuncios. El onboarding automático vive en `/admin/marketing/onboarding`, sin mezclar contenido, activación y datos personales de clientes.
 - **Rutas involucradas**: `/admin/growth`, `/api/admin/growth/*`
 - **Archivos principales**:
   - `app/admin/growth/page.tsx`

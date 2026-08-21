@@ -2,6 +2,12 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-08-21 - Marketing operativo y onboarding por dispositivo
+
+- `/admin/marketing` ahora inicia con el orden operativo: preparar las dos bienvenidas, crear contenido desde guiones base y revisar uso real antes de ampliar la biblioteca.
+- `/admin/marketing/onboarding` propone por defecto los videos celular y computador, con título, duración y pasos de grabación consistentes.
+- `docs/marketing/onboarding-video-pilots.md` define los dos videos automáticos prioritarios; Constructor queda como video posterior según adopción.
+
 ## 2026-08-21 - Tablero founder: caja mensual y métricas honestas
 
 - `/admin` reemplaza la caja móvil de 30 días por mes calendario de Santiago, usando solo pagos aprobados y excluyendo cuentas de prueba.
