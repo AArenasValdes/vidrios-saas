@@ -173,7 +173,7 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 
 **Addendum 2026-08-13 - Billing Fase 5 snapshot regional:** la migracion remota `20260813023403_billing_phase_5_quote_region_snapshots.sql` agrega `regional_snapshot jsonb` y el CHECK `cotizaciones_regional_snapshot_object_check`. No crea tablas, policies ni grants. El servicio captura el perfil regional al crear la cotizacion; sus ediciones conservan el valor existente. PDF, enlace publico y WhatsApp consumen ese snapshot. Las cotizaciones antiguas sin dato mantienen CLP e IVA 19% como compatibilidad, sin leer el perfil regional actual.
 
-**Addendum 2026-08-21 - Métrica de superficie de cotización:** la migración remota `20260821163629_quote_creation_surface_metrics.sql` agrega `creation_surface` nullable con CHECK para `desktop_rapida`, `desktop_guiada`, `mobile_por_items` y `total_global`, más un índice parcial para análisis de cotizaciones activas. No toca filas históricas: `NULL` significa “sin clasificación confiable”. El panel `/admin/marketing` excluye organizaciones con `is_test_account=true`.
+**Addendum 2026-08-21 - Métrica de superficie de cotización:** la migración `20260821163629_quote_creation_surface_metrics.sql` agrega `creation_surface` nullable; la complementaria `20260821173824_quote_surface_constructor_metrics.sql` lo normaliza a `desktop_constructor`, `desktop_guiada`, `mobile_constructor`, `mobile_guiada` y `total_global`. Ambas preservan el índice parcial para análisis de cotizaciones activas. No tocan filas históricas: `NULL` significa “sin clasificación confiable”. El panel `/admin/marketing` excluye organizaciones con `is_test_account=true`.
 
 ---
 

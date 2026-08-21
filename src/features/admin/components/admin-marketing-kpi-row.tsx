@@ -28,8 +28,9 @@ const KPI_ICONS: Record<string, ComponentType<{ className?: string; "aria-hidden
   pending_review: LuTarget,
   real_quotes: LuFileText,
   items_quotes: LuFileText,
-  quick_items: LuZap,
-  quick_pdf: LuBadgePercent,
+  constructor_items: LuZap,
+  guided_items: LuFileText,
+  constructor_pdf: LuBadgePercent,
 };
 
 type AdminMarketingKpiRowProps = {

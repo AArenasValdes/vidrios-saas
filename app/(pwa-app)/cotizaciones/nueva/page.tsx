@@ -325,6 +325,12 @@ function NuevaCotizacionPageContent() {
       if (requestedConstructorEntry && isMobile) {
         setMobileCuadernoActive(true);
       }
+      if (requestedConstructorEntry) {
+        setDraft((current) => ({
+          ...current,
+          quoteCreationSurface: isMobile ? "mobile_constructor" : "desktop_constructor",
+        }));
+      }
     };
 
     syncViewport();
@@ -678,7 +684,7 @@ function NuevaCotizacionPageContent() {
         setDraft((current) => ({
           ...current,
           quoteCreationSurface:
-            mode === "total_global" ? "total_global" : "mobile_por_items",
+            mode === "total_global" ? "total_global" : "mobile_guiada",
         }));
       }
       if (mode === "por_item" && draft.items.length === 0 && (!isMobileViewport || quoteModeChosen)) {
@@ -703,7 +709,7 @@ function NuevaCotizacionPageContent() {
         mode === "total_global"
           ? "total_global"
           : isMobileViewport
-            ? "mobile_por_items"
+            ? "mobile_guiada"
             : current.quoteCreationSurface,
       totalClienteManual: null,
       costoTotalFabricacion: 0,
@@ -730,7 +736,7 @@ function NuevaCotizacionPageContent() {
 
   const handleDesktopWorkspaceModeChange = (mode: "rapida" | "guiada") => {
     const surface: QuoteCreationSurface =
-      mode === "rapida" ? "desktop_rapida" : "desktop_guiada";
+      mode === "rapida" ? "desktop_constructor" : "desktop_guiada";
     setDraft((current) =>
       current.quoteCreationSurface === surface
         ? current
@@ -3041,12 +3047,22 @@ function goNextFromStep1() {
             onRemoveItem: handleRemoveItem,
             onOpenFreeValueItemForm: handleOpenFreeValueItemForm,
             quoteModeChosen,
-            onQuoteModeChosen: () => setQuoteModeChosen(true),
+            onQuoteModeChosen: () => {
+              setQuoteModeChosen(true);
+              setDraft((current) => ({
+                ...current,
+                quoteCreationSurface: "mobile_guiada",
+              }));
+            },
             mobileCuadernoActive,
             onReturnToModeSelector: returnToModeSelector,
             onEnterCuaderno: () => {
               setQuoteModeChosen(true);
               setMobileCuadernoActive(true);
+              setDraft((current) => ({
+                ...current,
+                quoteCreationSurface: "mobile_constructor",
+              }));
             },
             cuaderno: {
               lineTemplates: activeLineTemplates,
@@ -3061,7 +3077,13 @@ function goNextFromStep1() {
                 duplicateItemInPlace(item);
               },
               onRemoveItem: handleRemoveItem,
-              onClose: () => setMobileCuadernoActive(false),
+              onClose: () => {
+                setMobileCuadernoActive(false);
+                setDraft((current) => ({
+                  ...current,
+                  quoteCreationSurface: "mobile_guiada",
+                }));
+              },
               onReturnToModeSelector: returnToModeSelector,
             },
             wizard: {

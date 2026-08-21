@@ -88,9 +88,9 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ## 2026-08-21 - Métrica de superficie de cotización en Marketing
 
-- `cotizaciones.creation_surface` registra solo creaciones nuevas como rápida desktop, guiada desktop, móvil por ítems o total global; histórico queda nulo, sin inferencias.
+- `cotizaciones.creation_surface` registra solo cotizaciones nuevas como Guiada o Constructor, diferenciando móvil y escritorio; histórico queda nulo, sin inferencias.
 - `/admin/marketing` suma un bloque de adopción del cotizador y excluye dinámicamente cualquier cuenta marcada `is_test_account`.
-- La métrica rápida por ítems no reemplaza `pricing_mode`: ambos datos se conservan para distinguir precio por ítems de la superficie usada para crearlo.
+- La métrica de superficie no reemplaza `pricing_mode`: ambos datos se conservan para distinguir precio por ítems de la superficie usada para crearlo.
 
 ---
 

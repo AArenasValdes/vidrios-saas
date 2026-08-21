@@ -87,8 +87,17 @@ export type MarketingQuoteUsageRow = {
 
 export function buildMarketingQuoteUsage(rows: MarketingQuoteUsageRow[]): MarketingQuoteUsage {
   const itemQuotes = rows.filter((row) => row.pricingMode === "por_item");
-  const rapidItemQuotes = itemQuotes.filter(
-    (row) => row.creationSurface === "desktop_rapida"
+  const constructorItemQuotes = itemQuotes.filter((row) =>
+    row.creationSurface === "mobile_constructor" || row.creationSurface === "desktop_constructor"
+  );
+  const mobileConstructorQuotes = itemQuotes.filter(
+    (row) => row.creationSurface === "mobile_constructor"
+  );
+  const desktopConstructorQuotes = itemQuotes.filter(
+    (row) => row.creationSurface === "desktop_constructor"
+  );
+  const guidedItemQuotes = itemQuotes.filter(
+    (row) => row.creationSurface === "mobile_guiada" || row.creationSurface === "desktop_guiada"
   );
   const classifiedItemQuotes = itemQuotes.filter((row) => row.creationSurface !== null);
 
@@ -96,8 +105,11 @@ export function buildMarketingQuoteUsage(rows: MarketingQuoteUsageRow[]): Market
     totalQuotes: rows.length,
     itemQuotes: itemQuotes.length,
     totalGlobalQuotes: rows.filter((row) => row.pricingMode === "total_global").length,
-    rapidItemQuotes: rapidItemQuotes.length,
-    rapidItemPdfs: rapidItemQuotes.filter((row) => row.pdfDownloadedAt !== null).length,
+    constructorItemQuotes: constructorItemQuotes.length,
+    mobileConstructorQuotes: mobileConstructorQuotes.length,
+    desktopConstructorQuotes: desktopConstructorQuotes.length,
+    guidedItemQuotes: guidedItemQuotes.length,
+    constructorItemPdfs: constructorItemQuotes.filter((row) => row.pdfDownloadedAt !== null).length,
     classifiedItemQuotes: classifiedItemQuotes.length,
     historicalUnclassifiedItemQuotes: itemQuotes.length - classifiedItemQuotes.length,
   };
@@ -108,7 +120,10 @@ export function buildMarketingQuoteUsageKpis(input: {
   period: MarketingPeriodWindow;
 }): MarketingKpi[] {
   const itemShare = formatPct(input.usage.itemQuotes, input.usage.totalQuotes);
-  const rapidPdfShare = formatPct(input.usage.rapidItemPdfs, input.usage.rapidItemQuotes);
+  const constructorPdfShare = formatPct(
+    input.usage.constructorItemPdfs,
+    input.usage.constructorItemQuotes
+  );
 
   return [
     {
@@ -130,27 +145,39 @@ export function buildMarketingQuoteUsageKpis(input: {
       tone: "cyan",
     },
     {
-      id: "quick_items",
-      label: "Rápida por ítems",
-      value: input.usage.rapidItemQuotes,
-      displayValue: String(input.usage.rapidItemQuotes),
-      subtitle: "Escritorio · desde esta medición",
+      id: "constructor_items",
+      label: "Constructor de piezas",
+      value: input.usage.constructorItemQuotes,
+      displayValue: String(input.usage.constructorItemQuotes),
+      subtitle: "Dentro de por ítems",
+      insight:
+        input.usage.classifiedItemQuotes === 0
+          ? "Aún sin datos nuevos"
+          : `Móvil ${input.usage.mobileConstructorQuotes} · PC ${input.usage.desktopConstructorQuotes}`,
+      tone: "violet",
+    },
+    {
+      id: "guided_items",
+      label: "Guiada por ítems",
+      value: input.usage.guidedItemQuotes,
+      displayValue: String(input.usage.guidedItemQuotes),
+      subtitle: "Dentro de por ítems",
       insight:
         input.usage.classifiedItemQuotes === 0
           ? "Aún sin datos nuevos"
           : `${input.usage.classifiedItemQuotes} cotizaciones por ítems clasificadas`,
-      tone: "violet",
+      tone: "cyan",
     },
     {
-      id: "quick_pdf",
-      label: "PDF tras rápida",
-      value: rapidPdfShare ?? 0,
-      displayValue: rapidPdfShare === null ? "—" : `${rapidPdfShare}%`,
-      subtitle: "Rápida → PDF",
+      id: "constructor_pdf",
+      label: "PDF tras Constructor",
+      value: constructorPdfShare ?? 0,
+      displayValue: constructorPdfShare === null ? "—" : `${constructorPdfShare}%`,
+      subtitle: "Constructor → PDF",
       insight:
-        input.usage.rapidItemQuotes === 0
-          ? "Esperando primeras cotizaciones rápidas"
-          : `${input.usage.rapidItemPdfs} de ${input.usage.rapidItemQuotes} con PDF`,
+        input.usage.constructorItemQuotes === 0
+          ? "Esperando primeras cotizaciones"
+          : `${input.usage.constructorItemPdfs} de ${input.usage.constructorItemQuotes} con PDF`,
       tone: "green",
     },
   ];

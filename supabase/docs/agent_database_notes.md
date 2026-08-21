@@ -364,6 +364,6 @@ Si la respuesta a 1-4 no es sí: detenerse y reportar.
 ## Addendum 2026-08-21 - Métricas de adopción del cotizador
 
 - Migración aplicada y verificada en remoto: `20260821163629_quote_creation_surface_metrics`.
-- `cotizaciones.creation_surface` es nullable y distingue `desktop_rapida`, `desktop_guiada`, `mobile_por_items` y `total_global` al crear nuevas cotizaciones. No se hace backfill: las cotizaciones anteriores quedan sin clasificación confiable.
+- `cotizaciones.creation_surface` es nullable y distingue `desktop_constructor`, `desktop_guiada`, `mobile_constructor`, `mobile_guiada` y `total_global` al crear nuevas cotizaciones. No se hace backfill: las cotizaciones anteriores quedan sin clasificación confiable.
 - No cambia RLS, grants ni ownership. El índice parcial `cotizaciones_creation_surface_active_idx` sirve al panel founder para leer adopción sin incluir soft deletes.
 - El panel `/admin/marketing` filtra primero por `organization_profile.is_test_account=false`; no excluir cuentas por correo ni nombre.

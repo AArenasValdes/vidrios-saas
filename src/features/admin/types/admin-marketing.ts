@@ -154,8 +154,11 @@ export type MarketingQuoteUsage = {
   totalQuotes: number;
   itemQuotes: number;
   totalGlobalQuotes: number;
-  rapidItemQuotes: number;
-  rapidItemPdfs: number;
+  constructorItemQuotes: number;
+  mobileConstructorQuotes: number;
+  desktopConstructorQuotes: number;
+  guidedItemQuotes: number;
+  constructorItemPdfs: number;
   classifiedItemQuotes: number;
   historicalUnclassifiedItemQuotes: number;
 };

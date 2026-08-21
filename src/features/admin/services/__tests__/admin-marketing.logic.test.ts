@@ -118,9 +118,9 @@ describe("admin-marketing.logic", () => {
     expect(channels.rows.some((row) => row.id === "facebook")).toBe(false);
   });
 
-  it("separa rápida por ítems del histórico no clasificable", () => {
+  it("separa Guiada y Constructor del histórico no clasificable", () => {
     const usage = buildMarketingQuoteUsage([
-      { pricingMode: "por_item", creationSurface: "desktop_rapida", pdfDownloadedAt: "2026-06-10" },
+      { pricingMode: "por_item", creationSurface: "mobile_constructor", pdfDownloadedAt: "2026-06-10" },
       { pricingMode: "por_item", creationSurface: "desktop_guiada", pdfDownloadedAt: null },
       { pricingMode: "por_item", creationSurface: null, pdfDownloadedAt: null },
       { pricingMode: "total_global", creationSurface: "total_global", pdfDownloadedAt: null },
@@ -129,14 +129,17 @@ describe("admin-marketing.logic", () => {
     expect(usage).toMatchObject({
       totalQuotes: 4,
       itemQuotes: 3,
-      rapidItemQuotes: 1,
-      rapidItemPdfs: 1,
+      constructorItemQuotes: 1,
+      mobileConstructorQuotes: 1,
+      desktopConstructorQuotes: 0,
+      guidedItemQuotes: 1,
+      constructorItemPdfs: 1,
       historicalUnclassifiedItemQuotes: 1,
     });
 
-    const quickPdf = buildMarketingQuoteUsageKpis({ usage, period }).find(
-      (item) => item.id === "quick_pdf"
+    const constructorPdf = buildMarketingQuoteUsageKpis({ usage, period }).find(
+      (item) => item.id === "constructor_pdf"
     );
-    expect(quickPdf?.displayValue).toBe("100%");
+    expect(constructorPdf?.displayValue).toBe("100%");
   });
 });

@@ -1,7 +1,8 @@
 export const QUOTE_CREATION_SURFACE_OPTIONS = [
-  "desktop_rapida",
+  "desktop_constructor",
   "desktop_guiada",
-  "mobile_por_items",
+  "mobile_constructor",
+  "mobile_guiada",
   "total_global",
 ] as const;
 

@@ -405,7 +405,7 @@ export function AdminMarketingWorkspace() {
       <section className={s.sectionBlock} aria-label="Uso real del cotizador">
         <div className={s.sectionHeading}>
           <h2>Uso real del cotizador</h2>
-          <p>Solo cuentas reales. La rápida por ítems se mide desde hoy; el histórico no se inventa.</p>
+          <p>Solo cuentas reales. Dentro de por ítems: Guiada o Constructor de piezas.</p>
         </div>
 
         <AdminMarketingKpiRow
@@ -418,7 +418,7 @@ export function AdminMarketingWorkspace() {
         {workspace.quoteUsage.historicalUnclassifiedItemQuotes > 0 ? (
           <p className={s.funnelInsightMuted}>
             {workspace.quoteUsage.historicalUnclassifiedItemQuotes} cotizaciones históricas por ítems
-            no distinguen rápida de guiada. Se excluyen de esa comparación.
+            no distinguen Guiada de Constructor. Se excluyen de esa comparación.
           </p>
         ) : null}
       </section>
