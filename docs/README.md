@@ -19,6 +19,7 @@ Entrada única para agentes, desarrollo, billing, base de datos y Growth OS.
 | Tarea técnica específica | `docs/agent-map/AGENT_TASK_GUIDE.md` | Lectura, riesgos y QA |
 | Pagos | `docs/billing/README.md` | Estado operativo y runbook |
 | Marketing/growth | `AGENTS_MARKETING.md` + `docs/growth-os/README.md` | Estrategia y ejecución |
+| Trabajar desde otro equipo | `docs/growth-os/MANUAL_TRABAJO_MULTIEQUIPO.md` | Sincronización, contexto y secretos |
 | Marca y contenido | `docs/marketing/README.md` | Biblioteca táctica y branding |
 | Handoff técnico | `docs/agent-map/` | Constructor, móvil, cubicación y onboarding |
 

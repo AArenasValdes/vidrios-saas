@@ -108,6 +108,7 @@ Casos:
 - `PARTNERSHIPS_PLAYBOOK.md`: playbook de alianzas
 - `KAPSO_WHATSAPP_PLAN.md`: plan tecnico/comercial para evaluar Kapso
 - `ONBOARDING_FEATURE_BRIEF.md`: brief para onboarding guiado dentro del producto
+- `MANUAL_TRABAJO_MULTIEQUIPO.md`: instalación Ubuntu, sincronización entre equipos y handoff de contexto
 
 ## Principios del Growth OS
 
