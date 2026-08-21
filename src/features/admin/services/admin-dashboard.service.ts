@@ -12,19 +12,25 @@ import type {
   AdminDashboard,
   AdminDashboardActionItem,
   AdminDashboardActivityItem,
-  AdminDashboardFunnelStage,
   AdminDashboardFocusItem,
   AdminDashboardHealthBucket,
   AdminDashboardWeeklyRevenue,
 } from "@/features/admin/types/admin-dashboard";
+import {
+  buildMonthlyCashSummary,
+  resolveSantiagoCalendarMonth,
+} from "@/features/admin/services/admin-dashboard-metrics.logic";
 import { mapDbStatusToUi } from "@/features/growth/services/growth-prospect-mapper";
 import type { GrowthDbProspectStatus } from "@/features/growth/types/growth-supabase";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const DEFAULT_REVENUE_GOAL_CLP = 120_000;
 const MS_DAY = 24 * 60 * 60 * 1000;
 
-type QuoteRow = { organization_id: number; creado_en: string };
+type QuoteRow = {
+  organization_id: number;
+  creado_en: string;
+  pdf_descargado_en: string | null;
+};
 type ProspectRow = {
   id: string;
   empresa: string;
@@ -49,29 +55,12 @@ type SolicitudRow = {
   organization_id: number | null;
   contexto: string;
 };
-type WorkspaceRow = {
-  configuracion_json: Record<string, unknown> | null;
-};
-
-function clampPct(value: number) {
-  return Math.max(0, Math.min(100, value));
-}
-
 function pctChange(current: number, previous: number) {
   if (previous <= 0) {
     return current > 0 ? 100 : null;
   }
 
   return Math.round(((current - previous) / previous) * 100);
-}
-
-function resolvePeriodWindow(periodDays: number) {
-  const end = new Date();
-  const start = new Date(end.getTime() - periodDays * MS_DAY);
-  const previousEnd = new Date(start.getTime());
-  const previousStart = new Date(previousEnd.getTime() - periodDays * MS_DAY);
-
-  return { start, end, previousStart, previousEnd };
 }
 
 function isWithinRange(iso: string | null, start: Date, end: Date) {
@@ -102,102 +91,32 @@ function formatRelativeTime(iso: string | null) {
   return `Hace ${diffDays} días`;
 }
 
-function sumApprovedPayments(
-  payments: AdminOrganizationPaymentRow[],
-  testOrgIds: Set<number>,
-  start: Date,
-  end: Date
-) {
-  return payments.reduce((total, payment) => {
-    if (payment.status !== "aprobado") {
-      return total;
-    }
-
-    if (testOrgIds.has(Number(payment.organization_id))) {
-      return total;
-    }
-
-    const paidAt = payment.paid_at ?? payment.creado_en;
-    if (!isWithinRange(paidAt, start, end)) {
-      return total;
-    }
-
-    return total + Number(payment.amount_clp ?? 0);
-  }, 0);
-}
-
 function buildWeeklyRevenue(
   payments: AdminOrganizationPaymentRow[],
   testOrgIds: Set<number>,
-  weeklyGoalClp: number
+  now: Date
 ): AdminDashboardWeeklyRevenue[] {
-  const now = new Date();
   const weeks: AdminDashboardWeeklyRevenue[] = [];
 
   for (let index = 3; index >= 0; index -= 1) {
     const weekEnd = new Date(now.getTime() - index * 7 * MS_DAY);
     const weekStart = new Date(weekEnd.getTime() - 7 * MS_DAY);
-    const amountClp = sumApprovedPayments(
-      payments,
-      testOrgIds,
-      weekStart,
-      weekEnd
-    );
+    const amountClp = payments.reduce((total, payment) => {
+      if (payment.status !== "aprobado" || testOrgIds.has(Number(payment.organization_id))) {
+        return total;
+      }
+      return isWithinRange(payment.paid_at ?? payment.creado_en, weekStart, weekEnd)
+        ? total + Number(payment.amount_clp ?? 0)
+        : total;
+    }, 0);
 
     weeks.push({
-      label: `Sem ${4 - index}`,
+      label: `Sem. ${4 - index}`,
       amountClp,
-      goalClp: weeklyGoalClp,
     });
   }
 
   return weeks;
-}
-
-function buildFunnel(prospects: ProspectRow[]): AdminDashboardFunnelStage[] {
-  const active = prospects.filter((prospect) => !prospect.no_contactar);
-  const contacted = active.filter((prospect) =>
-    [
-      "contactado",
-      "respondio",
-      "calificado",
-      "demo_agendada",
-      "piloto_activo",
-      "activado",
-      "pagado",
-    ].includes(prospect.estado)
-  );
-  const demos = active.filter((prospect) =>
-    ["demo_agendada", "piloto_activo", "activado", "pagado"].includes(
-      prospect.estado
-    )
-  );
-  const trials = active.filter((prospect) =>
-    ["piloto_activo", "activado", "pagado"].includes(prospect.estado)
-  );
-  const paid = active.filter((prospect) => prospect.estado === "pagado");
-
-  const stages = [
-    { stage: "Prospectos", count: active.length },
-    { stage: "Contactados", count: contacted.length },
-    { stage: "Demo", count: demos.length },
-    { stage: "Trial", count: trials.length },
-    { stage: "Cliente pagado", count: paid.length },
-  ];
-
-  return stages.map((stage, index) => {
-    const previous = index === 0 ? stage.count : stages[index - 1]?.count ?? 0;
-    const conversionPct =
-      index === 0 || previous <= 0
-        ? null
-        : Math.round((stage.count / previous) * 100);
-
-    return {
-      stage: stage.stage,
-      count: stage.count,
-      conversionPct,
-    };
-  });
 }
 
 function buildActionItems(input: {
@@ -529,24 +448,17 @@ function buildRecentActivity(input: {
     .slice(0, 10);
 }
 
-export async function getAdminDashboard(
-  periodDays = 30
-): Promise<AdminDashboard> {
+export async function getAdminDashboard(): Promise<AdminDashboard> {
   const admin = createAdminClient();
-  const { start, end, previousStart, previousEnd } = resolvePeriodWindow(periodDays);
+  const now = new Date();
+  const month = resolveSantiagoCalendarMonth(now);
   const snapshotPromise = listAdminOrganizationsSnapshot();
   const clientsPromise = snapshotPromise.then(listAdminClientsFromSnapshot);
 
-  const [clients, snapshot, workspaceResult, prospectsResult, tasksResult, quotesResult, solicitudesResult] =
+  const [clients, snapshot, prospectsResult, tasksResult, quotesResult, solicitudesResult] =
     await Promise.all([
       clientsPromise,
       snapshotPromise,
-      admin
-        .from("growth_workspaces")
-        .select("configuracion_json")
-        .eq("slug", "ventora-founder")
-        .is("eliminado_en", null)
-        .maybeSingle(),
       admin
         .from("growth_prospects")
         .select(
@@ -562,7 +474,7 @@ export async function getAdminDashboard(
         .order("vence_en", { ascending: true }),
       admin
         .from("cotizaciones")
-        .select("organization_id, creado_en")
+        .select("organization_id, creado_en, pdf_descargado_en")
         .is("eliminado_en", null)
         .order("creado_en", { ascending: true }),
       admin
@@ -579,27 +491,15 @@ export async function getAdminDashboard(
       .map((profile) => Number(profile.organization_id))
   );
 
-  const workspace = workspaceResult.data as WorkspaceRow | null;
-  const goalClp = Number(
-    (workspace?.configuracion_json as { monthlyMrrGoalClp?: number } | null)
-      ?.monthlyMrrGoalClp ?? DEFAULT_REVENUE_GOAL_CLP
-  );
-
-  const collectedClp = sumApprovedPayments(
-    snapshot.payments,
-    testOrgIds,
-    start,
-    end
-  );
-  const previousPeriodClp = sumApprovedPayments(
-    snapshot.payments,
-    testOrgIds,
-    previousStart,
-    previousEnd
-  );
+  const revenue = buildMonthlyCashSummary({
+    payments: snapshot.payments,
+    testOrganizationIds: testOrgIds,
+    month,
+  });
 
   const firstQuoteByOrg = new Map<number, string>();
-  for (const quote of (quotesResult.data ?? []) as QuoteRow[]) {
+  const quotes = (quotesResult.data ?? []) as QuoteRow[];
+  for (const quote of quotes) {
     const organizationId = Number(quote.organization_id);
     if (!firstQuoteByOrg.has(organizationId)) {
       firstQuoteByOrg.set(organizationId, quote.creado_en);
@@ -660,37 +560,41 @@ export async function getAdminDashboard(
     },
   ];
 
-  const trialsStarted = clients.filter(
+  const quotesThisMonth = quotes.filter(
+    (quote) =>
+      !testOrgIds.has(Number(quote.organization_id)) &&
+      isWithinRange(quote.creado_en, month.start, now)
+  );
+  const accountsToResolve = clients.filter(
     (client) =>
       !client.isTestAccount &&
-      (client.estadoEfectivo === "trial_active" ||
-        client.estadoEfectivo === "trial_expiring" ||
-        client.estadoEfectivo === "active" ||
+      (client.estadoEfectivo === "trial_expiring" ||
         client.estadoEfectivo === "trial_expired" ||
         client.estadoEfectivo === "past_due")
   ).length;
-
-  const trialsConverted = clients.filter(
-    (client) => !client.isTestAccount && client.estadoEfectivo === "active"
-  ).length;
-
-  const prospectosNuevos = prospects.filter((prospect) =>
-    isWithinRange(prospect.creado_en, start, end)
-  ).length;
-
-  const remainingClp = Math.max(goalClp - collectedClp, 0);
-  const progressPct = goalClp > 0 ? clampPct((collectedClp / goalClp) * 100) : 0;
+  const activeProspects = prospects.filter(
+    (prospect) =>
+      !prospect.no_contactar &&
+      !["sin_respuesta", "no_calza", "no_contactar", "pagado"].includes(prospect.estado)
+  );
+  const contactedProspects = activeProspects.filter((prospect) =>
+    ["contactado", "respondio", "calificado", "demo_agendada", "piloto_activo", "activado"].includes(
+      prospect.estado
+    )
+  );
 
   return {
-    syncedAt: new Date().toISOString(),
-    periodDays,
+    syncedAt: now.toISOString(),
     revenue: {
-      collectedClp,
-      previousPeriodClp,
-      changePct: pctChange(collectedClp, previousPeriodClp),
-      goalClp,
-      remainingClp,
-      progressPct,
+      label: month.label,
+      previousLabel: month.previousLabel,
+      collectedClp: revenue.collectedClp,
+      previousMonthCollectedClp: revenue.previousMonthCollectedClp,
+      changePct: pctChange(revenue.collectedClp, revenue.previousMonthCollectedClp),
+      newSalesClp: revenue.newSalesClp,
+      renewalsClp: revenue.renewalsClp,
+      newCustomers: revenue.newCustomers,
+      renewalPayments: revenue.renewalPayments,
     },
     focusToday,
     kpis: {
@@ -703,11 +607,19 @@ export async function getAdminDashboard(
           (client.estadoEfectivo === "trial_active" ||
             client.estadoEfectivo === "trial_expiring")
       ).length,
-      conversionTrialToPaidPct:
-        trialsStarted > 0
-          ? Math.round((trialsConverted / trialsStarted) * 100)
-          : null,
-      prospectosNuevos,
+      cuentasPorResolver: accountsToResolve,
+      trialsSinCotizacion: trialsWithoutQuote,
+    },
+    productUsage: {
+      quotesCreated: quotesThisMonth.length,
+      pdfsGenerated: quotesThisMonth.filter((quote) => quote.pdf_descargado_en !== null).length,
+      organizationsWithQuotes: new Set(
+        quotesThisMonth.map((quote) => Number(quote.organization_id))
+      ).size,
+    },
+    outboundProspecting: {
+      activeProspects: activeProspects.length,
+      contactedProspects: contactedProspects.length,
     },
     actionItems: buildActionItems({
       clients,
@@ -715,12 +627,7 @@ export async function getAdminDashboard(
       prospects,
       tasks,
     }),
-    weeklyRevenue: buildWeeklyRevenue(
-      snapshot.payments,
-      testOrgIds,
-      Math.round(goalClp / 4)
-    ),
-    funnel: buildFunnel(prospects),
+    weeklyRevenue: buildWeeklyRevenue(snapshot.payments, testOrgIds, now),
     accountHealth: buildAccountHealth(clients, firstQuoteByOrg),
     recentActivity: buildRecentActivity({
       prospects,

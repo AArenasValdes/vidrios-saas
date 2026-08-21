@@ -21,13 +21,6 @@ export type AdminDashboardActionItem = {
 export type AdminDashboardWeeklyRevenue = {
   label: string;
   amountClp: number;
-  goalClp: number;
-};
-
-export type AdminDashboardFunnelStage = {
-  stage: string;
-  count: number;
-  conversionPct: number | null;
 };
 
 export type AdminDashboardHealthBucket = {
@@ -51,25 +44,35 @@ export type AdminDashboardActivityItem = {
 
 export type AdminDashboard = {
   syncedAt: string;
-  periodDays: number;
   revenue: {
+    label: string;
+    previousLabel: string;
     collectedClp: number;
-    previousPeriodClp: number;
+    previousMonthCollectedClp: number;
     changePct: number | null;
-    goalClp: number;
-    remainingClp: number;
-    progressPct: number;
+    newSalesClp: number;
+    renewalsClp: number;
+    newCustomers: number;
+    renewalPayments: number;
   };
   focusToday: AdminDashboardFocusItem[];
   kpis: {
     clientesActivos: number;
     trialsActivos: number;
-    conversionTrialToPaidPct: number | null;
-    prospectosNuevos: number;
+    cuentasPorResolver: number;
+    trialsSinCotizacion: number;
+  };
+  productUsage: {
+    quotesCreated: number;
+    pdfsGenerated: number;
+    organizationsWithQuotes: number;
+  };
+  outboundProspecting: {
+    activeProspects: number;
+    contactedProspects: number;
   };
   actionItems: AdminDashboardActionItem[];
   weeklyRevenue: AdminDashboardWeeklyRevenue[];
-  funnel: AdminDashboardFunnelStage[];
   accountHealth: AdminDashboardHealthBucket[];
   recentActivity: AdminDashboardActivityItem[];
 };

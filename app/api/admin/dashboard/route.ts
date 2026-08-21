@@ -8,14 +8,8 @@ export async function GET(request: Request) {
   try {
     await resolveVentoraAdminRouteContext();
 
-    const url = new URL(request.url);
-    const periodDays = Number(url.searchParams.get("days") ?? "30");
-    const safePeriodDays =
-      Number.isFinite(periodDays) && periodDays > 0 && periodDays <= 365
-        ? periodDays
-        : 30;
-
-    const dashboard = await getAdminDashboard(safePeriodDays);
+    void request;
+    const dashboard = await getAdminDashboard();
     return NextResponse.json({ dashboard });
   } catch (error) {
     if (error instanceof AuthRouteAccessError) {

@@ -2,6 +2,13 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-08-21 - Tablero founder: caja mensual y métricas honestas
+
+- `/admin` reemplaza la caja móvil de 30 días por mes calendario de Santiago, usando solo pagos aprobados y excluyendo cuentas de prueba.
+- El monto se desglosa entre primera compra y renovación; no se presenta como MRR, ARR ni meta cuando esos datos no son confiables.
+- Se eliminó el embudo que etiquetaba una lista histórica de `growth_prospects` como ventas recientes. La lista queda visible solo como prospección saliente.
+- `/admin/marketing` usa el mismo lenguaje: su lista manual no equivale a leads captados ni atribuye inversión de marketing. El uso real del cotizador permanece separado y excluye pruebas.
+
 ## 2026-08-20 - Fase B de onboarding automático medible
 
 - `/admin/marketing` queda enfocado en adquisición. `/admin/marketing/onboarding` administra sólo dos videos base: celular y computador.

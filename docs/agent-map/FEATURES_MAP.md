@@ -255,14 +255,16 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
   - `src/features/admin/components/source-badge.tsx`
   - `src/features/auth/services/logout-navigation.service.ts`
   - `src/features/admin/services/admin-access.service.ts`
-  - `src/features/admin/services/admin-summary.service.ts`
+  - `src/features/admin/services/admin-dashboard.service.ts`
+  - `src/features/admin/services/admin-dashboard-metrics.logic.ts`
+  - `src/features/admin/components/admin-dashboard-workspace.tsx`
   - `src/features/admin/services/admin-clients.service.ts`
   - `src/features/admin/repositories/admin-clients.repository.ts`
   - `src/features/admin/types/admin-client.ts`
   - `src/features/admin/types/admin-summary.ts`
   - `proxy.ts`
 - **Componentes principales**: `AdminShell`, `AdminSidebar`, `AdminKpiCard`, `ClientStatusBadge`, `SourceBadge`
-- **Hooks/servicios/actions**: acceso founder via `resolveVentoraAdminRouteContext`, resumen via `adminSummaryService`, listado/ficha via `adminClientsService`
+- **Hooks/servicios/actions**: acceso founder via `resolveVentoraAdminRouteContext`, resumen de dueño via `getAdminDashboard()`, listado/ficha via `adminClientsService`
 - **Tablas Supabase**: `organizations`, `organization_profile`, `users`, `pagos_suscripcion`
 - **Flujo de datos**:
   - Login founder -> `proxy.ts` redirige por defecto a `/admin`
@@ -273,14 +275,14 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
 - **Donde editar UI**: `app/admin/*`, `src/features/admin/components/*`
 - **Donde editar logica**: `src/features/admin/services/*`
 - **Donde editar persistencia**: `src/features/admin/repositories/admin-clients.repository.ts`
-- **Consideraciones UX**: No reutiliza `AppShell`. Founder ve organizaciones SaaS separadas de `clients`, con nombre del registro, taller, correo, WhatsApp privado, ciudad, fecha, trial y primera cotizacion.
+- **Consideraciones UX**: No reutiliza `AppShell`. `/admin` abre con caja del mes calendario de Chile (solo pagos aprobados), separa primeras compras de renovaciones y muestra uso real del producto excluyendo pruebas. No presentar ese monto como MRR, meta ni ventana móvil. La lista `growth_prospects` es prospección saliente, no leads captados.
 - **Riesgos al modificar**: No permitir acceso a admins normales de una organizacion. No mezclar esta capa con CRUD de clientes finales `/clientes`. Mantener `service_role` solo en servidor. No volver a poner `<Link href="/auth/logout">` en el sidebar founder (invalida cookies por prefetch/soft-nav).
 
 ---
 
 ## Feature: Founder Growth Panel
 
-- **Que hace**: Panel privado del fundador con tabs operativas: trabajo de hoy, prospectos, clientes/pagos y marketing/tareas. Persiste en Supabase (`growth_*`) con import idempotente desde `localStorage` v3 y separa `Real`, `Manual` y `Mock`. El control editorial vive en `/admin/marketing`; muestra adopción real del cotizador excluyendo cuentas `is_test_account`, incluida rápida por ítems desde su instrumentación. El onboarding automático vive en `/admin/marketing/onboarding`, sin mezclar contenido, activación y datos personales de clientes.
+- **Que hace**: Panel privado del fundador con tabs operativas: trabajo de hoy, prospectos, clientes/pagos y marketing/tareas. Persiste en Supabase (`growth_*`) con import idempotente desde `localStorage` v3 y separa `Real`, `Manual` y `Mock`. El control editorial vive en `/admin/marketing`; muestra adopción real del cotizador excluyendo cuentas `is_test_account`, incluida rápida por ítems desde su instrumentación. Su bloque de prospectos se etiqueta como prospección saliente: no confundirlo con leads captados ni usarlo para atribuir anuncios. El onboarding automático vive en `/admin/marketing/onboarding`, sin mezclar contenido, activación y datos personales de clientes.
 - **Rutas involucradas**: `/admin/growth`, `/api/admin/growth/*`
 - **Archivos principales**:
   - `app/admin/growth/page.tsx`

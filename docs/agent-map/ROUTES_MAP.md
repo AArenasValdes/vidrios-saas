@@ -176,13 +176,14 @@ Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las
 - **Layout usado**: `app/admin/layout.tsx` -> `AdminShell`
 - **Proposito**: Dashboard interno de Ventora para operar clientes SaaS, trials, cobros y foco comercial founder sin entrar al panel cliente.
 - **Usuario objetivo**: Founder/admin interno allowlist por correo
-- **Funcionalidades visibles**: Hero interno, KPIs globales (activos, trial, vencen esta semana, MRR/ARR estimado, pagos pendientes), tablas de trials urgentes, pagos recientes y altas recientes
-- **Componentes principales**: `AdminShell`, `AdminSidebar`, `AdminKpiCard`, `ClientStatusBadge`, `SourceBadge`
-- **Hooks**: Ninguno en Fase 1
-- **Datos que consume**: Resumen server-side via `adminSummaryService`
-- **Tablas Supabase relacionadas**: `organizations`, `organization_profile`, `users`, `pagos_suscripcion`
-- **Acciones principales**: Navegar a clientes SaaS, abrir prospectos `/admin/growth`, revisar urgencias
-- **Archivos a tocar para modificar**: `app/admin/layout.tsx`, `app/admin/page.tsx`, `app/admin/admin.module.css`, `src/features/admin/components/*`, `src/features/admin/config/admin-nav.config.ts`, `src/features/admin/services/admin-summary.service.ts`, `src/features/admin/repositories/admin-clients.repository.ts`, `proxy.ts`
+- **Funcionalidades visibles**: Caja cobrada del mes calendario Chile (solo pagos aprobados), desglose primeras compras/renovaciones, cartera actual, activación de trials, uso mensual de cotizaciones/PDF y prospección saliente etiquetada.
+- **Componentes principales**: `AdminShell`, `AdminSidebar`, `AdminDashboardWorkspace`, `ClientStatusBadge`, `SourceBadge`
+- **Hooks**: Recarga client-side del resumen server-side
+- **Datos que consume**: `getAdminDashboard()`; ledger `pagos_suscripcion`, perfiles/estados efectivos, cotizaciones y lista `growth_prospects`
+- **Tablas Supabase relacionadas**: `organizations`, `organization_profile`, `users`, `pagos_suscripcion`, `cotizaciones`, `growth_prospects`
+- **Acciones principales**: Navegar a clientes SaaS, revisar cobros, abrir prospectos y resolver urgencias
+- **Archivos a tocar para modificar**: `app/admin/page.tsx`, `app/api/admin/dashboard/route.ts`, `src/features/admin/components/admin-dashboard-*`, `src/features/admin/services/admin-dashboard-*`, `src/features/admin/repositories/admin-clients.repository.ts`
+- **Definición crítica**: Caja = pagos `aprobado` no-test dentro de mes calendario Santiago; una primera transacción por organización es venta nueva, las siguientes son renovaciones. No etiquetar caja como MRR/ARR/meta. `growth_prospects` es una lista de outreach, no un embudo de leads recientes.
 - **Riesgos**: No reutilizar `AppShell`. No abrir esta ruta a admins normales de una organizacion. No exponer `service_role` ni datos multi-tenant al cliente. `AdminSidebar` debe cerrar sesion con hard nav (`navigateToLogoutRoute` -> `/auth/logout`), nunca con `<Link href="/auth/logout">` (prefetch/soft-nav borra cookies y parece logout en cada accion).
 
 ---

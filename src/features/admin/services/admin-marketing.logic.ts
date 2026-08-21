@@ -62,7 +62,7 @@ const FUNNEL_ORDER: MarketingFunnelStepId[] = [
 ];
 
 const FUNNEL_LABELS: Record<MarketingFunnelStepId, string> = {
-  prospectos: "Prospectos nuevos",
+  prospectos: "Contactos agregados",
   contactados: "Contactados",
   demo: "Demo agendada",
   trial: "Trial iniciado",
@@ -453,7 +453,7 @@ export function buildAcquisitionKpis(input: {
   return [
     {
       id: "new_prospects",
-      label: "Prospectos nuevos",
+      label: "Contactos agregados",
       value: newProspects.length,
       displayValue: String(newProspects.length),
       subtitle: input.period.label,
@@ -497,14 +497,14 @@ export function buildAcquisitionKpis(input: {
     },
     {
       id: "conversion",
-      label: "Conversión prospecto a pago",
+      label: "Avance de la lista a pago",
       value: conversionPct ?? 0,
       displayValue: conversionPct === null ? "—" : `${conversionPct}%`,
       subtitle: "cohort del período",
       insight:
         conversionPct === null
-          ? "Datos insuficientes para calcular conversión"
-          : `${paid.length} de ${newProspects.length} prospectos`,
+          ? "Datos insuficientes para calcular avance"
+          : `${paid.length} de ${newProspects.length} contactos`,
       tone: "amber",
     },
   ];

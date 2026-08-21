@@ -21,7 +21,6 @@ import {
   applyMarketingKpiFilter,
   buildMarketingFilterChips,
   EMPTY_MARKETING_FILTERS,
-  filterMarketingProspects,
   filterMarketingPublicCompanies,
   hasMarketingActiveFilters,
   marketingFiltersToSearchParams,
@@ -137,11 +136,6 @@ export function AdminMarketingWorkspace() {
     return () => resetHeaderState();
   }, [syncedAt, isRefreshing, loadWorkspace, resetHeaderState, setHeaderState, workspace]);
 
-  const filteredProspects = useMemo(
-    () => (workspace ? filterMarketingProspects(workspace.prospects, filters) : []),
-    [workspace, filters]
-  );
-
   const filteredPublicCompanies = useMemo(
     () => (workspace ? filterMarketingPublicCompanies(workspace.publicCompanies, filters) : []),
     [workspace, filters]
@@ -239,16 +233,16 @@ export function AdminMarketingWorkspace() {
 
       <AdminMarketingContentControl />
 
-      <section className={s.sectionBlock} aria-label="Adquisición de Ventora">
+      <section className={s.sectionBlock} aria-label="Prospección saliente de Ventora">
         <div className={s.sectionHeading}>
-          <h2>Adquisición de Ventora</h2>
-          <p>Prospectos reales que podrían contratar Ventora.</p>
+          <h2>Prospección saliente</h2>
+          <p>Lista manual de contactos a trabajar. No equivale a leads captados ni a ventas atribuidas.</p>
         </div>
 
         <AdminMarketingKpiRow
           kpis={workspace.acquisitionKpis}
           activeKpiId={activeAcquisitionKpiId}
-          ariaLabel="KPIs de adquisición de Ventora"
+          ariaLabel="KPIs de prospección saliente"
           onKpiClick={(kpiId) => {
             setActiveAcquisitionKpiId(kpiId);
             const kpi = workspace.acquisitionKpis.find((item) => item.id === kpiId);
@@ -260,7 +254,7 @@ export function AdminMarketingWorkspace() {
           <div className={s.splitGrid}>
             <article className={s.panel}>
               <div className={s.panelHeader}>
-                <h3>Embudo de adquisición</h3>
+                <h3>Avance de la lista</h3>
               </div>
               <div className={s.funnelList}>
                 {workspace.acquisitionFunnel.map((step) => (
@@ -299,11 +293,11 @@ export function AdminMarketingWorkspace() {
 
             <article className={s.panel}>
               <div className={s.panelHeader}>
-                <h3>Canales que generan oportunidades</h3>
+                <h3>Origen declarado en la lista</h3>
               </div>
               {workspace.channelRows.length === 0 ? (
                 <div className={s.emptyCompact}>
-                  Aún no hay prospectos con origen registrado en el período.
+                  Aún no hay contactos con origen registrado en el período.
                   <Link href="/admin/prospectos" className={s.emptyAction}>
                     Completar origen
                   </Link>
@@ -374,18 +368,18 @@ export function AdminMarketingWorkspace() {
           </div>
         ) : (
           <article className={s.acquisitionEmptyPanel}>
-            <h3>Medición de adquisición aún no iniciada</h3>
+            <h3>Sin atribución de marketing todavía</h3>
             <p className={s.acquisitionEmptyLead}>
-              {workspace.prospectsWithOriginInPeriod} prospecto
+              {workspace.prospectsWithOriginInPeriod} contacto
               {workspace.prospectsWithOriginInPeriod === 1 ? "" : "s"} con origen registrado en
               este período.
             </p>
             <p>
-              Registra el origen de cada prospecto para comparar qué canal genera demos, trials y
-              clientes pagados.
+              Registra el origen de cada contacto para comparar tu prospección saliente. Para medir
+              marketing real, el lead debe llegar con un origen trazable.
             </p>
             <p className={s.acquisitionEmptyMuted}>
-              Los canales aparecerán cuando existan datos suficientes.
+              No uses esta sección para decidir inversión en anuncios hasta tener esa trazabilidad.
             </p>
             <div className={s.acquisitionEmptyActions}>
               <Link href="/admin/prospectos" className={s.secondaryBtn}>

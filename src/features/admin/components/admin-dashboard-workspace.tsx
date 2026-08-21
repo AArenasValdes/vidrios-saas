@@ -11,7 +11,6 @@ import {
   LuFileText,
   LuShieldCheck,
   LuTrendingUp,
-  LuUserPlus,
   LuUsers,
 } from "react-icons/lu";
 
@@ -105,22 +104,19 @@ const HEALTH_BUCKET_PRESENTATION: Record<
 
 type AdminDashboardWorkspaceProps = {
   initialDashboard?: AdminDashboard | null;
-  initialPeriodDays?: number;
 };
 
 export function AdminDashboardWorkspace({
   initialDashboard = null,
-  initialPeriodDays = 30,
 }: AdminDashboardWorkspaceProps = {}) {
   const { setHeaderState, resetHeaderState } = useAdminHeaderActions();
-  const [periodDays, setPeriodDays] = useState(initialPeriodDays);
   const [dashboard, setDashboard] = useState<AdminDashboard | null>(initialDashboard);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(!initialDashboard);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const hasLoadedInitialRef = useRef(Boolean(initialDashboard));
 
-  const loadDashboard = useCallback(async (days: number, refresh = false) => {
+  const loadDashboard = useCallback(async (refresh = false) => {
     if (refresh) {
       setIsRefreshing(true);
     } else {
@@ -130,7 +126,7 @@ export function AdminDashboardWorkspace({
     setError(null);
 
     try {
-      const response = await fetch(`/api/admin/dashboard?days=${days}`, {
+      const response = await fetch("/api/admin/dashboard", {
         cache: "no-store",
       });
       const payload = (await response.json()) as {
@@ -156,26 +152,24 @@ export function AdminDashboardWorkspace({
   }, []);
 
   useEffect(() => {
-    // async-defer-await / client waterfall: si ya vino del server, no re-fetch del período inicial.
-    if (hasLoadedInitialRef.current && periodDays === initialPeriodDays) {
+    // async-defer-await / client waterfall: si ya vino del server, no re-fetch al montar.
+    if (hasLoadedInitialRef.current) {
       hasLoadedInitialRef.current = false;
       return;
     }
 
-    void loadDashboard(periodDays);
-  }, [initialPeriodDays, loadDashboard, periodDays]);
+    void loadDashboard();
+  }, [loadDashboard]);
 
   useEffect(() => {
-    setHeaderState({
-      syncedAt: dashboard?.syncedAt ?? null,
-      periodDays,
-      onPeriodChange: setPeriodDays,
-      onRefresh: () => {
-        void loadDashboard(periodDays, true);
-      },
-      isRefreshing,
-    });
-  }, [dashboard?.syncedAt, isRefreshing, loadDashboard, periodDays, setHeaderState]);
+      setHeaderState({
+        syncedAt: dashboard?.syncedAt ?? null,
+        onRefresh: () => {
+          void loadDashboard(true);
+        },
+        isRefreshing,
+      });
+  }, [dashboard?.syncedAt, isRefreshing, loadDashboard, setHeaderState]);
 
   useEffect(() => {
     return () => {
@@ -190,18 +184,8 @@ export function AdminDashboardWorkspace({
 
     return Math.max(
       1,
-      ...dashboard.weeklyRevenue.map((week) =>
-        Math.max(week.amountClp, week.goalClp)
-      )
+      ...dashboard.weeklyRevenue.map((week) => week.amountClp)
     );
-  }, [dashboard]);
-
-  const maxFunnelCount = useMemo(() => {
-    if (!dashboard) {
-      return 1;
-    }
-
-    return Math.max(1, ...dashboard.funnel.map((stage) => stage.count));
   }, [dashboard]);
 
   if (isLoading && !dashboard) {
@@ -220,7 +204,7 @@ export function AdminDashboardWorkspace({
     <div className={s.page}>
       <section className={s.heroCard}>
         <div className={s.heroMain}>
-          <span className={s.cardEyebrow}>Ingresos cobrados en el período</span>
+          <span className={s.cardEyebrow}>Caja cobrada · {dashboard.revenue.label}</span>
           <div className={s.heroValueRow}>
             <strong className={s.heroValue}>
               {formatMoney(dashboard.revenue.collectedClp)}
@@ -232,25 +216,26 @@ export function AdminDashboardWorkspace({
                 }`}
               >
                 {dashboard.revenue.changePct >= 0 ? "+" : ""}
-                {dashboard.revenue.changePct}% vs. período anterior
+                {dashboard.revenue.changePct}% vs. {dashboard.revenue.previousLabel}
               </span>
             ) : null}
           </div>
 
-          <div className={s.progressMeta}>
-            <span>Meta del período: {formatMoney(dashboard.revenue.goalClp)}</span>
-            <span>{Math.round(dashboard.revenue.progressPct)}%</span>
+          <div className={s.cashBreakdown}>
+            <div>
+              <span>Ventas nuevas</span>
+              <strong>{formatMoney(dashboard.revenue.newSalesClp)}</strong>
+              <small>{dashboard.revenue.newCustomers} cliente{dashboard.revenue.newCustomers === 1 ? "" : "s"} nuevo{dashboard.revenue.newCustomers === 1 ? "" : "s"}</small>
+            </div>
+            <div>
+              <span>Renovaciones</span>
+              <strong>{formatMoney(dashboard.revenue.renewalsClp)}</strong>
+              <small>{dashboard.revenue.renewalPayments} cobro{dashboard.revenue.renewalPayments === 1 ? "" : "s"} recurrente{dashboard.revenue.renewalPayments === 1 ? "" : "s"}</small>
+            </div>
           </div>
-          <div className={s.progressTrack}>
-            <div
-              className={s.progressFill}
-              style={{ width: `${dashboard.revenue.progressPct}%` }}
-            />
-          </div>
-          <p className={s.progressHint}>
-            {dashboard.revenue.remainingClp > 0
-              ? `Faltan ${formatMoney(dashboard.revenue.remainingClp)} para alcanzar la meta`
-              : "Meta del período alcanzada"}
+          <p className={s.cashNote}>
+            Solo pagos aprobados. No es MRR ni una meta configurada.
+            <Link href="/admin/pagos-y-planes">Ver cobros</Link>
           </p>
         </div>
 
@@ -275,26 +260,50 @@ export function AdminDashboardWorkspace({
           <LuUsers aria-hidden />
           <span>Clientes activos</span>
           <strong>{dashboard.kpis.clientesActivos}</strong>
+          <small>Con plan activo hoy</small>
         </Link>
         <Link href="/admin/clientes" className={s.kpiCard}>
           <LuShieldCheck aria-hidden />
-          <span>Trials activos</span>
+          <span>Trials en curso</span>
           <strong>{dashboard.kpis.trialsActivos}</strong>
+          <small>Aún sin pago registrado</small>
         </Link>
         <Link href="/admin/clientes" className={s.kpiCard}>
-          <LuTrendingUp aria-hidden />
-          <span>Conv. trial a pago</span>
-          <strong>
-            {dashboard.kpis.conversionTrialToPaidPct !== null
-              ? `${dashboard.kpis.conversionTrialToPaidPct}%`
-              : "—"}
-          </strong>
+          <LuCircleAlert aria-hidden />
+          <span>Cuentas por resolver</span>
+          <strong>{dashboard.kpis.cuentasPorResolver}</strong>
+          <small>Vencidas o próximas a vencer</small>
         </Link>
-        <Link href="/admin/prospectos" className={s.kpiCard}>
-          <LuUserPlus aria-hidden />
-          <span>Prospectos nuevos</span>
-          <strong>{dashboard.kpis.prospectosNuevos}</strong>
+        <Link href="/admin/clientes" className={s.kpiCard}>
+          <LuFileText aria-hidden />
+          <span>Trials sin cotización</span>
+          <strong>{dashboard.kpis.trialsSinCotizacion}</strong>
+          <small>Prioridad de activación</small>
         </Link>
+      </section>
+
+      <section className={s.usageSection}>
+        <div className={s.sectionTitle}>
+          <h2>Uso del producto · {dashboard.revenue.label}</h2>
+          <p>Cuentas de prueba excluidas.</p>
+        </div>
+        <div className={s.usageMetrics}>
+          <div>
+            <LuTrendingUp aria-hidden />
+            <strong>{dashboard.productUsage.quotesCreated}</strong>
+            <span>Cotizaciones creadas</span>
+          </div>
+          <div>
+            <LuFileText aria-hidden />
+            <strong>{dashboard.productUsage.pdfsGenerated}</strong>
+            <span>PDF descargados</span>
+          </div>
+          <div>
+            <LuUsers aria-hidden />
+            <strong>{dashboard.productUsage.organizationsWithQuotes}</strong>
+            <span>Empresas que cotizaron</span>
+          </div>
+        </div>
       </section>
 
       <section className={s.panel}>
@@ -379,22 +388,15 @@ export function AdminDashboardWorkspace({
       <section className={s.chartsRow}>
         <article className={s.panel}>
           <div className={s.panelHeader}>
-            <h2>Ingresos semanales</h2>
-            <span className={s.panelHint}>Meta semanal visible en barras</span>
+            <h2>Cobros aprobados</h2>
+            <span className={s.panelHint}>Últimos 28 días · sin meta</span>
           </div>
           <div className={s.barChart}>
             {dashboard.weeklyRevenue.map((week) => {
               const amountHeight = (week.amountClp / maxWeeklyAmount) * 100;
-              const goalHeight = (week.goalClp / maxWeeklyAmount) * 100;
-
               return (
                 <div key={week.label} className={s.barColumn}>
                   <div className={s.barStack}>
-                    <div
-                      className={s.barGoalLine}
-                      style={{ bottom: `${goalHeight}%` }}
-                      title={`Meta ${formatMoney(week.goalClp)}`}
-                    />
                     <div
                       className={s.barFill}
                       style={{ height: `${amountHeight}%` }}
@@ -411,29 +413,25 @@ export function AdminDashboardWorkspace({
 
         <article className={s.panel}>
           <div className={s.panelHeader}>
-            <h2>Embudo de ventas ({dashboard.periodDays}d)</h2>
+            <h2>Prospección saliente</h2>
+            <Link href="/admin/prospectos">
+              Abrir prospectos
+              <LuArrowRight aria-hidden />
+            </Link>
           </div>
-          <div className={s.funnelList}>
-            {dashboard.funnel.map((stage, index) => (
-              <div key={stage.stage} className={s.funnelRow}>
-                <div className={s.funnelLabel}>
-                  <span>{stage.stage}</span>
-                  <strong>{stage.count}</strong>
-                </div>
-                <div className={s.funnelTrack}>
-                  <div
-                    className={s.funnelFill}
-                    style={{
-                      width: `${(stage.count / maxFunnelCount) * 100}%`,
-                    }}
-                  />
-                </div>
-                {index > 0 && stage.conversionPct !== null ? (
-                  <span className={s.funnelPct}>{stage.conversionPct}%</span>
-                ) : null}
-              </div>
-            ))}
+          <div className={s.outboundMetrics}>
+            <div>
+              <strong>{dashboard.outboundProspecting.activeProspects}</strong>
+              <span>contactos activos en la lista</span>
+            </div>
+            <div>
+              <strong>{dashboard.outboundProspecting.contactedProspects}</strong>
+              <span>ya contactados o con demo</span>
+            </div>
           </div>
+          <p className={s.outboundNote}>
+            Es una cartera manual para hacer outreach; no representa leads captados ni conversión de marketing.
+          </p>
         </article>
       </section>
 
