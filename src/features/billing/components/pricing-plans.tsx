@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { startTransition, useEffect, useState } from "react";
-import { ArrowRight, BriefcaseBusiness, Calculator, Check, ExternalLink } from "lucide-react";
+import {
+  ArrowRight,
+  BriefcaseBusiness,
+  Calculator,
+  Check,
+  ExternalLink,
+  ShieldCheck,
+} from "lucide-react";
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
 import {
   getBillingPlanForSelection,
@@ -118,28 +125,50 @@ export function PricingPlans({
   return (
     <section className={`${styles.section} ${isPublic ? styles.public : styles.account}`} id={isPublic ? "precios" : undefined}>
       <div className={styles.heading}>
-        <div>
-          <span className={styles.eyebrow}>Precios simples</span>
-          <h2>{isPublic ? "Elige cómo quieres trabajar con Ventora." : "Elige el plan para volver a operar."}</h2>
-          <p>{isPublic ? "Dos productos. Las mismas funciones en mensual o anual. Parte con 15 días gratis." : "La periodicidad cambia el cobro, no las funciones. Selecciona mensual o anual."}</p>
+        <div className={styles.headingCopy}>
+          <span className={styles.eyebrow}>{isPublic ? "Planes para tu taller" : "Precios simples"}</span>
+          <h2>{isPublic ? "Elige el plan que mejor se adapta a tu taller." : "Elige el plan para volver a operar."}</h2>
+          <p>
+            {isPublic
+              ? "Prueba 15 días gratis sin tarjeta. Si decides continuar, activas el plan elegido y pagas la tarifa que ves: mensual o anual."
+              : "La periodicidad cambia el cobro, no las funciones. Selecciona mensual o anual."}
+          </p>
         </div>
-        <fieldset className={styles.periodSelector}>
-          <legend>Periodicidad</legend>
-          {(["monthly", "yearly"] as const).map((option) => (
-            <label key={option} className={period === option ? styles.periodActive : undefined}>
-              <input
-                type="radio"
-                name={`${context}-billing-period`}
-                value={option}
-                checked={period === option}
-                onChange={() => changePeriod(option)}
-              />
-              <span>{option === "yearly" ? "Anual" : "Mensual"}</span>
-              {option === "yearly" ? <small>Ahorra</small> : null}
-            </label>
-          ))}
-        </fieldset>
+        <div className={styles.periodControl}>
+          <fieldset className={styles.periodSelector}>
+            <legend>Periodicidad</legend>
+            {(["monthly", "yearly"] as const).map((option) => (
+              <label key={option} className={period === option ? styles.periodActive : undefined}>
+                <input
+                  type="radio"
+                  name={`${context}-billing-period`}
+                  value={option}
+                  checked={period === option}
+                  onChange={() => changePeriod(option)}
+                />
+                <span>{option === "yearly" ? "Anual" : "Mensual"}</span>
+                {option === "yearly" ? <small>Ahorra hasta 28%</small> : null}
+              </label>
+            ))}
+          </fieldset>
+          {isPublic ? (
+            <span className={styles.periodHint}>
+              {period === "yearly" ? "Ahorra frente a pagar mes a mes." : "Pago mensual, sin pagar el año completo."}
+            </span>
+          ) : null}
+        </div>
       </div>
+
+      {isPublic ? (
+        <div className={styles.valueRail}>
+          <ShieldCheck size={20} aria-hidden />
+          <div>
+            <strong>El mejor software para carpinteros en relación precio-calidad.</strong>
+            <span>Cotiza, envía presupuestos profesionales y ordena tu taller desde cualquier dispositivo.</span>
+          </div>
+          <span className={styles.trialBadge}>15 días gratis</span>
+        </div>
+      ) : null}
 
       <div className={styles.grid}>
         {plans.map(({ code, recommended }) => {
@@ -172,7 +201,7 @@ export function PricingPlans({
                   Equivale a {formatAmount(Math.round(selected.amountClp / 12))}/mes · Ahorras {formatAmount(savings)} ({savingsPercent}%)
                 </p>
               ) : (
-                <p className={styles.savings}>{isPublic ? "15 días gratis · Cambia de periodicidad cuando quieras" : "Cobro mensual · Cancela la renovación cuando quieras"}</p>
+                <p className={styles.savings}>{isPublic ? "15 días gratis · Sin tarjeta durante la prueba" : "Cobro mensual · Cancela la renovación cuando quieras"}</p>
               )}
 
               {isAccountActive ? (
@@ -200,6 +229,7 @@ export function PricingPlans({
                 <span className={styles.disabledCta}>Mercado Pago no disponible</span>
               ) : null}
 
+              {isPublic ? <div className={styles.includesLabel}>Incluye</div> : null}
               <ul className={styles.benefits}>
                 {selected.benefits.map((benefit) => (
                   <li key={benefit}><Check size={15} aria-hidden /><span>{benefit}</span></li>

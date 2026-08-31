@@ -213,3 +213,220 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Landing pública: la decisión de compra se entiende antes de entrar a cada tarjeta. */
+.public .heading {
+  align-items: start;
+  margin-bottom: 20px;
+}
+
+.public .headingCopy {
+  max-width: 680px;
+}
+
+.public .heading h2 {
+  max-width: 20ch;
+  font-size: clamp(2rem, 4.3vw, 3.15rem);
+  line-height: 0.98;
+}
+
+.public .heading p {
+  max-width: 62ch;
+  color: rgba(190, 201, 217, 0.82);
+}
+
+.periodControl {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.account .periodControl {
+  display: contents;
+}
+
+.periodHint {
+  max-width: 230px;
+  color: rgba(174, 191, 216, 0.78);
+  font-size: 0.76rem;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.valueRail {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 18px;
+  padding: 13px 16px;
+  border: 1px solid rgba(30, 136, 255, 0.24);
+  border-radius: 15px;
+  background: linear-gradient(100deg, rgba(30, 136, 255, 0.11), rgba(17, 24, 39, 0.62));
+  color: #9ecbff;
+}
+
+.valueRail > svg {
+  flex: 0 0 auto;
+}
+
+.valueRail > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.valueRail strong {
+  color: #f1f7ff;
+  font-size: 0.92rem;
+  line-height: 1.25;
+}
+
+.valueRail div span {
+  color: rgba(183, 198, 220, 0.78);
+  font-size: 0.79rem;
+  line-height: 1.35;
+}
+
+.trialBadge {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 7px 10px;
+  border: 1px solid rgba(110, 231, 183, 0.24);
+  border-radius: 999px;
+  color: #9ff0c9;
+  background: rgba(16, 90, 65, 0.28);
+  font-size: 0.72rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.public .grid {
+  gap: 18px;
+}
+
+.public .card {
+  padding: clamp(22px, 2.5vw, 30px);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(15, 23, 38, 0.96), rgba(7, 12, 21, 0.98));
+  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.24);
+}
+
+.public .featured {
+  border-color: rgba(30, 136, 255, 0.7);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(30, 136, 255, 0.2), transparent 42%),
+    linear-gradient(145deg, rgba(16, 34, 63, 0.98), rgba(7, 12, 21, 0.98));
+  box-shadow: 0 24px 62px rgba(5, 65, 145, 0.22), inset 0 0 0 1px rgba(30, 136, 255, 0.08);
+}
+
+.public .cardHeader {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.public .cardKicker {
+  margin-top: 2px;
+}
+
+.public .card h3 {
+  margin-top: 5px;
+  color: #f5f9ff;
+  font-size: clamp(1.3rem, 2.4vw, 1.65rem);
+}
+
+.public .description {
+  min-height: 60px;
+  margin-top: 20px;
+  color: #b4c1d3;
+}
+
+.public .priceLine {
+  margin-top: 22px;
+}
+
+.public .priceLine strong {
+  color: #f8fbff;
+}
+
+.public .savings {
+  min-height: 44px;
+  color: #78d9ae;
+}
+
+.public .cta {
+  min-height: 50px;
+  border-radius: 13px;
+}
+
+.public .benefits {
+  gap: 11px;
+  margin-top: 24px;
+  color: #bdc9d9;
+}
+
+.public .benefits svg {
+  color: #3d9aff;
+}
+
+.includesLabel {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(230, 232, 235, 0.12);
+  color: rgba(236, 244, 255, 0.86);
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.account .includesLabel {
+  border-top-color: rgba(127, 147, 180, 0.18);
+  color: #d4deeb;
+}
+
+.public .benefits {
+  margin-top: 12px;
+}
+
+.public .assisted {
+  margin-top: 18px;
+  border-color: rgba(30, 136, 255, 0.24);
+  background: linear-gradient(105deg, rgba(17, 28, 47, 0.9), rgba(8, 14, 24, 0.82));
+}
+
+@media (max-width: 720px) {
+  .periodControl {
+    justify-items: start;
+  }
+
+  .periodHint {
+    max-width: none;
+    text-align: left;
+  }
+
+  .valueRail {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .valueRail > div {
+    flex: 1 1 calc(100% - 50px);
+  }
+
+  .trialBadge {
+    margin-left: 34px;
+  }
+
+  .public .cardHeader {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .public .cardHeader .badge {
+    grid-column: 2;
+    justify-self: start;
+    margin-top: -3px;
+  }
+}
