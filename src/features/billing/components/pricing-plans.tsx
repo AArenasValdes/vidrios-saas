@@ -24,7 +24,6 @@ type PricingPlansProps = {
   isAccountActive?: boolean;
   loadingSelection?: string | null;
   onCheckout?: (plan: BillingProductCode, period: BillingPeriodCode) => void;
-  getWhatsappHref?: (plan: BillingProductCode, period: BillingPeriodCode) => string;
 };
 
 function isProduct(value: string | null): value is BillingProductCode {
@@ -67,7 +66,6 @@ export function PricingPlans({
   isAccountActive = false,
   loadingSelection = null,
   onCheckout,
-  getWhatsappHref,
 }: PricingPlansProps) {
   const [period, setPeriod] = useState<BillingPeriodCode>("yearly");
   const isPublic = context === "public";
@@ -150,7 +148,6 @@ export function PricingPlans({
           const savings = monthly.amountClp * 12 - selected.amountClp;
           const savingsPercent = Math.round((savings / (monthly.amountClp * 12)) * 100);
           const checkoutActive = !isPublic && isCheckoutEnabled && !isAccountActive;
-          const whatsappHref = getWhatsappHref?.(code, period);
 
           return (
             <article key={code} className={`${styles.card} ${recommended ? styles.featured : ""}`}>
@@ -195,10 +192,8 @@ export function PricingPlans({
                 >
                   {loadingSelection === `${code}:${period}` ? "Abriendo Mercado Pago..." : "Suscribirme con Mercado Pago"} <ExternalLink size={15} aria-hidden />
                 </button>
-              ) : whatsappHref ? (
-                <a className={`${styles.cta} ${recommended ? styles.ctaPrimary : styles.ctaSecondary}`} href={whatsappHref} target="_blank" rel="noreferrer" onClick={() => handlePlanClick(code)}>
-                  Contratar por WhatsApp <ExternalLink size={15} aria-hidden />
-                </a>
+              ) : !isPublic ? (
+                <span className={styles.disabledCta}>Mercado Pago no disponible</span>
               ) : null}
 
               <ul className={styles.benefits}>

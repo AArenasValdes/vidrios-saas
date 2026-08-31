@@ -2,19 +2,19 @@
 
 **Última actualización:** 2026-08-31
 
-Estado: Pricing V2 implementado en código; rollout productivo pendiente
+Estado: Pricing V2 implementado en código y configurado en Vercel Production; smoke productivo de checkout/webhook pendiente
 Responsable: billing + ingeniería
 
 ## Resumen
 
-La pasarela recurrente conserva el flujo productivo anterior mientras se
-preparan los cuatro planes V2. El código V2 deja el checkout bloqueado hasta que
-los cuatro IDs estén configurados y validados en Vercel; no se hizo deploy en
-esta implementación.
+La pasarela recurrente usa el catálogo V2 de cuatro variantes. El código deja el
+checkout disponible únicamente cuando la bandera, credenciales, secreto de
+webhook y los cuatro IDs server-side están presentes; todavía falta completar
+la prueba productiva con un comprador distinto y confirmar el webhook.
 
 | Ámbito | Estado |
 |---|---|
-| Pasarela principal Chile (Mercado Pago) | V2 pendiente de IDs y rollout |
+| Pasarela principal Chile (Mercado Pago) | V2 configurada en Vercel Production; smoke final pendiente |
 | Cobro automático fuera de Chile | No disponible (WhatsApp / activación manual) |
 | Flow / Webpay Plus legacy | Retirados del runtime; solo se conserva evidencia histórica |
 | Mi plan (`/cuenta/suscripcion`) | Operativo con cancelación de renovación MP |
@@ -48,7 +48,7 @@ MERCADOPAGO_CL_QUOTE_ONLY_YEARLY_PLAN_ID=
 
 - No usar prefijo `NEXT_PUBLIC_` en secretos ni tokens.
 - La UI solo recibe un booleano calculado en servidor (`isMercadoPagoChileBillingReady()`).
-- Si falta alguna variable o la bandera es `false`, `/cuenta-vencida` conserva el flujo manual por WhatsApp.
+- Si falta alguna variable o la bandera es `false`, `/cuenta-vencida` muestra que Mercado Pago no está disponible y no ofrece un CTA alternativo de contratación.
 
 Webhook productivo:
 
@@ -81,7 +81,7 @@ Topics mínimos: **Planes y suscripciones** (`subscription_preapproval`, `subscr
 - **Grandfathering:** el lock existente se conserva y los KPI administrativos
   calculan MRR/ARR con `suscripciones_organizacion.amount` o pago aprobado.
 
-> Despliegue coordinado: el hardening depende de `20260814201536_security_hardening_payments_auth.sql`. Al 2026-08-14 su aplicacion remota esta pendiente de verificacion; aplicar la migracion antes de desplegar el codigo que llama `complete_verified_auth_account(...)`.
+> Despliegue coordinado: `20260814201536_security_hardening_payments_auth.sql` consta aplicada y verificada en el addendum remoto del 2026-08-20. No modificarla ni asumir que una futura base nueva la contiene sin verificar historial.
 
 ## Archivos críticos
 

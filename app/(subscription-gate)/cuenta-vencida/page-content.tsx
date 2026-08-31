@@ -8,7 +8,6 @@ import { useOrganizationProfile } from "@/features/organization-profile/hooks/us
 import { useMercadoPagoSubscriptionCheckout } from "@/features/subscriptions/hooks/useMercadoPagoSubscriptionCheckout";
 import { PricingPlans } from "@/features/billing/components/pricing-plans";
 import {
-  buildPlanContractWhatsappHref,
   resolveOrganizationSubscriptionState,
 } from "@/features/subscriptions/services/subscription-status.service";
 
@@ -24,7 +23,6 @@ export function CuentaVencidaPageContent({
   const searchParams = useSearchParams();
   const pagoFallido = searchParams.get("pago_fallido") === "1";
   const pagoPendiente = searchParams.get("pago_pendiente") === "1";
-  const companyName = profile?.empresaNombre ?? "Mi empresa";
   const subscriptionState = resolveOrganizationSubscriptionState({
     subscriptionStatus: profile?.subscriptionStatus ?? null,
     trialStartedAt: profile?.trialStartedAt ?? null,
@@ -45,11 +43,6 @@ export function CuentaVencidaPageContent({
   const { startCheckout, loadingPlan, error: checkoutError } =
     useMercadoPagoSubscriptionCheckout();
 
-  const getWhatsappHref = (plan: "quote_only" | "founder_full", period: "monthly" | "yearly") =>
-    buildPlanContractWhatsappHref({
-      planLabel: `${plan === "founder_full" ? "Ventora Comercial" : "Ventora Cotización"} ${period === "yearly" ? "Anual" : "Mensual"}`,
-      companyName,
-    });
 
   const volver = useCallback(() => {
     if (window.history.length > 1) {
@@ -109,7 +102,7 @@ export function CuentaVencidaPageContent({
           <p className={s.text}>
             {mercadoPagoEnabled
               ? "Elige tu plan y completa la suscripcion de forma segura en Mercado Pago. La activacion se confirma automaticamente."
-              : "Elige un plan y te contactamos por WhatsApp para activarlo. Todos los pagos se confirman de forma manual por ahora."}
+              : "Mercado Pago no está disponible en este momento. La cuenta seguirá en modo lectura hasta que se complete la configuración de cobro."}
           </p>
           {mercadoPagoEnabled ? (
             <p className={s.text}>
@@ -148,7 +141,6 @@ export function CuentaVencidaPageContent({
           isAccountActive={whatsappDisabled}
           loadingSelection={loadingPlan}
           onCheckout={(plan, period) => void startCheckout(plan, period)}
-          getWhatsappHref={getWhatsappHref}
         />
 
         <div className={s.actions}>

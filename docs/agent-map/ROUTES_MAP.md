@@ -41,15 +41,15 @@ Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las
 - **Tipo**: Publica (redirect)
 - **Archivo principal**: `app/(landing-web)/planes/page.tsx`
 - **Layout usado**: `app/layout.tsx` (root layout)
-- **Proposito**: Redirect permanente a `/registro`. El CTA de prueba ya no pasa por una pagina extra.
+- **Proposito**: Redirect permanente a la landing unica, anclada en `#precios`. El CTA de prueba ya no pasa por una pagina extra.
 - **Usuario objetivo**: Visitante que llega por un link antiguo a `/planes`
 - **Funcionalidades visibles**: Ninguna; redirige a crear cuenta
 - **Componentes principales**: Ninguno
 - **Datos que consume**: Ninguno
 - **Tablas Supabase relacionadas**: Ninguna
-- **Acciones principales**: `permanentRedirect("/registro")`
+- **Acciones principales**: `permanentRedirect("/#precios")`
 - **Archivos a tocar para modificar**: `app/(landing-web)/planes/page.tsx`
-- **Riesgos**: No reintroducir una pagina intermedia entre el CTA de prueba y `/registro`. Los precios viven en `/#precios`.
+- **Riesgos**: No reintroducir una pagina intermedia entre la landing, el CTA de prueba y `/registro`. Los precios viven en `/#precios`.
 
 ---
 
@@ -405,13 +405,13 @@ Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las
 - **Archivo principal**: `app/(subscription-gate)/cuenta-vencida/page.tsx`
 - **Layout usado**: `app/(subscription-gate)/layout.tsx` (sin `AppShell`; tipografías PWA únicamente)
 - **CSS**: `app/(subscription-gate)/cuenta-vencida/page.module.css`
-- **Proposito**: Pantalla de activacion/renovacion. Mercado Pago Chile ofrece los tres planes en checkout cuando la configuracion server-side esta completa (estado operativo desde 2026-08-14); sin ella conserva WhatsApp.
+- **Proposito**: Pantalla de activacion/renovacion. Mercado Pago Chile ofrece las cuatro variantes del catalogo en checkout cuando la configuracion server-side esta completa; si no esta lista, muestra el estado operativo sin ofrecer un canal de contratacion alternativo.
 - **Usuario objetivo**: Admin/vendedor autenticado con cuenta en modo lectura
-- **Funcionalidades visibles**: Selector accesible mensual/anual (anual por defecto), cards Ventora Cotización y Ventora Comercial, checkout Mercado Pago/WhatsApp, configuración asistida separada desde $250.000 y accion discreta `Seguir en modo lectura`.
+- **Funcionalidades visibles**: Selector accesible mensual/anual (anual por defecto), cards Ventora Cotización y Ventora Comercial, checkout Mercado Pago, configuración asistida separada desde $250.000 y accion discreta `Seguir en modo lectura`.
 - **Componentes principales**: Internos de la pagina
 - **Datos que consume**: `organization_profile` con snapshot calculado de suscripcion
 - **Tablas Supabase relacionadas**: `organization_profile`, `suscripciones_organizacion`, `pagos_suscripcion`
-- **Acciones principales**: Iniciar suscripcion Mercado Pago, abrir WhatsApp como fallback, volver a lectura basica
+- **Acciones principales**: Iniciar suscripcion Mercado Pago, mostrar error operativo si la configuracion no esta lista, volver a lectura basica
 - **Archivos a tocar para modificar**: `app/(subscription-gate)/cuenta-vencida/page.tsx`, `app/(subscription-gate)/cuenta-vencida/page.module.css`, `app/(subscription-gate)/layout.tsx`, `src/features/subscriptions/services/*`, `src/components/layout/app-shell.tsx`
 - **Riesgos**: No convertirla en logout forzado. El retorno `/cuenta-vencida/mercadopago/retorno` es informativo y no debe escribir. La UI deshabilita checkout para cualquier cuenta pagada activa, incluso founder sin vencimiento.
 

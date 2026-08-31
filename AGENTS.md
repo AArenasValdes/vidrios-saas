@@ -1,7 +1,7 @@
 # AGENTS.md - Ventora
 
 Estado: vigente
-Actualizado: 2026-08-14
+Actualizado: 2026-08-31
 Responsable: ingeniería + agentes del repositorio
 
 Lee antes de editar. Ultima consolidacion: 2026-08-14.
@@ -74,7 +74,7 @@ docs/
 
 Ultima actualizacion operativa: 2026-08-14
 
-- **Pasarela de pago**: Mercado Pago Chile **operativa en produccion** para suscripciones recurrentes CLP. Runbook: `docs/billing/README.md`.
+- **Pasarela de pago**: Mercado Pago Chile **configurada en produccion** para suscripciones recurrentes CLP; el smoke final de checkout/webhook sigue siendo la prueba de salida. Runbook: `docs/billing/README.md`.
 - **Paso actual**: **Fase 4 — Cubicación V1 vendible multi-tipología**. Ver `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`.
 - **Modelo vigente**: `fabrication_recipes` + `fabrication_recipe_tests`; seleccion de receta validada; snapshot formal en `cotizacion_items.fabricacion_snapshot`; `fabricationRecipePack`, `fabricationRecipe` y `[cub:]` quedan como compatibilidad historica.
 - **Plantillas**: L5000/L20/L25 = iniciales sugeridas (wizard Fabricación, no listado de líneas). Bases tipológicas = pendientes.
@@ -89,7 +89,7 @@ Ultima actualizacion operativa: 2026-08-14
 ### Ya resuelto en pasada 2026-08-14 (Billing Mercado Pago Chile)
 
 - Pasarela recurrente Mercado Pago Chile operativa en produccion (`MERCADOPAGO_BILLING_ENABLED=true` + variables `MERCADOPAGO_CL_*`)
-- Checkout en `/cuenta-vencida` para Founder mensual/anual y Solo Cotizacion anual; WhatsApp solo como fallback si falta configuracion
+- Checkout en `/cuenta-vencida` para las cuatro variantes de Pricing V2; si falta configuracion, la UI muestra el estado operativo y no ofrece WhatsApp como contratacion alternativa
 - Webhook firmado en `/api/subscriptions/mercadopago/webhook`; activacion de cuenta solo por webhook, no por retorno del navegador
 - Cambio de plan durante checkout pendiente: reutiliza mismo plan o libera reserva anterior al elegir otro
 - Documentacion operativa centralizada en `docs/billing/README.md`

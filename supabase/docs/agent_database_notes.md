@@ -3,16 +3,16 @@
 Reglas y contexto para futuros agentes que trabajen sobre la base de datos.
 Fuente de verdad, en orden: base remota verificada; migraciones registradas en remoto; fuentes recuperadas con `supabase migration fetch --linked`; y, solo como baseline historico, `current_schema.sql`. El dump y `database.types.ts` estan atrasados respecto de migraciones recientes; revisar migraciones y addendums en `database_map.md` y `rls_policies.md`.
 
-## Endurecimiento pendiente de aplicar en remoto (2026-08-14)
+## Endurecimiento aplicado y verificado (2026-08-20)
 
-La migracion local `20260814201536_security_hardening_payments_auth.sql` aun requiere aplicacion y verificacion remota. Hasta entonces, no asumir activos estos controles en produccion:
+La migracion `20260814201536_security_hardening_payments_auth.sql` consta aplicada y verificada en el addendum remoto del 2026-08-20. Estos controles forman parte del contrato actual:
 
 - privilegios por columna en `organization_profile`, sin escritura cliente sobre estado de billing;
 - revocacion del `SELECT` cliente sobre el ledger crudo `pagos_suscripcion`;
 - deduplicacion durable de webhooks en `payment_webhook_events`;
 - RPC `complete_verified_auth_account(...)`, que impide reclamar usuarios por coincidencia de correo.
 
-La aplicacion ya consume el contrato endurecido. No desplegar ese codigo antes de aplicar la migracion, regenerar `database.types.ts` y ejecutar el smoke completo de registro, login y webhook.
+La aplicacion consume el contrato endurecido. Para una nueva base o una reconciliacion futura, verificar historial remoto, regenerar `database.types.ts` y ejecutar el smoke completo de registro, login y webhook antes de desplegar.
 
 ---
 
@@ -367,3 +367,12 @@ Si la respuesta a 1-4 no es sí: detenerse y reportar.
 - `cotizaciones.creation_surface` es nullable y distingue `desktop_constructor`, `desktop_guiada`, `mobile_constructor`, `mobile_guiada` y `total_global` al crear nuevas cotizaciones. No se hace backfill: las cotizaciones anteriores quedan sin clasificación confiable.
 - No cambia RLS, grants ni ownership. El índice parcial `cotizaciones_creation_surface_active_idx` sirve al panel founder para leer adopción sin incluir soft deletes.
 - El panel `/admin/marketing` filtra primero por `organization_profile.is_test_account=false`; no excluir cuentas por correo ni nombre.
+
+---
+
+## Addendum 2026-08-31 - Pricing V2 y preservación de contratos
+
+- El operador confirmó la aplicación de `20260831120000_preserve_founder_price_lock.sql` en Supabase remoto.
+- La migración no crea tablas ni columnas: ajusta el lifecycle para conservar el valor existente de `organization_profile.founder_price_locked` y no asignarlo automáticamente a nuevas altas Comerciales.
+- Pricing V2 mantiene cuatro variantes comerciales en el catálogo server-side de la aplicación. Supabase persiste el producto lógico (`quote_only` o `founder_full`), la periodicidad y el monto contractual real en `suscripciones_organizacion`; no se reescriben suscripciones ni pagos históricos.
+- La verificación remota específica de la función modificada debe hacerse con Supabase MCP/CLI antes de abrir una nueva migración dependiente de ella. No ejecutar `db push` global por el drift histórico documentado.
