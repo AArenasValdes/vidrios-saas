@@ -9,6 +9,7 @@ describe("mercadopago market config", () => {
     delete process.env.MERCADOPAGO_CL_FOUNDER_MONTHLY_PLAN_ID;
     delete process.env.MERCADOPAGO_CL_FOUNDER_YEARLY_PLAN_ID;
     delete process.env.MERCADOPAGO_CL_QUOTE_ONLY_YEARLY_PLAN_ID;
+    delete process.env.MERCADOPAGO_CL_QUOTE_ONLY_MONTHLY_PLAN_ID;
     delete process.env.MERCADOPAGO_PE_BILLING_ENABLED;
   });
 
@@ -38,6 +39,7 @@ describe("mercadopago market config", () => {
     process.env.MERCADOPAGO_CL_FOUNDER_MONTHLY_PLAN_ID = "monthly";
     process.env.MERCADOPAGO_CL_FOUNDER_YEARLY_PLAN_ID = "yearly";
     process.env.MERCADOPAGO_CL_QUOTE_ONLY_YEARLY_PLAN_ID = "quote-yearly";
+    process.env.MERCADOPAGO_CL_QUOTE_ONLY_MONTHLY_PLAN_ID = "quote-monthly";
 
     expect(isMercadoPagoMarketBillingReady("CL")).toBe(true);
   });

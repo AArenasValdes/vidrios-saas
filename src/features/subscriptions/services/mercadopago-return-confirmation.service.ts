@@ -7,15 +7,17 @@ export function resolveSubscriptionPlanLabel(input: {
   planType?: string | null;
 }) {
   if (input.planCode === "quote_only") {
-    return getPlanLabel("quote_only");
+    return input.billingPeriod === "monthly"
+      ? "Ventora Cotización Mensual"
+      : "Ventora Cotización Anual";
   }
 
   if (input.planCode === "founder_full") {
     if (input.billingPeriod === "monthly" || input.planType === "monthly") {
-      return "Founder Mensual";
+      return "Ventora Comercial Mensual";
     }
 
-    return "Founder Full Anual";
+    return "Ventora Comercial Anual";
   }
 
   return getPlanLabel(input.planCode);

@@ -1,17 +1,20 @@
 # Billing Ventora — Estado operativo
 
-**Última actualización:** 2026-08-14
+**Última actualización:** 2026-08-31
 
-Estado: operativo
+Estado: Pricing V2 implementado en código; rollout productivo pendiente
 Responsable: billing + ingeniería
 
 ## Resumen
 
-La **pasarela de pago recurrente con Mercado Pago Chile está lista y operativa en producción**. Las empresas chilenas con trial vencido o cuenta inactiva pueden contratar desde `/cuenta-vencida` sin depender de WhatsApp cuando la configuración server-side está completa.
+La pasarela recurrente conserva el flujo productivo anterior mientras se
+preparan los cuatro planes V2. El código V2 deja el checkout bloqueado hasta que
+los cuatro IDs estén configurados y validados en Vercel; no se hizo deploy en
+esta implementación.
 
 | Ámbito | Estado |
 |---|---|
-| Pasarela principal Chile (Mercado Pago) | **Operativa** |
+| Pasarela principal Chile (Mercado Pago) | V2 pendiente de IDs y rollout |
 | Cobro automático fuera de Chile | No disponible (WhatsApp / activación manual) |
 | Flow / Webpay Plus legacy | Retirados del runtime; solo se conserva evidencia histórica |
 | Mi plan (`/cuenta/suscripcion`) | Operativo con cancelación de renovación MP |
@@ -20,9 +23,14 @@ La **pasarela de pago recurrente con Mercado Pago Chile está lista y operativa 
 
 | Plan | Periodicidad | Monto CLP | Variable de plan ID |
 |---|---|---:|---|
-| Founder Full | Mensual | $8.990 | `MERCADOPAGO_CL_FOUNDER_MONTHLY_PLAN_ID` |
-| Founder Full | Anual | $79.990 | `MERCADOPAGO_CL_FOUNDER_YEARLY_PLAN_ID` |
-| Solo Cotización | Anual | $59.990 | `MERCADOPAGO_CL_QUOTE_ONLY_YEARLY_PLAN_ID` |
+| Ventora Cotización | Mensual | $6.990 | `MERCADOPAGO_CL_QUOTE_ONLY_MONTHLY_PLAN_ID` |
+| Ventora Cotización | Anual | $59.990 | `MERCADOPAGO_CL_QUOTE_ONLY_YEARLY_PLAN_ID` |
+| Ventora Comercial | Mensual | $9.990 | `MERCADOPAGO_CL_FOUNDER_MONTHLY_PLAN_ID` |
+| Ventora Comercial | Anual | $89.990 | `MERCADOPAGO_CL_FOUNDER_YEARLY_PLAN_ID` |
+
+El anual queda seleccionado por defecto. Equivalencias: Cotización $4.999/mes
+(ahorro $23.890, 28%) y Comercial $7.499/mes (ahorro $29.890, 25%). Los
+montos de suscripciones históricas no se revalorizan.
 
 Moneda: **CLP**. País requerido en perfil: **`CL`**.
 
@@ -32,6 +40,7 @@ Moneda: **CLP**. País requerido en perfil: **`CL`**.
 MERCADOPAGO_BILLING_ENABLED=true
 MERCADOPAGO_CL_ACCESS_TOKEN=
 MERCADOPAGO_CL_WEBHOOK_SECRET=
+MERCADOPAGO_CL_QUOTE_ONLY_MONTHLY_PLAN_ID=
 MERCADOPAGO_CL_FOUNDER_MONTHLY_PLAN_ID=
 MERCADOPAGO_CL_FOUNDER_YEARLY_PLAN_ID=
 MERCADOPAGO_CL_QUOTE_ONLY_YEARLY_PLAN_ID=
@@ -67,6 +76,10 @@ Topics mínimos: **Planes y suscripciones** (`subscription_preapproval`, `subscr
 - **Replay:** cada webhook firmado se reclama primero en `payment_webhook_events`; duplicados procesados no vuelven a mutar billing.
 - **Ledger privado:** `pagos_suscripcion` se consulta solo desde servidor y la API visible omite tokens, checkout URL y payloads crudos.
 - **Gracia por pago fallido:** `NEXT_PUBLIC_SUBSCRIPTION_GRACE_DAYS` (default `3`).
+- **Catálogo único:** `src/features/billing/types/plans.ts`; la API recibe solo
+  `planCode` lógico (`quote_only`/`founder_full`) y `billingPeriod`.
+- **Grandfathering:** el lock existente se conserva y los KPI administrativos
+  calculan MRR/ARR con `suscripciones_organizacion.amount` o pago aprobado.
 
 > Despliegue coordinado: el hardening depende de `20260814201536_security_hardening_payments_auth.sql`. Al 2026-08-14 su aplicacion remota esta pendiente de verificacion; aplicar la migracion antes de desplegar el codigo que llama `complete_verified_auth_account(...)`.
 

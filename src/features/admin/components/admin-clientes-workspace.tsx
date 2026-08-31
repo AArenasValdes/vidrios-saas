@@ -45,13 +45,14 @@ import {
   buildProvisionWhatsAppMessage,
 } from "@/features/admin/services/admin-provision-message";
 import type { AdminClientListItem } from "@/features/admin/types/admin-client";
-import type { BillingPlanCode } from "@/features/billing/types/plans";
+import { formatBillingPlanAmount, type BillingPlanCode } from "@/features/billing/types/plans";
 import s from "./admin-clientes-workspace.module.css";
 
 const PLAN_OPTIONS: Array<{ value: BillingPlanCode; label: string }> = [
-  { value: "founder_monthly", label: "Founder mensual ($8.990)" },
-  { value: "founder_full_annual", label: "Founder anual ($79.990)" },
-  { value: "quote_only_annual", label: "Solo cotización anual ($59.990)" },
+  { value: "quote_only_monthly", label: `Ventora Cotización mensual (${formatBillingPlanAmount("quote_only_monthly")})` },
+  { value: "quote_only_annual", label: `Ventora Cotización anual (${formatBillingPlanAmount("quote_only_annual")})` },
+  { value: "founder_monthly", label: `Ventora Comercial mensual (${formatBillingPlanAmount("founder_monthly")})` },
+  { value: "founder_full_annual", label: `Ventora Comercial anual (${formatBillingPlanAmount("founder_full_annual")})` },
 ];
 
 const SORT_OPTIONS: Array<{ value: ClientesSortField; label: string }> = [

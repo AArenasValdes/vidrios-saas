@@ -119,9 +119,10 @@ Respuesta:
 
 Oferta sugerida:
 
-- `CLP 8.990 mensual`
-- `CLP 79.990 Founder anual`
-- `CLP 59.990 Solo Cotizacion anual`
+- `CLP 6.990 Ventora Cotización mensual`
+- `CLP 9.990 Ventora Comercial mensual`
+- `CLP 89.990 Ventora Comercial anual`
+- `CLP 59.990 Ventora Cotización anual` (equivalente publicado: $4.999/mes)
 
 Estructura de cierre:
 

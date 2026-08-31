@@ -385,6 +385,10 @@ function resolveBillingPlanCodeFromPayment(payment: PagoSuscripcionRow): Billing
     return "quote_only_annual";
   }
 
+  if (payment.plan_code === "quote_only" && payment.billing_period === "monthly") {
+    return "quote_only_monthly";
+  }
+
   return null;
 }
 

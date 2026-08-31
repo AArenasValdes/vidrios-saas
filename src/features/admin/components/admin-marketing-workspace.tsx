@@ -5,20 +5,17 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   LuFilter,
-  LuMonitor,
   LuSearch,
   LuSettings2,
-  LuSmartphone,
-  LuVideo,
 } from "react-icons/lu";
 
+import { AdminMarketingDashboard } from "@/features/admin/components/admin-marketing-dashboard";
 import { AdminMarketingFiltersPanel } from "@/features/admin/components/admin-marketing-filters-panel";
 import { AdminMarketingKpiRow } from "@/features/admin/components/admin-marketing-kpi-row";
 import { AdminMarketingPublicActionCell } from "@/features/admin/components/admin-marketing-public-action-cell";
 import { AdminMarketingContentControl } from "@/features/admin/components/admin-marketing-content-control";
 import { useAdminHeaderActions } from "@/features/admin/components/admin-header-context";
 import { CONFIGURED_ACQUISITION_SOURCES } from "@/features/admin/services/admin-marketing.logic";
-import { ONBOARDING_VIDEO_BLUEPRINTS } from "@/features/growth/config/onboarding-video-blueprints";
 import {
   applyMarketingChannelFilter,
   applyMarketingFunnelFilter,
@@ -41,6 +38,9 @@ function buildExportCsv(workspace: MarketingWorkspace) {
       (row) =>
         `${row.label},${row.prospects},${row.trials},${row.paid},${row.conversionPct ?? ""}`
     ),
+    "",
+    "UTM pagina publica,Solicitudes",
+    ...workspace.publicUtmRows.map((row) => `${row.label},${row.count}`),
     "",
     "Empresa,Estado pagina,Solicitudes periodo,Ultima solicitud,Cotizaciones,Estado recomendado",
     ...workspace.publicCompanies.map(
@@ -66,7 +66,7 @@ export function AdminMarketingWorkspace() {
   const searchParams = useSearchParams();
   const { setHeaderState, resetHeaderState } = useAdminHeaderActions();
   const measurementRef = useRef<HTMLElement>(null);
-  const onboardingRef = useRef<HTMLElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const appOrigin = typeof window !== "undefined" ? window.location.origin : "";
 
   const [workspace, setWorkspace] = useState<MarketingWorkspace | null>(null);
@@ -117,15 +117,19 @@ export function AdminMarketingWorkspace() {
   );
 
   useEffect(() => {
+    const periodDays = filters.period === "7d" ? 7 : filters.period === "month" ? 90 : 30;
     setHeaderState({
       syncedAt,
       isRefreshing,
+      periodDays,
+      onPeriodChange: (days) => {
+        updateFilters({
+          ...filters,
+          period: days === 7 ? "7d" : days === 90 ? "month" : "30d",
+        });
+      },
       onRefresh: () => void loadWorkspace(),
       hideDefaultPrimaryActions: true,
-      customSecondaryAction: {
-        label: "Registrar origen",
-        href: "/admin/prospectos",
-      },
       customTertiaryAction: {
         label: "Exportar",
         onClick: () => {
@@ -134,12 +138,12 @@ export function AdminMarketingWorkspace() {
         },
       },
       customPrimaryAction: {
-        label: "Preparar onboarding",
-        onClick: () => onboardingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+        label: "Crear publicación",
+        onClick: () => contentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
       },
     });
     return () => resetHeaderState();
-  }, [syncedAt, isRefreshing, loadWorkspace, resetHeaderState, setHeaderState, workspace]);
+  }, [filters, syncedAt, isRefreshing, loadWorkspace, resetHeaderState, setHeaderState, updateFilters, workspace]);
 
   const filteredPublicCompanies = useMemo(
     () => (workspace ? filterMarketingPublicCompanies(workspace.publicCompanies, filters) : []),
@@ -171,81 +175,18 @@ export function AdminMarketingWorkspace() {
     <div className={s.page}>
       {error ? <div className={s.bannerError}>{error}</div> : null}
 
-      <section className={s.startPanel} ref={onboardingRef} aria-label="Primeros pasos de marketing">
-        <div className={s.startIntro}>
-          <p>Empieza por aquí</p>
-          <h2>Primero deja lista la bienvenida. Después publica.</h2>
-          <span>Son dos videos que explican Ventora según el dispositivo. Se configuran una vez y se muestran automáticamente a cada cuenta nueva.</span>
-        </div>
-        <ol className={s.startSteps}>
-          <li className={s.startStepActive}>
-            <span className={s.stepNumber}>1</span>
-            <div>
-              <h3>Graba los 2 videos de bienvenida</h3>
-              <p>No grabes seis tutoriales ahora. Parte por el resultado que cada persona necesita en su dispositivo.</p>
-              <div className={s.videoBlueprints}>
-                {(["movil", "escritorio"] as const).map((device) => {
-                  const blueprint = ONBOARDING_VIDEO_BLUEPRINTS[device];
-                  const Icon = device === "movil" ? LuSmartphone : LuMonitor;
-                  return (
-                    <article key={device} className={s.videoBlueprint}>
-                      <Icon aria-hidden />
-                      <div>
-                        <strong>{device === "movil" ? "Celular" : "Computador"} · {blueprint.title}</strong>
-                        <span>{Math.ceil(blueprint.durationSeconds / 60)}–{Math.ceil(blueprint.durationSeconds / 60) + 1} min · {blueprint.recordingSteps[0]}</span>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-              <Link href="/admin/marketing/onboarding" className={s.primaryAction}>
-                <LuVideo aria-hidden /> Preparar los videos
-              </Link>
-            </div>
-          </li>
-          <li className={s.startStep}>
-            <span className={s.stepNumber}>2</span>
-            <div>
-              <h3>Publica una demostración simple</h3>
-              <p>Reutiliza el video de celular como Reel. Un dolor, una demostración y un CTA.</p>
-              <a href="#contenido" className={s.inlineAction}>Crear una pieza con guion base</a>
-            </div>
-          </li>
-          <li className={s.startStep}>
-            <span className={s.stepNumber}>3</span>
-            <div>
-              <h3>Revisa señales reales</h3>
-              <p>Mira qué forma de cotizar usan las cuentas reales antes de grabar videos más avanzados, como Constructor.</p>
-              <a href="#uso-real" className={s.inlineAction}>Ver uso del cotizador</a>
-            </div>
-          </li>
-        </ol>
-      </section>
+      <AdminMarketingDashboard
+        workspace={workspace}
+        onKpiClick={(kpiId) => {
+          setActiveAcquisitionKpiId(kpiId);
+          const kpi = workspace.acquisitionKpis.find((item) => item.id === kpiId);
+          updateFilters(applyMarketingKpiFilter(filters, kpi?.filterKey));
+        }}
+      />
 
-      <div id="contenido">
+      <div id="contenido" ref={contentRef}>
         <AdminMarketingContentControl />
       </div>
-
-      <section id="uso-real" className={s.sectionBlock} aria-label="Uso real del cotizador">
-        <div className={s.sectionHeading}>
-          <h2>Uso real del cotizador</h2>
-          <p>Solo cuentas reales · {workspace.period.label}. Dentro de por ítems: Guiada o Constructor de piezas.</p>
-        </div>
-
-        <AdminMarketingKpiRow
-          kpis={workspace.quoteUsageKpis}
-          activeKpiId={activeQuoteUsageKpiId}
-          ariaLabel="KPIs de adopción del cotizador"
-          onKpiClick={setActiveQuoteUsageKpiId}
-        />
-
-        {workspace.quoteUsage.historicalUnclassifiedItemQuotes > 0 ? (
-          <p className={s.funnelInsightMuted}>
-            {workspace.quoteUsage.historicalUnclassifiedItemQuotes} cotizaciones históricas por ítems
-            no distinguen Guiada de Constructor. Se excluyen de esa comparación.
-          </p>
-        ) : null}
-      </section>
 
       <details className={s.detailDisclosure}>
         <summary>
@@ -253,6 +194,25 @@ export function AdminMarketingWorkspace() {
           <small>Prospección saliente, páginas públicas y calidad de medición</small>
         </summary>
         <div className={s.detailContent}>
+
+      <section className={s.sectionBlock} aria-label="Uso real del cotizador">
+        <div className={s.sectionHeading}>
+          <h2>Uso real del cotizador</h2>
+          <p>Solo cuentas reales · {workspace.period.label}. Dentro de por ítems: Guiada o Constructor de piezas.</p>
+        </div>
+        <AdminMarketingKpiRow
+          kpis={workspace.quoteUsageKpis}
+          activeKpiId={activeQuoteUsageKpiId}
+          ariaLabel="KPIs de adopción del cotizador"
+          onKpiClick={setActiveQuoteUsageKpiId}
+        />
+        {workspace.quoteUsage.historicalUnclassifiedItemQuotes > 0 ? (
+          <p className={s.funnelInsightMuted}>
+            {workspace.quoteUsage.historicalUnclassifiedItemQuotes} cotizaciones históricas por ítems
+            no distinguen Guiada de Constructor. Se excluyen de esa comparación.
+          </p>
+        ) : null}
+      </section>
 
       <div className={s.toolbar}>
         <label className={s.searchField}>

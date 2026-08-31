@@ -49,7 +49,7 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
 
 ## Feature: Trial, Suscripcion y Billing
 
-- **Que hace**: Controla la prueba gratuita de 15 dias para altas nuevas, el contrato recurrente y su ledger. **Mercado Pago Chile esta operativo en produccion** (desde 2026-08-14) para Founder mensual/anual y Solo Cotizacion anual; Flow y Webpay Plus estan retirados del runtime y solo se conservan como evidencia historica. Una cuenta vencida conserva lectura y bloquea escrituras privadas.
+- **Que hace**: Controla la prueba gratuita de 15 dias para altas nuevas, el contrato recurrente y su ledger. El catalogo V2 ofrece Ventora Cotización ($6.990/$59.990) y Ventora Comercial ($9.990/$89.990) en mensual/anual; la disponibilidad de Mercado Pago exige cuatro IDs server-side y el rollout productivo aún está pendiente. Flow y Webpay Plus estan retirados del runtime y solo se conservan como evidencia historica. Una cuenta vencida conserva lectura y bloquea escrituras privadas.
 - **Estado pasarela**: `MERCADOPAGO_BILLING_ENABLED=true` + variables `MERCADOPAGO_CL_*` completas en Vercel. Fuente operativa: `docs/billing/README.md`.
 - **Preparacion LATAM Fase 6**: `mercadopago-market.config.ts` separa secretos, plan IDs, bandera y moneda por mercado. Solo Chile tiene precios comerciales definidos; PE/CO/AR/UY/MX permanecen sin precio y apagados. El checkout actual rechaza en servidor organizaciones fuera de Chile para no cobrar CLP por error.
 - **Rutas involucradas**: `/dashboard`, `/cotizaciones`, `/cotizaciones/nueva`, `/clientes`, `/clientes/nuevo`, `/clientes/[id]/editar`, `/solicitudes`, `/solicitudes/canales`, `/configuracion/*`, `/cuenta-vencida`

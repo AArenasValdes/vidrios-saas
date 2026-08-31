@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { assertValidSupabaseServiceRoleKey } from "@/lib/supabase/service-role-key";
 
 let adminClient: ReturnType<typeof createClient> | null = null;
 
@@ -21,6 +22,8 @@ export function createAdminClient() {
       "Faltan NEXT_PUBLIC_SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY para usar rutas públicas con Supabase admin."
     );
   }
+
+  assertValidSupabaseServiceRoleKey(serviceRoleKey);
 
   adminClient = createClient(url, serviceRoleKey, {
     auth: {

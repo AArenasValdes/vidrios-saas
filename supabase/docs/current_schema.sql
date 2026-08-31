@@ -117,7 +117,7 @@ begin
     plan_type = projected_plan_type,
     billing_period = payment_record.billing_period,
     payment_method = payment_record.payment_provider,
-    founder_price_locked = payment_record.plan_code = 'founder_full',
+    founder_price_locked = public.organization_profile.founder_price_locked,
     subscription_started_at = coalesce(
       payment_record.period_starts_at,
       payment_record.paid_at
@@ -709,7 +709,7 @@ begin
       plan_type = projected_plan_type,
       billing_period = subscription_record.billing_period,
       payment_method = 'mercadopago',
-      founder_price_locked = subscription_record.plan_code = 'founder_full',
+      founder_price_locked = public.organization_profile.founder_price_locked,
       subscription_started_at = coalesce(
         subscription_record.current_period_starts_at,
         subscription_started_at,

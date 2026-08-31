@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { PaymentProvider, PaymentStatus } from "@/features/subscriptions/types/pago-suscripcion";
 
 const ADMIN_ORGANIZATION_PROFILE_SELECT =
   "organization_id, empresa_nombre, empresa_direccion, empresa_telefono, empresa_email, public_name, public_zone, brand_color, solicitud_publica_slug, subscription_status, trial_started_at, trial_ends_at, subscription_started_at, subscription_ends_at, plan_type, plan_code, billing_period, payment_method, last_payment_at, founder_price_locked, is_test_account";
@@ -62,9 +63,9 @@ export type AdminOrganizationPaymentRow = {
   billing_period: string;
   amount_clp: number;
   currency: string;
-  payment_provider: "flow" | "manual_transfer" | "webpay_plus";
+  payment_provider: PaymentProvider;
   provider_status: string | null;
-  status: "pendiente" | "aprobado" | "fallido" | "cancelado" | "reembolsado";
+  status: PaymentStatus;
   paid_at: string | null;
   period_starts_at: string | null;
   period_ends_at: string | null;
@@ -73,11 +74,32 @@ export type AdminOrganizationPaymentRow = {
   eliminado_en: string | null;
 };
 
+export type AdminOrganizationSubscriptionRow = {
+  id: number | string;
+  organization_id: number | string;
+  provider: string;
+  provider_subscription_id: string | null;
+  provider_plan_id: string | null;
+  plan_code: string;
+  billing_period: string;
+  currency_code: string;
+  amount: number;
+  status: string;
+  provider_status: string | null;
+  current_period_starts_at: string | null;
+  current_period_ends_at: string | null;
+  next_payment_at: string | null;
+  creado_en: string;
+  actualizado_en: string;
+  eliminado_en: string | null;
+};
+
 export type AdminOrganizationsSnapshot = {
   organizations: AdminOrganizationRow[];
   profiles: AdminOrganizationProfileRow[];
   users: AdminOrganizationUserRow[];
   payments: AdminOrganizationPaymentRow[];
+  subscriptions: AdminOrganizationSubscriptionRow[];
 };
 
 export type AdminOrganizationSnapshot = {
@@ -85,6 +107,7 @@ export type AdminOrganizationSnapshot = {
   profile: AdminOrganizationProfileRow | null;
   users: AdminOrganizationUserRow[];
   payments: AdminOrganizationPaymentRow[];
+  subscriptions: AdminOrganizationSubscriptionRow[];
 };
 
 export async function listAdminOrganizationsSnapshot(): Promise<AdminOrganizationsSnapshot> {
@@ -112,10 +135,11 @@ export async function listAdminOrganizationsSnapshot(): Promise<AdminOrganizatio
       profiles: [],
       users: [],
       payments: [],
+      subscriptions: [],
     };
   }
 
-  const [profilesResult, usersResult, paymentsResult] = await Promise.all([
+  const [profilesResult, usersResult, paymentsResult, subscriptionsResult] = await Promise.all([
     admin
       .from("organization_profile")
       .select(ADMIN_ORGANIZATION_PROFILE_SELECT)
@@ -136,6 +160,14 @@ export async function listAdminOrganizationsSnapshot(): Promise<AdminOrganizatio
       .in("organization_id", organizationIds)
       .is("eliminado_en", null)
       .order("creado_en", { ascending: false }),
+    admin
+      .from("suscripciones_organizacion")
+      .select(
+        "id, organization_id, provider, provider_subscription_id, provider_plan_id, plan_code, billing_period, currency_code, amount, status, provider_status, current_period_starts_at, current_period_ends_at, next_payment_at, creado_en, actualizado_en, eliminado_en"
+      )
+      .in("organization_id", organizationIds)
+      .is("eliminado_en", null)
+      .order("actualizado_en", { ascending: false }),
   ]);
 
   if (profilesResult.error) {
@@ -156,11 +188,18 @@ export async function listAdminOrganizationsSnapshot(): Promise<AdminOrganizatio
     );
   }
 
+  if (subscriptionsResult.error) {
+    throw new Error(
+      `No pudimos listar suscripciones recurrentes: ${subscriptionsResult.error.message}`
+    );
+  }
+
   return {
     organizations: organizationRows,
     profiles: (profilesResult.data ?? []) as AdminOrganizationProfileRow[],
     users: (usersResult.data ?? []) as AdminOrganizationUserRow[],
     payments: (paymentsResult.data ?? []) as AdminOrganizationPaymentRow[],
+    subscriptions: (subscriptionsResult.data ?? []) as AdminOrganizationSubscriptionRow[],
   };
 }
 
@@ -187,7 +226,7 @@ export async function getAdminOrganizationSnapshot(
     return null;
   }
 
-  const [profileResult, usersResult, paymentsResult] = await Promise.all([
+  const [profileResult, usersResult, paymentsResult, subscriptionsResult] = await Promise.all([
     admin
       .from("organization_profile")
       .select(ADMIN_ORGANIZATION_PROFILE_SELECT)
@@ -209,6 +248,14 @@ export async function getAdminOrganizationSnapshot(
       .eq("organization_id", organizationId)
       .is("eliminado_en", null)
       .order("creado_en", { ascending: false }),
+    admin
+      .from("suscripciones_organizacion")
+      .select(
+        "id, organization_id, provider, provider_subscription_id, provider_plan_id, plan_code, billing_period, currency_code, amount, status, provider_status, current_period_starts_at, current_period_ends_at, next_payment_at, creado_en, actualizado_en, eliminado_en"
+      )
+      .eq("organization_id", organizationId)
+      .is("eliminado_en", null)
+      .order("actualizado_en", { ascending: false }),
   ]);
 
   if (profileResult.error) {
@@ -229,10 +276,17 @@ export async function getAdminOrganizationSnapshot(
     );
   }
 
+  if (subscriptionsResult.error) {
+    throw new Error(
+      `No pudimos leer suscripciones de organizacion ${organizationId}: ${subscriptionsResult.error.message}`
+    );
+  }
+
   return {
     organization: organization as AdminOrganizationRow,
     profile: (profileResult.data as AdminOrganizationProfileRow | null) ?? null,
     users: (usersResult.data ?? []) as AdminOrganizationUserRow[],
     payments: (paymentsResult.data ?? []) as AdminOrganizationPaymentRow[],
+    subscriptions: (subscriptionsResult.data ?? []) as AdminOrganizationSubscriptionRow[],
   };
 }

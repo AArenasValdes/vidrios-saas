@@ -3,11 +3,11 @@
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
-import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { ArrowRight, ArrowUpRight, CircleCheck, X } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, ArrowUpRight, X } from "lucide-react";
 
-import { googleTagService } from "@/features/analytics/services/google-tag.service";
-import { faqs, LOGIN_HREF, pricingPlans, REGISTRO_HREF } from "./landing-shared";
+import { faqs, LOGIN_HREF, REGISTRO_HREF } from "./landing-shared";
+import { PricingPlans } from "@/features/billing/components/pricing-plans";
 import s from "./landing.module.css";
 
 const ContrastSection = dynamic(
@@ -60,69 +60,6 @@ const LandingContactSection = dynamic(
   { ssr: true }
 );
 
-function subscribeReducedMotion(onStoreChange: () => void) {
-  const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-  mediaQuery.addEventListener("change", onStoreChange);
-  return () => mediaQuery.removeEventListener("change", onStoreChange);
-}
-
-function getReducedMotionSnapshot() {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
-function SectionReveal({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
-  const reduceMotion = useSyncExternalStore(
-    subscribeReducedMotion,
-    getReducedMotionSnapshot,
-    () => false,
-  );
-  const revealRef = useRef<HTMLDivElement | null>(null);
-  const [hasIntersected, setHasIntersected] = useState(false);
-  const isVisible = reduceMotion || hasIntersected;
-
-  useEffect(() => {
-    if (reduceMotion) {
-      return;
-    }
-
-    const node = revealRef.current;
-
-    if (!node) {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          setHasIntersected(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.15 },
-    );
-
-    observer.observe(node);
-
-    return () => observer.disconnect();
-  }, [reduceMotion]);
-
-  const revealClassName = [
-    className,
-    !reduceMotion ? s.sectionReveal : null,
-    !reduceMotion && isVisible ? s.sectionRevealVisible : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  return <div ref={revealRef} className={revealClassName}>{children}</div>;
-}
-
 function SectionHeading({
   title,
   description,
@@ -141,24 +78,6 @@ function SectionHeading({
 export function LandingBelowFold() {
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
 
-  function trackLandingCta(location: string, kind: "internal" | "whatsapp") {
-    if (kind === "whatsapp") {
-      googleTagService.trackWhatsappClick({
-        source: "landing",
-        location,
-        label: `landing:${location}`,
-      });
-      return;
-    }
-
-    googleTagService.trackEvent("landing_cta_click", {
-      event_category: "landing",
-      event_label: location,
-      source: "landing",
-      location,
-    });
-  }
-
   return (
     <>
       <ContrastSection />
@@ -173,102 +92,9 @@ export function LandingBelowFold() {
 
       <PublicLinkSection />
 
-      <section id="precios" className={s.pricingSection}>
-        <div className={s.container}>
-          <SectionReveal>
-            <div className={s.pricingIntro}>
-              <div className={s.pricingHeader}>
-                <SectionHeading
-                  title="Parte 15 días gratis con Ventora"
-                  description="Funciones claras, precios en CLP para Chile y una sola alternativa recomendada."
-                />
-              </div>
-              <p className={s.pricingStrip}>
-                Una sola cotización perdida puede costar más que todo el año de Ventora.
-              </p>
-            </div>
-          </SectionReveal>
-
-          <div className={s.pricingGrid}>
-            {pricingPlans.map((plan) => {
-              const isFeatured = plan.tone === "featured";
-              const isAnchor = plan.tone === "anchor";
-              const cardToneClass =
-                plan.tone === "featured"
-                  ? s.pricingCardFeatured
-                  : plan.tone === "highlight"
-                    ? s.pricingCardHighlight
-                    : isAnchor
-                      ? s.pricingCardAnchor
-                      : s.pricingCardSecondary;
-
-              return (
-                <div
-                  key={plan.name}
-                  className={`${s.pricingReveal}${isAnchor ? ` ${s.pricingRevealAnchor}` : ""}`}
-                >
-                  <article className={`${s.pricingCard} ${cardToneClass}`}>
-                    <div className={s.pricingCardTop}>
-                      <div>
-                        <h3>{plan.name}</h3>
-                        <div className={s.pricingAmount}>
-                          <strong>{plan.price}</strong>
-                          <span>{plan.period}</span>
-                        </div>
-                      </div>
-                      {plan.badge ? <span className={s.pricingBadge}>{plan.badge}</span> : null}
-                    </div>
-
-                    <p className={s.pricingDescription}>{plan.description}</p>
-                    {plan.helper ? <p className={s.pricingHelper}>{plan.helper}</p> : null}
-                    {plan.savings ? <p className={s.pricingSavings}>{plan.savings}</p> : null}
-
-                    {plan.ctaKind === "whatsapp" ? (
-                      <a
-                        href={plan.href}
-                        className={`${s.pricingCta} ${s.pricingCtaSecondary}`}
-                        onClick={() => trackLandingCta(plan.trackingLocation, "whatsapp")}
-                      >
-                        {plan.ctaLabel}
-                        <ArrowUpRight size={17} aria-hidden />
-                      </a>
-                    ) : (
-                      <Link
-                        href={plan.href}
-                        className={`${s.pricingCta} ${
-                          isFeatured ? s.pricingCtaPrimary : s.pricingCtaSecondary
-                        }`}
-                        prefetch={false}
-                        onClick={() => trackLandingCta(plan.trackingLocation, "internal")}
-                      >
-                        {plan.ctaLabel}
-                        <ArrowRight size={17} aria-hidden />
-                      </Link>
-                    )}
-
-                    {plan.benefits ? (
-                      <ul className={s.pricingBenefits}>
-                        {plan.benefits.map((benefit) => (
-                          <li key={benefit}>
-                            <CircleCheck size={15} aria-hidden />
-                            <span>{benefit}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </article>
-                </div>
-              );
-            })}
-          </div>
-
-          <p className={s.pricingFootnote}>
-            Precios publicados en CLP para Chile. El alta permite configurar Chile,
-            Argentina, Colombia, México, Perú y Uruguay; los pagos directos están
-            disponibles inicialmente en Chile.
-          </p>
-        </div>
-      </section>
+      <div className={s.container}>
+        <PricingPlans context="public" />
+      </div>
 
       <section id="preguntas" className={s.faqSection}>
         <div className={s.container}>

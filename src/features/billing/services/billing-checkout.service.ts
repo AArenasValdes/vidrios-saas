@@ -1,6 +1,7 @@
 import "server-only";
 
 import {
+  BILLING_PLANS,
   type BillingPlanCode,
 } from "@/features/billing/types/plans";
 import { createMercadoPagoChileCheckout } from "@/features/subscriptions/services/mercadopago-checkout.service";
@@ -20,6 +21,7 @@ export async function createBillingCheckout(input: {
     organizationId: input.organizationId,
     payerEmail: input.userEmail,
     planCode: input.planCode,
+    billingPeriod: BILLING_PLANS[input.planCode].billingPeriod,
   });
 
   return { checkout_url: result.checkout_url };

@@ -21,6 +21,8 @@ export type PublicSolicitudRow = {
   creado_en: string;
   ayuda: string | null;
   contactada_at: string | null;
+  utm_source?: string | null;
+  utm_medium?: string | null;
 };
 
 export type AdminPublicChannelProfile = {

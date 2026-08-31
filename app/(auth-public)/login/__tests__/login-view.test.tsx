@@ -125,6 +125,22 @@ describe("LoginView", () => {
     });
   });
 
+  it("explica como entrar desde localhost", async () => {
+    render(
+      <LoginView
+        oauthError={false}
+        oauthNoEmailError={false}
+        identityConflictError={false}
+        nextPath={null}
+        appResetDone={false}
+      />
+    );
+
+    expect(
+      await screen.findByText(/localhost usa la misma Auth que produccion/i)
+    ).toBeInTheDocument();
+  });
+
   it("muestra un mensaje mas preciso cuando las credenciales no coinciden", async () => {
     mockSignIn.mockRejectedValueOnce(new Error("Invalid login credentials"));
 

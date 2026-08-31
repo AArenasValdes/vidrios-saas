@@ -77,11 +77,31 @@ function resolvePlanDistributionLabel(profile: AdminOrganizationProfileRow | nul
     return BILLING_PLANS.founder_full_annual.label;
   }
 
+  if (profile.plan_code === "quote_only" && profile.billing_period === "monthly") {
+    return BILLING_PLANS.quote_only_monthly.label;
+  }
+
   if (profile.plan_code === "quote_only") {
     return BILLING_PLANS.quote_only_annual.label;
   }
 
   return getPlanLabel(profile.plan_code);
+}
+
+function resolvePaymentPlanLabel(planCode: string, billingPeriod: string) {
+  if (planCode === "founder_full" && billingPeriod === "monthly") {
+    return BILLING_PLANS.founder_monthly.label;
+  }
+  if (planCode === "founder_full" && billingPeriod === "yearly") {
+    return BILLING_PLANS.founder_full_annual.label;
+  }
+  if (planCode === "quote_only" && billingPeriod === "monthly") {
+    return BILLING_PLANS.quote_only_monthly.label;
+  }
+  if (planCode === "quote_only" && billingPeriod === "yearly") {
+    return BILLING_PLANS.quote_only_annual.label;
+  }
+  return getPlanLabel(planCode);
 }
 
 function needsActivation(
@@ -132,7 +152,7 @@ function buildActionRowFromPayment(input: {
     empresaNombre: input.empresaNombre,
     paymentStatus: payment.status,
     accountStatus: input.accountStatus,
-    planLabel: getPlanLabel(payment.plan_code),
+    planLabel: resolvePaymentPlanLabel(payment.plan_code, payment.billing_period),
     amountClp: Number(payment.amount_clp),
     paymentProvider: payment.payment_provider,
     reference: payment.buy_order,
@@ -269,7 +289,7 @@ export async function getAdminPaymentsWorkspace(
         correo: client?.correoPrincipal ?? profile?.empresa_email ?? org?.correo ?? null,
         paymentStatus: payment.status,
         accountStatus: client?.estadoEfectivo ?? "trial_active",
-        planLabel: getPlanLabel(payment.plan_code),
+        planLabel: resolvePaymentPlanLabel(payment.plan_code, payment.billing_period),
         planCode: payment.plan_code,
         amountClp: Number(payment.amount_clp),
         paymentProvider: payment.payment_provider,

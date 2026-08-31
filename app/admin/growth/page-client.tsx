@@ -250,7 +250,7 @@ export function GrowthPageClient() {
               </span>
               <span className={s.metaItem}>
                 <LuCircleDollarSign aria-hidden />
-                MRR: {viewModel.mrrActualLabel}
+                MRR real: {formatClp(viewModel.realMetrics?.mrrClp ?? 0)}
               </span>
             </div>
           </div>
@@ -303,7 +303,7 @@ export function GrowthPageClient() {
           {viewModel.updatedAtLabel}
           <span className={sourceClass(viewModel.manualMetrics.dataStatus)}>
             {" "}
-            · MRR {growthDashboardService.getDataStatusLabel(viewModel.manualMetrics.dataStatus)}
+            · MRR/ARR real desde billing
           </span>
           {csvImportMessage ? (
             <span className={s.importResult}> · {csvImportMessage}</span>
@@ -313,10 +313,25 @@ export function GrowthPageClient() {
 
       <PremiumPageSection className={s.kpiGrid}>
         <div className={s.kpiCard}>
-          <span className={s.kpiLabel}>MRR</span>
+          <span className={s.kpiLabel}>MRR real</span>
+          <strong>{formatClp(viewModel.realMetrics?.mrrClp ?? 0)}</strong>
+          <span className={`${s.sourceText} ${s.sourceTextReal}`}>Billing real</span>
+        </div>
+        <div className={s.kpiCard}>
+          <span className={s.kpiLabel}>ARR contractual</span>
+          <strong>{formatClp(viewModel.realMetrics?.arrClp ?? 0)}</strong>
+          <span className={`${s.sourceText} ${s.sourceTextReal}`}>Billing real</span>
+        </div>
+        <div className={s.kpiCard}>
+          <span className={s.kpiLabel}>Clientes en trial</span>
+          <strong>{viewModel.realMetrics?.trialCustomers ?? 0}</strong>
+          <span className={`${s.sourceText} ${s.sourceTextReal}`}>Billing real</span>
+        </div>
+        <div className={s.kpiCard}>
+          <span className={s.kpiLabel}>MRR manual legado</span>
           <strong>{viewModel.mrrActualLabel}</strong>
           <span className={sourceClass(viewModel.manualMetrics.dataStatus)}>
-            {growthDashboardService.getDataStatusLabel(viewModel.manualMetrics.dataStatus)}
+            Solo referencia manual
           </span>
         </div>
         <div className={s.kpiCard}>
@@ -335,8 +350,8 @@ export function GrowthPageClient() {
           <span className={sourceClass(viewModel.manualMetrics.dataStatus)}>Manual</span>
         </div>
         <div className={s.kpiCard}>
-          <span className={s.kpiLabel}>Cuentas vinculadas</span>
-          <strong>{viewModel.counts.clientesActivos}</strong>
+          <span className={s.kpiLabel}>Clientes activos (billing)</span>
+          <strong>{viewModel.realMetrics?.activeCustomers ?? 0}</strong>
           <span className={`${s.sourceText} ${s.sourceTextReal}`}>Real</span>
         </div>
         <div className={s.kpiCard}>

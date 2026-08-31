@@ -7,12 +7,22 @@ import {
   patchGrowthManualMetrics,
   patchGrowthSettings,
 } from "@/features/growth/services/growth-workspace.service";
+import { getAdminSummary } from "@/features/admin/services/admin-summary.service";
 
 export async function GET() {
   try {
     const context = await resolveGrowthRouteContext();
     const workspace = await loadGrowthWorkspace(context);
-    return NextResponse.json({ workspace });
+    const summary = await getAdminSummary();
+    return NextResponse.json({
+      workspace,
+      realMetrics: {
+        mrrClp: summary.mrrEstimadoClp,
+        arrClp: summary.arrEstimadoClp,
+        activeCustomers: summary.clientesActivos,
+        trialCustomers: summary.clientesEnTrial,
+      },
+    });
   } catch (error) {
     return growthApiError(error, "No pudimos cargar el workspace de growth.");
   }

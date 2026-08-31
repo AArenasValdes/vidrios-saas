@@ -44,7 +44,7 @@ describe("mercadopago return confirmation", () => {
         billingPeriod: "monthly",
         planType: "monthly",
       })
-    ).toBe("Founder Mensual");
+    ).toBe("Ventora Comercial Mensual");
   });
 
   it("resuelve el label anual de founder full", () => {
@@ -54,7 +54,7 @@ describe("mercadopago return confirmation", () => {
         billingPeriod: "yearly",
         planType: "founder",
       })
-    ).toBe("Founder Full Anual");
+    ).toBe("Ventora Comercial Anual");
   });
 
   it("detecta suscripcion pagada activa", () => {

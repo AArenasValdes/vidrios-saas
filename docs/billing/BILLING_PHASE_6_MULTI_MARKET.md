@@ -1,4 +1,7 @@
-# Billing LATAM - Fase 6 preparacion multi-mercado
+# Billing LATAM - Fase 6 preparacion multi-mercado (histórico)
+
+> La configuración vigente de Chile exige cuatro IDs V2. Este runbook conserva
+> la preparación multi-mercado y no habilita cobros fuera de Chile.
 
 Estado: preparada en código el 2026-08-13. Chile quedó **operativo** el 2026-08-14. Los demás mercados siguen apagados hasta precio, credenciales y QA propios.
 

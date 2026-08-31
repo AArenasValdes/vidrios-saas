@@ -17,6 +17,7 @@ export type PaymentAccountFilter =
 export type PaymentMethodFilter = "manual" | "transferencia" | "webpay" | "otro";
 
 export type PaymentPlanFilter =
+  | "quote_only_monthly"
   | "founder_full_annual"
   | "quote_only_annual"
   | "founder_monthly"
@@ -60,9 +61,10 @@ export const PAGOS_FILTER_LABELS = {
     otro: "Otro",
   },
   plan: {
-    founder_full_annual: "Founder Full Anual",
-    quote_only_annual: "Solo Cotización Anual",
-    founder_monthly: "Founder mensual",
+    quote_only_monthly: "Ventora Cotización mensual",
+    founder_full_annual: "Ventora Comercial anual",
+    quote_only_annual: "Ventora Cotización anual",
+    founder_monthly: "Ventora Comercial mensual",
     trial: "Prueba gratis",
   },
 } as const;
@@ -111,9 +113,10 @@ function matchesMethodFilter(provider: PaymentProvider, filter: PaymentMethodFil
 function matchesPlanFilter(movement: AdminPaymentMovement, filter: PaymentPlanFilter) {
   const code = movement.planCode ?? "";
   if (filter === "founder_full_annual") {
-    return code === "founder_full" && movement.planLabel.toLowerCase().includes("founder");
+    return code === "founder_full" && movement.planLabel.toLowerCase().includes("anual");
   }
-  if (filter === "quote_only_annual") return code === "quote_only";
+  if (filter === "quote_only_monthly") return code === "quote_only" && movement.planLabel.toLowerCase().includes("mensual");
+  if (filter === "quote_only_annual") return code === "quote_only" && movement.planLabel.toLowerCase().includes("anual");
   if (filter === "founder_monthly") return code === "founder_full" && movement.planLabel.toLowerCase().includes("mensual");
   if (filter === "trial") return code === "trial";
   return false;
@@ -295,7 +298,7 @@ export function parsePagosFiltersFromSearchParams(params: URLSearchParams): Pago
     plans: (params.get("plan") ?? "")
       .split(",")
       .filter((v): v is PaymentPlanFilter =>
-        ["founder_full_annual", "quote_only_annual", "founder_monthly", "trial"].includes(v)
+        ["quote_only_monthly", "founder_full_annual", "quote_only_annual", "founder_monthly", "trial"].includes(v)
       ),
     search: params.get("q") ?? "",
   };

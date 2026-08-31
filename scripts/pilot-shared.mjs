@@ -158,6 +158,18 @@ export function loadPilotRuntime(options = {}) {
     );
   }
 
+  if (
+    serviceRoleKey.startsWith("vck_") ||
+    !(
+      serviceRoleKey.startsWith("sb_secret_") ||
+      (serviceRoleKey.startsWith("eyJ") && serviceRoleKey.split(".").length === 3)
+    )
+  ) {
+    exitWithError(
+      "SUPABASE_SERVICE_ROLE_KEY no es una clave de servicio de Supabase. Copiala desde Dashboard → Settings → API → service_role. Un valor vck_ de Vercel CLI no sirve en localhost."
+    );
+  }
+
   return {
     supabaseUrl,
     anonKey,

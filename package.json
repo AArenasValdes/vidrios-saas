@@ -23,6 +23,7 @@
     "test:e2e:auth-mobile": "playwright test tests/e2e/auth-logout.mobile.spec.ts --project=mobile-chromium",
     "test:e2e:list": "playwright test --list",
     "test:watch": "jest --watch",
+    "env:check": "node scripts/check-local-env.mjs",
     "pilot:user:audit": "node scripts/pilot-users.mjs audit",
     "pilot:user:create": "node scripts/pilot-users.mjs create",
     "pilot:user:repair": "node scripts/pilot-users.mjs repair",

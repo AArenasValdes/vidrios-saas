@@ -22,6 +22,12 @@ import {
   buildMercadoPagoReturnUrl,
 } from "@/features/subscriptions/constants/mercadopago-return";
 import { resolvePublicAppUrl } from "@/utils/public-app-url";
+import {
+  getBillingPlanCodeForSelection,
+  isBillingPlanCode,
+  type BillingPeriodCode,
+  type BillingProductCode,
+} from "@/features/billing/types/plans";
 
 export class MercadoPagoCheckoutError extends Error {
   status: number;
@@ -178,7 +184,8 @@ function buildPendingReservationInput(input: {
 export async function createMercadoPagoChileCheckout(input: {
   organizationId: number;
   payerEmail: string;
-  planCode: MercadoPagoChilePlanCode;
+  planCode: BillingProductCode | MercadoPagoChilePlanCode;
+  billingPeriod?: BillingPeriodCode;
 }): Promise<{ checkout_url: string; subscription_id: number }> {
   if (!isMercadoPagoChileBillingReady()) {
     throw new MercadoPagoCheckoutError(
@@ -191,7 +198,13 @@ export async function createMercadoPagoChileCheckout(input: {
   await assertOrganizationCanStartCheckout(input.organizationId);
 
   const config = getMercadoPagoChileConfig();
-  const plan = getMercadoPagoChilePlan(input.planCode);
+  const variantPlanCode = isBillingPlanCode(input.planCode)
+    ? input.planCode
+    : getBillingPlanCodeForSelection(
+        input.planCode,
+        input.billingPeriod ?? "yearly"
+      );
+  const plan = getMercadoPagoChilePlan(variantPlanCode);
   const repository = createOrganizationSubscriptionRepository();
   let reservation = await repository.createPending(
     buildPendingReservationInput({

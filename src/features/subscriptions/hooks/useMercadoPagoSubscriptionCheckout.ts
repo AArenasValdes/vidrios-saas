@@ -2,27 +2,39 @@
 
 import { useCallback, useState } from "react";
 
-import type { MercadoPagoChilePlanCode } from "@/features/subscriptions/config/mercadopago-cl.config";
+import type {
+  BillingPeriodCode,
+  BillingProductCode,
+} from "@/features/billing/types/plans";
+import { googleTagService } from "@/features/analytics/services/google-tag.service";
 
 export function useMercadoPagoSubscriptionCheckout() {
-  const [loadingPlan, setLoadingPlan] = useState<MercadoPagoChilePlanCode | null>(
-    null
-  );
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const startCheckout = useCallback(async (planCode: MercadoPagoChilePlanCode) => {
+  const startCheckout = useCallback(async (
+    planCode: BillingProductCode,
+    billingPeriod: BillingPeriodCode
+  ) => {
     if (loadingPlan) {
       return;
     }
 
-    setLoadingPlan(planCode);
+    setLoadingPlan(`${planCode}:${billingPeriod}`);
     setError(null);
+
+    googleTagService.trackEvent("checkout_started", {
+      event_category: "billing",
+      plan_code: planCode,
+      billing_period: billingPeriod,
+      currency: "CLP",
+    });
 
     try {
       const response = await fetch("/api/subscriptions/mercadopago/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planCode }),
+        body: JSON.stringify({ planCode, billingPeriod }),
       });
       const result = (await response.json()) as {
         checkout_url?: string;

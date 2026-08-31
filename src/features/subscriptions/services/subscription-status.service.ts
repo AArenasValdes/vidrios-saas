@@ -12,9 +12,6 @@ import type {
 export const TRIAL_DURATION_DAYS = 15;
 export const TRIAL_EXPIRING_SOON_DAYS = 3;
 export const DEFAULT_PAYMENT_GRACE_DAYS = 3;
-export const VENTORA_MONTHLY_PRICE = 8_990;
-export const VENTORA_YEARLY_PRICE = 79_990;
-export const VENTORA_QUOTE_ONLY_YEARLY_PRICE = 59_990;
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const WRITE_RESTRICTED_SOLICITUDES_PREFIX = "/solicitudes/canales";

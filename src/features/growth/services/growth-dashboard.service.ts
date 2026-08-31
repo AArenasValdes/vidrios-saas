@@ -504,6 +504,7 @@ export const growthDashboardService = {
       marketingTasks,
       settings: workspace.settings,
       manualMetrics: workspace.manualMetrics,
+      realMetrics: null,
       tabs: [
         { id: "trabajo", label: "Trabajo de hoy" },
         { id: "prospectos", label: "Prospectos" },

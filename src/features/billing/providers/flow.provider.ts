@@ -463,6 +463,13 @@ export function createFlowPaymentProvider(): PaymentProvider {
                 ? "Solo Cotizacion Anual"
                 : "Founder Full Anual",
             checkoutEnabled: true,
+            productLabel:
+              existing.plan_code === "quote_only"
+                ? "Ventora Cotización"
+                : "Ventora Comercial",
+            description: "Plan historico conservado para reconciliacion de pagos.",
+            benefits: [],
+            recommended: false,
           },
           paidAt,
         });

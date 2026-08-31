@@ -35,6 +35,7 @@ describe("admin-marketing.logic", () => {
       dataStatus: "real",
       creadoEn: "2026-06-10T00:00:00.000Z",
       actualizadoEn: "2026-06-10T00:00:00.000Z",
+      proximaAccionEn: null,
     },
     {
       id: "2",
@@ -49,6 +50,7 @@ describe("admin-marketing.logic", () => {
       dataStatus: "real",
       creadoEn: "2026-06-12T00:00:00.000Z",
       actualizadoEn: "2026-06-15T00:00:00.000Z",
+      proximaAccionEn: null,
     },
     {
       id: "3",
@@ -63,6 +65,7 @@ describe("admin-marketing.logic", () => {
       dataStatus: "real",
       creadoEn: "2026-06-05T00:00:00.000Z",
       actualizadoEn: "2026-06-20T00:00:00.000Z",
+      proximaAccionEn: null,
     },
   ];
 
@@ -74,9 +77,10 @@ describe("admin-marketing.logic", () => {
 
   it("calcula KPIs de adquisición sin conversión falsa con denominador cero", () => {
     const kpis = buildAcquisitionKpis({ prospects: [], period });
-    const conversion = kpis.find((item) => item.id === "conversion");
+    const conversion = kpis.find((item) => item.id === "trial_to_paid");
     expect(conversion?.displayValue).toBe("—");
     expect(conversion?.insight).toContain("insuficientes");
+    expect(conversion?.changePct).toBeNull();
   });
 
   it("construye embudo acumulativo con caída principal", () => {

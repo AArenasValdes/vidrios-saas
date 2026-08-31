@@ -1,4 +1,8 @@
-# Billing LATAM - Fase 2 Mercado Pago Chile
+# Billing LATAM - Fase 2 Mercado Pago Chile (legacy de integración)
+
+> Documento histórico. El catálogo vigente está en `docs/billing/README.md` y
+> `src/features/billing/types/plans.ts`. Los montos y nombres de esta fase se
+> conservan para auditar contratos antiguos; no deben usarse para nuevas altas.
 
 Estado: **operativa en producción (Chile) desde 2026-08-14**. Implementada en código, aplicada al proyecto Supabase vinculado el 2026-08-13 y habilitada con credenciales productivas, tres planes, webhook y `MERCADOPAGO_BILLING_ENABLED=true`. Resumen operativo: `README.md`.
 

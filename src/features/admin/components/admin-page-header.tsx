@@ -136,7 +136,9 @@ export function AdminPageHeader({
             >
               {PERIOD_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
-                  {option.label}
+                  {option.value === 90 && pathname.startsWith("/admin/marketing")
+                    ? "Este mes"
+                    : option.label}
                 </option>
               ))}
             </select>
@@ -158,7 +160,7 @@ export function AdminPageHeader({
                 ) : null}
 
             {customPrimaryAction
-              ? renderHeaderAction(customPrimaryAction, s.primaryAction)
+              ? renderHeaderAction(customPrimaryAction, s.primaryAction, true)
               : !hideDefaultPrimaryActions ? (
                   onNewProspect ? (
                     <button type="button" className={s.primaryAction} onClick={onNewProspect}>

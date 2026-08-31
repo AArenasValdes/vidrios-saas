@@ -43,6 +43,7 @@ export type MarketingProspectSnapshot = {
   dataStatus: string;
   creadoEn: string;
   actualizadoEn: string;
+  proximaAccionEn: string | null;
 };
 
 export type MarketingKpi = {
@@ -55,6 +56,7 @@ export type MarketingKpi = {
   tone: ClientesKpiTone | "cyan";
   badge?: string;
   filterKey?: string;
+  changePct: number | null;
 };
 
 export type MarketingFunnelStepId =
@@ -163,6 +165,77 @@ export type MarketingQuoteUsage = {
   historicalUnclassifiedItemQuotes: number;
 };
 
+export type MarketingTrendPoint = {
+  date: string;
+  label: string;
+  prospects: number;
+  quotes: number;
+  trials: number;
+  paid: number;
+};
+
+export type MarketingContentHighlight = {
+  id: string;
+  title: string;
+  formatLabel: string;
+  channelLabel: string;
+  publishedLabel: string;
+  utmComplete: boolean;
+  estado: string;
+};
+
+export type MarketingPublicUtmRow = {
+  id: string;
+  label: string;
+  count: number;
+};
+
+export type MarketingNowAction = {
+  id: string;
+  title: string;
+  detail: string;
+  ctaLabel: string;
+  href: string;
+  done: boolean;
+};
+
+export type MarketingNextAction = {
+  id: string;
+  title: string;
+  detail: string;
+  current: number;
+  target: number | null;
+  href: string;
+};
+
+export type MarketingQuoteUsageInsight = {
+  text: string;
+  ctaLabel: string | null;
+  ctaHref: string | null;
+};
+
+export type MarketingOnboardingVideoSnapshot = {
+  dispositivo: string;
+  estado: string;
+  esPredeterminado: boolean;
+  hasUrl: boolean;
+};
+
+export type MarketingContentSnapshot = {
+  id: string;
+  title: string;
+  formato: string;
+  canal: string;
+  estado: string;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  utmContent: string | null;
+  publicadoEn: string | null;
+  programadoPara: string | null;
+  actualizadoEn: string;
+};
+
 export type MarketingWorkspace = {
   syncedAt: string;
   period: MarketingPeriodWindow;
@@ -184,5 +257,12 @@ export type MarketingWorkspace = {
   measurementGaps: MarketingMeasurementGap[];
   quoteUsage: MarketingQuoteUsage;
   quoteUsageKpis: MarketingKpi[];
+  quoteUsageInsight: MarketingQuoteUsageInsight;
   prospects: MarketingProspectSnapshot[];
+  trendSeries: MarketingTrendPoint[];
+  contentHighlights: MarketingContentHighlight[];
+  publicUtmRows: MarketingPublicUtmRow[];
+  nowActions: MarketingNowAction[];
+  nextActions: MarketingNextAction[];
+  pendingPublicSolicitudes: number;
 };

@@ -48,6 +48,8 @@ const copy = {
   signupAction: "Solicitar cuenta",
   oauthError:
     "No pudimos completar el acceso social. Intenta con tu correo y contrasena.",
+  localHint:
+    "Localhost usa la misma Auth que produccion. Si en ventorap.cl entras con Google, en Supabase → Authentication → URL Configuration agrega http://localhost:3000/auth/callback y usa Continuar con Google. Correo y contrasena solo sirven si esa cuenta tiene password en Auth.",
   oauthNoEmailError:
     "Tu cuenta social no compartio un correo. Usa otra cuenta o entra con correo y contrasena.",
   identityConflictError:
@@ -207,7 +209,13 @@ export default function LoginView({
   const [isRecoveringApp, setIsRecoveringApp] = useState(false);
   const [rateLimitUntil, setRateLimitUntil] = useState<number | null>(null);
   const [rateLimitRemainingMs, setRateLimitRemainingMs] = useState(0);
+  const [showLocalHint, setShowLocalHint] = useState(false);
   const submitLockRef = useRef(false);
+
+  useEffect(() => {
+    const hostname = window.location.hostname;
+    setShowLocalHint(hostname === "localhost" || hostname === "127.0.0.1");
+  }, []);
 
   useEffect(() => {
     return scheduleLoginPrefetch(() => {
@@ -457,6 +465,11 @@ export default function LoginView({
             <header className={s.formHeader}>
               <h1 className={s.formTitle}>{copy.title}</h1>
               <p className={s.formSubtitle}>{copy.subtitle}</p>
+              {showLocalHint ? (
+                <p className={s.localHint} role="note">
+                  {copy.localHint}
+                </p>
+              ) : null}
             </header>
 
             <form

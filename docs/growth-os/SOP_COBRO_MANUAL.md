@@ -1,7 +1,7 @@
 # SOP Cobro Manual - Ventora
 
 Estado: vigente con fallback manual
-Actualizado: 2026-08-14
+Actualizado: 2026-08-31
 Responsable: billing + Agente de Conversión
 
 Contrato: `WORKFLOW_STANDARD.md`
@@ -19,9 +19,10 @@ Mientras no haya cuenta bancaria de empresa para Flow o Transbank, todos los pag
 
 | Plan | Comando | Monto | Duracion |
 |------|---------|-------|----------|
-| Founder mensual | `--plan founder_monthly` | $8.990 | 1 mes |
-| Founder anual | `--plan founder_full_annual` | $79.990 | 12 meses |
-| Solo cotizacion anual | `--plan quote_only_annual` | $59.990 | 12 meses |
+| Ventora Cotización mensual | `--plan quote_only_monthly` | $6.990 | 1 mes |
+| Ventora Cotización anual | `--plan quote_only_annual` | $59.990 | 12 meses |
+| Ventora Comercial mensual | `--plan founder_monthly` | $9.990 | 1 mes |
+| Ventora Comercial anual | `--plan founder_full_annual` | $89.990 | 12 meses |
 
 ```bash
 pnpm pilot:payment:activate --organization-id 12 --plan founder_monthly --reference "transferencia junio 2026"

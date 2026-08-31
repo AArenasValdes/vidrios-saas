@@ -30,8 +30,8 @@ const APPROVED_STATUS = "aprobado";
 const MAIN_HISTORY_LIMIT = 3;
 
 const PLAN_LABELS: Record<string, string> = {
-  founder_full: "Founder Full Anual",
-  quote_only: "Solo Cotizaci\u00f3n Anual",
+  founder_full: "Ventora Comercial",
+  quote_only: "Ventora Cotización",
   trial: "Prueba gratis",
 };
 

@@ -2188,3 +2188,4 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
 - El laboratorio conserva el cálculo puro y expone una pauta de barras FFD referencial a partir de largos comerciales y pérdidas documentadas. No agrega optimizador industrial ni bloquea la cotización comercial cuando no existe receta validada.
 
 ---
+- 2026-08-31 — Pricing V2: catálogo server-side único con cuatro variantes CLP, UI pública `/planes`, selector anual por defecto, API por producto/período, configuración asistida separada y KPI admin basado en contrato real. Nueva migración `20260831120000_preserve_founder_price_lock.sql`; IDs Mercado Pago nuevos aún deben configurarse antes de habilitar checkout.

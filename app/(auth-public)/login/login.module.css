@@ -293,6 +293,18 @@
   text-decoration: underline;
 }
 
+.localHint {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(30, 136, 255, 0.28);
+  background: rgba(30, 136, 255, 0.1);
+  color: var(--login-muted-strong);
+  font-size: 0.86rem;
+  line-height: 1.45;
+  max-width: 46ch;
+}
+
 .errorBox {
   display: flex;
   align-items: flex-start;

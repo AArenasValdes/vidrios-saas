@@ -18,7 +18,7 @@ Activar a un nuevo cliente para que llegue rapido a su primer resultado comercia
 ## Reglas de planes y trial
 
 - **Trial (15 dias gratis):** `plan_code = trial` en `organization_profile`. Da acceso **Founder Full** completo: solicitudes, pagina publica y cotizaciones.
-- **Nunca** asignar `quote_only` durante el trial. Ese plan ($59.990/anual) solo aplica despues de un pago explicito de Solo Cotizacion.
+- **Nunca** asignar `quote_only` durante el trial. Ese plan ($6.990 mensual o $59.990/anual) solo aplica despues de un pago explicito de Ventora Cotización.
 - **Founder Full pagado:** `plan_code = founder_full` + `subscription_status = active`.
   - Mensual manual: $8.990 (`billing_period = monthly`, `plan_type = monthly`).
   - Anual: $79.990 (`billing_period = yearly`, `plan_type = founder`).

@@ -22,6 +22,12 @@ import type { GrowthImportResult } from "@/features/growth/types/growth-supabase
 type GrowthDashboardState = {
   workspace: GrowthWorkspace | null;
   workToday: GrowthTodayItem[] | null;
+  realMetrics: {
+    mrrClp: number;
+    arrClp: number;
+    activeCustomers: number;
+    trialCustomers: number;
+  } | null;
   isLoading: boolean;
   error: string | null;
   currentTab: GrowthPanelTab;
@@ -35,6 +41,7 @@ export function useGrowthDashboard() {
   const [state, setState] = useState<GrowthDashboardState>({
     workspace: null,
     workToday: null,
+    realMetrics: null,
     isLoading: true,
     error: null,
     currentTab: "trabajo",
@@ -53,7 +60,7 @@ export function useGrowthDashboard() {
   }, []);
 
   const reload = useCallback(async () => {
-    const [workspace, workToday] = await Promise.all([
+    const [workspaceResult, workToday] = await Promise.all([
       growthApiClient.loadWorkspace(),
       growthApiClient.loadWorkToday(),
     ]);
@@ -62,8 +69,9 @@ export function useGrowthDashboard() {
 
     setState((current) => ({
       ...current,
-      workspace,
+      workspace: workspaceResult.workspace,
       workToday,
+      realMetrics: workspaceResult.realMetrics,
       isLoading: false,
       error: null,
     }));
@@ -81,6 +89,7 @@ export function useGrowthDashboard() {
             ...current,
             workspace: null,
             workToday: null,
+            realMetrics: null,
             isLoading: false,
             error:
               loadError instanceof Error
@@ -109,11 +118,11 @@ export function useGrowthDashboard() {
     );
 
     if (state.workToday) {
-      return { ...base, workToday: state.workToday };
+      return { ...base, workToday: state.workToday, realMetrics: state.realMetrics };
     }
 
     return base;
-  }, [state.currentTab, state.workspace, state.workToday]);
+  }, [state.currentTab, state.workspace, state.workToday, state.realMetrics]);
 
   async function refreshAfterMutation(nextWorkspace?: GrowthWorkspace) {
     if (nextWorkspace) {

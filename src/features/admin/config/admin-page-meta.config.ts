@@ -39,7 +39,8 @@ const PAGE_META: Record<string, AdminPageMeta> = {
   },
   "/admin/marketing": {
     title: "Marketing",
-    subtitle: "Adquisición de Ventora y rendimiento de páginas públicas.",
+    subtitle: "Captas, entiendes y conviertes más.",
+    showDateRange: true,
     showPrimaryActions: true,
   },
 };

@@ -29,9 +29,14 @@ async function growthFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const growthApiClient = {
   loadWorkspace() {
-    return growthFetch<{ workspace: GrowthWorkspace }>(
+    return growthFetch<{ workspace: GrowthWorkspace; realMetrics: {
+      mrrClp: number;
+      arrClp: number;
+      activeCustomers: number;
+      trialCustomers: number;
+    } | null }>(
       "/api/admin/growth/workspace"
-    ).then((data) => data.workspace);
+    ).then((data) => ({ workspace: data.workspace, realMetrics: data.realMetrics }));
   },
   loadWorkToday() {
     return growthFetch<{ workToday: GrowthTodayItem[] }>(

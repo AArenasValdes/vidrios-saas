@@ -163,6 +163,12 @@ export type GrowthDashboardViewModel = {
   marketingTasks: GrowthMarketingTask[];
   settings: GrowthSettings;
   manualMetrics: GrowthManualMetrics;
+  realMetrics: {
+    mrrClp: number;
+    arrClp: number;
+    activeCustomers: number;
+    trialCustomers: number;
+  } | null;
   tabs: Array<{ id: GrowthPanelTab; label: string }>;
   counts: {
     prospectosActivos: number;

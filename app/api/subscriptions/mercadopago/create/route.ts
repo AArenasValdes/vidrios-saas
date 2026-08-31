@@ -4,7 +4,10 @@ import {
   AuthRouteAccessError,
   resolveAuthenticatedRouteContext,
 } from "@/features/auth/services/auth-route-access.service";
-import { isMercadoPagoChilePlanCode } from "@/features/subscriptions/config/mercadopago-cl.config";
+import {
+  isBillingPeriodCode,
+  isBillingProductCode,
+} from "@/features/billing/types/plans";
 import { MercadoPagoApiError } from "@/features/subscriptions/providers/mercadopago/mercadopago.client";
 import { mapMercadoPagoUserMessage } from "@/features/subscriptions/providers/mercadopago/mercadopago-user-message";
 import {
@@ -37,7 +40,7 @@ export async function POST(request: Request) {
     }
 
     const body = await parseJsonObjectBody<
-      { planCode?: unknown } & Record<string, unknown>
+      { planCode?: unknown; billingPeriod?: unknown } & Record<string, unknown>
     >(request);
     if (!body) {
       return NextResponse.json(
@@ -48,7 +51,9 @@ export async function POST(request: Request) {
 
     if (
       typeof body.planCode !== "string" ||
-      !isMercadoPagoChilePlanCode(body.planCode)
+      !isBillingProductCode(body.planCode) ||
+      typeof body.billingPeriod !== "string" ||
+      !isBillingPeriodCode(body.billingPeriod)
     ) {
       return NextResponse.json(
         { error: "Plan no valido para Mercado Pago Chile." },
@@ -60,6 +65,7 @@ export async function POST(request: Request) {
       organizationId,
       payerEmail,
       planCode: body.planCode,
+      billingPeriod: body.billingPeriod,
     });
 
     return NextResponse.json(result);

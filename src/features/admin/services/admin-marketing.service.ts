@@ -3,6 +3,15 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { listAdminClients } from "@/features/admin/services/admin-clients.service";
 import {
+  buildContentHighlights,
+  buildNextActions,
+  buildNowActions,
+  buildPublicUtmRows,
+  buildQuoteUsageInsight,
+  buildTrendSeries,
+  countPendingPublicSolicitudes,
+} from "@/features/admin/services/admin-marketing-dashboard.logic";
+import {
   buildAcquisitionFunnel,
   buildAcquisitionKpis,
   buildChannelRows,
@@ -25,7 +34,12 @@ import {
   fetchPublicChannelSummaries,
   fetchPublicSolicitudesForOrganizations,
 } from "@/features/admin/services/admin-public-channel.service";
-import type { MarketingPeriodPreset, MarketingWorkspace } from "@/features/admin/types/admin-marketing";
+import type {
+  MarketingContentSnapshot,
+  MarketingOnboardingVideoSnapshot,
+  MarketingPeriodPreset,
+  MarketingWorkspace,
+} from "@/features/admin/types/admin-marketing";
 import type { PublicSolicitudRow } from "@/features/admin/services/admin-public-channel.logic";
 
 type ProspectRow = {
@@ -39,6 +53,7 @@ type ProspectRow = {
   data_status: string;
   creado_en: string;
   actualizado_en: string;
+  proxima_accion_en: string | null;
 };
 
 type LinkedQuoteRow = {
@@ -50,6 +65,29 @@ type QuoteUsageRow = {
   pricing_mode: string | null;
   creation_surface: MarketingQuoteUsageRow["creationSurface"];
   pdf_descargado_en: string | null;
+  creado_en: string;
+};
+
+type ContentItemRow = {
+  id: string;
+  titulo: string;
+  formato: string;
+  canal: string;
+  estado: string;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  utm_content: string | null;
+  publicado_en: string | null;
+  programado_para: string | null;
+  actualizado_en: string;
+};
+
+type OnboardingVideoRow = {
+  dispositivo: string;
+  estado: string;
+  es_predeterminado: boolean;
+  video_url: string | null;
 };
 
 async function fetchQuoteUsage(
@@ -61,7 +99,7 @@ async function fetchQuoteUsage(
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("cotizaciones")
-    .select("pricing_mode, creation_surface, pdf_descargado_en")
+    .select("pricing_mode, creation_surface, pdf_descargado_en, creado_en")
     .in("organization_id", organizationIds)
     .is("eliminado_en", null)
     .gte("creado_en", period.start)
@@ -73,6 +111,7 @@ async function fetchQuoteUsage(
     pricingMode: row.pricing_mode,
     creationSurface: row.creation_surface ?? null,
     pdfDownloadedAt: row.pdf_descargado_en,
+    creadoEn: row.creado_en,
   }));
 }
 
@@ -103,6 +142,51 @@ async function fetchLinkedQuotes(organizationIds: number[]) {
   return { available: true, bySolicitud };
 }
 
+async function fetchMarketingContent(): Promise<MarketingContentSnapshot[]> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("growth_content_items")
+    .select(
+      "id, titulo, formato, canal, estado, utm_source, utm_medium, utm_campaign, utm_content, publicado_en, programado_para, actualizado_en"
+    )
+    .is("eliminado_en", null)
+    .order("actualizado_en", { ascending: false });
+
+  if (error) throw error;
+
+  return ((data ?? []) as ContentItemRow[]).map((row) => ({
+    id: row.id,
+    title: row.titulo,
+    formato: row.formato,
+    canal: row.canal,
+    estado: row.estado,
+    utmSource: row.utm_source,
+    utmMedium: row.utm_medium,
+    utmCampaign: row.utm_campaign,
+    utmContent: row.utm_content,
+    publicadoEn: row.publicado_en,
+    programadoPara: row.programado_para,
+    actualizadoEn: row.actualizado_en,
+  }));
+}
+
+async function fetchOnboardingVideos(): Promise<MarketingOnboardingVideoSnapshot[]> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("growth_onboarding_videos")
+    .select("dispositivo, estado, es_predeterminado, video_url")
+    .is("eliminado_en", null);
+
+  if (error) throw error;
+
+  return ((data ?? []) as OnboardingVideoRow[]).map((row) => ({
+    dispositivo: row.dispositivo,
+    estado: row.estado,
+    esPredeterminado: row.es_predeterminado,
+    hasUrl: Boolean(row.video_url),
+  }));
+}
+
 export async function getAdminMarketingWorkspace(input?: {
   period?: MarketingPeriodPreset;
   customStart?: string | null;
@@ -120,7 +204,7 @@ export async function getAdminMarketingWorkspace(input?: {
     admin
       .from("growth_prospects")
       .select(
-        "id, empresa, contacto_nombre, fuente, estado, converted_organization_id, no_contactar, data_status, creado_en, actualizado_en"
+        "id, empresa, contacto_nombre, fuente, estado, converted_organization_id, no_contactar, data_status, creado_en, actualizado_en, proxima_accion_en"
       )
       .is("eliminado_en", null)
       .order("actualizado_en", { ascending: false }),
@@ -130,12 +214,15 @@ export async function getAdminMarketingWorkspace(input?: {
     .filter((client) => !client.isTestAccount)
     .map((client) => client.organizationId);
 
-  const [summaries, solicitudesByOrg, linkedQuotes, quoteUsageRows] = await Promise.all([
-    fetchPublicChannelSummaries(organizationIds),
-    fetchPublicSolicitudesForOrganizations(organizationIds),
-    fetchLinkedQuotes(organizationIds),
-    fetchQuoteUsage(organizationIds, period),
-  ]);
+  const [summaries, solicitudesByOrg, linkedQuotes, quoteUsageRows, contentItems, onboardingVideos] =
+    await Promise.all([
+      fetchPublicChannelSummaries(organizationIds),
+      fetchPublicSolicitudesForOrganizations(organizationIds),
+      fetchLinkedQuotes(organizationIds),
+      fetchQuoteUsage(organizationIds, period),
+      fetchMarketingContent(),
+      fetchOnboardingVideos(),
+    ]);
 
   const prospects = ((prospectsResult.data ?? []) as ProspectRow[]).map(mapProspectRow);
   const clientsByOrg = new Map(clients.map((client) => [client.organizationId, client]));
@@ -181,6 +268,12 @@ export async function getAdminMarketingWorkspace(input?: {
     period,
   });
   const quoteUsage = buildMarketingQuoteUsage(quoteUsageRows);
+  const nowActions = buildNowActions({ videos: onboardingVideos, content: contentItems });
+  const nextActions = buildNextActions({
+    videos: onboardingVideos,
+    content: contentItems,
+    prospects,
+  });
 
   return {
     syncedAt: new Date().toISOString(),
@@ -203,6 +296,13 @@ export async function getAdminMarketingWorkspace(input?: {
     measurementGaps,
     quoteUsage,
     quoteUsageKpis: buildMarketingQuoteUsageKpis({ usage: quoteUsage, period }),
+    quoteUsageInsight: buildQuoteUsageInsight(quoteUsage),
     prospects,
+    trendSeries: buildTrendSeries({ prospects, quotes: quoteUsageRows, period }),
+    contentHighlights: buildContentHighlights(contentItems),
+    publicUtmRows: buildPublicUtmRows({ solicitudes: allSolicitudes, period }),
+    nowActions,
+    nextActions,
+    pendingPublicSolicitudes: countPendingPublicSolicitudes(publicCompanies),
   };
 }

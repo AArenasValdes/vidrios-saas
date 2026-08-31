@@ -81,7 +81,7 @@ export async function fetchPublicSolicitudesForOrganizations(
   const admin = createAdminClient();
   const { data } = await admin
     .from("solicitudes_contacto")
-    .select("id, nombre, organization_id, contexto, estado, creado_en, ayuda, contactada_at")
+    .select("id, nombre, organization_id, contexto, estado, creado_en, ayuda, contactada_at, utm_source, utm_medium")
     .eq("contexto", "empresa-publica")
     .in("organization_id", organizationIds)
     .order("creado_en", { ascending: false });

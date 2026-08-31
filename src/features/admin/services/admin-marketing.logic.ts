@@ -62,11 +62,11 @@ const FUNNEL_ORDER: MarketingFunnelStepId[] = [
 ];
 
 const FUNNEL_LABELS: Record<MarketingFunnelStepId, string> = {
-  prospectos: "Contactos agregados",
+  prospectos: "Prospectos",
   contactados: "Contactados",
-  demo: "Demo agendada",
-  trial: "Trial iniciado",
-  pagado: "Cliente pagado",
+  demo: "Demo",
+  trial: "Trial",
+  pagado: "Pagado",
 };
 
 const ALL_CHANNELS: MarketingChannelId[] = [
@@ -83,6 +83,7 @@ export type MarketingQuoteUsageRow = {
   pricingMode: string | null;
   creationSurface: QuoteCreationSurface | null;
   pdfDownloadedAt: string | null;
+  creadoEn?: string | null;
 };
 
 export function buildMarketingQuoteUsage(rows: MarketingQuoteUsageRow[]): MarketingQuoteUsage {
@@ -134,6 +135,7 @@ export function buildMarketingQuoteUsageKpis(input: {
       subtitle: input.period.label,
       insight: "Cuentas demo excluidas",
       tone: "blue",
+      changePct: null,
     },
     {
       id: "items_quotes",
@@ -143,6 +145,7 @@ export function buildMarketingQuoteUsageKpis(input: {
       subtitle: itemShare === null ? "Sin cotizaciones" : `${itemShare}% del uso real`,
       insight: `${input.usage.totalGlobalQuotes} por total global`,
       tone: "cyan",
+      changePct: null,
     },
     {
       id: "constructor_items",
@@ -155,6 +158,7 @@ export function buildMarketingQuoteUsageKpis(input: {
           ? "Aún sin datos nuevos"
           : `Móvil ${input.usage.mobileConstructorQuotes} · PC ${input.usage.desktopConstructorQuotes}`,
       tone: "violet",
+      changePct: null,
     },
     {
       id: "guided_items",
@@ -167,6 +171,7 @@ export function buildMarketingQuoteUsageKpis(input: {
           ? "Aún sin datos nuevos"
           : `${input.usage.classifiedItemQuotes} cotizaciones por ítems clasificadas`,
       tone: "cyan",
+      changePct: null,
     },
     {
       id: "constructor_pdf",
@@ -179,6 +184,7 @@ export function buildMarketingQuoteUsageKpis(input: {
           ? "Esperando primeras cotizaciones"
           : `${input.usage.constructorItemPdfs} de ${input.usage.constructorItemQuotes} con PDF`,
       tone: "green",
+      changePct: null,
     },
   ];
 }
@@ -421,6 +427,11 @@ function formatPct(numerator: number, denominator: number): number | null {
   return Math.round((numerator / denominator) * 1000) / 10;
 }
 
+function periodChangePct(current: number, previous: number): number | null {
+  if (previous <= 0) return current > 0 ? 100 : null;
+  return Math.round(((current - previous) / previous) * 100);
+}
+
 export function buildAcquisitionKpis(input: {
   prospects: MarketingProspectSnapshot[];
   period: MarketingPeriodWindow;
@@ -448,12 +459,13 @@ export function buildAcquisitionKpis(input: {
   const prevPaid = prevCohort.filter((item) => hasReachedFunnelStage(item.estado, "pagado"));
 
   const withoutOrigin = cohort.filter((item) => item.channelId === "sin_origen").length;
-  const conversionPct = formatPct(paid.length, newProspects.length);
+  const trialToPaidPct = formatPct(paid.length, trials.length);
+  const prevTrialToPaidPct = formatPct(prevPaid.length, prevTrials.length);
 
   return [
     {
       id: "new_prospects",
-      label: "Contactos agregados",
+      label: "Prospectos agregados",
       value: newProspects.length,
       displayValue: String(newProspects.length),
       subtitle: input.period.label,
@@ -461,6 +473,7 @@ export function buildAcquisitionKpis(input: {
       tone: "blue",
       badge: withoutOrigin > 0 ? `${withoutOrigin} sin origen` : undefined,
       filterKey: "prospecto",
+      changePct: periodChangePct(newProspects.length, prevNewProspects.length),
     },
     {
       id: "demos",
@@ -474,6 +487,7 @@ export function buildAcquisitionKpis(input: {
           : formatDeltaInsight(demos.length, prevDemos.length, "demos"),
       tone: "violet",
       filterKey: "demo_agendada",
+      changePct: periodChangePct(demos.length, prevDemos.length),
     },
     {
       id: "trials",
@@ -484,6 +498,7 @@ export function buildAcquisitionKpis(input: {
       insight: formatDeltaInsight(trials.length, prevTrials.length, "trials"),
       tone: "cyan",
       filterKey: "trial_iniciado",
+      changePct: periodChangePct(trials.length, prevTrials.length),
     },
     {
       id: "paid",
@@ -494,18 +509,23 @@ export function buildAcquisitionKpis(input: {
       insight: formatDeltaInsight(paid.length, prevPaid.length, "pagos"),
       tone: "green",
       filterKey: "cliente_pagado",
+      changePct: periodChangePct(paid.length, prevPaid.length),
     },
     {
-      id: "conversion",
-      label: "Avance de la lista a pago",
-      value: conversionPct ?? 0,
-      displayValue: conversionPct === null ? "—" : `${conversionPct}%`,
+      id: "trial_to_paid",
+      label: "Trial → pago",
+      value: trialToPaidPct ?? 0,
+      displayValue: trialToPaidPct === null ? "—" : `${trialToPaidPct}%`,
       subtitle: "cohort del período",
       insight:
-        conversionPct === null
+        trialToPaidPct === null
           ? "Datos insuficientes para calcular avance"
-          : `${paid.length} de ${newProspects.length} contactos`,
+          : `${paid.length} de ${trials.length} trials`,
       tone: "amber",
+      changePct:
+        trialToPaidPct === null || prevTrialToPaidPct === null
+          ? null
+          : periodChangePct(trialToPaidPct, prevTrialToPaidPct),
     },
   ];
 }
@@ -758,6 +778,7 @@ export function buildPublicPageKpis(input: {
       insight: published > 0 ? "Captación pública habilitada" : "Sin páginas publicadas aún",
       tone: "cyan",
       filterKey: "publicada",
+      changePct: null,
     },
     {
       id: "not_configured",
@@ -768,6 +789,7 @@ export function buildPublicPageKpis(input: {
       insight: notConfigured > 0 ? "Oportunidad de activación" : "Todas con página o borrador",
       tone: "amber",
       filterKey: "no_configurada",
+      changePct: null,
     },
     {
       id: "public_requests",
@@ -781,6 +803,7 @@ export function buildPublicPageKpis(input: {
           : "Sin solicitudes en el período",
       tone: "violet",
       filterKey: "con_solicitudes",
+      changePct: null,
     },
     {
       id: "clients_with_requests",
@@ -791,6 +814,7 @@ export function buildPublicPageKpis(input: {
       insight:
         clientsWithSolicitudes > 0 ? "Movimiento real en canal público" : "Sin movimiento reciente",
       tone: "blue",
+      changePct: null,
     },
     {
       id: "pending_review",
@@ -809,6 +833,7 @@ export function buildPublicPageKpis(input: {
         : "Estado de revisión aún no disponible",
       tone: SOLICITUD_REVISION_STATE_AVAILABLE && pendingReview > 0 ? "amber" : "green",
       filterKey: SOLICITUD_REVISION_STATE_AVAILABLE ? "pendientes" : "con_solicitudes",
+      changePct: null,
     },
   ];
 }
@@ -1027,6 +1052,7 @@ export function mapProspectRow(row: {
   data_status: string;
   creado_en: string;
   actualizado_en: string;
+  proxima_accion_en?: string | null;
 }): MarketingProspectSnapshot {
   return {
     id: row.id,
@@ -1043,5 +1069,6 @@ export function mapProspectRow(row: {
     dataStatus: row.data_status,
     creadoEn: row.creado_en,
     actualizadoEn: row.actualizado_en,
+    proximaAccionEn: row.proxima_accion_en ?? null,
   };
 }

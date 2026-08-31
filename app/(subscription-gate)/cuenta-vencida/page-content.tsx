@@ -6,22 +6,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { useMercadoPagoSubscriptionCheckout } from "@/features/subscriptions/hooks/useMercadoPagoSubscriptionCheckout";
+import { PricingPlans } from "@/features/billing/components/pricing-plans";
 import {
   buildPlanContractWhatsappHref,
   resolveOrganizationSubscriptionState,
-  VENTORA_MONTHLY_PRICE,
-  VENTORA_YEARLY_PRICE,
-  VENTORA_QUOTE_ONLY_YEARLY_PRICE,
 } from "@/features/subscriptions/services/subscription-status.service";
 
 import s from "./page.module.css";
-
-const PLAN_LABELS = {
-  founderFullAnnual: "Founder Full Anual",
-  quoteOnlyAnnual: "Solo Cotizacion Anual",
-  monthly: "Mensual",
-  enterprise: "Plan Empresa Acompanado",
-} as const;
 
 export function CuentaVencidaPageContent({
   mercadoPagoEnabled,
@@ -54,22 +45,11 @@ export function CuentaVencidaPageContent({
   const { startCheckout, loadingPlan, error: checkoutError } =
     useMercadoPagoSubscriptionCheckout();
 
-  const founderFullHref = buildPlanContractWhatsappHref({
-    planLabel: PLAN_LABELS.founderFullAnnual,
-    companyName,
-  });
-  const quoteOnlyHref = buildPlanContractWhatsappHref({
-    planLabel: PLAN_LABELS.quoteOnlyAnnual,
-    companyName,
-  });
-  const monthlyHref = buildPlanContractWhatsappHref({
-    planLabel: PLAN_LABELS.monthly,
-    companyName,
-  });
-  const enterpriseHref = buildPlanContractWhatsappHref({
-    planLabel: PLAN_LABELS.enterprise,
-    companyName,
-  });
+  const getWhatsappHref = (plan: "quote_only" | "founder_full", period: "monthly" | "yearly") =>
+    buildPlanContractWhatsappHref({
+      planLabel: `${plan === "founder_full" ? "Ventora Comercial" : "Ventora Cotización"} ${period === "yearly" ? "Anual" : "Mensual"}`,
+      companyName,
+    });
 
   const volver = useCallback(() => {
     if (window.history.length > 1) {
@@ -162,149 +142,14 @@ export function CuentaVencidaPageContent({
           </div>
         ) : null}
 
-        <div className={s.priceGrid}>
-          <article className={`${s.priceCard} ${s.priceCardHighlight}`}>
-            <div className={s.planTopline}>
-              <span className={s.priceLabel}>Founder Full Anual</span>
-              <span className={s.recommendedBadge}>Recomendado</span>
-            </div>
-            <strong className={s.priceValue}>
-              ${VENTORA_YEARLY_PRICE.toLocaleString("es-CL")}
-              <span>/ a&ntilde;o</span>
-            </strong>
-            <p className={s.priceHint}>
-              Cotizaciones, solicitudes, página pública, WhatsApp y aprobación de presupuestos.
-            </p>
-            {whatsappDisabled ? (
-              <span className={`${s.webpayButton} ${s.buttonDisabled}`} aria-disabled="true">
-                Cuenta activa
-              </span>
-            ) : mercadoPagoEnabled ? (
-              <button
-                className={s.webpayButton}
-                type="button"
-                disabled={loadingPlan !== null}
-                onClick={() => void startCheckout("founder_full_annual")}
-              >
-                {loadingPlan === "founder_full_annual"
-                  ? "Abriendo Mercado Pago..."
-                  : "Suscribirme con Mercado Pago"}
-              </button>
-            ) : (
-              <a
-                className={s.webpayButton}
-                href={founderFullHref}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Contratar por WhatsApp
-              </a>
-            )}
-          </article>
-          <article className={s.priceCard}>
-            <div className={s.planTopline}>
-              <span className={s.priceLabel}>Solo Cotizaci&oacute;n Anual</span>
-            </div>
-            <strong className={s.priceValue}>
-              ${VENTORA_QUOTE_ONLY_YEARLY_PRICE.toLocaleString("es-CL")}
-              <span>/ a&ntilde;o</span>
-            </strong>
-            <p className={s.priceHint}>
-              Cotiza rápido desde el celular, genera PDF profesional y comparte por WhatsApp.
-            </p>
-            {whatsappDisabled ? (
-              <span
-                className={`${s.webpayButtonOutline} ${s.buttonDisabled}`}
-                aria-disabled="true"
-              >
-                Cuenta activa
-              </span>
-            ) : mercadoPagoEnabled ? (
-              <button
-                className={s.webpayButtonOutline}
-                type="button"
-                disabled={loadingPlan !== null}
-                onClick={() => void startCheckout("quote_only_annual")}
-              >
-                {loadingPlan === "quote_only_annual"
-                  ? "Abriendo Mercado Pago..."
-                  : "Suscribirme con Mercado Pago"}
-              </button>
-            ) : (
-              <a
-                className={s.webpayButtonOutline}
-                href={quoteOnlyHref}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Contratar por WhatsApp
-              </a>
-            )}
-          </article>
-          <article className={`${s.priceCard} ${s.priceCardManual}`}>
-            <div className={s.planTopline}>
-              <span className={s.priceLabel}>
-                {mercadoPagoEnabled ? "Founder Mensual" : "Mensual manual"}
-              </span>
-              <span className={s.manualBadge}>
-                {mercadoPagoEnabled ? "Mercado Pago" : "WhatsApp"}
-              </span>
-            </div>
-            <strong className={s.priceValue}>
-              ${VENTORA_MONTHLY_PRICE.toLocaleString("es-CL")}
-              <span>/ mes</span>
-            </strong>
-            <p className={s.priceHint}>
-              {mercadoPagoEnabled
-                ? "Suscripcion mensual recurrente. Ideal si quieres comenzar sin compromiso anual."
-                : "Pago mensual manual por WhatsApp. Ideal si quieres comenzar sin compromiso anual."}
-            </p>
-            {whatsappDisabled ? (
-              <span className={`${s.whatsappButton} ${s.buttonDisabled}`} aria-disabled="true">
-                Cuenta activa
-              </span>
-            ) : mercadoPagoEnabled ? (
-              <button
-                className={s.whatsappButton}
-                type="button"
-                disabled={loadingPlan !== null}
-                onClick={() => void startCheckout("founder_monthly")}
-              >
-                {loadingPlan === "founder_monthly"
-                  ? "Abriendo Mercado Pago..."
-                  : "Suscribirme con Mercado Pago"}
-              </button>
-            ) : (
-              <a
-                className={s.whatsappButton}
-                href={monthlyHref}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Contratar por WhatsApp
-              </a>
-            )}
-          </article>
-        </div>
-
-        <aside className={s.enterpriseBox}>
-          <div>
-            <span className={s.enterpriseEyebrow}>¿Necesitas algo más avanzado?</span>
-            <strong>Plan Empresa Acompañado desde $250.000</strong>
-            <p>
-              Configuración asistida, capacitación y adaptación inicial del flujo comercial. Motor
-              de precios personalizado disponible previa evaluación.
-            </p>
-          </div>
-          <a
-            className={s.supportButton}
-            href={enterpriseHref}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Consultar por WhatsApp
-          </a>
-        </aside>
+        <PricingPlans
+          context="account"
+          isCheckoutEnabled={mercadoPagoEnabled}
+          isAccountActive={whatsappDisabled}
+          loadingSelection={loadingPlan}
+          onCheckout={(plan, period) => void startCheckout(plan, period)}
+          getWhatsappHref={getWhatsappHref}
+        />
 
         <div className={s.actions}>
           <Link className={s.secondary} href="/cotizaciones">

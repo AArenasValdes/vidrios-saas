@@ -3,11 +3,12 @@ import "server-only";
 import {
   listAdminOrganizationsSnapshot,
   type AdminOrganizationProfileRow,
+  type AdminOrganizationSubscriptionRow,
 } from "@/features/admin/repositories/admin-clients.repository";
 import { listAdminClients } from "@/features/admin/services/admin-clients.service";
 import type { AdminClientPayment } from "@/features/admin/types/admin-client";
 import type { AdminSummary } from "@/features/admin/types/admin-summary";
-import { getBillingPlan } from "@/features/billing/types/plans";
+import type { PaymentProvider, PaymentStatus } from "@/features/subscriptions/types/pago-suscripcion";
 import { resolveOrganizationSubscriptionState } from "@/features/subscriptions/services/subscription-status.service";
 import { mapAdminProfileSubscription } from "@/features/admin/services/admin-subscription-mapper";
 
@@ -20,9 +21,9 @@ function mapRecentPayment(input: {
   billingPeriod: string;
   amountClp: number;
   currency: string;
-  paymentProvider: "flow" | "manual_transfer" | "webpay_plus";
+  paymentProvider: PaymentProvider;
   providerStatus: string | null;
-  status: "pendiente" | "aprobado" | "fallido" | "cancelado" | "reembolsado";
+  status: PaymentStatus;
   paidAt: string | null;
   periodStartsAt: string | null;
   periodEndsAt: string | null;
@@ -60,7 +61,36 @@ function isTrialEndingThisWeek(profile: AdminOrganizationProfileRow) {
   );
 }
 
-function resolveRecurringRevenue(profile: AdminOrganizationProfileRow) {
+function revenueFromAmount(amount: number, billingPeriod: string) {
+  const normalizedAmount = Math.max(0, Math.round(Number(amount) || 0));
+  if (normalizedAmount === 0) {
+    return { mrrEstimadoClp: 0, arrEstimadoClp: 0 };
+  }
+
+  return billingPeriod === "yearly"
+    ? {
+        mrrEstimadoClp: Math.round(normalizedAmount / 12),
+        arrEstimadoClp: normalizedAmount,
+      }
+    : {
+        mrrEstimadoClp: normalizedAmount,
+        arrEstimadoClp: normalizedAmount * 12,
+      };
+}
+
+function resolveRecurringRevenue(input: {
+  profile: AdminOrganizationProfileRow;
+  subscriptions: AdminOrganizationSubscriptionRow[];
+  payments: Array<{
+    organization_id: number | string;
+    plan_code: string;
+    billing_period: string;
+    amount_clp: number;
+    currency: string;
+    status: string;
+  }>;
+}) {
+  const { profile } = input;
   if (profile.is_test_account) {
     return { mrrEstimadoClp: 0, arrEstimadoClp: 0 };
   }
@@ -73,37 +103,31 @@ function resolveRecurringRevenue(profile: AdminOrganizationProfileRow) {
     return { mrrEstimadoClp: 0, arrEstimadoClp: 0 };
   }
 
-  if (
-    subscription.planCode === "founder_full" &&
-    subscription.billingPeriod === "monthly"
-  ) {
-    const monthlyPlan = getBillingPlan("founder_monthly");
-    return {
-      mrrEstimadoClp: monthlyPlan.amountClp,
-      arrEstimadoClp: monthlyPlan.amountClp * 12,
-    };
+  const organizationId = Number(profile.organization_id);
+  const contract = input.subscriptions.find(
+    (row) =>
+      Number(row.organization_id) === organizationId &&
+      (row.status === "active" || row.status === "past_due") &&
+      row.currency_code.trim().toUpperCase() === "CLP" &&
+      row.plan_code === subscription.planCode &&
+      row.billing_period === subscription.billingPeriod
+  );
+
+  if (contract) {
+    return revenueFromAmount(contract.amount, contract.billing_period);
   }
 
-  if (
-    subscription.planCode === "founder_full" &&
-    subscription.billingPeriod === "yearly"
-  ) {
-    const annualPlan = getBillingPlan("founder_full_annual");
-    return {
-      mrrEstimadoClp: Math.round(annualPlan.amountClp / 12),
-      arrEstimadoClp: annualPlan.amountClp,
-    };
-  }
+  const approvedPayment = input.payments.find(
+    (payment) =>
+      Number(payment.organization_id) === organizationId &&
+      payment.status === "aprobado" &&
+      payment.currency.trim().toUpperCase() === "CLP" &&
+      payment.plan_code === subscription.planCode &&
+      payment.billing_period === subscription.billingPeriod
+  );
 
-  if (
-    subscription.planCode === "quote_only" &&
-    subscription.billingPeriod === "yearly"
-  ) {
-    const quoteOnlyPlan = getBillingPlan("quote_only_annual");
-    return {
-      mrrEstimadoClp: Math.round(quoteOnlyPlan.amountClp / 12),
-      arrEstimadoClp: quoteOnlyPlan.amountClp,
-    };
+  if (approvedPayment) {
+    return revenueFromAmount(approvedPayment.amount_clp, approvedPayment.billing_period);
   }
 
   return { mrrEstimadoClp: 0, arrEstimadoClp: 0 };
@@ -119,7 +143,11 @@ export async function getAdminSummary(): Promise<AdminSummary> {
   let arrEstimadoClp = 0;
 
   for (const profile of snapshot.profiles) {
-    const revenue = resolveRecurringRevenue(profile);
+    const revenue = resolveRecurringRevenue({
+      profile,
+      subscriptions: snapshot.subscriptions,
+      payments: snapshot.payments,
+    });
     mrrEstimadoClp += revenue.mrrEstimadoClp;
     arrEstimadoClp += revenue.arrEstimadoClp;
   }

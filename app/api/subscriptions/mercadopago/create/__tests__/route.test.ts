@@ -45,7 +45,8 @@ describe("Mercado Pago create route", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          planCode: "founder_monthly",
+          planCode: "founder_full",
+          billingPeriod: "monthly",
           amount: 1,
           organizationId: 999,
           payerEmail: "attacker@example.com",
@@ -57,11 +58,12 @@ describe("Mercado Pago create route", () => {
     expect(createMercadoPagoChileCheckout).toHaveBeenCalledWith({
       organizationId: 7,
       payerEmail: "owner@ventora.cl",
-      planCode: "founder_monthly",
+      planCode: "founder_full",
+      billingPeriod: "monthly",
     });
   });
 
-  it("rechaza pais o plan fuera de Chile V1", async () => {
+  it("rechaza periodo o plan invalido", async () => {
     (resolveAuthenticatedRouteContext as jest.Mock).mockResolvedValue({
       user: { email: "owner@ventora.cl" },
       profile: { organizationId: 7, rol: "admin" },
@@ -71,7 +73,7 @@ describe("Mercado Pago create route", () => {
       new Request("https://www.ventorap.cl/api/subscriptions/mercadopago/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planCode: "quote_only_monthly", country: "AR" }),
+        body: JSON.stringify({ planCode: "quote_only", billingPeriod: "weekly", country: "AR" }),
       })
     );
 

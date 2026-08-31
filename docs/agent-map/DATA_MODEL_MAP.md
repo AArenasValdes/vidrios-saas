@@ -236,7 +236,7 @@ Incluye onboarding, captación, perfil público, notificaciones y billing. No co
 - **Relaciones**: N:1 organizations; 1:N pagos_suscripcion.
 - **RLS/grants**: RLS forzada. `authenticated` solo SELECT del tenant; `anon` sin acceso; escrituras y RPC solo `service_role`.
 - **Idempotencia**: referencia externa unica, identidad `(provider, provider_subscription_id)` unica y una sola suscripcion Mercado Pago abierta por organizacion.
-- **Migraciones**: `20260812230428_billing_phase_1_recurring_core.sql` y `20260812233117_billing_phase_2_mercadopago_chile.sql`, aplicadas y registradas en remoto el 2026-08-13.
+- **Migraciones**: `20260812230428_billing_phase_1_recurring_core.sql`, `20260812233117_billing_phase_2_mercadopago_chile.sql` y `20260831120000_preserve_founder_price_lock.sql`. La última cambia solo el lifecycle: activaciones nuevas conservan `founder_price_locked` existente; no modifica filas históricas ni agrega columnas.
 
 ---
 
