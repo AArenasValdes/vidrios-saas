@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { BadgeCheck, CreditCard, LockKeyhole, RefreshCw, ShieldCheck } from "lucide-react";
 
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { useMercadoPagoSubscriptionCheckout } from "@/features/subscriptions/hooks/useMercadoPagoSubscriptionCheckout";
@@ -97,29 +98,54 @@ export function CuentaVencidaPageContent({
         </button>
 
         <div className={s.hero}>
-          <span className={s.eyebrow}>Cuenta en modo lectura</span>
-          <h1 className={s.title}>Activa Ventora y vuelve a operar sin cortes.</h1>
+          <div className={s.heroTopline}>
+            <span className={s.eyebrow}>Cuenta vencida</span>
+            <span className={s.readOnlyState}>Modo lectura</span>
+          </div>
+          <h1 className={s.title}>
+            Activa Ventora y vuelve a operar <span>sin cortes.</span>
+          </h1>
           <p className={s.text}>
             {mercadoPagoEnabled
-              ? "Elige tu plan y completa la suscripcion de forma segura en Mercado Pago. La activacion se confirma automaticamente."
+              ? "Elige tu plan y completa la suscripción recurrente de forma segura en Mercado Pago. Tu cuenta se habilita cuando recibimos la confirmación."
               : "Mercado Pago no está disponible en este momento. La cuenta seguirá en modo lectura hasta que se complete la configuración de cobro."}
           </p>
           {mercadoPagoEnabled ? (
             <p className={s.text}>
-              Usa una cuenta Mercado Pago distinta a la que recibe los pagos de Ventora. Si pagas
-              con la misma cuenta vendedora, Mercado Pago puede bloquear el boton Confirmar.
+              Puedes cancelar la renovación cuando quieras. Usa una cuenta Mercado Pago distinta a
+              la cuenta vendedora de Ventora para evitar bloqueos del proveedor.
             </p>
           ) : null}
+          <div className={s.trustBar}>
+            <div className={s.trustItem}>
+              <ShieldCheck size={18} aria-hidden />
+              <span><strong>Pago seguro</strong><small>Procesado por Mercado Pago</small></span>
+            </div>
+            <div className={s.trustItem}>
+              <RefreshCw size={18} aria-hidden />
+              <span><strong>Suscripción recurrente</strong><small>Mensual o anual, tú eliges</small></span>
+            </div>
+            <div className={s.trustItem}>
+              <LockKeyhole size={18} aria-hidden />
+              <span><strong>Control total</strong><small>Cancela la renovación cuando quieras</small></span>
+            </div>
+          </div>
         </div>
 
-        <div className={s.activeBanner} role="status">
-          {statusText}
+        <div className={s.statusPanel} role="status">
+          <div>
+            <span className={s.statusLabel}>ESTADO DE CUENTA</span>
+            <strong>{statusText}</strong>
+          </div>
+          <span className={s.statusHint}>
+            {hasActivePaidSubscription ? "No necesitas contratar otro plan." : "Elige una opción para recuperar la operación completa."}
+          </span>
         </div>
 
         {pagoFallido ? (
           <div className={s.errorBanner} role="alert">
-            No pudimos confirmar un pago automatico. Escríbenos por WhatsApp y te activamos el
-            plan manualmente.
+            No pudimos confirmar el pago automático. Puedes volver a intentar el checkout o
+            contactarnos para revisar el caso.
           </div>
         ) : null}
 
@@ -145,8 +171,14 @@ export function CuentaVencidaPageContent({
 
         <div className={s.actions}>
           <Link className={s.secondary} href="/cotizaciones">
+            <BadgeCheck size={16} aria-hidden />
             Seguir en modo lectura
           </Link>
+        </div>
+
+        <div className={s.securityNote}>
+          <CreditCard size={17} aria-hidden />
+          <span>Ventora no guarda los datos de tu tarjeta. Mercado Pago procesa el cobro.</span>
         </div>
       </div>
     </section>

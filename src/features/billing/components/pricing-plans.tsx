@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { startTransition, useEffect, useState } from "react";
-import { ArrowRight, Check, ExternalLink } from "lucide-react";
+import { ArrowRight, BriefcaseBusiness, Calculator, Check, ExternalLink } from "lucide-react";
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
 import {
   getBillingPlanForSelection,
@@ -120,8 +120,8 @@ export function PricingPlans({
       <div className={styles.heading}>
         <div>
           <span className={styles.eyebrow}>Precios simples</span>
-          <h2>Elige cómo quieres trabajar con Ventora.</h2>
-          <p>Dos productos. Las mismas funciones en mensual o anual. Parte con 15 días gratis.</p>
+          <h2>{isPublic ? "Elige cómo quieres trabajar con Ventora." : "Elige el plan para volver a operar."}</h2>
+          <p>{isPublic ? "Dos productos. Las mismas funciones en mensual o anual. Parte con 15 días gratis." : "La periodicidad cambia el cobro, no las funciones. Selecciona mensual o anual."}</p>
         </div>
         <fieldset className={styles.periodSelector}>
           <legend>Periodicidad</legend>
@@ -148,10 +148,14 @@ export function PricingPlans({
           const savings = monthly.amountClp * 12 - selected.amountClp;
           const savingsPercent = Math.round((savings / (monthly.amountClp * 12)) * 100);
           const checkoutActive = !isPublic && isCheckoutEnabled && !isAccountActive;
+          const PlanIcon = code === "founder_full" ? BriefcaseBusiness : Calculator;
 
           return (
             <article key={code} className={`${styles.card} ${recommended ? styles.featured : ""}`}>
               <div className={styles.cardHeader}>
+                <span className={styles.planIcon} aria-hidden>
+                  <PlanIcon size={21} strokeWidth={1.8} />
+                </span>
                 <div>
                   <span className={styles.cardKicker}>{selected.productLabel}</span>
                   <h3>{selected.productLabel}</h3>
@@ -168,7 +172,7 @@ export function PricingPlans({
                   Equivale a {formatAmount(Math.round(selected.amountClp / 12))}/mes · Ahorras {formatAmount(savings)} ({savingsPercent}%)
                 </p>
               ) : (
-                <p className={styles.savings}>15 días gratis · Cambia de periodicidad cuando quieras</p>
+                <p className={styles.savings}>{isPublic ? "15 días gratis · Cambia de periodicidad cuando quieras" : "Cobro mensual · Cancela la renovación cuando quieras"}</p>
               )}
 
               {isAccountActive ? (

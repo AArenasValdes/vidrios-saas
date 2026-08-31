@@ -49,3 +49,167 @@
 .account .assisted p { color: #667085; }
 .assistedCta { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 8px; min-height: 44px; padding: 0 15px; border: 1px solid #1e88ff; border-radius: 12px; color: #1e88ff; font-weight: 900; text-decoration: none; }
 @media (max-width: 720px) { .heading { align-items: stretch; flex-direction: column; } .periodSelector { align-self: flex-start; } .grid { grid-template-columns: 1fr; } .assisted { align-items: stretch; flex-direction: column; } .assistedCta { justify-content: center; } }
+
+/* Gate de suscripcion: la pantalla de pago usa la superficie premium oscura de Ventora. */
+.account {
+  color: #f7fbff;
+}
+
+.account .heading {
+  align-items: end;
+  margin-bottom: 18px;
+  padding-top: 26px;
+  border-top: 1px solid rgba(127, 147, 180, 0.16);
+}
+
+.account .heading h2 {
+  color: #f6faff;
+  font-size: clamp(1.65rem, 3vw, 2.35rem);
+}
+
+.account .heading p {
+  color: #91a0b4;
+}
+
+.account .periodSelector {
+  border-color: rgba(127, 147, 180, 0.24);
+  background: rgba(11, 17, 29, 0.84);
+}
+
+.account .periodSelector label {
+  color: #9aa9bd;
+}
+
+.account .periodActive {
+  background: #1e88ff;
+  color: #ffffff !important;
+  box-shadow: 0 10px 24px rgba(30, 136, 255, 0.3);
+}
+
+.account .grid {
+  gap: 16px;
+}
+
+.account .card {
+  min-width: 0;
+  border-color: rgba(127, 147, 180, 0.22);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(15, 23, 38, 0.94), rgba(8, 13, 23, 0.94));
+  box-shadow: 0 22px 52px rgba(0, 0, 0, 0.18);
+}
+
+.account .featured {
+  border-color: rgba(30, 136, 255, 0.62);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(30, 136, 255, 0.2), transparent 40%),
+    linear-gradient(145deg, rgba(16, 34, 63, 0.98), rgba(8, 13, 23, 0.96));
+  box-shadow: 0 24px 58px rgba(5, 65, 145, 0.2), inset 0 0 0 1px rgba(30, 136, 255, 0.08);
+}
+
+.account .cardHeader {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.planIcon {
+  width: 46px;
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(30, 136, 255, 0.2);
+  border-radius: 13px;
+  background: rgba(30, 136, 255, 0.12);
+  color: #3d9aff;
+}
+
+.account .cardKicker {
+  display: block;
+  margin-top: 2px;
+  color: #3d9aff;
+}
+
+.account .card h3 {
+  margin-top: 5px;
+  color: #f5f9ff;
+  font-size: clamp(1.25rem, 2.5vw, 1.55rem);
+}
+
+.account .description {
+  min-height: 48px;
+  margin-top: 20px;
+  color: #aebbd0;
+}
+
+.account .priceLine {
+  margin-top: 22px;
+}
+
+.account .priceLine strong {
+  color: #f8fbff;
+}
+
+.account .priceLine span {
+  color: #91a0b4;
+}
+
+.account .savings {
+  color: #70c9a0;
+}
+
+.account .ctaPrimary {
+  background: linear-gradient(135deg, #2b91ff, #1764df);
+  box-shadow: 0 16px 30px rgba(30, 136, 255, 0.25);
+}
+
+.account .ctaSecondary {
+  border-color: rgba(61, 154, 255, 0.72);
+  color: #79baff;
+  background: rgba(8, 17, 32, 0.42);
+}
+
+.account .disabledCta {
+  border: 1px solid rgba(127, 147, 180, 0.22);
+  background: rgba(127, 147, 180, 0.1);
+  color: #8e9db2;
+}
+
+.account .benefits {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  color: #b8c5d7;
+}
+
+.account .benefits svg {
+  color: #3d9aff;
+}
+
+.account .assisted {
+  border-color: rgba(127, 147, 180, 0.2);
+  background: rgba(11, 18, 30, 0.74);
+}
+
+.account .assisted p {
+  color: #91a0b4;
+}
+
+@media (max-width: 720px) {
+  .account .heading {
+    padding-top: 22px;
+  }
+
+  .account .cardHeader {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .account .cardHeader .badge {
+    grid-column: 2;
+    justify-self: start;
+    margin-top: -3px;
+  }
+
+  .account .benefits {
+    grid-template-columns: 1fr;
+  }
+}
