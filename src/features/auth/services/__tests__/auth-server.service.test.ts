@@ -78,6 +78,15 @@ describe("authServerService.handleOAuthCallback", () => {
       },
       session: createSession(createUser()),
     });
+    expect(resolveOAuthIdentity).toHaveBeenCalledWith(
+      {
+        authUserId: "auth-1",
+        email: "maestro@test.com",
+      },
+      {
+        accessToken: "access-token",
+      }
+    );
   });
 
   it("redirige a completar cuenta para un usuario Google nuevo", async () => {

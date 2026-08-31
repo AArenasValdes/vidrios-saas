@@ -381,8 +381,6 @@ export function createAuthRepository(
       }
 
       const supabase = browserClientFactory();
-      const shouldPreferServerLookup =
-        options.preferServerLookup === true || Boolean(options.accessToken);
       const serverProfileResult = await getUserProfileFromServer(supabase, cacheKey, {
         accessToken: options.accessToken,
         retryOnUnauthorized: options.retryServerOnUnauthorized,
@@ -392,7 +390,11 @@ export function createAuthRepository(
         return serverProfileResult.profile;
       }
 
-      if (shouldPreferServerLookup) {
+      const serverAnsweredMissingProfile = serverProfileResult.status === "not_found";
+      const shouldSkipClientLookup =
+        options.preferServerLookup === true && serverAnsweredMissingProfile;
+
+      if (shouldSkipClientLookup) {
         return null;
       }
 

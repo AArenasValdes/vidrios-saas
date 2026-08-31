@@ -86,10 +86,15 @@ export function createAuthServerService(
         };
       }
 
-      let identity = await resolveOAuthIdentity({
-        authUserId: user.id,
-        email: user.email,
-      });
+      let identity = await resolveOAuthIdentity(
+        {
+          authUserId: user.id,
+          email: user.email,
+        },
+        {
+          accessToken: session.access_token,
+        }
+      );
 
       if (
         provider === "email" &&

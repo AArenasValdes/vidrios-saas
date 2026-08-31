@@ -137,7 +137,7 @@ describe("LoginView", () => {
     );
 
     expect(
-      await screen.findByText(/localhost usa la misma Auth que produccion/i)
+      await screen.findByText(/usas las mismas cuentas que en ventorap.cl/i)
     ).toBeInTheDocument();
   });
 

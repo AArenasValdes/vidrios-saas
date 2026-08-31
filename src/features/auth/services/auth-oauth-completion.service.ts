@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createUserScopedClient } from "@/lib/supabase/user-scoped";
 import type { OrganizacionId } from "@/features/auth/types/auth";
 import {
   ensureAuthWhatsappE164,
@@ -90,6 +91,34 @@ type OrganizationProfileRow = {
   empresa_nombre: string | null;
   country_code?: string | null;
 };
+
+type AuthDataClientDeps = {
+  admin?: SupabaseClient;
+  accessToken?: string | null;
+};
+
+function resolveAuthDataClient(deps: AuthDataClientDeps = {}): SupabaseClient {
+  if (deps.admin) {
+    return deps.admin;
+  }
+
+  try {
+    return createAdminClient();
+  } catch {
+    const scoped = deps.accessToken
+      ? createUserScopedClient(deps.accessToken)
+      : null;
+
+    if (scoped) {
+      return scoped;
+    }
+
+    throw new AuthOAuthCompletionError(
+      "No pudimos validar tu sesion de Google.",
+      "unauthenticated",
+    );
+  }
+}
 
 type OAuthCompletionRpcRow = {
   result_organization_id: number | string;
@@ -202,7 +231,7 @@ export async function getOAuthAccountCompletionState(
     authUserId: string;
     email: string;
   },
-  deps: { admin?: SupabaseClient } = {},
+  deps: AuthDataClientDeps = {},
 ): Promise<OAuthAccountCompletionState> {
   const authUserId = input.authUserId.trim();
   const email = normalizeEmail(input.email);
@@ -214,7 +243,7 @@ export async function getOAuthAccountCompletionState(
     );
   }
 
-  const admin = deps.admin ?? createAdminClient();
+  const admin = resolveAuthDataClient(deps);
   const publicUser = await resolvePublicUser(admin, { authUserId, email });
 
   if (!publicUser) {
@@ -303,7 +332,7 @@ export async function resolveOAuthIdentity(
     authUserId: string;
     email: string;
   },
-  deps: { admin?: SupabaseClient } = {},
+  deps: AuthDataClientDeps = {},
 ): Promise<OAuthIdentityResolution> {
   const authUserId = input.authUserId.trim();
   const email = normalizeEmail(input.email);
@@ -315,7 +344,7 @@ export async function resolveOAuthIdentity(
     );
   }
 
-  const admin = deps.admin ?? createAdminClient();
+  const admin = resolveAuthDataClient(deps);
   const linkedByAuthUserId = await getPublicUserByAuthUserId(admin, authUserId);
 
   if (linkedByAuthUserId?.organization_id != null) {

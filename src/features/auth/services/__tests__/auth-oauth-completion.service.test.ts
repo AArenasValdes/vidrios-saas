@@ -2,7 +2,12 @@ jest.mock("@/lib/supabase/admin", () => ({
   createAdminClient: jest.fn(),
 }));
 
+jest.mock("@/lib/supabase/user-scoped", () => ({
+  createUserScopedClient: jest.fn(),
+}));
+
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createUserScopedClient } from "@/lib/supabase/user-scoped";
 import {
   getOAuthAccountCompletionState,
   provisionOrganizationFromOAuthUser,
@@ -104,6 +109,32 @@ describe("auth-oauth-completion.service", () => {
       status: "linked",
       organizationId: 77,
       accountComplete: true,
+    });
+  });
+
+  it("sigue reconociendo Google si el service_role no esta disponible y hay token de sesion", async () => {
+    const { admin } = createCompletionAdmin({
+      userByAuth: completeUser,
+      organization: { nombre: "Vidrios Test" },
+      profile: { empresa_nombre: "Vidrios Test" },
+    });
+    (createAdminClient as jest.Mock).mockImplementation(() => {
+      throw new Error("SUPABASE_SERVICE_ROLE_KEY no es una clave de servicio");
+    });
+    (createUserScopedClient as jest.Mock).mockReturnValue(admin);
+
+    const result = await resolveOAuthIdentity(
+      {
+        authUserId: "auth-1",
+        email: "maestro@test.com",
+      },
+      { accessToken: "access-token" }
+    );
+
+    expect(createUserScopedClient).toHaveBeenCalledWith("access-token");
+    expect(result).toMatchObject({
+      status: "linked",
+      organizationId: 77,
     });
   });
 

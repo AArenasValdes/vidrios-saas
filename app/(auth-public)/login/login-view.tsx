@@ -49,7 +49,7 @@ const copy = {
   oauthError:
     "No pudimos completar el acceso social. Intenta con tu correo y contrasena.",
   localHint:
-    "Localhost usa la misma Auth que produccion. Si en ventorap.cl entras con Google, en Supabase → Authentication → URL Configuration agrega http://localhost:3000/auth/callback y usa Continuar con Google. Correo y contrasena solo sirven si esa cuenta tiene password en Auth.",
+    "En este computador usas las mismas cuentas que en ventorap.cl. Si Google no vuelve, agrega http://localhost:3000/auth/callback en Supabase Auth.",
   oauthNoEmailError:
     "Tu cuenta social no compartio un correo. Usa otra cuenta o entra con correo y contrasena.",
   identityConflictError:

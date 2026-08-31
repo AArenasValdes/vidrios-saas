@@ -150,6 +150,55 @@ describe("authRepository", () => {
     expect(supabaseMock.auth.getSession).not.toHaveBeenCalled();
   });
 
+  it("cae a la fila de users cuando /api/auth/profile no esta disponible", async () => {
+    const usersQuery = createQueryBuilder({
+      data: {
+        organization_id: 3,
+        rol: "admin",
+      },
+      error: null,
+    });
+
+    const supabaseMock = {
+      from: jest.fn().mockReturnValue(usersQuery),
+      auth: {
+        getSession: jest.fn().mockResolvedValue({
+          data: {
+            session: {
+              access_token: "token-local",
+            },
+          },
+        }),
+      },
+    };
+
+    global.fetch = jest.fn().mockResolvedValue({
+      status: 500,
+      ok: false,
+    }) as typeof fetch;
+
+    const repository = createAuthRepository({
+      browserClientFactory: () => supabaseMock as never,
+    });
+
+    const profile = await repository.getUserProfile(
+      {
+        authUserId: "user-local",
+        email: "admin@test.com",
+      },
+      {
+        accessToken: "token-local",
+        preferServerLookup: true,
+      }
+    );
+
+    expect(profile).toEqual({
+      organizacionId: 3,
+      rol: "admin",
+    });
+    expect(supabaseMock.from).toHaveBeenCalled();
+  });
+
   it("debe devolver sesion fresca al iniciar con password", async () => {
     Object.defineProperty(document, "cookie", {
       configurable: true,
