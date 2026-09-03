@@ -686,6 +686,22 @@ export function RecipeGuidedEditor({
     );
   };
 
+  const setProfileManufacturerCode = (
+    profileId: string,
+    codigoPerfil: string
+  ) => {
+    updateProfile(profileId, (entry) => {
+      const pending = (entry.datosPendientes ?? []).filter(
+        (detail) => !/confirmar codigo/i.test(detail)
+      );
+      return {
+        ...entry,
+        codigoPerfil,
+        datosPendientes: pending.length > 0 ? pending : undefined,
+      };
+    });
+  };
+
   const reorderProfiles = (fromIndex: number, toIndex: number) => {
     const nextProfiles = reorderFabricacionItems(
       recipe.perfiles,
@@ -1106,8 +1122,25 @@ export function RecipeGuidedEditor({
               />
             </label>
             <div className={s.fabDrawerFieldBlock}>
+              <label className={s.fabDrawerInlineField}>
+                <span>Código de fabricante</span>
+                <input
+                  value={profile.codigoPerfil}
+                  placeholder="Ej. 2001"
+                  inputMode="text"
+                  autoComplete="off"
+                  onChange={(event) =>
+                    setProfileManufacturerCode(profile.id, event.target.value)
+                  }
+                  disabled={readOnly}
+                />
+              </label>
+              <p className={s.fabDrawerFieldHint}>
+                Escribe el código de tu proveedor. Si ya lo tienes guardado en el
+                taller, también puedes elegirlo abajo.
+              </p>
               <span className={s.fabDrawerFieldLabel}>
-                Código de fabricante (opcional)
+                Catálogo del taller (opcional)
               </span>
               <RecipeProfileReferencePicker
                 profile={profile}
@@ -2159,9 +2192,6 @@ export function RecipeGuidedEditor({
                     `Pieza ${index + 1}`;
                   const grupoPieza = getGrupoPiezaFromObservaciones(profile.observaciones);
                   const tipoPerfil = profile.funcion.trim();
-                  const codigoLabel = profile.codigoPerfil?.trim()
-                    ? profile.codigoPerfil.trim()
-                    : "—";
                   const rowStatus = !profile.codigoPerfil?.trim()
                     ? "Código pendiente"
                     : tallerResumen.pendingDiscount
@@ -2253,12 +2283,27 @@ export function RecipeGuidedEditor({
                           {tallerResumen.cortesMedida}
                         </span>
                       </div>
-                      <span
-                        className={s.fabPieceCode}
-                        data-empty={!profile.codigoPerfil?.trim()}
-                      >
-                        {codigoLabel}
-                      </span>
+                      <label className={s.fabPieceCodeField}>
+                        <input
+                          type="text"
+                          className={s.fabPieceCodeInput}
+                          value={profile.codigoPerfil}
+                          placeholder="Código"
+                          inputMode="text"
+                          autoComplete="off"
+                          aria-label={`Código de ${piezaNombre}`}
+                          disabled={readOnly}
+                          data-empty={!profile.codigoPerfil?.trim()}
+                          onChange={(event) =>
+                            setProfileManufacturerCode(
+                              profile.id,
+                              event.target.value
+                            )
+                          }
+                          onClick={(event) => event.stopPropagation()}
+                          onKeyDown={(event) => event.stopPropagation()}
+                        />
+                      </label>
                       <span
                         className={s.fabPieceDiscount}
                         data-pending={

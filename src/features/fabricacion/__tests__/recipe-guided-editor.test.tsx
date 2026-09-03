@@ -459,6 +459,44 @@ describe("RecipeGuidedEditor", () => {
     expect(currentRecipe.accesorios).toHaveLength(initialAccessories);
   });
 
+  it("permite escribir el código de fabricante directo en la tabla", () => {
+    let nextId = 0;
+    const baseRecipe = crearBaseTipologicaVentora({
+      tipologia: "corredera",
+      hojas: 2,
+      modulos: 2,
+      lineName: "WinHouse Andes",
+      createId: () => `inline-code-${nextId++}`,
+    });
+    let currentRecipe = baseRecipe;
+    const onRecipeChange = jest.fn((next: FabricacionReceta) => {
+      currentRecipe = next;
+    });
+
+    render(
+      <RecipeGuidedEditor
+        recipe={currentRecipe}
+        providerName="WinHouse"
+        lineName="WinHouse Andes"
+        desktopActiveStep="components"
+        onRecipeChange={onRecipeChange}
+        onProviderNameChange={jest.fn()}
+        onLineNameChange={jest.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Revisar piezas pendientes" }));
+    const firstProfile = currentRecipe.perfiles[0]!;
+    const codeInput = screen.getByLabelText(
+      new RegExp(`Código de ${firstProfile.funcion}`, "i")
+    );
+
+    fireEvent.change(codeInput, { target: { value: "2001" } });
+
+    expect(onRecipeChange).toHaveBeenCalled();
+    expect(currentRecipe.perfiles[0]?.codigoPerfil).toBe("2001");
+  });
+
   it("distingue ajuste Por confirmar, Sugerido documentado y Personalizado", () => {
     let nextId = 0;
     const baseRecipe = crearBaseTipologicaVentora({
