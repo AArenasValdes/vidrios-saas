@@ -15,6 +15,8 @@ import {
 import { buildProcedenciaPersistence } from "@/features/fabricacion/types/fabricacion-receta-procedencia";
 import type { CreateFabricationRecipeInput } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { CreateCotizacionLineTemplateInput } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import { VENTORA_LINE_CATALOG_KEY_PREFIX } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
 export type CatalogoInicioRapidoKind =
   | "plantilla_ventora"
@@ -139,6 +141,45 @@ export function listarInicioRapidoCatalogo(): CatalogoInicioRapidoItem[] {
     ...listarPlantillasVerificadasVentoraParaCatalogo(),
     ...listarBasesVentoraParaCatalogo(),
   ];
+}
+
+function resolveVentoraPlantillaId(
+  metadata: CotizacionLineTemplate["catalogMetadata"] | null | undefined
+): string | null {
+  const raw = metadata?.ventoraPlantillaId;
+  if (typeof raw !== "string") return null;
+  const normalized = raw.trim();
+  return normalized ? normalized.toUpperCase() : null;
+}
+
+/** Oculta plantillas Ventora ya presentes en el catálogo comercial de la org. */
+export function filterInicioRapidoCatalogoForExistingTemplates(
+  items: CatalogoInicioRapidoItem[],
+  templates: CotizacionLineTemplate[]
+): CatalogoInicioRapidoItem[] {
+  const catalogKeys = new Set(
+    templates
+      .map((template) => template.catalogKey?.trim())
+      .filter((key): key is string => Boolean(key))
+  );
+  const plantillaIds = new Set(
+    templates
+      .map((template) => resolveVentoraPlantillaId(template.catalogMetadata))
+      .filter((id): id is string => Boolean(id))
+  );
+
+  return items.filter((item) => {
+    if (item.kind !== "plantilla_ventora" || !item.plantillaId) {
+      return true;
+    }
+
+    const catalogKey = `${VENTORA_LINE_CATALOG_KEY_PREFIX}${item.plantillaId.toLowerCase()}`;
+    if (catalogKeys.has(catalogKey)) {
+      return false;
+    }
+
+    return !plantillaIds.has(item.plantillaId.toUpperCase());
+  });
 }
 
 export function buildUniqueCatalogLineName(

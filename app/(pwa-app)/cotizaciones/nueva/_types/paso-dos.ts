@@ -64,6 +64,7 @@ export type PasoDosFormularioComponenteProps = {
   onQuotePricingModeChange: (mode: QuotePricingMode) => void;
   onComponentChange: <K extends keyof ComponentFormState>(key: K, value: ComponentFormState[K]) => void;
   onSelectLineTemplate: (templateId: string) => void;
+  onTemplatePriceUpdated?: (updated: CotizacionLineTemplate) => void;
   onToggleGlassPanel: () => void;
   onGlassQueryChange: (value: string) => void;
   onGlassSelect: (value: string) => void;

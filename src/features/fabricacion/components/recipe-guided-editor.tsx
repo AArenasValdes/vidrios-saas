@@ -82,6 +82,12 @@ import {
   type FabricacionSheetGroupId,
 } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import type { CotizacionLineTemplateMaterial } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import {
+  describeCodigoPerfilEstructural,
+  getGrupoPiezaFromObservaciones,
+  getPiezaNombreFromObservaciones,
+  GRUPO_PIEZA_ESTRUCTURAL_LABELS,
+} from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
 import type { FabricationRecipeSourceType } from "@/features/fabricacion/types/fabricacion-persistence";
 import {
   FABRICACION_BASES_MEDIDA,
@@ -518,6 +524,14 @@ export function RecipeGuidedEditor({
     () => countProfilesGeometricallyPending(recipe),
     [recipe]
   );
+  const configuredProfilesCount = useMemo(
+    () =>
+      recipe.perfiles.filter((profile) => {
+        const resumen = describePerfilTallerResumen(profile);
+        return Boolean(profile.codigoPerfil?.trim()) && !resumen.pendingDiscount;
+      }).length,
+    [recipe.perfiles]
+  );
   const tiraAplicadaEnPiezas =
     recipe.perfiles.length > 0 &&
     recipe.perfiles.every((profile) => profile.largoComercialMm === tiraEstandarMm);
@@ -526,12 +540,16 @@ export function RecipeGuidedEditor({
     () => groupProfilesForSheet(recipe.perfiles),
     [recipe.perfiles]
   );
+  const profileSheetDisplayOrder = useMemo(
+    () => profileSheetGroups.flatMap((group) => group.profiles),
+    [profileSheetGroups]
+  );
 
   const drawerProfile = drawerProfileId
     ? recipe.perfiles.find((entry) => entry.id === drawerProfileId) ?? null
     : null;
-  const drawerProfileIndex = drawerProfile
-    ? recipe.perfiles.findIndex((entry) => entry.id === drawerProfile.id)
+  const drawerProfileIndex = drawerProfileId
+    ? profileSheetDisplayOrder.findIndex((entry) => entry.id === drawerProfileId)
     : -1;
 
   useEffect(() => {
@@ -740,9 +758,9 @@ export function RecipeGuidedEditor({
   const closeProfileDrawer = () => setDrawerProfileId(null);
 
   const goToAdjacentProfile = (direction: -1 | 1) => {
-    if (drawerProfileIndex < 0) return;
+    if (!drawerProfileId || drawerProfileIndex < 0) return;
     const nextIndex = drawerProfileIndex + direction;
-    const next = recipe.perfiles[nextIndex];
+    const next = profileSheetDisplayOrder[nextIndex];
     if (!next) return;
     setDrawerProfileId(next.id);
   };
@@ -857,7 +875,7 @@ export function RecipeGuidedEditor({
     const pieceName = profile.funcion.trim() || `Perfil ${index + 1}`;
     const previewZone = resolvePreviewZoneFromFuncion(profile.funcion);
     const hasPrev = index > 0;
-    const hasNext = index < recipe.perfiles.length - 1;
+    const hasNext = index < profileSheetDisplayOrder.length - 1;
 
     return (
       <div
@@ -896,7 +914,7 @@ export function RecipeGuidedEditor({
             Anterior
           </button>
           <span>
-            Pieza {index + 1} de {recipe.perfiles.length}
+            Pieza {index + 1} de {profileSheetDisplayOrder.length}
           </span>
           <button
             type="button"
@@ -1844,6 +1862,15 @@ export function RecipeGuidedEditor({
       <section id="recipe-components" className={`${s.recipeBuildCard} ${s.fabSheet} ${s.fabPrepFlow}`}>
         <header className={s.fabPrepPageHead}>
           <h2>Así fabricas esta ventana</h2>
+          <p className={s.fabPrepGlobalStatus}>
+            {configuredProfilesCount >= recipe.perfiles.length &&
+            recipe.perfiles.length > 0
+              ? "Fabricación lista para probar"
+              : "Fabricación pendiente"}
+            {" · "}
+            {configuredProfilesCount} de {recipe.perfiles.length} perfiles
+            configurados
+          </p>
           <p>
             Ventora ya preparó las medidas y piezas habituales. Revisa solo si
             en tu taller lo haces distinto.
@@ -2083,16 +2110,16 @@ export function RecipeGuidedEditor({
               <div
                 role="list"
                 aria-label="Perfiles de fabricación"
-                className={s.fabSheetProfileList}
+                className={`${s.fabSheetProfileList} ${s.fabPieceTableScroll}`}
               >
                 <div className={s.fabPieceCols} aria-hidden="true">
                   <span />
-                  <span>Pieza</span>
+                  <span>Perfil</span>
                   <span>Código</span>
                   <span>Descuento</span>
                   <span>Tira</span>
-                  <span />
-                  <span />
+                  <span>Estado</span>
+                  <span>Acción</span>
                 </div>
                 {profileSheetGroups.map((group) => (
                   <section
@@ -2113,10 +2140,6 @@ export function RecipeGuidedEditor({
                 {group.profiles.map((profile) => {
                   const index = recipe.perfiles.findIndex((entry) => entry.id === profile.id);
                   const tallerResumen = describePerfilTallerResumen(profile);
-                  const pieceStatus = resolvePieceWorkshopStatus(
-                    profile,
-                    adjustedAwayFromSuggestion.has(profile.id)
-                  );
                   const tiraCorta =
                     profileTieneOverrideLargoComercial(profile)
                       ? formatLargoComercialCorto(profile.largoComercialMm) ??
@@ -2129,6 +2152,22 @@ export function RecipeGuidedEditor({
                     draggingProfileIndex !== index;
 
                   const isEditing = drawerProfileId === profile.id;
+
+                  const piezaNombre =
+                    getPiezaNombreFromObservaciones(profile.observaciones) ||
+                    profile.funcion.trim() ||
+                    `Pieza ${index + 1}`;
+                  const grupoPieza = getGrupoPiezaFromObservaciones(profile.observaciones);
+                  const tipoPerfil = profile.funcion.trim();
+                  const codigoLabel = profile.codigoPerfil?.trim()
+                    ? profile.codigoPerfil.trim()
+                    : "—";
+                  const rowStatus = !profile.codigoPerfil?.trim()
+                    ? "Código pendiente"
+                    : tallerResumen.pendingDiscount
+                      ? "Descuento pendiente"
+                      : "Listo";
+                  const rowStatusTone = rowStatus === "Listo" ? "ready" : "pending";
 
                   return (
                     <article
@@ -2205,18 +2244,20 @@ export function RecipeGuidedEditor({
                         <GripVertical size={15} aria-hidden="true" />
                       </button>
                       <div className={s.fabPrepRowMain}>
-                        <span className={s.fabSheetFunction}>
-                          {profile.funcion.trim() || `Pieza ${index + 1}`}
-                        </span>
+                        <span className={s.fabSheetFunction}>{piezaNombre}</span>
                         <span className={s.fabSheetMeasure}>
+                          {grupoPieza
+                            ? `${GRUPO_PIEZA_ESTRUCTURAL_LABELS[grupoPieza]} · ${tipoPerfil}`
+                            : tipoPerfil}
+                          {" · "}
                           {tallerResumen.cortesMedida}
                         </span>
                       </div>
                       <span
                         className={s.fabPieceCode}
-                        data-empty={!profileManufacturerCodeLabel(profile)}
+                        data-empty={!profile.codigoPerfil?.trim()}
                       >
-                        {profileManufacturerCodeLabel(profile) || "—"}
+                        {codigoLabel}
                       </span>
                       <span
                         className={s.fabPieceDiscount}
@@ -2227,17 +2268,12 @@ export function RecipeGuidedEditor({
                         {tallerResumen.descuentoCorto}
                       </span>
                       <span className={s.fabPieceTira}>{tiraCorta}</span>
-                      {pieceStatus.label === "Lista" ||
-                      pieceStatus.label === "Revisada" ? (
                       <span
-                        className={s.fabPrepBadge}
-                        data-tone={pieceStatus.tone}
+                        className={s.fabPieceRowStatus}
+                        data-tone={rowStatusTone}
                       >
-                        {pieceStatus.label}
+                        {rowStatus}
                       </span>
-                      ) : (
-                        <span className={s.fabPrepBadgeSpacer} />
-                      )}
                       <button
                         type="button"
                         className={s.fabSheetEdit}

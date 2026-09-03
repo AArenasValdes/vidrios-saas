@@ -811,7 +811,7 @@ function TabMedidas({
                           {isMirrorComponent
                             ? "Recomendado para espejos"
                             : lineTemplateRecommendedGlass
-                              ? "Recomendado para esta linea"
+                              ? "Sugerido por tu línea"
                               : "Vidrios sugeridos"}
                         </strong>
                         <span>{recommendedGlassReason}</span>
@@ -1073,6 +1073,7 @@ function TabPrecio({
   precioDisplay,
   onComponentChange,
   onSelectLineTemplate,
+  onTemplatePriceUpdated,
   onPricingModeSelection,
   onRecalculateCurrentTemplatePrice,
   onSaveQuickPriceTemplate,
@@ -1085,6 +1086,7 @@ function TabPrecio({
   | "isSavingQuickPriceTemplate"
   | "onComponentChange"
   | "onSelectLineTemplate"
+  | "onTemplatePriceUpdated"
   | "onPricingModeSelection"
   | "onRecalculateCurrentTemplatePrice"
   | "onSaveQuickPriceTemplate"
@@ -1116,6 +1118,7 @@ function TabPrecio({
               templates={visibleLineTemplates}
               value={componentForm.lineTemplateId}
               onChange={onSelectLineTemplate}
+              onTemplatePriceUpdated={onTemplatePriceUpdated}
               mode={isGlassCatalogItem ? "glass" : "profile"}
               ariaLabel={`Seleccionar ${catalogLabelLower}`}
             />
@@ -1530,6 +1533,7 @@ export function PasoDosEditorDesktop(props: Props) {
             precioDisplay={precioDisplay}
             onComponentChange={props.onComponentChange}
             onSelectLineTemplate={props.onSelectLineTemplate}
+            onTemplatePriceUpdated={props.onTemplatePriceUpdated}
             onPricingModeSelection={props.onPricingModeSelection}
             onRecalculateCurrentTemplatePrice={props.onRecalculateCurrentTemplatePrice}
             onSaveQuickPriceTemplate={props.onSaveQuickPriceTemplate}

@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendAccountActivationEmail } from "@/features/auth/services/auth-account-activation-email.service";
+import { seedDefaultLineCatalogServer } from "@/features/cotizaciones/line-templates/services/seed-line-catalog-server";
 
 export class OrganizationProvisionError extends Error {
   constructor(
@@ -222,6 +223,9 @@ export async function provisionOrganizationAccount(
         "No pudimos enviar la invitacion. Revisa la configuracion de correo."
       );
     }
+
+    // Precargar catálogo de líneas Ventora para la nueva organización
+    await seedDefaultLineCatalogServer(organizationId, { admin }).catch(() => undefined);
 
     return {
       organizationId,

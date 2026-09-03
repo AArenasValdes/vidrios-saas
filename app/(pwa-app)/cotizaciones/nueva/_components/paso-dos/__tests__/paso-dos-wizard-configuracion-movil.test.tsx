@@ -2,6 +2,10 @@
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
+jest.mock("@/features/auth/hooks/useAuth", () => ({
+  useAuth: () => ({ organizacionId: "test-org-1", userId: "test-user" }),
+}));
+
 import { PasoDosWizardConfiguracionMovil } from "../paso-dos-wizard-configuracion-movil";
 
 const baseProps = {
@@ -538,5 +542,40 @@ describe("PasoDosWizardConfiguracionMovil", () => {
 
     expect(screen.queryByText("Editar detalle incluido")).not.toBeInTheDocument();
     expect(screen.getByText("+ Agregar observacion interna")).toBeInTheDocument();
+  });
+
+  it("muestra Precio pendiente y no aplica la linea hasta guardar el precio", () => {
+    const onSelectLineTemplate = jest.fn();
+
+    render(
+      <PasoDosWizardConfiguracionMovil
+        {...baseProps}
+        onSelectLineTemplate={onSelectLineTemplate}
+        lineTemplateOptions={[
+          {
+            id: "al-1",
+            organizationId: "org-1",
+            nombre: "Serie 25",
+            material: "Aluminio",
+            categoria: "aluminio",
+            unidadCobro: "m2",
+            precioM2Sugerido: 0,
+            minimoCobrable: 0,
+            redondeoPrecio: 1000,
+            vidrioPrincipalRecomendado: null,
+            catalogMetadata: { needsCommercialPrice: true, lineSystem: "Corredera" },
+            isActive: true,
+            creadoEn: "2026-09-03T00:00:00.000Z",
+            actualizadoEn: "2026-09-03T00:00:00.000Z",
+          },
+        ]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Precio manual o sin linea/i }));
+    expect(screen.getByText("Precio pendiente")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Serie 25/i }));
+    expect(onSelectLineTemplate).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: "Agregar precio de la línea" })).toBeInTheDocument();
   });
 });

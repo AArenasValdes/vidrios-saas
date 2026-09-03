@@ -30,14 +30,14 @@ Promesa narrativa:
 
 ## Orden de grabación y asignación automática
 
-No grabar la biblioteca completa antes de activar onboarding. El primer paquete son **dos videos base**, configurados una vez en `/admin/marketing/onboarding`; Ventora muestra el correspondiente al dispositivo con el que entra cada cuenta nueva.
+El paquete inicial son **dos videos base**. El orden operativo vigente y sus templates están en `VIDEO_PRODUCTION_SYSTEM.md`; no grabar una biblioteca completa antes de validar que estos dos videos llevan al usuario a su primera cotización.
 
 | Prioridad | Dispositivo | Video base | Duración | Resultado que debe mostrar |
 |---|---|---|---:|---|
 | 1 | Celular | `Cotiza desde el celular y envía tu PDF` | 90 s | Nueva cotización → trabajo/precio simple → resumen → PDF y WhatsApp. |
-| 2 | Computador | `Configura líneas y cotiza por ítems` | 120 s | Línea/precio comercial → cotización por ítems → aclaración de continuidad desde celular. |
+| 2 | Computador | `Continúa en PC con Constructor` | 90 s | Constructor → líneas → despiece → cubicación y pauta interna revisable. |
 
-El **Constructor de piezas** no es parte de la bienvenida inicial. Se graba como tercer video solo cuando el panel de `Uso real del cotizador` confirme que vale la pena priorizarlo. Los videos 3 y 4 de este documento quedan como biblioteca de ayuda/contenido, no como requisito para salir a vender.
+El **Constructor de piezas** sí es parte del onboarding PC inicial porque es el flujo elegido para trabajar en computador. Los videos 3 y 4 quedan como biblioteca de ayuda/contenido, no como requisito para salir a vender.
 
 ## Pantallas reales a capturar
 

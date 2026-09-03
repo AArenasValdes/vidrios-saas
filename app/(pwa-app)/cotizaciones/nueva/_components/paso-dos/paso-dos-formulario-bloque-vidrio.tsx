@@ -94,7 +94,7 @@ export function PasoDosFormularioBloqueVidrio({
                       {isMirrorComponent
                         ? "Recomendado para espejos"
                         : lineTemplateRecommendedGlass
-                          ? "Recomendado para esta linea"
+                          ? "Sugerido por tu línea"
                           : "Vidrios sugeridos"}
                     </strong>
                     <span>{recommendedGlassReason}</span>

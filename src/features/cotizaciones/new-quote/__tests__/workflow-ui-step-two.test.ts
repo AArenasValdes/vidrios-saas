@@ -1224,7 +1224,7 @@ describe("workflow-ui paso 2", () => {
     ).toEqual(["Cristal templado 10 mm"]);
   });
 
-  it("debe ocultar lineas sin precio comercial en selectores de cotizacion", () => {
+  it("debe mostrar lineas sin precio comercial (precio pendiente) en selectores de cotizacion", () => {
     const templates = [
       {
         id: "al-1",
@@ -1250,7 +1250,7 @@ describe("workflow-ui paso 2", () => {
         tipo: "Ventana",
         material: "Aluminio",
       }).map((template) => template.nombre)
-    ).toEqual(["Serie con precio"]);
+    ).toEqual(["Serie con precio", "Serie tecnica sin precio"]);
   });
 
   it("debe mostrar lineas PVC y Aluminio al cotizar ventana, priorizando el material actual", () => {

@@ -22,7 +22,7 @@ Frase guia: *"En pocos minutos veras como Ventora te ayuda a generar un presupue
 ## Guía automática por dispositivo (Fase B, 2026-08-20)
 
 - El founder configura una vez los dos predeterminados en `/admin/marketing/onboarding`: uno `movil` y uno `escritorio`, ambos `listo` con URL HTTPS. No se asignan empresas en la operación diaria.
-- Una cuenta nueva ve en la bienvenida el predeterminado de su dispositivo. Una asignación antigua sólo opera como override de piloto si falta el predeterminado.
+- Una cuenta nueva ve en la bienvenida el predeterminado de su dispositivo y, si existe, un enlace secundario al predeterminado del otro dispositivo. Una asignación antigua sólo opera como override de piloto si falta el predeterminado.
 - Abrir la guía registra una única señal `video_abierto` por organización/video; los hitos `primera_cotizacion_creada` y `primer_pdf_descargado` los registran triggers de PostgreSQL para que sean confiables aunque el navegador se cierre.
 - No usar esta capa para bloquear el CTA de primera cotización ni cargar una biblioteca completa al usuario nuevo.
 

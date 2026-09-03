@@ -16,6 +16,7 @@ import type { AuthCallbackProvider, AuthOAuthIntent } from "@/features/auth/type
 import type { OAuthAnalyticsEvent } from "@/features/auth/services/auth-oauth-analytics.service";
 import type { Session } from "@supabase/supabase-js";
 import { sendWelcomeEmail } from "@/features/auth/services/auth-welcome-email.service";
+import { seedDefaultLineCatalogServer } from "@/features/cotizaciones/line-templates/services/seed-line-catalog-server";
 
 type AuthServerServiceDeps = {
   repository?: AuthServerRepository;
@@ -118,6 +119,8 @@ export function createAuthServerService(
           };
 
           if (!provisioned.alreadyProvisioned) {
+            await seedDefaultLineCatalogServer(provisioned.organizationId).catch(() => undefined);
+
             await sendWelcomeEmail({
               to: user.email,
               nombre: pending.nombre,

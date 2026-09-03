@@ -2,6 +2,50 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-03 - Fase 4A: Referencias de perfiles por línea comercial
+
+- Referencias informativas en `catalog_metadata.workshopProfiles` (sin migración SQL).
+- Catálogo documentado en `ventora-profile-references.ts` con códigos SODAL/industria para aluminio y componentes pendientes para Óptima S-28 y PVC WinHouse.
+- Seed idempotente `seedProfileReferencesForOrganization()` + ganchos server/client en provisión de líneas.
+- UI compartida `LineProfileReferencesSection` en tarjetas desktop (colapsable) y detalle móvil.
+- Sin cambios en cotización, precio por m², descuentos ni fórmulas de corte.
+
+## 2026-09-03 - Fase 4: Base estructural de perfiles por línea comercial
+
+- Arquetipos técnicos reutilizables en `arquetipos-estructurales-lineas.ts`: corredera 2h/3h, proyectante, multislide 4h/8h, puertas, PVC (doble/triple riel, S60, Andes proyectante).
+- Cada una de las 23 líneas Ventora (`catalog_key`) mapea a un arquetipo vía `CATALOG_KEY_TO_ARQUETIPO` y `catalog_metadata.structuralArchetypeId`.
+- `crearRecetaDesdeArquetipoEstructural()` genera `FabricacionReceta` en estado `ejemplo_no_validado` sin inventar códigos ni descuentos (salvo ajustes documentados L5000/L20/L25).
+- Seed idempotente `seedStructuralDraftsForOrganization()` inserta borradores en `fabrication_recipes` (`status: draft`, `source_reference: ventora-arquetipo:{id}`) solo para líneas Ventora sin receta previa.
+- Ganchos: `seed-line-catalog-server.ts` (server) y `ensureStructuralDraftsClient()` en `useCotizacionLineTemplates` (client, una vez por sesión/org).
+- Workspace fabricación: al crear receta manual usa `crearRecetaEstructuralParaLineaComercial()` si la línea tiene arquetipo.
+- UI `recipe-guided-editor`: filas muestran pieza, grupo, tipo, código "Pendiente de validar" y badge "Borrador técnico".
+- Sin migración SQL nueva; sin activar `cuttingEnabled` ni pauta automática; cotización comercial intacta.
+- Tests: `arquetipos-estructurales-lineas.test.ts`, `seed-structural-draft.test.ts`.
+
+## 2026-09-03 - Fase 3: Catálogo comercial ampliado y vidrio habitual
+
+- Catálogo Ventora ampliado a 23 líneas canónicas (`default-line-catalog.ts`): 5 base + 13 aluminio + 5 PVC WinHouse.
+- `seedDefaultLineCatalog()` ahora inserta solo `catalog_key` ausentes; no omite orgs con líneas privadas ni sobrescribe precios/vidrio existente.
+- Fallback client en `useCotizacionLineTemplates` ejecuta el seed una vez por sesión aunque ya haya líneas.
+- Vidrio habitual opcional reutiliza `cotizacion_line_templates.vidrio_principal_recomendado` (sin migración nueva).
+- `LinePriceEditor`: sección colapsable **Opciones avanzadas** → vidrio habitual de la línea.
+- Cotización: preselección + etiqueta **Sugerido por tu línea**; el cambio en el ítem no altera la línea.
+- Tarjetas desktop/móvil muestran `Vidrio habitual: …` cuando está configurado.
+- `filterInicioRapidoCatalogoForExistingTemplates` evita duplicar plantillas L5000/L20/… ya sembradas.
+
+## 2026-09-03 - Fase 1: Catálogo inicial de líneas para cuentas nuevas
+
+- Migración `20260903110000_line_template_catalog_key`: columna `catalog_key` en `cotizacion_line_templates` con unique parcial por org.
+- Catálogo base Ventora (L5000/L20/L25/L32/L42) en `default-line-catalog.ts` con seed idempotente `seedDefaultLineCatalog()`.
+- Seed server-side (`seed-line-catalog-server.ts`) integrado en provisión OAuth, correo y admin.
+- Fallback client-side (`seed-line-catalog-client.ts`) en `useCotizacionLineTemplates` si la org no tiene líneas.
+- `filterLineTemplatesForComponent` ahora muestra líneas activas con precio pendiente.
+- `LineTemplatePicker` muestra "Precio pendiente" en ámbar para líneas sin precio configurado.
+- Paso 2 desktop muestra banner de aviso cuando la línea seleccionada no tiene precio.
+- Componente `LineTemplatePendingPriceForm` para confirmar precio inline.
+- Nav desktop: "Líneas y precios" agregado en `CONFIG_NAV_ITEMS` de `app-shell.tsx`.
+- Docs actualizados: `database_map.md`, `current_schema.sql`, `agent_database_notes.md`, `FEATURES_MAP.md`.
+
 ## 2026-08-21 - Marketing operativo y onboarding por dispositivo
 
 - `/admin/marketing` ahora inicia con el orden operativo: preparar las dos bienvenidas, crear contenido desde guiones base y revisar uso real antes de ampliar la biblioteca.

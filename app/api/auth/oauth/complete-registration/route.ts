@@ -7,6 +7,7 @@ import {
   provisionOrganizationFromOAuthUser,
 } from "@/features/auth/services/auth-oauth-completion.service";
 import { sendWelcomeEmail } from "@/features/auth/services/auth-welcome-email.service";
+import { seedDefaultLineCatalogServer } from "@/features/cotizaciones/line-templates/services/seed-line-catalog-server";
 import {
   isRateLimitUnavailableError,
   isRequestBodyTooLargeError,
@@ -83,6 +84,9 @@ export async function POST(request: Request) {
     });
 
     if (!result.alreadyProvisioned) {
+      // Precargar catálogo de líneas Ventora para la nueva organización
+      await seedDefaultLineCatalogServer(result.organizationId).catch(() => undefined);
+
       const welcomeEmailResult = await sendWelcomeEmail({
         to: user.email,
         nombre: body.nombre ?? "",

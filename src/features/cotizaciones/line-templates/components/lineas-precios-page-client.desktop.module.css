@@ -129,12 +129,18 @@
 
   .groupCards {
     display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
-    gap: 12px !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 14px !important;
     overflow: visible !important;
     border: 0 !important;
     border-radius: 0 !important;
     background: transparent !important;
+  }
+
+  @media (min-width: 1024px) and (max-width: 1279px) {
+    .groupCards {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
   }
 
   .groupCards:has(.cardMenuOpen) {
@@ -152,12 +158,14 @@
     grid-template-areas:
       "identity"
       "price"
+      "status"
       "technical"
+      "profiles"
       "details"
       "state" !important;
     align-content: start;
-    min-height: 238px !important;
-    padding: 20px !important;
+    min-height: 0 !important;
+    padding: 18px !important;
     border: 1px solid #dde5ee !important;
     border-radius: 16px !important;
     background: #ffffff !important;
@@ -219,7 +227,7 @@
   .priceRow {
     grid-area: price !important;
     min-height: 0 !important;
-    padding: 18px 0 14px !important;
+    padding: 14px 0 10px !important;
     border: 0 !important;
   }
 
@@ -228,14 +236,49 @@
     letter-spacing: -0.035em !important;
   }
 
+  .lineStatusSummary {
+    grid-area: status !important;
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    padding: 0 0 10px !important;
+    border-bottom: 1px solid #edf1f5;
+  }
+
   .technicalStatusRow {
     grid-area: technical !important;
     min-height: 0 !important;
-    padding: 13px 0 12px !important;
+    padding: 10px 0 8px !important;
     border: 0 !important;
-    border-top: 1px solid #e8edf3 !important;
+    border-top: 0 !important;
     border-radius: 0 !important;
     background: transparent !important;
+    justify-content: flex-start !important;
+  }
+
+  .technicalManageLinkSecondary {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 4px;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid #d7e3f2;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #334155 !important;
+    font-size: 13px !important;
+    font-weight: 650 !important;
+    text-decoration: none !important;
+    white-space: nowrap;
+  }
+
+  .technicalManageLinkSecondary:hover {
+    background: #f1f5f9;
+    border-color: #c7d7e9;
+  }
+
+  .cardProfiles {
+    grid-area: profiles !important;
   }
 
   .technicalStatusRow[data-tech-status] {

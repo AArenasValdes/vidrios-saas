@@ -164,7 +164,7 @@ export function getGlassRecommendations(
     return {
       recommendedOptions: mergedRecommendations,
       reason: lineTemplateRecommendedOption
-        ? "Recomendado para esta linea. Igual puedes cambiarlo."
+        ? "Sugerido por tu línea"
         : matchingRule?.reason ?? "Opciones frecuentes para partir rapido.",
       lineTemplateRecommendedOption,
     };

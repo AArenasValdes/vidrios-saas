@@ -27,6 +27,7 @@ import {
   LuGlobe,
   LuInbox,
   LuLayoutDashboard,
+  LuLayers,
   LuLogOut,
   LuRefreshCw,
   LuSettings,
@@ -139,6 +140,13 @@ const CONFIG_NAV_ITEMS: NavItem[] = [
     label: "Empresa",
     mobileLabel: "Empresa",
     description: "Marca, logo y datos comerciales del negocio",
+  },
+  {
+    href: "/configuracion/empresa/lineas-precios",
+    icon: LuLayers,
+    label: "Líneas y precios",
+    mobileLabel: "Líneas",
+    description: "Catálogo de líneas comerciales con precios",
   },
   {
     href: "/configuracion/pagina-venta",

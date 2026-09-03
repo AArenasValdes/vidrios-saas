@@ -1274,6 +1274,7 @@ CREATE TABLE IF NOT EXISTS "public"."cotizacion_line_templates" (
     "vigencia_desde" "date",
     "vigencia_hasta" "date",
     "catalog_metadata" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
+    "catalog_key" "text",
     CONSTRAINT "cotizacion_line_templates_catalog_costs_nonnegative" CHECK ((("costo_base" >= (0)::numeric) AND ("merma_pct" >= (0)::numeric) AND (("margen_objetivo_pct" IS NULL) OR (("margen_objetivo_pct" >= (0)::numeric) AND ("margen_objetivo_pct" < (100)::numeric))))),
     CONSTRAINT "cotizacion_line_templates_categoria_check" CHECK (("categoria" = ANY (ARRAY['aluminio'::"text", 'pvc'::"text", 'vidrio'::"text", 'shower'::"text", 'accesorios'::"text", 'otros'::"text"]))),
     CONSTRAINT "cotizacion_line_templates_material_check" CHECK (("material" = ANY (ARRAY['Aluminio'::"text", 'PVC'::"text", 'Cristal'::"text"]))),
@@ -2753,6 +2754,8 @@ CREATE INDEX "cotizacion_items_system_line_id_idx" ON "public"."cotizacion_items
 
 
 CREATE INDEX "cotizacion_line_templates_org_sort_idx" ON "public"."cotizacion_line_templates" USING "btree" ("organization_id", "sort_order", "nombre") WHERE ("eliminado_en" IS NULL);
+
+CREATE UNIQUE INDEX "cotizacion_line_templates_catalog_key_org_unique" ON "public"."cotizacion_line_templates" USING "btree" ("organization_id", "catalog_key") WHERE ("catalog_key" IS NOT NULL AND "eliminado_en" IS NULL);
 
 
 

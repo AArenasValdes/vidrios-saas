@@ -28,6 +28,7 @@ export type CotizacionLineTemplateUnidadCobro = (typeof LINE_TEMPLATE_UNIDADES_C
 export type CotizacionLineTemplate = {
   id: EntityId;
   organizationId: EntityId;
+  catalogKey: string | null;
   nombre: string;
   categoria: CotizacionLineTemplateCategoria;
   unidadCobro: CotizacionLineTemplateUnidadCobro;
@@ -730,6 +731,7 @@ export function clearNeedsCommercialPriceFlag(
 
 export type CreateCotizacionLineTemplateInput = {
   organizationId: EntityId;
+  catalogKey?: string | null;
   nombre: string;
   categoria?: CotizacionLineTemplateCategoria;
   unidadCobro?: CotizacionLineTemplateUnidadCobro;
@@ -750,6 +752,7 @@ export type CreateCotizacionLineTemplateInput = {
 };
 
 export type UpdateCotizacionLineTemplateInput = {
+  catalogKey?: string | null;
   nombre?: string;
   categoria?: CotizacionLineTemplateCategoria;
   unidadCobro?: CotizacionLineTemplateUnidadCobro;

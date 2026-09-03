@@ -178,6 +178,15 @@
   line-height: 1.35;
 }
 
+.catalogRegionLabel {
+  color: #1e5fbf;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  text-transform: none;
+}
+
 .toolbar {
   display: grid;
   gap: 10px;
@@ -960,7 +969,8 @@
 
 .priceRow {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
   flex-wrap: wrap;
 }
@@ -977,6 +987,69 @@
   color: #5f708c;
   font-size: 13px;
   font-weight: 700;
+}
+
+.addPriceBtn,
+.editPriceBtn {
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.addPriceBtn {
+  background: #1e88ff;
+  border: 1px solid #1e88ff;
+  color: #ffffff;
+}
+
+.addPriceBtn:hover {
+  background: #1677e8;
+  border-color: #1677e8;
+}
+
+.editPriceBtn {
+  background: #ffffff;
+  border: 1px solid #d7e3f2;
+  color: #1e88ff;
+}
+
+.editPriceBtn:hover {
+  background: #f8fbff;
+  border-color: #b9d6fb;
+}
+
+.lineStatusSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+
+.lineStatusItem {
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+  color: #64748b;
+}
+
+.lineStatusItem[data-tone="ready"] {
+  color: #15803d;
+}
+
+.lineStatusItem[data-tone="pending"] {
+  color: #b45309;
+}
+
+.lineStatusItem[data-tone="info"] {
+  color: #1d4ed8;
+}
+
+.lineStatusItem[data-tone="muted"] {
+  color: #64748b;
 }
 
 .technicalStatusRow {

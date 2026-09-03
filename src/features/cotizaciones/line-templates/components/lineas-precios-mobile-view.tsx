@@ -20,11 +20,15 @@ import {
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CatalogoInicioRapidoItem } from "@/features/cotizaciones/line-templates/services/catalogo-usar-base-ventora.service";
 import {
+  formatLineTemplateHabitualGlassLabel,
+} from "@/features/cotizaciones/line-templates/constants/line-template-habitual-glass";
+import {
   formatLineTemplatePriceLabel,
   LINE_TEMPLATE_CATEGORIA_LABELS,
 } from "@/features/cotizaciones/line-templates/utils/catalog-labels";
 
 import s from "./lineas-precios-mobile-view.module.css";
+import { LineProfileReferencesSection } from "./line-profile-references-section";
 
 export type MobileStatusFilter = "todas" | "activas" | "inactivas";
 export type MobileCategoryFilter = "Todo" | "aluminio" | "pvc" | "vidrio";
@@ -67,11 +71,13 @@ type Props = {
   feedback: { kind: "success" | "error"; message: string } | null;
   onNew: () => void;
   onEdit: (template: CotizacionLineTemplate) => void;
+  onEditPrice: (template: CotizacionLineTemplate) => void;
   baseRecommendations: CatalogoInicioRapidoItem[];
   isUsingBase: boolean;
   usingBaseId: string | null;
   onUseBase: (recommendation: CatalogoInicioRapidoItem) => void;
   formatMoney: (value: number) => string;
+  isChileCatalog?: boolean;
 };
 
 const MATERIAL_OPTIONS: Array<{ value: MobileCategoryFilter; label: string }> = [
@@ -115,37 +121,30 @@ function getCommercialStatus(
 }
 
 function getFabricationStatus(status: TechnicalStatus) {
-  // En móvil solo se consulta el resumen; la configuración vive en desktop.
-  const action = "Ver fabricación";
   if (status.tone === "validated") {
     return {
       tone: "validated",
-      label: "Validada",
+      label: "Fabricación configurada",
       detail: "Lista para despiece en cotización.",
-      action,
+      action: "Ver fabricación",
+      actionPrimary: true,
     } as const;
   }
   if (status.tone === "testing") {
     return {
       tone: "testing",
-      label: "En prueba",
-      detail: "Configurada en desktop · pendiente de activar.",
-      action,
-    } as const;
-  }
-  if (status.tone === "draft") {
-    return {
-      tone: "pending",
-      label: "Borrador",
-      detail: "Hay un borrador · sigue en el computador.",
-      action,
+      label: "Fabricación en prueba",
+      detail: "Completa la validación en desktop.",
+      action: "Configurar fabricación",
+      actionPrimary: true,
     } as const;
   }
   return {
     tone: "pending",
-    label: "Sin configurar",
-    detail: "Puedes cotizar · fabricación se arma en desktop.",
-    action,
+    label: "Fabricación pendiente",
+    detail: "Configúrala en el computador cuando quieras.",
+    action: "Configurar fabricación",
+    actionPrimary: true,
   } as const;
 }
 
@@ -173,11 +172,13 @@ export function LineasPreciosMobileView({
   feedback,
   onNew,
   onEdit,
+  onEditPrice,
   baseRecommendations,
   isUsingBase: _isUsingBase,
   usingBaseId: _usingBaseId,
   onUseBase: _onUseBase,
   formatMoney,
+  isChileCatalog = false,
 }: Props) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const appliedFilterCount = [
@@ -203,6 +204,9 @@ export function LineasPreciosMobileView({
           <LuArrowLeft aria-hidden />
         </Link>
         <div className={s.headerCopy}>
+          {isChileCatalog ? (
+            <span className={s.catalogRegionLabel}>Catálogo base de Chile</span>
+          ) : null}
           <h1>Líneas y precios</h1>
           <p>{templates.length} {templates.length === 1 ? "línea guardada" : "líneas guardadas"}</p>
         </div>
@@ -325,21 +329,25 @@ export function LineasPreciosMobileView({
             const context = [template.proveedor, system].filter(Boolean).join(" · ");
             const commercialStatus = getCommercialStatus(template, needsPrice);
             const fabricationStatus = getFabricationStatus(technicalStatus);
+            const habitualGlassLabel = formatLineTemplateHabitualGlassLabel(
+              template.vidrioPrincipalRecomendado
+            );
 
             return (
               <article
                 key={template.id}
                 className={`${s.card} ${template.isActive ? "" : s.cardInactive}`}
               >
-                <div className={s.cardHeader}>
-                  <div>
+                <header className={s.cardHeader}>
+                  <div className={s.cardHeaderMain}>
                     <h2>{template.nombre}</h2>
                     <p>
                       {LINE_TEMPLATE_CATEGORIA_LABELS[template.categoria]}
+                      {template.material ? ` · ${template.material}` : ""}
                       {context ? ` · ${context}` : ""}
                     </p>
                   </div>
-                </div>
+                </header>
 
                 <div className={s.priceBlock}>
                   <strong>
@@ -352,38 +360,42 @@ export function LineasPreciosMobileView({
                         )}
                   </strong>
                   <span>
-                    Mínimo {template.minimoCobrable > 0
+                    Mínimo{" "}
+                    {template.minimoCobrable > 0
                       ? formatMoney(template.minimoCobrable)
                       : "sin definir"}
                   </span>
+                  {habitualGlassLabel ? (
+                    <span className={s.habitualGlass}>
+                      Vidrio habitual: {habitualGlassLabel}
+                    </span>
+                  ) : null}
                 </div>
 
-                <div className={s.statusList} aria-label="Estado de la línea">
-                  <div className={s.statusRow} data-tone={commercialStatus.tone}>
-                    <span className={s.statusDot} aria-hidden />
-                    <div>
-                      <strong>{commercialStatus.label}</strong>
-                      <small>{commercialStatus.detail}</small>
-                    </div>
-                  </div>
-                  <div className={s.statusRow} data-tone={fabricationStatus.tone}>
-                    <span className={s.statusDot} aria-hidden />
-                    <div>
-                      <strong>{fabricationStatus.label}</strong>
-                      <small>{fabricationStatus.detail}</small>
-                    </div>
-                  </div>
+                <div className={s.statusSummary} aria-label="Estado de la línea">
+                  <span data-tone={commercialStatus.tone}>{commercialStatus.label}</span>
+                  <span data-tone={fabricationStatus.tone}>{fabricationStatus.label}</span>
                 </div>
+
+                <LineProfileReferencesSection
+                  catalogMetadata={template.catalogMetadata}
+                  variant="mobile"
+                />
 
                 <div className={s.cardActions}>
                   <Link
                     href={`/configuracion/empresa/lineas-precios/${template.id}/fabricacion`}
+                    className={s.primaryAction}
                   >
                     {fabricationStatus.action}
                     <LuChevronRight aria-hidden />
                   </Link>
-                  <button type="button" onClick={() => onEdit(template)}>
-                    Precio y datos
+                  <button
+                    type="button"
+                    className={needsPrice ? s.addPriceBtn : s.editPriceBtn}
+                    onClick={() => onEditPrice(template)}
+                  >
+                    {needsPrice ? "Agregar precio" : "Editar precio"}
                   </button>
                 </div>
               </article>

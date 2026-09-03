@@ -4,6 +4,15 @@ import {
   VENTORA_DEMO_MASTER_DURATION,
 } from "../src/features/video/VentoraDemoMaster";
 import { VentoraExplainer } from "../src/features/video/VentoraExplainer";
+import {
+  PrimerOnboardingPremium,
+  PRIMER_ONBOARDING_DURATION,
+} from "../src/features/video/PrimerOnboardingPremium";
+import {
+  OnboardingPcEnhancement,
+  ONBOARDING_PC_ENHANCEMENT_DURATION,
+  ONBOARDING_PC_ENHANCEMENT_FPS,
+} from "../src/features/video/OnboardingPcEnhancement";
 import { VENTORA_VIDEO_FPS } from "../src/features/video/video-assets";
 
 const LANDSCAPE_WIDTH = 1920;
@@ -43,6 +52,22 @@ export const RemotionRoot = () => {
         fps={VENTORA_VIDEO_FPS}
         width={PORTRAIT_WIDTH}
         height={PORTRAIT_HEIGHT}
+      />
+      <Composition
+        id="PrimerOnboardingPremium"
+        component={PrimerOnboardingPremium}
+        durationInFrames={PRIMER_ONBOARDING_DURATION}
+        fps={VENTORA_VIDEO_FPS}
+        width={PORTRAIT_WIDTH}
+        height={PORTRAIT_HEIGHT}
+      />
+      <Composition
+        id="OnboardingPcEnhancement"
+        component={OnboardingPcEnhancement}
+        durationInFrames={ONBOARDING_PC_ENHANCEMENT_DURATION}
+        fps={ONBOARDING_PC_ENHANCEMENT_FPS}
+        width={LANDSCAPE_WIDTH}
+        height={LANDSCAPE_HEIGHT}
       />
     </>
   );

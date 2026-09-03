@@ -12,10 +12,12 @@ import {
 import { createPortal } from "react-dom";
 import { LuCheck, LuChevronDown, LuSearch, LuX } from "react-icons/lu";
 
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
-import { getLineTemplateSystemMetadata } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import { getLineTemplateSystemMetadata, lineTemplateNeedsCommercialPrice } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { CLP } from "@/features/cotizaciones/new-quote/workflow-ui";
 
+import { LinePriceEditor } from "./line-template-price-editor";
 import styles from "./line-template-picker.module.css";
 
 type MaterialFilter = "todos" | "Aluminio" | "PVC" | "Cristal";
@@ -32,6 +34,9 @@ type LineTemplatePickerProps = {
   templates: readonly CotizacionLineTemplate[];
   value: string;
   onChange: (templateId: string) => void;
+  /** Called when a template's price is saved from the inline editor. */
+  onTemplatePriceUpdated?: (updated: CotizacionLineTemplate) => void;
+  organizationId?: string | number | null;
   mode?: "profile" | "glass";
   preferredMaterial?: MaterialFilter | null;
   ariaLabel?: string;
@@ -106,12 +111,18 @@ function renderTemplateOption(
           ) : null}
         </span>
         <span className={styles.optionPriceRow}>
-          <em>{formatPricePerM2(template.precioM2Sugerido)}</em>
-          <span className={styles.optionSecondary}>
-            {formatMinimum(template.minimoCobrable)}
-            <span aria-hidden> · </span>
-            {formatRounding(template.redondeoPrecio)}
-          </span>
+          {lineTemplateNeedsCommercialPrice(template) ? (
+            <em className={styles.pricePending}>Precio pendiente</em>
+          ) : (
+            <>
+              <em>{formatPricePerM2(template.precioM2Sugerido)}</em>
+              <span className={styles.optionSecondary}>
+                {formatMinimum(template.minimoCobrable)}
+                <span aria-hidden> · </span>
+                {formatRounding(template.redondeoPrecio)}
+              </span>
+            </>
+          )}
         </span>
       </span>
       {selectedOption ? <LuCheck className={styles.optionCheck} aria-hidden /> : null}
@@ -123,12 +134,16 @@ export function LineTemplatePicker({
   templates,
   value,
   onChange,
+  onTemplatePriceUpdated,
+  organizationId,
   mode = "profile",
   preferredMaterial = null,
   ariaLabel,
   className,
   renderTrigger,
 }: LineTemplatePickerProps) {
+  const { organizacionId: authOrgId } = useAuth();
+  const resolvedOrgId = organizationId ?? authOrgId;
   const listId = useId();
   const titleId = useId();
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -138,6 +153,7 @@ export function LineTemplatePicker({
   const [query, setQuery] = useState("");
   const [materialFilter, setMaterialFilter] = useState<MaterialFilter>("todos");
   const [providerFilter, setProviderFilter] = useState<ProviderFilter>("todos");
+  const [priceEditorTarget, setPriceEditorTarget] = useState<CotizacionLineTemplate | null>(null);
 
   const resetFilters = useCallback(() => {
     setQuery("");
@@ -250,6 +266,13 @@ export function LineTemplatePicker({
   }, [closePicker, open]);
 
   const selectValue = (next: string) => {
+    if (next && resolvedOrgId) {
+      const target = templates.find((t) => String(t.id) === next);
+      if (target && lineTemplateNeedsCommercialPrice(target)) {
+        setPriceEditorTarget(target);
+        return;
+      }
+    }
     onChange(next);
     closePicker();
   };
@@ -443,8 +466,8 @@ export function LineTemplatePicker({
                     {query.trim() || materialFilter !== "todos" || providerFilter !== "todos"
                       ? "No hay líneas con ese filtro."
                       : isGlass
-                        ? "No hay cristales con precio guardados."
-                        : "No hay líneas con precio guardadas."}
+                        ? "No hay cristales guardados."
+                        : "No hay líneas guardadas."}
                   </div>
                 ) : null}
               </div>
@@ -495,15 +518,21 @@ export function LineTemplatePicker({
               </span>
             </span>
             <span className={styles.triggerMeta}>
-              <em>{formatPricePerM2(selected.precioM2Sugerido)}</em>
-              {selectedProvider ? (
+              {lineTemplateNeedsCommercialPrice(selected) ? (
+                <em className={styles.pricePending}>Precio pendiente</em>
+              ) : (
                 <>
+                  <em>{formatPricePerM2(selected.precioM2Sugerido)}</em>
+                  {selectedProvider ? (
+                    <>
+                      <span aria-hidden>·</span>
+                      <span>{selectedProvider}</span>
+                    </>
+                  ) : null}
                   <span aria-hidden>·</span>
-                  <span>{selectedProvider}</span>
+                  <span>{formatMinimum(selected.minimoCobrable)}</span>
                 </>
-              ) : null}
-              <span aria-hidden>·</span>
-              <span>{formatMinimum(selected.minimoCobrable)}</span>
+              )}
             </span>
           </span>
         ) : (
@@ -523,6 +552,23 @@ export function LineTemplatePicker({
       )}
 
       {overlay}
+
+      {priceEditorTarget && resolvedOrgId ? (
+        <LinePriceEditor
+          template={priceEditorTarget}
+          organizationId={resolvedOrgId}
+          onSaved={(updated) => {
+            setPriceEditorTarget(null);
+            if (onTemplatePriceUpdated) {
+              onTemplatePriceUpdated(updated);
+            } else {
+              onChange(String(updated.id));
+            }
+            closePicker();
+          }}
+          onClose={() => setPriceEditorTarget(null)}
+        />
+      ) : null}
     </div>
   );
 }

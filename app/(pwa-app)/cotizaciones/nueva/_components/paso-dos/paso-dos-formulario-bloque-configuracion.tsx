@@ -49,6 +49,7 @@ type Props = Pick<
   | "onPricingModeSelection"
   | "onComponentChange"
   | "onSelectLineTemplate"
+  | "onTemplatePriceUpdated"
   | "onRecalculateCurrentTemplatePrice"
   | "onSaveQuickPriceTemplate"
   | "variant"
@@ -80,6 +81,7 @@ export function PasoDosFormularioBloqueConfiguracion({
   onPricingModeSelection,
   onComponentChange,
   onSelectLineTemplate,
+  onTemplatePriceUpdated,
   onRecalculateCurrentTemplatePrice,
   onSaveQuickPriceTemplate,
   variant = "default",
@@ -148,6 +150,7 @@ export function PasoDosFormularioBloqueConfiguracion({
             templates={visibleLineTemplates}
             value={componentForm.lineTemplateId}
             onChange={onSelectLineTemplate}
+            onTemplatePriceUpdated={onTemplatePriceUpdated}
             mode={isGlassCatalogSelection(componentForm) ? "glass" : "profile"}
             ariaLabel="Seleccionar linea comercial"
           />

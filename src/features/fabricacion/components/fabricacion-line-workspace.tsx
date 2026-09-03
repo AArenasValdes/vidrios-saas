@@ -47,7 +47,9 @@ import {
   VENTORA_LARGO_COMERCIAL_PRESET_MM,
 } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import { applyLargoToProfilesWithoutLength } from "@/features/fabricacion/services/taller-perfiles.service";
+import { crearRecetaEstructuralParaLineaComercial } from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
 import { enriquecerCodigosPerfilRecetaFabricacion } from "@/features/fabricacion/services/fabricacion-receta-codigos.service";
+import { resolveInitialFabricationStepForTemplate } from "@/features/fabricacion/services/fabricacion-workflow-initial-step.service";
 import type {
   FabricacionEntradaCalculo,
   FabricacionReceta,
@@ -540,7 +542,7 @@ export function FabricacionLineWorkspace({
     setActiveStep("base");
   };
 
-  const openEditor = useCallback((recipe: FabricationRecipeRecord, step: RecipeWorkflowStepId = "base") => {
+  const openEditor = useCallback((recipe: FabricationRecipeRecord, step?: RecipeWorkflowStepId) => {
     const raw = cloneRecipe(recipe.definition);
     const enriched = enriquecerCodigosPerfilRecetaFabricacion({
       receta: raw,
@@ -574,10 +576,12 @@ export function FabricacionLineWorkspace({
     setRecipeStartMode(restoredStartMode);
     setHasChangedRecipeStartMode(false);
     setLineSetupError(null);
-    setActiveStep(step);
+    setActiveStep(
+      step ?? resolveInitialFabricationStepForTemplate(template, recipe)
+    );
     setView("edit");
     setFeedback(null);
-  }, [template?.material]);
+  }, [template]);
 
   const openTestLab = useCallback(async (
     recipe: FabricationRecipeRecord,
@@ -612,11 +616,32 @@ export function FabricacionLineWorkspace({
 
   const handleCreate = async (sourceType: "manual" | "imported_ai" = "manual") => {
     if (!template) return;
-    const definition = crearRecetaFabricacionVacia({
-      recipeIdentityId: crypto.randomUUID(),
+
+    const structuralArchetypeId =
+      typeof template.catalogMetadata?.structuralArchetypeId === "string"
+        ? template.catalogMetadata.structuralArchetypeId
+        : null;
+
+    const structuralDefinition = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: template.catalogKey,
+      structuralArchetypeId,
       lineName: template.nombre,
     });
-    await handleCreateFromDefinition({ definition, sourceType });
+
+    const definition =
+      structuralDefinition ??
+      crearRecetaFabricacionVacia({
+        recipeIdentityId: crypto.randomUUID(),
+        lineName: template.nombre,
+      });
+
+    await handleCreateFromDefinition({
+      definition,
+      sourceType,
+      sourceReference: structuralDefinition
+        ? `ventora-arquetipo:${structuralArchetypeId ?? template.catalogKey}`
+        : "blank-start",
+    });
   };
 
   useEffect(() => {
@@ -633,7 +658,7 @@ export function FabricacionLineWorkspace({
 
     if (focusRecipe) {
       const timeoutId = window.setTimeout(() => {
-        openEditor(focusRecipe, "base");
+        openEditor(focusRecipe);
       }, 0);
       return () => window.clearTimeout(timeoutId);
     }

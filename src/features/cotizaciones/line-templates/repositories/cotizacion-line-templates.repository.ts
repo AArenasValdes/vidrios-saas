@@ -16,6 +16,7 @@ type CotizacionLineTemplatesRepositoryDeps = {
 type CotizacionLineTemplateRow = {
   id: EntityId;
   organization_id: EntityId;
+  catalog_key?: string | null;
   nombre: string;
   categoria?: CotizacionLineTemplateCategoria | null;
   unidad_cobro?: CotizacionLineTemplateUnidadCobro | null;
@@ -40,7 +41,7 @@ type CotizacionLineTemplateRow = {
 
 const TABLE_NAME = "cotizacion_line_templates";
 const BASE_SELECT_FIELDS =
-  "id, organization_id, nombre, material, vidrio_principal_recomendado, precio_m2_sugerido, minimo_cobrable, redondeo_precio, is_active, sort_order, creado_en, actualizado_en, eliminado_en";
+  "id, organization_id, catalog_key, nombre, material, vidrio_principal_recomendado, precio_m2_sugerido, minimo_cobrable, redondeo_precio, is_active, sort_order, creado_en, actualizado_en, eliminado_en";
 const CATALOG_SELECT_FIELDS =
   "categoria, unidad_cobro, costo_base, merma_pct, margen_objetivo_pct, proveedor, vigencia_desde, vigencia_hasta, catalog_metadata";
 const SELECT_FIELDS = `${BASE_SELECT_FIELDS}, ${CATALOG_SELECT_FIELDS}`;
@@ -170,6 +171,7 @@ function mapRow(row: CotizacionLineTemplateRow): CotizacionLineTemplate {
   return {
     id: row.id,
     organizationId: row.organization_id,
+    catalogKey: row.catalog_key?.trim() || null,
     nombre: row.nombre,
     categoria: normalizeCategoriaFromRow(row),
     unidadCobro: normalizeUnidadCobroFromRow(row),
@@ -201,6 +203,7 @@ function mapRow(row: CotizacionLineTemplateRow): CotizacionLineTemplate {
 function buildInsertPayload(input: CreateCotizacionLineTemplateInput) {
   return {
     organization_id: input.organizationId,
+    catalog_key: input.catalogKey ?? null,
     nombre: input.nombre,
     categoria: input.categoria ?? "aluminio",
     unidad_cobro: input.unidadCobro ?? "m2",
@@ -227,6 +230,7 @@ function buildUpdatePayload(input: UpdateCotizacionLineTemplateInput) {
   };
 
   if (input.nombre !== undefined) payload.nombre = input.nombre;
+  if (input.catalogKey !== undefined) payload.catalog_key = input.catalogKey;
   if (input.categoria !== undefined) payload.categoria = input.categoria;
   if (input.unidadCobro !== undefined) payload.unidad_cobro = input.unidadCobro;
   if (input.material !== undefined) payload.material = input.material;

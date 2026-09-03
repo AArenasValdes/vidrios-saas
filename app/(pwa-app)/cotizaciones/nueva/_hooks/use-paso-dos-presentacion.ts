@@ -80,6 +80,7 @@ type UsePasoDosPresentacionParams = {
   onPricingModeSelection: (mode: "margen" | "precio_directo") => void;
   onComponentChange: <K extends keyof ComponentFormState>(key: K, value: ComponentFormState[K]) => void;
   onSelectLineTemplate: (templateId: string) => void;
+  onTemplatePriceUpdated?: (updated: CotizacionLineTemplate) => void;
   onToggleGlassPanel: () => void;
   onGlassQueryChange: (value: string) => void;
   onGlassSelect: (value: string) => void;
@@ -321,6 +322,7 @@ export function usePasoDosPresentacion(
       onPricingModeSelection: params.onPricingModeSelection,
       onComponentChange: params.onComponentChange,
       onSelectLineTemplate: params.onSelectLineTemplate,
+      onTemplatePriceUpdated: params.onTemplatePriceUpdated,
       onToggleGlassPanel: params.onToggleGlassPanel,
       onGlassQueryChange: params.onGlassQueryChange,
       onGlassSelect: params.onGlassSelect,

@@ -44,7 +44,10 @@ import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotiz
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import { lineTemplateNeedsCommercialPrice } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { LineTemplatePicker } from "@/features/cotizaciones/line-templates/components/line-template-picker";
+import { LinePriceEditor } from "@/features/cotizaciones/line-templates/components/line-template-price-editor";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
   formatCubicationMm,
   PautaCubicacionPanel,
@@ -126,6 +129,7 @@ type Props = {
   onNormalizeCantidadInput: () => void;
   onMaterialChange: (material: PasoDosGrupoDraft["material"]) => void;
   onSelectLineTemplate?: (templateId: string) => void;
+  onTemplatePriceUpdated?: (updated: CotizacionLineTemplate) => void;
   onColorChange: (value: string) => void;
   onNombreChange: (value: string) => void;
   onDescripcionChange: (value: string) => void;
@@ -402,6 +406,7 @@ export function PasoDosAgregarGrupoSheet({
   onNormalizeCantidadInput,
   onMaterialChange,
   onSelectLineTemplate,
+  onTemplatePriceUpdated,
   onColorChange,
   onNombreChange,
   onDescripcionChange,
@@ -458,6 +463,8 @@ export function PasoDosAgregarGrupoSheet({
   });
   const [isDesktopGlassPopoverReady, setIsDesktopGlassPopoverReady] = useState(false);
   const [isGuidedComposerOpen, setIsGuidedComposerOpen] = useState(false);
+  const { organizacionId } = useAuth();
+  const [priceEditorTemplate, setPriceEditorTemplate] = useState<CotizacionLineTemplate | null>(null);
   const [guidedDraft, setGuidedDraft] = useState<GuidedVisualConfig | null>(null);
   const desktopGlassTriggerRef = useRef<HTMLButtonElement | null>(null);
   const desktopGlassPopoverRef = useRef<HTMLDivElement | null>(null);
@@ -669,6 +676,19 @@ export function PasoDosAgregarGrupoSheet({
     totalClienteManual !== null && totalClienteManual !== undefined
       ? formatCurrencyInput(String(totalClienteManual))
       : "";
+
+  const priceEditor =
+    priceEditorTemplate && organizacionId ? (
+      <LinePriceEditor
+        template={priceEditorTemplate}
+        organizationId={organizacionId}
+        onSaved={(updated) => {
+          setPriceEditorTemplate(null);
+          onTemplatePriceUpdated?.(updated);
+        }}
+        onClose={() => setPriceEditorTemplate(null)}
+      />
+    ) : null;
 
   if (!isOverlay && entryMode !== "free_total_single" && (quotePricingMode === "por_item" || quotePricingMode === "total_global")) {
     const totalGlobalDetailMode = detailOnlyMode || quotePricingMode === "total_global";
@@ -1866,6 +1886,7 @@ export function PasoDosAgregarGrupoSheet({
                           templates={visibleLineTemplates}
                           value={draft.lineTemplateId}
                           onChange={(templateId) => onSelectLineTemplate?.(templateId)}
+                          onTemplatePriceUpdated={onTemplatePriceUpdated}
                           mode={isGlassCatalogItem ? "glass" : "profile"}
                           ariaLabel={catalogAriaLabel}
                         />
@@ -2298,6 +2319,23 @@ export function PasoDosAgregarGrupoSheet({
 
               {isLineM2Pricing ? (
                 <>
+                  {selectedLineTemplate && lineTemplateNeedsCommercialPrice(selectedLineTemplate) ? (
+                    <div style={{ margin: "0 0 8px", padding: "8px 12px", borderRadius: "8px", background: "#fffbeb", border: "1px solid #fde68a", color: "#92400e", fontSize: "0.82rem" }}>
+                      <p style={{ margin: 0, fontWeight: 600 }}>
+                        La línea <strong>{selectedLineTemplate.nombre}</strong> no tiene precio configurado.
+                      </p>
+                      <p style={{ margin: "4px 0 8px", fontWeight: 500 }}>
+                        Agrégalo ahora. Queda guardado para futuras cotizaciones.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setPriceEditorTemplate(selectedLineTemplate)}
+                        style={{ minHeight: 36, padding: "0 12px", borderRadius: 8, border: "1px solid #fde68a", background: "#fff", color: "#92400e", fontWeight: 700, cursor: "pointer" }}
+                      >
+                        Agregar precio ahora
+                      </button>
+                    </div>
+                  ) : null}
                   <div className={d.priceFieldsGrid}>
                     <label className={d.measureField}>
                       <span className={d.measureFieldLabel}>Precio por m²</span>
@@ -3615,6 +3653,7 @@ export function PasoDosAgregarGrupoSheet({
             </section>
           </div>
         ) : null}
+        {priceEditor}
       </>
     );
   }
@@ -3623,6 +3662,7 @@ export function PasoDosAgregarGrupoSheet({
     <div className={s.groupSheetOverlay} role="presentation" onClick={onClose}>
       {sheet}
       {guidedComposer}
+      {priceEditor}
     </div>
   );
 }

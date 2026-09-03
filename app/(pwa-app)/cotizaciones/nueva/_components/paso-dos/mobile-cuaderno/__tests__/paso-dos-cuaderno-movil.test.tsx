@@ -2,6 +2,10 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 
+jest.mock("@/features/auth/hooks/useAuth", () => ({
+  useAuth: () => ({ organizacionId: "test-org-1", userId: "test-user" }),
+}));
+
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";

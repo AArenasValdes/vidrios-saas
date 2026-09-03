@@ -1045,16 +1045,18 @@ export function filterLineTemplatesForComponent(
     catalogCategoria?: string | null;
   }
 ) {
-  const withSalePrice = templates.filter(
-    (template) => Number(template.precioM2Sugerido) > 0
+  // Mostrar todas las líneas activas, incluidas las que tienen precio pendiente.
+  // El usuario puede ingresar el precio al seleccionar la línea.
+  const activeTemplates = templates.filter(
+    (template) => template.isActive !== false
   );
 
   if (isGlassOnlyComponentType(input.tipo) || isGlassCatalogSelection(input)) {
-    return withSalePrice.filter(isGlassLineTemplate);
+    return activeTemplates.filter(isGlassLineTemplate);
   }
 
   const preferredMaterial = input.material === "PVC" ? "PVC" : "Aluminio";
-  const profileTemplates = withSalePrice.filter(isProfileLineTemplate);
+  const profileTemplates = activeTemplates.filter(isProfileLineTemplate);
 
   return [...profileTemplates].sort((left, right) => {
     const leftPreferred = left.material === preferredMaterial ? 0 : 1;

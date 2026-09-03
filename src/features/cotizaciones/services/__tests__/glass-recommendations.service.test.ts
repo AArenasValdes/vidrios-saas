@@ -106,5 +106,6 @@ describe("glass-recommendations service", () => {
     expect(result.lineTemplateRecommendedOption).toBe("Templado 10mm");
     expect(result.recommendedOptions[0]).toBe("Templado 10mm");
     expect(result.recommendedOptions).toContain("DVH 4+12+4");
+    expect(result.reason).toBe("Sugerido por tu línea");
   });
 });

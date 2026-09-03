@@ -38,7 +38,7 @@ import type {
   QuoteStudioFinancialDraft,
 } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { createQuoteStudioFinancialDraft } from "@/features/cotizaciones/types/cotizacion-workflow";
-import type { CreateCotizacionLineTemplateInput } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import type { CotizacionLineTemplate, CreateCotizacionLineTemplateInput } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import {
   getLineTemplateCuttingRules,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
@@ -187,6 +187,7 @@ function NuevaCotizacionPageContent() {
     activeTemplates: activeLineTemplates,
     createTemplate: createLineTemplate,
     updateTemplate: updateLineTemplate,
+    loadTemplates: reloadLineTemplates,
     isSaving: isSavingQuickPriceTemplate,
   } = useCotizacionLineTemplates({ activeOnly: true, enabled: step !== 1 });
   const [isSavingCubicationLineAdjustment, setIsSavingCubicationLineAdjustment] =
@@ -1191,7 +1192,26 @@ function NuevaCotizacionPageContent() {
       costoProveedorUnitario: undefined,
       margenPct: undefined,
     }));
-    setGlobalError(null);
+  };
+
+  const handleApplyPricedLineTemplateToForm = (template: CotizacionLineTemplate) => {
+    void reloadLineTemplates();
+    setComponentForm((current) => applyLineTemplateToComponentForm(current, template));
+    setFieldErrors((current) => ({
+      ...current,
+      costoProveedorUnitario: undefined,
+      margenPct: undefined,
+    }));
+  };
+
+  const handleApplyPricedLineTemplateToGrupo = (template: CotizacionLineTemplate) => {
+    void reloadLineTemplates();
+    pasoDosAgregarGrupo.applyCreatedLineTemplate(template);
+  };
+
+  const handleApplyPricedLineTemplateToGrupoMovil = (template: CotizacionLineTemplate) => {
+    void reloadLineTemplates();
+    pasoDosAgregarGrupoMovil.applyCreatedLineTemplate(template);
   };
 
   const handleSaveQuickPriceTemplate = async () => {
@@ -2914,6 +2934,7 @@ function goNextFromStep1() {
     onPricingModeSelection: handlePricingModeSelection,
     onComponentChange: handleComponentChange,
     onSelectLineTemplate: handleSelectLineTemplate,
+    onTemplatePriceUpdated: handleApplyPricedLineTemplateToForm,
     onToggleGlassPanel: () => {
       setIsGlassPanelOpen((current) => {
         const next = !current;
@@ -3115,7 +3136,7 @@ function goNextFromStep1() {
               onNombreChange: pasoDosAgregarGrupoMovil.updateNombre,
               onDescripcionChange: pasoDosAgregarGrupoMovil.updateDescripcion,
               onSelectLineTemplate: pasoDosAgregarGrupoMovil.selectLineTemplate,
-              onApplyCreatedLineTemplate: pasoDosAgregarGrupoMovil.applyCreatedLineTemplate,
+              onApplyCreatedLineTemplate: handleApplyPricedLineTemplateToGrupoMovil,
               onCreateLineTemplate: handleCreateMobileLineTemplate,
               onColorChange: pasoDosAgregarGrupoMovil.updateColorHex,
               onSistemaChange: pasoDosAgregarGrupoMovil.updateSistema,
@@ -3261,6 +3282,7 @@ function goNextFromStep1() {
             onNormalizeCantidadInput: pasoDosAgregarGrupo.normalizeCantidadInput,
             onMaterialChange: pasoDosAgregarGrupo.updateMaterial,
             onSelectLineTemplate: pasoDosAgregarGrupo.selectLineTemplate,
+            onTemplatePriceUpdated: handleApplyPricedLineTemplateToGrupo,
             onColorChange: pasoDosAgregarGrupo.updateColorHex,
             onNombreChange: pasoDosAgregarGrupo.updateNombre,
             onDescripcionChange: pasoDosAgregarGrupo.updateDescripcion,

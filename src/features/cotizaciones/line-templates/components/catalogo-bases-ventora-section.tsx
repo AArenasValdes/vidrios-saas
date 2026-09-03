@@ -16,6 +16,7 @@ type Props = {
   isUsingBase: boolean;
   usingBaseId: string | null;
   onUseBase: (recommendation: CatalogoInicioRapidoItem) => void;
+  catalogRegionLabel?: string | null;
 };
 
 export function CatalogoBasesVentoraSection({
@@ -24,6 +25,7 @@ export function CatalogoBasesVentoraSection({
   isUsingBase,
   usingBaseId,
   onUseBase,
+  catalogRegionLabel = null,
 }: Props) {
   const shouldCollapseByDefault =
     privateLineCount >= CATALOGO_BASES_COLLAPSE_THRESHOLD;
@@ -54,12 +56,13 @@ export function CatalogoBasesVentoraSection({
         <div className={s.basesDiscoverCopy}>
           <span className={s.basesDiscoverEyebrow}>
             <LuSparkles aria-hidden />
-            Plantillas
+            {catalogRegionLabel ?? "Plantillas"}
           </span>
           <h2>Empieza más rápido</h2>
           <p>
-            Ventora prepara los perfiles habituales. Revisa las medidas de fabricación
-            antes de activar.
+            {catalogRegionLabel
+              ? "Ventora prepara líneas habituales del mercado chileno. Revisa las medidas de fabricación antes de activar."
+              : "Ventora prepara los perfiles habituales. Revisa las medidas de fabricación antes de activar."}
           </p>
         </div>
         {shouldCollapseByDefault ? (

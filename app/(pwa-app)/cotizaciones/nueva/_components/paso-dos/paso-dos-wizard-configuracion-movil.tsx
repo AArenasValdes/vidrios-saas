@@ -10,6 +10,9 @@ import type {
   CotizacionLineTemplate,
   CreateCotizacionLineTemplateInput,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import { lineTemplateNeedsCommercialPrice } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import { LinePriceEditor } from "@/features/cotizaciones/line-templates/components/line-template-price-editor";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
   FIELD_LIMITS,
   getCompositionSectionLabel,
@@ -211,6 +214,7 @@ export function PasoDosWizardConfiguracionMovil({
   onSetVidSearch,
   onCreateCustomGlass,
 }: Props) {
+  const { organizacionId } = useAuth();
   const [showAllColors, setShowAllColors] = useState(false);
   const [isIphoneViewport] = useState(() => {
     if (typeof window === "undefined") {
@@ -227,6 +231,7 @@ export function PasoDosWizardConfiguracionMovil({
   );
   const [isQuickOptionsOpen, setIsQuickOptionsOpen] = useState(false);
   const [quickLineError, setQuickLineError] = useState<string | null>(null);
+  const [priceEditorTarget, setPriceEditorTarget] = useState<CotizacionLineTemplate | null>(null);
   const [isInternalObservationOpen, setIsInternalObservationOpen] = useState(
     Boolean(internalObservation.trim())
   );
@@ -289,6 +294,15 @@ export function PasoDosWizardConfiguracionMovil({
       : "";
   const primaryColorOptions = useMemo(() => colorOptions.slice(0, 4), [colorOptions]);
   const visibleColorOptions = showAllColors ? colorOptions : primaryColorOptions;
+  const selectedLineTemplate = useMemo(
+    () =>
+      availableLineTemplates.find((template) => String(template.id) === draft.lineTemplateId) ??
+      null,
+    [availableLineTemplates, draft.lineTemplateId]
+  );
+  const selectedLineNeedsPrice = Boolean(
+    selectedLineTemplate && lineTemplateNeedsCommercialPrice(selectedLineTemplate)
+  );
   const selectedLineLabel = useMemo(() => {
     if (!draft.lineTemplateId) {
       return isGlassProduct ? "Precio manual o sin cristal" : "Precio manual o sin linea";
@@ -326,7 +340,18 @@ export function PasoDosWizardConfiguracionMovil({
     setQuickLineForm(createQuickLineFormState());
     setIsQuickOptionsOpen(false);
     setQuickLineError(null);
+    setPriceEditorTarget(null);
     setIsLineSelectorOpen(false);
+  };
+
+  const handleSelectSavedLine = (template: CotizacionLineTemplate) => {
+    if (lineTemplateNeedsCommercialPrice(template)) {
+      setPriceEditorTarget(template);
+      return;
+    }
+
+    onSelectLineTemplate(String(template.id));
+    closeLineSelector();
   };
 
   const openQuickLineForm = () => {
@@ -1244,7 +1269,20 @@ export function PasoDosWizardConfiguracionMovil({
             +
           </span>
         </button>
-        {referencia && precioPorM2 ? (
+        {selectedLineNeedsPrice && selectedLineTemplate ? (
+          <div className={s.stepTwoMobilePendingPriceBanner}>
+            <p>
+              <strong>{selectedLineTemplate.nombre}</strong> no tiene precio configurado.
+              Agrégalo ahora; queda guardado para futuras cotizaciones.
+            </p>
+            <button
+              type="button"
+              onClick={() => setPriceEditorTarget(selectedLineTemplate)}
+            >
+              Agregar precio ahora
+            </button>
+          </div>
+        ) : referencia && precioPorM2 ? (
           <div className={s.stepTwoMobileLineSummary}>
             <span>{referencia}</span>
             <strong>
@@ -1352,10 +1390,7 @@ export function PasoDosWizardConfiguracionMovil({
                       <button
                         key={template.id}
                         className={`${s.stepTwoMobileLineOption} ${draft.lineTemplateId === String(template.id) ? s.stepTwoMobileLineOptionActive : ""}`}
-                        onClick={() => {
-                          onSelectLineTemplate(String(template.id));
-                          closeLineSelector();
-                        }}
+                        onClick={() => handleSelectSavedLine(template)}
                         type="button"
                       >
                         <div className={s.stepTwoMobileLineOptionBody}>
@@ -1372,14 +1407,20 @@ export function PasoDosWizardConfiguracionMovil({
                             </span>
                           </div>
                           <small>
-                            ${Math.round(template.precioM2Sugerido).toLocaleString("es-CL")}/m2 ·{" "}
-                            {template.minimoCobrable > 0
-                              ? `Min. $${Math.round(template.minimoCobrable).toLocaleString("es-CL")}`
-                              : "Sin minimo"}{" "}
-                            ·{" "}
-                            {template.redondeoPrecio > 0
-                              ? `Redondeo $${Math.round(template.redondeoPrecio).toLocaleString("es-CL")}`
-                              : "Sin redondeo"}
+                            {lineTemplateNeedsCommercialPrice(template) ? (
+                              <em className={s.stepTwoMobileLinePricePending}>Precio pendiente</em>
+                            ) : (
+                              <>
+                                ${Math.round(template.precioM2Sugerido).toLocaleString("es-CL")}/m2 ·{" "}
+                                {template.minimoCobrable > 0
+                                  ? `Min. $${Math.round(template.minimoCobrable).toLocaleString("es-CL")}`
+                                  : "Sin minimo"}{" "}
+                                ·{" "}
+                                {template.redondeoPrecio > 0
+                                  ? `Redondeo $${Math.round(template.redondeoPrecio).toLocaleString("es-CL")}`
+                                  : "Sin redondeo"}
+                              </>
+                            )}
                           </small>
                         </div>
                         {draft.lineTemplateId === String(template.id) ? (
@@ -1907,6 +1948,19 @@ export function PasoDosWizardConfiguracionMovil({
           vidSearch={vidSearch}
         />
       )}
+
+      {priceEditorTarget && organizacionId ? (
+        <LinePriceEditor
+          template={priceEditorTarget}
+          organizationId={organizacionId}
+          onSaved={(updated) => {
+            setPriceEditorTarget(null);
+            onApplyCreatedLineTemplate(updated);
+            closeLineSelector();
+          }}
+          onClose={() => setPriceEditorTarget(null)}
+        />
+      ) : null}
     </div>
   );
 }

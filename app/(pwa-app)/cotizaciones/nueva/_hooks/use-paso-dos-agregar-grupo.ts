@@ -1426,6 +1426,10 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     setDraft((current) => applyLineTemplateToGrupoDraft(current, template));
   };
 
+  const applyCreatedLineTemplate = (template: CotizacionLineTemplate) => {
+    setDraft((current) => applyLineTemplateToGrupoDraft(current, template));
+  };
+
   const updateColorHex = (colorHex: string) => {
     setDraft((current) => ({ ...current, colorHex }));
   };
@@ -1997,6 +2001,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     normalizeCantidadInput,
     updateMaterial,
     selectLineTemplate,
+    applyCreatedLineTemplate,
     updateColorHex,
     updateSistema,
     updateConfiguracion,

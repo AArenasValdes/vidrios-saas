@@ -14,6 +14,36 @@ La migracion `20260814201536_security_hardening_payments_auth.sql` consta aplica
 
 La aplicacion consume el contrato endurecido. Para una nueva base o una reconciliacion futura, verificar historial remoto, regenerar `database.types.ts` y ejecutar el smoke completo de registro, login y webhook antes de desplegar.
 
+## Catálogo comercial de líneas (2026-09-03)
+
+Migración `20260903110000_line_template_catalog_key`: agrega `catalog_key text null` a `cotizacion_line_templates` con unique parcial `(organization_id, catalog_key) WHERE catalog_key IS NOT NULL AND eliminado_en IS NULL`.
+
+Propósito: seed idempotente del catálogo Ventora al crear o abrir una organización. `seedDefaultLineCatalog()` inserta **solo** las `catalog_key` canónicas ausentes (23 líneas en Fase 3: L5000/L20/L25/L32/L42 + aluminio/PVC comercial), con `precio_m2_sugerido=0`, `minimo_cobrable=0`, `redondeo_precio=1000` y `catalog_metadata.needsCommercialPrice=true`. No sobrescribe precios, nombres ni vidrio habitual de filas existentes; las líneas privadas (`catalog_key` null) no bloquean el alta de keys faltantes.
+
+**Vidrio habitual (Fase 3):** preferencia opcional del taller en `vidrio_principal_recomendado` (nullable). Se usa como sugerencia al cotizar; el valor final queda en `cotizacion_items.vidrio`. No hay tabla ni matriz de precios por vidrio.
+
+Ganchos de ejecución:
+- Server-side con `service_role`: al provisionar org vía OAuth, correo o admin.
+- Client-side con RLS: fallback en `useCotizacionLineTemplates` (una vez por sesión) para rellenar keys faltantes.
+
+Reglas para agentes:
+- No insertar más `catalog_key` sin aprobación explícita.
+- No modificar precios/nombres/vidrio habitual de líneas existentes vía seed.
+- Las líneas con `catalog_key` que se soft-deleten no se recrean (el unique parcial las excluye, pero `seedDefaultLineCatalog` no detecta keys eliminadas).
+
+## Borradores técnicos estructurales (Fase 4, 2026-09-03)
+
+Sin migración nueva: reutiliza `fabrication_recipes` con `status = 'draft'` y `definition` JSON (`FabricacionReceta`).
+
+- `catalog_metadata.structuralArchetypeId` en líneas Ventora apunta al arquetipo (`corredera_2h`, `pvc_corredera_3h`, etc.).
+- `seedStructuralDraftsForOrganization()` inserta solo para líneas con `catalog_key` Ventora **sin** receta existente en `fabrication_recipes.line_template_id`.
+- `source_reference` queda como `ventora-arquetipo:{arquetipoId}` para trazabilidad.
+- No sobrescribe recetas privadas ni versiones ya creadas por el taller.
+- Códigos de perfil y descuentos de corte quedan vacíos/pendientes; solo L5000/L20/L25 heredan ajustes documentados de `bases-tipologicas-ventora.ts`.
+- No activar `cuttingEnabled` ni validar recetas automáticamente: la cotización comercial no depende de esto.
+
+**Referencias de perfiles (Fase 4A, 2026-09-03):** `catalog_metadata.workshopProfiles` guarda códigos, roles, proveedor y fuente documental de forma informativa. El seed `seedProfileReferencesForOrganization()` solo rellena líneas Ventora sin `workshopProfiles` vigente; no toca precios ni líneas privadas.
+
 ---
 
 ## Archivos obligatorios antes de tocar la base de datos

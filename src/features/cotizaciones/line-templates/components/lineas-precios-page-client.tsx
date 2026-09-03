@@ -11,14 +11,18 @@ import {
   LuSearch,
   LuSlidersHorizontal,
 } from "react-icons/lu";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
+import { isChileOrganizationCountry } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import { buildTechnicalCardStatus } from "@/features/cotizaciones/line-templates/services/catalogo-fabricacion-card-status";
+import type { TechnicalCardStatus } from "@/features/cotizaciones/line-templates/services/catalogo-fabricacion-card-status";
 import {
   buildFabricationRecipeInputFromInicioRapido,
   buildLineTemplatePayloadFromInicioRapido,
   listarInicioRapidoCatalogo,
+  filterInicioRapidoCatalogoForExistingTemplates,
   type CatalogoInicioRapidoItem,
 } from "@/features/cotizaciones/line-templates/services/catalogo-usar-base-ventora.service";
 import { CatalogoBasesVentoraSection } from "@/features/cotizaciones/line-templates/components/catalogo-bases-ventora-section";
@@ -50,6 +54,9 @@ import {
   suggestCubicationDeductionsFromWorkshopExample,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-calibration";
 import {
+  formatLineTemplateHabitualGlassLabel,
+} from "@/features/cotizaciones/line-templates/constants/line-template-habitual-glass";
+import {
   formatLineTemplatePriceLabel,
   LINE_TEMPLATE_CATEGORIA_LABELS,
 } from "@/features/cotizaciones/line-templates/utils/catalog-labels";
@@ -73,6 +80,8 @@ import {
   migrateLegacyCubicationToRecipe,
   recipePreviewToLegacyCuttingPreview,
 } from "@/features/cotizaciones/line-templates/services/fabrication-recipe.service";
+import { LinePriceEditor } from "./line-template-price-editor";
+import { LineProfileReferencesSection } from "./line-profile-references-section";
 import s from "./lineas-precios-page-client.module.css";
 import desktop from "./lineas-precios-page-client.desktop.module.css";
 import {
@@ -126,6 +135,26 @@ function parseDecimal(value: string) {
 
 function formatDecimalInput(value: number) {
   return value > 0 ? String(value).replace(".", ",") : "";
+}
+
+function getLineCommercialStatusLabel(
+  template: CotizacionLineTemplate,
+  needsPrice: boolean
+): string {
+  if (!template.isActive) return "Pausada para cotizar";
+  if (needsPrice) return "Precio pendiente";
+  return "Lista para cotizar";
+}
+
+function getLineFabricationStatusLabel(tone: TechnicalCardStatus["tone"]): string {
+  if (tone === "validated") return "Fabricación configurada";
+  if (tone === "testing") return "Fabricación en prueba";
+  return "Fabricación pendiente";
+}
+
+function getLineFabricationActionLabel(tone: TechnicalCardStatus["tone"]): string {
+  if (tone === "validated") return "Ver fabricación";
+  return "Configurar fabricación";
 }
 
 function buildDraft(template?: CotizacionLineTemplate): LineTemplateFormDraft {
@@ -249,10 +278,12 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { profile } = useOrganizationProfile();
+  const isChileCatalog = isChileOrganizationCountry(profile?.countryCode);
   const formatMoney = useCallback(
     (value: number) => formatCurrency(value, profile?.locale, profile?.currencyCode),
     [profile?.currencyCode, profile?.locale]
   );
+  const { organizacionId } = useAuth();
   const {
     templates,
     isLoading,
@@ -262,12 +293,19 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     updateTemplate,
     duplicateTemplate,
     deleteTemplate,
+    loadTemplates: refreshTemplates,
   } = useCotizacionLineTemplates();
   const { recipes: fabricationRecipes, createRecipe } = useFabricationRecipes();
-  const ventoraBaseRecommendations = useMemo(
-    () => listarInicioRapidoCatalogo(),
-    []
-  );
+  const ventoraBaseRecommendations = useMemo(() => {
+    if (!isChileCatalog) {
+      return [];
+    }
+
+    return filterInicioRapidoCatalogoForExistingTemplates(
+      listarInicioRapidoCatalogo(),
+      templates
+    );
+  }, [isChileCatalog, templates]);
   const [usingBaseId, setUsingBaseId] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
@@ -286,6 +324,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
   } | null>(null);
   const [templatePendingDelete, setTemplatePendingDelete] =
     useState<CotizacionLineTemplate | null>(null);
+  const [priceEditorTemplate, setPriceEditorTemplate] = useState<CotizacionLineTemplate | null>(null);
   const [sheetMode, setSheetMode] = useState<"new" | "edit" | null>(() =>
     openNewByDefault ? "new" : null
   );
@@ -1066,11 +1105,13 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         feedback={feedback}
         onNew={openNewSheet}
         onEdit={openEditSheet}
+        onEditPrice={setPriceEditorTemplate}
         baseRecommendations={ventoraBaseRecommendations}
         isUsingBase={usingBaseId !== null}
         usingBaseId={usingBaseId}
         onUseBase={(recommendation) => void handleUseVentoraBase(recommendation)}
         formatMoney={formatMoney}
+        isChileCatalog={isChileCatalog}
       />
 
       <div className={`${s.page} ${s.desktopCatalog} ${desktop.page}`}>
@@ -1080,6 +1121,9 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         </Link>
 
         <div className={s.headerCopy}>
+          {isChileCatalog ? (
+            <span className={s.catalogRegionLabel}>Catálogo base de Chile</span>
+          ) : null}
           <h1>Catálogo privado</h1>
           <p>
             {templates.length} líneas guardadas · {activeCount} activas
@@ -1454,14 +1498,16 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         isUsingBase={usingBaseId !== null}
         usingBaseId={usingBaseId}
         onUseBase={(recommendation) => void handleUseVentoraBase(recommendation)}
+        catalogRegionLabel={isChileCatalog ? "Catálogo base de Chile" : null}
       />
 
       {isEmpty ? (
         <section className={s.emptyState}>
           <strong>Aún no tienes líneas en tu catálogo privado</strong>
           <p>
-            Usa una Base Ventora arriba o crea una línea con precio, mínimo y
-            redondeo para reutilizarla en tus cotizaciones.
+            {isChileCatalog
+              ? "Usa una Base Ventora arriba o crea una línea con precio, mínimo y redondeo para reutilizarla en tus cotizaciones."
+              : "Crea una línea con precio, mínimo y redondeo para reutilizarla en tus cotizaciones."}
           </p>
           <button type="button" className={s.primaryButton} onClick={openNewSheet}>
             <LuPlus aria-hidden />
@@ -1555,9 +1601,6 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                           <span className={s.materialPill} data-material={template.material}>
                             {LINE_TEMPLATE_CATEGORIA_LABELS[template.categoria]}
                           </span>
-                          {needsPrice ? (
-                            <span className={s.pendingPricePill}>Sin precio</span>
-                          ) : null}
                         </div>
                         {lineContext ? (
                           <span className={s.cardHierarchy}>{lineContext}</span>
@@ -1565,15 +1608,6 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                       </div>
 
                       <div className={`${s.cardActions} ${desktop.cardActions}`}>
-                        <button
-                          type="button"
-                          className={s.cardTapHint}
-                          onClick={() => openEditSheet(template)}
-                        >
-                          Editar
-                          <LuChevronRight aria-hidden />
-                        </button>
-
                         <LineTemplateCardActions
                           templateId={template.id}
                           templateName={template.nombre}
@@ -1596,24 +1630,55 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                     </div>
 
                     <div className={`${s.priceRow} ${desktop.priceRow}`}>
-                      <strong>
-                        {needsPrice
-                          ? "Completar precio"
-                          : formatLineTemplatePriceLabel(
-                              template.unidadCobro,
-                              template.precioM2Sugerido,
-                              formatMoney
-                            )}
-                      </strong>
-                      <span>
-                        {template.costoBase > 0
-                          ? `Costo ${formatMoney(template.costoBase)}`
-                          : "Sin costo"}
-                        {" · "}
-                        Mín.{" "}
-                        {template.minimoCobrable > 0
-                          ? formatMoney(template.minimoCobrable)
-                          : "Sin mínimo"}
+                      <div>
+                        <strong>
+                          {needsPrice
+                            ? "Precio pendiente"
+                            : formatLineTemplatePriceLabel(
+                                template.unidadCobro,
+                                template.precioM2Sugerido,
+                                formatMoney
+                              )}
+                        </strong>
+                        <span>
+                          {needsPrice
+                            ? ""
+                            : `Mín. ${template.minimoCobrable > 0 ? formatMoney(template.minimoCobrable) : "Sin mínimo"}`}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className={needsPrice ? s.addPriceBtn : s.editPriceBtn}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setPriceEditorTemplate(template);
+                        }}
+                      >
+                        {needsPrice ? "Agregar precio" : "Editar precio"}
+                      </button>
+                    </div>
+
+                    <div
+                      className={`${s.lineStatusSummary} ${desktop.lineStatusSummary}`}
+                      aria-label="Estado de la línea"
+                    >
+                      <span
+                        className={s.lineStatusItem}
+                        data-tone={needsPrice ? "pending" : template.isActive ? "ready" : "muted"}
+                      >
+                        {getLineCommercialStatusLabel(template, needsPrice)}
+                      </span>
+                      <span
+                        className={s.lineStatusItem}
+                        data-tone={
+                          technicalStatus.tone === "validated"
+                            ? "ready"
+                            : technicalStatus.tone === "testing"
+                              ? "info"
+                              : "pending"
+                        }
+                      >
+                        {getLineFabricationStatusLabel(technicalStatus.tone)}
                       </span>
                     </div>
 
@@ -1621,28 +1686,21 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                       className={`${s.technicalStatusRow} ${desktop.technicalStatusRow}`}
                       data-tech-status={technicalStatus.tone}
                     >
-                      <div className={s.technicalStatusCopy}>
-                        <span className={s.technicalStatusLabel}>Fabricación</span>
-                        <div className={s.technicalStatusMeta}>
-                          <span
-                            className={s.technicalStatusPill}
-                            data-tech-status={technicalStatus.tone}
-                          >
-                            {technicalStatus.label}
-                          </span>
-                          <span className={s.technicalStatusDetail}>
-                            {technicalStatus.detail}
-                          </span>
-                        </div>
-                      </div>
                       <Link
                         href={`/configuracion/empresa/lineas-precios/${template.id}/fabricacion`}
-                        className={s.technicalManageLink}
+                        className={`${s.technicalManageLink} ${desktop.technicalManageLinkSecondary}`}
                         onClick={(event) => event.stopPropagation()}
                       >
-                        {technicalStatus.actionLabel}
+                        {getLineFabricationActionLabel(technicalStatus.tone)}
                         <LuChevronRight aria-hidden />
                       </Link>
+                    </div>
+
+                    <div className={desktop.cardProfiles}>
+                      <LineProfileReferencesSection
+                        catalogMetadata={template.catalogMetadata}
+                        variant="desktop"
+                      />
                     </div>
 
                     <div className={s.cardDivider} />
@@ -1651,7 +1709,9 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                       <span className={`${s.roundingMeta} ${desktop.detailMeta}`}>{glassDescription}</span>
                     ) : template.vidrioPrincipalRecomendado ? (
                       <span className={`${s.roundingMeta} ${desktop.detailMeta}`}>
-                        Vidrio habitual: {template.vidrioPrincipalRecomendado}
+                        Vidrio habitual:{" "}
+                        {formatLineTemplateHabitualGlassLabel(template.vidrioPrincipalRecomendado) ??
+                          template.vidrioPrincipalRecomendado}
                       </span>
                     ) : null}
 
@@ -1749,6 +1809,18 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
               ? `/configuracion/empresa/lineas-precios/${editingTemplateId}/fabricacion`
               : null
           }
+        />
+      ) : null}
+
+      {priceEditorTemplate && organizacionId ? (
+        <LinePriceEditor
+          template={priceEditorTemplate}
+          organizationId={organizacionId}
+          onSaved={(updated) => {
+            setPriceEditorTemplate(null);
+            refreshTemplates();
+          }}
+          onClose={() => setPriceEditorTemplate(null)}
         />
       ) : null}
     </>

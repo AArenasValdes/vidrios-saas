@@ -848,14 +848,15 @@ auth.users (1) ──── (N) users
 | `vigencia_hasta` | date | Nullable |
 | `catalog_metadata` | jsonb | Default `{}`. Para `categoria='vidrio'` guarda `espesor` y `terminacion` |
 | `vidrio_principal_recomendado` | text | Sugerencia visual/comercial |
+| `catalog_key` | text | Nullable. Identifica líneas precargadas del catálogo Ventora (ej. `ventora:l5000`). Usado para seed idempotente. |
 | `is_active` | boolean | Default true |
 | `sort_order` | integer | Default 0 |
 | `eliminado_en` | timestamptz | Soft delete |
 
-**Índices:** `(organization_id, sort_order, nombre)` WHERE `eliminado_en IS NULL`.
+**Índices:** `(organization_id, sort_order, nombre)` WHERE `eliminado_en IS NULL`; `(organization_id, catalog_key)` UNIQUE parcial WHERE `catalog_key IS NOT NULL AND eliminado_en IS NULL`.
 **RLS:** SELECT/INSERT/UPDATE por `organization_id = get_org_id()`.
 **Nota:** No tiene FK formal a `organizations`; relación inferida por tenant key.
-**Migración remota:** `extend_cotizacion_line_templates_catalog` aplicada 2026-07-09 (Fase 2A). Migración aditiva 2026-07-13 expande `material` a `Cristal`.
+**Migración remota:** `extend_cotizacion_line_templates_catalog` aplicada 2026-07-09 (Fase 2A). Migración aditiva 2026-07-13 expande `material` a `Cristal`. Migración `20260903110000_line_template_catalog_key` agrega `catalog_key` con unique parcial para seed idempotente del catálogo inicial Ventora (L5000/L20/L25/L32/L42).
 
 ### `public_landing_testimonials`
 

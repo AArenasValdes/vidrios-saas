@@ -362,6 +362,16 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
   - `src/features/cotizaciones/line-templates/services/cotizacion-line-templates.service.ts`
   - `src/features/cotizaciones/line-templates/repositories/cotizacion-line-templates.repository.ts`
   - `src/features/cotizaciones/line-templates/types/cotizacion-line-template.ts`
+  - `src/features/cotizaciones/line-templates/services/default-line-catalog.ts` (catálogo Ventora 23 líneas canónicas + `seedDefaultLineCatalog` idempotente por `catalog_key`)
+  - `src/features/cotizaciones/line-templates/constants/line-template-habitual-glass.ts` (opciones de vidrio habitual en editor de precio)
+  - `src/features/cotizaciones/line-templates/services/seed-line-catalog-server.ts` (seed server-side con service_role)
+  - `src/features/cotizaciones/line-templates/services/seed-line-catalog-client.ts` (fallback client-side con RLS)
+  - `src/features/cotizaciones/line-templates/services/seed-structural-draft.ts` (borradores técnicos idempotentes por arquetipo)
+  - `src/features/cotizaciones/line-templates/services/seed-structural-draft-server.ts` / `seed-structural-draft-client.ts`
+  - `src/features/cotizaciones/line-templates/types/line-profile-references.ts` (Fase 4A: referencias informativas en `workshopProfiles`)
+  - `src/features/cotizaciones/line-templates/fixtures/ventora-profile-references.ts`
+  - `src/features/cotizaciones/line-templates/services/seed-profile-references.ts` (+ server/client)
+  - `src/features/cotizaciones/line-templates/components/line-profile-references-section.tsx`
   - `src/features/cotizaciones/repositories/cotizaciones-repository.ts` (1486 lineas)
   - `src/features/cotizaciones/types/cotizacion.ts`
   - `src/features/cotizaciones/types/cotizacion-item.ts` (tipo `item_libre_con_valor`)
@@ -417,6 +427,7 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
 
 - **Que hace**: Dominio puro y autocontenido para recetas de fabricacion y motor deterministico de cubicacion/pauta. Calcula perfiles, funciones, medidas, cantidades, vidrio, accesorios, advertencias y trazabilidad desde `receta + dimensiones + cantidad + variante/configuracion`. No cotiza precios.
 - **Fase 4 (2026-08-04)**: Catálogo privado vuelve a ser la única entrada principal para líneas, precios y recetas. Biblioteca técnica y Mis recetas quedan como vistas internas sin sidebar; las tarjetas muestran estado de fabricación y enlazan a la receta de su línea. Reutiliza `cotizacion_line_templates` + `fabrication_recipes`, muestra sugeridas/reconocidas sin inventar reglas, y deriva siempre a la receta versionada de la línea. El editor conserva controles estructurados sin JSON/fórmulas libres; el laboratorio muestra despiece, comparación esperado/calculado y una pauta FFD referencial de barras. Una receta validada queda bloqueada y solo cambia mediante nueva versión.
+- **Fase 4 estructural (2026-09-03)**: cada línea Ventora del catálogo comercial puede tener un borrador técnico visible en Fabricación con piezas, grupo, tipo de perfil, medida base, cantidad y largo comercial preset; códigos y descuentos quedan pendientes salvo L5000/L20/L25. La línea sigue cotizable aunque la receta esté en `draft`/`ejemplo_no_validado`. No se activa pauta automática ni `cuttingEnabled`.
 - **Fase 3 (2026-07-29)**: integra recetas validadas al guardado de `/cotizaciones/nueva` sin redisenar UI final. El flujo resuelve receta compatible por `line_template_id`, tipologia, hojas, modulos, herraje/variante cuando existan; si hay una receta `validated` unica calcula con `calcularCubicacionYPauta()` y guarda `cotizacion_items.fabricacion_snapshot`. Si no hay receta unica validada, la cotizacion comercial sigue funcionando sin bloquear.
 - **Resumen interno**: `/print/cotizaciones/[id]/fabricacion` lee primero `fabricacionSnapshot` formal; si no existe usa fallback legacy `[cub:]`. Desktop usa ancho de sistema, bloques colapsables por pieza (Cubicación / Despiece / Pauta) y reutiliza `DespieceReviewSurface` con el `itemId` persistente. Print/PDF expanden todas las piezas.
 - **Compatibilidad Fase 3**: `fabricationRecipePack`, espejo `fabricationRecipe` y snapshot `[cub:]` siguen como lectura/compatibilidad, pero el flujo nuevo no escribe snapshots tecnicos en `[cub:]`.
@@ -453,6 +464,8 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
   - `src/features/fabricacion/repositories/fabrication-recipe-tests.repository.ts`
   - `src/features/fabricacion/fixtures/receta-corredera-dos-hojas.fixture.ts`
   - `src/features/fabricacion/fixtures/bases-tipologicas-ventora.ts`
+  - `src/features/fabricacion/fixtures/arquetipos-estructurales-lineas.ts` (Fase 4: arquetipos por tipología + mapeo `catalog_key` → borrador estructural)
+  - `src/features/fabricacion/__tests__/arquetipos-estructurales-lineas.test.ts`
   - `src/features/fabricacion/__tests__/fabricacion-calculo.service.test.ts`
   - `src/features/fabricacion/__tests__/fabrication-recipes.service.test.ts`
   - `src/features/fabricacion/__tests__/fabrication-recipes-rls-migration.contract.test.ts`

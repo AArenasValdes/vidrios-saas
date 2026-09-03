@@ -1,6 +1,6 @@
 .page {
   min-height: 100%;
-  padding: 0 16px calc(var(--tabbar-h, 72px) + 30px + env(safe-area-inset-bottom, 0px));
+  padding: 0 16px calc(var(--tabbar-h, 72px) + 48px + env(safe-area-inset-bottom, 0px));
   color: #102038;
   background: transparent;
 }
@@ -55,6 +55,15 @@
   margin: 3px 0 0;
   color: #6b7b91;
   font-size: 12px;
+}
+
+.catalogRegionLabel {
+  display: block;
+  margin-bottom: 2px;
+  color: #1677e8;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .newButton {
@@ -302,35 +311,62 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 17px 16px 2px;
+  padding: 16px 16px 4px;
 }
 
-.cardHeader > div {
+.cardHeaderMain {
   min-width: 0;
 }
 
 .cardHeader h2 {
-  overflow: hidden;
   margin: 0;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font: 700 16px/1.2 var(--font-syne), sans-serif;
+  font: 700 17px/1.25 var(--font-syne), sans-serif;
   letter-spacing: -0.015em;
+  color: #0f172a;
+  word-break: break-word;
 }
 
 .cardHeader p {
-  overflow: hidden;
-  margin: 5px 0 0;
-  color: #6b7b91;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 11px;
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.4;
+  word-break: break-word;
 }
 
 .priceBlock {
   display: grid;
   gap: 5px;
-  padding: 15px 16px 17px;
+  padding: 12px 16px 14px;
+}
+
+.statusSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 0 16px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid #e9edf2;
+}
+
+.statusSummary span {
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.statusSummary span[data-tone="ready"],
+.statusSummary span[data-tone="validated"] {
+  color: #15803d;
+}
+
+.statusSummary span[data-tone="pending"],
+.statusSummary span[data-tone="paused"] {
+  color: #b45309;
+}
+
+.statusSummary span[data-tone="testing"] {
+  color: #1d4ed8;
 }
 
 .priceBlock strong {
@@ -341,6 +377,13 @@
 .priceBlock span {
   color: #66758a;
   font-size: 11px;
+}
+
+.habitualGlass {
+  display: block;
+  margin-top: 4px;
+  color: #9ca3af;
+  font-size: 10px;
 }
 
 .statusList {
@@ -402,34 +445,46 @@
 
 .cardActions {
   display: grid;
-  gap: 2px;
-  padding: 8px 16px 12px;
+  gap: 8px;
+  padding: 12px 16px 16px;
 }
 
 .cardActions button,
 .cardActions a {
   display: flex;
-  min-height: 48px;
-  padding: 0 12px;
+  min-height: 46px;
+  padding: 0 14px;
   align-items: center;
   justify-content: center;
   gap: 6px;
   border-radius: 10px;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 700;
   text-decoration: none;
 }
 
-.cardActions button {
-  min-height: 44px;
-  color: #526177;
-  background: transparent;
-  border: 0;
+.primaryAction {
+  color: #fff !important;
+  background: #1e88ff !important;
+  border: 1px solid #1e88ff;
 }
 
-.cardActions a {
-  color: #fff;
-  background: #1677e8;
+.cardActions button {
+  color: #475569;
+  background: #fff;
+  border: 1px solid #d7e3f2;
+}
+
+.cardActions .addPriceBtn {
+  color: #475569;
+  background: #fff;
+  border: 1px solid #d7e3f2;
+}
+
+.cardActions .editPriceBtn {
+  color: #1e88ff;
+  background: #fff;
+  border: 1px solid #d7e3f2;
 }
 
 .cardActions svg {

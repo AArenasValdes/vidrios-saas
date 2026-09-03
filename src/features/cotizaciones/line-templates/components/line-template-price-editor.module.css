@@ -1,0 +1,326 @@
+/* ── Overlay / backdrop ── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+/* ── Editor panel ── */
+.editor {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 20px 0;
+}
+
+.title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0;
+  color: #111827;
+}
+
+.lineName {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: #6b7280;
+}
+
+.material {
+  margin-left: 6px;
+  color: #9ca3af;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  color: #9ca3af;
+  transition: background 0.15s;
+}
+
+.closeBtn:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+/* ── Help text ── */
+.help {
+  margin: 12px 20px 0;
+  padding: 10px 12px;
+  background: #f0f9ff;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: #0369a1;
+  line-height: 1.45;
+}
+
+/* ── Fields ── */
+.fields {
+  padding: 16px 20px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.fieldLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.required {
+  color: #dc2626;
+}
+
+.moneyInputWrap {
+  display: flex;
+  align-items: center;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.moneyInputWrap:focus-within {
+  border-color: #1E88FF;
+  box-shadow: 0 0 0 2px rgba(30, 136, 255, 0.15);
+}
+
+.moneyPrefix {
+  padding: 0 10px;
+  color: #6b7280;
+  font-size: 0.88rem;
+  font-weight: 500;
+  background: #f9fafb;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  border-right: 1px solid #e5e7eb;
+}
+
+.moneyInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 10px 12px;
+  font-size: 0.92rem;
+  font-weight: 500;
+  min-width: 0;
+}
+
+.moneyInput::placeholder {
+  color: #c4c8cf;
+}
+
+/* ── Rounding chips ── */
+.roundingGroup {
+  display: flex;
+  gap: 6px;
+}
+
+.roundingChip {
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: #374151;
+}
+
+.roundingChip:hover {
+  border-color: #1E88FF;
+  color: #1E88FF;
+}
+
+.roundingChipActive {
+  background: #1E88FF;
+  border-color: #1E88FF;
+  color: #fff;
+}
+
+.roundingChipActive:hover {
+  background: #1976d2;
+  border-color: #1976d2;
+  color: #fff;
+}
+
+.advancedSection {
+  border-top: 1px solid #f3f4f6;
+  padding-top: 12px;
+}
+
+.advancedToggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.advancedChevron {
+  transition: transform 0.15s ease;
+  color: #9ca3af;
+}
+
+.advancedChevronOpen {
+  transform: rotate(180deg);
+}
+
+.advancedBody {
+  margin-top: 12px;
+}
+
+.glassSelect {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.88rem;
+  background: #fff;
+  color: #111827;
+}
+
+.glassSelect:focus {
+  outline: none;
+  border-color: #1e88ff;
+  box-shadow: 0 0 0 2px rgba(30, 136, 255, 0.15);
+}
+
+.fieldHelp {
+  font-size: 0.74rem;
+  color: #6b7280;
+  line-height: 1.45;
+}
+
+/* ── Error ── */
+.error {
+  margin: 0 20px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+/* ── Actions ── */
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 16px 20px 20px;
+}
+
+.cancelBtn {
+  padding: 9px 18px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #374151;
+  transition: background 0.15s;
+}
+
+.cancelBtn:hover {
+  background: #f3f4f6;
+}
+
+.cancelBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.saveBtn {
+  padding: 9px 22px;
+  border-radius: 8px;
+  border: none;
+  background: #1E88FF;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.saveBtn:hover {
+  background: #1976d2;
+}
+
+.saveBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Mobile adjustments ── */
+@media (max-width: 640px) {
+  .overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .editor {
+    max-width: 100%;
+    border-radius: 16px 16px 0 0;
+    max-height: 92vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .actions {
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+
+  .moneyInput {
+    font-size: 1rem;
+    padding: 12px;
+  }
+}

@@ -113,6 +113,7 @@ type UseFlujoNuevaCotizacionParams = {
   onPricingModeSelection: (mode: "margen" | "precio_directo") => void;
   onComponentChange: <K extends keyof ComponentFormState>(key: K, value: ComponentFormState[K]) => void;
   onSelectLineTemplate: (templateId: string) => void;
+  onTemplatePriceUpdated?: (updated: import("@/features/cotizaciones/line-templates/types/cotizacion-line-template").CotizacionLineTemplate) => void;
   onToggleGlassPanel: () => void;
   onGlassQueryChange: (value: string) => void;
   onGlassSelect: (value: string) => void;
@@ -222,6 +223,7 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     onPricingModeSelection: params.onPricingModeSelection,
     onComponentChange: params.onComponentChange,
     onSelectLineTemplate: params.onSelectLineTemplate,
+    onTemplatePriceUpdated: params.onTemplatePriceUpdated,
     onToggleGlassPanel: params.onToggleGlassPanel,
     onGlassQueryChange: params.onGlassQueryChange,
     onGlassSelect: params.onGlassSelect,

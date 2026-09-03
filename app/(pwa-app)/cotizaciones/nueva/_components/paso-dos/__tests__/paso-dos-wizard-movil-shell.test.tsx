@@ -2,6 +2,10 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 
+jest.mock("@/features/auth/hooks/useAuth", () => ({
+  useAuth: () => ({ organizacionId: "test-org-1", userId: "test-user" }),
+}));
+
 import { createEmptyComponentForm } from "@/features/cotizaciones/new-quote/workflow-ui";
 
 import { PasoDosWizardMovil, type WizardActions } from "../paso-dos-wizard-movil-shell";

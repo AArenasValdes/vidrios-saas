@@ -376,6 +376,7 @@ export function createCotizacionLineTemplatesService(
       return repository.create({
         organizationId,
         ...normalized,
+        catalogKey: input.catalogKey ?? null,
         sortOrder:
           input.sortOrder !== undefined
             ? normalized.sortOrder

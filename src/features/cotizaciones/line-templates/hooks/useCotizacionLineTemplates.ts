@@ -4,6 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { cotizacionLineTemplatesService } from "@/features/cotizaciones/line-templates/services/cotizacion-line-templates.service";
+import { ensureDefaultLineCatalogClient } from "@/features/cotizaciones/line-templates/services/seed-line-catalog-client";
+import { ensureStructuralDraftsClient } from "@/features/cotizaciones/line-templates/services/seed-structural-draft-client";
+import { ensureProfileReferencesClient } from "@/features/cotizaciones/line-templates/services/seed-profile-references-client";
 import type {
   CotizacionLineTemplate,
   CreateCotizacionLineTemplateInput,
@@ -35,10 +38,28 @@ export function useCotizacionLineTemplates(options?: {
     setError(null);
 
     try {
-      const items = await cotizacionLineTemplatesService.getTemplatesByOrganizationId(
+      let items = await cotizacionLineTemplatesService.getTemplatesByOrganizationId(
         organizacionId,
         { activeOnly: options?.activeOnly }
       );
+
+      if (loadId !== activeLoadIdRef.current) {
+        return;
+      }
+
+      // Respaldo: rellenar líneas canónicas Ventora ausentes (idempotente, una vez por sesión)
+      const didSeed = await ensureDefaultLineCatalogClient(organizacionId);
+      const didSeedStructural = await ensureStructuralDraftsClient(organizacionId);
+      const didSeedProfiles = await ensureProfileReferencesClient(organizacionId);
+      if (
+        (didSeed || didSeedStructural || didSeedProfiles) &&
+        loadId === activeLoadIdRef.current
+      ) {
+        items = await cotizacionLineTemplatesService.getTemplatesByOrganizationId(
+          organizacionId,
+          { activeOnly: options?.activeOnly }
+        );
+      }
 
       if (loadId !== activeLoadIdRef.current) {
         return;
