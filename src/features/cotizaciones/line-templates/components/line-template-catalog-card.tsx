@@ -148,26 +148,28 @@ export function LineTemplateCatalogCard({
                   formatMoney
                 )}
           </strong>
-          <span>
-            {needsPrice
-              ? "Define el precio comercial"
-              : `Mín. ${
-                  template.minimoCobrable > 0
-                    ? formatMoney(template.minimoCobrable)
-                    : "sin mínimo"
-                }`}
-          </span>
+          {!needsPrice ? (
+            <span>
+              {`Mín. ${
+                template.minimoCobrable > 0
+                  ? formatMoney(template.minimoCobrable)
+                  : "sin mínimo"
+              }`}
+            </span>
+          ) : null}
         </div>
-        <button
-          type="button"
-          className={needsPrice ? s.addPriceBtn : s.editPriceBtn}
-          onClick={(event) => {
-            event.stopPropagation();
-            onEditPrice();
-          }}
-        >
-          {needsPrice ? "Agregar precio" : "Editar precio"}
-        </button>
+        {!needsPrice ? (
+          <button
+            type="button"
+            className={s.editPriceBtn}
+            onClick={(event) => {
+              event.stopPropagation();
+              onEditPrice();
+            }}
+          >
+            Editar precio
+          </button>
+        ) : null}
       </div>
 
       {template.categoria !== "vidrio" ? (
