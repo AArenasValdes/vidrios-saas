@@ -378,9 +378,10 @@ describe("PasoDosWizardConfiguracionMovil", () => {
     fireEvent.change(screen.getByPlaceholderText(/Ej: L(i|í)nea 5000/i), {
       target: { value: "Línea 5000" },
     });
-    fireEvent.change(screen.getByPlaceholderText("Ej: 185000"), {
+    fireEvent.change(screen.getByPlaceholderText("Ej: 185.000"), {
       target: { value: "185000" },
     });
+    expect(screen.getByDisplayValue("185.000")).toBeInTheDocument();
     fireEvent.change(screen.getByPlaceholderText("Ej: Termopanel 4/10/4"), {
       target: { value: "Templado 8mm" },
     });

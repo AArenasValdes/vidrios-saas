@@ -1466,9 +1466,13 @@ export function PasoDosWizardConfiguracionMovil({
                     <input
                       className={s.stepTwoMobileQuickLineInput}
                       inputMode="numeric"
-                      placeholder="Ej: 185000"
+                      placeholder="Ej: 185.000"
                       type="text"
-                      value={quickLineForm.precioM2Sugerido}
+                      value={
+                        quickLineForm.precioM2Sugerido
+                          ? formatCurrencyInput(quickLineForm.precioM2Sugerido)
+                          : ""
+                      }
                       onChange={(event) =>
                         handleQuickLineChange(
                           "precioM2Sugerido",
@@ -1503,9 +1507,13 @@ export function PasoDosWizardConfiguracionMovil({
                     <input
                       className={s.stepTwoMobileQuickLineInput}
                       inputMode="numeric"
-                      placeholder="Ej: 120000"
+                      placeholder="Ej: 120.000"
                       type="text"
-                      value={quickLineForm.minimoCobrable}
+                      value={
+                        quickLineForm.minimoCobrable
+                          ? formatCurrencyInput(quickLineForm.minimoCobrable)
+                          : ""
+                      }
                       onChange={(event) =>
                         handleQuickLineChange(
                           "minimoCobrable",
@@ -1534,9 +1542,13 @@ export function PasoDosWizardConfiguracionMovil({
                           <input
                             className={s.stepTwoMobileQuickLineInput}
                             inputMode="numeric"
-                            placeholder="Ej: 1000"
+                            placeholder="Ej: 1.000"
                             type="text"
-                            value={quickLineForm.redondeoPrecio}
+                            value={
+                              quickLineForm.redondeoPrecio
+                                ? formatCurrencyInput(quickLineForm.redondeoPrecio)
+                                : ""
+                            }
                             onChange={(event) =>
                               handleQuickLineChange(
                                 "redondeoPrecio",
