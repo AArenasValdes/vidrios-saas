@@ -1910,6 +1910,12 @@ export function buildGlassValue(prefix: string, item: string) {
   return prefix ? `${prefix} ${item}` : item;
 }
 
+export function listVentoraGlassCatalogOptions(): string[] {
+  return GLASS_OPTIONS.flatMap((group) =>
+    group.items.map((item) => buildGlassValue(group.prefix, item))
+  );
+}
+
 function pickSuggestedString(value: string | null | undefined, fallback: string) {
   return typeof value === "string" && value.trim() !== "" ? value : fallback;
 }

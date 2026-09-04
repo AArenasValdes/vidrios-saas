@@ -120,6 +120,46 @@ export function patchFabricacionPerfil(
   return changed ? { ...receta, perfiles } : receta;
 }
 
+export function patchFabricacionGlassNombre(
+  glass: FabricacionVidrio,
+  nombre: string
+): FabricacionVidrio {
+  const trimmed = nombre.trim();
+  if (!trimmed) {
+    return {
+      ...glass,
+      nombre: "",
+      requerido: false,
+    };
+  }
+
+  return {
+    ...glass,
+    nombre: trimmed,
+    requerido: true,
+    datosPendientes: (glass.datosPendientes ?? []).filter(
+      (detail) =>
+        !/composici[oó]n del vidrio/i.test(detail) &&
+        !/descuento de ancho y alto/i.test(detail)
+    ),
+  };
+}
+
+export function patchRecipeGlassNombre(
+  receta: FabricacionReceta,
+  glassId: string,
+  nombre: string
+): FabricacionReceta {
+  let changed = false;
+  const vidrios = receta.vidrios.map((glass) => {
+    if (glass.id !== glassId) return glass;
+    const next = patchFabricacionGlassNombre(glass, nombre);
+    if (next !== glass) changed = true;
+    return next;
+  });
+  return changed ? { ...receta, vidrios } : receta;
+}
+
 function profileHasWorkshopIdentity(profile: FabricacionComponentePerfil): boolean {
   return Boolean(
     profile.funcion.trim() ||

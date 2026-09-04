@@ -28,6 +28,7 @@ import {
 
 import { RecipeTextAssistant } from "@/features/fabricacion/components/recipe-text-assistant";
 import { RecipeCommercialLengthPicker } from "@/features/fabricacion/components/recipe-commercial-length-picker";
+import { RecipeGlassNamePicker } from "@/features/fabricacion/components/recipe-glass-name-picker";
 import { RecipeProfileReferencePicker } from "@/features/fabricacion/components/recipe-profile-reference-picker";
 import {
   FabricacionTipologiaPreview,
@@ -51,6 +52,7 @@ import {
   contarBloqueosCriticosReceta,
   countProfilesGeometricallyPending,
   patchFabricacionPerfil,
+  patchRecipeGlassNombre,
   reorderFabricacionItems,
 } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
@@ -741,6 +743,10 @@ export function RecipeGuidedEditor({
       ...recipe,
       accesorios: recipe.accesorios.filter((entry) => entry.id !== accessoryId),
     });
+  };
+
+  const updateGlassName = (glassId: string, nombre: string) => {
+    onRecipeChange(patchRecipeGlassNombre(recipe, glassId, nombre));
   };
 
   const addGlass = () => {
@@ -1952,19 +1958,31 @@ export function RecipeGuidedEditor({
             className={s.fabSheetPreview}
           />
           {!readOnly && onContinueToTest && recipe.perfiles.length > 0 ? (
-            <button
-              type="button"
-              className={`${s.primaryButton} ${s.fabPrimaryCta} ${s.fabPreparedCta}`}
-              onClick={onContinueToTest}
-              disabled={!listaParaProbarEvaluacion.listaParaProbar}
-              title={
-                listaParaProbarEvaluacion.bloqueos[0] ??
-                "Completa la receta antes de probar."
-              }
-            >
-              Probar con una medida real
-              <ChevronRight size={16} aria-hidden="true" />
-            </button>
+            <div className={s.fabPreparedCtaBlock}>
+              <button
+                type="button"
+                className={`${s.primaryButton} ${s.fabPrimaryCta} ${s.fabPreparedCta}`}
+                onClick={onContinueToTest}
+                disabled={!listaParaProbarEvaluacion.listaParaProbar}
+                title={
+                  listaParaProbarEvaluacion.bloqueos[0] ??
+                  "Completa la receta antes de probar."
+                }
+              >
+                Probar con una medida real
+                <ChevronRight size={16} aria-hidden="true" />
+              </button>
+              {!listaParaProbarEvaluacion.listaParaProbar ? (
+                <div className={s.fabGateBloqueos} role="status">
+                  <strong>Falta para probar:</strong>
+                  <ul>
+                    {listaParaProbarEvaluacion.bloqueos.map((bloqueo) => (
+                      <li key={bloqueo}>{bloqueo}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
           ) : null}
         </section>
 
@@ -2569,7 +2587,10 @@ export function RecipeGuidedEditor({
                     </span>
                   </div>
                   <span className={s.fabAccessoryQty}>
-                    Medida preliminar
+                    {recipe.vidrios
+                      .map((glass) => glass.nombre.trim())
+                      .filter(Boolean)
+                      .join(" · ") || "Sin tipo definido"}
                   </span>
                   {!readOnly ? (
                     <button
@@ -2603,23 +2624,12 @@ export function RecipeGuidedEditor({
               ) : null}
               {recipe.vidrios.map((glass) => (
                 <div key={glass.id} className={s.recipeBuildInlineItem}>
-                  <label>
-                    <span>Vidrio</span>
-                    <input
-                      value={glass.nombre}
-                      onChange={(event) =>
-                        onRecipeChange({
-                          ...recipe,
-                          vidrios: recipe.vidrios.map((entry) =>
-                            entry.id === glass.id
-                              ? { ...entry, nombre: event.target.value }
-                              : entry
-                          ),
-                        })
-                      }
-                      disabled={readOnly}
-                    />
-                  </label>
+                  <RecipeGlassNamePicker
+                    value={glass.nombre}
+                    onChange={(nombre) => updateGlassName(glass.id, nombre)}
+                    readOnly={readOnly}
+                    ariaLabel={`Tipo de vidrio para ${glass.nombre || "vidrio"}`}
+                  />
                   {!readOnly ? (
                     <button
                       type="button"
@@ -3605,17 +3615,11 @@ export function RecipeGuidedEditor({
                   <span className={s.componentCompactEdit}><Pencil size={14} /> Editar</span>
                 </summary>
                 <div className={s.formGridDense}>
-                  <label>
-                    <span>Nombre</span>
-                    <input
-                      value={glass.nombre}
-                      onChange={(event) => onRecipeChange({
-                        ...recipe,
-                        vidrios: recipe.vidrios.map((entry) => entry.id === glass.id ? { ...entry, nombre: event.target.value } : entry),
-                      })}
-                      disabled={readOnly}
-                    />
-                  </label>
+                  <RecipeGlassNamePicker
+                    value={glass.nombre}
+                    onChange={(nombre) => updateGlassName(glass.id, nombre)}
+                    readOnly={readOnly}
+                  />
                   {!readOnly ? (
                     <button type="button" className={s.dangerTextButton} onClick={() => onRecipeChange({
                       ...recipe,
@@ -3653,23 +3657,11 @@ export function RecipeGuidedEditor({
               </div>
               <div className={s.formGridDense}>
                 {!isGuidedDesktop ? (
-                <label>
-                  <span>Nombre</span>
-                  <input
-                    value={glass.nombre}
-                    onChange={(event) =>
-                      onRecipeChange({
-                        ...recipe,
-                        vidrios: recipe.vidrios.map((entry) =>
-                          entry.id === glass.id
-                            ? { ...entry, nombre: event.target.value }
-                            : entry
-                        ),
-                      })
-                    }
-                    disabled={readOnly}
-                  />
-                </label>
+                <RecipeGlassNamePicker
+                  value={glass.nombre}
+                  onChange={(nombre) => updateGlassName(glass.id, nombre)}
+                  readOnly={readOnly}
+                />
                 ) : null}
                 {(!isGuidedDesktop || desktopActiveStep === "rules") ? (
                 <>

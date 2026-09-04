@@ -6703,6 +6703,32 @@
   white-space: nowrap;
 }
 
+.fabPreparedCtaBlock {
+  display: grid;
+  gap: 0.65rem;
+  justify-items: start;
+}
+
+.fabGateBloqueos {
+  max-width: 28rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 0.75rem;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  box-shadow: inset 0 0 0 1px #fed7aa;
+}
+
+.fabGateBloqueos ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.fabGateBloqueos li + li {
+  margin-top: 0.2rem;
+}
+
 .fabAdvancedSection {
   margin-top: 8px;
   padding: 12px 14px 16px;
