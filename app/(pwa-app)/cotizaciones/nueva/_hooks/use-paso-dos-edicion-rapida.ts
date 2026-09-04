@@ -8,6 +8,7 @@ import {
   isWorkflowItemEffectivelyComplete,
   mapItemToForm,
   type ComponentFormState,
+  type LineTemplateFormLookup,
   type QuickEditBatchTarget,
   type QuickEditDraftState,
   type QuickEditFieldKey,
@@ -17,7 +18,6 @@ import type {
   CotizacionWorkflowDraft,
   CotizacionWorkflowItem,
 } from "@/features/cotizaciones/types/cotizacion-workflow";
-import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import {
   normalizeQuotePricingMode,
@@ -27,7 +27,7 @@ import {
 type UsePasoDosEdicionRapidaParams = {
   items: CotizacionWorkflowItem[];
   quotePricingMode?: QuotePricingMode;
-  activeLineTemplates?: Array<Pick<CotizacionLineTemplate, "id" | "catalogMetadata">>;
+  activeLineTemplates?: LineTemplateFormLookup[];
   setDraft: React.Dispatch<React.SetStateAction<CotizacionWorkflowDraft>>;
   setGlobalError: React.Dispatch<React.SetStateAction<string | null>>;
 };

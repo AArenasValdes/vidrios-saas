@@ -2060,6 +2060,7 @@ function NuevaCotizacionPageContent() {
       if (!item) return current;
 
       let form = mapItemToForm(item);
+      const { markPriceManual, ...formPatch } = patch;
       if (patch.lineTemplateId !== undefined) {
         const template = activeLineTemplates.find(
           (candidate) => String(candidate.id) === patch.lineTemplateId
@@ -2085,7 +2086,6 @@ function NuevaCotizacionPageContent() {
             };
       }
 
-      const { markPriceManual, ...formPatch } = patch;
       form = { ...form, ...formPatch };
 
       if (patch.material) {

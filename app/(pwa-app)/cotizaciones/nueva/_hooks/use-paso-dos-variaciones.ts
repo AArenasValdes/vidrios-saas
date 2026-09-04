@@ -9,11 +9,11 @@ import {
 } from "@/features/cotizaciones/services/component-catalog.service";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { type PricingMode } from "@/features/cotizaciones/types/pricing-mode";
-import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import {
   buildItemFromForm,
   formatCurrencyInput,
   mapItemToForm,
+  type LineTemplateFormLookup,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 
 type VariationBase = {
@@ -69,7 +69,7 @@ type PendingForcedFullEdit = {
 
 type Params = {
   items: CotizacionWorkflowItem[];
-  activeLineTemplates?: Array<Pick<CotizacionLineTemplate, "id" | "catalogMetadata">>;
+  activeLineTemplates?: LineTemplateFormLookup[];
   setItems: (nextItems: CotizacionWorkflowItem[]) => void;
   openItemForEditing: (
     item: CotizacionWorkflowItem,

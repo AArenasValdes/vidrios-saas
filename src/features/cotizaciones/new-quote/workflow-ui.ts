@@ -1604,10 +1604,35 @@ export type LineTemplatePricingSource = Pick<
   | "redondeoPrecio"
 >;
 
+/** Lookup parcial (catálogo) o completo (precio/m²) para buildItemFromForm. */
+export type LineTemplateFormLookup = Pick<
+  CotizacionLineTemplate,
+  "id" | "catalogMetadata"
+> &
+  Partial<Omit<LineTemplatePricingSource, "id" | "catalogMetadata">>;
+
+function isLineTemplatePricingSource(
+  template: LineTemplateFormLookup
+): template is LineTemplatePricingSource {
+  return (
+    typeof template.nombre === "string" &&
+    template.nombre.trim().length > 0 &&
+    typeof template.categoria === "string" &&
+    typeof template.material === "string" &&
+    typeof template.precioM2Sugerido === "number" &&
+    Number.isFinite(template.precioM2Sugerido) &&
+    template.precioM2Sugerido > 0 &&
+    typeof template.minimoCobrable === "number" &&
+    Number.isFinite(template.minimoCobrable) &&
+    typeof template.redondeoPrecio === "number" &&
+    Number.isFinite(template.redondeoPrecio)
+  );
+}
+
 export type BuildItemFromFormOptions = {
   quotePricingMode?: QuotePricingMode;
   lineTemplateCatalogMetadata?: CotizacionLineTemplateCatalogMetadata | null;
-  lineTemplates?: LineTemplatePricingSource[];
+  lineTemplates?: LineTemplateFormLookup[];
 };
 
 export function hydrateComponentFormFromLineTemplate(
@@ -1622,7 +1647,7 @@ export function hydrateComponentFormFromLineTemplate(
   const template = options.lineTemplates.find(
     (candidate) => String(candidate.id) === lineTemplateId
   );
-  if (!template) {
+  if (!template || !isLineTemplatePricingSource(template)) {
     return form;
   }
 
