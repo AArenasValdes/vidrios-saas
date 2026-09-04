@@ -813,8 +813,8 @@ export function RecipeGuidedEditor({
       ?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   };
 
-  const applyRecipeTira = (nextValue: number) => {
-    onRecipeChange({
+  const applyRecipeTira = (nextValue: number, options?: { applyToProfiles?: boolean }) => {
+    const withDefault: FabricacionReceta = {
       ...recipe,
       configuracionCorte: {
         perdidaCorteMm: recipe.configuracionCorte?.perdidaCorteMm ?? null,
@@ -823,7 +823,16 @@ export function RecipeGuidedEditor({
           recipe.configuracionCorte?.sobranteMinimoAprovechableMm ?? null,
         largoComercialDefaultMm: nextValue,
       },
-    });
+    };
+    onRecipeChange(
+      options?.applyToProfiles
+        ? applyLargoToAllProfiles(withDefault, nextValue)
+        : withDefault
+    );
+  };
+
+  const applyCustomTiraToAllProfiles = () => {
+    onRecipeChange(applyLargoToAllProfiles(recipe, tiraEstandarMm));
   };
 
   const persistDrawerRecipe = async (options?: {
@@ -1991,30 +2000,6 @@ export function RecipeGuidedEditor({
           ) : null}
         </section>
 
-        {!listaParaProbarEvaluacion.listaParaProbar &&
-        listaParaProbarEvaluacion.bloqueos.length > 0 ? (
-          <div className={s.fabPrepGateBanner} role="status">
-            <AlertTriangle size={16} aria-hidden="true" />
-            <div className={s.fabPrepGateBannerCopy}>
-              <strong>Completa las piezas obligatorias para probar</strong>
-              <p>
-                {listaParaProbarEvaluacion.bloqueos.length}{" "}
-                {listaParaProbarEvaluacion.bloqueos.length === 1
-                  ? "ajuste pendiente"
-                  : "ajustes pendientes"}{" "}
-                en perfiles requeridos.
-              </p>
-            </div>
-            <button
-              type="button"
-              className={s.fabPrepGateBannerAction}
-              onClick={scrollToReviewPiezas}
-            >
-              Ir a piezas
-            </button>
-          </div>
-        ) : null}
-
         <section className={s.fabTiraBlock} aria-label="Tira que compras">
           <header>
             <h3>Tira que compras</h3>
@@ -2030,7 +2015,7 @@ export function RecipeGuidedEditor({
                   className={s.fabPrepTiraChip}
                   data-selected={tiraEstandarMm === largo ? "true" : "false"}
                   onClick={() => {
-                    applyRecipeTira(largo);
+                    applyRecipeTira(largo, { applyToProfiles: true });
                     setShowCustomTira(false);
                   }}
                 >
@@ -2074,14 +2059,12 @@ export function RecipeGuidedEditor({
               />
             </label>
           ) : null}
-          {!readOnly && recipe.perfiles.length > 0 ? (
+          {!readOnly && showCustomTira && recipe.perfiles.length > 0 ? (
             <button
               type="button"
               className={s.fabTiraApply}
               data-applied={tiraAplicadaEnPiezas ? "true" : "false"}
-              onClick={() =>
-                onRecipeChange(applyLargoToAllProfiles(recipe, tiraEstandarMm))
-              }
+              onClick={applyCustomTiraToAllProfiles}
             >
               <CheckCircle2 size={15} aria-hidden="true" />
               {tiraAplicadaEnPiezas
@@ -2104,23 +2087,26 @@ export function RecipeGuidedEditor({
           </p>
         ) : null}
 
-        {pendingDiscountCount > 0 ? (
+        {pendingDiscountCount > 0 ||
+        (!listaParaProbarEvaluacion.listaParaProbar &&
+          listaParaProbarEvaluacion.bloqueos.length > 0) ? (
           <div className={s.fabPrepDiscountWarn} role="status">
             <AlertTriangle size={16} aria-hidden="true" />
             <p>
-              Faltan descuentos en {pendingDiscountCount}{" "}
-              {pendingDiscountCount === 1 ? "pieza" : "piezas"} para completar
-              la pauta de corte.
+              {pendingDiscountCount > 0
+                ? `Faltan descuentos en ${pendingDiscountCount} ${
+                    pendingDiscountCount === 1 ? "pieza" : "piezas"
+                  } para completar la pauta de corte.`
+                : `Completa ${listaParaProbarEvaluacion.bloqueos.length} ${
+                    listaParaProbarEvaluacion.bloqueos.length === 1
+                      ? "ajuste pendiente"
+                      : "ajustes pendientes"
+                  } en perfiles obligatorios para probar.`}
             </p>
             <button
               type="button"
               className={s.fabWarnAction}
-              onClick={() => {
-                setOpenReview("piezas");
-                document
-                  .getElementById("fab-review-piezas")
-                  ?.scrollIntoView?.({ behavior: "smooth", block: "start" });
-              }}
+              onClick={scrollToReviewPiezas}
             >
               Revisar piezas pendientes
               <ChevronRight size={15} aria-hidden="true" />

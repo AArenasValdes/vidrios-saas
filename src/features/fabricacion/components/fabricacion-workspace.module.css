@@ -6703,60 +6703,6 @@
   white-space: nowrap;
 }
 
-.fabPrepGateBanner {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: inset 0 0 0 1px #f3d9c4;
-}
-
-.fabPrepGateBanner svg {
-  flex: 0 0 auto;
-  color: #c2410c;
-}
-
-.fabPrepGateBannerCopy {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.fabPrepGateBannerCopy strong {
-  color: #9a3412;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.fabPrepGateBannerCopy p {
-  margin: 0;
-  color: #b45309;
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.fabPrepGateBannerAction {
-  flex: 0 0 auto;
-  min-height: 36px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 10px;
-  background: #fff7ed;
-  color: #9a3412;
-  font-size: 12px;
-  font-weight: 700;
-  box-shadow: inset 0 0 0 1px #fed7aa;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.fabPrepGateBannerAction:hover {
-  background: #ffedd5;
-}
-
 .fabReviewOptionalHint {
   margin: 0;
   color: #64748b;
@@ -9852,15 +9798,6 @@
 
   .fabPrepHero .fabPreparedCta {
     justify-self: start;
-  }
-
-  .fabPrepGateBanner {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .fabPrepGateBannerAction {
-    width: 100%;
   }
 
   .fabPrepFlow .fabPieceRow,
