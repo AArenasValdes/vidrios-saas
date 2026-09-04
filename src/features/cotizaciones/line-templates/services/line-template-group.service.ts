@@ -2,6 +2,11 @@
  * Agrupación visual del catálogo de líneas (proveedor + sistema).
  */
 
+import {
+  isVentoraCatalogKey,
+  VENTORA_DEFAULT_LINE_CATALOG,
+} from "@/features/cotizaciones/line-templates/services/default-line-catalog";
+
 export const LINE_TEMPLATE_GROUP_NO_PROVIDER = "Sin proveedor";
 export const LINE_TEMPLATE_GROUP_NO_SYSTEM = "Sin sistema";
 /** Valor del filtro UI: todos los proveedores. */
@@ -98,4 +103,50 @@ export function groupLineTemplatesByProvider<
         { provider: right.provider, system: LINE_TEMPLATE_GROUP_NO_SYSTEM }
       )
     );
+}
+
+const VENTORA_CATALOG_KEY_ORDER = new Map(
+  VENTORA_DEFAULT_LINE_CATALOG.map((line, index) => [line.catalogKey ?? "", index])
+);
+
+/** Orden canónico del catálogo Ventora (fallback alfabético por nombre). */
+export function sortVentoraCatalogTemplates<
+  T extends { catalogKey: string | null; nombre: string },
+>(templates: readonly T[]): T[] {
+  return [...templates].sort((left, right) => {
+    const leftIndex = left.catalogKey
+      ? (VENTORA_CATALOG_KEY_ORDER.get(left.catalogKey) ?? 999)
+      : 999;
+    const rightIndex = right.catalogKey
+      ? (VENTORA_CATALOG_KEY_ORDER.get(right.catalogKey) ?? 999)
+      : 999;
+    if (leftIndex !== rightIndex) {
+      return leftIndex - rightIndex;
+    }
+    return left.nombre.localeCompare(right.nombre, "es", { sensitivity: "base" });
+  });
+}
+
+export type LineTemplateCatalogOriginSection = "ventora" | "propias";
+
+export function partitionLineTemplatesByCatalogOrigin<
+  T extends { catalogKey: string | null; nombre: string },
+>(templates: readonly T[]) {
+  const ventora: T[] = [];
+  const propias: T[] = [];
+
+  for (const template of templates) {
+    if (isVentoraCatalogKey(template.catalogKey)) {
+      ventora.push(template);
+    } else {
+      propias.push(template);
+    }
+  }
+
+  return {
+    ventora: sortVentoraCatalogTemplates(ventora),
+    propias: [...propias].sort((left, right) =>
+      left.nombre.localeCompare(right.nombre, "es", { sensitivity: "base" })
+    ),
+  };
 }

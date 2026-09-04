@@ -17,11 +17,13 @@ import s from "./line-profile-references-section.module.css";
 type Props = {
   catalogMetadata: CotizacionLineTemplateCatalogMetadata | null | undefined;
   variant?: "desktop" | "mobile";
+  compact?: boolean;
 };
 
 export function LineProfileReferencesSection({
   catalogMetadata,
   variant = "desktop",
+  compact = false,
 }: Props) {
   const panelId = useId();
   const workshopProfiles = getLineTemplateWorkshopProfiles(catalogMetadata);
@@ -40,12 +42,14 @@ export function LineProfileReferencesSection({
 
   return (
     <section
-      className={`${s.section} ${isDesktop ? s.sectionDesktop : s.sectionMobile}`}
+      className={`${s.section} ${isDesktop ? s.sectionDesktop : s.sectionMobile} ${
+        compact ? s.sectionCompact : ""
+      }`}
       aria-label="Perfiles de referencia"
     >
       <button
         type="button"
-        className={s.summaryToggle}
+        className={`${s.summaryToggle} ${compact ? s.summaryToggleCompact : ""}`}
         aria-expanded={expanded}
         aria-controls={panelId}
         onClick={(event) => {
@@ -54,14 +58,22 @@ export function LineProfileReferencesSection({
         }}
       >
         <span className={s.summaryCopy}>
-          <strong>Perfiles de referencia</strong>
-          <span className={s.summaryMeta}>
-            {summary.total} {summary.total === 1 ? "perfil" : "perfiles"} ·{" "}
-            {configuredLabel}
-          </span>
+          {compact ? (
+            <strong>
+              {summary.total} {summary.total === 1 ? "referencia" : "referencias"}
+            </strong>
+          ) : (
+            <>
+              <strong>Perfiles de referencia</strong>
+              <span className={s.summaryMeta}>
+                {summary.total} {summary.total === 1 ? "perfil" : "perfiles"} ·{" "}
+                {configuredLabel}
+              </span>
+            </>
+          )}
         </span>
         <span className={s.summaryAction}>
-          {expanded ? "Ocultar" : "Ver perfiles"}
+          {compact ? null : expanded ? "Ocultar" : "Ver perfiles"}
           <LuChevronDown
             aria-hidden
             className={expanded ? s.toggleIconOpen : s.toggleIcon}

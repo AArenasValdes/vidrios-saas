@@ -1,7 +1,7 @@
 # Agent Task Guide - Ventora
 
 Estado: vigente
-Actualizado: 2026-08-14
+Actualizado: 2026-09-04
 Responsable: ingeniería
 
 Guia practica para futuros agentes. Antes de explorar el proyecto, revisar la seccion correspondiente.
@@ -83,8 +83,11 @@ Reglas:
 2. `src/features/fabricacion/types/fabricacion-domain.ts`
 3. `src/features/fabricacion/services/fabricacion-calculo.service.ts`
 4. `src/features/fabricacion/components/fabricacion-line-workspace.tsx`
-5. `src/features/fabricacion/components/recipe-guided-editor.tsx` / `recipe-test-lab.tsx`
-6. Print: `app/print/cotizaciones/[id]/fabricacion/`
+5. `src/features/fabricacion/services/fabricacion-receta-lista-para-probar.service.ts` (gate **Probar**; vidrio = advertencia)
+6. `src/features/fabricacion/components/recipe-guided-editor.tsx` / `recipe-glass-name-picker.tsx` / `recipe-test-lab.tsx`
+7. Catálogo 25 líneas: `default-line-catalog.ts`, `auditoria-catalogo-lineas-ventora.service.ts`, `auditoria-integridad-catalogo-lineas.service.ts`
+8. Cotización + línea: `fabricacion-linea-cotizacion-context.service.ts`, `workflow-ui.ts` (`hydrateComponentFormFromLineTemplate`)
+9. Print: `app/print/cotizaciones/[id]/fabricacion/`
 
 ### Decisión Camino 2 (2026-07-19) — obligatoria
 

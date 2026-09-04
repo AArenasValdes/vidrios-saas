@@ -1,7 +1,7 @@
 # Agent Map - Indice Maestro del Proyecto
 
 Estado: vigente
-Actualizado: 2026-08-14
+Actualizado: 2026-09-04
 Responsable: ingeniería
 
 ## Proposito
@@ -45,7 +45,7 @@ Si la tarea toca dashboard Fase 5 o su contrato de datos, leer tambien `docs/des
 
 - Desktop taller, no CRM generico.
 - Paso 2 mobile (2026-07-27): `por_item` ofrece **Guiada | Constructor** sobre el mismo `draft.items`; el Constructor mobile vive en `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/mobile-cuaderno/` y no reutiliza el workspace desktop.
-- **Fase actual = Fase 4 — módulo técnico esencial** (2026-07-30). Fuente nueva: `fabrication_recipes` + `fabrication_recipe_tests`, administrador guiado por línea, laboratorio y selector de receta validada en cotización; snapshot formal en `cotizacion_items.fabricacion_snapshot`. `fabricationRecipePack`, `fabricationRecipe` y `[cub:]` quedan solo como lectura/compatibilidad. Print interno: `/print/cotizaciones/[id]/fabricacion`.
+- **Fase actual = Fase 4 — módulo técnico esencial** (2026-07-30). Fuente nueva: `fabrication_recipes` + `fabrication_recipe_tests`, administrador guiado por línea, laboratorio y selector de receta validada en cotización; snapshot formal en `cotizacion_items.fabricacion_snapshot`. Catálogo comercial **25 líneas** con auditorías de integridad y fabricación (2026-09-04). `fabricationRecipePack`, `fabricationRecipe` y `[cub:]` quedan solo como lectura/compatibilidad. Print interno: `/print/cotizaciones/[id]/fabricacion`.
 - Camino 2 (3 partidas Marco/Hoja) = solo migración.
 - Fuera de alcance: optimizador real, nesting, CAD, inventario, fabricación automática, marketing de “más comunes” antes de validación piloto.
 - No reinventar 2B ni Quote Studio sin bug concreto. CRM/Kanban fuera.

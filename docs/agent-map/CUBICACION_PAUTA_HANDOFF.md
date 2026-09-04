@@ -5,6 +5,16 @@
 **Cómo usar:** copia **TODO este archivo** y pégalo en el chat. No necesita abrir otros archivos.  
 **Idioma de respuesta esperado:** español.
 
+### Actualización catálogo y gate 2026-09-04 (vigente)
+
+- Catálogo comercial canónico: **25 líneas** Ventora (`default-line-catalog.ts`). AM-35 es solo comercial (sin arquetipo estructural).
+- **Serie 32 / Serie 42 corredera** no deben heredar códigos ni plantilla L32/L42 de **proyectante**. En cotización mapean a `corredera_2h`.
+- Al asignar línea en cotización, propagar tipología/hojas/receta desde catálogo; no reutilizar receta validada si su tipología no coincide con la línea elegida.
+- **Vidrio base en receta = opcional.** El gate **Probar fabricación** bloquea solo perfiles/accesorios obligatorios incompletos; sin vidrio base aparece advertencia, no bloqueo (el maestro puede definir vidrio al cotizar cada pieza).
+- Editor de receta: selector de vidrio con catálogo Ventora completo + vidrio propio del taller (`RecipeGlassNamePicker`).
+- UX editor: chips de tira comercial (6,00 / 5,95 / 5,90 m) aplican a todas las piezas al elegir; botón “Aplicar a todas las piezas” solo con medida custom.
+- Auditorías internas: `auditoria-catalogo-lineas-ventora` (fabricación por línea) y `auditoria-integridad-catalogo-lineas` (integridad de códigos; categorías mutuamente excluyentes que suman 25).
+
 ### Actualización UX 2026-08-11 (vigente)
 
 - **Configurar una vez:** línea + tipología → perfiles (lenguaje humano) → medida de corte → accesorios → largo comercial **persistido en la receta** → probar → activar.

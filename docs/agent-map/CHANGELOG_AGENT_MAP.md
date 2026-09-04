@@ -2,6 +2,50 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-04 - Catálogo 25 líneas: integridad, cotización, fabricación y UX receta
+
+### Catálogo comercial e integridad de códigos
+
+- Catálogo canónico **25 líneas** en `default-line-catalog.ts` (incluye AM-35 solo comercial y WinHouse Andes monorriel).
+- **Auditoría de catálogo** (`auditoria-catalogo-lineas-ventora.service.ts`): estado fabricación por línea, gate técnico, bloqueos de prueba.
+- **Auditoría de integridad** (`auditoria-integridad-catalogo-lineas.service.ts`): clasificación primaria mutuamente excluyente que suma 25:
+  - 3 códigos documentados no validados (L5000/L20/L25)
+  - 10 referenciales no ambiguos
+  - 3 referenciales ambiguos (Serie 32 corredera, Serie 42 corredera, Serie 3200 puerta)
+  - 8 sin códigos técnicos en fixtures
+  - 1 solo comercial (AM-35)
+- Separación de códigos en `ventora-profile-references.ts`:
+  - Serie 32/42 **corredera** sin códigos 32xx/42xx de proyectante
+  - Códigos SODAL/perfil como **referencia visual** (`codeStatus: visual_reference` / `catalog_reference`)
+  - `ventoraPlantillaId: null` en Serie 32 y Serie 42 comerciales (no arrastrar plantilla L32/L42 proyectante)
+- AM-35 renombrado a **"AM-35 · Puerta abatible y vaivén"**; sin arquetipo en `CATALOG_KEY_TO_ARQUETIPO`.
+- Tests: `auditoria-integridad-catalogo-lineas.service.test.ts`, snapshot `auditoria-catalogo-lineas-ventora.service.test.ts`.
+
+### Cotización: línea corredera y precio por m²
+
+- **Fix Serie 32 corredera → proyectante**: `ventora:l32` y `ventora:l42` mapean a `corredera_2h` en `arquetipos-estructurales-lineas.ts`.
+- `fabricacion-linea-cotizacion-context.service.ts`: al asignar línea, prioriza preset/catálogo sobre receta validada si la tipología no coincide.
+- `workflow-ui.ts`: `applyLineTemplateToComponentForm` / `hydrateComponentFormFromLineTemplate` propagan tipología, hojas, receta y **precio sugerido por m²** al elegir línea.
+- Tests: `fabricacion-linea-cotizacion-context.service.test.ts`, `workflow-ui-step-two.test.ts`.
+
+### Fabricación: gate “Probar” y vidrio en receta
+
+- `fabricacion-receta-lista-para-probar.service.ts`:
+  - **Bloquea** solo perfiles/accesorios obligatorios incompletos (código, fórmula, descuento, cantidad, largo comercial).
+  - **Vidrio base = advertencia**, no bloqueo: el tipo se define en la receta (opcional) o al cotizar cada pieza.
+- `RecipeGlassNamePicker` + `listVentoraGlassCatalogOptions()`: catálogo Ventora completo y vidrio personalizado del taller en `recipe-guided-editor.tsx`.
+- `patchRecipeGlassNombre()` en `fabricacion-receta-editor.service.ts` persiste nombre sin forzar `requerido: true`.
+
+### UX workspace fabricación (`recipe-guided-editor.tsx`)
+
+- Hero **Fabricación preparada** sin alertas apiladas; una sola barra de aviso antes de “Piezas de la ventana”.
+- **Tira comercial**: chips 6,00 / 5,95 / 5,90 m aplican a todas las piezas al instante; botón **Aplicar a todas las piezas** solo con **Ingresar otra medida**.
+- Acordeón **Vidrio** simplificado: resumen en summary + panel único de selección.
+
+### Restricciones respetadas
+
+- Sin cambios en seed overwrite, precios existentes, PDF, cálculo comercial por m² ni líneas privadas de org.
+
 ## 2026-09-03 - Fase 4A: Referencias de perfiles por línea comercial
 
 - Referencias informativas en `catalog_metadata.workshopProfiles` (sin migración SQL).

@@ -6,7 +6,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   LuArrowLeft,
-  LuChevronRight,
   LuPlus,
   LuSearch,
   LuSlidersHorizontal,
@@ -17,7 +16,6 @@ import { useOrganizationProfile } from "@/features/organization-profile/hooks/us
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import { isChileOrganizationCountry } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import { buildTechnicalCardStatus } from "@/features/cotizaciones/line-templates/services/catalogo-fabricacion-card-status";
-import type { TechnicalCardStatus } from "@/features/cotizaciones/line-templates/services/catalogo-fabricacion-card-status";
 import {
   buildFabricationRecipeInputFromInicioRapido,
   buildLineTemplatePayloadFromInicioRapido,
@@ -30,7 +28,6 @@ import {
   buildLineTemplateCuttingPreview,
   getLineTemplateCubicationConfig,
   getLineTemplateGlassMetadata,
-  getLineTemplateProfilePreview,
   getLineTemplateCuttingRules,
   getLineTemplateEstimationRules,
   getLineTemplateSystemMetadata,
@@ -40,7 +37,6 @@ import {
   mergeLineTemplateEstimationRules,
   mergeLineTemplateSystemMetadata,
   clearNeedsCommercialPriceFlag,
-  lineTemplateNeedsCommercialPrice,
   CotizacionLineTemplate,
   CotizacionLineTemplateCategoria,
   CotizacionLineTemplateEstimationMode,
@@ -54,19 +50,10 @@ import {
   suggestCubicationDeductionsFromWorkshopExample,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-calibration";
 import {
-  formatLineTemplateHabitualGlassLabel,
-} from "@/features/cotizaciones/line-templates/constants/line-template-habitual-glass";
-import {
-  formatLineTemplatePriceLabel,
-  LINE_TEMPLATE_CATEGORIA_LABELS,
-} from "@/features/cotizaciones/line-templates/utils/catalog-labels";
-import {
-  compareLineTemplateGroups,
   getLineTemplateProviderLabel,
   listLineTemplateProviderFilterOptions,
-  LINE_TEMPLATE_GROUP_NO_PROVIDER,
-  LINE_TEMPLATE_GROUP_NO_SYSTEM,
   LINE_TEMPLATE_PROVIDER_FILTER_ALL,
+  partitionLineTemplatesByCatalogOrigin,
 } from "@/features/cotizaciones/line-templates/services/line-template-group.service";
 import { formatCurrency } from "@/utils/formatCurrency";
 
@@ -81,14 +68,13 @@ import {
   recipePreviewToLegacyCuttingPreview,
 } from "@/features/cotizaciones/line-templates/services/fabrication-recipe.service";
 import { LinePriceEditor } from "./line-template-price-editor";
-import { LineProfileReferencesSection } from "./line-profile-references-section";
+import { LineTemplateCatalogCard } from "./line-template-catalog-card";
 import s from "./lineas-precios-page-client.module.css";
 import desktop from "./lineas-precios-page-client.desktop.module.css";
 import {
   LineasPreciosMobileView,
 } from "./lineas-precios-mobile-view";
 import {
-  LineTemplateCardActions,
   LineTemplateDeleteDialog,
   type LineTemplateActionKind,
 } from "./line-template-card-actions";
@@ -135,26 +121,6 @@ function parseDecimal(value: string) {
 
 function formatDecimalInput(value: number) {
   return value > 0 ? String(value).replace(".", ",") : "";
-}
-
-function getLineCommercialStatusLabel(
-  template: CotizacionLineTemplate,
-  needsPrice: boolean
-): string {
-  if (!template.isActive) return "Pausada para cotizar";
-  if (needsPrice) return "Precio pendiente";
-  return "Lista para cotizar";
-}
-
-function getLineFabricationStatusLabel(tone: TechnicalCardStatus["tone"]): string {
-  if (tone === "validated") return "Fabricación configurada";
-  if (tone === "testing") return "Fabricación en prueba";
-  return "Fabricación pendiente";
-}
-
-function getLineFabricationActionLabel(tone: TechnicalCardStatus["tone"]): string {
-  if (tone === "validated") return "Ver fabricación";
-  return "Configurar fabricación";
 }
 
 function buildDraft(template?: CotizacionLineTemplate): LineTemplateFormDraft {
@@ -239,10 +205,6 @@ function parseMoney(value: string) {
   return digits ? Number(digits) : 0;
 }
 
-function buildRoundingLabel(value: number, formatMoney: (amount: number) => string) {
-  return value > 0 ? formatMoney(value) : "Sin redondeo";
-}
-
 function draftHasAdvancedDetails(draft: LineTemplateFormDraft) {
   return Boolean(
     draft.minimoCobrable ||
@@ -257,20 +219,6 @@ function draftHasAdvancedDetails(draft: LineTemplateFormDraft) {
       draft.terminacion.trim() ||
       (draft.redondeoPrecio !== "0" && draft.redondeoPrecio !== "1000")
   );
-}
-
-function buildLineTemplateGroup(template: CotizacionLineTemplate) {
-  const provider = template.proveedor?.trim() || LINE_TEMPLATE_GROUP_NO_PROVIDER;
-  const system =
-    getLineTemplateSystemMetadata(template.catalogMetadata).lineSystem?.trim() ||
-    LINE_TEMPLATE_GROUP_NO_SYSTEM;
-
-  return {
-    key: `${provider.toLowerCase()}::${system.toLowerCase()}`,
-    provider,
-    system,
-    label: `${provider} · ${system}`,
-  };
 }
 
 export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
@@ -500,31 +448,37 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     technicalStatusesByTemplateId,
     templates,
   ]);
-  const groupedTemplates = useMemo(() => {
-    const groups = new Map<
-      string,
-      {
-        key: string;
-        provider: string;
-        system: string;
-        label: string;
-        templates: CotizacionLineTemplate[];
-      }
-    >();
+  const catalogSections = useMemo(() => {
+    const { ventora, propias } = partitionLineTemplatesByCatalogOrigin(filteredTemplates);
+    const sections: Array<{
+      id: "ventora" | "propias";
+      title: string;
+      description: string;
+      templates: CotizacionLineTemplate[];
+    }> = [];
 
-    filteredTemplates.forEach((template) => {
-      const group = buildLineTemplateGroup(template);
-      const existingGroup = groups.get(group.key);
-      if (existingGroup) {
-        existingGroup.templates.push(template);
-        return;
-      }
+    if (ventora.length > 0) {
+      sections.push({
+        id: "ventora",
+        title: "Líneas entregadas por Ventora",
+        description: isChileCatalog
+          ? "Catálogo base del mercado chileno. Revisa precio y fabricación antes de cotizar."
+          : "Líneas base incluidas con tu cuenta Ventora.",
+        templates: ventora,
+      });
+    }
 
-      groups.set(group.key, { ...group, templates: [template] });
-    });
+    if (propias.length > 0) {
+      sections.push({
+        id: "propias",
+        title: "Tus líneas",
+        description: "Líneas creadas o importadas por tu taller.",
+        templates: propias,
+      });
+    }
 
-    return Array.from(groups.values()).sort(compareLineTemplateGroups);
-  }, [filteredTemplates]);
+    return sections;
+  }, [filteredTemplates, isChileCatalog]);
 
   const pricePerM2 = parseMoney(draft.precioM2Sugerido);
   const minimum = parseMoney(draft.minimoCobrable);
@@ -1124,9 +1078,9 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
           {isChileCatalog ? (
             <span className={s.catalogRegionLabel}>Catálogo base de Chile</span>
           ) : null}
-          <h1>Catálogo privado</h1>
+          <h1>Líneas y precios</h1>
           <p>
-            {templates.length} líneas guardadas · {activeCount} activas
+            {templates.length} líneas · {activeCount} activas para cotizar
           </p>
         </div>
 
@@ -1525,219 +1479,60 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
 
       {!isEmpty && !hasNoResults ? (
         <section className={`${s.list} ${desktop.list}`}>
-          {groupedTemplates.map((group) => (
-            <section className={`${s.catalogGroup} ${desktop.catalogGroup}`} key={group.key}>
-              <div className={`${s.groupHeader} ${desktop.groupHeader}`}>
+          {catalogSections.map((section) => (
+            <section
+              className={`${s.catalogGroup} ${desktop.catalogGroup} ${desktop.catalogOriginSection}`}
+              key={section.id}
+              data-origin={section.id}
+            >
+              <div className={`${s.groupHeader} ${desktop.groupHeader} ${desktop.originSectionHeader}`}>
                 <div>
-                  <span>{group.provider}</span>
-                  <strong>{group.system}</strong>
+                  <strong>{section.title}</strong>
+                  <span>{section.description}</span>
                 </div>
                 <small>
-                  {group.templates.length}{" "}
-                  {group.templates.length === 1 ? "línea" : "líneas"}
+                  {section.templates.length}{" "}
+                  {section.templates.length === 1 ? "línea" : "líneas"}
                 </small>
               </div>
 
-              <div
-                className={`${s.groupCards} ${
-                  desktop.groupCards
-                } ${
-                  group.templates.length === 1
-                    ? `${s.groupCardsSingle} ${desktop.groupCardsSingle}`
-                    : ""
-                }`}
-              >
-              {group.templates.map((template) => {
-                const isMenuOpen = openMenuId === template.id;
-                const pendingAction =
-                  pendingLineAction?.templateId === template.id
-                    ? pendingLineAction.kind
-                    : null;
-                const glassMetadata = getLineTemplateGlassMetadata(template.catalogMetadata);
-                const glassDescription = [glassMetadata.espesor, glassMetadata.terminacion]
-                  .filter(Boolean)
-                  .join(" · ");
-                const profilePreview = getLineTemplateProfilePreview(template.catalogMetadata);
-                const needsPrice = lineTemplateNeedsCommercialPrice(template);
-                const lineSystem = getLineTemplateSystemMetadata(template.catalogMetadata).lineSystem;
-                const lineContext = [template.proveedor, lineSystem].filter(Boolean).join(" · ");
-                const technicalStatus = technicalStatusesByTemplateId.get(
-                  String(template.id)
-                );
-                if (!technicalStatus) return null;
+              <div className={`${s.groupCards} ${desktop.groupCards}`}>
+                {section.templates.map((template) => {
+                  const isMenuOpen = openMenuId === template.id;
+                  const pendingAction =
+                    pendingLineAction?.templateId === template.id
+                      ? pendingLineAction.kind
+                      : null;
+                  const technicalStatus = technicalStatusesByTemplateId.get(
+                    String(template.id)
+                  );
+                  if (!technicalStatus) return null;
 
-                return (
-                  <article
-                    key={template.id}
-                    className={`${s.card} ${desktop.card} ${template.isActive ? "" : s.cardInactive} ${
-                      isMenuOpen ? s.cardMenuOpen : ""
-                    }`}
-                    data-material={template.material}
-                  >
-                    <div
-                      className={`${s.cardTop} ${desktop.cardTop} ${
-                        profilePreview ? s.cardTopWithProfilePreview : ""
-                      }`}
-                    >
-                      {profilePreview ? (
-                        <figure className={`${s.profilePreview} ${desktop.profilePreview}`}>
-                          {/* Asset técnico externo o interno, definido por proveedor. */}
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={profilePreview.assetUrl}
-                            alt={`Sección técnica de ${template.nombre}`}
-                          />
-                          <figcaption>
-                            {profilePreview.sourceLabel}
-                            {profilePreview.sourcePage !== null
-                              ? ` · pág. ${profilePreview.sourcePage}`
-                              : ""}
-                          </figcaption>
-                        </figure>
-                      ) : null}
-                      <div className={`${s.cardTitleBlock} ${desktop.cardTitleBlock}`}>
-                        <div className={s.cardTitleText}>
-                          <strong>{template.nombre}</strong>
-                          <span className={s.materialPill} data-material={template.material}>
-                            {LINE_TEMPLATE_CATEGORIA_LABELS[template.categoria]}
-                          </span>
-                        </div>
-                        {lineContext ? (
-                          <span className={s.cardHierarchy}>{lineContext}</span>
-                        ) : null}
-                      </div>
-
-                      <div className={`${s.cardActions} ${desktop.cardActions}`}>
-                        <LineTemplateCardActions
-                          templateId={template.id}
-                          templateName={template.nombre}
-                          isOpen={isMenuOpen}
-                          isBusy={isSaving}
-                          pendingAction={pendingAction}
-                          onToggle={() =>
-                            setOpenMenuId((current) =>
-                              current === template.id ? null : template.id
-                            )
-                          }
-                          onClose={() => setOpenMenuId(null)}
-                          onDuplicate={() => void handleDuplicate(template.id)}
-                          onRequestDelete={() => {
-                            setOpenMenuId(null);
-                            setTemplatePendingDelete(template);
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className={`${s.priceRow} ${desktop.priceRow}`}>
-                      <div>
-                        <strong>
-                          {needsPrice
-                            ? "Precio pendiente"
-                            : formatLineTemplatePriceLabel(
-                                template.unidadCobro,
-                                template.precioM2Sugerido,
-                                formatMoney
-                              )}
-                        </strong>
-                        <span>
-                          {needsPrice
-                            ? ""
-                            : `Mín. ${template.minimoCobrable > 0 ? formatMoney(template.minimoCobrable) : "Sin mínimo"}`}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        className={needsPrice ? s.addPriceBtn : s.editPriceBtn}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setPriceEditorTemplate(template);
-                        }}
-                      >
-                        {needsPrice ? "Agregar precio" : "Editar precio"}
-                      </button>
-                    </div>
-
-                    <div
-                      className={`${s.lineStatusSummary} ${desktop.lineStatusSummary}`}
-                      aria-label="Estado de la línea"
-                    >
-                      <span
-                        className={s.lineStatusItem}
-                        data-tone={needsPrice ? "pending" : template.isActive ? "ready" : "muted"}
-                      >
-                        {getLineCommercialStatusLabel(template, needsPrice)}
-                      </span>
-                      <span
-                        className={s.lineStatusItem}
-                        data-tone={
-                          technicalStatus.tone === "validated"
-                            ? "ready"
-                            : technicalStatus.tone === "testing"
-                              ? "info"
-                              : "pending"
-                        }
-                      >
-                        {getLineFabricationStatusLabel(technicalStatus.tone)}
-                      </span>
-                    </div>
-
-                    <div
-                      className={`${s.technicalStatusRow} ${desktop.technicalStatusRow}`}
-                      data-tech-status={technicalStatus.tone}
-                    >
-                      <Link
-                        href={`/configuracion/empresa/lineas-precios/${template.id}/fabricacion`}
-                        className={`${s.technicalManageLink} ${desktop.technicalManageLinkSecondary}`}
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        {getLineFabricationActionLabel(technicalStatus.tone)}
-                        <LuChevronRight aria-hidden />
-                      </Link>
-                    </div>
-
-                    <div className={desktop.cardProfiles}>
-                      <LineProfileReferencesSection
-                        catalogMetadata={template.catalogMetadata}
-                        variant="desktop"
-                      />
-                    </div>
-
-                    <div className={s.cardDivider} />
-
-                    {template.categoria === "vidrio" && glassDescription ? (
-                      <span className={`${s.roundingMeta} ${desktop.detailMeta}`}>{glassDescription}</span>
-                    ) : template.vidrioPrincipalRecomendado ? (
-                      <span className={`${s.roundingMeta} ${desktop.detailMeta}`}>
-                        Vidrio habitual:{" "}
-                        {formatLineTemplateHabitualGlassLabel(template.vidrioPrincipalRecomendado) ??
-                          template.vidrioPrincipalRecomendado}
-                      </span>
-                    ) : null}
-
-                    <div className={`${s.cardBottom} ${desktop.cardBottom}`}>
-                      <span className={s.roundingMeta}>
-                        Redondeo: {buildRoundingLabel(template.redondeoPrecio, formatMoney)}
-                      </span>
-
-                      <button
-                        type="button"
-                        className={`${s.switch} ${template.isActive ? s.switchOn : ""}`}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void handleToggleActive(template);
-                        }}
-                        aria-pressed={template.isActive}
-                        aria-label={`${template.isActive ? "Desactivar" : "Activar"} ${
-                          template.nombre
-                        }`}
-                      >
-                        <span className={s.switchThumb} />
-                      </button>
-                    </div>
-                  </article>
-                );
-              })}
+                  return (
+                    <LineTemplateCatalogCard
+                      key={template.id}
+                      template={template}
+                      technicalStatus={technicalStatus}
+                      formatMoney={formatMoney}
+                      isMenuOpen={isMenuOpen}
+                      isSaving={isSaving}
+                      pendingAction={pendingAction}
+                      onToggleMenu={() =>
+                        setOpenMenuId((current) =>
+                          current === template.id ? null : template.id
+                        )
+                      }
+                      onCloseMenu={() => setOpenMenuId(null)}
+                      onDuplicate={() => void handleDuplicate(template.id)}
+                      onRequestDelete={() => {
+                        setOpenMenuId(null);
+                        setTemplatePendingDelete(template);
+                      }}
+                      onEditPrice={() => setPriceEditorTemplate(template)}
+                      onToggleActive={() => void handleToggleActive(template)}
+                    />
+                  );
+                })}
               </div>
             </section>
           ))}

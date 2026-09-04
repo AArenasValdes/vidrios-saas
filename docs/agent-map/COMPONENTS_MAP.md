@@ -1,13 +1,13 @@
 # Components Map - Ventora
 
 Estado: vigente
-Actualizado: 2026-08-14
+Actualizado: 2026-09-04
 Responsable: ingeniería
 
 Los archivos descritos aquí deben seguir siendo reutilizables y coherentes con `FEATURES_MAP.md`; nuevos componentes compartidos requieren entrada y `pnpm docs:check`.
 
 Estado: vigente
-Actualizado: 2026-08-14
+Actualizado: 2026-09-04
 Responsable: ingeniería
 
 ---
@@ -305,11 +305,11 @@ Responsable: ingeniería
 
 ### Componentes: FabricacionLineWorkspace / RecipeGuidedEditor / RecipeTestLab
 
-- **Archivos**: `src/features/fabricacion/components/fabricacion-line-workspace.tsx`, `recipe-guided-editor.tsx`, `recipe-test-lab.tsx`
-- **Proposito**: Administrar versiones por linea, editar identidad/perfiles/vidrios/accesorios con primitivas controladas y comparar esperado vs calculado con el motor deterministico.
+- **Archivos**: `src/features/fabricacion/components/fabricacion-line-workspace.tsx`, `recipe-guided-editor.tsx`, `recipe-glass-name-picker.tsx`, `recipe-test-lab.tsx`
+- **Proposito**: Administrar versiones por linea, editar identidad/perfiles/vidrios/accesorios con primitivas controladas y comparar esperado vs calculado con el motor deterministico. `RecipeGlassNamePicker` expone catálogo Ventora + vidrio propio. `recipe-guided-editor` (2026-09-04): hero limpio, una alerta antes de piezas, tira comercial auto-aplicada a todas las piezas.
 - **Usado en**: `/configuracion/empresa/lineas-precios/[lineTemplateId]/fabricacion`
-- **Dependencias**: `useFabricationRecipes`, schemas Zod, `calcularCubicacionYPauta()`.
-- **Riesgos**: No agregar textarea JSON, expresiones libres, `eval`, SQL, IA ni edicion directa de una version validada.
+- **Dependencias**: `useFabricationRecipes`, `evaluarRecetaListaParaProbar`, schemas Zod, `calcularCubicacionYPauta()`.
+- **Riesgos**: No agregar textarea JSON, expresiones libres, `eval`, SQL, IA ni edicion directa de una version validada. Vidrio base no debe bloquear **Probar** si perfiles obligatorios están listos.
 
 ### Componente interno: PautaCubicacionPanel
 

@@ -4,7 +4,7 @@ Estado: vigente
 Actualizado: 2026-08-31
 Responsable: ingeniería + agentes del repositorio
 
-Lee antes de editar. Ultima consolidacion: 2026-08-14.
+Lee antes de editar. Ultima consolidacion: 2026-09-04.
 
 ## Regla principal
 
@@ -72,7 +72,7 @@ docs/
 
 ## Estado actual
 
-Ultima actualizacion operativa: 2026-08-14
+Ultima actualizacion operativa: 2026-09-04
 
 - **Pasarela de pago**: Mercado Pago Chile **configurada en produccion** para suscripciones recurrentes CLP; el smoke final de checkout/webhook sigue siendo la prueba de salida. Runbook: `docs/billing/README.md`.
 - **Paso actual**: **Fase 4 — Cubicación V1 vendible multi-tipología**. Ver `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`.
@@ -179,6 +179,26 @@ Ultima actualizacion operativa: 2026-08-14
   - metadata comercial de items de cotizacion
   - pricing por linea con minimo y redondeo
   - override manual en edicion rapida
+
+### Ya resuelto en la pasada 2026-09-04
+
+- Catálogo comercial ampliado y auditado a **25 líneas** (`default-line-catalog.ts`); AM-35 solo comercial; WinHouse Andes monorriel incluido
+- Auditorías de catálogo:
+  - `auditoria-catalogo-lineas-ventora.service.ts` (estado fabricación por línea)
+  - `auditoria-integridad-catalogo-lineas.service.ts` (clasificación primaria mutuamente excluyente que suma 25)
+- Integridad de códigos en `ventora-profile-references.ts`:
+  - Serie 32/42 **corredera** sin códigos 32xx/42xx de proyectante
+  - Referencias SODAL/perfil como `visual_reference` / `catalog_reference`
+  - `ventoraPlantillaId: null` en Serie 32 y Serie 42 comerciales
+- Fix cotización Serie 32 corredera guardada como proyectante:
+  - `ventora:l32` y `ventora:l42` → `corredera_2h` en arquetipos
+  - `fabricacion-linea-cotizacion-context.service.ts` prioriza preset/catálogo sobre receta si tipología no coincide
+- Precio automático por m² al asignar línea en cotización/constructor (`hydrateComponentFormFromLineTemplate` en `workflow-ui.ts`)
+- Gate **Probar fabricación** (`fabricacion-receta-lista-para-probar.service.ts`):
+  - Bloquea solo perfiles/accesorios obligatorios incompletos
+  - Vidrio base = **advertencia**, no bloqueo (se define en receta opcional o al cotizar cada pieza)
+- Editor de receta: `RecipeGlassNamePicker` + catálogo Ventora completo y vidrio propio del taller
+- UX `recipe-guided-editor`: hero sin alertas apiladas; chips de tira comercial aplican a todas las piezas; botón "Aplicar a todas" solo con medida custom
 
 ### Ya resuelto en la pasada 2026-05-13
 

@@ -1,7 +1,7 @@
 # Features Map - Ventora
 
 Estado: vigente
-Actualizado: 2026-08-14
+Actualizado: 2026-09-04
 Responsable: ingeniería
 
 Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente donde editar UI, logica y persistencia.
@@ -362,7 +362,9 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
   - `src/features/cotizaciones/line-templates/services/cotizacion-line-templates.service.ts`
   - `src/features/cotizaciones/line-templates/repositories/cotizacion-line-templates.repository.ts`
   - `src/features/cotizaciones/line-templates/types/cotizacion-line-template.ts`
-  - `src/features/cotizaciones/line-templates/services/default-line-catalog.ts` (catálogo Ventora 23 líneas canónicas + `seedDefaultLineCatalog` idempotente por `catalog_key`)
+  - `src/features/cotizaciones/line-templates/services/default-line-catalog.ts` (catálogo Ventora **25 líneas** canónicas + `seedDefaultLineCatalog` idempotente por `catalog_key`)
+  - `src/features/cotizaciones/line-templates/services/auditoria-catalogo-lineas-ventora.service.ts` (auditoría fabricación por línea del catálogo base)
+  - `src/features/cotizaciones/line-templates/services/auditoria-integridad-catalogo-lineas.service.ts` (clasificación primaria de integridad de códigos; suma 25)
   - `src/features/cotizaciones/line-templates/constants/line-template-habitual-glass.ts` (opciones de vidrio habitual en editor de precio)
   - `src/features/cotizaciones/line-templates/services/seed-line-catalog-server.ts` (seed server-side con service_role)
   - `src/features/cotizaciones/line-templates/services/seed-line-catalog-client.ts` (fallback client-side con RLS)
@@ -378,7 +380,8 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
   - `src/features/cotizaciones/types/cotizacion-workflow.ts` (`tipoItem` field)
   - `src/features/cotizaciones/types/quote-pricing-mode.ts`
   - `src/features/cotizaciones/types/pricing-mode.ts`
-  - `src/features/cotizaciones/new-quote/workflow-ui.ts` (`shouldRequireProfileMaterialForComponent`, `MIRROR_GLASS_THICKNESS_OPTIONS`, grupo `Espejos` en `GLASS_OPTIONS`, `buildFreeValueItemFromForm`, `buildQuickEditDraft`, `isWorkflowItemComplete`, `applyQuickEditDraftStatesToItems`)
+  - `src/features/cotizaciones/new-quote/workflow-ui.ts` (`hydrateComponentFormFromLineTemplate`, precio m² al asignar línea, `listVentoraGlassCatalogOptions`; `shouldRequireProfileMaterialForComponent`, `MIRROR_GLASS_THICKNESS_OPTIONS`, grupo `Espejos` en `GLASS_OPTIONS`, `buildFreeValueItemFromForm`, `buildQuickEditDraft`, `isWorkflowItemComplete`, `applyQuickEditDraftStatesToItems`)
+  - `src/features/fabricacion/services/fabricacion-linea-cotizacion-context.service.ts` (contexto fabricación al asignar línea en cotización; fix corredera vs proyectante)
   - `src/features/cotizaciones/new-quote/__tests__/profile-material-regression.test.ts` (regresion catalogo completo: solo Espejo/Cubierta omiten perfil)
   - `src/features/cotizaciones/new-quote/solicitud-prefill.ts`
   - `src/utils/cotizacion-pdf.ts` (703 lineas)
@@ -428,6 +431,7 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
 - **Que hace**: Dominio puro y autocontenido para recetas de fabricacion y motor deterministico de cubicacion/pauta. Calcula perfiles, funciones, medidas, cantidades, vidrio, accesorios, advertencias y trazabilidad desde `receta + dimensiones + cantidad + variante/configuracion`. No cotiza precios.
 - **Fase 4 (2026-08-04)**: Catálogo privado vuelve a ser la única entrada principal para líneas, precios y recetas. Biblioteca técnica y Mis recetas quedan como vistas internas sin sidebar; las tarjetas muestran estado de fabricación y enlazan a la receta de su línea. Reutiliza `cotizacion_line_templates` + `fabrication_recipes`, muestra sugeridas/reconocidas sin inventar reglas, y deriva siempre a la receta versionada de la línea. El editor conserva controles estructurados sin JSON/fórmulas libres; el laboratorio muestra despiece, comparación esperado/calculado y una pauta FFD referencial de barras. Una receta validada queda bloqueada y solo cambia mediante nueva versión.
 - **Fase 4 estructural (2026-09-03)**: cada línea Ventora del catálogo comercial puede tener un borrador técnico visible en Fabricación con piezas, grupo, tipo de perfil, medida base, cantidad y largo comercial preset; códigos y descuentos quedan pendientes salvo L5000/L20/L25. La línea sigue cotizable aunque la receta esté en `draft`/`ejemplo_no_validado`. No se activa pauta automática ni `cuttingEnabled`.
+- **Fase 4 catálogo e integridad (2026-09-04)**: catálogo canónico **25 líneas**; auditorías de fabricación e integridad de códigos; Serie 32/42 corredera sin códigos proyectante; fix tipología al cotizar (`corredera_2h`); precio m² automático al asignar línea; gate **Probar** sin bloqueo por vidrio base; `RecipeGlassNamePicker` en editor de receta; UX hero/tira comercial simplificada en `recipe-guided-editor`.
 - **Fase 3 (2026-07-29)**: integra recetas validadas al guardado de `/cotizaciones/nueva` sin redisenar UI final. El flujo resuelve receta compatible por `line_template_id`, tipologia, hojas, modulos, herraje/variante cuando existan; si hay una receta `validated` unica calcula con `calcularCubicacionYPauta()` y guarda `cotizacion_items.fabricacion_snapshot`. Si no hay receta unica validada, la cotizacion comercial sigue funcionando sin bloquear.
 - **Resumen interno**: `/print/cotizaciones/[id]/fabricacion` lee primero `fabricacionSnapshot` formal; si no existe usa fallback legacy `[cub:]`. Desktop usa ancho de sistema, bloques colapsables por pieza (Cubicación / Despiece / Pauta) y reutiliza `DespieceReviewSurface` con el `itemId` persistente. Print/PDF expanden todas las piezas.
 - **Compatibilidad Fase 3**: `fabricationRecipePack`, espejo `fabricationRecipe` y snapshot `[cub:]` siguen como lectura/compatibilidad, pero el flujo nuevo no escribe snapshots tecnicos en `[cub:]`.
@@ -457,7 +461,10 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
   - `src/features/fabricacion/hooks/use-fabrication-recipes.ts`
   - `src/features/fabricacion/components/fabricacion-line-workspace.tsx`
   - `src/features/fabricacion/components/fabricacion-library.tsx`
-  - `src/features/fabricacion/components/recipe-guided-editor.tsx`
+  - `src/features/fabricacion/services/fabricacion-receta-lista-para-probar.service.ts` (gate **Probar fabricación**: bloquea perfiles/accesorios obligatorios; vidrio base = advertencia opcional)
+  - `src/features/fabricacion/services/catalogo-fabricacion-card-status.ts` (estado tarjeta fabricación en catálogo de líneas)
+  - `src/features/fabricacion/components/recipe-glass-name-picker.tsx` (selector vidrio catálogo Ventora + vidrio propio del taller)
+  - `src/features/fabricacion/components/recipe-guided-editor.tsx` (editor guiado; hero limpio, tira comercial auto-aplicada, una alerta antes de piezas)
   - `src/features/fabricacion/components/recipe-test-lab.tsx`
   - `src/features/fabricacion/components/recipe-text-assistant.tsx`
   - `src/features/fabricacion/repositories/fabrication-recipes.repository.ts`
