@@ -63,11 +63,11 @@ describe("fabricacion-receta-editor.service helpers", () => {
     expect(withCatalogGlass.vidrios[0]).toEqual(
       expect.objectContaining({
         nombre: "Incoloro monolítico 4mm",
-        requerido: true,
+        requerido: false,
       })
     );
-    expect(evaluarRecetaListaParaProbar(withCatalogGlass).bloqueos).not.toContain(
-      "Falta vidrio definido"
+    expect(evaluarRecetaListaParaProbar(withCatalogGlass).advertencias).not.toEqual(
+      expect.arrayContaining([expect.stringMatching(/Sin tipo de vidrio base/i)])
     );
 
     const withCustomGlass = patchRecipeGlassNombre(
@@ -76,7 +76,7 @@ describe("fabricacion-receta-editor.service helpers", () => {
       "DVH especial del proveedor"
     );
     expect(withCustomGlass.vidrios[0]?.nombre).toBe("DVH especial del proveedor");
-    expect(withCustomGlass.vidrios[0]?.requerido).toBe(true);
+    expect(withCustomGlass.vidrios[0]?.requerido).toBe(false);
   });
 
   it("expone el catálogo completo de vidrios Ventora para fabricación", () => {

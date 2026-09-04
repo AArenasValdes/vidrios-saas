@@ -423,7 +423,6 @@ export function RecipeGuidedEditor({
   const [editingAccessoryIds, setEditingAccessoryIds] = useState<Set<string>>(
     () => new Set()
   );
-  const [showGlassEditor, setShowGlassEditor] = useState(false);
   const [showCustomTira, setShowCustomTira] = useState(false);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [openReview, setOpenReview] = useState<
@@ -539,6 +538,17 @@ export function RecipeGuidedEditor({
     () => evaluarRecetaListaParaProbar(recipe),
     [recipe]
   );
+  const primaryGlassLabel = useMemo(() => {
+    const named = recipe.vidrios
+      .map((glass) => glass.nombre.trim())
+      .filter(
+        (name) =>
+          name &&
+          name.toLocaleLowerCase("es") !== "vidrio principal" &&
+          name.toLocaleLowerCase("es") !== "vidrio"
+      );
+    return named[0] ?? null;
+  }, [recipe.vidrios]);
   const tiraAplicadaEnPiezas =
     recipe.perfiles.length > 0 &&
     recipe.perfiles.every((profile) => profile.largoComercialMm === tiraEstandarMm);
@@ -1982,6 +1992,16 @@ export function RecipeGuidedEditor({
                   </ul>
                 </div>
               ) : null}
+              {listaParaProbarEvaluacion.advertencias.length > 0 ? (
+                <div className={s.fabGateAdvertencias} role="status">
+                  <strong>Opcional:</strong>
+                  <ul>
+                    {listaParaProbarEvaluacion.advertencias.map((advertencia) => (
+                      <li key={advertencia}>{advertencia}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </section>
@@ -2551,11 +2571,7 @@ export function RecipeGuidedEditor({
           <summary>
             <span>
               <strong>Vidrio</strong>
-              <em>
-                {recipe.vidrios.length === 0
-                  ? "Sin vidrio"
-                  : "1 por hoja"}
-              </em>
+              <em>{primaryGlassLabel ?? "Opcional al cotizar"}</em>
             </span>
             <b>
               Ver / editar
@@ -2564,73 +2580,38 @@ export function RecipeGuidedEditor({
           </summary>
         <section className={`${s.fabSheetGroup} ${s.fabReviewBody}`} aria-label="Vidrio">
           <p className={s.fabReviewLead}>
-            Revisa el vidrio base para esta línea.
+            Vidrio base opcional. Al cotizar cada pieza puedes cambiar el tipo sin
+            bloquear esta receta.
           </p>
-          {recipe.vidrios.length === 0 ? (
-            <p className={s.emptyInline}>Esta ventana no tiene vidrio preparado.</p>
-          ) : (
-            <div className={s.fabAccessoryTable}>
-              <div className={s.fabAccessoryCols} aria-hidden="true">
-                <span>Vidrio</span>
-                <span>Detalle</span>
-                <span />
-              </div>
-              <div
-                className={s.fabAccessoryRow}
-                data-editing={showGlassEditor ? "true" : "false"}
-              >
-                <div className={s.fabAccessoryRowHead}>
-                  <div className={s.fabPrepRowMain}>
-                    <span className={s.fabSheetFunction}>
-                      {Math.max(1, recipe.identidad.hojas)}{" "}
-                      {recipe.identidad.hojas === 1 ? "vidrio" : "vidrios"}
-                    </span>
-                  </div>
-                  <span className={s.fabAccessoryQty}>
-                    {recipe.vidrios
-                      .map((glass) => glass.nombre.trim())
-                      .filter(Boolean)
-                      .join(" · ") || "Sin tipo definido"}
-                  </span>
-                  {!readOnly ? (
-                    <button
-                      type="button"
-                      className={s.fabSheetEdit}
-                      aria-expanded={showGlassEditor}
-                      onClick={() => setShowGlassEditor((current) => !current)}
-                    >
-                      {showGlassEditor ? "Cerrar" : "Editar"}
-                    </button>
-                  ) : null}
-                </div>
-              </div>
+          {listaParaProbarEvaluacion.advertencias.length > 0 ? (
+            <div className={s.fabGateAdvertencias}>
+              <ul>
+                {listaParaProbarEvaluacion.advertencias.map((advertencia) => (
+                  <li key={advertencia}>{advertencia}</li>
+                ))}
+              </ul>
             </div>
-          )}
-          {recipe.vidrios.some(
-            (glass) =>
-              glass.reglaAncho.ajusteMm == null || glass.reglaAlto.ajusteMm == null
-          ) ? (
-            <p className={s.fabPrepHeroHint}>
-              Medida referencial. Puedes ajustar el descuento de vidrio si tu
-              taller usa otro.
-            </p>
           ) : null}
-          {showGlassEditor ? (
-            <div className={s.fabGlassEdit}>
+          {recipe.vidrios.length === 0 ? (
+            <div className={s.fabGlassPanel}>
+              <p className={s.emptyInline}>Esta ventana no tiene vidrio preparado.</p>
               {!readOnly ? (
                 <button type="button" className={s.secondaryButton} onClick={addGlass}>
-                  <Plus size={16} /> Agregar vidrio
+                  <Plus size={16} /> Agregar vidrio base
                 </button>
               ) : null}
+            </div>
+          ) : (
+            <div className={s.fabGlassPanel}>
               {recipe.vidrios.map((glass) => (
-                <div key={glass.id} className={s.recipeBuildInlineItem}>
+                <div key={glass.id} className={s.fabGlassEditorCard}>
                   <RecipeGlassNamePicker
                     value={glass.nombre}
                     onChange={(nombre) => updateGlassName(glass.id, nombre)}
                     readOnly={readOnly}
-                    ariaLabel={`Tipo de vidrio para ${glass.nombre || "vidrio"}`}
+                    ariaLabel="Tipo de vidrio base de la línea"
                   />
-                  {!readOnly ? (
+                  {!readOnly && recipe.vidrios.length > 1 ? (
                     <button
                       type="button"
                       className={s.dangerTextButton}
@@ -2642,7 +2623,7 @@ export function RecipeGuidedEditor({
                 </div>
               ))}
             </div>
-          ) : null}
+          )}
         </section>
         </details>
 

@@ -136,7 +136,7 @@ export function patchFabricacionGlassNombre(
   return {
     ...glass,
     nombre: trimmed,
-    requerido: true,
+    requerido: false,
     datosPendientes: (glass.datosPendientes ?? []).filter(
       (detail) =>
         !/composici[oó]n del vidrio/i.test(detail) &&

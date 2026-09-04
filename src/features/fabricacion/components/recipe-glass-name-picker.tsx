@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 import { listVentoraGlassCatalogOptions } from "@/features/cotizaciones/new-quote/workflow-ui";
 import { GlassOptionPicker } from "@/features/cotizaciones/visual-composer/components/glass-option-picker";
@@ -22,9 +23,11 @@ export function RecipeGlassNamePicker({
 }: RecipeGlassNamePickerProps) {
   const catalogOptions = useMemo(() => listVentoraGlassCatalogOptions(), []);
   const [customDraft, setCustomDraft] = useState("");
+  const [showCustom, setShowCustom] = useState(false);
+  const trimmedValue = value.trim();
 
   if (readOnly) {
-    return <p className={styles.readOnlyValue}>{value.trim() || "Sin tipo definido"}</p>;
+    return <p className={styles.readOnlyValue}>{trimmedValue || "Sin tipo definido"}</p>;
   }
 
   const applyCustomGlass = () => {
@@ -32,32 +35,53 @@ export function RecipeGlassNamePicker({
     if (!trimmed) return;
     onChange(trimmed);
     setCustomDraft("");
+    setShowCustom(false);
   };
 
   return (
     <div className={styles.root}>
-      <GlassOptionPicker
-        options={catalogOptions}
-        value={value}
-        onChange={onChange}
-        ariaLabel={ariaLabel}
-        placeholder="Elegir del catálogo Ventora"
-      />
+      <div className={styles.primaryBlock}>
+        <div className={styles.blockHeader}>
+          <span className={styles.blockEyebrow}>Catálogo Ventora</span>
+          {trimmedValue ? (
+            <span className={styles.blockStatus}>Seleccionado</span>
+          ) : (
+            <span className={styles.blockStatusMuted}>Opcional</span>
+          )}
+        </div>
+        <GlassOptionPicker
+          options={catalogOptions}
+          value={value}
+          onChange={onChange}
+          ariaLabel={ariaLabel}
+          placeholder="Elegir vidrio habitual"
+        />
+      </div>
 
-      <label className={styles.customField}>
-        <span>Otro vidrio del taller</span>
-        <div className={styles.customRow}>
-          <input
-            value={customDraft}
-            onChange={(event) => setCustomDraft(event.target.value)}
-            placeholder="Ej: DVH Low-E 6+12+6 especial"
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                applyCustomGlass();
-              }
-            }}
-          />
+      <details
+        className={styles.customDetails}
+        open={showCustom}
+        onToggle={(event) => setShowCustom(event.currentTarget.open)}
+      >
+        <summary className={styles.customSummary}>
+          <span>¿No está en el catálogo?</span>
+          <ChevronDown size={15} aria-hidden="true" />
+        </summary>
+        <div className={styles.customBody}>
+          <label className={styles.customField}>
+            <span>Nombre del vidrio en tu taller</span>
+            <input
+              value={customDraft}
+              onChange={(event) => setCustomDraft(event.target.value)}
+              placeholder="Ej: DVH Low-E 6+12+6 especial"
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  applyCustomGlass();
+                }
+              }}
+            />
+          </label>
           <button
             type="button"
             className={styles.customApply}
@@ -67,10 +91,7 @@ export function RecipeGlassNamePicker({
             Usar este vidrio
           </button>
         </div>
-        <small className={styles.customHint}>
-          Puedes elegir del catálogo Ventora o escribir uno que no esté listado.
-        </small>
-      </label>
+      </details>
     </div>
   );
 }

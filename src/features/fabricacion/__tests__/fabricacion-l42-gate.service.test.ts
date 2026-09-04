@@ -33,7 +33,7 @@ describe("L42 proyectante gate vs UI listo", () => {
     return recipe;
   }
 
-  it("con piezas en Listo pero sin tipo de vidrio, sigue bloqueado", () => {
+  it("con piezas en Listo pero sin tipo de vidrio, permite probar con advertencia", () => {
     const recipe = buildL42LikeScreenshot();
     const listos = recipe.perfiles.filter((profile) => {
       const resumen = describePerfilTallerResumen(profile);
@@ -41,12 +41,16 @@ describe("L42 proyectante gate vs UI listo", () => {
     });
 
     expect(listos).toHaveLength(5);
-    expect(evaluarRecetaListaParaProbar(recipe).bloqueos).toContain(
-      "Falta vidrio definido"
+
+    const evaluacion = evaluarRecetaListaParaProbar(recipe);
+    expect(evaluacion.listaParaProbar).toBe(true);
+    expect(evaluacion.bloqueos).toHaveLength(0);
+    expect(evaluacion.advertencias).toEqual(
+      expect.arrayContaining([expect.stringMatching(/Sin tipo de vidrio base/i)])
     );
   });
 
-  it("con piezas Listo y vidrio elegido del catálogo, habilita probar", () => {
+  it("con piezas Listo y vidrio elegido del catálogo, habilita probar sin bloqueos", () => {
     const recipe = buildL42LikeScreenshot();
     const glass = recipe.vidrios[0]!;
     const ready = patchRecipeGlassNombre(
@@ -55,7 +59,8 @@ describe("L42 proyectante gate vs UI listo", () => {
       "Incoloro monolítico 4mm"
     );
 
-    expect(evaluarRecetaListaParaProbar(ready).listaParaProbar).toBe(true);
-    expect(evaluarRecetaListaParaProbar(ready).bloqueos).toHaveLength(0);
+    const evaluacion = evaluarRecetaListaParaProbar(ready);
+    expect(evaluacion.listaParaProbar).toBe(true);
+    expect(evaluacion.bloqueos).toHaveLength(0);
   });
 });

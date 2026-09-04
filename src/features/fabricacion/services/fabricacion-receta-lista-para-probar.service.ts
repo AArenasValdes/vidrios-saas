@@ -12,6 +12,7 @@ import type {
 export type RecetaListaParaProbarEvaluacion = {
   listaParaProbar: boolean;
   bloqueos: string[];
+  advertencias: string[];
 };
 
 function profileLabel(
@@ -26,6 +27,11 @@ function profileLabel(
     profile.funcion?.trim() ||
     "perfil"
   );
+}
+
+function isPlaceholderGlassName(nombre: string | null | undefined): boolean {
+  const normalized = nombre?.trim().toLocaleLowerCase("es") ?? "";
+  return !normalized || normalized === "vidrio principal" || normalized === "vidrio";
 }
 
 function glassMeasurePending(glass: FabricacionVidrio): boolean {
@@ -50,6 +56,30 @@ function glassMeasurePending(glass: FabricacionVidrio): boolean {
   );
 }
 
+function collectGlassAdvisories(receta: FabricacionReceta): string[] {
+  const advertencias: string[] = [];
+  const configuredGlass = receta.vidrios.filter(
+    (glass) => !isPlaceholderGlassName(glass.nombre)
+  );
+
+  if (configuredGlass.length === 0) {
+    advertencias.push(
+      "Sin tipo de vidrio base en la línea. Es opcional: puedes definirlo acá o al cotizar cada pieza."
+    );
+    return advertencias;
+  }
+
+  configuredGlass.forEach((glass) => {
+    if (glassMeasurePending(glass)) {
+      advertencias.push(
+        `Descuento de vidrio pendiente (${glass.nombre}). La pauta usará medidas preliminares hasta confirmarlo.`
+      );
+    }
+  });
+
+  return advertencias;
+}
+
 function evaluateRequiredAccessory(accessory: FabricacionAccesorio, bloqueos: string[]) {
   if (!accessory.nombre?.trim()) {
     bloqueos.push("Accesorio requerido sin nombre");
@@ -64,14 +94,15 @@ function evaluateRequiredAccessory(accessory: FabricacionAccesorio, bloqueos: st
 }
 
 /**
- * Criterio estricto para habilitar "Probar fabricación" / pauta confiable.
- * No inventa datos: exige código, componente, fórmula, descuento, cantidad,
- * largo comercial, accesorios requeridos y vidrio requerido completos.
+ * Criterio para habilitar "Probar fabricación".
+ * Bloquea solo perfiles/accesorios requeridos incompletos.
+ * El vidrio base queda como advertencia: en cotización cada pieza puede definir su tipo.
  */
 export function evaluarRecetaListaParaProbar(
   receta: FabricacionReceta
 ): RecetaListaParaProbarEvaluacion {
   const bloqueos: string[] = [];
+  const advertencias = collectGlassAdvisories(receta);
 
   if (receta.perfiles.length === 0) {
     bloqueos.push("Sin perfiles definidos");
@@ -102,23 +133,6 @@ export function evaluarRecetaListaParaProbar(
       }
     });
 
-  const requiredGlass = receta.vidrios.filter((glass) => glass.requerido);
-  if (requiredGlass.length === 0) {
-    bloqueos.push("Falta vidrio definido");
-  } else {
-    requiredGlass.forEach((glass) => {
-      if (!glass.nombre?.trim()) {
-        bloqueos.push("Vidrio requerido sin nombre");
-      }
-      if (glassMeasurePending(glass)) {
-        bloqueos.push(`Vidrio requerido sin fórmula completa: ${glass.nombre || "vidrio"}`);
-      }
-      if (!glass.reglaCantidad?.cantidad || glass.reglaCantidad.cantidad <= 0) {
-        bloqueos.push(`Vidrio requerido sin cantidad: ${glass.nombre || "vidrio"}`);
-      }
-    });
-  }
-
   receta.accesorios
     .filter((accessory) => accessory.requerido)
     .forEach((accessory) => evaluateRequiredAccessory(accessory, bloqueos));
@@ -126,5 +140,6 @@ export function evaluarRecetaListaParaProbar(
   return {
     listaParaProbar: bloqueos.length === 0,
     bloqueos,
+    advertencias,
   };
 }
