@@ -2065,7 +2065,13 @@ function NuevaCotizacionPageContent() {
           (candidate) => String(candidate.id) === patch.lineTemplateId
         );
         form = template
-          ? applyLineTemplateToComponentForm(form, template)
+          ? applyLineTemplateToComponentForm(
+              {
+                ...form,
+                precioAjustadoManual: markPriceManual ? form.precioAjustadoManual : false,
+              },
+              template
+            )
           : {
               ...form,
               lineTemplateId: "",
@@ -2112,6 +2118,16 @@ function NuevaCotizacionPageContent() {
       ) {
         form.cubicationSnapshot = null;
         form.fabricacionSnapshot = null;
+      }
+
+      if (
+        !form.precioAjustadoManual &&
+        (patch.lineTemplateId !== undefined ||
+          patch.ancho !== undefined ||
+          patch.alto !== undefined ||
+          patch.cantidad !== undefined)
+      ) {
+        form = syncTemplatePricingInComponentForm(form, { forceSuggestedPrice: true });
       }
 
       const nextItem = buildItemFromForm(form, current.items, itemId, {

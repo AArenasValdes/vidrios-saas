@@ -1588,7 +1588,8 @@ export function QuoteConstructorWorkspace({
                             })
                           }
                         />
-                        {activeItem.precioAjustadoManual && activeForm.lineTemplateId ? (
+                        {activeForm.lineTemplateId &&
+                        (activeItem.precioAjustadoManual || activeItem.precioUnitario <= 0) ? (
                           <button
                             type="button"
                             className={s.secondaryButton}

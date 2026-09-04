@@ -1591,11 +1591,56 @@ export function isWorkflowItemEffectivelyComplete(
     : isWorkflowItemComplete(item, quotePricingMode);
 }
 
+export type LineTemplatePricingSource = Pick<
+  CotizacionLineTemplate,
+  | "id"
+  | "nombre"
+  | "categoria"
+  | "material"
+  | "catalogMetadata"
+  | "vidrioPrincipalRecomendado"
+  | "precioM2Sugerido"
+  | "minimoCobrable"
+  | "redondeoPrecio"
+>;
+
 export type BuildItemFromFormOptions = {
   quotePricingMode?: QuotePricingMode;
   lineTemplateCatalogMetadata?: CotizacionLineTemplateCatalogMetadata | null;
-  lineTemplates?: Array<Pick<CotizacionLineTemplate, "id" | "catalogMetadata">>;
+  lineTemplates?: LineTemplatePricingSource[];
 };
+
+export function hydrateComponentFormFromLineTemplate(
+  form: ComponentFormState,
+  options?: Pick<BuildItemFromFormOptions, "lineTemplates">
+): ComponentFormState {
+  const lineTemplateId = form.lineTemplateId?.trim();
+  if (!lineTemplateId || !options?.lineTemplates?.length || form.precioAjustadoManual) {
+    return form;
+  }
+
+  const template = options.lineTemplates.find(
+    (candidate) => String(candidate.id) === lineTemplateId
+  );
+  if (!template) {
+    return form;
+  }
+
+  const precioPorM2 = form.precioPorM2?.trim() ?? "";
+  const referencia = form.referencia?.trim() ?? "";
+  const templatePrice = Math.round(template.precioM2Sugerido);
+  const needsHydration =
+    !precioPorM2 ||
+    !referencia ||
+    Number(precioPorM2) !== templatePrice ||
+    referencia !== template.nombre;
+
+  if (!needsHydration) {
+    return form;
+  }
+
+  return applyLineTemplateToComponentForm(form, template);
+}
 
 function resolveLineTemplateCatalogMetadataForForm(
   form: Pick<ComponentFormState, "lineTemplateId">,
@@ -2342,10 +2387,12 @@ export function buildItemFromForm(
 ) {
   const pricingMode = normalizePricingMode(form.pricingMode);
   const quotePricingMode = normalizeQuotePricingMode(options?.quotePricingMode);
-  const syncedForm = syncTemplatePricingInComponentForm(form);
+  const hydratedForm = hydrateComponentFormFromLineTemplate(form, options);
+  const syncedForm = syncTemplatePricingInComponentForm(hydratedForm);
   const linePricingSummary = buildComponentFormLinePricingSummary(syncedForm);
   const hasTemplateReference =
-    typeof syncedForm.referencia === "string" && syncedForm.referencia.trim().length > 0;
+    Boolean(syncedForm.lineTemplateId?.trim()) ||
+    (typeof syncedForm.referencia === "string" && syncedForm.referencia.trim().length > 0);
   const hasTemplatePrice =
     typeof syncedForm.precioPorM2 === "string" && syncedForm.precioPorM2.trim().length > 0;
   const shouldUseLinePricingUnitPrice =

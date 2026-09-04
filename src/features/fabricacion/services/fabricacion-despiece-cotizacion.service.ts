@@ -142,45 +142,6 @@ export function resolveFabricacionDespieceForQuoteItem(input: {
     allowPreliminaryNonValidated: true,
   });
 
-  // #region agent log
-  fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "69b9fd" },
-    body: JSON.stringify({
-      sessionId: "69b9fd",
-      runId: "pre-fix",
-      hypothesisId: "A-C-E",
-      location: "fabricacion-despiece-cotizacion.service.ts:resolve",
-      message: "despiece resolution",
-      data: {
-        itemId: input.item.id,
-        itemCodigo: input.item.codigo,
-        lineTemplateId,
-        tipologia,
-        hojas,
-        hojasBase: presentation.hojasBase,
-        fabricacionHojas: presentation.fabricacionHojas,
-        sistema: presentation.sistema,
-        hasGuidedVisual: Boolean(presentation.guidedVisualConfig),
-        guidedLeafCount: presentation.guidedVisualConfig
-          ? presentation.guidedVisualConfig.root
-            ? "present"
-            : "missing-root"
-          : null,
-        recipesCount: input.recipes.length,
-        recipesForLine: input.recipes.filter((r) => r.lineTemplateId === lineTemplateId).length,
-        resolutionEstado: resolution.estado,
-        descartadas: resolution.descartadas.slice(0, 5).map((d) => ({
-          motivo: d.motivo,
-          nombre: d.nombre,
-        })),
-        candidatas: resolution.candidatas.length,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
-
   if (resolution.estado === "multiples_recetas") {
     return {
       estado: "multiples_recetas",

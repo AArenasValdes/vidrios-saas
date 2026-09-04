@@ -4,6 +4,7 @@ import {
   buildFreeValueItemFromForm,
   buildItemFromForm,
   buildNextComponentCode,
+  hydrateComponentFormFromLineTemplate,
   buildUpcomingComponentCodes,
   buildSuggestedComponentForm,
   createEmptyFreeValueItemForm,
@@ -145,6 +146,56 @@ describe("workflow-ui paso 2", () => {
     expect(item.precioTotal).toBe(78000);
     expect(item.precioAjustadoManual).toBe(false);
     expect(item.origenPrecio).toBe("plantilla");
+  });
+
+  it("debe calcular precio automático en constructor cuando solo hay lineTemplateId", () => {
+    const template = {
+      id: 332,
+      nombre: "L32 - Proyectante",
+      categoria: "aluminio" as const,
+      material: "Aluminio" as const,
+      catalogMetadata: {},
+      vidrioPrincipalRecomendado: "4mm",
+      precioM2Sugerido: 100000,
+      minimoCobrable: 35000,
+      redondeoPrecio: 0,
+    };
+    const item = buildItemFromForm(
+      {
+        ...createLinePricingForm({
+          referencia: "",
+          lineTemplateId: "332",
+          precioPorM2: "",
+          minimoCobrable: "",
+          redondeoPrecio: "0",
+          costoProveedorUnitario: "0",
+          sistema: "Personalizado",
+          configuracion: "Personalizado",
+          sheetScheme: "Personalizado",
+          isCustomScheme: true,
+        }),
+      },
+      [],
+      "item-constructor-1",
+      {
+        quotePricingMode: "por_item",
+        lineTemplates: [template],
+      }
+    );
+
+    expect(item.precioUnitario).toBe(120000);
+    expect(item.origenPrecio).toBe("plantilla");
+    expect(item.precioAjustadoManual).toBe(false);
+    expect(hydrateComponentFormFromLineTemplate(
+      {
+        ...createLinePricingForm({
+          referencia: "",
+          lineTemplateId: "332",
+          precioPorM2: "",
+        }),
+      },
+      { lineTemplates: [template] }
+    ).precioPorM2).toBe("100000");
   });
 
   it("debe regenerar el nombre comercial cuando cambia el tipo y queda un nombre viejo", () => {
