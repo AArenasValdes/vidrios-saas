@@ -4,6 +4,8 @@ import {
   crearRecetaReferenciaL5000Corredera2H,
   type PlantillaVentoraCorrederaId,
 } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
+import { crearRecetaPlantillaVentoraProyectante } from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
+import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import {
   anyQuoteItemCanOpenDespiecePreview,
   buildQuoteDespiecePreviewEligibility,
@@ -431,5 +433,41 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
         organizationId: 1,
       })
     ).toBe(false);
+  });
+
+  it("CASO 10: L32 proyectante en constructor (hojasBase=2) no debe bloquear receta de 1 hoja", () => {
+    const definition = crearRecetaPlantillaVentoraProyectante("L32");
+    const recipe = recipeRecord({
+      id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      lineTemplateId: 332,
+      status: "validated",
+      definition,
+      typology: "proyectante",
+      leavesCount: 1,
+    });
+    const guidedVisualConfig = createQuoteConstructorPresetConfig("proyectante");
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "332", withLine: true }),
+      nombre: "Ventana proyectante",
+      descripcion: "",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "332",
+        sistema: "Personalizado",
+        configuracion: "Personalizado",
+        sheetScheme: "Personalizado",
+        isCustomScheme: true,
+        hojasBase: 2,
+        guidedVisualConfig,
+      }),
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [recipe],
+      organizationId: 1,
+    });
+
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.formal?.result.perfiles.length).toBeGreaterThan(0);
   });
 });

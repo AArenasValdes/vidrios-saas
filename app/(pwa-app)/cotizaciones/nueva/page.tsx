@@ -115,6 +115,7 @@ import {
   type QuoteConstructorItemPatch,
   type QuoteConstructorPresetId,
 } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
+import { countLeafModules } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 
 const NuevaCotizacionDesktop = dynamic(
   () => import("./_components/desktop/nueva-cotizacion-desktop").then((m) => ({
@@ -2017,6 +2018,7 @@ function NuevaCotizacionPageContent() {
         organizationProfile?.margenDefecto
       );
       const config = createQuoteConstructorPresetConfig(preset.id);
+      const constructorLeafCount = countLeafModules(config.root);
       let form: ComponentFormState = {
         ...base,
         codigo: buildNextComponentCode(current.items, preset.componentType),
@@ -2025,6 +2027,7 @@ function NuevaCotizacionPageContent() {
         ancho: "1200",
         alto: "1000",
         cantidad: "1",
+        hojasBase: constructorLeafCount === 1 ? 1 : constructorLeafCount === 2 ? 2 : null,
         sistema: "Personalizado",
         configuracion: "Personalizado",
         sheetScheme: "Personalizado",

@@ -41,6 +41,7 @@ import {
 import { buildQuoteStudioFinancialSummary } from "@/features/cotizaciones/services/quote-studio-financial.service";
 import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
+import { resolveFabricacionHojasForRecipeMatch } from "@/features/fabricacion/services/fabricacion-hojas-resolver.service";
 import { resolverRecetaFabricacionCompatible } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
@@ -430,13 +431,11 @@ function hasSupabaseBrowserEnv() {
   );
 }
 
-function resolveLeavesCount(item: CotizacionWorkflowItem, fallback: number | null) {
-  if (fallback && fallback > 0) return fallback;
-  const source = `${item.tipo} ${item.nombre} ${item.descripcion}`.toLowerCase();
-  const match = source.match(/(\d+)\s*(?:hoja|hojas|h)/);
-  if (!match) return null;
-  const parsed = Number(match[1]);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+function resolveLeavesCount(
+  item: CotizacionWorkflowItem,
+  presentation: ReturnType<typeof decodeCotizacionItemPresentationMeta>
+) {
+  return resolveFabricacionHojasForRecipeMatch(item, presentation);
 }
 
 function buildFabricacionSnapshotForItem(input: {
@@ -464,7 +463,7 @@ function buildFabricacionSnapshotForItem(input: {
     tipologia,
     hojas:
       presentation.fabricacionHojas ??
-      resolveLeavesCount(input.item, presentation.hojasBase),
+      resolveLeavesCount(input.item, presentation),
     modulos: presentation.fabricacionModulos,
     apertura: (() => {
       for (const candidate of [

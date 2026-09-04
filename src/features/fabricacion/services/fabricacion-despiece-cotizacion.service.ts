@@ -5,6 +5,7 @@
  */
 
 import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
+import { resolveFabricacionHojasForRecipeMatch } from "@/features/fabricacion/services/fabricacion-hojas-resolver.service";
 import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import { resolverRecetaFabricacionCompatible } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
 import { tieneLargosComercialesPendientes } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
@@ -43,16 +44,9 @@ function normalizeLineTemplateId(value: string | number | null | undefined): num
 
 function resolveLeavesCount(
   item: CotizacionWorkflowItem,
-  presentationHojas: number | null,
-  fallback: number | null
+  presentation: ReturnType<typeof decodeCotizacionItemPresentationMeta>
 ) {
-  if (presentationHojas && presentationHojas > 0) return presentationHojas;
-  if (fallback && fallback > 0) return fallback;
-  const source = `${item.tipo} ${item.nombre} ${item.descripcion}`.toLowerCase();
-  const match = source.match(/(\d+)\s*(?:hoja|hojas|h)/);
-  if (!match) return null;
-  const parsed = Number(match[1]);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  return resolveFabricacionHojasForRecipeMatch(item, presentation);
 }
 
 /** El Constructor guarda sistema/config como "Personalizado"; no es apertura de receta. */
@@ -133,11 +127,7 @@ export function resolveFabricacionDespieceForQuoteItem(input: {
     presentation.fabricacionApertura,
     presentation.sistema
   );
-  const hojas = resolveLeavesCount(
-    input.item,
-    presentation.fabricacionHojas,
-    presentation.hojasBase
-  );
+  const hojas = resolveLeavesCount(input.item, presentation);
   const resolution = resolverRecetaFabricacionCompatible(input.recipes, {
     organizationId: input.organizationId,
     lineTemplateId,
@@ -152,6 +142,44 @@ export function resolveFabricacionDespieceForQuoteItem(input: {
     allowPreliminaryNonValidated: true,
   });
 
+  // #region agent log
+  fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "69b9fd" },
+    body: JSON.stringify({
+      sessionId: "69b9fd",
+      runId: "pre-fix",
+      hypothesisId: "A-C-E",
+      location: "fabricacion-despiece-cotizacion.service.ts:resolve",
+      message: "despiece resolution",
+      data: {
+        itemId: input.item.id,
+        itemCodigo: input.item.codigo,
+        lineTemplateId,
+        tipologia,
+        hojas,
+        hojasBase: presentation.hojasBase,
+        fabricacionHojas: presentation.fabricacionHojas,
+        sistema: presentation.sistema,
+        hasGuidedVisual: Boolean(presentation.guidedVisualConfig),
+        guidedLeafCount: presentation.guidedVisualConfig
+          ? presentation.guidedVisualConfig.root
+            ? "present"
+            : "missing-root"
+          : null,
+        recipesCount: input.recipes.length,
+        recipesForLine: input.recipes.filter((r) => r.lineTemplateId === lineTemplateId).length,
+        resolutionEstado: resolution.estado,
+        descartadas: resolution.descartadas.slice(0, 5).map((d) => ({
+          motivo: d.motivo,
+          nombre: d.nombre,
+        })),
+        candidatas: resolution.candidatas.length,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
 
   if (resolution.estado === "multiples_recetas") {
     return {
