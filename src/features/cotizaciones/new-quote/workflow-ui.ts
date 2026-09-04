@@ -10,6 +10,12 @@ import {
 } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import { calculateLineTemplatePricing } from "@/features/cotizaciones/services/cotizacion-line-pricing.service";
 import {
+  mergeFabricacionLineaContextIntoForm,
+  resolveFabricacionContextForLineAssignment,
+  type FabricacionLineaCotizacionContext,
+} from "@/features/fabricacion/services/fabricacion-linea-cotizacion-context.service";
+import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
+import {
   getLineTemplateGlassMetadata,
   type CotizacionLineTemplate,
   type CotizacionLineTemplateCatalogMetadata,
@@ -1597,6 +1603,7 @@ export type LineTemplatePricingSource = Pick<
   | "nombre"
   | "categoria"
   | "material"
+  | "catalogKey"
   | "catalogMetadata"
   | "vidrioPrincipalRecomendado"
   | "precioM2Sugerido"
@@ -1607,7 +1614,7 @@ export type LineTemplatePricingSource = Pick<
 /** Lookup parcial (catálogo) o completo (precio/m²) para buildItemFromForm. */
 export type LineTemplateFormLookup = Pick<
   CotizacionLineTemplate,
-  "id" | "catalogMetadata"
+  "id" | "catalogKey" | "catalogMetadata"
 > &
   Partial<Omit<LineTemplatePricingSource, "id" | "catalogMetadata">>;
 
@@ -1633,38 +1640,60 @@ export type BuildItemFromFormOptions = {
   quotePricingMode?: QuotePricingMode;
   lineTemplateCatalogMetadata?: CotizacionLineTemplateCatalogMetadata | null;
   lineTemplates?: LineTemplateFormLookup[];
+  fabricationRecipes?: FabricationRecipeRecord[];
+  organizationId?: number | null;
 };
 
 export function hydrateComponentFormFromLineTemplate(
   form: ComponentFormState,
-  options?: Pick<BuildItemFromFormOptions, "lineTemplates">
+  options?: Pick<
+    BuildItemFromFormOptions,
+    "lineTemplates" | "fabricationRecipes" | "organizationId"
+  >
 ): ComponentFormState {
   const lineTemplateId = form.lineTemplateId?.trim();
-  if (!lineTemplateId || !options?.lineTemplates?.length || form.precioAjustadoManual) {
+  if (!lineTemplateId || !options?.lineTemplates?.length) {
     return form;
   }
 
   const template = options.lineTemplates.find(
     (candidate) => String(candidate.id) === lineTemplateId
   );
-  if (!template || !isLineTemplatePricingSource(template)) {
+  if (!template) {
     return form;
   }
 
-  const precioPorM2 = form.precioPorM2?.trim() ?? "";
-  const referencia = form.referencia?.trim() ?? "";
+  const fabricationContext = resolveFabricacionContextForLineAssignment({
+    template,
+    recipes: options?.fabricationRecipes ?? [],
+    organizationId: options?.organizationId ?? null,
+    form,
+  });
+
+  const withFabricacion = mergeFabricacionLineaContextIntoForm(form, fabricationContext);
+
+  if (form.precioAjustadoManual || !isLineTemplatePricingSource(template)) {
+    return withFabricacion;
+  }
+
+  const precioPorM2 = withFabricacion.precioPorM2?.trim() ?? "";
+  const referencia = withFabricacion.referencia?.trim() ?? "";
   const templatePrice = Math.round(template.precioM2Sugerido);
-  const needsHydration =
+  const needsPricingHydration =
     !precioPorM2 ||
     !referencia ||
     Number(precioPorM2) !== templatePrice ||
     referencia !== template.nombre;
 
-  if (!needsHydration) {
-    return form;
+  if (!needsPricingHydration) {
+    return withFabricacion;
   }
 
-  return applyLineTemplateToComponentForm(form, template);
+  return applyLineTemplateToComponentForm(withFabricacion, template, {
+    fabricationContext,
+    fabricationRecipes: options?.fabricationRecipes,
+    organizationId: options?.organizationId,
+  });
 }
 
 function resolveLineTemplateCatalogMetadataForForm(
@@ -1973,18 +2002,33 @@ export function applyLineTemplateToComponentForm(
     | "nombre"
     | "categoria"
     | "material"
+    | "catalogKey"
     | "catalogMetadata"
     | "vidrioPrincipalRecomendado"
     | "precioM2Sugerido"
     | "minimoCobrable"
     | "redondeoPrecio"
-  >
+  >,
+  options?: {
+    fabricationContext?: FabricacionLineaCotizacionContext | null;
+    fabricationRecipes?: FabricationRecipeRecord[];
+    organizationId?: number | null;
+  }
 ) {
   const preserveManualPrice = form.precioAjustadoManual;
   const glassMetadata = getLineTemplateGlassMetadata(template.catalogMetadata);
+  const fabricationContext =
+    options?.fabricationContext ??
+    resolveFabricacionContextForLineAssignment({
+      template,
+      recipes: options?.fabricationRecipes ?? [],
+      organizationId: options?.organizationId ?? null,
+      form,
+    });
 
   return syncTemplatePricingInComponentForm(
-    {
+    mergeFabricacionLineaContextIntoForm(
+      {
       ...form,
       material: template.material,
       catalogCategoria: template.categoria === "vidrio" ? "vidrio" : template.categoria === "pvc" ? "pvc" : "aluminio",
@@ -2004,11 +2048,10 @@ export function applyLineTemplateToComponentForm(
       precioAjustadoManual: preserveManualPrice,
       origenPrecio: preserveManualPrice ? "manual" : "plantilla",
       cubicationSnapshot: null,
-      fabricationRecipeId: "",
-      fabricacionHerraje: "",
-      fabricacionVariante: "",
       fabricacionSnapshot: null,
     },
+      fabricationContext
+    ),
     { forceSuggestedPrice: !preserveManualPrice }
   );
 }
@@ -2558,6 +2601,32 @@ export function buildItemFromForm(
       syncedForm.fabricacionSnapshot.recipeId === syncedForm.fabricationRecipeId)
       ? syncedForm.fabricacionSnapshot
       : null;
+
+  // #region agent log
+  if (syncedForm.lineTemplateId?.trim()) {
+    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "69b9fd" },
+      body: JSON.stringify({
+        sessionId: "69b9fd",
+        runId: "pre-fix",
+        hypothesisId: "C",
+        location: "workflow-ui.ts:buildItemFromForm",
+        message: "item fabrication fields after line assignment",
+        data: {
+          lineTemplateId: syncedForm.lineTemplateId,
+          referencia: syncedForm.referencia,
+          tipo: syncedForm.tipo,
+          nombre: syncedForm.nombre,
+          fabricacionTipologia: syncedForm.fabricacionTipologia,
+          fabricacionHojas: syncedForm.fabricacionHojas,
+          fabricationRecipeId: syncedForm.fabricationRecipeId,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+  }
+  // #endregion
 
   return {
     ...calculateComponentItem({

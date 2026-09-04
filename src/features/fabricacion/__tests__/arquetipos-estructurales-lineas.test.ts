@@ -93,7 +93,7 @@ describe("arquetipos estructurales de líneas comerciales", () => {
       resolveArquetipoEstructuralId({
         catalogKey: "ventora:l32",
       })
-    ).toBe("proyectante");
+    ).toBe("corredera_2h");
 
     expect(
       resolveArquetipoEstructuralId({

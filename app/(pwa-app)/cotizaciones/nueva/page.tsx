@@ -129,6 +129,7 @@ const NuevaCotizacionMobile = dynamic(
   })),
 );
 import { useFlujoNuevaCotizacion } from "./_hooks/use-flujo-nueva-cotizacion";
+import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import {
   buildFreeTotalNotebookDraftFromWorkflow,
   buildStructuredAlcanceDetalleItem,
@@ -191,6 +192,10 @@ function NuevaCotizacionPageContent() {
     loadTemplates: reloadLineTemplates,
     isSaving: isSavingQuickPriceTemplate,
   } = useCotizacionLineTemplates({ activeOnly: true, enabled: step !== 1 });
+  const {
+    recipes: fabricationRecipes,
+    organizationId: fabricationOrganizationId,
+  } = useFabricationRecipes({ enabled: step !== 1 });
   const [isSavingCubicationLineAdjustment, setIsSavingCubicationLineAdjustment] =
     useState(false);
   const [componentForm, setComponentForm] = useState<ComponentFormState>(() =>
@@ -265,6 +270,20 @@ function NuevaCotizacionPageContent() {
     organizationProfile?.modoPrecioPreferido
   );
   const quotePricingMode = normalizeQuotePricingMode(draft.quotePricingMode);
+  const buildItemFromFormOptions = useMemo(
+    () => ({
+      quotePricingMode,
+      lineTemplates: activeLineTemplates,
+      fabricationRecipes,
+      organizationId: fabricationOrganizationId,
+    }),
+    [
+      quotePricingMode,
+      activeLineTemplates,
+      fabricationRecipes,
+      fabricationOrganizationId,
+    ]
+  );
   const regionalPricing = useMemo(
     () => resolveOrganizationPricingSettings(organizationProfile),
     [organizationProfile]
@@ -1186,7 +1205,12 @@ function NuevaCotizacionPageContent() {
         (currentTemplate) => String(currentTemplate.id) === templateId
       );
 
-      return template ? applyLineTemplateToComponentForm(current, template) : current;
+      return template
+        ? applyLineTemplateToComponentForm(current, template, {
+            fabricationRecipes,
+            organizationId: fabricationOrganizationId,
+          })
+        : current;
     });
     setFieldErrors((current) => ({
       ...current,
@@ -1197,7 +1221,12 @@ function NuevaCotizacionPageContent() {
 
   const handleApplyPricedLineTemplateToForm = (template: CotizacionLineTemplate) => {
     void reloadLineTemplates();
-    setComponentForm((current) => applyLineTemplateToComponentForm(current, template));
+    setComponentForm((current) =>
+      applyLineTemplateToComponentForm(current, template, {
+        fabricationRecipes,
+        organizationId: fabricationOrganizationId,
+      })
+    );
     setFieldErrors((current) => ({
       ...current,
       costoProveedorUnitario: undefined,
@@ -1243,7 +1272,12 @@ function NuevaCotizacionPageContent() {
         isActive: true,
       });
 
-      setComponentForm((current) => applyLineTemplateToComponentForm(current, created));
+      setComponentForm((current) =>
+        applyLineTemplateToComponentForm(current, created, {
+          fabricationRecipes,
+          organizationId: fabricationOrganizationId,
+        })
+      );
       setGlobalError(null);
     } catch (error) {
       setGlobalError(
@@ -1442,10 +1476,7 @@ function NuevaCotizacionPageContent() {
       ...current,
       items: current.items.map((item) =>
         item.id === itemId
-          ? buildItemFromForm(recalculatedForm, current.items, itemId, {
-              quotePricingMode,
-              lineTemplates: activeLineTemplates,
-            })
+          ? buildItemFromForm(recalculatedForm, current.items, itemId, buildItemFromFormOptions)
           : item
       ),
     }));
@@ -1465,10 +1496,7 @@ function NuevaCotizacionPageContent() {
       let nextQuickEditItemId: string | null = editingItemId;
 
       if (editingItemId) {
-        const item = buildItemFromForm(componentForm, draft.items, editingItemId, {
-          quotePricingMode,
-          lineTemplates: activeLineTemplates,
-        });
+        const item = buildItemFromForm(componentForm, draft.items, editingItemId, buildItemFromFormOptions);
         const updatedItems = draft.items.map((e) => (e.id === editingItemId ? item : e));
         nextItems = pasoDosVariaciones.resolveItemsAfterFullEditSave(editingItemId, updatedItems);
       } else {
@@ -1491,10 +1519,7 @@ function NuevaCotizacionPageContent() {
                 };
 
           nextItems.push(
-            buildItemFromForm(nextForm, nextItems, null, {
-              quotePricingMode,
-              lineTemplates: activeLineTemplates,
-            })
+            buildItemFromForm(nextForm, nextItems, null, buildItemFromFormOptions)
           );
         }
 
@@ -1786,10 +1811,7 @@ function NuevaCotizacionPageContent() {
           provider: suggestionProvider,
           draft: groupDraft,
         });
-        nextItem = buildItemFromForm(nextForm, nextItems, null, {
-          quotePricingMode,
-          lineTemplates: activeLineTemplates,
-        });
+        nextItem = buildItemFromForm(nextForm, nextItems, null, buildItemFromFormOptions);
       }
 
       nextItems.push(nextItem);
@@ -2038,12 +2060,12 @@ function NuevaCotizacionPageContent() {
         ? activeLineTemplates.find((template) => String(template.id) === lineTemplateId)
         : null;
       if (lineTemplate) {
-        form = applyLineTemplateToComponentForm(form, lineTemplate);
+        form = applyLineTemplateToComponentForm(form, lineTemplate, {
+          fabricationRecipes,
+          organizationId: fabricationOrganizationId,
+        });
       }
-      const item = buildItemFromForm(form, current.items, itemId, {
-        quotePricingMode,
-        lineTemplates: activeLineTemplates,
-      });
+      const item = buildItemFromForm(form, current.items, itemId, buildItemFromFormOptions);
       return { ...current, items: [...current.items, item] };
     });
     setQuoteModeChosen(true);
@@ -2071,7 +2093,11 @@ function NuevaCotizacionPageContent() {
                 ...form,
                 precioAjustadoManual: markPriceManual ? form.precioAjustadoManual : false,
               },
-              template
+              template,
+              {
+                fabricationRecipes,
+                organizationId: fabricationOrganizationId,
+              }
             )
           : {
               ...form,
@@ -2130,10 +2156,7 @@ function NuevaCotizacionPageContent() {
         form = syncTemplatePricingInComponentForm(form, { forceSuggestedPrice: true });
       }
 
-      const nextItem = buildItemFromForm(form, current.items, itemId, {
-        quotePricingMode,
-        lineTemplates: activeLineTemplates,
-      });
+      const nextItem = buildItemFromForm(form, current.items, itemId, buildItemFromFormOptions);
       return {
         ...current,
         items: current.items.map((candidate) =>
@@ -2152,12 +2175,15 @@ function NuevaCotizacionPageContent() {
     setDraft((current) => {
       const nextItems = current.items.map((item) =>
         buildItemFromForm(
-          applyLineTemplateToComponentForm(mapItemToForm(item), template),
+          applyLineTemplateToComponentForm(mapItemToForm(item), template, {
+            fabricationRecipes,
+            organizationId: fabricationOrganizationId,
+          }),
           current.items,
           item.id,
           {
+            ...buildItemFromFormOptions,
             quotePricingMode: current.quotePricingMode,
-            lineTemplates: activeLineTemplates,
           }
         )
       );
