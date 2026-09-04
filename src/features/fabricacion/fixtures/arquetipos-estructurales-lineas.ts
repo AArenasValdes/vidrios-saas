@@ -341,7 +341,6 @@ export const CATALOG_KEY_TO_ARQUETIPO: Record<string, ArquetipoEstructuralId> = 
   "ventora:optima-s28-corredera-3h": "corredera_3h",
   "ventora:winhouse-new-s75-triple-riel": "pvc_corredera_3h",
   "ventora:l32": "corredera_2h",
-  "ventora:l35": "corredera_2h",
   "ventora:l42": "corredera_2h",
   "ventora:serie-42-proyectante-camara": "proyectante",
   "ventora:serie-42-proyectante-sin-camara": "proyectante",

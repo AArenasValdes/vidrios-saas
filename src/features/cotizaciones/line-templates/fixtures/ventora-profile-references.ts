@@ -42,6 +42,13 @@ function industryRef(input: RefInput): LineProfileReference {
   });
 }
 
+function visualRef(input: RefInput): LineProfileReference {
+  return catalogRef({
+    ...input,
+    codeStatus: "visual_reference",
+  });
+}
+
 function pendingRef(name: string, role: string): LineProfileReference {
   return {
     code: null,
@@ -99,20 +106,22 @@ const SERIE_4800_PROFILES: LineProfileReference[] = [
   }),
 ];
 
-const SERIE_32_PROFILES: LineProfileReference[] = [
-  industryRef({ code: "3201", name: "Marco", role: "Marco" }),
-  industryRef({ code: "3202", name: "Hoja", role: "Hoja" }),
-  industryRef({ code: "3204", name: "Palillo", role: "Otro" }),
-  industryRef({
+/** Códigos L32 proyectante (SODAL). No usar en Serie 32 corredera comercial. */
+const L32_PROYECTANTE_VISUAL_REFERENCES: LineProfileReference[] = [
+  visualRef({ code: "3201", name: "Marco simple", role: "Marco", description: "L32 · Proyectante" }),
+  visualRef({ code: "3202", name: "Hoja proyectante", role: "Hoja", description: "L32 · Proyectante" }),
+  visualRef({ code: "3204", name: "Palillo / Pilar T", role: "Otro", description: "L32 · Proyectante" }),
+  visualRef({
     code: "3205",
-    name: "Cámara de agua",
+    name: "Marco cámara de agua",
     role: "Otro",
-    description: "Cámara de agua",
+    description: "L32 · Proyectante",
   }),
-  industryRef({ code: "3208", name: "Junquillo", role: "Otro" }),
+  visualRef({ code: "3208", name: "Junquillo", role: "Otro", description: "L32 · Proyectante" }),
 ];
 
-const SERIE_42_PROFILES: LineProfileReference[] = [
+/** Códigos Serie 42 proyectante (SODAL). No usar en Serie 42 corredera comercial. */
+const SERIE_42_PROYECTANTE_PROFILES: LineProfileReference[] = [
   catalogRef({
     code: "4201",
     name: "Marco proyectante",
@@ -319,13 +328,11 @@ const CATALOG_KEY_PROFILE_SETS: Record<string, LineProfileReference[]> = {
   "ventora:l5000": SERIE_5000_PROFILES,
   "ventora:l20": SERIE_20_PROFILES,
   "ventora:l25": SERIE_25_PROFILES,
-  "ventora:l32": SERIE_32_PROFILES,
-  "ventora:l42": SERIE_42_PROFILES,
   "ventora:serie-4800-corredera-2h": SERIE_4800_PROFILES,
   "ventora:s33-corredera-2h": SERIE_S33_PROFILES,
   "ventora:s33-rpt-corredera-2h": SERIE_S33_RPT_PROFILES,
-  "ventora:serie-42-proyectante-camara": SERIE_42_PROFILES,
-  "ventora:serie-42-proyectante-sin-camara": SERIE_42_PROFILES,
+  "ventora:serie-42-proyectante-camara": SERIE_42_PROYECTANTE_PROFILES,
+  "ventora:serie-42-proyectante-sin-camara": SERIE_42_PROYECTANTE_PROFILES,
   "ventora:s38-proyectante": SERIE_S38_PROFILES,
   "ventora:s38-rpt-proyectante": SERIE_S38_RPT_PROFILES,
   "ventora:multislide-s83-4h": MULTISLIDE_S83_PROFILES,
@@ -335,6 +342,8 @@ const CATALOG_KEY_PROFILE_SETS: Record<string, LineProfileReference[]> = {
 };
 
 const PENDING_VALIDATION_CATALOG_KEYS = new Set([
+  "ventora:l32",
+  "ventora:l42",
   "ventora:optima-s28-corredera-2h",
   "ventora:optima-s28-corredera-3h",
   "ventora:winhouse-new-s75-doble-riel",
@@ -343,6 +352,11 @@ const PENDING_VALIDATION_CATALOG_KEYS = new Set([
   "ventora:winhouse-andes-doble-riel",
   "ventora:winhouse-andes-proyectante",
 ]);
+
+/** Referencias visuales L32 proyectante (wizard/biblioteca). No asociar a Serie 32 corredera. */
+export function getL32ProyectanteVisualReferences(): LineProfileReference[] {
+  return L32_PROYECTANTE_VISUAL_REFERENCES;
+}
 
 function roleFromGrupo(grupo: GrupoPiezaEstructural): string {
   return GRUPO_PIEZA_ESTRUCTURAL_LABELS[grupo] ?? "Otro";

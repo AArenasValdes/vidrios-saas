@@ -9,7 +9,7 @@ import {
 
 describe("arquetipos estructurales de líneas comerciales", () => {
   it("mapea todas las líneas Ventora del catálogo fase 3", () => {
-    expect(Object.keys(CATALOG_KEY_TO_ARQUETIPO)).toHaveLength(25);
+    expect(Object.keys(CATALOG_KEY_TO_ARQUETIPO)).toHaveLength(24);
     expect(CATALOG_KEY_TO_ARQUETIPO["ventora:l5000"]).toBe("corredera_2h");
     expect(CATALOG_KEY_TO_ARQUETIPO["ventora:optima-s28-corredera-3h"]).toBe(
       "corredera_3h"

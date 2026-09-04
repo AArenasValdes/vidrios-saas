@@ -89,9 +89,8 @@ describe("catalogo fabricacion card status", () => {
     expect(
       buildTechnicalCardStatus(makeTemplate(), [makeRecipe("testing")])
     ).toMatchObject({
-      label: "Lista para probar",
-      detail: "Comprueba la receta con una medida real.",
-      actionLabel: "Probar fabricación",
+      label: "Borrador",
+      actionLabel: "Continuar configuración",
     });
     expect(
       buildTechnicalCardStatus(makeTemplate(), [makeRecipe("validated")])

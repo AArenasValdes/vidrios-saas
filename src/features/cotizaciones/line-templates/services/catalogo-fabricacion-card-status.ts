@@ -4,6 +4,7 @@ import {
   deriveRecipeStatus,
   getFabricationRecipeFromMetadata,
 } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
+import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 
 export type TechnicalCardStatusTone =
   | "quote_only"
@@ -24,6 +25,16 @@ export type TechnicalCardStatus = {
   actionLabel: string;
   filter: TechnicalCardFilter;
 };
+
+function recipeAllowsTesting(recipe: FabricationRecipeRecord): boolean {
+  return evaluarRecetaListaParaProbar(recipe.definition).listaParaProbar;
+}
+
+function hasTestingReadyRecipe(recipes: FabricationRecipeRecord[]): boolean {
+  return recipes.some(
+    (entry) => entry.status === "testing" && recipeAllowsTesting(entry)
+  );
+}
 
 function collectPendingTechnicalDetails(
   recipes: FabricationRecipeRecord[]
@@ -110,7 +121,7 @@ export function buildTechnicalCardStatus(
     };
   }
 
-  if (testingPersisted.length > 0) {
+  if (hasTestingReadyRecipe(testingPersisted)) {
     return {
       tone: "testing",
       label: "Lista para probar",
@@ -120,7 +131,7 @@ export function buildTechnicalCardStatus(
     };
   }
 
-  if (activePersisted.length > 0) {
+  if (testingPersisted.length > 0 || activePersisted.length > 0) {
     return {
       tone: "draft",
       label: "Borrador",

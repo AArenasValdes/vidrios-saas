@@ -11,7 +11,8 @@ export const PROFILE_REFERENCE_SOURCES = {
 
 export type LineProfileReferenceCodeStatus =
   | "catalog_reference"
-  | "pending_validation";
+  | "pending_validation"
+  | "visual_reference";
 
 export type LineProfileReference = {
   code: string | null;
@@ -44,7 +45,8 @@ function isLineProfileReference(value: unknown): value is LineProfileReference {
     typeof value.role === "string" &&
     (value.code === null || typeof value.code === "string") &&
     (value.codeStatus === "catalog_reference" ||
-      value.codeStatus === "pending_validation")
+      value.codeStatus === "pending_validation" ||
+      value.codeStatus === "visual_reference")
   );
 }
 
@@ -87,7 +89,10 @@ export function formatLineProfileReferenceStatus(
   if (profile.codeStatus === "pending_validation") {
     return "Pendiente de validar";
   }
-  return "Referencia de catálogo";
+  if (profile.codeStatus === "visual_reference") {
+    return "Código referencial";
+  }
+  return "Código referencial";
 }
 
 export function buildWorkshopProfilesPayload(
@@ -121,5 +126,5 @@ export function formatLineProfileReferenceRowStatus(
   if (profile.codeStatus === "pending_validation" || !profile.code?.trim()) {
     return "Pendiente";
   }
-  return "Referencia";
+  return "Código referencial";
 }

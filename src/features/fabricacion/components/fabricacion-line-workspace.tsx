@@ -41,6 +41,7 @@ import {
   contarBloqueosCriticosReceta,
   crearRecetaFabricacionVacia,
 } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
+import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 import {
   formatLargoComercialCorto,
   resolveRecetaLargoComercialDefaultMm,
@@ -307,8 +308,7 @@ function RecipeSummaryPanel({
     recipe.identidad.hojas > 0 && recipe.identidad.tipologia !== "pano_fijo"
       ? `${tipologiaCorta} ${recipe.identidad.hojas}H`
       : tipologiaCorta;
-  const canContinue =
-    recipe.perfiles.length > 0 && contarBloqueosCriticosReceta(recipe) === 0;
+  const canContinue = evaluarRecetaListaParaProbar(recipe).listaParaProbar;
 
   return (
     <aside className={`${s.guidedSidebar} ${s.fabCompactSidebar}`}>
@@ -840,10 +840,27 @@ export function FabricacionLineWorkspace({
       selectedId === recipe.id &&
       selected?.status !== "validated"
         ? draft
+        : recipe.definition;
+    const probarEvaluacion = evaluarRecetaListaParaProbar(
+      draftToPersist ?? recipe.definition
+    );
+    if (!probarEvaluacion.listaParaProbar) {
+      setFeedback(
+        probarEvaluacion.bloqueos[0] ??
+          "Completa código, medida, descuento, cantidad, largo comercial, accesorios y vidrio antes de probar."
+      );
+      return;
+    }
+    const draftToPersistSilent =
+      view === "edit" &&
+      draft &&
+      selectedId === recipe.id &&
+      selected?.status !== "validated"
+        ? draft
         : null;
     void openTestLab(recipe, step);
-    if (draftToPersist) {
-      void handleSave(draftToPersist, { silent: true }).catch(() => undefined);
+    if (draftToPersistSilent) {
+      void handleSave(draftToPersistSilent, { silent: true }).catch(() => undefined);
     }
   };
 

@@ -2602,32 +2602,6 @@ export function buildItemFromForm(
       ? syncedForm.fabricacionSnapshot
       : null;
 
-  // #region agent log
-  if (syncedForm.lineTemplateId?.trim()) {
-    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "69b9fd" },
-      body: JSON.stringify({
-        sessionId: "69b9fd",
-        runId: "pre-fix",
-        hypothesisId: "C",
-        location: "workflow-ui.ts:buildItemFromForm",
-        message: "item fabrication fields after line assignment",
-        data: {
-          lineTemplateId: syncedForm.lineTemplateId,
-          referencia: syncedForm.referencia,
-          tipo: syncedForm.tipo,
-          nombre: syncedForm.nombre,
-          fabricacionTipologia: syncedForm.fabricacionTipologia,
-          fabricacionHojas: syncedForm.fabricacionHojas,
-          fabricationRecipeId: syncedForm.fabricationRecipeId,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-  }
-  // #endregion
-
   return {
     ...calculateComponentItem({
     id: editingItemId ?? undefined,

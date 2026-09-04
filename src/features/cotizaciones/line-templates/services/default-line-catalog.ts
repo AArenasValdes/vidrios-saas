@@ -208,15 +208,15 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     configuracion: "Corredera 2 hojas",
     proveedor: null,
     lineSystem: "L32",
-    ventoraPlantillaId: "L32",
+    ventoraPlantillaId: null,
   },
   {
     catalogKey: "ventora:l35",
-    nombre: "Aluminio Línea 35",
+    nombre: "AM-35 · Puerta abatible y vaivén",
     material: "Aluminio",
-    configuracion: "Línea 35",
+    configuracion: "Puerta abatible y vaivén",
     proveedor: null,
-    lineSystem: "L35",
+    lineSystem: "AM-35",
     ventoraPlantillaId: null,
   },
   {
@@ -226,7 +226,7 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     configuracion: "Corredera 2 hojas",
     proveedor: null,
     lineSystem: "L42",
-    ventoraPlantillaId: "L42",
+    ventoraPlantillaId: null,
   },
   {
     catalogKey: "ventora:serie-4800-corredera-2h",

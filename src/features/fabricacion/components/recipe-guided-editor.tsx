@@ -53,6 +53,7 @@ import {
   patchFabricacionPerfil,
   reorderFabricacionItems,
 } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
+import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
 import {
   buildPlantillaSuggestedPerfilRefs,
@@ -531,6 +532,10 @@ export function RecipeGuidedEditor({
         return Boolean(profile.codigoPerfil?.trim()) && !resumen.pendingDiscount;
       }).length,
     [recipe.perfiles]
+  );
+  const listaParaProbarEvaluacion = useMemo(
+    () => evaluarRecetaListaParaProbar(recipe),
+    [recipe]
   );
   const tiraAplicadaEnPiezas =
     recipe.perfiles.length > 0 &&
@@ -1896,8 +1901,7 @@ export function RecipeGuidedEditor({
         <header className={s.fabPrepPageHead}>
           <h2>Así fabricas esta ventana</h2>
           <p className={s.fabPrepGlobalStatus}>
-            {configuredProfilesCount >= recipe.perfiles.length &&
-            recipe.perfiles.length > 0
+            {listaParaProbarEvaluacion.listaParaProbar
               ? "Fabricación lista para probar"
               : "Fabricación pendiente"}
             {" · "}
@@ -1952,6 +1956,11 @@ export function RecipeGuidedEditor({
               type="button"
               className={`${s.primaryButton} ${s.fabPrimaryCta} ${s.fabPreparedCta}`}
               onClick={onContinueToTest}
+              disabled={!listaParaProbarEvaluacion.listaParaProbar}
+              title={
+                listaParaProbarEvaluacion.bloqueos[0] ??
+                "Completa la receta antes de probar."
+              }
             >
               Probar con una medida real
               <ChevronRight size={16} aria-hidden="true" />

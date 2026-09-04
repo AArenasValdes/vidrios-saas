@@ -213,28 +213,6 @@ export function resolveFabricacionContextForLineAssignment(input: {
           : null;
 
     if (recipe) {
-      // #region agent log
-      fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "69b9fd" },
-        body: JSON.stringify({
-          sessionId: "69b9fd",
-          runId: "pre-fix",
-          hypothesisId: "B",
-          location: "fabricacion-linea-cotizacion-context.service.ts:recipe-match",
-          message: "fabricacion context from matched recipe",
-          data: {
-            lineTemplateId,
-            tipologiaHint,
-            hojasHint,
-            recipeTipologia: recipe.definition.identidad.tipologia,
-            recipeHojas: recipe.definition.identidad.hojas,
-            resolutionEstado: resolution.estado,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       return contextFromRecipe(recipe);
     }
   }
@@ -252,52 +230,9 @@ export function resolveFabricacionContextForLineAssignment(input: {
       normalizeText(validatedTipologia) === normalizeText(formTipologia);
 
     if (tipologiasCoinciden && formCoincide) {
-      // #region agent log
-      fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "69b9fd" },
-        body: JSON.stringify({
-          sessionId: "69b9fd",
-          runId: "pre-fix",
-          hypothesisId: "B",
-          location: "fabricacion-linea-cotizacion-context.service.ts:single-validated",
-          message: "fabricacion context from single validated recipe",
-          data: {
-            lineTemplateId,
-            validatedTipologia,
-            catalogTipologia,
-            formTipologia,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       return contextFromRecipe(validated[0]);
     }
   }
-
-  // #region agent log
-  fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "69b9fd" },
-    body: JSON.stringify({
-      sessionId: "69b9fd",
-      runId: "pre-fix",
-      hypothesisId: "A",
-      location: "fabricacion-linea-cotizacion-context.service.ts:catalog-fallback",
-      message: "fabricacion context from catalog fallback",
-      data: {
-        lineTemplateId,
-        catalogKey: input.template.catalogKey,
-        catalogTipologia: catalogContext?.fabricacionTipologia ?? null,
-        catalogHojas: catalogContext?.fabricacionHojas ?? null,
-        tipologiaHint,
-        validatedCount: validated.length,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
 
   return catalogContext;
 }
