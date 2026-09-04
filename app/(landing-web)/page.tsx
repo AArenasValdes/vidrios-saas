@@ -3,14 +3,57 @@ import type { Metadata } from "next";
 
 import { LandingHeroServer } from "./landing-hero-server";
 import { LandingNavClient } from "./landing-nav-client";
+import { faqs } from "./landing-shared";
+import { BILLING_PLANS } from "@/features/billing/types/plans";
 import s from "./landing.module.css";
 
-const landingTitle =
-  "Ventora | Cotizador, cubicación y pauta de corte para vidrio y aluminio";
+const landingTitle = "Software para vidrierías | Cotizador de aluminio";
 const landingDescription =
-  "Cotiza trabajos de vidrio y aluminio desde el celular o computador. Genera PDFs por WhatsApp y prepara cubicaciones y pautas de corte revisables.";
+  "Software para vidrierías y talleres: cotiza vidrio y aluminio, envía PDF por WhatsApp y prueba Ventora gratis por 15 días.";
 const landingOgImage =
   "https://www.ventorap.cl/ventora-landing-page/dashboard-cotizaciones.webp";
+const quoteOnlyAnnualPlan = BILLING_PLANS.quote_only_annual;
+
+type LandingJsonLd = Record<string, unknown>;
+
+const softwareApplicationJsonLd: LandingJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Ventora",
+  description: landingDescription,
+  url: "https://www.ventorap.cl/",
+  image: landingOgImage,
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web, mobile browser",
+  inLanguage: "es-CL",
+  featureList: [
+    "Cotización de vidrio y aluminio",
+    "PDF profesional y envío por WhatsApp",
+    "Clientes y cotizaciones ordenados",
+    "Líneas propias y fabricación configurable",
+  ],
+  offers: {
+    "@type": "Offer",
+    name: quoteOnlyAnnualPlan.productLabel,
+    price: String(quoteOnlyAnnualPlan.amountClp),
+    priceCurrency: "CLP",
+    url: "https://www.ventorap.cl/registro?plan=quote_only&billing_period=yearly",
+    availability: "https://schema.org/OnlineOnly",
+  },
+};
+
+const faqPageJsonLd: LandingJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map((faq) => ({
+    "@type": "Question",
+    name: faq.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: faq.answer,
+    },
+  })),
+};
 
 export const metadata: Metadata = {
   title: { absolute: landingTitle },
@@ -57,6 +100,18 @@ export const dynamic = "force-static";
 export default function LandingPage() {
   return (
     <main className={s.page}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(softwareApplicationJsonLd),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(faqPageJsonLd),
+        }}
+      />
       <LandingNavClient />
       <LandingHeroServer />
       <LandingBelowFold />

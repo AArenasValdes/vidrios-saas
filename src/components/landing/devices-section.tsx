@@ -29,7 +29,7 @@ export function DevicesSection() {
               <div className={s.laptopScreen}>
                 <Image
                   src="/ventora-landing-page/dashboard-desktop.png"
-                  alt=""
+                  alt="Dashboard de Ventora con clientes y cotizaciones ordenadas en computador"
                   width={1024}
                   height={492}
                   className={s.desktopShot}
@@ -42,7 +42,7 @@ export function DevicesSection() {
 
           <Image
             src="/ventora-landing-page/capturalanding-pdf-800.webp"
-            alt=""
+            alt="PDF profesional de una cotización de vidrio y aluminio listo para enviar por WhatsApp"
             width={800}
             height={1600}
             className={s.phoneFront}

@@ -41,13 +41,13 @@ export function LandingHeroServer() {
         <div className={s.heroLayout}>
           <div className={s.heroContent}>
             <h1 className={s.heroTitle}>
-              Cotiza vidrios y aluminio{" "}
-              <span className={s.heroTitleAccent}>desde el celular</span>
+              Cotizador de vidrio y aluminio{" "}
+              <span className={s.heroTitleAccent}>para talleres</span>
             </h1>
 
             <p className={s.heroDescription}>
-              15 días gratis en celular, tablet y computador. Pensado para talleres
-              de Latinoamérica, con pagos disponibles inicialmente en Chile. Envía
+              Software para vidrierías, carpinteros de aluminio y talleres. Cotiza
+              ventanas, puertas, shower y cierres de terraza desde el celular. Envía
               un PDF profesional por WhatsApp y deja de llegar a casa a hacer
               presupuestos.
             </p>
