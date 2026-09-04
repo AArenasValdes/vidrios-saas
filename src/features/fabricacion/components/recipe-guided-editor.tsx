@@ -806,6 +806,13 @@ export function RecipeGuidedEditor({
     setDrawerProfileId(profileId);
   };
 
+  const scrollToReviewPiezas = () => {
+    setOpenReview("piezas");
+    document
+      .getElementById("fab-review-piezas")
+      ?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  };
+
   const applyRecipeTira = (nextValue: number) => {
     onRecipeChange({
       ...recipe,
@@ -1968,43 +1975,45 @@ export function RecipeGuidedEditor({
             className={s.fabSheetPreview}
           />
           {!readOnly && onContinueToTest && recipe.perfiles.length > 0 ? (
-            <div className={s.fabPreparedCtaBlock}>
-              <button
-                type="button"
-                className={`${s.primaryButton} ${s.fabPrimaryCta} ${s.fabPreparedCta}`}
-                onClick={onContinueToTest}
-                disabled={!listaParaProbarEvaluacion.listaParaProbar}
-                title={
-                  listaParaProbarEvaluacion.bloqueos[0] ??
-                  "Completa la receta antes de probar."
-                }
-              >
-                Probar con una medida real
-                <ChevronRight size={16} aria-hidden="true" />
-              </button>
-              {!listaParaProbarEvaluacion.listaParaProbar ? (
-                <div className={s.fabGateBloqueos} role="status">
-                  <strong>Falta para probar:</strong>
-                  <ul>
-                    {listaParaProbarEvaluacion.bloqueos.map((bloqueo) => (
-                      <li key={bloqueo}>{bloqueo}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              {listaParaProbarEvaluacion.advertencias.length > 0 ? (
-                <div className={s.fabGateAdvertencias} role="status">
-                  <strong>Opcional:</strong>
-                  <ul>
-                    {listaParaProbarEvaluacion.advertencias.map((advertencia) => (
-                      <li key={advertencia}>{advertencia}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
+            <button
+              type="button"
+              className={`${s.primaryButton} ${s.fabPrimaryCta} ${s.fabPreparedCta}`}
+              onClick={onContinueToTest}
+              disabled={!listaParaProbarEvaluacion.listaParaProbar}
+              title={
+                listaParaProbarEvaluacion.bloqueos[0] ??
+                "Completa la receta antes de probar."
+              }
+            >
+              Probar con una medida real
+              <ChevronRight size={16} aria-hidden="true" />
+            </button>
           ) : null}
         </section>
+
+        {!listaParaProbarEvaluacion.listaParaProbar &&
+        listaParaProbarEvaluacion.bloqueos.length > 0 ? (
+          <div className={s.fabPrepGateBanner} role="status">
+            <AlertTriangle size={16} aria-hidden="true" />
+            <div className={s.fabPrepGateBannerCopy}>
+              <strong>Completa las piezas obligatorias para probar</strong>
+              <p>
+                {listaParaProbarEvaluacion.bloqueos.length}{" "}
+                {listaParaProbarEvaluacion.bloqueos.length === 1
+                  ? "ajuste pendiente"
+                  : "ajustes pendientes"}{" "}
+                en perfiles requeridos.
+              </p>
+            </div>
+            <button
+              type="button"
+              className={s.fabPrepGateBannerAction}
+              onClick={scrollToReviewPiezas}
+            >
+              Ir a piezas
+            </button>
+          </div>
+        ) : null}
 
         <section className={s.fabTiraBlock} aria-label="Tira que compras">
           <header>
@@ -2584,13 +2593,9 @@ export function RecipeGuidedEditor({
             bloquear esta receta.
           </p>
           {listaParaProbarEvaluacion.advertencias.length > 0 ? (
-            <div className={s.fabGateAdvertencias}>
-              <ul>
-                {listaParaProbarEvaluacion.advertencias.map((advertencia) => (
-                  <li key={advertencia}>{advertencia}</li>
-                ))}
-              </ul>
-            </div>
+            <p className={s.fabReviewOptionalHint}>
+              {listaParaProbarEvaluacion.advertencias[0]}
+            </p>
           ) : null}
           {recipe.vidrios.length === 0 ? (
             <div className={s.fabGlassPanel}>
