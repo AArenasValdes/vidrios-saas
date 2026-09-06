@@ -196,6 +196,9 @@ function emptyForm(): ContentForm {
 }
 
 function itemToForm(item: GrowthContentItem): ContentForm {
+  const metadata = item.metadata;
+  const metrics = metadata?.metricas;
+
   return {
     contentId: item.contentId,
     titulo: item.titulo,
@@ -216,15 +219,15 @@ function itemToForm(item: GrowthContentItem): ContentForm {
     claimReviewStatus: item.claimReviewStatus,
     claimReviewNotes: item.claimReviewNotes ?? "",
     programadoPara: item.programadoPara ? item.programadoPara.slice(0, 16) : "",
-    grupoNombre: item.metadata.grupoNombre ?? "",
-    grupoSegmento: item.metadata.grupoSegmento ?? "",
-    grupoRegion: item.metadata.grupoRegion ?? "",
-    alcance: item.metadata.metricas.alcance?.toString() ?? "",
-    interacciones: item.metadata.metricas.interacciones?.toString() ?? "",
-    comentarios: item.metadata.metricas.comentarios?.toString() ?? "",
-    mensajesDemo: item.metadata.metricas.mensajesDemo?.toString() ?? "",
-    demos: item.metadata.metricas.demos?.toString() ?? "",
-    pagos: item.metadata.metricas.pagos?.toString() ?? "",
+    grupoNombre: metadata?.grupoNombre ?? "",
+    grupoSegmento: metadata?.grupoSegmento ?? "",
+    grupoRegion: metadata?.grupoRegion ?? "",
+    alcance: metrics?.alcance?.toString() ?? "",
+    interacciones: metrics?.interacciones?.toString() ?? "",
+    comentarios: metrics?.comentarios?.toString() ?? "",
+    mensajesDemo: metrics?.mensajesDemo?.toString() ?? "",
+    demos: metrics?.demos?.toString() ?? "",
+    pagos: metrics?.pagos?.toString() ?? "",
   };
 }
 

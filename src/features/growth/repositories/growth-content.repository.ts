@@ -25,7 +25,7 @@ type GrowthContentItemRow = {
   estado: GrowthContentItem["estado"];
   claim_review_status: GrowthContentItem["claimReviewStatus"];
   claim_review_notes: string | null;
-  metadata_json: GrowthContentItem["metadata"];
+  metadata_json: unknown;
   programado_para: string | null;
   publicado_en: string | null;
   creado_en: string;
@@ -35,7 +35,42 @@ type GrowthContentItemRow = {
 const CONTENT_COLUMNS =
   "id, workspace_id, content_id, titulo, pilar, formato, canal, objetivo, hook, cta, guion, caption, campaign_key, utm_source, utm_medium, utm_campaign, utm_content, estado, claim_review_status, claim_review_notes, metadata_json, programado_para, publicado_en, creado_en, actualizado_en";
 
-function mapRow(row: GrowthContentItemRow): GrowthContentItem {
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function nullableString(value: unknown) {
+  return typeof value === "string" ? value : null;
+}
+
+function nullableMetric(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function mapMetadata(value: unknown): GrowthContentItem["metadata"] {
+  const source = asRecord(value);
+  const metrics = asRecord(source.metricas);
+
+  return {
+    grupoNombre: nullableString(source.grupoNombre),
+    grupoSegmento: nullableString(source.grupoSegmento),
+    grupoRegion: nullableString(source.grupoRegion),
+    publicacionUrl: nullableString(source.publicacionUrl),
+    piezaBaseId: nullableString(source.piezaBaseId),
+    metricas: {
+      alcance: nullableMetric(metrics.alcance),
+      interacciones: nullableMetric(metrics.interacciones),
+      comentarios: nullableMetric(metrics.comentarios),
+      mensajesDemo: nullableMetric(metrics.mensajesDemo),
+      demos: nullableMetric(metrics.demos),
+      pagos: nullableMetric(metrics.pagos),
+    },
+  };
+}
+
+export function mapGrowthContentItemRow(row: GrowthContentItemRow): GrowthContentItem {
   return {
     id: row.id,
     workspaceId: row.workspace_id,
@@ -57,21 +92,7 @@ function mapRow(row: GrowthContentItemRow): GrowthContentItem {
     estado: row.estado,
     claimReviewStatus: row.claim_review_status,
     claimReviewNotes: row.claim_review_notes,
-    metadata: row.metadata_json ?? {
-      grupoNombre: null,
-      grupoSegmento: null,
-      grupoRegion: null,
-      publicacionUrl: null,
-      piezaBaseId: null,
-      metricas: {
-        alcance: null,
-        interacciones: null,
-        comentarios: null,
-        mensajesDemo: null,
-        demos: null,
-        pagos: null,
-      },
-    },
+    metadata: mapMetadata(row.metadata_json),
     programadoPara: row.programado_para,
     publicadoEn: row.publicado_en,
     creadoEn: row.creado_en,
@@ -92,7 +113,7 @@ export async function listGrowthContentItems(
     .order("actualizado_en", { ascending: false });
 
   if (error) throw error;
-  return ((data ?? []) as GrowthContentItemRow[]).map(mapRow);
+  return ((data ?? []) as GrowthContentItemRow[]).map(mapGrowthContentItemRow);
 }
 
 export async function insertGrowthContentItem(
@@ -106,7 +127,7 @@ export async function insertGrowthContentItem(
     .single();
 
   if (error) throw error;
-  return mapRow(data as GrowthContentItemRow);
+  return mapGrowthContentItemRow(data as GrowthContentItemRow);
 }
 
 export async function updateGrowthContentItem(
@@ -125,5 +146,5 @@ export async function updateGrowthContentItem(
     .single();
 
   if (error) throw error;
-  return mapRow(data as GrowthContentItemRow);
+  return mapGrowthContentItemRow(data as GrowthContentItemRow);
 }
