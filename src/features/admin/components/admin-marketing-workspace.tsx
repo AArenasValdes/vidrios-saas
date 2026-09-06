@@ -67,6 +67,7 @@ export function AdminMarketingWorkspace() {
   const { setHeaderState, resetHeaderState } = useAdminHeaderActions();
   const measurementRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const [composerRequestId, setComposerRequestId] = useState(0);
   const appOrigin = typeof window !== "undefined" ? window.location.origin : "";
 
   const [workspace, setWorkspace] = useState<MarketingWorkspace | null>(null);
@@ -130,16 +131,12 @@ export function AdminMarketingWorkspace() {
       },
       onRefresh: () => void loadWorkspace(),
       hideDefaultPrimaryActions: true,
-      customTertiaryAction: {
-        label: "Exportar",
-        onClick: () => {
-          if (!workspace) return;
-          downloadCsv(`ventora-marketing-${Date.now()}.csv`, buildExportCsv(workspace));
-        },
-      },
       customPrimaryAction: {
         label: "Crear publicación",
-        onClick: () => contentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+        onClick: () => {
+          setComposerRequestId((current) => current + 1);
+          contentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        },
       },
     });
     return () => resetHeaderState();
@@ -164,7 +161,20 @@ export function AdminMarketingWorkspace() {
   }
 
   if (isLoading) {
-    return <div className={s.stateCard}>Cargando marketing…</div>;
+    return (
+      <div className={s.page} aria-busy="true" aria-live="polite">
+        <p className={s.visuallyHidden}>Cargando marketing…</p>
+        <div className={s.skeletonBanner} />
+        <div className={s.skeletonEditorial} />
+        <div className={s.skeletonKpis}>
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+        </div>
+      </div>
+    );
   }
 
   if (!workspace) {
@@ -175,18 +185,11 @@ export function AdminMarketingWorkspace() {
     <div className={s.page}>
       {error ? <div className={s.bannerError}>{error}</div> : null}
 
-      <AdminMarketingDashboard
-        workspace={workspace}
-        onKpiClick={(kpiId) => {
-          setActiveAcquisitionKpiId(kpiId);
-          const kpi = workspace.acquisitionKpis.find((item) => item.id === kpiId);
-          updateFilters(applyMarketingKpiFilter(filters, kpi?.filterKey));
-        }}
-      />
-
-      <div id="contenido" ref={contentRef}>
-        <AdminMarketingContentControl />
-      </div>
+      <AdminMarketingDashboard workspace={workspace}>
+        <div id="contenido" ref={contentRef}>
+          <AdminMarketingContentControl composerRequestId={composerRequestId} />
+        </div>
+      </AdminMarketingDashboard>
 
       <details className={s.detailDisclosure}>
         <summary>
@@ -241,6 +244,13 @@ export function AdminMarketingWorkspace() {
           ))}
           <button type="button" className={s.secondaryBtn} onClick={() => setIsFiltersOpen(true)}>
             <LuFilter aria-hidden /> Filtrar
+          </button>
+          <button
+            type="button"
+            className={s.ghostBtn}
+            onClick={() => downloadCsv(`ventora-marketing-${Date.now()}.csv`, buildExportCsv(workspace))}
+          >
+            Exportar
           </button>
           <Link href="/admin/marketing/onboarding" className={s.secondaryBtn}>
             Onboarding automático

@@ -1,8 +1,10 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
-import { LuChevronDown, LuMonitor, LuPlus, LuSave, LuSmartphone, LuTrash2 } from "react-icons/lu";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { LuChevronDown, LuMonitor, LuSave, LuSmartphone, LuTrash2 } from "react-icons/lu";
 
+import type { MarketingWeekStatus } from "@/features/admin/types/admin-marketing-command-center";
+import { buildWeekPlan } from "@/features/admin/services/admin-marketing-command-center.logic";
 import { useGrowthContent } from "@/features/growth/hooks/use-growth-content";
 import {
   GROWTH_CLAIM_REVIEW_STATUSES,
@@ -156,13 +158,16 @@ const CONTENT_STARTERS: Array<{
   })),
 ];
 
+const PRIMARY_STARTERS = CONTENT_STARTERS.filter((starter) => !starter.id.startsWith("grupo-"));
+const GROUP_STARTERS = CONTENT_STARTERS.filter((starter) => starter.id.startsWith("grupo-"));
+
 function parseMetric(value: string) {
   if (!value.trim()) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : null;
 }
 
-function emptyForm(): ContentForm {
+function emptyForm(planDate?: string | null): ContentForm {
   return {
     contentId: "",
     titulo: "",
@@ -182,7 +187,7 @@ function emptyForm(): ContentForm {
     estado: "borrador",
     claimReviewStatus: "pendiente",
     claimReviewNotes: "",
-    programadoPara: "",
+    programadoPara: planDate ? `${planDate}T10:00` : "",
     grupoNombre: "",
     grupoSegmento: "",
     grupoRegion: "",
@@ -275,13 +280,56 @@ function claimClass(status: GrowthContentItem["claimReviewStatus"]) {
   return s.claimPending;
 }
 
-export function AdminMarketingContentControl() {
+const WEEK_STATUS_CLASS: Record<MarketingWeekStatus, string> = {
+  idea: s.weekIdea,
+  guion: s.weekGuion,
+  editado: s.weekEditado,
+  programado: s.weekProgramado,
+  publicado: s.weekPublicado,
+  medir: s.weekMedir,
+};
+
+export function AdminMarketingContentControl({
+  composerRequestId = 0,
+  onComposerOpenChange,
+  planDate = null,
+}: {
+  composerRequestId?: number;
+  onComposerOpenChange?: (open: boolean) => void;
+  planDate?: string | null;
+}) {
   const content = useGrowthContent();
   const [isComposerOpen, setIsComposerOpen] = useState(false);
-  const [composer, setComposer] = useState<ContentForm>(emptyForm);
+  const [composer, setComposer] = useState<ContentForm>(() => emptyForm());
   const [drafts, setDrafts] = useState<Record<string, ContentForm>>({});
   const [actionError, setActionError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+
+  const week = useMemo(
+    () =>
+      buildWeekPlan(
+        content.items.map((item) => ({
+          id: item.id,
+          title: item.titulo,
+          formato: item.formato,
+          canal: item.canal,
+          estado: item.estado,
+          grupoNombre: item.metadata?.grupoNombre ?? null,
+          programadoPara: item.programadoPara,
+          publicadoEn: item.publicadoEn,
+          actualizadoEn: item.actualizadoEn,
+          hasManualMetrics: Object.values(item.metadata?.metricas ?? {}).some((value) => value !== null),
+        }))
+      ),
+    [content.items]
+  );
+
+  useEffect(() => {
+    if (composerRequestId < 1) return;
+    setComposer(emptyForm(planDate));
+    setIsComposerOpen(true);
+  }, [composerRequestId, planDate]);
 
   const summary = useMemo(() => ({
     total: content.items.length,
@@ -293,9 +341,21 @@ export function AdminMarketingContentControl() {
     setComposer((current) => ({ ...current, [key]: value }));
   }
 
-  function startFromTemplate(template: (typeof CONTENT_STARTERS)[number]) {
-    setComposer({ ...emptyForm(), ...template.form });
+  function openComposer(nextPlanDate?: string | null) {
+    setComposer(emptyForm(nextPlanDate));
     setIsComposerOpen(true);
+    onComposerOpenChange?.(true);
+  }
+
+  function closeComposer() {
+    setIsComposerOpen(false);
+    onComposerOpenChange?.(false);
+  }
+
+  function startFromTemplate(template: (typeof CONTENT_STARTERS)[number]) {
+    setComposer({ ...emptyForm(planDate), ...template.form });
+    setIsComposerOpen(true);
+    onComposerOpenChange?.(true);
   }
 
   function draftFor(item: GrowthContentItem) {
@@ -316,7 +376,7 @@ export function AdminMarketingContentControl() {
     try {
       await content.create(formToInput(composer));
       setComposer(emptyForm());
-      setIsComposerOpen(false);
+      closeComposer();
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "No pudimos guardar la pieza.");
     } finally {
@@ -353,16 +413,50 @@ export function AdminMarketingContentControl() {
   }
 
   return (
-    <section className={s.section} aria-label="Control editorial de marketing">
+    <section className={s.section} aria-label="Contenido de esta semana">
       <div className={s.heading}>
         <div>
-          <p className={s.eyebrow}>Paso 2 · Publica contenido</p>
-          <h2>Crea la siguiente demostración</h2>
-          <p>Parte con un video real. Antes de programarlo, completa la UTM y revisa el claim.</p>
+          <h2>Contenido de esta semana</h2>
+          <p>Mantén presencia constante en los grupos correctos. Un paso a la vez.</p>
         </div>
-        <button className={s.primaryButton} type="button" onClick={() => setIsComposerOpen((open) => !open)}>
-          <LuPlus aria-hidden /> Nueva pieza
-        </button>
+        <a href="#cola-editorial" className={s.textLink}>
+          Ver calendario
+        </a>
+      </div>
+
+      <div className={s.week} aria-label="Plan de lunes a domingo">
+        {week.map((day) => (
+          <article key={day.dateKey} className={s.weekDay}>
+            <span className={s.weekDate}>
+              {day.weekdayLabel} {day.label}
+            </span>
+            {day.item ? (
+              <>
+                <span className={`${s.weekStatus} ${WEEK_STATUS_CLASS[day.item.status]}`}>{day.item.statusLabel}</span>
+                <strong>{day.item.title}</strong>
+                <span className={s.weekMeta}>
+                  {day.item.channelLabel} · {day.item.formatLabel}
+                </span>
+                <button
+                  type="button"
+                  className={s.weekAction}
+                  onClick={() => setExpandedItemId(day.item?.id ?? null)}
+                >
+                  {day.item.actionText}
+                </button>
+              </>
+            ) : (
+              <>
+                <span className={`${s.weekStatus} ${s.weekIdea}`}>Idea</span>
+                <strong>Sin pieza este día</strong>
+                <span className={s.weekMeta}>Agrega un borrador al plan semanal.</span>
+                <button type="button" className={s.weekAction} onClick={() => openComposer(day.dateKey)}>
+                  Agregar al plan
+                </button>
+              </>
+            )}
+          </article>
+        ))}
       </div>
 
       <div className={s.summary}>
@@ -371,54 +465,66 @@ export function AdminMarketingContentControl() {
         <span><strong>{summary.pendingClaims}</strong> claims por revisar</span>
       </div>
 
-      <div className={s.starters} aria-label="Piezas recomendadas para empezar">
-        <div className={s.startersCopy}>
-          <strong>No empieces desde cero</strong>
-          <span>Elige una base y deja el guion listo para editar.</span>
-        </div>
-        <div className={s.starterActions}>
-          {CONTENT_STARTERS.map((starter) => {
-            const Icon = starter.device === "movil" ? LuSmartphone : LuMonitor;
-            return (
-              <button key={starter.id} type="button" className={s.starterButton} onClick={() => startFromTemplate(starter)}>
-                <Icon aria-hidden />
-                <span><strong>{starter.label}</strong><small>{starter.description}</small></span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {actionError ? <p className={s.error}>{actionError}</p> : null}
       {content.error ? <p className={s.error}>{content.error}</p> : null}
 
       {isComposerOpen ? (
         <form className={s.composer} onSubmit={createItem}>
           <div className={s.composerTitle}>
-            <h3>Nueva pieza</h3>
-            <p>Parte por la promesa, define el CTA y deja la atribución lista antes de publicar.</p>
+            <h3>Preparar publicación</h3>
+            <p>Título, canal, copy, CTA, UTM, fecha y estado. El video se registra; no se genera solo.</p>
+          </div>
+          <div className={s.starters} aria-label="Bases de guion">
+            <div className={s.startersCopy}>
+              <strong>Partir de una base</strong>
+              <span>Carga un guion. No genera el video.</span>
+            </div>
+            <div className={s.starterPrimary}>
+              {PRIMARY_STARTERS.map((starter) => {
+                const Icon = starter.device === "movil" ? LuSmartphone : LuMonitor;
+                return (
+                  <button key={starter.id} type="button" className={s.starterButton} onClick={() => startFromTemplate(starter)}>
+                    <Icon aria-hidden />
+                    <span><strong>{starter.label}</strong><small>{starter.description}</small></span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className={s.starterGroups}>
+              <span className={s.starterGroupsLabel}>Grupos de Facebook</span>
+              <div className={s.starterGroupRow}>
+                {GROUP_STARTERS.map((starter) => (
+                  <button key={starter.id} type="button" className={s.starterChip} onClick={() => startFromTemplate(starter)}>
+                    {starter.label.replace("Grupo · ", "")}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           <ContentFields form={composer} onChange={setComposerField} />
           <div className={s.formActions}>
-            <button className={s.secondaryButton} type="button" onClick={() => setIsComposerOpen(false)}>Cancelar</button>
+            <button className={s.secondaryButton} type="button" onClick={closeComposer}>Cancelar</button>
             <button className={s.primaryButton} type="submit" disabled={isSaving}>{isSaving ? "Guardando…" : "Guardar borrador"}</button>
           </div>
         </form>
       ) : null}
 
       {content.isLoading ? <div className={s.empty}>Cargando cola editorial…</div> : null}
-      {!content.isLoading && content.items.length === 0 ? (
-        <div className={s.empty}>
-          Aún no hay piezas. Crea primero el video móvil principal: cotizar en obra → PDF por WhatsApp.
-        </div>
-      ) : null}
 
-      <div className={s.itemList}>
+      <div className={s.itemList} id="cola-editorial">
         {content.items.map((item) => {
           const draft = draftFor(item);
           const isUtmReady = Boolean(draft.utmSource && draft.utmMedium && draft.utmCampaign && draft.utmContent);
           return (
-            <details className={s.item} key={item.id}>
+            <details
+              className={s.item}
+              key={item.id}
+              open={expandedItemId === item.id}
+              onToggle={(event) => {
+                if (event.currentTarget.open) setExpandedItemId(item.id);
+                else if (expandedItemId === item.id) setExpandedItemId(null);
+              }}
+            >
               <summary>
                 <span className={s.itemMain}>
                   <strong>{item.titulo}</strong>
@@ -457,24 +563,36 @@ function ContentFields({
 }) {
   return (
     <div className={s.fields}>
-      <label><span>ID de pieza</span><input value={form.contentId} onChange={(event) => onChange("contentId", event.target.value)} placeholder="reel-cotiza-obra-01" required /></label>
-      <label><span>Título</span><input value={form.titulo} onChange={(event) => onChange("titulo", event.target.value)} placeholder="Cotiza en obra desde tu teléfono" required /></label>
-      <label><span>Pilar</span><select value={form.pilar} onChange={(event) => onChange("pilar", event.target.value as ContentForm["pilar"])}>{GROWTH_CONTENT_PILLARS.map((value) => <option key={value} value={value}>{PILLAR_LABELS[value]}</option>)}</select></label>
-      <label><span>Formato</span><select value={form.formato} onChange={(event) => onChange("formato", event.target.value as ContentForm["formato"])}>{GROWTH_CONTENT_FORMATS.map((value) => <option key={value} value={value}>{value.replace("_", " ")}</option>)}</select></label>
-      <label><span>Canal</span><select value={form.canal} onChange={(event) => onChange("canal", event.target.value as ContentForm["canal"])}>{GROWTH_CONTENT_CHANNELS.map((value) => <option key={value} value={value}>{value === "grupos" ? "Grupos de Facebook" : value}</option>)}</select></label>
-      <label><span>Objetivo</span><select value={form.objetivo} onChange={(event) => onChange("objetivo", event.target.value as ContentForm["objetivo"])}>{GROWTH_CONTENT_OBJECTIVES.map((value) => <option key={value} value={value}>{OBJECTIVE_LABELS[value]}</option>)}</select></label>
-      <label className={s.full}><span>Hook</span><input value={form.hook} onChange={(event) => onChange("hook", event.target.value)} placeholder="¿Todavía llegas a casa a hacer presupuestos?" /></label>
-      <label><span>CTA</span><input value={form.cta} onChange={(event) => onChange("cta", event.target.value)} required /></label>
-      <label><span>Estado</span><select value={form.estado} onChange={(event) => onChange("estado", event.target.value as ContentForm["estado"])}>{GROWTH_CONTENT_STATUSES.map((value) => <option key={value} value={value}>{STATUS_LABELS[value]}</option>)}</select></label>
-      <label><span>Revisión de claim</span><select value={form.claimReviewStatus} onChange={(event) => onChange("claimReviewStatus", event.target.value as ContentForm["claimReviewStatus"])}>{GROWTH_CLAIM_REVIEW_STATUSES.map((value) => <option key={value} value={value}>{CLAIM_LABELS[value]}</option>)}</select></label>
-      <label><span>Programar para</span><input type="datetime-local" value={form.programadoPara} onChange={(event) => onChange("programadoPara", event.target.value)} /></label>
-      <label className={s.full}><span>Campaña</span><input value={form.campaignKey} onChange={(event) => onChange("campaignKey", event.target.value)} placeholder="reels_cotiza_obra_aug26" /></label>
-      <div className={`${s.utmFields} ${s.full}`}>
-        <span>UTM de esta pieza</span>
-        <label><input value={form.utmSource} onChange={(event) => onChange("utmSource", event.target.value)} placeholder="source" /></label>
-        <label><input value={form.utmMedium} onChange={(event) => onChange("utmMedium", event.target.value)} placeholder="medium" /></label>
-        <label><input value={form.utmCampaign} onChange={(event) => onChange("utmCampaign", event.target.value)} placeholder="campaign" /></label>
-        <label><input value={form.utmContent} onChange={(event) => onChange("utmContent", event.target.value)} placeholder="content" /></label>
+      <div className={s.fieldGroup}>
+        <p className={s.fieldGroupLabel}>Pieza</p>
+        <label><span>ID de pieza</span><input value={form.contentId} onChange={(event) => onChange("contentId", event.target.value)} placeholder="reel-cotiza-obra-01" required /></label>
+        <label><span>Título</span><input value={form.titulo} onChange={(event) => onChange("titulo", event.target.value)} placeholder="Cotiza en obra desde tu teléfono" required /></label>
+        <label><span>Pilar</span><select value={form.pilar} onChange={(event) => onChange("pilar", event.target.value as ContentForm["pilar"])}>{GROWTH_CONTENT_PILLARS.map((value) => <option key={value} value={value}>{PILLAR_LABELS[value]}</option>)}</select></label>
+        <label><span>Formato</span><select value={form.formato} onChange={(event) => onChange("formato", event.target.value as ContentForm["formato"])}>{GROWTH_CONTENT_FORMATS.map((value) => <option key={value} value={value}>{value.replace("_", " ")}</option>)}</select></label>
+        <label><span>Canal</span><select value={form.canal} onChange={(event) => onChange("canal", event.target.value as ContentForm["canal"])}>{GROWTH_CONTENT_CHANNELS.map((value) => <option key={value} value={value}>{value === "grupos" ? "Grupos de Facebook" : value}</option>)}</select></label>
+        <label><span>Objetivo</span><select value={form.objetivo} onChange={(event) => onChange("objetivo", event.target.value as ContentForm["objetivo"])}>{GROWTH_CONTENT_OBJECTIVES.map((value) => <option key={value} value={value}>{OBJECTIVE_LABELS[value]}</option>)}</select></label>
+      </div>
+      <div className={s.fieldGroup}>
+        <p className={s.fieldGroupLabel}>Mensaje</p>
+        <label className={s.full}><span>Hook</span><input value={form.hook} onChange={(event) => onChange("hook", event.target.value)} placeholder="¿Todavía llegas a casa a hacer presupuestos?" /></label>
+        <label className={s.full}><span>CTA</span><input value={form.cta} onChange={(event) => onChange("cta", event.target.value)} required /></label>
+        <label className={s.full}><span>Guion</span><textarea value={form.guion} onChange={(event) => onChange("guion", event.target.value)} placeholder="Qué mostrar, en qué orden y qué decir." rows={4} /></label>
+        <label className={s.full}><span>Caption</span><textarea value={form.caption} onChange={(event) => onChange("caption", event.target.value)} placeholder="Texto del post y CTA." rows={3} /></label>
+      </div>
+      <div className={s.fieldGroup}>
+        <p className={s.fieldGroupLabel}>Publicación y UTM</p>
+        <label><span>Estado</span><select value={form.estado} onChange={(event) => onChange("estado", event.target.value as ContentForm["estado"])}>{GROWTH_CONTENT_STATUSES.map((value) => <option key={value} value={value}>{STATUS_LABELS[value]}</option>)}</select></label>
+        <label><span>Revisión de claim</span><select value={form.claimReviewStatus} onChange={(event) => onChange("claimReviewStatus", event.target.value as ContentForm["claimReviewStatus"])}>{GROWTH_CLAIM_REVIEW_STATUSES.map((value) => <option key={value} value={value}>{CLAIM_LABELS[value]}</option>)}</select></label>
+        <label><span>Programar para</span><input type="datetime-local" value={form.programadoPara} onChange={(event) => onChange("programadoPara", event.target.value)} /></label>
+        <label className={s.full}><span>Campaña</span><input value={form.campaignKey} onChange={(event) => onChange("campaignKey", event.target.value)} placeholder="reels_cotiza_obra_aug26" /></label>
+        <div className={`${s.utmFields} ${s.full}`}>
+          <span>UTM de esta pieza</span>
+          <label><input value={form.utmSource} onChange={(event) => onChange("utmSource", event.target.value)} placeholder="source" /></label>
+          <label><input value={form.utmMedium} onChange={(event) => onChange("utmMedium", event.target.value)} placeholder="medium" /></label>
+          <label><input value={form.utmCampaign} onChange={(event) => onChange("utmCampaign", event.target.value)} placeholder="campaign" /></label>
+          <label><input value={form.utmContent} onChange={(event) => onChange("utmContent", event.target.value)} placeholder="content" /></label>
+        </div>
+        <label className={s.full}><span>Notas de revisión de claim</span><textarea value={form.claimReviewNotes} onChange={(event) => onChange("claimReviewNotes", event.target.value)} placeholder="Fuente, alcance y frase aprobada para publicar." rows={2} /></label>
       </div>
       {form.canal === "grupos" ? (
         <>
@@ -495,9 +613,6 @@ function ContentFields({
           </div>
         </>
       ) : null}
-      <label className={s.full}><span>Guion</span><textarea value={form.guion} onChange={(event) => onChange("guion", event.target.value)} placeholder="Qué mostrar, en qué orden y qué decir." rows={4} /></label>
-      <label className={s.full}><span>Caption</span><textarea value={form.caption} onChange={(event) => onChange("caption", event.target.value)} placeholder="Texto del post y CTA." rows={3} /></label>
-      <label className={s.full}><span>Notas de revisión de claim</span><textarea value={form.claimReviewNotes} onChange={(event) => onChange("claimReviewNotes", event.target.value)} placeholder="Fuente, alcance y frase aprobada para publicar." rows={2} /></label>
     </div>
   );
 }

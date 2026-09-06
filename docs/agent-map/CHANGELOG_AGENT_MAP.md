@@ -2,6 +2,13 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-06 - Robustez metadata de cola editorial y handoff de diseño
+
+- `/admin/marketing` dejaba de renderizar cuando una pieza histórica tenía `metadata_json: {}`: `metricas` quedaba indefinido y la UI intentaba leer `metricas.alcance`.
+- `growth-content.repository.ts` normaliza metadata incompleta, tipos inválidos y métricas ausentes a valores nulos; `admin-marketing-content-control.tsx` mantiene un fallback defensivo al convertir una pieza al formulario.
+- Se agregó regresión en `src/features/growth/repositories/__tests__/growth-content.repository.test.ts`.
+- Se documentó `docs/marketing/DISENO_HANDOFF_IA.md` para futuras sesiones exclusivamente visuales. No cambiar lógica, persistencia, Supabase, contratos ni rutas al usar ese handoff.
+
 ## 2026-09-04 - Catálogo 25 líneas: integridad, cotización, fabricación y UX receta
 
 ### Catálogo comercial e integridad de códigos

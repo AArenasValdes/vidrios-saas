@@ -1,7 +1,7 @@
 # Marketing Docs - Ventora
 
 Estado: vigente
-Actualizado: 2026-08-14
+Actualizado: 2026-09-06
 Responsable: marketing Ventora
 
 Esta carpeta reúne la documentacion operativa para crecimiento, prospeccion, contenido, metricas y WhatsApp de Ventora.
@@ -23,6 +23,7 @@ La ejecución operativa vive en `docs/growth-os/README.md`. Esta carpeta conserv
 - `VIDEO_PRODUCTION_SYSTEM.md`: templates, workflow, orden de onboarding y métricas de video
 - `VIDEO_BRIEF_TEMPLATE.md`: brief reutilizable para cada pieza
 - `VIDEO_LINEAS_25_PC_MOVIL.md`: brief y guion para catálogo de 25 líneas, configuración PC y uso móvil
+- `DISENO_HANDOFF_IA.md`: contexto reusable para trabajar con otra IA exclusivamente en diseño/UI
 - `PLANILLA_CONTENIDO_VENTORA.csv`: registro de publicaciones, UTMs, métricas y aprendizajes
 - `kpi-dashboard-spec.md`: definicion de metricas, formulas y estructura de dashboard HTML
 - `UTM_PLAYBOOK_META.md`: nomenclatura, enlaces y checklist de trazabilidad para el piloto Meta

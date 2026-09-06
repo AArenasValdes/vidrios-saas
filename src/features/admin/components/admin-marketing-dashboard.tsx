@@ -1,318 +1,238 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
-  LuBadgePercent,
+  LuBeaker,
   LuFileText,
-  LuLightbulb,
-  LuTarget,
+  LuFlag,
+  LuMessageCircle,
+  LuMonitor,
+  LuRocket,
+  LuTrophy,
   LuUsers,
-  LuVideo,
-  LuZap,
 } from "react-icons/lu";
 
 import {
-  MarketingDonutChart,
-  MarketingFunnelChart,
-  MarketingTrendChart,
-  MarketingUtmBars,
-} from "@/features/admin/components/admin-marketing-charts";
-import type { MarketingKpi, MarketingWorkspace } from "@/features/admin/types/admin-marketing";
+  buildAttentionLeads,
+  buildSalesFunnel,
+  buildSprintProgress,
+  hasSalesFunnelSignal,
+} from "@/features/admin/services/admin-marketing-command-center.logic";
+import type { MarketingWorkspace } from "@/features/admin/types/admin-marketing";
 import s from "./admin-marketing-dashboard.module.css";
 
-const KPI_ICONS = {
-  new_prospects: LuUsers,
-  demos: LuVideo,
-  trials: LuZap,
-  paid: LuBadgePercent,
-  trial_to_paid: LuTarget,
+const FUNNEL_ICONS = {
+  grupo: LuUsers,
+  demo_msg: LuFileText,
+  conversaciones: LuMessageCircle,
+  demos: LuMonitor,
+  pilotos: LuBeaker,
+  pagos: LuTrophy,
 } as const;
-
-function formatDelta(changePct: number | null) {
-  if (changePct === null) return { label: "Sin base previa", tone: s.kpiFlat };
-  if (changePct > 0) return { label: `+${changePct}%`, tone: s.kpiUp };
-  if (changePct < 0) return { label: `${changePct}%`, tone: s.kpiDown };
-  return { label: "0%", tone: s.kpiFlat };
-}
-
-function DashKpi({
-  kpi,
-  onClick,
-}: {
-  kpi: MarketingKpi;
-  onClick: (id: string) => void;
-}) {
-  const Icon = KPI_ICONS[kpi.id as keyof typeof KPI_ICONS] ?? LuFileText;
-  const delta = formatDelta(kpi.changePct);
-
-  return (
-    <button type="button" className={s.kpiCard} onClick={() => onClick(kpi.id)}>
-      <div className={s.kpiTop}>
-        <span className={s.kpiLabel}>{kpi.label}</span>
-        <span className={s.kpiIcon} aria-hidden>
-          <Icon />
-        </span>
-      </div>
-      <strong className={s.kpiValue}>{kpi.displayValue}</strong>
-      <span className={`${s.kpiDelta} ${delta.tone}`}>{delta.label} vs. período anterior</span>
-    </button>
-  );
-}
 
 type AdminMarketingDashboardProps = {
   workspace: MarketingWorkspace;
-  onKpiClick: (kpiId: string) => void;
+  children?: ReactNode;
 };
 
-export function AdminMarketingDashboard({ workspace, onKpiClick }: AdminMarketingDashboardProps) {
-  const paidStep = workspace.acquisitionFunnel.find((step) => step.id === "pagado");
-  const conversionPct = paidStep?.pctOfTotal ?? null;
-  const utmTotal = workspace.publicUtmRows.reduce((sum, row) => sum + row.count, 0);
+function initials(name: string) {
+  const parts = name.split(" ").filter(Boolean);
+  return `${parts[0]?.[0] ?? "V"}${parts[1]?.[0] ?? ""}`.toUpperCase();
+}
+
+export function AdminMarketingDashboard({ workspace, children }: AdminMarketingDashboardProps) {
+  const funnel = buildSalesFunnel({
+    groups: workspace.groupPerformance,
+    acquisitionFunnel: workspace.acquisitionFunnel,
+    prospects: workspace.prospects,
+  });
+  const showFunnel = hasSalesFunnelSignal(funnel);
+  const leads = buildAttentionLeads(workspace.prospects);
+  const groups = workspace.groupPerformance.slice(0, 6);
+  const sprint = buildSprintProgress({
+    nowActions: workspace.nowActions,
+    nextActions: workspace.nextActions,
+    groupPublications: workspace.groupPerformance.reduce((sum, group) => sum + group.publicaciones, 0),
+  });
 
   return (
     <div className={s.dashboard}>
-      <section className={s.nowBanner} aria-label="Qué hacer ahora">
-        <div className={s.nowHead}>
-          <span className={s.nowIcon} aria-hidden>
-            <LuTarget />
-          </span>
-          <h2>Qué hacer ahora</h2>
+      <section className={s.section} aria-label="Embudo de marketing y ventas">
+        <div className={s.sectionHead}>
+          <div>
+            <h2>Embudo de marketing y ventas</h2>
+            <p>Alcance de grupos, mensajes DEMO y avance real de la lista comercial.</p>
+          </div>
+          <Link href="/admin/prospectos" className={s.textLink}>
+            Ver embudo completo
+          </Link>
         </div>
-        <div className={s.nowSteps}>
-          {workspace.nowActions.map((action, index) => (
-            <article key={action.id} className={`${s.nowStep} ${action.done ? s.nowStepDone : ""}`}>
-              <span className={s.nowIndex}>{index + 1}</span>
-              <div className={s.nowCopy}>
-                <strong>{action.title}</strong>
-                <span>{action.detail}</span>
-              </div>
-              <Link
-                href={action.href}
-                className={index === 0 ? s.nowCta : s.nowCtaGhost}
-              >
-                {action.ctaLabel}
-              </Link>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className={s.kpiRow} aria-label="Indicadores de adquisición">
-        {workspace.acquisitionKpis.map((kpi) => (
-          <DashKpi key={kpi.id} kpi={kpi} onClick={onKpiClick} />
-        ))}
-      </section>
-
-      <section className={s.analyticsRow}>
-        <article className={s.panel}>
-          <div className={s.panelHead}>
-            <h2>Actividad comercial</h2>
-            <span className={s.chip}>Diario</span>
-          </div>
-          <div className={s.legendRow}>
-            <span className={s.legendKey}>
-              <i className={s.legendSwatch} style={{ background: "#1e88ff" }} /> Prospectos
-            </span>
-            <span className={s.legendKey}>
-              <i className={s.legendSwatch} style={{ background: "#a78bfa" }} /> Trials
-            </span>
-            <span className={s.legendKey}>
-              <i className={s.legendSwatch} style={{ background: "#fbbf24" }} /> Pagos
-            </span>
-          </div>
-          <MarketingTrendChart series={workspace.trendSeries} />
-        </article>
-
-        <article className={s.panel}>
-          <div className={s.panelHead}>
-            <h2>Prospectos por canal</h2>
-          </div>
-          <MarketingDonutChart rows={workspace.channelRows} />
-        </article>
-
-        <article className={s.panel}>
-          <div className={s.panelHead}>
-            <h2>Próximas acciones</h2>
-          </div>
-          <div className={s.nextList}>
-            {workspace.nextActions.map((action) => {
-              const ratio =
-                action.target && action.target > 0
-                  ? Math.min(100, (action.current / action.target) * 100)
-                  : action.current > 0
-                    ? 100
-                    : 0;
+        {showFunnel ? (
+          <ol className={s.funnel}>
+            {funnel.map((stage) => {
+              const Icon = FUNNEL_ICONS[stage.id];
               return (
-                <Link key={action.id} href={action.href} className={s.nextItem}>
-                  <div className={s.nextTop}>
-                    <strong>{action.title}</strong>
-                    <span>{action.detail}</span>
-                  </div>
-                  <div className={s.nextBar}>
-                    <div
-                      className={`${s.nextBarFill} ${action.id === "seguimientos" && action.current > 0 ? s.nextAlert : ""}`}
-                      style={{ width: `${Math.max(action.current > 0 ? 8 : 0, ratio)}%` }}
-                    />
-                  </div>
-                </Link>
+                <li key={stage.id} className={`${s.funnelStage} ${stage.id === "pagos" && stage.count > 0 ? s.funnelPaid : ""}`}>
+                  <span className={s.funnelIcon} aria-hidden>
+                    <Icon />
+                  </span>
+                  <strong className={s.funnelValue}>{stage.count.toLocaleString("es-CL")}</strong>
+                  <span className={s.funnelLabel}>{stage.label}</span>
+                  <span className={s.funnelDetail}>{stage.detail}</span>
+                </li>
               );
             })}
+          </ol>
+        ) : (
+          <div className={s.emptyRow}>
+            <p>Aún no hay avance medible en este período. Publica en grupos y registra DEMO, demos y pagos a mano.</p>
+            <a href="#contenido" className={s.primaryLink}>
+              Preparar publicación
+            </a>
           </div>
-        </article>
+        )}
       </section>
 
-      <section className={s.conversionRow}>
-        <article className={s.panel}>
-          <div className={s.panelHead}>
-            <h2>Embudo de adquisición</h2>
-          </div>
-          <MarketingFunnelChart steps={workspace.acquisitionFunnel} conversionPct={conversionPct} />
-        </article>
-
-        <article className={s.panel}>
-          <div className={s.panelHead}>
-            <h2>Piezas publicadas</h2>
-          </div>
-          {workspace.contentHighlights.length === 0 ? (
-            <p className={s.emptyNote}>Aún no hay piezas publicadas o programadas.</p>
-          ) : (
-            <ul className={s.pieceList}>
-              {workspace.contentHighlights.map((item) => (
-                <li key={item.id} className={s.piece}>
-                  <span className={s.thumb}>{item.formatLabel.slice(0, 2)}</span>
-                  <div className={s.pieceCopy}>
-                    <strong>{item.title}</strong>
-                    <span>
-                      {item.channelLabel} · {item.publishedLabel}
-                    </span>
-                  </div>
-                  <span className={item.utmComplete ? s.utmOk : s.utmBad}>
-                    {item.utmComplete ? "UTM ok" : "Falta UTM"}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </article>
-
-        <article className={s.panel}>
-          <div className={s.panelHead}>
-            <h2>Solicitudes desde páginas públicas</h2>
-          </div>
-          <MarketingUtmBars rows={workspace.publicUtmRows} />
-        </article>
-      </section>
-
-      <section className={s.analyticsRow} aria-label="Chile Sales Sprint">
-        <article className={s.panel}>
-          <div className={s.panelHead}>
-            <h2>Chile Sales Sprint · 30 días</h2>
-            <span className={s.chip}>Operación</span>
-          </div>
-          <p className={s.emptyNote}>
-            Cadencia equilibrada para aprender rápido sin convertir la operación en spam.
-          </p>
-          <div className={s.statRow}>
-            <div className={s.stat}><span>Carruseles</span><strong>3 / semana</strong></div>
-            <div className={s.stat}><span>Videos verticales</span><strong>2 / semana</strong></div>
-            <div className={s.stat}><span>Demo horizontal</span><strong>Quincenal</strong></div>
-            <div className={s.stat}><span>Historias/estados</span><strong>5–7 / semana</strong></div>
-          </div>
-          <div className={s.insight}>
-            <LuLightbulb aria-hidden />
-            <p><strong>CTA:</strong> Escríbeme DEMO y te muestro una cotización real. <strong>Oferta:</strong> piloto guiado de 15 días.</p>
-          </div>
-        </article>
-
-        <article className={s.panel}>
-          <div className={s.panelHead}>
-            <h2>Rendimiento de grupos</h2>
-            <span className={s.chip}>Manual</span>
-          </div>
-          {workspace.groupPerformance.length === 0 ? (
-            <p className={s.emptyNote}>Crea una pieza con canal “Grupos de Facebook” para comenzar a registrar resultados.</p>
-          ) : (
-            <div className={s.nextList}>
-              {workspace.groupPerformance.slice(0, 5).map((group) => (
-                <div key={group.grupoNombre} className={s.nextItem}>
-                  <div className={s.nextTop}>
-                    <strong>{group.grupoNombre}</strong>
-                    <span>{group.grupoSegmento ?? "Segmento no indicado"} · {group.publicaciones} publicación{group.publicaciones === 1 ? "" : "es"}</span>
-                  </div>
-                  <div className={s.tagRow}>
-                    <span className={s.tag}>Alcance <strong>{group.alcance.toLocaleString("es-CL")}</strong></span>
-                    <span className={s.tag}>DEMO <strong>{group.mensajesDemo}</strong></span>
-                    <span className={s.tag}>Demos <strong>{group.demos}</strong></span>
-                    <span className={s.tag}>Pagos <strong>{group.pagos}</strong></span>
-                  </div>
-                  {!group.metricasRegistradas ? <span className={s.emptyNote}>Faltan resultados manuales</span> : null}
-                </div>
-              ))}
+      <section className={s.split} aria-label="Atención comercial">
+        <article className={s.section}>
+          <div className={s.sectionHead}>
+            <div>
+              <h2>
+                Leads que requieren atención
+                {leads.length > 0 ? <span className={s.countBadge}>{leads.length}</span> : null}
+              </h2>
+              <p>Prospectos de la lista saliente que necesitan respuesta. No son leads captados de anuncios.</p>
             </div>
-          )}
-        </article>
-      </section>
-
-      <section className={s.bottomRow}>
-        <article className={s.panel}>
-          <div className={s.panelHead}>
-            <h2>Uso real del cotizador</h2>
+            <Link href="/admin/prospectos" className={s.textLink}>
+              Ver todos los leads
+            </Link>
           </div>
-          <div className={s.statRow}>
-            {workspace.quoteUsageKpis.slice(0, 4).map((kpi) => (
-              <div key={kpi.id} className={s.stat}>
-                <span>{kpi.label}</span>
-                <strong>{kpi.displayValue}</strong>
-              </div>
-            ))}
-          </div>
-          <div className={s.insight}>
-            <LuLightbulb aria-hidden />
-            <p>{workspace.quoteUsageInsight.text}</p>
-            {workspace.quoteUsageInsight.ctaHref && workspace.quoteUsageInsight.ctaLabel ? (
-              <Link href={workspace.quoteUsageInsight.ctaHref} className={s.nowCtaGhost}>
-                {workspace.quoteUsageInsight.ctaLabel}
+          {leads.length === 0 ? (
+            <div className={s.emptyRow}>
+              <p>No hay prospectos abiertos que requieran seguimiento ahora.</p>
+              <Link href="/admin/prospectos" className={s.primaryLink}>
+                Abrir prospectos
               </Link>
-            ) : null}
-          </div>
+            </div>
+          ) : (
+            <div className={s.tableWrap}>
+              <table className={s.table}>
+                <thead>
+                  <tr>
+                    <th>Prospecto</th>
+                    <th>Origen</th>
+                    <th>Siguiente acción</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {leads.map((lead) => (
+                    <tr key={lead.id}>
+                      <td>
+                        <div className={s.person}>
+                          <span className={s.avatar} aria-hidden>
+                            {initials(lead.name)}
+                          </span>
+                          <span>
+                            <strong>{lead.name}</strong>
+                            <small>{lead.company}</small>
+                          </span>
+                        </div>
+                      </td>
+                      <td>{lead.originLabel}</td>
+                      <td className={lead.nextActionTone === "overdue" ? s.overdue : undefined}>{lead.nextAction}</td>
+                      <td>
+                        <Link href={lead.href} className={s.rowAction}>
+                          {lead.ctaLabel}
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </article>
 
-        <article className={s.panel}>
-          <div className={s.panelHead}>
-            <h2>Páginas públicas</h2>
-          </div>
-          <div className={s.publicStats}>
-            <div className={s.stat}>
-              <span>Publicadas</span>
-              <strong>{workspace.periodSummary.publishedPages}</strong>
-            </div>
-            <div className={s.stat}>
-              <span>Solicitudes</span>
-              <strong>{workspace.periodSummary.totalPublicSolicitudes}</strong>
-            </div>
-            <div className={s.stat}>
-              <span>Pendientes</span>
-              <strong>{workspace.pendingPublicSolicitudes}</strong>
+        <article className={s.section}>
+          <div className={s.sectionHead}>
+            <div>
+              <h2>Grupos que generan oportunidades</h2>
+              <p>Resultados manuales: DEMO, demos y pagos. El alcance queda fuera de esta tabla.</p>
             </div>
           </div>
-          {utmTotal > 0 ? (
-            <ul className={s.tagRow}>
-              {workspace.publicUtmRows.slice(0, 4).map((row) => (
-                <li key={row.id} className={s.tag}>
-                  <span>{row.label}</span>
-                  <strong>{Math.round((row.count / utmTotal) * 100)}%</strong>
-                </li>
-              ))}
-            </ul>
+          {groups.length === 0 ? (
+            <div className={s.emptyRow}>
+              <p>Crea una pieza con canal Grupos de Facebook para registrar resultados reales.</p>
+              <a href="#contenido" className={s.primaryLink}>
+                Agregar al plan
+              </a>
+            </div>
           ) : (
-            <p className={s.emptyNote}>Sin UTM en solicitudes de clientes todavía.</p>
+            <div className={s.tableWrap}>
+              <table className={s.table}>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Grupo</th>
+                    <th>DEMO</th>
+                    <th>Demos</th>
+                    <th>Pagos</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {groups.map((group, index) => (
+                    <tr key={group.grupoNombre}>
+                      <td>
+                        <span className={s.rank}>{index + 1}</span>
+                      </td>
+                      <td>
+                        <strong>{group.grupoNombre}</strong>
+                        <small className={s.muted}>{group.grupoSegmento ?? "Segmento no indicado"}</small>
+                      </td>
+                      <td>{group.mensajesDemo.toLocaleString("es-CL")}</td>
+                      <td>{group.demos.toLocaleString("es-CL")}</td>
+                      <td className={group.pagos > 0 ? s.positive : undefined}>
+                        {group.pagos.toLocaleString("es-CL")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </article>
       </section>
 
-      <p className={s.footnote}>
-        Las métricas de solicitudes corresponden a páginas públicas de clientes, no a anuncios de Ventora.
-      </p>
+      {children}
+
+      <section className={s.sprint} aria-label="Chile Sales Sprint">
+        <div className={s.sprintCopy}>
+          <span className={s.sprintIcon} aria-hidden>
+            <LuRocket />
+          </span>
+          <div>
+            <strong>{sprint.title}</strong>
+            <p>{sprint.detail}</p>
+          </div>
+        </div>
+        <div className={s.sprintMeter}>
+          <div className={s.sprintMeta}>
+            <span>
+              {sprint.completed} de {sprint.total} acciones
+            </span>
+            <span>{sprint.percent}%</span>
+          </div>
+          <div className={s.sprintTrack}>
+            <div className={s.sprintFill} style={{ width: `${sprint.percent}%` }} />
+          </div>
+        </div>
+        <p className={s.sprintNext}>
+          <LuFlag aria-hidden />
+          Siguiente hito: {sprint.nextMilestone}
+        </p>
+      </section>
     </div>
   );
 }

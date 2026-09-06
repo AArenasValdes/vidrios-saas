@@ -39,7 +39,7 @@ const PAGE_META: Record<string, AdminPageMeta> = {
   },
   "/admin/marketing": {
     title: "Marketing",
-    subtitle: "Captas, entiendes y conviertes más.",
+    subtitle: "Capta, atiende y convierte más talleres en clientes.",
     showDateRange: true,
     showPrimaryActions: true,
   },

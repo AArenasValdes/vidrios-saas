@@ -336,7 +336,7 @@ export function buildQuoteUsageInsight(usage: MarketingQuoteUsage): MarketingQuo
   if (itemShare >= 50) {
     return {
       text: `El ${itemShare}% de las cotizaciones reales va por ítems. Prioriza demos de ese flujo en el contenido.`,
-      ctaLabel: "Crear pieza sobre Por ítems",
+      ctaLabel: "Preparar publicación",
       ctaHref: "#contenido",
     };
   }
