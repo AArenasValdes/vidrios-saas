@@ -17,6 +17,7 @@ export const GROWTH_CONTENT_FORMATS = [
 export const GROWTH_CONTENT_CHANNELS = [
   "instagram",
   "facebook",
+  "grupos",
   "tiktok",
   "youtube",
   "whatsapp",
@@ -52,6 +53,24 @@ export type GrowthContentObjective = (typeof GROWTH_CONTENT_OBJECTIVES)[number];
 export type GrowthContentStatus = (typeof GROWTH_CONTENT_STATUSES)[number];
 export type GrowthClaimReviewStatus = (typeof GROWTH_CLAIM_REVIEW_STATUSES)[number];
 
+export type GrowthContentManualMetrics = {
+  alcance: number | null;
+  interacciones: number | null;
+  comentarios: number | null;
+  mensajesDemo: number | null;
+  demos: number | null;
+  pagos: number | null;
+};
+
+export type GrowthContentMetadata = {
+  grupoNombre: string | null;
+  grupoSegmento: string | null;
+  grupoRegion: string | null;
+  publicacionUrl: string | null;
+  piezaBaseId: string | null;
+  metricas: GrowthContentManualMetrics;
+};
+
 export type GrowthContentItem = {
   id: string;
   workspaceId: string;
@@ -73,6 +92,7 @@ export type GrowthContentItem = {
   estado: GrowthContentStatus;
   claimReviewStatus: GrowthClaimReviewStatus;
   claimReviewNotes: string | null;
+  metadata: GrowthContentMetadata;
   programadoPara: string | null;
   publicadoEn: string | null;
   creadoEn: string;
@@ -98,6 +118,7 @@ export type CreateGrowthContentItemInput = {
   estado?: GrowthContentStatus;
   claimReviewStatus?: GrowthClaimReviewStatus;
   claimReviewNotes?: string | null;
+  metadata?: Partial<GrowthContentMetadata> | null;
   programadoPara?: string | null;
 };
 

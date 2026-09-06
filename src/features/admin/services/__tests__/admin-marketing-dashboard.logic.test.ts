@@ -1,5 +1,6 @@
 import {
   buildContentHighlights,
+  buildGroupPerformance,
   buildNextActions,
   buildNowActions,
   buildPublicUtmRows,
@@ -133,6 +134,17 @@ describe("admin-marketing-dashboard.logic", () => {
       utmMedium: null,
       utmCampaign: null,
       utmContent: null,
+      grupoNombre: null,
+      grupoSegmento: null,
+      grupoRegion: null,
+      metricas: {
+        alcance: null,
+        interacciones: null,
+        comentarios: null,
+        mensajesDemo: null,
+        demos: null,
+        pagos: null,
+      },
       publicadoEn: null,
       programadoPara: null,
       actualizadoEn: "2026-06-01T00:00:00.000Z",
@@ -157,6 +169,17 @@ describe("admin-marketing-dashboard.logic", () => {
         utmMedium: null,
         utmCampaign: null,
         utmContent: null,
+        grupoNombre: null,
+        grupoSegmento: null,
+        grupoRegion: null,
+        metricas: {
+          alcance: null,
+          interacciones: null,
+          comentarios: null,
+          mensajesDemo: null,
+          demos: null,
+          pagos: null,
+        },
         publicadoEn: "2026-06-02T00:00:00.000Z",
         programadoPara: null,
         actualizadoEn: "2026-06-02T00:00:00.000Z",
@@ -169,6 +192,46 @@ describe("admin-marketing-dashboard.logic", () => {
     expect(now[1]?.done).toBe(true);
     expect(now[2]?.done).toBe(false);
     expect(now[2]?.title).toContain("Completa UTM");
+  });
+
+  it("separa el rendimiento manual por grupo de Facebook", () => {
+    const groups = buildGroupPerformance([
+      {
+        id: "g1",
+        title: "Cotiza desde el celular",
+        formato: "carrusel",
+        canal: "grupos",
+        estado: "publicado",
+        utmSource: "facebook",
+        utmMedium: "group",
+        utmCampaign: "chile_sales_sprint_30d",
+        utmContent: "grupo_1",
+        grupoNombre: "Fabricantes PVC Chile",
+        grupoSegmento: "Fabricantes de ventanas PVC",
+        grupoRegion: "Chile",
+        metricas: {
+          alcance: 1716,
+          interacciones: 264,
+          comentarios: 8,
+          mensajesDemo: 2,
+          demos: 1,
+          pagos: 0,
+        },
+        publicadoEn: "2026-09-06T00:00:00.000Z",
+        programadoPara: null,
+        actualizadoEn: "2026-09-06T00:00:00.000Z",
+      },
+    ]);
+
+    expect(groups).toEqual([
+      expect.objectContaining({
+        grupoNombre: "Fabricantes PVC Chile",
+        alcance: 1716,
+        interacciones: 264,
+        mensajesDemo: 2,
+        metricasRegistradas: true,
+      }),
+    ]);
   });
 
   it("cuenta seguimientos vencidos y omite mock o cerrados", () => {

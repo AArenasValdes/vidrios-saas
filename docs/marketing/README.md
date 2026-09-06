@@ -22,6 +22,7 @@ La ejecución operativa vive en `docs/growth-os/README.md`. Esta carpeta conserv
 - `onboarding-video-pilots.md`: guiones piloto para videos de onboarding comercial de Ventora
 - `VIDEO_PRODUCTION_SYSTEM.md`: templates, workflow, orden de onboarding y métricas de video
 - `VIDEO_BRIEF_TEMPLATE.md`: brief reutilizable para cada pieza
+- `VIDEO_LINEAS_25_PC_MOVIL.md`: brief y guion para catálogo de 25 líneas, configuración PC y uso móvil
 - `PLANILLA_CONTENIDO_VENTORA.csv`: registro de publicaciones, UTMs, métricas y aprendizajes
 - `kpi-dashboard-spec.md`: definicion de metricas, formulas y estructura de dashboard HTML
 - `UTM_PLAYBOOK_META.md`: nomenclatura, enlaces y checklist de trazabilidad para el piloto Meta

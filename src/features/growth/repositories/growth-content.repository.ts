@@ -25,6 +25,7 @@ type GrowthContentItemRow = {
   estado: GrowthContentItem["estado"];
   claim_review_status: GrowthContentItem["claimReviewStatus"];
   claim_review_notes: string | null;
+  metadata_json: GrowthContentItem["metadata"];
   programado_para: string | null;
   publicado_en: string | null;
   creado_en: string;
@@ -32,7 +33,7 @@ type GrowthContentItemRow = {
 };
 
 const CONTENT_COLUMNS =
-  "id, workspace_id, content_id, titulo, pilar, formato, canal, objetivo, hook, cta, guion, caption, campaign_key, utm_source, utm_medium, utm_campaign, utm_content, estado, claim_review_status, claim_review_notes, programado_para, publicado_en, creado_en, actualizado_en";
+  "id, workspace_id, content_id, titulo, pilar, formato, canal, objetivo, hook, cta, guion, caption, campaign_key, utm_source, utm_medium, utm_campaign, utm_content, estado, claim_review_status, claim_review_notes, metadata_json, programado_para, publicado_en, creado_en, actualizado_en";
 
 function mapRow(row: GrowthContentItemRow): GrowthContentItem {
   return {
@@ -56,6 +57,21 @@ function mapRow(row: GrowthContentItemRow): GrowthContentItem {
     estado: row.estado,
     claimReviewStatus: row.claim_review_status,
     claimReviewNotes: row.claim_review_notes,
+    metadata: row.metadata_json ?? {
+      grupoNombre: null,
+      grupoSegmento: null,
+      grupoRegion: null,
+      publicacionUrl: null,
+      piezaBaseId: null,
+      metricas: {
+        alcance: null,
+        interacciones: null,
+        comentarios: null,
+        mensajesDemo: null,
+        demos: null,
+        pagos: null,
+      },
+    },
     programadoPara: row.programado_para,
     publicadoEn: row.publicado_en,
     creadoEn: row.creado_en,

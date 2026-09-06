@@ -37,6 +37,15 @@ type ContentForm = {
   claimReviewStatus: NonNullable<CreateGrowthContentItemInput["claimReviewStatus"]>;
   claimReviewNotes: string;
   programadoPara: string;
+  grupoNombre: string;
+  grupoSegmento: string;
+  grupoRegion: string;
+  alcance: string;
+  interacciones: string;
+  comentarios: string;
+  mensajesDemo: string;
+  demos: string;
+  pagos: string;
 };
 
 const PILLAR_LABELS = {
@@ -72,6 +81,15 @@ const CLAIM_LABELS = {
   aprobado: "Claim aprobado",
   bloqueado: "Claim bloqueado",
 } as const;
+
+const GROUP_SEGMENTS = [
+  "Fabricantes de ventanas PVC",
+  "Talleres de aluminio",
+  "Vidrierías",
+  "Maestros instaladores",
+  "Shower y cierres",
+  "Talleres pequeños",
+] as const;
 
 const CONTENT_STARTERS: Array<{
   id: string;
@@ -114,7 +132,35 @@ const CONTENT_STARTERS: Array<{
       guion: "1. Abre una línea común.\n2. Ajusta precio y datos comerciales.\n3. Crea una cotización por ítems.\n4. Muestra que también puede continuar desde el celular.\n5. CTA: Te muestro una cotización real.",
     },
   },
+  ...GROUP_SEGMENTS.map((segment, index) => ({
+    id: `grupo-${index + 1}`,
+    label: `Grupo · ${segment}`,
+    description: "Publicación adaptada para un grupo especializado.",
+    device: "movil" as const,
+    form: {
+      contentId: `grupo-${index + 1}-cotiza-obra`,
+      titulo: `Cotizar mejor en ${segment.toLowerCase()}`,
+      pilar: "dolor_transformacion" as const,
+      formato: "carrusel" as const,
+      canal: "grupos" as const,
+      objetivo: "generar_demos" as const,
+      hook: "¿Sigues armando presupuestos entre WhatsApp, Excel y notas?",
+      campaignKey: "chile_sales_sprint_30d",
+      utmSource: "facebook",
+      utmMedium: "group",
+      utmCampaign: "chile_sales_sprint_30d",
+      utmContent: `grupo_${index + 1}`,
+      grupoSegmento: segment,
+      guion: `1. Presentar el dolor de ${segment.toLowerCase()}.\n2. Mostrar una cotización real desde el celular.\n3. Explicar PDF y WhatsApp.\n4. CTA: Escríbeme DEMO.`,
+    },
+  })),
 ];
+
+function parseMetric(value: string) {
+  if (!value.trim()) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : null;
+}
 
 function emptyForm(): ContentForm {
   return {
@@ -137,6 +183,15 @@ function emptyForm(): ContentForm {
     claimReviewStatus: "pendiente",
     claimReviewNotes: "",
     programadoPara: "",
+    grupoNombre: "",
+    grupoSegmento: "",
+    grupoRegion: "",
+    alcance: "",
+    interacciones: "",
+    comentarios: "",
+    mensajesDemo: "",
+    demos: "",
+    pagos: "",
   };
 }
 
@@ -161,6 +216,15 @@ function itemToForm(item: GrowthContentItem): ContentForm {
     claimReviewStatus: item.claimReviewStatus,
     claimReviewNotes: item.claimReviewNotes ?? "",
     programadoPara: item.programadoPara ? item.programadoPara.slice(0, 16) : "",
+    grupoNombre: item.metadata.grupoNombre ?? "",
+    grupoSegmento: item.metadata.grupoSegmento ?? "",
+    grupoRegion: item.metadata.grupoRegion ?? "",
+    alcance: item.metadata.metricas.alcance?.toString() ?? "",
+    interacciones: item.metadata.metricas.interacciones?.toString() ?? "",
+    comentarios: item.metadata.metricas.comentarios?.toString() ?? "",
+    mensajesDemo: item.metadata.metricas.mensajesDemo?.toString() ?? "",
+    demos: item.metadata.metricas.demos?.toString() ?? "",
+    pagos: item.metadata.metricas.pagos?.toString() ?? "",
   };
 }
 
@@ -177,6 +241,21 @@ function formToInput(form: ContentForm): CreateGrowthContentItemInput {
     utmContent: form.utmContent || null,
     claimReviewNotes: form.claimReviewNotes || null,
     programadoPara: form.programadoPara || null,
+    metadata: {
+      grupoNombre: form.grupoNombre || null,
+      grupoSegmento: form.grupoSegmento || null,
+      grupoRegion: form.grupoRegion || null,
+      publicacionUrl: null,
+      piezaBaseId: null,
+      metricas: {
+        alcance: parseMetric(form.alcance),
+        interacciones: parseMetric(form.interacciones),
+        comentarios: parseMetric(form.comentarios),
+        mensajesDemo: parseMetric(form.mensajesDemo),
+        demos: parseMetric(form.demos),
+        pagos: parseMetric(form.pagos),
+      },
+    },
   };
 }
 
@@ -379,7 +458,7 @@ function ContentFields({
       <label><span>Título</span><input value={form.titulo} onChange={(event) => onChange("titulo", event.target.value)} placeholder="Cotiza en obra desde tu teléfono" required /></label>
       <label><span>Pilar</span><select value={form.pilar} onChange={(event) => onChange("pilar", event.target.value as ContentForm["pilar"])}>{GROWTH_CONTENT_PILLARS.map((value) => <option key={value} value={value}>{PILLAR_LABELS[value]}</option>)}</select></label>
       <label><span>Formato</span><select value={form.formato} onChange={(event) => onChange("formato", event.target.value as ContentForm["formato"])}>{GROWTH_CONTENT_FORMATS.map((value) => <option key={value} value={value}>{value.replace("_", " ")}</option>)}</select></label>
-      <label><span>Canal</span><select value={form.canal} onChange={(event) => onChange("canal", event.target.value as ContentForm["canal"])}>{GROWTH_CONTENT_CHANNELS.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+      <label><span>Canal</span><select value={form.canal} onChange={(event) => onChange("canal", event.target.value as ContentForm["canal"])}>{GROWTH_CONTENT_CHANNELS.map((value) => <option key={value} value={value}>{value === "grupos" ? "Grupos de Facebook" : value}</option>)}</select></label>
       <label><span>Objetivo</span><select value={form.objetivo} onChange={(event) => onChange("objetivo", event.target.value as ContentForm["objetivo"])}>{GROWTH_CONTENT_OBJECTIVES.map((value) => <option key={value} value={value}>{OBJECTIVE_LABELS[value]}</option>)}</select></label>
       <label className={s.full}><span>Hook</span><input value={form.hook} onChange={(event) => onChange("hook", event.target.value)} placeholder="¿Todavía llegas a casa a hacer presupuestos?" /></label>
       <label><span>CTA</span><input value={form.cta} onChange={(event) => onChange("cta", event.target.value)} required /></label>
@@ -394,6 +473,25 @@ function ContentFields({
         <label><input value={form.utmCampaign} onChange={(event) => onChange("utmCampaign", event.target.value)} placeholder="campaign" /></label>
         <label><input value={form.utmContent} onChange={(event) => onChange("utmContent", event.target.value)} placeholder="content" /></label>
       </div>
+      {form.canal === "grupos" ? (
+        <>
+          <div className={`${s.utmFields} ${s.full}`}>
+            <span>Distribución en grupo</span>
+            <label><span>Nombre del grupo</span><input value={form.grupoNombre} onChange={(event) => onChange("grupoNombre", event.target.value)} placeholder="Fabricantes PVC y aluminio Chile" required={form.estado === "programado" || form.estado === "publicado"} /></label>
+            <label><span>Segmento</span><select value={form.grupoSegmento} onChange={(event) => onChange("grupoSegmento", event.target.value)}><option value="">Seleccionar</option>{GROUP_SEGMENTS.map((segment) => <option key={segment} value={segment}>{segment}</option>)}</select></label>
+            <label><span>Región/cobertura</span><input value={form.grupoRegion} onChange={(event) => onChange("grupoRegion", event.target.value)} placeholder="Chile · RM" /></label>
+          </div>
+          <div className={`${s.utmFields} ${s.full}`}>
+            <span>Resultados manuales · separados de prospectos</span>
+            <label><span>Alcance</span><input inputMode="numeric" value={form.alcance} onChange={(event) => onChange("alcance", event.target.value)} placeholder="—" /></label>
+            <label><span>Interacciones</span><input inputMode="numeric" value={form.interacciones} onChange={(event) => onChange("interacciones", event.target.value)} placeholder="—" /></label>
+            <label><span>Comentarios</span><input inputMode="numeric" value={form.comentarios} onChange={(event) => onChange("comentarios", event.target.value)} placeholder="—" /></label>
+            <label><span>Mensajes DEMO</span><input inputMode="numeric" value={form.mensajesDemo} onChange={(event) => onChange("mensajesDemo", event.target.value)} placeholder="—" /></label>
+            <label><span>Demos</span><input inputMode="numeric" value={form.demos} onChange={(event) => onChange("demos", event.target.value)} placeholder="—" /></label>
+            <label><span>Pagos</span><input inputMode="numeric" value={form.pagos} onChange={(event) => onChange("pagos", event.target.value)} placeholder="—" /></label>
+          </div>
+        </>
+      ) : null}
       <label className={s.full}><span>Guion</span><textarea value={form.guion} onChange={(event) => onChange("guion", event.target.value)} placeholder="Qué mostrar, en qué orden y qué decir." rows={4} /></label>
       <label className={s.full}><span>Caption</span><textarea value={form.caption} onChange={(event) => onChange("caption", event.target.value)} placeholder="Texto del post y CTA." rows={3} /></label>
       <label className={s.full}><span>Notas de revisión de claim</span><textarea value={form.claimReviewNotes} onChange={(event) => onChange("claimReviewNotes", event.target.value)} placeholder="Fuente, alcance y frase aprobada para publicar." rows={2} /></label>

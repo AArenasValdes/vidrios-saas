@@ -231,9 +231,34 @@ export type MarketingContentSnapshot = {
   utmMedium: string | null;
   utmCampaign: string | null;
   utmContent: string | null;
+  grupoNombre: string | null;
+  grupoSegmento: string | null;
+  grupoRegion: string | null;
+  metricas: {
+    alcance: number | null;
+    interacciones: number | null;
+    comentarios: number | null;
+    mensajesDemo: number | null;
+    demos: number | null;
+    pagos: number | null;
+  };
   publicadoEn: string | null;
   programadoPara: string | null;
   actualizadoEn: string;
+};
+
+export type MarketingGroupPerformance = {
+  grupoNombre: string;
+  grupoSegmento: string | null;
+  grupoRegion: string | null;
+  publicaciones: number;
+  alcance: number;
+  interacciones: number;
+  comentarios: number;
+  mensajesDemo: number;
+  demos: number;
+  pagos: number;
+  metricasRegistradas: boolean;
 };
 
 export type MarketingWorkspace = {
@@ -261,6 +286,7 @@ export type MarketingWorkspace = {
   prospects: MarketingProspectSnapshot[];
   trendSeries: MarketingTrendPoint[];
   contentHighlights: MarketingContentHighlight[];
+  groupPerformance: MarketingGroupPerformance[];
   publicUtmRows: MarketingPublicUtmRow[];
   nowActions: MarketingNowAction[];
   nextActions: MarketingNextAction[];

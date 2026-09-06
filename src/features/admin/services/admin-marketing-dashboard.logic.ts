@@ -3,6 +3,7 @@ import type { PublicSolicitudRow } from "@/features/admin/services/admin-public-
 import type {
   MarketingContentHighlight,
   MarketingContentSnapshot,
+  MarketingGroupPerformance,
   MarketingNextAction,
   MarketingNowAction,
   MarketingOnboardingVideoSnapshot,
@@ -28,11 +29,51 @@ const FORMAT_LABELS: Record<string, string> = {
 const CHANNEL_LABELS: Record<string, string> = {
   instagram: "Instagram",
   facebook: "Facebook",
+  grupos: "Grupos de Facebook",
   tiktok: "TikTok",
   youtube: "YouTube",
   whatsapp: "WhatsApp",
   interno: "Interno",
 };
+
+export function buildGroupPerformance(
+  items: MarketingContentSnapshot[]
+): MarketingGroupPerformance[] {
+  const groups = new Map<string, MarketingGroupPerformance>();
+
+  for (const item of items) {
+    if (item.canal !== "grupos" || !item.grupoNombre) continue;
+    const current = groups.get(item.grupoNombre) ?? {
+      grupoNombre: item.grupoNombre,
+      grupoSegmento: item.grupoSegmento,
+      grupoRegion: item.grupoRegion,
+      publicaciones: 0,
+      alcance: 0,
+      interacciones: 0,
+      comentarios: 0,
+      mensajesDemo: 0,
+      demos: 0,
+      pagos: 0,
+      metricasRegistradas: false,
+    };
+    const metrics = item.metricas;
+    current.publicaciones += item.estado === "publicado" || item.estado === "ganador" ? 1 : 0;
+    current.alcance += metrics.alcance ?? 0;
+    current.interacciones += metrics.interacciones ?? 0;
+    current.comentarios += metrics.comentarios ?? 0;
+    current.mensajesDemo += metrics.mensajesDemo ?? 0;
+    current.demos += metrics.demos ?? 0;
+    current.pagos += metrics.pagos ?? 0;
+    current.metricasRegistradas = current.metricasRegistradas || Object.values(metrics).some((value) => value !== null);
+    groups.set(item.grupoNombre, current);
+  }
+
+  return [...groups.values()].sort((left, right) => {
+    if (right.pagos !== left.pagos) return right.pagos - left.pagos;
+    if (right.mensajesDemo !== left.mensajesDemo) return right.mensajesDemo - left.mensajesDemo;
+    return right.interacciones - left.interacciones;
+  });
+}
 
 function dayKey(iso: string) {
   return iso.slice(0, 10);

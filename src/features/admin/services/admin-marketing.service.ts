@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { listAdminClients } from "@/features/admin/services/admin-clients.service";
 import {
   buildContentHighlights,
+  buildGroupPerformance,
   buildNextActions,
   buildNowActions,
   buildPublicUtmRows,
@@ -78,6 +79,12 @@ type ContentItemRow = {
   utm_medium: string | null;
   utm_campaign: string | null;
   utm_content: string | null;
+  metadata_json: {
+    grupoNombre?: string | null;
+    grupoSegmento?: string | null;
+    grupoRegion?: string | null;
+    metricas?: Partial<MarketingContentSnapshot["metricas"]>;
+  } | null;
   publicado_en: string | null;
   programado_para: string | null;
   actualizado_en: string;
@@ -147,7 +154,7 @@ async function fetchMarketingContent(): Promise<MarketingContentSnapshot[]> {
   const { data, error } = await admin
     .from("growth_content_items")
     .select(
-      "id, titulo, formato, canal, estado, utm_source, utm_medium, utm_campaign, utm_content, publicado_en, programado_para, actualizado_en"
+      "id, titulo, formato, canal, estado, utm_source, utm_medium, utm_campaign, utm_content, metadata_json, publicado_en, programado_para, actualizado_en"
     )
     .is("eliminado_en", null)
     .order("actualizado_en", { ascending: false });
@@ -164,6 +171,17 @@ async function fetchMarketingContent(): Promise<MarketingContentSnapshot[]> {
     utmMedium: row.utm_medium,
     utmCampaign: row.utm_campaign,
     utmContent: row.utm_content,
+    grupoNombre: row.metadata_json?.grupoNombre ?? null,
+    grupoSegmento: row.metadata_json?.grupoSegmento ?? null,
+    grupoRegion: row.metadata_json?.grupoRegion ?? null,
+    metricas: {
+      alcance: row.metadata_json?.metricas?.alcance ?? null,
+      interacciones: row.metadata_json?.metricas?.interacciones ?? null,
+      comentarios: row.metadata_json?.metricas?.comentarios ?? null,
+      mensajesDemo: row.metadata_json?.metricas?.mensajesDemo ?? null,
+      demos: row.metadata_json?.metricas?.demos ?? null,
+      pagos: row.metadata_json?.metricas?.pagos ?? null,
+    },
     publicadoEn: row.publicado_en,
     programadoPara: row.programado_para,
     actualizadoEn: row.actualizado_en,
@@ -300,6 +318,7 @@ export async function getAdminMarketingWorkspace(input?: {
     prospects,
     trendSeries: buildTrendSeries({ prospects, quotes: quoteUsageRows, period }),
     contentHighlights: buildContentHighlights(contentItems),
+    groupPerformance: buildGroupPerformance(contentItems),
     publicUtmRows: buildPublicUtmRows({ solicitudes: allSolicitudes, period }),
     nowActions,
     nextActions,

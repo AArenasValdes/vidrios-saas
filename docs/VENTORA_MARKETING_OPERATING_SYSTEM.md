@@ -51,7 +51,7 @@ La meta correcta es crear un sistema que produzca suficientes experimentos para 
 
 **Oferta de entrada:**
 
-> “Reto 7 días sin perder solicitudes: crea tu página, comparte tu link y envía tu primera cotización.”
+> “Piloto guiado de 15 días: crea tu primera cotización real y envía un PDF desde el celular.”
 
 ### Tono
 
@@ -62,7 +62,7 @@ Directo, reconocible, con humor de taller y terreno. Chileno cuando aporte natur
 | Franquicia | Conflicto | Formato | CTA |
 |---|---|---|---|
 | WhatsApp no es CRM | 28 chats, 9 audios y una cotización perdida | Reel/sketch | “Escribe DEMO” |
-| Cotización fantasma | El cliente pidió precio y nadie sabe dónde quedó | Reel con pantalla | “Prueba Ventora 7 días” |
+| Cotización fantasma | El cliente pidió precio y nadie sabe dónde quedó | Reel con pantalla | “Escríbeme DEMO” |
 | Antes/después | Libreta + chat versus flujo centralizado | Carrusel | “Guarda este post” |
 | Reto 2 minutos | Crear y compartir una cotización en tiempo real | Reel demo | “Haz el reto” |
 | El cliente que dijo “lo pienso” | Seguimiento perdido por falta de orden | Historias/encuesta | “¿Te ha pasado?” |
@@ -75,10 +75,10 @@ La producción semanal parte de una sola idea comercial y la convierte en múlti
 ```mermaid
 flowchart TD
     A[Dolor real del rubro] --> B[Brief semanal]
-    B --> C[4 guiones de Reel]
-    B --> D[2 carruseles]
-    B --> E[7 historias]
-    B --> F[1 demo larga]
+    B --> C[2 videos verticales]
+    B --> D[3 carruseles + 1 pieza de grupo]
+    B --> E[5–7 historias]
+    B --> F[1 demo horizontal quincenal]
     C --> G[Render y subtítulos]
     D --> G
     E --> H[Publicación y CTA]
@@ -91,14 +91,15 @@ flowchart TD
 
 ### Cadencia mínima durante 30 días
 
-- 5 Reels/Shorts por semana.
-- 2 carruseles por semana.
-- 5–7 historias por semana con encuesta, prueba social o CTA.
-- 1 demo larga cada dos semanas.
+- 2 videos verticales por semana.
+- 3 carruseles por semana.
+- 1 foto o pieza gráfica para grupos por semana.
+- 5–7 historias o estados por semana con encuesta, prueba social o CTA.
+- 1 demo horizontal cada dos semanas.
 - 1 caso o testimonio real por semana cuando exista autorización.
 - 1 bloque semanal de respuesta a comentarios y seguimiento de solicitudes.
 
-Distribución prioritaria: Instagram Reels, TikTok, Facebook Reels y YouTube Shorts. Los carruseles viven principalmente en Instagram/Facebook. LinkedIn es secundario para alianzas, proveedores y empresas más estructuradas; no debe absorber el esfuerzo inicial.
+Distribución prioritaria: grupos de Facebook para descubrimiento, Facebook/Instagram para confianza, videos verticales en Instagram/TikTok/YouTube Shorts y demos horizontales en YouTube/Facebook como video normal. Los carruseles viven principalmente en Facebook/Instagram. LinkedIn es secundario para alianzas y no debe absorber el esfuerzo inicial.
 
 Para vídeo vertical, usar 9:16, subtítulos grandes, una idea por pieza y el producto visible temprano. Meta recomienda captar atención desde los primeros segundos y diseñar para visualización sin sonido; los recursos oficiales también recomiendan formato vertical y zonas seguras.
 
@@ -287,15 +288,15 @@ Interpretación: existe evidencia de que una pieza o campaña puede producir dis
 ### Semana 1: dolor y categoría
 
 - Lanzar “El cementerio de cotizaciones”.
-- Publicar 5 Reels sobre WhatsApp, memoria, audios y respuestas tardías.
-- Publicar 2 carruseles: “cotizador técnico vs sistema comercial” y “qué pasa desde la solicitud hasta el pago”.
-- CTA único: `Escribe DEMO` o link con UTM, no ambos en la misma pieza.
+- Publicar 2 videos verticales, 3 carruseles y 1 adaptación gráfica para grupos sobre WhatsApp, memoria, audios y respuestas tardías.
+- CTA único: `Escríbeme DEMO`; los enlaces UTM se usan como apoyo de atribución, no como un segundo CTA en la misma pieza.
 
 ### Semana 2: demostración
 
-- 5 Reels con pantalla real: solicitud pública, bandeja, cotización móvil, PDF, aprobación.
+- 2 videos verticales con pantalla real: cotización móvil, PDF y WhatsApp.
+- 3 carruseles sobre líneas, precios y orden comercial.
 - Reto de 2 minutos con cronómetro visible.
-- Primer vídeo largo: “Cómo crear y enviar una cotización desde el teléfono”.
+- Demo horizontal quincenal: “Cómo crear y enviar una cotización desde el teléfono”.
 
 ### Semana 3: objeciones y confianza
 
@@ -307,7 +308,7 @@ Interpretación: existe evidencia de que una pieza o campaña puede producir dis
 
 ### Semana 4: oferta y prueba
 
-- Reto 7 días.
+- Piloto guiado de 15 días.
 - Demo con un caso real autorizado.
 - Comparación antes/después con tiempos medidos, sin inventar ahorros.
 - Retargeting a visitantes y personas que vieron 50% o más del vídeo, cuando exista volumen suficiente.
@@ -343,8 +344,8 @@ Criterios de aceptación:
 
 ## 12. Decisiones inmediatas
 
-1. Conectar Instagram, GA4, Search Console, TikTok y YouTube a Windsor.ai o a una fuente equivalente.
-2. Definir un único CTA de adquisición para 30 días: `Prueba Ventora 7 días`.
+1. Validar las fuentes externas disponibles y registrar grupos de Facebook como canal separado en la cola editorial.
+2. Definir un único CTA de adquisición para 30 días: `Escríbeme DEMO`.
 3. Grabar cinco demostraciones reales: crear línea, configurar línea, cotizar en computador, cotizar en teléfono y compartir/aprobar.
 4. Implementar eventos y UTMs antes de escalar publicidad.
 5. Publicar 30 días sin cambiar el posicionamiento cada tres días.

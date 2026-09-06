@@ -308,7 +308,7 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
 - **Hooks/servicios/actions**: `useGrowthDashboard`, `growthApiClient`, `resolveGrowthRouteContext`, repositories Supabase
 - **Tablas Supabase**: `growth_workspaces`, `growth_workspace_members`, `growth_prospects`, `growth_activities`, `growth_tasks`, `growth_content_items`
 - **Flujo de datos**: guard founder -> hook -> fetch API -> service -> repository Supabase (RLS por membership)
-- **Estados importantes**: tabs `trabajo`, `prospectos`, `clientes`, `marketing`; cola editorial `borrador -> revisión -> aprobado -> programado -> publicado -> pausado -> ganador -> archivado`. El servidor bloquea `programado`/`publicado` sin claim aprobado y UTM `source`, `medium`, `campaign`, `content`.
+- **Estados importantes**: tabs `trabajo`, `prospectos`, `clientes`, `marketing`; cola editorial `borrador -> revisión -> aprobado -> programado -> publicado -> pausado -> ganador -> archivado`. La cola admite `grupos` como canal explícito y guarda resultados de alcance/interacción como metadata manual. El servidor bloquea `programado`/`publicado` sin claim aprobado y UTM `source`, `medium`, `campaign`, `content`.
 - **Donde editar UI**: `app/admin/growth/`
 - **Donde editar logica**: `src/features/growth/services/`
 - **Donde editar persistencia**: `src/features/growth/repositories/` + migraciones SQL

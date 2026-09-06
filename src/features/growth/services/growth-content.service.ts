@@ -16,6 +16,8 @@ import {
   type CreateGrowthContentItemInput,
   type GrowthClaimReviewStatus,
   type GrowthContentItem,
+  type GrowthContentMetadata,
+  type GrowthContentManualMetrics,
   type GrowthContentStatus,
   type UpdateGrowthContentItemInput,
 } from "@/features/growth/types/growth-content";
@@ -26,6 +28,24 @@ const TEXT_LIMITS = {
   short: 120,
   long: 8000,
 } as const;
+
+const EMPTY_MANUAL_METRICS: GrowthContentManualMetrics = {
+  alcance: null,
+  interacciones: null,
+  comentarios: null,
+  mensajesDemo: null,
+  demos: null,
+  pagos: null,
+};
+
+const EMPTY_METADATA: GrowthContentMetadata = {
+  grupoNombre: null,
+  grupoSegmento: null,
+  grupoRegion: null,
+  publicacionUrl: null,
+  piezaBaseId: null,
+  metricas: EMPTY_MANUAL_METRICS,
+};
 
 function normalizeText(value: string | null | undefined, limit: number) {
   const normalized = value?.trim() ?? "";
@@ -41,6 +61,35 @@ function requireText(value: string | null | undefined, limit: number, label: str
 function assertOneOf<T extends string>(value: string, values: readonly T[], label: string): T {
   if (!values.includes(value as T)) throw new Error(`${label} no es válido.`);
   return value as T;
+}
+
+function normalizeMetric(value: number | null | undefined) {
+  if (value === null || value === undefined || Number.isNaN(value)) return null;
+  return Math.max(0, Math.round(value));
+}
+
+function normalizeMetadata(
+  value: CreateGrowthContentItemInput["metadata"],
+  current?: GrowthContentMetadata
+): GrowthContentMetadata {
+  const source = value ?? current ?? EMPTY_METADATA;
+  const metrics = source.metricas ?? current?.metricas ?? EMPTY_MANUAL_METRICS;
+
+  return {
+    grupoNombre: normalizeText(source.grupoNombre, TEXT_LIMITS.short),
+    grupoSegmento: normalizeText(source.grupoSegmento, TEXT_LIMITS.short),
+    grupoRegion: normalizeText(source.grupoRegion, TEXT_LIMITS.short),
+    publicacionUrl: normalizeText(source.publicacionUrl, 500),
+    piezaBaseId: normalizeText(source.piezaBaseId, TEXT_LIMITS.contentId),
+    metricas: {
+      alcance: normalizeMetric(metrics.alcance),
+      interacciones: normalizeMetric(metrics.interacciones),
+      comentarios: normalizeMetric(metrics.comentarios),
+      mensajesDemo: normalizeMetric(metrics.mensajesDemo),
+      demos: normalizeMetric(metrics.demos),
+      pagos: normalizeMetric(metrics.pagos),
+    },
+  };
 }
 
 function normalizeContentId(value: string) {
@@ -76,6 +125,8 @@ function validatePublication(input: {
   utmMedium: string | null;
   utmCampaign: string | null;
   utmContent: string | null;
+  canal: string;
+  metadata: GrowthContentMetadata;
 }) {
   if (input.estado !== "programado" && input.estado !== "publicado") return;
   if (input.claimReviewStatus !== "aprobado") {
@@ -83,6 +134,9 @@ function validatePublication(input: {
   }
   if (!input.utmSource || !input.utmMedium || !input.utmCampaign || !input.utmContent) {
     throw new Error("Completa source, medium, campaña y contenido UTM antes de programar o publicar.");
+  }
+  if (input.canal === "grupos" && !input.metadata.grupoNombre) {
+    throw new Error("Indica el nombre del grupo antes de programar o publicar.");
   }
 }
 
@@ -138,12 +192,13 @@ export function buildGrowthContentPatch(
   const utmContent = input.utmContent === undefined
     ? current?.utmContent ?? null
     : normalizeText(input.utmContent, TEXT_LIMITS.short);
+  const metadata = normalizeMetadata(input.metadata, current?.metadata);
 
   if (!contentId || !titulo || !pilar || !formato || !canal) {
     throw new Error("La pieza de contenido está incompleta.");
   }
 
-  validatePublication({ estado, claimReviewStatus, utmSource, utmMedium, utmCampaign, utmContent });
+  validatePublication({ estado, claimReviewStatus, utmSource, utmMedium, utmCampaign, utmContent, canal, metadata });
 
   return {
     content_id: contentId,
@@ -164,6 +219,7 @@ export function buildGrowthContentPatch(
     estado,
     claim_review_status: claimReviewStatus,
     claim_review_notes: input.claimReviewNotes === undefined ? current?.claimReviewNotes ?? null : normalizeText(input.claimReviewNotes, TEXT_LIMITS.long),
+    metadata_json: metadata,
     programado_para: input.programadoPara === undefined ? current?.programadoPara ?? null : input.programadoPara,
   };
 }

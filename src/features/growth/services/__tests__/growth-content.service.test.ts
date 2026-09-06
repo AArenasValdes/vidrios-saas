@@ -22,6 +22,21 @@ const CURRENT: GrowthContentItem = {
   estado: "borrador",
   claimReviewStatus: "pendiente",
   claimReviewNotes: null,
+  metadata: {
+    grupoNombre: null,
+    grupoSegmento: null,
+    grupoRegion: null,
+    publicacionUrl: null,
+    piezaBaseId: null,
+    metricas: {
+      alcance: null,
+      interacciones: null,
+      comentarios: null,
+      mensajesDemo: null,
+      demos: null,
+      pagos: null,
+    },
+  },
   programadoPara: null,
   publicadoEn: null,
   creadoEn: "2026-08-20T12:00:00.000Z",
@@ -66,5 +81,17 @@ describe("growth-content.service", () => {
     expect(patch.estado).toBe("programado");
     expect(patch.claim_review_status).toBe("aprobado");
     expect(patch.utm_content).toBe("reel_cotiza_obra_01");
+  });
+
+  it("exige identificar el grupo antes de publicar una adaptación", () => {
+    expect(() => buildGrowthContentPatch({
+      canal: "grupos",
+      estado: "publicado",
+      claimReviewStatus: "aprobado",
+      utmSource: "facebook",
+      utmMedium: "group",
+      utmCampaign: "chile_sales_sprint_30d",
+      utmContent: "grupo_1",
+    }, CURRENT)).toThrow("nombre del grupo");
   });
 });

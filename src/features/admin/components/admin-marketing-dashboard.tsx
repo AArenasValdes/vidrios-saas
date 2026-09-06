@@ -203,6 +203,56 @@ export function AdminMarketingDashboard({ workspace, onKpiClick }: AdminMarketin
         </article>
       </section>
 
+      <section className={s.analyticsRow} aria-label="Chile Sales Sprint">
+        <article className={s.panel}>
+          <div className={s.panelHead}>
+            <h2>Chile Sales Sprint · 30 días</h2>
+            <span className={s.chip}>Operación</span>
+          </div>
+          <p className={s.emptyNote}>
+            Cadencia equilibrada para aprender rápido sin convertir la operación en spam.
+          </p>
+          <div className={s.statRow}>
+            <div className={s.stat}><span>Carruseles</span><strong>3 / semana</strong></div>
+            <div className={s.stat}><span>Videos verticales</span><strong>2 / semana</strong></div>
+            <div className={s.stat}><span>Demo horizontal</span><strong>Quincenal</strong></div>
+            <div className={s.stat}><span>Historias/estados</span><strong>5–7 / semana</strong></div>
+          </div>
+          <div className={s.insight}>
+            <LuLightbulb aria-hidden />
+            <p><strong>CTA:</strong> Escríbeme DEMO y te muestro una cotización real. <strong>Oferta:</strong> piloto guiado de 15 días.</p>
+          </div>
+        </article>
+
+        <article className={s.panel}>
+          <div className={s.panelHead}>
+            <h2>Rendimiento de grupos</h2>
+            <span className={s.chip}>Manual</span>
+          </div>
+          {workspace.groupPerformance.length === 0 ? (
+            <p className={s.emptyNote}>Crea una pieza con canal “Grupos de Facebook” para comenzar a registrar resultados.</p>
+          ) : (
+            <div className={s.nextList}>
+              {workspace.groupPerformance.slice(0, 5).map((group) => (
+                <div key={group.grupoNombre} className={s.nextItem}>
+                  <div className={s.nextTop}>
+                    <strong>{group.grupoNombre}</strong>
+                    <span>{group.grupoSegmento ?? "Segmento no indicado"} · {group.publicaciones} publicación{group.publicaciones === 1 ? "" : "es"}</span>
+                  </div>
+                  <div className={s.tagRow}>
+                    <span className={s.tag}>Alcance <strong>{group.alcance.toLocaleString("es-CL")}</strong></span>
+                    <span className={s.tag}>DEMO <strong>{group.mensajesDemo}</strong></span>
+                    <span className={s.tag}>Demos <strong>{group.demos}</strong></span>
+                    <span className={s.tag}>Pagos <strong>{group.pagos}</strong></span>
+                  </div>
+                  {!group.metricasRegistradas ? <span className={s.emptyNote}>Faltan resultados manuales</span> : null}
+                </div>
+              ))}
+            </div>
+          )}
+        </article>
+      </section>
+
       <section className={s.bottomRow}>
         <article className={s.panel}>
           <div className={s.panelHead}>

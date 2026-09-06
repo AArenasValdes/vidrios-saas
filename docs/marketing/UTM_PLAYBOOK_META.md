@@ -16,7 +16,7 @@ Las conversiones principales viven en Ventora. Windsor queda como fuente de medi
 Usar minúsculas, guion bajo y nombres estables:
 
 - `utm_source`: plataforma (`facebook`, `instagram`, `whatsapp`, `qr`, `web`)
-- `utm_medium`: ubicación o tipo (`paid_social`, `organic_social`, `mensaje`, `bio`, `offline`)
+- `utm_medium`: ubicación o tipo (`paid_social`, `organic_social`, `group`, `mensaje`, `bio`, `offline`)
 - `utm_campaign`: objetivo y periodo (`demo_cotizador_2026_08`)
 - `utm_content`: pieza o variante (`reel_01`, `carrusel_01`, `testimonio_01`)
 - `utm_term`: audiencia o búsqueda, solo si aplica
@@ -36,7 +36,7 @@ https://www.ventorap.cl/solicitud/SLUG?origen=facebook&utm_source=facebook&utm_m
 - Destino: página pública de solicitud de la empresa, no una URL genérica
 - Variantes: `reel_01`, `reel_02`, `testimonio_01`
 
-No publicar promesas de más clientes, ventas garantizadas, ERP, fabricación automática ni cortes exactos para máquina.
+Para grupos de Facebook usar `utm_source=facebook` y `utm_medium=group`. El nombre del grupo, segmento y resultados de alcance/interacción se registran en la metadata manual de la pieza editorial. No publicar promesas de más clientes, ventas garantizadas, ERP, fabricación automática ni cortes exactos para máquina.
 
 ## Control antes de activar anuncios
 
