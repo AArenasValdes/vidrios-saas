@@ -82,5 +82,8 @@ docs/VENTORA_DESKTOP_TALLER_ROADMAP.md
 .impeccable/live/deferred-svelte-component-accepts.json
 .impeccable/live/*.png
 
+.out 
 .vercel
 .env*.local
+/public/audio
+/public/video-assets

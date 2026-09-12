@@ -147,4 +147,5 @@ Todo nuevo workflow debe seguir `WORKFLOW_STANDARD.md`. Los workflows existentes
 | Onboarding | `SOP_ONBOARDING.md` |
 | Cobro | `SOP_COBRO_MANUAL.md` + `docs/billing/README.md` |
 | Revisión semanal | `WEEKLY_OPERATING_SYSTEM.md` |
+| Marketing automatizado y medible | `WORKFLOW_MARKETING_AUTOMATIZADO.md` |
 | Cambio de producto | `WORKFLOW_PRODUCT_CHANGE.md` |

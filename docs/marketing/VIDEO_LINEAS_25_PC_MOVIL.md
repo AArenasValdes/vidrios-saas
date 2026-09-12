@@ -78,7 +78,7 @@ Subtítulos: máximo 8 palabras por bloque. Voz tranquila, directa, sin jerga in
 | 2:50–3:00 | Móvil: dos piezas con líneas distintas | `Cada pieza puede tener su línea` | “Puedes mezclar líneas en una misma cotización. Cada pieza conserva su propia elección.” | Pieza 1 y pieza 2 con líneas distintas |
 | 3:00–3:09 | Barra `Línea para todas` | `Aplica una línea en segundos` | “Si varias piezas usan la misma línea, Línea para todas acelera el trabajo. Después puedes cambiar una pieza.” | Acción explícita de aplicar; no mostrar cristal en línea global |
 | 3:09–3:19 | Nota técnica móvil + regreso a PC | `Pauta y cubicación: PC` | “La pauta y la cubicación no se editan en el celular. Para eso vuelves al computador.” | Nota `Se revisa en desktop` |
-| 3:19–3:30 | Cierre con cotización/PDF | `Configura en PC. Cotiza móvil.` | “Ventora: configura tus líneas en PC, cotiza desde el celular y revisa tu fabricación con orden.” | CTA único: `Escríbeme DEMO` |
+| 3:19–3:30 | Cierre con cotización/PDF | `Configura en PC. Cotiza móvil.` | “Ventora: configura tus líneas en PC, cotiza desde el celular y revisa tu fabricación con orden.” | CTA único: `¿Quieres ver una cotización real? Te la muestro.` |
 
 La duración estimada supera 3 minutos si se dejan todos los tiempos. Para el master final, eliminar pausas y compactar escenas 1:17–2:24 a 55 segundos. El master objetivo queda en 2:30–2:45; la versión larga sirve como ayuda de producto.
 
@@ -92,7 +92,7 @@ La duración estimada supera 3 minutos si se dejan todos los tiempos. Para el ma
 | 0:20–0:29 | Móvil, selector de línea | `Elige línea por pieza` | “En el celular eliges la línea y el precio se carga en la pieza.” |
 | 0:29–0:38 | Dos piezas distintas | `Puedes mezclar líneas` | “Una cotización puede tener distintas líneas, una por cada pieza.” |
 | 0:38–0:48 | Nota técnica móvil | `Pauta y cubicación: PC` | “Si necesitas pauta o cubicación, la dejas configurada y revisable en el computador.” |
-| 0:48–0:58 | Logo + CTA | `Escríbeme DEMO` | “Escríbeme DEMO y te muestro el flujo completo.” |
+| 0:48–0:58 | Logo + CTA | `¿Quieres ver una cotización real? Te la muestro.` | “¿Quieres ver una cotización real? Te la muestro.” |
 
 ## Ayuda contextual — receta, descuentos y pauta
 
@@ -141,7 +141,7 @@ Rótulo recomendado: `25 líneas base · revisa precio y fabricación antes de c
 
 ## CTA y publicación
 
-CTA único: **Escríbeme DEMO**.
+CTA único: **¿Quieres ver una cotización real? Te la muestro.**
 
 Caption:
 
@@ -186,6 +186,6 @@ No usar visualizaciones, reproducciones totales o “25 líneas” como prueba d
 - [ ] Se muestra que pauta/cubicación se revisa en PC.
 - [ ] Se muestra línea por pieza y mezcla de líneas en móvil.
 - [ ] PDF cliente no muestra pauta ni costos internos.
-- [ ] CTA único: `Escríbeme DEMO`.
+- [ ] CTA único: `¿Quieres ver una cotización real? Te la muestro.`
 - [ ] Subtítulos sincronizados, máximo 8 palabras.
 - [ ] Revisar cuadro a cuadro privacidad antes de publicar.

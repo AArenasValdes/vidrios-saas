@@ -22,6 +22,8 @@ La ejecución operativa vive en `docs/growth-os/README.md`. Esta carpeta conserv
 - `onboarding-video-pilots.md`: guiones piloto para videos de onboarding comercial de Ventora
 - `VIDEO_PRODUCTION_SYSTEM.md`: templates, workflow, orden de onboarding y métricas de video
 - `VIDEO_BRIEF_TEMPLATE.md`: brief reutilizable para cada pieza
+- `briefs/`: briefs de produccion listos para grabar o diseñar por semana
+- `SEMANA_1_CONTENIDO_LISTO.md`: paquete ejecutable de contenido de la semana actual
 - `VIDEO_LINEAS_25_PC_MOVIL.md`: brief y guion para catálogo de 25 líneas, configuración PC y uso móvil
 - `DISENO_HANDOFF_IA.md`: contexto reusable para trabajar con otra IA exclusivamente en diseño/UI
 - `PLANILLA_CONTENIDO_VENTORA.csv`: registro de publicaciones, UTMs, métricas y aprendizajes
@@ -50,7 +52,7 @@ No competir como sistema industrial de optimizacion, nesting, CNC o produccion a
 Embudo obligatorio:
 
 1. Contenido con dolor real.
-2. CTA unico: "Escribeme DEMO" o "Te muestro una cotizacion real".
+2. CTA unico vigente para el piloto: "¿Quieres ver una cotización real? Te la muestro.".
 3. Conversacion breve de clasificacion.
 4. Mostrar una cotizacion real o demo.
 5. Prueba guiada.

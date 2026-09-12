@@ -11,7 +11,7 @@ Este es el sistema reutilizable para grabar, editar, publicar y medir videos de 
 |---|---:|---:|---|---|
 | `OnboardingMobile` | 9:16 | 60–75 s | Primera cotización desde celular: cliente → pieza → PDF/WhatsApp | `Crea tu primera cotización` |
 | `OnboardingPcEnhancement` | 16:9 | Master completo; recorte posterior opcional | Continuidad en PC: Constructor → líneas → despiece → cubicación/pauta revisable | `Continúa tu cotización en computador` |
-| `FeatureShort` | 9:16 | 25–45 s | Un dolor y una función: PDF, clientes, líneas o seguimiento | `Escríbeme DEMO` |
+| `FeatureShort` | 9:16 | 25–45 s | Un dolor y una función: PDF, clientes, líneas o seguimiento | `¿Quieres ver una cotización real? Te la muestro.` |
 | `DemoProof` | 16:9 | 45–75 s | Demo completa para una conversación comercial | `Te muestro una cotización real` |
 
 Los templates viven en `src/features/video/`. El template PC actual usa `DesktopAppFrame.tsx` + `ProductCamera.tsx` + `OnboardingPcEnhancement.tsx`: el footage real va dentro de un marco Ventora, sin chrome del navegador, y el master se mantiene estable para que el recorte posterior no deforme la lectura. Las variantes futuras pueden activar focos controlados desde `ProductCamera.tsx`.

@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Eye, EyeOff, Lock, Mail, PlayCircle, RefreshCcw } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Lock, Mail, PlayCircle, RefreshCcw, X } from "lucide-react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { GoogleAuthButton } from "../_components/google-auth-button";
@@ -66,9 +66,11 @@ const copy = {
   recoveryAction: "Reiniciar esta app",
   recovering: "Reiniciando...",
   installHelpTitle: "¿Primera vez usando Ventora?",
-  installHelpText: "Mira como usar Ventora desde tu celular.",
-  androidVideo: "Video Android",
-  iphoneVideo: "Video iPhone",
+  installHelpText: "Aprende a instalar Ventora en tu teléfono.",
+  androidVideo: "Instalar en Android",
+  iphoneVideo: "Instalar en iPhone",
+  androidVideoTitle: "Cómo instalar Ventora en Android",
+  iphoneVideoTitle: "Cómo instalar Ventora en iPhone",
   diagnosticLabel: "Detalle tecnico:",
   diagnosticCopy: "Copiar diagnostico",
   diagnosticCopied: "Diagnostico copiado",
@@ -82,8 +84,23 @@ const copy = {
 const LOGIN_TIMEOUT_MS = 12000;
 const LOGIN_COOKIE_READY_TIMEOUT_MS = 4000;
 const LOGIN_COOKIE_POLL_INTERVAL_MS = 120;
-const ANDROID_INSTALL_VIDEO_URL = "https://example.com/ventora-android";
-const IPHONE_INSTALL_VIDEO_URL = "https://example.com/ventora-iphone";
+type InstallVideoKey = "android" | "iphone";
+
+const INSTALL_VIDEOS: Record<
+  InstallVideoKey,
+  { buttonLabel: string; title: string; embedUrl: string }
+> = {
+  android: {
+    buttonLabel: copy.androidVideo,
+    title: copy.androidVideoTitle,
+    embedUrl: "https://www.youtube-nocookie.com/embed/e9vj7eVwkNg",
+  },
+  iphone: {
+    buttonLabel: copy.iphoneVideo,
+    title: copy.iphoneVideoTitle,
+    embedUrl: "https://www.youtube-nocookie.com/embed/xyrQ-umOvfU",
+  },
+};
 
 type BrowserWindowWithIdleCallback = Window &
   typeof globalThis & {
@@ -210,7 +227,10 @@ export default function LoginView({
   const [rateLimitUntil, setRateLimitUntil] = useState<number | null>(null);
   const [rateLimitRemainingMs, setRateLimitRemainingMs] = useState(0);
   const [showLocalHint, setShowLocalHint] = useState(false);
+  const [activeInstallVideo, setActiveInstallVideo] = useState<InstallVideoKey | null>(null);
   const submitLockRef = useRef(false);
+  const installVideoTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const installVideoCloseRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     const hostname = window.location.hostname;
@@ -222,6 +242,29 @@ export default function LoginView({
       router.prefetch("/dashboard");
     });
   }, [router]);
+
+  useEffect(() => {
+    if (!activeInstallVideo) {
+      return;
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setActiveInstallVideo(null);
+      }
+    };
+
+    const previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleEscape);
+    window.requestAnimationFrame(() => installVideoCloseRef.current?.focus());
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      window.removeEventListener("keydown", handleEscape);
+      window.requestAnimationFrame(() => installVideoTriggerRef.current?.focus());
+    };
+  }, [activeInstallVideo]);
 
   const handleOAuthSignIn = async (provider: AuthOAuthProvider) => {
     if (cargandoOAuth || cargando) {
@@ -286,6 +329,14 @@ export default function LoginView({
       platform_mode: getPlatformMode(),
     });
     await authDeviceRecoveryService.resetCurrentDeviceAppState();
+  };
+
+  const openInstallVideo = (
+    videoKey: InstallVideoKey,
+    trigger: HTMLButtonElement
+  ) => {
+    installVideoTriggerRef.current = trigger;
+    setActiveInstallVideo(videoKey);
   };
 
   const handleCopyDiagnostic = async () => {
@@ -668,15 +719,21 @@ export default function LoginView({
                 <p className={s.installHelpTitle}>{copy.installHelpTitle}</p>
                 <p className={s.installHelpText}>{copy.installHelpText}</p>
               </div>
-              <div className={s.installHelpActions}>
-                <a href={ANDROID_INSTALL_VIDEO_URL} target="_blank" rel="noreferrer">
-                  <PlayCircle size={15} aria-hidden />
-                  {copy.androidVideo}
-                </a>
-                <a href={IPHONE_INSTALL_VIDEO_URL} target="_blank" rel="noreferrer">
-                  <PlayCircle size={15} aria-hidden />
-                  {copy.iphoneVideo}
-                </a>
+               <div className={s.installHelpActions}>
+                {(Object.keys(INSTALL_VIDEOS) as InstallVideoKey[]).map((videoKey) => {
+                  const video = INSTALL_VIDEOS[videoKey];
+                  return (
+                    <button
+                      key={videoKey}
+                      type="button"
+                      className={s.installVideoButton}
+                      onClick={(event) => openInstallVideo(videoKey, event.currentTarget)}
+                    >
+                      <PlayCircle size={15} aria-hidden />
+                      {video.buttonLabel}
+                    </button>
+                  );
+                })}
               </div>
             </section>
 
@@ -687,6 +744,48 @@ export default function LoginView({
           </div>
         </div>
       </section>
+
+      {activeInstallVideo ? (
+        <div
+          className={s.videoModalBackdrop}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setActiveInstallVideo(null);
+            }
+          }}
+        >
+          <section
+            className={s.videoModal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="login-install-video-title"
+          >
+            <header className={s.videoModalHeader}>
+              <h2 id="login-install-video-title" className={s.videoModalTitle}>
+                {INSTALL_VIDEOS[activeInstallVideo].title}
+              </h2>
+              <button
+                ref={installVideoCloseRef}
+                type="button"
+                className={s.videoModalClose}
+                aria-label="Cerrar video"
+                onClick={() => setActiveInstallVideo(null)}
+              >
+                <X size={20} aria-hidden />
+              </button>
+            </header>
+            <div className={s.videoModalFrame}>
+              <iframe
+                src={INSTALL_VIDEOS[activeInstallVideo].embedUrl}
+                title={INSTALL_VIDEOS[activeInstallVideo].title}
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       <section className={s.visualPanel} aria-hidden>
         <Image

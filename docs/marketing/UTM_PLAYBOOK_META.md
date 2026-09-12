@@ -36,6 +36,24 @@ https://www.ventorap.cl/solicitud/SLUG?origen=facebook&utm_source=facebook&utm_m
 - Destino: página pública de solicitud de la empresa, no una URL genérica
 - Variantes: `reel_01`, `reel_02`, `testimonio_01`
 
+## Campaña semanal preparada: septiembre 2026
+
+- Campaña: `cotiza_en_terreno_2026_09`
+- CTA visible: `¿Quieres ver una cotización real? Te la muestro.`
+- Piezas: `w2609_v003`, `w2609_s001`, `w2609_c001`, `w2609_p001`, `w2609_v004`, `w2609_s002`
+- Objetivo: mensajes calificados y demos, no trafico vacio
+- Destino con enlace: pagina publica de solicitud de la empresa, usando el slug real y probado
+
+Ejemplos por canal:
+
+```text
+https://www.ventorap.cl/solicitud/SLUG?origen=instagram&utm_source=instagram&utm_medium=organic&utm_campaign=cotiza_en_terreno_2026_09&utm_content=w2609_v003
+https://www.ventorap.cl/solicitud/SLUG?origen=facebook&utm_source=facebook&utm_medium=group&utm_campaign=cotiza_en_terreno_2026_09&utm_content=w2609_c001
+https://www.ventorap.cl/solicitud/SLUG?origen=tiktok&utm_source=tiktok&utm_medium=organic&utm_campaign=cotiza_en_terreno_2026_09&utm_content=w2609_v004
+```
+
+El CTA hablado sigue siendo `¿Quieres ver una cotización real? Te la muestro.`. El enlace UTM sirve para atribuir; no convertirlo en un segundo llamado dentro de la misma pieza.
+
 Para grupos de Facebook usar `utm_source=facebook` y `utm_medium=group`. El nombre del grupo, segmento y resultados de alcance/interacción se registran en la metadata manual de la pieza editorial. No publicar promesas de más clientes, ventas garantizadas, ERP, fabricación automática ni cortes exactos para máquina.
 
 ## Control antes de activar anuncios

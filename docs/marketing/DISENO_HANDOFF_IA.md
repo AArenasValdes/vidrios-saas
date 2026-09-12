@@ -52,7 +52,7 @@ La pantalla principal de trabajo es `/admin/marketing`, panel privado del fundad
 - onboarding por dispositivo;
 - rendimiento de grupos de Facebook.
 
-La cola editorial permite registrar piezas con pilar, formato, canal, objetivo, hook, guion, caption, CTA, campaña, cuatro UTMs, estado y revisión humana de claims. Existe un canal explícito `grupos` para Facebook. Sus resultados de alcance, interacciones, comentarios, mensajes DEMO, demos y pagos son manuales porque no hay integración externa verificable.
+La cola editorial permite registrar piezas con pilar, formato, canal, objetivo, hook, guion, caption, CTA, campaña, cuatro UTMs, estado y revisión humana de claims. Existe un canal explícito `grupos` para Facebook. Sus resultados de alcance, interacciones, comentarios, mensajes, demos y pagos son manuales porque no hay integración externa verificable.
 
 Cadencia comercial vigente para 30 días:
 - 3 carruseles por semana;
@@ -61,7 +61,7 @@ Cadencia comercial vigente para 30 días:
 - 5–7 historias o estados por semana;
 - 1 demo horizontal cada dos semanas.
 
-CTA único vigente: `Escríbeme DEMO`. Oferta: piloto guiado de 15 días.
+CTA único vigente: `¿Quieres ver una cotización real? Te la muestro.` Oferta: piloto guiado de 15 días.
 
 ## Restricciones técnicas que debes respetar
 

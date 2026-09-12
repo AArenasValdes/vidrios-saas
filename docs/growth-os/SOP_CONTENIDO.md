@@ -57,7 +57,7 @@ Distribucion:
 - martes: grabacion o captura
 - miercoles: reel principal
 - jueves: carrusel o post educativo
-- viernes: story con CTA y aprendizaje
+- viernes: post con CTA, aprendizaje y seguimiento manual (stories solo si el piloto las reactiva)
 - sabado: pieza corta de producto o FAQ
 - domingo: plan de la semana siguiente
 
@@ -76,7 +76,7 @@ Distribucion:
 1. gancho: `Llegaste a casa y todavia tienes presupuestos pendientes`
 2. problema: mostrar notas, Excel o WhatsApp con medidas
 3. cambio: mostrar cotizacion creada desde el celular
-4. cierre: `Escribeme DEMO`
+4. cierre: `Te muestro una cotizacion real`
 
 ### Reel 2: PDF profesional
 
@@ -90,7 +90,7 @@ Distribucion:
 1. gancho: `Cotiza antes de irte de la obra`
 2. problema: esperar hasta la noche para usar computador
 3. cambio: cotizacion movil + PDF + WhatsApp
-4. cierre: `Escribeme DEMO`
+4. cierre: `Te muestro una cotizacion real`
 
 ## Estructura de carruseles
 
@@ -105,7 +105,7 @@ Distribucion:
 
 ### Atraccion fria
 
-- `Escribeme DEMO`
+- `Te muestro una cotizacion real`
 
 ### Interes
 

@@ -361,4 +361,55 @@ describe("LoginView", () => {
       });
     });
   });
+
+  it("abre el video correcto de Android solo al pulsar su boton", () => {
+    render(
+      <LoginView
+        oauthError={false}
+        oauthNoEmailError={false}
+        identityConflictError={false}
+        nextPath={null}
+        appResetDone={false}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Instalar en Android" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Instalar en iPhone" })).toBeInTheDocument();
+    expect(screen.queryByTitle("Cómo instalar Ventora en Android")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Instalar en Android" }));
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByTitle("Cómo instalar Ventora en Android")).toHaveAttribute(
+      "src",
+      "https://www.youtube-nocookie.com/embed/e9vj7eVwkNg"
+    );
+    expect(mockSignIn).not.toHaveBeenCalled();
+  });
+
+  it("cierra el video por Escape y al pulsar el fondo", () => {
+    render(
+      <LoginView
+        oauthError={false}
+        oauthNoEmailError={false}
+        identityConflictError={false}
+        nextPath={null}
+        appResetDone={false}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Instalar en iPhone" }));
+    expect(screen.getByTitle("Cómo instalar Ventora en iPhone")).toHaveAttribute(
+      "src",
+      "https://www.youtube-nocookie.com/embed/xyrQ-umOvfU"
+    );
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Instalar en iPhone" }));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.mouseDown(dialog.parentElement as HTMLElement);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
 });
