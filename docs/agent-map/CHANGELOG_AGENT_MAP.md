@@ -2,6 +2,14 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-12 - Página pública habilitada al crear cuenta
+
+- La RPC `complete_google_oauth_account()` genera automáticamente `solicitud_publica_slug` desde el nombre del taller y guarda `is_published = true` al provisionar una cuenta.
+- Slugs repetidos usan el id de organización como sufijo; locks transaccionales evitan colisiones durante altas concurrentes.
+- Reintentos conservan slug y estado de publicación de perfiles ya configurados.
+- La migración `20260912201216_auto_enable_public_request_page.sql` repara perfiles históricos sin slug y los publica con datos base del registro.
+- Regresión: `public-page-provisioning-migration.contract.test.ts`.
+
 ## 2026-09-06 - Robustez metadata de cola editorial y handoff de diseño
 
 - `/admin/marketing` dejaba de renderizar cuando una pieza histórica tenía `metadata_json: {}`: `metricas` quedaba indefinido y la UI intentaba leer `metricas.alcance`.

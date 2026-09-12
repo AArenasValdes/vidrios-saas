@@ -136,4 +136,43 @@ describe("organization-profile.repository", () => {
     });
     expect(update).not.toHaveBeenCalled();
   });
+
+  it("actualiza el perfil sin enviar organization_id en el payload", async () => {
+    const updateQuery = {
+      eq: jest.fn(),
+      select: jest.fn(),
+      maybeSingle: jest.fn().mockResolvedValue({
+        data: {
+          organization_id: 3,
+          empresa_nombre: "Ventora",
+          solicitud_publica_slug: "ventora",
+          is_published: true,
+        },
+        error: null,
+      }),
+    };
+    updateQuery.eq.mockReturnValue(updateQuery);
+    updateQuery.select.mockReturnValue(updateQuery);
+
+    const update = jest.fn().mockReturnValue(updateQuery);
+    const insert = jest.fn();
+    const client = {
+      from: jest.fn().mockReturnValue({ update, insert }),
+    } as never;
+    const repository = createOrganizationProfileRepository({
+      clientFactory: client,
+    });
+
+    await repository.upsertByOrganizationId(3, {
+      empresaNombre: "Ventora",
+      solicitudPublicaSlug: "ventora",
+      solicitudPublicaDiasAtencion: ["1", "2"],
+    } as never);
+
+    expect(update).toHaveBeenCalledWith(
+      expect.not.objectContaining({ organization_id: expect.anything() }),
+    );
+    expect(updateQuery.eq).toHaveBeenCalledWith("organization_id", 3);
+    expect(insert).not.toHaveBeenCalled();
+  });
 });

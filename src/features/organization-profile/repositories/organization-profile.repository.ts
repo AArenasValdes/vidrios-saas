@@ -317,11 +317,7 @@ export function createOrganizationProfileRepository(
     organizationId: EntityId,
     input: UpdateOrganizationProfileInput
   ) {
-    const { data, error } = await supabase
-      .from(TABLE_NAME)
-      .upsert(
-        {
-          organization_id: organizationId,
+    const profilePayload = {
           empresa_nombre: input.empresaNombre,
           empresa_logo_url: input.empresaLogoUrl,
           responsable_comercial: input.responsableComercial,
@@ -380,11 +376,38 @@ export function createOrganizationProfileRepository(
           form_title: input.formTitle || null,
           form_subtitle: input.formSubtitle || null,
           is_published: input.isPublished,
-        },
-        {
-          onConflict: "organization_id",
-        }
-      )
+    };
+
+    // organization_id identifica la fila y no debe formar parte del UPDATE:
+    // Supabase entrega permisos de escritura por columna y evita reasignar
+    // perfiles entre organizaciones.
+    const { data: updatedData, error: updateError } = await supabase
+      .from(TABLE_NAME)
+      .update(profilePayload)
+      .eq("organization_id", organizationId)
+      .select("*")
+      .maybeSingle();
+
+    if (updateError) {
+      if (isMissingOrganizationProfileTableError(updateError)) {
+        throw new Error(
+          "Falta ejecutar la migracion de organization_profile en Supabase antes de guardar la configuracion de empresa."
+        );
+      }
+
+      throw updateError;
+    }
+
+    if (updatedData) {
+      return mapOrganizationProfile(updatedData as OrganizationProfileRow)!;
+    }
+
+    const { data, error } = await supabase
+      .from(TABLE_NAME)
+      .insert({
+        organization_id: organizationId,
+        ...profilePayload,
+      })
       .select("*")
       .single();
 

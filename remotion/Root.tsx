@@ -40,6 +40,11 @@ import {
   REEL_V003_DURATION,
   REEL_V003_FPS,
 } from "../src/features/video/ReelV003";
+import {
+  ReelV004,
+  REEL_V004_DURATION,
+  REEL_V004_FPS,
+} from "../src/features/video/ReelV004";
 
 const LANDSCAPE_WIDTH = 1920;
 const LANDSCAPE_HEIGHT = 1080;
@@ -146,6 +151,19 @@ export const RemotionRoot = () => {
           maxScale: 1.02,
           musicVolume: 1.8,
           showSubtitles: true,
+          sfxVolume: 2.2,
+        }}
+      />
+      <Composition
+        id="VentoraReelV004"
+        component={ReelV004}
+        durationInFrames={REEL_V004_DURATION}
+        fps={REEL_V004_FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          maxScale: 1.02,
+          musicVolume: 1.8,
           sfxVolume: 2.2,
         }}
       />
