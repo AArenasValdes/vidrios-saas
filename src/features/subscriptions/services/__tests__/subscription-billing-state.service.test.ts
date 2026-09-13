@@ -74,6 +74,30 @@ describe("canonical subscription billing state", () => {
     });
   });
 
+  it("mantiene el trial vigente al cancelar un checkout sin pago aprobado", () => {
+    const snapshot = resolveCanonicalSubscriptionSnapshot({
+      profile: trialProfile,
+      recurringSubscription: {
+        ...activeQuoteSubscription,
+        status: "cancelled",
+        provider_status: "cancelled",
+        current_period_starts_at: null,
+        current_period_ends_at: null,
+        next_payment_at: null,
+        cancel_at_period_end: true,
+      },
+      latestApprovedPayment: null,
+    });
+
+    expect(snapshot).toMatchObject({
+      subscriptionStatus: "trial_active",
+      planCode: "trial",
+      billingPeriod: "none",
+      paymentMethod: "none",
+      trialEndsAt: "2026-09-27T18:04:36.000Z",
+    });
+  });
+
   it("usa un pago aprobado ligado a la suscripcion aunque el estado recurrente siga pendiente", () => {
     const snapshot = resolveCanonicalSubscriptionSnapshot({
       profile: trialProfile,

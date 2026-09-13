@@ -111,6 +111,16 @@ export function resolveCanonicalSubscriptionSnapshot(
   state: OrganizationBillingState
 ): OrganizationSubscriptionSnapshot | null {
   if (state.recurringSubscription && state.recurringSubscription.status !== "pending") {
+    // Cancelar un checkout sin pago aprobado no transforma el trial en un plan
+    // pagado cancelado. El snapshot recurrente queda como auditoria, pero la
+    // cuenta debe volver a mostrar el trial que sigue vigente en el perfil.
+    if (
+      state.recurringSubscription.status === "cancelled" &&
+      state.latestApprovedPayment?.subscription_id !== state.recurringSubscription.id
+    ) {
+      return mapProfileBillingSnapshot(state.profile);
+    }
+
     return mapRecurringSnapshot(
       state.recurringSubscription,
       state.latestApprovedPayment

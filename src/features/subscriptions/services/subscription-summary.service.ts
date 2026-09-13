@@ -74,9 +74,13 @@ export async function getSubscriptionSummary(
   const recurringSubscription = billingState.recurringSubscription;
   const latestApprovedPayment = billingState.latestApprovedPayment;
   const amountClp =
-    recurringSubscription && recurringSubscription.status !== "pending"
+    latestApprovedPayment?.amount_clp ??
+    (recurringSubscription &&
+    recurringSubscription.status !== "pending" &&
+    (recurringSubscription.status !== "cancelled" ||
+      latestApprovedPayment?.subscription_id === recurringSubscription.id)
       ? recurringSubscription.amount
-      : latestApprovedPayment?.amount_clp ?? recurringSubscription?.amount ?? null;
+      : null);
 
   return {
     planCode,

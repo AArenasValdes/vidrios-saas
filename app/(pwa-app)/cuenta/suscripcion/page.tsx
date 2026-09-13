@@ -272,6 +272,11 @@ export default function SuscripcionPage() {
   );
   const shouldShowActivationCard =
     isTrialSubscription || (isExpiredSubscription && !isInPaymentGracePeriod);
+  const isCancelledUnpaidTrial = Boolean(
+    summary?.cancelAtPeriodEnd &&
+      summary.planCode === "trial" &&
+      !summary.latestPayment
+  );
 
   async function cancelRenewal() {
     if (
@@ -467,7 +472,11 @@ export default function SuscripcionPage() {
                 <LuCalendar aria-hidden />
               </span>
               <span className={s.detailLabel}>
-                {summary?.cancelAtPeriodEnd ? "Acceso hasta" : "Próximo cobro"}
+                {isCancelledUnpaidTrial
+                  ? "Prueba disponible hasta"
+                  : summary?.cancelAtPeriodEnd
+                    ? "Acceso hasta"
+                    : "Próximo cobro"}
               </span>
               <span className={s.detailValue}>
                 {formatDate(
@@ -516,7 +525,11 @@ export default function SuscripcionPage() {
           {lifecycleMessage ? <p className={s.lifecycleMessage}>{lifecycleMessage}</p> : null}
           {summary?.cancelAtPeriodEnd ? (
             <p className={s.lifecycleMessage}>
-              La renovación automática está cancelada. No habrá un nuevo cobro.
+              {isCancelledUnpaidTrial
+                ? `La suscripción automática está cancelada. Tu prueba gratuita sigue activa hasta ${formatDate(
+                    subscription?.trialEndsAt ?? subscriptionEndsAt
+                  )}. No habrá ningún cobro.`
+                : "La renovación automática está cancelada. No habrá un nuevo cobro."}
             </p>
           ) : null}
           {summary?.canCancelRecurringSubscription ? (
