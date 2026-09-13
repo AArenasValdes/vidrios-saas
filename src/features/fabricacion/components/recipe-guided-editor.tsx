@@ -2615,6 +2615,13 @@ export function RecipeGuidedEditor({
               ))}
             </div>
           )}
+          {!readOnly && recipe.vidrios.length > 0 ? (
+            <div className={s.fabReviewAddRow}>
+              <button type="button" className={s.secondaryButton} onClick={addGlass}>
+                <Plus size={16} /> Agregar vidrio base
+              </button>
+            </div>
+          ) : null}
         </section>
         </details>
 

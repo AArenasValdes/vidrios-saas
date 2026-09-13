@@ -5,8 +5,8 @@ exports[`auditoria-catalogo-lineas-ventora.service resume estados del catálogo 
   {
     "catalogKey": "ventora:l5000",
     "codigos": 7,
-    "fabricacionEstado": "fabricacion_pendiente",
-    "listaParaProbar": false,
+    "fabricacionEstado": "fabricacion_configurada",
+    "listaParaProbar": true,
     "nombre": "Serie 5000",
     "perfiles": "7/7",
     "tipologia": "corredera",
@@ -14,8 +14,8 @@ exports[`auditoria-catalogo-lineas-ventora.service resume estados del catálogo 
   {
     "catalogKey": "ventora:l20",
     "codigos": 7,
-    "fabricacionEstado": "fabricacion_pendiente",
-    "listaParaProbar": false,
+    "fabricacionEstado": "fabricacion_configurada",
+    "listaParaProbar": true,
     "nombre": "Serie 20",
     "perfiles": "7/7",
     "tipologia": "corredera",
@@ -23,8 +23,8 @@ exports[`auditoria-catalogo-lineas-ventora.service resume estados del catálogo 
   {
     "catalogKey": "ventora:l25",
     "codigos": 7,
-    "fabricacionEstado": "fabricacion_pendiente",
-    "listaParaProbar": false,
+    "fabricacionEstado": "fabricacion_configurada",
+    "listaParaProbar": true,
     "nombre": "Serie 25",
     "perfiles": "7/7",
     "tipologia": "corredera",

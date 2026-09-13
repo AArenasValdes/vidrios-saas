@@ -423,16 +423,20 @@ describe("RecipeGuidedEditor", () => {
       screen.getByLabelText("Vidrio").closest("details")?.querySelector("summary") as HTMLElement
     );
     const vidrioSection = screen.getByLabelText("Vidrio");
-    fireEvent.click(within(vidrioSection).getByRole("button", { name: /^(Editar|Cerrar)$/i }));
     const initialGlass = currentRecipe.vidrios.length;
-    fireEvent.click(screen.getByRole("button", { name: /Agregar vidrio/i }));
+    fireEvent.click(within(vidrioSection).getByRole("button", { name: /Agregar vidrio/i }));
     expect(currentRecipe.vidrios).toHaveLength(initialGlass + 1);
     const addedGlassId = currentRecipe.vidrios.at(-1)?.id;
     expect(addedGlassId).toBeTruthy();
-    const addedGlassInput = screen.getByDisplayValue("Vidrio principal");
-    const addedGlassRow = addedGlassInput.closest("div");
-    expect(addedGlassRow).toBeTruthy();
-    fireEvent.click(within(addedGlassRow as HTMLElement).getByRole("button", { name: /Eliminar/i }));
+    const glassPickers = within(vidrioSection).getAllByRole("button", {
+      name: "Tipo de vidrio base de la línea",
+    });
+    expect(glassPickers).toHaveLength(initialGlass + 1);
+    const addedGlassCard = glassPickers.at(-1)?.closest(".fabGlassEditorCard");
+    expect(addedGlassCard).toBeTruthy();
+    fireEvent.click(
+      within(addedGlassCard as HTMLElement).getByRole("button", { name: /Eliminar/i })
+    );
     expect(currentRecipe.vidrios.some((glass) => glass.id === addedGlassId)).toBe(false);
     expect(currentRecipe.vidrios).toHaveLength(initialGlass);
 

@@ -1,7 +1,25 @@
-import { createCotizacionesAppService } from "../cotizaciones.service";
+import { createCotizacionesAppService as createCotizacionesAppServiceBase } from "../cotizaciones.service";
 import type { ClientesRepository } from "@/repositories/clientes-repository";
 import type { CotizacionesRepository } from "@/repositories/cotizaciones-repository";
 import type { ProjectsRepository } from "@/repositories/projects.repository";
+import type { OrganizationProfileRepository } from "@/features/organization-profile/repositories/organization-profile.repository";
+
+function createOrganizationProfileRepositoryMock(): jest.Mocked<OrganizationProfileRepository> {
+  return {
+    getByOrganizationId: jest.fn().mockResolvedValue(null),
+    upsertByOrganizationId: jest.fn(),
+    uploadLogo: jest.fn(),
+    uploadHeroImage: jest.fn(),
+  } as unknown as jest.Mocked<OrganizationProfileRepository>;
+}
+
+const createCotizacionesAppService = (
+  deps: Parameters<typeof createCotizacionesAppServiceBase>[0] = {}
+) =>
+  createCotizacionesAppServiceBase({
+    organizationProfileRepository: createOrganizationProfileRepositoryMock(),
+    ...deps,
+  });
 
 function createClientesRepositoryMock(): jest.Mocked<ClientesRepository> {
   return {

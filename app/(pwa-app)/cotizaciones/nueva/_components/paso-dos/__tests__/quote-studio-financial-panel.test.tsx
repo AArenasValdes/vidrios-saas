@@ -10,6 +10,7 @@ import {
 } from "../quote-studio-financial-panel";
 import type { QuoteStudioFinancialSummary } from "@/features/cotizaciones/services/quote-studio-financial.service";
 import { createQuoteStudioFinancialDraft } from "@/features/cotizaciones/types/cotizacion-workflow";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 function buildSummary(
   overrides: Partial<QuoteStudioFinancialSummary> = {}
@@ -38,7 +39,7 @@ function buildProps(summary: QuoteStudioFinancialSummary) {
   return {
     summary,
     adjustments: createQuoteStudioFinancialDraft(),
-    formatCurrencyInput: (value: string) => `$${value}`,
+    formatCurrencyInput: (value: string) => formatCurrency(Number(value)),
     onAdjustmentChange: jest.fn(),
     onApplyRecommendedPrice: jest.fn(),
   };

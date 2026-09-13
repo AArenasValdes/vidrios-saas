@@ -948,7 +948,7 @@ async function rollbackEntities(rollbacks: Array<(() => Promise<void>) | undefin
     cotizacion: Cotizacion,
     organizationId: EntityId
   ): Promise<Cotizacion> {
-    if (!cotizacion.items.length) {
+    if (!cotizacion.items.length || !hasSupabaseBrowserEnv()) {
       return cotizacion;
     }
 
@@ -1236,21 +1236,23 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
           )
         : await withTimeout(cotizacionesRepo.create(cotizacionInput), "crear cotización");
 
-      try {
-        const visualConfigsService = createCotizacionItemVisualConfigsService(createClient());
-        await visualConfigsService.syncFromPersistedItems({
-          organizationId: input.organizationId,
-          items: (persisted.items ?? []).map((item) => ({
-            id: item.id,
-            observaciones: item.observaciones,
-            color: item.color,
-          })),
-        });
-      } catch (visualError) {
-        console.error(
-          "No se pudo sincronizar cotizacion_item_visual_configs (el guardado comercial sí ocurrió).",
-          visualError
-        );
+      if (hasSupabaseBrowserEnv()) {
+        try {
+          const visualConfigsService = createCotizacionItemVisualConfigsService(createClient());
+          await visualConfigsService.syncFromPersistedItems({
+            organizationId: input.organizationId,
+            items: (persisted.items ?? []).map((item) => ({
+              id: item.id,
+              observaciones: item.observaciones,
+              color: item.color,
+            })),
+          });
+        } catch (visualError) {
+          console.error(
+            "No se pudo sincronizar cotizacion_item_visual_configs (el guardado comercial sí ocurrió).",
+            visualError
+          );
+        }
       }
 
       const workflowRecord = await withTimeout(

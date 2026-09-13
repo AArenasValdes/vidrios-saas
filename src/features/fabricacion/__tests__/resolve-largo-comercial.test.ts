@@ -109,12 +109,12 @@ describe("resolveLargoComercialMm", () => {
     );
   });
 
-  it("Caso D — sin códigos puede cubicar, despiezar y activar", () => {
+  it("Caso D — con referencias sugeridas puede cubicar, despiezar y activar", () => {
     let nextId = 0;
     const receta = crearRecetaPlantillaVentoraCorredera2H("L5000", {
       createId: () => `d-${nextId++}`,
     });
-    expect(receta.perfiles.every((p) => !p.codigoPerfil.trim())).toBe(true);
+    expect(receta.perfiles.every((p) => p.codigoPerfil.trim())).toBe(true);
 
     const output = calcularCubicacionYPauta(receta, ENTRADA);
     const pauta = construirPautaBarrasFabricacion({ receta, resultado: output });
