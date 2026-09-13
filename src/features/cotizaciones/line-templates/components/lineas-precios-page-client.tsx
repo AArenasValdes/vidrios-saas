@@ -17,14 +17,6 @@ import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templat
 import { isChileOrganizationCountry } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import { buildTechnicalCardStatus } from "@/features/cotizaciones/line-templates/services/catalogo-fabricacion-card-status";
 import {
-  buildFabricationRecipeInputFromInicioRapido,
-  buildLineTemplatePayloadFromInicioRapido,
-  listarInicioRapidoCatalogo,
-  filterInicioRapidoCatalogoForExistingTemplates,
-  type CatalogoInicioRapidoItem,
-} from "@/features/cotizaciones/line-templates/services/catalogo-usar-base-ventora.service";
-import { CatalogoBasesVentoraSection } from "@/features/cotizaciones/line-templates/components/catalogo-bases-ventora-section";
-import {
   buildLineTemplateCuttingPreview,
   getLineTemplateCubicationConfig,
   getLineTemplateGlassMetadata,
@@ -243,18 +235,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     deleteTemplate,
     loadTemplates: refreshTemplates,
   } = useCotizacionLineTemplates();
-  const { recipes: fabricationRecipes, createRecipe } = useFabricationRecipes();
-  const ventoraBaseRecommendations = useMemo(() => {
-    if (!isChileCatalog) {
-      return [];
-    }
-
-    return filterInicioRapidoCatalogoForExistingTemplates(
-      listarInicioRapidoCatalogo(),
-      templates
-    );
-  }, [isChileCatalog, templates]);
-  const [usingBaseId, setUsingBaseId] = useState<string | null>(null);
+  const { recipes: fabricationRecipes } = useFabricationRecipes();
 
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilterValue>("Todo");
@@ -934,45 +915,6 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     }
   };
 
-  const handleUseVentoraBase = async (item: CatalogoInicioRapidoItem) => {
-    if (usingBaseId) return;
-    setUsingBaseId(item.id);
-    setFeedback(null);
-
-    try {
-      const linePayload = buildLineTemplatePayloadFromInicioRapido({
-        item,
-        existingNames: templates.map((template) => template.nombre),
-      });
-      const created = await createTemplate(linePayload);
-      const recipePayload = buildFabricationRecipeInputFromInicioRapido({
-        item,
-        lineTemplateId: Number(created.id),
-        lineName: created.nombre,
-      });
-      await createRecipe(recipePayload);
-      setFeedback({
-        kind: "success",
-        message:
-          item.kind === "plantilla_ventora"
-            ? `Se creó “${created.nombre}” con ajustes de la plantilla. Continúa la configuración.`
-            : `Se creó “${created.nombre}” en tu catálogo. Continúa la configuración.`,
-      });
-      router.push(
-        `/configuracion/empresa/lineas-precios/${created.id}/fabricacion`
-      );
-    } catch (useBaseError) {
-      setFeedback({
-        kind: "error",
-        message:
-          useBaseError instanceof Error
-            ? useBaseError.message
-            : "No pudimos crear la línea desde esta opción.",
-      });
-      setUsingBaseId(null);
-    }
-  };
-
   const handleToggleActive = async (template: CotizacionLineTemplate) => {
     try {
       await updateTemplate(template.id, { isActive: !template.isActive });
@@ -1060,10 +1002,6 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         onNew={openNewSheet}
         onEdit={openEditSheet}
         onEditPrice={setPriceEditorTemplate}
-        baseRecommendations={ventoraBaseRecommendations}
-        isUsingBase={usingBaseId !== null}
-        usingBaseId={usingBaseId}
-        onUseBase={(recommendation) => void handleUseVentoraBase(recommendation)}
         formatMoney={formatMoney}
         isChileCatalog={isChileCatalog}
       />
@@ -1446,22 +1384,11 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         </div>
       ) : null}
 
-      <CatalogoBasesVentoraSection
-        recommendations={ventoraBaseRecommendations}
-        privateLineCount={templates.length}
-        isUsingBase={usingBaseId !== null}
-        usingBaseId={usingBaseId}
-        onUseBase={(recommendation) => void handleUseVentoraBase(recommendation)}
-        catalogRegionLabel={isChileCatalog ? "Catálogo base de Chile" : null}
-      />
-
       {isEmpty ? (
         <section className={s.emptyState}>
           <strong>Aún no tienes líneas en tu catálogo privado</strong>
           <p>
-            {isChileCatalog
-              ? "Usa una Base Ventora arriba o crea una línea con precio, mínimo y redondeo para reutilizarla en tus cotizaciones."
-              : "Crea una línea con precio, mínimo y redondeo para reutilizarla en tus cotizaciones."}
+            Crea una línea con precio, mínimo y redondeo para reutilizarla en tus cotizaciones.
           </p>
           <button type="button" className={s.primaryButton} onClick={openNewSheet}>
             <LuPlus aria-hidden />

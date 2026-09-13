@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { repararBorradoresProyectantes } from "@/features/fabricacion/repositories/reparar-borrador-proyectante.repository";
 import {
   seedStructuralDraftsForOrganization,
   type SeedStructuralDraftDeps,
@@ -6,22 +7,50 @@ import {
 import { fetchOrganizationCountryCodeClient } from "@/features/cotizaciones/line-templates/services/fetch-organization-country-code-client";
 import { isChileOrganizationCountry } from "@/features/cotizaciones/line-templates/services/line-catalog-country";
 
-const seededStructuralOrgs = new Set<string>();
+const structuralSeedRuns = new Map<string, Promise<boolean>>();
+const projectingRepairRuns = new Map<string, Promise<number>>();
+
+/** Comparte la reparación entre catálogo y editor, sin crear líneas ni recetas. */
+export function ensureCatalogDraftsClient(organizationId: string | number): Promise<number> {
+  const key = String(organizationId);
+  const existing = projectingRepairRuns.get(key);
+  if (existing) return existing;
+  const run = fetchOrganizationCountryCodeClient(organizationId)
+    .then((country) => isChileOrganizationCountry(country)
+      ? repararBorradoresProyectantes(createClient(), organizationId)
+      : 0)
+    .catch((error) => {
+      projectingRepairRuns.delete(key);
+      throw error;
+    });
+  projectingRepairRuns.set(key, run);
+  return run;
+}
+
+/** Compatibilidad para las cargas que solo conocían AL-32/AL-42. */
+export const ensureProyectanteDraftsClient = ensureCatalogDraftsClient;
 
 /** Rellena borradores técnicos faltantes. Una vez por org y sesión. Solo organizaciones CL. */
-export async function ensureStructuralDraftsClient(
+export function ensureStructuralDraftsClient(
   organizationId: string | number
 ): Promise<boolean> {
   const key = String(organizationId);
-  if (seededStructuralOrgs.has(key)) return false;
+  const existing = structuralSeedRuns.get(key);
+  if (existing) return existing;
 
+  const run = prepareStructuralDrafts(organizationId).catch((error) => {
+    structuralSeedRuns.delete(key);
+    throw error;
+  });
+  structuralSeedRuns.set(key, run);
+  return run;
+}
+
+async function prepareStructuralDrafts(organizationId: string | number): Promise<boolean> {
   const countryCode = await fetchOrganizationCountryCodeClient(organizationId);
   if (!isChileOrganizationCountry(countryCode)) {
-    seededStructuralOrgs.add(key);
     return false;
   }
-
-  seededStructuralOrgs.add(key);
 
   const supabase = createClient();
 
@@ -58,10 +87,7 @@ export async function ensureStructuralDraftsClient(
     },
   };
 
-  try {
-    const result = await seedStructuralDraftsForOrganization(organizationId, seedDeps);
-    return result.seeded > 0;
-  } catch {
-    return false;
-  }
+  const repaired = await ensureCatalogDraftsClient(organizationId);
+  const result = await seedStructuralDraftsForOrganization(organizationId, seedDeps);
+  return repaired > 0 || result.seeded > 0;
 }

@@ -241,8 +241,8 @@ export function crearRecetaPlantillaVentoraProyectante(
       ? [
           {
             id: createId(),
-            codigo: "4212",
-            nombre: "Cuña de armado a presión",
+            codigo: "4230",
+            nombre: "Cuña de armado NAT.",
             reglaCantidad: { tipo: "por_hoja", cantidad: 1, multiplicador: 1 },
             requerido: false,
             observaciones:

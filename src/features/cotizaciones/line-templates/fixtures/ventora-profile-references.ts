@@ -136,7 +136,7 @@ const SERIE_4800_PROFILES: LineProfileReference[] = [
   }),
 ];
 
-/** Códigos L32 proyectante (SODAL). No usar en Serie 32 corredera comercial. */
+/** Códigos AL-32 proyectante (SODAL). La línea comercial AL-32 usa esta identidad. */
 const L32_PROYECTANTE_VISUAL_REFERENCES: LineProfileReference[] = [
   visualRef({ code: "3201", name: "Marco simple", role: "Marco", description: "L32 · Proyectante" }),
   visualRef({ code: "3202", name: "Hoja proyectante", role: "Hoja", description: "L32 · Proyectante" }),
@@ -150,7 +150,7 @@ const L32_PROYECTANTE_VISUAL_REFERENCES: LineProfileReference[] = [
   visualRef({ code: "3208", name: "Junquillo", role: "Otro", description: "L32 · Proyectante" }),
 ];
 
-/** Códigos Serie 42 proyectante (SODAL). No usar en Serie 42 corredera comercial. */
+/** Códigos AL-42 proyectante (SODAL). La línea comercial AL-42 usa esta identidad. */
 const SERIE_42_PROYECTANTE_PROFILES: LineProfileReference[] = [
   catalogRef({
     code: "4201",
@@ -354,7 +354,7 @@ const PUERTA_4600_PROFILES: LineProfileReference[] = [
   }),
 ];
 
-/** AL-32: códigos SODAL de proyectante; no asociar a una corredera. */
+/** AL-32: códigos SODAL de proyectante. */
 const AL32_PROJECTING_PROFILES: LineProfileReference[] = [
   studyRef({
     code: "3201",
@@ -814,7 +814,7 @@ const CATALOG_KEY_PROFILE_SETS: Record<string, LineProfileReference[]> = {
 
 const PENDING_VALIDATION_CATALOG_KEYS = new Set<string>();
 
-/** Referencias visuales L32 proyectante (wizard/biblioteca). No asociar a Serie 32 corredera. */
+/** Referencias visuales AL-32 proyectante (wizard/biblioteca). */
 export function getL32ProyectanteVisualReferences(): LineProfileReference[] {
   return L32_PROYECTANTE_VISUAL_REFERENCES;
 }

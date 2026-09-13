@@ -2,6 +2,14 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-13 - AL-32/AL-42: editor proyectante y catálogo sin duplicados
+
+- Corrige la clasificación histórica de septiembre 4: AL-32/AL-42 son proyectantes, no correderas. La identidad canónica prevalece sobre metadata antigua.
+- Las recetas nuevas usan la base proyectante con códigos; descuentos y validación de taller siguen pendientes.
+- Reparación idempotente de borradores genéricos intactos, versión 1, sin pruebas ni validación. Se conservan id, líneas privadas, ajustes del taller y cotizaciones históricas. Queries por organización y guardado con comparación optimista de fecha/definición.
+- Catálogo y editor esperan la misma reparación para no abrir la base antigua mientras carga. Sin migración de esquema ni aplicación remota manual.
+- Se retiró de Líneas y precios el bloque redundante “Empieza más rápido”, incluidas las tarjetas L32/L42 y la base Corredera 2 hojas. Las líneas existentes siguen disponibles.
+
 ## 2026-09-12 - Página pública habilitada al crear cuenta
 
 - La RPC `complete_google_oauth_account()` genera automáticamente `solicitud_publica_slug` desde el nombre del taller y guarda `is_published = true` al provisionar una cuenta.
@@ -26,11 +34,11 @@ Historial de cambios en la documentacion del mapa tecnico.
 - **Auditoría de integridad** (`auditoria-integridad-catalogo-lineas.service.ts`): clasificación primaria mutuamente excluyente que suma 25:
   - 3 códigos documentados no validados (L5000/L20/L25)
   - 10 referenciales no ambiguos
-  - 3 referenciales ambiguos (Serie 32 corredera, Serie 42 corredera, Serie 3200 puerta)
+  - 3 referenciales ambiguos (clasificación histórica de Serie 32/42, Serie 3200 puerta)
   - 8 sin códigos técnicos en fixtures
   - 1 solo comercial (AM-35)
 - Separación de códigos en `ventora-profile-references.ts`:
-  - Serie 32/42 **corredera** sin códigos 32xx/42xx de proyectante
+  - En ese corte histórico, Serie 32/42 se habían tratado como corredera; esta decisión fue corregida el 2026-09-13: AL-32/AL-42 son proyectantes.
   - Códigos SODAL/perfil como **referencia visual** (`codeStatus: visual_reference` / `catalog_reference`)
   - `ventoraPlantillaId: null` en Serie 32 y Serie 42 comerciales (no arrastrar plantilla L32/L42 proyectante)
 - AM-35 renombrado a **"AM-35 · Puerta abatible y vaivén"**; sin arquetipo en `CATALOG_KEY_TO_ARQUETIPO`.
@@ -38,7 +46,7 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ### Cotización: línea corredera y precio por m²
 
-- **Fix Serie 32 corredera → proyectante**: `ventora:l32` y `ventora:l42` mapean a `corredera_2h` en `arquetipos-estructurales-lineas.ts`.
+- **Decisión histórica supersedida el 2026-09-13**: `ventora:l32` y `ventora:l42` habían mapeado temporalmente a `corredera_2h`; hoy mapean a `proyectante`.
 - `fabricacion-linea-cotizacion-context.service.ts`: al asignar línea, prioriza preset/catálogo sobre receta validada si la tipología no coincide.
 - `workflow-ui.ts`: `applyLineTemplateToComponentForm` / `hydrateComponentFormFromLineTemplate` propagan tipología, hojas, receta y **precio sugerido por m²** al elegir línea.
 - Tests: `fabricacion-linea-cotizacion-context.service.test.ts`, `workflow-ui-step-two.test.ts`.

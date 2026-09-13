@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { repararBorradoresProyectantes } from "@/features/fabricacion/repositories/reparar-borrador-proyectante.repository";
 import {
   seedStructuralDraftsForOrganization,
   type SeedStructuralDraftDeps,
@@ -48,6 +49,7 @@ export async function seedStructuralDraftsServer(
   };
 
   try {
+    await repararBorradoresProyectantes(admin, organizationId);
     return await seedStructuralDraftsForOrganization(organizationId, seedDeps);
   } catch (error) {
     console.warn("[seedStructuralDraftsServer] failed for org", organizationId, error);

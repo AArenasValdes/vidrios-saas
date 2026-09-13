@@ -27,7 +27,7 @@ describe("plantillas Ventora L32 / L42", () => {
     expect(receta.notasValidacion.join(" ")).toMatch(/-2,1/);
   });
 
-  it("L42 crea perfiles, junquillos alternativos y accesorio 4212", () => {
+  it("L42 crea perfiles, junquillos alternativos y accesorio 4230", () => {
     const receta = crearRecetaPlantillaVentoraProyectante("L42");
 
     expect(receta.perfiles.map((p) => [p.codigoPerfil, p.funcion, p.requerido])).toEqual([
@@ -39,8 +39,8 @@ describe("plantillas Ventora L32 / L42", () => {
     ]);
     expect(receta.accesorios).toHaveLength(1);
     expect(receta.accesorios[0]).toMatchObject({
-      codigo: "4212",
-      nombre: "Cuña de armado a presión",
+      codigo: "4230",
+      nombre: "Cuña de armado NAT.",
     });
     expect(
       receta.perfiles.every((profile) => profile.reglaMedida.ajusteMm == null)

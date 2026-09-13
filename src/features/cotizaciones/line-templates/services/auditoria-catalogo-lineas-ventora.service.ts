@@ -171,7 +171,7 @@ function buildNotas(
     meta.lineConfiguration?.toLowerCase().includes("corredera")
   ) {
     notas.push(
-      "La línea comercial es corredera; la plantilla L32 en código es proyectante (referencia aparte)."
+      "Metadata heredada: AL-32 es proyectante; corregir la configuración antes de usar sus códigos."
     );
   }
 

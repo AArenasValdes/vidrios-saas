@@ -3,6 +3,7 @@ import {
   type PlantillaVentoraCorrederaId,
 } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
 import { VENTORA_LARGO_COMERCIAL_PRESET_MM } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
+import { crearRecetaPlantillaVentoraProyectante } from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
 import {
   FABRICACION_RECIPE_SCHEMA_VERSION,
   type FabricacionBaseMedida,
@@ -378,6 +379,9 @@ export function resolveArquetipoEstructuralId(input: {
   catalogKey?: string | null;
   structuralArchetypeId?: string | null;
 }): ArquetipoEstructuralId | null {
+  if (input.catalogKey === "ventora:l32" || input.catalogKey === "ventora:l42") {
+    return "proyectante";
+  }
   const fromMetadata = input.structuralArchetypeId?.trim();
   if (fromMetadata && fromMetadata in ARQUETIPOS_ESTRUCTURALES) {
     return fromMetadata as ArquetipoEstructuralId;
@@ -550,6 +554,12 @@ export function crearRecetaEstructuralParaLineaComercial(input: {
   lineName: string;
   createId?: () => string;
 }): FabricacionReceta | null {
+  if (input.catalogKey === "ventora:l32" || input.catalogKey === "ventora:l42") {
+    return crearRecetaPlantillaVentoraProyectante(
+      input.catalogKey === "ventora:l32" ? "L32" : "L42",
+      { lineName: input.lineName, createId: input.createId }
+    );
+  }
   const archetypeId = resolveArquetipoEstructuralId(input);
   if (!archetypeId) return null;
 

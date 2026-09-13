@@ -18,7 +18,6 @@ import {
   lineTemplateNeedsCommercialPrice,
   type CotizacionLineTemplate,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
-import type { CatalogoInicioRapidoItem } from "@/features/cotizaciones/line-templates/services/catalogo-usar-base-ventora.service";
 import {
   formatLineTemplateHabitualGlassLabel,
 } from "@/features/cotizaciones/line-templates/constants/line-template-habitual-glass";
@@ -72,10 +71,6 @@ type Props = {
   onNew: () => void;
   onEdit: (template: CotizacionLineTemplate) => void;
   onEditPrice: (template: CotizacionLineTemplate) => void;
-  baseRecommendations: CatalogoInicioRapidoItem[];
-  isUsingBase: boolean;
-  usingBaseId: string | null;
-  onUseBase: (recommendation: CatalogoInicioRapidoItem) => void;
   formatMoney: (value: number) => string;
   isChileCatalog?: boolean;
 };
@@ -173,10 +168,6 @@ export function LineasPreciosMobileView({
   onNew,
   onEdit,
   onEditPrice,
-  baseRecommendations,
-  isUsingBase: _isUsingBase,
-  usingBaseId: _usingBaseId,
-  onUseBase: _onUseBase,
   formatMoney,
   isChileCatalog = false,
 }: Props) {

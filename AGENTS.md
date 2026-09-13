@@ -187,11 +187,13 @@ Ultima actualizacion operativa: 2026-09-04
   - `auditoria-catalogo-lineas-ventora.service.ts` (estado fabricación por línea)
   - `auditoria-integridad-catalogo-lineas.service.ts` (clasificación primaria mutuamente excluyente que suma 25)
 - Integridad de códigos en `ventora-profile-references.ts`:
-  - Serie 32/42 **corredera** sin códigos 32xx/42xx de proyectante
+  - Corrección 2026-09-13: AL-32/AL-42 (`ventora:l32`/`ventora:l42`) son **proyectantes**, con códigos 32xx/42xx y base precargada; no correderas.
   - Referencias SODAL/perfil como `visual_reference` / `catalog_reference`
-  - `ventoraPlantillaId: null` en Serie 32 y Serie 42 comerciales
-- Fix cotización Serie 32 corredera guardada como proyectante:
-  - `ventora:l32` y `ventora:l42` → `corredera_2h` en arquetipos
+  - La identidad canónica prevalece sobre metadata antigua de corredera. Los descuentos y pruebas siguen pendientes del taller.
+- Corrección de AL-32/AL-42 en catálogo y fabricación (2026-09-13):
+  - `ventora:l32` y `ventora:l42` → `proyectante` en arquetipos y recetas nuevas.
+  - Se reparan borradores precargados intactos en `fabrication_recipes` antes de abrir el editor, sin reemplazar ajustes ni recetas probadas/validadas.
+  - Se retiró el bloque duplicado “Empieza más rápido” del catálogo; se configura desde cada línea existente.
   - `fabricacion-linea-cotizacion-context.service.ts` prioriza preset/catálogo sobre receta si tipología no coincide
 - Precio automático por m² al asignar línea en cotización/constructor (`hydrateComponentFormFromLineTemplate` en `workflow-ui.ts`)
 - Gate **Probar fabricación** (`fabricacion-receta-lista-para-probar.service.ts`):

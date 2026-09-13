@@ -8,7 +8,7 @@
 ### Actualización catálogo y gate 2026-09-04 (vigente)
 
 - Catálogo comercial canónico: **25 líneas** Ventora (`default-line-catalog.ts`). AM-35 es solo comercial (sin arquetipo estructural).
-- **Serie 32 / Serie 42 corredera** no deben heredar códigos ni plantilla L32/L42 de **proyectante**. En cotización mapean a `corredera_2h`.
+- **AL-32 / AL-42** (`ventora:l32` / `ventora:l42`) son **proyectantes**. La corrección del 2026-09-13 reemplaza la clasificación antigua como corredera. La receta nueva usa los códigos de la plantilla proyectante; descuentos y pruebas quedan pendientes del taller. El bootstrap repara solo borradores genéricos intactos sin pruebas, con filtros por organización y control de cambios concurrentes.
 - Al asignar línea en cotización, propagar tipología/hojas/receta desde catálogo; no reutilizar receta validada si su tipología no coincide con la línea elegida.
 - **Vidrio base en receta = opcional.** El gate **Probar fabricación** bloquea solo perfiles/accesorios obligatorios incompletos; sin vidrio base aparece advertencia, no bloqueo (el maestro puede definir vidrio al cotizar cada pieza).
 - Editor de receta: selector de vidrio con catálogo Ventora completo + vidrio propio del taller (`RecipeGlassNamePicker`).

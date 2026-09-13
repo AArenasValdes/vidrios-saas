@@ -3,6 +3,7 @@ import {
   resolveArquetipoEstructuralId,
 } from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
 import { isVentoraCatalogKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
+import { enriquecerRecetaDesdeCatalogo } from "@/features/fabricacion/services/enriquecer-receta-desde-catalogo.service";
 
 export type LineTemplateSeedRow = {
   id: number | string;
@@ -72,11 +73,14 @@ export async function seedStructuralDraftsForOrganization(
       continue;
     }
 
-    const definition = crearRecetaEstructuralParaLineaComercial({
+    const structuralDefinition = crearRecetaEstructuralParaLineaComercial({
       catalogKey: line.catalog_key,
       structuralArchetypeId: archetypeId,
       lineName: line.nombre,
     });
+    const definition = structuralDefinition
+      ? enriquecerRecetaDesdeCatalogo({ receta: structuralDefinition, catalogKey: line.catalog_key })
+      : null;
 
     if (!definition) {
       skipped += 1;

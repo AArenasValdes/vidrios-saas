@@ -180,19 +180,19 @@ function detectNomenclatureIssues(
 
   if (key === "ventora:l32" && config.includes("corredera")) {
     issues.push(
-      "Serie 32 comercial = corredera 2H; L32 en biblioteca = plantilla proyectante separada (códigos 32xx no son corredera)."
+      "Metadata heredada: AL-32 es proyectante; eliminar la configuración corredera antes de usar sus códigos 32xx."
     );
   }
 
   if (key === "ventora:l42" && config.includes("corredera")) {
     issues.push(
-      "Serie 42 comercial = corredera 2H; códigos 42xx del catálogo SODAL pertenecen a Serie 42 proyectante, no a corredera."
+      "Metadata heredada: AL-42 es proyectante; eliminar la configuración corredera antes de usar sus códigos 42xx."
     );
   }
 
   if (key === "ventora:serie-3200-puerta-abatible-1h") {
     issues.push(
-      "Serie 3200 puerta usa prefijo 322x; no confundir con L32 proyectante (32xx) ni Serie 32 corredera."
+      "Serie 3200 puerta usa prefijo 322x; no confundir con AL-32 proyectante (32xx)."
     );
   }
 

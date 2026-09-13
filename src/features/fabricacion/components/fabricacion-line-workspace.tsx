@@ -48,8 +48,12 @@ import {
   VENTORA_LARGO_COMERCIAL_PRESET_MM,
 } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import { applyLargoToProfilesWithoutLength } from "@/features/fabricacion/services/taller-perfiles.service";
-import { crearRecetaEstructuralParaLineaComercial } from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
+import {
+  crearRecetaEstructuralParaLineaComercial,
+  resolveArquetipoEstructuralId,
+} from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
 import { enriquecerCodigosPerfilRecetaFabricacion } from "@/features/fabricacion/services/fabricacion-receta-codigos.service";
+import { enriquecerRecetaDesdeCatalogo } from "@/features/fabricacion/services/enriquecer-receta-desde-catalogo.service";
 import { resolveInitialFabricationStepForTemplate } from "@/features/fabricacion/services/fabricacion-workflow-initial-step.service";
 import type {
   FabricacionEntradaCalculo,
@@ -544,11 +548,14 @@ export function FabricacionLineWorkspace({
 
   const openEditor = useCallback((recipe: FabricationRecipeRecord, step?: RecipeWorkflowStepId) => {
     const raw = cloneRecipe(recipe.definition);
-    const enriched = enriquecerCodigosPerfilRecetaFabricacion({
-      receta: raw,
+    const enriched = enriquecerRecetaDesdeCatalogo({
+      receta: enriquecerCodigosPerfilRecetaFabricacion({
+        receta: raw,
       sourceType: recipe.sourceType,
       sourceReference: recipe.sourceReference,
       lineName: recipe.lineName,
+      }),
+      catalogKey: template?.catalogKey,
     });
     setSelectedId(recipe.id);
     setDraft(enriched);
@@ -622,6 +629,10 @@ export function FabricacionLineWorkspace({
         ? template.catalogMetadata.structuralArchetypeId
         : null;
 
+    const resolvedStructuralArchetypeId = resolveArquetipoEstructuralId({
+      catalogKey: template.catalogKey,
+      structuralArchetypeId,
+    });
     const structuralDefinition = crearRecetaEstructuralParaLineaComercial({
       catalogKey: template.catalogKey,
       structuralArchetypeId,
@@ -634,12 +645,16 @@ export function FabricacionLineWorkspace({
         recipeIdentityId: crypto.randomUUID(),
         lineName: template.nombre,
       });
+    const definitionWithCatalog = enriquecerRecetaDesdeCatalogo({
+      receta: definition,
+      catalogKey: template.catalogKey,
+    });
 
     await handleCreateFromDefinition({
-      definition,
+      definition: definitionWithCatalog,
       sourceType,
       sourceReference: structuralDefinition
-        ? `ventora-arquetipo:${structuralArchetypeId ?? template.catalogKey}`
+        ? `ventora-arquetipo:${resolvedStructuralArchetypeId ?? template.catalogKey}`
         : "blank-start",
     });
   };

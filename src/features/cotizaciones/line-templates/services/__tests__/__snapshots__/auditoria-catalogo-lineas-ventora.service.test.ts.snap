@@ -35,7 +35,7 @@ exports[`auditoria-catalogo-lineas-ventora.service resume estados del catálogo 
     "fabricacionEstado": "fabricacion_pendiente",
     "listaParaProbar": false,
     "nombre": "AL-32",
-    "perfiles": "0/8",
+    "perfiles": "5/5",
     "tipologia": "proyectante",
   },
   {
@@ -53,7 +53,7 @@ exports[`auditoria-catalogo-lineas-ventora.service resume estados del catálogo 
     "fabricacionEstado": "fabricacion_pendiente",
     "listaParaProbar": false,
     "nombre": "AL-42",
-    "perfiles": "0/8",
+    "perfiles": "5/5",
     "tipologia": "proyectante",
   },
   {
