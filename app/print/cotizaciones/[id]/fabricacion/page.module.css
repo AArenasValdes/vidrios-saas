@@ -796,6 +796,13 @@
   }
 }
 
+/* El selector se activa desde page.tsx únicamente para iPhone/iPod. */
+@media screen and (max-width: 719px) {
+  .iphonePrintRoot {
+    padding-top: calc(28px + env(safe-area-inset-top, 0px));
+  }
+}
+
 @media print {
   .printRoot {
     background: #fff;

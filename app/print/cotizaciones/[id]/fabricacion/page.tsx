@@ -41,6 +41,17 @@ export default function CotizacionFabricacionPrintPage() {
   const [despieceItemId, setDespieceItemId] = useState<string | null>(null);
   const [despieceSession, setDespieceSession] = useState(0);
   const documentRef = useRef<HTMLElement | null>(null);
+  const printRootRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const printRoot = printRootRef.current;
+    if (!printRoot) return;
+
+    printRoot.classList.toggle(
+      s.iphonePrintRoot,
+      /iPhone|iPod/i.test(window.navigator.userAgent)
+    );
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -157,7 +168,7 @@ export default function CotizacionFabricacionPrintPage() {
   }
 
   return (
-    <main className={s.printRoot} data-fabricacion-print="1">
+    <main ref={printRootRef} className={s.printRoot} data-fabricacion-print="1">
       <div className={s.workspace}>
         <FabricacionResumenView
           backHref={`/cotizaciones/${params.id}`}

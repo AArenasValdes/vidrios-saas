@@ -41,12 +41,6 @@ type Props = {
   onOpenCuaderno?: () => void;
   /** Abre la revisión de despiece de la cotización. */
   onOpenDespieceReview?: () => void;
-  /** Aviso contextual tras agregar una pieza con fabricación configurada. */
-  despiecePrompt?: {
-    itemLabel: string;
-    onOpen: () => void;
-    onDismiss: () => void;
-  } | null;
 };
 
 export function PasoDosListaMovil({
@@ -67,7 +61,6 @@ export function PasoDosListaMovil({
   onReturnToModeSelector,
   onOpenCuaderno,
   onOpenDespieceReview,
-  despiecePrompt = null,
 }: Props) {
   const [isCambiarModoDialogOpen, setIsCambiarModoDialogOpen] = useState(false);
   const isGlobalPricing = quotePricingMode === "total_global";
@@ -312,30 +305,6 @@ export function PasoDosListaMovil({
 
       {!isWizardOpen ? (
         <footer className={s.stepTwoMobileFooterBar}>
-          {despiecePrompt ? (
-            <div className={s.stepTwoMobileDespiecePrompt} role="status">
-              <div className={s.stepTwoMobileDespiecePromptCopy}>
-                <strong>Cortes y tiras listos</strong>
-                <p>
-                  {despiecePrompt.itemLabel} tiene fabricación configurada. Revisa la pauta sin
-                  salir del presupuesto.
-                </p>
-              </div>
-              <div className={s.stepTwoMobileDespiecePromptActions}>
-                <button
-                  className={s.btnPrimary}
-                  onClick={despiecePrompt.onOpen}
-                  type="button"
-                >
-                  <LuPencilRuler aria-hidden />
-                  Ver cortes y tiras
-                </button>
-                <button className={s.btnGhost} onClick={despiecePrompt.onDismiss} type="button">
-                  Ahora no
-                </button>
-              </div>
-            </div>
-          ) : null}
           <div className={s.stepTwoMobileFooterTotals}>
             <span>
               {quotePricingMode === "total_global"
