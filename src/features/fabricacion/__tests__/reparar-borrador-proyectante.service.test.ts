@@ -1,4 +1,5 @@
 import { crearRecetaDesdeArquetipoEstructural, crearRecetaEstructuralParaLineaComercial, resolveArquetipoEstructuralId } from "../fixtures/arquetipos-estructurales-lineas";
+import { crearRecetaPlantillaVentoraProyectante } from "../fixtures/plantillas-ventora-proyectante";
 import { prepararReparacionBorradorProyectante, type BorradorProyectanteRow } from "../services/reparar-borrador-proyectante.service";
 import { fabricacionRecetaSchema } from "../schemas/fabricacion-schemas";
 
@@ -41,6 +42,27 @@ describe("reparación conservadora de borradores AL-32/AL-42", () => {
     expect(prepararReparacionBorradorProyectante("ventora:l42", { ...row, definition: recipe })).toBeNull();
   });
 
+  it("repara la precarga AL-42 de cinco piezas creada por la versión anterior", () => {
+    const row = {
+      ...seed("proyectante"),
+      source_reference: "ventora-proyectante:catalogo-2026-09-13",
+      definition: crearRecetaPlantillaVentoraProyectante("L42", {
+        lineName: "Serie 42",
+        createId: (() => {
+          let id = 0;
+          return () => `old-l42-${++id}`;
+        })(),
+      }),
+    };
+
+    const recipe = prepararReparacionBorradorProyectante("ventora:l42", row);
+
+    expect(recipe?.identidad.variante).toBe("normal");
+    expect(recipe?.perfiles).toHaveLength(11);
+    expect(recipe?.perfiles.some((profile) => profile.codigoPerfil === "4231")).toBe(false);
+    expect(recipe?.perfiles.some((profile) => profile.codigoPerfil === "4201")).toBe(true);
+  });
+
   it("repara la precarga genérica vieja de Serie 3200 con la base L/ST/TP", () => {
     const row = {
       ...seed("proyectante"),
@@ -75,6 +97,35 @@ describe("reparación conservadora de borradores AL-32/AL-42", () => {
       "3227",
       "3227",
     ]);
+  });
+
+  it("repara la precarga genérica vieja de S-33 con la pauta actual", () => {
+    const row = {
+      ...seed("corredera_2h"),
+      line_name: "S-33",
+      definition: crearRecetaDesdeArquetipoEstructural({
+        archetypeId: "corredera_2h",
+        lineName: "S-33",
+        createId: (() => {
+          let id = 0;
+          return () => `old-s33-${++id}`;
+        })(),
+      }),
+    };
+
+    const recipe = prepararReparacionBorradorProyectante(
+      "ventora:s33-corredera-2h",
+      row
+    );
+
+    expect(recipe?.identidad).toMatchObject({
+      tipologia: "corredera",
+      hojas: 2,
+      variante: "S-33 Normal",
+    });
+    expect(recipe?.perfiles).toHaveLength(11);
+    expect(recipe?.perfiles.map((profile) => profile.codigoPerfil)).toContain("3308");
+    expect(recipe?.perfiles.map((profile) => profile.codigoPerfil)).toContain("3303");
   });
 
   it.each(["codigo", "medida", "tira", "notas"])("conserva el ajuste del taller: %s", (change) => {

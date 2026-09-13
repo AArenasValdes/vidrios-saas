@@ -96,6 +96,19 @@ const GLASS_RECOMMENDATION_RULES: readonly GlassRecommendationRule[] = [
     recommendations: AL42_GLASS_OPTIONS,
   },
   {
+    id: "serie-s33",
+    reason: "S-33: monolítico 4/5 mm en Normal/Reforzada o DVH 22 mm en TP/RPT.",
+    matches: ({ subtipo, sistema }) =>
+      subtipo.includes("ventana") &&
+      includesAny(sistema, ["s 33", "s33", "serie 33"]),
+    recommendations: [
+      "Incoloro monolitico 4mm",
+      "Incoloro monolitico 5mm",
+      "DVH 4+12+4",
+      "DVH 5+12+5",
+    ],
+  },
+  {
     id: "ventana-corredera",
     reason: "Mas usado para ventana corredera.",
     matches: ({ subtipo, sistema }) =>

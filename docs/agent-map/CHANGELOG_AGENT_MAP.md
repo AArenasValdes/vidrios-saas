@@ -38,6 +38,12 @@ Historial de cambios en la documentacion del mapa tecnico.
 - La receta incorpora 4202 con descuentos X−136/Y−123, junquillos 4229/4206 y vidrio monolítico 3/4/5 mm o DVH 22 mm con X−94/Y−94.
 - Las referencias de catálogo quedan alineadas con los códigos aportados; la reparación de borradores intactos conserva cambios del taller y pruebas existentes.
 
+## 2026-09-13 - Base técnica S-33 corredera 2 hojas
+
+- S-33 estándar incorpora la pauta 3301/3302/3303/3304 con cantidades y descuentos X/2 + 2, Y − 60 y largos directos.
+- Se agregan alternativas Normal, Reforzada y TP; TP usa 3308. S-33 RPT usa 3308 + 3324 y exige la escuadra 3470.
+- Se reemplazan referencias RPT antiguas no entregadas (3324R/3308R y similares) por los códigos aportados; la receta sigue pendiente de validación real del taller.
+
 ## 2026-09-04 - Catálogo 25 líneas: integridad, cotización, fabricación y UX receta
 
 ### Catálogo comercial e integridad de códigos

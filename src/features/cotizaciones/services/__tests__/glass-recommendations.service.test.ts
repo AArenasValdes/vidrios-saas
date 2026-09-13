@@ -77,6 +77,20 @@ describe("glass-recommendations service", () => {
     ]);
   });
 
+  it("recomienda monolítico y DVH 22 mm para S-33", () => {
+    const result = getGlassRecommendations(
+      { subtipo: "Ventana", sistema: "S-33" },
+      ["Incoloro monolitico 4mm", "Incoloro monolitico 5mm", "DVH 4+12+4", "DVH 5+12+5"]
+    );
+
+    expect(result.recommendedOptions).toEqual([
+      "Incoloro monolitico 4mm",
+      "Incoloro monolitico 5mm",
+      "DVH 4+12+4",
+      "DVH 5+12+5",
+    ]);
+  });
+
   it("recomienda los vidrios correctos de Serie 3200", () => {
     const result = getGlassRecommendations(
       { subtipo: "Puerta", sistema: "Serie 3200" },

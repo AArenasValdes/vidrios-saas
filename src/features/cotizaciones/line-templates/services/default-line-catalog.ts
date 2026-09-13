@@ -56,8 +56,12 @@ function buildVentoraDefaultLine(
       definition.catalogKey === "ventora:serie-3200-puerta-abatible-1h" ||
       definition.catalogKey === "ventora:l42" ||
       definition.catalogKey === "ventora:serie-42-proyectante-camara" ||
-      definition.catalogKey === "ventora:serie-42-proyectante-sin-camara"
-        ? "Incoloro monolítico 4mm"
+      definition.catalogKey === "ventora:serie-42-proyectante-sin-camara" ||
+      definition.catalogKey === "ventora:s33-corredera-2h" ||
+      definition.catalogKey === "ventora:s33-rpt-corredera-2h"
+        ? definition.catalogKey === "ventora:s33-rpt-corredera-2h"
+          ? "DVH 4+12+4"
+          : "Incoloro monolítico 4mm"
         : null,
     catalogMetadata: {
       needsCommercialPrice: true,
@@ -265,18 +269,18 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     catalogKey: "ventora:s33-corredera-2h",
     nombre: "S-33 — Corredera 2 hojas",
     material: "Aluminio",
-    configuracion: "Corredera 2 hojas",
+    configuracion: "S-33 Normal / Reforzada / TP · Corredera 2 hojas",
     proveedor: null,
-    lineSystem: null,
+    lineSystem: "S-33",
     ventoraPlantillaId: null,
   },
   {
     catalogKey: "ventora:s33-rpt-corredera-2h",
     nombre: "S-33 RPT — Corredera 2 hojas",
     material: "Aluminio",
-    configuracion: "Corredera 2 hojas",
+    configuracion: "S-33 RPT · Corredera 2 hojas",
     proveedor: null,
-    lineSystem: null,
+    lineSystem: "S-33",
     ventoraPlantillaId: null,
   },
   {

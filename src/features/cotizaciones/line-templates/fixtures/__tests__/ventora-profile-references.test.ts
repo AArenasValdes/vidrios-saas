@@ -76,6 +76,22 @@ describe("ventora profile references", () => {
       "4230",
       "4250",
     ]);
+    const s33 = getVentoraProfileReferencesForCatalogKey("ventora:s33-corredera-2h");
+    const s33Rpt = getVentoraProfileReferencesForCatalogKey("ventora:s33-rpt-corredera-2h");
+    expect(s33?.profiles.map((profile) => profile.code)).toEqual([
+      "3301",
+      "3302",
+      "3303",
+      "3304",
+      "3308",
+    ]);
+    expect(s33Rpt?.profiles.map((profile) => profile.code)).toEqual([
+      "3324",
+      "3308",
+      "3303",
+      "3304",
+      "3470",
+    ]);
     expect(
       [...(al32?.profiles ?? []), ...(al42?.profiles ?? [])].every(
         (profile) =>

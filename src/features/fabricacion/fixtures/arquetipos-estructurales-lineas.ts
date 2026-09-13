@@ -9,6 +9,10 @@ import {
   type Serie42ProyectanteVariantId,
 } from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
 import {
+  crearRecetaSerieS33,
+  type SerieS33VariantId,
+} from "@/features/fabricacion/fixtures/plantillas-ventora-s33";
+import {
   FABRICACION_RECIPE_SCHEMA_VERSION,
   type FabricacionBaseMedida,
   type FabricacionReceta,
@@ -604,6 +608,11 @@ const SERIE_42_VARIANT_BY_CATALOG_KEY: Record<
   "ventora:serie-42-proyectante-sin-camara": "sin_camara",
 };
 
+const SERIE_S33_VARIANT_BY_CATALOG_KEY: Record<string, SerieS33VariantId> = {
+  "ventora:s33-corredera-2h": "normal",
+  "ventora:s33-rpt-corredera-2h": "rpt",
+};
+
 const PLANTILLA_BY_CATALOG_KEY: Partial<Record<string, PlantillaVentoraCorrederaId>> = {
   "ventora:l5000": "L5000",
   "ventora:l20": "L20",
@@ -789,6 +798,16 @@ export function crearRecetaEstructuralParaLineaComercial(input: {
   lineName: string;
   createId?: () => string;
 }): FabricacionReceta | null {
+  const serieS33Variant = input.catalogKey
+    ? SERIE_S33_VARIANT_BY_CATALOG_KEY[input.catalogKey]
+    : undefined;
+  if (serieS33Variant) {
+    return crearRecetaSerieS33({
+      variant: serieS33Variant,
+      lineName: input.lineName,
+      createId: input.createId,
+    });
+  }
   const serie42Variant = input.catalogKey
     ? SERIE_42_VARIANT_BY_CATALOG_KEY[input.catalogKey]
     : undefined;

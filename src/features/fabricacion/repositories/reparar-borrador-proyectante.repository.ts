@@ -36,6 +36,8 @@ export async function repararBorradoresProyectantes(
     const isSerie42 = line?.catalog_key === "ventora:l42" ||
       line?.catalog_key === "ventora:serie-42-proyectante-camara" ||
       line?.catalog_key === "ventora:serie-42-proyectante-sin-camara";
+    const isSerieS33 = line?.catalog_key === "ventora:s33-corredera-2h" ||
+      line?.catalog_key === "ventora:s33-rpt-corredera-2h";
     const { data: updated, error: updateError } = await client.from("fabrication_recipes")
       .update({
         definition,
@@ -46,6 +48,8 @@ export async function repararBorradoresProyectantes(
           ? "ventora-serie-3200:catalogo-2026-09-13"
           : isSerie42
             ? `ventora-serie-42:${definition.identidad.variante}:catalogo-2026-09-13`
+            : isSerieS33
+              ? `ventora-serie-s33:${definition.identidad.variante}:catalogo-2026-09-13`
             : "ventora-proyectante:catalogo-2026-09-13",
       })
       .eq("id", row.id).eq("organization_id", organizationId).eq("scope", "organization")

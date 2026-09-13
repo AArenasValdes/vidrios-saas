@@ -33,10 +33,16 @@ export function prepararReparacionBorradorCatalogo(
 ): FabricacionReceta | null {
   if (!listVentoraCatalogKeysWithProfileReferences().includes(catalogKey ?? "")) return null;
   if (row.status !== "draft" || row.version !== 1 || row.source_type !== "manual") return null;
-  if (!row.source_reference?.startsWith("ventora-arquetipo:")) return null;
+  const sourceReference = row.source_reference;
+  const isPreviousProjectingSeed =
+    (catalogKey === "ventora:l32" || catalogKey === "ventora:l42") &&
+    sourceReference === "ventora-proyectante:catalogo-2026-09-13";
+  if (!sourceReference?.startsWith("ventora-arquetipo:") && !isPreviousProjectingSeed) return null;
   const parsed = fabricacionRecetaSchema.safeParse(row.definition);
   if (!parsed.success) return null;
-  const archetypeId = row.source_reference.slice("ventora-arquetipo:".length);
+  const archetypeId = sourceReference.startsWith("ventora-arquetipo:")
+    ? sourceReference.slice("ventora-arquetipo:".length)
+    : "proyectante";
   if (!(archetypeId in ARQUETIPOS_ESTRUCTURALES)) return null;
   const original = fabricacionRecetaSchema.parse(crearRecetaDesdeArquetipoEstructural({
     archetypeId: archetypeId as keyof typeof ARQUETIPOS_ESTRUCTURALES,

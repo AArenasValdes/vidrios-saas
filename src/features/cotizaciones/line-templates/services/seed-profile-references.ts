@@ -24,7 +24,7 @@ export type SeedProfileReferencesDeps = {
   }) => Promise<void>;
 };
 
-const SERIE_3200_GLASS_RECOMMENDATION = "Incoloro monolítico 4mm";
+const DEFAULT_MONOLITHIC_GLASS_RECOMMENDATION = "Incoloro monolítico 4mm";
 
 function shouldSeedProfileReferences(
   row: LineTemplateProfileSeedRow
@@ -40,12 +40,21 @@ function shouldSeedProfileReferences(
 function getGlassRecommendationPatch(
   row: LineTemplateProfileSeedRow
 ): string | null | undefined {
-  if (row.catalog_key !== "ventora:serie-3200-puerta-abatible-1h") {
-    return undefined;
-  }
-  return row.vidrio_principal_recomendado?.trim() === SERIE_3200_GLASS_RECOMMENDATION
+  const recommendation =
+    row.catalog_key === "ventora:serie-3200-puerta-abatible-1h" ||
+    row.catalog_key === "ventora:l42" ||
+    row.catalog_key === "ventora:serie-42-proyectante-camara" ||
+    row.catalog_key === "ventora:serie-42-proyectante-sin-camara" ||
+    row.catalog_key === "ventora:s33-corredera-2h"
+      ? DEFAULT_MONOLITHIC_GLASS_RECOMMENDATION
+      : row.catalog_key === "ventora:s33-rpt-corredera-2h"
+        ? "DVH 4+12+4"
+        : undefined;
+
+  if (!recommendation) return undefined;
+  return row.vidrio_principal_recomendado?.trim() === recommendation
     ? undefined
-    : SERIE_3200_GLASS_RECOMMENDATION;
+    : recommendation;
 }
 
 function getLegacyLineIdentityPatch(
@@ -56,6 +65,32 @@ function getLegacyLineIdentityPatch(
     typeof metadata.lineConfiguration === "string"
       ? metadata.lineConfiguration.trim().toLowerCase()
       : "";
+
+  if (
+    row.catalog_key === "ventora:s33-corredera-2h" &&
+    (configuration !== "s-33 normal / reforzada / tp · corredera 2 hojas" ||
+      metadata.lineSystem !== "S-33" ||
+      metadata.structuralArchetypeId !== "corredera_2h")
+  ) {
+    return {
+      lineConfiguration: "S-33 Normal / Reforzada / TP · Corredera 2 hojas",
+      lineSystem: "S-33",
+      structuralArchetypeId: "corredera_2h",
+    };
+  }
+
+  if (
+    row.catalog_key === "ventora:s33-rpt-corredera-2h" &&
+    (configuration !== "s-33 rpt · corredera 2 hojas" ||
+      metadata.lineSystem !== "S-33" ||
+      metadata.structuralArchetypeId !== "corredera_2h")
+  ) {
+    return {
+      lineConfiguration: "S-33 RPT · Corredera 2 hojas",
+      lineSystem: "S-33",
+      structuralArchetypeId: "corredera_2h",
+    };
+  }
 
   if (
     row.catalog_key === "ventora:l42" &&

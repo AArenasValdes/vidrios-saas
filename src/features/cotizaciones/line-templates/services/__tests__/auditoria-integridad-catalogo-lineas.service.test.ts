@@ -171,5 +171,21 @@ describe("auditoria integridad catalogo lineas", () => {
 
   });
 
+  it("mantiene los códigos S-33 estándar y RPT sin usar nomenclatura antigua", () => {
+    const { lineas } = auditarIntegridadCatalogoLineasVentora();
+    const standard = lineas.find((line) => line.catalogKey === "ventora:s33-corredera-2h");
+    const rpt = lineas.find((line) => line.catalogKey === "ventora:s33-rpt-corredera-2h");
+
+    expect(standard?.codigosReferenciales).toEqual(
+      expect.arrayContaining(["3301", "3302", "3303", "3304", "3308"])
+    );
+    expect(rpt?.codigosReferenciales).toEqual(
+      expect.arrayContaining(["3324", "3308", "3303", "3304", "3470"])
+    );
+    expect(rpt?.codigosReferenciales).not.toEqual(
+      expect.arrayContaining(["3324R", "3308R"])
+    );
+  });
+
 });
 

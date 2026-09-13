@@ -85,11 +85,11 @@ exports[`auditoria-catalogo-lineas-ventora.service resume estados del catálogo 
   },
   {
     "catalogKey": "ventora:s33-corredera-2h",
-    "codigos": 6,
+    "codigos": 5,
     "fabricacionEstado": "fabricacion_pendiente",
     "listaParaProbar": false,
     "nombre": "S-33 — Corredera 2 hojas",
-    "perfiles": "0/7",
+    "perfiles": "11/11",
     "tipologia": "corredera",
   },
   {
@@ -98,7 +98,7 @@ exports[`auditoria-catalogo-lineas-ventora.service resume estados del catálogo 
     "fabricacionEstado": "fabricacion_pendiente",
     "listaParaProbar": false,
     "nombre": "S-33 RPT — Corredera 2 hojas",
-    "perfiles": "0/7",
+    "perfiles": "8/8",
     "tipologia": "corredera",
   },
   {

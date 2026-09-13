@@ -165,55 +165,19 @@ const SERIE_42_PROYECTANTE_PROFILES: LineProfileReference[] = [
 ];
 
 const SERIE_S33_PROFILES: LineProfileReference[] = [
-  catalogRef({ code: "3301", name: "Riel", role: "Marco" }),
-  catalogRef({ code: "3302", name: "Hoja", role: "Hoja" }),
-  catalogRef({ code: "3303", name: "Traslapo", role: "Hoja" }),
-  catalogRef({ code: "3304", name: "Cortagotera", role: "Otro" }),
-  catalogRef({
-    code: "3308",
-    name: "Hoja termopanel",
-    role: "Hoja",
-    description: "Hoja termopanel",
-  }),
-  catalogRef({
-    code: "3309",
-    name: "Hoja reforzada",
-    role: "Hoja",
-    description: "Hoja reforzada",
-  }),
+  studyRef({ code: "3301", name: "Riel / jamba", role: "Marco", provider: "SODAL", description: "Riel superior, inferior y jamba; largo directo." }),
+  studyRef({ code: "3302", name: "Hoja", role: "Hoja", provider: "SODAL", description: "Hoja normal y reforzada." }),
+  studyRef({ code: "3303", name: "Traslapo hoja", role: "Hoja", provider: "SODAL", description: "Traslapo; Y − 60 mm." }),
+  studyRef({ code: "3304", name: "Cortagotera", role: "Otro", provider: "SODAL", description: "Cortagotera; largo X directo." }),
+  studyRef({ code: "3308", name: "Hoja termopanel", role: "Hoja", provider: "SODAL", description: "Hoja TP para DVH 22 mm." }),
 ];
 
 const SERIE_S33_RPT_PROFILES: LineProfileReference[] = [
-  catalogRef({
-    code: "3324R",
-    name: "Riel RPT",
-    role: "Marco",
-    source: PROFILE_REFERENCE_SOURCES.SODAL_RPT_PDF,
-  }),
-  catalogRef({
-    code: "3308R",
-    name: "Hoja TP RPT",
-    role: "Hoja",
-    source: PROFILE_REFERENCE_SOURCES.SODAL_RPT_PDF,
-  }),
-  catalogRef({
-    code: "3303",
-    name: "Traslapo",
-    role: "Hoja",
-    source: PROFILE_REFERENCE_SOURCES.SODAL_RPT_PDF,
-  }),
-  catalogRef({
-    code: "3325R",
-    name: "Riel triple RPT",
-    role: "Marco",
-    source: PROFILE_REFERENCE_SOURCES.SODAL_RPT_PDF,
-  }),
-  catalogRef({
-    code: "3315R",
-    name: "Hoja TP reforzada",
-    role: "Hoja",
-    source: PROFILE_REFERENCE_SOURCES.SODAL_RPT_PDF,
-  }),
+  studyRef({ code: "3324", name: "Riel cámara RPT", role: "Marco", provider: "SODAL", description: "Riel cámara; 1,332 kg/m según datos aportados." }),
+  studyRef({ code: "3308", name: "Hoja TP RPT", role: "Hoja", provider: "SODAL", description: "Hoja termopanel para DVH 22 mm." }),
+  studyRef({ code: "3303", name: "Traslapo", role: "Hoja", provider: "SODAL", description: "Traslapo; Y − 60 mm." }),
+  studyRef({ code: "3304", name: "Cortagotera", role: "Otro", provider: "SODAL", description: "Cortagotera; confirmar aplicación RPT." }),
+  studyRef({ code: "3470", name: "Escuadra bloqueo anudal", role: "Accesorio", provider: "SODAL", description: "Requerida para RPT." }),
 ];
 
 const SERIE_S38_PROFILES: LineProfileReference[] = [

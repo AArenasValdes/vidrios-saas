@@ -204,4 +204,35 @@ describe("arquetipos estructurales de líneas comerciales", () => {
       ]);
     }
   });
+
+  it("crea la pauta S-33 2H con descuentos y variante RPT", () => {
+    const standard = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:s33-corredera-2h",
+      lineName: "S-33",
+      createId: (() => {
+        let n = 0;
+        return () => `s33-${++n}`;
+      })(),
+    });
+    const rpt = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:s33-rpt-corredera-2h",
+      lineName: "S-33 RPT",
+      createId: (() => {
+        let n = 0;
+        return () => `s33-rpt-${++n}`;
+      })(),
+    });
+
+    expect(standard?.identidad).toMatchObject({ tipologia: "corredera", hojas: 2, variante: "S-33 Normal" });
+    expect(standard?.perfiles.filter((profile) => profile.codigoPerfil === "3301")).toHaveLength(3);
+    expect(standard?.perfiles.filter((profile) => profile.codigoPerfil === "3302")).toHaveLength(3);
+    expect(standard?.perfiles.filter((profile) => profile.codigoPerfil === "3308")).toHaveLength(3);
+    expect(standard?.perfiles.find((profile) => profile.nombrePerfil === "Pierna hoja")?.reglaMedida.ajusteMm).toBe(-60);
+    expect(standard?.perfiles.find((profile) => profile.nombrePerfil === "Cabezal hoja")?.reglaMedida.multiplicador).toBe(0.5);
+    expect(standard?.perfiles.find((profile) => profile.nombrePerfil === "Cabezal hoja")?.reglaMedida.ajusteMm).toBe(2);
+    expect(rpt?.identidad).toMatchObject({ tipologia: "corredera", hojas: 2, variante: "S-33 RPT" });
+    expect(rpt?.perfiles.every((profile) => ["3324", "3308", "3303", "3304"].includes(profile.codigoPerfil))).toBe(true);
+    expect(rpt?.perfiles.filter((profile) => profile.codigoPerfil === "3324")).toHaveLength(3);
+    expect(rpt?.accesorios.find((accessory) => accessory.codigo === "3470")?.requerido).toBe(true);
+  });
 });
