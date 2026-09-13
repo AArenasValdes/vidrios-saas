@@ -2,6 +2,12 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-13 - Corrección AL-42 proyectante 1H estándar
+
+- La receta estándar `ventora:l42` queda limitada a 4201, 4202 y 4229, con dos piezas horizontales y dos verticales por perfil.
+- Se centralizan los ajustes 0 mm para marco, −18 mm para hoja, −90 mm para junquillo y −93 mm para vidrio; 4209, 4204 y 4206 permanecen disponibles en el catálogo global, fuera de esta receta.
+- El editor ya no muestra “Fabricación preparada” cuando faltan fórmulas o descuentos obligatorios; se conserva la reparación idempotente de precargas sin sobrescribir recetas personalizadas.
+
 ## 2026-09-13 - AL-32/AL-42: editor proyectante y catálogo sin duplicados
 
 - Corrige la clasificación histórica de septiembre 4: AL-32/AL-42 son proyectantes, no correderas. La identidad canónica prevalece sobre metadata antigua.

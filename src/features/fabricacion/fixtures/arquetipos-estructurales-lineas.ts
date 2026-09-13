@@ -194,28 +194,18 @@ function pvcProyectantePerfiles(): PerfilEstructural[] {
 
 const SERIE_3200_VARIANTS = [
   {
-    variant: "3200 L",
+    variant: "3200 1H · Bastidor 3221",
     code: "3221",
-    name: "Bastidor chico",
-    horizontalAdjustmentMm: -136,
-    verticalAdjustmentMm: -123,
-    weightFormula: "Kg = 1,97 X + 2,44 Y",
+    name: "Bastidor 3221",
+    glassWidthAdjustmentMm: -141,
+    glassHeightAdjustmentMm: -128,
   },
   {
-    variant: "3200 ST",
+    variant: "3200 1H · Bastidor 3225",
     code: "3225",
-    name: "Bastidor grande",
-    horizontalAdjustmentMm: -192,
-    verticalAdjustmentMm: -179,
-    weightFormula: "Kg = 2,47 X + 2,94 Y",
-  },
-  {
-    variant: "3200 TP",
-    code: "3227",
-    name: "Bastidor grande TP",
-    horizontalAdjustmentMm: -192,
-    verticalAdjustmentMm: -179,
-    weightFormula: null,
+    name: "Bastidor 3225",
+    glassWidthAdjustmentMm: -190,
+    glassHeightAdjustmentMm: -177,
   },
 ] as const;
 
@@ -227,12 +217,12 @@ function serie3200Profile(input: {
   createId: () => string;
   name: string;
   code: string;
+  functionName: string;
+  quantity: number;
   measure: FabricacionBaseMedida;
   adjustmentMm: number;
   cut: string;
   variant?: string;
-  pending?: string[];
-  weightFormula?: string | null;
 }): FabricacionReceta["perfiles"][number] {
   const condition = input.variant
     ? serie3200VariantCondition(input.variant)
@@ -241,7 +231,7 @@ function serie3200Profile(input: {
     id: input.createId(),
     codigoPerfil: input.code,
     nombrePerfil: input.name,
-    funcion: input.name === "Marco" ? "Marco" : "Perfil de puerta",
+    funcion: input.functionName,
     largoComercialMm: VENTORA_LARGO_COMERCIAL_PRESET_MM,
     reglaMedida: {
       base: input.measure,
@@ -251,19 +241,19 @@ function serie3200Profile(input: {
     },
     reglaCantidad: {
       tipo: "fija",
-      cantidad: 1,
+      cantidad: input.quantity,
       multiplicador: 1,
       ...(condition ? { condicion: condition } : {}),
     },
     requerido: true,
     observaciones: [
+      `Pieza: ${input.name}. Grupo: ${input.functionName}.`,
       `Serie 3200. Código ${input.code}.`,
-      `Pauta una hoja: ${input.measure === "ancho_total" ? "X" : "Y"} ${input.cut}.`,
-      input.weightFormula ? `Peso teórico: ${input.weightFormula}.` : "Peso teórico TP: pendiente de ficha.",
+      `Pauta una hoja: ${input.measure === "ancho_total" ? "W" : "H"} ${input.cut}.`,
       input.variant ? `Aplica a variante ${input.variant}.` : "Aplica a todas las variantes.",
-      "Fuente: datos técnicos aportados para la Serie 3200.",
+      "Descuento documentado en Ventora; validar con una fabricación real antes de activar.",
     ].join(" "),
-    datosPendientes: input.pending ?? ["Validar la receta con una fabricación real"],
+    datosPendientes: ["Validar la receta con una fabricación real"],
   };
 }
 
@@ -275,16 +265,20 @@ function crearRecetaSerie3200(input: {
   const profiles: FabricacionReceta["perfiles"] = [
     serie3200Profile({
       createId: input.createId,
-      name: "Marco",
+      name: "Marco superior",
       code: "3222",
+      functionName: "Marco",
+      quantity: 1,
       measure: "ancho_total",
       adjustmentMm: 0,
       cut: "45°/45°",
     }),
     serie3200Profile({
       createId: input.createId,
-      name: "Marco",
+      name: "Jamba",
       code: "3222",
+      functionName: "Marco",
+      quantity: 2,
       measure: "alto_total",
       adjustmentMm: 0,
       cut: "45°/90°",
@@ -292,70 +286,55 @@ function crearRecetaSerie3200(input: {
     ...SERIE_3200_VARIANTS.flatMap((variant) => [
       serie3200Profile({
         createId: input.createId,
-        name: variant.name,
+        name: `${variant.name} horizontal`,
         code: variant.code,
+        functionName: "Perfil de hoja",
+        quantity: 2,
         measure: "ancho_total",
-        adjustmentMm: variant.horizontalAdjustmentMm,
+        adjustmentMm: -42,
         cut: "45°/45°",
         variant: variant.variant,
-        weightFormula: variant.weightFormula,
-        pending: variant.weightFormula
-          ? ["Validar la receta con una fabricación real"]
-          : [
-              "Confirmar descuento horizontal de 3227 para TP",
-              "Confirmar descuento vertical de 3227 para TP",
-              "Confirmar peso teórico de 3227",
-            ],
       }),
       serie3200Profile({
         createId: input.createId,
-        name: variant.name,
+        name: `${variant.name} vertical`,
         code: variant.code,
+        functionName: "Perfil de hoja",
+        quantity: 2,
         measure: "alto_total",
-        adjustmentMm: variant.verticalAdjustmentMm,
+        adjustmentMm: -29,
         cut: "45°/90°",
         variant: variant.variant,
-        weightFormula: variant.weightFormula,
-        pending: variant.weightFormula
-          ? ["Validar la receta con una fabricación real"]
-          : [
-              "Confirmar descuento horizontal de 3227 para TP",
-              "Confirmar descuento vertical de 3227 para TP",
-              "Confirmar peso teórico de 3227",
-            ],
       }),
     ]),
   ];
 
   const variantCondition = (variants: string[]) => ({ variante: variants });
-  const glass = (name: string, variants: string[]) => ({
+  const glass = (variant: (typeof SERIE_3200_VARIANTS)[number], name: string) => ({
     id: input.createId(),
     nombre: name,
-    reglaAncho: { base: "fijo_mm" as const, valorFijoMm: 0, multiplicador: 1 },
-    reglaAlto: { base: "fijo_mm" as const, valorFijoMm: 0, multiplicador: 1 },
+    reglaAncho: {
+      base: "ancho_total" as const,
+      ajusteMm: variant.glassWidthAdjustmentMm,
+      multiplicador: 1,
+    },
+    reglaAlto: {
+      base: "alto_total" as const,
+      ajusteMm: variant.glassHeightAdjustmentMm,
+      multiplicador: 1,
+    },
     reglaCantidad: { tipo: "fija" as const, cantidad: 1, multiplicador: 1 },
     requerido: false,
-    condicion: variantCondition(variants),
-    observaciones: "Sugerencia de acristalamiento. La medida del vidrio requiere el descuento confirmado por el taller.",
-    datosPendientes: ["Confirmar descuento de ancho y alto del vidrio"],
+    condicion: variantCondition([variant.variant]),
+    observaciones: `Vidrio para ${variant.name}. Descuento documentado en Ventora; validar con una fabricación real antes de activar.`,
+    datosPendientes: ["Validar la receta con una fabricación real"],
   });
 
-  const allVariants = SERIE_3200_VARIANTS.map((variant) => variant.variant);
   const accessories = [
     { name: "Bisagra Udinese 3200", quantity: 3, note: "Alternativa de bisagra. Elegir solo una familia." },
     { name: "Bisagra Gold 2F 3200 (Alualpha)", quantity: 2, note: "Alternativa de bisagra. Elegir solo una familia." },
-    {
-      name: "Cerradura Scanavini 1280",
-      quantity: 1,
-      variants: ["3200 L"],
-      note: "Aplicable al bastidor 3221.",
-    },
-    {
-      name: "Cerradura ISEO (inox)",
-      quantity: 1,
-      variants: allVariants,
-      note: "Entrada 25/35 mm; aplicable a 3221, 3225 y 3227.",
-    },
+    { name: "Cerradura Scanavini 1280", quantity: 1, note: "Aplicable al bastidor 3221." },
+    { name: "Cerradura ISEO (inox)", quantity: 1, note: "Entrada 25/35 mm; aplicable a 3221 y 3225." },
     { name: "Escuadra Bastidor 3200", quantity: 1, note: "Cantidad a confirmar con el taller." },
     { name: "Escuadra Marco (DC 3800)", quantity: 1, note: "Cantidad a confirmar con el taller." },
     { name: "Cierrapuertas OMV 80250", quantity: 1, note: "Aéreo, hasta 100 kg. Cantidad a confirmar." },
@@ -369,7 +348,6 @@ function crearRecetaSerie3200(input: {
       multiplicador: 1,
     },
     requerido: false,
-    ...(accessory.variants ? { condicion: variantCondition(accessory.variants) } : {}),
     observaciones: `${accessory.note} Fuente: datos técnicos aportados para la Serie 3200.`,
     datosPendientes: ["Confirmar modelo y cantidad con el taller"],
   }));
@@ -381,20 +359,20 @@ function crearRecetaSerie3200(input: {
     identidad: {
       recetaId: input.createId(),
       codigo: "SERIE-3200-1H-V1",
-      nombre: `${lineName} — base L/ST/TP`,
+      nombre: `${lineName} — Puerta abatible 1H`,
       tipologia: "puerta_abatible",
       hojas: 1,
       modulos: 1,
       apertura: "abatible",
       herraje: null,
-      variante: "3200 ST",
+      variante: SERIE_3200_VARIANTS[0].variant,
     },
     perfiles: profiles,
     vidrios: [
-      glass("Monolítico 4 mm", ["3200 L", "3200 ST"]),
-      glass("Monolítico 5 mm", ["3200 L", "3200 ST"]),
-      glass("Termopanel DVH 22 mm (4-12-4)", ["3200 TP"]),
-      glass("Termopanel DVH 22 mm (5-12-5)", ["3200 TP"]),
+      glass(SERIE_3200_VARIANTS[0], "Monolítico 4 mm · Bastidor 3221"),
+      glass(SERIE_3200_VARIANTS[0], "Monolítico 5 mm · Bastidor 3221"),
+      glass(SERIE_3200_VARIANTS[1], "Termopanel DVH 22 mm (4-12-4) · Bastidor 3225"),
+      glass(SERIE_3200_VARIANTS[1], "Termopanel DVH 22 mm (5-12-5) · Bastidor 3225"),
     ],
     accesorios: accessories,
     configuracionCorte: {
@@ -404,10 +382,10 @@ function crearRecetaSerie3200(input: {
       largoComercialDefaultMm: VENTORA_LARGO_COMERCIAL_PRESET_MM,
     },
     notasValidacion: [
-      "Base técnica Serie 3200 de una hoja: 3200 L, 3200 ST y 3200 TP.",
-      "Marco 3222: X sin descuento y Y sin descuento; cortes 45°/45° y 45°/90°.",
-      "Bastidor 3221 L: X − 136 y Y − 123. Bastidor 3225 ST: X − 192 y Y − 179.",
-      "Bastidor 3227 TP usa provisionalmente la geometría ST; confirmar sus descuentos antes de validar.",
+      "Base técnica Serie 3200 de una hoja con dos variantes: bastidor 3221 y bastidor 3225.",
+      "Marco 3222: 1 × W y 2 × H, sin marco inferior; cortes 45°/45° y 45°/90°.",
+      "Bastidor 3221/3225: 2 × (W − 42) y 2 × (H − 29). No se mezclan ambas variantes.",
+      "Vidrio bastidor 3221: W − 141 y H − 128. Vidrio bastidor 3225: W − 190 y H − 177.",
       "El perfil 3223 Tope 2ª Hoja queda fuera de esta receta porque la base es de una hoja.",
       "La receta permanece sin validar y no habilita pauta operativa hasta revisión del taller.",
     ],

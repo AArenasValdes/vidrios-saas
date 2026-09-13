@@ -2,8 +2,35 @@ import { patchRecipeGlassNombre } from "@/features/fabricacion/services/fabricac
 import { crearRecetaPlantillaVentoraProyectante } from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 import { describePerfilTallerResumen } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
+import { crearRecetaEstructuralParaLineaComercial } from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
 
 describe("L42 proyectante gate vs UI listo", () => {
+  it("deja pendiente la receta estándar si falta una fórmula obligatoria", () => {
+    const recipe = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:l42",
+      lineName: "Serie 42",
+    })!;
+    const incomplete = {
+      ...recipe,
+      perfiles: recipe.perfiles.map((profile, index) =>
+        index === 0
+          ? {
+              ...profile,
+              reglaMedida: { ...profile.reglaMedida, ajusteMm: undefined },
+              datosPendientes: ["Falta descuento"],
+            }
+          : profile
+      ),
+    };
+
+    const evaluacion = evaluarRecetaListaParaProbar(incomplete);
+
+    expect(evaluacion.listaParaProbar).toBe(false);
+    expect(evaluacion.bloqueos).toEqual(
+      expect.arrayContaining([expect.stringMatching(/Falta descuento confirmado/i)])
+    );
+  });
+
   function buildL42LikeScreenshot() {
     let recipe = crearRecetaPlantillaVentoraProyectante("L42");
     recipe = {

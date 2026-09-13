@@ -538,6 +538,7 @@ export function RecipeGuidedEditor({
     () => evaluarRecetaListaParaProbar(recipe),
     [recipe]
   );
+  const fabricacionPreparada = listaParaProbarEvaluacion.listaParaProbar;
   const primaryGlassLabel = useMemo(() => {
     const named = recipe.vidrios
       .map((glass) => glass.nombre.trim())
@@ -1946,9 +1947,12 @@ export function RecipeGuidedEditor({
           </p>
         </header>
 
-        <section className={s.fabPrepHero} aria-label="Fabricación preparada">
+        <section
+          className={s.fabPrepHero}
+          aria-label={fabricacionPreparada ? "Fabricación preparada" : "Configuración pendiente"}
+        >
           <div className={s.fabPrepHeroMain}>
-            <h3>Fabricación preparada</h3>
+            <h3>{fabricacionPreparada ? "Fabricación preparada" : "Configuración pendiente"}</h3>
             <ul className={s.fabPrepStats} aria-label="Resumen de fabricación">
               <li>
                 <Package size={16} aria-hidden="true" />

@@ -285,7 +285,8 @@ describe("RecipeGuidedEditor", () => {
     );
 
     expect(screen.getByText("Así fabricas esta ventana")).toBeInTheDocument();
-    expect(screen.getByText("Fabricación preparada")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Configuración pendiente" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Fabricación preparada" })).not.toBeInTheDocument();
     expect(screen.getByText("Tira que compras")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "6,00 m" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "5,95 m" })).toBeInTheDocument();

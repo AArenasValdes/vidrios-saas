@@ -170,8 +170,27 @@ describe("arquetipos estructurales de líneas comerciales", () => {
   });
 
   it("crea AL-42 con identidad separada para normal, cámara y sin cámara", () => {
+    const standard = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:l42",
+      lineName: "Serie 42",
+      createId: (() => {
+        let n = 0;
+        return () => `standard-${++n}`;
+      })(),
+    });
+
+    expect(standard?.identidad).toMatchObject({ tipologia: "proyectante", hojas: 1, variante: "normal" });
+    expect(standard?.perfiles).toHaveLength(6);
+    expect(standard?.perfiles.filter((profile) => profile.codigoPerfil === "4201")).toHaveLength(2);
+    expect(standard?.perfiles.filter((profile) => profile.codigoPerfil === "4202")).toHaveLength(2);
+    expect(standard?.perfiles.filter((profile) => profile.codigoPerfil === "4229")).toHaveLength(2);
+    expect(standard?.perfiles.every((profile) => profile.reglaCantidad.cantidad === 2)).toBe(true);
+    expect(standard?.perfiles.some((profile) => ["4209", "4204", "4206"].includes(profile.codigoPerfil))).toBe(false);
+    expect(standard?.vidrios).toHaveLength(1);
+    expect(standard?.vidrios[0]?.reglaAncho.ajusteMm).toBe(-93);
+    expect(standard?.vidrios[0]?.reglaAlto.ajusteMm).toBe(-93);
+
     const cases = [
-      ["ventora:l42", "normal", "4201"],
       ["ventora:serie-42-proyectante-camara", "con_camara", "4231"],
       ["ventora:serie-42-proyectante-sin-camara", "sin_camara", "4201"],
     ] as const;

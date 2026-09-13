@@ -355,7 +355,9 @@ function serie42Profile(input: {
   functionName: string;
   measure: FabricacionBaseMedida;
   adjustmentMm?: number;
+  quantity?: number;
   required: boolean;
+  configurationReady?: boolean;
   note: string;
 }): FabricacionReceta["perfiles"][number] {
   return {
@@ -373,7 +375,7 @@ function serie42Profile(input: {
     },
     reglaCantidad: {
       tipo: "fija",
-      cantidad: 1,
+      cantidad: input.quantity ?? 1,
       multiplicador: 1,
     },
     requerido: input.required,
@@ -382,11 +384,94 @@ function serie42Profile(input: {
       input.note,
       "Corte indicado por la pauta VPE42NM-1HJN; confirmar con el taller antes de validar.",
     ].join(" "),
-    datosPendientes: [
-      "Confirmar cantidad y descuento con una fabricación real",
-      "Validar la receta con el taller",
-    ],
+    datosPendientes: input.configurationReady
+      ? ["Validar la receta con el taller"]
+      : [
+          "Confirmar cantidad y descuento con una fabricación real",
+          "Validar la receta con el taller",
+        ],
   };
+}
+
+function serie42StandardProfiles(
+  createId: () => string
+): FabricacionReceta["perfiles"] {
+  const note =
+    "Serie 42 proyectante estándar de una hoja. Regla aportada para esta configuración; validar con una fabricación real antes de activar.";
+  return [
+    serie42Profile({
+      createId,
+      code: "4201",
+      name: "Marco 4201 horizontal",
+      functionName: "Marco",
+      measure: "ancho_total",
+      adjustmentMm: 0,
+      quantity: 2,
+      required: true,
+      configurationReady: true,
+      note: `${note} Largo W, corte 45°/45°.`,
+    }),
+    serie42Profile({
+      createId,
+      code: "4201",
+      name: "Marco 4201 vertical",
+      functionName: "Marco",
+      measure: "alto_total",
+      adjustmentMm: 0,
+      quantity: 2,
+      required: true,
+      configurationReady: true,
+      note: `${note} Largo H, corte 45°/45°.`,
+    }),
+    serie42Profile({
+      createId,
+      code: "4202",
+      name: "Hoja 4202 horizontal",
+      functionName: "Hoja",
+      measure: "ancho_por_hoja",
+      adjustmentMm: -18,
+      quantity: 2,
+      required: true,
+      configurationReady: true,
+      note: `${note} Largo W − 18 mm, corte 45°/45°.`,
+    }),
+    serie42Profile({
+      createId,
+      code: "4202",
+      name: "Hoja 4202 vertical",
+      functionName: "Hoja",
+      measure: "alto_por_hoja",
+      adjustmentMm: -18,
+      quantity: 2,
+      required: true,
+      configurationReady: true,
+      note: `${note} Largo H − 18 mm, corte 45°/45°.`,
+    }),
+    serie42Profile({
+      createId,
+      code: "4229",
+      name: "Junquillo 4229 horizontal",
+      functionName: "Junquillo",
+      measure: "ancho_por_hoja",
+      adjustmentMm: -90,
+      quantity: 2,
+      required: true,
+      configurationReady: true,
+      note: `${note} Largo W − 90 mm, corte 45°/45°.`,
+    }),
+    serie42Profile({
+      createId,
+      code: "4229",
+      name: "Junquillo 4229 vertical",
+      functionName: "Junquillo",
+      measure: "alto_por_hoja",
+      adjustmentMm: -90,
+      quantity: 2,
+      required: true,
+      configurationReady: true,
+      note: `${note} Largo H − 90 mm, corte 45°/45°.`,
+    }),
+  ];
 }
 
 function serie42Accessory(
@@ -418,7 +503,9 @@ export function crearRecetaSerie42Proyectante(input: {
   const createId = input.createId ?? (() => crypto.randomUUID());
   const variant = SERIE_42_VARIANTS[input.variant];
   const frameNote = `${variant.note} Para paño fijo también existe el código 4209 como alternativa de composición.`;
-  const profiles: FabricacionReceta["perfiles"] = [
+  const profiles: FabricacionReceta["perfiles"] = input.variant === "normal"
+    ? serie42StandardProfiles(createId)
+    : ([
     serie42Profile({
       createId,
       code: variant.frameCode,
@@ -510,7 +597,38 @@ export function crearRecetaSerie42Proyectante(input: {
         }),
       ];
     }),
-  ];
+      ]);
+
+  const vidrios: FabricacionReceta["vidrios"] = input.variant === "normal"
+    ? [{
+        id: createId(),
+        nombre: "Monolítico 4 mm",
+        reglaAncho: { base: "ancho_total", ajusteMm: -93, multiplicador: 1 },
+        reglaAlto: { base: "alto_total", ajusteMm: -93, multiplicador: 1 },
+        reglaCantidad: { tipo: "fija", cantidad: 1, multiplicador: 1 },
+        requerido: false,
+        observaciones: "Vidrio estándar de una hoja; ancho W − 93 mm y alto H − 93 mm.",
+        datosPendientes: ["Confirmar composición elegida con el taller"],
+      }]
+    : ([
+        ["Monolítico 3 mm", "Vidrio monolítico 3 mm"],
+        ["Monolítico 4 mm", "Vidrio monolítico 4 mm"],
+        ["Monolítico 5 mm", "Vidrio monolítico 5 mm"],
+        ["Termopanel DVH 22 mm (4-12-4)", "Termopanel 22 mm"],
+        ["Termopanel DVH 22 mm (5-12-5)", "Termopanel 22 mm"],
+      ] as const).map(([name, composition]) => ({
+      id: createId(),
+      nombre: name,
+      reglaAncho: { base: "ancho_total", ajusteMm: -94, multiplicador: 1 },
+      reglaAlto: { base: "alto_total", ajusteMm: -94, multiplicador: 1 },
+      reglaCantidad: { tipo: "fija", cantidad: 1, multiplicador: 1 },
+      requerido: false,
+      observaciones: `Vidrio ${composition}. Seleccionar un solo tipo; la pauta entregada indica X − 94 mm y Y − 94 mm.`,
+      datosPendientes: [
+        "Confirmar composición elegida",
+        "Confirmar descuento con el taller",
+      ],
+    }));
 
   return {
     schemaVersion: FABRICACION_RECIPE_SCHEMA_VERSION,
@@ -528,27 +646,7 @@ export function crearRecetaSerie42Proyectante(input: {
       variante: input.variant,
     },
     perfiles: profiles,
-    vidrios: [
-      ...[
-        ["Monolítico 3 mm", "Vidrio monolítico 3 mm"],
-        ["Monolítico 4 mm", "Vidrio monolítico 4 mm"],
-        ["Monolítico 5 mm", "Vidrio monolítico 5 mm"],
-        ["Termopanel DVH 22 mm (4-12-4)", "Termopanel 22 mm"],
-        ["Termopanel DVH 22 mm (5-12-5)", "Termopanel 22 mm"],
-      ] as const,
-    ].map(([name, composition]) => ({
-      id: createId(),
-      nombre: name,
-      reglaAncho: { base: "ancho_total" as const, ajusteMm: -94, multiplicador: 1 },
-      reglaAlto: { base: "alto_total" as const, ajusteMm: -94, multiplicador: 1 },
-      reglaCantidad: { tipo: "fija" as const, cantidad: 1, multiplicador: 1 },
-      requerido: false,
-      observaciones: `Vidrio ${composition}. Seleccionar un solo tipo; la pauta entregada indica X − 94 mm y Y − 94 mm.`,
-      datosPendientes: [
-        "Confirmar composición elegida",
-        "Confirmar descuento con el taller",
-      ],
-    })),
+    vidrios,
     accesorios: [
       serie42Accessory(createId, "Cierre manilla", "735/36 o 1735/36", "Negro, titanio o mate."),
       serie42Accessory(createId, "Bisagra", "S-32-42", "Blanco, bronce, mate o titanio."),

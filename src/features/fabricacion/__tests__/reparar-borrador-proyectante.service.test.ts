@@ -18,11 +18,12 @@ describe("reparación conservadora de borradores AL-32/AL-42", () => {
     expect(resolveArquetipoEstructuralId(input)).toBe("proyectante");
     const recipe = crearRecetaEstructuralParaLineaComercial(input)!;
     expect(recipe.identidad).toMatchObject({ tipologia: "proyectante", hojas: 1 });
-    expect(recipe.perfiles).toHaveLength(catalogKey === "ventora:l32" ? 5 : 11);
+    expect(recipe.perfiles).toHaveLength(catalogKey === "ventora:l32" ? 5 : 6);
     expect(recipe.perfiles.every((profile) => profile.codigoPerfil)).toBe(true);
     if (catalogKey === "ventora:l42") {
-      expect(recipe.perfiles.some((profile) => profile.reglaMedida.ajusteMm === -136)).toBe(true);
-      expect(recipe.perfiles.some((profile) => profile.reglaMedida.ajusteMm === -123)).toBe(true);
+      expect(recipe.perfiles.some((profile) => profile.reglaMedida.ajusteMm === -18)).toBe(true);
+      expect(recipe.perfiles.some((profile) => profile.reglaMedida.ajusteMm === -90)).toBe(true);
+      expect(recipe.perfiles.every((profile) => !["4209", "4204", "4206"].includes(profile.codigoPerfil))).toBe(true);
     } else {
       expect(recipe.perfiles.every((profile) => profile.reglaMedida.ajusteMm == null)).toBe(true);
     }
@@ -36,8 +37,7 @@ describe("reparación conservadora de borradores AL-32/AL-42", () => {
     expect(recipe.identidad).toMatchObject({ recetaId: "original-0", tipologia: "proyectante", hojas: 1 });
     expect(recipe.estado).toBe("borrador");
     expect(recipe.perfiles.map((p) => p.codigoPerfil)).toEqual([
-      "4201", "4201", "4202", "4202", "4209", "4209", "4204",
-      "4229", "4229", "4206", "4206",
+      "4201", "4201", "4202", "4202", "4229", "4229",
     ]);
     expect(prepararReparacionBorradorProyectante("ventora:l42", { ...row, definition: recipe })).toBeNull();
   });
@@ -58,9 +58,11 @@ describe("reparación conservadora de borradores AL-32/AL-42", () => {
     const recipe = prepararReparacionBorradorProyectante("ventora:l42", row);
 
     expect(recipe?.identidad.variante).toBe("normal");
-    expect(recipe?.perfiles).toHaveLength(11);
-    expect(recipe?.perfiles.some((profile) => profile.codigoPerfil === "4231")).toBe(false);
-    expect(recipe?.perfiles.some((profile) => profile.codigoPerfil === "4201")).toBe(true);
+    expect(recipe?.perfiles).toHaveLength(6);
+    expect(recipe?.perfiles.map((profile) => profile.codigoPerfil)).toEqual([
+      "4201", "4201", "4202", "4202", "4229", "4229",
+    ]);
+    expect(recipe?.perfiles.every((profile) => profile.reglaCantidad.cantidad === 2)).toBe(true);
   });
 
   it("repara la precarga genérica vieja de Serie 3200 con la base L/ST/TP", () => {

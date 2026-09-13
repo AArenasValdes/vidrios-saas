@@ -6,6 +6,8 @@ import {
   type FabricacionEntradaCalculo,
   type FabricacionReceta,
 } from "@/features/fabricacion";
+import { crearRecetaEstructuralParaLineaComercial } from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
+import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
 
 const entradaBase: FabricacionEntradaCalculo = {
   anchoTotalMm: 1200,
@@ -25,6 +27,79 @@ function findPerfil(resultado: ReturnType<typeof calcularCubicacionYPauta>, func
 }
 
 describe("motor determinístico de fabricación", () => {
+  it("calcula la receta estándar AL-42 1H con las cantidades y descuentos aportados", () => {
+    const receta = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:l42",
+      lineName: "Serie 42",
+      createId: (() => {
+        let n = 0;
+        return () => `al42-${++n}`;
+      })(),
+    })!;
+    const resultado = calcularCubicacionYPauta(receta, {
+      anchoTotalMm: 1200,
+      altoTotalMm: 1000,
+      cantidad: 1,
+      hojas: 1,
+      modulos: 1,
+    });
+    const totalPorCodigo = (codigo: string) =>
+      resultado.perfiles
+        .filter((profile) => profile.codigoPerfil === codigo)
+        .reduce((total, profile) => total + profile.cantidadPiezas, 0);
+
+    expect(totalPorCodigo("4201")).toBe(4);
+    expect(totalPorCodigo("4202")).toBe(4);
+    expect(totalPorCodigo("4229")).toBe(4);
+    expect(resultado.perfiles.map((profile) => profile.codigoPerfil)).not.toEqual(
+      expect.arrayContaining(["4209", "4204", "4206"])
+    );
+    expect(resultado.perfiles.find((profile) => profile.codigoPerfil === "4202" && profile.medidaMm === 1182)).toBeTruthy();
+    expect(resultado.perfiles.find((profile) => profile.codigoPerfil === "4202" && profile.medidaMm === 982)).toBeTruthy();
+    expect(resultado.perfiles.find((profile) => profile.codigoPerfil === "4229" && profile.medidaMm === 1110)).toBeTruthy();
+    expect(resultado.perfiles.find((profile) => profile.codigoPerfil === "4229" && profile.medidaMm === 910)).toBeTruthy();
+    expect(resultado.vidrios).toHaveLength(1);
+    expect(resultado.vidrios[0]).toMatchObject({
+      anchoMm: 1107,
+      altoMm: 907,
+      cantidadPiezas: 1,
+    });
+  });
+
+  it("cambia barras al cambiar la tira sin cambiar las medidas de las piezas AL-42", () => {
+    const receta = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:l42",
+      lineName: "Serie 42",
+      createId: (() => {
+        let n = 0;
+        return () => `al42-tira-${++n}`;
+      })(),
+    })!;
+    const entrada = {
+      anchoTotalMm: 1200,
+      altoTotalMm: 1000,
+      cantidad: 1,
+      hojas: 1,
+      modulos: 1,
+    } satisfies FabricacionEntradaCalculo;
+    const resultado6000 = calcularCubicacionYPauta(receta, entrada);
+    const receta5950 = {
+      ...receta,
+      perfiles: receta.perfiles.map((profile) => ({
+        ...profile,
+        largoComercialMm: 5950,
+      })),
+    };
+    const resultado5950 = calcularCubicacionYPauta(receta5950, entrada);
+    const pauta6000 = construirPautaBarrasFabricacion({ receta, resultado: resultado6000 });
+    const pauta5950 = construirPautaBarrasFabricacion({ receta: receta5950, resultado: resultado5950 });
+
+    expect(resultado5950.perfiles).toEqual(resultado6000.perfiles);
+    expect(pauta6000.barras.every((bar) => bar.largoComercialMm === 6000)).toBe(true);
+    expect(pauta5950.barras.every((bar) => bar.largoComercialMm === 5950)).toBe(true);
+    expect(pauta5950.totalSobranteMm).not.toBe(pauta6000.totalSobranteMm);
+  });
+
   it("valida el schema Zod del fixture de corredera 2 hojas", () => {
     const parsed = fabricacionRecetaSchema.safeParse(
       RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO

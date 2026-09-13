@@ -50,10 +50,10 @@ exports[`auditoria-catalogo-lineas-ventora.service resume estados del catálogo 
   {
     "catalogKey": "ventora:l42",
     "codigos": 10,
-    "fabricacionEstado": "fabricacion_pendiente",
-    "listaParaProbar": false,
+    "fabricacionEstado": "fabricacion_configurada",
+    "listaParaProbar": true,
     "nombre": "AL-42",
-    "perfiles": "11/11",
+    "perfiles": "6/6",
     "tipologia": "proyectante",
   },
   {
