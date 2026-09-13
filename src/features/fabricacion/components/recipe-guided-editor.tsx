@@ -76,7 +76,10 @@ import {
 import {
   describePerfilTallerResumen,
   describeProfileRuleLegacy,
+  countActiveRecipeGlasses,
+  countActiveRecipeProfilePieces,
   formatLargoComercialCorto,
+  matchesRecipeIdentityCondition,
   groupProfilesForSheet,
   labelBaseMedida,
   labelReglaCantidadTipo,
@@ -108,6 +111,15 @@ import s from "./fabricacion-workspace.module.css";
 
 /** Asistente IA oculto temporalmente en la UI de fabricación. */
 const SHOW_FABRICATION_AI_ASSIST = false;
+
+function fabricationProductLabel(tipologia: FabricacionTipologia): string {
+  if (tipologia === "puerta_abatible" || tipologia === "puerta_corredera") {
+    return "puerta";
+  }
+  if (tipologia === "shower") return "shower";
+  if (tipologia === "personalizada") return "producto";
+  return "ventana";
+}
 
 const TYPOLOGY_OPTIONS = [
   { label: "Corredera 2H", tipologia: "corredera", supported: true, icon: Columns3 },
@@ -526,13 +538,28 @@ export function RecipeGuidedEditor({
     () => countProfilesGeometricallyPending(recipe),
     [recipe]
   );
-  const configuredProfilesCount = useMemo(
+  const activeProfilePieces = useMemo(
+    () => countActiveRecipeProfilePieces(recipe),
+    [recipe]
+  );
+  const activeGlassPieces = useMemo(
+    () => countActiveRecipeGlasses(recipe),
+    [recipe]
+  );
+  const configuredActiveProfilePieces = useMemo(
     () =>
-      recipe.perfiles.filter((profile) => {
-        const resumen = describePerfilTallerResumen(profile);
-        return Boolean(profile.codigoPerfil?.trim()) && !resumen.pendingDiscount;
-      }).length,
-    [recipe.perfiles]
+      recipe.perfiles
+        .filter((profile) => {
+          const resumen = describePerfilTallerResumen(profile);
+          return (
+            Boolean(profile.codigoPerfil?.trim()) &&
+            !resumen.pendingDiscount &&
+            matchesRecipeIdentityCondition(profile.reglaMedida.condicion, recipe) &&
+            matchesRecipeIdentityCondition(profile.reglaCantidad.condicion, recipe)
+          );
+        })
+        .reduce((total, profile) => total + Math.max(1, Math.round(profile.reglaCantidad.cantidad)), 0),
+    [recipe]
   );
   const listaParaProbarEvaluacion = useMemo(
     () => evaluarRecetaListaParaProbar(recipe),
@@ -541,6 +568,7 @@ export function RecipeGuidedEditor({
   const fabricacionPreparada = listaParaProbarEvaluacion.listaParaProbar;
   const primaryGlassLabel = useMemo(() => {
     const named = recipe.vidrios
+      .filter((glass) => matchesRecipeIdentityCondition(glass.condicion, recipe))
       .map((glass) => glass.nombre.trim())
       .filter(
         (name) =>
@@ -549,7 +577,7 @@ export function RecipeGuidedEditor({
           name.toLocaleLowerCase("es") !== "vidrio"
       );
     return named[0] ?? null;
-  }, [recipe.vidrios]);
+  }, [recipe]);
   const tiraAplicadaEnPiezas =
     recipe.perfiles.length > 0 &&
     recipe.perfiles.every((profile) => profile.largoComercialMm === tiraEstandarMm);
@@ -1932,14 +1960,13 @@ export function RecipeGuidedEditor({
       ) : null}
       <section id="recipe-components" className={`${s.recipeBuildCard} ${s.fabSheet} ${s.fabPrepFlow}`}>
         <header className={s.fabPrepPageHead}>
-          <h2>Así fabricas esta ventana</h2>
+          <h2>Así fabricas esta {fabricationProductLabel(recipe.identidad.tipologia)}</h2>
           <p className={s.fabPrepGlobalStatus}>
             {listaParaProbarEvaluacion.listaParaProbar
               ? "Fabricación lista para probar"
               : "Fabricación pendiente"}
             {" · "}
-            {configuredProfilesCount} de {recipe.perfiles.length} perfiles
-            configurados
+            {configuredActiveProfilePieces} de {activeProfilePieces} piezas de perfilería configuradas
           </p>
           <p>
             Ventora ya preparó las medidas y piezas habituales. Revisa solo si
@@ -1956,9 +1983,9 @@ export function RecipeGuidedEditor({
             <ul className={s.fabPrepStats} aria-label="Resumen de fabricación">
               <li>
                 <Package size={16} aria-hidden="true" />
-                <strong>{recipe.perfiles.length}</strong>
+                <strong>{activeProfilePieces}</strong>
                 <span>
-                  {recipe.perfiles.length === 1 ? "Pieza" : "Piezas"}
+                  {activeProfilePieces === 1 ? "Pieza" : "Piezas"}
                 </span>
               </li>
               <li>
@@ -1970,8 +1997,8 @@ export function RecipeGuidedEditor({
               </li>
               <li>
                 <Square size={16} aria-hidden="true" />
-                <strong>{recipe.vidrios.length}</strong>
-                <span>{recipe.vidrios.length === 1 ? "Vidrio" : "Vidrios"}</span>
+                <strong>{activeGlassPieces}</strong>
+                <span>{activeGlassPieces === 1 ? "Vidrio" : "Vidrios"}</span>
               </li>
               <li>
                 <Ruler size={16} aria-hidden="true" />

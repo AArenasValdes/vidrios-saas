@@ -65,7 +65,7 @@ describe("reparación conservadora de borradores AL-32/AL-42", () => {
     expect(recipe?.perfiles.every((profile) => profile.reglaCantidad.cantidad === 2)).toBe(true);
   });
 
-  it("repara la precarga genérica vieja de Serie 3200 con la base L/ST/TP", () => {
+  it("repara la precarga genérica vieja de Serie 3200 con las variantes de bastidor", () => {
     const row = {
       ...seed("proyectante"),
       line_name: "Serie 3200",
@@ -87,7 +87,7 @@ describe("reparación conservadora de borradores AL-32/AL-42", () => {
 
     expect(recipe?.identidad).toMatchObject({
       tipologia: "puerta_abatible",
-      variante: "3200 ST",
+      variante: "3200 1H · Bastidor 3221",
     });
     expect(recipe?.perfiles.map((profile) => profile.codigoPerfil)).toEqual([
       "3222",
@@ -96,9 +96,9 @@ describe("reparación conservadora de borradores AL-32/AL-42", () => {
       "3221",
       "3225",
       "3225",
-      "3227",
-      "3227",
     ]);
+    expect(recipe?.perfiles.some((profile) => profile.codigoPerfil === "3223")).toBe(false);
+    expect(recipe?.vidrios).toHaveLength(2);
   });
 
   it("repara la precarga genérica vieja de S-33 con la pauta actual", () => {

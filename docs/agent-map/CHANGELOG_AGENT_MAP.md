@@ -33,8 +33,8 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ## 2026-09-13 - Base técnica Serie 3200
 
-- Serie 3200 separada de la base genérica de puerta: variantes 3200 L/ST/TP, códigos 3222/3221/3225/3227 y cortes de una hoja.
-- 3223 se conserva como referencia de segunda hoja, fuera de la receta base 1H; se eliminan referencias no entregadas 3226/3228.
+- Serie 3200 1H separada de la base genérica de puerta: variantes técnicas por bastidor 3221/3225, marco 3222, vidrio y descuentos documentados.
+- 3223 se conserva como referencia global de segunda hoja, fuera de la receta base 1H; tampoco se incluye 3227 en esta receta.
 - Se agrega recomendación de vidrio monolítico 4/5 mm y DVH 22 mm para la cotización, más reparación conservadora de precargas 3200 intactas.
 
 ## 2026-09-13 - Base técnica AL-42 por variante de marco

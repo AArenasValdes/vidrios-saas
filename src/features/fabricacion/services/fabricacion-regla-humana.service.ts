@@ -7,6 +7,7 @@ import type {
   FabricacionAccesorio,
   FabricacionBaseMedida,
   FabricacionComponentePerfil,
+  FabricacionCondicion,
   FabricacionReceta,
   FabricacionReglaCantidad,
   FabricacionReglaCantidadTipo,
@@ -58,6 +59,65 @@ export function profileTieneOverrideLargoComercial(
   profile: FabricacionComponentePerfil
 ): boolean {
   return normalizeLargoComercialMm(profile.largoComercialMm) != null;
+}
+
+export function matchesRecipeIdentityCondition(
+  condition: FabricacionCondicion | undefined,
+  receta: FabricacionReceta
+): boolean {
+  if (!condition) return true;
+  const matchesNumber = (
+    value: number,
+    rule: FabricacionCondicion["hojas"] | FabricacionCondicion["modulos"]
+  ) => {
+    if (rule == null) return true;
+    if (typeof rule === "number") return value === rule;
+    if (rule.igual != null) return value === rule.igual;
+    if (rule.min != null && value < rule.min) return false;
+    if (rule.max != null && value > rule.max) return false;
+    return true;
+  };
+  if (!matchesNumber(receta.identidad.hojas, condition.hojas)) return false;
+  if (!matchesNumber(receta.identidad.modulos, condition.modulos)) return false;
+  if (condition.variante == null) return true;
+  return Array.isArray(condition.variante)
+    ? condition.variante.includes(receta.identidad.variante)
+    : condition.variante === receta.identidad.variante;
+}
+
+function activeQuantity(
+  rule: FabricacionReglaCantidad,
+  receta: FabricacionReceta
+): number {
+  const scopedQuantity =
+    rule.tipo === "por_hoja"
+      ? receta.identidad.hojas * rule.cantidad
+      : rule.tipo === "por_modulo"
+        ? receta.identidad.modulos * rule.cantidad
+        : rule.cantidad;
+  return Math.max(1, Math.round(scopedQuantity * (rule.multiplicador ?? 1)));
+}
+
+/** Cantidad de piezas que corresponde a la variante activa de la receta. */
+export function countActiveRecipeProfilePieces(receta: FabricacionReceta): number {
+  return receta.perfiles
+    .filter(
+      (profile) =>
+        matchesRecipeIdentityCondition(profile.reglaMedida.condicion, receta) &&
+        matchesRecipeIdentityCondition(profile.reglaCantidad.condicion, receta)
+    )
+    .reduce((total, profile) => total + activeQuantity(profile.reglaCantidad, receta), 0);
+}
+
+/** Cantidad de vidrios que corresponde a la variante activa de la receta. */
+export function countActiveRecipeGlasses(receta: FabricacionReceta): number {
+  return receta.vidrios
+    .filter(
+      (glass) =>
+        matchesRecipeIdentityCondition(glass.condicion, receta) &&
+        matchesRecipeIdentityCondition(glass.reglaCantidad.condicion, receta)
+    )
+    .reduce((total, glass) => total + activeQuantity(glass.reglaCantidad, receta), 0);
 }
 
 /** Etiqueta humana para UI (resumen o excepción por perfil). */

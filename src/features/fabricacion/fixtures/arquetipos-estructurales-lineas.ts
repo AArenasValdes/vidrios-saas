@@ -370,9 +370,7 @@ function crearRecetaSerie3200(input: {
     perfiles: profiles,
     vidrios: [
       glass(SERIE_3200_VARIANTS[0], "Monolítico 4 mm · Bastidor 3221"),
-      glass(SERIE_3200_VARIANTS[0], "Monolítico 5 mm · Bastidor 3221"),
-      glass(SERIE_3200_VARIANTS[1], "Termopanel DVH 22 mm (4-12-4) · Bastidor 3225"),
-      glass(SERIE_3200_VARIANTS[1], "Termopanel DVH 22 mm (5-12-5) · Bastidor 3225"),
+      glass(SERIE_3200_VARIANTS[1], "Monolítico 4 mm · Bastidor 3225"),
     ],
     accesorios: accessories,
     configuracionCorte: {

@@ -158,10 +158,10 @@ exports[`auditoria-catalogo-lineas-ventora.service resume estados del catálogo 
   {
     "catalogKey": "ventora:serie-3200-puerta-abatible-1h",
     "codigos": 5,
-    "fabricacionEstado": "fabricacion_pendiente",
-    "listaParaProbar": false,
+    "fabricacionEstado": "fabricacion_configurada",
+    "listaParaProbar": true,
     "nombre": "Serie 3200 — Puerta abatible 1 hoja",
-    "perfiles": "8/8",
+    "perfiles": "6/6",
     "tipologia": "puerta_abatible",
   },
   {

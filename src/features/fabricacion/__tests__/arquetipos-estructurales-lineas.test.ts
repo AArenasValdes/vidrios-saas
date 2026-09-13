@@ -136,7 +136,7 @@ describe("arquetipos estructurales de líneas comerciales", () => {
     expect(recipe?.perfiles.length).toBeGreaterThan(0);
   });
 
-  it("crea la base real de Serie 3200 con variantes, códigos y cortes de una hoja", () => {
+  it("crea la base real de Serie 3200 1H con variantes de bastidor", () => {
     const recipe = crearRecetaEstructuralParaLineaComercial({
       catalogKey: "ventora:serie-3200-puerta-abatible-1h",
       lineName: "Serie 3200",
@@ -149,20 +149,22 @@ describe("arquetipos estructurales de líneas comerciales", () => {
     expect(recipe?.identidad).toMatchObject({
       tipologia: "puerta_abatible",
       hojas: 1,
-      variante: "3200 ST",
+      variante: "3200 1H · Bastidor 3221",
     });
     expect(recipe?.perfiles.filter((profile) => profile.codigoPerfil === "3222")).toHaveLength(2);
     expect(recipe?.perfiles.filter((profile) => profile.codigoPerfil === "3221")).toHaveLength(2);
     expect(recipe?.perfiles.filter((profile) => profile.codigoPerfil === "3225")).toHaveLength(2);
-    expect(recipe?.perfiles.filter((profile) => profile.codigoPerfil === "3227")).toHaveLength(2);
+    expect(recipe?.perfiles).toHaveLength(6);
+    expect(recipe?.perfiles.filter((profile) => profile.codigoPerfil === "3223")).toHaveLength(0);
+    expect(recipe?.perfiles.every((profile) => profile.reglaCantidad.cantidad === 2 || profile.codigoPerfil === "3222")).toBe(true);
     expect(recipe?.perfiles.every((profile) => profile.largoComercialMm === 6000)).toBe(true);
-    expect(recipe?.perfiles.find((profile) => profile.codigoPerfil === "3221")?.reglaMedida.ajusteMm).toBe(-136);
-    expect(recipe?.perfiles.find((profile) => profile.codigoPerfil === "3225")?.reglaMedida.ajusteMm).toBe(-192);
+    expect(recipe?.perfiles.find((profile) => profile.codigoPerfil === "3221" && profile.reglaMedida.base === "ancho_total")?.reglaMedida.ajusteMm).toBe(-42);
+    expect(recipe?.perfiles.find((profile) => profile.codigoPerfil === "3221" && profile.reglaMedida.base === "alto_total")?.reglaMedida.ajusteMm).toBe(-29);
+    expect(recipe?.perfiles.find((profile) => profile.codigoPerfil === "3225" && profile.reglaMedida.base === "ancho_total")?.reglaMedida.ajusteMm).toBe(-42);
+    expect(recipe?.perfiles.find((profile) => profile.codigoPerfil === "3225" && profile.reglaMedida.base === "alto_total")?.reglaMedida.ajusteMm).toBe(-29);
     expect(recipe?.vidrios.map((glass) => glass.nombre)).toEqual([
-      "Monolítico 4 mm",
-      "Monolítico 5 mm",
-      "Termopanel DVH 22 mm (4-12-4)",
-      "Termopanel DVH 22 mm (5-12-5)",
+      "Monolítico 4 mm · Bastidor 3221",
+      "Monolítico 4 mm · Bastidor 3225",
     ]);
     expect(recipe?.accesorios.map((accessory) => accessory.nombre)).toEqual(
       expect.arrayContaining(["Bisagra Udinese 3200", "Cerradura ISEO (inox)"])

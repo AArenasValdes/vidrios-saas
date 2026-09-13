@@ -73,4 +73,35 @@ describe("seedStructuralDraftsForOrganization", () => {
     expect(result.seeded).toBe(0);
     expect(result.skipped).toBe(1);
   });
+
+  it("es idempotente cuando se ejecuta dos veces", async () => {
+    const inserted: Record<string, unknown>[] = [];
+    const result = await seedStructuralDraftsForOrganization("org-3", {
+      async listVentoraLineTemplates() {
+        return [{ id: 30, catalog_key: "ventora:serie-3200-puerta-abatible-1h", nombre: "Serie 3200" }];
+      },
+      async listLineTemplateIdsWithRecipes() {
+        return inserted.length > 0 ? [30] : [];
+      },
+      async insertStructuralRecipe(payload) {
+        inserted.push(payload);
+      },
+    });
+    const second = await seedStructuralDraftsForOrganization("org-3", {
+      async listVentoraLineTemplates() {
+        return [{ id: 30, catalog_key: "ventora:serie-3200-puerta-abatible-1h", nombre: "Serie 3200" }];
+      },
+      async listLineTemplateIdsWithRecipes() {
+        return [30];
+      },
+      async insertStructuralRecipe(payload) {
+        inserted.push(payload);
+      },
+    });
+
+    expect(result).toEqual({ seeded: 1, skipped: 0 });
+    expect(second).toEqual({ seeded: 0, skipped: 1 });
+    expect(inserted).toHaveLength(1);
+    expect((inserted[0]?.definition as { perfiles: unknown[] }).perfiles).toHaveLength(6);
+  });
 });

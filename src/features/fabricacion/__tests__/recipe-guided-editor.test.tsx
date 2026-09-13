@@ -7,6 +7,7 @@ import {
   crearBaseTipologicaVentora,
   crearRecetaReferenciaL5000Corredera2H,
 } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
+import { crearRecetaEstructuralParaLineaComercial } from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
 import { RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO } from "@/features/fabricacion/fixtures/receta-corredera-dos-hojas.fixture";
 import { crearRecetaFabricacionVacia } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
@@ -37,6 +38,28 @@ function createDataTransferMock() {
 }
 
 describe("RecipeGuidedEditor", () => {
+  it("usa el nombre del producto en el encabezado de fabricación", () => {
+    const recipe = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:serie-3200-puerta-abatible-1h",
+      lineName: "Serie 3200",
+    })!;
+
+    render(
+      <RecipeGuidedEditor
+        recipe={recipe}
+        providerName="Proveedor"
+        lineName="Serie 3200"
+        desktopActiveStep="components"
+        onRecipeChange={jest.fn()}
+        onProviderNameChange={jest.fn()}
+        onLineNameChange={jest.fn()}
+      />
+    );
+
+    expect(screen.getByRole("heading", { name: "Así fabricas esta puerta" })).toBeInTheDocument();
+    expect(screen.getByText(/7 de 7 piezas de perfilería configuradas/)).toBeInTheDocument();
+  });
+
   it("edita una receta con controles guiados sin exponer JSON", () => {
     const onRecipeChange = jest.fn();
 

@@ -8,6 +8,7 @@ import {
 } from "@/features/fabricacion";
 import { crearRecetaEstructuralParaLineaComercial } from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
 import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
+import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 
 const entradaBase: FabricacionEntradaCalculo = {
   anchoTotalMm: 1200,
@@ -98,6 +99,154 @@ describe("motor determinístico de fabricación", () => {
     expect(pauta6000.barras.every((bar) => bar.largoComercialMm === 6000)).toBe(true);
     expect(pauta5950.barras.every((bar) => bar.largoComercialMm === 5950)).toBe(true);
     expect(pauta5950.totalSobranteMm).not.toBe(pauta6000.totalSobranteMm);
+  });
+
+  it.each([
+    [
+      "3200 1H · Bastidor 3221",
+      "3221",
+      759,
+      1972,
+    ],
+    [
+      "3200 1H · Bastidor 3225",
+      "3225",
+      710,
+      1923,
+    ],
+  ] as const)("calcula Serie 3200 1H con %s", (variante, bastidor, vidrioAncho, vidrioAlto) => {
+    const receta = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:serie-3200-puerta-abatible-1h",
+      lineName: "Serie 3200",
+      createId: (() => {
+        let id = 0;
+        return () => `serie-3200-${id++}`;
+      })(),
+    })!;
+    const resultado = calcularCubicacionYPauta(receta, {
+      anchoTotalMm: 900,
+      altoTotalMm: 2100,
+      cantidad: 1,
+      hojas: 1,
+      modulos: 1,
+      variante,
+    });
+    const totalPorCodigo = (codigo: string) =>
+      resultado.perfiles
+        .filter((profile) => profile.codigoPerfil === codigo)
+        .reduce((total, profile) => total + profile.cantidadPiezas, 0);
+
+    expect(resultado.calculable).toBe(true);
+    expect(totalPorCodigo("3222")).toBe(3);
+    expect(totalPorCodigo(bastidor)).toBe(4);
+    expect(resultado.perfiles).toHaveLength(4);
+    expect(resultado.perfiles.map((profile) => profile.codigoPerfil)).not.toContain("3223");
+    expect(resultado.perfiles.find((profile) => profile.codigoPerfil === "3222" && profile.medidaMm === 900)).toMatchObject({
+      cantidadPiezas: 1,
+    });
+    expect(resultado.perfiles.find((profile) => profile.codigoPerfil === "3222" && profile.medidaMm === 2100)).toMatchObject({
+      cantidadPiezas: 2,
+    });
+    expect(resultado.perfiles.find((profile) => profile.codigoPerfil === bastidor && profile.medidaMm === 858)).toMatchObject({
+      cantidadPiezas: 2,
+    });
+    expect(resultado.perfiles.find((profile) => profile.codigoPerfil === bastidor && profile.medidaMm === 2071)).toMatchObject({
+      cantidadPiezas: 2,
+    });
+    expect(resultado.vidrios).toHaveLength(1);
+    expect(resultado.vidrios[0]).toMatchObject({
+      anchoMm: vidrioAncho,
+      altoMm: vidrioAlto,
+      cantidadPiezas: 1,
+    });
+  });
+
+  it("mantiene siete piezas de perfilería y no mezcla bastidores en Serie 3200", () => {
+    const receta = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:serie-3200-puerta-abatible-1h",
+      lineName: "Serie 3200",
+    })!;
+
+    expect(receta.perfiles).toHaveLength(6);
+    expect(receta.perfiles.some((profile) => /cierre|travesaño|travesano/i.test(`${profile.nombrePerfil} ${profile.funcion}`))).toBe(false);
+    for (const variante of ["3200 1H · Bastidor 3221", "3200 1H · Bastidor 3225"] as const) {
+      const resultado = calcularCubicacionYPauta(receta, {
+        anchoTotalMm: 900,
+        altoTotalMm: 2100,
+        cantidad: 1,
+        hojas: 1,
+        modulos: 1,
+        variante,
+      });
+      expect(resultado.perfiles.reduce((total, profile) => total + profile.cantidadPiezas, 0)).toBe(7);
+    }
+  });
+
+  it("cambiar la tira de Serie 3200 solo cambia la pauta de barras", () => {
+    const receta = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:serie-3200-puerta-abatible-1h",
+      lineName: "Serie 3200",
+    })!;
+    const entrada = {
+      anchoTotalMm: 900,
+      altoTotalMm: 2100,
+      cantidad: 1,
+      hojas: 1,
+      modulos: 1,
+      variante: "3200 1H · Bastidor 3221",
+    } satisfies FabricacionEntradaCalculo;
+    const receta5950 = {
+      ...receta,
+      perfiles: receta.perfiles.map((profile) => ({ ...profile, largoComercialMm: 5950 })),
+    };
+    const receta5900 = {
+      ...receta,
+      perfiles: receta.perfiles.map((profile) => ({ ...profile, largoComercialMm: 5900 })),
+    };
+    const resultado6000 = calcularCubicacionYPauta(receta, entrada);
+    const resultado5950 = calcularCubicacionYPauta(receta5950, entrada);
+    const resultado5900 = calcularCubicacionYPauta(receta5900, entrada);
+    const pauta6000 = construirPautaBarrasFabricacion({ receta, resultado: resultado6000 });
+    const pauta5950 = construirPautaBarrasFabricacion({ receta: receta5950, resultado: resultado5950 });
+    const pauta5900 = construirPautaBarrasFabricacion({ receta: receta5900, resultado: resultado5900 });
+
+    expect(resultado5950.perfiles).toEqual(resultado6000.perfiles);
+    expect(resultado5900.perfiles).toEqual(resultado6000.perfiles);
+    expect(pauta6000.barras.every((bar) => bar.largoComercialMm === 6000)).toBe(true);
+    expect(pauta5950.barras.every((bar) => bar.largoComercialMm === 5950)).toBe(true);
+    expect(pauta5900.barras.every((bar) => bar.largoComercialMm === 5900)).toBe(true);
+    expect(pauta5950.totalSobranteMm).not.toBe(pauta6000.totalSobranteMm);
+  });
+
+  it("rechaza medidas de puerta 3200 que producirían largos no positivos", () => {
+    const receta = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:serie-3200-puerta-abatible-1h",
+      lineName: "Serie 3200",
+    })!;
+    const resultado = calcularCubicacionYPauta(receta, {
+      anchoTotalMm: 100,
+      altoTotalMm: 100,
+      cantidad: 1,
+      hojas: 1,
+      modulos: 1,
+      variante: "3200 1H · Bastidor 3225",
+    });
+
+    expect(resultado.calculable).toBe(false);
+    expect(resultado.advertencias.some((warning) => warning.codigo === "MEDIDA_INVALIDA")).toBe(true);
+    expect(resultado.perfiles.some((profile) => profile.medidaMm <= 0)).toBe(false);
+  });
+
+  it("no bloquea una receta 3200 base con descuentos documentados", () => {
+    const receta = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:serie-3200-puerta-abatible-1h",
+      lineName: "Serie 3200",
+    })!;
+
+    expect(evaluarRecetaListaParaProbar(receta)).toMatchObject({
+      listaParaProbar: true,
+      bloqueos: [],
+    });
   });
 
   it("valida el schema Zod del fixture de corredera 2 hojas", () => {
