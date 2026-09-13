@@ -31,6 +31,13 @@ Historial de cambios en la documentacion del mapa tecnico.
 - 3223 se conserva como referencia de segunda hoja, fuera de la receta base 1H; se eliminan referencias no entregadas 3226/3228.
 - Se agrega recomendación de vidrio monolítico 4/5 mm y DVH 22 mm para la cotización, más reparación conservadora de precargas 3200 intactas.
 
+## 2026-09-13 - Base técnica AL-42 por variante de marco
+
+- AL-42 normal, con cámara y sin cámara conservan sus entradas comerciales, pero ahora cargan recetas proyectantes distintas e identificables.
+- Se usan 4201 para normal/sin cámara y 4231 para cámara; 4209 queda como alternativa de paño fijo, sin inventar un código adicional para “sin cámara”.
+- La receta incorpora 4202 con descuentos X−136/Y−123, junquillos 4229/4206 y vidrio monolítico 3/4/5 mm o DVH 22 mm con X−94/Y−94.
+- Las referencias de catálogo quedan alineadas con los códigos aportados; la reparación de borradores intactos conserva cambios del taller y pruebas existentes.
+
 ## 2026-09-04 - Catálogo 25 líneas: integridad, cotización, fabricación y UX receta
 
 ### Catálogo comercial e integridad de códigos

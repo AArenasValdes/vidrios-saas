@@ -53,7 +53,10 @@ function buildVentoraDefaultLine(
     minimoCobrable: 0,
     redondeoPrecio: DEFAULT_PRICE_ROUNDING_CLP,
     vidrioPrincipalRecomendado:
-      definition.catalogKey === "ventora:serie-3200-puerta-abatible-1h"
+      definition.catalogKey === "ventora:serie-3200-puerta-abatible-1h" ||
+      definition.catalogKey === "ventora:l42" ||
+      definition.catalogKey === "ventora:serie-42-proyectante-camara" ||
+      definition.catalogKey === "ventora:serie-42-proyectante-sin-camara"
         ? "Incoloro monolítico 4mm"
         : null,
     catalogMetadata: {
@@ -226,7 +229,7 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     catalogKey: "ventora:l42",
     nombre: "AL-42",
     material: "Aluminio",
-    configuracion: "Proyectante / paño fijo",
+    configuracion: "AL-42 normal · Proyectante / paño fijo",
     proveedor: null,
     lineSystem: "AL-42",
     ventoraPlantillaId: null,
@@ -280,18 +283,18 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     catalogKey: "ventora:serie-42-proyectante-camara",
     nombre: "Serie 42 — Proyectante con cámara",
     material: "Aluminio",
-    configuracion: "Proyectante con cámara",
+    configuracion: "AL-42 con cámara · Proyectante",
     proveedor: null,
-    lineSystem: null,
+    lineSystem: "AL-42",
     ventoraPlantillaId: null,
   },
   {
     catalogKey: "ventora:serie-42-proyectante-sin-camara",
     nombre: "Serie 42 — Proyectante sin cámara",
     material: "Aluminio",
-    configuracion: "Proyectante sin cámara",
+    configuracion: "AL-42 sin cámara · Proyectante",
     proveedor: null,
-    lineSystem: null,
+    lineSystem: "AL-42",
     ventoraPlantillaId: null,
   },
   {

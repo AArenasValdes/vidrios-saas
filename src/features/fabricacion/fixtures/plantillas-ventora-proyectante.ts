@@ -317,3 +317,262 @@ export function crearRecetaPlantillaVentoraProyectante(
     ],
   };
 }
+
+export type Serie42ProyectanteVariantId =
+  | "normal"
+  | "con_camara"
+  | "sin_camara";
+
+const SERIE_42_VARIANTS: Record<
+  Serie42ProyectanteVariantId,
+  { label: string; frameCode: string; frameName: string; note: string }
+> = {
+  normal: {
+    label: "AL-42 normal",
+    frameCode: "4201",
+    frameName: "Marco 4201",
+    note: "Marco exterior normal de 42 mm.",
+  },
+  con_camara: {
+    label: "AL-42 con cámara",
+    frameCode: "4231",
+    frameName: "Marco cámara de agua 4231",
+    note: "Marco con canal de condensación.",
+  },
+  sin_camara: {
+    label: "AL-42 sin cámara",
+    frameCode: "4201",
+    frameName: "Marco 4201",
+    note:
+      "La fuente entregada no diferencia otro código de marco sin cámara; confirmar con proveedor si corresponde 4201 u otra variante.",
+  },
+};
+
+function serie42Profile(input: {
+  createId: () => string;
+  code: string;
+  name: string;
+  functionName: string;
+  measure: FabricacionBaseMedida;
+  adjustmentMm?: number;
+  required: boolean;
+  note: string;
+}): FabricacionReceta["perfiles"][number] {
+  return {
+    id: input.createId(),
+    codigoPerfil: input.code,
+    nombrePerfil: input.name,
+    funcion: input.functionName,
+    largoComercialMm: VENTORA_LARGO_COMERCIAL_PRESET_MM,
+    reglaMedida: {
+      base: input.measure,
+      ...(input.adjustmentMm !== undefined
+        ? { ajusteMm: input.adjustmentMm }
+        : {}),
+      multiplicador: 1,
+    },
+    reglaCantidad: {
+      tipo: "fija",
+      cantidad: 1,
+      multiplicador: 1,
+    },
+    requerido: input.required,
+    observaciones: [
+      `Serie AL-42. Código ${input.code}.`,
+      input.note,
+      "Corte indicado por la pauta VPE42NM-1HJN; confirmar con el taller antes de validar.",
+    ].join(" "),
+    datosPendientes: [
+      "Confirmar cantidad y descuento con una fabricación real",
+      "Validar la receta con el taller",
+    ],
+  };
+}
+
+function serie42Accessory(
+  createId: () => string,
+  name: string,
+  code: string,
+  note: string
+): FabricacionReceta["accesorios"][number] {
+  return {
+    id: createId(),
+    codigo: code,
+    nombre: name,
+    reglaCantidad: { tipo: "fija", cantidad: 1, multiplicador: 1 },
+    requerido: false,
+    observaciones: `${note} Cantidad a confirmar con el taller.`,
+    datosPendientes: [
+      "Confirmar si aplica a esta composición",
+      "Confirmar cantidad y modelo con el taller",
+    ],
+  };
+}
+
+/** Base AL-42 proyectante con identidad separada para normal, cámara y sin cámara. */
+export function crearRecetaSerie42Proyectante(input: {
+  variant: Serie42ProyectanteVariantId;
+  lineName: string;
+  createId?: () => string;
+}): FabricacionReceta {
+  const createId = input.createId ?? (() => crypto.randomUUID());
+  const variant = SERIE_42_VARIANTS[input.variant];
+  const frameNote = `${variant.note} Para paño fijo también existe el código 4209 como alternativa de composición.`;
+  const profiles: FabricacionReceta["perfiles"] = [
+    serie42Profile({
+      createId,
+      code: variant.frameCode,
+      name: `${variant.frameName} horizontal`,
+      functionName: "Marco",
+      measure: "ancho_total",
+      required: true,
+      note: `${frameNote} Largo X, corte 45°/45°.`,
+    }),
+    serie42Profile({
+      createId,
+      code: variant.frameCode,
+      name: `${variant.frameName} vertical`,
+      functionName: "Marco",
+      measure: "alto_total",
+      required: true,
+      note: `${frameNote} Largo Y, corte 45°/90°.`,
+    }),
+    serie42Profile({
+      createId,
+      code: "4202",
+      name: "Hoja proyectante horizontal",
+      functionName: "Hoja",
+      measure: "ancho_por_hoja",
+      adjustmentMm: -136,
+      required: true,
+      note: "Largo X − 136 mm, corte 45°/45°.",
+    }),
+    serie42Profile({
+      createId,
+      code: "4202",
+      name: "Hoja proyectante vertical",
+      functionName: "Hoja",
+      measure: "alto_por_hoja",
+      adjustmentMm: -123,
+      required: true,
+      note: "Largo Y − 123 mm, corte 45°/90°.",
+    }),
+    serie42Profile({
+      createId,
+      code: "4209",
+      name: "Marco / paño fijo horizontal",
+      functionName: "Marco paño fijo",
+      measure: "ancho_total",
+      required: false,
+      note: "Alternativa de estructura exterior para paño fijo; no activa en la hoja móvil base.",
+    }),
+    serie42Profile({
+      createId,
+      code: "4209",
+      name: "Marco / paño fijo vertical",
+      functionName: "Marco paño fijo",
+      measure: "alto_total",
+      required: false,
+      note: "Alternativa de estructura exterior para paño fijo; no activa en la hoja móvil base.",
+    }),
+    serie42Profile({
+      createId,
+      code: "4204",
+      name: "Palillo / pilar",
+      functionName: "Palillo",
+      measure: "alto_total",
+      required: false,
+      note: "Se suma cuando la composición tiene dos hojas móviles o separación entre vanos.",
+    }),
+    ...(["4229", "4206"] as const).flatMap((code) => {
+      const isThermopane = code === "4206";
+      const name = isThermopane ? "Junquillo termopanel" : "Junquillo monolítico";
+      return [
+        serie42Profile({
+          createId,
+          code,
+          name: `${name} horizontal`,
+          functionName: "Junquillo",
+          measure: "ancho_por_hoja",
+          adjustmentMm: -94,
+          required: false,
+          note: `Largo X − 94 mm; usar con ${isThermopane ? "DVH 22 mm" : "vidrio monolítico 3, 4 o 5 mm"}.`,
+        }),
+        serie42Profile({
+          createId,
+          code,
+          name: `${name} vertical`,
+          functionName: "Junquillo",
+          measure: "alto_por_hoja",
+          adjustmentMm: -94,
+          required: false,
+          note: `Largo Y − 94 mm; corte 45°/45° o 90°/90°.`,
+        }),
+      ];
+    }),
+  ];
+
+  return {
+    schemaVersion: FABRICACION_RECIPE_SCHEMA_VERSION,
+    version: 1,
+    estado: "ejemplo_no_validado",
+    identidad: {
+      recetaId: createId(),
+      codigo: `AL-42-PROY-${input.variant.toUpperCase()}-V1`,
+      nombre: `${input.lineName} — ${variant.label}`,
+      tipologia: "proyectante",
+      hojas: 1,
+      modulos: 1,
+      apertura: "proyectante",
+      herraje: null,
+      variante: input.variant,
+    },
+    perfiles: profiles,
+    vidrios: [
+      ...[
+        ["Monolítico 3 mm", "Vidrio monolítico 3 mm"],
+        ["Monolítico 4 mm", "Vidrio monolítico 4 mm"],
+        ["Monolítico 5 mm", "Vidrio monolítico 5 mm"],
+        ["Termopanel DVH 22 mm (4-12-4)", "Termopanel 22 mm"],
+        ["Termopanel DVH 22 mm (5-12-5)", "Termopanel 22 mm"],
+      ] as const,
+    ].map(([name, composition]) => ({
+      id: createId(),
+      nombre: name,
+      reglaAncho: { base: "ancho_total" as const, ajusteMm: -94, multiplicador: 1 },
+      reglaAlto: { base: "alto_total" as const, ajusteMm: -94, multiplicador: 1 },
+      reglaCantidad: { tipo: "fija" as const, cantidad: 1, multiplicador: 1 },
+      requerido: false,
+      observaciones: `Vidrio ${composition}. Seleccionar un solo tipo; la pauta entregada indica X − 94 mm y Y − 94 mm.`,
+      datosPendientes: [
+        "Confirmar composición elegida",
+        "Confirmar descuento con el taller",
+      ],
+    })),
+    accesorios: [
+      serie42Accessory(createId, "Cierre manilla", "735/36 o 1735/36", "Negro, titanio o mate."),
+      serie42Accessory(createId, "Bisagra", "S-32-42", "Blanco, bronce, mate o titanio."),
+      serie42Accessory(createId, "Brazo de proyección", "", "Acero simple o reforzado, 8–24 pulgadas."),
+      serie42Accessory(createId, "Escuadra armado", "S-42", "Unión de armado."),
+      serie42Accessory(createId, "Escuadra anudal", "S-42 / 4220", "Unión de esquina."),
+      serie42Accessory(createId, "Cuña armado", "S-42 / 4230", "Cuña de fijación."),
+      serie42Accessory(createId, "Burlete doble contacto", "DC-142 / DC-425", "Negro."),
+      serie42Accessory(createId, "Burlete cuña 4 mm", "C-424", "Negro; vidrio monolítico 4 mm."),
+      serie42Accessory(createId, "Burlete cuña 5 mm", "C-425", "Negro; vidrio monolítico 5 mm."),
+      serie42Accessory(createId, "Base 42", "C-425", "Confirmar aplicación según vidrio."),
+      serie42Accessory(createId, "Manilla de parche", "", "Aplicación especial; confirmar compatibilidad."),
+    ],
+    configuracionCorte: {
+      perdidaCorteMm: null,
+      despunteInicialMm: null,
+      sobranteMinimoAprovechableMm: null,
+      largoComercialDefaultMm: VENTORA_LARGO_COMERCIAL_PRESET_MM,
+    },
+    notasValidacion: [
+      `${variant.label}. Modelo base VPE42NM-1HJN, una hoja móvil.`,
+      "Códigos y descuentos cargados desde los datos técnicos aportados.",
+      "4209 queda como alternativa de paño fijo; 4204 se usa cuando la composición agrega separación entre vanos.",
+      "La receta sigue siendo borrador técnico: probar una medida real y validar con el proveedor/taller.",
+    ],
+  };
+}

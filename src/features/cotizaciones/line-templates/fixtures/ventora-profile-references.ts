@@ -150,24 +150,18 @@ const L32_PROYECTANTE_VISUAL_REFERENCES: LineProfileReference[] = [
   visualRef({ code: "3208", name: "Junquillo", role: "Otro", description: "L32 · Proyectante" }),
 ];
 
-/** Códigos AL-42 proyectante (SODAL). La línea comercial AL-42 usa esta identidad. */
+/** Códigos AL-42 proyectante (SODAL). Se comparten entre sus variantes de marco. */
 const SERIE_42_PROYECTANTE_PROFILES: LineProfileReference[] = [
-  catalogRef({
-    code: "4201",
-    name: "Marco proyectante",
-    role: "Marco",
-    description: "Marco proyectante",
-  }),
-  catalogRef({ code: "4202", name: "Hoja", role: "Hoja" }),
-  catalogRef({ code: "4204", name: "Palillo", role: "Otro" }),
-  catalogRef({ code: "4209", name: "Marco fijo", role: "Marco" }),
-  catalogRef({ code: "4229", name: "Junquillo", role: "Otro" }),
-  catalogRef({
-    code: "4231",
-    name: "Marco con cámara",
-    role: "Marco",
-    description: "Marco con cámara",
-  }),
+  studyRef({ code: "4201", name: "Marco", role: "Marco", provider: "SODAL", description: "Marco exterior normal de 42 mm." }),
+  studyRef({ code: "4209", name: "Paño fijo / marco", role: "Marco", provider: "SODAL", description: "Marco o paño fijo de 42 mm." }),
+  studyRef({ code: "4202", name: "Hoja", role: "Hoja", provider: "SODAL", description: "Hoja proyectante de 42 mm." }),
+  studyRef({ code: "4204", name: "Palillo / pilar", role: "Otro", provider: "SODAL", description: "Separador entre vanos." }),
+  studyRef({ code: "4229", name: "Junquillo monolítico", role: "Otro", provider: "SODAL", description: "Soporte para vidrio simple de 3, 4 o 5 mm." }),
+  studyRef({ code: "4206", name: "Junquillo termopanel", role: "Otro", provider: "SODAL", description: "Soporte para termopanel de 22 mm." }),
+  studyRef({ code: "4231", name: "Marco cámara de agua", role: "Marco", provider: "SODAL", description: "Marco con canal de condensación." }),
+  studyRef({ code: "4220", name: "Escuadra anudal NAT.", role: "Accesorio", provider: "SODAL", description: "Unión de esquina." }),
+  studyRef({ code: "4230", name: "Cuña armado NAT.", role: "Accesorio", provider: "SODAL", description: "Cuña de fijación." }),
+  studyRef({ code: "4250", name: "Hoja muro cortina", role: "Hoja", provider: "SODAL", description: "Aplicación especial." }),
 ];
 
 const SERIE_S33_PROFILES: LineProfileReference[] = [
@@ -386,86 +380,8 @@ const AL32_PROJECTING_PROFILES: LineProfileReference[] = [
   }),
 ];
 
-/** AL-42: códigos SODAL para proyectante, paño fijo y variantes de vidrio. */
-const AL42_PROJECTING_PROFILES: LineProfileReference[] = [
-  studyRef({
-    code: "4202",
-    name: "Hoja / marco nave",
-    role: "Hoja",
-    provider: "SODAL",
-    description: "Hoja proyectante o nave; sección nominal 42 mm.",
-  }),
-  studyRef({
-    code: "4203",
-    name: "Junquillo",
-    role: "Otro",
-    provider: "SODAL",
-    description: "Soporte de vidrio monolítico.",
-  }),
-  studyRef({
-    code: "4204",
-    name: "Palillo / pilar / traslapo",
-    role: "Otro",
-    provider: "SODAL",
-    description: "Separador o traslapo entre hojas.",
-  }),
-  studyRef({
-    code: "4206",
-    name: "Junquillo termopanel",
-    role: "Otro",
-    provider: "SODAL",
-    description: "Soporte para termopanel de 22 mm.",
-  }),
-  studyRef({
-    code: "4209",
-    name: "Marco fijo / paño fijo",
-    role: "Marco",
-    provider: "SODAL",
-    description: "Marco para paño fijo.",
-  }),
-  studyRef({
-    code: "4220",
-    name: "Escuadra anudal NAT.",
-    role: "Accesorio",
-    provider: "SODAL",
-    description: "Unión de esquinas a 45 grados.",
-  }),
-  studyRef({
-    code: "4225",
-    name: "Nave",
-    role: "Hoja",
-    provider: "SODAL",
-    description: "Perfil para nave o ampliación.",
-  }),
-  studyRef({
-    code: "4229",
-    name: "Junquillo monolítico",
-    role: "Otro",
-    provider: "SODAL",
-    description: "Alternativa para vidrio simple.",
-  }),
-  studyRef({
-    code: "4230",
-    name: "Cuña armado NAT.",
-    role: "Accesorio",
-    provider: "SODAL",
-    description: "Cuña de armado.",
-  }),
-  studyRef({
-    code: "4231",
-    name: "Marco cámara de agua",
-    role: "Marco",
-    provider: "SODAL",
-    description: "Marco con canal de condensación.",
-  }),
-  studyRef({
-    code: "4250",
-    name: "Hoja muro cortina",
-    role: "Hoja",
-    provider: "SODAL",
-    description: "Hoja para aplicación en muro cortina.",
-  }),
-];
+/** AL-42: las tres entradas del catálogo usan la misma referencia técnica, con variante de marco en receta. */
+const AL42_PROJECTING_PROFILES = SERIE_42_PROYECTANTE_PROFILES;
 
 /** Óptima S-28: nombres útiles del estudio, códigos SODAL aún pendientes. */
 const OPTIMA_S28_2H_PROFILES: LineProfileReference[] = [

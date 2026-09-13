@@ -33,6 +33,9 @@ export async function repararBorradoresProyectantes(
     if (testError) throw testError;
     if (tests?.length) continue;
     const isSerie3200 = line?.catalog_key === "ventora:serie-3200-puerta-abatible-1h";
+    const isSerie42 = line?.catalog_key === "ventora:l42" ||
+      line?.catalog_key === "ventora:serie-42-proyectante-camara" ||
+      line?.catalog_key === "ventora:serie-42-proyectante-sin-camara";
     const { data: updated, error: updateError } = await client.from("fabrication_recipes")
       .update({
         definition,
@@ -41,7 +44,9 @@ export async function repararBorradoresProyectantes(
         variant: definition.identidad.variante,
         source_reference: isSerie3200
           ? "ventora-serie-3200:catalogo-2026-09-13"
-          : "ventora-proyectante:catalogo-2026-09-13",
+          : isSerie42
+            ? `ventora-serie-42:${definition.identidad.variante}:catalogo-2026-09-13`
+            : "ventora-proyectante:catalogo-2026-09-13",
       })
       .eq("id", row.id).eq("organization_id", organizationId).eq("scope", "organization")
       .eq("line_template_id", row.line_template_id).eq("status", "draft").eq("version", 1)

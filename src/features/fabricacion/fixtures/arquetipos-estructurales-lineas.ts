@@ -3,7 +3,11 @@ import {
   type PlantillaVentoraCorrederaId,
 } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
 import { VENTORA_LARGO_COMERCIAL_PRESET_MM } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
-import { crearRecetaPlantillaVentoraProyectante } from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
+import {
+  crearRecetaPlantillaVentoraProyectante,
+  crearRecetaSerie42Proyectante,
+  type Serie42ProyectanteVariantId,
+} from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
 import {
   FABRICACION_RECIPE_SCHEMA_VERSION,
   type FabricacionBaseMedida,
@@ -591,6 +595,15 @@ export const CATALOG_KEY_TO_ARQUETIPO: Record<string, ArquetipoEstructuralId> = 
   "ventora:winhouse-andes-monorriel": "pvc_corredera_2h",
 };
 
+const SERIE_42_VARIANT_BY_CATALOG_KEY: Record<
+  string,
+  Serie42ProyectanteVariantId
+> = {
+  "ventora:l42": "normal",
+  "ventora:serie-42-proyectante-camara": "con_camara",
+  "ventora:serie-42-proyectante-sin-camara": "sin_camara",
+};
+
 const PLANTILLA_BY_CATALOG_KEY: Partial<Record<string, PlantillaVentoraCorrederaId>> = {
   "ventora:l5000": "L5000",
   "ventora:l20": "L20",
@@ -776,9 +789,19 @@ export function crearRecetaEstructuralParaLineaComercial(input: {
   lineName: string;
   createId?: () => string;
 }): FabricacionReceta | null {
-  if (input.catalogKey === "ventora:l32" || input.catalogKey === "ventora:l42") {
+  const serie42Variant = input.catalogKey
+    ? SERIE_42_VARIANT_BY_CATALOG_KEY[input.catalogKey]
+    : undefined;
+  if (serie42Variant) {
+    return crearRecetaSerie42Proyectante({
+      variant: serie42Variant,
+      lineName: input.lineName,
+      createId: input.createId,
+    });
+  }
+  if (input.catalogKey === "ventora:l32") {
     return crearRecetaPlantillaVentoraProyectante(
-      input.catalogKey === "ventora:l32" ? "L32" : "L42",
+      "L32",
       { lineName: input.lineName, createId: input.createId }
     );
   }

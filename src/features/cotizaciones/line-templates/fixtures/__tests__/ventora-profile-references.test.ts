@@ -65,16 +65,15 @@ describe("ventora profile references", () => {
       "3208",
     ]);
     expect(al42?.profiles.map((profile) => profile.code)).toEqual([
-      "4202",
-      "4203",
-      "4204",
-      "4206",
+      "4201",
       "4209",
-      "4220",
-      "4225",
+      "4202",
+      "4204",
       "4229",
-      "4230",
+      "4206",
       "4231",
+      "4220",
+      "4230",
       "4250",
     ]);
     expect(

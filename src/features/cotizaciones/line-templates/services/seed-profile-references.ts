@@ -58,6 +58,45 @@ function getLegacyLineIdentityPatch(
       : "";
 
   if (
+    row.catalog_key === "ventora:l42" &&
+    (configuration !== "al-42 normal · proyectante / paño fijo" ||
+      metadata.lineSystem !== "AL-42" ||
+      metadata.structuralArchetypeId !== "proyectante")
+  ) {
+    return {
+      lineConfiguration: "AL-42 normal · Proyectante / paño fijo",
+      lineSystem: "AL-42",
+      structuralArchetypeId: "proyectante",
+    };
+  }
+
+  if (
+    row.catalog_key === "ventora:serie-42-proyectante-camara" &&
+    (configuration !== "al-42 con cámara · proyectante" ||
+      metadata.lineSystem !== "AL-42" ||
+      metadata.structuralArchetypeId !== "proyectante")
+  ) {
+    return {
+      lineConfiguration: "AL-42 con cámara · Proyectante",
+      lineSystem: "AL-42",
+      structuralArchetypeId: "proyectante",
+    };
+  }
+
+  if (
+    row.catalog_key === "ventora:serie-42-proyectante-sin-camara" &&
+    (configuration !== "al-42 sin cámara · proyectante" ||
+      metadata.lineSystem !== "AL-42" ||
+      metadata.structuralArchetypeId !== "proyectante")
+  ) {
+    return {
+      lineConfiguration: "AL-42 sin cámara · Proyectante",
+      lineSystem: "AL-42",
+      structuralArchetypeId: "proyectante",
+    };
+  }
+
+  if (
     row.catalog_key === "ventora:l32" &&
     configuration === "corredera 2 hojas"
   ) {

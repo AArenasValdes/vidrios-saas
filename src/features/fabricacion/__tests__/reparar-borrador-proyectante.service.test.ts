@@ -17,9 +17,14 @@ describe("reparación conservadora de borradores AL-32/AL-42", () => {
     expect(resolveArquetipoEstructuralId(input)).toBe("proyectante");
     const recipe = crearRecetaEstructuralParaLineaComercial(input)!;
     expect(recipe.identidad).toMatchObject({ tipologia: "proyectante", hojas: 1 });
-    expect(recipe.perfiles).toHaveLength(5);
+    expect(recipe.perfiles).toHaveLength(catalogKey === "ventora:l32" ? 5 : 11);
     expect(recipe.perfiles.every((profile) => profile.codigoPerfil)).toBe(true);
-    expect(recipe.perfiles.every((profile) => profile.reglaMedida.ajusteMm == null)).toBe(true);
+    if (catalogKey === "ventora:l42") {
+      expect(recipe.perfiles.some((profile) => profile.reglaMedida.ajusteMm === -136)).toBe(true);
+      expect(recipe.perfiles.some((profile) => profile.reglaMedida.ajusteMm === -123)).toBe(true);
+    } else {
+      expect(recipe.perfiles.every((profile) => profile.reglaMedida.ajusteMm == null)).toBe(true);
+    }
     expect(fabricacionRecetaSchema.safeParse(recipe).success).toBe(true);
   });
 
@@ -29,7 +34,10 @@ describe("reparación conservadora de borradores AL-32/AL-42", () => {
     expect(recipe).not.toBeNull();
     expect(recipe.identidad).toMatchObject({ recetaId: "original-0", tipologia: "proyectante", hojas: 1 });
     expect(recipe.estado).toBe("borrador");
-    expect(recipe.perfiles.map((p) => p.codigoPerfil)).toEqual(["4209", "4202", "4229", "4206", "4204"]);
+    expect(recipe.perfiles.map((p) => p.codigoPerfil)).toEqual([
+      "4201", "4201", "4202", "4202", "4209", "4209", "4204",
+      "4229", "4229", "4206", "4206",
+    ]);
     expect(prepararReparacionBorradorProyectante("ventora:l42", { ...row, definition: recipe })).toBeNull();
   });
 

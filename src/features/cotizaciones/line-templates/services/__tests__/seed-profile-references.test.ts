@@ -145,7 +145,7 @@ describe("seedProfileReferencesForOrganization", () => {
       }),
     });
     expect(updates[1]).toMatchObject({
-      lineConfiguration: "Proyectante / paño fijo",
+      lineConfiguration: "AL-42 normal · Proyectante / paño fijo",
       lineSystem: "AL-42",
       structuralArchetypeId: "proyectante",
       workshopProfiles: expect.objectContaining({

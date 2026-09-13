@@ -3,6 +3,7 @@ import { fabricacionRecetaSchema } from "@/features/fabricacion/schemas/fabricac
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
 import { enriquecerRecetaDesdeCatalogo } from "@/features/fabricacion/services/enriquecer-receta-desde-catalogo.service";
 import { listVentoraCatalogKeysWithProfileReferences } from "@/features/cotizaciones/line-templates/fixtures/ventora-profile-references";
+import { crearRecetaPlantillaVentoraProyectante } from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
 
 export type BorradorProyectanteRow = {
   id: string;
@@ -47,7 +48,20 @@ export function prepararReparacionBorradorCatalogo(
     catalogKey,
   });
   const parsedComparable = JSON.stringify(comparable(parsed.data));
-  const isUntouchedSeed = [original, legacyCatalogDefinition].some(
+  const legacyDefinitions = [original, legacyCatalogDefinition];
+  if (
+    catalogKey === "ventora:l42" ||
+    catalogKey === "ventora:serie-42-proyectante-camara" ||
+    catalogKey === "ventora:serie-42-proyectante-sin-camara"
+  ) {
+    legacyDefinitions.push(
+      crearRecetaPlantillaVentoraProyectante("L42", {
+        lineName: row.line_name,
+        createId: () => "seed",
+      })
+    );
+  }
+  const isUntouchedSeed = legacyDefinitions.some(
     (candidate) => parsedComparable === JSON.stringify(comparable(candidate))
   );
   if (!isUntouchedSeed) return null;

@@ -49,11 +49,11 @@ exports[`auditoria-catalogo-lineas-ventora.service resume estados del catálogo 
   },
   {
     "catalogKey": "ventora:l42",
-    "codigos": 11,
+    "codigos": 10,
     "fabricacionEstado": "fabricacion_pendiente",
     "listaParaProbar": false,
     "nombre": "AL-42",
-    "perfiles": "5/5",
+    "perfiles": "11/11",
     "tipologia": "proyectante",
   },
   {
@@ -103,20 +103,20 @@ exports[`auditoria-catalogo-lineas-ventora.service resume estados del catálogo 
   },
   {
     "catalogKey": "ventora:serie-42-proyectante-camara",
-    "codigos": 6,
+    "codigos": 10,
     "fabricacionEstado": "fabricacion_pendiente",
     "listaParaProbar": false,
     "nombre": "Serie 42 — Proyectante con cámara",
-    "perfiles": "0/8",
+    "perfiles": "11/11",
     "tipologia": "proyectante",
   },
   {
     "catalogKey": "ventora:serie-42-proyectante-sin-camara",
-    "codigos": 6,
+    "codigos": 10,
     "fabricacionEstado": "fabricacion_pendiente",
     "listaParaProbar": false,
     "nombre": "Serie 42 — Proyectante sin cámara",
-    "perfiles": "0/8",
+    "perfiles": "11/11",
     "tipologia": "proyectante",
   },
   {

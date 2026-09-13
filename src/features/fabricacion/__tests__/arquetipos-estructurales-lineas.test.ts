@@ -168,4 +168,40 @@ describe("arquetipos estructurales de líneas comerciales", () => {
       expect.arrayContaining(["Bisagra Udinese 3200", "Cerradura ISEO (inox)"])
     );
   });
+
+  it("crea AL-42 con identidad separada para normal, cámara y sin cámara", () => {
+    const cases = [
+      ["ventora:l42", "normal", "4201"],
+      ["ventora:serie-42-proyectante-camara", "con_camara", "4231"],
+      ["ventora:serie-42-proyectante-sin-camara", "sin_camara", "4201"],
+    ] as const;
+
+    for (const [catalogKey, variant, frameCode] of cases) {
+      const recipe = crearRecetaEstructuralParaLineaComercial({
+        catalogKey,
+        lineName: "Serie 42",
+        createId: (() => {
+          let n = 0;
+          return () => `${variant}-${++n}`;
+        })(),
+      });
+
+      expect(recipe?.identidad).toMatchObject({
+        tipologia: "proyectante",
+        hojas: 1,
+        variante: variant,
+      });
+      expect(recipe?.perfiles.filter((profile) => profile.codigoPerfil === frameCode)).toHaveLength(2);
+      expect(recipe?.perfiles.filter((profile) => profile.codigoPerfil === "4202")).toHaveLength(2);
+      expect(recipe?.perfiles.find((profile) => profile.codigoPerfil === "4202" && profile.reglaMedida.base === "ancho_por_hoja")?.reglaMedida.ajusteMm).toBe(-136);
+      expect(recipe?.perfiles.find((profile) => profile.codigoPerfil === "4202" && profile.reglaMedida.base === "alto_por_hoja")?.reglaMedida.ajusteMm).toBe(-123);
+      expect(recipe?.vidrios.map((glass) => glass.nombre)).toEqual([
+        "Monolítico 3 mm",
+        "Monolítico 4 mm",
+        "Monolítico 5 mm",
+        "Termopanel DVH 22 mm (4-12-4)",
+        "Termopanel DVH 22 mm (5-12-5)",
+      ]);
+    }
+  });
 });

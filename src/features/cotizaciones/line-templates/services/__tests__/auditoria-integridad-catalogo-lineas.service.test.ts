@@ -83,7 +83,7 @@ describe("auditoria integridad catalogo lineas", () => {
     expect(al42?.nomenclaturaAmbigua).toBe(false);
 
     expect(al42?.codigosReferenciales).toEqual(
-      expect.arrayContaining(["4202", "4203", "4206", "4209", "4229", "4231"])
+      expect.arrayContaining(["4201", "4202", "4204", "4206", "4209", "4229", "4231", "4220", "4230", "4250"])
     );
 
 
