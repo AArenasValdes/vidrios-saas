@@ -5,6 +5,7 @@ import {
 } from "@/features/cotizaciones/line-templates/services/catalogo-usar-base-ventora.service";
 import {
   crearRecetaPlantillaVentoraProyectante,
+  crearRecetaSerie42Proyectante,
   PLANTILLAS_VENTORA_PROYECTANTE,
 } from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
 
@@ -77,5 +78,50 @@ describe("plantillas Ventora L32 / L42", () => {
     });
     expect(procedencia.procedencia).toBe("plantilla_verificada");
     expect(recipeInput.definition.perfiles[0]?.codigoPerfil).toBe("3201");
+  });
+
+  it("crea la nueva línea L42 normal con la receta proyectante de 6 reglas", () => {
+    const recipe = crearRecetaSerie42Proyectante({
+      variant: "normal",
+      lineName: "Serie 42",
+      createId: (() => {
+        let next = 0;
+        return () => `l42-${next++}`;
+      })(),
+    });
+
+    expect(recipe.perfiles.map((profile) => profile.codigoPerfil)).toEqual([
+      "4201", "4201", "4202", "4202", "4229", "4229",
+    ]);
+    expect(recipe.perfiles.map((profile) => profile.reglaMedida.ajusteMm)).toEqual([
+      0, 0, -18, -18, -90, -90,
+    ]);
+    expect(recipe.vidrios).toHaveLength(1);
+    expect(recipe.perfiles.some((profile) => ["4206", "4209", "4204"].includes(profile.codigoPerfil))).toBe(false);
+    expect(recipe.perfiles.every((profile) =>
+      !(profile.datosPendientes ?? []).some((detail) => /descuento/i.test(detail))
+    )).toBe(true);
+  });
+
+  it("el flujo de usar plantilla L42 no vuelve a llamar la receta antigua", () => {
+    const l42 = listarPlantillasVerificadasVentoraParaCatalogo().find(
+      (entry) => entry.plantillaVerificadaId === "L42"
+    );
+    expect(l42).toBeTruthy();
+
+    const recipeInput = buildFabricationRecipeInputFromInicioRapido({
+      item: l42!,
+      lineTemplateId: 317,
+      lineName: "Serie 42",
+      createId: (() => {
+        let next = 0;
+        return () => `l42-flow-${next++}`;
+      })(),
+    });
+
+    expect(recipeInput.definition.perfiles.map((profile) => profile.codigoPerfil)).toEqual([
+      "4201", "4201", "4202", "4202", "4229", "4229",
+    ]);
+    expect(recipeInput.definition.vidrios).toHaveLength(1);
   });
 });

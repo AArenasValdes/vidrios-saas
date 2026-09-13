@@ -14,6 +14,7 @@ import {
 } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
 import {
   crearRecetaPlantillaVentoraProyectante,
+  crearRecetaSerie42Proyectante,
   type PlantillaVentoraProyectanteId,
 } from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
@@ -87,6 +88,12 @@ function resolveReferenceRecipe(
   const configuracionComercial = meta.lineConfiguration?.toLowerCase() ?? "";
   const esCorrederaComercial = configuracionComercial.includes("corredera");
   if (plantillaProyectante && !esCorrederaComercial) {
+    if (plantillaProyectante === "L42") {
+      return crearRecetaSerie42Proyectante({
+        variant: "normal",
+        lineName: line.nombre,
+      });
+    }
     return crearRecetaPlantillaVentoraProyectante(plantillaProyectante);
   }
 

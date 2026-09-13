@@ -47,7 +47,7 @@ export async function repararBorradoresProyectantes(
         source_reference: isSerie3200
           ? "ventora-serie-3200:catalogo-2026-09-13"
           : isSerie42
-            ? `ventora-serie-42:${definition.identidad.variante}:catalogo-2026-09-13`
+            ? `ventora-serie-42:${definition.identidad.variante}:catalogo-2026-09-13-v2`
             : isSerieS33
               ? `ventora-serie-s33:${definition.identidad.variante}:catalogo-2026-09-13`
             : "ventora-proyectante:catalogo-2026-09-13",

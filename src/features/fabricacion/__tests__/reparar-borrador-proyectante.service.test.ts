@@ -65,6 +65,60 @@ describe("reparación conservadora de borradores AL-32/AL-42", () => {
     expect(recipe?.perfiles.every((profile) => profile.reglaCantidad.cantidad === 2)).toBe(true);
   });
 
+  it("repara la receta AL-42 persistida con la referencia v1 aunque ya no coincida el JSON", () => {
+    const row = {
+      ...seed("proyectante"),
+      source_reference: "ventora-serie-42:normal:catalogo-2026-09-13",
+      definition: crearRecetaPlantillaVentoraProyectante("L42", {
+        lineName: "Serie 42",
+        createId: (() => {
+          let id = 0;
+          return () => `old-l42-v1-${++id}`;
+        })(),
+      }),
+    };
+
+    const recipe = prepararReparacionBorradorProyectante("ventora:l42", row);
+
+    expect(recipe?.perfiles.map((profile) => profile.codigoPerfil)).toEqual([
+      "4201", "4201", "4202", "4202", "4229", "4229",
+    ]);
+    expect(recipe?.perfiles.map((profile) => profile.reglaMedida.ajusteMm)).toEqual([
+      0, 0, -18, -18, -90, -90,
+    ]);
+    expect(recipe?.vidrios).toHaveLength(1);
+  });
+
+  it("no reemplaza la receta AL-42 si el taller cambió un código de la firma vieja", () => {
+    const row = {
+      ...seed("proyectante"),
+      source_reference: "ventora-serie-42:normal:catalogo-2026-09-13",
+      definition: crearRecetaPlantillaVentoraProyectante("L42"),
+    };
+    const definition = fabricacionRecetaSchema.parse(row.definition);
+    definition.perfiles[0].codigoPerfil = "4201-PROPIO";
+
+    expect(
+      prepararReparacionBorradorProyectante("ventora:l42", {
+        ...row,
+        definition,
+      })
+    ).toBeNull();
+  });
+
+  it("no vuelve a reparar la receta AL-42 ya migrada a v2", () => {
+    const row = {
+      ...seed("proyectante"),
+      source_reference: "ventora-serie-42:normal:catalogo-2026-09-13-v2",
+      definition: crearRecetaEstructuralParaLineaComercial({
+        catalogKey: "ventora:l42",
+        lineName: "Serie 42",
+      })!,
+    };
+
+    expect(prepararReparacionBorradorProyectante("ventora:l42", row)).toBeNull();
+  });
+
   it("repara la precarga genérica vieja de Serie 3200 con las variantes de bastidor", () => {
     const row = {
       ...seed("proyectante"),

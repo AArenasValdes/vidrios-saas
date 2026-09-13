@@ -42,6 +42,7 @@ describe("reparación persistida por taller", () => {
       ["eq", "id", row.id], ["eq", "line_template_id", 42], ["eq", "updated_at", row.updated_at],
       ["eq", "definition", JSON.stringify(row.definition)], ["eq", "status", "draft"],
       ["update", expect.objectContaining({ typology: "proyectante", leaves_count: 1,
+        source_reference: "ventora-serie-42:normal:catalogo-2026-09-13-v2",
         definition: expect.objectContaining({ identidad: expect.objectContaining({ tipologia: "proyectante" }) }) })],
     ]));
   });

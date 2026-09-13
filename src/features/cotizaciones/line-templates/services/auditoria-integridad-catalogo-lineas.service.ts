@@ -12,7 +12,10 @@ import type { CreateCotizacionLineTemplateInput } from "@/features/cotizaciones/
 import type { LineProfileReference } from "@/features/cotizaciones/line-templates/types/line-profile-references";
 import { CATALOG_KEY_TO_ARQUETIPO } from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
 import { PLANTILLAS_VENTORA_PROYECTANTE } from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
-import { crearRecetaPlantillaVentoraProyectante } from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
+import {
+  crearRecetaPlantillaVentoraProyectante,
+  crearRecetaSerie42Proyectante,
+} from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
 
 export type CodigoPerfilOrigen =
   | "receta_plantilla_corredera"
@@ -163,8 +166,10 @@ function hasCodedWorkshopProfiles(catalogKey: string): boolean {
   return collectReferentialCodes(catalogKey).length > 0;
 }
 
-function collectProyectantePlantillaCodes(plantillaId: "L32" | "L42"): string[] {
-  const receta = crearRecetaPlantillaVentoraProyectante(plantillaId);
+function collectProyectantePlantillaCodes(plantillaId: "L32" | "L42"): string[] {
+  const receta = plantillaId === "L42"
+    ? crearRecetaSerie42Proyectante({ variant: "normal", lineName: plantillaId })
+    : crearRecetaPlantillaVentoraProyectante(plantillaId);
   return receta.perfiles
     .map((profile) => profile.codigoPerfil?.trim())
     .filter((code): code is string => Boolean(code));

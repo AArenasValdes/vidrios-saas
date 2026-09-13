@@ -3,7 +3,6 @@ import { fabricacionRecetaSchema } from "@/features/fabricacion/schemas/fabricac
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
 import { enriquecerRecetaDesdeCatalogo } from "@/features/fabricacion/services/enriquecer-receta-desde-catalogo.service";
 import { listVentoraCatalogKeysWithProfileReferences } from "@/features/cotizaciones/line-templates/fixtures/ventora-profile-references";
-import { crearRecetaPlantillaVentoraProyectante } from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
 
 export type BorradorProyectanteRow = {
   id: string;
@@ -17,8 +16,74 @@ export type BorradorProyectanteRow = {
   updated_at: string;
 };
 
-// Solo ignora identificadores aleatorios y el estado normalizado al guardar.
-// Cualquier código, medida, cantidad, nota o configuración del taller impide reemplazarlo.
+const SERIE_42_CATALOG_KEYS = new Set([
+  "ventora:l42",
+  "ventora:serie-42-proyectante-camara",
+  "ventora:serie-42-proyectante-sin-camara",
+]);
+
+const SERIE_42_LEGACY_SOURCE_REFERENCES = new Set([
+  "ventora-proyectante:catalogo-2026-09-13",
+  "ventora-serie-42:normal:catalogo-2026-09-13",
+]);
+
+const SERIE_42_LEGACY_PROFILE_COUNTS: Record<string, number> = {
+  "4201": 2,
+  "4202": 2,
+  "4204": 1,
+  "4206": 2,
+  "4209": 2,
+  "4229": 2,
+};
+
+const SERIE_42_LEGACY_FIVE_PROFILE_COUNTS: Record<string, number> = {
+  "4202": 1,
+  "4204": 1,
+  "4206": 1,
+  "4209": 1,
+  "4229": 1,
+};
+
+function hasProfileCodeCounts(
+  recipe: FabricacionReceta,
+  expected: Record<string, number>
+): boolean {
+  const actual = recipe.perfiles.reduce<Record<string, number>>((counts, profile) => {
+    const code = profile.codigoPerfil?.trim();
+    if (code) counts[code] = (counts[code] ?? 0) + 1;
+    return counts;
+  }, {});
+
+  const expectedCodes = Object.keys(expected);
+  return (
+    Object.keys(actual).length === expectedCodes.length &&
+    expectedCodes.every((code) => actual[code] === expected[code])
+  );
+}
+
+/**
+ * Identifica la precarga vieja de AL-42 por su firma técnica, no por UUIDs ni
+ * por una comparación JSON completa. Un cambio de código/cantidad del taller
+ * rompe la firma y deja la receta intacta.
+ */
+function isLegacySerie42Seed(
+  catalogKey: string,
+  sourceReference: string | null,
+  recipe: FabricacionReceta
+): boolean {
+  if (!SERIE_42_CATALOG_KEYS.has(catalogKey)) return false;
+  if (!SERIE_42_LEGACY_SOURCE_REFERENCES.has(sourceReference ?? "")) return false;
+  return (
+    recipe.identidad.tipologia === "proyectante" &&
+    recipe.identidad.hojas === 1 &&
+    (recipe.identidad.variante === "estandar" ||
+      recipe.identidad.variante === "normal") &&
+    (hasProfileCodeCounts(recipe, SERIE_42_LEGACY_PROFILE_COUNTS) ||
+      hasProfileCodeCounts(recipe, SERIE_42_LEGACY_FIVE_PROFILE_COUNTS))
+  );
+}
+
+// La comparación histórica solo ignora identificadores aleatorios y estado.
 function comparable(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(comparable);
   if (!value || typeof value !== "object") return value;
@@ -37,11 +102,17 @@ export function prepararReparacionBorradorCatalogo(
   const isPreviousProjectingSeed =
     (catalogKey === "ventora:l32" || catalogKey === "ventora:l42") &&
     sourceReference === "ventora-proyectante:catalogo-2026-09-13";
-  if (!sourceReference?.startsWith("ventora-arquetipo:") && !isPreviousProjectingSeed) return null;
   const parsed = fabricacionRecetaSchema.safeParse(row.definition);
   if (!parsed.success) return null;
-  const archetypeId = sourceReference.startsWith("ventora-arquetipo:")
-    ? sourceReference.slice("ventora-arquetipo:".length)
+  const isLegacySerie42 = isLegacySerie42Seed(catalogKey ?? "", sourceReference, parsed.data);
+  if (
+    !sourceReference?.startsWith("ventora-arquetipo:") &&
+    !isPreviousProjectingSeed &&
+    !isLegacySerie42
+  ) return null;
+  const isArchetypeSource = sourceReference?.startsWith("ventora-arquetipo:") ?? false;
+  const archetypeId = isArchetypeSource
+    ? sourceReference!.slice("ventora-arquetipo:".length)
     : "proyectante";
   if (!(archetypeId in ARQUETIPOS_ESTRUCTURALES)) return null;
   const original = fabricacionRecetaSchema.parse(crearRecetaDesdeArquetipoEstructural({
@@ -55,21 +126,9 @@ export function prepararReparacionBorradorCatalogo(
   });
   const parsedComparable = JSON.stringify(comparable(parsed.data));
   const legacyDefinitions = [original, legacyCatalogDefinition];
-  if (
-    catalogKey === "ventora:l42" ||
-    catalogKey === "ventora:serie-42-proyectante-camara" ||
-    catalogKey === "ventora:serie-42-proyectante-sin-camara"
-  ) {
-    legacyDefinitions.push(
-      crearRecetaPlantillaVentoraProyectante("L42", {
-        lineName: row.line_name,
-        createId: () => "seed",
-      })
-    );
-  }
   const isUntouchedSeed = legacyDefinitions.some(
     (candidate) => parsedComparable === JSON.stringify(comparable(candidate))
-  );
+  ) || isLegacySerie42;
   if (!isUntouchedSeed) return null;
   const replacement = crearRecetaEstructuralParaLineaComercial({ catalogKey, lineName: row.line_name });
   return replacement ? {

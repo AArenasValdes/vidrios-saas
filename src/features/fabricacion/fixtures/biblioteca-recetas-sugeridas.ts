@@ -1,5 +1,6 @@
 import {
   crearRecetaPlantillaVentoraProyectante,
+  crearRecetaSerie42Proyectante,
   PLANTILLAS_VENTORA_PROYECTANTE,
 } from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
 import {
@@ -166,7 +167,13 @@ const VENTORA_PROYECTANTE_TEMPLATES: BibliotecaRecetaSugerida[] = (
   tipologia: "proyectante",
   estado: "sugerida",
   motivoPendiente: null,
-  crearDefinicion: () => crearRecetaPlantillaVentoraProyectante(plantillaId),
+  crearDefinicion: () =>
+    plantillaId === "L42"
+      ? crearRecetaSerie42Proyectante({
+          variant: "normal",
+          lineName: plantillaId,
+        })
+      : crearRecetaPlantillaVentoraProyectante(plantillaId),
 }));
 
 export const BIBLIOTECA_RECETAS_PRIORIZADAS: BibliotecaRecetaSugerida[] = [

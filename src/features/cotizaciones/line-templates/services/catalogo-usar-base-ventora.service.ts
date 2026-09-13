@@ -9,11 +9,13 @@ import {
 } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
 import {
   crearRecetaPlantillaVentoraProyectante,
+  crearRecetaSerie42Proyectante,
   PLANTILLAS_VENTORA_PROYECTANTE,
   type PlantillaVentoraProyectanteId,
 } from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
 import { buildProcedenciaPersistence } from "@/features/fabricacion/types/fabricacion-receta-procedencia";
 import type { CreateFabricationRecipeInput } from "@/features/fabricacion/types/fabricacion-persistence";
+import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
 import type { CreateCotizacionLineTemplateInput } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { VENTORA_LINE_CATALOG_KEY_PREFIX } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
@@ -152,6 +154,25 @@ function resolveVentoraPlantillaId(
   return normalized ? normalized.toUpperCase() : null;
 }
 
+function crearRecetaPlantillaProyectanteVentora(input: {
+  plantillaId: PlantillaVentoraProyectanteId;
+  lineName: string;
+  createId?: () => string;
+}): FabricacionReceta {
+  if (input.plantillaId === "L42") {
+    return crearRecetaSerie42Proyectante({
+      variant: "normal",
+      lineName: input.lineName,
+      createId: input.createId,
+    });
+  }
+
+  return crearRecetaPlantillaVentoraProyectante(input.plantillaId, {
+    createId: input.createId,
+    lineName: input.lineName,
+  });
+}
+
 /** Oculta plantillas Ventora ya presentes en el catálogo comercial de la org. */
 export function filterInicioRapidoCatalogoForExistingTemplates(
   items: CatalogoInicioRapidoItem[],
@@ -260,13 +281,11 @@ export function buildFabricationRecipeInputFromInicioRapido(input: {
         })
       : input.item.kind === "plantilla_verificada" &&
           input.item.plantillaVerificadaId
-        ? crearRecetaPlantillaVentoraProyectante(
-            input.item.plantillaVerificadaId,
-            {
-              createId: input.createId,
-              lineName: input.lineName,
-            }
-          )
+        ? crearRecetaPlantillaProyectanteVentora({
+            plantillaId: input.item.plantillaVerificadaId,
+            createId: input.createId,
+            lineName: input.lineName,
+          })
       : crearBaseTipologicaVentora({
           tipologia: input.item.tipologia,
           hojas: input.item.hojas,
