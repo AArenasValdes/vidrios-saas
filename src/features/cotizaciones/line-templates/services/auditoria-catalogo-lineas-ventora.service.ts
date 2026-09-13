@@ -13,7 +13,7 @@ import {
   type PlantillaVentoraCorrederaId,
 } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
 import {
-  crearRecetaPlantillaVentoraProyectante,
+  crearRecetaSerie32ProyectanteNormal,
   crearRecetaSerie42Proyectante,
   type PlantillaVentoraProyectanteId,
 } from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
@@ -94,7 +94,7 @@ function resolveReferenceRecipe(
         lineName: line.nombre,
       });
     }
-    return crearRecetaPlantillaVentoraProyectante(plantillaProyectante);
+    return crearRecetaSerie32ProyectanteNormal({ lineName: line.nombre });
   }
 
   return crearRecetaEstructuralParaLineaComercial({

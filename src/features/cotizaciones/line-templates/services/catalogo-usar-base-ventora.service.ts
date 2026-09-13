@@ -8,7 +8,7 @@ import {
   type PlantillaVentoraCorrederaId,
 } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
 import {
-  crearRecetaPlantillaVentoraProyectante,
+  crearRecetaSerie32ProyectanteNormal,
   crearRecetaSerie42Proyectante,
   PLANTILLAS_VENTORA_PROYECTANTE,
   type PlantillaVentoraProyectanteId,
@@ -167,7 +167,7 @@ function crearRecetaPlantillaProyectanteVentora(input: {
     });
   }
 
-  return crearRecetaPlantillaVentoraProyectante(input.plantillaId, {
+  return crearRecetaSerie32ProyectanteNormal({
     createId: input.createId,
     lineName: input.lineName,
   });

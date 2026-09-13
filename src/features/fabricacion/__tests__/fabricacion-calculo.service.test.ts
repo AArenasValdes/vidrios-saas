@@ -28,6 +28,88 @@ function findPerfil(resultado: ReturnType<typeof calcularCubicacionYPauta>, func
 }
 
 describe("motor determinístico de fabricación", () => {
+  it("calcula AL-32 proyectante normal 1H con seis reglas y vidrio monolítico", () => {
+    const receta = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:l32",
+      lineName: "Serie 32",
+      createId: (() => {
+        let id = 0;
+        return () => `al32-${++id}`;
+      })(),
+    })!;
+    const resultado = calcularCubicacionYPauta(receta, {
+      anchoTotalMm: 1000,
+      altoTotalMm: 1200,
+      cantidad: 1,
+      hojas: 1,
+      modulos: 1,
+    });
+
+    expect(resultado.calculable).toBe(true);
+    expect(resultado.perfiles).toHaveLength(6);
+    expect(resultado.perfiles.map((profile) => [profile.codigoPerfil, profile.medidaMm, profile.cantidadPiezas])).toEqual([
+      ["3201", 1000, 2],
+      ["3201", 1200, 2],
+      ["3202", 977, 2],
+      ["3202", 1177, 2],
+      ["3208", 915, 2],
+      ["3208", 1115, 2],
+    ]);
+    expect(resultado.vidrios).toEqual([
+      expect.objectContaining({ anchoMm: 906, altoMm: 1106, cantidadPiezas: 1 }),
+    ]);
+    expect(resultado.perfiles.map((profile) => profile.codigoPerfil)).not.toEqual(
+      expect.arrayContaining(["3204", "3205"])
+    );
+  });
+
+  it("cambiar la tira de AL-32 no cambia las medidas técnicas", () => {
+    const receta = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:l32",
+      lineName: "Serie 32",
+    })!;
+    const entrada = {
+      anchoTotalMm: 1000,
+      altoTotalMm: 1200,
+      cantidad: 1,
+      hojas: 1,
+      modulos: 1,
+    } satisfies FabricacionEntradaCalculo;
+    const resultado6000 = calcularCubicacionYPauta(receta, entrada);
+    const resultado5950 = calcularCubicacionYPauta({
+      ...receta,
+      perfiles: receta.perfiles.map((profile) => ({ ...profile, largoComercialMm: 5950 })),
+    }, entrada);
+    const resultado5900 = calcularCubicacionYPauta({
+      ...receta,
+      perfiles: receta.perfiles.map((profile) => ({ ...profile, largoComercialMm: 5900 })),
+    }, entrada);
+
+    expect(resultado5950.perfiles).toEqual(resultado6000.perfiles);
+    expect(resultado5900.perfiles).toEqual(resultado6000.perfiles);
+    expect(construirPautaBarrasFabricacion({ receta, resultado: resultado6000 }).barras.every((bar) => bar.largoComercialMm === 6000)).toBe(true);
+    expect(construirPautaBarrasFabricacion({ receta: { ...receta, perfiles: receta.perfiles.map((profile) => ({ ...profile, largoComercialMm: 5950 })) }, resultado: resultado5950 }).barras.every((bar) => bar.largoComercialMm === 5950)).toBe(true);
+    expect(construirPautaBarrasFabricacion({ receta: { ...receta, perfiles: receta.perfiles.map((profile) => ({ ...profile, largoComercialMm: 5900 })) }, resultado: resultado5900 }).barras.every((bar) => bar.largoComercialMm === 5900)).toBe(true);
+  });
+
+  it("rechaza largos no positivos de AL-32 sin generar piezas inválidas", () => {
+    const receta = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:l32",
+      lineName: "Serie 32",
+    })!;
+    const resultado = calcularCubicacionYPauta(receta, {
+      anchoTotalMm: 90,
+      altoTotalMm: 90,
+      cantidad: 1,
+      hojas: 1,
+      modulos: 1,
+    });
+
+    expect(resultado.calculable).toBe(false);
+    expect(resultado.advertencias.some((warning) => warning.codigo === "MEDIDA_INVALIDA")).toBe(true);
+    expect(resultado.perfiles.some((profile) => profile.medidaMm <= 0)).toBe(false);
+  });
+
   it("calcula la receta estándar AL-42 1H con las cantidades y descuentos aportados", () => {
     const receta = crearRecetaEstructuralParaLineaComercial({
       catalogKey: "ventora:l42",

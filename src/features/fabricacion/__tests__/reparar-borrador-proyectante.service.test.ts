@@ -18,14 +18,17 @@ describe("reparación conservadora de borradores AL-32/AL-42", () => {
     expect(resolveArquetipoEstructuralId(input)).toBe("proyectante");
     const recipe = crearRecetaEstructuralParaLineaComercial(input)!;
     expect(recipe.identidad).toMatchObject({ tipologia: "proyectante", hojas: 1 });
-    expect(recipe.perfiles).toHaveLength(catalogKey === "ventora:l32" ? 5 : 6);
+    expect(recipe.perfiles).toHaveLength(6);
     expect(recipe.perfiles.every((profile) => profile.codigoPerfil)).toBe(true);
     if (catalogKey === "ventora:l42") {
       expect(recipe.perfiles.some((profile) => profile.reglaMedida.ajusteMm === -18)).toBe(true);
       expect(recipe.perfiles.some((profile) => profile.reglaMedida.ajusteMm === -90)).toBe(true);
       expect(recipe.perfiles.every((profile) => !["4209", "4204", "4206"].includes(profile.codigoPerfil))).toBe(true);
     } else {
-      expect(recipe.perfiles.every((profile) => profile.reglaMedida.ajusteMm == null)).toBe(true);
+      expect(recipe.perfiles.map((profile) => profile.reglaMedida.ajusteMm)).toEqual([
+        0, 0, -23, -23, -85, -85,
+      ]);
+      expect(recipe.perfiles.some((profile) => ["3204", "3205"].includes(profile.codigoPerfil))).toBe(false);
     }
     expect(fabricacionRecetaSchema.safeParse(recipe).success).toBe(true);
   });
@@ -40,6 +43,47 @@ describe("reparación conservadora de borradores AL-32/AL-42", () => {
       "4201", "4201", "4202", "4202", "4229", "4229",
     ]);
     expect(prepararReparacionBorradorProyectante("ventora:l42", { ...row, definition: recipe })).toBeNull();
+  });
+
+  it("repara la precarga L32 de cinco perfiles con la receta normal de seis reglas", () => {
+    const row = {
+      ...seed("proyectante"),
+      line_name: "Serie 32",
+      source_reference: "ventora-proyectante:catalogo-2026-09-13",
+      definition: crearRecetaPlantillaVentoraProyectante("L32", {
+        lineName: "Serie 32",
+        createId: (() => {
+          let id = 0;
+          return () => `old-l32-${++id}`;
+        })(),
+      }),
+    };
+
+    // Construimos explícitamente la firma anterior para verificar la migración.
+    row.definition.perfiles = [
+      row.definition.perfiles[0],
+      row.definition.perfiles[2],
+      row.definition.perfiles[4],
+      { ...row.definition.perfiles[3], codigoPerfil: "3204" },
+      { ...row.definition.perfiles[5], codigoPerfil: "3205" },
+    ];
+
+    const recipe = prepararReparacionBorradorProyectante("ventora:l32", row);
+
+    expect(recipe?.identidad).toMatchObject({ tipologia: "proyectante", hojas: 1, variante: "normal" });
+    expect(recipe?.perfiles.map((profile) => profile.codigoPerfil)).toEqual([
+      "3201", "3201", "3202", "3202", "3208", "3208",
+    ]);
+    expect(recipe?.perfiles.map((profile) => profile.reglaMedida.ajusteMm)).toEqual([
+      0, 0, -23, -23, -85, -85,
+    ]);
+    expect(recipe?.vidrios[0]?.reglaAncho.ajusteMm).toBe(-94);
+    expect(recipe?.vidrios[0]?.reglaAlto.ajusteMm).toBe(-94);
+    expect(prepararReparacionBorradorProyectante("ventora:l32", {
+      ...row,
+      source_reference: "ventora-serie-32:normal:catalogo-2026-09-13-v2",
+      definition: recipe,
+    })).toBeNull();
   });
 
   it("repara la precarga AL-42 de cinco piezas creada por la versión anterior", () => {

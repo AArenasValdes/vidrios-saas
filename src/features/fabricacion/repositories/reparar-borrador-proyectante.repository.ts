@@ -33,6 +33,7 @@ export async function repararBorradoresProyectantes(
     if (testError) throw testError;
     if (tests?.length) continue;
     const isSerie3200 = line?.catalog_key === "ventora:serie-3200-puerta-abatible-1h";
+    const isSerie32 = line?.catalog_key === "ventora:l32";
     const isSerie42 = line?.catalog_key === "ventora:l42" ||
       line?.catalog_key === "ventora:serie-42-proyectante-camara" ||
       line?.catalog_key === "ventora:serie-42-proyectante-sin-camara";
@@ -46,6 +47,8 @@ export async function repararBorradoresProyectantes(
         variant: definition.identidad.variante,
         source_reference: isSerie3200
           ? "ventora-serie-3200:catalogo-2026-09-13"
+          : isSerie32
+            ? "ventora-serie-32:normal:catalogo-2026-09-13-v2"
           : isSerie42
             ? `ventora-serie-42:${definition.identidad.variante}:catalogo-2026-09-13-v2`
             : isSerieS33

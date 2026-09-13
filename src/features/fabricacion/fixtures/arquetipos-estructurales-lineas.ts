@@ -4,7 +4,7 @@ import {
 } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
 import { VENTORA_LARGO_COMERCIAL_PRESET_MM } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import {
-  crearRecetaPlantillaVentoraProyectante,
+  crearRecetaSerie32ProyectanteNormal,
   crearRecetaSerie42Proyectante,
   type Serie42ProyectanteVariantId,
 } from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
@@ -795,10 +795,10 @@ export function crearRecetaEstructuralParaLineaComercial(input: {
     });
   }
   if (input.catalogKey === "ventora:l32") {
-    return crearRecetaPlantillaVentoraProyectante(
-      "L32",
-      { lineName: input.lineName, createId: input.createId }
-    );
+    return crearRecetaSerie32ProyectanteNormal({
+      lineName: input.lineName,
+      createId: input.createId,
+    });
   }
   if (input.catalogKey === "ventora:serie-3200-puerta-abatible-1h") {
     const createId =

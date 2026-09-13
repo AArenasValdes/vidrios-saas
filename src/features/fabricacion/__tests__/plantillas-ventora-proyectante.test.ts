@@ -10,22 +10,32 @@ import {
 } from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
 
 describe("plantillas Ventora L32 / L42", () => {
-  it("L32 crea perfiles base y opcionales con códigos persistidos", () => {
+  it("L32 crea la receta normal de seis reglas y excluye variantes opcionales", () => {
     const receta = crearRecetaPlantillaVentoraProyectante("L32");
 
     expect(receta.estado).toBe("ejemplo_no_validado");
     expect(receta.identidad.tipologia).toBe("proyectante");
     expect(receta.perfiles.map((p) => [p.codigoPerfil, p.funcion, p.requerido])).toEqual([
-      ["3201", "Marco simple", true],
-      ["3202", "Hoja proyectante", true],
+      ["3201", "Marco", true],
+      ["3201", "Marco", true],
+      ["3202", "Hoja", true],
+      ["3202", "Hoja", true],
       ["3208", "Junquillo", true],
-      ["3204", "Palillo / Pilar T", false],
-      ["3205", "Marco cámara de agua", false],
+      ["3208", "Junquillo", true],
     ]);
-    expect(
-      receta.perfiles.every((profile) => profile.reglaMedida.ajusteMm == null)
-    ).toBe(true);
-    expect(receta.notasValidacion.join(" ")).toMatch(/-2,1/);
+    expect(receta.perfiles.map((profile) => profile.reglaMedida.ajusteMm)).toEqual([
+      0, 0, -23, -23, -85, -85,
+    ]);
+    expect(receta.perfiles.every((profile) => profile.reglaCantidad.cantidad === 2)).toBe(true);
+    expect(receta.perfiles.some((profile) => ["3204", "3205"].includes(profile.codigoPerfil))).toBe(false);
+    expect(receta.vidrios[0]).toMatchObject({
+      reglaAncho: { base: "ancho_por_hoja", ajusteMm: -94 },
+      reglaAlto: { base: "alto_por_hoja", ajusteMm: -94 },
+      reglaCantidad: { cantidad: 1 },
+    });
+    expect(receta.perfiles.every((profile) =>
+      !(profile.datosPendientes ?? []).some((detail) => /descuento/i.test(detail))
+    )).toBe(true);
   });
 
   it("L42 crea perfiles, junquillos alternativos y accesorio 4230", () => {

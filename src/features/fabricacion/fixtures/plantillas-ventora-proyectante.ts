@@ -8,7 +8,8 @@ import { VENTORA_LARGO_COMERCIAL_PRESET_MM } from "@/features/fabricacion/servic
 
 /**
  * Plantillas Ventora documentadas · Proyectante (L32 / L42).
- * Perfiles y códigos habituales precargados; sin descuentos ni fórmulas de taller.
+ * Perfiles y códigos habituales precargados. L32 usa su receta normal
+ * documentada; L42 conserva su plantilla pendiente de calibración.
  */
 
 export type PlantillaVentoraProyectanteId = "L32" | "L42";
@@ -31,7 +32,7 @@ export const PLANTILLAS_VENTORA_PROYECTANTE: Record<
     title: "L32 · Proyectante",
     sourceReferenceId: "l32:chile",
     pendingShopNote:
-      "Pendiente validar medidas de taller. Referencia documentada hoja -2,1 sin implementar.",
+      "Descuentos técnicos cargados para la receta normal. Validar una fabricación real antes de activar.",
   },
   L42: {
     id: "L42",
@@ -55,68 +56,8 @@ type PerfilPlantillaSeed = {
   observacionesExtra?: string;
 };
 
-const PENDING_DISCOUNT_L32 =
-  "Pendiente validar descuento hoja -2,1 (unidad y aplicación). No usar para calcular.";
 const PENDING_DISCOUNT_L42 =
   "Pendiente validar descuento hoja -1,7 (confirmar mm, dimensión y orden). No usar para calcular.";
-
-const L32_PERFILES: PerfilPlantillaSeed[] = [
-  {
-    codigo: "3201",
-    funcion: "Marco simple",
-    nombre: "Marco simple",
-    grupo: "marco",
-    medida: "ancho_total",
-    cantidadTipo: "fija",
-    cantidad: 1,
-    requerido: true,
-    observacionesExtra:
-      "Marco perimetral habitual L32. Ancho y alto sin descuento documentado pendiente de validar en taller.",
-  },
-  {
-    codigo: "3202",
-    funcion: "Hoja proyectante",
-    nombre: "Hoja proyectante",
-    grupo: "hoja",
-    medida: "ancho_por_hoja",
-    cantidadTipo: "por_hoja",
-    cantidad: 1,
-    requerido: true,
-    observacionesExtra: PENDING_DISCOUNT_L32,
-  },
-  {
-    codigo: "3208",
-    funcion: "Junquillo",
-    nombre: "Junquillo",
-    grupo: "vidrio",
-    medida: "ancho_por_hoja",
-    cantidadTipo: "por_hoja",
-    cantidad: 1,
-    requerido: true,
-  },
-  {
-    codigo: "3204",
-    funcion: "Palillo / Pilar T",
-    nombre: "Palillo / Pilar T",
-    grupo: "composicion",
-    medida: "alto_total",
-    cantidadTipo: "fija",
-    cantidad: 1,
-    requerido: false,
-    observacionesExtra: "Opcional según composición del vano.",
-  },
-  {
-    codigo: "3205",
-    funcion: "Marco cámara de agua",
-    nombre: "Marco cámara de agua",
-    grupo: "composicion",
-    medida: "ancho_total",
-    cantidadTipo: "fija",
-    cantidad: 1,
-    requerido: false,
-    observacionesExtra: "Opcional según composición del vano.",
-  },
-];
 
 const L42_PERFILES: PerfilPlantillaSeed[] = [
   {
@@ -179,14 +120,6 @@ const L42_PERFILES: PerfilPlantillaSeed[] = [
   },
 ];
 
-const PERFILES_BY_PLANTILLA: Record<
-  PlantillaVentoraProyectanteId,
-  PerfilPlantillaSeed[]
-> = {
-  L32: L32_PERFILES,
-  L42: L42_PERFILES,
-};
-
 function mapPerfilSeed(
   seed: PerfilPlantillaSeed,
   createId: () => string
@@ -231,9 +164,16 @@ export function crearRecetaPlantillaVentoraProyectante(
   plantillaId: PlantillaVentoraProyectanteId,
   input?: { createId?: () => string; lineName?: string }
 ): FabricacionReceta {
+  if (plantillaId === "L32") {
+    return crearRecetaSerie32ProyectanteNormal({
+      createId: input?.createId,
+      lineName: input?.lineName,
+    });
+  }
+
   const createId = input?.createId ?? (() => crypto.randomUUID());
   const meta = PLANTILLAS_VENTORA_PROYECTANTE[plantillaId];
-  const seeds = PERFILES_BY_PLANTILLA[plantillaId];
+  const seeds = L42_PERFILES;
   const lineName = input?.lineName?.trim() || meta.label;
 
   const accesorios: FabricacionReceta["accesorios"] =
@@ -314,6 +254,147 @@ export function crearRecetaPlantillaVentoraProyectante(
       meta.pendingShopNote,
       "Ventora prepara los perfiles habituales. Revisa las medidas de fabricación antes de activar.",
       "No está técnicamente validada. Probar medida real antes de activar en el Paso 3.",
+    ],
+  };
+}
+
+/**
+ * Fuente canónica de la receta normal AL-32 proyectante de una hoja.
+ *
+ * La referencia de catálogo también contiene 3204/3205 para otras
+ * composiciones, pero no forman parte de esta receta base. Las reglas de
+ * medida quedan completas para que el editor no solicite descuentos aislados.
+ */
+export function crearRecetaSerie32ProyectanteNormal(input?: {
+  createId?: () => string;
+  lineName?: string;
+}): FabricacionReceta {
+  const createId = input?.createId ?? (() => crypto.randomUUID());
+  const lineName = input?.lineName?.trim() || "Serie 32";
+  const profile = (config: {
+    code: string;
+    name: string;
+    functionName: string;
+    measure: FabricacionBaseMedida;
+    adjustmentMm: number;
+    cut: string;
+  }): FabricacionReceta["perfiles"][number] => ({
+    id: createId(),
+    codigoPerfil: config.code,
+    nombrePerfil: config.name,
+    funcion: config.functionName,
+    largoComercialMm: VENTORA_LARGO_COMERCIAL_PRESET_MM,
+    reglaMedida: {
+      base: config.measure,
+      multiplicador: 1,
+      ajusteMm: config.adjustmentMm,
+    },
+    reglaCantidad: {
+      tipo: "fija",
+      cantidad: 2,
+      multiplicador: 1,
+    },
+    requerido: true,
+    observaciones: [
+      `Pieza: ${config.name}.`,
+      `Serie 32 proyectante normal. Código ${config.code}.`,
+      `Pauta una hoja: ${config.measure.includes("ancho") ? "ancho" : "alto"} ${config.cut}.`,
+      "Descuento documentado para la receta normal; validar una fabricación real antes de activar.",
+    ].join(" "),
+    datosPendientes: ["Validar la receta con una fabricación real"],
+  });
+
+  return {
+    schemaVersion: FABRICACION_RECIPE_SCHEMA_VERSION,
+    version: 1,
+    estado: "ejemplo_no_validado",
+    identidad: {
+      recetaId: createId(),
+      codigo: "L32-PROY-NORMAL-1H",
+      nombre: `${lineName} · Proyectante normal 1H`,
+      tipologia: "proyectante",
+      hojas: 1,
+      modulos: 1,
+      apertura: "proyectante",
+      herraje: null,
+      variante: "normal",
+    },
+    perfiles: [
+      profile({
+        code: "3201",
+        name: "Marco horizontal",
+        functionName: "Marco",
+        measure: "ancho_total",
+        adjustmentMm: 0,
+        cut: "W",
+      }),
+      profile({
+        code: "3201",
+        name: "Marco vertical",
+        functionName: "Marco",
+        measure: "alto_total",
+        adjustmentMm: 0,
+        cut: "H",
+      }),
+      profile({
+        code: "3202",
+        name: "Hoja horizontal",
+        functionName: "Hoja",
+        measure: "ancho_por_hoja",
+        adjustmentMm: -23,
+        cut: "W/hoja − 23",
+      }),
+      profile({
+        code: "3202",
+        name: "Hoja vertical",
+        functionName: "Hoja",
+        measure: "alto_por_hoja",
+        adjustmentMm: -23,
+        cut: "H/hoja − 23",
+      }),
+      profile({
+        code: "3208",
+        name: "Junquillo horizontal",
+        functionName: "Junquillo",
+        measure: "ancho_por_hoja",
+        adjustmentMm: -85,
+        cut: "W/hoja − 85",
+      }),
+      profile({
+        code: "3208",
+        name: "Junquillo vertical",
+        functionName: "Junquillo",
+        measure: "alto_por_hoja",
+        adjustmentMm: -85,
+        cut: "H/hoja − 85",
+      }),
+    ],
+    vidrios: [
+      {
+        id: createId(),
+        nombre: "Vidrio monolítico 4 mm",
+        reglaAncho: { base: "ancho_por_hoja", ajusteMm: -94, multiplicador: 1 },
+        reglaAlto: { base: "alto_por_hoja", ajusteMm: -94, multiplicador: 1 },
+        reglaCantidad: { tipo: "fija", cantidad: 1, multiplicador: 1 },
+        requerido: false,
+        observaciones: "Vidrio simple para AL-32 normal. La línea no admite termopanel.",
+        datosPendientes: ["Validar la composición de vidrio con el taller"],
+      },
+    ],
+    accesorios: [],
+    configuracionCorte: {
+      perdidaCorteMm: null,
+      despunteInicialMm: null,
+      sobranteMinimoAprovechableMm: null,
+      largoComercialDefaultMm: VENTORA_LARGO_COMERCIAL_PRESET_MM,
+    },
+    notasValidacion: [
+      "Receta canónica AL-32 proyectante normal de una hoja.",
+      "Perfiles obligatorios: 2 × 3201, 2 × 3202 y 2 × 3208; no incluye 3204 ni 3205.",
+      "Marco 3201: 2 × W y 2 × H. Hoja 3202: W/hoja − 23 y H/hoja − 23.",
+      "Junquillo 3208: W/hoja − 85 y H/hoja − 85.",
+      "Vidrio monolítico: W/hoja − 94 y H/hoja − 94. No admite termopanel.",
+      "La tira comercial solo modifica barras, sobrantes y pauta; no modifica estas medidas.",
     ],
   };
 }

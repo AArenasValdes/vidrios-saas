@@ -44,6 +44,18 @@ const SERIE_42_LEGACY_FIVE_PROFILE_COUNTS: Record<string, number> = {
   "4229": 1,
 };
 
+const SERIE_32_LEGACY_SOURCE_REFERENCES = new Set([
+  "ventora-proyectante:catalogo-2026-09-13",
+]);
+
+const SERIE_32_LEGACY_PROFILE_COUNTS: Record<string, number> = {
+  "3201": 1,
+  "3202": 1,
+  "3204": 1,
+  "3205": 1,
+  "3208": 1,
+};
+
 function hasProfileCodeCounts(
   recipe: FabricacionReceta,
   expected: Record<string, number>
@@ -83,6 +95,27 @@ function isLegacySerie42Seed(
   );
 }
 
+/**
+ * Identifica la precarga anterior de L32: cinco perfiles codificados, pero
+ * sin cantidades ni descuentos técnicos completos. Solo se migra el borrador
+ * Ventora intacto; una receta validada o editada queda fuera del alcance.
+ */
+function isLegacySerie32Seed(
+  catalogKey: string,
+  sourceReference: string | null,
+  recipe: FabricacionReceta
+): boolean {
+  if (catalogKey !== "ventora:l32") return false;
+  if (!SERIE_32_LEGACY_SOURCE_REFERENCES.has(sourceReference ?? "")) return false;
+  return (
+    recipe.identidad.tipologia === "proyectante" &&
+    recipe.identidad.hojas === 1 &&
+    (recipe.identidad.variante === "estandar" || recipe.identidad.variante === "normal") &&
+    recipe.perfiles.length === 5 &&
+    hasProfileCodeCounts(recipe, SERIE_32_LEGACY_PROFILE_COUNTS)
+  );
+}
+
 // La comparación histórica solo ignora identificadores aleatorios y estado.
 function comparable(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(comparable);
@@ -105,10 +138,12 @@ export function prepararReparacionBorradorCatalogo(
   const parsed = fabricacionRecetaSchema.safeParse(row.definition);
   if (!parsed.success) return null;
   const isLegacySerie42 = isLegacySerie42Seed(catalogKey ?? "", sourceReference, parsed.data);
+  const isLegacySerie32 = isLegacySerie32Seed(catalogKey ?? "", sourceReference, parsed.data);
   if (
     !sourceReference?.startsWith("ventora-arquetipo:") &&
     !isPreviousProjectingSeed &&
-    !isLegacySerie42
+    !isLegacySerie42 &&
+    !isLegacySerie32
   ) return null;
   const isArchetypeSource = sourceReference?.startsWith("ventora-arquetipo:") ?? false;
   const archetypeId = isArchetypeSource
@@ -128,7 +163,7 @@ export function prepararReparacionBorradorCatalogo(
   const legacyDefinitions = [original, legacyCatalogDefinition];
   const isUntouchedSeed = legacyDefinitions.some(
     (candidate) => parsedComparable === JSON.stringify(comparable(candidate))
-  ) || isLegacySerie42;
+  ) || isLegacySerie42 || isLegacySerie32;
   if (!isUntouchedSeed) return null;
   const replacement = crearRecetaEstructuralParaLineaComercial({ catalogKey, lineName: row.line_name });
   return replacement ? {

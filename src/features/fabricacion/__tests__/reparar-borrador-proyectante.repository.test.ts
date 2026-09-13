@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { crearRecetaDesdeArquetipoEstructural } from "../fixtures/arquetipos-estructurales-lineas";
+import { crearRecetaPlantillaVentoraProyectante } from "../fixtures/plantillas-ventora-proyectante";
 import { repararBorradoresProyectantes } from "../repositories/reparar-borrador-proyectante.repository";
 
 const row = {
@@ -44,6 +45,50 @@ describe("reparación persistida por taller", () => {
       ["update", expect.objectContaining({ typology: "proyectante", leaves_count: 1,
         source_reference: "ventora-serie-42:normal:catalogo-2026-09-13-v2",
         definition: expect.objectContaining({ identidad: expect.objectContaining({ tipologia: "proyectante" }) }) })],
+    ]));
+  });
+
+  it("persiste la receta normal de L32 con referencia v2 y sin perfiles opcionales", async () => {
+    const old = crearRecetaPlantillaVentoraProyectante("L32", { lineName: "Serie 32" });
+    const oldDefinition = {
+      ...old,
+      perfiles: [
+        old.perfiles[0],
+        old.perfiles[2],
+        old.perfiles[4],
+        { ...old.perfiles[3], codigoPerfil: "3204" },
+        { ...old.perfiles[5], codigoPerfil: "3205" },
+      ],
+    };
+    const row32 = {
+      ...row,
+      line_name: "Serie 32",
+      source_reference: "ventora-proyectante:catalogo-2026-09-13",
+      definition: oldDefinition,
+    };
+    const { client, queries } = mockClient([
+      { data: [{ id: 42, catalog_key: "ventora:l32" }] },
+      { data: [row32] },
+      { data: [] },
+      { data: [{ id: row32.id }] },
+    ]);
+
+    expect(await repararBorradoresProyectantes(client, 8)).toBe(1);
+    expect(queries[3].calls).toEqual(expect.arrayContaining([
+      ["eq", "organization_id", 8],
+      ["update", expect.objectContaining({
+        source_reference: "ventora-serie-32:normal:catalogo-2026-09-13-v2",
+        typology: "proyectante",
+        leaves_count: 1,
+        variant: "normal",
+        definition: expect.objectContaining({
+          perfiles: expect.arrayContaining([
+            expect.objectContaining({ codigoPerfil: "3201" }),
+            expect.objectContaining({ codigoPerfil: "3202" }),
+            expect.objectContaining({ codigoPerfil: "3208" }),
+          ]),
+        }),
+      })],
     ]));
   });
 

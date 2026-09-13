@@ -32,10 +32,10 @@ exports[`auditoria-catalogo-lineas-ventora.service resume estados del catálogo 
   {
     "catalogKey": "ventora:l32",
     "codigos": 5,
-    "fabricacionEstado": "fabricacion_pendiente",
-    "listaParaProbar": false,
+    "fabricacionEstado": "fabricacion_configurada",
+    "listaParaProbar": true,
     "nombre": "AL-32",
-    "perfiles": "5/5",
+    "perfiles": "6/6",
     "tipologia": "proyectante",
   },
   {
