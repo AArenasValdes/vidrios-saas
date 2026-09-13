@@ -32,10 +32,13 @@ export async function cancelMercadoPagoChileSubscription(input: {
     input.organizationId
   );
 
-  if (!subscription || subscription.status !== "active") {
+  if (
+    !subscription ||
+    (subscription.status !== "active" && subscription.status !== "pending")
+  ) {
     throw new MercadoPagoLifecycleError(
       409,
-      "No encontramos una suscripcion activa de Mercado Pago para cancelar."
+      "No encontramos una suscripcion de Mercado Pago que pueda cancelarse."
     );
   }
 
@@ -71,8 +74,14 @@ export async function cancelMercadoPagoChileSubscription(input: {
     providerPlanId: subscription.provider_plan_id,
     providerStatus: cancelled.providerStatus,
     status: "cancelled",
-    periodStartsAt: subscription.current_period_starts_at,
-    periodEndsAt: subscription.current_period_ends_at,
+    periodStartsAt:
+      subscription.status === "active"
+        ? subscription.current_period_starts_at
+        : null,
+    periodEndsAt:
+      subscription.status === "active"
+        ? subscription.current_period_ends_at
+        : null,
     nextPaymentAt: null,
     cancelledAt: new Date().toISOString(),
   });

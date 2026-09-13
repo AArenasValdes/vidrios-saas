@@ -95,7 +95,9 @@ export async function getSubscriptionSummary(
     cancelledAt: recurringSubscription?.cancelled_at ?? null,
     canCancelRecurringSubscription:
       recurringSubscription?.provider === "mercadopago" &&
-      recurringSubscription.status === "active" &&
+      Boolean(recurringSubscription.provider_subscription_id) &&
+      (recurringSubscription.status === "active" ||
+        recurringSubscription.status === "pending") &&
       isMercadoPagoChileBillingReady(),
     founderPriceLocked: snapshot.founderPriceLocked,
     externalReference: recurringSubscription?.external_reference ?? null,

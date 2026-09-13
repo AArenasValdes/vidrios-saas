@@ -97,6 +97,34 @@ describe("Mercado Pago lifecycle", () => {
     expect(markMercadoPagoCancellationRequested).toHaveBeenCalledWith(81);
   });
 
+  it("permite cancelar una suscripcion pendiente sin inventar un periodo pagado", async () => {
+    const pending = activeSubscription();
+    pending.status = "pending";
+    pending.provider_status = "pending";
+    pending.current_period_starts_at = null;
+    pending.current_period_ends_at = null;
+    pending.next_payment_at = null;
+    getOpenMercadoPagoByOrganizationId.mockResolvedValueOnce(pending);
+
+    await expect(
+      cancelMercadoPagoChileSubscription({ organizationId: 7 })
+    ).resolves.toEqual({
+      subscriptionId: 81,
+      currentPeriodEndsAt: null,
+    });
+
+    expect(cancelSubscription).toHaveBeenCalledWith("preapproval-1");
+    expect(reconcileMercadoPagoSubscription).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subscriptionId: 81,
+        status: "cancelled",
+        periodStartsAt: null,
+        periodEndsAt: null,
+        nextPaymentAt: null,
+      })
+    );
+  });
+
   it("no intenta llamar a Mercado Pago sin configuracion completa", async () => {
     isMercadoPagoChileBillingReady.mockReturnValue(false);
 

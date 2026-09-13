@@ -526,7 +526,11 @@ export default function SuscripcionPage() {
               onClick={cancelRenewal}
               disabled={isCancellingRenewal}
             >
-              {isCancellingRenewal ? "Cancelando renovación…" : "Cancelar renovación automática"}
+              {isCancellingRenewal
+                ? "Cancelando suscripción…"
+                : summary.recurringStatus === "pending"
+                  ? "Cancelar suscripción automática"
+                  : "Cancelar renovación automática"}
             </button>
           ) : null}
         </section>
