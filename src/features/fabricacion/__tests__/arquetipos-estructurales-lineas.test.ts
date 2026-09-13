@@ -93,7 +93,13 @@ describe("arquetipos estructurales de líneas comerciales", () => {
       resolveArquetipoEstructuralId({
         catalogKey: "ventora:l32",
       })
-    ).toBe("corredera_2h");
+    ).toBe("proyectante");
+
+    expect(
+      resolveArquetipoEstructuralId({
+        catalogKey: "ventora:l42",
+      })
+    ).toBe("proyectante");
 
     expect(
       resolveArquetipoEstructuralId({
@@ -116,6 +122,8 @@ describe("arquetipos estructurales de líneas comerciales", () => {
     expect(ARQUETIPOS_ESTRUCTURALES.pvc_corredera_2h.perfiles.some((p) =>
       p.nombre.includes("Refuerzo")
     )).toBe(true);
+    expect(ARQUETIPOS_ESTRUCTURALES.pvc_s60.tipologia).toBe("abatible");
+    expect(ARQUETIPOS_ESTRUCTURALES.pvc_s60.hojas).toBe(1);
   });
 
   it("crea receta estructural para línea comercial por catalog_key", () => {

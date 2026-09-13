@@ -203,11 +203,11 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
   },
   {
     catalogKey: "ventora:l32",
-    nombre: "Serie 32",
+    nombre: "AL-32",
     material: "Aluminio",
-    configuracion: "Corredera 2 hojas",
+    configuracion: "Proyectante",
     proveedor: null,
-    lineSystem: "L32",
+    lineSystem: "AL-32",
     ventoraPlantillaId: null,
   },
   {
@@ -221,11 +221,11 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
   },
   {
     catalogKey: "ventora:l42",
-    nombre: "Serie 42",
+    nombre: "AL-42",
     material: "Aluminio",
-    configuracion: "Corredera 2 hojas",
+    configuracion: "Proyectante / paño fijo",
     proveedor: null,
-    lineSystem: "L42",
+    lineSystem: "AL-42",
     ventoraPlantillaId: null,
   },
   {
@@ -243,7 +243,7 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     material: "Aluminio",
     configuracion: "Corredera 2 hojas",
     proveedor: null,
-    lineSystem: null,
+    lineSystem: "S-28",
     ventoraPlantillaId: null,
   },
   {
@@ -252,7 +252,7 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     material: "Aluminio",
     configuracion: "Corredera 3 hojas",
     proveedor: null,
-    lineSystem: null,
+    lineSystem: "S-28",
     ventoraPlantillaId: null,
   },
   {
@@ -351,7 +351,7 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     material: "PVC",
     configuracion: "Doble riel",
     proveedor: "WinHouse",
-    lineSystem: null,
+    lineSystem: "New S75",
     ventoraPlantillaId: null,
   },
   {
@@ -360,16 +360,16 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     material: "PVC",
     configuracion: "Triple riel",
     proveedor: "WinHouse",
-    lineSystem: null,
+    lineSystem: "New S75",
     ventoraPlantillaId: null,
   },
   {
     catalogKey: "ventora:winhouse-s60",
     nombre: "WinHouse S60",
     material: "PVC",
-    configuracion: "S60",
+    configuracion: "Abatible / doble contacto",
     proveedor: "WinHouse",
-    lineSystem: null,
+    lineSystem: "S60",
     ventoraPlantillaId: null,
   },
   {
@@ -378,7 +378,7 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     material: "PVC",
     configuracion: "Doble riel",
     proveedor: "WinHouse",
-    lineSystem: null,
+    lineSystem: "Andes",
     ventoraPlantillaId: null,
   },
   {
@@ -387,7 +387,7 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     material: "PVC",
     configuracion: "Monorriel",
     proveedor: "WinHouse",
-    lineSystem: null,
+    lineSystem: "Andes",
     ventoraPlantillaId: null,
   },
   {
@@ -396,7 +396,7 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     material: "PVC",
     configuracion: "Proyectante",
     proveedor: "WinHouse",
-    lineSystem: null,
+    lineSystem: "Andes",
     ventoraPlantillaId: null,
   },
 ];

@@ -1,6 +1,6 @@
 import type { CotizacionLineTemplateCatalogMetadata } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 
-export const LINE_PROFILE_REFERENCE_SEED_VERSION = 1;
+export const LINE_PROFILE_REFERENCE_SEED_VERSION = 2;
 
 export const PROFILE_REFERENCE_SOURCES = {
   SODAL_CATALOG: "https://sodal.cl/catalogos/",

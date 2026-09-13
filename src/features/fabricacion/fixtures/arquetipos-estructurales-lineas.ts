@@ -183,6 +183,17 @@ function pvcProyectantePerfiles(): PerfilEstructural[] {
   ];
 }
 
+function pvcAbatiblePerfiles(): PerfilEstructural[] {
+  return [
+    { nombre: "Marco PVC superior", funcion: "Marco PVC", grupo: "marco", medida: "ancho_total", cantidadTipo: "fija", cantidad: 1 },
+    { nombre: "Marco PVC inferior", funcion: "Marco PVC", grupo: "marco", medida: "ancho_total", cantidadTipo: "fija", cantidad: 1 },
+    { nombre: "Marco PVC lateral", funcion: "Marco PVC", grupo: "marco", medida: "alto_total", cantidadTipo: "fija", cantidad: 2 },
+    { nombre: "Hoja PVC abatible", funcion: "Hoja PVC", grupo: "hoja", medida: "ancho_por_hoja", cantidadTipo: "por_hoja", cantidad: 1 },
+    { nombre: "Refuerzo PVC", funcion: "Refuerzo PVC", grupo: "refuerzo", medida: "alto_por_hoja", cantidadTipo: "por_hoja", cantidad: 1 },
+    { nombre: "Junquillo", funcion: "Acristalamiento", grupo: "otro", medida: "ancho_por_hoja", cantidadTipo: "por_hoja", cantidad: 1 },
+  ];
+}
+
 const vidrioVentanaEstandar: VidrioEstructural[] = [
   {
     nombre: "Vidrio principal",
@@ -310,11 +321,11 @@ export const ARQUETIPOS_ESTRUCTURALES: Record<ArquetipoEstructuralId, ArquetipoE
   },
   pvc_s60: {
     id: "pvc_s60",
-    label: "PVC S60",
-    tipologia: "corredera",
-    hojas: 2,
-    modulos: 2,
-    perfiles: pvcCorrederaPerfiles(2),
+    label: "PVC S60 abatible / doble contacto",
+    tipologia: "abatible",
+    hojas: 1,
+    modulos: 1,
+    perfiles: pvcAbatiblePerfiles(),
     vidrios: vidrioVentanaEstandar,
     accesorios: accesoriosPvc,
   },
@@ -340,8 +351,8 @@ export const CATALOG_KEY_TO_ARQUETIPO: Record<string, ArquetipoEstructuralId> = 
   "ventora:s33-rpt-corredera-2h": "corredera_2h",
   "ventora:optima-s28-corredera-3h": "corredera_3h",
   "ventora:winhouse-new-s75-triple-riel": "pvc_corredera_3h",
-  "ventora:l32": "corredera_2h",
-  "ventora:l42": "corredera_2h",
+  "ventora:l32": "proyectante",
+  "ventora:l42": "proyectante",
   "ventora:serie-42-proyectante-camara": "proyectante",
   "ventora:serie-42-proyectante-sin-camara": "proyectante",
   "ventora:s38-proyectante": "proyectante",

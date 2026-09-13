@@ -32,11 +32,11 @@ describe("auditoria integridad catalogo lineas", () => {
 
       codigos_documentados_no_validados: 3,
 
-      codigos_referenciales_no_ambiguos: 10,
+      codigos_referenciales_no_ambiguos: 15,
 
-      codigos_referenciales_ambiguos: 3,
+      codigos_referenciales_ambiguos: 1,
 
-      sin_codigos_tecnicos_en_fixtures: 8,
+      sin_codigos_tecnicos_en_fixtures: 5,
 
       solo_comercial: 1,
 
@@ -44,9 +44,9 @@ describe("auditoria integridad catalogo lineas", () => {
 
 
 
-    expect(resumen.nomenclaturaAmbigua).toBe(3);
+    expect(resumen.nomenclaturaAmbigua).toBe(1);
 
-    expect(resumen.conCodigosReferencialesEnFixtures).toBe(14);
+    expect(resumen.conCodigosReferencialesEnFixtures).toBe(19);
 
     expect(resumen.gateTecnico.listaParaProbar).toBe(3);
 
@@ -54,31 +54,37 @@ describe("auditoria integridad catalogo lineas", () => {
 
 
 
-  it("no reutiliza códigos 32xx en Serie 32 corredera y separa ambigüedad", () => {
+  it("clasifica AL-32 y AL-42 como proyectantes con códigos técnicos", () => {
 
     const { lineas } = auditarIntegridadCatalogoLineasVentora();
 
 
 
-    const serie32 = lineas.find((line) => line.catalogKey === "ventora:l32");
+    const al32 = lineas.find((line) => line.catalogKey === "ventora:l32");
 
-    expect(serie32?.clasificacionPrimaria).toBe("codigos_referenciales_ambiguos");
+    expect(al32?.tipologiaComercial).toContain("Proyectante");
 
-    expect(serie32?.nomenclaturaAmbigua).toBe(true);
+    expect(al32?.clasificacionPrimaria).toBe("codigos_referenciales_no_ambiguos");
 
-    expect(serie32?.codigosReferenciales).toEqual([]);
+    expect(al32?.nomenclaturaAmbigua).toBe(false);
 
-    expect(serie32?.codigosDocumentadosReceta).toEqual([]);
+    expect(al32?.codigosReferenciales).toEqual(
+      expect.arrayContaining(["3201", "3202", "3204", "3205", "3208"])
+    );
 
 
 
-    const serie42Corredera = lineas.find((line) => line.catalogKey === "ventora:l42");
+    const al42 = lineas.find((line) => line.catalogKey === "ventora:l42");
 
-    expect(serie42Corredera?.clasificacionPrimaria).toBe("codigos_referenciales_ambiguos");
+    expect(al42?.tipologiaComercial).toContain("Proyectante");
 
-    expect(serie42Corredera?.nomenclaturaAmbigua).toBe(true);
+    expect(al42?.clasificacionPrimaria).toBe("codigos_referenciales_no_ambiguos");
 
-    expect(serie42Corredera?.codigosReferenciales).toEqual([]);
+    expect(al42?.nomenclaturaAmbigua).toBe(false);
+
+    expect(al42?.codigosReferenciales).toEqual(
+      expect.arrayContaining(["4202", "4203", "4206", "4209", "4229", "4231"])
+    );
 
 
 
@@ -118,7 +124,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
 
 
-  it("agrupa sin códigos técnicos en fixtures las líneas PVC y Óptima S-28", () => {
+  it("mantiene pendientes las líneas sin códigos técnicos exactos", () => {
 
     const { lineas } = auditarIntegridadCatalogoLineasVentora();
 
@@ -130,7 +136,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
 
 
-    expect(sinCodigos).toHaveLength(8);
+    expect(sinCodigos).toHaveLength(5);
 
     expect(sinCodigos.map((line) => line.catalogKey).sort()).toEqual(
 
@@ -140,17 +146,12 @@ describe("auditoria integridad catalogo lineas", () => {
 
         "ventora:optima-s28-corredera-3h",
 
-        "ventora:winhouse-andes-doble-riel",
-
-        "ventora:winhouse-andes-monorriel",
 
         "ventora:winhouse-andes-proyectante",
 
         "ventora:winhouse-new-s75-doble-riel",
 
         "ventora:winhouse-new-s75-triple-riel",
-
-        "ventora:winhouse-s60",
 
       ].sort()
 

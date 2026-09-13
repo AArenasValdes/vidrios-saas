@@ -54,8 +54,34 @@ function resolveRecommendedOptions(
 }
 
 const WINDOW_DVH_OPTIONS = ["DVH 4+12+4", "DVH 3+3 / 12 / 3+3."] as const;
+const AL32_GLASS_OPTIONS = [
+  "Incoloro monolitico 3mm",
+  "Incoloro monolitico 4mm",
+  "Incoloro monolitico 5mm",
+] as const;
+const AL42_GLASS_OPTIONS = [
+  ...AL32_GLASS_OPTIONS,
+  "DVH 4+12+4",
+  "DVH 5+12+5",
+] as const;
 
 const GLASS_RECOMMENDATION_RULES: readonly GlassRecommendationRule[] = [
+  {
+    id: "al-32",
+    reason: "AL-32: vidrio monolítico de 3, 4 o 5 mm. No admite termopanel.",
+    matches: ({ subtipo, sistema }) =>
+      subtipo.includes("ventana") &&
+      includesAny(sistema, ["al 32", "al32", "serie 32", "l32"]),
+    recommendations: AL32_GLASS_OPTIONS,
+  },
+  {
+    id: "al-42",
+    reason: "AL-42: vidrio monolítico de 3, 4 o 5 mm o DVH de 22 mm.",
+    matches: ({ subtipo, sistema }) =>
+      subtipo.includes("ventana") &&
+      includesAny(sistema, ["al 42", "al42", "serie 42", "l42"]),
+    recommendations: AL42_GLASS_OPTIONS,
+  },
   {
     id: "ventana-corredera",
     reason: "Mas usado para ventana corredera.",

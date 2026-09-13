@@ -2,6 +2,7 @@ import type { ComponentFormState } from "@/features/cotizaciones/new-quote/workf
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import {
   ARQUETIPOS_ESTRUCTURALES,
+  CATALOG_KEY_TO_ARQUETIPO,
   resolveArquetipoEstructuralId,
 } from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
 import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
@@ -130,18 +131,24 @@ export function resolveFabricacionContextFromLineCatalog(
   template: Pick<CotizacionLineTemplate, "catalogKey" | "catalogMetadata">
 ): FabricacionLineaCotizacionContext | null {
   const metadata = template.catalogMetadata ?? {};
-  const fromConfiguration = parseLineConfigurationContext(metadata.lineConfiguration);
+  const canonicalProjectingLine =
+    template.catalogKey === "ventora:l32" || template.catalogKey === "ventora:l42";
+  const fromConfiguration = canonicalProjectingLine
+    ? null
+    : parseLineConfigurationContext(metadata.lineConfiguration);
   if (fromConfiguration) {
     return fromConfiguration;
   }
 
-  const archetypeId = resolveArquetipoEstructuralId({
-    catalogKey: template.catalogKey,
-    structuralArchetypeId:
-      typeof metadata.structuralArchetypeId === "string"
-        ? metadata.structuralArchetypeId
-        : null,
-  });
+  const archetypeId = canonicalProjectingLine
+    ? CATALOG_KEY_TO_ARQUETIPO[template.catalogKey ?? ""]
+    : resolveArquetipoEstructuralId({
+        catalogKey: template.catalogKey,
+        structuralArchetypeId:
+          typeof metadata.structuralArchetypeId === "string"
+            ? metadata.structuralArchetypeId
+            : null,
+      });
   if (!archetypeId) return null;
 
   const archetype = ARQUETIPOS_ESTRUCTURALES[archetypeId];

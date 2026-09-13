@@ -52,4 +52,77 @@ describe("ventora profile references", () => {
     expect(parsed?.profiles).toHaveLength(7);
     expect(formatLineProfileReferenceCode(parsed!.profiles[0]!)).toBe("2001");
   });
+
+  it("expone los códigos técnicos fidedignos de AL-32 y AL-42", () => {
+    const al32 = getVentoraProfileReferencesForCatalogKey("ventora:l32");
+    const al42 = getVentoraProfileReferencesForCatalogKey("ventora:l42");
+
+    expect(al32?.profiles.map((profile) => profile.code)).toEqual([
+      "3201",
+      "3202",
+      "3204",
+      "3205",
+      "3208",
+    ]);
+    expect(al42?.profiles.map((profile) => profile.code)).toEqual([
+      "4202",
+      "4203",
+      "4204",
+      "4206",
+      "4209",
+      "4220",
+      "4225",
+      "4229",
+      "4230",
+      "4231",
+      "4250",
+    ]);
+    expect(
+      [...(al32?.profiles ?? []), ...(al42?.profiles ?? [])].every(
+        (profile) =>
+          profile.codeStatus === "catalog_reference" &&
+          profile.source === "Estudio técnico de líneas aportado por el usuario (2026-09-13)"
+      )
+    ).toBe(true);
+  });
+
+  it("expone códigos del estudio para S60 sin marcar receta validada", () => {
+    const payload = getVentoraProfileReferencesForCatalogKey("ventora:winhouse-s60");
+
+    expect(payload?.profiles.map((profile) => profile.code)).toEqual([
+      "7160Z00013",
+      "7160Z00016",
+      "720000200",
+      "716CZ00001",
+      "716CZ00002",
+      "716CZ00003",
+      "726332612N",
+      "2433242N",
+      "4040BOX15",
+      "78200010001",
+    ]);
+    expect(
+      payload?.profiles.every((profile) => profile.codeStatus === "catalog_reference")
+    ).toBe(true);
+  });
+
+  it("expone refuerzos Andes y conserva perfiles principales pendientes", () => {
+    const payload = getVentoraProfileReferencesForCatalogKey(
+      "ventora:winhouse-andes-monorriel"
+    );
+
+    expect(payload?.profiles.filter((profile) => profile.code)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "PL-SLA-TC-MLT-12", role: "Refuerzo" }),
+        expect.objectContaining({ code: "PL-SLA-TC-H54-12", role: "Refuerzo" }),
+        expect.objectContaining({ code: "HL-ACC-5X5-APOC-MA", role: "Accesorio" }),
+      ])
+    );
+    expect(
+      payload?.profiles.some(
+        (profile) =>
+          profile.name === "Marco monorriel corredera Andes" && profile.code == null
+      )
+    ).toBe(true);
+  });
 });

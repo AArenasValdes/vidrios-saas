@@ -40,7 +40,7 @@ function buildRecipe(input: {
 }
 
 describe("fabricacion-linea-cotizacion-context.service", () => {
-  it("resuelve Serie 32 como corredera 2 hojas desde el catálogo", () => {
+  it("resuelve AL-32 como proyectante aunque conserve metadata histórica", () => {
     const context = resolveFabricacionContextFromLineCatalog({
       catalogKey: "ventora:l32",
       catalogMetadata: {
@@ -49,9 +49,9 @@ describe("fabricacion-linea-cotizacion-context.service", () => {
     });
 
     expect(context).toEqual({
-      fabricacionTipologia: "corredera",
-      fabricacionHojas: 2,
-      fabricacionModulos: 2,
+      fabricacionTipologia: "proyectante",
+      fabricacionHojas: 1,
+      fabricacionModulos: 1,
       fabricationRecipeId: "",
       fabricacionApertura: "",
       fabricacionHerraje: "",
@@ -59,7 +59,7 @@ describe("fabricacion-linea-cotizacion-context.service", () => {
     });
   });
 
-  it("no fuerza una receta validada proyectante cuando el preset y catálogo son corredera", () => {
+  it("prioriza la tipología proyectante canónica de AL-32", () => {
     const context = resolveFabricacionContextForLineAssignment({
       template: {
         id: 42,
@@ -87,12 +87,12 @@ describe("fabricacion-linea-cotizacion-context.service", () => {
       },
     });
 
-    expect(context?.fabricacionTipologia).toBe("corredera");
-    expect(context?.fabricacionHojas).toBe(2);
-    expect(context?.fabricationRecipeId).toBe("");
+    expect(context?.fabricacionTipologia).toBe("proyectante");
+    expect(context?.fabricacionHojas).toBe(1);
+    expect(context?.fabricationRecipeId).toBe("rec-proyectante");
   });
 
-  it("usa la receta validada corredera cuando coincide con el preset", () => {
+  it("descarta una receta histórica corredera para AL-32", () => {
     const context = resolveFabricacionContextForLineAssignment({
       template: {
         id: 42,
@@ -127,8 +127,8 @@ describe("fabricacion-linea-cotizacion-context.service", () => {
       },
     });
 
-    expect(context?.fabricacionTipologia).toBe("corredera");
-    expect(context?.fabricacionHojas).toBe(2);
-    expect(context?.fabricationRecipeId).toBe("rec-corredera");
+    expect(context?.fabricacionTipologia).toBe("proyectante");
+    expect(context?.fabricacionHojas).toBe(1);
+    expect(context?.fabricationRecipeId).toBe("");
   });
 });

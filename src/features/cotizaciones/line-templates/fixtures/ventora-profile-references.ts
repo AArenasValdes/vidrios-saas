@@ -61,6 +61,36 @@ function pendingRef(name: string, role: string): LineProfileReference {
   };
 }
 
+/**
+ * Referencias extraídas del estudio técnico aportado por el usuario.
+ * Mantenerlas como referencia de catálogo: no equivalen a una receta validada
+ * por el taller ni habilitan descuentos o pauta automática.
+ */
+const USER_TECHNICAL_STUDY_SOURCE =
+  "Estudio técnico de líneas aportado por el usuario (2026-09-13)";
+
+function studyRef(input: RefInput): LineProfileReference {
+  return {
+    code: input.code?.trim() || null,
+    name: input.name,
+    role: input.role,
+    description: input.description?.trim() || input.name,
+    provider: input.provider ?? null,
+    source: USER_TECHNICAL_STUDY_SOURCE,
+    codeStatus: input.codeStatus ?? "catalog_reference",
+  };
+}
+
+function pendingStudyRef(
+  input: Omit<RefInput, "code"> & { code?: null }
+): LineProfileReference {
+  return studyRef({
+    ...input,
+    code: null,
+    codeStatus: "pending_validation",
+  });
+}
+
 const SERIE_5000_PROFILES: LineProfileReference[] = [
   industryRef({ code: "5001", name: "Riel inferior", role: "Marco" }),
   industryRef({ code: "5002", name: "Riel superior", role: "Marco" }),
@@ -324,6 +354,437 @@ const PUERTA_4600_PROFILES: LineProfileReference[] = [
   }),
 ];
 
+/** AL-32: códigos SODAL de proyectante; no asociar a una corredera. */
+const AL32_PROJECTING_PROFILES: LineProfileReference[] = [
+  studyRef({
+    code: "3201",
+    name: "Marco",
+    role: "Marco",
+    provider: "SODAL",
+    description: "Marco fijo exterior; 27 × 32 mm.",
+  }),
+  studyRef({
+    code: "3202",
+    name: "Hoja proyectante",
+    role: "Hoja",
+    provider: "SODAL",
+    description: "Hoja proyectante; 42 × 32 mm.",
+  }),
+  studyRef({
+    code: "3204",
+    name: "Palillo",
+    role: "Otro",
+    provider: "SODAL",
+    description: "Pilar o separador entre hojas; 32 × 42,2 mm.",
+  }),
+  studyRef({
+    code: "3205",
+    name: "Marco cámara de agua",
+    role: "Marco",
+    provider: "SODAL",
+    description: "Marco con canal de condensación; 32 × 47,6 mm.",
+  }),
+  studyRef({
+    code: "3208",
+    name: "Junquillo",
+    role: "Otro",
+    provider: "SODAL",
+    description: "Soporte interior del vidrio; 22,5 × 15 mm.",
+  }),
+];
+
+/** AL-42: códigos SODAL para proyectante, paño fijo y variantes de vidrio. */
+const AL42_PROJECTING_PROFILES: LineProfileReference[] = [
+  studyRef({
+    code: "4202",
+    name: "Hoja / marco nave",
+    role: "Hoja",
+    provider: "SODAL",
+    description: "Hoja proyectante o nave; sección nominal 42 mm.",
+  }),
+  studyRef({
+    code: "4203",
+    name: "Junquillo",
+    role: "Otro",
+    provider: "SODAL",
+    description: "Soporte de vidrio monolítico.",
+  }),
+  studyRef({
+    code: "4204",
+    name: "Palillo / pilar / traslapo",
+    role: "Otro",
+    provider: "SODAL",
+    description: "Separador o traslapo entre hojas.",
+  }),
+  studyRef({
+    code: "4206",
+    name: "Junquillo termopanel",
+    role: "Otro",
+    provider: "SODAL",
+    description: "Soporte para termopanel de 22 mm.",
+  }),
+  studyRef({
+    code: "4209",
+    name: "Marco fijo / paño fijo",
+    role: "Marco",
+    provider: "SODAL",
+    description: "Marco para paño fijo.",
+  }),
+  studyRef({
+    code: "4220",
+    name: "Escuadra anudal NAT.",
+    role: "Accesorio",
+    provider: "SODAL",
+    description: "Unión de esquinas a 45 grados.",
+  }),
+  studyRef({
+    code: "4225",
+    name: "Nave",
+    role: "Hoja",
+    provider: "SODAL",
+    description: "Perfil para nave o ampliación.",
+  }),
+  studyRef({
+    code: "4229",
+    name: "Junquillo monolítico",
+    role: "Otro",
+    provider: "SODAL",
+    description: "Alternativa para vidrio simple.",
+  }),
+  studyRef({
+    code: "4230",
+    name: "Cuña armado NAT.",
+    role: "Accesorio",
+    provider: "SODAL",
+    description: "Cuña de armado.",
+  }),
+  studyRef({
+    code: "4231",
+    name: "Marco cámara de agua",
+    role: "Marco",
+    provider: "SODAL",
+    description: "Marco con canal de condensación.",
+  }),
+  studyRef({
+    code: "4250",
+    name: "Hoja muro cortina",
+    role: "Hoja",
+    provider: "SODAL",
+    description: "Hoja para aplicación en muro cortina.",
+  }),
+];
+
+/** Óptima S-28: nombres útiles del estudio, códigos SODAL aún pendientes. */
+const OPTIMA_S28_2H_PROFILES: LineProfileReference[] = [
+  pendingStudyRef({
+    name: "Marco perimetral S-28",
+    role: "Marco",
+    provider: "SODAL",
+    description: "Marco perimetral de corredera 2 hojas; ensamblaje a 45 grados.",
+  }),
+  pendingStudyRef({
+    name: "Hoja corredera S-28",
+    role: "Hoja",
+    provider: "SODAL",
+  }),
+  pendingStudyRef({
+    name: "Traslapo central S-28",
+    role: "Hoja",
+    provider: "SODAL",
+  }),
+  pendingStudyRef({
+    name: "Perfil cortagotera S-28",
+    role: "Otro",
+    provider: "SODAL",
+  }),
+  pendingStudyRef({
+    name: "Felpa Fin Seal / sello estanco S-28",
+    role: "Otro",
+    provider: "SODAL",
+  }),
+];
+
+const OPTIMA_S28_3H_PROFILES: LineProfileReference[] = [
+  pendingStudyRef({
+    name: "Marco perimetral triple riel S-28",
+    role: "Marco",
+    provider: "SODAL",
+    description: "Marco de corredera 3 hojas; código SODAL pendiente.",
+  }),
+  pendingStudyRef({
+    name: "Hoja corredera S-28",
+    role: "Hoja",
+    provider: "SODAL",
+  }),
+  pendingStudyRef({
+    name: "Traslapo central S-28",
+    role: "Hoja",
+    provider: "SODAL",
+  }),
+  pendingStudyRef({
+    name: "Perfil cortagotera S-28",
+    role: "Otro",
+    provider: "SODAL",
+  }),
+  pendingStudyRef({
+    name: "Felpa Fin Seal / sello estanco S-28",
+    role: "Otro",
+    provider: "SODAL",
+  }),
+];
+
+const WINHOUSE_NEW_S75_DOUBLE_RAIL_PROFILES: LineProfileReference[] = [
+  pendingStudyRef({
+    name: "Marco doble riel New S75",
+    role: "Marco",
+    provider: "WinHouse",
+    description: "Marco 48 × 75 mm; código interno WinHouse pendiente.",
+  }),
+  pendingStudyRef({
+    name: "Hoja ventana corredera 80 New S75",
+    role: "Hoja",
+    provider: "WinHouse",
+  }),
+  pendingStudyRef({
+    name: "Hoja puerta corredera 98 New S75",
+    role: "Hoja",
+    provider: "WinHouse",
+  }),
+  pendingStudyRef({
+    name: "Traslapo hoja 80/98 New S75",
+    role: "Hoja",
+    provider: "WinHouse",
+  }),
+  pendingStudyRef({
+    name: "Refuerzo Box New S75",
+    role: "Refuerzo",
+    provider: "WinHouse",
+  }),
+  pendingStudyRef({
+    name: "Junquillo New S75",
+    role: "Otro",
+    provider: "WinHouse",
+  }),
+];
+
+const WINHOUSE_NEW_S75_TRIPLE_RAIL_PROFILES: LineProfileReference[] = [
+  pendingStudyRef({
+    name: "Marco triple riel New S75",
+    role: "Marco",
+    provider: "WinHouse",
+    description: "Marco 48 × 135 mm; código interno WinHouse pendiente.",
+  }),
+  pendingStudyRef({
+    name: "Hoja ventana corredera 80 New S75",
+    role: "Hoja",
+    provider: "WinHouse",
+  }),
+  pendingStudyRef({
+    name: "Hoja puerta corredera 98 New S75",
+    role: "Hoja",
+    provider: "WinHouse",
+  }),
+  pendingStudyRef({
+    name: "Traslapo hoja 80/98 New S75",
+    role: "Hoja",
+    provider: "WinHouse",
+  }),
+  pendingStudyRef({
+    name: "Refuerzo Box New S75",
+    role: "Refuerzo",
+    provider: "WinHouse",
+  }),
+  pendingStudyRef({
+    name: "Junquillo New S75",
+    role: "Otro",
+    provider: "WinHouse",
+  }),
+];
+
+const WINHOUSE_S60_PROFILES: LineProfileReference[] = [
+  studyRef({
+    code: "7160Z00013",
+    name: "Pilar fijo S60",
+    role: "Marco",
+    provider: "WinHouse",
+    description: "Pilar fijo; 64,5 mm; ángulo 90 grados.",
+  }),
+  studyRef({
+    code: "7160Z00016",
+    name: "Perfil de elevación S60",
+    role: "Marco",
+    provider: "WinHouse",
+    description: "Extensión del marco fijo; 60 mm.",
+  }),
+  studyRef({
+    code: "720000200",
+    name: "Ángulo de revestimiento S60",
+    role: "Otro",
+    provider: "WinHouse",
+    description: "Ángulo de revestimiento; 150 × 50 mm.",
+  }),
+  studyRef({
+    code: "716CZ00001",
+    name: "Junquillo monolítico S60",
+    role: "Otro",
+    provider: "WinHouse",
+    description: "Junquillo interior para vidrio monolítico de 5 mm.",
+  }),
+  studyRef({
+    code: "716CZ00002",
+    name: "Junquillo termopanel 20 S60",
+    role: "Otro",
+    provider: "WinHouse",
+    description: "Junquillo interior para DVH de 20 mm.",
+  }),
+  studyRef({
+    code: "716CZ00003",
+    name: "Junquillo termopanel 24 S60",
+    role: "Otro",
+    provider: "WinHouse",
+    description: "Junquillo interior para DVH de 24 mm.",
+  }),
+  studyRef({
+    code: "726332612N",
+    name: "Refuerzo múltiple S60",
+    role: "Refuerzo",
+    provider: "WinHouse",
+    description: "Refuerzo de acero; espesor 1,2 mm.",
+  }),
+  studyRef({
+    code: "2433242N",
+    name: "Refuerzo múltiple pesado S60",
+    role: "Refuerzo",
+    provider: "WinHouse",
+    description: "Refuerzo de acero; espesor 2,0 mm.",
+  }),
+  studyRef({
+    code: "4040BOX15",
+    name: "Refuerzo esquinero S60",
+    role: "Refuerzo",
+    provider: "WinHouse",
+    description: "Inserto Box; espesor 1,5 mm.",
+  }),
+  studyRef({
+    code: "78200010001",
+    name: "Refuerzo de bisagra S60",
+    role: "Refuerzo",
+    provider: "WinHouse",
+    description: "Pletina de acero para fijación de herrajes; espesor 1,35 mm.",
+  }),
+];
+
+const WINHOUSE_ANDES_DOUBLE_RAIL_PROFILES: LineProfileReference[] = [
+  pendingStudyRef({
+    name: "Marco doble riel corredera Andes",
+    role: "Marco",
+    provider: "WinHouse",
+  }),
+  pendingStudyRef({
+    name: "Hoja corredera Andes 66",
+    role: "Hoja",
+    provider: "WinHouse",
+  }),
+  pendingStudyRef({
+    name: "Junquillo Andes hasta 19 mm",
+    role: "Otro",
+    provider: "WinHouse",
+  }),
+  studyRef({
+    code: "PL-SLA-TC-H66-12",
+    name: "Refuerzo hoja Andes 66",
+    role: "Refuerzo",
+    provider: "WinHouse",
+    description: "Refuerzo de hoja; espesor reportado 1,2 mm.",
+  }),
+  studyRef({
+    code: "PL-SLA-TC-H66-15",
+    name: "Refuerzo hoja Andes 66 pesado",
+    role: "Refuerzo",
+    provider: "WinHouse",
+    description: "Refuerzo de hoja; espesor reportado 1,5 mm.",
+  }),
+  studyRef({
+    code: "PL-SLA-TC-MCA-12",
+    name: "Refuerzo marco corredera Andes",
+    role: "Refuerzo",
+    provider: "WinHouse",
+    description: "Refuerzo de marco; espesor reportado 1,2 mm.",
+  }),
+];
+
+const WINHOUSE_ANDES_MONORAIL_PROFILES: LineProfileReference[] = [
+  pendingStudyRef({
+    name: "Marco monorriel corredera Andes",
+    role: "Marco",
+    provider: "WinHouse",
+  }),
+  pendingStudyRef({
+    name: "Tapa marco monorriel Andes",
+    role: "Marco",
+    provider: "WinHouse",
+  }),
+  pendingStudyRef({
+    name: "Hoja corredera Andes 54",
+    role: "Hoja",
+    provider: "WinHouse",
+  }),
+  studyRef({
+    code: "PL-SLA-TC-MLT-12",
+    name: "Refuerzo múltiple Andes",
+    role: "Refuerzo",
+    provider: "WinHouse",
+    description: "Refuerzo de acero; espesor reportado 1,2 mm.",
+  }),
+  studyRef({
+    code: "PL-SLA-TC-H54-12",
+    name: "Refuerzo hoja Andes 54",
+    role: "Refuerzo",
+    provider: "WinHouse",
+    description:
+      "El estudio reporta 2,0 mm asociado a este código; confirmar espesor con WinHouse.",
+  }),
+  studyRef({
+    code: "HL-ACC-5X5-APOC-MA",
+    name: "Apoyo cerradero 5 × 5 M Andes",
+    role: "Accesorio",
+    provider: "WinHouse",
+  }),
+];
+
+const WINHOUSE_ANDES_PROJECTING_PROFILES: LineProfileReference[] = [
+  pendingStudyRef({
+    name: "Marco fijo Andes S38",
+    role: "Marco",
+    provider: "WinHouse",
+  }),
+  pendingStudyRef({
+    name: "Rótula Andes 38",
+    role: "Otro",
+    provider: "WinHouse",
+  }),
+  pendingStudyRef({
+    name: "Adaptador rótula Andes",
+    role: "Otro",
+    provider: "WinHouse",
+  }),
+  pendingStudyRef({
+    name: "Poste T Andes S38",
+    role: "Otro",
+    provider: "WinHouse",
+  }),
+  pendingStudyRef({
+    name: "Hoja exterior Andes S38",
+    role: "Hoja",
+    provider: "WinHouse",
+  }),
+  pendingStudyRef({
+    name: "Junquillo Andes para 4–19 mm",
+    role: "Otro",
+    provider: "WinHouse",
+  }),
+];
+
 const CATALOG_KEY_PROFILE_SETS: Record<string, LineProfileReference[]> = {
   "ventora:l5000": SERIE_5000_PROFILES,
   "ventora:l20": SERIE_20_PROFILES,
@@ -339,19 +800,19 @@ const CATALOG_KEY_PROFILE_SETS: Record<string, LineProfileReference[]> = {
   "ventora:multislide-s83-8h": MULTISLIDE_S83_PROFILES,
   "ventora:serie-3200-puerta-abatible-1h": PUERTA_3200_PROFILES,
   "ventora:serie-4600-puerta-vaiven": PUERTA_4600_PROFILES,
+  "ventora:l32": AL32_PROJECTING_PROFILES,
+  "ventora:l42": AL42_PROJECTING_PROFILES,
+  "ventora:optima-s28-corredera-2h": OPTIMA_S28_2H_PROFILES,
+  "ventora:optima-s28-corredera-3h": OPTIMA_S28_3H_PROFILES,
+  "ventora:winhouse-new-s75-doble-riel": WINHOUSE_NEW_S75_DOUBLE_RAIL_PROFILES,
+  "ventora:winhouse-new-s75-triple-riel": WINHOUSE_NEW_S75_TRIPLE_RAIL_PROFILES,
+  "ventora:winhouse-s60": WINHOUSE_S60_PROFILES,
+  "ventora:winhouse-andes-doble-riel": WINHOUSE_ANDES_DOUBLE_RAIL_PROFILES,
+  "ventora:winhouse-andes-monorriel": WINHOUSE_ANDES_MONORAIL_PROFILES,
+  "ventora:winhouse-andes-proyectante": WINHOUSE_ANDES_PROJECTING_PROFILES,
 };
 
-const PENDING_VALIDATION_CATALOG_KEYS = new Set([
-  "ventora:l32",
-  "ventora:l42",
-  "ventora:optima-s28-corredera-2h",
-  "ventora:optima-s28-corredera-3h",
-  "ventora:winhouse-new-s75-doble-riel",
-  "ventora:winhouse-new-s75-triple-riel",
-  "ventora:winhouse-s60",
-  "ventora:winhouse-andes-doble-riel",
-  "ventora:winhouse-andes-proyectante",
-]);
+const PENDING_VALIDATION_CATALOG_KEYS = new Set<string>();
 
 /** Referencias visuales L32 proyectante (wizard/biblioteca). No asociar a Serie 32 corredera. */
 export function getL32ProyectanteVisualReferences(): LineProfileReference[] {

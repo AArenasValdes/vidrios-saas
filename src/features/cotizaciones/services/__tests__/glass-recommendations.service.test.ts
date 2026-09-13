@@ -36,6 +36,47 @@ describe("glass-recommendations service", () => {
     ]);
   });
 
+  it("recomienda solo monolítico para AL-32", () => {
+    const result = getGlassRecommendations(
+      { subtipo: "Ventana", sistema: "AL-32" },
+      [
+        "Incoloro monolítico 3mm",
+        "Incoloro monolítico 4mm",
+        "Incoloro monolítico 5mm",
+        "DVH 4+12+4",
+        "DVH 5+12+5",
+      ]
+    );
+
+    expect(result.recommendedOptions).toEqual([
+      "Incoloro monolítico 3mm",
+      "Incoloro monolítico 4mm",
+      "Incoloro monolítico 5mm",
+    ]);
+    expect(result.reason).toContain("No admite termopanel");
+  });
+
+  it("recomienda monolítico y DVH 22 mm para AL-42", () => {
+    const result = getGlassRecommendations(
+      { subtipo: "Ventana", sistema: "AL-42" },
+      [
+        "Incoloro monolítico 3mm",
+        "Incoloro monolítico 4mm",
+        "Incoloro monolítico 5mm",
+        "DVH 4+12+4",
+        "DVH 5+12+5",
+      ]
+    );
+
+    expect(result.recommendedOptions).toEqual([
+      "Incoloro monolítico 3mm",
+      "Incoloro monolítico 4mm",
+      "Incoloro monolítico 5mm",
+      "DVH 4+12+4",
+      "DVH 5+12+5",
+    ]);
+  });
+
   it("debe recomendar templados para shower door sin bloquear el resto", () => {
     const result = getGlassRecommendations(
       { subtipo: "Shower door", sistema: "Batiente" },

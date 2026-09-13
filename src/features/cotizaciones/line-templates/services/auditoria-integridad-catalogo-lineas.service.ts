@@ -83,12 +83,11 @@ export type ResumenIntegridadCatalogo = {
 };
 
 const CATALOG_KEYS_NOMENCLATURA_AMBIGUA = new Set([
-  "ventora:l32",
-  "ventora:l42",
   "ventora:serie-3200-puerta-abatible-1h",
 ]);
 
-const PLANTILLAS_CORREDERA_DOCUMENTADAS = new Set(["L5000", "L20", "L25"]);
+
+const PLANTILLAS_CORREDERA_DOCUMENTADAS = new Set(["L5000", "L20", "L25"]);
 
 /** Equivalencias documentadas en código; no ampliar sin fuente verificable. */
 const EQUIVALENCIAS_DOCUMENTADAS: Array<{

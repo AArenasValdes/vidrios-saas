@@ -94,4 +94,63 @@ describe("seedProfileReferencesForOrganization", () => {
     )?.profiles;
     expect(profiles).toHaveLength(7);
   });
+
+  it("corrige la identidad histórica de AL-32 y AL-42", async () => {
+    const updates: Array<Record<string, unknown>> = [];
+
+    const result = await seedProfileReferencesForOrganization("org-4", {
+      async listVentoraLineTemplates() {
+        return [
+          {
+            id: 30,
+            catalog_key: "ventora:l32",
+            catalog_metadata: {
+              lineConfiguration: "Corredera 2 hojas",
+              lineSystem: "L32",
+              structuralArchetypeId: "corredera_2h",
+              workshopProfiles: {
+                seedVersion: LINE_PROFILE_REFERENCE_SEED_VERSION,
+                profiles: [],
+              },
+            },
+          },
+          {
+            id: 31,
+            catalog_key: "ventora:l42",
+            catalog_metadata: {
+              lineConfiguration: "Corredera 2 hojas",
+              lineSystem: "L42",
+              structuralArchetypeId: "corredera_2h",
+              workshopProfiles: {
+                seedVersion: LINE_PROFILE_REFERENCE_SEED_VERSION,
+                profiles: [],
+              },
+            },
+          },
+        ];
+      },
+      async updateLineTemplateMetadata({ catalogMetadata }) {
+        updates.push(catalogMetadata);
+      },
+    });
+
+    expect(result.seeded).toBe(2);
+    expect(updates).toHaveLength(2);
+    expect(updates[0]).toMatchObject({
+      lineConfiguration: "Proyectante",
+      lineSystem: "AL-32",
+      structuralArchetypeId: "proyectante",
+      workshopProfiles: expect.objectContaining({
+        profiles: expect.arrayContaining([expect.objectContaining({ code: "3201" })]),
+      }),
+    });
+    expect(updates[1]).toMatchObject({
+      lineConfiguration: "Proyectante / paño fijo",
+      lineSystem: "AL-42",
+      structuralArchetypeId: "proyectante",
+      workshopProfiles: expect.objectContaining({
+        profiles: expect.arrayContaining([expect.objectContaining({ code: "4206" })]),
+      }),
+    });
+  });
 });

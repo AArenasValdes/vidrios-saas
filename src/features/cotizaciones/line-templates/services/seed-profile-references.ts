@@ -33,6 +33,40 @@ function shouldSeedProfileReferences(
   return existing.seedVersion < LINE_PROFILE_REFERENCE_SEED_VERSION;
 }
 
+function getLegacyLineIdentityPatch(
+  row: LineTemplateProfileSeedRow
+): Record<string, string> | null {
+  const metadata = row.catalog_metadata ?? {};
+  const configuration =
+    typeof metadata.lineConfiguration === "string"
+      ? metadata.lineConfiguration.trim().toLowerCase()
+      : "";
+
+  if (
+    row.catalog_key === "ventora:l32" &&
+    configuration === "corredera 2 hojas"
+  ) {
+    return {
+      lineConfiguration: "Proyectante",
+      lineSystem: "AL-32",
+      structuralArchetypeId: "proyectante",
+    };
+  }
+
+  if (
+    row.catalog_key === "ventora:l42" &&
+    configuration === "corredera 2 hojas"
+  ) {
+    return {
+      lineConfiguration: "Proyectante / paño fijo",
+      lineSystem: "AL-42",
+      structuralArchetypeId: "proyectante",
+    };
+  }
+
+  return null;
+}
+
 /**
  * Rellena referencias de perfiles en catalog_metadata.workshopProfiles.
  * Idempotente: no sobrescribe versiones actuales ni líneas privadas.
@@ -54,7 +88,8 @@ export async function seedProfileReferencesForOrganization(
   let skipped = 0;
 
   for (const line of ventoraLines) {
-    if (!shouldSeedProfileReferences(line)) {
+    const identityPatch = getLegacyLineIdentityPatch(line);
+    if (!shouldSeedProfileReferences(line) && !identityPatch) {
       skipped += 1;
       continue;
     }
@@ -79,6 +114,7 @@ export async function seedProfileReferencesForOrganization(
         organizationId,
         catalogMetadata: {
           ...currentMetadata,
+          ...(identityPatch ?? {}),
           workshopProfiles,
         },
       });

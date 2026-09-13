@@ -47,7 +47,7 @@ describe("LineProfileReferencesSection", () => {
 
     render(<LineProfileReferencesSection catalogMetadata={metadata} variant="mobile" />);
 
-    expect(screen.getByText(/0 configurados/)).toBeInTheDocument();
+    expect(screen.getByText(/10 con código/)).toBeInTheDocument();
     expect(screen.queryByText("Pendiente")).not.toBeInTheDocument();
   });
 });
