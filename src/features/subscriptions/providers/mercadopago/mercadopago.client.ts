@@ -6,7 +6,6 @@ import type {
   MercadoPagoPreapproval,
   MercadoPagoPreapprovalPlan,
 } from "./mercadopago.types";
-import { normalizeMercadoPagoTransactionAmount } from "./mercadopago-amount";
 
 const API_BASE = "https://api.mercadopago.com";
 const REQUEST_TIMEOUT_MS = 12_000;

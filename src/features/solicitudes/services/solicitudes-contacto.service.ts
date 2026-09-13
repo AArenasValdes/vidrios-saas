@@ -6,6 +6,10 @@ import { resolvePublicLandingConfig } from "@/features/organization-profile/serv
 import { isValidChileMobilePhone, normalizeChileMobilePhone } from "@/utils/chile-mobile-phone";
 import { normalizePhoneToE164 } from "@/features/organization-region/services/phone-number.service";
 import { normalizeSupportedCountryCode } from "@/features/organization-region/services/organization-region.service";
+import {
+  getOrganizationBillingState,
+  resolveCanonicalSubscriptionSnapshot,
+} from "@/features/subscriptions/services/subscription-billing-state.service";
 import type {
   AyudaSolicitudContacto,
   EstadoSolicitudContacto,
@@ -201,7 +205,19 @@ export function createSolicitudesContactoService(
     async getPublicRequestConfig(slug: string) {
       const config = await repository.getPublicConfigBySlug(slug);
 
-      if (!config || !config.isPublished || config.planCode === "quote_only") {
+      if (!config || !config.isPublished) {
+        return null;
+      }
+
+      const billingState = await getOrganizationBillingState(
+        Number(config.organizationId)
+      );
+      const canonicalSnapshot = resolveCanonicalSubscriptionSnapshot(billingState);
+
+      if (
+        config.planCode === "quote_only" ||
+        canonicalSnapshot?.planCode === "quote_only"
+      ) {
         return null;
       }
 

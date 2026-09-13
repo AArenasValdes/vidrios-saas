@@ -46,6 +46,7 @@ function getStatusClass(status: string | null): string {
 }
 
 const PAYMENT_LABELS: Record<string, string> = {
+  mercadopago: "Mercado Pago",
   flow: "Flow",
   webpay_plus: "Webpay Plus",
   manual_transfer: "Transferencia",
@@ -85,8 +86,16 @@ export function SubscriptionSummaryCard({
         </div>
 
         <div className={s.dates}>
-          <span className={s.dateLabel}>Vence:</span>
-          <span>{formatDate(summary.subscriptionEndsAt)}</span>
+          <span className={s.dateLabel}>
+            {summary.cancelAtPeriodEnd ? "Acceso hasta:" : "Próximo cobro:"}
+          </span>
+          <span>
+            {formatDate(
+              summary.cancelAtPeriodEnd
+                ? summary.currentPeriodEndsAt ?? summary.subscriptionEndsAt
+                : summary.nextPaymentAt ?? summary.subscriptionEndsAt
+            )}
+          </span>
         </div>
 
         {summary.founderPriceLocked ? (

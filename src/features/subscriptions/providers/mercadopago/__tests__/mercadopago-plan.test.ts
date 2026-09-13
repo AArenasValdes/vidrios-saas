@@ -1,4 +1,8 @@
-import { buildPendingAutoRecurringFromPlan, readMercadoPagoPlanAmount } from "../mercadopago-plan";
+import {
+  buildPendingAutoRecurringFromPlan,
+  doesMercadoPagoPlanMatchBillingPeriod,
+  readMercadoPagoPlanAmount,
+} from "../mercadopago-plan";
 
 describe("Mercado Pago plan helpers", () => {
   it("usa fallback mensual cuando el plan del panel no trae auto_recurring", () => {
@@ -53,5 +57,41 @@ describe("Mercado Pago plan helpers", () => {
         auto_recurring: { transaction_amount: "8990" },
       })
     ).toBe(8_990);
+  });
+
+  it("rechaza una frecuencia mensual para un plan anual", () => {
+    expect(
+      doesMercadoPagoPlanMatchBillingPeriod(
+        {
+          id: "plan-annual",
+          status: "active",
+          auto_recurring: {
+            frequency: 1,
+            frequency_type: "months",
+            transaction_amount: 59_990,
+            currency_id: "CLP",
+          },
+        },
+        "yearly"
+      )
+    ).toBe(false);
+  });
+
+  it("acepta un plan anual expresado como un año", () => {
+    expect(
+      doesMercadoPagoPlanMatchBillingPeriod(
+        {
+          id: "plan-annual",
+          status: "active",
+          auto_recurring: {
+            frequency: 1,
+            frequency_type: "years",
+            transaction_amount: 59_990,
+            currency_id: "CLP",
+          },
+        },
+        "yearly"
+      )
+    ).toBe(true);
   });
 });

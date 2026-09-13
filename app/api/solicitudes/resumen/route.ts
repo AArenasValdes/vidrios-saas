@@ -2,13 +2,16 @@ import { NextResponse } from "next/server";
 
 import {
   AuthRouteAccessError,
-  resolveAuthenticatedRouteContext,
 } from "@/features/auth/services/auth-route-access.service";
 import {
   canAccessAllSolicitudes,
   canAccessSolicitudes,
 } from "@/features/solicitudes/services/solicitudes-contacto-access";
 import { solicitudesContactoService } from "@/features/solicitudes/services/solicitudes-contacto.service";
+import {
+  assertSubscriptionAllowsRequestManagement,
+  resolveAuthenticatedSubscriptionRouteContext,
+} from "@/features/subscriptions/services/subscription-route-access.service";
 
 export const dynamic = "force-dynamic";
 
@@ -43,11 +46,11 @@ export async function GET(request: Request) {
   let rol: string | null = null;
 
   try {
-    const context = await resolveAuthenticatedRouteContext({
+    const context = await resolveAuthenticatedSubscriptionRouteContext({
       requireOrganization: false,
-      messages: {
-        profileError: "No pudimos validar tus permisos.",
-      },
+    });
+    assertSubscriptionAllowsRequestManagement({
+      subscription: context.subscription,
     });
     authReadyAt = performance.now();
     userEmail = context.user.email;

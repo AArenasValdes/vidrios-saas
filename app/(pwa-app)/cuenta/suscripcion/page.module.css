@@ -314,6 +314,49 @@
   text-align: right;
 }
 
+.receiptPanel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(30, 136, 255, 0.18);
+  border-radius: 16px;
+  background: rgba(30, 136, 255, 0.05);
+}
+
+.receiptCopy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.receiptCopy strong {
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.receiptCopy span,
+.receiptHint {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.receiptLink {
+  flex-shrink: 0;
+  color: var(--blueDark);
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.receiptLink:hover {
+  text-decoration: underline;
+}
+
 .statusBadge,
 .founderBadge {
   display: inline-flex;
@@ -605,6 +648,11 @@
 
   .detailValue {
     max-width: 144px;
+  }
+
+  .receiptPanel {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 

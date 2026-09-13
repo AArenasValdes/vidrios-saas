@@ -57,6 +57,9 @@ export type MercadoPagoPayment = {
   currency_id?: string | null;
   date_approved?: string | null;
   date_created?: string | null;
+  transaction_details?: {
+    external_resource_url?: string | null;
+  } | null;
   metadata?: Record<string, unknown> | null;
 };
 

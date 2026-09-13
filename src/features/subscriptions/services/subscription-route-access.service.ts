@@ -10,6 +10,10 @@ import {
   buildFreshTrialRepairSnapshot,
   resolveOrganizationSubscriptionState,
 } from "@/features/subscriptions/services/subscription-status.service";
+import {
+  getOrganizationBillingState,
+  resolveCanonicalSubscriptionSnapshot,
+} from "@/features/subscriptions/services/subscription-billing-state.service";
 import type { OrganizationSubscriptionSnapshot } from "@/features/subscriptions/types/subscription";
 import { createClient } from "@/lib/supabase/server";
 
@@ -161,10 +165,15 @@ export async function resolveAuthenticatedSubscriptionRouteContext(options: {
     supabase,
     context.profile.organizationId
   );
+  const billingState = await getOrganizationBillingState(
+    Number(context.profile.organizationId)
+  );
+  const canonicalSnapshot =
+    resolveCanonicalSubscriptionSnapshot(billingState) ?? snapshot;
   const repairedSnapshot = await repairFreshTrialSnapshotIfNeeded({
     supabase,
     organizationId: context.profile.organizationId,
-    snapshot,
+    snapshot: canonicalSnapshot,
   });
 
   return {
@@ -180,6 +189,17 @@ export function assertAuthenticatedRouteAllowsWrite(input: {
     throw new AuthRouteAccessError(
       403,
       "Tu prueba gratuita ya vencio. Activa tu cuenta para volver a operar."
+    );
+  }
+}
+
+export function assertSubscriptionAllowsRequestManagement(input: {
+  subscription: ReturnType<typeof resolveOrganizationSubscriptionState>;
+}) {
+  if (input.subscription.planCode === "quote_only") {
+    throw new AuthRouteAccessError(
+      403,
+      "El plan Cotización no incluye la gestión de solicitudes públicas."
     );
   }
 }

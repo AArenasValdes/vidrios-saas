@@ -20,20 +20,24 @@ import {
 import { SubscriptionBadge } from "@/features/subscriptions/components/subscription-badge";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { fetchSubscriptionSummary } from "@/features/subscriptions/services/subscription-summary-client.service";
+import { resolveOrganizationSubscriptionState } from "@/features/subscriptions/services/subscription-status.service";
+import type {
+  BillingPeriod,
+  PaymentMethod,
+  PlanCode,
+  SubscriptionStatus,
+} from "@/features/subscriptions/types/subscription";
 import type { PagoHistoryEntry } from "@/features/subscriptions/services/pagos-list.service";
-import type { SubscriptionSummary } from "@/features/subscriptions/types/subscription-summary";
+import {
+  getBillingPlanLabel,
+  type SubscriptionSummary,
+} from "@/features/subscriptions/types/subscription-summary";
 
 import s from "./page.module.css";
 
 const EMPTY_VALUE = "\u2014";
 const APPROVED_STATUS = "aprobado";
 const MAIN_HISTORY_LIMIT = 3;
-
-const PLAN_LABELS: Record<string, string> = {
-  founder_full: "Ventora Comercial",
-  quote_only: "Ventora Cotización",
-  trial: "Prueba gratis",
-};
 
 const PAYMENT_STATUS_LABELS: Record<string, string> = {
   pendiente: "Pendiente",
@@ -114,11 +118,6 @@ function getDaysRemainingLabel(
   return `${Math.max(diffDays, 0)} d\u00edas`;
 }
 
-function getLocalPlanLabel(planCode: string | null | undefined): string {
-  if (!planCode) return "Sin plan";
-  return PLAN_LABELS[planCode] ?? planCode;
-}
-
 function getSubscriptionStatusLabel(status: string | null | undefined): string {
   if (!status) return EMPTY_VALUE;
   return SUBSCRIPTION_STATUS_LABELS[status] ?? status;
@@ -133,9 +132,31 @@ function PaymentHistoryItem({ pago }: { pago: PagoHistoryEntry }) {
     <article className={s.historyItem}>
       <div className={s.historyMain}>
         <span className={s.historyDate}>{formatDate(pago.paidAt ?? pago.createdAt)}</span>
-        <strong className={s.historyPlan}>{getLocalPlanLabel(pago.planCode)}</strong>
+        <strong className={s.historyPlan}>
+          {pago.planLabel}
+        </strong>
         {pago.buyOrder ? (
           <span className={s.historyBuyOrder}>Orden {pago.buyOrder}</span>
+        ) : null}
+        {pago.providerPaymentId ? (
+          <span className={s.historyBuyOrder}>
+            ID Mercado Pago {pago.providerPaymentId}
+          </span>
+        ) : null}
+        {pago.externalReference ? (
+          <span className={s.historyBuyOrder}>
+            Ref. {pago.externalReference}
+          </span>
+        ) : null}
+        {pago.receiptUrl ? (
+          <a
+            className={s.receiptLink}
+            href={pago.receiptUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Ver comprobante Mercado Pago
+          </a>
         ) : null}
       </div>
       <div className={s.historyMeta}>
@@ -179,11 +200,37 @@ export default function SuscripcionPage() {
   const approvedPayments = pagos.filter((pago) => pago.status === APPROVED_STATUS);
   const recentApprovedPayments = approvedPayments.slice(0, MAIN_HISTORY_LIMIT);
   const paymentAttempts = pagos.filter((pago) => pago.status !== APPROVED_STATUS);
-  const lastApprovedPayment = approvedPayments.find((pago) => pago.paidAt)?.paidAt ?? null;
+  const lastApprovedPayment =
+    summary?.latestPayment?.paidAt ??
+    approvedPayments.find((pago) => pago.paidAt)?.paidAt ??
+    null;
   const hasPaymentAttempts = paymentAttempts.length > 0;
 
-  const planCode = profile?.planCode ?? summary?.planCode ?? null;
-  const subscription = profile?.subscription ?? null;
+  const planCode = summary?.planCode ?? profile?.planCode ?? null;
+  const subscription = summary
+    ? resolveOrganizationSubscriptionState({
+        subscriptionStatus: summary.subscriptionStatus as SubscriptionStatus | null,
+        trialStartedAt: profile?.trialStartedAt ?? null,
+        trialEndsAt: profile?.trialEndsAt ?? null,
+        subscriptionStartedAt:
+          summary.currentPeriodStartsAt ?? profile?.subscriptionStartedAt ?? null,
+        subscriptionEndsAt:
+          summary.currentPeriodEndsAt ?? profile?.subscriptionEndsAt ?? null,
+        planType:
+          summary.planCode === "founder_full"
+            ? "founder"
+            : summary.billingPeriod === "yearly"
+              ? "yearly"
+              : summary.planCode && summary.planCode !== "trial"
+                ? "monthly"
+                : profile?.planType ?? null,
+        planCode: summary.planCode as PlanCode | null,
+        billingPeriod: summary.billingPeriod as BillingPeriod | null,
+        paymentMethod: summary.paymentMethod as PaymentMethod | null,
+        lastPaymentAt: summary.latestPayment?.paidAt ?? profile?.lastPaymentAt ?? null,
+        founderPriceLocked: summary.founderPriceLocked,
+      })
+    : profile?.subscription ?? null;
   // Preferir estado efectivo (calculado por fechas) sobre el status crudo de BD/API.
   // Si no, una prueba con fecha vencida puede seguir mostrando "Prueba activa".
   const subscriptionStatus =
@@ -366,7 +413,9 @@ export default function SuscripcionPage() {
                 <LuLayers aria-hidden />
               </span>
               <span className={s.detailLabel}>Plan</span>
-              <span className={s.detailValue}>{getLocalPlanLabel(planCode)}</span>
+              <span className={s.detailValue}>
+                {getBillingPlanLabel(planCode, summary?.billingPeriod)}
+              </span>
             </div>
             <div className={s.detailRow}>
               <span className={s.detailIcon}>
@@ -381,7 +430,9 @@ export default function SuscripcionPage() {
               </span>
               <span className={s.detailLabel}>Monto</span>
               <span className={s.detailValue}>
-                {summary?.amountClp ? formatClp(summary.amountClp) : EMPTY_VALUE}
+                {summary?.amountClp !== null && summary?.amountClp !== undefined
+                  ? formatClp(summary.amountClp)
+                  : EMPTY_VALUE}
               </span>
             </div>
             <div className={s.detailRow}>
@@ -436,6 +487,31 @@ export default function SuscripcionPage() {
               </div>
             ) : null}
           </div>
+
+          {summary?.latestPayment ? (
+            <div className={s.receiptPanel}>
+              <div className={s.receiptCopy}>
+                <strong>Comprobante Mercado Pago</strong>
+                <span>
+                  Pago aprobado el {formatDate(summary.latestPayment.paidAt)}
+                </span>
+              </div>
+              {summary.latestPayment.receiptUrl ? (
+                <a
+                  className={s.receiptLink}
+                  href={summary.latestPayment.receiptUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Abrir comprobante
+                </a>
+              ) : (
+                <span className={s.receiptHint}>
+                  ID {summary.latestPayment.providerPaymentId ?? EMPTY_VALUE}
+                </span>
+              )}
+            </div>
+          ) : null}
 
           {lifecycleMessage ? <p className={s.lifecycleMessage}>{lifecycleMessage}</p> : null}
           {summary?.cancelAtPeriodEnd ? (

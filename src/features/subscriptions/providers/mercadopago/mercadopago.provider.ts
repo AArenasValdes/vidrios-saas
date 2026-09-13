@@ -1,7 +1,11 @@
 import "server-only";
 
 import { createMercadoPagoClient } from "./mercadopago.client";
-import { buildPendingAutoRecurringFromPlan, readMercadoPagoPlanAmount } from "./mercadopago-plan";
+import {
+  buildPendingAutoRecurringFromPlan,
+  doesMercadoPagoPlanMatchBillingPeriod,
+  readMercadoPagoPlanAmount,
+} from "./mercadopago-plan";
 import { resolveMercadoPagoCheckoutUrl } from "./mercadopago-reference";
 import type {
   RecurringSubscriptionResult,
@@ -60,12 +64,13 @@ export function createMercadoPagoSubscriptionProvider(input: {
       if (
         plan.id !== createInput.providerPlanId ||
         plan.status !== "active" ||
+        !doesMercadoPagoPlanMatchBillingPeriod(plan, input.billingPeriod) ||
         autoRecurring.transaction_amount !== input.expectedAmount ||
         autoRecurring.currency_id !== input.expectedCurrency ||
         (planAmount !== null && planAmount !== input.expectedAmount)
       ) {
         throw new Error(
-          `El plan configurado en Mercado Pago no coincide con Ventora (esperado: ${input.expectedAmount} ${input.expectedCurrency}; recibido: ${planAmount ?? autoRecurring.transaction_amount} ${autoRecurring.currency_id}).`
+          `El plan configurado en Mercado Pago no coincide con Ventora (esperado: ${input.expectedAmount} ${input.expectedCurrency} ${input.billingPeriod}; recibido: ${planAmount ?? autoRecurring.transaction_amount} ${autoRecurring.currency_id}).`
         );
       }
 

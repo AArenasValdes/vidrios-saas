@@ -1,6 +1,6 @@
 "use client";
 
-import { getPlanLabel } from "@/features/subscriptions/types/subscription-summary";
+import { getBillingPlanLabel } from "@/features/subscriptions/types/subscription-summary";
 import type { EffectiveSubscriptionState } from "@/features/subscriptions/types/subscription";
 
 import s from "./subscription-badge.module.css";
@@ -43,7 +43,7 @@ export function SubscriptionBadge({
 }) {
   if (!subscription) return null;
 
-  const planLabel = getPlanLabel(planCode);
+  const planLabel = getBillingPlanLabel(planCode, subscription.billingPeriod);
   const statusLabel = subscription.effectiveStatus
     ? STATUS_LABELS[subscription.effectiveStatus] ?? subscription.effectiveStatus
     : "—";

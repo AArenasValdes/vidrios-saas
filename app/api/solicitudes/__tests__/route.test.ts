@@ -1,6 +1,7 @@
 jest.mock("@/features/subscriptions/services/subscription-route-access.service", () => ({
   resolveAuthenticatedSubscriptionRouteContext: jest.fn(),
   assertAuthenticatedRouteAllowsWrite: jest.fn(),
+  assertSubscriptionAllowsRequestManagement: jest.fn(),
 }));
 
 jest.mock("@/features/auth/services/auth-route-access.service", () => ({
@@ -33,6 +34,7 @@ import { GET, PATCH, POST } from "../route";
 import { AuthRouteAccessError } from "@/features/auth/services/auth-route-access.service";
 import {
   assertAuthenticatedRouteAllowsWrite,
+  assertSubscriptionAllowsRequestManagement,
   resolveAuthenticatedSubscriptionRouteContext,
 } from "@/features/subscriptions/services/subscription-route-access.service";
 import {
@@ -163,6 +165,30 @@ describe("/api/solicitudes", () => {
     expect(solicitudesContactoService.updateSolicitudStatus).not.toHaveBeenCalled();
     expect(payload).toEqual({
       error: "Tu prueba gratuita ya vencio. Activa tu cuenta para volver a operar.",
+    });
+  });
+
+  it("bloquea la gestion de solicitudes para el plan Cotizacion", async () => {
+    (resolveAuthenticatedSubscriptionRouteContext as jest.Mock).mockResolvedValue({
+      user: { email: "owner@ventora.cl" },
+      profile: { rol: "admin", organizationId: 39 },
+      subscription: { isWriteBlocked: false, planCode: "quote_only" },
+    });
+    (canAccessSolicitudes as jest.Mock).mockReturnValue(true);
+    (assertSubscriptionAllowsRequestManagement as jest.Mock).mockImplementation(() => {
+      throw new AuthRouteAccessError(
+        403,
+        "El plan Cotización no incluye la gestión de solicitudes públicas."
+      );
+    });
+
+    const response = await GET();
+    const payload = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(solicitudesContactoService.listSolicitudesByOrganizationId).not.toHaveBeenCalled();
+    expect(payload).toEqual({
+      error: "El plan Cotización no incluye la gestión de solicitudes públicas.",
     });
   });
 });

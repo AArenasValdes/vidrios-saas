@@ -5,7 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { organizationProfileService } from "@/features/organization-profile/services/organization-profile.service";
 import { publicLandingCacheRepository } from "@/features/solicitudes/repositories/public-landing-cache.repository";
+import { fetchSubscriptionSummary } from "@/features/subscriptions/services/subscription-summary-client.service";
 import { assertSubscriptionAllowsWrite } from "@/features/subscriptions/services/subscription-status.service";
+import { resolveOrganizationSubscriptionState } from "@/features/subscriptions/services/subscription-status.service";
 import type {
   OrganizationProfile,
   UpdateOrganizationProfileInput,
@@ -97,6 +99,60 @@ function scheduleDeferredProfileRefresh(callback: () => void, delayMs = 500) {
   return () => window.clearTimeout(timeoutId);
 }
 
+async function mergeCanonicalSubscriptionSummary(profile: OrganizationProfile) {
+  try {
+    const summary = await fetchSubscriptionSummary();
+
+    if (!summary) return profile;
+
+    const subscription = resolveOrganizationSubscriptionState({
+      subscriptionStatus: summary.subscriptionStatus as OrganizationProfile["subscriptionStatus"],
+      trialStartedAt: profile.trialStartedAt,
+      trialEndsAt: profile.trialEndsAt,
+      subscriptionStartedAt:
+        summary.currentPeriodStartsAt ?? profile.subscriptionStartedAt,
+      subscriptionEndsAt:
+        summary.currentPeriodEndsAt ?? profile.subscriptionEndsAt,
+      planType:
+        summary.planCode === "founder_full"
+          ? "founder"
+          : summary.billingPeriod === "yearly"
+            ? "yearly"
+            : summary.planCode && summary.planCode !== "trial"
+              ? "monthly"
+              : profile.planType,
+      planCode: summary.planCode as OrganizationProfile["planCode"],
+      billingPeriod: summary.billingPeriod as OrganizationProfile["billingPeriod"],
+      paymentMethod: summary.paymentMethod as OrganizationProfile["paymentMethod"],
+      lastPaymentAt: summary.latestPayment?.paidAt ?? profile.lastPaymentAt,
+      founderPriceLocked: summary.founderPriceLocked,
+    });
+
+    return {
+      ...profile,
+      planCode: (summary.planCode as OrganizationProfile["planCode"]) ?? profile.planCode,
+      subscriptionStatus:
+        (summary.subscriptionStatus as OrganizationProfile["subscriptionStatus"]) ??
+        profile.subscriptionStatus,
+      subscriptionStartedAt:
+        summary.currentPeriodStartsAt ?? profile.subscriptionStartedAt,
+      subscriptionEndsAt:
+        summary.currentPeriodEndsAt ?? profile.subscriptionEndsAt,
+      billingPeriod:
+        (summary.billingPeriod as OrganizationProfile["billingPeriod"]) ??
+        profile.billingPeriod,
+      paymentMethod:
+        (summary.paymentMethod as OrganizationProfile["paymentMethod"]) ??
+        profile.paymentMethod,
+      lastPaymentAt: summary.latestPayment?.paidAt ?? profile.lastPaymentAt,
+      founderPriceLocked: summary.founderPriceLocked,
+      subscription,
+    };
+  } catch {
+    return profile;
+  }
+}
+
 function readInitialOrganizationProfileState(organizationId: string | number | null) {
   if (organizationId === null || organizationId === undefined) {
     return {
@@ -180,24 +236,27 @@ export function useOrganizationProfile() {
     }
 
     const nextProfile = await profilePromise;
+    const canonicalProfile = nextProfile
+      ? await mergeCanonicalSubscriptionSummary(nextProfile)
+      : null;
     const hasWarmCache =
-      nextProfile !== null || organizationProfileCache.has(organizationKey);
+      canonicalProfile !== null || organizationProfileCache.has(organizationKey);
 
     if (!isMountedRef.current || refreshId !== activeRefreshIdRef.current) {
       return nextProfile;
     }
 
-    setProfile(nextProfile);
+    setProfile(canonicalProfile);
     organizationProfileCache.set(organizationKey, {
       organizationId: organizationKey,
-      profile: nextProfile,
+      profile: canonicalProfile as OrganizationProfile,
     });
-    persistOrganizationProfile(organizationKey, nextProfile);
+    persistOrganizationProfile(organizationKey, canonicalProfile as OrganizationProfile);
     setIsReady(true);
 
     if (
       !hasWarmCache &&
-      nextProfile === null &&
+      canonicalProfile === null &&
       bootRetryCountRef.current < 1 &&
       typeof window !== "undefined"
     ) {
@@ -208,7 +267,7 @@ export function useOrganizationProfile() {
       }, 500);
     }
 
-    return nextProfile;
+    return canonicalProfile;
   };
 
   async function refreshProfile() {

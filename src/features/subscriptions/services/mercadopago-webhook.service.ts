@@ -117,8 +117,18 @@ async function reconcilePreapproval(resource: MercadoPagoPreapproval) {
   const status = mapMercadoPagoSubscriptionStatus(resource.status);
   const startsAt = resource.start_date ?? resource.date_created ?? null;
   const fallbackStart = startsAt ?? new Date().toISOString();
+  const existingPeriodStart = local.current_period_starts_at
+    ? new Date(local.current_period_starts_at).getTime()
+    : null;
+  const candidatePeriodStart = new Date(fallbackStart).getTime();
+  const shouldProjectPeriod =
+    status === "active" &&
+    (existingPeriodStart === null ||
+      Number.isNaN(existingPeriodStart) ||
+      Number.isNaN(candidatePeriodStart) ||
+      candidatePeriodStart >= existingPeriodStart);
   const period =
-    status === "active"
+    shouldProjectPeriod
       ? getPeriod({
           subscription: local,
           paidAt: fallbackStart,
@@ -257,23 +267,39 @@ export async function processMercadoPagoWebhook(input: {
     }
 
     const preapproval = await client.getPreapproval(resource.preapproval_id);
-    const providerStatus = authorizedPaymentStatus(resource);
     const providerPaymentId = String(
       resource.payment?.id ?? `authorized:${resource.id}`
     );
+    let payment: MercadoPagoPayment | null = null;
+
+    if (resource.payment?.id) {
+      try {
+        payment = await client.getPayment(String(resource.payment.id));
+      } catch {
+        // El pago autorizado sigue siendo suficiente para activar; el detalle
+        // enriquecido solo agrega datos del comprobante.
+        payment = null;
+      }
+    }
+
+    const providerStatus = payment?.status ?? authorizedPaymentStatus(resource);
 
     return reconcilePayment({
       paymentId: providerPaymentId,
       providerOrderId: String(resource.id),
       providerStatus,
-      amount: resource.transaction_amount,
-      currency: resource.currency_id,
-      paidAt: resource.debit_date,
+      amount: payment?.transaction_amount ?? resource.transaction_amount,
+      currency: payment?.currency_id ?? resource.currency_id,
+      paidAt:
+        payment?.date_approved ?? payment?.date_created ?? resource.debit_date,
       providerResponse: {
         authorized_payment_id: String(resource.id),
         payment_id: resource.payment?.id ?? null,
         status: providerStatus,
-        status_detail: resource.payment?.status_detail ?? null,
+        status_detail:
+          payment?.status_detail ?? resource.payment?.status_detail ?? null,
+        external_reference: resource.external_reference ?? preapproval.external_reference ?? null,
+        transaction_details: payment?.transaction_details ?? null,
       },
       preapproval,
     });
@@ -309,6 +335,8 @@ export async function processMercadoPagoWebhook(input: {
       payment_id: String(resource.id),
       status: resource.status ?? null,
       status_detail: resource.status_detail ?? null,
+      external_reference: resource.external_reference ?? null,
+      transaction_details: resource.transaction_details ?? null,
     },
     preapproval,
   });

@@ -20,6 +20,7 @@ import {
 } from "@/features/solicitudes/services/solicitudes-public-http.service";
 import {
   assertAuthenticatedRouteAllowsWrite,
+  assertSubscriptionAllowsRequestManagement,
   resolveAuthenticatedSubscriptionRouteContext,
 } from "@/features/subscriptions/services/subscription-route-access.service";
 
@@ -44,6 +45,10 @@ async function resolveSolicitudesAccess() {
       "No tienes permisos para revisar las solicitudes."
     );
   }
+
+  assertSubscriptionAllowsRequestManagement({
+    subscription: context.subscription,
+  });
 
   return {
     userEmail: context.user.email,

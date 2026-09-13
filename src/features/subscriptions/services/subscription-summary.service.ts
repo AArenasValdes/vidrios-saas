@@ -1,93 +1,88 @@
 import "server-only";
 
-import { createAdminClient } from "@/lib/supabase/admin";
 import { isMercadoPagoChileBillingReady } from "@/features/subscriptions/config/mercadopago-cl.config";
-import { createOrganizationSubscriptionRepository } from "@/features/subscriptions/repositories/organization-subscription.repository";
+import {
+  getOrganizationBillingState,
+  resolveCanonicalSubscriptionSnapshot,
+} from "@/features/subscriptions/services/subscription-billing-state.service";
 import { resolveOrganizationSubscriptionState } from "@/features/subscriptions/services/subscription-status.service";
-import type { OrganizationSubscriptionSnapshot } from "@/features/subscriptions/types/subscription";
-import { getPlanLabel } from "@/features/subscriptions/types/subscription-summary";
+import {
+  getBillingPlanLabel,
+  type SubscriptionPaymentReceipt,
+} from "@/features/subscriptions/types/subscription-summary";
 import type { SubscriptionSummary } from "@/features/subscriptions/types/subscription-summary";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyClient = any;
 
 function readOptionalString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
+function readProviderResponseObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function readHttpsUrl(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+function mapPaymentReceipt(
+  payment: Awaited<ReturnType<typeof getOrganizationBillingState>>["latestApprovedPayment"]
+): SubscriptionPaymentReceipt | null {
+  if (!payment) return null;
+
+  const response = readProviderResponseObject(payment.provider_response);
+  const transactionDetails = readProviderResponseObject(response.transaction_details);
+
+  return {
+    providerPaymentId: payment.provider_payment_id,
+    providerOrderId: payment.provider_order_id,
+    externalReference: readOptionalString(response.external_reference),
+    receiptUrl: readHttpsUrl(
+      response.receipt_url ?? transactionDetails.external_resource_url
+    ),
+    paidAt: payment.paid_at,
+  };
+}
+
 export async function getSubscriptionSummary(
   organizationId: number
 ): Promise<SubscriptionSummary | null> {
-  const admin = createAdminClient() as AnyClient;
+  const billingState = await getOrganizationBillingState(organizationId);
+  if (!billingState.profile) return null;
 
-  const { data: profile } = (await admin
-    .from("organization_profile")
-    .select(
-      "plan_code, billing_period, payment_method, subscription_status, trial_started_at, trial_ends_at, subscription_started_at, subscription_ends_at, plan_type, founder_price_locked"
-    )
-    .eq("organization_id", organizationId)
-    .single()) as {
-    data: Record<string, unknown> | null;
-  };
+  const snapshot = resolveCanonicalSubscriptionSnapshot(billingState);
+  if (!snapshot) return null;
 
-  if (!profile) return null;
-
-  const [{ data: lastPayment }, recurringSubscription] = await Promise.all([
-    admin
-      .from("pagos_suscripcion")
-      .select("amount_clp")
-      .eq("organization_id", organizationId)
-      .eq("status", "aprobado")
-      .order("creado_en", { ascending: false })
-      .limit(1)
-      .maybeSingle() as Promise<{ data: Record<string, unknown> | null }>,
-    createOrganizationSubscriptionRepository().getLatestByOrganizationId(
-      organizationId
-    ),
-  ]);
-
-  const planCode =
-    readOptionalString(profile.plan_code) ?? recurringSubscription?.plan_code ?? null;
-  const paymentMethod =
-    readOptionalString(profile.payment_method) ??
-    recurringSubscription?.provider ??
-    null;
-  const subscriptionEndsAt =
-    recurringSubscription?.current_period_ends_at ??
-    readOptionalString(profile.subscription_ends_at) ??
-    null;
+  const planCode = snapshot.planCode;
+  const paymentMethod = snapshot.paymentMethod;
+  const subscriptionEndsAt = snapshot.subscriptionEndsAt;
   const resolvedSubscription = resolveOrganizationSubscriptionState({
-    subscriptionStatus: readOptionalString(profile.subscription_status),
-    trialStartedAt: readOptionalString(profile.trial_started_at),
-    trialEndsAt: readOptionalString(profile.trial_ends_at),
-    subscriptionStartedAt: readOptionalString(profile.subscription_started_at),
-    subscriptionEndsAt: readOptionalString(profile.subscription_ends_at),
-    planType: readOptionalString(profile.plan_type),
-    planCode: readOptionalString(profile.plan_code),
-    billingPeriod: readOptionalString(profile.billing_period),
-    paymentMethod: readOptionalString(profile.payment_method),
-    lastPaymentAt: null,
-    founderPriceLocked: Boolean(profile.founder_price_locked),
-  } as Partial<OrganizationSubscriptionSnapshot>);
+    ...snapshot,
+  });
   const subscriptionStatus =
     resolvedSubscription.effectiveStatus ??
-    readOptionalString(profile.subscription_status) ??
-    recurringSubscription?.status ??
+    snapshot.subscriptionStatus ??
     null;
+  const recurringSubscription = billingState.recurringSubscription;
+  const latestApprovedPayment = billingState.latestApprovedPayment;
+  const amountClp =
+    recurringSubscription && recurringSubscription.status !== "pending"
+      ? recurringSubscription.amount
+      : latestApprovedPayment?.amount_clp ?? recurringSubscription?.amount ?? null;
 
   return {
     planCode,
-    planLabel: getPlanLabel(planCode),
-    amountClp:
-      (typeof lastPayment?.amount_clp === "number"
-        ? lastPayment.amount_clp
-        : null) ??
-      recurringSubscription?.amount ??
-      null,
-    billingPeriod:
-      readOptionalString(profile.billing_period) ??
-      recurringSubscription?.billing_period ??
-      null,
+    planLabel: getBillingPlanLabel(planCode, snapshot.billingPeriod),
+    amountClp,
+    billingPeriod: snapshot.billingPeriod,
     paymentMethod,
     subscriptionStatus,
     subscriptionEndsAt,
@@ -102,6 +97,8 @@ export async function getSubscriptionSummary(
       recurringSubscription?.provider === "mercadopago" &&
       recurringSubscription.status === "active" &&
       isMercadoPagoChileBillingReady(),
-    founderPriceLocked: Boolean(profile.founder_price_locked),
+    founderPriceLocked: snapshot.founderPriceLocked,
+    externalReference: recurringSubscription?.external_reference ?? null,
+    latestPayment: mapPaymentReceipt(latestApprovedPayment),
   };
 }

@@ -36,6 +36,27 @@ function recurringDefaultsForBillingPeriod(billingPeriod: Exclude<BillingPeriod,
   return { frequency: 1, frequency_type: "months" as const };
 }
 
+export function doesMercadoPagoPlanMatchBillingPeriod(
+  plan: MercadoPagoPreapprovalPlan,
+  billingPeriod: Exclude<BillingPeriod, "none">
+) {
+  const recurring = plan.auto_recurring;
+  const frequency = normalizeFrequency(recurring?.frequency);
+  const frequencyType = normalizeFrequencyType(recurring?.frequency_type);
+
+  if (!frequency || !frequencyType) return false;
+
+  if (frequencyType === "year" || frequencyType === "years") {
+    return billingPeriod === "yearly" && frequency === 1;
+  }
+
+  if (frequencyType !== "month" && frequencyType !== "months") {
+    return false;
+  }
+
+  return billingPeriod === "monthly" ? frequency === 1 : frequency === 12;
+}
+
 export function buildPendingAutoRecurringFromPlan(
   plan: MercadoPagoPreapprovalPlan,
   fallback: {

@@ -1,6 +1,9 @@
 "use client";
 
-import type { SubscriptionSummary } from "@/features/subscriptions/types/subscription-summary";
+import {
+  getBillingPlanLabel,
+  type SubscriptionSummary,
+} from "@/features/subscriptions/types/subscription-summary";
 
 import s from "./subscription-detail.module.css";
 
@@ -37,6 +40,7 @@ const STATUS_CLASSES: Record<string, string> = {
 
 const PAYMENT_LABELS: Record<string, string> = {
   flow: "Flow",
+  mercadopago: "Mercado Pago",
   webpay_plus: "Webpay Plus",
   manual_transfer: "Transferencia manual",
   manual_other: "Otro",
@@ -66,7 +70,9 @@ export function SubscriptionDetail({
     <div className={s.detail}>
       <div className={s.row}>
         <span className={s.label}>Plan</span>
-        <strong className={s.value}>{summary.planLabel}</strong>
+        <strong className={s.value}>
+          {getBillingPlanLabel(summary.planCode, summary.billingPeriod)}
+        </strong>
       </div>
 
       <div className={s.row}>
@@ -89,16 +95,33 @@ export function SubscriptionDetail({
       </div>
 
       <div className={s.row}>
-        <span className={s.label}>Ultimo pago</span>
+        <span className={s.label}>Periodicidad</span>
         <span className={s.value}>
-          {formatDate(summary.subscriptionEndsAt)}
+          {summary.billingPeriod === "monthly"
+            ? "Mensual"
+            : summary.billingPeriod === "yearly"
+              ? "Anual"
+              : "—"}
         </span>
       </div>
 
       <div className={s.row}>
-        <span className={s.label}>Vence</span>
+        <span className={s.label}>Ultimo pago</span>
         <span className={s.value}>
-          {formatDate(summary.subscriptionEndsAt)}
+          {formatDate(summary.latestPayment?.paidAt ?? null)}
+        </span>
+      </div>
+
+      <div className={s.row}>
+        <span className={s.label}>
+          {summary.cancelAtPeriodEnd ? "Acceso hasta" : "Proximo cobro"}
+        </span>
+        <span className={s.value}>
+          {formatDate(
+            summary.cancelAtPeriodEnd
+              ? summary.currentPeriodEndsAt ?? summary.subscriptionEndsAt
+              : summary.nextPaymentAt ?? summary.subscriptionEndsAt
+          )}
         </span>
       </div>
 
@@ -109,7 +132,43 @@ export function SubscriptionDetail({
         </div>
       ) : null}
 
+      {summary.latestPayment ? (
+        <div className={s.receipt}>
+          <span className={s.label}>Comprobante</span>
+          {summary.latestPayment.receiptUrl ? (
+            <a
+              className={s.receiptLink}
+              href={summary.latestPayment.receiptUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Ver comprobante Mercado Pago
+            </a>
+          ) : (
+            <span className={s.value}>
+              ID {summary.latestPayment.providerPaymentId ?? "—"}
+            </span>
+          )}
+        </div>
+      ) : null}
+
+      {summary.externalReference ? (
+        <div className={s.row}>
+          <span className={s.label}>Referencia</span>
+          <span className={s.value}>{summary.externalReference}</span>
+        </div>
+      ) : null}
+
+      {summary.cancelAtPeriodEnd ? (
+        <p className={s.lifecycleMessage}>
+          La renovacion automatica esta cancelada. No habra un nuevo cobro.
+        </p>
+      ) : null}
+
       <div className={s.actions}>
+        <a className={s.billingButton} href="/cuenta/suscripcion">
+          Administrar facturacion
+        </a>
         <a
           className={s.supportButton}
           href="mailto:ventora.cl@gmail.com?subject=Soporte%20suscripcion"

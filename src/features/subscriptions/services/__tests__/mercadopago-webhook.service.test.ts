@@ -68,6 +68,7 @@ describe("Mercado Pago webhook reconciliation", () => {
     getByProviderSubscriptionId.mockResolvedValue(local);
     getByExternalReference.mockResolvedValue(local);
     getPreapproval.mockResolvedValue(preapproval);
+    getPayment.mockResolvedValue(undefined);
     reconcileMercadoPagoSubscription.mockResolvedValue(81);
     reconcileMercadoPagoPayment.mockResolvedValue(901);
   });
@@ -108,6 +109,43 @@ describe("Mercado Pago webhook reconciliation", () => {
         amount: 8_990,
         currencyCode: "CLP",
         periodEndsAt: "2026-09-12T12:00:00.000Z",
+      })
+    );
+  });
+
+  it("conserva los datos del comprobante cuando Mercado Pago los entrega", async () => {
+    getAuthorizedPayment.mockResolvedValue({
+      id: 505,
+      preapproval_id: "preapproval-1",
+      transaction_amount: 8_990,
+      currency_id: "CLP",
+      debit_date: "2026-08-12T12:00:00.000Z",
+      payment: { id: 9005, status: "approved" },
+    });
+    getPayment.mockResolvedValue({
+      id: 9005,
+      status: "approved",
+      transaction_amount: 8_990,
+      currency_id: "CLP",
+      date_approved: "2026-08-12T12:00:00.000Z",
+      transaction_details: {
+        external_resource_url: "https://www.mercadopago.cl/receipt/9005",
+      },
+    });
+
+    await processMercadoPagoWebhook({
+      topic: "subscription_authorized_payment",
+      resourceId: "505",
+    });
+
+    expect(reconcileMercadoPagoPayment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerPaymentId: "9005",
+        providerResponse: expect.objectContaining({
+          transaction_details: {
+            external_resource_url: "https://www.mercadopago.cl/receipt/9005",
+          },
+        }),
       })
     );
   });
