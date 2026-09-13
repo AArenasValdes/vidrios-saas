@@ -135,4 +135,37 @@ describe("arquetipos estructurales de líneas comerciales", () => {
     expect(recipe?.identidad.tipologia).toBe("puerta_corredera");
     expect(recipe?.perfiles.length).toBeGreaterThan(0);
   });
+
+  it("crea la base real de Serie 3200 con variantes, códigos y cortes de una hoja", () => {
+    const recipe = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:serie-3200-puerta-abatible-1h",
+      lineName: "Serie 3200",
+      createId: (() => {
+        let n = 0;
+        return () => `3200-${++n}`;
+      })(),
+    });
+
+    expect(recipe?.identidad).toMatchObject({
+      tipologia: "puerta_abatible",
+      hojas: 1,
+      variante: "3200 ST",
+    });
+    expect(recipe?.perfiles.filter((profile) => profile.codigoPerfil === "3222")).toHaveLength(2);
+    expect(recipe?.perfiles.filter((profile) => profile.codigoPerfil === "3221")).toHaveLength(2);
+    expect(recipe?.perfiles.filter((profile) => profile.codigoPerfil === "3225")).toHaveLength(2);
+    expect(recipe?.perfiles.filter((profile) => profile.codigoPerfil === "3227")).toHaveLength(2);
+    expect(recipe?.perfiles.every((profile) => profile.largoComercialMm === 6000)).toBe(true);
+    expect(recipe?.perfiles.find((profile) => profile.codigoPerfil === "3221")?.reglaMedida.ajusteMm).toBe(-136);
+    expect(recipe?.perfiles.find((profile) => profile.codigoPerfil === "3225")?.reglaMedida.ajusteMm).toBe(-192);
+    expect(recipe?.vidrios.map((glass) => glass.nombre)).toEqual([
+      "Monolítico 4 mm",
+      "Monolítico 5 mm",
+      "Termopanel DVH 22 mm (4-12-4)",
+      "Termopanel DVH 22 mm (5-12-5)",
+    ]);
+    expect(recipe?.accesorios.map((accessory) => accessory.nombre)).toEqual(
+      expect.arrayContaining(["Bisagra Udinese 3200", "Cerradura ISEO (inox)"])
+    );
+  });
 });

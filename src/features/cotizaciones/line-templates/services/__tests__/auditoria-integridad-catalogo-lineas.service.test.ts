@@ -100,7 +100,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
     expect(puerta3200?.codigosReferenciales).toEqual(
 
-      expect.arrayContaining(["3221", "3228"])
+      expect.arrayContaining(["3221", "3222", "3223", "3225", "3227"])
 
     );
 

@@ -67,6 +67,19 @@ const AL42_GLASS_OPTIONS = [
 
 const GLASS_RECOMMENDATION_RULES: readonly GlassRecommendationRule[] = [
   {
+    id: "serie-3200",
+    reason:
+      "Serie 3200: monolítico 4 o 5 mm para L/ST; termopanel DVH 22 mm para TP.",
+    matches: ({ sistema }) =>
+      includesAny(sistema, ["serie 3200", "3200"]),
+    recommendations: [
+      "Incoloro monolitico 4mm",
+      "Incoloro monolitico 5mm",
+      "DVH 4+12+4",
+      "DVH 5+12+5",
+    ],
+  },
+  {
     id: "al-32",
     reason: "AL-32: vidrio monolítico de 3, 4 o 5 mm. No admite termopanel.",
     matches: ({ subtipo, sistema }) =>

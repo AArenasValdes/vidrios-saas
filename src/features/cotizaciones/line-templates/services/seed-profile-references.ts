@@ -8,6 +8,7 @@ import {
 export type LineTemplateProfileSeedRow = {
   id: number | string;
   catalog_key?: string | null;
+  vidrio_principal_recomendado?: string | null;
   catalog_metadata?: Record<string, unknown> | null;
 };
 
@@ -19,8 +20,11 @@ export type SeedProfileReferencesDeps = {
     id: number | string;
     organizationId: string | number;
     catalogMetadata: Record<string, unknown>;
+    vidrioPrincipalRecomendado?: string | null;
   }) => Promise<void>;
 };
+
+const SERIE_3200_GLASS_RECOMMENDATION = "Incoloro monolítico 4mm";
 
 function shouldSeedProfileReferences(
   row: LineTemplateProfileSeedRow
@@ -31,6 +35,17 @@ function shouldSeedProfileReferences(
 
   if (!existing) return true;
   return existing.seedVersion < LINE_PROFILE_REFERENCE_SEED_VERSION;
+}
+
+function getGlassRecommendationPatch(
+  row: LineTemplateProfileSeedRow
+): string | null | undefined {
+  if (row.catalog_key !== "ventora:serie-3200-puerta-abatible-1h") {
+    return undefined;
+  }
+  return row.vidrio_principal_recomendado?.trim() === SERIE_3200_GLASS_RECOMMENDATION
+    ? undefined
+    : SERIE_3200_GLASS_RECOMMENDATION;
 }
 
 function getLegacyLineIdentityPatch(
@@ -89,7 +104,8 @@ export async function seedProfileReferencesForOrganization(
 
   for (const line of ventoraLines) {
     const identityPatch = getLegacyLineIdentityPatch(line);
-    if (!shouldSeedProfileReferences(line) && !identityPatch) {
+    const glassRecommendationPatch = getGlassRecommendationPatch(line);
+    if (!shouldSeedProfileReferences(line) && !identityPatch && !glassRecommendationPatch) {
       skipped += 1;
       continue;
     }
@@ -117,6 +133,7 @@ export async function seedProfileReferencesForOrganization(
           ...(identityPatch ?? {}),
           workshopProfiles,
         },
+        vidrioPrincipalRecomendado: glassRecommendationPatch,
       });
       seeded += 1;
     } catch (error) {

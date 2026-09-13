@@ -77,6 +77,27 @@ describe("glass-recommendations service", () => {
     ]);
   });
 
+  it("recomienda los vidrios correctos de Serie 3200", () => {
+    const result = getGlassRecommendations(
+      { subtipo: "Puerta", sistema: "Serie 3200" },
+      [
+        "Incoloro monolítico 4mm",
+        "Incoloro monolítico 5mm",
+        "DVH 4+12+4",
+        "DVH 5+12+5",
+        "Templado 10mm",
+      ]
+    );
+
+    expect(result.recommendedOptions).toEqual([
+      "Incoloro monolítico 4mm",
+      "Incoloro monolítico 5mm",
+      "DVH 4+12+4",
+      "DVH 5+12+5",
+    ]);
+    expect(result.reason).toContain("Serie 3200");
+  });
+
   it("debe recomendar templados para shower door sin bloquear el resto", () => {
     const result = getGlassRecommendations(
       { subtipo: "Shower door", sistema: "Batiente" },

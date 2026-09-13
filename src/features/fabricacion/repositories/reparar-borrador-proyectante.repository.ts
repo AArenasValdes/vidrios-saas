@@ -32,9 +32,17 @@ export async function repararBorradoresProyectantes(
       .select("id").eq("organization_id", organizationId).eq("recipe_id", row.id).limit(1);
     if (testError) throw testError;
     if (tests?.length) continue;
+    const isSerie3200 = line?.catalog_key === "ventora:serie-3200-puerta-abatible-1h";
     const { data: updated, error: updateError } = await client.from("fabrication_recipes")
-      .update({ definition, typology: "proyectante", leaves_count: 1, variant: definition.identidad.variante,
-        source_reference: "ventora-proyectante:catalogo-2026-09-13" })
+      .update({
+        definition,
+        typology: definition.identidad.tipologia,
+        leaves_count: definition.identidad.hojas,
+        variant: definition.identidad.variante,
+        source_reference: isSerie3200
+          ? "ventora-serie-3200:catalogo-2026-09-13"
+          : "ventora-proyectante:catalogo-2026-09-13",
+      })
       .eq("id", row.id).eq("organization_id", organizationId).eq("scope", "organization")
       .eq("line_template_id", row.line_template_id).eq("status", "draft").eq("version", 1)
       .eq("updated_at", row.updated_at).eq("definition", JSON.stringify(row.definition))

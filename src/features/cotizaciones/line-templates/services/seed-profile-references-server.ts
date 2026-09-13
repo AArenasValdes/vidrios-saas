@@ -18,7 +18,7 @@ export async function seedProfileReferencesServer(
     async listVentoraLineTemplates(orgId) {
       const { data, error } = await admin
         .from("cotizacion_line_templates")
-        .select("id, catalog_key, catalog_metadata")
+        .select("id, catalog_key, vidrio_principal_recomendado, catalog_metadata")
         .eq("organization_id", orgId)
         .is("eliminado_en", null)
         .not("catalog_key", "is", null);
@@ -27,10 +27,20 @@ export async function seedProfileReferencesServer(
       return data ?? [];
     },
 
-    async updateLineTemplateMetadata({ id, organizationId: orgId, catalogMetadata }) {
+    async updateLineTemplateMetadata({
+      id,
+      organizationId: orgId,
+      catalogMetadata,
+      vidrioPrincipalRecomendado,
+    }) {
       const { error } = await admin
         .from("cotizacion_line_templates")
-        .update({ catalog_metadata: catalogMetadata })
+        .update({
+          catalog_metadata: catalogMetadata,
+          ...(vidrioPrincipalRecomendado !== undefined
+            ? { vidrio_principal_recomendado: vidrioPrincipalRecomendado }
+            : {}),
+        })
         .eq("id", id)
         .eq("organization_id", orgId)
         .is("eliminado_en", null);

@@ -25,6 +25,12 @@ Historial de cambios en la documentacion del mapa tecnico.
 - Se agregó regresión en `src/features/growth/repositories/__tests__/growth-content.repository.test.ts`.
 - Se documentó `docs/marketing/DISENO_HANDOFF_IA.md` para futuras sesiones exclusivamente visuales. No cambiar lógica, persistencia, Supabase, contratos ni rutas al usar ese handoff.
 
+## 2026-09-13 - Base técnica Serie 3200
+
+- Serie 3200 separada de la base genérica de puerta: variantes 3200 L/ST/TP, códigos 3222/3221/3225/3227 y cortes de una hoja.
+- 3223 se conserva como referencia de segunda hoja, fuera de la receta base 1H; se eliminan referencias no entregadas 3226/3228.
+- Se agrega recomendación de vidrio monolítico 4/5 mm y DVH 22 mm para la cotización, más reparación conservadora de precargas 3200 intactas.
+
 ## 2026-09-04 - Catálogo 25 líneas: integridad, cotización, fabricación y UX receta
 
 ### Catálogo comercial e integridad de códigos

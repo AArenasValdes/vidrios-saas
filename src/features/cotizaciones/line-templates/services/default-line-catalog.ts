@@ -52,7 +52,10 @@ function buildVentoraDefaultLine(
     precioM2Sugerido: 0,
     minimoCobrable: 0,
     redondeoPrecio: DEFAULT_PRICE_ROUNDING_CLP,
-    vidrioPrincipalRecomendado: null,
+    vidrioPrincipalRecomendado:
+      definition.catalogKey === "ventora:serie-3200-puerta-abatible-1h"
+        ? "Incoloro monolítico 4mm"
+        : null,
     catalogMetadata: {
       needsCommercialPrice: true,
       cubicationStatus: "pending",

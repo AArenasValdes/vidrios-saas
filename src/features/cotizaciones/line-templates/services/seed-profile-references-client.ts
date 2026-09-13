@@ -29,7 +29,7 @@ export async function ensureProfileReferencesClient(
     async listVentoraLineTemplates(orgId) {
       const { data, error } = await supabase
         .from("cotizacion_line_templates")
-        .select("id, catalog_key, catalog_metadata")
+        .select("id, catalog_key, vidrio_principal_recomendado, catalog_metadata")
         .eq("organization_id", orgId)
         .is("eliminado_en", null)
         .not("catalog_key", "is", null);
@@ -38,10 +38,20 @@ export async function ensureProfileReferencesClient(
       return data ?? [];
     },
 
-    async updateLineTemplateMetadata({ id, organizationId: orgId, catalogMetadata }) {
+    async updateLineTemplateMetadata({
+      id,
+      organizationId: orgId,
+      catalogMetadata,
+      vidrioPrincipalRecomendado,
+    }) {
       const { error } = await supabase
         .from("cotizacion_line_templates")
-        .update({ catalog_metadata: catalogMetadata })
+        .update({
+          catalog_metadata: catalogMetadata,
+          ...(vidrioPrincipalRecomendado !== undefined
+            ? { vidrio_principal_recomendado: vidrioPrincipalRecomendado }
+            : {}),
+        })
         .eq("id", id)
         .eq("organization_id", orgId)
         .is("eliminado_en", null);

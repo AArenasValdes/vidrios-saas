@@ -293,18 +293,12 @@ const MULTISLIDE_S83_PROFILES: LineProfileReference[] = [
 ];
 
 const PUERTA_3200_PROFILES: LineProfileReference[] = [
+  catalogRef({ code: "3222", name: "Marco", role: "Marco" }),
   catalogRef({
     code: "3221",
     name: "Bastidor chico",
     role: "Puerta",
     description: "Bastidor chico",
-  }),
-  catalogRef({ code: "3222", name: "Marco", role: "Marco" }),
-  catalogRef({
-    code: "3223",
-    name: "Tope segunda hoja",
-    role: "Otro",
-    description: "Tope segunda hoja",
   }),
   catalogRef({
     code: "3225",
@@ -312,7 +306,6 @@ const PUERTA_3200_PROFILES: LineProfileReference[] = [
     role: "Puerta",
     description: "Bastidor grande",
   }),
-  catalogRef({ code: "3226", name: "Palillo", role: "Otro" }),
   catalogRef({
     code: "3227",
     name: "Bastidor termopanel",
@@ -320,10 +313,10 @@ const PUERTA_3200_PROFILES: LineProfileReference[] = [
     description: "Bastidor termopanel",
   }),
   catalogRef({
-    code: "3228",
-    name: "Palillo termopanel",
+    code: "3223",
+    name: "Tope segunda hoja",
     role: "Otro",
-    description: "Palillo termopanel",
+    description: "Tope segunda hoja",
   }),
 ];
 

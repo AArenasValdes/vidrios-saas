@@ -42,7 +42,15 @@ export function prepararReparacionBorradorCatalogo(
     lineName: row.line_name,
     createId: () => "seed",
   }));
-  if (JSON.stringify(comparable(parsed.data)) !== JSON.stringify(comparable(original))) return null;
+  const legacyCatalogDefinition = enriquecerRecetaDesdeCatalogo({
+    receta: original,
+    catalogKey,
+  });
+  const parsedComparable = JSON.stringify(comparable(parsed.data));
+  const isUntouchedSeed = [original, legacyCatalogDefinition].some(
+    (candidate) => parsedComparable === JSON.stringify(comparable(candidate))
+  );
+  if (!isUntouchedSeed) return null;
   const replacement = crearRecetaEstructuralParaLineaComercial({ catalogKey, lineName: row.line_name });
   return replacement ? {
     ...enriquecerRecetaDesdeCatalogo({ receta: replacement, catalogKey }),

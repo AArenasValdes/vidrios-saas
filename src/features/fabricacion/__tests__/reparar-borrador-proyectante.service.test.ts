@@ -33,6 +33,42 @@ describe("reparación conservadora de borradores AL-32/AL-42", () => {
     expect(prepararReparacionBorradorProyectante("ventora:l42", { ...row, definition: recipe })).toBeNull();
   });
 
+  it("repara la precarga genérica vieja de Serie 3200 con la base L/ST/TP", () => {
+    const row = {
+      ...seed("proyectante"),
+      line_name: "Serie 3200",
+      source_reference: "ventora-arquetipo:puerta_abatible",
+      definition: crearRecetaDesdeArquetipoEstructural({
+        archetypeId: "puerta_abatible",
+        lineName: "Serie 3200",
+        createId: (() => {
+          let id = 0;
+          return () => `old-3200-${++id}`;
+        })(),
+      }),
+    };
+
+    const recipe = prepararReparacionBorradorProyectante(
+      "ventora:serie-3200-puerta-abatible-1h",
+      row
+    );
+
+    expect(recipe?.identidad).toMatchObject({
+      tipologia: "puerta_abatible",
+      variante: "3200 ST",
+    });
+    expect(recipe?.perfiles.map((profile) => profile.codigoPerfil)).toEqual([
+      "3222",
+      "3222",
+      "3221",
+      "3221",
+      "3225",
+      "3225",
+      "3227",
+      "3227",
+    ]);
+  });
+
   it.each(["codigo", "medida", "tira", "notas"])("conserva el ajuste del taller: %s", (change) => {
     const row = seed();
     const definition = fabricacionRecetaSchema.parse(row.definition);
