@@ -338,6 +338,25 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     effectiveProviderFilter !== LINE_TEMPLATE_PROVIDER_FILTER_ALL,
   ].filter(Boolean).length;
 
+  const organizationRecipesByLineId = useMemo(() => {
+    const recipesByLineId = new Map<number, typeof fabricationRecipes>();
+
+    for (const recipe of fabricationRecipes) {
+      if (recipe.scope !== "organization" || recipe.lineTemplateId == null) {
+        continue;
+      }
+
+      const lineRecipes = recipesByLineId.get(recipe.lineTemplateId);
+      if (lineRecipes) {
+        lineRecipes.push(recipe);
+      } else {
+        recipesByLineId.set(recipe.lineTemplateId, [recipe]);
+      }
+    }
+
+    return recipesByLineId;
+  }, [fabricationRecipes]);
+
   const technicalStatusesByTemplateId = useMemo(
     () =>
       new Map(
@@ -345,15 +364,11 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
           String(template.id),
           buildTechnicalCardStatus(
             template,
-            fabricationRecipes.filter(
-              (recipe) =>
-                recipe.scope === "organization" &&
-                recipe.lineTemplateId === Number(template.id)
-            )
+            organizationRecipesByLineId.get(Number(template.id)) ?? []
           ),
         ])
       ),
-    [fabricationRecipes, templates]
+    [organizationRecipesByLineId, templates]
   );
   const technicalFilterCounts = useMemo(
     () => ({
@@ -1538,9 +1553,9 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         <LinePriceEditor
           template={priceEditorTemplate}
           organizationId={organizacionId}
-          onSaved={(updated) => {
+          onSaved={() => {
             setPriceEditorTemplate(null);
-            refreshTemplates();
+            void refreshTemplates({ force: true });
           }}
           onClose={() => setPriceEditorTemplate(null)}
         />
