@@ -57,5 +57,7 @@ Una línea se cierra como “Validada en taller” solo con receta persistida va
 - Migración ejecutada: `20260914120000_fabrication_recipe_provenance.sql`.
 - Columnas verificadas: `source_name`, `source_revision`.
 - RLS verificada activa y con 3 policies en `cotizacion_line_templates`, `fabrication_recipes` y `fabrication_recipe_tests`.
-- Fingerprints antes/después: líneas `80f02ab712a023c41cc158f62b7f431d`, recetas `c0ffd8952540201583967a2092795cb5`, pruebas `e1f26e9083e4aab1176b315810fdab6e`; sin cambios.
-- Conteos antes/después: 363 líneas, 328 recetas y 15 pruebas; `organization_id` sin cambios en la verificación agregada.
+- Conteos remotos post-migración de la organización auditada: 25 líneas activas, 28 recetas activas y 1 prueba activa. Conteos globales activos: 363 líneas, 320 recetas y 15 pruebas.
+- Fingerprints deterministas post-migración (`md5(string_agg(to_jsonb(row)::text, '|' order by id))`): organización 39 = líneas `ee1257e875e351986db61a8b51a7ce74`, recetas `e2efefd7a63f339b15eba5aa71cb1381`, pruebas `ac3368322f7654e2041766de0c10132a`; global = líneas `71526892b83b8eda936a339d65c3dadf`, recetas `d395ebe774237b6929194019d796b6e9`, pruebas `de122e8c6ea70373345d97d57cf79afe`.
+- La comparación contra el snapshot tomado antes de ejecutar la migración fue idéntica en conteos/fingerprints y `organization_id`; no hubo sobrescritura de recetas, descuentos ni códigos.
+- La migración se aplicó remotamente con `db query --linked`. No se ejecutó `migration repair`: el historial remoto aún tiene migraciones anteriores pendientes y no se alteró para fabricar una marca de versión.
