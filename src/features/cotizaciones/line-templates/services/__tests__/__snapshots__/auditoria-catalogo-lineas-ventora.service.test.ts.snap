@@ -171,7 +171,7 @@ exports[`auditoria-catalogo-lineas-ventora.service resume estados del catálogo 
     "listaParaProbar": false,
     "nombre": "Serie 4600 — Puerta vaivén",
     "perfiles": "0/7",
-    "tipologia": "puerta_corredera",
+    "tipologia": "puerta_vaiven",
   },
   {
     "catalogKey": "ventora:winhouse-new-s75-doble-riel",
@@ -216,7 +216,7 @@ exports[`auditoria-catalogo-lineas-ventora.service resume estados del catálogo 
     "listaParaProbar": false,
     "nombre": "WinHouse Andes Monorriel",
     "perfiles": "0/10",
-    "tipologia": "corredera",
+    "tipologia": "pvc_monorriel",
   },
   {
     "catalogKey": "ventora:winhouse-andes-proyectante",

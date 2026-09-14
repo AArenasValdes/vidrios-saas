@@ -27,7 +27,7 @@ describe("L42 proyectante gate vs UI listo", () => {
 
     expect(evaluacion.listaParaProbar).toBe(false);
     expect(evaluacion.bloqueos).toEqual(
-      expect.arrayContaining([expect.stringMatching(/Falta descuento confirmado/i)])
+      expect.arrayContaining([expect.stringMatching(/Falta descuento persistido/i)])
     );
   });
 

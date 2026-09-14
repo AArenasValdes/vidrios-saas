@@ -636,6 +636,8 @@ export type Database = {
           provider_name: string
           scope: string
           source_reference: string | null
+          source_name: string | null
+          source_revision: string | null
           source_type: string
           status: string
           typology: string
@@ -658,6 +660,8 @@ export type Database = {
           provider_name?: string
           scope: string
           source_reference?: string | null
+          source_name?: string | null
+          source_revision?: string | null
           source_type?: string
           status?: string
           typology: string
@@ -680,6 +684,8 @@ export type Database = {
           provider_name?: string
           scope?: string
           source_reference?: string | null
+          source_name?: string | null
+          source_revision?: string | null
           source_type?: string
           status?: string
           typology?: string

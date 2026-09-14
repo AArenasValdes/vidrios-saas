@@ -23,8 +23,9 @@ describe("procedencia de receta de fabricación", () => {
         plantillaId: "L5000",
       })
     ).toEqual({
-      sourceType: "copied",
+      sourceType: "ventora_reference",
       sourceReference: buildPlantillaVentoraSourceReference("L5000"),
+      sourceName: "Plantilla Ventora sugerida",
     });
 
     expect(buildProcedenciaPersistence("borrador_ia")).toEqual({
@@ -42,8 +43,9 @@ describe("procedencia de receta de fabricación", () => {
         plantillaId: "cuprum-serie-xx",
       })
     ).toEqual({
-      sourceType: "copied",
+      sourceType: "manufacturer",
       sourceReference: buildPlantillaVerificadaSourceReference("cuprum-serie-xx"),
+      sourceName: "Documento técnico informado",
     });
   });
 
@@ -77,7 +79,7 @@ describe("procedencia de receta de fabricación", () => {
     ).toMatchObject({
       procedencia: "plantilla_ventora",
       label: "Plantilla Ventora",
-      detail: "Validada en taller · L20",
+      detail: "Base sugerida · L20",
       plantillaId: "L20",
     });
 

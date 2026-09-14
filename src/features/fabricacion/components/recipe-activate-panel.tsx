@@ -50,7 +50,9 @@ function formatTypologyLabel(tipologia: FabricacionTipologia) {
     abatible: "Abatible",
     proyectante: "Proyectante",
     puerta_abatible: "Puerta abatible",
+    puerta_vaiven: "Puerta vaivén",
     puerta_corredera: "Puerta corredera",
+    pvc_monorriel: "PVC monorriel",
     shower: "Shower",
     personalizada: "Personalizada",
   };
@@ -72,6 +74,7 @@ function leafCompositionLabel(recipe: FabricacionReceta) {
   }
   if (
     recipe.identidad.tipologia === "puerta_abatible" ||
+    recipe.identidad.tipologia === "puerta_vaiven" ||
     recipe.identidad.tipologia === "puerta_corredera"
   ) {
     return hojas === 1 ? `${typology} de 1 hoja` : `${typology} de ${hojas} hojas`;

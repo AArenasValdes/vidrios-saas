@@ -42,6 +42,7 @@ import {
   crearRecetaFabricacionVacia,
 } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
+import { deriveLineOperationalStatus } from "@/features/fabricacion/services/line-operational-status.service";
 import {
   formatLargoComercialCorto,
   resolveRecetaLargoComercialDefaultMm,
@@ -75,7 +76,7 @@ const STATUS_COPY: Record<
   { label: string; detail: string; tone: string }
 > = {
   draft: {
-    label: "Borrador",
+    label: "Configuración técnica pendiente",
     detail: "Fabricación por completar",
     tone: "draft",
   },
@@ -85,7 +86,7 @@ const STATUS_COPY: Record<
     tone: "testing",
   },
   validated: {
-    label: "Lista para cotizar",
+    label: "Validada en taller",
     detail: "Validada por tu taller",
     tone: "validated",
   },
@@ -200,7 +201,7 @@ function getRecipeStage(
   let nextLabel = "Probar con una medida real";
   if (!hasComponents) nextLabel = "Preparar fabricación";
   else if (!hasTest) nextLabel = "Probar con una medida real";
-  else if (canValidate) nextLabel = "Dejar lista para cotizar";
+  else if (canValidate) nextLabel = "Dejar receta validada";
 
   return {
     componentCount,
@@ -565,6 +566,8 @@ export function FabricacionLineWorkspace({
     const procedencia = resolveProcedenciaFromSource({
       sourceType: recipe.sourceType,
       sourceReference: recipe.sourceReference,
+      sourceName: recipe.sourceName,
+      sourceRevision: recipe.sourceRevision,
     });
     const restoredStartMode: RecipeStartMode =
       procedencia.procedencia === "borrador_ia"
@@ -772,12 +775,17 @@ export function FabricacionLineWorkspace({
 
   const resolveStartModePersistence = (
     recipeToSave: FabricacionReceta
-  ): Pick<UpdateFabricationRecipeInput, "sourceType" | "sourceReference"> => {
+  ): Pick<
+    UpdateFabricationRecipeInput,
+    "sourceType" | "sourceReference" | "sourceName" | "sourceRevision"
+  > => {
     // Conservar plantilla/base de origen si el usuario no cambió el modo de inicio.
     if (!hasChangedRecipeStartMode && selected) {
       return {
         sourceType: selected.sourceType,
         sourceReference: selected.sourceReference,
+        sourceName: selected.sourceName ?? null,
+        sourceRevision: selected.sourceRevision ?? null,
       };
     }
     if (recipeStartMode === "ai") {
@@ -1208,6 +1216,8 @@ export function FabricacionLineWorkspace({
                 : resolveProcedenciaFromSource({
                     sourceType: selected.sourceType,
                     sourceReference: selected.sourceReference,
+                    sourceName: selected.sourceName,
+                    sourceRevision: selected.sourceRevision,
                   }).label
             }
             origenDetail={
@@ -1216,6 +1226,8 @@ export function FabricacionLineWorkspace({
                 : resolveProcedenciaFromSource({
                     sourceType: selected.sourceType,
                     sourceReference: selected.sourceReference,
+                    sourceName: selected.sourceName,
+                    sourceRevision: selected.sourceRevision,
                   }).detail
             }
           />
@@ -1546,7 +1558,11 @@ export function FabricacionLineWorkspace({
         ) : (
           <>
             {(() => {
-              const status = STATUS_COPY[focusRecipe.status];
+    const status = STATUS_COPY[focusRecipe.status];
+    const lineStatus = deriveLineOperationalStatus({
+      template,
+      recipes: lineRecipes,
+    });
               const stage = focusProgress ?? getRecipeStage(focusRecipe);
               return (
                 <article className={s.recipeFocus} data-tone={status.tone}>
@@ -1563,7 +1579,7 @@ export function FabricacionLineWorkspace({
                   <dl className={s.recipeFocusProgress}>
                     <div><dt>Línea</dt><dd>Definida</dd></div>
                     <div><dt>Fabricación</dt><dd>{stage.hasComponents ? `${stage.componentCount} piezas` : "Pendiente"}</dd></div>
-                    <div><dt>Probar</dt><dd>{focusRecipe.status === "validated" ? "Lista para cotizar" : stage.hasTest ? (stage.canValidate ? "Lista para validar" : "En prueba") : "Pendiente"}</dd></div>
+                    <div><dt>Probar</dt><dd>{focusRecipe.status === "validated" ? (lineStatus.quotable ? "Precio habilitado" : "Precio pendiente") : stage.hasTest ? (stage.canValidate ? "Lista para validar" : "En prueba") : "Pendiente"}</dd></div>
                   </dl>
                   <div className={s.recipeFocusActions}>
                     {focusRecipe.status === "validated" ? (

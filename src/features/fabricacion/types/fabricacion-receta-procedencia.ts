@@ -44,6 +44,8 @@ const PLANTILLA_VERIFICADA_PREFIX = "plantilla-verificada:";
 export type FabricacionProcedenciaPersistence = {
   sourceType: FabricationRecipeSourceType;
   sourceReference: string | null;
+  sourceName?: string | null;
+  sourceRevision?: string | null;
 };
 
 export type FabricacionProcedenciaResolved = {
@@ -94,17 +96,19 @@ export function buildProcedenciaPersistence(
       };
     case "plantilla_ventora":
       return {
-        sourceType: "copied",
+        sourceType: "ventora_reference",
         sourceReference: buildPlantillaVentoraSourceReference(
           options?.plantillaId?.trim() || "sin-id"
         ),
+        sourceName: "Plantilla Ventora sugerida",
       };
     case "plantilla_verificada":
       return {
-        sourceType: "copied",
+        sourceType: "manufacturer",
         sourceReference: buildPlantillaVerificadaSourceReference(
           options?.plantillaId?.trim() || "sin-id"
         ),
+        sourceName: "Documento técnico informado",
       };
     case "receta_taller":
     default:
@@ -118,8 +122,12 @@ export function buildProcedenciaPersistence(
 export function resolveProcedenciaFromSource(input: {
   sourceType: FabricationRecipeSourceType;
   sourceReference?: string | null;
+  sourceName?: string | null;
+  sourceRevision?: string | null;
 }): FabricacionProcedenciaResolved {
   const reference = input.sourceReference?.trim() || "";
+  const sourceName = input.sourceName?.trim() || "";
+  const sourceRevision = input.sourceRevision?.trim() || "";
 
   if (
     input.sourceType === "imported_ai" ||
@@ -138,8 +146,8 @@ export function resolveProcedenciaFromSource(input: {
       procedencia: "plantilla_ventora",
       label: FABRICACION_RECETA_PROCEDENCIA_LABEL.plantilla_ventora,
       detail: plantillaId
-        ? `Validada en taller · ${plantillaId}`
-        : "Validada en taller",
+        ? `Base sugerida · ${plantillaId}`
+        : "Base sugerida; requiere confirmación del taller",
       plantillaId,
     };
   }
@@ -149,7 +157,9 @@ export function resolveProcedenciaFromSource(input: {
     return {
       procedencia: "plantilla_verificada",
       label: FABRICACION_RECETA_PROCEDENCIA_LABEL.plantilla_verificada,
-      detail: plantillaId,
+      detail: [sourceName || "Documento técnico", plantillaId, sourceRevision ? `rev. ${sourceRevision}` : null]
+        .filter(Boolean)
+        .join(" · "),
       plantillaId,
     };
   }
@@ -191,6 +201,31 @@ export function resolveProcedenciaFromSource(input: {
       label: FABRICACION_RECETA_PROCEDENCIA_LABEL.plantilla_verificada,
       detail: reference || null,
       plantillaId: reference || null,
+    };
+  }
+
+  if (input.sourceType === "ventora_reference") {
+    return {
+      procedencia: "plantilla_ventora",
+      label: FABRICACION_RECETA_PROCEDENCIA_LABEL.plantilla_ventora,
+      detail: sourceName || (reference ? `Referencia: ${reference}` : "Referencia Ventora"),
+      plantillaId: reference || null,
+    };
+  }
+
+  if (input.sourceType === "workshop") {
+    return {
+      procedencia: "receta_taller",
+      label: FABRICACION_RECETA_PROCEDENCIA_LABEL.receta_taller,
+      detail: sourceName || "Fuente declarada por el taller",
+    };
+  }
+
+  if (input.sourceType === "manufacturer" || input.sourceType === "supplier") {
+    return {
+      procedencia: "plantilla_verificada",
+      label: FABRICACION_RECETA_PROCEDENCIA_LABEL.plantilla_verificada,
+      detail: reference || "Documento técnico",
     };
   }
 

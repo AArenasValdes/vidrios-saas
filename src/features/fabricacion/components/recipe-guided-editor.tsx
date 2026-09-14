@@ -113,7 +113,11 @@ import s from "./fabricacion-workspace.module.css";
 const SHOW_FABRICATION_AI_ASSIST = false;
 
 function fabricationProductLabel(tipologia: FabricacionTipologia): string {
-  if (tipologia === "puerta_abatible" || tipologia === "puerta_corredera") {
+  if (
+    tipologia === "puerta_abatible" ||
+    tipologia === "puerta_vaiven" ||
+    tipologia === "puerta_corredera"
+  ) {
     return "puerta";
   }
   if (tipologia === "shower") return "shower";
@@ -1976,7 +1980,7 @@ export function RecipeGuidedEditor({
 
         <section
           className={s.fabPrepHero}
-          aria-label={fabricacionPreparada ? "Fabricación preparada" : "Configuración pendiente"}
+          aria-label="Estado de fabricación"
         >
           <div className={s.fabPrepHeroMain}>
             <h3>{fabricacionPreparada ? "Fabricación preparada" : "Configuración pendiente"}</h3>

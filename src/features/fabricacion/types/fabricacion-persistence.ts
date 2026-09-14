@@ -22,6 +22,11 @@ export const FABRICATION_RECIPE_SOURCE_TYPES = [
   "copied",
   "imported_ai",
   "legacy",
+  "workshop",
+  "manufacturer",
+  "supplier",
+  "ventora_reference",
+  "unknown",
 ] as const;
 export type FabricationRecipeSourceType =
   (typeof FABRICATION_RECIPE_SOURCE_TYPES)[number];
@@ -41,6 +46,8 @@ export type FabricationRecipeRecord = {
   definition: FabricacionReceta;
   sourceType: FabricationRecipeSourceType;
   sourceReference: string | null;
+  sourceName?: string | null;
+  sourceRevision?: string | null;
   parentRecipeId: string | null;
   validatedAt: string | null;
   validatedBy: string | null;
@@ -79,6 +86,8 @@ export type CreateFabricationRecipeInput = {
   definition: FabricacionReceta;
   sourceType?: FabricationRecipeSourceType;
   sourceReference?: string | null;
+  sourceName?: string | null;
+  sourceRevision?: string | null;
   parentRecipeId?: string | null;
   validatedAt?: string | null;
   validatedBy?: string | null;
@@ -97,6 +106,8 @@ export type UpdateFabricationRecipeInput = Partial<
     | "definition"
     | "sourceType"
     | "sourceReference"
+    | "sourceName"
+    | "sourceRevision"
     | "validatedAt"
     | "validatedBy"
   >

@@ -206,9 +206,10 @@ export function FabricacionTipologiaPreview({
   className,
   size = "md",
 }: Props) {
-  const isCorredera = tipologia === "corredera" && hojas >= 2;
+  const isCorredera =
+    (tipologia === "corredera" || tipologia === "pvc_monorriel") && hojas >= 2;
   const isFijo = tipologia === "pano_fijo";
-  const isPuerta = tipologia === "puerta_abatible";
+  const isPuerta = tipologia === "puerta_abatible" || tipologia === "puerta_vaiven";
   const isAbatible = tipologia === "abatible";
   const isProyectante = tipologia === "proyectante";
   const active = (zone: NonNullable<FabricacionPreviewZone>) =>
