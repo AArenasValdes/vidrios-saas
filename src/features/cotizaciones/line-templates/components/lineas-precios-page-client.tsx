@@ -1017,6 +1017,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         onNew={openNewSheet}
         onEdit={openEditSheet}
         onEditPrice={setPriceEditorTemplate}
+        onToggleActive={(template) => void handleToggleActive(template)}
         formatMoney={formatMoney}
         isChileCatalog={isChileCatalog}
       />
@@ -1470,6 +1471,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                         setOpenMenuId(null);
                         setTemplatePendingDelete(template);
                       }}
+                      onEdit={() => openEditSheet(template)}
                       onEditPrice={() => setPriceEditorTemplate(template)}
                       onToggleActive={() => void handleToggleActive(template)}
                     />

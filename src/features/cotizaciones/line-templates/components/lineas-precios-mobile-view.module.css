@@ -318,6 +318,40 @@
   min-width: 0;
 }
 
+.commercialBadge {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 24px;
+  margin-bottom: 9px;
+  padding: 0 9px;
+  align-items: center;
+  border: 1px solid #d6e2ef;
+  border-radius: 999px;
+  color: #52657c;
+  background: #f3f6f9;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.commercialBadge[data-tone="ready"] {
+  border-color: #cfe8d8;
+  color: #167348;
+  background: #eef9f2;
+}
+
+.commercialBadge[data-tone="pending"] {
+  border-color: #f0dfc2;
+  color: #9a5b00;
+  background: #fff9ef;
+}
+
+.commercialBadge[data-tone="paused"] {
+  color: #64748b;
+  background: #f1f5f9;
+}
+
 .cardHeader h2 {
   margin: 0;
   font: 700 17px/1.25 var(--font-syne), sans-serif;
@@ -336,8 +370,29 @@
 
 .priceBlock {
   display: grid;
-  gap: 5px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px 12px;
   padding: 12px 16px 14px;
+}
+
+.priceBlock > strong,
+.priceBlock > span {
+  grid-column: 1;
+}
+
+.priceBlock > button {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.priceBlock .habitualGlass {
+  grid-column: 1 / -1;
 }
 
 .statusSummary {
@@ -377,6 +432,76 @@
 .priceBlock span {
   color: #66758a;
   font-size: 11px;
+}
+
+.priceBlock .addPriceBtn,
+.priceBlock .editPriceBtn {
+  color: #1e6fc9;
+  background: #f5f9ff;
+  border: 1px solid #cfe0f4;
+}
+
+.fabricationRow {
+  display: flex;
+  min-height: 56px;
+  margin: 0 16px;
+  padding: 9px 12px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #e0e8f1;
+  border-radius: 12px;
+  color: #475569;
+  background: #f8fafc;
+  text-decoration: none;
+}
+
+.fabricationRow > span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.fabricationRow small {
+  color: #7b8a9d;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.fabricationRow strong {
+  overflow: hidden;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fabricationRow svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  color: #94a3b8;
+}
+
+.fabricationRow[data-tone="testing"] {
+  border-color: #cfe0f4;
+  color: #1d5fac;
+  background: #f3f8ff;
+}
+
+.fabricationRow[data-tone="validated"] {
+  border-color: #cfe8d8;
+  color: #167348;
+  background: #f1faf5;
+}
+
+.fabricationRow[data-tone="draft"] {
+  border-color: #f0dfc2;
+  color: #9a5b00;
+  background: #fff9ef;
 }
 
 .habitualGlass {
@@ -445,8 +570,10 @@
 
 .cardActions {
   display: grid;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
   padding: 12px 16px 16px;
+  align-items: center;
 }
 
 .cardActions button,
@@ -463,28 +590,47 @@
   text-decoration: none;
 }
 
-.primaryAction {
-  color: #fff !important;
-  background: #1e88ff !important;
+.configureButton {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: #1e88ff;
   border: 1px solid #1e88ff;
+  border-radius: 11px;
+  font-size: 13px;
+  font-weight: 800;
 }
 
-.cardActions button {
-  color: #475569;
-  background: #fff;
-  border: 1px solid #d7e3f2;
+.switch {
+  width: 52px;
+  height: 32px;
+  padding: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  border: 1px solid #d5ddeb;
+  border-radius: 999px;
+  background: #edf1f7;
 }
 
-.cardActions .addPriceBtn {
-  color: #475569;
-  background: #fff;
-  border: 1px solid #d7e3f2;
+.switchOn {
+  border-color: #2f71e7;
+  background: #2f71e7;
 }
 
-.cardActions .editPriceBtn {
-  color: #1e88ff;
+.switchThumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
   background: #fff;
-  border: 1px solid #d7e3f2;
+  box-shadow: 0 5px 10px rgb(17 31 57 / 18%);
+  transition: transform 0.18s ease;
+}
+
+.switchOn .switchThumb {
+  transform: translateX(20px);
 }
 
 .cardActions svg {

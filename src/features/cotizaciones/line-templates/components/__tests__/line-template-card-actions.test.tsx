@@ -26,13 +26,12 @@ jest.mock("next/link", () => {
 });
 
 describe("LineTemplateCardActions", () => {
-  it("expone las tres acciones y ejecuta duplicar y solicitar eliminación", () => {
+  it("expone solo duplicar y eliminar", () => {
     const onDuplicate = jest.fn();
     const onRequestDelete = jest.fn();
 
     render(
       <LineTemplateCardActions
-        templateId={43}
         templateName="Serie 5000"
         isOpen
         isBusy={false}
@@ -45,10 +44,7 @@ describe("LineTemplateCardActions", () => {
     );
 
     expect(screen.getByRole("menu", { name: "Acciones de Serie 5000" })).toBeVisible();
-    expect(screen.getByRole("menuitem", { name: "Administrar fabricación" })).toHaveAttribute(
-      "href",
-      "/configuracion/empresa/lineas-precios/43/fabricacion"
-    );
+    expect(screen.queryByRole("menuitem", { name: "Administrar fabricación" })).toBeNull();
 
     fireEvent.click(screen.getByRole("menuitem", { name: "Duplicar línea" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Eliminar línea" }));
@@ -60,7 +56,6 @@ describe("LineTemplateCardActions", () => {
   it("bloquea dobles acciones mientras hay una operación pendiente", () => {
     render(
       <LineTemplateCardActions
-        templateId={43}
         templateName="Serie 5000"
         isOpen
         isBusy

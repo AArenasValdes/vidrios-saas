@@ -2,6 +2,13 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-14 - P2 UX catálogo de líneas
+
+- Se unifica la tarjeta desktop y mobile en la secuencia precio → Fabricación → referencias → **Configurar línea** + toggle.
+- `Agregar precio`/`Editar precio` abre únicamente `LinePriceEditor`; el CTA estable abre `LineTemplateFormWizard` en edición.
+- Fabricación queda en una sola fila técnica compacta; el menú de tres puntos conserva solo duplicar y eliminar.
+- No se modifican recetas, descuentos, códigos técnicos, precios persistidos, `quotable`, RLS ni Supabase.
+
 ## 2026-09-14 - P1 primeras recetas reales de taller
 
 - Serie 5000, Serie 20 y Serie 25 reciben `source_type='workshop'` y referencia P1; se conservan exactamente sus descuentos y códigos técnicos.

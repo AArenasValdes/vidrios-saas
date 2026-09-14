@@ -285,7 +285,7 @@ Responsable: ingeniería
 ### Componente: LineasPreciosPageClient
 
 - **Archivo**: `src/features/cotizaciones/line-templates/components/lineas-precios-page-client.tsx`
-- **Proposito**: CRUD del catalogo privado y estado visual de recetas persistidas. Abre el administrador tecnico por linea; no escribe nuevas recetas en metadata legacy.
+- **Proposito**: CRUD del catalogo privado y estado visual de recetas persistidas. Mantiene separado el editor de precio, el CTA comercial estable **Configurar línea** y la entrada técnica compacta a Fabricación; no escribe nuevas recetas en metadata legacy.
 - **Usado en**: `/configuracion/empresa/lineas-precios`
 - **Dependencias**: wizard, `LineTemplateCardActions`, `useCotizacionLineTemplates`, `useFabricationRecipes`.
 - **Riesgos**: No formulas/JSON. No mezclar pauta con precios/margen. No migraciones legacy sin aprobacion.
@@ -293,9 +293,15 @@ Responsable: ingeniería
 ### Componente: LineTemplateCardActions
 
 - **Archivo**: `src/features/cotizaciones/line-templates/components/line-template-card-actions.tsx`
-- **Proposito**: Menu accesible de tres puntos y confirmacion interna para administrar fabricacion, duplicar o hacer soft delete de una linea. Expone progreso y bloquea dobles acciones.
+- **Proposito**: Menu accesible de tres puntos para duplicar o hacer soft delete de una linea. La entrada a Fabricación vive como fila técnica única en la tarjeta; el menú expone progreso y bloquea dobles acciones.
 - **Usado en**: `LineasPreciosPageClient` desktop.
 - **Riesgos**: Eliminar debe seguir siendo soft delete multi-tenant y solo informar exito despues de confirmar una fila actualizada en Supabase.
+
+### Componente: LineTemplateCatalogCard
+
+- **Archivo**: `src/features/cotizaciones/line-templates/components/line-template-catalog-card.tsx`
+- **Proposito**: Tarjeta desktop del catálogo privado con jerarquía precio → Fabricación → referencias → **Configurar línea** + toggle. Precio abre `LinePriceEditor`; la fila técnica abre exclusivamente `/fabricacion`.
+- **Riesgos**: No convertir la fila técnica en CTA comercial, no duplicar accesos a Fabricación y no mezclar precio configurable del taller con estado técnico.
 
 ### Componente: LineTemplateFormWizard / FabricationRecipeEditor
 

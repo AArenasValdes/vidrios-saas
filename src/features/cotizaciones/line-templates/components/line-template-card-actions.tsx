@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import {
   LuCopyPlus,
   LuEllipsisVertical,
-  LuSettings2,
   LuTrash2,
 } from "react-icons/lu";
 
@@ -14,7 +12,6 @@ import s from "./lineas-precios-page-client.module.css";
 export type LineTemplateActionKind = "duplicate" | "delete";
 
 type LineTemplateCardActionsProps = {
-  templateId: string | number;
   templateName: string;
   isOpen: boolean;
   isBusy: boolean;
@@ -26,7 +23,6 @@ type LineTemplateCardActionsProps = {
 };
 
 export function LineTemplateCardActions({
-  templateId,
   templateName,
   isOpen,
   isBusy,
@@ -61,18 +57,6 @@ export function LineTemplateCardActions({
           onClick={(event) => event.stopPropagation()}
           onPointerDown={(event) => event.stopPropagation()}
         >
-          <Link
-            href={`/configuracion/empresa/lineas-precios/${templateId}/fabricacion`}
-            className={s.menuAction}
-            role="menuitem"
-            onClick={(event) => {
-              event.stopPropagation();
-              onClose();
-            }}
-          >
-            <LuSettings2 aria-hidden />
-            Administrar fabricación
-          </Link>
           <button
             type="button"
             className={s.menuAction}

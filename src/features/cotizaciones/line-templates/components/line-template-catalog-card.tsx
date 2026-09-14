@@ -34,6 +34,7 @@ type Props = {
   onCloseMenu: () => void;
   onDuplicate: () => void;
   onRequestDelete: () => void;
+  onEdit: () => void;
   onEditPrice: () => void;
   onToggleActive: () => void;
 };
@@ -51,23 +52,6 @@ function getCardStatusBadge(
   return { label: "Lista para cotizar", tone: "ready" };
 }
 
-function getPrimaryCta(
-  template: CotizacionLineTemplate,
-  needsPrice: boolean,
-  technicalStatus: TechnicalCardStatus
-): { label: string; href?: string; onClick?: () => void } {
-  if (needsPrice) {
-    return { label: "Agregar precio", onClick: undefined };
-  }
-  if (technicalStatus.tone !== "validated" && template.categoria !== "vidrio") {
-    return {
-      label: "Completar fabricación",
-      href: `/configuracion/empresa/lineas-precios/${template.id}/fabricacion`,
-    };
-  }
-  return { label: "Nueva cotización", href: "/cotizaciones/nueva" };
-}
-
 export function LineTemplateCatalogCard({
   template,
   technicalStatus,
@@ -79,6 +63,7 @@ export function LineTemplateCatalogCard({
   onCloseMenu,
   onDuplicate,
   onRequestDelete,
+  onEdit,
   onEditPrice,
   onToggleActive,
 }: Props) {
@@ -86,7 +71,6 @@ export function LineTemplateCatalogCard({
   const lineSystem = getLineTemplateSystemMetadata(template.catalogMetadata).lineSystem;
   const lineContext = [template.proveedor, lineSystem].filter(Boolean).join(" · ");
   const statusBadge = getCardStatusBadge(template, needsPrice);
-  const primaryCta = getPrimaryCta(template, needsPrice, technicalStatus);
   const isVentoraLine = isVentoraCatalogKey(template.catalogKey);
 
   return (
@@ -118,7 +102,6 @@ export function LineTemplateCatalogCard({
 
         <div className={`${s.cardActions} ${desktop.cardActions}`}>
           <LineTemplateCardActions
-            templateId={template.id}
             templateName={template.nombre}
             isOpen={isMenuOpen}
             isBusy={isSaving}
@@ -152,18 +135,16 @@ export function LineTemplateCatalogCard({
             </span>
           ) : null}
         </div>
-        {!needsPrice ? (
-          <button
-            type="button"
-            className={s.editPriceBtn}
-            onClick={(event) => {
-              event.stopPropagation();
-              onEditPrice();
-            }}
-          >
-            Editar precio
-          </button>
-        ) : null}
+        <button
+          type="button"
+          className={`${needsPrice ? s.addPriceBtn : s.editPriceBtn} ${desktop.priceAction}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onEditPrice();
+          }}
+        >
+          {needsPrice ? "Agregar precio" : "Editar precio"}
+        </button>
       </div>
 
       {template.categoria !== "vidrio" ? (
@@ -171,9 +152,13 @@ export function LineTemplateCatalogCard({
           href={`/configuracion/empresa/lineas-precios/${template.id}/fabricacion`}
           className={`${desktop.fabricationCompactRow}`}
           data-tech-status={technicalStatus.tone}
+          aria-label={`Fabricación: ${technicalStatus.label}`}
           onClick={(event) => event.stopPropagation()}
         >
-          <span>{technicalStatus.label}</span>
+          <span>
+            <small>Fabricación</small>
+            <strong>{technicalStatus.label}</strong>
+          </span>
           <LuChevronRight aria-hidden />
         </Link>
       ) : null}
@@ -187,22 +172,16 @@ export function LineTemplateCatalogCard({
       </div>
 
       <div className={`${desktop.cardCtaRow}`}>
-        {primaryCta.href ? (
-          <Link href={primaryCta.href} className={desktop.cardPrimaryCta}>
-            {primaryCta.label}
-          </Link>
-        ) : (
-          <button
-            type="button"
-            className={desktop.cardPrimaryCta}
-            onClick={(event) => {
-              event.stopPropagation();
-              onEditPrice();
-            }}
-          >
-            {primaryCta.label}
-          </button>
-        )}
+        <button
+          type="button"
+          className={desktop.cardPrimaryCta}
+          onClick={(event) => {
+            event.stopPropagation();
+            onEdit();
+          }}
+        >
+          Configurar línea
+        </button>
 
         <button
           type="button"

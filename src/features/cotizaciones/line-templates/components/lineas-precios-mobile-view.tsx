@@ -71,6 +71,7 @@ type Props = {
   onNew: () => void;
   onEdit: (template: CotizacionLineTemplate) => void;
   onEditPrice: (template: CotizacionLineTemplate) => void;
+  onToggleActive: (template: CotizacionLineTemplate) => void;
   formatMoney: (value: number) => string;
   isChileCatalog?: boolean;
 };
@@ -115,34 +116,6 @@ function getCommercialStatus(
   } as const;
 }
 
-function getFabricationStatus(status: TechnicalStatus) {
-  if (status.tone === "validated") {
-    return {
-      tone: "validated",
-      label: "Fabricación configurada",
-      detail: "Lista para despiece en cotización.",
-      action: "Ver fabricación",
-      actionPrimary: true,
-    } as const;
-  }
-  if (status.tone === "testing") {
-    return {
-      tone: "testing",
-      label: "Fabricación en prueba",
-      detail: "Completa la validación en desktop.",
-      action: "Configurar fabricación",
-      actionPrimary: true,
-    } as const;
-  }
-  return {
-    tone: "pending",
-    label: "Fabricación pendiente",
-    detail: "Configúrala en el computador cuando quieras.",
-    action: "Configurar fabricación",
-    actionPrimary: true,
-  } as const;
-}
-
 export function LineasPreciosMobileView({
   templates,
   filteredTemplates,
@@ -168,6 +141,7 @@ export function LineasPreciosMobileView({
   onNew,
   onEdit,
   onEditPrice,
+  onToggleActive,
   formatMoney,
   isChileCatalog = false,
 }: Props) {
@@ -319,7 +293,6 @@ export function LineasPreciosMobileView({
             const system = getLineTemplateSystemMetadata(template.catalogMetadata).lineSystem;
             const context = [template.proveedor, system].filter(Boolean).join(" · ");
             const commercialStatus = getCommercialStatus(template, needsPrice);
-            const fabricationStatus = getFabricationStatus(technicalStatus);
             const habitualGlassLabel = formatLineTemplateHabitualGlassLabel(
               template.vidrioPrincipalRecomendado
             );
@@ -331,6 +304,9 @@ export function LineasPreciosMobileView({
               >
                 <header className={s.cardHeader}>
                   <div className={s.cardHeaderMain}>
+                    <span className={s.commercialBadge} data-tone={commercialStatus.tone}>
+                      {commercialStatus.label}
+                    </span>
                     <h2>{template.nombre}</h2>
                     <p>
                       {LINE_TEMPLATE_CATEGORIA_LABELS[template.categoria]}
@@ -343,7 +319,7 @@ export function LineasPreciosMobileView({
                 <div className={s.priceBlock}>
                   <strong>
                     {needsPrice
-                      ? "Precio pendiente"
+                      ? "Sin precio"
                       : formatLineTemplatePriceLabel(
                           template.unidadCobro,
                           template.precioM2Sugerido,
@@ -356,6 +332,13 @@ export function LineasPreciosMobileView({
                       ? formatMoney(template.minimoCobrable)
                       : "sin definir"}
                   </span>
+                  <button
+                    type="button"
+                    className={needsPrice ? s.addPriceBtn : s.editPriceBtn}
+                    onClick={() => onEditPrice(template)}
+                  >
+                    {needsPrice ? "Agregar precio" : "Editar precio"}
+                  </button>
                   {habitualGlassLabel ? (
                     <span className={s.habitualGlass}>
                       Vidrio habitual: {habitualGlassLabel}
@@ -363,10 +346,20 @@ export function LineasPreciosMobileView({
                   ) : null}
                 </div>
 
-                <div className={s.statusSummary} aria-label="Estado de la línea">
-                  <span data-tone={commercialStatus.tone}>{commercialStatus.label}</span>
-                  <span data-tone={fabricationStatus.tone}>{fabricationStatus.label}</span>
-                </div>
+                {template.categoria !== "vidrio" ? (
+                  <Link
+                    href={`/configuracion/empresa/lineas-precios/${template.id}/fabricacion`}
+                    className={s.fabricationRow}
+                    data-tone={technicalStatus.tone}
+                    aria-label={`Fabricación: ${technicalStatus.label}`}
+                  >
+                    <span>
+                      <small>Fabricación</small>
+                      <strong>{technicalStatus.label}</strong>
+                    </span>
+                    <LuChevronRight aria-hidden />
+                  </Link>
+                ) : null}
 
                 <LineProfileReferencesSection
                   catalogMetadata={template.catalogMetadata}
@@ -374,19 +367,21 @@ export function LineasPreciosMobileView({
                 />
 
                 <div className={s.cardActions}>
-                  <Link
-                    href={`/configuracion/empresa/lineas-precios/${template.id}/fabricacion`}
-                    className={s.primaryAction}
-                  >
-                    {fabricationStatus.action}
-                    <LuChevronRight aria-hidden />
-                  </Link>
                   <button
                     type="button"
-                    className={needsPrice ? s.addPriceBtn : s.editPriceBtn}
-                    onClick={() => onEditPrice(template)}
+                    className={s.configureButton}
+                    onClick={() => onEdit(template)}
                   >
-                    {needsPrice ? "Agregar precio" : "Editar precio"}
+                    Configurar línea
+                  </button>
+                  <button
+                    type="button"
+                    className={`${s.switch} ${template.isActive ? s.switchOn : ""}`}
+                    onClick={() => onToggleActive(template)}
+                    aria-pressed={template.isActive}
+                    aria-label={`${template.isActive ? "Desactivar" : "Activar"} ${template.nombre}`}
+                  >
+                    <span className={s.switchThumb} />
                   </button>
                 </div>
               </article>
