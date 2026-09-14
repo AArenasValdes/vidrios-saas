@@ -103,6 +103,25 @@ const STATUS_COPY: Record<
   },
 };
 
+function getOperationalStatusCopy(
+  recipeStatus: FabricationRecipeStatus,
+  operationalStatus: ReturnType<typeof deriveLineOperationalStatus>
+) {
+  const base = STATUS_COPY[recipeStatus];
+  const tone =
+    operationalStatus.validationStatus === "workshop_validated"
+      ? "validated"
+      : operationalStatus.label === "Lista para probar"
+        ? "testing"
+        : base.tone;
+  return {
+    ...base,
+    label: operationalStatus.label,
+    detail: operationalStatus.detail,
+    tone,
+  };
+}
+
 type WorkspaceView = "list" | "edit" | "test";
 type RecipeStartMode = "ventora" | "ai" | "blank";
 
@@ -1067,7 +1086,11 @@ export function FabricacionLineWorkspace({
   }
 
   if (view === "edit" && selected && draft) {
-    const status = STATUS_COPY[selected.status];
+    const operationalStatus = deriveLineOperationalStatus({
+      template,
+      recipes: [selected],
+    });
+    const status = getOperationalStatusCopy(selected.status, operationalStatus);
     const readOnly = selected.status === "validated";
     const progress = getRecipeStage(selected, selectedTests);
     const editorStep =
@@ -1367,6 +1390,14 @@ export function FabricacionLineWorkspace({
             lineName: lineName || selected.lineName,
           }
         : selected;
+    const operationalStatus = deriveLineOperationalStatus({
+      template,
+      recipes: [workingSelected],
+    });
+    const status = getOperationalStatusCopy(
+      workingSelected.status,
+      operationalStatus
+    );
     const showActivateReady = isRecipeReadyToActivate(
       workingSelected.definition,
       selectedTests
@@ -1428,8 +1459,8 @@ export function FabricacionLineWorkspace({
             <h1>{workingSelected.definition.identidad.nombre}</h1>
             <p>
               Versión {workingSelected.version} ·{" "}
-              <span className={s.statusPill} data-tone={STATUS_COPY[workingSelected.status].tone}>
-                {STATUS_COPY[workingSelected.status].label}
+              <span className={s.statusPill} data-tone={status.tone}>
+                {status.label}
               </span>
             </p>
           </div>
@@ -1563,11 +1594,11 @@ export function FabricacionLineWorkspace({
         ) : (
           <>
             {(() => {
-    const status = STATUS_COPY[focusRecipe.status];
     const lineStatus = deriveLineOperationalStatus({
       template,
       recipes: lineRecipes,
     });
+    const status = getOperationalStatusCopy(focusRecipe.status, lineStatus);
               const stage = focusProgress ?? getRecipeStage(focusRecipe);
               return (
                 <article className={s.recipeFocus} data-tone={status.tone}>
