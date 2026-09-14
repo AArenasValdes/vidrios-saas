@@ -33,8 +33,8 @@ describe("P2U líneas tradicionales / multiproveedor", () => {
       recipe.perfiles.map((profile) => [profile.codigoPerfil, profile])
     );
 
-    expect(byCode["1501"]?.reglaMedida).toEqual({ base: "ancho_total" });
-    expect(byCode["1502"]?.reglaMedida).toEqual({ base: "ancho_total" });
+    expect(byCode["1501"]?.reglaMedida).toEqual({ base: "ancho_total", ajusteMm: 0 });
+    expect(byCode["1502"]?.reglaMedida).toEqual({ base: "ancho_total", ajusteMm: 0 });
     expect(byCode["1503"]?.reglaMedida).toEqual({ base: "alto_total", ajusteMm: -7 });
     expect(byCode["1504"]?.reglaMedida).toEqual({ base: "ancho_por_hoja", ajusteMm: -3 });
     expect(byCode["1505"]?.reglaMedida).toEqual({ base: "ancho_por_hoja", ajusteMm: -3 });

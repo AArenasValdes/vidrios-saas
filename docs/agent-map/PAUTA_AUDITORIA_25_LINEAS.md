@@ -53,7 +53,7 @@ Línea 15: la pauta ALAR es `1501=1×X`, `1502=1×X`, `1503=2×(Y−7)`, `1504=4
 | Línea | Sistema / tipología | Códigos documentados | Descuentos persistidos | Decisión |
 |---|---|---|---|---|
 | AM-35 | Línea 35 · abatible y vaivén | 3502, 3501, 3508, 3503, 3504, 3506, 3507, 3509 | Ninguno inferido; ajustes pendientes por variante | No reutilizar 3200/4600; separar variantes |
-| Línea 15 | Corredera 2 hojas | 1501–1508 | 1503 −7; 1504/1505 −3; 1506/1507/1508 −26 documentados por ALAR, opcionales hasta resolver composición | Única pauta numérica P2U |
+| Línea 15 | Corredera 2 hojas | 1501–1508 | 1501/1502 0; 1503 −7; 1504/1505 −3; 1506/1507/1508 −26 documentados por ALAR, opcionales hasta resolver composición | Única pauta numérica P2U |
 | Línea 4000 | Corredera 2 hojas | 4001, 4002, 4003, 4004, 4005, 4007, 4008 | Pendientes; no hay pauta numérica primaria encontrada | Mostrar “faltan medidas de corte” |
 | Línea 45 | Puerta abatible | 4502, 4504, 4511 | Pendientes; no mezclar ALAR/Alumet automáticamente | Confirmar bastidor, hoja y variante |
 | Línea 12 | Shower Door · corredera colgante | 1201, 1202, 1203, 1204 | Pendientes; solo cortes estructurales 90°/45° documentados | Confirmar receptáculo, herrajes y pauta |

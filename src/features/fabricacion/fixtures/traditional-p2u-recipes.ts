@@ -134,8 +134,8 @@ function createLine15(input: RecipeInput): FabricacionReceta {
     typology: "corredera",
     leaves: 2,
     profiles: [
-      profile(createId, { code: "1501", name: "Riel superior", functionName: "Riel superior", base: "ancho_total", quantity: 1 }),
-      profile(createId, { code: "1502", name: "Riel inferior", functionName: "Riel inferior", base: "ancho_total", quantity: 1 }),
+      profile(createId, { code: "1501", name: "Riel superior", functionName: "Riel superior", base: "ancho_total", adjustmentMm: 0, quantity: 1 }),
+      profile(createId, { code: "1502", name: "Riel inferior", functionName: "Riel inferior", base: "ancho_total", adjustmentMm: 0, quantity: 1 }),
       profile(createId, { code: "1503", name: "Jamba", functionName: "Jamba", base: "alto_total", adjustmentMm: -7, quantity: 2 }),
       profile(createId, { code: "1504", name: "Cabezal", functionName: "Cabezal", base: "ancho_por_hoja", adjustmentMm: -3, quantity: 4 }),
       profile(createId, { code: "1505", name: "Zócalo", functionName: "Zócalo", base: "ancho_por_hoja", adjustmentMm: -3, quantity: 2 }),
