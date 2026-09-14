@@ -74,10 +74,12 @@ import {
   type TallerPerfilRef,
 } from "@/features/fabricacion/services/taller-perfiles.service";
 import {
+  buildFabricationRecipeSummary,
   describePerfilTallerResumen,
   describeProfileRuleLegacy,
-  countActiveRecipeGlasses,
   countActiveRecipeProfilePieces,
+  getActiveRecipeProfileRules,
+  getOptionalRecipeProfileRules,
   formatLargoComercialCorto,
   matchesRecipeIdentityCondition,
   groupProfilesForSheet,
@@ -546,13 +548,21 @@ export function RecipeGuidedEditor({
     () => countActiveRecipeProfilePieces(recipe),
     [recipe]
   );
-  const activeGlassPieces = useMemo(
-    () => countActiveRecipeGlasses(recipe),
+  const recipeSummary = useMemo(
+    () => buildFabricationRecipeSummary(recipe),
+    [recipe]
+  );
+  const activeProfileRules = useMemo(
+    () => getActiveRecipeProfileRules(recipe),
+    [recipe]
+  );
+  const optionalProfileRules = useMemo(
+    () => getOptionalRecipeProfileRules(recipe),
     [recipe]
   );
   const configuredActiveProfilePieces = useMemo(
     () =>
-      recipe.perfiles
+        activeProfileRules
         .filter((profile) => {
           const resumen = describePerfilTallerResumen(profile);
           return (
@@ -563,13 +573,14 @@ export function RecipeGuidedEditor({
           );
         })
         .reduce((total, profile) => total + Math.max(1, Math.round(profile.reglaCantidad.cantidad)), 0),
-    [recipe]
+    [activeProfileRules]
   );
   const listaParaProbarEvaluacion = useMemo(
     () => evaluarRecetaListaParaProbar(recipe),
     [recipe]
   );
-  const fabricacionPreparada = listaParaProbarEvaluacion.listaParaProbar;
+  const fabricacionPreparada =
+    listaParaProbarEvaluacion.listaParaProbar && recipeSummary.compositionComplete;
   const primaryGlassLabel = useMemo(() => {
     const named = recipe.vidrios
       .filter((glass) => matchesRecipeIdentityCondition(glass.condicion, recipe))
@@ -583,16 +594,20 @@ export function RecipeGuidedEditor({
     return named[0] ?? null;
   }, [recipe]);
   const tiraAplicadaEnPiezas =
-    recipe.perfiles.length > 0 &&
-    recipe.perfiles.every((profile) => profile.largoComercialMm === tiraEstandarMm);
+    activeProfileRules.length > 0 &&
+    activeProfileRules.every((profile) => profile.largoComercialMm === tiraEstandarMm);
 
   const profileSheetGroups = useMemo(
-    () => groupProfilesForSheet(recipe.perfiles),
-    [recipe.perfiles]
+    () => groupProfilesForSheet(activeProfileRules),
+    [activeProfileRules]
+  );
+  const optionalProfileSheetGroups = useMemo(
+    () => groupProfilesForSheet(optionalProfileRules),
+    [optionalProfileRules]
   );
   const profileSheetDisplayOrder = useMemo(
-    () => profileSheetGroups.flatMap((group) => group.profiles),
-    [profileSheetGroups]
+    () => groupProfilesForSheet(recipe.perfiles).flatMap((group) => group.profiles),
+    [recipe.perfiles]
   );
 
   const drawerProfile = drawerProfileId
@@ -1970,7 +1985,7 @@ export function RecipeGuidedEditor({
               ? "Fabricación lista para probar"
               : "Fabricación pendiente"}
             {" · "}
-            {configuredActiveProfilePieces} de {activeProfilePieces} piezas de perfilería configuradas
+            {configuredActiveProfilePieces} de {activeProfilePieces} cortes de perfilería configurados
           </p>
           <p>
             Ventora ya preparó las medidas y piezas habituales. Revisa solo si
@@ -1983,26 +1998,28 @@ export function RecipeGuidedEditor({
           aria-label="Estado de fabricación"
         >
           <div className={s.fabPrepHeroMain}>
-            <h3>{fabricacionPreparada ? "Fabricación preparada" : "Configuración pendiente"}</h3>
+            <h3>
+              {fabricacionPreparada && recipeSummary.compositionComplete
+                ? "Fabricación preparada"
+                : "Configuración técnica pendiente"}
+            </h3>
             <ul className={s.fabPrepStats} aria-label="Resumen de fabricación">
               <li>
                 <Package size={16} aria-hidden="true" />
-                <strong>{activeProfilePieces}</strong>
-                <span>
-                  {activeProfilePieces === 1 ? "Pieza" : "Piezas"}
-                </span>
+                <strong>{recipeSummary.activePieceCount}</strong>
+                <span>{recipeSummary.activePieceCount === 1 ? "Corte" : "Cortes"}</span>
               </li>
               <li>
                 <Layers3 size={16} aria-hidden="true" />
-                <strong>{recipe.accesorios.length}</strong>
+                <strong>{recipeSummary.activeAccessoryCount}</strong>
                 <span>
-                  {recipe.accesorios.length === 1 ? "Accesorio" : "Accesorios"}
+                  {recipeSummary.activeAccessoryCount === 1 ? "Accesorio" : "Accesorios"}
                 </span>
               </li>
               <li>
                 <Square size={16} aria-hidden="true" />
-                <strong>{activeGlassPieces}</strong>
-                <span>{activeGlassPieces === 1 ? "Vidrio" : "Vidrios"}</span>
+                <strong>{recipeSummary.activeGlassCount}</strong>
+                <span>{recipeSummary.activeGlassCount === 1 ? "Vidrio" : "Vidrios"}</span>
               </li>
               <li>
                 <Ruler size={16} aria-hidden="true" />
@@ -2018,12 +2035,12 @@ export function RecipeGuidedEditor({
             size="sm"
             className={s.fabSheetPreview}
           />
-          {!readOnly && onContinueToTest && recipe.perfiles.length > 0 ? (
+          {!readOnly && onContinueToTest && activeProfileRules.length > 0 ? (
             <button
               type="button"
               className={`${s.primaryButton} ${s.fabPrimaryCta} ${s.fabPreparedCta}`}
               onClick={onContinueToTest}
-              disabled={!listaParaProbarEvaluacion.listaParaProbar}
+              disabled={!fabricacionPreparada}
               title={
                 listaParaProbarEvaluacion.bloqueos[0] ??
                 "Completa la receta antes de probar."
@@ -2094,7 +2111,7 @@ export function RecipeGuidedEditor({
               />
             </label>
           ) : null}
-          {!readOnly && showCustomTira && recipe.perfiles.length > 0 ? (
+          {!readOnly && showCustomTira && activeProfileRules.length > 0 ? (
             <button
               type="button"
               className={s.fabTiraApply}
@@ -2163,12 +2180,9 @@ export function RecipeGuidedEditor({
         >
           <summary>
             <span>
-              <strong>Piezas de la ventana</strong>
+              <strong>Piezas de la {fabricationProductLabel(recipe.identidad.tipologia)}</strong>
               <em>
-                {recipe.perfiles.length}{" "}
-                {recipe.perfiles.length === 1
-                  ? "pieza preparada"
-                  : "piezas preparadas"}
+                {recipeSummary.activeRuleCount} {recipeSummary.activeRuleCount === 1 ? "regla" : "reglas"} de corte · {recipeSummary.activePieceCount} {recipeSummary.activePieceCount === 1 ? "corte" : "cortes"}
               </em>
             </span>
             <b>
@@ -2181,7 +2195,7 @@ export function RecipeGuidedEditor({
             <p className={s.fabReviewLead}>
               Aquí se define cómo fabricas esta ventana.
             </p>
-            {recipe.perfiles.length === 0 ? (
+            {activeProfileRules.length === 0 ? (
               recipe.identidad.tipologia === "personalizada" ? (
                 <div className={s.fabEmptyPersonalizada}>
                   <strong>Configuración personalizada</strong>
@@ -2202,7 +2216,7 @@ export function RecipeGuidedEditor({
               ) : (
                 <div className={s.fabReviewEmpty}>
                   <p className={s.emptyInline}>
-                    Agrega el primer perfil para preparar esta fabricación.
+                    Activa al menos una regla de perfil para preparar esta fabricación.
                   </p>
                   {!readOnly ? (
                     <button
@@ -2438,6 +2452,60 @@ export function RecipeGuidedEditor({
         )}
           </div>
         </details>
+
+        {optionalProfileSheetGroups.length > 0 ? (
+          <details className={s.fabReviewAccordion}>
+            <summary>
+              <span>
+                <strong>Opciones / referencias documentadas</strong>
+                <em>
+                  {recipeSummary.optionalProfileCount} {recipeSummary.optionalProfileCount === 1 ? "alternativa" : "alternativas"} · no cuentan como cortes activos
+                </em>
+              </span>
+              <b>
+                Ver referencias
+                <ChevronDown size={14} aria-hidden="true" />
+              </b>
+            </summary>
+            <div className={s.fabPrepGroups}>
+              <p className={s.fabReviewLead}>
+                Estas referencias pertenecen al sistema, pero no se incluyen en la composición activa hasta seleccionarlas.
+              </p>
+              {optionalProfileSheetGroups.map((group) => (
+                <section key={group.id} className={s.fabSheetGroup} aria-label={`${group.label} opcional`}>
+                  <h3>
+                    <Layers3 size={14} aria-hidden="true" />
+                    {group.label} · referencia opcional
+                  </h3>
+                  <div role="list" aria-label={`Referencias opcionales de ${group.label}`} className={`${s.fabSheetProfileList} ${s.fabPieceTableScroll}`}>
+                    {group.profiles.map((profile) => {
+                      const index = recipe.perfiles.findIndex((entry) => entry.id === profile.id);
+                      const tallerResumen = describePerfilTallerResumen(profile);
+                      const piezaNombre = getPiezaNombreFromObservaciones(profile.observaciones) || profile.funcion.trim() || `Perfil ${index + 1}`;
+                      return (
+                        <article key={profile.id} className={`${s.fabSheetRow} ${s.fabPieceRow}`} role="listitem">
+                          <span aria-hidden="true" />
+                          <div className={s.fabPrepRowMain}>
+                            <span className={s.fabSheetFunction}>{piezaNombre}</span>
+                            <span className={s.fabSheetMeasure}>{profile.funcion || "Referencia documentada"} · no activa</span>
+                          </div>
+                          <span>{profile.codigoPerfil || "Código pendiente"}</span>
+                          <span>{tallerResumen.descuentoCorto}</span>
+                          <span>—</span>
+                          <span className={s.fabPieceRowStatus} data-tone="pending">No activo</span>
+                          <button type="button" className={s.fabSheetEdit} onClick={() => openProfileDrawer(profile.id)}>
+                            {readOnly ? "Ver referencia" : "Seleccionar / editar"}
+                            <ChevronRight size={14} aria-hidden="true" />
+                          </button>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </details>
+        ) : null}
 
         <details
           className={s.fabReviewAccordion}

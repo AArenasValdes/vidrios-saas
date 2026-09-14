@@ -57,7 +57,7 @@ describe("RecipeGuidedEditor", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Así fabricas esta puerta" })).toBeInTheDocument();
-    expect(screen.getByText(/7 de 7 piezas de perfilería configuradas/)).toBeInTheDocument();
+    expect(screen.getByText(/7 de 7 cortes de perfilería configurados/)).toBeInTheDocument();
   });
 
   it("edita una receta con controles guiados sin exponer JSON", () => {
@@ -265,6 +265,10 @@ describe("RecipeGuidedEditor", () => {
   it("en desktop permite completar perfiles humanos y reordenar con el grip", () => {
     let currentRecipe: FabricacionReceta = {
       ...RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO,
+      identidad: {
+        ...RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO.identidad,
+        variante: "termopanel",
+      },
       perfiles: RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO.perfiles.map(
         (profile) => ({
           ...profile,
@@ -308,18 +312,28 @@ describe("RecipeGuidedEditor", () => {
     );
 
     expect(screen.getByText("Así fabricas esta ventana")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Configuración pendiente" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Configuración técnica pendiente" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Fabricación preparada" })).not.toBeInTheDocument();
     expect(screen.getByText("Tira que compras")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "6,00 m" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "5,95 m" })).toBeInTheDocument();
     const profileList = screen.getByRole("list", { name: "Perfiles de fabricación" });
     expect(profileList).toBeInTheDocument();
+    const optionalProfileList = screen.queryByRole("list", {
+      name: /Referencias opcionales de/i,
+    });
 
     for (let index = 0; index < 8; index += 1) {
-      const rows = within(profileList).getAllByRole("listitem");
+      const rows = [
+        ...within(profileList).getAllByRole("listitem"),
+        ...(optionalProfileList ? within(optionalProfileList).getAllByRole("listitem") : []),
+      ];
       const row = rows[index]!;
-      fireEvent.click(within(row).getByRole("button", { name: /Editar pieza|Definir descuento/i }));
+      fireEvent.click(
+        within(row).getByRole("button", {
+          name: /Editar pieza|Definir descuento|Seleccionar \/ editar/i,
+        })
+      );
       fireEvent.click(
         screen.getByRole("button", { name: /Perfil o referencia/i })
       );

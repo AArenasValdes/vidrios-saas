@@ -16,6 +16,7 @@ import { FabricacionPerfilTirasVisual } from "@/features/fabricacion/components/
 import { FabricacionTipologiaPreview } from "@/features/fabricacion/components/fabricacion-tipologia-preview";
 import { calcularPautaBarrasMultiMedida } from "@/features/fabricacion/services/fabricacion-pauta-multi-medida.service";
 import {
+  buildFabricationRecipeSummary,
   formatMetersFromMm,
   resolveTiraEstandarRecetaLabel,
   summarizeTirasPorPerfil,
@@ -110,6 +111,7 @@ function LabIdentityCard({
   onChange?: () => void;
 }) {
   const identity = recipe.definition.identidad;
+  const summary = buildFabricationRecipeSummary(recipe.definition);
   return (
     <aside className={s.fabLabIdentityCard} aria-label="Resumen de fabricación">
       <FabricacionTipologiaPreview
@@ -124,8 +126,8 @@ function LabIdentityCard({
       <span>
         {[
           recipe.providerName,
-          `${recipe.definition.perfiles.length} perfiles`,
-          `${recipe.definition.accesorios.length} accesorios`,
+          `${summary.activeRuleCount} reglas · ${summary.activePieceCount} cortes`,
+          `${summary.activeAccessoryCount} accesorios`,
         ]
           .filter(Boolean)
           .join(" · ")}
@@ -571,10 +573,10 @@ export function RecipeTestLab({
               </li>
               <li>
                 <strong>{tirasSummary.length || consolidado.perfiles.length}</strong>
-                <span>
+                  <span>
                   {(tirasSummary.length || consolidado.perfiles.length) === 1
-                    ? "perfil"
-                    : "perfiles"}
+                    ? "regla activa"
+                    : "reglas activas"}
                 </span>
               </li>
               <li>

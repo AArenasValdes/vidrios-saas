@@ -11,12 +11,13 @@ import {
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { formatLineTemplatePriceLabel } from "@/features/cotizaciones/line-templates/utils/catalog-labels";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
+import { buildFabricationRecipeSummary } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 import s from "./fabricacion-line-mobile-hub.module.css";
 
 const STATUS_LABELS = {
-  draft: "Borrador",
+  draft: "Configuración técnica pendiente",
   testing: "En prueba",
   validated: "Validada",
   review_required: "Requiere revisión",
@@ -31,16 +32,17 @@ type Props = {
 };
 
 function summarizeRecipe(recipe: FabricationRecipeRecord) {
-  const perfiles = recipe.definition.perfiles.length;
-  const vidrios = recipe.definition.vidrios.length;
-  const accesorios = recipe.definition.accesorios.length;
+  const recipeSummary = buildFabricationRecipeSummary(recipe.definition);
   const tipología = recipe.definition.identidad.tipologia.replaceAll("_", " ");
   const hojas = recipe.definition.identidad.hojas;
 
   return {
-    perfiles,
-    vidrios,
-    accesorios,
+    activeRules: recipeSummary.activeRuleCount,
+    activeCuts: recipeSummary.activePieceCount,
+    optionalProfiles: recipeSummary.optionalProfileCount,
+    vidrios: recipeSummary.activeGlassCount,
+    accesorios: recipeSummary.activeAccessoryCount,
+    compositionComplete: recipeSummary.compositionComplete,
     tipología,
     hojas,
     nombre: recipe.definition.identidad.nombre,
@@ -167,8 +169,8 @@ export function FabricacionLineMobileHub({
               <div>
                 <dt>Perfiles</dt>
                 <dd>
-                  {summary.perfiles > 0
-                    ? `${summary.perfiles} en despiece`
+                  {summary.activeRules > 0
+                    ? `${summary.activeRules} reglas · ${summary.activeCuts} cortes`
                     : "Pendientes"}
                 </dd>
               </div>
@@ -188,7 +190,17 @@ export function FabricacionLineMobileHub({
                     : "Pendiente"}
                 </dd>
               </div>
+              {summary.optionalProfiles > 0 ? (
+                <div>
+                  <dt>Referencias opcionales</dt>
+                  <dd>{summary.optionalProfiles} · no activas</dd>
+                </div>
+              ) : null}
             </dl>
+
+            {!summary.compositionComplete ? (
+              <p className={s.readOnlyHint}>Configuración técnica pendiente; las referencias opcionales no se cuentan como cortes.</p>
+            ) : null}
 
             <p className={s.readOnlyHint}>
               Para editar receta, probar medidas o activar, ábrela en el

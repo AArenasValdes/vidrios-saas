@@ -17,6 +17,7 @@ import {
   type BibliotecaRecetaSugerida,
 } from "@/features/fabricacion/fixtures/biblioteca-recetas-sugeridas";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
+import { buildFabricationRecipeSummary } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import type {
   FabricationRecipeRecord,
   FabricationRecipeStatus,
@@ -57,10 +58,7 @@ function isSuggestedLinked(
 }
 
 function RecipeCard({ recipe }: { recipe: FabricationRecipeRecord }) {
-  const componentCount =
-    recipe.definition.perfiles.length +
-    recipe.definition.vidrios.length +
-    recipe.definition.accesorios.length;
+  const summary = buildFabricationRecipeSummary(recipe.definition);
   const missing = [
     ...recipe.definition.perfiles.flatMap((profile) => profile.datosPendientes),
     ...recipe.definition.notasValidacion,
@@ -79,9 +77,12 @@ function RecipeCard({ recipe }: { recipe: FabricationRecipeRecord }) {
         {recipe.providerName || "Proveedor por confirmar"} · {recipe.typology || "Tipología por confirmar"}
       </p>
       <div className={s.recipeFacts}>
-        <span>{componentCount} componentes</span>
+        <span>{summary.activeRuleCount} reglas · {summary.activePieceCount} cortes</span>
         <span>{recipe.definition.identidad.hojas} hojas</span>
       </div>
+      {summary.optionalProfileCount > 0 ? (
+        <p className={s.cardMeta}>{summary.optionalProfileCount} referencias opcionales documentadas</p>
+      ) : null}
       {missing.length > 0 && recipe.status !== "validated" ? (
         <p className={s.pendingLine}>Faltan datos o verificación de taller.</p>
       ) : (

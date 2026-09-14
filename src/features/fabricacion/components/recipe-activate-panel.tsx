@@ -26,6 +26,10 @@ import type {
   FabricacionTipologia,
 } from "@/features/fabricacion/types/fabricacion-domain";
 import type { FabricationRecipeTestRecord } from "@/features/fabricacion/types/fabricacion-persistence";
+import {
+  buildFabricationRecipeSummary,
+  getActiveRecipeProfileRules,
+} from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 
 import s from "./fabricacion-workspace.module.css";
 
@@ -206,11 +210,11 @@ export function RecipeActivatePanel({
   );
   const typologyLabel = formatTypologyLabel(recipe.identidad.tipologia);
   const compositionLabel = leafCompositionLabel(recipe);
+  const recipeSummary = buildFabricationRecipeSummary(recipe);
+  const activeProfileRules = getActiveRecipeProfileRules(recipe);
   const areaM2 =
     (referenceInput.anchoTotalMm * referenceInput.altoTotalMm) / 1_000_000;
-  const functionsCount = recipe.perfiles.filter((profile) =>
-    Boolean(profile.funcion.trim())
-  ).length;
+  const functionsCount = recipeSummary.activeRuleCount;
   const rulesCount = checklist.filter((item) => item.done).length;
   const materialsCount =
     recipe.perfiles.filter((profile) => (profile.reglaMedida.ajusteMm ?? 0) !== 0)
@@ -225,9 +229,9 @@ export function RecipeActivatePanel({
     },
     {
       icon: Grid3X3,
-      title: "Perfiles y componentes",
-      detail: "Marco, hojas y piezas de la receta",
-      value: recipe.perfiles.length,
+      title: "Reglas y cortes de perfil",
+      detail: "Reglas activas y cortes físicos de la receta",
+      value: recipeSummary.activePieceCount,
     },
     {
       icon: ShieldCheck,
@@ -285,11 +289,11 @@ export function RecipeActivatePanel({
           </article>
           <article>
             <span><Package size={18} aria-hidden="true" /></span>
-            <strong>Total de perfiles</strong>
-            <p>{recipe.perfiles.length}</p>
+            <strong>Cortes de perfil activos</strong>
+            <p>{recipeSummary.activePieceCount}</p>
             <small>
-              Perfiles del marco: {recipe.perfiles.length} · Accesorios:{" "}
-              {recipe.accesorios.length}
+              Reglas de corte: {recipeSummary.activeRuleCount} · Referencias opcionales:{" "}
+              {recipeSummary.optionalProfileCount}
             </small>
           </article>
         </div>
@@ -297,9 +301,9 @@ export function RecipeActivatePanel({
         <div className={s.activateDetailGrid}>
           <section className={s.activateDetailCard}>
             <header>
-              <h3>Perfiles del marco ({recipe.perfiles.length})</h3>
+              <h3>Reglas de perfil activas ({recipeSummary.activeRuleCount})</h3>
             </header>
-            {recipe.perfiles.length === 0 ? (
+            {activeProfileRules.length === 0 ? (
               <p className={s.activateEmpty}>Sin perfiles en esta receta.</p>
             ) : (
               <div className={s.activateMiniTable}>
@@ -309,7 +313,7 @@ export function RecipeActivatePanel({
                   <span>Cantidad</span>
                   <span>Largo comercial</span>
                 </div>
-                {recipe.perfiles.slice(0, 6).map((profile) => (
+                {activeProfileRules.slice(0, 6).map((profile) => (
                   <div key={profile.id}>
                     <strong>
                       {profile.nombrePerfil.trim() ||
@@ -327,9 +331,9 @@ export function RecipeActivatePanel({
                 ))}
               </div>
             )}
-            {recipe.perfiles.length > 6 ? (
+            {activeProfileRules.length > 6 ? (
               <button type="button" className={s.activateLinkButton} onClick={onEditRecipe}>
-                Ver todos los detalles ({recipe.perfiles.length})
+                Ver todas las reglas ({activeProfileRules.length})
               </button>
             ) : null}
           </section>

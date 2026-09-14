@@ -1,4 +1,5 @@
 import { validarRecetaFabricacion } from "@/features/fabricacion/services/fabricacion-validacion.service";
+import { isActiveRecipeProfileRule } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import {
   FABRICACION_ENGINE_VERSION,
   type FabricacionAccesorio,
@@ -228,7 +229,16 @@ export function calcularCubicacionYPauta(
   const perfiles = receta.perfiles.flatMap((perfil) => {
     if (
       !cumpleCondicion(perfil.reglaMedida.condicion, entradaNormalizada) ||
-      !cumpleCondicion(perfil.reglaCantidad.condicion, entradaNormalizada)
+      !cumpleCondicion(perfil.reglaCantidad.condicion, entradaNormalizada) ||
+      !isActiveRecipeProfileRule(perfil, {
+        ...receta,
+        identidad: {
+          ...receta.identidad,
+          hojas: entradaNormalizada.hojas,
+          modulos: entradaNormalizada.modulos,
+          variante: entradaNormalizada.variante ?? receta.identidad.variante,
+        },
+      })
     ) {
       return [];
     }

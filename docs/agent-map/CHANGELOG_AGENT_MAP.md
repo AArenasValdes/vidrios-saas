@@ -2,6 +2,13 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-14 - P3 auditoría final de consistencia de 29 líneas
+
+- Se centraliza el resumen de Fabricación: referencias documentadas, reglas activas, cortes físicos, accesorios, vidrios y alternativas opcionales ya no comparten un mismo contador.
+- Las reglas opcionales sin selección explícita no entran en cubicación, pauta ni conteos; las condicionales solo se activan cuando coincide la variante elegida.
+- Serie 4600 mantiene variantes mecánica/hidráulica independientes, con 2 reglas y 4 cortes por variante; Andes Monorriel conserva `pvc_monorriel`.
+- Se agrega `fabricacion-consistency-audit.service.ts`, regresiones P3 y la tabla de 29 líneas en `PAUTA_AUDITORIA_25_LINEAS.md`. No hay migración ni cambios de datos, descuentos, precios o códigos técnicos.
+
 ## 2026-09-14 - P2U líneas tradicionales / multiproveedor
 
 - Catálogo canónico ampliado de 25 a 29 líneas: AM-35 conserva su fila y se agregan Línea 15, Línea 4000, Línea 45 y Línea 12 Shower Door.

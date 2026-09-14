@@ -44,6 +44,7 @@ import {
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 import { deriveLineOperationalStatus } from "@/features/fabricacion/services/line-operational-status.service";
 import {
+  buildFabricationRecipeSummary,
   formatLargoComercialCorto,
   resolveRecetaLargoComercialDefaultMm,
   VENTORA_LARGO_COMERCIAL_PRESET_MM,
@@ -175,6 +176,7 @@ function getRecipeStage(
   recipe: FabricationRecipeRecord,
   recipeTests: FabricationRecipeTestRecord[] = []
 ) {
+  const summary = buildFabricationRecipeSummary(recipe.definition);
   const componentCount =
     recipe.definition.perfiles.length +
     recipe.definition.vidrios.length +
@@ -225,6 +227,8 @@ function getRecipeStage(
 
   return {
     componentCount,
+    activeProfileRuleCount: summary.activeRuleCount,
+    activeProfilePieceCount: summary.activePieceCount,
     hasComponents,
     hasRules,
     hasCutPolicy,
@@ -238,7 +242,7 @@ function getRecipeStage(
 
 function RecipeWorkflowStepper({
   progress,
-  activeStep,
+    activeStep,
   onStep,
 }: {
   progress: ReturnType<typeof getRecipeStage> | null;
@@ -308,6 +312,7 @@ function RecipeSummaryPanel({
 }) {
   const isRecipeStage = activeStep === "components" || activeStep === "rules";
   const isActivateStage = activeStep === "test" || activeStep === "validation";
+  const summary = buildFabricationRecipeSummary(recipe);
   void progress;
   void readyToActivate;
   void updatedAt;
@@ -352,21 +357,32 @@ function RecipeSummaryPanel({
             {recipe.identidad.hojas === 1 ? "hoja" : "hojas"}
           </li>
           <li>
-            {recipe.perfiles.length}{" "}
-            {recipe.perfiles.length === 1 ? "pieza" : "piezas"}
+            {summary.activeRuleCount}{" "}
+            {summary.activeRuleCount === 1 ? "regla de corte" : "reglas de corte"}
           </li>
           <li>
-            {recipe.accesorios.length}{" "}
-            {recipe.accesorios.length === 1 ? "accesorio" : "accesorios"}
+            {summary.activePieceCount}{" "}
+            {summary.activePieceCount === 1 ? "corte" : "cortes"}
           </li>
           <li>
-            {recipe.vidrios.length}{" "}
-            {recipe.vidrios.length === 1 ? "vidrio" : "vidrios"}
+            {summary.activeAccessoryCount}{" "}
+            {summary.activeAccessoryCount === 1 ? "accesorio" : "accesorios"}
           </li>
+          <li>
+            {summary.activeGlassCount}{" "}
+            {summary.activeGlassCount === 1 ? "vidrio" : "vidrios"}
+          </li>
+          {summary.optionalProfileCount > 0 ? (
+            <li>{summary.optionalProfileCount} referencias opcionales</li>
+          ) : null}
           <li>Tira: {tiraLabel}</li>
         </ul>
         <span className={s.fabSidebarReady} data-ready={canContinue ? "true" : "false"}>
-          {canContinue ? "Lista para probar" : "Revisa las piezas"}
+          {canContinue
+            ? "Lista para probar"
+            : summary.compositionComplete
+              ? "Revisa ajustes"
+              : "Configuración técnica pendiente"}
         </span>
         <button
           type="button"
@@ -1614,7 +1630,7 @@ export function FabricacionLineWorkspace({
                   </div>
                   <dl className={s.recipeFocusProgress}>
                     <div><dt>Línea</dt><dd>Definida</dd></div>
-                    <div><dt>Fabricación</dt><dd>{stage.hasComponents ? `${stage.componentCount} piezas` : "Pendiente"}</dd></div>
+                    <div><dt>Fabricación</dt><dd>{stage.hasComponents ? `${stage.activeProfilePieceCount} cortes` : "Pendiente"}</dd></div>
                     <div><dt>Probar</dt><dd>{focusRecipe.status === "validated" ? (lineStatus.quotable ? "Precio habilitado" : "Precio pendiente") : stage.hasTest ? (stage.canValidate ? "Lista para validar" : "En prueba") : "Pendiente"}</dd></div>
                   </dl>
                   <div className={s.recipeFocusActions}>
@@ -1654,7 +1670,7 @@ export function FabricacionLineWorkspace({
                         <dl className={s.recipeFacts}>
                           <div><dt>Tipología</dt><dd>{recipe.definition.identidad.tipologia.replaceAll("_", " ")}</dd></div>
                           <div><dt>Hojas</dt><dd>{recipe.definition.identidad.hojas}</dd></div>
-                          <div><dt>Componentes</dt><dd>{getRecipeStage(recipe).componentCount}</dd></div>
+                          <div><dt>Reglas activas</dt><dd>{getRecipeStage(recipe).activeProfileRuleCount}</dd></div>
                         </dl>
                         <div className={s.recipeActions}>
                           <button type="button" className={s.secondaryButton} onClick={() => openEditor(recipe)}>

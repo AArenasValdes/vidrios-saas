@@ -12,6 +12,44 @@ Fecha de corte remoto: 2026-09-14. El nombre histórico del archivo se conserva 
 6. Serie 4600 debe resolver `puerta_vaiven`; Andes Monorriel debe resolver `pvc_monorriel`. Metadata histórica incompatible no puede ganar al `catalogKey` canónico.
 7. Esta pauta es interna y revisable. No es CNC, nesting, promesa de corte ni validación automática.
 
+## Auditoría P3 de consistencia semántica — 29 líneas
+
+Fecha de ejecución: 2026-09-14. La auditoría usa la misma identidad canónica que el catálogo y Fabricación. La columna **referencias del sistema** describe la familia documentada; **reglas activas** son solo las reglas de la variante seleccionada; **cortes** es la suma de sus cantidades; las opciones quedan fuera hasta selección explícita. “Receta persistida”, “pauta documentada”, “validada en taller” y “precio configurado” son estados independientes.
+
+| Línea / `catalog_key` | Variante · tipología | Referencias del sistema | Receta persistida: reglas activas → cortes | Opciones no activas | Pauta documentada | Validada en taller | Precio configurado | Pauta para corregir / alerta |
+|---|---|---|---|---|---|---|---|---|
+| Serie 5000 / `ventora:l5000` | estándar · corredera | 5001–5007 | 5001, 5002, 5003, 5005, 5004, 5006, 5007 → 12 | — | Sí | No | Según organización | Confirmar evidencia física completa |
+| Serie 20 / `ventora:l20` | estándar · corredera | 2001, 2002, 2009, 2004, 2005, 2010, 2019 | 2001, 2002, 2009, 2005, 2004, 2010, 2019 → 12 | — | Sí | No | Según organización | Confirmar evidencia física y precio del taller |
+| Serie 25 / `ventora:l25` | estándar · corredera | 2501, 2502, 2509, 2504, 2505, 2507, 2510 | 2501, 2502, 2509, 2505, 2504, 2510, 2507 → 12 | — | Sí | No | Según organización | Confirmar evidencia física y precio del taller |
+| AL-32 / `ventora:l32` | normal · proyectante, composición pendiente | 3201, 3202, 3204, 3205, 3208 | 3201, 3201, 3202, 3202, 3208, 3208 → 12 | — | Parcial | No | Según organización | No declarar “Proyectante Normal estándar”; confirmar qué composición representan 3204/3205 |
+| AM-35 / `ventora:l35` | abatible · puerta abatible | 3502, 3501, 3508, 3503, 3504, 3506, 3507, 3509 | 3502, 3501, 3509 → 3 | 3508, 3503, 3504, 3506, 3507 (5) | Pendiente | No | Según organización | Confirmar composición y separar vaivén si corresponde |
+| Línea 15 / `ventora:serie-15-corredera-2h` | composición por resolver · corredera | 1501–1508 | 1501, 1502, 1503, 1504, 1505 → 10 | 1506, 1507, 1508 (3) | ALAR | No | Según organización | Resolver si 1506/1507/1508 son alternativas o simultáneos |
+| Línea 4000 / `ventora:serie-4000-corredera-2h` | normal · corredera | 4001–4005, 4007, 4008 | 4001, 4002, 4003, 4004, 4005, 4007, 4008 → 12 | — | Arquetipo | No | Según organización | Completar medidas de corte |
+| Línea 45 / `ventora:serie-45-puerta` | puerta · puerta abatible | 4502, 4504, 4511 | 4502, 4504 → 2 | 4511 (1) | Arquetipo | No | Según organización | Confirmar bastidor, variante y cortes |
+| Línea 12 / `ventora:serie-12-shower-corredera` | tina · shower | 1201–1204 | 1201, 1202, 1203, 1204 → 8 | — | Arquetipo | No | Según organización | Confirmar receptáculo, herrajes y pauta |
+| AL-42 / `ventora:l42` | normal · proyectante | 4201, 4209, 4202, 4204, 4229, 4206, 4231, 4220, 4230, 4250 | 4201, 4201, 4202, 4202, 4229, 4229 → 12 | — | Parcial | No | Según organización | Completar evidencia; no convertir la referencia en validación |
+| Serie 4800 / `ventora:serie-4800-corredera-2h` | normal y reforzada · corredera | 4801–4806, 4808 | normal: 4801–4806, 4808 → 12; reforzada: 4801–4805, 4810, 4811 → 12 | — | SODAL | No | Según organización | Alinear referencias de variante reforzada (4810/4811) |
+| Óptima S-28 2H / `ventora:optima-s28-corredera-2h` | estándar · corredera | Sin códigos publicados | 7 reglas → 12 | — | Base tipológica | No | Según organización | Reemplazar base por fuente primaria y prueba |
+| Óptima S-28 3H / `ventora:optima-s28-corredera-3h` | estándar · corredera | Sin códigos publicados | 7 reglas → 16 | — | Base tipológica | No | Según organización | Reemplazar base por fuente primaria y prueba |
+| S-33 / `ventora:s33-corredera-2h` | normal · corredera | 3301, 3302, 3303, 3304, 3308 | 3324, 3324, 3308, 3308, 3303 → 14 | — | SODAL | No | Según organización | Resolver diferencia 3324 frente a referencias 3301/3302/3304 |
+| S-33 RPT / `ventora:s33-rpt-corredera-2h` | RPT · corredera | 3324, 3308, 3303, 3304, 3470 | 3324R, 3324R, 3308R, 3308R, 3303 → 14 | — | SODAL | No | Según organización | Confirmar códigos RPT de la fuente y su equivalencia |
+| Serie 42 cámara / `ventora:serie-42-proyectante-camara` | con cámara · proyectante | 4201, 4209, 4202, 4204, 4229, 4206, 4231, 4220, 4230, 4250 | 4231, 4231, 4202, 4202 → 4 | 4209, 4209, 4204, 4229, 4229, 4206, 4206 (7) | Base tipológica | No | Según organización | Confirmar composición y separar referencias opcionales |
+| Serie 42 sin cámara / `ventora:serie-42-proyectante-sin-camara` | sin cámara · proyectante | 4201, 4209, 4202, 4204, 4229, 4206, 4231, 4220, 4230, 4250 | 4201, 4201, 4202, 4202 → 4 | 4209, 4209, 4204, 4229, 4229, 4206, 4206 (7) | Base tipológica | No | Según organización | Confirmar composición y separar referencias opcionales |
+| S-38 / `ventora:s38-proyectante` | estándar · proyectante | 3801, 3802N, 3803–3807 | 8 reglas → 10 | — | Base tipológica | No | Según organización | Fuente primaria y códigos pendientes |
+| S-38 RPT / `ventora:s38-rpt-proyectante` | estándar · proyectante | 381R, 384R, 386R, 383, 387 | 8 reglas → 10 | — | Base tipológica | No | Según organización | Fuente primaria y códigos pendientes |
+| MultiSlide S-83 4H / `ventora:multislide-s83-4h` | 4 hojas · corredera | S831–S834 | S831, S832, S833, S834 → 8 | — | SODAL | No | Según organización | Validar fabricación real |
+| MultiSlide S-83 8H / `ventora:multislide-s83-8h` | 8 hojas · corredera | S831–S834 | S831, S832, S833, S834 → 12 | — | SODAL | No | Según organización | Validar fabricación real |
+| Serie 3200 / `ventora:serie-3200-puerta-abatible-1h` | bastidor 3221/3225 · puerta abatible | 3222, 3221, 3225, 3227, 3223 | 3222×3 + bastidor×2 → 7 por variante | — | SODAL | No | Según organización | Confirmar bastidor y prueba física |
+| Serie 4600 / `ventora:serie-4600-puerta-vaiven` | quicio mecánico · `puerta_vaiven` | 4601, 4603, 4604, 4602 | 4601, 4603 → 4; quicio hidráulico: 4604, 4602 → 4 | — | SODAL | No | Según organización | Nunca mezclar las 4 referencias como una sola variante activa |
+| WinHouse New S75 doble / `ventora:winhouse-new-s75-doble-riel` | estándar · corredera | Sin códigos publicados | 10 reglas → 19 | — | Base tipológica | No | Según organización | Fuente primaria y prueba |
+| WinHouse New S75 triple / `ventora:winhouse-new-s75-triple-riel` | estándar · corredera | Sin códigos publicados | 10 reglas → 26 | — | Base tipológica | No | Según organización | Fuente primaria y prueba |
+| WinHouse S60 / `ventora:winhouse-s60` | estándar · abatible | 7160Z00013, 7160Z00016, 720000200, 716CZ00001–716CZ00003, 726332612N, 2433242N, 4040BOX15, 78200010001 | 6 reglas → 7 | — | Base tipológica | No | Según organización | Fuente primaria y prueba |
+| WinHouse Andes doble / `ventora:winhouse-andes-doble-riel` | estándar · corredera | PL-SLA-TC-H66-12, PL-SLA-TC-H66-15, PL-SLA-TC-MCA-12 | 10 reglas → 19 | — | Base tipológica | No | Según organización | Fuente primaria y prueba |
+| WinHouse Andes Monorriel / `ventora:winhouse-andes-monorriel` | estándar · `pvc_monorriel` | PL-SLA-TC-MLT-12, PL-SLA-TC-H54-12, HL-ACC-5X5-APOC-MA | 10 reglas → 19 | — | Identidad canónica | No | Según organización | Nunca `pvc_corredera_2h`; completar receta específica |
+| WinHouse Andes proyectante / `ventora:winhouse-andes-proyectante` | estándar · proyectante | Sin códigos publicados | 6 reglas → 7 | — | Base tipológica | No | Según organización | Fuente primaria y prueba |
+
+Resultado de la auditoría: **29/29 claves únicas**, sin `OPTIONAL_PROFILE_COUNTED_AS_ACTIVE`, sin mezcla de variantes en Serie 4600 y con tipologías canónicas `puerta_vaiven` y `pvc_monorriel`. Las diferencias de referencias frente a reglas activas son advertencias de trazabilidad, no autorización para copiar todas las referencias a Fabricación. El auditor no altera datos ni reemplaza recetas persistidas.
+
 ## Auditoría post-migración P2U (corte vigente)
 
 | Línea / `catalog_key` | Tipología | Receta persistida | Pauta documentada | Validada en taller | Precio configurado | Estado técnico / evidencia | Próximo arreglo |

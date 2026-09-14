@@ -19,7 +19,7 @@ describe("LineProfileReferencesSection", () => {
     expect(screen.getByText("Ver perfiles")).toBeInTheDocument();
     expect(screen.queryByText("5001")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Perfiles de referencia/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Referencias del sistema/i }));
 
     expect(screen.getByText("5001")).toBeInTheDocument();
     expect(screen.getByText("Riel inferior")).toBeInTheDocument();

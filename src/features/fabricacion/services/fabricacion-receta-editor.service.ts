@@ -1,5 +1,6 @@
 import {
   describePerfilSheetMeasure,
+  isActiveRecipeProfileRule,
   resolveLargoComercialMm,
 } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import {
@@ -207,13 +208,17 @@ export function isProfileReadyForPauta(
 }
 
 export function countProfilesReadyForPauta(receta: FabricacionReceta) {
-  return receta.perfiles.filter((profile) =>
-    isProfileReadyForPauta(profile, receta)
+  return receta.perfiles.filter(
+    (profile) =>
+      isActiveRecipeProfileRule(profile, receta) &&
+      isProfileReadyForPauta(profile, receta)
   ).length;
 }
 
 export function countProfilesGeometricallyPending(receta: FabricacionReceta) {
   return receta.perfiles.filter(
-    (profile) => describePerfilSheetMeasure(profile).pending
+    (profile) =>
+      isActiveRecipeProfileRule(profile, receta) &&
+      describePerfilSheetMeasure(profile).pending
   ).length;
 }

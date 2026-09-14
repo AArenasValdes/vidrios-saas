@@ -60,13 +60,13 @@ export function LineProfileReferencesSection({
         <span className={s.summaryCopy}>
           {compact ? (
             <strong>
-              {summary.total} {summary.total === 1 ? "referencia" : "referencias"}
+              {summary.total} {summary.total === 1 ? "referencia del sistema" : "referencias del sistema"}
             </strong>
           ) : (
             <>
-              <strong>Perfiles de referencia</strong>
+              <strong>Referencias del sistema</strong>
               <span className={s.summaryMeta}>
-                {summary.total} {summary.total === 1 ? "perfil" : "perfiles"} ·{" "}
+                {summary.total} {summary.total === 1 ? "perfil documentado" : "perfiles documentados"} ·{" "}
                 {configuredLabel}
               </span>
             </>

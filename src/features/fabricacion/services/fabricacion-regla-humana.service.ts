@@ -98,14 +98,66 @@ function activeQuantity(
   return Math.max(1, Math.round(scopedQuantity * (rule.multiplicador ?? 1)));
 }
 
-/** Cantidad de piezas que corresponde a la variante activa de la receta. */
+/** Regla de perfil que pertenece a la variante y composición activa. */
+export function isActiveRecipeProfileRule(
+  profile: FabricacionComponentePerfil,
+  receta: FabricacionReceta
+): boolean {
+  const hasExplicitSelection = Boolean(
+    profile.reglaMedida.condicion || profile.reglaCantidad.condicion
+  );
+  return (
+    (profile.requerido || hasExplicitSelection) &&
+    matchesRecipeIdentityCondition(profile.reglaMedida.condicion, receta) &&
+    matchesRecipeIdentityCondition(profile.reglaCantidad.condicion, receta)
+  );
+}
+
+/** Referencia opcional de la variante: se documenta, pero no se fabrica por defecto. */
+export function isOptionalRecipeProfileRule(
+  profile: FabricacionComponentePerfil,
+  receta: FabricacionReceta
+): boolean {
+  const hasExplicitSelection = Boolean(
+    profile.reglaMedida.condicion || profile.reglaCantidad.condicion
+  );
+  return (
+    !profile.requerido &&
+    !hasExplicitSelection &&
+    matchesRecipeIdentityCondition(profile.reglaMedida.condicion, receta) &&
+    matchesRecipeIdentityCondition(profile.reglaCantidad.condicion, receta)
+  );
+}
+
+export function getActiveRecipeProfileRules(
+  receta: FabricacionReceta
+): FabricacionComponentePerfil[] {
+  return receta.perfiles.filter((profile) =>
+    isActiveRecipeProfileRule(profile, receta)
+  );
+}
+
+export function getOptionalRecipeProfileRules(
+  receta: FabricacionReceta
+): FabricacionComponentePerfil[] {
+  return receta.perfiles.filter((profile) =>
+    isOptionalRecipeProfileRule(profile, receta)
+  );
+}
+
+/** Cantidad de reglas activas de perfil, no cantidad física de cortes. */
+export function countActiveRecipeProfileRules(receta: FabricacionReceta): number {
+  return getActiveRecipeProfileRules(receta).length;
+}
+
+/** Cantidad de referencias opcionales visibles para la variante activa. */
+export function countOptionalRecipeProfileRules(receta: FabricacionReceta): number {
+  return getOptionalRecipeProfileRules(receta).length;
+}
+
+/** Cantidad física de cortes que corresponde a la variante activa de la receta. */
 export function countActiveRecipeProfilePieces(receta: FabricacionReceta): number {
-  return receta.perfiles
-    .filter(
-      (profile) =>
-        matchesRecipeIdentityCondition(profile.reglaMedida.condicion, receta) &&
-        matchesRecipeIdentityCondition(profile.reglaCantidad.condicion, receta)
-    )
+  return getActiveRecipeProfileRules(receta)
     .reduce((total, profile) => total + activeQuantity(profile.reglaCantidad, receta), 0);
 }
 
@@ -118,6 +170,68 @@ export function countActiveRecipeGlasses(receta: FabricacionReceta): number {
         matchesRecipeIdentityCondition(glass.reglaCantidad.condicion, receta)
     )
     .reduce((total, glass) => total + activeQuantity(glass.reglaCantidad, receta), 0);
+}
+
+function isActiveRecipeAccessory(
+  accessory: FabricacionAccesorio,
+  receta: FabricacionReceta
+): boolean {
+  return (
+    matchesRecipeIdentityCondition(accessory.condicion, receta) &&
+    matchesRecipeIdentityCondition(accessory.reglaCantidad.condicion, receta)
+  );
+}
+
+export function countActiveRecipeAccessoryRules(receta: FabricacionReceta): number {
+  return receta.accesorios.filter((accessory) =>
+    isActiveRecipeAccessory(accessory, receta)
+  ).length;
+}
+
+export function countActiveRecipeAccessories(receta: FabricacionReceta): number {
+  return receta.accesorios
+    .filter((accessory) => isActiveRecipeAccessory(accessory, receta))
+    .reduce((total, accessory) => total + activeQuantity(accessory.reglaCantidad, receta), 0);
+}
+
+export function countActiveRecipeGlassRules(receta: FabricacionReceta): number {
+  return receta.vidrios.filter(
+    (glass) =>
+      matchesRecipeIdentityCondition(glass.condicion, receta) &&
+      matchesRecipeIdentityCondition(glass.reglaCantidad.condicion, receta)
+  ).length;
+}
+
+export type FabricationRecipeSummary = {
+  activeRuleCount: number;
+  activePieceCount: number;
+  activeAccessoryRuleCount: number;
+  activeAccessoryCount: number;
+  activeGlassRuleCount: number;
+  activeGlassCount: number;
+  optionalProfileCount: number;
+  compositionComplete: boolean;
+};
+
+/** Objeto único para hero, sidebar, tabla, cubicación y auditoría visible. */
+export function buildFabricationRecipeSummary(
+  receta: FabricacionReceta
+): FabricationRecipeSummary {
+  const activeRules = getActiveRecipeProfileRules(receta);
+  const hasPendingCompositionData =
+    (receta.datosPendientes?.length ?? 0) > 0 ||
+    activeRules.some((profile) => (profile.datosPendientes?.length ?? 0) > 0);
+
+  return {
+    activeRuleCount: activeRules.length,
+    activePieceCount: countActiveRecipeProfilePieces(receta),
+    activeAccessoryRuleCount: countActiveRecipeAccessoryRules(receta),
+    activeAccessoryCount: countActiveRecipeAccessories(receta),
+    activeGlassRuleCount: countActiveRecipeGlassRules(receta),
+    activeGlassCount: countActiveRecipeGlasses(receta),
+    optionalProfileCount: countOptionalRecipeProfileRules(receta),
+    compositionComplete: !hasPendingCompositionData && activeRules.length > 0,
+  };
 }
 
 /** Etiqueta humana para UI (resumen o excepción por perfil). */
