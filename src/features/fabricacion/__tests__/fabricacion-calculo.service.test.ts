@@ -7,6 +7,7 @@ import {
   type FabricacionReceta,
 } from "@/features/fabricacion";
 import { crearRecetaEstructuralParaLineaComercial } from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
+import { crearRecetasSodalP2A } from "@/features/fabricacion/fixtures/sodal-p2a-recipes";
 import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 
@@ -288,14 +289,10 @@ describe("motor determinístico de fabricación", () => {
       1923,
     ],
   ] as const)("calcula Serie 3200 1H con %s", (variante, bastidor, vidrioAncho, vidrioAlto) => {
-    const receta = crearRecetaEstructuralParaLineaComercial({
+    const receta = crearRecetasSodalP2A({
       catalogKey: "ventora:serie-3200-puerta-abatible-1h",
       lineName: "Serie 3200",
-      createId: (() => {
-        let id = 0;
-        return () => `serie-3200-${id++}`;
-      })(),
-    })!;
+    }).find((candidate) => candidate.identidad.variante === variante)!;
     const resultado = calcularCubicacionYPauta(receta, {
       anchoTotalMm: 900,
       altoTotalMm: 2100,
@@ -312,13 +309,13 @@ describe("motor determinístico de fabricación", () => {
     expect(resultado.calculable).toBe(true);
     expect(totalPorCodigo("3222")).toBe(3);
     expect(totalPorCodigo(bastidor)).toBe(4);
-    expect(resultado.perfiles).toHaveLength(4);
+    expect(resultado.perfiles).toHaveLength(5);
     expect(resultado.perfiles.map((profile) => profile.codigoPerfil)).not.toContain("3223");
     expect(resultado.perfiles.find((profile) => profile.codigoPerfil === "3222" && profile.medidaMm === 900)).toMatchObject({
       cantidadPiezas: 1,
     });
     expect(resultado.perfiles.find((profile) => profile.codigoPerfil === "3222" && profile.medidaMm === 2100)).toMatchObject({
-      cantidadPiezas: 2,
+      cantidadPiezas: 1,
     });
     expect(resultado.perfiles.find((profile) => profile.codigoPerfil === bastidor && profile.medidaMm === 858)).toMatchObject({
       cantidadPiezas: 2,
@@ -335,21 +332,23 @@ describe("motor determinístico de fabricación", () => {
   });
 
   it("mantiene siete piezas de perfilería y no mezcla bastidores en Serie 3200", () => {
-    const receta = crearRecetaEstructuralParaLineaComercial({
+    const recetas = crearRecetasSodalP2A({
       catalogKey: "ventora:serie-3200-puerta-abatible-1h",
       lineName: "Serie 3200",
-    })!;
+    });
 
-    expect(receta.perfiles).toHaveLength(6);
-    expect(receta.perfiles.some((profile) => /cierre|travesaño|travesano/i.test(`${profile.nombrePerfil} ${profile.funcion}`))).toBe(false);
-    for (const variante of ["3200 1H · Bastidor 3221", "3200 1H · Bastidor 3225"] as const) {
+    expect(recetas).toHaveLength(2);
+    expect(recetas.every((receta) => receta.perfiles.length > 0)).toBe(true);
+    expect(recetas[0]?.perfiles).toHaveLength(5);
+    for (const receta of recetas) {
+      expect(receta.perfiles.some((profile) => /cierre|travesaño|travesano/i.test(`${profile.nombrePerfil} ${profile.funcion}`))).toBe(false);
       const resultado = calcularCubicacionYPauta(receta, {
         anchoTotalMm: 900,
         altoTotalMm: 2100,
         cantidad: 1,
         hojas: 1,
         modulos: 1,
-        variante,
+        variante: receta.identidad.variante,
       });
       expect(resultado.perfiles.reduce((total, profile) => total + profile.cantidadPiezas, 0)).toBe(7);
     }

@@ -190,13 +190,12 @@ describe("reparación conservadora de borradores AL-32/AL-42", () => {
     expect(recipe?.perfiles.map((profile) => profile.codigoPerfil)).toEqual([
       "3222",
       "3222",
+      "3222",
       "3221",
       "3221",
-      "3225",
-      "3225",
     ]);
     expect(recipe?.perfiles.some((profile) => profile.codigoPerfil === "3223")).toBe(false);
-    expect(recipe?.vidrios).toHaveLength(2);
+    expect(recipe?.vidrios).toHaveLength(1);
   });
 
   it("repara la precarga genérica vieja de S-33 con la pauta actual", () => {
@@ -223,7 +222,7 @@ describe("reparación conservadora de borradores AL-32/AL-42", () => {
       hojas: 2,
       variante: "S-33 Normal",
     });
-    expect(recipe?.perfiles).toHaveLength(11);
+    expect(recipe?.perfiles).toHaveLength(5);
     expect(recipe?.perfiles.map((profile) => profile.codigoPerfil)).toContain("3308");
     expect(recipe?.perfiles.map((profile) => profile.codigoPerfil)).toContain("3303");
   });

@@ -48,7 +48,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
     expect(resumen.conCodigosReferencialesEnFixtures).toBe(19);
 
-    expect(resumen.gateTecnico.listaParaProbar).toBe(6);
+    expect(resumen.gateTecnico.listaParaProbar).toBe(12);
 
   });
 

@@ -102,6 +102,6 @@ describe("seedStructuralDraftsForOrganization", () => {
     expect(result).toEqual({ seeded: 1, skipped: 0 });
     expect(second).toEqual({ seeded: 0, skipped: 1 });
     expect(inserted).toHaveLength(1);
-    expect((inserted[0]?.definition as { perfiles: unknown[] }).perfiles).toHaveLength(6);
+    expect((inserted[0]?.definition as { perfiles: unknown[] }).perfiles).toHaveLength(5);
   });
 });

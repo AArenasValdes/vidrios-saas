@@ -198,23 +198,18 @@ describe("arquetipos estructurales de líneas comerciales", () => {
       hojas: 1,
       variante: "3200 1H · Bastidor 3221",
     });
-    expect(recipe?.perfiles.filter((profile) => profile.codigoPerfil === "3222")).toHaveLength(2);
+    expect(recipe?.perfiles.filter((profile) => profile.codigoPerfil === "3222")).toHaveLength(3);
     expect(recipe?.perfiles.filter((profile) => profile.codigoPerfil === "3221")).toHaveLength(2);
-    expect(recipe?.perfiles.filter((profile) => profile.codigoPerfil === "3225")).toHaveLength(2);
-    expect(recipe?.perfiles).toHaveLength(6);
+    expect(recipe?.perfiles.filter((profile) => profile.codigoPerfil === "3225")).toHaveLength(0);
+    expect(recipe?.perfiles).toHaveLength(5);
     expect(recipe?.perfiles.filter((profile) => profile.codigoPerfil === "3223")).toHaveLength(0);
     expect(recipe?.perfiles.every((profile) => profile.reglaCantidad.cantidad === 2 || profile.codigoPerfil === "3222")).toBe(true);
     expect(recipe?.perfiles.every((profile) => profile.largoComercialMm === 6000)).toBe(true);
     expect(recipe?.perfiles.find((profile) => profile.codigoPerfil === "3221" && profile.reglaMedida.base === "ancho_total")?.reglaMedida.ajusteMm).toBe(-42);
     expect(recipe?.perfiles.find((profile) => profile.codigoPerfil === "3221" && profile.reglaMedida.base === "alto_total")?.reglaMedida.ajusteMm).toBe(-29);
-    expect(recipe?.perfiles.find((profile) => profile.codigoPerfil === "3225" && profile.reglaMedida.base === "ancho_total")?.reglaMedida.ajusteMm).toBe(-42);
-    expect(recipe?.perfiles.find((profile) => profile.codigoPerfil === "3225" && profile.reglaMedida.base === "alto_total")?.reglaMedida.ajusteMm).toBe(-29);
-    expect(recipe?.vidrios.map((glass) => glass.nombre)).toEqual([
-      "Monolítico 4 mm · Bastidor 3221",
-      "Monolítico 4 mm · Bastidor 3225",
-    ]);
+    expect(recipe?.vidrios.map((glass) => glass.nombre)).toEqual(["Vidrio para bastidor 3221"]);
     expect(recipe?.accesorios.map((accessory) => accessory.nombre)).toEqual(
-      expect.arrayContaining(["Bisagra Udinese 3200", "Cerradura ISEO (inox)"])
+      expect.arrayContaining(["Bisagra 3200 (Udinese)", "Cerradura ISEO (E.25 o E.35)"])
     );
   });
 
@@ -292,15 +287,10 @@ describe("arquetipos estructurales de líneas comerciales", () => {
     });
 
     expect(standard?.identidad).toMatchObject({ tipologia: "corredera", hojas: 2, variante: "S-33 Normal" });
-    expect(standard?.perfiles.filter((profile) => profile.codigoPerfil === "3301")).toHaveLength(3);
-    expect(standard?.perfiles.filter((profile) => profile.codigoPerfil === "3302")).toHaveLength(3);
-    expect(standard?.perfiles.filter((profile) => profile.codigoPerfil === "3308")).toHaveLength(3);
-    expect(standard?.perfiles.find((profile) => profile.nombrePerfil === "Pierna hoja")?.reglaMedida.ajusteMm).toBe(-60);
-    expect(standard?.perfiles.find((profile) => profile.nombrePerfil === "Cabezal hoja")?.reglaMedida.multiplicador).toBe(0.5);
-    expect(standard?.perfiles.find((profile) => profile.nombrePerfil === "Cabezal hoja")?.reglaMedida.ajusteMm).toBe(2);
+    expect(standard?.perfiles.map((profile) => profile.codigoPerfil)).toEqual(["3324", "3324", "3308", "3308", "3303"]);
+    expect(standard?.perfiles.find((profile) => profile.codigoPerfil === "3308" && profile.reglaMedida.base === "alto_total")?.reglaMedida.ajusteMm).toBe(-72);
     expect(rpt?.identidad).toMatchObject({ tipologia: "corredera", hojas: 2, variante: "S-33 RPT" });
-    expect(rpt?.perfiles.every((profile) => ["3324", "3308", "3303", "3304"].includes(profile.codigoPerfil))).toBe(true);
-    expect(rpt?.perfiles.filter((profile) => profile.codigoPerfil === "3324")).toHaveLength(3);
-    expect(rpt?.accesorios.find((accessory) => accessory.codigo === "3470")?.requerido).toBe(true);
+    expect(rpt?.perfiles.map((profile) => profile.codigoPerfil)).toEqual(["3324R", "3324R", "3308R", "3308R", "3303"]);
+    expect(rpt?.perfiles.find((profile) => profile.codigoPerfil === "3308R" && profile.reglaMedida.base === "ancho_por_hoja")?.reglaMedida.ajusteMm).toBe(4);
   });
 });

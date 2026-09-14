@@ -95,6 +95,7 @@ export const fabricacionComponentePerfilSchema = z
     reglaMedida: fabricacionReglaMedidaSchema,
     reglaCantidad: fabricacionReglaCantidadSchema,
     requerido: z.boolean(),
+    corte: z.string().min(1).optional(),
     ...componentNotesShape,
   })
   .strict();
@@ -120,6 +121,8 @@ export const fabricacionAccesorioSchema = z
     reglaCantidad: fabricacionReglaCantidadSchema,
     requerido: z.boolean(),
     condicion: fabricacionCondicionSchema.optional(),
+    formulaCantidad: z.string().min(1).optional(),
+    unidad: z.string().min(1).optional(),
     ...componentNotesShape,
   })
   .strict();

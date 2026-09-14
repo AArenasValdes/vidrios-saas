@@ -13,6 +13,10 @@ import {
   type SerieS33VariantId,
 } from "@/features/fabricacion/fixtures/plantillas-ventora-s33";
 import {
+  crearRecetaSodalP2A,
+  type SodalP2ACatalogKey,
+} from "@/features/fabricacion/fixtures/sodal-p2a-recipes";
+import {
   FABRICACION_RECIPE_SCHEMA_VERSION,
   type FabricacionBaseMedida,
   type FabricacionReceta,
@@ -606,6 +610,16 @@ const PLANTILLA_BY_CATALOG_KEY: Partial<Record<string, PlantillaVentoraCorredera
   "ventora:l25": "L25",
 };
 
+const SODAL_P2A_CATALOG_KEYS: Record<SodalP2ACatalogKey, true> = {
+  "ventora:serie-4800-corredera-2h": true,
+  "ventora:s33-corredera-2h": true,
+  "ventora:s33-rpt-corredera-2h": true,
+  "ventora:multislide-s83-4h": true,
+  "ventora:multislide-s83-8h": true,
+  "ventora:serie-3200-puerta-abatible-1h": true,
+  "ventora:serie-4600-puerta-vaiven": true,
+};
+
 export function resolveArquetipoEstructuralId(input: {
   catalogKey?: string | null;
   structuralArchetypeId?: string | null;
@@ -824,6 +838,13 @@ export function crearRecetaEstructuralParaLineaComercial(input: {
   lineName: string;
   createId?: () => string;
 }): FabricacionReceta | null {
+  if (input.catalogKey && input.catalogKey in SODAL_P2A_CATALOG_KEYS) {
+    return crearRecetaSodalP2A({
+      catalogKey: input.catalogKey as SodalP2ACatalogKey,
+      lineName: input.lineName,
+      createId: input.createId,
+    });
+  }
   const serieS33Variant = input.catalogKey
     ? SERIE_S33_VARIANT_BY_CATALOG_KEY[input.catalogKey]
     : undefined;

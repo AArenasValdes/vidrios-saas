@@ -92,6 +92,8 @@ export type FabricacionComponentePerfil = {
   reglaMedida: FabricacionReglaMedida;
   reglaCantidad: FabricacionReglaCantidad;
   requerido: boolean;
+  /** Corte indicado por la fuente primaria, cuando la ficha lo publica. */
+  corte?: string;
   observaciones?: string;
   datosPendientes?: string[];
 };
@@ -115,6 +117,9 @@ export type FabricacionAccesorio = {
   reglaCantidad: FabricacionReglaCantidad;
   requerido: boolean;
   condicion?: FabricacionCondicion;
+  /** Fórmula textual de consumo cuando la fuente expresa metros/tramos. */
+  formulaCantidad?: string;
+  unidad?: string;
   observaciones?: string;
   datosPendientes?: string[];
 };

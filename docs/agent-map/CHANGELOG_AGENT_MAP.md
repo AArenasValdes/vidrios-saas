@@ -9,6 +9,13 @@ Historial de cambios en la documentacion del mapa tecnico.
 - Fabricación queda en una sola fila técnica compacta; el menú de tres puntos conserva solo duplicar y eliminar.
 - No se modifican recetas, descuentos, códigos técnicos, precios persistidos, `quotable`, RLS ni Supabase.
 
+## 2026-09-14 - P2A recetas SODAL de aluminio
+
+- Se agregan recetas documentales separadas para Serie 4800 normal/reforzada, S-33 normal, S-33 RPT, MultiSlide S-83 4H/8H, Serie 3200 con bastidores 3221/3225 y Serie 4600 con quicio mecánico/hidráulico.
+- Todas quedan `source_type=manufacturer`, `source_name=SODAL`, `status=draft` y evidencia `documented`; no se crean pruebas físicas ni se marca `workshop_validated`.
+- La migración `20260914153339_p2a_sodal_aluminum_recipes.sql` versiona sin sobrescribir, conserva padres/historial y es idempotente. Felpas/burletes permanecen como fórmulas textuales pendientes de unidad de compra.
+- Verificación remota y pauta de 25 líneas: `docs/agent-map/PAUTA_AUDITORIA_25_LINEAS.md`.
+
 ## 2026-09-14 - P1 primeras recetas reales de taller
 
 - Serie 5000, Serie 20 y Serie 25 reciben `source_type='workshop'` y referencia P1; se conservan exactamente sus descuentos y códigos técnicos.

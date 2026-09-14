@@ -283,6 +283,15 @@ export function calcularCubicacionYPauta(
 
   const accesorios = receta.accesorios.flatMap((accesorio) => {
     if (!accesorioCumpleCondicion(accesorio, entradaNormalizada)) return [];
+    if (accesorio.formulaCantidad) {
+      advertencias.push({
+        codigo: "FORMULA_ACCESORIO_PENDIENTE",
+        nivel: "advertencia",
+        mensaje: `${accesorio.nombre}: consumo documentado como ${accesorio.formulaCantidad} ${accesorio.unidad ?? ""}`.trim() +
+          "; queda pendiente de conversión a unidad de compra.",
+      });
+      return [];
+    }
     const cantidad = calcularCantidad(accesorio.id, accesorio.reglaCantidad, entradaNormalizada);
     return [
       {
