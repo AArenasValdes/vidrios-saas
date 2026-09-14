@@ -2,6 +2,14 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-14 - P1 primeras recetas reales de taller
+
+- Serie 5000, Serie 20 y Serie 25 reciben `source_type='workshop'` y referencia P1; se conservan exactamente sus descuentos y códigos técnicos.
+- AL-32 versiona la receta persistida: confirma 3201 marco 0 mm y 3202 hoja -21 mm, conserva 3208/3205/3204 y deja composición, vidrio y accesorios pendientes. La versión anterior queda archivada; no se etiqueta estándar ni validada en taller.
+- AL-42 normal registra evidencia parcial de 4201 marco 0 mm y 4202 hoja -17 mm; 4229 -90 mm permanece persistido sin validación. La diferencia frente a la referencia externa histórica -18 mm queda documentada.
+- La migración `20260914142228_p1_workshop_recipe_evidence.sql` es idempotente, acotada a `organization_id=39`, no toca otras organizaciones y no convierte recetas en `workshop_validated` automáticamente.
+- La pauta de las 25 líneas separa receta persistida, pauta documentada, validación de taller y precio configurado: `docs/agent-map/PAUTA_AUDITORIA_25_LINEAS.md`.
+
 ## 2026-09-14 - Corrección P0 de verdad técnica en Fabricación
 
 - Se centraliza el estado operativo de una línea en `line-operational-status.service.ts`: técnico, evidencia, precio y `quotable` son ejes independientes.

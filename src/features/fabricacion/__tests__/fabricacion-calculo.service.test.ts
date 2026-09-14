@@ -28,6 +28,97 @@ function findPerfil(resultado: ReturnType<typeof calcularCubicacionYPauta>, func
 }
 
 describe("motor determinístico de fabricación", () => {
+  it.each([
+    ["ventora:l5000", { "5001": 0, "5002": 0, "5003": -3, "5004": -2, "5005": -2, "5006": -18, "5007": -18 }],
+    ["ventora:l20", { "2001": -12, "2002": -12, "2009": 0, "2004": -2, "2005": -2, "2010": -27, "2019": -27 }],
+    ["ventora:l25", { "2501": -16, "2502": -16, "2509": 0, "2504": 0, "2505": 0, "2510": -35, "2507": -35 }],
+  ] as const)("protege descuentos de taller de %s", (catalogKey, expected) => {
+    const recipe = crearRecetaEstructuralParaLineaComercial({
+      catalogKey,
+      lineName: catalogKey,
+    })!;
+    const actual = Object.fromEntries(
+      recipe.perfiles.map((profile) => [profile.codigoPerfil, profile.reglaMedida.ajusteMm ?? 0])
+    );
+
+    expect(actual).toEqual(expected);
+  });
+
+  it("calcula L32 con evidencia parcial de taller: marco W/H y hoja W/H -21", () => {
+    const base = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:l32",
+      lineName: "L32",
+    })!;
+    const recipe = {
+      ...base,
+      perfiles: base.perfiles.map((profile) => {
+        if (profile.codigoPerfil === "3201") {
+          return {
+            ...profile,
+            reglaCantidad: { tipo: "fija" as const, cantidad: 2, multiplicador: 1 },
+            reglaMedida: { ...profile.reglaMedida, ajusteMm: 0 },
+            observaciones: "Confirmado por taller: marco W/H.",
+          };
+        }
+        if (profile.codigoPerfil === "3202") {
+          return {
+            ...profile,
+            reglaCantidad: { tipo: "fija" as const, cantidad: 2, multiplicador: 1 },
+            reglaMedida: { ...profile.reglaMedida, ajusteMm: -21 },
+            observaciones: "Confirmado por taller: hoja W/H -21 mm.",
+          };
+        }
+        return profile;
+      }),
+    };
+    const resultado = calcularCubicacionYPauta(recipe, {
+      anchoTotalMm: 1000,
+      altoTotalMm: 1200,
+      cantidad: 1,
+      hojas: 1,
+      modulos: 1,
+    });
+
+    expect(resultado.perfiles.filter((profile) => profile.codigoPerfil === "3201").map((profile) => [profile.medidaMm, profile.cantidadPiezas])).toEqual([
+      [1000, 2],
+      [1200, 2],
+    ]);
+    expect(resultado.perfiles.filter((profile) => profile.codigoPerfil === "3202").map((profile) => [profile.medidaMm, profile.cantidadPiezas])).toEqual([
+      [979, 2],
+      [1179, 2],
+    ]);
+  });
+
+  it("calcula L42 con evidencia parcial de taller: marco W/H y hoja W/H -17", () => {
+    const base = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:l42",
+      lineName: "L42",
+    })!;
+    const recipe = {
+      ...base,
+      perfiles: base.perfiles.map((profile) =>
+        profile.codigoPerfil === "4202"
+          ? {
+              ...profile,
+              reglaMedida: { ...profile.reglaMedida, ajusteMm: -17 },
+              observaciones: "Confirmado por taller: hoja W/H -17 mm.",
+            }
+          : profile
+      ),
+    };
+    const resultado = calcularCubicacionYPauta(recipe, {
+      anchoTotalMm: 1000,
+      altoTotalMm: 1200,
+      cantidad: 1,
+      hojas: 1,
+      modulos: 1,
+    });
+
+    expect(resultado.perfiles.filter((profile) => profile.codigoPerfil === "4201").map((profile) => profile.medidaMm)).toEqual([1000, 1200]);
+    expect(resultado.perfiles.filter((profile) => profile.codigoPerfil === "4202").map((profile) => profile.medidaMm)).toEqual([983, 1183]);
+    expect(resultado.perfiles.filter((profile) => profile.codigoPerfil === "4202").map((profile) => profile.medidaMm)).not.toEqual(expect.arrayContaining([982, 1182]));
+  });
+
   it("calcula AL-32 proyectante normal 1H con seis reglas y vidrio monolítico", () => {
     const receta = crearRecetaEstructuralParaLineaComercial({
       catalogKey: "ventora:l32",
