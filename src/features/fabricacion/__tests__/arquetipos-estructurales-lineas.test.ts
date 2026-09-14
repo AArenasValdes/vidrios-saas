@@ -178,6 +178,7 @@ describe("arquetipos estructurales de líneas comerciales", () => {
     });
 
     expect(aligned.identidad.tipologia).toBe("pvc_monorriel");
+    expect(aligned.identidad.nombre).toBe("WinHouse Andes Monorriel — PVC monorriel");
     expect(aligned.perfiles).toEqual(recipe.perfiles);
     expect(recipe.identidad.tipologia).toBe("corredera");
   });

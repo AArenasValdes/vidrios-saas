@@ -646,11 +646,16 @@ export function alignRecipeIdentityForCatalogDisplay<T extends FabricacionReceta
   }
 
   const lineName = input.lineName?.trim() || input.recipe.identidad.nombre;
+  const canonicalName = lineName.toLocaleLowerCase("es-CL");
+  const canonicalLabel = archetype.label.toLocaleLowerCase("es-CL");
+  const displayName = canonicalName.endsWith(canonicalLabel)
+    ? lineName
+    : `${lineName} — ${archetype.label}`;
   return {
     ...input.recipe,
     identidad: {
       ...input.recipe.identidad,
-      nombre: `${lineName} — ${archetype.label}`,
+      nombre: displayName,
       tipologia: archetype.tipologia,
       apertura: archetype.tipologia,
     },
