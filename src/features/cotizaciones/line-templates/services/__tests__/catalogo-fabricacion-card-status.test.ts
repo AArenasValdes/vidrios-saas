@@ -44,6 +44,25 @@ function makeRecipe(
     lineName: "Serie demo",
     createId: () => `status-${nextId++}`,
   });
+  const persistedDefinition =
+    status === "validated"
+      ? {
+          ...definition,
+          datosPendientes: undefined,
+          perfiles: definition.perfiles.map((profile) => ({
+            ...profile,
+            datosPendientes: undefined,
+          })),
+          vidrios: definition.vidrios.map((glass) => ({
+            ...glass,
+            datosPendientes: undefined,
+          })),
+          accesorios: definition.accesorios.map((accessory) => ({
+            ...accessory,
+            datosPendientes: undefined,
+          })),
+        }
+      : definition;
 
   return {
     id: `recipe-${status}`,
@@ -57,7 +76,7 @@ function makeRecipe(
     variant: "estandar",
     version: 1,
     status,
-    definition,
+    definition: persistedDefinition,
     sourceType: "manual",
     sourceReference: "base-ventora:corredera:2",
     parentRecipeId: null,

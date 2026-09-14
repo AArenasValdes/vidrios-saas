@@ -1,4 +1,5 @@
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
+import { buildFabricationRecipeSummary } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
 import type {
   FabricationRecipeRecord,
@@ -142,9 +143,22 @@ export function deriveLineOperationalStatus(input: StatusInput): LineOperational
   const persistedRecipe = chooseRecipe(input.recipes ?? []);
   const recipe = persistedRecipe?.definition ?? input.referenceRecipe ?? null;
   const technicalEvaluation = recipe
-    ? persistedRecipe?.status === "validated"
-      ? { listaParaProbar: true, bloqueos: [] as string[], advertencias: [] as string[] }
-      : evaluarRecetaListaParaProbar(recipe)
+    ? (() => {
+        const gate =
+          persistedRecipe?.status === "validated"
+            ? { listaParaProbar: true, bloqueos: [] as string[], advertencias: [] as string[] }
+            : evaluarRecetaListaParaProbar(recipe);
+        const compositionComplete = buildFabricationRecipeSummary(recipe).compositionComplete;
+        if (compositionComplete) return gate;
+        return {
+          ...gate,
+          listaParaProbar: false,
+          bloqueos: [
+            ...gate.bloqueos,
+            "Composición técnica pendiente: la receta no puede presentarse como lista para probar.",
+          ],
+        };
+      })()
     : { listaParaProbar: false, bloqueos: ["Sin receta técnica"] as string[], advertencias: [] as string[] };
   const technicalStatus: LineTechnicalStatus = technicalEvaluation.listaParaProbar
     ? "calculable"

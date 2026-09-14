@@ -1981,15 +1981,18 @@ export function RecipeGuidedEditor({
         <header className={s.fabPrepPageHead}>
           <h2>Así fabricas esta {fabricationProductLabel(recipe.identidad.tipologia)}</h2>
           <p className={s.fabPrepGlobalStatus}>
-            {listaParaProbarEvaluacion.listaParaProbar
+            {fabricacionPreparada
               ? "Fabricación lista para probar"
               : "Fabricación pendiente"}
             {" · "}
-            {configuredActiveProfilePieces} de {activeProfilePieces} cortes de perfilería configurados
+            {fabricacionPreparada
+              ? `${configuredActiveProfilePieces} de ${activeProfilePieces} cortes de perfilería configurados`
+              : `${recipeSummary.activeRuleCount} reglas de corte persistidas · ${recipeSummary.optionalProfileCount} ${recipeSummary.optionalProfileCount === 1 ? "referencia opcional" : "referencias opcionales"}`}
           </p>
           <p>
-            Ventora ya preparó las medidas y piezas habituales. Revisa solo si
-            en tu taller lo haces distinto.
+            {fabricacionPreparada
+              ? "Ventora ya preparó las medidas y piezas habituales. Revisa solo si en tu taller lo haces distinto."
+              : "La receta conserva información persistida, pero su composición aún está pendiente. No se puede probar ni generar una pauta confiable hasta completarla."}
           </p>
         </header>
 

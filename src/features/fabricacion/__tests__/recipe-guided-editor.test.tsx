@@ -312,6 +312,8 @@ describe("RecipeGuidedEditor", () => {
     );
 
     expect(screen.getByText("Así fabricas esta ventana")).toBeInTheDocument();
+    expect(screen.getByText(/Fabricación pendiente ·/)).toBeInTheDocument();
+    expect(screen.queryByText(/Fabricación lista para probar ·/)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Configuración técnica pendiente" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Fabricación preparada" })).not.toBeInTheDocument();
     expect(screen.getByText("Tira que compras")).toBeInTheDocument();

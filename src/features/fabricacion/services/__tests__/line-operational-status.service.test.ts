@@ -1,8 +1,25 @@
 import { crearRecetaPlantillaVentoraCorredera2H } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
+import { crearRecetaEstructuralParaLineaComercial } from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
 import { deriveLineOperationalStatus } from "@/features/fabricacion/services/line-operational-status.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
 const recipeDefinition = crearRecetaPlantillaVentoraCorredera2H("L5000");
+const completeRecipeDefinition = {
+  ...recipeDefinition,
+  datosPendientes: undefined,
+  perfiles: recipeDefinition.perfiles.map((profile) => ({
+    ...profile,
+    datosPendientes: undefined,
+  })),
+  vidrios: recipeDefinition.vidrios.map((glass) => ({
+    ...glass,
+    datosPendientes: undefined,
+  })),
+  accesorios: recipeDefinition.accesorios.map((accessory) => ({
+    ...accessory,
+    datosPendientes: undefined,
+  })),
+};
 
 function makeTemplate(overrides: { price?: number; active?: boolean } = {}) {
   return {
@@ -24,7 +41,7 @@ function makeValidatedRecipe(): FabricationRecipeRecord {
     variant: "L5000",
     version: 1,
     status: "validated",
-    definition: recipeDefinition,
+    definition: completeRecipeDefinition,
     sourceType: "manual",
     sourceReference: "base-ventora:corredera:2",
     parentRecipeId: null,
@@ -40,7 +57,7 @@ describe("line-operational-status.service", () => {
   it("separa receta calculable, evidencia documentada y precio pendiente", () => {
     const status = deriveLineOperationalStatus({
       template: makeTemplate(),
-      referenceRecipe: recipeDefinition,
+      referenceRecipe: completeRecipeDefinition,
       referenceSource: {
         sourceType: "ventora_reference",
         sourceReference: "ventora:l5000",
@@ -61,7 +78,7 @@ describe("line-operational-status.service", () => {
     expect(
       deriveLineOperationalStatus({
         template: makeTemplate({ price: 80000 }),
-        referenceRecipe: recipeDefinition,
+        referenceRecipe: completeRecipeDefinition,
         referenceSource: { sourceType: "ventora_reference" },
       })
     ).toMatchObject({
@@ -111,5 +128,30 @@ describe("line-operational-status.service", () => {
       validationStatus: "workshop_validated",
       label: "Validada en taller",
     });
+  });
+
+  it("mantiene pendiente una receta con composición incompleta aunque tenga fórmulas", () => {
+    const recipe = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:l42",
+      lineName: "Serie 42",
+    })!;
+
+    const status = deriveLineOperationalStatus({
+      template: makeTemplate({ price: 80000 }),
+      referenceRecipe: recipe,
+      referenceSource: { sourceType: "workshop", sourceReference: "taller:p1:l42" },
+    });
+
+    expect(status).toMatchObject({
+      technicalStatus: "incomplete",
+      pricingStatus: "configured",
+      quotable: true,
+      label: "Configuración técnica pendiente",
+    });
+    expect(status.warnings).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/Composición técnica pendiente/i),
+      ])
+    );
   });
 });

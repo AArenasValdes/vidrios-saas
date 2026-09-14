@@ -40,6 +40,8 @@ import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabricat
 import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
 import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import { resolveAperturaForRecipeMatch } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
+import { buildFabricationRecipeSummary } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import { resolverRecetaFabricacionCompatible } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
 import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
@@ -353,9 +355,20 @@ export function PautaCubicacionPanel({
     formalResolution?.estado === "receta_no_validada"
       ? formalResolution.receta
       : null;
+  const selectedPersistedRecipeReady = useMemo(() => {
+    if (!selectedPersistedRecipe) return false;
+    const compositionComplete = buildFabricationRecipeSummary(
+      selectedPersistedRecipe.definition
+    ).compositionComplete;
+    const technicalGate =
+      selectedPersistedRecipe.status === "validated" ||
+      evaluarRecetaListaParaProbar(selectedPersistedRecipe.definition).listaParaProbar;
+    return compositionComplete && technicalGate;
+  }, [selectedPersistedRecipe]);
   const formalSnapshot = useMemo(() => {
     if (
       !selectedPersistedRecipe ||
+      !selectedPersistedRecipeReady ||
       widthMm <= 0 ||
       heightMm <= 0 ||
       quantity <= 0
@@ -383,6 +396,7 @@ export function PautaCubicacionPanel({
     persistedRecipes.length,
     quantity,
     selectedPersistedRecipe,
+    selectedPersistedRecipeReady,
     widthMm,
   ]);
   const formalLegacySnapshot = useMemo(
@@ -542,9 +556,11 @@ export function PautaCubicacionPanel({
       : draftMatches || savedMatches
         ? "Snapshot guardado"
         : selectedPersistedRecipe
-          ? selectedPersistedRecipe.status === "validated"
-            ? "Validada por tu taller"
-            : "Receta en prueba"
+          ? !selectedPersistedRecipeReady
+            ? "Configuración técnica pendiente"
+            : selectedPersistedRecipe.status === "validated"
+              ? "Validada por tu taller"
+              : "Receta en prueba"
         : fabricationRecipe
           ? RECIPE_STATUS_LABELS[fabricationRecipe.status]
           : cubicationConfig
@@ -557,7 +573,7 @@ export function PautaCubicacionPanel({
       : activeSnapshot
         ? activeSnapshot.status === "validada"
         : selectedPersistedRecipe
-          ? selectedPersistedRecipe.status === "validated"
+          ? selectedPersistedRecipeReady && selectedPersistedRecipe.status === "validated"
         : fabricationRecipe
           ? fabricationRecipe.status === "validada"
           : cubicationConfig?.status === "validada";

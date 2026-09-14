@@ -338,7 +338,9 @@ function RecipeSummaryPanel({
     recipe.identidad.hojas > 0 && recipe.identidad.tipologia !== "pano_fijo"
       ? `${tipologiaCorta} ${recipe.identidad.hojas}H`
       : tipologiaCorta;
-  const canContinue = evaluarRecetaListaParaProbar(recipe).listaParaProbar;
+  const canContinue =
+    evaluarRecetaListaParaProbar(recipe).listaParaProbar &&
+    summary.compositionComplete;
 
   return (
     <aside className={`${s.guidedSidebar} ${s.fabCompactSidebar}`}>
@@ -904,13 +906,13 @@ export function FabricacionLineWorkspace({
       selected?.status !== "validated"
         ? draft
         : recipe.definition;
-    const probarEvaluacion = evaluarRecetaListaParaProbar(
-      draftToPersist ?? recipe.definition
-    );
-    if (!probarEvaluacion.listaParaProbar) {
+    const recipeToTest = draftToPersist ?? recipe.definition;
+    const probarEvaluacion = evaluarRecetaListaParaProbar(recipeToTest);
+    const recipeSummary = buildFabricationRecipeSummary(recipeToTest);
+    if (!probarEvaluacion.listaParaProbar || !recipeSummary.compositionComplete) {
       setFeedback(
         probarEvaluacion.bloqueos[0] ??
-          "Completa código, medida, descuento, cantidad, largo comercial, accesorios y vidrio antes de probar."
+          "Completa la composición técnica antes de probar; no se generará una pauta mientras siga pendiente."
       );
       return;
     }
