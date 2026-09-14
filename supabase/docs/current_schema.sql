@@ -1338,6 +1338,8 @@ CREATE TABLE IF NOT EXISTS "public"."fabrication_recipes" (
     "definition" "jsonb" NOT NULL,
     "source_type" "text" DEFAULT 'manual'::"text" NOT NULL,
     "source_reference" "text",
+    "source_name" "text",
+    "source_revision" "text",
     "parent_recipe_id" "uuid",
     "validated_at" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -1348,13 +1350,19 @@ CREATE TABLE IF NOT EXISTS "public"."fabrication_recipes" (
     CONSTRAINT "fabrication_recipes_leaves_count_positive_check" CHECK ((("leaves_count" IS NULL) OR ("leaves_count" > 0))),
     CONSTRAINT "fabrication_recipes_scope_check" CHECK (("scope" = ANY (ARRAY['ventora'::"text", 'organization'::"text"]))),
     CONSTRAINT "fabrication_recipes_scope_organization_check" CHECK (((("scope" = 'ventora'::"text") AND ("organization_id" IS NULL)) OR (("scope" = 'organization'::"text") AND ("organization_id" IS NOT NULL)))),
-    CONSTRAINT "fabrication_recipes_source_type_check" CHECK (("source_type" = ANY (ARRAY['manual'::"text", 'copied'::"text", 'imported_ai'::"text", 'legacy'::"text"]))),
+    CONSTRAINT "fabrication_recipes_source_type_check" CHECK (("source_type" = ANY (ARRAY['manual'::"text", 'copied'::"text", 'imported_ai'::"text", 'legacy'::"text", 'workshop'::"text", 'manufacturer'::"text", 'supplier'::"text", 'ventora_reference'::"text", 'unknown'::"text"]))),
     CONSTRAINT "fabrication_recipes_status_check" CHECK (("status" = ANY (ARRAY['draft'::"text", 'testing'::"text", 'validated'::"text", 'review_required'::"text", 'archived'::"text"]))),
     CONSTRAINT "fabrication_recipes_version_positive_check" CHECK (("version" > 0))
 );
 
 
 ALTER TABLE "public"."fabrication_recipes" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."fabrication_recipes"."source_name" IS 'Nombre legible de la fuente de la receta; no equivale a proveedor de perfiles.';
+
+
+COMMENT ON COLUMN "public"."fabrication_recipes"."source_revision" IS 'Versión, página o revisión del documento que respalda la receta, si existe.';
 
 
 COMMENT ON COLUMN "public"."fabrication_recipes"."validated_by" IS 'Usuario autenticado que valido esta version de receta.';

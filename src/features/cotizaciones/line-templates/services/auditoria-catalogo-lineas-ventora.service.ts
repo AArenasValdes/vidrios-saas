@@ -18,6 +18,7 @@ import {
   type PlantillaVentoraProyectanteId,
 } from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
+import { deriveLineOperationalStatus } from "@/features/fabricacion/services/line-operational-status.service";
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
 
 export type LineaFabricacionEstadoCatalogo =
@@ -45,6 +46,12 @@ export type LineaAuditoriaCatalogo = {
   fabricacionEstado: LineaFabricacionEstadoCatalogo;
   listaParaProbar: boolean;
   listaParaPautaConfiable: boolean;
+  technicalStatus: "incomplete" | "calculable";
+  validationStatus: "unverified" | "documented" | "workshop_validated";
+  pricingStatus: "missing" | "configured";
+  quotable: boolean;
+  sourceType: string | null;
+  sourceReference: string | null;
   bloqueosProbar: string[];
   notas: string[];
 };
@@ -227,6 +234,20 @@ export function auditarLineaCatalogoVentora(
     listaParaProbar: probar.listaParaProbar,
     workshopCodes,
   });
+  const operationalStatus = deriveLineOperationalStatus({
+    template: {
+      isActive: line.isActive !== false,
+      precioM2Sugerido: line.precioM2Sugerido,
+    },
+    referenceRecipe: recipe,
+    referenceSource: recipe
+      ? {
+          sourceType: "ventora_reference",
+          sourceReference: line.catalogKey,
+          sourceName: line.proveedor ?? "Referencia Ventora",
+        }
+      : null,
+  });
 
   return {
     catalogKey: line.catalogKey ?? "",
@@ -247,6 +268,12 @@ export function auditarLineaCatalogoVentora(
     fabricacionEstado,
     listaParaProbar: probar.listaParaProbar,
     listaParaPautaConfiable: false,
+    technicalStatus: operationalStatus.technicalStatus,
+    validationStatus: operationalStatus.validationStatus,
+    pricingStatus: operationalStatus.pricingStatus,
+    quotable: operationalStatus.quotable,
+    sourceType: operationalStatus.sourceType,
+    sourceReference: operationalStatus.sourceReference,
     bloqueosProbar: probar.bloqueos,
     notas: buildNotas(line, recipe),
   };

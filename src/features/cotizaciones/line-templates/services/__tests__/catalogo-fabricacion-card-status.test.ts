@@ -74,29 +74,43 @@ describe("catalogo fabricacion card status", () => {
     const status = buildTechnicalCardStatus(makeTemplate(), []);
 
     expect(status).toMatchObject({
-      label: "Sin configurar",
-      detail: "Puedes cotizar igualmente.",
+      label: "Configuración técnica pendiente",
+      detail: "La línea puede cotizarse cuando tenga precio; la fabricación sigue pendiente.",
       actionLabel: "Configurar fabricación",
       filter: "solo_cotizar",
     });
   });
 
-  it("distingue borrador, lista para probar y validada", () => {
+  it("distingue borrador, lista para probar y no inventa validación de taller", () => {
     expect(buildTechnicalCardStatus(makeTemplate(), [makeRecipe("draft")])).toMatchObject({
-      label: "Borrador",
+      label: "Configuración técnica pendiente",
       actionLabel: "Continuar configuración",
     });
     expect(
       buildTechnicalCardStatus(makeTemplate(), [makeRecipe("testing")])
     ).toMatchObject({
-      label: "Borrador",
+      label: "Configuración técnica pendiente",
       actionLabel: "Continuar configuración",
     });
     expect(
       buildTechnicalCardStatus(makeTemplate(), [makeRecipe("validated")])
     ).toMatchObject({
-      label: "Validada",
-      detail: "Lista para generar despiece y pauta.",
+      label: "Lista para probar",
+      detail: "La receta calcula; prueba una medida real antes de usarla como pauta de taller.",
+      actionLabel: "Probar fabricación",
+    });
+
+    expect(
+      buildTechnicalCardStatus(makeTemplate(), [
+        {
+          ...makeRecipe("validated"),
+          sourceType: "workshop",
+          sourceName: "Pauta firmada taller Ventora",
+          sourceReference: "taller:orden-2026-09",
+        },
+      ])
+    ).toMatchObject({
+      label: "Validada en taller",
       actionLabel: "Ver fabricación",
     });
   });

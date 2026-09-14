@@ -18,7 +18,9 @@ export const FABRICACION_TIPOLOGIAS = [
   "abatible",
   "proyectante",
   "puerta_abatible",
+  "puerta_vaiven",
   "puerta_corredera",
+  "pvc_monorriel",
   "shower",
   "personalizada",
 ] as const;

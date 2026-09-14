@@ -123,7 +123,7 @@ export function evaluarRecetaListaParaProbar(
         bloqueos.push(`Falta fórmula de medida: ${label}`);
       }
       if (describePerfilTallerResumen(profile).pendingDiscount) {
-        bloqueos.push(`Falta descuento confirmado: ${label}`);
+        bloqueos.push(`Falta descuento persistido: ${label}`);
       }
       if (!profile.reglaCantidad?.cantidad || profile.reglaCantidad.cantidad <= 0) {
         bloqueos.push(`Falta cantidad: ${label}`);

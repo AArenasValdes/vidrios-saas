@@ -2,6 +2,15 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-14 - Corrección P0 de verdad técnica en Fabricación
+
+- Se centraliza el estado operativo de una línea en `line-operational-status.service.ts`: técnico, evidencia, precio y `quotable` son ejes independientes.
+- El catálogo deja de presentar una receta calculable como cotizable sin precio comercial válido; la fabricación usa “Configuración técnica pendiente”, “Lista para probar”, “Pauta documentada” y “Validada en taller” según evidencia.
+- Se corrige Serie 4600 a `puerta_vaiven` y Andes Monorriel a `pvc_monorriel`; se agregan regresiones para impedir que vuelvan a caer en corredera.
+- Se elimina un encabezado accesible duplicado en el editor guiado.
+- `fabrication_recipes` incorpora `source_name` y `source_revision`; la migración `20260914120000_fabrication_recipe_provenance.sql` es aditiva, preserva definition/descuentos y fue aplicada/verificada en Supabase remoto el 2026-09-14.
+- Pauta detallada de las 25 líneas y descuentos conocidos: `docs/agent-map/PAUTA_AUDITORIA_25_LINEAS.md`.
+
 ## 2026-09-13 - Corrección AL-42 proyectante 1H estándar
 
 - La receta estándar `ventora:l42` queda limitada a 4201, 4202 y 4229, con dos piezas horizontales y dos verticales por perfil.

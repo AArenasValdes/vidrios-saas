@@ -88,7 +88,7 @@ describe("catalogo inicio rápido Ventora", () => {
     expect(procedencia).toMatchObject({
       procedencia: "plantilla_ventora",
       label: "Plantilla Ventora",
-      detail: "Validada en taller · L5000",
+      detail: "Base sugerida · L5000",
       plantillaId: "L5000",
     });
   });

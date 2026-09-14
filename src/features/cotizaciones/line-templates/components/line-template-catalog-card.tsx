@@ -51,12 +51,6 @@ function getCardStatusBadge(
   return { label: "Lista para cotizar", tone: "ready" };
 }
 
-function getFabricationRowLabel(tone: TechnicalCardStatus["tone"]): string {
-  if (tone === "validated") return "Configuración completa";
-  if (tone === "testing") return "Fabricación en prueba";
-  return "Configuración pendiente";
-}
-
 function getPrimaryCta(
   template: CotizacionLineTemplate,
   needsPrice: boolean,
@@ -179,7 +173,7 @@ export function LineTemplateCatalogCard({
           data-tech-status={technicalStatus.tone}
           onClick={(event) => event.stopPropagation()}
         >
-          <span>{getFabricationRowLabel(technicalStatus.tone)}</span>
+          <span>{technicalStatus.label}</span>
           <LuChevronRight aria-hidden />
         </Link>
       ) : null}

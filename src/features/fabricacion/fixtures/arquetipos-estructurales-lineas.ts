@@ -46,6 +46,7 @@ export type ArquetipoEstructuralId =
   | "puerta_vaiven"
   | "pvc_corredera_2h"
   | "pvc_corredera_3h"
+  | "pvc_monorriel"
   | "pvc_s60"
   | "pvc_proyectante";
 
@@ -499,7 +500,7 @@ export const ARQUETIPOS_ESTRUCTURALES: Record<ArquetipoEstructuralId, ArquetipoE
   puerta_vaiven: {
     id: "puerta_vaiven",
     label: "Puerta vaivén",
-    tipologia: "puerta_corredera",
+    tipologia: "puerta_vaiven",
     hojas: 1,
     modulos: 1,
     perfiles: puertaVaivenPerfiles(),
@@ -523,6 +524,16 @@ export const ARQUETIPOS_ESTRUCTURALES: Record<ArquetipoEstructuralId, ArquetipoE
     hojas: 3,
     modulos: 3,
     perfiles: pvcCorrederaPerfiles(3),
+    vidrios: vidrioVentanaEstandar,
+    accesorios: accesoriosPvc,
+  },
+  pvc_monorriel: {
+    id: "pvc_monorriel",
+    label: "PVC monorriel",
+    tipologia: "pvc_monorriel",
+    hojas: 2,
+    modulos: 2,
+    perfiles: pvcCorrederaPerfiles(2),
     vidrios: vidrioVentanaEstandar,
     accesorios: accesoriosPvc,
   },
@@ -572,7 +583,7 @@ export const CATALOG_KEY_TO_ARQUETIPO: Record<string, ArquetipoEstructuralId> = 
   "ventora:winhouse-new-s75-doble-riel": "pvc_corredera_2h",
   "ventora:winhouse-s60": "pvc_s60",
   "ventora:winhouse-andes-doble-riel": "pvc_corredera_2h",
-  "ventora:winhouse-andes-monorriel": "pvc_corredera_2h",
+  "ventora:winhouse-andes-monorriel": "pvc_monorriel",
 };
 
 const SERIE_42_VARIANT_BY_CATALOG_KEY: Record<
@@ -602,6 +613,12 @@ export function resolveArquetipoEstructuralId(input: {
   if (input.catalogKey === "ventora:l32" || input.catalogKey === "ventora:l42") {
     return "proyectante";
   }
+  if (input.catalogKey === "ventora:serie-4600-puerta-vaiven") {
+    return "puerta_vaiven";
+  }
+  if (input.catalogKey === "ventora:winhouse-andes-monorriel") {
+    return "pvc_monorriel";
+  }
   const fromMetadata = input.structuralArchetypeId?.trim();
   if (fromMetadata && fromMetadata in ARQUETIPOS_ESTRUCTURALES) {
     return fromMetadata as ArquetipoEstructuralId;
@@ -610,6 +627,34 @@ export function resolveArquetipoEstructuralId(input: {
   const key = input.catalogKey?.trim();
   if (!key) return null;
   return CATALOG_KEY_TO_ARQUETIPO[key] ?? null;
+}
+
+/**
+ * Alinea solo la identidad visible al catálogo. No cambia códigos, descuentos
+ * ni persiste la receta; la receta histórica se conserva hasta un guardado
+ * explícito del usuario.
+ */
+export function alignRecipeIdentityForCatalogDisplay<T extends FabricacionReceta>(input: {
+  recipe: T;
+  catalogKey?: string | null;
+  lineName?: string | null;
+}): T {
+  const archetypeId = resolveArquetipoEstructuralId({ catalogKey: input.catalogKey });
+  const archetype = archetypeId ? ARQUETIPOS_ESTRUCTURALES[archetypeId] : null;
+  if (!archetype || input.recipe.identidad.tipologia === archetype.tipologia) {
+    return input.recipe;
+  }
+
+  const lineName = input.lineName?.trim() || input.recipe.identidad.nombre;
+  return {
+    ...input.recipe,
+    identidad: {
+      ...input.recipe.identidad,
+      nombre: `${lineName} — ${archetype.label}`,
+      tipologia: archetype.tipologia,
+      apertura: archetype.tipologia,
+    },
+  };
 }
 
 export function getGrupoPiezaFromObservaciones(

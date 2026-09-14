@@ -15,7 +15,7 @@ import type {
 
 const TABLE_NAME = "fabrication_recipes";
 const SELECT_FIELDS =
-  "id, organization_id, line_template_id, scope, provider_name, line_name, typology, leaves_count, variant, version, status, definition, source_type, source_reference, parent_recipe_id, validated_at, validated_by, created_at, updated_at, eliminado_en";
+  "id, organization_id, line_template_id, scope, provider_name, line_name, typology, leaves_count, variant, version, status, definition, source_type, source_reference, source_name, source_revision, parent_recipe_id, validated_at, validated_by, created_at, updated_at, eliminado_en";
 
 type FabricationRecipeRow = {
   id: string;
@@ -32,6 +32,8 @@ type FabricationRecipeRow = {
   definition: unknown;
   source_type: FabricationRecipeSourceType;
   source_reference: string | null;
+  source_name: string | null;
+  source_revision: string | null;
   parent_recipe_id: string | null;
   validated_at: string | null;
   validated_by: string | null;
@@ -56,6 +58,8 @@ function mapRecipeRow(row: FabricationRecipeRow): FabricationRecipeRecord {
     definition: fabricacionRecetaSchema.parse(row.definition),
     sourceType: row.source_type,
     sourceReference: row.source_reference,
+    sourceName: row.source_name,
+    sourceRevision: row.source_revision,
     parentRecipeId: row.parent_recipe_id,
     validatedAt: row.validated_at,
     validatedBy: row.validated_by,
@@ -82,6 +86,8 @@ function buildInsertPayload(input: CreateFabricationRecipeInput) {
     definition,
     source_type: input.sourceType ?? "manual",
     source_reference: input.sourceReference ?? null,
+    source_name: input.sourceName ?? null,
+    source_revision: input.sourceRevision ?? null,
     parent_recipe_id: input.parentRecipeId ?? null,
     validated_at: input.validatedAt ?? null,
     validated_by: input.validatedBy ?? null,
@@ -107,6 +113,8 @@ function buildUpdatePayload(input: UpdateFabricationRecipeInput) {
   if (input.sourceReference !== undefined) {
     payload.source_reference = input.sourceReference;
   }
+  if (input.sourceName !== undefined) payload.source_name = input.sourceName;
+  if (input.sourceRevision !== undefined) payload.source_revision = input.sourceRevision;
   if (input.validatedAt !== undefined) payload.validated_at = input.validatedAt;
   if (input.validatedBy !== undefined) payload.validated_by = input.validatedBy;
 

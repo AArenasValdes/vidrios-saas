@@ -1,5 +1,6 @@
 import {
   ARQUETIPOS_ESTRUCTURALES,
+  alignRecipeIdentityForCatalogDisplay,
   CATALOG_KEY_TO_ARQUETIPO,
   crearRecetaDesdeArquetipoEstructural,
   crearRecetaEstructuralParaLineaComercial,
@@ -19,6 +20,9 @@ describe("arquetipos estructurales de líneas comerciales", () => {
     );
     expect(CATALOG_KEY_TO_ARQUETIPO["ventora:winhouse-andes-proyectante"]).toBe(
       "pvc_proyectante"
+    );
+    expect(CATALOG_KEY_TO_ARQUETIPO["ventora:winhouse-andes-monorriel"]).toBe(
+      "pvc_monorriel"
     );
   });
 
@@ -109,6 +113,21 @@ describe("arquetipos estructurales de líneas comerciales", () => {
     ).toBe("puerta_vaiven");
   });
 
+  it("no permite que metadata histórica rebaje 4600 o Andes Monorriel", () => {
+    expect(
+      resolveArquetipoEstructuralId({
+        catalogKey: "ventora:serie-4600-puerta-vaiven",
+        structuralArchetypeId: "proyectante",
+      })
+    ).toBe("puerta_vaiven");
+    expect(
+      resolveArquetipoEstructuralId({
+        catalogKey: "ventora:winhouse-andes-monorriel",
+        structuralArchetypeId: "pvc_corredera_2h",
+      })
+    ).toBe("pvc_monorriel");
+  });
+
   it("expone arquetipos para multislide y PVC", () => {
     expect(ARQUETIPOS_ESTRUCTURALES.multislide_4h.hojas).toBe(4);
     const zocalo4h = ARQUETIPOS_ESTRUCTURALES.multislide_4h.perfiles.find((p) =>
@@ -132,8 +151,35 @@ describe("arquetipos estructurales de líneas comerciales", () => {
       lineName: "Serie 4600",
     });
 
-    expect(recipe?.identidad.tipologia).toBe("puerta_corredera");
+    expect(recipe?.identidad.tipologia).toBe("puerta_vaiven");
     expect(recipe?.perfiles.length).toBeGreaterThan(0);
+  });
+
+  it("mantiene Andes Monorriel separado de una corredera PVC de dos rieles", () => {
+    const recipe = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:winhouse-andes-monorriel",
+      lineName: "WinHouse Andes Monorriel",
+    });
+
+    expect(recipe?.identidad.tipologia).toBe("pvc_monorriel");
+    expect(recipe?.identidad.tipologia).not.toBe("corredera");
+  });
+
+  it("alinea identidad visible sin tocar la receta persistida ni sus piezas", () => {
+    const recipe = crearRecetaDesdeArquetipoEstructural({
+      archetypeId: "pvc_corredera_2h",
+      lineName: "WinHouse Andes Monorriel",
+      createId: () => "legacy",
+    });
+    const aligned = alignRecipeIdentityForCatalogDisplay({
+      recipe,
+      catalogKey: "ventora:winhouse-andes-monorriel",
+      lineName: "WinHouse Andes Monorriel",
+    });
+
+    expect(aligned.identidad.tipologia).toBe("pvc_monorriel");
+    expect(aligned.perfiles).toEqual(recipe.perfiles);
+    expect(recipe.identidad.tipologia).toBe("corredera");
   });
 
   it("crea la base real de Serie 3200 1H con variantes de bastidor", () => {
