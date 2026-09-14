@@ -2,6 +2,12 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-14 - P2U líneas tradicionales / multiproveedor
+
+- Catálogo canónico ampliado de 25 a 29 líneas: AM-35 conserva su fila y se agregan Línea 15, Línea 4000, Línea 45 y Línea 12 Shower Door.
+- Procedencia documental persistida: ALAR como fuente ejecutable de Línea 15; Arquetipo como identidad primaria de 4000, AM-35, 45 y 12; sin `workshop_validated` automático ni precios de Ventora.
+- `docs/agent-map/PAUTA_AUDITORIA_25_LINEAS.md` conserva el nombre histórico y ahora contiene el corte vigente de 29 líneas, separando receta persistida, pauta documentada, validación de taller y precio configurado.
+
 ## 2026-09-14 - P2 UX catálogo de líneas
 
 - Se unifica la tarjeta desktop y mobile en la secuencia precio → Fabricación → referencias → **Configurar línea** + toggle.

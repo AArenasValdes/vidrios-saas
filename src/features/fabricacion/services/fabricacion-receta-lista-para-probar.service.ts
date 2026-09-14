@@ -104,6 +104,14 @@ export function evaluarRecetaListaParaProbar(
   const bloqueos: string[] = [];
   const advertencias = collectGlassAdvisories(receta);
 
+  if ((receta.datosPendientes?.length ?? 0) > 0) {
+    bloqueos.push(
+      ...(receta.datosPendientes ?? []).map(
+        (detail) => `Dato pendiente de receta: ${detail}`
+      )
+    );
+  }
+
   if (receta.perfiles.length === 0) {
     bloqueos.push("Sin perfiles definidos");
   }

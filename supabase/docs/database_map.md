@@ -997,3 +997,8 @@ auth.users (1) ──── (N) users
 - `growth_onboarding_assignments` relaciona una guia lista con una `organization_id` sólo como override excepcional de piloto. La app de cada empresa sólo lee sus propias asignaciones.
 - `growth_onboarding_events` almacena apertura de video y los hitos de primera cotizacion/PDF. La apertura es única por organización/video; los dos hitos comerciales se capturan con triggers de `cotizaciones`, por lo que no dependen del navegador.
 - Las tres tablas tienen RLS y `FORCE ROW LEVEL SECURITY`; los triggers operan con funciones `SECURITY DEFINER` de ACL exclusiva para `postgres` y `service_role`.
+## Addendum 2026-09-14 - P2U líneas tradicionales/multiproveedor
+
+- La migración `20260914162442_p2u_traditional_multivendor_lines.sql` agrega cuatro `catalog_key` canónicos y actualiza solo metadata de AM-35 (`ventora:l35`). No crea tablas ni columnas nuevas.
+- La metadata de línea distingue `lineFamilyType=traditional` y `lineSourceModel=multiprovider`; la receta persiste procedencia primaria como `manufacturer` o `supplier` y permanece `draft`, nunca `workshop_validated`.
+- Las inserciones son idempotentes por `organization_id + line_template_id + source_reference`, preservan precios, soft delete, `parent_recipe_id`, historia y `organization_id`. Precio `0` significa pendiente/configurable por el taller.

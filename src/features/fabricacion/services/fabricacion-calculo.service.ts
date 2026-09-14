@@ -312,6 +312,14 @@ export function calcularCubicacionYPauta(
     });
   }
 
+  if ((receta.datosPendientes?.length ?? 0) > 0) {
+    advertencias.push({
+      codigo: "RECETA_DATOS_PENDIENTES",
+      nivel: "advertencia",
+      mensaje: `La receta no se considera completa: ${(receta.datosPendientes ?? []).join(", ")}.`,
+    });
+  }
+
   const totalLinealMm = perfiles.reduce((sum, perfil) => sum + perfil.totalLinealMm, 0);
   const totalVidrioM2 = vidrios.reduce((sum, vidrio) => sum + vidrio.totalM2, 0);
 
@@ -329,6 +337,7 @@ export function calcularCubicacionYPauta(
     totalVidrioM2,
     calculable:
       !advertencias.some((entry) => entry.nivel === "error") &&
+      (receta.datosPendientes?.length ?? 0) === 0 &&
       (perfiles.length > 0 || vidrios.length > 0 || accesorios.length > 0),
   };
 }

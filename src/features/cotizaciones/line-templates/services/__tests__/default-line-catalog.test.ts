@@ -101,7 +101,7 @@ describe("seedDefaultLineCatalog", () => {
     const keys = VENTORA_DEFAULT_LINE_CATALOG.map((line) => line.catalogKey);
     expect(keys).toContain("ventora:l35");
     expect(keys).toContain("ventora:winhouse-andes-monorriel");
-    expect(catalogSize).toBe(25);
+    expect(catalogSize).toBe(29);
   });
 
   it("maneja unique violation (23505) sin romper", async () => {

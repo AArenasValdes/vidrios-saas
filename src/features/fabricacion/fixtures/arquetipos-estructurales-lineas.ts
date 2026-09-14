@@ -17,6 +17,10 @@ import {
   type SodalP2ACatalogKey,
 } from "@/features/fabricacion/fixtures/sodal-p2a-recipes";
 import {
+  crearRecetaP2U,
+  type P2UCatalogKey,
+} from "@/features/fabricacion/fixtures/traditional-p2u-recipes";
+import {
   FABRICACION_RECIPE_SCHEMA_VERSION,
   type FabricacionBaseMedida,
   type FabricacionReceta,
@@ -52,7 +56,8 @@ export type ArquetipoEstructuralId =
   | "pvc_corredera_3h"
   | "pvc_monorriel"
   | "pvc_s60"
-  | "pvc_proyectante";
+  | "pvc_proyectante"
+  | "shower";
 
 type PerfilEstructural = {
   nombre: string;
@@ -511,6 +516,16 @@ export const ARQUETIPOS_ESTRUCTURALES: Record<ArquetipoEstructuralId, ArquetipoE
     vidrios: vidrioVentanaEstandar,
     accesorios: accesoriosPuerta,
   },
+  shower: {
+    id: "shower",
+    label: "Shower Door",
+    tipologia: "shower",
+    hojas: 2,
+    modulos: 1,
+    perfiles: [],
+    vidrios: [],
+    accesorios: [],
+  },
   pvc_corredera_2h: {
     id: "pvc_corredera_2h",
     label: "PVC corredera doble riel",
@@ -588,6 +603,10 @@ export const CATALOG_KEY_TO_ARQUETIPO: Record<string, ArquetipoEstructuralId> = 
   "ventora:winhouse-s60": "pvc_s60",
   "ventora:winhouse-andes-doble-riel": "pvc_corredera_2h",
   "ventora:winhouse-andes-monorriel": "pvc_monorriel",
+  "ventora:serie-15-corredera-2h": "corredera_2h",
+  "ventora:serie-4000-corredera-2h": "corredera_2h",
+  "ventora:serie-45-puerta": "puerta_abatible",
+  "ventora:serie-12-shower-corredera": "shower",
 };
 
 const SERIE_42_VARIANT_BY_CATALOG_KEY: Record<
@@ -618,6 +637,14 @@ const SODAL_P2A_CATALOG_KEYS: Record<SodalP2ACatalogKey, true> = {
   "ventora:multislide-s83-8h": true,
   "ventora:serie-3200-puerta-abatible-1h": true,
   "ventora:serie-4600-puerta-vaiven": true,
+};
+
+const P2U_CATALOG_KEYS: Record<P2UCatalogKey, true> = {
+  "ventora:serie-15-corredera-2h": true,
+  "ventora:serie-4000-corredera-2h": true,
+  "ventora:l35": true,
+  "ventora:serie-45-puerta": true,
+  "ventora:serie-12-shower-corredera": true,
 };
 
 export function resolveArquetipoEstructuralId(input: {
@@ -838,6 +865,13 @@ export function crearRecetaEstructuralParaLineaComercial(input: {
   lineName: string;
   createId?: () => string;
 }): FabricacionReceta | null {
+  if (input.catalogKey && input.catalogKey in P2U_CATALOG_KEYS) {
+    return crearRecetaP2U({
+      catalogKey: input.catalogKey as P2UCatalogKey,
+      lineName: input.lineName,
+      createId: input.createId,
+    });
+  }
   if (input.catalogKey && input.catalogKey in SODAL_P2A_CATALOG_KEYS) {
     return crearRecetaSodalP2A({
       catalogKey: input.catalogKey as SodalP2ACatalogKey,

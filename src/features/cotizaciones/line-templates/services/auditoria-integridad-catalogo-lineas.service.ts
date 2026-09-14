@@ -23,7 +23,7 @@ export type CodigoPerfilOrigen =
   | "referencia_taller"
   | "sin_codigo";
 
-/** Clasificación primaria mutuamente excluyente (suma exactamente 25 líneas). */
+/** Clasificación primaria mutuamente excluyente (suma exactamente el catálogo canónico). */
 export type ClasificacionPrimariaIntegridad =
   | "codigos_documentados_no_validados"
   | "codigos_referenciales_no_ambiguos"
@@ -139,8 +139,10 @@ function readLineMeta(line: Omit<CreateCotizacionLineTemplateInput, "organizatio
     lineConfiguration:
       typeof metadata.lineConfiguration === "string" ? metadata.lineConfiguration : "",
     lineSystem: typeof metadata.lineSystem === "string" ? metadata.lineSystem : null,
-    ventoraPlantillaId:
-      typeof metadata.ventoraPlantillaId === "string" ? metadata.ventoraPlantillaId : null,
+    ventoraPlantillaId:
+      typeof metadata.ventoraPlantillaId === "string" ? metadata.ventoraPlantillaId : null,
+    lineFamilyType:
+      metadata.lineFamilyType === "traditional" ? "traditional" : "manufacturer_specific",
   };
 }
 
@@ -218,9 +220,9 @@ function resolveClasificacionPrimaria(
   const key = line.catalogKey ?? "";
   const meta = readLineMeta(line);
 
-  if (!CATALOG_KEY_TO_ARQUETIPO[key] && key === "ventora:l35") {
-    return "solo_comercial";
-  }
+  if (meta.lineFamilyType === "traditional" && hasCodedWorkshopProfiles(key)) {
+    return "codigos_documentados_no_validados";
+  }
 
   if (
     meta.ventoraPlantillaId &&

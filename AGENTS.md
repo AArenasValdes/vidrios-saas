@@ -182,7 +182,7 @@ Ultima actualizacion operativa: 2026-09-04
 
 ### Ya resuelto en la pasada 2026-09-04
 
-- Catálogo comercial ampliado y auditado a **25 líneas** (`default-line-catalog.ts`); AM-35 solo comercial; WinHouse Andes monorriel incluido
+- Catálogo comercial ampliado y auditado a **29 líneas** (`default-line-catalog.ts`); AM-35 y cuatro familias tradicionales P2U quedan documentados pero pendientes de pauta/taller; WinHouse Andes monorriel incluido
 - Auditorías de catálogo:
   - `auditoria-catalogo-lineas-ventora.service.ts` (estado fabricación por línea)
   - `auditoria-integridad-catalogo-lineas.service.ts` (clasificación primaria mutuamente excluyente que suma 25)

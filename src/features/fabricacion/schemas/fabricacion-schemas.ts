@@ -146,6 +146,7 @@ export const fabricacionRecetaSchema = z
     vidrios: z.array(fabricacionVidrioSchema),
     accesorios: z.array(fabricacionAccesorioSchema),
     configuracionCorte: fabricacionConfiguracionCorteSchema.optional(),
+    datosPendientes: z.array(z.string().min(1)).optional(),
     notasValidacion: z.array(z.string()),
   })
   .strict();

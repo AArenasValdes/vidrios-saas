@@ -7,6 +7,12 @@ export const PROFILE_REFERENCE_SOURCES = {
   SODAL_RPT_PDF:
     "https://sodal.cl/wp-content/uploads/2024/03/SODAL_RPT_WEB_2024.pdf",
   PERFILES_CHILE: "https://perfileschile.cl/",
+  ARQUETIPO_CATALOG:
+    "https://arquetipo.cl/catalogos/Perfiles%20Aluminio%20-%20Catalogo%20Linea%20Estandar.pdf",
+  ALAR_CATALOG:
+    "https://www.alumet.cl/wp-content/uploads/2020/05/alar_catalogo_2011.pdf",
+  ALUMET_CATALOG:
+    "https://www.alumet.cl/wp-content/uploads/2020/02/202700803-ALUMET-ALUMCO-ALUMINIO.pdf",
 } as const;
 
 export type LineProfileReferenceCodeStatus =

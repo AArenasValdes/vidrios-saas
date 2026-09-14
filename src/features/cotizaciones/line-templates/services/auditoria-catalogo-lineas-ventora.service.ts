@@ -50,6 +50,8 @@ export type LineaAuditoriaCatalogo = {
   validationStatus: "unverified" | "documented" | "workshop_validated";
   pricingStatus: "missing" | "configured";
   quotable: boolean;
+  lineFamilyType: "traditional" | "manufacturer_specific";
+  lineSourceModel: "multiprovider" | "manufacturer_specific";
   sourceType: string | null;
   sourceReference: string | null;
   bloqueosProbar: string[];
@@ -74,6 +76,18 @@ function readMetadata(
     structuralArchetypeId:
       typeof metadata.structuralArchetypeId === "string"
         ? metadata.structuralArchetypeId
+        : null,
+    lineFamilyType: (metadata.lineFamilyType === "traditional"
+      ? "traditional"
+      : "manufacturer_specific") as "traditional" | "manufacturer_specific",
+    lineSourceModel: (metadata.lineSourceModel === "multiprovider"
+      ? "multiprovider"
+      : "manufacturer_specific") as "multiprovider" | "manufacturer_specific",
+    identitySource:
+      typeof metadata.identitySource === "string" ? metadata.identitySource : null,
+    cuttingGuideSource:
+      typeof metadata.cuttingGuideSource === "string"
+        ? metadata.cuttingGuideSource
         : null,
   };
 }
@@ -242,9 +256,22 @@ export function auditarLineaCatalogoVentora(
     referenceRecipe: recipe,
     referenceSource: recipe
       ? {
-          sourceType: "ventora_reference",
-          sourceReference: line.catalogKey,
-          sourceName: line.proveedor ?? "Referencia Ventora",
+          sourceType:
+            meta.lineFamilyType === "traditional"
+              ? meta.cuttingGuideSource
+                ? "supplier"
+                : "manufacturer"
+              : "ventora_reference",
+          sourceReference:
+            meta.lineFamilyType === "traditional"
+              ? meta.cuttingGuideSource ?? meta.identitySource ?? line.catalogKey
+              : line.catalogKey,
+          sourceName:
+            meta.lineFamilyType === "traditional"
+              ? meta.cuttingGuideSource
+                ? "ALAR"
+                : "Arquetipo"
+              : line.proveedor ?? "Referencia Ventora",
         }
       : null,
   });
@@ -272,6 +299,8 @@ export function auditarLineaCatalogoVentora(
     validationStatus: operationalStatus.validationStatus,
     pricingStatus: operationalStatus.pricingStatus,
     quotable: operationalStatus.quotable,
+    lineFamilyType: meta.lineFamilyType,
+    lineSourceModel: meta.lineSourceModel,
     sourceType: operationalStatus.sourceType,
     sourceReference: operationalStatus.sourceReference,
     bloqueosProbar: probar.bloqueos,

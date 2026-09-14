@@ -4,15 +4,15 @@ import { auditarIntegridadCatalogoLineasVentora } from "@/features/cotizaciones/
 
 describe("auditoria integridad catalogo lineas", () => {
 
-  it("clasifica las 25 líneas con categorías primarias mutuamente excluyentes", () => {
+  it("clasifica las 29 líneas con categorías primarias mutuamente excluyentes", () => {
 
     const { lineas, resumen } = auditarIntegridadCatalogoLineasVentora();
 
 
 
-    expect(lineas).toHaveLength(25);
+    expect(lineas).toHaveLength(29);
 
-    expect(resumen.totalLineas).toBe(25);
+    expect(resumen.totalLineas).toBe(29);
 
 
 
@@ -24,13 +24,13 @@ describe("auditoria integridad catalogo lineas", () => {
 
     );
 
-    expect(sumaPrimaria).toBe(25);
+    expect(sumaPrimaria).toBe(29);
 
 
 
     expect(resumen.clasificacionPrimaria).toEqual({
 
-      codigos_documentados_no_validados: 3,
+      codigos_documentados_no_validados: 8,
 
       codigos_referenciales_no_ambiguos: 15,
 
@@ -38,7 +38,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
       sin_codigos_tecnicos_en_fixtures: 5,
 
-      solo_comercial: 1,
+      solo_comercial: 0,
 
     });
 
@@ -46,7 +46,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
     expect(resumen.nomenclaturaAmbigua).toBe(1);
 
-    expect(resumen.conCodigosReferencialesEnFixtures).toBe(19);
+    expect(resumen.conCodigosReferencialesEnFixtures).toBe(24);
 
     expect(resumen.gateTecnico.listaParaProbar).toBe(12);
 
@@ -108,7 +108,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
 
 
-  it("marca AM-35 como solo comercial", () => {
+  it("marca AM-35 como código documentado no validado", () => {
 
     const am35 = auditarIntegridadCatalogoLineasVentora().lineas.find(
 
@@ -116,7 +116,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
     );
 
-    expect(am35?.clasificacionPrimaria).toBe("solo_comercial");
+    expect(am35?.clasificacionPrimaria).toBe("codigos_documentados_no_validados");
 
     expect(am35?.nomenclaturaAmbigua).toBe(false);
 

@@ -35,6 +35,10 @@ type VentoraDefaultLineDefinition = {
   proveedor: string | null;
   lineSystem: string | null;
   ventoraPlantillaId: string | null;
+  lineFamilyType?: "traditional" | "manufacturer_specific";
+  lineSourceModel?: "multiprovider" | "manufacturer_specific";
+  identitySource?: string;
+  cuttingGuideSource?: string;
 };
 
 function buildVentoraDefaultLine(
@@ -66,6 +70,12 @@ function buildVentoraDefaultLine(
     catalogMetadata: {
       needsCommercialPrice: true,
       cubicationStatus: "pending",
+      lineFamilyType: definition.lineFamilyType ?? "manufacturer_specific",
+      lineSourceModel: definition.lineSourceModel ?? "manufacturer_specific",
+      ...(definition.identitySource ? { identitySource: definition.identitySource } : {}),
+      ...(definition.cuttingGuideSource
+        ? { cuttingGuideSource: definition.cuttingGuideSource }
+        : {}),
       lineConfiguration: definition.configuracion,
       structuralArchetypeId: CATALOG_KEY_TO_ARQUETIPO[definition.catalogKey] ?? null,
       ...(definition.lineSystem ? { lineSystem: definition.lineSystem } : {}),
@@ -228,6 +238,57 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     proveedor: null,
     lineSystem: "AM-35",
     ventoraPlantillaId: null,
+    lineFamilyType: "traditional",
+    lineSourceModel: "multiprovider",
+  },
+  {
+    catalogKey: "ventora:serie-15-corredera-2h",
+    nombre: "Línea 15 — Corredera 2 hojas",
+    material: "Aluminio",
+    configuracion: "Corredera 2 hojas",
+    proveedor: null,
+    lineSystem: "Línea 15",
+    ventoraPlantillaId: null,
+    lineFamilyType: "traditional",
+    lineSourceModel: "multiprovider",
+    identitySource: "Arquetipo · Catálogo Línea 15",
+    cuttingGuideSource: "ALAR · Pautas de Corte, p. 109",
+  },
+  {
+    catalogKey: "ventora:serie-4000-corredera-2h",
+    nombre: "Línea 4000 — Corredera 2 hojas",
+    material: "Aluminio",
+    configuracion: "Corredera 2 hojas",
+    proveedor: null,
+    lineSystem: "Línea 4000",
+    ventoraPlantillaId: null,
+    lineFamilyType: "traditional",
+    lineSourceModel: "multiprovider",
+    identitySource: "Arquetipo · Catálogo Línea 4000",
+  },
+  {
+    catalogKey: "ventora:serie-45-puerta",
+    nombre: "Línea 45 — Puerta",
+    material: "Aluminio",
+    configuracion: "Puerta abatible 1 hoja",
+    proveedor: null,
+    lineSystem: "Línea 45",
+    ventoraPlantillaId: null,
+    lineFamilyType: "traditional",
+    lineSourceModel: "multiprovider",
+    identitySource: "Arquetipo · Catálogo Línea 45",
+  },
+  {
+    catalogKey: "ventora:serie-12-shower-corredera",
+    nombre: "Línea 12 — Shower Door",
+    material: "Aluminio",
+    configuracion: "Shower Door · Corredera 2 hojas",
+    proveedor: null,
+    lineSystem: "Línea 12",
+    ventoraPlantillaId: null,
+    lineFamilyType: "traditional",
+    lineSourceModel: "multiprovider",
+    identitySource: "Arquetipo · Catálogo Línea 12",
   },
   {
     catalogKey: "ventora:l42",

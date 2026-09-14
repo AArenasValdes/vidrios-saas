@@ -7,13 +7,13 @@
 
 ### Actualización catálogo y gate 2026-09-04 (vigente)
 
-- Catálogo comercial canónico: **25 líneas** Ventora (`default-line-catalog.ts`). AM-35 es solo comercial (sin arquetipo estructural).
+- Catálogo comercial canónico: **29 líneas** Ventora (`default-line-catalog.ts`). AM-35 y las nuevas líneas 15, 4000, 45 y 12 son tradicionales/multiproveedor: identidad documentada, receta incompleta y sin validación automática.
 - **AL-32 / AL-42** (`ventora:l32` / `ventora:l42`) son **proyectantes**. La corrección del 2026-09-13 reemplaza la clasificación antigua como corredera. La receta nueva usa los códigos de la plantilla proyectante; descuentos y pruebas quedan pendientes del taller. El bootstrap repara solo borradores genéricos intactos sin pruebas, con filtros por organización y control de cambios concurrentes.
 - Al asignar línea en cotización, propagar tipología/hojas/receta desde catálogo; no reutilizar receta validada si su tipología no coincide con la línea elegida.
 - **Vidrio base en receta = opcional.** El gate **Probar fabricación** bloquea solo perfiles/accesorios obligatorios incompletos; sin vidrio base aparece advertencia, no bloqueo (el maestro puede definir vidrio al cotizar cada pieza).
 - Editor de receta: selector de vidrio con catálogo Ventora completo + vidrio propio del taller (`RecipeGlassNamePicker`).
 - UX editor: chips de tira comercial (6,00 / 5,95 / 5,90 m) aplican a todas las piezas al elegir; botón “Aplicar a todas las piezas” solo con medida custom.
-- Auditorías internas: `auditoria-catalogo-lineas-ventora` (fabricación por línea) y `auditoria-integridad-catalogo-lineas` (integridad de códigos; categorías mutuamente excluyentes que suman 25).
+- Auditorías internas: `auditoria-catalogo-lineas-ventora` (fabricación por línea) y `auditoria-integridad-catalogo-lineas` (integridad de códigos; categorías mutuamente excluyentes que suman 29).
 
 ### Actualización UX 2026-08-11 (vigente)
 

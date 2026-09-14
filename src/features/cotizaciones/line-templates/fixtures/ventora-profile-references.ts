@@ -658,6 +658,51 @@ const WINHOUSE_ANDES_PROJECTING_PROFILES: LineProfileReference[] = [
   }),
 ];
 
+const LINE_15_PROFILES: LineProfileReference[] = [
+  catalogRef({ code: "1501", name: "Riel superior", role: "Marco", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "1502", name: "Riel inferior", role: "Marco", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "1503", name: "Jamba", role: "Marco", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "1504", name: "Cabezal", role: "Hoja", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "1505", name: "Zócalo", role: "Hoja", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "1506", name: "Pierna reforzada", role: "Hoja", provider: "ALAR", source: PROFILE_REFERENCE_SOURCES.ALAR_CATALOG }),
+  catalogRef({ code: "1507", name: "Pierna", role: "Hoja", provider: "ALAR", source: PROFILE_REFERENCE_SOURCES.ALAR_CATALOG }),
+  catalogRef({ code: "1508", name: "Traslapo reforzado", role: "Hoja", provider: "ALAR", source: PROFILE_REFERENCE_SOURCES.ALAR_CATALOG }),
+];
+
+const LINE_4000_PROFILES: LineProfileReference[] = [
+  catalogRef({ code: "4001", name: "Riel superior", role: "Marco", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "4002", name: "Riel inferior", role: "Marco", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "4003", name: "Jamba", role: "Marco", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "4004", name: "Cabezal", role: "Hoja", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "4005", name: "Zócalo", role: "Hoja", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "4007", name: "Traslapo", role: "Hoja", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "4008", name: "Pierna con aleta", role: "Hoja", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+];
+
+const AM35_PROFILES: LineProfileReference[] = [
+  catalogRef({ code: "3502", name: "Marco", role: "Marco", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "3501", name: "Bastidor", role: "Hoja", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "3508", name: "Bastidor liviano", role: "Hoja", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "3503", name: "Junquillo 45°", role: "Otro", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "3504", name: "Junquillo recto", role: "Otro", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "3506", name: "Tapa lisa", role: "Otro", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "3507", name: "Tapa portafelpa", role: "Otro", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "3509", name: "Traslapo", role: "Hoja", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+];
+
+const LINE_45_PROFILES: LineProfileReference[] = [
+  catalogRef({ code: "4502", name: "Marco", role: "Marco", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "4504", name: "Junquillo", role: "Otro", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "4511", name: "Marco redondeado", role: "Marco", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+];
+
+const LINE_12_PROFILES: LineProfileReference[] = [
+  catalogRef({ code: "1201", name: "Riel inferior", role: "Marco", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "1202", name: "Jamba", role: "Marco", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "1203", name: "Riel superior", role: "Marco", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "1204", name: "Bastidor hoja", role: "Hoja", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+];
+
 const CATALOG_KEY_PROFILE_SETS: Record<string, LineProfileReference[]> = {
   "ventora:l5000": SERIE_5000_PROFILES,
   "ventora:l20": SERIE_20_PROFILES,
@@ -683,6 +728,11 @@ const CATALOG_KEY_PROFILE_SETS: Record<string, LineProfileReference[]> = {
   "ventora:winhouse-andes-doble-riel": WINHOUSE_ANDES_DOUBLE_RAIL_PROFILES,
   "ventora:winhouse-andes-monorriel": WINHOUSE_ANDES_MONORAIL_PROFILES,
   "ventora:winhouse-andes-proyectante": WINHOUSE_ANDES_PROJECTING_PROFILES,
+  "ventora:serie-15-corredera-2h": LINE_15_PROFILES,
+  "ventora:serie-4000-corredera-2h": LINE_4000_PROFILES,
+  "ventora:l35": AM35_PROFILES,
+  "ventora:serie-45-puerta": LINE_45_PROFILES,
+  "ventora:serie-12-shower-corredera": LINE_12_PROFILES,
 };
 
 const PENDING_VALIDATION_CATALOG_KEYS = new Set<string>();

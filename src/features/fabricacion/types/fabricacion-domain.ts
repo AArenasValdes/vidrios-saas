@@ -141,6 +141,8 @@ export type FabricacionReceta = {
   vidrios: FabricacionVidrio[];
   accesorios: FabricacionAccesorio[];
   configuracionCorte?: FabricacionConfiguracionCorte;
+  /** Datos que impiden tratar la receta como pauta completa calculable. */
+  datosPendientes?: string[];
   notasValidacion: string[];
 };
 

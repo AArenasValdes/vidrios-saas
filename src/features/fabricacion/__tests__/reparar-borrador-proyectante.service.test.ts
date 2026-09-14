@@ -238,7 +238,7 @@ describe("reparación conservadora de borradores AL-32/AL-42", () => {
   });
 
   it("conserva otras líneas, fuentes, estados, versiones y datos inválidos", () => {
-    expect(prepararReparacionBorradorProyectante("ventora:l35", seed())).toBeNull();
+    expect(prepararReparacionBorradorProyectante("ventora:linea-no-p2u", seed())).toBeNull();
     expect(prepararReparacionBorradorProyectante(null, seed())).toBeNull();
     for (const patch of [{ status: "validated" }, { status: "testing" }, { version: 2 }, { source_type: "copied" }, { source_reference: "propia" }, { definition: null }]) {
       expect(prepararReparacionBorradorProyectante("ventora:l42", { ...seed(), ...patch })).toBeNull();
