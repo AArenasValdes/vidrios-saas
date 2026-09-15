@@ -26,6 +26,7 @@ export type Cotizacion = {
   condicionesDePago?: string | null;
   condicionesVenta?: string | null;
   terminosCondiciones?: string | null;
+  mostrarIvaEnPdf?: boolean | null;
   validoHasta: string | null;
   subtotalNeto: number | null;
   costoTotal: number | null;
@@ -73,6 +74,7 @@ export type CrearCotizacionInput = {
   condicionesDePago?: string | null;
   condicionesVenta?: string | null;
   terminosCondiciones?: string | null;
+  mostrarIvaEnPdf?: boolean | null;
   validoHasta?: string | null;
   subtotalNeto?: number | null;
   costoTotal?: number | null;

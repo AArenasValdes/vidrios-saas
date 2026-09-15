@@ -957,6 +957,24 @@
   box-shadow: 0 10px 22px rgba(36, 59, 107, 0.05);
 }
 
+.commercialPdfIvaRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 18px;
+  border: 1px solid #d9e0ea;
+  background: #fff;
+  padding: 14px;
+  box-shadow: 0 10px 22px rgba(36, 59, 107, 0.05);
+}
+
+.commercialPdfIvaCopy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
 .commercialMobileSummaryCard {
   display: grid;
   gap: 6px;

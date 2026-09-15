@@ -352,6 +352,7 @@ function mapCotizacionToWorkflowRecord(input: {
     utilidadTotal,
     totalClienteManual: quotePricingMode === "total_global" ? input.cotizacion.total : null,
     mostrarIva: input.cotizacion.iva ? input.cotizacion.iva > 0 : true,
+    mostrarIvaEnPdf: input.cotizacion.mostrarIvaEnPdf ?? true,
     quoteStudioFinancial: createQuoteStudioFinancialDraft({
       manoObra: input.cotizacion.costoManoObraTotal ?? 0,
       traslado: input.cotizacion.costoTrasladoTotal ?? 0,
@@ -1197,6 +1198,7 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
         condicionesDePago: input.draft.condicionesDePago?.trim() || null,
         condicionesVenta: input.draft.condicionesVenta?.trim() || null,
         terminosCondiciones: input.draft.terminosCondiciones?.trim() || null,
+        mostrarIvaEnPdf: input.draft.mostrarIvaEnPdf ?? true,
         validoHasta: resolveValidoHasta(input.draft.validez),
         subtotalNeto: totals.neto,
         costoTotal,

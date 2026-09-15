@@ -16,6 +16,10 @@ import {
 } from "@/utils/cotizacion-document";
 import { buildQuoteDocumentCommercialSections } from "@/features/cotizaciones/services/quote-commercial-conditions.service";
 import {
+  buildQuoteGrandTotalClientLabel,
+  resolveMostrarIvaEnPdf,
+} from "@/features/cotizaciones/services/quote-pdf-display.service";
+import {
   buildReadableCotizacionPdfFileName,
   downloadPdfBlob,
   exportCotizacionElementToPdf,
@@ -460,6 +464,11 @@ export function PublicQuoteDocument({
   );
   const neto = Math.max(0, quote.subtotal - discountValue);
   const showItemPrices = quote.pricingMode !== "total_global";
+  const showIvaInPdf = resolveMostrarIvaEnPdf(quote.mostrarIvaEnPdf);
+  const grandTotalClientLabel = buildQuoteGrandTotalClientLabel({
+    mostrarIvaEnPdf: quote.mostrarIvaEnPdf,
+    showItemPrices,
+  });
   const totalGlobalLeadItem = useMemo(() => {
     if (quote.pricingMode !== "total_global") {
       return null;
@@ -965,14 +974,10 @@ export function PublicQuoteDocument({
                             <span>Neto</span>
                             <strong>{formatMoney(neto)}</strong>
                           </div>
-                          <div className={printStyles.totalRow}>
-                            <span>{taxLabel}</span>
-                            <strong>{formatMoney(quote.iva)}</strong>
-                          </div>
-                          {showItemPrices && quote.flete > 0 ? (
+                          {showIvaInPdf ? (
                             <div className={printStyles.totalRow}>
-                              <span>Flete</span>
-                              <strong>{formatMoney(quote.flete)}</strong>
+                              <span>{taxLabel}</span>
+                              <strong>{formatMoney(quote.iva)}</strong>
                             </div>
                           ) : null}
                           {showItemPrices ? (
@@ -985,7 +990,12 @@ export function PublicQuoteDocument({
                       </section>
 
                       <section className={printStyles.grandTotal}>
-                        <span>{showItemPrices ? "Total presupuesto" : "Precio final"}</span>
+                        <div className={printStyles.grandTotalCopy}>
+                          <span>{grandTotalClientLabel}</span>
+                          {!showIvaInPdf ? (
+                            <span className={printStyles.grandTotalHint}>IVA incluido</span>
+                          ) : null}
+                        </div>
                         <strong>{formatMoney(quote.total)}</strong>
                       </section>
 

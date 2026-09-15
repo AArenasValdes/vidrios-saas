@@ -46,6 +46,7 @@ export type OrganizationProfile = OrganizationRegionSettings & {
   validezPredeterminada: string;
   condicionesVentaPredeterminadas: string;
   terminosCondicionesPredeterminados: string;
+  mostrarIvaEnPdf: boolean;
   solicitudPublicaSlug: string;
   solicitudPublicaDescripcionCorta: string;
   solicitudPublicaValor: string;
@@ -113,6 +114,7 @@ export type UpdateOrganizationProfileInput = OrganizationRegionSettings & {
   validezPredeterminada: string;
   condicionesVentaPredeterminadas: string;
   terminosCondicionesPredeterminados: string;
+  mostrarIvaEnPdf: boolean;
   solicitudPublicaSlug: string;
   solicitudPublicaDescripcionCorta: string;
   solicitudPublicaValor: string;

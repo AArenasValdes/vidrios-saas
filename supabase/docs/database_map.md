@@ -157,7 +157,11 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 | `flete` | numeric | |
 | `iva` | numeric | |
 | `regional_snapshot` | jsonb | Snapshot regional inmutable v1: pais, moneda, locale e impuesto comercial al crear la cotizacion |
-| `notas` | text | |
+| `notas` | text | Observaciones internas / texto libre de la cotización |
+| `condiciones_de_pago` | text | Forma de pago de esta cotización. Si es `NULL`, el PDF puede usar `organization_profile.forma_pago` |
+| `condiciones_venta` | text | Condiciones de venta de esta cotización, separadas de `notas` |
+| `terminos_condiciones` | text | Términos y condiciones adicionales de esta cotización |
+| `mostrar_iva_en_pdf` | boolean | Override por cotización de visibilidad del IVA en PDF. `NULL` = mostrar desglose (compatibilidad histórica). No altera el cálculo de `iva` ni `total` |
 | `valido_hasta` | date | |
 | `approval_token` | text | UNIQUE parcial WHERE NOT NULL |
 | `approval_token_expires_at` | timestamptz | |
@@ -181,6 +185,10 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 **Addendum 2026-08-13 - Billing Fase 5 snapshot regional:** la migracion remota `20260813023403_billing_phase_5_quote_region_snapshots.sql` agrega `regional_snapshot jsonb` y el CHECK `cotizaciones_regional_snapshot_object_check`. No crea tablas, policies ni grants. El servicio captura el perfil regional al crear la cotizacion; sus ediciones conservan el valor existente. PDF, enlace publico y WhatsApp consumen ese snapshot. Las cotizaciones antiguas sin dato mantienen CLP e IVA 19% como compatibilidad, sin leer el perfil regional actual.
 
 **Addendum 2026-08-21 - Métrica de superficie de cotización:** la migración `20260821163629_quote_creation_surface_metrics.sql` agrega `creation_surface` nullable; la complementaria `20260821173824_quote_surface_constructor_metrics.sql` lo normaliza a `desktop_constructor`, `desktop_guiada`, `mobile_constructor`, `mobile_guiada` y `total_global`. Ambas preservan el índice parcial para análisis de cotizaciones activas. No tocan filas históricas: `NULL` significa “sin clasificación confiable”. El panel `/admin/marketing` excluye organizaciones con `is_test_account=true`.
+
+**Addendum 2026-09-15 - Condiciones comerciales predeterminadas:** la migración `20260915100000_quote_default_commercial_conditions.sql` agrega `validez_predeterminada`, `condiciones_venta_predeterminadas` y `terminos_condiciones_predeterminados` en `organization_profile`, y `condiciones_de_pago`, `condiciones_venta` y `terminos_condiciones` en `cotizaciones`. No crea tablas ni policies nuevas. Los textos de empresa se heredan al crear cotizaciones; cada presupuesto puede sobreescribirlos sin cambiar la plantilla. El PDF y el enlace público consumen el snapshot por cotización con fallback a `forma_pago` y textos predeterminados de empresa cuando corresponda.
+
+**Addendum 2026-09-15 - Visibilidad de IVA en PDF:** la migración `20260915113000_mostrar_iva_en_pdf.sql` agrega `mostrar_iva_en_pdf` en `organization_profile` (NOT NULL, default `true`) y en `cotizaciones` (nullable, override por presupuesto). Controla solo si el cliente ve neto + IVA separados o solo “Total final” con hint “IVA incluido”. No modifica `iva`, `total`, descuento, flete ni redondeo. Ambas migraciones reemiten los grants columnares de `organization_profile` para `authenticated`, incluyendo los campos nuevos.
 
 ---
 
@@ -316,7 +324,11 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 | `empresa_telefono` | text | |
 | `empresa_email` | text | |
 | `brand_color` | text NOT NULL | Default: `#1a3a5c` |
-| `forma_pago` | text | |
+| `forma_pago` | text | Texto libre de condiciones de pago para PDF |
+| `validez_predeterminada` | text NOT NULL | Default: `15 dias`. Vigencia heredada al crear cotizaciones |
+| `condiciones_venta_predeterminadas` | text | Condiciones de venta plantilla por empresa |
+| `terminos_condiciones_predeterminados` | text | Términos y condiciones adicionales plantilla por empresa |
+| `mostrar_iva_en_pdf` | boolean NOT NULL | Default: `true`. Si es `false`, el PDF oculta el desglose de IVA y muestra solo total final con “IVA incluido” |
 | `proveedor_preferido` | text | |
 | `modo_precio_preferido` | text NOT NULL | Default: `margen` |
 | `margen_defecto` | numeric | Default: 100 |
@@ -1005,6 +1017,12 @@ auth.users (1) ──── (N) users
 - `growth_onboarding_assignments` relaciona una guia lista con una `organization_id` sólo como override excepcional de piloto. La app de cada empresa sólo lee sus propias asignaciones.
 - `growth_onboarding_events` almacena apertura de video y los hitos de primera cotizacion/PDF. La apertura es única por organización/video; los dos hitos comerciales se capturan con triggers de `cotizaciones`, por lo que no dependen del navegador.
 - Las tres tablas tienen RLS y `FORCE ROW LEVEL SECURITY`; los triggers operan con funciones `SECURITY DEFINER` de ACL exclusiva para `postgres` y `service_role`.
+## Addendum 2026-09-15 - Condiciones comerciales y visibilidad de IVA en PDF
+
+- `20260915100000_quote_default_commercial_conditions.sql` separa condiciones comerciales de `notas`: plantillas en `organization_profile` y snapshot editable por cotización en `condiciones_de_pago`, `condiciones_venta` y `terminos_condiciones`.
+- `20260915113000_mostrar_iva_en_pdf.sql` agrega `mostrar_iva_en_pdf` como preferencia de empresa y override opcional por cotización. El cálculo tributario sigue en `iva`/`total`; el flag solo afecta presentación en PDF y vistas cliente.
+- No hay tablas, policies RLS ni índices nuevos. Los grants columnares de `organization_profile` para `authenticated` se reemiten en ambas migraciones para incluir los campos agregados.
+
 ## Addendum 2026-09-14 - P2U líneas tradicionales/multiproveedor
 
 - La migración `20260914162442_p2u_traditional_multivendor_lines.sql` agrega cuatro `catalog_key` canónicos y actualiza solo metadata de AM-35 (`ventora:l35`). No crea tablas ni columnas nuevas.

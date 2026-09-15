@@ -50,6 +50,7 @@ type PasoTresResumenProps = {
   onDraftDiscountTypeChange: (value: CotizacionWorkflowDraft["descuentoTipo"]) => void;
   onGlobalTotalClienteChange: (value: string) => void;
   onMostrarIvaChange: () => void;
+  onMostrarIvaEnPdfChange: () => void;
   onValidezChange: (value: string) => void;
   onObservacionesChange: (value: string) => void;
   onCondicionesPagoChange: (value: string) => void;
@@ -183,6 +184,7 @@ export function PasoTresResumen({
   onDraftDiscountTypeChange,
   onGlobalTotalClienteChange,
   onMostrarIvaChange,
+  onMostrarIvaEnPdfChange,
   onValidezChange,
   onObservacionesChange,
   onCondicionesPagoChange,
@@ -538,6 +540,24 @@ export function PasoTresResumen({
                       </button>
                     </div>
                   </div>
+
+                  <div className={s.rtPdfIvaSwitchRow}>
+                    <div className={s.rtPdfIvaSwitchCopy}>
+                      <span className={s.rtFieldLabel}>Mostrar IVA en el PDF</span>
+                      <span className={s.rtHint}>
+                        Si lo ocultas, Ventora igual calcula el impuesto y el cliente verá solo el total final.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className={`${s.rtSwitch} ${draft.mostrarIvaEnPdf ?? true ? s.rtSwitchOn : ""}`}
+                      onClick={onMostrarIvaEnPdfChange}
+                      aria-pressed={draft.mostrarIvaEnPdf ?? true}
+                      aria-label="Mostrar IVA en el PDF"
+                    >
+                      <span className={s.rtSwitchThumb} />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -832,12 +852,12 @@ export function PasoTresResumen({
           onDraftDiscountTypeChange={handleDraftDiscountTypeChange}
           onGlobalTotalClienteChange={handleGlobalTotalClienteChange}
           onMostrarIvaChange={handleMostrarIvaChange}
+          onMostrarIvaEnPdfChange={onMostrarIvaEnPdfChange}
           onValidezChange={handleValidezChange}
           validezOptions={VALIDEZ_OPTIONS}
           formatCurrencyInput={formatCurrencyInput}
           financialSummary={financialSummary}
           onQuoteStudioFinancialChange={handleQuoteStudioFinancialChange}
-          organizationProfile={organizationProfile}
           onCondicionesDePagoChange={onCondicionesPagoChange}
           onCondicionesVentaChange={onCondicionesVentaChange}
           onTerminosCondicionesChange={onTerminosCondicionesChange}

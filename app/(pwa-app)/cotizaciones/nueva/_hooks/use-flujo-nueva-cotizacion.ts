@@ -154,6 +154,7 @@ type UseFlujoNuevaCotizacionParams = {
   onDraftDiscountTypeChange: (value: CotizacionWorkflowDraft["descuentoTipo"]) => void;
   onGlobalTotalClienteChange: (value: string) => void;
   onMostrarIvaChange: () => void;
+  onMostrarIvaEnPdfChange: () => void;
   formatCurrencyInput: (value: string) => string;
   stepTwoListRef: React.RefObject<HTMLDivElement | null>;
   stepTwoSummaryRef: React.RefObject<HTMLDivElement | null>;
@@ -321,6 +322,7 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     onDraftDiscountTypeChange: params.onDraftDiscountTypeChange,
     onGlobalTotalClienteChange: params.onGlobalTotalClienteChange,
     onMostrarIvaChange: params.onMostrarIvaChange,
+    onMostrarIvaEnPdfChange: params.onMostrarIvaEnPdfChange,
     onValidezChange: params.onValidezChange,
     onObservacionesChange: params.onObservacionesChange,
     onCondicionesPagoChange: params.onCondicionesPagoChange,

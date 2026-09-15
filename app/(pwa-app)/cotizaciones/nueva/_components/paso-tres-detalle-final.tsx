@@ -14,7 +14,6 @@ import type { QuoteStudioFinancialSummary } from "@/features/cotizaciones/servic
 import { QuoteProfitabilitySummary } from "../../_components/quote-profitability-summary";
 import { PasoTresCostosRentabilidadMovil } from "./paso-tres-costos-rentabilidad-movil";
 import { PasoTresCondicionesMovil } from "./paso-tres-condiciones-movil";
-import type { OrganizationProfile } from "@/features/organization-profile/types/organization-profile";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 import { formatMeasurePairFromMm } from "@/features/organization-profile/services/measure-unit.service";
@@ -40,6 +39,7 @@ type PasoTresDetalleFinalProps = {
   onDraftDiscountTypeChange: (value: CotizacionWorkflowDraft["descuentoTipo"]) => void;
   onGlobalTotalClienteChange: (value: string) => void;
   onMostrarIvaChange: () => void;
+  onMostrarIvaEnPdfChange: () => void;
   onValidezChange: (value: string) => void;
   validezOptions: string[];
   formatCurrencyInput: (value: string) => string;
@@ -48,7 +48,6 @@ type PasoTresDetalleFinalProps = {
     field: keyof QuoteStudioFinancialDraft,
     value: string
   ) => void;
-  organizationProfile?: OrganizationProfile | null;
   onCondicionesDePagoChange: (value: string) => void;
   onCondicionesVentaChange: (value: string) => void;
   onTerminosCondicionesChange: (value: string) => void;
@@ -73,12 +72,12 @@ export function PasoTresDetalleFinal({
   onDraftDiscountTypeChange,
   onGlobalTotalClienteChange,
   onMostrarIvaChange,
+  onMostrarIvaEnPdfChange,
   onValidezChange,
   validezOptions,
   formatCurrencyInput,
   financialSummary,
   onQuoteStudioFinancialChange,
-  organizationProfile,
   onCondicionesDePagoChange,
   onCondicionesVentaChange,
   onTerminosCondicionesChange,
@@ -186,6 +185,18 @@ export function PasoTresDetalleFinal({
           ? "Se suma 19% sobre el subtotal antes de cerrar el total."
           : "El cliente ve estos valores como precio final."}
       </span>
+      <div className={s.stepThreePdfIvaSwitchRow}>
+        <span>Mostrar IVA en el PDF</span>
+        <button
+          type="button"
+          className={`${s.stepThreePdfIvaSwitch} ${draft.mostrarIvaEnPdf ?? true ? s.stepThreePdfIvaSwitchOn : ""}`}
+          onClick={onMostrarIvaEnPdfChange}
+          aria-pressed={draft.mostrarIvaEnPdf ?? true}
+          aria-label="Mostrar IVA en el PDF"
+        >
+          <span className={s.stepThreePdfIvaSwitchThumb} />
+        </button>
+      </div>
     </section>
   );
 
@@ -303,16 +314,6 @@ export function PasoTresDetalleFinal({
           quoteStudioFinancial={draft.quoteStudioFinancial}
           formatCurrencyInput={formatCurrencyInput}
           onQuoteStudioFinancialChange={onQuoteStudioFinancialChange}
-        />
-      ) : null}
-
-      {isMobileViewport ? (
-        <PasoTresCondicionesMovil
-          draft={draft}
-          organizationProfile={organizationProfile}
-          onCondicionesDePagoChange={onCondicionesDePagoChange}
-          onCondicionesVentaChange={onCondicionesVentaChange}
-          onTerminosCondicionesChange={onTerminosCondicionesChange}
         />
       ) : null}
     </section>
@@ -436,6 +437,12 @@ export function PasoTresDetalleFinal({
         {isGlobal ? globalPricingEditor : null}
         {quoteIvaEditor}
         {adjustmentsEditor}
+        <PasoTresCondicionesMovil
+          draft={draft}
+          onCondicionesDePagoChange={onCondicionesDePagoChange}
+          onCondicionesVentaChange={onCondicionesVentaChange}
+          onTerminosCondicionesChange={onTerminosCondicionesChange}
+        />
         {totalsPanel}
       </div>
     );

@@ -1321,6 +1321,57 @@
   color: #1d4ed8;
 }
 
+.rtPdfIvaSwitchRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.rtPdfIvaSwitchCopy {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.rtHint {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.rtSwitch {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid #d9e0ea;
+  background: #e9eef6;
+  padding: 2px;
+  position: relative;
+  cursor: pointer;
+}
+
+.rtSwitchThumb {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.14);
+  transform: translateX(0);
+  transition: transform 0.18s ease;
+}
+
+.rtSwitchOn {
+  background: #4f7dd4;
+  border-color: #4f7dd4;
+}
+
+.rtSwitchOn .rtSwitchThumb {
+  transform: translateX(16px);
+}
+
 .rtMoneyInputWrap {
   display: flex;
   align-items: center;
@@ -9255,6 +9306,49 @@
   color: #1f63c4;
   box-shadow: 0 2px 8px rgba(27, 47, 86, 0.1);
 }
+
+.stepThreePdfIvaSwitchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin-top: 0.35rem;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.stepThreePdfIvaSwitch {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid #d9e0ea;
+  background: #e9eef6;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.stepThreePdfIvaSwitchThumb {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.14);
+  transform: translateX(0);
+  transition: transform 0.18s ease;
+}
+
+.stepThreePdfIvaSwitchOn {
+  background: #4f7dd4;
+  border-color: #4f7dd4;
+}
+
+.stepThreePdfIvaSwitchOn .stepThreePdfIvaSwitchThumb {
+  transform: translateX(14px);
+}
+
 .ivaRow {
   display: flex;
   align-items: center;
@@ -16553,10 +16647,23 @@
     line-height: 1.35;
   }
 
+  .stepThreeDetailsSecondary {
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .stepThreeDetailsSecondary > summary {
+    list-style: none;
+  }
+
+  .stepThreeDetailsSecondary > summary::-webkit-details-marker {
+    display: none;
+  }
+
   .stepThreeCondicionesPanel {
     display: grid;
     gap: 0.72rem;
-    padding: 0 0.9rem 0.96rem;
+    padding: 0.15rem 0 0.2rem;
   }
 
   .stepThreeCondicionesHint {

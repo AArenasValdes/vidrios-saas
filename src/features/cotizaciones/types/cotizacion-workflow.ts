@@ -103,6 +103,7 @@ export type CotizacionWorkflowRecord = {
   utilidadTotal?: number;
   totalClienteManual?: number | null;
   mostrarIva?: boolean;
+  mostrarIvaEnPdf?: boolean;
   quoteStudioFinancial?: QuoteStudioFinancialDraft;
 };
 
@@ -128,5 +129,6 @@ export type CotizacionWorkflowDraft = {
   utilidadTotal?: number;
   totalClienteManual?: number | null;
   mostrarIva?: boolean;
+  mostrarIvaEnPdf?: boolean;
   quoteStudioFinancial?: QuoteStudioFinancialDraft;
 };

@@ -38,6 +38,7 @@ export type PublicApprovalQuoteView = {
   condicionesDePago?: string | null;
   condicionesVenta?: string | null;
   terminosCondiciones?: string | null;
+  mostrarIvaEnPdf?: boolean | null;
   subtotal: number;
   descuentoPct: number;
   iva: number;
@@ -219,6 +220,7 @@ async function buildPublicApprovalQuoteView(
     condicionesDePago: payload.cotizacion.condiciones_de_pago ?? null,
     condicionesVenta: payload.cotizacion.condiciones_venta ?? null,
     terminosCondiciones: payload.cotizacion.terminos_condiciones ?? null,
+    mostrarIvaEnPdf: payload.cotizacion.mostrar_iva_en_pdf ?? null,
     subtotal,
     descuentoPct: Number(payload.cotizacion.descuento_pct ?? 0),
     iva: Number(payload.cotizacion.iva ?? 0),

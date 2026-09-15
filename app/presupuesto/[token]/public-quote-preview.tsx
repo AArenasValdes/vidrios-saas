@@ -13,6 +13,10 @@ import {
   formatDocumentCompanyPhoneNumber,
 } from "@/utils/cotizacion-document";
 import { buildQuoteDocumentCommercialSections } from "@/features/cotizaciones/services/quote-commercial-conditions.service";
+import {
+  buildQuoteGrandTotalClientLabel,
+  resolveMostrarIvaEnPdf,
+} from "@/features/cotizaciones/services/quote-pdf-display.service";
 import { resolveCotizacionItemDrawingSvg } from "@/features/cotizaciones/visual-composer/services/resolve-item-drawing-svg";
 import {
   formatQuoteCurrency,
@@ -289,6 +293,11 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
   );
   const neto = Math.max(0, quote.subtotal - discountValue);
   const showItemPrices = quote.pricingMode !== "total_global";
+  const showIvaInPdf = resolveMostrarIvaEnPdf(quote.mostrarIvaEnPdf);
+  const grandTotalClientLabel = buildQuoteGrandTotalClientLabel({
+    mostrarIvaEnPdf: quote.mostrarIvaEnPdf,
+    showItemPrices,
+  });
 
   const { printPages, totalSurfaceM2 } = useMemo(() => {
     const nextPrintPages = buildPrintPlan(quote.items);
@@ -795,14 +804,10 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                               <span>Neto</span>
                               <strong>{formatMoney(neto)}</strong>
                             </div>
-                            <div className={printStyles.totalRow}>
-                              <span>{taxLabel}</span>
-                              <strong>{formatMoney(quote.iva)}</strong>
-                            </div>
-                            {showItemPrices && quote.flete > 0 ? (
+                            {showIvaInPdf ? (
                               <div className={printStyles.totalRow}>
-                                <span>Flete</span>
-                                <strong>{formatMoney(quote.flete)}</strong>
+                                <span>{taxLabel}</span>
+                                <strong>{formatMoney(quote.iva)}</strong>
                               </div>
                             ) : null}
                             {showItemPrices ? (
@@ -817,7 +822,12 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                         </section>
 
                         <section className={printStyles.grandTotal}>
-                          <span>Total presupuesto</span>
+                          <div className={printStyles.grandTotalCopy}>
+                            <span>{grandTotalClientLabel}</span>
+                            {!showIvaInPdf ? (
+                              <span className={printStyles.grandTotalHint}>IVA incluido</span>
+                            ) : null}
+                          </div>
                           <strong>{formatMoney(quote.total)}</strong>
                         </section>
 

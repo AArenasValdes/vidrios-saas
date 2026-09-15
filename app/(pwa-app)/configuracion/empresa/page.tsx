@@ -1196,6 +1196,26 @@ export default function ConfiguracionEmpresaPage() {
                 </p>
               </div>
 
+              <div className={s.commercialPdfIvaRow}>
+                <div className={s.commercialPdfIvaCopy}>
+                  <span className={s.label}>Mostrar IVA en el PDF</span>
+                  <p className={s.measureUnitHint}>
+                    Si lo ocultas, Ventora igual lo calcula y el cliente verá solo el total final.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={`${s.switch} ${form.mostrarIvaEnPdf ? s.switchOn : ""}`}
+                  onClick={() =>
+                    handleFieldChange("mostrarIvaEnPdf", !(form.mostrarIvaEnPdf ?? true))
+                  }
+                  aria-pressed={form.mostrarIvaEnPdf ?? true}
+                  aria-label="Mostrar IVA en el PDF"
+                >
+                  <span className={s.switchThumb} />
+                </button>
+              </div>
+
               <article className={s.commercialMobileSummaryCard}>
                 <span className={s.label}>Preferencias de cotización</span>
                 <strong>{quotePreferencesSummary}</strong>

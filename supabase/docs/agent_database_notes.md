@@ -414,6 +414,13 @@ Si la respuesta a 1-4 no es sí: detenerse y reportar.
 - La migración no crea tablas ni columnas: ajusta el lifecycle para conservar el valor existente de `organization_profile.founder_price_locked` y no asignarlo automáticamente a nuevas altas Comerciales.
 - Pricing V2 mantiene cuatro variantes comerciales en el catálogo server-side de la aplicación. Supabase persiste el producto lógico (`quote_only` o `founder_full`), la periodicidad y el monto contractual real en `suscripciones_organizacion`; no se reescriben suscripciones ni pagos históricos.
 - La verificación remota específica de la función modificada debe hacerse con Supabase MCP/CLI antes de abrir una nueva migración dependiente de ella. No ejecutar `db push` global por el drift histórico documentado.
+## Addendum 2026-09-15 - Condiciones comerciales y visibilidad de IVA en PDF
+
+- `20260915100000_quote_default_commercial_conditions.sql` agrega plantillas comerciales en `organization_profile` (`validez_predeterminada`, `condiciones_venta_predeterminadas`, `terminos_condiciones_predeterminados`) y snapshot por cotización en `cotizaciones` (`condiciones_de_pago`, `condiciones_venta`, `terminos_condiciones`). Separa condiciones del cliente de `notas` internas.
+- `20260915113000_mostrar_iva_en_pdf.sql` agrega `mostrar_iva_en_pdf` en `organization_profile` (NOT NULL, default `true`) y `cotizaciones` (nullable). Solo controla si el PDF muestra neto + IVA o total final con “IVA incluido”; no altera `iva`, `total`, descuento, flete ni redondeo.
+- No hay tablas, policies RLS ni índices nuevos. Ambas migraciones reemiten grants columnares de `organization_profile` para `authenticated`, incluyendo los campos agregados.
+- Compatibilidad: cotizaciones antiguas con `mostrar_iva_en_pdf IS NULL` se interpretan como mostrar desglose. La app usa `resolveMostrarIvaEnPdf()` en `quote-pdf-display.service.ts`.
+
 ## Addendum 2026-09-14 - P2U líneas tradicionales/multiproveedor
 
 - P2U incorpora Línea 15, Línea 4000, Línea 45 y Línea 12; AM-35 conserva su fila `ventora:l35` y recibe variantes de receta sin duplicar catálogo.

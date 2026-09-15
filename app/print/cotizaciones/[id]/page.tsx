@@ -26,6 +26,10 @@ import {
   normalizeDocumentOptionalText,
 } from "@/utils/cotizacion-document";
 import { buildQuoteDocumentCommercialSections } from "@/features/cotizaciones/services/quote-commercial-conditions.service";
+import {
+  buildQuoteGrandTotalClientLabel,
+  resolveMostrarIvaEnPdf,
+} from "@/features/cotizaciones/services/quote-pdf-display.service";
 import { buildReadableCotizacionPdfFileName } from "@/utils/cotizacion-pdf";
 import {
   buildCotizacionMirrorFormatLabel,
@@ -687,6 +691,11 @@ export default function CotizacionPrintPage() {
   }, [organizationProfile, visibleCotizacion]);
   const isTotalGlobalQuote = visibleCotizacion?.quotePricingMode === "total_global";
   const showItemPrices = !isTotalGlobalQuote;
+  const showIvaInPdf = resolveMostrarIvaEnPdf(visibleCotizacion?.mostrarIvaEnPdf);
+  const grandTotalClientLabel = buildQuoteGrandTotalClientLabel({
+    mostrarIvaEnPdf: visibleCotizacion?.mostrarIvaEnPdf,
+    showItemPrices,
+  });
   const quoteModeBadgeLabel = isTotalGlobalQuote ? "Total global" : "Detalle por ítems";
   const totalGlobalLeadItem = useMemo(() => {
     if (!visibleCotizacion || visibleCotizacion.quotePricingMode !== "total_global") {
@@ -1394,15 +1403,22 @@ export default function CotizacionPrintPage() {
                         <span>Neto</span>
                         <strong>{formatMoney(visibleCotizacion.neto)}</strong>
                       </div>
-                      <div className={s.totalRow}>
-                        <span>{taxLabel}</span>
-                        <strong>{formatMoney(visibleCotizacion.iva)}</strong>
-                      </div>
+                      {showIvaInPdf ? (
+                        <div className={s.totalRow}>
+                          <span>{taxLabel}</span>
+                          <strong>{formatMoney(visibleCotizacion.iva)}</strong>
+                        </div>
+                      ) : null}
                     </aside>
                   </section>
 
                   <section className={s.grandTotal}>
-                    <span>Precio final</span>
+                    <div className={s.grandTotalCopy}>
+                      <span>{grandTotalClientLabel}</span>
+                      {!showIvaInPdf ? (
+                        <span className={s.grandTotalHint}>IVA incluido</span>
+                      ) : null}
+                    </div>
                     <strong>{formatMoney(visibleCotizacion.total)}</strong>
                   </section>
 
@@ -1768,10 +1784,12 @@ export default function CotizacionPrintPage() {
                           <span>Neto</span>
                           <strong>{formatMoney(visibleCotizacion.neto)}</strong>
                         </div>
-                        <div className={s.totalRow}>
-                          <span>{taxLabel}</span>
-                          <strong>{formatMoney(visibleCotizacion.iva)}</strong>
-                        </div>
+                        {showIvaInPdf ? (
+                          <div className={s.totalRow}>
+                            <span>{taxLabel}</span>
+                            <strong>{formatMoney(visibleCotizacion.iva)}</strong>
+                          </div>
+                        ) : null}
                       </>
                     ) : (
                       <>
@@ -1787,18 +1805,14 @@ export default function CotizacionPrintPage() {
                           <span>Neto</span>
                           <strong>{formatMoney(visibleCotizacion.neto)}</strong>
                         </div>
-                        <div className={s.totalRow}>
-                          <span>{taxLabel}</span>
-                          <strong>{formatMoney(visibleCotizacion.iva)}</strong>
-                        </div>
+                        {showIvaInPdf ? (
+                          <div className={s.totalRow}>
+                            <span>{taxLabel}</span>
+                            <strong>{formatMoney(visibleCotizacion.iva)}</strong>
+                          </div>
+                        ) : null}
                       </>
                     )}
-                    {showItemPrices && visibleCotizacion.flete > 0 ? (
-                      <div className={s.totalRow}>
-                        <span>Flete</span>
-                        <strong>{formatMoney(visibleCotizacion.flete)}</strong>
-                      </div>
-                    ) : null}
                     {showItemPrices ? (
                       <div className={`${s.totalRow} ${s.totalRowStrong}`}>
                         <span>Carpintería total</span>
@@ -1809,7 +1823,12 @@ export default function CotizacionPrintPage() {
                 </section>
 
                 <section className={s.grandTotal}>
-                  <span>{showItemPrices ? "Total presupuesto" : "Precio final"}</span>
+                  <div className={s.grandTotalCopy}>
+                    <span>{grandTotalClientLabel}</span>
+                    {!showIvaInPdf ? (
+                      <span className={s.grandTotalHint}>IVA incluido</span>
+                    ) : null}
+                  </div>
                   <strong>{formatMoney(visibleCotizacion.total)}</strong>
                 </section>
 
@@ -1875,6 +1894,8 @@ export default function CotizacionPrintPage() {
       totalSurfaceM2,
       quoteRegion.currencyCode,
       taxLabel,
+      showIvaInPdf,
+      grandTotalClientLabel,
       visibleCotizacion,
     ]
   );

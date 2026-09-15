@@ -2,6 +2,12 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-15 - Condiciones comerciales y visibilidad de IVA en PDF (DB)
+
+- `20260915100000_quote_default_commercial_conditions.sql`: plantillas en `organization_profile` (`validez_predeterminada`, `condiciones_venta_predeterminadas`, `terminos_condiciones_predeterminados`) y snapshot por cotización (`condiciones_de_pago`, `condiciones_venta`, `terminos_condiciones`).
+- `20260915113000_mostrar_iva_en_pdf.sql`: `mostrar_iva_en_pdf` en empresa (default `true`) y override nullable por cotización. Solo afecta presentación del IVA en PDF/vistas cliente; no cambia cálculo tributario.
+- Documentación actualizada en `supabase/docs/database_map.md`, `DATA_MODEL_MAP.md` y `agent_database_notes.md`.
+
 ## 2026-09-15 - Ajustes copy acordeón móvil de costos
 
 - Merma pasa a **Merma de materiales %** (solo copy; la fórmula no cambia).

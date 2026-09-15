@@ -48,6 +48,7 @@ type OrganizationProfileRow = {
   validez_predeterminada?: string | null;
   condiciones_venta_predeterminadas?: string | null;
   terminos_condiciones_predeterminados?: string | null;
+  mostrar_iva_en_pdf?: boolean | null;
   solicitud_publica_slug?: string | null;
   solicitud_publica_descripcion_corta?: string | null;
   solicitud_publica_valor?: string | null;
@@ -179,6 +180,7 @@ function mapOrganizationProfile(
     validezPredeterminada: row.validez_predeterminada ?? "15 dias",
     condicionesVentaPredeterminadas: row.condiciones_venta_predeterminadas ?? "",
     terminosCondicionesPredeterminados: row.terminos_condiciones_predeterminados ?? "",
+    mostrarIvaEnPdf: row.mostrar_iva_en_pdf ?? true,
     solicitudPublicaSlug: row.solicitud_publica_slug ?? "",
     solicitudPublicaDescripcionCorta:
       row.solicitud_publica_descripcion_corta ?? "",
@@ -346,6 +348,7 @@ export function createOrganizationProfileRepository(
           validez_predeterminada: input.validezPredeterminada,
           condiciones_venta_predeterminadas: input.condicionesVentaPredeterminadas || null,
           terminos_condiciones_predeterminados: input.terminosCondicionesPredeterminados || null,
+          mostrar_iva_en_pdf: input.mostrarIvaEnPdf,
           solicitud_publica_slug: input.solicitudPublicaSlug,
           solicitud_publica_descripcion_corta:
           input.solicitudPublicaDescripcionCorta,

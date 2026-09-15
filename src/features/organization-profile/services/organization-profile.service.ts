@@ -419,6 +419,7 @@ function buildNormalizedProfileInput(
     validezPredeterminada: resolved.validezPredeterminada,
     condicionesVentaPredeterminadas: resolved.condicionesVentaPredeterminadas,
     terminosCondicionesPredeterminados: resolved.terminosCondicionesPredeterminados,
+    mostrarIvaEnPdf: resolved.mostrarIvaEnPdf,
     solicitudPublicaSlug: resolved.solicitudPublicaSlug,
     solicitudPublicaDescripcionCorta: resolved.solicitudPublicaDescripcionCorta,
     solicitudPublicaValor: resolved.solicitudPublicaValor,
@@ -671,6 +672,7 @@ export function resolveOrganizationProfile(
     terminosCondicionesPredeterminados: normalizeText(
       profile?.terminosCondicionesPredeterminados
     ),
+    mostrarIvaEnPdf: profile?.mostrarIvaEnPdf ?? true,
     solicitudPublicaSlug,
     solicitudPublicaDescripcionCorta:
       normalizeText(profile?.solicitudPublicaDescripcionCorta) ||
@@ -800,6 +802,7 @@ export function createOrganizationProfileService(
           terminosCondicionesPredeterminados: normalizeText(
             input.terminosCondicionesPredeterminados
           ),
+          mostrarIvaEnPdf: input.mostrarIvaEnPdf ?? true,
           solicitudPublicaSlug,
           solicitudPublicaDescripcionCorta: normalizeText(
             input.solicitudPublicaDescripcionCorta

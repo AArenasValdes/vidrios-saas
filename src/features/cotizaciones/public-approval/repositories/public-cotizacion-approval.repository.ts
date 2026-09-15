@@ -13,6 +13,7 @@ type CotizacionApprovalRow = {
   condiciones_de_pago?: string | null;
   condiciones_venta?: string | null;
   terminos_condiciones?: string | null;
+  mostrar_iva_en_pdf?: boolean | null;
   valido_hasta: string | null;
   subtotal_neto: number | string | null;
   descuento_pct: number | string | null;
@@ -116,6 +117,7 @@ const COTIZACION_APPROVAL_SELECT = `
   condiciones_de_pago,
   condiciones_venta,
   terminos_condiciones,
+  mostrar_iva_en_pdf,
   valido_hasta,
   subtotal_neto,
   descuento_pct,

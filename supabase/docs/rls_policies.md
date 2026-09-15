@@ -420,4 +420,10 @@ Notas:
 
 - `20260813015101_billing_phase_4_organization_region` agrega columnas a `organization_profile`, pero no agrega policies ni permisos nuevos.
 - La lectura y actualizacion siguen sujetas al aislamiento existente de `organization_profile` por organizacion. No exponer campos privados de `users` por esta fase.
+
+## Addendum 2026-09-15 - Condiciones comerciales y visibilidad de IVA en PDF
+
+- `20260915100000_quote_default_commercial_conditions.sql` y `20260915113000_mostrar_iva_en_pdf.sql` agregan columnas aditivas en `organization_profile` y `cotizaciones`. No crean policies RLS nuevas.
+- Ambas migraciones reemiten los grants columnares de `organization_profile` para `authenticated`, incluyendo `validez_predeterminada`, `condiciones_venta_predeterminadas`, `terminos_condiciones_predeterminados` y `mostrar_iva_en_pdf`.
+- `cotizaciones` hereda el aislamiento existente por `organization_id = get_org_id()`; los campos nuevos no requieren grants adicionales porque la tabla ya tenía INSERT/UPDATE tenant-scoped.
 - La RPC `complete_google_oauth_account(..., p_country_code text)` continua revocada para `public`, `anon` y `authenticated`; solo `service_role` puede ejecutarla.

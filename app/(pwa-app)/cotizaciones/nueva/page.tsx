@@ -28,6 +28,7 @@ import {
   resolveSyncedPorItemTotalClienteManual,
 } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import { buildQuoteCommercialDefaultsFromProfile } from "@/features/cotizaciones/services/quote-commercial-conditions.service";
+import { buildQuotePdfDisplayDefaultsFromProfile } from "@/features/cotizaciones/services/quote-pdf-display.service";
 import {
   applyQuoteStudioRecommendedPrice,
   buildQuoteStudioFinancialSummary,
@@ -187,7 +188,10 @@ function NuevaCotizacionPageContent() {
   );
   const { profile: organizationProfile } = useOrganizationProfile();
   const quoteCommercialDefaults = useMemo(
-    () => buildQuoteCommercialDefaultsFromProfile(organizationProfile),
+    () => ({
+      ...buildQuoteCommercialDefaultsFromProfile(organizationProfile),
+      ...buildQuotePdfDisplayDefaultsFromProfile(organizationProfile),
+    }),
     [organizationProfile]
   );
   const commercialDefaultsAppliedRef = useRef(false);
@@ -350,7 +354,8 @@ function NuevaCotizacionPageContent() {
         current.validez === pristineDraft.validez &&
         (current.condicionesDePago ?? "") === (pristineDraft.condicionesDePago ?? "") &&
         (current.condicionesVenta ?? "") === (pristineDraft.condicionesVenta ?? "") &&
-        (current.terminosCondiciones ?? "") === (pristineDraft.terminosCondiciones ?? "");
+        (current.terminosCondiciones ?? "") === (pristineDraft.terminosCondiciones ?? "") &&
+        (current.mostrarIvaEnPdf ?? true) === (pristineDraft.mostrarIvaEnPdf ?? true);
 
       commercialDefaultsAppliedRef.current = true;
 
@@ -364,6 +369,7 @@ function NuevaCotizacionPageContent() {
         condicionesDePago: quoteCommercialDefaults.condicionesDePago,
         condicionesVenta: quoteCommercialDefaults.condicionesVenta,
         terminosCondiciones: quoteCommercialDefaults.terminosCondiciones,
+        mostrarIvaEnPdf: quoteCommercialDefaults.mostrarIvaEnPdf,
       };
     });
   }, [organizationProfile, editId, duplicateId, quoteCommercialDefaults]);
@@ -825,6 +831,10 @@ function NuevaCotizacionPageContent() {
       ...current,
       mostrarIva: !(current.mostrarIva ?? true),
     }));
+  };
+
+  const handleMostrarIvaEnPdfChange = () => {
+    handleDraftChange("mostrarIvaEnPdf", !(draft.mostrarIvaEnPdf ?? true));
   };
 
   const handleInternalObservationChange = (value: string) => {
@@ -3077,6 +3087,7 @@ function goNextFromStep1() {
     organizationProfile,
     onGlobalTotalClienteChange: handleGlobalTotalClienteChange,
     onMostrarIvaChange: handleMostrarIvaChange,
+    onMostrarIvaEnPdfChange: handleMostrarIvaEnPdfChange,
     formatCurrencyInput: regionalCurrencyInput,
     stepTwoListRef: pasoDosLista.listaRef,
     stepTwoSummaryRef: pasoDosLista.resumenRef,

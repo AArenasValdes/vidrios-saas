@@ -2271,6 +2271,7 @@ export function mapRecordToDraft(record: CotizacionWorkflowRecord): CotizacionWo
     condicionesDePago: record.condicionesDePago ?? "",
     condicionesVenta: record.condicionesVenta ?? "",
     terminosCondiciones: record.terminosCondiciones ?? "",
+    mostrarIvaEnPdf: record.mostrarIvaEnPdf ?? true,
     items: reconcileWorkflowItemsPricing(record.items, quotePricingMode),
     quotePricingMode,
     costoTotalFabricacion: record.costoTotalFabricacion ?? 0,

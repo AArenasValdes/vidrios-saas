@@ -681,7 +681,11 @@ export function createCotizacionWorkflowDraft(
   commercialDefaults?: Partial<
     Pick<
       CotizacionWorkflowDraft,
-      "validez" | "condicionesDePago" | "condicionesVenta" | "terminosCondiciones"
+      | "validez"
+      | "condicionesDePago"
+      | "condicionesVenta"
+      | "terminosCondiciones"
+      | "mostrarIvaEnPdf"
     >
   >
 ): CotizacionWorkflowDraft {
@@ -706,6 +710,7 @@ export function createCotizacionWorkflowDraft(
     utilidadTotal: 0,
     totalClienteManual: null,
     mostrarIva: true,
+    mostrarIvaEnPdf: commercialDefaults?.mostrarIvaEnPdf ?? true,
     quoteStudioFinancial: createQuoteStudioFinancialDraft(),
   };
 }
@@ -769,6 +774,7 @@ export function createCotizacionRecord(
     items: input.draft.items,
     quotePricingMode,
     mostrarIva: input.draft.mostrarIva ?? true,
+    mostrarIvaEnPdf: input.draft.mostrarIvaEnPdf ?? true,
     ...totals,
   };
 }
@@ -796,6 +802,7 @@ export function cloneCotizacionAsDraft(record: CotizacionWorkflowRecord, now = n
       utilidadTotal: record.utilidadTotal,
       totalClienteManual: record.totalClienteManual,
       mostrarIva: record.mostrarIva ?? true,
+      mostrarIvaEnPdf: record.mostrarIvaEnPdf ?? true,
     },
     estado: "borrador",
     now,
