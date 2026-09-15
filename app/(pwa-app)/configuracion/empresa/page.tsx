@@ -43,6 +43,11 @@ import {
   normalizePublicRequestSlug,
 } from "@/features/organization-profile/services/organization-profile.service";
 import type { UpdateOrganizationProfileInput } from "@/features/organization-profile/types/organization-profile";
+import { VALIDEZ_OPTIONS } from "@/features/cotizaciones/new-quote/workflow-ui";
+import {
+  buildQuotePreferencesSummary,
+  hasActiveQuoteCommercialDefaults,
+} from "@/features/cotizaciones/services/quote-commercial-conditions.service";
 import { SubscriptionDetail } from "@/features/subscriptions/components/subscription-detail";
 import { fetchSubscriptionSummary } from "@/features/subscriptions/services/subscription-summary-client.service";
 import { getPlanLabel } from "@/features/subscriptions/types/subscription-summary";
@@ -71,6 +76,9 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = buildEmpresaProfileInput({
   empresaEmail: "",
   brandColor: DEFAULT_ORGANIZATION_BRAND_COLOR,
   formaPago: "",
+  validezPredeterminada: "15 dias",
+  condicionesVentaPredeterminadas: "",
+  terminosCondicionesPredeterminados: "",
   solicitudPublicaSlug: "",
   solicitudPublicaDescripcionCorta: "",
   solicitudPublicaValor: "",
@@ -575,7 +583,8 @@ export default function ConfiguracionEmpresaPage() {
     form.brandColor.trim() &&
       (form.empresaLogoUrl || previewUrl)
   );
-  const commercialComplete = Boolean(form.formaPago.trim());
+  const commercialComplete = hasActiveQuoteCommercialDefaults(form);
+  const quotePreferencesSummary = buildQuotePreferencesSummary(form);
   const notificationsComplete = notificationsEnabled;
   const activeLineTemplatesCount = lineTemplates.filter((item) => item.isActive).length;
   const setupSteps: Array<{
@@ -626,10 +635,8 @@ export default function ConfiguracionEmpresaPage() {
     form.empresaLogoUrl || previewUrl ? "Logo subido" : "Sin logo",
   ]);
   const commercialSummary = compactJoin([
-    shorten(form.formaPago || "Forma de pago pendiente", 34),
+    quotePreferencesSummary,
     form.unidadMedidas === "cm" ? "Medidas en cm" : "Medidas en mm",
-    "Vigencia por cotizacion",
-    "IVA incluido",
   ]);
   const previewIdentity = previewUrl ?? form.empresaLogoUrl;
   const previewInitials = buildOrganizationInitials(form.empresaNombre || "Mi empresa");
@@ -1189,27 +1196,79 @@ export default function ConfiguracionEmpresaPage() {
                 </p>
               </div>
 
-              <label className={s.field}>
-                <span className={s.label}>Forma de pago</span>
-                <textarea className={s.textarea} rows={3} value={form.formaPago} onChange={(event) => handleFieldChange("formaPago", event.target.value)} placeholder="Ej: 50% al inicio y 50% al finalizar" />
-              </label>
+              <article className={s.commercialMobileSummaryCard}>
+                <span className={s.label}>Preferencias de cotización</span>
+                <strong>{quotePreferencesSummary}</strong>
+                <p>Configura los textos largos desde computador para mantener el celular simple.</p>
+              </article>
 
-              <div className={s.commercialInfoGrid}>
-                <article className={s.commercialInfoCard}>
-                  <span className={s.label}>Vigencia</span>
-                  <strong>Se define por cotizacion</strong>
-                  <p>La ajustas al momento de preparar el presupuesto final.</p>
-                </article>
-                <article className={s.commercialInfoCard}>
-                  <span className={s.label}>IVA incluido</span>
-                  <strong>Visible en cada cotizacion</strong>
-                  <p>El total comercial se sigue mostrando con IVA incluido.</p>
-                </article>
-                <article className={s.commercialInfoCard}>
-                  <span className={s.label}>Notas comerciales</span>
-                  <strong>Se agregan al crear presupuesto</strong>
-                  <p>No se pierden dentro de Empresa ni te alargan esta configuracion.</p>
-                </article>
+              <div className={s.commercialDefaultsSection}>
+                <div className={s.commercialDefaultsHeader}>
+                  <span className={s.label}>Condiciones predeterminadas de cotización</span>
+                  <p className={s.measureUnitHint}>
+                    Se heredan automáticamente al crear una cotización. Puedes ajustarlas por presupuesto sin cambiar esta plantilla.
+                  </p>
+                </div>
+
+                <label className={s.field}>
+                  <span className={s.label}>Forma de pago predeterminada</span>
+                  <textarea
+                    className={s.textarea}
+                    rows={3}
+                    value={form.formaPago}
+                    onChange={(event) => handleFieldChange("formaPago", event.target.value)}
+                    placeholder="Ej: 50% al inicio y 50% al finalizar"
+                  />
+                </label>
+
+                <label className={s.field}>
+                  <span className={s.label}>Vigencia predeterminada</span>
+                  <select
+                    className={s.input}
+                    value={form.validezPredeterminada}
+                    onChange={(event) =>
+                      handleFieldChange("validezPredeterminada", event.target.value)
+                    }
+                  >
+                    {VALIDEZ_OPTIONS.map((value) => (
+                      <option key={value} value={value}>
+                        {value.replace(" dias", " días")}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className={s.field}>
+                  <span className={s.label}>Condiciones de venta</span>
+                  <textarea
+                    className={s.textarea}
+                    rows={6}
+                    value={form.condicionesVentaPredeterminadas}
+                    onChange={(event) =>
+                      handleFieldChange(
+                        "condicionesVentaPredeterminadas",
+                        event.target.value
+                      )
+                    }
+                    placeholder="Plazos, garantías, exclusiones, alcance del trabajo, etc."
+                  />
+                </label>
+
+                <label className={s.field}>
+                  <span className={s.label}>Términos y condiciones adicionales</span>
+                  <textarea
+                    className={s.textarea}
+                    rows={6}
+                    value={form.terminosCondicionesPredeterminados}
+                    onChange={(event) =>
+                      handleFieldChange(
+                        "terminosCondicionesPredeterminados",
+                        event.target.value
+                      )
+                    }
+                    placeholder="Cláusulas legales o comerciales que quieras repetir en cada presupuesto"
+                  />
+                </label>
               </div>
 
               {sectionFeedback?.section === "comercial" ? <p className={sectionFeedback.kind === "error" ? s.error : s.success}>{sectionFeedback.message}</p> : null}

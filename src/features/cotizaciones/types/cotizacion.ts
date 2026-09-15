@@ -23,6 +23,9 @@ export type Cotizacion = {
   flete: number | null;
   iva: number | null;
   notas: string | null;
+  condicionesDePago?: string | null;
+  condicionesVenta?: string | null;
+  terminosCondiciones?: string | null;
   validoHasta: string | null;
   subtotalNeto: number | null;
   costoTotal: number | null;
@@ -67,6 +70,9 @@ export type CrearCotizacionInput = {
   flete?: number | null;
   iva?: number | null;
   notas?: string | null;
+  condicionesDePago?: string | null;
+  condicionesVenta?: string | null;
+  terminosCondiciones?: string | null;
   validoHasta?: string | null;
   subtotalNeto?: number | null;
   costoTotal?: number | null;

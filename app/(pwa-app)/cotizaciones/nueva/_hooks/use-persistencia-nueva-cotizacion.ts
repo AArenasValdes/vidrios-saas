@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, type Dispatch, type SetStateAc
 import {
   createCotizacionWorkflowDraft,
 } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
+import type { QuoteCommercialDefaults } from "@/features/cotizaciones/services/quote-commercial-conditions.service";
 import type {
   CotizacionWorkflowDraft,
   CotizacionWorkflowRecord,
@@ -61,6 +62,7 @@ type UsePersistenciaNuevaCotizacionParams = {
   loadCotizacionById: (id: string) => Promise<unknown>;
   suggestionProvider: PreferredProvider;
   preferredPricingMode: PricingMode;
+  quoteCommercialDefaults?: QuoteCommercialDefaults;
   draft: CotizacionWorkflowDraft;
   componentForm: ComponentFormState;
   editingItemId: string | null;
@@ -265,7 +267,7 @@ export function usePersistenciaNuevaCotizacion(
         provider: suggestionProvider,
         pricingMode: preferredPricingMode,
       });
-      const blankDraft = createCotizacionWorkflowDraft();
+      const blankDraft = createCotizacionWorkflowDraft(params.quoteCommercialDefaults);
       const blankComponentForm = createEmptyComponentForm(
         [],
         suggestionProvider,

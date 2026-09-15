@@ -13,9 +13,8 @@ import {
   buildDocumentContactLine,
   buildDocumentInitials,
   formatDocumentCompanyPhoneNumber,
-  resolveDocumentConditionsText,
-  resolveDocumentPaymentTerms,
 } from "@/utils/cotizacion-document";
+import { buildQuoteDocumentCommercialSections } from "@/features/cotizaciones/services/quote-commercial-conditions.service";
 import {
   buildReadableCotizacionPdfFileName,
   downloadPdfBlob,
@@ -67,6 +66,9 @@ type PublicPreviewQuote = {
   obra: string;
   validez: string;
   observaciones: string;
+  condicionesDePago?: string | null;
+  condicionesVenta?: string | null;
+  terminosCondiciones?: string | null;
   subtotal: number;
   descuentoPct: number;
   iva: number;
@@ -86,6 +88,8 @@ type PublicPreviewQuote = {
     empresaEmail: string;
     brandColor: string;
     formaPago: string;
+    condicionesVentaPredeterminadas?: string;
+    terminosCondicionesPredeterminados?: string;
   };
 };
 
@@ -430,8 +434,24 @@ export function PublicQuoteDocument({
   const hasCompanyHeaderDetails = Boolean(
     commercialResponsibleDisplay || hasNormalizedCompanyAddress
   );
-  const paymentTermsDisplay = resolveDocumentPaymentTerms(
-    quote.organizationProfile.formaPago
+  const commercialConditionSections = useMemo(
+    () =>
+      buildQuoteDocumentCommercialSections(
+        {
+          condicionesDePago: quote.condicionesDePago ?? null,
+          condicionesVenta: quote.condicionesVenta ?? null,
+          terminosCondiciones: quote.terminosCondiciones ?? null,
+          observaciones: quote.observaciones,
+        },
+        {
+          formaPago: quote.organizationProfile.formaPago,
+          condicionesVentaPredeterminadas:
+            quote.organizationProfile.condicionesVentaPredeterminadas,
+          terminosCondicionesPredeterminados:
+            quote.organizationProfile.terminosCondicionesPredeterminados,
+        }
+      ),
+    [quote]
   );
 
   const discountValue = useMemo(
@@ -928,25 +948,9 @@ export function PublicQuoteDocument({
 
                   {isLastPage ? (
                     <>
-                        {paymentTermsDisplay ? (
-                          <section className={printStyles.paymentBand}>
-                            <span className={printStyles.paymentLabel}>Forma de pago:</span>
-                            <span className={printStyles.paymentValue}>
-                              {paymentTermsDisplay}
-                            </span>
-                          </section>
-                        ) : null}
-
-                      <section className={printStyles.summarySection}>
-                        {showItemPrices ? (
-                          <section className={printStyles.conditionsColumn}>
-                            <span className={printStyles.summaryLabel}>CONDICIONES</span>
-                            <p className={printStyles.conditionsText}>
-                              {resolveDocumentConditionsText(quote.observaciones)}
-                            </p>
-                          </section>
-                        ) : null}
-
+                      <section
+                        className={`${printStyles.summarySection} ${printStyles.totalGlobalSummarySection}`}
+                      >
                         <aside className={printStyles.totalsColumn}>
                           <span className={printStyles.summaryLabel}>RESUMEN FINAL</span>
                           <div className={printStyles.totalRow}>
@@ -984,6 +988,23 @@ export function PublicQuoteDocument({
                         <span>{showItemPrices ? "Total presupuesto" : "Precio final"}</span>
                         <strong>{formatMoney(quote.total)}</strong>
                       </section>
+
+                      {commercialConditionSections.length > 0 ? (
+                        <section
+                          className={printStyles.commercialConditionsBlock}
+                          aria-label="Condiciones comerciales"
+                        >
+                          {commercialConditionSections.map((section) => (
+                            <article
+                              key={section.title}
+                              className={printStyles.commercialConditionsSection}
+                            >
+                              <span className={printStyles.summaryLabel}>{section.title}</span>
+                              <p className={printStyles.conditionsText}>{section.body}</p>
+                            </article>
+                          ))}
+                        </section>
+                      ) : null}
                     </>
                   ) : null}
 

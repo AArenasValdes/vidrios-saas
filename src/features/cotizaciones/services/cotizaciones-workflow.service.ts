@@ -677,18 +677,28 @@ export function calculateWorkflowTotalsForPricingMode(
   };
 }
 
-export function createCotizacionWorkflowDraft(): CotizacionWorkflowDraft {
+export function createCotizacionWorkflowDraft(
+  commercialDefaults?: Partial<
+    Pick<
+      CotizacionWorkflowDraft,
+      "validez" | "condicionesDePago" | "condicionesVenta" | "terminosCondiciones"
+    >
+  >
+): CotizacionWorkflowDraft {
   return {
     clienteNombre: "",
     clienteTelefono: "+56 9 ",
     obra: "",
     direccion: "",
-    validez: "15 dias",
+    validez: commercialDefaults?.validez ?? "15 dias",
     descuentoPct: 0,
     descuentoTipo: "porcentaje",
     descuentoMonto: 0,
     flete: DEFAULT_FLETE,
     observaciones: "",
+    condicionesDePago: commercialDefaults?.condicionesDePago ?? "",
+    condicionesVenta: commercialDefaults?.condicionesVenta ?? "",
+    terminosCondiciones: commercialDefaults?.terminosCondiciones ?? "",
     items: [],
     quotePricingMode: "por_item",
     costoTotalFabricacion: 0,

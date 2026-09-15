@@ -24,9 +24,8 @@ import {
   buildDocumentInitials,
   formatDocumentCompanyPhoneNumber,
   normalizeDocumentOptionalText,
-  resolveDocumentConditionsText,
-  resolveDocumentPaymentTerms,
 } from "@/utils/cotizacion-document";
+import { buildQuoteDocumentCommercialSections } from "@/features/cotizaciones/services/quote-commercial-conditions.service";
 import { buildReadableCotizacionPdfFileName } from "@/utils/cotizacion-pdf";
 import {
   buildCotizacionMirrorFormatLabel,
@@ -666,9 +665,26 @@ export default function CotizacionPrintPage() {
   const hasCompanyHeaderDetails = Boolean(
     commercialResponsibleDisplay || hasNormalizedCompanyAddress
   );
-  const paymentTermsDisplay = resolveDocumentPaymentTerms(
-    organizationProfile.formaPago
-  );
+  const commercialConditionSections = useMemo(() => {
+    if (!visibleCotizacion) {
+      return [];
+    }
+
+    return buildQuoteDocumentCommercialSections(
+      {
+        condicionesDePago: visibleCotizacion.condicionesDePago ?? null,
+        condicionesVenta: visibleCotizacion.condicionesVenta ?? null,
+        terminosCondiciones: visibleCotizacion.terminosCondiciones ?? null,
+        observaciones: visibleCotizacion.observaciones,
+      },
+      {
+        formaPago: organizationProfile.formaPago,
+        condicionesVentaPredeterminadas: organizationProfile.condicionesVentaPredeterminadas,
+        terminosCondicionesPredeterminados:
+          organizationProfile.terminosCondicionesPredeterminados,
+      }
+    );
+  }, [organizationProfile, visibleCotizacion]);
   const isTotalGlobalQuote = visibleCotizacion?.quotePricingMode === "total_global";
   const showItemPrices = !isTotalGlobalQuote;
   const quoteModeBadgeLabel = isTotalGlobalQuote ? "Total global" : "Detalle por ítems";
@@ -1363,13 +1379,6 @@ export default function CotizacionPrintPage() {
 
               {isLastPage ? (
                 <>
-                  {paymentTermsDisplay ? (
-                    <section className={s.paymentBand}>
-                      <span className={s.paymentLabel}>Forma de pago:</span>
-                      <span className={s.paymentValue}>{paymentTermsDisplay}</span>
-                    </section>
-                  ) : null}
-
                   <section className={`${s.summarySection} ${s.totalGlobalSummarySection}`}>
                     <aside className={s.totalsColumn}>
                       <span className={s.summaryLabel}>RESUMEN FINAL</span>
@@ -1396,6 +1405,17 @@ export default function CotizacionPrintPage() {
                     <span>Precio final</span>
                     <strong>{formatMoney(visibleCotizacion.total)}</strong>
                   </section>
+
+                  {commercialConditionSections.length > 0 ? (
+                    <section className={s.commercialConditionsBlock} aria-label="Condiciones comerciales">
+                      {commercialConditionSections.map((section) => (
+                        <article key={section.title} className={s.commercialConditionsSection}>
+                          <span className={s.summaryLabel}>{section.title}</span>
+                          <p className={s.conditionsText}>{section.body}</p>
+                        </article>
+                      ))}
+                    </section>
+                  ) : null}
                 </>
               ) : null}
 
@@ -1731,23 +1751,7 @@ export default function CotizacionPrintPage() {
 
             {isLastPage ? (
               <>
-                {paymentTermsDisplay ? (
-                  <section className={s.paymentBand}>
-                    <span className={s.paymentLabel}>Forma de pago:</span>
-                    <span className={s.paymentValue}>{paymentTermsDisplay}</span>
-                  </section>
-                ) : null}
-
-                <section className={s.summarySection}>
-                  {showItemPrices ? (
-                    <section className={s.conditionsColumn}>
-                      <span className={s.summaryLabel}>CONDICIONES</span>
-                      <p className={s.conditionsText}>
-                        {resolveDocumentConditionsText(visibleCotizacion.observaciones)}
-                      </p>
-                    </section>
-                  ) : null}
-
+                <section className={`${s.summarySection} ${s.totalGlobalSummarySection}`}>
                   <aside className={s.totalsColumn}>
                     <span className={s.summaryLabel}>RESUMEN FINAL</span>
                     {showItemPrices ? (
@@ -1808,6 +1812,17 @@ export default function CotizacionPrintPage() {
                   <span>{showItemPrices ? "Total presupuesto" : "Precio final"}</span>
                   <strong>{formatMoney(visibleCotizacion.total)}</strong>
                 </section>
+
+                {commercialConditionSections.length > 0 ? (
+                  <section className={s.commercialConditionsBlock} aria-label="Condiciones comerciales">
+                    {commercialConditionSections.map((section) => (
+                      <article key={section.title} className={s.commercialConditionsSection}>
+                        <span className={s.summaryLabel}>{section.title}</span>
+                        <p className={s.conditionsText}>{section.body}</p>
+                      </article>
+                    ))}
+                  </section>
+                ) : null}
               </>
             ) : null}
 
@@ -1849,7 +1864,7 @@ export default function CotizacionPrintPage() {
       itemPresentationMap,
       globalIvaLabel,
       isTotalGlobalQuote,
-      paymentTermsDisplay,
+      commercialConditionSections,
       printPages,
       quoteModeBadgeLabel,
       showItemPrices,

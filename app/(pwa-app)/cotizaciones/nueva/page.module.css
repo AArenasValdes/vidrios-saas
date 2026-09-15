@@ -16553,6 +16553,42 @@
     line-height: 1.35;
   }
 
+  .stepThreeCondicionesPanel {
+    display: grid;
+    gap: 0.72rem;
+    padding: 0 0.9rem 0.96rem;
+  }
+
+  .stepThreeCondicionesHint {
+    margin: 0;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: #667085;
+  }
+
+  .stepThreeCondicionesField {
+    display: grid;
+    gap: 0.38rem;
+  }
+
+  .stepThreeCondicionesField span {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #4b5f7a;
+  }
+
+  .stepThreeCondicionesField textarea {
+    width: 100%;
+    min-height: 88px;
+    border-radius: 12px;
+    border: 1px solid #d7dee8;
+    padding: 0.72rem 0.8rem;
+    font: inherit;
+    line-height: 1.45;
+    resize: vertical;
+    background: #fff;
+  }
+
   .stepThreeCostosEditor {
     display: grid;
     gap: 0.72rem;

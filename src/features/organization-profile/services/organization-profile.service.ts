@@ -416,6 +416,9 @@ function buildNormalizedProfileInput(
     empresaEmail: resolved.empresaEmail,
     brandColor: resolved.brandColor,
     formaPago: resolved.formaPago,
+    validezPredeterminada: resolved.validezPredeterminada,
+    condicionesVentaPredeterminadas: resolved.condicionesVentaPredeterminadas,
+    terminosCondicionesPredeterminados: resolved.terminosCondicionesPredeterminados,
     solicitudPublicaSlug: resolved.solicitudPublicaSlug,
     solicitudPublicaDescripcionCorta: resolved.solicitudPublicaDescripcionCorta,
     solicitudPublicaValor: resolved.solicitudPublicaValor,
@@ -660,6 +663,14 @@ export function resolveOrganizationProfile(
     empresaEmail: normalizeText(profile?.empresaEmail),
     brandColor: sanitizeBrandColor(profile?.brandColor),
     formaPago: normalizeText(profile?.formaPago),
+    validezPredeterminada:
+      normalizeText(profile?.validezPredeterminada) || "15 dias",
+    condicionesVentaPredeterminadas: normalizeText(
+      profile?.condicionesVentaPredeterminadas
+    ),
+    terminosCondicionesPredeterminados: normalizeText(
+      profile?.terminosCondicionesPredeterminados
+    ),
     solicitudPublicaSlug,
     solicitudPublicaDescripcionCorta:
       normalizeText(profile?.solicitudPublicaDescripcionCorta) ||
@@ -781,6 +792,14 @@ export function createOrganizationProfileService(
           empresaEmail,
           brandColor: sanitizeBrandColor(input.brandColor),
           formaPago: normalizeText(input.formaPago),
+          validezPredeterminada:
+            normalizeText(input.validezPredeterminada) || "15 dias",
+          condicionesVentaPredeterminadas: normalizeText(
+            input.condicionesVentaPredeterminadas
+          ),
+          terminosCondicionesPredeterminados: normalizeText(
+            input.terminosCondicionesPredeterminados
+          ),
           solicitudPublicaSlug,
           solicitudPublicaDescripcionCorta: normalizeText(
             input.solicitudPublicaDescripcionCorta

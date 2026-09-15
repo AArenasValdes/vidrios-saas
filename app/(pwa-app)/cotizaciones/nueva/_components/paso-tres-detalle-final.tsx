@@ -13,6 +13,8 @@ import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-prici
 import type { QuoteStudioFinancialSummary } from "@/features/cotizaciones/services/quote-studio-financial.service";
 import { QuoteProfitabilitySummary } from "../../_components/quote-profitability-summary";
 import { PasoTresCostosRentabilidadMovil } from "./paso-tres-costos-rentabilidad-movil";
+import { PasoTresCondicionesMovil } from "./paso-tres-condiciones-movil";
+import type { OrganizationProfile } from "@/features/organization-profile/types/organization-profile";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 import { formatMeasurePairFromMm } from "@/features/organization-profile/services/measure-unit.service";
@@ -46,6 +48,10 @@ type PasoTresDetalleFinalProps = {
     field: keyof QuoteStudioFinancialDraft,
     value: string
   ) => void;
+  organizationProfile?: OrganizationProfile | null;
+  onCondicionesDePagoChange: (value: string) => void;
+  onCondicionesVentaChange: (value: string) => void;
+  onTerminosCondicionesChange: (value: string) => void;
 };
 
 export function PasoTresDetalleFinal({
@@ -72,6 +78,10 @@ export function PasoTresDetalleFinal({
   formatCurrencyInput,
   financialSummary,
   onQuoteStudioFinancialChange,
+  organizationProfile,
+  onCondicionesDePagoChange,
+  onCondicionesVentaChange,
+  onTerminosCondicionesChange,
 }: PasoTresDetalleFinalProps) {
   const measureUnit = useOrganizationMeasureUnit();
   const [showFreightEditor, setShowFreightEditor] = useState(false);
@@ -293,6 +303,16 @@ export function PasoTresDetalleFinal({
           quoteStudioFinancial={draft.quoteStudioFinancial}
           formatCurrencyInput={formatCurrencyInput}
           onQuoteStudioFinancialChange={onQuoteStudioFinancialChange}
+        />
+      ) : null}
+
+      {isMobileViewport ? (
+        <PasoTresCondicionesMovil
+          draft={draft}
+          organizationProfile={organizationProfile}
+          onCondicionesDePagoChange={onCondicionesDePagoChange}
+          onCondicionesVentaChange={onCondicionesVentaChange}
+          onTerminosCondicionesChange={onTerminosCondicionesChange}
         />
       ) : null}
     </section>

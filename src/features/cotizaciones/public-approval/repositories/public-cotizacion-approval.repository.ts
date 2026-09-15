@@ -10,6 +10,9 @@ type CotizacionApprovalRow = {
   numero: string | null;
   estado: string;
   notas: string | null;
+  condiciones_de_pago?: string | null;
+  condiciones_venta?: string | null;
+  terminos_condiciones?: string | null;
   valido_hasta: string | null;
   subtotal_neto: number | string | null;
   descuento_pct: number | string | null;
@@ -51,6 +54,8 @@ type OrganizationProfileRow = {
   empresa_email: string | null;
   brand_color: string | null;
   forma_pago: string | null;
+  condiciones_venta_predeterminadas?: string | null;
+  terminos_condiciones_predeterminados?: string | null;
   margen_defecto: number | null;
 };
 
@@ -84,6 +89,8 @@ const ORGANIZATION_PROFILE_SELECT = `
   empresa_email,
   brand_color,
   forma_pago,
+  condiciones_venta_predeterminadas,
+  terminos_condiciones_predeterminados,
   margen_defecto
 `;
 
@@ -106,6 +113,9 @@ const COTIZACION_APPROVAL_SELECT = `
   numero,
   estado,
   notas,
+  condiciones_de_pago,
+  condiciones_venta,
+  terminos_condiciones,
   valido_hasta,
   subtotal_neto,
   descuento_pct,

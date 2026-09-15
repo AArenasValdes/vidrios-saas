@@ -45,6 +45,9 @@ type OrganizationProfileRow = {
   empresa_email: string | null;
   brand_color: string | null;
   forma_pago: string | null;
+  validez_predeterminada?: string | null;
+  condiciones_venta_predeterminadas?: string | null;
+  terminos_condiciones_predeterminados?: string | null;
   solicitud_publica_slug?: string | null;
   solicitud_publica_descripcion_corta?: string | null;
   solicitud_publica_valor?: string | null;
@@ -173,6 +176,9 @@ function mapOrganizationProfile(
     empresaEmail: row.empresa_email ?? "",
     brandColor: row.brand_color ?? "",
     formaPago: row.forma_pago ?? "",
+    validezPredeterminada: row.validez_predeterminada ?? "15 dias",
+    condicionesVentaPredeterminadas: row.condiciones_venta_predeterminadas ?? "",
+    terminosCondicionesPredeterminados: row.terminos_condiciones_predeterminados ?? "",
     solicitudPublicaSlug: row.solicitud_publica_slug ?? "",
     solicitudPublicaDescripcionCorta:
       row.solicitud_publica_descripcion_corta ?? "",
@@ -337,6 +343,9 @@ export function createOrganizationProfileRepository(
           empresa_email: input.empresaEmail,
           brand_color: input.brandColor,
           forma_pago: input.formaPago,
+          validez_predeterminada: input.validezPredeterminada,
+          condiciones_venta_predeterminadas: input.condicionesVentaPredeterminadas || null,
+          terminos_condiciones_predeterminados: input.terminosCondicionesPredeterminados || null,
           solicitud_publica_slug: input.solicitudPublicaSlug,
           solicitud_publica_descripcion_corta:
           input.solicitudPublicaDescripcionCorta,

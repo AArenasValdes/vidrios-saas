@@ -27,6 +27,7 @@ import {
   createCotizacionWorkflowDraft,
   resolveSyncedPorItemTotalClienteManual,
 } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
+import { buildQuoteCommercialDefaultsFromProfile } from "@/features/cotizaciones/services/quote-commercial-conditions.service";
 import {
   applyQuoteStudioRecommendedPrice,
   buildQuoteStudioFinancialSummary,
@@ -185,6 +186,11 @@ function NuevaCotizacionPageContent() {
     requestedStep ?? (requestedConstructorEntry ? 2 : 1)
   );
   const { profile: organizationProfile } = useOrganizationProfile();
+  const quoteCommercialDefaults = useMemo(
+    () => buildQuoteCommercialDefaultsFromProfile(organizationProfile),
+    [organizationProfile]
+  );
+  const commercialDefaultsAppliedRef = useRef(false);
   const {
     activeTemplates: activeLineTemplates,
     createTemplate: createLineTemplate,
@@ -308,6 +314,7 @@ function NuevaCotizacionPageContent() {
     loadCotizacionById,
     suggestionProvider,
     preferredPricingMode,
+    quoteCommercialDefaults,
     draft,
     componentForm,
     editingItemId,
@@ -329,6 +336,37 @@ function NuevaCotizacionPageContent() {
     setLastSaveMode,
     setHasUnsavedProgress,
   });
+
+  useEffect(() => {
+    if (!organizationProfile || editId || duplicateId || commercialDefaultsAppliedRef.current) {
+      return;
+    }
+
+    setDraft((current) => {
+      const pristineDraft = createCotizacionWorkflowDraft();
+      const isPristineCommercial =
+        current.items.length === 0 &&
+        !current.clienteNombre.trim() &&
+        current.validez === pristineDraft.validez &&
+        (current.condicionesDePago ?? "") === (pristineDraft.condicionesDePago ?? "") &&
+        (current.condicionesVenta ?? "") === (pristineDraft.condicionesVenta ?? "") &&
+        (current.terminosCondiciones ?? "") === (pristineDraft.terminosCondiciones ?? "");
+
+      commercialDefaultsAppliedRef.current = true;
+
+      if (!isPristineCommercial) {
+        return current;
+      }
+
+      return {
+        ...current,
+        validez: quoteCommercialDefaults.validez,
+        condicionesDePago: quoteCommercialDefaults.condicionesDePago,
+        condicionesVenta: quoteCommercialDefaults.condicionesVenta,
+        terminosCondiciones: quoteCommercialDefaults.terminosCondiciones,
+      };
+    });
+  }, [organizationProfile, editId, duplicateId, quoteCommercialDefaults]);
 
   useEffect(() => {
     return () => {
@@ -683,6 +721,14 @@ function NuevaCotizacionPageContent() {
     handleDraftChange("condicionesDePago", value);
   };
 
+  const handleCondicionesVentaChange = (value: string) => {
+    handleDraftChange("condicionesVenta", value);
+  };
+
+  const handleTerminosCondicionesChange = (value: string) => {
+    handleDraftChange("terminosCondiciones", value);
+  };
+
   const hasUnsavedComponentDraft =
     Boolean(editingItemId) ||
     pasoDosAgregarGrupo.isOpen ||
@@ -803,7 +849,7 @@ function NuevaCotizacionPageContent() {
   }
 
   function resetWorkflowToBlank() {
-    const nextDraft = createCotizacionWorkflowDraft();
+    const nextDraft = createCotizacionWorkflowDraft(quoteCommercialDefaults);
     const nextComponentForm = createEmptyComponentForm(
       [],
       suggestionProvider,
@@ -838,7 +884,7 @@ function NuevaCotizacionPageContent() {
   }
 
   const handleResetStep1 = () => {
-    const nextDraft = createCotizacionWorkflowDraft();
+    const nextDraft = createCotizacionWorkflowDraft(quoteCommercialDefaults);
 
     setSelectedClientId("");
     setClientQuery("");
@@ -3026,6 +3072,9 @@ function goNextFromStep1() {
     onDraftDiscountChange: handleDraftDiscountChange,
     onDraftDiscountTypeChange: handleDraftDiscountTypeChange,
     onCondicionesPagoChange: handleCondicionesPagoChange,
+    onCondicionesVentaChange: handleCondicionesVentaChange,
+    onTerminosCondicionesChange: handleTerminosCondicionesChange,
+    organizationProfile,
     onGlobalTotalClienteChange: handleGlobalTotalClienteChange,
     onMostrarIvaChange: handleMostrarIvaChange,
     formatCurrencyInput: regionalCurrencyInput,

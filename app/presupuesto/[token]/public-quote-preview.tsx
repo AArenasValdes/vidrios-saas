@@ -11,9 +11,8 @@ import {
   buildDocumentContactLine,
   buildDocumentInitials,
   formatDocumentCompanyPhoneNumber,
-  resolveDocumentConditionsText,
-  resolveDocumentPaymentTerms,
 } from "@/utils/cotizacion-document";
+import { buildQuoteDocumentCommercialSections } from "@/features/cotizaciones/services/quote-commercial-conditions.service";
 import { resolveCotizacionItemDrawingSvg } from "@/features/cotizaciones/visual-composer/services/resolve-item-drawing-svg";
 import {
   formatQuoteCurrency,
@@ -58,6 +57,9 @@ export type PublicPreviewQuote = {
   obra: string;
   validez: string;
   observaciones: string;
+  condicionesDePago?: string | null;
+  condicionesVenta?: string | null;
+  terminosCondiciones?: string | null;
   subtotal: number;
   descuentoPct: number;
   iva: number;
@@ -77,6 +79,8 @@ export type PublicPreviewQuote = {
     empresaEmail: string;
     brandColor: string;
     formaPago: string;
+    condicionesVentaPredeterminadas?: string;
+    terminosCondicionesPredeterminados?: string;
   };
 };
 
@@ -257,8 +261,24 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
     formatDocumentCompanyPhoneNumber(quote.organizationProfile.empresaTelefono),
     quote.organizationProfile.empresaEmail,
   ]);
-  const paymentTermsDisplay = resolveDocumentPaymentTerms(
-    quote.organizationProfile.formaPago
+  const commercialConditionSections = useMemo(
+    () =>
+      buildQuoteDocumentCommercialSections(
+        {
+          condicionesDePago: quote.condicionesDePago ?? null,
+          condicionesVenta: quote.condicionesVenta ?? null,
+          terminosCondiciones: quote.terminosCondiciones ?? null,
+          observaciones: quote.observaciones,
+        },
+        {
+          formaPago: quote.organizationProfile.formaPago,
+          condicionesVentaPredeterminadas:
+            quote.organizationProfile.condicionesVentaPredeterminadas,
+          terminosCondicionesPredeterminados:
+            quote.organizationProfile.terminosCondicionesPredeterminados,
+        }
+      ),
+    [quote]
   );
   const baseDate = quote.updatedAt ?? quote.createdAt ?? new Date().toISOString();
   const dueDate = formatDueDate(baseDate, quote.validez);
@@ -756,23 +776,9 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
 
                     {isLastPage ? (
                       <>
-                        {paymentTermsDisplay ? (
-                          <section className={printStyles.paymentBand}>
-                            <span className={printStyles.paymentLabel}>Forma de pago:</span>
-                            <span className={printStyles.paymentValue}>
-                              {paymentTermsDisplay}
-                            </span>
-                          </section>
-                        ) : null}
-
-                        <section className={printStyles.summarySection}>
-                          <section className={printStyles.conditionsColumn}>
-                            <span className={printStyles.summaryLabel}>CONDICIONES</span>
-                            <p className={printStyles.conditionsText}>
-                              {resolveDocumentConditionsText(quote.observaciones)}
-                            </p>
-                          </section>
-
+                        <section
+                          className={`${printStyles.summarySection} ${printStyles.totalGlobalSummarySection}`}
+                        >
                           <aside className={printStyles.totalsColumn}>
                             <span className={printStyles.summaryLabel}>RESUMEN FINAL</span>
                             <div className={printStyles.totalRow}>
@@ -814,6 +820,23 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                           <span>Total presupuesto</span>
                           <strong>{formatMoney(quote.total)}</strong>
                         </section>
+
+                        {commercialConditionSections.length > 0 ? (
+                          <section
+                            className={printStyles.commercialConditionsBlock}
+                            aria-label="Condiciones comerciales"
+                          >
+                            {commercialConditionSections.map((section) => (
+                              <article
+                                key={section.title}
+                                className={printStyles.commercialConditionsSection}
+                              >
+                                <span className={printStyles.summaryLabel}>{section.title}</span>
+                                <p className={printStyles.conditionsText}>{section.body}</p>
+                              </article>
+                            ))}
+                          </section>
+                        ) : null}
                       </>
                     ) : null}
 

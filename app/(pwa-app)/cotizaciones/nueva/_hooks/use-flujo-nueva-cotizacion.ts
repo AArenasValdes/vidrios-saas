@@ -105,6 +105,9 @@ type UseFlujoNuevaCotizacionParams = {
   onValidezChange: (value: string) => void;
   onObservacionesChange: (value: string) => void;
   onCondicionesPagoChange: (value: string) => void;
+  onCondicionesVentaChange: (value: string) => void;
+  onTerminosCondicionesChange: (value: string) => void;
+  organizationProfile?: import("@/features/organization-profile/types/organization-profile").OrganizationProfile | null;
   onStep1KeyDown: (field: Step1FieldKey, event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   onToggleMoreData: () => void;
   onResetStep1: () => void;
@@ -321,6 +324,9 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     onValidezChange: params.onValidezChange,
     onObservacionesChange: params.onObservacionesChange,
     onCondicionesPagoChange: params.onCondicionesPagoChange,
+    onCondicionesVentaChange: params.onCondicionesVentaChange,
+    onTerminosCondicionesChange: params.onTerminosCondicionesChange,
+    organizationProfile: params.organizationProfile,
     onGoToStepTwo: () => params.onGoToStep(2),
     onEditItem: params.onEditItem,
     onDuplicateItem: params.onDuplicateItemPaso3,

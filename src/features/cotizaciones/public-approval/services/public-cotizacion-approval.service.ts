@@ -35,6 +35,9 @@ export type PublicApprovalQuoteView = {
   direccion: string;
   validez: string;
   observaciones: string;
+  condicionesDePago?: string | null;
+  condicionesVenta?: string | null;
+  terminosCondiciones?: string | null;
   subtotal: number;
   descuentoPct: number;
   iva: number;
@@ -213,6 +216,9 @@ async function buildPublicApprovalQuoteView(
     direccion: payload.client?.direccion ?? "",
     validez: formatValidez(payload.cotizacion.valido_hasta),
     observaciones: payload.cotizacion.notas ?? "",
+    condicionesDePago: payload.cotizacion.condiciones_de_pago ?? null,
+    condicionesVenta: payload.cotizacion.condiciones_venta ?? null,
+    terminosCondiciones: payload.cotizacion.terminos_condiciones ?? null,
     subtotal,
     descuentoPct: Number(payload.cotizacion.descuento_pct ?? 0),
     iva: Number(payload.cotizacion.iva ?? 0),
@@ -241,6 +247,10 @@ async function buildPublicApprovalQuoteView(
             empresaEmail: payload.organizationProfile.empresa_email ?? "",
             brandColor: payload.organizationProfile.brand_color ?? "",
             formaPago: payload.organizationProfile.forma_pago ?? "",
+            condicionesVentaPredeterminadas:
+              payload.organizationProfile.condiciones_venta_predeterminadas ?? "",
+            terminosCondicionesPredeterminados:
+              payload.organizationProfile.terminos_condiciones_predeterminados ?? "",
             solicitudPublicaSlug: "",
             solicitudPublicaDescripcionCorta: "",
             solicitudPublicaValor: "",

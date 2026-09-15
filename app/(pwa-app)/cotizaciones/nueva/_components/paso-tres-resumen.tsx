@@ -21,6 +21,7 @@ import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-pr
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 import { formatMeasurePairFromMm } from "@/features/organization-profile/services/measure-unit.service";
 import type { MeasureUnit } from "@/features/organization-profile/types/measure-unit";
+import type { OrganizationProfile } from "@/features/organization-profile/types/organization-profile";
 
 import s from "../page.module.css";
 
@@ -52,6 +53,9 @@ type PasoTresResumenProps = {
   onValidezChange: (value: string) => void;
   onObservacionesChange: (value: string) => void;
   onCondicionesPagoChange: (value: string) => void;
+  onCondicionesVentaChange: (value: string) => void;
+  onTerminosCondicionesChange: (value: string) => void;
+  organizationProfile?: OrganizationProfile | null;
   onGoToStepTwo: () => void;
   onEditItem: (item: CotizacionWorkflowItem) => void;
   onDuplicateItem: (item: CotizacionWorkflowItem) => void;
@@ -182,6 +186,9 @@ export function PasoTresResumen({
   onValidezChange,
   onObservacionesChange,
   onCondicionesPagoChange,
+  onCondicionesVentaChange,
+  onTerminosCondicionesChange,
+  organizationProfile,
   onGoToStepTwo,
   onEditItem,
   onDuplicateItem,
@@ -540,27 +547,50 @@ export function PasoTresResumen({
                 <span className={s.rtAdjustSectionTitle}>Condiciones para el cliente</span>
 
                 <label className={s.rtAdjustRow}>
-                  <span className={s.rtFieldLabel}>Condiciones de pago</span>
-                  <input
-                    className={s.rtTextInput}
+                  <span className={s.rtFieldLabel}>Forma de pago</span>
+                  <textarea
+                    className={s.rtTextarea}
                     value={draft.condicionesDePago ?? ""}
                     onChange={(event) => onCondicionesPagoChange(event.target.value)}
                     placeholder="Ej: 50% anticipo, 50% contra entrega"
+                    rows={3}
                   />
-                  <span className={s.rtHint}>
-                    Estas condiciones aparecerán en el PDF.
-                  </span>
                 </label>
 
                 <label className={`${s.rtAdjustRow} ${s.rtAdjustWide}`}>
-                  <span className={s.rtFieldLabel}>Observaciones para el cliente</span>
+                  <span className={s.rtFieldLabel}>Condiciones de venta</span>
+                  <textarea
+                    className={s.rtTextarea}
+                    value={draft.condicionesVenta ?? ""}
+                    onChange={(event) => onCondicionesVentaChange(event.target.value)}
+                    placeholder="Plazos, garantías, exclusiones, etc."
+                    rows={5}
+                  />
+                </label>
+
+                <label className={`${s.rtAdjustRow} ${s.rtAdjustWide}`}>
+                  <span className={s.rtFieldLabel}>Términos y condiciones adicionales</span>
+                  <textarea
+                    className={s.rtTextarea}
+                    value={draft.terminosCondiciones ?? ""}
+                    onChange={(event) => onTerminosCondicionesChange(event.target.value)}
+                    placeholder="Cláusulas legales o comerciales adicionales"
+                    rows={5}
+                  />
+                </label>
+
+                <label className={`${s.rtAdjustRow} ${s.rtAdjustWide}`}>
+                  <span className={s.rtFieldLabel}>Notas para el presupuesto</span>
                   <textarea
                     className={s.rtTextarea}
                     value={draft.observaciones}
                     onChange={(event) => onObservacionesChange(event.target.value)}
-                    placeholder="Ej.: instalación incluida, plazo estimado, condiciones especiales…"
+                    placeholder="Observaciones específicas de esta cotización"
                     rows={3}
                   />
+                  <span className={s.rtHint}>
+                    Solo para esta cotización. No reemplaza las condiciones predeterminadas de tu empresa.
+                  </span>
                 </label>
               </div>
 
@@ -807,6 +837,10 @@ export function PasoTresResumen({
           formatCurrencyInput={formatCurrencyInput}
           financialSummary={financialSummary}
           onQuoteStudioFinancialChange={handleQuoteStudioFinancialChange}
+          organizationProfile={organizationProfile}
+          onCondicionesDePagoChange={onCondicionesPagoChange}
+          onCondicionesVentaChange={onCondicionesVentaChange}
+          onTerminosCondicionesChange={onTerminosCondicionesChange}
         />
         <PasoTresPanelAcciones
           savedRecord={savedRecord}

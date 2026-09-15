@@ -1860,6 +1860,20 @@
   white-space: pre-wrap;
 }
 
+.commercialConditionsBlock {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  position: relative;
+  z-index: 1;
+}
+
+.commercialConditionsSection {
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  padding: 14px;
+}
+
 .totalsColumn {
   display: grid;
   gap: 0;

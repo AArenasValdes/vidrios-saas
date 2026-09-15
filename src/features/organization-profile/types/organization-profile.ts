@@ -43,6 +43,9 @@ export type OrganizationProfile = OrganizationRegionSettings & {
   empresaEmail: string;
   brandColor: string;
   formaPago: string;
+  validezPredeterminada: string;
+  condicionesVentaPredeterminadas: string;
+  terminosCondicionesPredeterminados: string;
   solicitudPublicaSlug: string;
   solicitudPublicaDescripcionCorta: string;
   solicitudPublicaValor: string;
@@ -107,6 +110,9 @@ export type UpdateOrganizationProfileInput = OrganizationRegionSettings & {
   empresaEmail: string;
   brandColor: string;
   formaPago: string;
+  validezPredeterminada: string;
+  condicionesVentaPredeterminadas: string;
+  terminosCondicionesPredeterminados: string;
   solicitudPublicaSlug: string;
   solicitudPublicaDescripcionCorta: string;
   solicitudPublicaValor: string;

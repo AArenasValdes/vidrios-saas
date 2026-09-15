@@ -26,6 +26,9 @@ type CotizacionRow = {
   flete: number | string | null;
   iva: number | string | null;
   notas: string | null;
+  condiciones_de_pago?: string | null;
+  condiciones_venta?: string | null;
+  terminos_condiciones?: string | null;
   valido_hasta: string | null;
   actualizado_en: string | null;
   eliminado_en: string | null;
@@ -111,7 +114,7 @@ type CotizacionItemBreakdownRow = {
 };
 
 const COTIZACION_DETAIL_SELECT =
-  "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, costo_materiales_total, costo_mano_obra_total, costo_traslado_total, costo_otros_total, merma_pct, merma_total, margen_objetivo_pct, precio_recomendado_neto, iva_pct, financial_snapshot_version, financial_snapshot_calculado_en, cost_basis_status, pricing_mode, creation_surface, estado_comercial, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, pdf_descargado_en, regional_snapshot, solicitud_id, creado_en, total";
+  "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, condiciones_de_pago, condiciones_venta, terminos_condiciones, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, costo_materiales_total, costo_mano_obra_total, costo_traslado_total, costo_otros_total, merma_pct, merma_total, margen_objetivo_pct, precio_recomendado_neto, iva_pct, financial_snapshot_version, financial_snapshot_calculado_en, cost_basis_status, pricing_mode, creation_surface, estado_comercial, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, pdf_descargado_en, regional_snapshot, solicitud_id, creado_en, total";
 const COTIZACION_DETAIL_SELECT_LEGACY =
   "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, estado_comercial, creado_en, total";
 const COTIZACION_LIST_SELECT =
@@ -402,6 +405,9 @@ function mapCotizacion(row: CotizacionRow): Cotizacion {
     flete: toNumber(row.flete ?? null),
     iva: toNumber(row.iva ?? null),
     notas: row.notas ?? null,
+    condicionesDePago: row.condiciones_de_pago ?? null,
+    condicionesVenta: row.condiciones_venta ?? null,
+    terminosCondiciones: row.terminos_condiciones ?? null,
     validoHasta: row.valido_hasta ?? null,
     actualizadoEn: row.actualizado_en,
     eliminadoEn: row.eliminado_en,
@@ -633,6 +639,9 @@ function buildCotizacionUpdatePayload(input: CrearCotizacionInput) {
     flete: input.flete ?? null,
     iva: input.iva ?? null,
     notas: input.notas ?? null,
+    condiciones_de_pago: input.condicionesDePago ?? null,
+    condiciones_venta: input.condicionesVenta ?? null,
+    terminos_condiciones: input.terminosCondiciones ?? null,
     valido_hasta: input.validoHasta ?? null,
     subtotal_neto: input.subtotalNeto ?? null,
     costo_total: input.costoTotal ?? null,
