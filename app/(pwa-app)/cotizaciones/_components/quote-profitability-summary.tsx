@@ -63,22 +63,6 @@ export function QuoteProfitabilitySummary({
     ? `${QUOTE_PROFITABILITY_COPY.costoTotal} ${money(summary.costoTotal, formatMoney)} · ${QUOTE_PROFITABILITY_COPY.utilidad} ${money(summary.utilidadEstimada, formatMoney)} · ${QUOTE_PROFITABILITY_COPY.margenReal} ${formatQuoteProfitabilityPct(summary.margenRealPct)}`
     : QUOTE_PROFITABILITY_COPY.pendiente;
 
-  // #region agent log
-  void globalThis.fetch?.("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "26894a" },
-    body: JSON.stringify({
-      sessionId: "26894a",
-      runId: "post-fix",
-      hypothesisId: "A",
-      location: "quote-profitability-summary.tsx:render",
-      message: "profitability summary render",
-      data: { variant, tone, hasCostBasis, isOpen, costoTotal: summary.costoTotal },
-      timestamp: Date.now(),
-    }),
-  })?.catch(() => {});
-  // #endregion
-
   if (variant === "detail") {
     return (
       <section className={`${s.detail} ${tone === "onDark" ? s.onDark : ""}`} aria-label="Rentabilidad interna">
@@ -115,27 +99,7 @@ export function QuoteProfitabilitySummary({
         type="button"
         className={s.toggle}
         aria-expanded={isOpen}
-        onClick={() => {
-          setIsOpen((current) => {
-            const next = !current;
-            // #region agent log
-            void globalThis.fetch?.("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "26894a" },
-              body: JSON.stringify({
-                sessionId: "26894a",
-                runId: "post-fix",
-                hypothesisId: "C",
-                location: "quote-profitability-summary.tsx:toggle",
-                message: "compact metrics toggle",
-                data: { next, hasCostBasis },
-                timestamp: Date.now(),
-              }),
-            })?.catch(() => {});
-            // #endregion
-            return next;
-          });
-        }}
+        onClick={() => setIsOpen((current) => !current)}
       >
         <span className={s.toggleLabel}>
           Rentabilidad <span className={s.chevron}>{isOpen ? "▾" : "▸"}</span>

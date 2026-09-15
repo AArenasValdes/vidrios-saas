@@ -379,26 +379,6 @@ export function PasoTresDetalleFinal({
   );
 
   if (isMobileViewport) {
-    // #region agent log
-    void globalThis.fetch?.("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "26894a" },
-      body: JSON.stringify({
-        sessionId: "26894a",
-        runId: "post-fix",
-        hypothesisId: "C",
-        location: "paso-tres-detalle-final.tsx:mobile",
-        message: "paso 3 mobile layout surfaces",
-        data: {
-          isMobileViewport: true,
-          totalsPanelHasBlueRentabilidad: false,
-          accordionPresent: true,
-          hasCostBasis: financialSummary.hasCostBasis,
-        },
-        timestamp: Date.now(),
-      }),
-    })?.catch(() => {});
-    // #endregion
     return (
       <div className={s.finalStageMain}>
         <section className={s.stepThreeSummaryCard}>

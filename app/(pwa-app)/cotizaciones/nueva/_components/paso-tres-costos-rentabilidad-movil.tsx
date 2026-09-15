@@ -78,60 +78,12 @@ export function PasoTresCostosRentabilidadMovil({
     ? formatAccordionClp(financialSummary.costoMateriales)
     : UNAVAILABLE_LABEL;
 
-  // #region agent log
-  void globalThis.fetch?.("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "26894a" },
-    body: JSON.stringify({
-      sessionId: "26894a",
-      runId: "post-fix",
-      hypothesisId: "A",
-      location: "paso-tres-costos-rentabilidad-movil.tsx:render",
-      message: "paso 3 mobile costos accordion render",
-      data: {
-        isOpen,
-        hasCostBasis: financialSummary.hasCostBasis,
-        mermaLabel: MERMA_LABEL,
-        underCost,
-        underCostCopyShown: isOpen && underCost,
-        closedSummary,
-        utilidadFormatted: formatAccordionClp(financialSummary.utilidadEstimada),
-        costoTotal: financialSummary.costoTotal,
-        utilidad: financialSummary.utilidadEstimada,
-        ventaNeta: financialSummary.precioFinalNeto,
-        margenRealPct: financialSummary.margenRealPct,
-      },
-      timestamp: Date.now(),
-    }),
-  })?.catch(() => {});
-  // #endregion
-
   return (
     <div className={s.stepThreeAdjustmentItem}>
       <button
         type="button"
         className={s.stepThreeAdjustmentRow}
-        onClick={() => {
-          setIsOpen((current) => {
-            const next = !current;
-            // #region agent log
-            void globalThis.fetch?.("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "26894a" },
-              body: JSON.stringify({
-                sessionId: "26894a",
-                runId: "post-fix",
-                hypothesisId: "D",
-                location: "paso-tres-costos-rentabilidad-movil.tsx:toggle",
-                message: "paso 3 mobile costos accordion toggle",
-                data: { next, hasCostBasis: financialSummary.hasCostBasis },
-                timestamp: Date.now(),
-              }),
-            })?.catch(() => {});
-            // #endregion
-            return next;
-          });
-        }}
+        onClick={() => setIsOpen((current) => !current)}
         aria-expanded={isOpen}
         aria-label="Costos y rentabilidad"
       >

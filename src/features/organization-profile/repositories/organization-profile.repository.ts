@@ -382,30 +382,6 @@ export function createOrganizationProfileRepository(
           is_published: input.isPublished,
     };
 
-    if (process.env.NODE_ENV !== "test") {
-      // #region agent log
-      fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "26894a",
-        },
-        body: JSON.stringify({
-          sessionId: "26894a",
-          runId: "measure-unit",
-          hypothesisId: "H1",
-          location: "organization-profile.repository.ts:upsert",
-          message: "persist unidad_medidas",
-          data: {
-            organizationId,
-            unidadMedidas: profilePayload.unidad_medidas,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
-    }
-
     // organization_id identifica la fila y no debe formar parte del UPDATE:
     // Supabase entrega permisos de escritura por columna y evita reasignar
     // perfiles entre organizaciones.

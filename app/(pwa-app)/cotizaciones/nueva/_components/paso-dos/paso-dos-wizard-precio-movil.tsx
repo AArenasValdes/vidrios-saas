@@ -27,8 +27,6 @@ export function PasoDosWizardPrecioMovil({
   costInputScope,
   formattedPriceValue,
   marginValue,
-  costoIngresado,
-  cantidad,
   hideMargenOption = false,
   onCostInputScopeChange,
   onMargenChange,
@@ -43,31 +41,6 @@ export function PasoDosWizardPrecioMovil({
         { value: "precio_directo" as const, label: "Valor directo" },
         { value: "margen" as const, label: "Costo + recargo" },
       ];
-
-  // #region agent log
-  void globalThis.fetch?.("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "26894a" },
-    body: JSON.stringify({
-      sessionId: "26894a",
-      runId: "post-fix",
-      hypothesisId: "A",
-      location: "paso-dos-wizard-precio-movil.tsx:render",
-      message: "paso 2 mobile price block render",
-      data: {
-        activePricingMode,
-        recargoLabel: "Costo + recargo",
-        recargoFieldLabel: "Recargo sobre costo (%)",
-        helpText: QUOTE_PROFITABILITY_COPY.recargoDuplica,
-        livePreviewShown: false,
-        longHelpShown: false,
-        costoIngresado,
-        cantidad,
-      },
-      timestamp: Date.now(),
-    }),
-  })?.catch(() => {});
-  // #endregion
 
   return (
     <div className={s.stepTwoMobileBlockPrecio}>
