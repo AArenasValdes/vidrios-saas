@@ -10,6 +10,10 @@ import {
 } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import { calculateLineTemplatePricing } from "@/features/cotizaciones/services/cotizacion-line-pricing.service";
 import {
+  formatMeasurePairFromMm,
+} from "@/features/organization-profile/services/measure-unit.service";
+import type { MeasureUnit } from "@/features/organization-profile/types/measure-unit";
+import {
   mergeFabricacionLineaContextIntoForm,
   resolveFabricacionContextForLineAssignment,
   type FabricacionLineaCotizacionContext,
@@ -2858,7 +2862,7 @@ export function validateComponentForm(
   if (quotePricingMode !== "total_global" && form.pricingMode === "margen") {
     const margen = Number(form.margenPct);
     if (form.margenPct === "" || Number.isNaN(margen) || margen < 0) {
-      errors.margenPct = "El margen de ganancia no puede ser negativo";
+      errors.margenPct = "El recargo sobre costo no puede ser negativo";
     }
   }
   const lote = Number(form.loteCantidad);
@@ -3002,11 +3006,15 @@ export function resolveFormPrecioVenta(
 }
 
 export function buildEditorSubtitle(
-  form: Pick<ComponentFormState, "ancho" | "alto" | "material" | "referencia" | "vidrio" | "cantidad">
+  form: Pick<ComponentFormState, "ancho" | "alto" | "material" | "referencia" | "vidrio" | "cantidad">,
+  unit: MeasureUnit = "mm"
 ): string {
   const parts: string[] = [];
   if (form.ancho && form.alto) {
-    parts.push(`${form.ancho} × ${form.alto} mm`);
+    parts.push(
+      formatMeasurePairFromMm(form.ancho, form.alto, unit)?.replace(" x ", " × ") ??
+        `${form.ancho} × ${form.alto} mm`
+    );
   }
   if (form.material) {
     parts.push(form.material);

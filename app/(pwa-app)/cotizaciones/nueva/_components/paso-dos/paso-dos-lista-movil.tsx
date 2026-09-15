@@ -10,6 +10,8 @@ import {
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
+import { formatMeasurePairFromMm } from "@/features/organization-profile/services/measure-unit.service";
 
 import {
   formatMoney,
@@ -62,6 +64,7 @@ export function PasoDosListaMovil({
   onOpenCuaderno,
   onOpenDespieceReview,
 }: Props) {
+  const measureUnit = useOrganizationMeasureUnit();
   const [isCambiarModoDialogOpen, setIsCambiarModoDialogOpen] = useState(false);
   const isGlobalPricing = quotePricingMode === "total_global";
   const pendingCount = isGlobalPricing
@@ -238,7 +241,7 @@ export function PasoDosListaMovil({
                   <div className={s.stepTwoMobileItemDims}>
                     <span>
                       {item.ancho && item.alto
-                        ? `${item.ancho} x ${item.alto} mm`
+                        ? formatMeasurePairFromMm(item.ancho, item.alto, measureUnit)
                         : isGlobalPricing || isFreeValueItem
                           ? "Sin medidas"
                           : "Medidas pendientes"}

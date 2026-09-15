@@ -32,6 +32,11 @@ import { calculateLineTemplatePricing } from "@/features/cotizaciones/services/c
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { MeasureDimensionInput } from "@/features/cotizaciones/components/measure-dimension-input";
+import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
+import {
+  measureDimensionFieldLabel,
+} from "@/features/organization-profile/services/measure-unit.service";
 
 import s from "../page.module.css";
 
@@ -90,6 +95,7 @@ export const EditorRapidoMovil = memo(function EditorRapidoMovil({
   onSaveQuickPriceTemplate,
   isSavingQuickPriceTemplate,
 }: EditorRapidoMovilProps) {
+  const measureUnit = useOrganizationMeasureUnit();
   const editorRef = useRef<HTMLElement | null>(null);
   const {
     pricingMode,
@@ -534,30 +540,30 @@ export const EditorRapidoMovil = memo(function EditorRapidoMovil({
 
       <div className={s.quickEditRow}>
         <label className={s.quickEditField}>
-          <span>Ancho</span>
-          <input
+          <span>{measureDimensionFieldLabel("ancho", measureUnit)}</span>
+          <MeasureDimensionInput
             ref={(node) => {
               inputRefs.current.ancho = node;
             }}
             className={s.quickEditInput}
-            inputMode="numeric"
-            value={draft.ancho}
-            onChange={(event) => handleFieldChange("ancho", event.target.value)}
+            unit={measureUnit}
+            valueMm={draft.ancho}
+            onChangeMm={(value) => handleFieldChange("ancho", value)}
             onBlur={handleBlur}
             onKeyDown={(event) => handleKeyDown("ancho", event)}
             placeholder="-"
           />
         </label>
         <label className={s.quickEditField}>
-          <span>Alto</span>
-          <input
+          <span>{measureDimensionFieldLabel("alto", measureUnit)}</span>
+          <MeasureDimensionInput
             ref={(node) => {
               inputRefs.current.alto = node;
             }}
             className={s.quickEditInput}
-            inputMode="numeric"
-            value={draft.alto}
-            onChange={(event) => handleFieldChange("alto", event.target.value)}
+            unit={measureUnit}
+            valueMm={draft.alto}
+            onChangeMm={(value) => handleFieldChange("alto", value)}
             onBlur={handleBlur}
             onKeyDown={(event) => handleKeyDown("alto", event)}
             placeholder="-"

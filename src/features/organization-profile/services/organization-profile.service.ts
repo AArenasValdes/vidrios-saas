@@ -16,6 +16,7 @@ import type {
 } from "@/features/organization-profile/types/organization-profile";
 import { resolveOrganizationSubscriptionState } from "@/features/subscriptions/services/subscription-status.service";
 import { resolveOrganizationRegionSettings } from "@/features/organization-region/services/organization-region.service";
+import { normalizeMeasureUnit } from "@/features/organization-profile/services/measure-unit.service";
 
 type OrganizationProfileServiceDeps = {
   organizationProfileRepository?: OrganizationProfileRepository;
@@ -427,6 +428,7 @@ function buildNormalizedProfileInput(
     proveedorPreferido: resolved.proveedorPreferido,
     modoPrecioPreferido: resolved.modoPrecioPreferido,
     margenDefecto: resolved.margenDefecto,
+    unidadMedidas: resolved.unidadMedidas,
     publicName: resolved.publicName,
     publicSubtitle: resolved.publicSubtitle,
     publicZone: resolved.publicZone,
@@ -536,6 +538,7 @@ export function resolvePublicLandingConfig(source: {
     proveedorPreferido: "",
     modoPrecioPreferido: "margen",
     margenDefecto: 100,
+    unidadMedidas: "mm",
     creadoEn: null,
     actualizadoEn: null,
     publicName: source.publicName,
@@ -677,6 +680,7 @@ export function resolveOrganizationProfile(
     proveedorPreferido: normalizePreferredProvider(profile?.proveedorPreferido),
     modoPrecioPreferido: normalizePricingMode(profile?.modoPrecioPreferido),
     margenDefecto: profile?.margenDefecto ?? 100,
+    unidadMedidas: normalizeMeasureUnit(profile?.unidadMedidas),
     creadoEn: profile?.creadoEn ?? null,
     actualizadoEn: profile?.actualizadoEn ?? null,
     publicName: normalizeText(profile?.publicName) || empresaNombre,
@@ -793,6 +797,7 @@ export function createOrganizationProfileService(
           proveedorPreferido: normalizePreferredProvider(input.proveedorPreferido),
           modoPrecioPreferido: normalizePricingMode(input.modoPrecioPreferido),
           margenDefecto: input.margenDefecto,
+          unidadMedidas: normalizeMeasureUnit(input.unidadMedidas),
           publicName: normalizeText(input.publicName),
           publicSubtitle: normalizeText(input.publicSubtitle),
           publicZone: normalizeText(input.publicZone),

@@ -26,6 +26,12 @@ import {
   shouldShowSystemSelectionForComponent,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import { LineTemplatePicker } from "@/features/cotizaciones/line-templates/components/line-template-picker";
+import { MeasureDimensionInput } from "@/features/cotizaciones/components/measure-dimension-input";
+import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
+import {
+  measureDimensionFieldLabel,
+  measureDimensionPlaceholder,
+} from "@/features/organization-profile/services/measure-unit.service";
 import type { PasoDosFormularioComponenteProps } from "../../_types/paso-dos";
 
 import s from "../../page.module.css";
@@ -87,6 +93,7 @@ export function PasoDosFormularioBloqueConfiguracion({
   variant = "default",
   desktopAssistantStage = null,
 }: Props) {
+  const measureUnit = useOrganizationMeasureUnit();
   const isMobilePointEdit = variant === "mobilePointEdit";
   const isGlassCatalogItem = isGlassCatalogSelection(componentForm);
   const requiresProfileMaterial =
@@ -389,9 +396,9 @@ export function PasoDosFormularioBloqueConfiguracion({
                   checked={componentForm.pricingMode === "margen"}
                   onChange={() => onPricingModeSelection("margen")}
                 />
-                <span className={s.segmentedChoiceTitle}>Con margen</span>
+                <span className={s.segmentedChoiceTitle}>Costo + recargo</span>
                 {!isMobileViewport ? (
-                  <span className={s.segmentedChoiceHint}>Calcula la venta desde precio base y margen.</span>
+                  <span className={s.segmentedChoiceHint}>Calcula la venta sumando un recargo porcentual al costo.</span>
                 ) : null}
               </label>
               <label
@@ -409,7 +416,7 @@ export function PasoDosFormularioBloqueConfiguracion({
                 />
                 <span className={s.segmentedChoiceTitle}>Precio final manual</span>
                 {!isMobileViewport ? (
-                  <span className={s.segmentedChoiceHint}>Tu defines el precio final sin margen automatico.</span>
+                  <span className={s.segmentedChoiceHint}>Tu defines el precio final sin recargo automático.</span>
                 ) : null}
               </label>
             </div>
@@ -417,7 +424,7 @@ export function PasoDosFormularioBloqueConfiguracion({
               <span className={s.helpText}>
                 {componentForm.pricingMode === "precio_directo"
                   ? "Tu escribes el valor final por componente."
-                  : "El sistema calcula la venta con el margen."}
+                  : "El sistema calcula la venta con el recargo sobre costo."}
               </span>
             ) : null}
           </div>
@@ -426,18 +433,18 @@ export function PasoDosFormularioBloqueConfiguracion({
         {quotePricingMode === "por_item" && componentForm.pricingMode === "margen" ? (
           <div className={s.field}>
             <span className={s.label}>
-              Margen <span className={s.required}>*</span>
+              Recargo sobre costo <span className={s.required}>*</span>
             </span>
             <div className={s.selectWrap}>
               <select
                 className={`${s.input} ${fieldErrors.margenPct ? s.inputError : ""}`}
                 value={componentForm.margenPct}
                 onChange={(event) => onComponentChange("margenPct", event.target.value)}
-                aria-label="Margen a aplicar"
+                aria-label="Recargo sobre costo a aplicar"
               >
                 {MARGIN_SELECT_OPTIONS.map((preset) => (
                   <option key={preset} value={String(preset)}>
-                    {preset === 0 ? "0% (sin margen)" : `${preset}%`}
+                    {preset === 0 ? "0% (sin recargo)" : `${preset}%`}
                   </option>
                 ))}
               </select>
@@ -465,16 +472,15 @@ export function PasoDosFormularioBloqueConfiguracion({
           <div className={s.stepTwoMobileMedidasRow}>
             <div className={s.stepTwoMobileMedidaField}>
               <label className={s.stepTwoMobileMedidaLabel} htmlFor="componente-ancho">
-                Ancho (mm)
+                {measureDimensionFieldLabel("ancho", measureUnit)}
               </label>
-              <input
+              <MeasureDimensionInput
                 className={s.stepTwoMobileMedidaInput}
                 id="componente-ancho"
-                inputMode="numeric"
-                placeholder="1200"
-                type="text"
-                value={componentForm.ancho}
-                onChange={(event) => onComponentChange("ancho", event.target.value)}
+                placeholder={measureDimensionPlaceholder("ancho", measureUnit)}
+                unit={measureUnit}
+                valueMm={componentForm.ancho}
+                onChangeMm={(value) => onComponentChange("ancho", value)}
               />
             </div>
 
@@ -482,16 +488,15 @@ export function PasoDosFormularioBloqueConfiguracion({
 
             <div className={s.stepTwoMobileMedidaField}>
               <label className={s.stepTwoMobileMedidaLabel} htmlFor="componente-alto">
-                Alto (mm)
+                {measureDimensionFieldLabel("alto", measureUnit)}
               </label>
-              <input
+              <MeasureDimensionInput
                 className={s.stepTwoMobileMedidaInput}
                 id="componente-alto"
-                inputMode="numeric"
-                placeholder="1500"
-                type="text"
-                value={componentForm.alto}
-                onChange={(event) => onComponentChange("alto", event.target.value)}
+                placeholder={measureDimensionPlaceholder("alto", measureUnit)}
+                unit={measureUnit}
+                valueMm={componentForm.alto}
+                onChangeMm={(value) => onComponentChange("alto", value)}
               />
             </div>
           </div>

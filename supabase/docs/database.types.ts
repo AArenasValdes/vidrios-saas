@@ -1342,6 +1342,7 @@ export type Database = {
           jobs_count_label: string | null
           last_payment_at: string | null
           margen_defecto: number | null
+          unidad_medidas: string
           modo_precio_preferido: string
           organization_id: number
           payment_method: string
@@ -1405,6 +1406,7 @@ export type Database = {
           jobs_count_label?: string | null
           last_payment_at?: string | null
           margen_defecto?: number | null
+          unidad_medidas?: string
           modo_precio_preferido?: string
           organization_id: number
           payment_method?: string
@@ -1468,6 +1470,7 @@ export type Database = {
           jobs_count_label?: string | null
           last_payment_at?: string | null
           margen_defecto?: number | null
+          unidad_medidas?: string
           modo_precio_preferido?: string
           organization_id?: number
           payment_method?: string

@@ -8,6 +8,7 @@ import type {
   UpdateOrganizationProfileInput,
 } from "@/features/organization-profile/types/organization-profile";
 import { normalizePricingMode } from "@/features/cotizaciones/types/pricing-mode";
+import { normalizeMeasureUnit } from "@/features/organization-profile/services/measure-unit.service";
 import type {
   BillingPeriod,
   OrganizationSubscriptionSnapshot,
@@ -56,6 +57,7 @@ type OrganizationProfileRow = {
   proveedor_preferido: string | null;
   modo_precio_preferido: string | null;
   margen_defecto: number | null;
+  unidad_medidas?: string | null;
   creado_en: string | null;
   actualizado_en: string | null;
   public_name: string | null;
@@ -190,6 +192,7 @@ function mapOrganizationProfile(
     proveedorPreferido: normalizePreferredProvider(row.proveedor_preferido),
     modoPrecioPreferido: normalizePricingMode(row.modo_precio_preferido),
     margenDefecto: row.margen_defecto ?? 100,
+    unidadMedidas: normalizeMeasureUnit(row.unidad_medidas),
     creadoEn: row.creado_en,
     actualizadoEn: row.actualizado_en,
     publicName: row.public_name ?? "",
@@ -349,6 +352,7 @@ export function createOrganizationProfileRepository(
           proveedor_preferido: input.proveedorPreferido || null,
           modo_precio_preferido: normalizePricingMode(input.modoPrecioPreferido),
           margen_defecto: input.margenDefecto,
+          unidad_medidas: normalizeMeasureUnit(input.unidadMedidas),
           actualizado_en: new Date().toISOString(),
           public_name: input.publicName || null,
           public_subtitle: input.publicSubtitle || null,
@@ -377,6 +381,30 @@ export function createOrganizationProfileRepository(
           form_subtitle: input.formSubtitle || null,
           is_published: input.isPublished,
     };
+
+    if (process.env.NODE_ENV !== "test") {
+      // #region agent log
+      fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Debug-Session-Id": "26894a",
+        },
+        body: JSON.stringify({
+          sessionId: "26894a",
+          runId: "measure-unit",
+          hypothesisId: "H1",
+          location: "organization-profile.repository.ts:upsert",
+          message: "persist unidad_medidas",
+          data: {
+            organizationId,
+            unidadMedidas: profilePayload.unidad_medidas,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+    }
 
     // organization_id identifica la fila y no debe formar parte del UPDATE:
     // Supabase entrega permisos de escritura por columna y evita reasignar

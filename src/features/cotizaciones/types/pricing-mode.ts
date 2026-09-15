@@ -6,6 +6,7 @@ export function normalizePricingMode(value: string | null | undefined): PricingM
   return value?.trim() === "precio_directo" ? "precio_directo" : "margen";
 }
 
+/** Recargo sobre costo (markup), no margen real sobre venta. 100 = duplicar el costo. */
 export const DEFAULT_MARGIN_PCT = 100;
 
 export const COST_INPUT_SCOPE_OPTIONS = ["group_total", "unit"] as const;

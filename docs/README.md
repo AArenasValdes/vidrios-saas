@@ -1,7 +1,7 @@
 # Documentación Ventora
 
 Estado: vigente
-Actualizado: 2026-08-14
+Actualizado: 2026-09-14
 Responsable: producto + agentes del repositorio
 
 Entrada única para agentes, desarrollo, billing, base de datos y Growth OS.
@@ -42,6 +42,8 @@ Si dos documentos contradicen código o una fuente superior, detenerse, registra
 - Mercado Pago Chile opera en producción; otros mercados siguen apagados.
 - Growth OS concentra prospección, contenido, conversión, onboarding, cobro y revisión semanal.
 - Pauta de fabricación es interna, referencial, sin precios y separada del PDF cliente.
+- El P0 de consistencia catálogo/Fabricación está protegido en producción: una receta con composición incompleta no puede mostrarse como lista para probar ni generar snapshot técnico.
+- Serie 42 normal mantiene su receta P1 como borrador de taller; la migración local `20260914170000_l42_normal_double_junquillo.sql` deja preparado el par completo de junquillos `4229`, pero aún no está aplicada en remoto.
 
 ## Regla de mantenimiento
 

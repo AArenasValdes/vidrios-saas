@@ -2,6 +2,7 @@
 
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type { CostInputScope } from "@/features/cotizaciones/types/pricing-mode";
+import { QUOTE_PROFITABILITY_COPY } from "@/features/cotizaciones/services/quote-studio-financial.service";
 
 import s from "../../page.module.css";
 
@@ -10,6 +11,8 @@ type Props = {
   costInputScope: CostInputScope;
   formattedPriceValue: string;
   marginValue: string;
+  costoIngresado: number;
+  cantidad: number;
   hideMargenOption?: boolean;
   onCostInputScopeChange: (scope: CostInputScope) => void;
   onMargenChange: (value: string) => void;
@@ -24,6 +27,8 @@ export function PasoDosWizardPrecioMovil({
   costInputScope,
   formattedPriceValue,
   marginValue,
+  costoIngresado,
+  cantidad,
   hideMargenOption = false,
   onCostInputScopeChange,
   onMargenChange,
@@ -36,8 +41,34 @@ export function PasoDosWizardPrecioMovil({
     ? [{ value: "precio_directo" as const, label: "Valor directo" }]
     : [
         { value: "precio_directo" as const, label: "Valor directo" },
-        { value: "margen" as const, label: "Con margen" },
+        { value: "margen" as const, label: "Costo + recargo" },
       ];
+
+  // #region agent log
+  void globalThis.fetch?.("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "26894a" },
+    body: JSON.stringify({
+      sessionId: "26894a",
+      runId: "post-fix",
+      hypothesisId: "A",
+      location: "paso-dos-wizard-precio-movil.tsx:render",
+      message: "paso 2 mobile price block render",
+      data: {
+        activePricingMode,
+        recargoLabel: "Costo + recargo",
+        recargoFieldLabel: "Recargo sobre costo (%)",
+        helpText: QUOTE_PROFITABILITY_COPY.recargoDuplica,
+        livePreviewShown: false,
+        longHelpShown: false,
+        costoIngresado,
+        cantidad,
+      },
+      timestamp: Date.now(),
+    }),
+  })?.catch(() => {});
+  // #endregion
+
   return (
     <div className={s.stepTwoMobileBlockPrecio}>
       <div className={s.stepTwoMobileBlockLabel}>Modo de precio</div>
@@ -69,7 +100,7 @@ export function PasoDosWizardPrecioMovil({
         <div className={s.stepTwoMobilePricingModeSlot}>
           <div className={s.stepTwoMobileMarginField}>
             <label className={s.stepTwoMobileMedidaLabel} htmlFor="grupo-margen">
-              Margen (%)
+              Recargo sobre costo (%)
             </label>
             <input
               aria-describedby="grupo-margen-help"
@@ -82,7 +113,7 @@ export function PasoDosWizardPrecioMovil({
               onChange={(event) => onMargenChange(event.target.value)}
             />
             <span className={s.stepTwoMobileInlineHelp} id="grupo-margen-help">
-              Usado para calcular venta.
+              {QUOTE_PROFITABILITY_COPY.recargoDuplica}
             </span>
           </div>
         </div>

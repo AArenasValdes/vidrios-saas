@@ -20,6 +20,8 @@ import {
 } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
 import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
+import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
+import { formatMeasurePairFromMm } from "@/features/organization-profile/services/measure-unit.service";
 import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 
 import { useMobileViewportStability } from "../../../_hooks/use-mobile-viewport-stability";
@@ -129,6 +131,7 @@ export function PasoDosCuadernoMovil({
   onOpenDespieceReview,
   canOpenDespieceForItem,
 }: PasoDosCuadernoMovilProps) {
+  const measureUnit = useOrganizationMeasureUnit();
   useMobileViewportStability();
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [quickEditItemId, setQuickEditItemId] = useState<string | null>(null);
@@ -473,7 +476,9 @@ export function PasoDosCuadernoMovil({
                 <div className={s.pieceBody}>
                   <p className={s.pieceName}>{item.nombre || "Sin nombre"}</p>
                   <p className={s.pieceMeta}>
-                    {item.ancho || "—"} × {item.alto || "—"} mm · ×
+                    {formatMeasurePairFromMm(item.ancho, item.alto, measureUnit)?.replace(" x ", " × ") ??
+                      `${item.ancho || "—"} × ${item.alto || "—"} mm`}{" "}
+                    · ×
                     {Math.max(1, item.cantidad)}
                   </p>
                   {item.lineaComercial.trim() ? (

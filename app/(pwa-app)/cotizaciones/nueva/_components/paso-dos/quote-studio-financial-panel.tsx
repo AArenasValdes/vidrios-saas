@@ -3,7 +3,11 @@
 import { useState, type ReactNode } from "react";
 
 import { formatCurrency } from "@/utils/formatCurrency";
-import type { QuoteStudioFinancialSummary } from "@/features/cotizaciones/services/quote-studio-financial.service";
+import {
+  formatQuoteProfitabilityPct,
+  QUOTE_PROFITABILITY_COPY,
+  type QuoteStudioFinancialSummary,
+} from "@/features/cotizaciones/services/quote-studio-financial.service";
 import type { QuoteStudioFinancialDraft } from "@/features/cotizaciones/types/cotizacion-workflow";
 
 import d from "../paso-dos-panel-desktop.module.css";
@@ -22,16 +26,7 @@ type QuoteStudioFinancialPanelProps = {
   initialDetailOpen?: boolean;
 };
 
-function formatPct(value: number) {
-  if (!Number.isFinite(value)) {
-    return "0%";
-  }
-
-  return `${value.toLocaleString("es-CL", {
-    maximumFractionDigits: 1,
-    minimumFractionDigits: Math.abs(value) > 0 && Math.abs(value) < 10 ? 1 : 0,
-  })}%`;
-}
+const formatPct = formatQuoteProfitabilityPct;
 
 function formatCurrencyField(value: number, formatCurrencyInput: (value: string) => string) {
   if (!Number.isFinite(value) || value <= 0) {
@@ -201,10 +196,10 @@ export function QuoteStudioFinancialPanel({
     ? `${formatPct(summary.margenRealPct)} · obj. ${formatPct(summary.margenObjetivoRealPct)}`
     : formatPct(summary.margenRealPct);
   const detailToggleLabel = isDetailOpen
-    ? "Ocultar costos"
+    ? QUOTE_PROFITABILITY_COPY.ocultarCostos
     : hasCostBasis
-      ? "Ajustar costos y margen"
-      : "Agregar costos";
+      ? QUOTE_PROFITABILITY_COPY.ajustarCostos
+      : QUOTE_PROFITABILITY_COPY.agregarCostos;
 
   return (
     <section
@@ -216,7 +211,7 @@ export function QuoteStudioFinancialPanel({
           <div className={d.financialHeaderRow}>
             <h3 className={embedded ? d.panelSectionTitle : d.financialTitle}>Rentabilidad</h3>
             {!hasCostBasis ? (
-              <span className={d.financialStatusChip}>Sin costos</span>
+              <span className={d.financialStatusChip}>{QUOTE_PROFITABILITY_COPY.pendiente}</span>
             ) : null}
           </div>
         </header>
@@ -224,28 +219,28 @@ export function QuoteStudioFinancialPanel({
         {hasCostBasis ? (
           <div className={d.financialSummaryList} aria-label="Resumen de rentabilidad">
             <FinancialSummaryRow
-              label="Precio de venta"
-              value={formatMoney(summary.precioFinalNeto)}
-              tone="primary"
-            />
-            <FinancialSummaryRow
-              label="Costo estimado"
+              label={QUOTE_PROFITABILITY_COPY.costoTotal}
               value={formatMoney(summary.costoTotal)}
             />
             <FinancialSummaryRow
-              label="Utilidad"
+              label={QUOTE_PROFITABILITY_COPY.utilidad}
               value={formatMoney(summary.utilidadEstimada)}
               tone="highlight"
               valueClassName={utilityValueClass}
             />
             <FinancialSummaryRow
-              label="Margen real"
+              label={QUOTE_PROFITABILITY_COPY.margenReal}
               value={marginDisplayValue}
               tone="margin"
               valueClassName={marginValueClass}
             />
             <FinancialSummaryRow
-              label="Precio recomendado"
+              label={QUOTE_PROFITABILITY_COPY.ventaNeta}
+              value={formatMoney(summary.precioFinalNeto)}
+              tone="primary"
+            />
+            <FinancialSummaryRow
+              label={QUOTE_PROFITABILITY_COPY.precioRecomendado}
               value={formatMoney(summary.precioRecomendadoNeto)}
               tone="recommended"
             />
@@ -283,8 +278,8 @@ export function QuoteStudioFinancialPanel({
           <section className={d.financialDetailBlock} aria-label="Detalle de costos">
             {!hasCostBasis ? (
               <p className={d.financialDetailIntro}>
-                Ingresa mano de obra, traslado u otros. Materiales salen del costo
-                proveedor en piezas con margen.
+                {QUOTE_PROFITABILITY_COPY.pendienteHint} Materiales salen del costo
+                proveedor en piezas con recargo sobre costo.
               </p>
             ) : null}
 
@@ -308,7 +303,7 @@ export function QuoteStudioFinancialPanel({
                   onChange={(event) => onAdjustmentChange("manoObra", event.target.value)}
                 />
               </FinancialEditRow>
-              <FinancialEditRow label="Traslado">
+              <FinancialEditRow label={QUOTE_PROFITABILITY_COPY.trasladoInterno}>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -338,17 +333,20 @@ export function QuoteStudioFinancialPanel({
                   onChange={(event) => onAdjustmentChange("mermaPct", event.target.value)}
                 />
               </FinancialEditRow>
-              <FinancialEditRow label="Margen objetivo %">
+              <FinancialEditRow label={`${QUOTE_PROFITABILITY_COPY.margenObjetivo} %`}>
                 <input
                   type="text"
                   inputMode="decimal"
                   className={d.financialAdjustInput}
                   value={String(adjustments.margenObjetivoRealPct)}
+                  title={QUOTE_PROFITABILITY_COPY.margenObjetivoHelp}
+                  aria-label={QUOTE_PROFITABILITY_COPY.margenObjetivoHelp}
                   onChange={(event) =>
                     onAdjustmentChange("margenObjetivoRealPct", event.target.value)
                   }
                 />
               </FinancialEditRow>
+              <p className={d.financialDetailIntro}>{QUOTE_PROFITABILITY_COPY.margenObjetivoHelp}</p>
             </div>
           </section>
         ) : null}

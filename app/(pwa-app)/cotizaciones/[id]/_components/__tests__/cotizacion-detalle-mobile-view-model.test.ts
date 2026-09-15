@@ -66,6 +66,8 @@ describe("buildCotizacionDetalleMobileViewModel", () => {
     expect(model.responseChannelLabel).toBe("Sin seguimiento registrado");
     expect(model.total).toBe("$1.190.000");
     expect(model.heroSubtext).toBe("Alejandro Flores · Vina del Mar 2722 · 1 componente");
+    expect(model.showInternalProfitability).toBe(true);
+    expect(model.profitabilitySummary.hasCostBasis).toBe(false);
   });
 
   it("arma items compactos y usa fallbacks seguros", () => {
@@ -108,6 +110,23 @@ describe("buildCotizacionDetalleMobileViewModel", () => {
       meta: "Medidas por definir · 1 ud",
       price: "$200.000",
     });
+  });
+
+  it("muestra rentabilidad interna cuando hay costo persistido", () => {
+    const model = buildCotizacionDetalleMobileViewModel(
+      createRecord({
+        neto: 900000,
+        costoTotalFabricacion: 600000,
+        utilidadTotal: 300000,
+        margenGlobalPct: 33.33,
+      })
+    );
+
+    expect(model.profitabilitySummary.hasCostBasis).toBe(true);
+    expect(model.profitabilitySummary.costoTotal).toBe(600000);
+    expect(model.profitabilitySummary.utilidadEstimada).toBe(300000);
+    expect(model.profitabilitySummary.margenRealPct).toBe(33.33);
+    expect(model.profitabilitySummary.precioFinalNeto).toBe(900000);
   });
 
   it("traduce el canal de seguimiento para enlace publico y app", () => {

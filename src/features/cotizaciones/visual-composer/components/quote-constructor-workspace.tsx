@@ -46,6 +46,14 @@ import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotiz
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import { GuidedVisualComposer } from "@/features/cotizaciones/visual-composer/components/guided-visual-composer";
+import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
+import {
+  formatMeasureFromMm,
+  formatMeasurePairFromMm,
+  parseMeasureToMm,
+  sanitizeMeasureInput,
+  measureUnitSuffix,
+} from "@/features/organization-profile/services/measure-unit.service";
 import { QuoteConstructorPresetSelector } from "@/features/cotizaciones/visual-composer/components/quote-constructor-preset-selector";
 import {
   createQuoteConstructorPresetConfig,
@@ -107,11 +115,16 @@ type DimensionFieldKey = "ancho" | "alto" | "cantidad";
 type LocalFieldDraft = { text: string; error: string | null };
 type ItemFieldDrafts = Partial<Record<DimensionFieldKey, LocalFieldDraft>>;
 
-function validateDimensionMm(raw: string, label: "Ancho" | "Alto"): string | null {
-  const digits = raw.replace(/[^\d]/g, "").trim();
-  if (!digits) return `${label} mínimo 200 mm`;
+function validateDimensionMm(
+  rawMm: string,
+  label: "Ancho" | "Alto",
+  unit: "mm" | "cm" = "mm"
+): string | null {
+  const digits = rawMm.replace(/[^\d]/g, "").trim();
+  const minimumLabel = unit === "cm" ? "20 cm" : "200 mm";
+  if (!digits) return `${label} mínimo ${minimumLabel}`;
   const value = Math.round(Number(digits));
-  if (!Number.isFinite(value) || value < 200) return `${label} mínimo 200 mm`;
+  if (!Number.isFinite(value) || value < 200) return `${label} mínimo ${minimumLabel}`;
   return null;
 }
 
@@ -377,7 +390,7 @@ function listPieceGaps(params: {
 type EditableInputProps = {
   label: string;
   value: string;
-  inputMode?: "text" | "numeric";
+  inputMode?: "text" | "numeric" | "decimal";
   suffix?: string;
   error?: string | null;
   /** Con onChange el input es controlado (draft local). Sin onChange usa defaultValue. */
@@ -510,6 +523,7 @@ export function QuoteConstructorWorkspace({
   embeddedInQuoteStudio = false,
   inspectorRailSlot = null,
 }: Props) {
+  const measureUnit = useOrganizationMeasureUnit();
   const visualItems = useMemo(() => items.filter(isQuoteConstructorCompatibleItem), [items]);
   const profileLineTemplates = useMemo(
     () => lineTemplates.filter((template) => template.categoria !== "vidrio"),
@@ -791,15 +805,19 @@ export function QuoteConstructorWorkspace({
     raw: string
   ) => {
     const label = key === "ancho" ? "Ancho" : "Alto";
-    const error = validateDimensionMm(raw, label);
+    const valueMm = parseMeasureToMm(raw, measureUnit);
+    const error = validateDimensionMm(valueMm, label, measureUnit);
     if (error) {
       setLocalFieldDraft(item.id, key, { text: raw, error });
       return;
     }
 
-    const value = parseDimensionMm(raw);
+    const value = parseDimensionMm(valueMm);
     if (value == null) {
-      setLocalFieldDraft(item.id, key, { text: raw, error: `${label} mínimo 200 mm` });
+      setLocalFieldDraft(item.id, key, {
+        text: raw,
+        error: `${label} mínimo ${measureUnit === "cm" ? "20 cm" : "200 mm"}`,
+      });
       return;
     }
 
@@ -1116,20 +1134,30 @@ export function QuoteConstructorWorkspace({
                     <div className={s.cardFields}>
                       <EditableInput
                         label="Ancho"
-                        value={anchoDraft?.text ?? getCommittedFieldText(item, "ancho")}
-                        inputMode="numeric"
-                        suffix="mm"
+                        value={
+                          anchoDraft?.text ??
+                          formatMeasureFromMm(getCommittedFieldText(item, "ancho"), measureUnit)
+                        }
+                        inputMode={measureUnit === "cm" ? "decimal" : "numeric"}
+                        suffix={measureUnitSuffix(measureUnit)}
                         error={anchoDraft?.error ?? null}
-                        onChange={(value) => handleLocalFieldChange(item.id, "ancho", value)}
+                        onChange={(value) =>
+                          handleLocalFieldChange(item.id, "ancho", sanitizeMeasureInput(value))
+                        }
                         onCommit={(value) => commitDimension(item, "ancho", value)}
                       />
                       <EditableInput
                         label="Alto"
-                        value={altoDraft?.text ?? getCommittedFieldText(item, "alto")}
-                        inputMode="numeric"
-                        suffix="mm"
+                        value={
+                          altoDraft?.text ??
+                          formatMeasureFromMm(getCommittedFieldText(item, "alto"), measureUnit)
+                        }
+                        inputMode={measureUnit === "cm" ? "decimal" : "numeric"}
+                        suffix={measureUnitSuffix(measureUnit)}
                         error={altoDraft?.error ?? null}
-                        onChange={(value) => handleLocalFieldChange(item.id, "alto", value)}
+                        onChange={(value) =>
+                          handleLocalFieldChange(item.id, "alto", sanitizeMeasureInput(value))
+                        }
                         onCommit={(value) => commitDimension(item, "alto", value)}
                       />
                       <EditableInput
@@ -1226,7 +1254,12 @@ export function QuoteConstructorWorkspace({
                       : ""}
                   </strong>
                   <span>
-                    {activeItem.ancho || "—"} × {activeItem.alto || "—"} mm ·{" "}
+                    {formatMeasurePairFromMm(
+                      activeItem.ancho,
+                      activeItem.alto,
+                      measureUnit
+                    )?.replace(" x ", " × ") ?? `${activeItem.ancho || "—"} × ${activeItem.alto || "—"} mm`}{" "}
+                    ·{" "}
                     {activeItem.cantidad} ud
                   </span>
                 </div>

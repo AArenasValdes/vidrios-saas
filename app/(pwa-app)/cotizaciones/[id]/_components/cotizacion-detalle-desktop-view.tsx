@@ -15,6 +15,7 @@ import {
 } from "react-icons/lu";
 
 import type { CotizacionDetalleMobileViewModel } from "./cotizacion-detalle-mobile-view-model";
+import { QuoteProfitabilitySummary } from "../../_components/quote-profitability-summary";
 
 import s from "./cotizacion-detalle-desktop.module.css";
 
@@ -237,6 +238,9 @@ export function CotizacionDetalleDesktopView({
 
           <section className={s.card}>
             <div className={s.sectionLabel}>Resumen</div>
+            {model.showInternalProfitability ? (
+              <QuoteProfitabilitySummary summary={model.profitabilitySummary} variant="detail" />
+            ) : null}
             {model.isTotalGlobal ? null : (
               <>
                 <div className={s.totalRow}>

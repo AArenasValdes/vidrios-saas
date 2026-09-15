@@ -10,6 +10,8 @@ import {
   getPiecePresentationMeta,
 } from "@/features/cotizaciones/new-quote/quote-piece-domain";
 import { COLOR_OPTIONS, mapItemToForm } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
+import { formatMeasurePairFromMm } from "@/features/organization-profile/services/measure-unit.service";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { GlassOptionPicker } from "@/features/cotizaciones/visual-composer/components/glass-option-picker";
@@ -115,6 +117,7 @@ export function CuadernoConstructorMovil({
   onOpenDespieceReview,
   canOpenDespieceForItem,
 }: Props) {
+  const measureUnit = useOrganizationMeasureUnit();
   useMobileViewportStability();
   const [openSection, setOpenSection] = useState<SectionId | null>("identificacion");
   const [compositionOpen, setCompositionOpen] = useState(false);
@@ -238,7 +241,9 @@ export function CuadernoConstructorMovil({
         <div className={s.previewCard}>
           <div className={s.previewSvg} dangerouslySetInnerHTML={{ __html: svg }} />
           <p className={s.previewDims}>
-            {item.ancho || "—"} × {item.alto || "—"} mm · ×{Math.max(1, item.cantidad)}
+            {formatMeasurePairFromMm(item.ancho, item.alto, measureUnit)?.replace(" x ", " × ") ??
+              `${item.ancho || "—"} × ${item.alto || "—"} mm`}{" "}
+            · ×{Math.max(1, item.cantidad)}
           </p>
         </div>
 

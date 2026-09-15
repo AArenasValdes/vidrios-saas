@@ -465,7 +465,7 @@ export function PasoDosSeccion({
               <strong>Costos y rentabilidad</strong>
               <em>Opcional</em>
             </span>
-            <small>Mano de obra, traslado, otros costos y margen.</small>
+            <small>Mano de obra, traslado, otros costos y recargo interno.</small>
           </summary>
           <QuoteStudioFinancialPanel
             embedded

@@ -39,6 +39,11 @@ import {
   buildEmpresaProfileInput,
   DEFAULT_ORGANIZATION_BRAND_COLOR,
 } from "@/features/organization-profile/services/organization-profile.service";
+import { MeasureDimensionInput } from "@/features/cotizaciones/components/measure-dimension-input";
+import {
+  measureDimensionFieldLabel,
+  normalizeMeasureUnit,
+} from "@/features/organization-profile/services/measure-unit.service";
 import { formatCurrency } from "@/utils/formatCurrency";
 import {
   buildCotizacionWhatsappMessage,
@@ -202,6 +207,7 @@ function ActivacionPageContent() {
     autoLoadSummary: false,
   });
   const { profile, saveProfile, uploadLogo, isSaving, isUploading } = useOrganizationProfile();
+  const measureUnit = normalizeMeasureUnit(profile?.unidadMedidas);
   const { markActivationComplete, markActivationSkipped, isChecking, shouldRedirect } =
     useActivationGate({ isReplayMode });
   const initialGateCheckedRef = useRef(false);
@@ -584,11 +590,11 @@ function ActivacionPageContent() {
           }
 
           if (!Number.isFinite(parsedAncho) || parsedAncho <= 0) {
-            throw new Error("Ingresa un ancho valido en mm.");
+            throw new Error("Ingresa un ancho valido.");
           }
 
           if (!Number.isFinite(parsedAlto) || parsedAlto <= 0) {
-            throw new Error("Ingresa un alto valido en mm.");
+            throw new Error("Ingresa un alto valido.");
           }
 
           draft = buildActivationRealComponentDraft({
@@ -1326,21 +1332,21 @@ function ActivacionPageContent() {
 
           <div className={`${s.activationFieldRow} ${s.activationFieldRowKeepCols}`}>
             <label className={s.activationField}>
-              <span className={s.activationLabelReadable}>Ancho (mm)</span>
-              <input
+              <span className={s.activationLabelReadable}>{measureDimensionFieldLabel("ancho", measureUnit)}</span>
+              <MeasureDimensionInput
                 className={`${s.activationInput} ${s.activationInputLarge}`}
-                value={anchoComponente}
-                onChange={(event) => setAnchoComponente(event.target.value.replace(/[^\d]/g, ""))}
-                inputMode="numeric"
+                unit={measureUnit}
+                valueMm={anchoComponente}
+                onChangeMm={setAnchoComponente}
               />
             </label>
             <label className={s.activationField}>
-              <span className={s.activationLabelReadable}>Alto (mm)</span>
-              <input
+              <span className={s.activationLabelReadable}>{measureDimensionFieldLabel("alto", measureUnit)}</span>
+              <MeasureDimensionInput
                 className={`${s.activationInput} ${s.activationInputLarge}`}
-                value={altoComponente}
-                onChange={(event) => setAltoComponente(event.target.value.replace(/[^\d]/g, ""))}
-                inputMode="numeric"
+                unit={measureUnit}
+                valueMm={altoComponente}
+                onChangeMm={setAltoComponente}
               />
             </label>
           </div>
@@ -1455,21 +1461,21 @@ function ActivacionPageContent() {
           </label>
           <div className={`${s.activationFieldRow} ${s.activationFieldRowKeepCols}`}>
             <label className={s.activationField}>
-              <span className={s.activationLabelReadable}>Ancho (mm)</span>
-              <input
+              <span className={s.activationLabelReadable}>{measureDimensionFieldLabel("ancho", measureUnit)}</span>
+              <MeasureDimensionInput
                 className={`${s.activationInput} ${s.activationInputLarge}`}
-                value={anchoComponente}
-                onChange={(event) => setAnchoComponente(event.target.value.replace(/[^\d]/g, ""))}
-                inputMode="numeric"
+                unit={measureUnit}
+                valueMm={anchoComponente}
+                onChangeMm={setAnchoComponente}
               />
             </label>
             <label className={s.activationField}>
-              <span className={s.activationLabelReadable}>Alto (mm)</span>
-              <input
+              <span className={s.activationLabelReadable}>{measureDimensionFieldLabel("alto", measureUnit)}</span>
+              <MeasureDimensionInput
                 className={`${s.activationInput} ${s.activationInputLarge}`}
-                value={altoComponente}
-                onChange={(event) => setAltoComponente(event.target.value.replace(/[^\d]/g, ""))}
-                inputMode="numeric"
+                unit={measureUnit}
+                valueMm={altoComponente}
+                onChangeMm={setAltoComponente}
               />
             </label>
           </div>

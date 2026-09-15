@@ -3,6 +3,7 @@
 import { LuChevronRight } from "react-icons/lu";
 
 import type { PasoDosPanelComponentesProps } from "../../_types/paso-dos";
+import { QuoteProfitabilitySummary } from "../../../_components/quote-profitability-summary";
 
 import s from "../../page.module.css";
 
@@ -24,6 +25,7 @@ type Props = Pick<
   | "iva"
   | "total"
   | "stepTwoSummaryRef"
+  | "financialSummary"
   | "onGoToSummary"
   | "mostrarIva"
   | "pendingItemsCount"
@@ -48,6 +50,7 @@ export function PasoDosPanelResumen({
   pendingItemsCount,
   completedItemsCount,
   isDesktopQuoteStudio,
+  financialSummary,
   stepTwoSummaryRef,
   onGoToSummary,
   layout = "mobile",
@@ -92,12 +95,36 @@ export function PasoDosPanelResumen({
         ? blockedReason
         : "");
 
+  // #region agent log
+  void globalThis.fetch?.("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "26894a" },
+    body: JSON.stringify({
+      sessionId: "26894a",
+      runId: "post-fix",
+      hypothesisId: "B",
+      location: "paso-dos-panel-resumen.tsx:render",
+      message: "paso 2 panel profitability surfaces",
+      data: {
+        isMobileViewport,
+        itemsCount: items.length,
+        dockProfitabilityShown: false,
+        footerProfitabilityShown: !(isMobileViewport && items.length > 0),
+      },
+      timestamp: Date.now(),
+    }),
+  })?.catch(() => {});
+  // #endregion
+
   return (
     <>
       <div
         className={isDesktopLayout ? desktopClasses.footer : s.stepTwoPanelFooter}
         ref={stepTwoSummaryRef}
       >
+        {!(isMobileViewport && items.length > 0) ? (
+          <QuoteProfitabilitySummary summary={financialSummary} variant="compact" />
+        ) : null}
         <div className={isDesktopLayout ? desktopClasses.totalsRow : s.stepTwoTotalsGrid}>
           <div className={isDesktopLayout ? desktopClasses.totalItem : s.stepTwoTotalCell}>
             <span>

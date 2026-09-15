@@ -1671,6 +1671,7 @@ CREATE TABLE IF NOT EXISTS "public"."organization_profile" (
     "proveedor_preferido" "text",
     "modo_precio_preferido" "text" DEFAULT 'margen'::"text" NOT NULL,
     "margen_defecto" numeric DEFAULT 100,
+    "unidad_medidas" "text" DEFAULT 'mm'::"text" NOT NULL,
     "solicitud_publica_slug" "text",
     "solicitud_publica_valor" "text",
     "solicitud_publica_privacidad" "text",
@@ -1765,6 +1766,10 @@ COMMENT ON COLUMN "public"."organization_profile"."modo_precio_preferido" IS 'De
 
 
 COMMENT ON COLUMN "public"."organization_profile"."margen_defecto" IS 'Margen de ganancia sugerido por defecto para nuevas cotizaciones y componentes.';
+
+
+
+COMMENT ON COLUMN "public"."organization_profile"."unidad_medidas" IS 'Unidad de visualizacion comercial para ancho/alto al cotizar. Internamente Ventora sigue usando mm.';
 
 
 

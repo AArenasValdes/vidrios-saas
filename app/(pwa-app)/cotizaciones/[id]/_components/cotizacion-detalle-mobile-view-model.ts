@@ -12,7 +12,10 @@ import {
   decodeCotizacionItemPresentationMeta,
   isCotizacionMirrorDivided,
 } from "@/utils/cotizacion-item-presentation";
+import type { QuoteStudioFinancialSummary } from "@/features/cotizaciones/services/quote-studio-financial.service";
 import { repairBrokenText } from "@/utils/repair-broken-text";
+import { formatMeasurePairFromMm } from "@/features/organization-profile/services/measure-unit.service";
+import type { MeasureUnit } from "@/features/organization-profile/types/measure-unit";
 
 const CLP_FORMATTER = new Intl.NumberFormat("es-CL", {
   style: "currency",
@@ -53,10 +56,13 @@ export type CotizacionDetalleMobileViewModel = {
   discount: string;
   iva: string;
   notes: string;
+  showInternalProfitability: boolean;
+  profitabilitySummary: QuoteStudioFinancialSummary;
 };
 
 type BuildCotizacionDetalleMobileViewModelOptions = {
   isHydratingItems?: boolean;
+  measureUnit?: MeasureUnit;
 };
 
 function clp(value: number) {
@@ -103,9 +109,10 @@ function resolveResponseChannelLabel(value: string | null | undefined) {
   return repairBrokenText(value);
 }
 
-function buildItemMeta(item: CotizacionWorkflowItem) {
+function buildItemMeta(item: CotizacionWorkflowItem, measureUnit: MeasureUnit) {
   const size =
-    item.ancho && item.alto ? `${item.ancho} × ${item.alto} mm` : "Medidas por definir";
+    formatMeasurePairFromMm(item.ancho, item.alto, measureUnit)?.replace(" x ", " × ") ??
+    "Medidas por definir";
   const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
   const { referencia } = meta;
   const mirrorFormatLabel = isCotizacionMirrorDivided({
@@ -151,11 +158,12 @@ export function buildCotizacionDetalleMobileViewModel(
   const status = resolveCotizacionWorkflowState(displayInput);
   const response = resolveCotizacionClosureState(displayInput);
   const isTotalGlobal = record.quotePricingMode === "total_global";
+  const measureUnit = options.measureUnit ?? "mm";
   const items = record.items.map((item, index) => ({
     id: item.id,
     code: item.codigo || `I${index + 1}`,
     name: safeText(item.nombre || item.tipo, `Componente ${index + 1}`),
-    meta: buildItemMeta(item),
+    meta: buildItemMeta(item, measureUnit),
     price: isTotalGlobal ? "" : clp(item.precioTotal),
   }));
   const summary =
@@ -166,6 +174,28 @@ export function buildCotizacionDetalleMobileViewModel(
   const discountValue =
     record.descuentoValor ??
     (record.descuentoPct > 0 ? Math.round(subtotal * (record.descuentoPct / 100)) : 0);
+
+  const costoTotal = Number(record.costoTotalFabricacion ?? 0);
+  const ventaNeta = Number(record.neto ?? 0);
+  const utilidadTotal = Number(record.utilidadTotal ?? 0);
+  const hasCostBasis = !isTotalGlobal && costoTotal > 0;
+  const profitabilitySummary: QuoteStudioFinancialSummary = {
+    quotePricingMode: isTotalGlobal ? "total_global" : "por_item",
+    costoMateriales: 0,
+    manoObra: 0,
+    traslado: 0,
+    otrosCostos: 0,
+    merma: 0,
+    costoTotal,
+    margenObjetivoRealPct: 0,
+    precioRecomendadoNeto: 0,
+    precioFinalNeto: ventaNeta,
+    precioFinalCliente: record.total,
+    utilidadEstimada: hasCostBasis ? utilidadTotal : 0,
+    margenRealPct: hasCostBasis ? Number(record.margenGlobalPct ?? 0) : 0,
+    markupEquivalentePct: 0,
+    hasCostBasis,
+  };
 
   return {
     code: record.codigo,
@@ -203,5 +233,7 @@ export function buildCotizacionDetalleMobileViewModel(
     discount: clp(discountValue),
     iva: clp(record.iva ?? 0),
     notes: safeText(record.observaciones, "Sin observaciones ni cierre adicional."),
+    showInternalProfitability: !isTotalGlobal,
+    profitabilitySummary,
   };
 }

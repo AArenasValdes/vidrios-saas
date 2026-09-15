@@ -12322,6 +12322,36 @@
   color: #243b6b;
 }
 
+.recargoLive {
+  display: grid;
+  gap: 0.28rem;
+  margin-top: 0.7rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid #ecf0f5;
+}
+
+.recargoLive div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.recargoLive dt {
+  color: #5b6e8c;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.recargoLive dd {
+  margin: 0;
+  color: #1b2f56;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
 .stepTwoMobileInlineHelp {
   display: block;
   font-size: 0.65rem;
@@ -16516,6 +16546,73 @@
 
   .stepThreeAdjustmentEditor .field {
     gap: 0.42rem;
+  }
+
+  .stepThreeCostosSummary {
+    white-space: normal;
+    line-height: 1.35;
+  }
+
+  .stepThreeCostosEditor {
+    display: grid;
+    gap: 0.72rem;
+    padding: 0 0.9rem 0.96rem;
+  }
+
+  .stepThreeCostosReadRow,
+  .stepThreeCostosMetric {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .stepThreeCostosReadRow span,
+  .stepThreeCostosMetric dt {
+    color: #4b5f7a;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  .stepThreeCostosReadRow strong,
+  .stepThreeCostosMetric dd {
+    margin: 0;
+    color: #10264d;
+    font-size: 0.9rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .stepThreeCostosFields {
+    display: grid;
+    gap: 0.62rem;
+  }
+
+  .stepThreeCostosFields .field {
+    gap: 0.38rem;
+  }
+
+  .stepThreeCostosMetrics {
+    display: grid;
+    gap: 0.42rem;
+    padding-top: 0.72rem;
+    border-top: 1px solid #dbe5f1;
+  }
+
+  .stepThreeCostosPrivacy {
+    margin: 0;
+    color: #62728e;
+    font-size: 0.74rem;
+    font-weight: 600;
+  }
+
+  .stepThreeCostosUnderCost {
+    margin: 0;
+    color: #8a4a32;
+    font-size: 0.76rem;
+    font-weight: 650;
+    line-height: 1.4;
   }
 
   .stepThreeFreightIcon {

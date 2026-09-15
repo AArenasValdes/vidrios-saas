@@ -1,7 +1,14 @@
 import {
   applyQuoteStudioRecommendedPrice,
   buildQuoteStudioFinancialSummary,
+  calculateSaleFromCostRecargo,
+  calculateRecargoLivePreview,
+  QUOTE_PROFITABILITY_COPY,
 } from "../quote-studio-financial.service";
+import {
+  calculateComponentItem,
+  calculateCotizacionWorkflowTotals,
+} from "../cotizaciones-workflow.service";
 import type { CotizacionWorkflowItem } from "../../types/cotizacion-workflow";
 import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
@@ -357,5 +364,249 @@ describe("quote-studio-financial.service", () => {
     expect(result.items.reduce((accumulator, item) => accumulator + item.precioTotal, 0)).toBe(
       940000
     );
+  });
+
+  it("caso A: recargo sobre costo 30% produce markup, no margen real", () => {
+    const item = calculateComponentItem({
+      codigo: "V1",
+      tipo: "Ventana",
+      nombre: "Ventana living",
+      costoProveedorUnitario: 100000,
+      margenPct: 30,
+      cantidad: 1,
+    });
+    const recargo = calculateSaleFromCostRecargo(100000, 30);
+    const summary = buildQuoteStudioFinancialSummary({
+      items: [
+        createItem({
+          costoProveedorUnitario: item.costoProveedorUnitario,
+          costoProveedorTotal: item.costoProveedorTotal,
+          margenPct: item.margenPct,
+          precioUnitario: item.precioUnitario,
+          precioTotal: item.precioTotal,
+        }),
+      ],
+      quotePricingMode: "por_item",
+      neto: item.precioTotal,
+      total: 154700,
+    });
+
+    expect(item.precioUnitario).toBe(130000);
+    expect(recargo.precio).toBe(130000);
+    expect(recargo.utilidad).toBe(30000);
+    expect(recargo.margenRealPct).toBe(23.08);
+    expect(summary.costoTotal).toBe(100000);
+    expect(summary.utilidadEstimada).toBe(30000);
+    expect(summary.margenRealPct).toBe(23.08);
+    expect(summary.hasCostBasis).toBe(true);
+  });
+
+  it("caso B: margen objetivo real 30% recomienda precio de margen, no markup", () => {
+    const summary = buildQuoteStudioFinancialSummary({
+      items: [createItem()],
+      quotePricingMode: "por_item",
+      neto: 1000000,
+      total: 1190000,
+      margenObjetivoRealPct: 30,
+    });
+
+    expect(summary.costoTotal).toBe(700000);
+    expect(summary.precioRecomendadoNeto).toBe(1000000);
+    expect(summary.utilidadEstimada).toBe(300000);
+    expect(summary.margenRealPct).toBe(30);
+    expect(summary.markupEquivalentePct).toBe(42.86);
+  });
+
+  it("caso C: descuento baja la venta neta usada en utilidad y margen real", () => {
+    const item = createItem({
+      costoProveedorUnitario: 600000,
+      costoProveedorTotal: 600000,
+      precioUnitario: 1000000,
+      precioTotal: 1000000,
+    });
+    const totals = calculateCotizacionWorkflowTotals([item], 10, 0);
+
+    expect(totals.subtotal).toBe(1000000);
+    expect(totals.neto).toBe(900000);
+
+    const summary = buildQuoteStudioFinancialSummary({
+      items: [item],
+      quotePricingMode: "por_item",
+      neto: totals.neto,
+      total: totals.total,
+    });
+
+    expect(summary.precioFinalNeto).toBe(900000);
+    expect(summary.costoTotal).toBe(600000);
+    expect(summary.utilidadEstimada).toBe(300000);
+    expect(summary.margenRealPct).toBe(33.33);
+  });
+
+  it("caso D: IVA no entra a utilidad ni margen real", () => {
+    const item = createItem({
+      costoProveedorUnitario: 600000,
+      costoProveedorTotal: 600000,
+      precioUnitario: 900000,
+      precioTotal: 900000,
+    });
+    const totals = calculateCotizacionWorkflowTotals([item], 0, 0);
+
+    expect(totals.neto).toBe(900000);
+    expect(totals.iva).toBe(171000);
+    expect(totals.total).toBe(1071000);
+
+    const summary = buildQuoteStudioFinancialSummary({
+      items: [item],
+      quotePricingMode: "por_item",
+      neto: totals.neto,
+      total: totals.total,
+    });
+
+    expect(summary.utilidadEstimada).toBe(300000);
+    expect(summary.margenRealPct).toBe(33.33);
+    expect(summary.precioFinalNeto).toBe(900000);
+    expect(summary.precioFinalCliente).toBe(1071000);
+  });
+
+  it("caso E: precio comercial sin costos deja rentabilidad pendiente", () => {
+    const summary = buildQuoteStudioFinancialSummary({
+      items: [
+        createItem({
+          costoProveedorUnitario: 192000,
+          costoProveedorTotal: 192000,
+          margenPct: 0,
+          precioUnitario: 192000,
+          precioTotal: 192000,
+          observaciones: encodeCotizacionItemPresentationMeta({
+            colorHex: "#a8a8a8",
+            material: "Aluminio",
+            referencia: "Serie prueba",
+            pricingMode: "precio_directo",
+            origenPrecio: "manual",
+            displayMode: "componente",
+            raw: "",
+          }),
+        }),
+      ],
+      quotePricingMode: "por_item",
+      neto: 192000,
+      total: 228480,
+    });
+
+    expect(summary.hasCostBasis).toBe(false);
+    expect(summary.utilidadEstimada).toBe(0);
+    expect(summary.margenRealPct).toBe(0);
+    expect(QUOTE_PROFITABILITY_COPY.pendiente).toBe("Rentabilidad pendiente");
+  });
+
+  it("caso F: cantidad mayor a 1 consolida costo, venta neta, utilidad y margen real", () => {
+    const item = calculateComponentItem({
+      codigo: "V1",
+      tipo: "Ventana",
+      nombre: "Ventana living",
+      costoProveedorUnitario: 100000,
+      margenPct: 30,
+      cantidad: 5,
+    });
+    const summary = buildQuoteStudioFinancialSummary({
+      items: [
+        createItem({
+          cantidad: 5,
+          costoProveedorUnitario: item.costoProveedorUnitario,
+          costoProveedorTotal: item.costoProveedorTotal,
+          margenPct: item.margenPct,
+          precioUnitario: item.precioUnitario,
+          precioTotal: item.precioTotal,
+        }),
+      ],
+      quotePricingMode: "por_item",
+      neto: item.precioTotal,
+      total: 773500,
+    });
+
+    expect(item.costoProveedorTotal).toBe(500000);
+    expect(item.precioTotal).toBe(650000);
+    expect(summary.costoTotal).toBe(500000);
+    expect(summary.precioFinalNeto).toBe(650000);
+    expect(summary.utilidadEstimada).toBe(150000);
+    expect(summary.margenRealPct).toBe(23.08);
+  });
+
+  it("caso G: distingue margen real de recargo equivalente sobre costo", () => {
+    const recargo = calculateSaleFromCostRecargo(585747, 53.03);
+    const summary = buildQuoteStudioFinancialSummary({
+      items: [
+        createItem({
+          costoProveedorUnitario: 585747,
+          costoProveedorTotal: 585747,
+          precioUnitario: 896193,
+          precioTotal: 896193,
+        }),
+      ],
+      quotePricingMode: "por_item",
+      neto: 896193,
+      total: 1066469,
+    });
+
+    expect(summary.utilidadEstimada).toBe(310446);
+    expect(summary.margenRealPct).toBe(34.64);
+    expect(summary.markupEquivalentePct).toBe(53);
+    expect(recargo.recargoEquivalentePct).toBeGreaterThan(summary.margenRealPct);
+  });
+
+  it("limita el margen objetivo real para no producir infinito ni NaN", () => {
+    const summary = buildQuoteStudioFinancialSummary({
+      items: [createItem()],
+      quotePricingMode: "por_item",
+      neto: 1000000,
+      total: 1190000,
+      margenObjetivoRealPct: 100,
+    });
+
+    expect(summary.margenObjetivoRealPct).toBe(95);
+    expect(Number.isFinite(summary.precioRecomendadoNeto)).toBe(true);
+    expect(summary.precioRecomendadoNeto).toBe(14000000);
+  });
+
+  it("calcula el preview de recargo por unidad y por total del grupo", () => {
+    const example = calculateRecargoLivePreview({
+      costoIngresado: 120000,
+      recargoPct: 100,
+      cantidad: 1,
+      costInputScope: "unit",
+    });
+    const unit = calculateRecargoLivePreview({
+      costoIngresado: 120000,
+      recargoPct: 100,
+      cantidad: 5,
+      costInputScope: "unit",
+    });
+    const group = calculateRecargoLivePreview({
+      costoIngresado: 120000,
+      recargoPct: 100,
+      cantidad: 5,
+      costInputScope: "group_total",
+    });
+
+    expect(example).toMatchObject({
+      ready: true,
+      ventaEstimada: 240000,
+      utilidad: 120000,
+      margenRealPct: 50,
+    });
+    expect(unit).toMatchObject({
+      ready: true,
+      costoTotal: 600000,
+      ventaEstimada: 1200000,
+      utilidad: 600000,
+      margenRealPct: 50,
+    });
+    expect(group).toMatchObject({
+      ready: true,
+      costoTotal: 120000,
+      ventaEstimada: 240000,
+      utilidad: 120000,
+      margenRealPct: 50,
+    });
   });
 });

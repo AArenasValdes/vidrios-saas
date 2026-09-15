@@ -619,6 +619,40 @@
   color: #667085;
 }
 
+.measureUnitToggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.measureUnitButton {
+  min-height: 46px;
+  border-radius: 16px;
+  border: 1px solid #d9e0ea;
+  background: #f8fbff;
+  color: #475467;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.measureUnitButtonActive {
+  border-color: #4f7dd4;
+  background: #eef4ff;
+  color: #143d7a;
+  box-shadow: 0 0 0 4px rgba(79, 125, 212, 0.1);
+}
+
+.measureUnitHint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #667085;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 .input,
 .textarea {
   width: 100%;

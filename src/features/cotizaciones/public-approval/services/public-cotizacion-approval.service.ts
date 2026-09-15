@@ -253,6 +253,7 @@ async function buildPublicApprovalQuoteView(
             proveedorPreferido: "",
             modoPrecioPreferido: "margen",
             margenDefecto: payload.organizationProfile.margen_defecto ?? 100,
+            unidadMedidas: "mm",
             creadoEn: null,
             actualizadoEn: null,
             publicName: payload.organizationProfile.empresa_nombre ?? "",

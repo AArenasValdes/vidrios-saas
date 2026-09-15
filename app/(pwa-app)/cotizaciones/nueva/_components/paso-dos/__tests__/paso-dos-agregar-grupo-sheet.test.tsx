@@ -6,6 +6,10 @@ jest.mock("@/features/auth/hooks/useAuth", () => ({
   useAuth: () => ({ organizacionId: "test-org-1", userId: "test-user" }),
 }));
 
+jest.mock("@/features/organization-profile/hooks/use-organization-measure-unit", () => ({
+  useOrganizationMeasureUnit: () => "mm",
+}));
+
 import { FREE_TOTAL_NOTEBOOK_CATEGORIA, FREE_TOTAL_NOTEBOOK_SUBTIPO } from "../../../_hooks/use-paso-dos-agregar-grupo";
 import type { PasoDosGrupoDraft } from "../../../_hooks/use-paso-dos-agregar-grupo";
 import { createDefaultGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";

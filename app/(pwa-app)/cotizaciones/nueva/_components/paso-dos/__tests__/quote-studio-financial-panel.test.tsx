@@ -49,10 +49,10 @@ describe("QuoteStudioFinancialPanel", () => {
   it("muestra estado compacto sin costos y CTA para agregar", () => {
     render(<QuoteStudioFinancialPanel {...buildProps(buildSummary())} />);
 
-    expect(screen.getByText("Sin costos")).toBeInTheDocument();
+    expect(screen.getByText("Rentabilidad pendiente")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Agregar costos/i })).toBeInTheDocument();
     expect(screen.queryByLabelText("Detalle de costos")).not.toBeInTheDocument();
-    expect(screen.queryByText("Precio de venta")).not.toBeInTheDocument();
+    expect(screen.queryByText("Venta neta")).not.toBeInTheDocument();
     expect(screen.queryByText("Rentabilidad no disponible")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Usar precio recomendado/i })).not.toBeInTheDocument();
   });
@@ -62,7 +62,7 @@ describe("QuoteStudioFinancialPanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Agregar costos/i }));
     expect(screen.getByLabelText("Detalle de costos")).toBeInTheDocument();
-    expect(screen.getByText(/Ingresa mano de obra, traslado u otros/i)).toBeInTheDocument();
+    expect(screen.getByText(/Agrega tus costos internos para calcular utilidad y margen real/i)).toBeInTheDocument();
     expect(screen.getByText("Mano de obra")).toBeInTheDocument();
   });
 
@@ -93,8 +93,8 @@ describe("QuoteStudioFinancialPanel", () => {
 
     render(<QuoteStudioFinancialPanel {...buildProps(summary)} />);
 
-    expect(screen.getByText("Precio de venta")).toBeInTheDocument();
-    expect(screen.getByText("Costo estimado")).toBeInTheDocument();
+    expect(screen.getByText("Venta neta")).toBeInTheDocument();
+    expect(screen.getByText("Costo total")).toBeInTheDocument();
     expect(screen.getByText("Utilidad")).toBeInTheDocument();
     expect(screen.getByText("Margen real")).toBeInTheDocument();
     expect(screen.getByText(/obj\.\s*30%/i)).toBeInTheDocument();
@@ -103,7 +103,7 @@ describe("QuoteStudioFinancialPanel", () => {
     expect(
       screen.getByRole("button", { name: buildQuoteStudioApplyRecommendedLabel(summary) })
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Ajustar costos y margen/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ajustar costos/i })).toBeInTheDocument();
   });
 
   it("expande y colapsa el detalle de costos", () => {
@@ -121,7 +121,7 @@ describe("QuoteStudioFinancialPanel", () => {
 
     expect(screen.queryByLabelText("Detalle de costos")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Ajustar costos y margen/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Ajustar costos/i }));
     expect(screen.getByLabelText("Detalle de costos")).toBeInTheDocument();
     expect(screen.getByText("Mano de obra")).toBeInTheDocument();
     expect(screen.getByText("Margen objetivo %")).toBeInTheDocument();

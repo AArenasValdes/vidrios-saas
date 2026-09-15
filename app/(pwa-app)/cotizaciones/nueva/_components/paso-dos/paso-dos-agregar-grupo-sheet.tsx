@@ -32,6 +32,13 @@ import {
   shouldShowSheetSchemeForComponent,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { MeasureDimensionInput } from "@/features/cotizaciones/components/measure-dimension-input";
+import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
+import {
+  formatMeasurePairFromMm,
+  measureDimensionFieldLabel,
+  measureDimensionPlaceholder,
+} from "@/features/organization-profile/services/measure-unit.service";
 import {
   getComponentDescripcion,
   isFreeValueComponentType,
@@ -447,6 +454,7 @@ export function PasoDosAgregarGrupoSheet({
   canContinueFromQuantity,
   canContinueFromConfig,
 }: Props) {
+  const measureUnit = useOrganizationMeasureUnit();
   const [isInternalObservationOpen, setIsInternalObservationOpen] = useState(
     Boolean(internalObservation.trim())
   );
@@ -1846,21 +1854,21 @@ export function PasoDosAgregarGrupoSheet({
                   <p className={d.measuresSectionTitle}>Medidas</p>
                   <div className={d.measuresFieldGrid}>
                     <label className={d.measureField}>
-                      <span className={d.measureFieldLabel}>Ancho (mm)</span>
-                      <input
+                      <span className={d.measureFieldLabel}>{measureDimensionFieldLabel("ancho", measureUnit)}</span>
+                      <MeasureDimensionInput
                         className={d.measureInput}
-                        inputMode="numeric"
-                        value={draft.ancho}
-                        onChange={(event) => onAnchoChange(event.target.value)}
+                        unit={measureUnit}
+                        valueMm={draft.ancho}
+                        onChangeMm={onAnchoChange}
                       />
                     </label>
                     <label className={d.measureField}>
-                      <span className={d.measureFieldLabel}>Alto (mm)</span>
-                      <input
+                      <span className={d.measureFieldLabel}>{measureDimensionFieldLabel("alto", measureUnit)}</span>
+                      <MeasureDimensionInput
                         className={d.measureInput}
-                        inputMode="numeric"
-                        value={draft.alto}
-                        onChange={(event) => onAltoChange(event.target.value)}
+                        unit={measureUnit}
+                        valueMm={draft.alto}
+                        onChangeMm={onAltoChange}
                       />
                     </label>
                     <label className={d.measureField}>
@@ -2954,7 +2962,7 @@ export function PasoDosAgregarGrupoSheet({
                             {nestedDetailItems.map((item) => {
                               const measures =
                                 item.ancho && item.alto
-                                  ? `${Math.round(item.ancho)} × ${Math.round(item.alto)} mm`
+                                  ? formatMeasurePairFromMm(item.ancho, item.alto, measureUnit)
                                   : null;
                               const material = decodeCotizacionItemPresentationMeta(
                                 item.observaciones
@@ -3154,33 +3162,33 @@ export function PasoDosAgregarGrupoSheet({
                                     />
                                   </label>
                                   <label className={s.field}>
-                                    <span className={s.label}>Ancho (mm)</span>
-                                    <input
+                                    <span className={s.label}>{measureDimensionFieldLabel("ancho", measureUnit)}</span>
+                                    <MeasureDimensionInput
                                       className={s.input}
-                                      inputMode="numeric"
-                                      placeholder="1500"
-                                      value={detalle.ancho}
-                                      onChange={(e) =>
+                                      placeholder={measureDimensionPlaceholder("ancho", measureUnit)}
+                                      unit={measureUnit}
+                                      valueMm={detalle.ancho}
+                                      onChangeMm={(value) =>
                                         onUpdateAlcanceDetalle(
                                           detalle.id,
                                           "ancho",
-                                          e.target.value
+                                          value
                                         )
                                       }
                                     />
                                   </label>
                                   <label className={s.field}>
-                                    <span className={s.label}>Alto (mm)</span>
-                                    <input
+                                    <span className={s.label}>{measureDimensionFieldLabel("alto", measureUnit)}</span>
+                                    <MeasureDimensionInput
                                       className={s.input}
-                                      inputMode="numeric"
-                                      placeholder="2000"
-                                      value={detalle.alto}
-                                      onChange={(e) =>
+                                      placeholder={measureDimensionPlaceholder("alto", measureUnit)}
+                                      unit={measureUnit}
+                                      valueMm={detalle.alto}
+                                      onChangeMm={(value) =>
                                         onUpdateAlcanceDetalle(
                                           detalle.id,
                                           "alto",
-                                          e.target.value
+                                          value
                                         )
                                       }
                                     />

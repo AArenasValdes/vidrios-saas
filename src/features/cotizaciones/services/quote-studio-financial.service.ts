@@ -3,13 +3,120 @@ import {
   normalizeQuotePricingMode,
   type QuotePricingMode,
 } from "@/features/cotizaciones/types/quote-pricing-mode";
-import { normalizePricingMode } from "@/features/cotizaciones/types/pricing-mode";
+import {
+  normalizeCostInputScope,
+  normalizePricingMode,
+  type CostInputScope,
+} from "@/features/cotizaciones/types/pricing-mode";
 import {
   decodeCotizacionItemPresentationMeta,
   encodeCotizacionItemPresentationMeta,
 } from "@/utils/cotizacion-item-presentation";
 
 const DEFAULT_TARGET_REAL_MARGIN_PCT = 30;
+
+export const QUOTE_PROFITABILITY_COPY = {
+  recargoSobreCosto: "Recargo sobre costo",
+  recargoModeTitle: "Costo + recargo",
+  recargoModeHint: "Calcula la venta sumando un recargo porcentual al costo.",
+  recargoHelp: "Porcentaje que se suma al costo. No es el margen real sobre la venta.",
+  recargoZero: "0% (sin recargo)",
+  margenReal: "Margen real",
+  margenObjetivo: "Margen objetivo",
+  margenObjetivoHelp: "Porcentaje de la venta neta que quedaría como utilidad.",
+  ventaNeta: "Venta neta",
+  costoTotal: "Costo total",
+  utilidad: "Utilidad",
+  pendiente: "Rentabilidad pendiente",
+  pendienteHint: "Agrega tus costos internos para calcular utilidad y margen real.",
+  soloInterno: "Solo visible para tu empresa",
+  recargoDuplica: "100% de recargo duplica el costo.",
+  recargoHelpMobile: "Recargo que se suma al costo. No es el margen real sobre la venta.",
+  ventaEstimada: "Venta estimada",
+  trasladoInterno: "Costo de traslado",
+  fleteCliente: "Flete cobrado al cliente",
+  fleteClienteHint: "Cobro al cliente. El costo interno se carga en rentabilidad.",
+  precioRecomendado: "Precio recomendado",
+  ajustarCostos: "Ajustar costos",
+  agregarCostos: "Agregar costos",
+  ocultarCostos: "Ocultar costos",
+} as const;
+
+export function formatQuoteProfitabilityPct(value: number) {
+  if (!Number.isFinite(value)) {
+    return "0%";
+  }
+
+  return `${value.toLocaleString("es-CL", {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: Math.abs(value) > 0 && Math.abs(value) < 10 ? 1 : 0,
+  })}%`;
+}
+
+export function calculateSaleFromCostRecargo(costo: number, recargoPct: number) {
+  const safeCost = normalizeNonNegative(costo);
+  const safeRecargo = Number.isFinite(recargoPct) && recargoPct > 0 ? recargoPct : 0;
+  const precio = round(safeCost * (1 + safeRecargo / 100), 2);
+  const utilidad = round(precio - safeCost, 2);
+  const margenRealPct = precio > 0 ? round((utilidad / precio) * 100, 2) : 0;
+  const recargoEquivalentePct = safeCost > 0 ? round((utilidad / safeCost) * 100, 2) : 0;
+
+  return {
+    precio,
+    utilidad,
+    margenRealPct,
+    recargoEquivalentePct,
+  };
+}
+
+export function calculateRecargoLivePreview(input: {
+  costoIngresado: number;
+  recargoPct: number;
+  cantidad?: number;
+  costInputScope?: CostInputScope;
+}) {
+  const costoIngresado = normalizeNonNegative(input.costoIngresado);
+  const recargoPct = Number(input.recargoPct);
+  const cantidad = Number(input.cantidad) > 0 ? Number(input.cantidad) : 1;
+  const costInputScope = normalizeCostInputScope(input.costInputScope);
+  const ready =
+    costoIngresado > 0 && Number.isFinite(recargoPct) && recargoPct >= 0;
+
+  if (!ready) {
+    return {
+      ready: false as const,
+      costoTotal: 0,
+      ventaEstimada: 0,
+      utilidad: 0,
+      margenRealPct: 0,
+    };
+  }
+
+  const costoUnitario =
+    costInputScope === "group_total" && cantidad > 1
+      ? round(costoIngresado / cantidad, 2)
+      : costoIngresado;
+  const costoTotal =
+    costInputScope === "group_total"
+      ? costoIngresado
+      : round(costoUnitario * cantidad, 2);
+  const precioUnitario = round(costoUnitario * (1 + recargoPct / 100), 2);
+  const ventaEstimada =
+    costInputScope === "group_total"
+      ? round(costoIngresado * (1 + recargoPct / 100), 2)
+      : round(precioUnitario * cantidad, 2);
+  const utilidad = round(ventaEstimada - costoTotal, 2);
+  const margenRealPct =
+    ventaEstimada > 0 ? round((utilidad / ventaEstimada) * 100, 2) : 0;
+
+  return {
+    ready: true as const,
+    costoTotal,
+    ventaEstimada,
+    utilidad,
+    margenRealPct,
+  };
+}
 
 function round(value: number, digits = 2) {
   const multiplier = 10 ** digits;

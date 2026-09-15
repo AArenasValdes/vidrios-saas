@@ -31,6 +31,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
+import type { MeasureUnit } from "@/features/organization-profile/types/measure-unit";
 import { COUNTRY_PRESET_OPTIONS } from "@/features/organization-region/config/country-presets";
 import { getCountryPreset } from "@/features/organization-region/services/organization-region.service";
 import type { SupportedCountryCode } from "@/features/organization-region/types/organization-region";
@@ -626,6 +627,7 @@ export default function ConfiguracionEmpresaPage() {
   ]);
   const commercialSummary = compactJoin([
     shorten(form.formaPago || "Forma de pago pendiente", 34),
+    form.unidadMedidas === "cm" ? "Medidas en cm" : "Medidas en mm",
     "Vigencia por cotizacion",
     "IVA incluido",
   ]);
@@ -1159,6 +1161,34 @@ export default function ConfiguracionEmpresaPage() {
 
           <div className={s.accordionPanel}>
             <div className={s.accordionInner}>
+              <div className={s.field}>
+                <span className={s.label}>Unidad de medidas</span>
+                <div className={s.measureUnitToggle} role="group" aria-label="Unidad de medidas">
+                  {(
+                    [
+                      { id: "mm", label: "Milímetros (mm)" },
+                      { id: "cm", label: "Centímetros (cm)" },
+                    ] as const
+                  ).map((option) => {
+                    const isActive = (form.unidadMedidas ?? "mm") === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={`${s.measureUnitButton} ${isActive ? s.measureUnitButtonActive : ""}`}
+                        aria-pressed={isActive}
+                        onClick={() => handleFieldChange("unidadMedidas", option.id as MeasureUnit)}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className={s.measureUnitHint}>
+                  Al cotizar, ancho y alto se muestran en esta unidad. Internamente Ventora sigue usando milímetros.
+                </p>
+              </div>
+
               <label className={s.field}>
                 <span className={s.label}>Forma de pago</span>
                 <textarea className={s.textarea} rows={3} value={form.formaPago} onChange={(event) => handleFieldChange("formaPago", event.target.value)} placeholder="Ej: 50% al inicio y 50% al finalizar" />
@@ -1186,7 +1216,7 @@ export default function ConfiguracionEmpresaPage() {
               <div className={s.sectionActions}>
                 <button type="button" className={s.saveButton} onClick={() => void handleSaveSection("comercial")} disabled={isSaving || savingSection === "comercial"}>
                   <LuSave aria-hidden />
-                  {savingSection === "comercial" ? "Guardando..." : "Guardar forma de pago"}
+                  {savingSection === "comercial" ? "Guardando..." : "Guardar"}
                 </button>
               </div>
             </div>

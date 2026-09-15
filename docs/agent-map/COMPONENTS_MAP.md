@@ -212,6 +212,13 @@ Responsable: ingeniería
 
 ## Cotizacion (subcomponentes de pagina)
 
+### Componente: MeasureDimensionInput
+
+- **Archivo**: `src/features/cotizaciones/components/measure-dimension-input.tsx`
+- **Proposito**: Input comercial de ancho/alto. Muestra mm o cm segun `unidad_medidas` de la empresa y siempre entrega mm al padre.
+- **Usado en**: Paso 2 (wizard, editor desktop, grupo, edicion rapida), constructor, activacion
+- **Props importantes**: `valueMm`, `unit`, `onChangeMm`
+
 ### Componente: CotizacionMobileCard
 
 - **Archivo**: `app/(pwa-app)/cotizaciones/_components/cotizacion-mobile-card.tsx`
@@ -382,9 +389,17 @@ Responsable: ingeniería
 ### Componente: PasoDosWizardPrecioMovil
 
 - **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-precio-movil.tsx`
-- **Proposito**: Bloque de precio en el wizard mobile. Soporta `hideMargenOption` para ocultar el modo "Con margen" y mostrar solo "Valor directo" (usado para items libres).
+- **Proposito**: Bloque de precio en el wizard mobile. Soporta `hideMargenOption` para ocultar el modo "Costo + recargo" y mostrar solo "Valor directo" (usado para items libres). En recargo muestra solo `Recargo sobre costo (%)` y la ayuda “100% de recargo duplica el costo.”; la rentabilidad global vive en Paso 3.
 - **Usado en**: `PasoDosWizardConfiguracionMovil` (config step del wizard mobile)
 - **Props importantes**: `activePricingMode`, `formattedPriceValue`, `marginValue`, `hideMargenOption?`, `onPrecioChange`, `onPricingModeChange`, `priceLabel`, `priceHelp`
+
+### Componente: PasoTresCostosRentabilidadMovil
+
+- **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-tres-costos-rentabilidad-movil.tsx`
+- **Proposito**: Acordeón móvil de Paso 3 para costos internos y rentabilidad global. Cerrado resume costo · utilidad · margen; abierto edita mano de obra, traslado, otros, merma y margen objetivo.
+- **Usado en**: `PasoTresDetalleFinal` (solo `isMobileViewport`)
+- **Props importantes**: `financialSummary`, `quoteStudioFinancial`, `formatCurrencyInput`, `onQuoteStudioFinancialChange`
+- **Riesgos**: No usarlo en desktop. No exponer estos campos en PDF/WhatsApp. No cambiar fórmulas.
 
 ---
 

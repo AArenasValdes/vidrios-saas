@@ -75,6 +75,7 @@ describe("organization-profile.repository", () => {
       solicitudPublicaDiasAtencion: ["1", "2", "3", "4", "5"],
       modoPrecioPreferido: "margen",
       margenDefecto: 100,
+      unidadMedidas: "mm",
     });
   });
 

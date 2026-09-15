@@ -24,6 +24,12 @@ import {
   renderGuidedModuleTypeIcon,
   renderGuidedVisualSvg,
 } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
+import { MeasureDimensionInput } from "@/features/cotizaciones/components/measure-dimension-input";
+import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
+import {
+  formatMeasurePairFromMm,
+  measureDimensionFieldLabel,
+} from "@/features/organization-profile/services/measure-unit.service";
 import {
   MAX_GUIDED_LEAF_MODULES,
   MAX_GUIDED_PALILLOS_PER_MODULE,
@@ -171,6 +177,7 @@ export function GuidedVisualComposer({
   onClose,
   onClear,
 }: Props) {
+  const measureUnit = useOrganizationMeasureUnit();
   const titleId = useId();
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const [widthDraft, setWidthDraft] = useState(String(config.widthMm));
@@ -394,9 +401,9 @@ export function GuidedVisualComposer({
     setPalilloMmDraft(mmMatch?.[1] ?? "");
   }, [selectedPalilloSplit, palilloEditLayoutModule]);
 
-  const commitDims = useCallback(() => {
-    const widthMm = commitDimensionMm(widthDraft, working.widthMm);
-    const heightMm = commitDimensionMm(heightDraft, working.heightMm);
+  const commitDims = useCallback((nextWidthDraft?: string, nextHeightDraft?: string) => {
+    const widthMm = commitDimensionMm(nextWidthDraft ?? widthDraft, working.widthMm);
+    const heightMm = commitDimensionMm(nextHeightDraft ?? heightDraft, working.heightMm);
     setWidthDraft(String(widthMm));
     setHeightDraft(String(heightMm));
     if (widthMm !== working.widthMm || heightMm !== working.heightMm) {
@@ -830,7 +837,7 @@ export function GuidedVisualComposer({
           <div className={s.headerCopy}>
             <h2 id={titleId}>Armar composición</h2>
             <p className={s.subcopy}>
-              {pieceTitle || "Pieza"} · {summary.widthMm} × {summary.heightMm} mm
+              {pieceTitle || "Pieza"} · {formatMeasurePairFromMm(summary.widthMm, summary.heightMm, measureUnit)?.replace(" x ", " × ") ?? `${summary.widthMm} × ${summary.heightMm} mm`}
             </p>
           </div>
           <div className={s.headerActions}>
@@ -1168,27 +1175,21 @@ export function GuidedVisualComposer({
               <span className={s.blockLabel}>Medidas de la pieza</span>
               <div className={s.inlineFields}>
                 <label>
-                  Ancho (mm)
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={widthDraft}
-                    onChange={(event) =>
-                      setWidthDraft(event.target.value.replace(/[^\d]/g, ""))
-                    }
-                    onBlur={commitDims}
+                  {measureDimensionFieldLabel("ancho", measureUnit)}
+                  <MeasureDimensionInput
+                    unit={measureUnit}
+                    valueMm={widthDraft}
+                    onChangeMm={setWidthDraft}
+                    onBlurMm={(value) => commitDims(value, heightDraft)}
                   />
                 </label>
                 <label>
-                  Alto (mm)
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={heightDraft}
-                    onChange={(event) =>
-                      setHeightDraft(event.target.value.replace(/[^\d]/g, ""))
-                    }
-                    onBlur={commitDims}
+                  {measureDimensionFieldLabel("alto", measureUnit)}
+                  <MeasureDimensionInput
+                    unit={measureUnit}
+                    valueMm={heightDraft}
+                    onChangeMm={setHeightDraft}
+                    onBlurMm={(value) => commitDims(widthDraft, value)}
                   />
                 </label>
               </div>

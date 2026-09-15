@@ -58,7 +58,7 @@ describe("cotizaciones-workflow.service", () => {
         costoProveedorUnitario: 100000,
         margenPct: -10,
       })
-    ).toThrow("El margen no puede ser negativo");
+    ).toThrow("El recargo sobre costo no puede ser negativo");
   });
 
   it("crea una cotizacion preservando id y codigo existentes", () => {

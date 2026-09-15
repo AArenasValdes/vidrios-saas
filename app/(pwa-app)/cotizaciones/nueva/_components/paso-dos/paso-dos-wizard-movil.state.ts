@@ -77,7 +77,7 @@ export function buildPasoDosWizardMovilState({
       ? "El valor que ingreses sera el total visible para el cliente."
       : activePricingMode === "precio_directo"
         ? "Total que cobras por todas las unidades de este grupo."
-        : "Base para calcular la venta con margen.";
+        : "Costo interno. El recargo sobre costo calcula la venta.";
 
   return {
     activePricingMode,

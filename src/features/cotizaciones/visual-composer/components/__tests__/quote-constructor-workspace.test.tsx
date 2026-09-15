@@ -14,6 +14,10 @@ jest.mock("@/features/cotizaciones/visual-composer/components/guided-visual-comp
     open ? <div role="dialog">Composición guiada</div> : null,
 }));
 
+jest.mock("@/features/organization-profile/hooks/use-organization-measure-unit", () => ({
+  useOrganizationMeasureUnit: () => "mm",
+}));
+
 jest.mock("@/features/fabricacion/hooks/use-fabrication-recipes", () => ({
   useFabricationRecipes: () => ({
     organizationId: null,

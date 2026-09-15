@@ -1,9 +1,16 @@
 # Database Map - Ventora
 
-> Verificacion remota: 2026-08-13. Mientras `current_schema.sql` siga marcado como atrasado, la base remota verificada, las migraciones registradas y los addendums de este archivo prevalecen para cambios posteriores al ultimo dump.
+> Verificacion remota: 2026-09-14. Mientras `current_schema.sql` siga marcado como atrasado, la base remota verificada, las migraciones registradas y los addendums de este archivo prevalecen para cambios posteriores al ultimo dump.
 
 Fuente de verdad: base remota verificada y migraciones registradas; `current_schema.sql` es baseline historico hasta regenerarlo. Referencia complementaria: `database.types.ts`.
 Fecha de generación: 2026-05-30.
+
+## Addendum 2026-09-14 - P0 consistencia de recetas y Serie 42 normal
+
+- La aplicación ahora exige composición completa antes de presentar una receta como `Lista para probar`, permitir prueba/validación o generar `cotizacion_items.fabricacion_snapshot`. Las referencias opcionales no cuentan como reglas activas ni cortes.
+- `fabrication_recipes.source_name` y `source_revision` existen en remoto y mantienen la procedencia explícita de las recetas. La receta Serie 42 normal (`organization_id=39`, `line_template_id=317`) permanece `draft`, `source_type='workshop'` y con evidencia P1 parcial.
+- La migración local `20260914170000_l42_normal_double_junquillo.sql` prepara la corrección estructural del junquillo horizontal `4229` (`requerido=true`) sin cambiar códigos, descuentos, cantidades, organización ni estado de validación. No está aplicada remotamente en este corte.
+- Verificación remota: `fabrication_recipes` y `fabrication_recipe_tests` mantienen RLS habilitada y 3 policies por tabla. La fila original de Serie 42 permanece intacta; una fila duplicada creada accidentalmente durante QA fue archivada mediante soft delete y conserva historial.
 
 ---
 
@@ -313,6 +320,7 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 | `proveedor_preferido` | text | |
 | `modo_precio_preferido` | text NOT NULL | Default: `margen` |
 | `margen_defecto` | numeric | Default: 100 |
+| `unidad_medidas` | text NOT NULL | Default: `mm`. CHECK `mm`/`cm`. Solo visualizacion comercial de ancho/alto |
 | `solicitud_publica_slug` | text | UNIQUE parcial lower() WHERE no vacío |
 | `solicitud_publica_descripcion_corta` | text | Copy principal de mini-landing |
 | `solicitud_publica_valor` | text | |

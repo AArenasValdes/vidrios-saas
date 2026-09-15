@@ -33,6 +33,7 @@ function buildProfile(
     proveedorPreferido: "",
     modoPrecioPreferido: "margen",
     margenDefecto: 100,
+    unidadMedidas: "mm",
     creadoEn: null,
     actualizadoEn: null,
     publicName: "Ventora Demo",

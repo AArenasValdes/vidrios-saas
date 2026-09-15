@@ -17,6 +17,7 @@ import {
 
 import { MobilePageHeader } from "../../../_components/mobile-page-header";
 import type { CotizacionDetalleMobileViewModel } from "./cotizacion-detalle-mobile-view-model";
+import { QuoteProfitabilitySummary } from "../../_components/quote-profitability-summary";
 
 import s from "./cotizacion-detalle-mobile.module.css";
 
@@ -243,6 +244,9 @@ export function CotizacionDetalleMobileView({
         </section>
 
         <section className={s.totalsPanel} aria-label="Desglose del total">
+          {model.showInternalProfitability ? (
+            <QuoteProfitabilitySummary summary={model.profitabilitySummary} variant="compact" />
+          ) : null}
           {model.isTotalGlobal ? null : (
             <>
               <div className={s.totalRow}>

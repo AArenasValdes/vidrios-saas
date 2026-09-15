@@ -35,6 +35,7 @@ function createProfile(overrides: Partial<OrganizationProfile> = {}): Organizati
     proveedorPreferido: "",
     modoPrecioPreferido: "margen",
     margenDefecto: 100,
+    unidadMedidas: "mm",
     creadoEn: null,
     actualizadoEn: null,
     publicName: "",
@@ -90,6 +91,17 @@ describe("organization-profile.service", () => {
     expect(input.solicitudPublicaSlug).toBe("mi-empresa-serena");
     expect(input.brandColor).toBe("#243b6b");
     expect(input.secondaryColor).toBe("#243b6b");
+    expect(input.unidadMedidas).toBe("mm");
+  });
+
+  it("persiste centimetros como unidad comercial de ancho y alto", () => {
+    const input = buildEmpresaProfileInput(
+      createProfile({
+        unidadMedidas: "cm",
+      })
+    );
+
+    expect(input.unidadMedidas).toBe("cm");
   });
 
   it("debe construir el input de Pagina de venta manteniendo defaults del sistema", () => {

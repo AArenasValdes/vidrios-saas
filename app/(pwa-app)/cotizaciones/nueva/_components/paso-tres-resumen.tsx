@@ -8,9 +8,19 @@ import { resolveWorkflowItemDisplayName } from "@/features/cotizaciones/new-quot
 import type { SaveIntent } from "../_hooks/use-paso-tres-guardado";
 import { PasoTresDetalleFinal } from "./paso-tres-detalle-final";
 import { PasoTresPanelAcciones } from "./paso-tres-panel-acciones";
-import type { CotizacionWorkflowDraft, CotizacionWorkflowItem, CotizacionWorkflowRecord } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type {
+  CotizacionWorkflowDraft,
+  CotizacionWorkflowItem,
+  CotizacionWorkflowRecord,
+  QuoteStudioFinancialDraft,
+} from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
+import type { QuoteStudioFinancialSummary } from "@/features/cotizaciones/services/quote-studio-financial.service";
+import { QuoteProfitabilitySummary } from "../../_components/quote-profitability-summary";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
+import { formatMeasurePairFromMm } from "@/features/organization-profile/services/measure-unit.service";
+import type { MeasureUnit } from "@/features/organization-profile/types/measure-unit";
 
 import s from "../page.module.css";
 
@@ -49,9 +59,14 @@ type PasoTresResumenProps = {
   onSaveQuote: () => void;
   onSaveDraft: () => void;
   formatCurrencyInput: (value: string) => string;
+  financialSummary: QuoteStudioFinancialSummary;
+  onQuoteStudioFinancialChange: (
+    field: keyof QuoteStudioFinancialDraft,
+    value: string
+  ) => void;
 };
 
-function formatStepThreeMeasure(item: CotizacionWorkflowItem) {
+function formatStepThreeMeasure(item: CotizacionWorkflowItem, unit: MeasureUnit) {
   const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
   const isFreeValueItem =
     item.tipoItem === "item_libre_con_valor" || meta.displayMode === "item_libre";
@@ -60,9 +75,7 @@ function formatStepThreeMeasure(item: CotizacionWorkflowItem) {
     return "Sin medidas";
   }
 
-  const width = item.ancho ? `${String(item.ancho).replace(/\.0+$/, "")}` : "-";
-  const height = item.alto ? `${String(item.alto).replace(/\.0+$/, "")}` : "-";
-  return `${width} x ${height} mm`;
+  return formatMeasurePairFromMm(item.ancho, item.alto, unit) ?? "- x - mm";
 }
 
 function formatStepThreeCurrency(value: number) {
@@ -176,7 +189,10 @@ export function PasoTresResumen({
   onSaveQuote,
   onSaveDraft,
   formatCurrencyInput,
+  financialSummary,
+  onQuoteStudioFinancialChange,
 }: PasoTresResumenProps) {
+  const measureUnit = useOrganizationMeasureUnit();
   const [isManualTotalOpen, setIsManualTotalOpen] = useState(
     totalClienteManual !== null && totalClienteManual !== undefined
   );
@@ -239,6 +255,14 @@ export function PasoTresResumen({
       onValidezChange(value);
     },
     [markDraftDirtyIfNeeded, onValidezChange]
+  );
+
+  const handleQuoteStudioFinancialChange = useCallback(
+    (field: keyof QuoteStudioFinancialDraft, value: string) => {
+      markDraftDirtyIfNeeded();
+      onQuoteStudioFinancialChange(field, value);
+    },
+    [markDraftDirtyIfNeeded, onQuoteStudioFinancialChange]
   );
 
   const handleSaveDraft = useCallback(() => {
@@ -335,7 +359,7 @@ export function PasoTresResumen({
                               <LuChevronDown size={16} aria-hidden />
                             </span>
                           </td>
-                          <td className={s.rtMeasure}>{formatStepThreeMeasure(item)}</td>
+                          <td className={s.rtMeasure}>{formatStepThreeMeasure(item, measureUnit)}</td>
                           <td className={s.rtQty}>{item.cantidad}</td>
                           <td className={s.rtValue}>
                             {formatStepThreeItemValue({
@@ -620,7 +644,7 @@ export function PasoTresResumen({
                         <strong>{iva}</strong>
                       </div>
                       <div className={s.rtManualBreakdownRow}>
-                        <span>Flete</span>
+                        <span>Flete cobrado al cliente</span>
                         <strong>{draft.flete > 0 ? flete : "—"}</strong>
                       </div>
                       {hasRedondeoComercial ? (
@@ -668,6 +692,8 @@ export function PasoTresResumen({
               </div>
 
               <div className={s.rtSummaryDivider} aria-hidden />
+              <QuoteProfitabilitySummary summary={financialSummary} variant="detail" />
+              <div className={s.rtSummaryDivider} aria-hidden />
               <div className={s.rtSummaryRows}>
                 <div className={s.rtSummaryRow}>
                   <span>Subtotal neto</span>
@@ -682,7 +708,7 @@ export function PasoTresResumen({
                   <strong>{mostrarIva ? iva : "$0"}</strong>
                 </div>
                 <div className={s.rtSummaryRow}>
-                  <span>Flete</span>
+                  <span>Flete cobrado al cliente</span>
                   <strong>{draft.flete > 0 ? flete : "—"}</strong>
                 </div>
                 {hasAjusteComercial ? (
@@ -779,6 +805,8 @@ export function PasoTresResumen({
           onValidezChange={handleValidezChange}
           validezOptions={VALIDEZ_OPTIONS}
           formatCurrencyInput={formatCurrencyInput}
+          financialSummary={financialSummary}
+          onQuoteStudioFinancialChange={handleQuoteStudioFinancialChange}
         />
         <PasoTresPanelAcciones
           savedRecord={savedRecord}

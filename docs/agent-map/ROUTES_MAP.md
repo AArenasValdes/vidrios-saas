@@ -1,7 +1,7 @@
 # Routes Map - Ventora
 
 Estado: vigente
-Actualizado: 2026-08-14
+Actualizado: 2026-09-14
 Responsable: ingeniería
 
 Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las secciones detalladas siguen abajo; el bloque de inventario cubre también APIs y superficies internas.
@@ -445,7 +445,7 @@ Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las
 - **Componentes principales**: `LineasPreciosPageClient`, `LineTemplateFormWizard`
 - **Hooks**: `useCotizacionLineTemplates`, `useFabricationRecipes`
 - **Tablas Supabase relacionadas**: `cotizacion_line_templates`, `fabrication_recipes`
-- **Acciones principales**: Crear/editar/duplicar/pausar líneas; filtrar por estado técnico; distinguir Sin configurar / Borrador / Lista para probar / Validada; abrir la receta vinculada.
+- **Acciones principales**: Crear/editar/duplicar/pausar líneas; filtrar por estado técnico; distinguir Sin configurar / Borrador / Configuración técnica pendiente / Lista para probar / Validada; abrir la receta vinculada. El estado de Fabricación no se confunde con el estado comercial de cotización.
 - **UX (2026-07-30)**: linea comercial y receta quedan separadas. El wizard no escribe nuevas recetas en `catalog_metadata`; muestra la configuracion antigua como solo lectura y deriva al modulo versionado.
 - **Archivos a tocar**: `lineas-precios-page-client.tsx`, `line-template-form-wizard.tsx`, `fabrication-recipe-editor.tsx`, `fabrication-recipe*.ts`, resto de `line-templates/**`
 - **Riesgos**: Migración catalog extendida requerida. No precios en pauta, no optimizador/nesting/CAD/inventario. No llamar “verificadas” a L5000/L20/L25. No mostrar formulas/JSON al usuario.
@@ -470,7 +470,7 @@ Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las
 - **Componentes principales**: `FabricacionLineWorkspace`, `RecipeGuidedEditor`, `RecipeTestLab`
 - **Hooks**: `useFabricationRecipes`, `useCotizacionLineTemplates`
 - **Tablas Supabase relacionadas**: `fabrication_recipes`, `fabrication_recipe_tests`, `cotizacion_line_templates`
-- **Acciones principales**: Crear, editar borrador, duplicar, versionar, archivar, guardar casos obligatorios/opcionales, ejecutar motor deterministico y validar.
+- **Acciones principales**: Crear, editar borrador, duplicar, versionar, archivar, guardar casos obligatorios/opcionales, ejecutar motor deterministico y validar. `compositionComplete` es requisito adicional para probar, validar o generar una pauta/snapshot; las referencias opcionales no cuentan como cortes activos.
 - **Riesgos**: No exponer JSON, formulas libres ni codigo ejecutable. Una version `validated` es solo lectura. No confundir receta Ventora con receta validada por el taller.
 
 ---

@@ -56,6 +56,7 @@ function createProfile(
     proveedorPreferido: "",
     modoPrecioPreferido: "margen",
     margenDefecto: 100,
+    unidadMedidas: "mm",
     creadoEn: "2026-03-27T10:00:00Z",
     actualizadoEn: "2026-03-27T10:00:00Z",
     publicName: "",

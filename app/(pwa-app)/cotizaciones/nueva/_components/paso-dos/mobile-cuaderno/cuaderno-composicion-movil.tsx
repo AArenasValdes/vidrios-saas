@@ -16,6 +16,9 @@ import {
 } from "react-icons/lu";
 
 import { useGuidedVisualHistory } from "@/features/cotizaciones/visual-composer/hooks/use-guided-visual-history";
+import { MeasureDimensionInput } from "@/features/cotizaciones/components/measure-dimension-input";
+import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
+import { measureUnitSuffix } from "@/features/organization-profile/services/measure-unit.service";
 import {
   calculateGuidedVisualLayout,
   renderGuidedVisualSvg,
@@ -155,6 +158,7 @@ function commitDimension(raw: string, fallback: number) {
 }
 
 export function CuadernoComposicionMovil({ initialConfig, onApply, onClose }: Props) {
+  const measureUnit = useOrganizationMeasureUnit();
   const history = useGuidedVisualHistory(initialConfig);
   useMobileViewportStability();
   const [showMore, setShowMore] = useState(false);
@@ -247,15 +251,19 @@ export function CuadernoComposicionMovil({ initialConfig, onApply, onClose }: Pr
     [config]
   );
 
-  const configWithDraftDimensions = (base = config) => {
-    const widthMm = commitDimension(widthValue, base.widthMm);
-    const heightMm = commitDimension(heightValue, base.heightMm);
+  const configWithDraftDimensions = (
+    base = config,
+    nextWidth = widthValue,
+    nextHeight = heightValue
+  ) => {
+    const widthMm = commitDimension(nextWidth, base.widthMm);
+    const heightMm = commitDimension(nextHeight, base.heightMm);
     if (widthMm === base.widthMm && heightMm === base.heightMm) return base;
     return setGuidedVisualDimensions(base, { widthMm, heightMm });
   };
 
-  const commitDimensions = () => {
-    const next = configWithDraftDimensions();
+  const commitDimensions = (nextWidth = widthValue, nextHeight = heightValue) => {
+    const next = configWithDraftDimensions(config, nextWidth, nextHeight);
     setWidthDraft(null);
     setHeightDraft(null);
     if (next !== config) history.setConfig(next);
@@ -505,35 +513,35 @@ export function CuadernoComposicionMovil({ initialConfig, onApply, onClose }: Pr
             <label className={s.dimensionField}>
               <span className={s.dimensionLabel}>Ancho</span>
               <span className={s.dimensionInputWrap}>
-                <input
+                <MeasureDimensionInput
                   aria-label="Ancho de la composicion"
-                  inputMode="numeric"
-                  value={widthValue}
-                  onChange={(event) => setWidthDraft(event.target.value.replace(/[^\d]/g, ""))}
+                  unit={measureUnit}
+                  valueMm={widthValue}
+                  onChangeMm={setWidthDraft}
+                  onBlurMm={(value) => commitDimensions(value, heightValue)}
                   onFocus={(event) => event.currentTarget.select()}
-                  onBlur={commitDimensions}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") event.currentTarget.blur();
                   }}
                 />
-                <span className={s.dimensionUnit}>mm</span>
+                <span className={s.dimensionUnit}>{measureUnitSuffix(measureUnit)}</span>
               </span>
             </label>
             <label className={s.dimensionField}>
               <span className={s.dimensionLabel}>Alto</span>
               <span className={s.dimensionInputWrap}>
-                <input
+                <MeasureDimensionInput
                   aria-label="Alto de la composicion"
-                  inputMode="numeric"
-                  value={heightValue}
-                  onChange={(event) => setHeightDraft(event.target.value.replace(/[^\d]/g, ""))}
+                  unit={measureUnit}
+                  valueMm={heightValue}
+                  onChangeMm={setHeightDraft}
+                  onBlurMm={(value) => commitDimensions(widthValue, value)}
                   onFocus={(event) => event.currentTarget.select()}
-                  onBlur={commitDimensions}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") event.currentTarget.blur();
                   }}
                 />
-                <span className={s.dimensionUnit}>mm</span>
+                <span className={s.dimensionUnit}>{measureUnitSuffix(measureUnit)}</span>
               </span>
             </label>
           </div>

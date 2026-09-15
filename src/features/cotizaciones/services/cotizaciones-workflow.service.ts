@@ -302,7 +302,7 @@ export function calculateComponentItem(
   }
 
   if (!Number.isFinite(margenPct) || margenPct < 0) {
-    throw new Error("El margen no puede ser negativo");
+    throw new Error("El recargo sobre costo no puede ser negativo");
   }
 
   const costInputScope = normalizeCostInputScope(input.costInputScope);

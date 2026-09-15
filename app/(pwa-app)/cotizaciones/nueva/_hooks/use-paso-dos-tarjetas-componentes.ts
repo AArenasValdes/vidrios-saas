@@ -15,6 +15,9 @@ import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-pr
 import { generateComponentSVG } from "@/utils/window-drawings";
 import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
 import { describeGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
+import { formatMeasurePairFromMm } from "@/features/organization-profile/services/measure-unit.service";
+import type { MeasureUnit } from "@/features/organization-profile/types/measure-unit";
 
 type UsePasoDosTarjetasComponentesParams = {
   items: CotizacionWorkflowItem[];
@@ -23,12 +26,8 @@ type UsePasoDosTarjetasComponentesParams = {
   isDesktopQuoteStudio?: boolean;
 };
 
-function buildDesktopListMeasures(item: CotizacionWorkflowItem) {
-  if (item.ancho && item.alto) {
-    return `${String(item.ancho).replace(/\.0+$/, "")} x ${String(item.alto).replace(/\.0+$/, "")} mm`;
-  }
-
-  return "Sin medidas";
+function buildDesktopListMeasures(item: CotizacionWorkflowItem, unit: MeasureUnit) {
+  return formatMeasurePairFromMm(item.ancho, item.alto, unit) ?? "Sin medidas";
 }
 
 function buildDesktopListConfiguration(input: {
@@ -52,6 +51,7 @@ function buildDesktopListConfiguration(input: {
 }
 
 export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponentesParams) {
+  const measureUnit = useOrganizationMeasureUnit();
   const desktopSvgWidth = params.isDesktopQuoteStudio ? 76 : 46;
   const desktopSvgHeight = params.isDesktopQuoteStudio ? 58 : 46;
 
@@ -105,7 +105,7 @@ export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponen
           };
         }
 
-        const listMeasures = buildDesktopListMeasures(effectiveItem);
+        const listMeasures = buildDesktopListMeasures(effectiveItem, measureUnit);
         const listConfiguration = guidedVisualConfig
           ? describeGuidedVisualConfig(guidedVisualConfig)
           : buildDesktopListConfiguration({
@@ -116,9 +116,13 @@ export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponen
               descripcion: effectiveItem.descripcion,
             });
         const measuresLabel =
-          effectiveItem.ancho && effectiveItem.alto
-            ? `${effectiveItem.ancho} × ${effectiveItem.alto} mm`
-            : "Sin medidas";
+          formatMeasurePairFromMm(effectiveItem.ancho, effectiveItem.alto, measureUnit)?.replace(
+            " x ",
+            " × "
+          ) ?? "Sin medidas";
+        const compactMeasures =
+          formatMeasurePairFromMm(effectiveItem.ancho, effectiveItem.alto, measureUnit, "x") ??
+          "Sin medidas";
 
         return {
           id: item.id,
@@ -134,11 +138,7 @@ export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponen
           priceLabel: pricingMode === "precio_directo" ? "Valor" : "Costo",
           compactMeta: guidedVisualConfig
             ? `${measuresLabel} · Personalizada`
-            : `${material} · ${
-            effectiveItem.ancho && effectiveItem.alto
-              ? `${effectiveItem.ancho}x${effectiveItem.alto} mm`
-              : "Sin medidas"
-          }`,
+            : `${material} · ${compactMeasures}`,
           metaPrimary: guidedVisualConfig
             ? `${measuresLabel}${referencia ? ` · ${referencia}` : ""}`
             : `${material} · ${effectiveItem.cantidad} ${
@@ -146,14 +146,10 @@ export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponen
           }`,
           metaSecondary: guidedVisualConfig
             ? `${listConfiguration} · ${effectiveItem.vidrio || "Sin vidrio"}`
-            : `${
-            effectiveItem.ancho && effectiveItem.alto
-              ? `${effectiveItem.ancho}x${effectiveItem.alto} mm`
-              : "Sin medidas"
-          } · ${effectiveItem.vidrio || "Sin vidrio"} · ${
+            : `${compactMeasures} · ${effectiveItem.vidrio || "Sin vidrio"} · ${
             pricingMode === "precio_directo"
               ? "precio directo"
-              : `margen ${effectiveItem.margenPct}%`
+              : `recargo ${effectiveItem.margenPct}%`
           }`,
           metaTertiary:
             pricingMode === "precio_directo"
@@ -215,6 +211,7 @@ export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponen
     [
       desktopSvgHeight,
       desktopSvgWidth,
+      measureUnit,
       params.borradoresRapidos,
       params.items,
       params.quotePricingMode,

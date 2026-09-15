@@ -27,7 +27,7 @@ Fecha de ejecución: 2026-09-14. La auditoría usa la misma identidad canónica 
 | Línea 4000 / `ventora:serie-4000-corredera-2h` | normal · corredera | 4001–4005, 4007, 4008 | 4001, 4002, 4003, 4004, 4005, 4007, 4008 → 12 | — | Arquetipo | No | Según organización | Completar medidas de corte |
 | Línea 45 / `ventora:serie-45-puerta` | puerta · puerta abatible | 4502, 4504, 4511 | 4502, 4504 → 2 | 4511 (1) | Arquetipo | No | Según organización | Confirmar bastidor, variante y cortes |
 | Línea 12 / `ventora:serie-12-shower-corredera` | tina · shower | 1201–1204 | 1201, 1202, 1203, 1204 → 8 | — | Arquetipo | No | Según organización | Confirmar receptáculo, herrajes y pauta |
-| AL-42 / `ventora:l42` | normal · proyectante | 4201, 4209, 4202, 4204, 4229, 4206, 4231, 4220, 4230, 4250 | 4201, 4201, 4202, 4202, 4229, 4229 → 12 | — | Parcial | No | Según organización | Completar evidencia; no convertir la referencia en validación |
+| AL-42 / `ventora:l42` | normal · proyectante | 4201, 4209, 4202, 4204, 4229, 4206, 4231, 4220, 4230, 4250 | 4201, 4201, 4202, 4202, 4229 vertical → 10 | 4229 horizontal (1 regla · 2 cortes) | Parcial | No | Según organización | Aplicar migración local para completar el par de junquillos; no convertir la referencia en validación |
 | Serie 4800 / `ventora:serie-4800-corredera-2h` | normal y reforzada · corredera | 4801–4806, 4808 | normal: 4801–4806, 4808 → 12; reforzada: 4801–4805, 4810, 4811 → 12 | — | SODAL | No | Según organización | Alinear referencias de variante reforzada (4810/4811) |
 | Óptima S-28 2H / `ventora:optima-s28-corredera-2h` | estándar · corredera | Sin códigos publicados | 7 reglas → 12 | — | Base tipológica | No | Según organización | Reemplazar base por fuente primaria y prueba |
 | Óptima S-28 3H / `ventora:optima-s28-corredera-3h` | estándar · corredera | Sin códigos publicados | 7 reglas → 16 | — | Base tipológica | No | Según organización | Reemplazar base por fuente primaria y prueba |
@@ -50,6 +50,12 @@ Fecha de ejecución: 2026-09-14. La auditoría usa la misma identidad canónica 
 
 Resultado de la auditoría: **29/29 claves únicas**, sin `OPTIONAL_PROFILE_COUNTED_AS_ACTIVE`, sin mezcla de variantes en Serie 4600 y con tipologías canónicas `puerta_vaiven` y `pvc_monorriel`. Las diferencias de referencias frente a reglas activas son advertencias de trazabilidad, no autorización para copiar todas las referencias a Fabricación. El auditor no altera datos ni reemplaza recetas persistidas.
 
+### Corrección P0 adicional: Serie 42 normal
+
+La receta persistida remota de la organización auditada (`organization_id=39`, `line_template_id=317`) conserva procedencia `workshop`, revisión `P1-L42-MARCO-HOJA-17` y estado `draft`. Antes de aplicar la corrección local, el junquillo `4229` horizontal está guardado como opcional y el vertical como obligatorio; por eso Fabricación muestra 5 reglas y 10 cortes, aunque el catálogo documenta la familia completa.
+
+La migración local `20260914170000_l42_normal_double_junquillo.sql` cambia únicamente la bandera `requerido` del junquillo horizontal `4229` a `true`. Conserva código, cantidad 2, descuento `-90 mm`, procedencia, vidrio, accesorios y estado de validación. Tras aplicarla, la receta tendrá 6 reglas y 12 cortes, pero seguirá pendiente porque vidrio/accesorios y la validación física completa no están confirmados. No se marca `workshop_validated`.
+
 ## Auditoría post-migración P2U (corte vigente)
 
 | Línea / `catalog_key` | Tipología | Receta persistida | Pauta documentada | Validada en taller | Precio configurado | Estado técnico / evidencia | Próximo arreglo |
@@ -63,7 +69,7 @@ Resultado de la auditoría: **29/29 claves únicas**, sin `OPTIONAL_PROFILE_COUN
 | Línea 4000 / `ventora:serie-4000-corredera-2h` | Corredera 2H | Sí · `draft`, `manufacturer=Arquetipo` | Sí · Arquetipo | No | Pendiente · 0 | Incompleta; faltan medidas de corte | Obtener pauta numérica |
 | Línea 45 / `ventora:serie-45-puerta` | Puerta abatible | Sí · `draft`, `manufacturer=Arquetipo` | Sí · Arquetipo | No | Pendiente · 0 | Incompleta; no armar solo con 4502/4504 | Confirmar bastidor, variante y cortes |
 | Línea 12 / `ventora:serie-12-shower-corredera` | Shower Door | Sí · `draft`, `manufacturer=Arquetipo` | Sí · estructura 90°/45° | No | Pendiente · 0 | Incompleta; consumos y cortes pendientes | Confirmar receptáculo, herrajes y pauta |
-| AL-42 / `ventora:l42` | Proyectante | Sí · `draft`, `workshop` | Sí | No | Según organización | No validada automáticamente | Completar evidencia y precio |
+| AL-42 / `ventora:l42` | Proyectante | Sí · `draft`, `workshop`; 5 reglas/10 cortes visibles actualmente | Sí | No | Según organización | Configuración técnica pendiente; no validada automáticamente | Aplicar migración local para activar el junquillo 4229 horizontal; completar evidencia, vidrio, accesorios y precio |
 | Serie 4800 / `ventora:serie-4800-corredera-2h` | Corredera 2H | Sí · SODAL P2A | Sí | No | Según organización | Calculable/documentada | Validar fabricación real |
 | Óptima S-28 2H / `ventora:optima-s28-corredera-2h` | Corredera 2H | Sí · base `draft` | Sí · base tipológica | No | Según organización | Pendiente | Fuente primaria y prueba |
 | Óptima S-28 3H / `ventora:optima-s28-corredera-3h` | Corredera 3H | Sí · base `draft` | Sí · base tipológica | No | Según organización | Pendiente | Fuente primaria y prueba |
@@ -96,7 +102,7 @@ Línea 15: la pauta ALAR es `1501=1×X`, `1502=1×X`, `1503=2×(Y−7)`, `1504=4
 | Línea 45 | Puerta abatible | 4502, 4504, 4511 | Pendientes; no mezclar ALAR/Alumet automáticamente | Confirmar bastidor, hoja y variante |
 | Línea 12 | Shower Door · corredera colgante | 1201, 1202, 1203, 1204 | Pendientes; solo cortes estructurales 90°/45° documentados | Confirmar receptáculo, herrajes y pauta |
 
-La columna “descuentos persistidos” no significa “descuentos confirmados”. Todas las recetas P2U son `draft`; `manufacturer`/`supplier` acredita documentación, no validación física.
+La columna “descuentos persistidos” no implica validación física del ajuste. Todas las recetas P2U son `draft`; `manufacturer`/`supplier` acredita documentación, no validación física.
 
 Fuentes primarias: [Catálogo Arquetipo](https://arquetipo.cl/catalogos/Perfiles%20Aluminio%20-%20Catalogo%20Linea%20Estandar.pdf), [Catálogo ALAR distribuido por Alumet](https://www.alumet.cl/wp-content/uploads/2020/05/alar_catalogo_2011.pdf) y [Catálogo Alumet](https://www.alumet.cl/wp-content/uploads/2020/02/202700803-ALUMET-ALUMCO-ALUMINIO.pdf).
 
@@ -111,7 +117,7 @@ La tabla siguiente conserva el corte detallado anterior para trazabilidad. No de
 | 314 | Serie 25 / L25 | Corredera 2H | Sí · `draft`, `workshop` | Sí · referencia Ventora + fuente taller P1 | No · evidencia parcial, no prueba física completa | No · 0 | Calculable; `unverified`; receta y ajustes persistidos | 2505 0; 2504 0; 2510 -35; 2507 -35; 2501 -16; 2502 -16; 2509 0 mm | P1: adjuntar comprobación física y precio |
 | 315 | AL-32 / Serie 32 | Proyectante · composición exacta pendiente | Sí · v2 `review_required`, `workshop`; v1 archivada; conserva 3204/3205 | Sí · referencia de catálogo + marco/hoja confirmados por taller | No · evidencia parcial | Sí · 80.000/m² | Calculable; `unverified`; no es “Proyectante Normal estándar” | 3201 0; 3202 -21 confirmados; 3208 -3, 3205 -1, 3204 -4 persistidos sin validar | P1: confirmar vidrio, accesorios y composición completa |
 | 316 | AM-35 | Puerta abatible y vaivén | Sí · propia, `draft` | No · base pendiente | No | No · 0 | Configuración técnica pendiente; evidencia `unverified` | Pendientes | P1 |
-| 317 | AL-42 normal / Serie 42 | Proyectante | Sí · `draft`, `workshop` | Sí · referencia Ventora + marco/hoja confirmados por taller | No · evidencia parcial | No · 0 | Calculable; `unverified`; precio pendiente | 4201 0; 4202 -17 confirmados; 4229 -90 persistido sin validar | P1: confirmar vidrio, accesorios y precio |
+| 317 | AL-42 normal / Serie 42 | Proyectante | Sí · `draft`, `workshop`; 5 reglas/10 cortes actuales | Sí · referencia Ventora + marco/hoja confirmados por taller | No · evidencia parcial | No · 0 | Configuración técnica pendiente; `unverified`; precio pendiente | 4201 0; 4202 -17 persistidos con evidencia P1; 4229 -90 persistido sin validación física | P0 local: completar junquillo 4229 horizontal; luego confirmar vidrio, accesorios y prueba real |
 | 318 | Serie 4800 | Corredera 2H | Sí · 2 recetas v2/v3, `draft`, `manufacturer=SODAL`; v1 archivada | Sí · [Catálogo General SODAL 2018, p. 29](https://sodal.cl/wp-content/uploads/2024/03/catalogo_sodal.pdf), normal/reforzada | No · sin prueba física aportada | No · 0, configurable por taller | `calculable`; `documented`; fuente SODAL | 4801/4802 -16; 4803 0; 4804/4805 -15; 4806/4808 o 4810/4811 -32; vidrio -42/-93 | P2A: prueba física y cortes no publicados |
 | 319 | Óptima S28 2H | Corredera 2H | Sí · `draft`, `manual` | Sí · base tipológica | No | No · 0 | Precio pendiente; evidencia `unverified` | Pendientes | P1 |
 | 320 | Óptima S28 3H | Corredera 3H | Sí · `draft`, `manual` | Sí · base tipológica | No | No · 0 | Precio pendiente; evidencia `unverified` | Pendientes | P1 |
@@ -156,6 +162,7 @@ Con W=1000 mm y H=1200 mm, el motor P1 debe producir: AL-32 marco 1000/1200; AL-
 
 - **P0:** 335: mantener identidad canónica `pvc_monorriel`; clasificar la línea histórica sin `catalog_key` antes de auditarla.
 - **P1:** 312, 313, 314, 315 y 317: incorporar comprobación física completa, vidrio/accesorios y precio donde falte. AL-32 conserva 3204/3205; confirmar composición antes de nombrarla estándar. AL-42 usa -17 mm para esta receta de taller; la referencia externa histórica -18 mm queda trazada, no aplicada.
+- **P0 local Serie 42:** aplicar `20260914170000_l42_normal_double_junquillo.sql` para activar el junquillo 4229 horizontal y dejar dos orientaciones obligatorias de 2 cortes; después repetir prueba real sin marcar validación automáticamente.
 - **P2A completado documentalmente:** 318, 321, 322, 327, 328, 329 y 330 tienen recetas SODAL persistidas, versionadas, separadas por variante y documentadas; siguen pendientes de prueba física.
 - **P2 siguiente:** 316, 319–326 y 331–334, 336: pedir ficha o pauta primaria; no completar por inferencia.
 
@@ -167,7 +174,7 @@ Una línea se cierra como “Validada en taller” solo con receta persistida va
 
 - Migraciones ejecutadas remotamente: `20260914120000_fabrication_recipe_provenance.sql`, `20260914142228_p1_workshop_recipe_evidence.sql` y `20260914153339_p2a_sodal_aluminum_recipes.sql` (además de cuatro migraciones históricas pendientes que estaban ausentes del historial remoto).
 - Columnas verificadas: `source_name`, `source_revision`.
-- RLS verificada activa en `fabrication_recipes` y `fabrication_recipe_tests`, con 6 policies en ambas tablas.
+- RLS verificada activa en `fabrication_recipes` y `fabrication_recipe_tests`, con 3 policies por tabla.
 - Conteo remoto de líneas activas en organización 39: 26, de las cuales 25 tienen `catalog_key` canónico y 1 (`id=437`) es histórica/no mapeada. Recetas activas: 31; pruebas activas: 1.
 - La receta anterior de cada línea P2A quedó archivada con `parent_recipe_id` en la nueva versión; no se sobrescribió ni se eliminó historia. `organization_id=39` se conserva en las 10 recetas nuevas.
 - Los checks remotos confirmaron columnas `source_name/source_revision`, `relrowsecurity=true`, códigos y fórmulas esperadas, `source_type=manufacturer`, `source_name=SODAL`, status `draft` y ausencia de pruebas físicas nuevas.

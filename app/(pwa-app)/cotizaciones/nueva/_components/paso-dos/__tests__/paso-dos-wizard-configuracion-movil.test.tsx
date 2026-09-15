@@ -6,6 +6,10 @@ jest.mock("@/features/auth/hooks/useAuth", () => ({
   useAuth: () => ({ organizacionId: "test-org-1", userId: "test-user" }),
 }));
 
+jest.mock("@/features/organization-profile/hooks/use-organization-measure-unit", () => ({
+  useOrganizationMeasureUnit: () => "mm",
+}));
+
 import { PasoDosWizardConfiguracionMovil } from "../paso-dos-wizard-configuracion-movil";
 
 const baseProps = {
@@ -113,7 +117,7 @@ const baseProps = {
   onGlobalTotalClienteChange: jest.fn(),
   onMostrarIvaChange: jest.fn(),
   onInternalObservationChange: jest.fn(),
-  priceHelp: "Base para calcular la venta con margen.",
+  priceHelp: "Costo interno. El recargo sobre costo calcula la venta.",
   priceLabel: "Costo base",
   recommendedReason: "Opciones frecuentes.",
   recommendedVidrios: ["Incoloro monolitico 5mm"],
@@ -316,7 +320,7 @@ describe("PasoDosWizardConfiguracionMovil", () => {
     expect(onMirrorInteriorLineChange).toHaveBeenCalledWith("marked");
   });
 
-  it("debe mostrar margen solo cuando aplica", () => {
+  it("debe mostrar recargo sobre costo solo cuando aplica", () => {
     const onPricingModeChange = jest.fn();
     const { rerender } = render(
       <PasoDosWizardConfiguracionMovil
@@ -326,8 +330,14 @@ describe("PasoDosWizardConfiguracionMovil", () => {
       />
     );
 
-    expect(screen.getByLabelText("Margen (%)")).toBeInTheDocument();
+    expect(screen.getByLabelText("Recargo sobre costo (%)")).toBeInTheDocument();
     expect(screen.getByText("Costo base")).toBeInTheDocument();
+    expect(screen.getByText("100% de recargo duplica el costo.")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Recargo que se suma al costo. No es el margen real sobre la venta.")
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Venta estimada")).not.toBeInTheDocument();
+    expect(screen.queryByText("Margen real")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("radio", { name: "Valor directo" }));
     expect(onPricingModeChange).toHaveBeenCalledWith("precio_directo");
@@ -342,8 +352,24 @@ describe("PasoDosWizardConfiguracionMovil", () => {
       />
     );
 
-    expect(screen.queryByLabelText("Margen (%)")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Recargo sobre costo (%)")).not.toBeInTheDocument();
+    expect(screen.queryByText("Venta estimada")).not.toBeInTheDocument();
+    expect(screen.queryByText("Margen real")).not.toBeInTheDocument();
     expect(screen.getByText("Precio unitario")).toBeInTheDocument();
+  });
+
+  it("multiplica el recargo por unidad cuando la cantidad es mayor a 1", () => {
+    render(
+      <PasoDosWizardConfiguracionMovil
+        {...baseProps}
+        activePricingMode="margen"
+        draft={{ ...baseProps.draft, costInputScope: "unit", cantidad: 5 }}
+      />
+    );
+
+    expect(screen.getByText("Se multiplicará por la cantidad.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Por unidad" })).toBeInTheDocument();
+    expect(screen.queryByText("Venta estimada")).not.toBeInTheDocument();
   });
 
   it("debe crear una línea rápida con el material heredado y aplicarla al draft", async () => {

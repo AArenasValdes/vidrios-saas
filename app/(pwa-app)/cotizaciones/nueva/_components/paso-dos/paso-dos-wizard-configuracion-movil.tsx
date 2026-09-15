@@ -27,6 +27,13 @@ import {
   type ComponentFormLinePricingSummary,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import { buildCotizacionMirrorPaneMeasure } from "@/utils/cotizacion-item-presentation";
+import { MeasureDimensionInput } from "@/features/cotizaciones/components/measure-dimension-input";
+import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
+import {
+  formatMeasurePairFromMm,
+  measureDimensionFieldLabel,
+  measureDimensionPlaceholder,
+} from "@/features/organization-profile/services/measure-unit.service";
 import {
   getComponentDescripcion,
   getSystemDisplayLabel,
@@ -214,6 +221,7 @@ export function PasoDosWizardConfiguracionMovil({
   onSetVidSearch,
   onCreateCustomGlass,
 }: Props) {
+  const measureUnit = useOrganizationMeasureUnit();
   const { organizacionId } = useAuth();
   const [showAllColors, setShowAllColors] = useState(false);
   const [isIphoneViewport] = useState(() => {
@@ -518,7 +526,7 @@ export function PasoDosWizardConfiguracionMovil({
               {nestedDetailItems.map((item) => {
                 const measures =
                   item.ancho && item.alto
-                    ? `${Math.round(item.ancho)} x ${Math.round(item.alto)} mm`
+                    ? formatMeasurePairFromMm(item.ancho, item.alto, measureUnit) ?? "Sin medidas"
                     : "Sin medidas";
                 const quantity = item.cantidad > 1 ? `${item.cantidad} uds.` : "1 ud.";
 
@@ -778,26 +786,26 @@ export function PasoDosWizardConfiguracionMovil({
                         />
                       </label>
                       <label className={s.stepTwoMobileInlineField}>
-                        <span className={s.label}>Ancho (mm)</span>
-                        <input
+                        <span className={s.label}>{measureDimensionFieldLabel("ancho", measureUnit)}</span>
+                        <MeasureDimensionInput
                           className={s.input}
-                          inputMode="numeric"
-                          placeholder="1500"
-                          value={detalle.ancho}
-                          onChange={(event) =>
-                            onUpdateAlcanceDetalle(detalle.id, "ancho", event.target.value)
+                          placeholder={measureDimensionPlaceholder("ancho", measureUnit)}
+                          unit={measureUnit}
+                          valueMm={detalle.ancho}
+                          onChangeMm={(value) =>
+                            onUpdateAlcanceDetalle(detalle.id, "ancho", value)
                           }
                         />
                       </label>
                       <label className={s.stepTwoMobileInlineField}>
-                        <span className={s.label}>Alto (mm)</span>
-                        <input
+                        <span className={s.label}>{measureDimensionFieldLabel("alto", measureUnit)}</span>
+                        <MeasureDimensionInput
                           className={s.input}
-                          inputMode="numeric"
-                          placeholder="2000"
-                          value={detalle.alto}
-                          onChange={(event) =>
-                            onUpdateAlcanceDetalle(detalle.id, "alto", event.target.value)
+                          placeholder={measureDimensionPlaceholder("alto", measureUnit)}
+                          unit={measureUnit}
+                          valueMm={detalle.alto}
+                          onChangeMm={(value) =>
+                            onUpdateAlcanceDetalle(detalle.id, "alto", value)
                           }
                         />
                       </label>
@@ -1654,26 +1662,26 @@ export function PasoDosWizardConfiguracionMovil({
                         />
                       </label>
                       <label className={s.stepTwoMobileInlineField}>
-                        <span className={s.label}>Ancho (mm)</span>
-                        <input
+                        <span className={s.label}>{measureDimensionFieldLabel("ancho", measureUnit)}</span>
+                        <MeasureDimensionInput
                           className={s.input}
-                          inputMode="numeric"
-                          placeholder="1500"
-                          value={detalle.ancho}
-                          onChange={(e) =>
-                            onUpdateAlcanceDetalle(detalle.id, "ancho", e.target.value)
+                          placeholder={measureDimensionPlaceholder("ancho", measureUnit)}
+                          unit={measureUnit}
+                          valueMm={detalle.ancho}
+                          onChangeMm={(value) =>
+                            onUpdateAlcanceDetalle(detalle.id, "ancho", value)
                           }
                         />
                       </label>
                       <label className={s.stepTwoMobileInlineField}>
-                        <span className={s.label}>Alto (mm)</span>
-                        <input
+                        <span className={s.label}>{measureDimensionFieldLabel("alto", measureUnit)}</span>
+                        <MeasureDimensionInput
                           className={s.input}
-                          inputMode="numeric"
-                          placeholder="2000"
-                          value={detalle.alto}
-                          onChange={(e) =>
-                            onUpdateAlcanceDetalle(detalle.id, "alto", e.target.value)
+                          placeholder={measureDimensionPlaceholder("alto", measureUnit)}
+                          unit={measureUnit}
+                          valueMm={detalle.alto}
+                          onChangeMm={(value) =>
+                            onUpdateAlcanceDetalle(detalle.id, "alto", value)
                           }
                         />
                       </label>
@@ -1870,16 +1878,15 @@ export function PasoDosWizardConfiguracionMovil({
         <div className={s.stepTwoMobileMedidasRow}>
           <div className={s.stepTwoMobileMedidaField}>
             <label className={s.stepTwoMobileMedidaLabel} htmlFor="grupo-ancho">
-              Ancho (mm)
+              {measureDimensionFieldLabel("ancho", measureUnit)}
             </label>
-            <input
+            <MeasureDimensionInput
               className={s.stepTwoMobileMedidaInput}
               id="grupo-ancho"
-              inputMode="numeric"
-              placeholder="1200"
-              type="text"
-              value={draft.ancho}
-              onChange={(event) => onAnchoChange(event.target.value)}
+              placeholder={measureDimensionPlaceholder("ancho", measureUnit)}
+              unit={measureUnit}
+              valueMm={draft.ancho}
+              onChangeMm={onAnchoChange}
             />
           </div>
 
@@ -1887,16 +1894,15 @@ export function PasoDosWizardConfiguracionMovil({
 
           <div className={s.stepTwoMobileMedidaField}>
             <label className={s.stepTwoMobileMedidaLabel} htmlFor="grupo-alto">
-              Alto (mm)
+              {measureDimensionFieldLabel("alto", measureUnit)}
             </label>
-            <input
+            <MeasureDimensionInput
               className={s.stepTwoMobileMedidaInput}
               id="grupo-alto"
-              inputMode="numeric"
-              placeholder="1500"
-              type="text"
-              value={draft.alto}
-              onChange={(event) => onAltoChange(event.target.value)}
+              placeholder={measureDimensionPlaceholder("alto", measureUnit)}
+              unit={measureUnit}
+              valueMm={draft.alto}
+              onChangeMm={onAltoChange}
             />
           </div>
         </div>
@@ -1908,6 +1914,12 @@ export function PasoDosWizardConfiguracionMovil({
           costInputScope={draft.costInputScope}
           formattedPriceValue={formattedPriceValue}
           marginValue={draft.margenPct}
+          costoIngresado={Number(draft.precio) || 0}
+          cantidad={
+            draft.usaCantidadPersonalizada
+              ? Number(draft.cantidadPersonalizada) || 0
+              : draft.cantidad
+          }
           onCostInputScopeChange={onCostInputScopeChange}
           onMargenChange={onMargenChange}
           onPrecioChange={onPrecioChange}

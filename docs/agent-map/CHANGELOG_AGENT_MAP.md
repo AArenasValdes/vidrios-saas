@@ -2,6 +2,49 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-15 - Ajustes copy acordeón móvil de costos
+
+- Merma pasa a **Merma de materiales %** (solo copy; la fórmula no cambia).
+- Si hay utilidad negativa o el costo supera la venta neta, el acordeón abierto muestra “Esta cotización está bajo costo.”
+- El resumen cerrado formatea CLP negativo como `Utilidad -$310.000`.
+- Debajo de Margen objetivo %: “Margen real que quieres obtener sobre la venta.”
+- Desktop, PDF, IVA, descuento, flete y cálculo de rentabilidad no cambian.
+
+## 2026-09-14 - Costos y rentabilidad móvil (Paso 2/3)
+
+- Paso 2 móvil deja solo el precio de pieza: `Costo + recargo`, `Recargo sobre costo (%)` y la ayuda “100% de recargo duplica el costo.”
+- Paso 3 móvil concentra costos y rentabilidad en un acordeón bajo Flete/Descuento. Cerrado resume costo · utilidad · margen; sin base muestra “Rentabilidad pendiente”.
+- Se retira la tarjeta azul de “Rentabilidad interna” del total móvil. Desktop, fórmulas, PDF, WhatsApp, IVA, descuento y flete no cambian.
+
+## 2026-09-14 - Unidad de medidas comercial mm/cm
+
+- `organization_profile.unidad_medidas` (`mm` default, `cm` opcional) se configura en Empresa > Configuracion comercial.
+- Interno (cotizacion, area, recetas, perfiles, fabricacion, largos comerciales, PDF) sigue en mm.
+- Si la empresa elige cm, los inputs de ancho/alto al crear/editar cotizaciones muestran y leen cm (`120` → `1200` mm).
+- Migracion `20260914211159_unidad_medidas_comercial.sql` + GRANT INSERT/UPDATE de `authenticated` para no romper el endurecimiento de columnas.
+
+## 2026-09-14 - Costos y rentabilidad V2
+
+- Copy: el markup de pieza pasa a **Recargo sobre costo**; **Margen real** queda reservado a `(venta neta − costo) / venta neta`.
+- Sin base de costos (`hasCostBasis=false`) la UI muestra **Rentabilidad pendiente** y no infiere utilidad.
+- Resumen interno compacto visible en Paso 2, Paso 3 y detalle privado. No se agrega a PDF, WhatsApp ni `/presupuesto/[token]`.
+- Fórmulas comerciales (m², mínimo, IVA, flete post-IVA, recargo) no cambian. El descuento ya afectaba el neto usado por Quote Studio; se cubre con tests A–G.
+- `margen_defecto=100` sigue siendo recargo/markup; no se migró a margen real.
+
+## 2026-09-14 - Serie 42 normal: par completo de junquillos
+
+- La revisión de la receta persistida de `line_template_id=317` confirmó el desfase entre las 10 referencias del catálogo y las 5 reglas activas/10 cortes que Fabricación mostraba: el junquillo `4229` horizontal estaba opcional y el vertical obligatorio.
+- Se prepara la migración idempotente local `20260914170000_l42_normal_double_junquillo.sql`, acotada a la receta `organization_id=39`, `source_type='workshop'`, referencia P1 y variante `normal`.
+- La migración cambia únicamente `requerido=false` a `true` para el junquillo horizontal `4229`; conserva código, cantidad 2, descuento `-90 mm`, procedencia, vidrio, accesorios y estado `draft`. Después de aplicarla quedarán 6 reglas/12 cortes, pero la receta seguirá pendiente de evidencia física completa.
+- La migración no fue subida ni aplicada remotamente en este corte. `supabase db push --linked --dry-run` la identifica como única migración pendiente. Test específico de Serie 42: 5/5 aprobado.
+
+## 2026-09-14 - P0 anti-recetas incompletas en Fabricación
+
+- `line-operational-status.service.ts`, `recipe-guided-editor.tsx` y `fabricacion-line-workspace.tsx` ahora exigen composición completa antes de mostrar “Lista para probar”, permitir prueba/validación o generar una pauta técnica.
+- `pauta-cubicacion-panel.tsx` no genera `fabricacion_snapshot` formal desde una receta persistida incompleta. Las referencias opcionales no cuentan como reglas activas ni cortes.
+- Producción fue verificada con sesión autenticada: Serie 42 muestra `Serie 42 — AL-42 normal`, `Proyectante · 1 Hoja`, estado `Configuración técnica pendiente`, 5 reglas/10 cortes actuales, vidrio y accesorios preliminares.
+- No se modificaron descuentos, códigos técnicos, precios ni la procedencia de las recetas. La corrección remota de una fila duplicada creada durante QA se hizo mediante soft delete, preservando historial.
+
 ## 2026-09-14 - P3 auditoría final de consistencia de 29 líneas
 
 - Se centraliza el resumen de Fabricación: referencias documentadas, reglas activas, cortes físicos, accesorios, vidrios y alternativas opcionales ya no comparten un mismo contador.

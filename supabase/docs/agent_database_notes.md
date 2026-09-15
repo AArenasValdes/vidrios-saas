@@ -3,6 +3,14 @@
 Reglas y contexto para futuros agentes que trabajen sobre la base de datos.
 Fuente de verdad, en orden: base remota verificada; migraciones registradas en remoto; fuentes recuperadas con `supabase migration fetch --linked`; y, solo como baseline historico, `current_schema.sql`. El dump y `database.types.ts` estan atrasados respecto de migraciones recientes; revisar migraciones y addendums en `database_map.md` y `rls_policies.md`.
 
+## Addendum 2026-09-14 - Serie 42 normal y bloqueo de composición incompleta
+
+- La corrección P0 de aplicación exige `compositionComplete` antes de probar, validar o crear un snapshot técnico. Una receta calculable no es necesariamente una receta lista para taller.
+- La receta Serie 42 normal de la organización auditada conserva `organization_id=39`, `line_template_id=317`, `source_type='workshop'`, referencia P1 y estado `draft`. Remotamente mantiene 5 reglas/10 cortes porque el junquillo `4229` horizontal estaba opcional; el vertical permanece obligatorio.
+- La migración local `20260914170000_l42_normal_double_junquillo.sql` es idempotente y acotada: solo cambia la bandera `requerido` del junquillo horizontal `4229` a `true`. No altera código, cantidad, descuento `-90 mm`, procedencia, vidrio, accesorios ni `workshop_validated`.
+- No modificar migraciones ya aplicadas. La migración nueva está pendiente de aplicación remota; antes de aplicarla verificar historial, fila objetivo, RLS, organización y que no se haya creado una receta duplicada.
+- El precio comercial sigue siendo configurable por taller y separado de la receta; Ventora no entrega precios técnicos en la pauta.
+
 ## Endurecimiento aplicado y verificado (2026-08-20)
 
 La migracion `20260814201536_security_hardening_payments_auth.sql` consta aplicada y verificada en el addendum remoto del 2026-08-20. Estos controles forman parte del contrato actual:

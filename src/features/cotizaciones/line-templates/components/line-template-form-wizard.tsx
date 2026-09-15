@@ -204,7 +204,7 @@ function buildAdvancedDetailsSummary(draft: LineTemplateFormDraft) {
   const parts: string[] = [];
   if (draft.redondeoPrecio !== "0") parts.push("Redondeo");
   if (draft.mermaPct) parts.push("Merma");
-  if (draft.margenObjetivoPct) parts.push("Margen");
+  if (draft.margenObjetivoPct) parts.push("Margen objetivo");
   if (draft.proveedor.trim()) parts.push("Proveedor");
   if (draft.lineSystem.trim()) parts.push("Sistema");
   if (draft.vidrioPrincipalRecomendado) parts.push("Vidrio");

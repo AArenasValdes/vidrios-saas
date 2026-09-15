@@ -1,4 +1,5 @@
 import type { PreferredProvider } from "@/features/cotizaciones/services/component-suggestions.service";
+import type { MeasureUnit } from "@/features/organization-profile/types/measure-unit";
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type {
   BillingPeriod,
@@ -54,6 +55,7 @@ export type OrganizationProfile = OrganizationRegionSettings & {
   proveedorPreferido: PreferredProvider;
   modoPrecioPreferido: PricingMode;
   margenDefecto: number;
+  unidadMedidas: MeasureUnit;
   creadoEn: string | null;
   actualizadoEn: string | null;
   publicName: string;
@@ -117,6 +119,7 @@ export type UpdateOrganizationProfileInput = OrganizationRegionSettings & {
   proveedorPreferido: PreferredProvider;
   modoPrecioPreferido: PricingMode;
   margenDefecto: number;
+  unidadMedidas: MeasureUnit;
   publicName: string;
   publicSubtitle: string;
   publicZone: string;

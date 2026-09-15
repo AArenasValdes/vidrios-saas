@@ -69,6 +69,7 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = buildPaginaVentaProfileInput(
   proveedorPreferido: "",
   modoPrecioPreferido: "margen",
   margenDefecto: 100,
+  unidadMedidas: "mm",
   creadoEn: null,
   actualizadoEn: null,
   publicName: "",

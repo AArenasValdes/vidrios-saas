@@ -14,6 +14,7 @@ import { buildCotizacionWhatsappUrl } from "@/utils/whatsapp";
 import { CotizacionDetalleDesktopView } from "./_components/cotizacion-detalle-desktop-view";
 import { CotizacionDetalleMobileView } from "./_components/cotizacion-detalle-mobile-view";
 import { buildCotizacionDetalleMobileViewModel } from "./_components/cotizacion-detalle-mobile-view-model";
+import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 
 import s from "./page.module.css";
 
@@ -26,6 +27,7 @@ function getRuntimeMessage(error: unknown, fallback: string) {
 }
 
 export default function CotizacionDetallePage() {
+  const measureUnit = useOrganizationMeasureUnit();
   const onboarding = useOnboardingChecklist();
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -344,6 +346,7 @@ export default function CotizacionDetallePage() {
   const isHydratingItems = isLoadingItems && cotizacion.items.length === 0;
   const model = buildCotizacionDetalleMobileViewModel(effectiveCotizacion, {
     isHydratingItems,
+    measureUnit,
   });
 
   const viewProps = {

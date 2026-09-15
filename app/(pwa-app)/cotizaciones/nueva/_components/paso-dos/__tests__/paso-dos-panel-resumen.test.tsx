@@ -26,6 +26,23 @@ function buildProps(overrides: Record<string, unknown> = {}) {
     pendingItemsCount: 0,
     completedItemsCount: 1,
     isDesktopQuoteStudio: true,
+    financialSummary: {
+      quotePricingMode: "por_item" as const,
+      costoMateriales: 0,
+      manoObra: 0,
+      traslado: 0,
+      otrosCostos: 0,
+      merma: 0,
+      costoTotal: 0,
+      margenObjetivoRealPct: 30,
+      precioRecomendadoNeto: 0,
+      precioFinalNeto: 120000,
+      precioFinalCliente: 142800,
+      utilidadEstimada: 0,
+      margenRealPct: 0,
+      markupEquivalentePct: 0,
+      hasCostBasis: false,
+    },
     stepTwoSummaryRef: { current: null },
     onGoToSummary: jest.fn(),
     layout: "desktop" as const,
@@ -77,5 +94,21 @@ describe("PasoDosPanelResumen desktop quote studio", () => {
     expect(
       screen.queryByText(QUOTE_STUDIO_NO_COMPLETED_PIECES_HINT)
     ).not.toBeInTheDocument();
+  });
+
+  it("en movil no muestra rentabilidad en el dock de paso 2", () => {
+    render(
+      <PasoDosPanelResumen
+        {...buildProps({
+          isMobileViewport: true,
+          isDesktopQuoteStudio: false,
+          layout: "mobile",
+        })}
+      />
+    );
+
+    expect(screen.getAllByRole("button", { name: /Ir al resumen/i }).length).toBeGreaterThan(0);
+    expect(screen.queryByText("Rentabilidad interna")).not.toBeInTheDocument();
+    expect(screen.queryByText("Rentabilidad pendiente")).not.toBeInTheDocument();
   });
 });

@@ -11,6 +11,12 @@ import {
   hasPerSystemConfigurations,
 } from "@/features/cotizaciones/services/component-catalog.service";
 import { LineTemplatePicker } from "@/features/cotizaciones/line-templates/components/line-template-picker";
+import { MeasureDimensionInput } from "@/features/cotizaciones/components/measure-dimension-input";
+import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
+import {
+  measureDimensionFieldLabel,
+  measureDimensionPlaceholder,
+} from "@/features/organization-profile/services/measure-unit.service";
 import { PautaCubicacionPanel } from "./pauta-cubicacion-panel";
 import { generateComponentSVG } from "@/utils/window-drawings";
 import {
@@ -45,6 +51,10 @@ import {
   buildEditorSubtitle,
   type FormPriceDisplay,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
+import {
+  calculateSaleFromCostRecargo,
+  formatQuoteProfitabilityPct,
+} from "@/features/cotizaciones/services/quote-studio-financial.service";
 import type { PasoDosFormularioComponenteProps } from "../../_types/paso-dos";
 
 import s from "../../page.module.css";
@@ -86,7 +96,11 @@ function EditorHeader({
   isDesktopQuoteStudio?: boolean;
   activeStepLabel?: string;
 }) {
-  const subtitle = useMemo(() => buildEditorSubtitle(componentForm), [componentForm]);
+  const measureUnit = useOrganizationMeasureUnit();
+  const subtitle = useMemo(
+    () => buildEditorSubtitle(componentForm, measureUnit),
+    [componentForm, measureUnit]
+  );
   const pieceType = componentForm.tipo || "Componente";
 
   const handleClose = useCallback(() => {
@@ -699,6 +713,7 @@ function TabMedidas({
 > & {
   onEditarPrecio: () => void;
 }) {
+  const measureUnit = useOrganizationMeasureUnit();
   const isMirrorComponent = componentForm.tipo === "Espejo";
   const hideGlass = componentForm.tipo === "Trabajo personalizado" || isFreeValueComponentType(componentForm.tipo);
 
@@ -713,31 +728,29 @@ function TabMedidas({
         <div className={s.stepTwoMobileMedidasRow}>
           <div className={s.stepTwoMobileMedidaField}>
             <label className={s.stepTwoMobileMedidaLabel} htmlFor="editor-ancho">
-              Ancho (mm)
+              {measureDimensionFieldLabel("ancho", measureUnit)}
             </label>
-            <input
+            <MeasureDimensionInput
               className={s.stepTwoMobileMedidaInput}
               id="editor-ancho"
-              inputMode="numeric"
-              placeholder="1200"
-              type="text"
-              value={componentForm.ancho}
-              onChange={(event) => onComponentChange("ancho", event.target.value)}
+              placeholder={measureDimensionPlaceholder("ancho", measureUnit)}
+              unit={measureUnit}
+              valueMm={componentForm.ancho}
+              onChangeMm={(value) => onComponentChange("ancho", value)}
             />
           </div>
           <div className={s.stepTwoMobileBlockX}>x</div>
           <div className={s.stepTwoMobileMedidaField}>
             <label className={s.stepTwoMobileMedidaLabel} htmlFor="editor-alto">
-              Alto (mm)
+              {measureDimensionFieldLabel("alto", measureUnit)}
             </label>
-            <input
+            <MeasureDimensionInput
               className={s.stepTwoMobileMedidaInput}
               id="editor-alto"
-              inputMode="numeric"
-              placeholder="1500"
-              type="text"
-              value={componentForm.alto}
-              onChange={(event) => onComponentChange("alto", event.target.value)}
+              placeholder={measureDimensionPlaceholder("alto", measureUnit)}
+              unit={measureUnit}
+              valueMm={componentForm.alto}
+              onChangeMm={(value) => onComponentChange("alto", value)}
             />
           </div>
         </div>
@@ -1169,8 +1182,8 @@ function TabPrecio({
                 checked={componentForm.pricingMode === "margen"}
                 onChange={() => onPricingModeSelection("margen")}
               />
-              <span className={s.segmentedChoiceTitle}>Costo + margen</span>
-              <span className={s.segmentedChoiceHint}>Calcula la venta desde precio base y margen.</span>
+              <span className={s.segmentedChoiceTitle}>Costo + recargo</span>
+              <span className={s.segmentedChoiceHint}>Calcula la venta sumando un recargo porcentual al costo.</span>
             </label>
             <label className={`${s.segmentedChoice} ${componentForm.pricingMode === "precio_directo" && (!componentForm.lineTemplateId || !componentForm.precioPorM2?.trim()) ? s.segmentedChoiceActive : ""}`}>
               <input
@@ -1260,17 +1273,17 @@ function TabPrecio({
                 />
               </label>
               <label className={s.field}>
-                <span className={s.label}>Margen %</span>
+                <span className={s.label}>Recargo sobre costo</span>
                 <div className={s.selectWrap}>
                   <select
                     className={s.input}
                     value={componentForm.margenPct}
                     onChange={(event) => onComponentChange("margenPct", event.target.value)}
-                    aria-label="Margen a aplicar"
+                    aria-label="Recargo sobre costo a aplicar"
                   >
                     {MARGIN_SELECT_OPTIONS.map((preset) => (
                       <option key={preset} value={String(preset)}>
-                        {preset === 0 ? "0% (sin margen)" : `${preset}%`}
+                        {preset === 0 ? "0% (sin recargo)" : `${preset}%`}
                       </option>
                     ))}
                   </select>
@@ -1280,7 +1293,17 @@ function TabPrecio({
             </div>
             {precioDisplay.precioUnitario > 0 ? (
               <div className={editor.precioSugerido}>
-                <span>Precio sugerido: {CLP(precioDisplay.precioUnitario)} / unidad</span>
+                <span>
+                  Precio resultante: {CLP(precioDisplay.precioUnitario)} / unidad
+                  {Number(componentForm.costoProveedorUnitario) > 0
+                    ? ` · Margen real ${formatQuoteProfitabilityPct(
+                        calculateSaleFromCostRecargo(
+                          Number(componentForm.costoProveedorUnitario),
+                          Number(componentForm.margenPct) || 0
+                        ).margenRealPct
+                      )}`
+                    : ""}
+                </span>
               </div>
             ) : null}
           </div>

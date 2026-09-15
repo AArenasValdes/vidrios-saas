@@ -328,6 +328,8 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     onSaveQuote: params.onSaveQuote,
     onSaveDraft: params.onSaveDraft,
     formatCurrencyInput: params.formatCurrencyInput,
+    financialSummary: params.financialSummary,
+    onQuoteStudioFinancialChange: params.onQuoteStudioFinancialChange,
   }), [params]);
 
   const propsResumenDesktop = useMemo(() => ({

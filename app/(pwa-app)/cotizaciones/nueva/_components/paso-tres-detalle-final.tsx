@@ -3,10 +3,19 @@
 import { useState } from "react";
 import { LuBadgePercent, LuChevronDown, LuTruck } from "react-icons/lu";
 
-import type { CotizacionWorkflowDraft, CotizacionWorkflowRecord } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type {
+  CotizacionWorkflowDraft,
+  CotizacionWorkflowRecord,
+  QuoteStudioFinancialDraft,
+} from "@/features/cotizaciones/types/cotizacion-workflow";
 import { resolveWorkflowItemDisplayName } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
+import type { QuoteStudioFinancialSummary } from "@/features/cotizaciones/services/quote-studio-financial.service";
+import { QuoteProfitabilitySummary } from "../../_components/quote-profitability-summary";
+import { PasoTresCostosRentabilidadMovil } from "./paso-tres-costos-rentabilidad-movil";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
+import { formatMeasurePairFromMm } from "@/features/organization-profile/services/measure-unit.service";
 
 import s from "../page.module.css";
 
@@ -32,6 +41,11 @@ type PasoTresDetalleFinalProps = {
   onValidezChange: (value: string) => void;
   validezOptions: string[];
   formatCurrencyInput: (value: string) => string;
+  financialSummary: QuoteStudioFinancialSummary;
+  onQuoteStudioFinancialChange: (
+    field: keyof QuoteStudioFinancialDraft,
+    value: string
+  ) => void;
 };
 
 export function PasoTresDetalleFinal({
@@ -56,7 +70,10 @@ export function PasoTresDetalleFinal({
   onValidezChange,
   validezOptions,
   formatCurrencyInput,
+  financialSummary,
+  onQuoteStudioFinancialChange,
 }: PasoTresDetalleFinalProps) {
+  const measureUnit = useOrganizationMeasureUnit();
   const [showFreightEditor, setShowFreightEditor] = useState(false);
   const [showDiscountEditor, setShowDiscountEditor] = useState(false);
   const [showAllItems, setShowAllItems] = useState(false);
@@ -83,10 +100,9 @@ export function PasoTresDetalleFinal({
       return item.descripcion?.trim() || "Sin medidas";
     }
 
-    const width = item.ancho ? String(item.ancho).replace(/\.0+$/, "") : "-";
-    const height = item.alto ? String(item.alto).replace(/\.0+$/, "") : "-";
+    const pair = formatMeasurePairFromMm(item.ancho, item.alto, measureUnit);
     const unit = item.unidad?.trim() || "u";
-    return `${width}x${height} - ${item.cantidad} ${unit}`;
+    return `${pair ? pair.replace(" x ", "x").replace(` ${measureUnit}`, "") : "-x-"} - ${item.cantidad} ${unit}`;
   };
 
   const visibleItems = showAllItems ? draft.items : draft.items.slice(0, 3);
@@ -187,7 +203,7 @@ export function PasoTresDetalleFinal({
             <LuTruck aria-hidden />
           </span>
           <span className={s.stepThreeFreightText}>
-            <strong>Flete</strong>
+            <strong>Flete cobrado al cliente</strong>
             <span>{draft.flete > 0 ? flete : "No incluido"}</span>
           </span>
           <LuChevronDown
@@ -197,7 +213,7 @@ export function PasoTresDetalleFinal({
         </button>
         {showFreightEditor ? (
           <label className={s.stepThreeAdjustmentEditor}>
-            <span className={s.label}>Valor del flete</span>
+            <span className={s.label}>Valor del flete cobrado al cliente</span>
             <div className={s.moneyInputWrap}>
               <span className={s.moneyPrefix}>CLP</span>
               <input
@@ -270,11 +286,23 @@ export function PasoTresDetalleFinal({
           </div>
         ) : null}
       </div>
+
+      {isMobileViewport ? (
+        <PasoTresCostosRentabilidadMovil
+          financialSummary={financialSummary}
+          quoteStudioFinancial={draft.quoteStudioFinancial}
+          formatCurrencyInput={formatCurrencyInput}
+          onQuoteStudioFinancialChange={onQuoteStudioFinancialChange}
+        />
+      ) : null}
     </section>
   );
 
   const totalsPanel = (
     <div className={s.totalPanel}>
+      {!isMobileViewport ? (
+        <QuoteProfitabilitySummary summary={financialSummary} variant="detail" tone="onDark" />
+      ) : null}
       <div className={s.totalRow}>
         <span>{mostrarIva ? "Subtotal neto" : "Precios finales"}</span>
         <strong>{subtotal}</strong>
@@ -293,7 +321,7 @@ export function PasoTresDetalleFinal({
       ) : null}
       {draft.flete > 0 ? (
         <div className={s.totalRow}>
-          <span>Flete</span>
+          <span>Flete cobrado al cliente</span>
           <strong>{flete}</strong>
         </div>
       ) : null}
@@ -351,6 +379,26 @@ export function PasoTresDetalleFinal({
   );
 
   if (isMobileViewport) {
+    // #region agent log
+    void globalThis.fetch?.("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "26894a" },
+      body: JSON.stringify({
+        sessionId: "26894a",
+        runId: "post-fix",
+        hypothesisId: "C",
+        location: "paso-tres-detalle-final.tsx:mobile",
+        message: "paso 3 mobile layout surfaces",
+        data: {
+          isMobileViewport: true,
+          totalsPanelHasBlueRentabilidad: false,
+          accordionPresent: true,
+          hasCostBasis: financialSummary.hasCostBasis,
+        },
+        timestamp: Date.now(),
+      }),
+    })?.catch(() => {});
+    // #endregion
     return (
       <div className={s.finalStageMain}>
         <section className={s.stepThreeSummaryCard}>
@@ -433,12 +481,12 @@ export function PasoTresDetalleFinal({
           <div className={s.summaryAdjustmentHeader}>
             <div>
               <span className={s.summaryAdjustmentEyebrow}>Ajuste final</span>
-              <strong>Flete</strong>
+              <strong>Flete cobrado al cliente</strong>
             </div>
             <span className={s.summaryAdjustmentValue}>{draft.flete > 0 ? flete : "No incluido"}</span>
           </div>
           <label className={s.field}>
-            <span className={s.label}>Valor del flete</span>
+            <span className={s.label}>Valor del flete cobrado al cliente</span>
             <div className={s.moneyInputWrap}>
               <span className={s.moneyPrefix}>CLP</span>
               <input

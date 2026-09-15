@@ -16,6 +16,12 @@ import {
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { GlassOptionPicker } from "@/features/cotizaciones/visual-composer/components/glass-option-picker";
 import type { QuoteConstructorItemPatch } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
+import { MeasureDimensionInput } from "@/features/cotizaciones/components/measure-dimension-input";
+import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
+import {
+  measureDimensionFieldLabel,
+  measureDimensionPlaceholder,
+} from "@/features/organization-profile/services/measure-unit.service";
 
 import { useMobileViewportStability } from "../../../_hooks/use-mobile-viewport-stability";
 import s from "./paso-dos-cuaderno-movil.module.css";
@@ -56,6 +62,7 @@ export function CuadernoQuickEditSheet({
   onDuplicate,
   onRemove,
 }: Props) {
+  const measureUnit = useOrganizationMeasureUnit();
   const titleId = useId();
   useMobileViewportStability();
   const form = useMemo(() => mapItemToForm(item), [item]);
@@ -198,23 +205,23 @@ export function CuadernoQuickEditSheet({
 
             <div className={s.fieldRow}>
               <label className={s.field}>
-                <span className={s.fieldLabel}>Ancho</span>
-                <input
+                <span className={s.fieldLabel}>{measureDimensionFieldLabel("ancho", measureUnit)}</span>
+                <MeasureDimensionInput
                   className={s.fieldInput}
-                  inputMode="numeric"
-                  value={ancho}
-                  onChange={(event) => setAncho(event.target.value.replace(/[^\d]/g, ""))}
-                  placeholder="mm"
+                  unit={measureUnit}
+                  valueMm={ancho}
+                  onChangeMm={setAncho}
+                  placeholder={measureDimensionPlaceholder("ancho", measureUnit)}
                 />
               </label>
               <label className={s.field}>
-                <span className={s.fieldLabel}>Alto</span>
-                <input
+                <span className={s.fieldLabel}>{measureDimensionFieldLabel("alto", measureUnit)}</span>
+                <MeasureDimensionInput
                   className={s.fieldInput}
-                  inputMode="numeric"
-                  value={alto}
-                  onChange={(event) => setAlto(event.target.value.replace(/[^\d]/g, ""))}
-                  placeholder="mm"
+                  unit={measureUnit}
+                  valueMm={alto}
+                  onChangeMm={setAlto}
+                  placeholder={measureDimensionPlaceholder("alto", measureUnit)}
                 />
               </label>
             </div>
