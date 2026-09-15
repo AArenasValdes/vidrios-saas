@@ -64,6 +64,7 @@ export type PublicPreviewQuote = {
   condicionesDePago?: string | null;
   condicionesVenta?: string | null;
   terminosCondiciones?: string | null;
+  mostrarIvaEnPdf?: boolean | null;
   subtotal: number;
   descuentoPct: number;
   iva: number;

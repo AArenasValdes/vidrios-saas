@@ -40,6 +40,7 @@ import {
 
 import printStyles from "../../../print/cotizaciones/[id]/page.module.css";
 import { buildCotizacionItemPrintSpecs } from "../../../print/cotizaciones/[id]/_utils/item-print-specs";
+import type { PublicPreviewQuote } from "../public-quote-preview";
 import s from "./page.module.css";
 
 const FIRST_PAGE_COMPONENTS = 3;
@@ -62,39 +63,6 @@ type PublicPreviewItem = {
   precioUnitario: number;
   precioTotal: number;
   observaciones: string;
-};
-
-type PublicPreviewQuote = {
-  codigo: string;
-  clienteNombre: string;
-  obra: string;
-  validez: string;
-  observaciones: string;
-  condicionesDePago?: string | null;
-  condicionesVenta?: string | null;
-  terminosCondiciones?: string | null;
-  subtotal: number;
-  descuentoPct: number;
-  iva: number;
-  flete: number;
-  total: number;
-  regionalSnapshot?: QuoteRegionSnapshot | null;
-  pricingMode?: "por_item" | "total_global";
-  createdAt: string | null;
-  updatedAt: string | null;
-  items: PublicPreviewItem[];
-  organizationProfile: {
-    empresaNombre: string;
-    empresaLogoUrl: string | null;
-    responsableComercial?: string;
-    empresaDireccion: string;
-    empresaTelefono: string;
-    empresaEmail: string;
-    brandColor: string;
-    formaPago: string;
-    condicionesVentaPredeterminadas?: string;
-    terminosCondicionesPredeterminados?: string;
-  };
 };
 
 type PublicQuoteDocumentProps = {
