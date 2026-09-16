@@ -11,6 +11,7 @@ import {
   resolveLightFixedPanePreviewBackground,
   resolveLightVitrinaPreviewBackground,
   resolveWhiteSlidingPreviewBackground,
+  type ComponentSVGParams,
 } from "@/utils/window-drawings";
 
 type ResolveItemDrawingSvgInput = {
@@ -55,16 +56,22 @@ export function resolveCotizacionItemDrawingSvg(
         palilloEnabled: input.palilloEnabled,
         palilloType: input.palilloType,
       });
+      const previewBackgroundParams: ComponentSVGParams = {
+        ...input,
+        tipo: input.tipo,
+        palilloType: input.palilloType ?? undefined,
+      };
+
       return renderGuidedVisualSvg(guidedVisualConfig, {
         maxW,
         maxH,
         variant: guidedVariant,
         canvasBackground: variant === "pdf"
-          ? resolveWhiteSlidingPreviewBackground({ ...input, palilloType: input.palilloType ?? undefined }) ??
-            resolveLightDoorPreviewBackground({ ...input, tipo: input.tipo }) ??
-            resolveLightCierrePreviewBackground({ ...input, tipo: input.tipo }) ??
-            resolveLightFixedPanePreviewBackground({ ...input, tipo: input.tipo }) ??
-            resolveLightVitrinaPreviewBackground({ ...input, tipo: input.tipo })
+          ? resolveWhiteSlidingPreviewBackground(previewBackgroundParams) ??
+            resolveLightDoorPreviewBackground(previewBackgroundParams) ??
+            resolveLightCierrePreviewBackground(previewBackgroundParams) ??
+            resolveLightFixedPanePreviewBackground(previewBackgroundParams) ??
+            resolveLightVitrinaPreviewBackground(previewBackgroundParams)
           : undefined,
         colorHex: input.colorHex,
         showSelection: false,

@@ -3650,9 +3650,9 @@ function routeDrawing(
       return drawShowerDoor(x, y, w, h, v, p, sistemaNorm, doorConfig, bowComposition);
 
     case "Cierre":
-      if (sistemaNorm === "Plegable") return drawCierrePlegable(x, y, w, h, v, p);
-      if (sistemaNorm === "Fijo")     return drawCierreFijo(x, y, w, h, v, p);
-      return drawCierreCorredera(x, y, w, h, v, p); // Corredera por defecto
+      if (sistemaNorm === "Plegable") return drawCierrePlegable(x, y, w, h, v, p as WindowVisualPalette);
+      if (sistemaNorm === "Fijo")     return drawCierreFijo(x, y, w, h, v, p as WindowVisualPalette);
+      return drawCierreCorredera(x, y, w, h, v, p as WindowVisualPalette); // Corredera por defecto
 
     case "Baranda":
       if (sistemaNorm === "PerfilInferior") return drawBarandaPerfilInferior(x, y, w, h, v, p);
