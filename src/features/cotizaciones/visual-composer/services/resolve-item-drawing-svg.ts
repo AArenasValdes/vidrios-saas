@@ -4,7 +4,14 @@ import {
   ensureGuidedVisualConfig,
   type GuidedVisualConfig,
 } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
-import { generateComponentSVG } from "@/utils/window-drawings";
+import {
+  generateComponentSVG,
+  resolveLightCierrePreviewBackground,
+  resolveLightDoorPreviewBackground,
+  resolveLightFixedPanePreviewBackground,
+  resolveLightVitrinaPreviewBackground,
+  resolveWhiteSlidingPreviewBackground,
+} from "@/utils/window-drawings";
 
 type ResolveItemDrawingSvgInput = {
   tipo: string;
@@ -19,6 +26,7 @@ type ResolveItemDrawingSvgInput = {
   ancho: number | null;
   alto: number | null;
   colorHex: string;
+  material?: string | null;
   guidedVisualConfig?: GuidedVisualConfig | null;
   palilloEnabled?: boolean;
   palilloType?: string | null;
@@ -51,6 +59,13 @@ export function resolveCotizacionItemDrawingSvg(
         maxW,
         maxH,
         variant: guidedVariant,
+        canvasBackground: variant === "pdf"
+          ? resolveWhiteSlidingPreviewBackground({ ...input, palilloType: input.palilloType ?? undefined }) ??
+            resolveLightDoorPreviewBackground({ ...input, tipo: input.tipo }) ??
+            resolveLightCierrePreviewBackground({ ...input, tipo: input.tipo }) ??
+            resolveLightFixedPanePreviewBackground({ ...input, tipo: input.tipo }) ??
+            resolveLightVitrinaPreviewBackground({ ...input, tipo: input.tipo })
+          : undefined,
         colorHex: input.colorHex,
         showSelection: false,
         showLabels: false,
@@ -74,6 +89,8 @@ export function resolveCotizacionItemDrawingSvg(
     ancho: input.ancho,
     alto: input.alto,
     colorHex: input.colorHex,
+    material: input.material,
+    presentation: variant === "pdf" ? "quote-pdf" : undefined,
     maxW,
     maxH,
     variant,

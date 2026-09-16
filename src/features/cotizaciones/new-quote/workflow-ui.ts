@@ -871,6 +871,25 @@ export function isDesktopPieceSystemStepComplete(input: {
   return true;
 }
 
+export function resolveVitrinaLeafCount(configuracion?: string | null): 1 | 2 | null {
+  const source = normalizeSearchValue(configuracion ?? "");
+  if (source.includes("1 hoja")) return 1;
+  if (source.includes("2 hojas")) return 2;
+  if (source.includes("vidrio templado") || source === "templada") return 2;
+  return null;
+}
+
+export function resolveVitrinaHojasBasePatch(input: {
+  tipo: string;
+  configuracion?: string | null;
+}): { hojasBase: 1 | 2 | null } | Record<string, never> {
+  if (normalizeSearchValue(input.tipo) !== "vitrina") {
+    return {};
+  }
+
+  return { hojasBase: resolveVitrinaLeafCount(input.configuracion) };
+}
+
 export function shouldShowSheetSchemeForComponent(input: {
   tipo: string;
   sistema?: string | null;
@@ -2503,7 +2522,12 @@ export function buildItemFromForm(
   const referenceParts = splitComponentReference(syncedForm.referencia, syncedForm.tipo);
   const sistema = syncedForm.sistema?.trim() || referenceParts.sistema;
   const configuracion = syncedForm.configuracion?.trim() || referenceParts.configuracion;
+  const vitrinaLeafCount =
+    normalizeSearchValue(syncedForm.tipo) === "vitrina"
+      ? resolveVitrinaLeafCount(configuracion)
+      : null;
   const hojasBase =
+    vitrinaLeafCount ??
     syncedForm.hojasBase ??
     getBaseLeafCountForComponent(syncedForm.tipo) ??
     resolveLegacyWindowLeafCount(syncedForm.tipo, sistema);

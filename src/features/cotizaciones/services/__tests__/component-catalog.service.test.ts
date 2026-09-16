@@ -104,6 +104,22 @@ describe("component-catalog service", () => {
     expect(getBaseLeafCountForComponent("Paño fijo")).toBe(1);
   });
 
+  it("debe exponer las seis variantes comerciales de vitrina por sistema", () => {
+    expect(getSystemOptionsForComponent("Vitrina")).toEqual(["Fijo", "Corredera", "Mostrador"]);
+    expect(getConfigurationOptionsForComponentSistema("Vitrina", "Fijo")).toEqual([
+      "Con perfileria",
+      "Vidrio templado",
+    ]);
+    expect(getConfigurationOptionsForComponentSistema("Vitrina", "Corredera")).toEqual([
+      "Con perfileria 1 hoja",
+      "Con perfileria 2 hojas",
+      "Vidrio templado",
+    ]);
+    expect(getConfigurationOptionsForComponentSistema("Vitrina", "Mostrador")).toEqual([
+      "Con repisas",
+    ]);
+  });
+
   it("debe corregir cierre terraza para no usar a medida como sistema", () => {
     expect(getSystemOptionsForComponent("Cierre terraza/logia")).toEqual([
       "Corredera",

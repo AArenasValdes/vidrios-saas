@@ -117,6 +117,7 @@ export function resolveTotalGlobalDetailDrawingSvg(input: {
       ancho: input.item.ancho,
       alto: input.item.alto,
       colorHex: meta.colorHex,
+      material: meta.material,
       guidedVisualConfig: meta.guidedVisualConfig,
       palilloEnabled: meta.palilloEnabled,
       palilloType: meta.palilloType,

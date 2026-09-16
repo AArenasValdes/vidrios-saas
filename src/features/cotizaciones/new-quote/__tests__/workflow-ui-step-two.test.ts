@@ -21,6 +21,8 @@ import {
   shouldRequireProfileMaterialForComponent,
   shouldAutoSelectFirstSheetScheme,
   shouldShowSystemSelectionForComponent,
+  resolveVitrinaHojasBasePatch,
+  resolveVitrinaLeafCount,
   isDesktopPieceSystemStepComplete,
   isWorkflowItemEffectivelyComplete,
   shouldShowGuidedComposerEntry,
@@ -1065,6 +1067,17 @@ describe("workflow-ui paso 2", () => {
       })
     ).toBe(true);
     expect(shouldShowSystemSelectionForComponent("Paño fijo")).toBe(false);
+  });
+
+  it("debe resolver hojas de vitrina desde la configuracion comercial", () => {
+    expect(resolveVitrinaLeafCount("Con perfileria 1 hoja")).toBe(1);
+    expect(resolveVitrinaLeafCount("Con perfileria 2 hojas")).toBe(2);
+    expect(resolveVitrinaLeafCount("Vidrio templado")).toBe(2);
+    expect(resolveVitrinaLeafCount("Con perfileria")).toBeNull();
+    expect(resolveVitrinaHojasBasePatch({
+      tipo: "Vitrina",
+      configuracion: "Con perfileria 2 hojas",
+    })).toEqual({ hojasBase: 2 });
   });
 
   it("considera completa la composición cuando hay guidedVisualConfig aunque sheetScheme esté vacío", () => {

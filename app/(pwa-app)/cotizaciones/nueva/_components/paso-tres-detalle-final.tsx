@@ -14,6 +14,8 @@ import type { QuoteStudioFinancialSummary } from "@/features/cotizaciones/servic
 import { QuoteProfitabilitySummary } from "../../_components/quote-profitability-summary";
 import { PasoTresCostosRentabilidadMovil } from "./paso-tres-costos-rentabilidad-movil";
 import { PasoTresCondicionesMovil } from "./paso-tres-condiciones-movil";
+import { ComponentPreview } from "@/features/cotizaciones/components/component-preview";
+import { buildComponentPreviewInputFromWorkflowItem } from "@/features/cotizaciones/services/resolve-component-preview-svg";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 import { formatMeasurePairFromMm } from "@/features/organization-profile/services/measure-unit.service";
@@ -368,9 +370,44 @@ export function PasoTresDetalleFinal({
         <strong>{isGlobal ? total : subtotal}</strong>
       </div>
       <div className={s.stepThreeItemList}>
-        {visibleItems.map((item, index) => (
+        {visibleItems.map((item, index) => {
+          const previewInput = buildComponentPreviewInputFromWorkflowItem(item, {
+            maxW: 56,
+            maxH: 44,
+          });
+
+          return (
           <article key={item.id} className={s.stepThreeItemRow}>
-            <span className={s.stepThreeItemBadge}>{buildItemBadge(item.codigo, index)}</span>
+            {previewInput ? (
+              <div className={s.stepThreeItemPreview}>
+                <ComponentPreview
+                  type={previewInput.type}
+                  system={previewInput.system}
+                  configuration={previewInput.configuration}
+                  width={previewInput.width}
+                  height={previewInput.height}
+                  colorHex={previewInput.colorHex}
+                  material={previewInput.material}
+                  sheetScheme={previewInput.sheetScheme}
+                  sheetVariant={previewInput.sheetVariant}
+                  customSchemeDescription={previewInput.customSchemeDescription}
+                  isCustomScheme={previewInput.isCustomScheme}
+                  referencia={previewInput.referencia}
+                  palilloEnabled={previewInput.palilloEnabled}
+                  palilloType={previewInput.palilloType}
+                  guidedVisualConfig={previewInput.guidedVisualConfig}
+                  mirrorFormat={previewInput.mirrorFormat}
+                  mirrorPaneCount={previewInput.mirrorPaneCount}
+                  mirrorPaneDirection={previewInput.mirrorPaneDirection}
+                  mirrorInteriorLine={previewInput.mirrorInteriorLine}
+                  maxW={previewInput.maxW}
+                  maxH={previewInput.maxH}
+                  size="compact"
+                />
+              </div>
+            ) : (
+              <span className={s.stepThreeItemBadge}>{buildItemBadge(item.codigo, index)}</span>
+            )}
             <div className={s.stepThreeItemBody}>
               <strong>
                 {resolveWorkflowItemDisplayName({
@@ -385,7 +422,8 @@ export function PasoTresDetalleFinal({
               <strong className={s.stepThreeItemPrice}>{formatMoney(item.precioTotal)}</strong>
             ) : null}
           </article>
-        ))}
+        );
+        })}
       </div>
       {hasHiddenItems ? (
         <button

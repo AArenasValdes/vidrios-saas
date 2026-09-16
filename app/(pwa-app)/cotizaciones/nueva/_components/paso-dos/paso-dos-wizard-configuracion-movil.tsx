@@ -28,6 +28,7 @@ import {
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import { buildCotizacionMirrorPaneMeasure } from "@/utils/cotizacion-item-presentation";
 import { MeasureDimensionInput } from "@/features/cotizaciones/components/measure-dimension-input";
+import { ComponentPreview } from "@/features/cotizaciones/components/component-preview";
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 import {
   formatMeasurePairFromMm,
@@ -1875,6 +1876,31 @@ export function PasoDosWizardConfiguracionMovil({
 
       <div className={s.stepTwoMobileBlockHero}>
         <div className={s.stepTwoMobileBlockLabel}>Medidas</div>
+        <ComponentPreview
+          type={draft.subtipo}
+          system={draft.sistema}
+          configuration={draft.configuracion}
+          width={draft.ancho ? Number(draft.ancho) : null}
+          height={draft.alto ? Number(draft.alto) : null}
+          colorHex={draft.colorHex}
+          material={draft.material}
+          sheetScheme={draft.sheetScheme}
+          sheetVariant={draft.sheetVariant}
+          customSchemeDescription={draft.customSchemeDescription}
+          isCustomScheme={draft.isCustomScheme}
+          hojasBase={draft.hojasBase}
+          referencia={draft.referencia}
+          palilloEnabled={draft.palilloEnabled}
+          palilloType={draft.palilloType}
+          guidedVisualConfig={draft.guidedVisualConfig}
+          mirrorFormat={draft.mirrorFormat}
+          mirrorPaneCount={draft.mirrorPaneCount}
+          mirrorPaneDirection={draft.mirrorPaneDirection}
+          mirrorInteriorLine={draft.mirrorInteriorLine}
+          maxW={240}
+          maxH={164}
+          size="hero"
+        />
         <div className={s.stepTwoMobileMedidasRow}>
           <div className={s.stepTwoMobileMedidaField}>
             <label className={s.stepTwoMobileMedidaLabel} htmlFor="grupo-ancho">

@@ -216,8 +216,16 @@ export const COMPONENT_CATALOG = [
       {
         tipo: "Vitrina",
         descripcion: "Vitrinas comerciales o exhibidores.",
-        sistemas: ["Fijo", "Corredera"],
-        configuraciones: ["Con perfileria", "Templada"],
+        sistemas: ["Fijo", "Corredera", "Mostrador"],
+        configuracionesPorSistema: {
+          Fijo: ["Con perfileria", "Vidrio templado"],
+          Corredera: [
+            "Con perfileria 1 hoja",
+            "Con perfileria 2 hojas",
+            "Vidrio templado",
+          ],
+          Mostrador: ["Con repisas"],
+        },
       },
       {
         tipo: "Muro cortina",

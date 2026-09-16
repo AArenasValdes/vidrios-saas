@@ -14,6 +14,7 @@ import {
   getSheetSchemeOptions,
   getComponentTypeLabelForBatch,
   normalizeCurrencyInput,
+  resolveVitrinaHojasBasePatch,
   MATERIAL_OPTIONS,
   PVC_COLOR_OPTIONS,
   MIRROR_GLASS_THICKNESS_OPTIONS,
@@ -1449,6 +1450,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
         ...current,
         sistema,
         configuracion: nextConfig,
+        ...resolveVitrinaHojasBasePatch({ tipo: current.subtipo, configuracion: nextConfig }),
         ...compositionPatch,
         ...(isPersonalizadoSistema
           ? {
@@ -1482,6 +1484,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
       return {
         ...current,
         configuracion,
+        ...resolveVitrinaHojasBasePatch({ tipo: current.subtipo, configuracion }),
         ...compositionPatch,
         ...(leavingGuidedPersonalizado ? { guidedVisualConfig: null } : {}),
       };

@@ -2,7 +2,7 @@ import { generateComponentSVG } from "@/utils/window-drawings";
 
 function getPrimaryFrameSize(svg: string) {
   const match = svg.match(
-    /<rect data-window-frame="outer" x="[^"]+" y="[^"]+" width="([^"]+)" height="([^"]+)" fill="none" stroke="[^"]+" stroke-width="[^"]+" rx="0"/
+    /data-window-frame="outer"[^>]*width="([^"]+)"[^>]*height="([^"]+)"/
   );
 
   return {
@@ -26,8 +26,8 @@ function getFirstFixedPanelY(svg: string) {
 }
 
 function getOuterAndFirstSashX(svg: string) {
-  const outer = svg.match(/<rect data-window-frame="outer" x="([^"]+)"/);
-  const sash = svg.match(/<rect data-window-sash="true"[^>]* x="([^"]+)"/);
+  const outer = svg.match(/data-window-frame="outer"[^>]*\sx="([^"]+)"/);
+  const sash = svg.match(/data-window-sash="true"[^>]*\sx="([^"]+)"/);
 
   return {
     outerX: outer ? Number(outer[1]) : 0,
@@ -266,10 +266,110 @@ describe("generateComponentSVG", () => {
     });
 
     expect(svg).toContain("#6B7280");
-    expect(svg).toContain("#5F6670");
     expect(svg).toContain('fill="#DCEAF7"');
     expect(svg).not.toContain("#343A40");
     expect(svg).not.toContain("#A8A8A8");
+    expect(svg).not.toContain("#5F6670");
+  });
+
+  it("unifica marco y hojas en aluminio mate dentro del croquis PDF de 2 hojas", () => {
+    const svg = generateComponentSVG({
+      tipo: "Ventana",
+      sistema: "Corredera",
+      sheetScheme: "2 hojas",
+      ancho: 1200,
+      alto: 1500,
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      variant: "pdf",
+      presentation: "quote-pdf",
+    });
+
+    expect(svg).toContain('data-sketch-part="outerFrame"');
+    expect(svg).toContain('data-sketch-part="sashes"');
+    expect(svg).toContain('data-window-frame-part="sash"');
+    expect(svg).not.toContain('data-window-frame="outline"');
+    expect(svg).not.toContain("#5F6670");
+    expect((svg.match(/data-window-sash-layer=/g) ?? []).length).toBe(0);
+
+    const sashProfiles = svg.match(/data-window-frame-part="sash"[^/]*\/>/g) ?? [];
+    expect(sashProfiles).toHaveLength(2);
+    expect(sashProfiles.every((part) => part.includes('stroke="#6B7280"'))).toBe(true);
+
+    const outerProfiles = svg.match(/data-window-frame-part="outer"[^/]*\/>/g) ?? [];
+    expect(outerProfiles).toHaveLength(1);
+    expect(outerProfiles.every((part) => part.includes('stroke="#6B7280"'))).toBe(true);
+    expect(svg).toContain('data-window-frame-reveal="true"');
+    expect(svg).toMatch(/data-window-frame-reveal="true"[^>]*fill="#6B7280"/);
+    expect((svg.match(/data-window-sash-reveal="true"/g) ?? []).length).toBe(2);
+    expect(svg).not.toContain('data-window-frame="inner-channel"');
+  });
+
+  it("marca contorno visible en correderas claras para aluminio y pvc", () => {
+    const preview = generateComponentSVG({
+      tipo: "Ventana",
+      sistema: "Corredera",
+      sheetScheme: "2 hojas",
+      ancho: 1200,
+      alto: 1500,
+      colorHex: "#ffffff",
+      material: "PVC",
+    });
+    const pdf = generateComponentSVG({
+      tipo: "Ventana",
+      sistema: "Corredera",
+      sheetScheme: "2 hojas",
+      ancho: 1200,
+      alto: 1500,
+      colorHex: "#f0eeeb",
+      material: "Aluminio",
+      variant: "pdf",
+      presentation: "quote-pdf",
+    });
+    const tresHojas = generateComponentSVG({
+      tipo: "Ventana",
+      sistema: "Corredera",
+      sheetScheme: "3 hojas",
+      sheetVariant: "2 móviles + 1 fija",
+      ancho: 1800,
+      alto: 1200,
+      colorHex: "#ffffff",
+      material: "PVC",
+      variant: "pdf",
+      presentation: "quote-pdf",
+    });
+
+    expect(preview).toContain('data-window-frame="outline"');
+    expect(pdf).toContain('data-window-frame="outline"');
+    expect(tresHojas).toContain('data-window-frame="outline"');
+    expect(preview).toContain('data-window-sash-layer="outline"');
+  });
+
+  it("no adelgaza perfiles de aluminio frente a pvc en corredera estandar de 2 hojas", () => {
+    const aluminio = generateComponentSVG({
+      tipo: "Ventana",
+      sistema: "Corredera",
+      sheetScheme: "2 hojas",
+      ancho: 1200,
+      alto: 1500,
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      variant: "pdf",
+      presentation: "quote-pdf",
+    });
+    const pvc = generateComponentSVG({
+      tipo: "Ventana",
+      sistema: "Corredera",
+      sheetScheme: "2 hojas",
+      ancho: 1200,
+      alto: 1500,
+      colorHex: "#f0eeeb",
+      material: "PVC",
+      variant: "pdf",
+      presentation: "quote-pdf",
+    });
+
+    expect(getPrimaryFrameSize(aluminio)).toEqual(getPrimaryFrameSize(pvc));
   });
 
   it("respeta colores seleccionados en ventanas sin limitarse al negro", () => {
@@ -432,14 +532,295 @@ describe("generateComponentSVG", () => {
         alto: 1400,
         variant: "pdf",
       });
-      const cierreGroup = svg.match(/data-cierre-frame="outer"[\s\S]*?(?:data-cierre-profile|<\/g>|<\/svg>)/)?.[0] ?? "";
+      const cierreGroup = svg.match(/data-window-frame="outer"[\s\S]*?(?:data-cierre-profile|<\/g>|<\/svg>)/)?.[0] ?? "";
 
-      expect(svg).toContain('data-cierre-frame="outer"');
-      expect(svg).toContain('rx="0"');
-      expect(svg).toContain('stroke-linejoin="miter"');
-      expect(svg).not.toContain('data-cierre-frame="outer" rx="0.5"');
+      expect(svg).toContain('data-window-frame="outer"');
+      expect(svg).toContain('data-cierre-frame-reveal="true"');
+      expect(svg).toContain('data-window-frame="inner-channel"');
+      expect(svg).toContain('vector-effect="non-scaling-stroke"');
+      expect(svg).not.toContain('data-window-frame="outer" rx="0.5"');
       expect(cierreGroup).toMatch(/stroke-width="6\.8"/);
     });
+  });
+
+  it("dibuja paño fijo con perfiles tipo ventana, composiciones y marca F por paño", () => {
+    const uno = generateComponentSVG({
+      tipo: "Paño fijo",
+      configuracion: "Con perfileria",
+      sheetScheme: "1 paño",
+      ancho: 1200,
+      alto: 1400,
+      colorHex: "#ffffff",
+      material: "PVC",
+    });
+    const dos = generateComponentSVG({
+      tipo: "Paño fijo",
+      configuracion: "Con perfileria",
+      sheetScheme: "2 paños",
+      ancho: 1800,
+      alto: 1400,
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      variant: "pdf",
+    });
+    const tres = generateComponentSVG({
+      tipo: "Paño fijo",
+      sheetScheme: "3 paños",
+      ancho: 2400,
+      alto: 1400,
+    });
+    const personalizado = generateComponentSVG({
+      tipo: "Paño fijo",
+      sheetScheme: "Personalizado",
+      ancho: 2000,
+      alto: 1600,
+    });
+
+    expect(uno).toContain('data-pano-fijo="true"');
+    expect(uno).toContain('data-pano-fijo-layout="single"');
+    expect(uno).toContain('data-window-frame="outline"');
+    expect(uno).toContain('data-window-frame="inner-channel"');
+    expect(uno).toContain('data-sketch-part="background"');
+    expect((uno.match(/data-fixed-pane-mark="true"/g) ?? []).length).toBe(1);
+    expect(uno).toContain(">F</text>");
+
+    expect(dos).toContain('data-pano-fijo-layout="columns"');
+    expect((dos.match(/data-fixed-pane-glass="true"/g) ?? []).length).toBe(2);
+    expect((dos.match(/data-pano-fijo-mullion="vertical"/g) ?? []).length).toBe(1);
+    expect((dos.match(/data-fixed-pane-mark="true"/g) ?? []).length).toBe(2);
+
+    expect(tres).toContain('data-pano-fijo-layout="columns"');
+    expect((tres.match(/data-fixed-pane-glass="true"/g) ?? []).length).toBe(3);
+    expect((tres.match(/data-fixed-pane-mark="true"/g) ?? []).length).toBe(3);
+
+    expect(personalizado).toContain('data-pano-fijo-layout="transom"');
+    expect((personalizado.match(/data-fixed-pane-glass="true"/g) ?? []).length).toBe(3);
+    expect((personalizado.match(/data-pano-fijo-mullion="transom"/g) ?? []).length).toBe(1);
+    expect((personalizado.match(/data-fixed-pane-mark="true"/g) ?? []).length).toBe(3);
+    expect(personalizado).not.toContain(">FIJO</text>");
+  });
+
+  it("dibuja vidrio y cristal con un SVG distinto por configuracion comercial", () => {
+    const suelto = generateComponentSVG({
+      tipo: "Vidrio / Cristal",
+      sistema: "Sin perfileria",
+      configuracion: "Vidrio suelto",
+      ancho: 900,
+      alto: 1400,
+    });
+    const reposicion = generateComponentSVG({
+      tipo: "Vidrio / Cristal",
+      sistema: "Sin perfileria",
+      configuracion: "Reposicion",
+      ancho: 900,
+      alto: 1400,
+    });
+    const termopanel = generateComponentSVG({
+      tipo: "Vidrio / Cristal",
+      sistema: "Sin perfileria",
+      configuracion: "Termopanel",
+      ancho: 900,
+      alto: 1400,
+      variant: "pdf",
+    });
+    const espejo = generateComponentSVG({
+      tipo: "Vidrio / Cristal",
+      sistema: "Sin perfileria",
+      configuracion: "Espejo",
+      ancho: 900,
+      alto: 1400,
+    });
+    const personalizado = generateComponentSVG({
+      tipo: "Vidrio / Cristal",
+      sistema: "Sin perfileria",
+      configuracion: "Personalizado",
+      ancho: 900,
+      alto: 1400,
+    });
+
+    expect(suelto).toContain('data-glass-catalog="loose"');
+    expect(suelto).toContain('data-glass-catalog-sheen="glass"');
+
+    expect(reposicion).toContain('data-glass-catalog="replacement"');
+    expect(reposicion).toContain('data-glass-catalog-frame="replacement-outer"');
+    expect(reposicion).toContain('stroke-dasharray="5,4"');
+
+    expect(termopanel).toContain('data-glass-catalog="termopanel"');
+    expect(termopanel).toContain('data-glass-catalog-frame="termopanel-outer"');
+    expect(termopanel).toContain('data-glass-catalog-frame="termopanel-inner"');
+
+    expect(espejo).toContain('data-glass-catalog="mirror"');
+    expect(espejo).toContain('data-glass-catalog-sheen="mirror"');
+    expect(espejo).toContain('fill="#C8CED6"');
+
+    expect(personalizado).toContain('data-glass-catalog="custom"');
+    expect(personalizado).toContain('data-glass-catalog-icon="pencil"');
+    expect(personalizado).toContain('data-glass-catalog-frame="custom-inner"');
+
+    expect(suelto).not.toEqual(reposicion);
+    expect(reposicion).not.toEqual(termopanel);
+    expect(termopanel).not.toEqual(espejo);
+    expect(espejo).not.toEqual(personalizado);
+  });
+
+  it("dibuja vitrinas comerciales según sistema, configuración y hojas", () => {
+    const fijaPerfileria = generateComponentSVG({
+      tipo: "Vitrina",
+      sistema: "Fijo",
+      configuracion: "Con perfileria",
+      ancho: 900,
+      alto: 1800,
+      colorHex: "#a8a8a8",
+    });
+    const correderaUnaHoja = generateComponentSVG({
+      tipo: "Vitrina",
+      sistema: "Corredera",
+      configuracion: "Con perfileria 1 hoja",
+      ancho: 900,
+      alto: 1800,
+    });
+    const correderaDosHojas = generateComponentSVG({
+      tipo: "Vitrina",
+      sistema: "Corredera",
+      configuracion: "Con perfileria 2 hojas",
+      ancho: 1200,
+      alto: 1800,
+      variant: "pdf",
+    });
+    const fijaTemplada = generateComponentSVG({
+      tipo: "Vitrina",
+      sistema: "Fijo",
+      configuracion: "Vidrio templado",
+      ancho: 900,
+      alto: 1800,
+    });
+    const correderaTemplada = generateComponentSVG({
+      tipo: "Vitrina",
+      sistema: "Corredera",
+      configuracion: "Vidrio templado",
+      ancho: 1200,
+      alto: 1800,
+    });
+    const mostrador = generateComponentSVG({
+      tipo: "Vitrina",
+      sistema: "Mostrador",
+      configuracion: "Con repisas",
+      ancho: 1600,
+      alto: 900,
+    });
+
+    expect(fijaPerfileria).toContain('data-vitrina-form="tower"');
+    expect(fijaPerfileria).toContain('data-vitrina-system="fixed"');
+    expect(fijaPerfileria).toContain('data-vitrina-profile="framed"');
+    expect(fijaPerfileria).toContain('data-vitrina-base="true"');
+    expect(fijaPerfileria).toContain('data-vitrina-shelf="true"');
+    expect(fijaPerfileria).toContain('data-vitrina-fixed-mark="true"');
+    expect(fijaPerfileria).toContain('data-vitrina-side-profile="left"');
+
+    expect(correderaUnaHoja).toContain('data-vitrina-system="sliding"');
+    expect(correderaUnaHoja).toContain('data-vitrina-leaves="1"');
+    expect(correderaUnaHoja).toContain('data-vitrina-handle="true"');
+    expect(correderaUnaHoja).toContain('data-vitrina-track="bottom"');
+    expect(correderaUnaHoja).not.toContain('data-vitrina-fixed-mark="true"');
+
+    expect(correderaDosHojas).toContain('data-vitrina-leaves="2"');
+    expect((correderaDosHojas.match(/data-vitrina-glass="true"/g) ?? []).length).toBe(2);
+    expect(correderaDosHojas).toContain('data-vitrina-mullion="center"');
+
+    expect(fijaTemplada).toContain('data-vitrina-profile="tempered"');
+    expect(fijaTemplada).toContain('data-vitrina-corner-clip="true"');
+    expect(fijaTemplada).not.toContain('data-vitrina-side-profile="left"');
+    expect(fijaTemplada).toContain('data-vitrina-glass-edge="true"');
+
+    expect(correderaTemplada).toContain('data-vitrina-profile="tempered"');
+    expect((correderaTemplada.match(/data-vitrina-handle="true"/g) ?? []).length).toBe(2);
+
+    expect(mostrador).toContain('data-vitrina-form="counter"');
+    expect(mostrador).toContain('data-vitrina-glass-top="true"');
+    expect((mostrador.match(/data-vitrina-shelf="true"/g) ?? []).length).toBe(2);
+  });
+
+  it("diferencia sin perfilería, con perfilería y premium en paño fijo", () => {
+    const sinPerfileria = generateComponentSVG({
+      tipo: "Paño fijo",
+      configuracion: "Sin perfileria",
+      sheetScheme: "2 paños",
+      ancho: 1800,
+      alto: 1400,
+    });
+    const conPerfileria = generateComponentSVG({
+      tipo: "Paño fijo",
+      configuracion: "Con perfileria",
+      sheetScheme: "2 paños",
+      ancho: 1800,
+      alto: 1400,
+      variant: "pdf",
+    });
+    const premium = generateComponentSVG({
+      tipo: "Paño fijo",
+      configuracion: "Premium",
+      sheetScheme: "2 paños",
+      ancho: 1800,
+      alto: 1400,
+      colorHex: "#ffffff",
+      material: "PVC",
+      variant: "pdf",
+    });
+
+    expect(sinPerfileria).toContain('data-pano-fijo-profile="frameless"');
+    expect(sinPerfileria).not.toContain('data-window-frame="outer"');
+    expect(sinPerfileria).not.toContain('data-pano-fijo-reveal="true"');
+    expect(sinPerfileria).not.toContain('data-pano-fijo-mullion="vertical"');
+    expect(sinPerfileria).toContain('data-fixed-pane-glass-edge="true"');
+    expect(sinPerfileria).toContain('stroke="#A7C7E7"');
+    expect((sinPerfileria.match(/data-fixed-pane-glass="true"/g) ?? []).length).toBe(2);
+    expect((sinPerfileria.match(/data-fixed-pane-mark="true"/g) ?? []).length).toBe(2);
+
+    expect(conPerfileria).toContain('data-pano-fijo-profile="framed"');
+    expect(conPerfileria).toContain('data-window-frame="outer"');
+    expect(conPerfileria).toContain('data-pano-fijo-mullion="vertical"');
+
+    expect(premium).toContain('data-pano-fijo-profile="premium"');
+    expect(premium).toContain('data-window-frame="inner-channel"');
+    expect(premium).toContain('data-pano-fijo-mullion="vertical"');
+
+    const framedStroke = Number(
+      conPerfileria.match(/data-window-frame="outer"[^>]*stroke-width="([\d.]+)"/)?.[1] ?? "0"
+    );
+    const premiumStroke = Number(
+      premium.match(/data-window-frame="outer"[^>]*stroke-width="([\d.]+)"/)?.[1] ?? "0"
+    );
+    expect(premiumStroke).toBeGreaterThan(framedStroke);
+  });
+
+  it("marca contorno visible en cierre terraza PVC blanco con la misma estructura de ventanas", () => {
+    const corredera = generateComponentSVG({
+      tipo: "Cierre terraza/logia",
+      sistema: "Corredera",
+      ancho: 2500,
+      alto: 1400,
+      colorHex: "#ffffff",
+      material: "PVC",
+    });
+    const aluminio = generateComponentSVG({
+      tipo: "Cierre terraza/logia",
+      sistema: "Corredera",
+      ancho: 2500,
+      alto: 1400,
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      variant: "pdf",
+      presentation: "quote-pdf",
+    });
+
+    expect(corredera).toContain('data-sketch-part="background"');
+    expect(corredera).toContain('data-window-frame="outline"');
+    expect(corredera).toContain('data-cierre-system="corredera"');
+    expect(corredera).toContain('data-cierre-profile="top-rail"');
+    expect(corredera).toContain('data-cierre-profile="bottom-rail"');
+    expect(aluminio).not.toContain('data-window-frame="outline"');
+    expect(aluminio).toContain('stroke="#6B7280"');
+    expect(aluminio).toContain('data-cierre-frame-reveal="true"');
   });
 
   it("usa la semantica del tipo para mostrar la tarjeta base correcta en paso 2", () => {
@@ -575,6 +956,24 @@ describe("generateComponentSVG", () => {
 
     expect((svg.match(/data-window-fixed-panel="true"/g) ?? []).length).toBe(1);
     expect(getFirstFixedPanelY(svg)).toBeLessThan(getSvgHeight(svg) / 2);
+  });
+
+  it("refuerza perfiles de Bow Window claros con contorno visible como correderas", () => {
+    const svg = generateComponentSVG({
+      tipo: "Ventana",
+      sistema: "Bow Window",
+      configuracion: "Corredera",
+      sheetScheme: "Fijos laterales + corredera central 2 hojas",
+      ancho: 2200,
+      alto: 1200,
+      colorHex: "#ffffff",
+      material: "PVC",
+      variant: "pdf",
+    });
+
+    expect(svg).toContain('data-window-frame="outline"');
+    expect(svg).toContain('data-window-bow-profile="true"');
+    expect((svg.match(/data-bow-pane="true"/g) ?? []).length).toBe(4);
   });
 
   it("dibuja Bow Window como paños en arco desde metadata comercial", () => {
@@ -753,6 +1152,33 @@ describe("generateComponentSVG", () => {
     expect(completa).not.toContain('data-bow-pane="true"');
   });
 
+  it("marca contorno visible en puertas PVC blancas en preview y fondo suave", () => {
+    const abatible = generateComponentSVG({
+      tipo: "Puerta",
+      sistema: "Abatible",
+      configuracion: "1 hoja",
+      ancho: 900,
+      alto: 2100,
+      colorHex: "#ffffff",
+      material: "PVC",
+    });
+    const corredera = generateComponentSVG({
+      tipo: "Puerta",
+      sistema: "Corredera",
+      configuracion: "2 hojas móviles encuentro central",
+      ancho: 1800,
+      alto: 2100,
+      colorHex: "#f0eeeb",
+      material: "PVC",
+    });
+
+    expect(abatible).toContain('data-sketch-part="background"');
+    expect(abatible).toContain('data-door-frame="outline"');
+    expect(abatible).toContain('data-door-swing-frame="true"');
+    expect(corredera).toContain('data-door-frame="outline"');
+    expect(corredera).toContain('data-door-sliding-sash="true"');
+  });
+
   it("dibuja puerta abatible desde una base visual comun", () => {
     const svg = generateComponentSVG({
       tipo: "Puerta",
@@ -790,7 +1216,7 @@ describe("generateComponentSVG", () => {
     });
 
     expect(svg).toMatch(
-      /data-door-palillo="true"[^>]*stroke="#2a2a2a"[^>]*stroke-width="2\.2"/
+      /data-door-palillo="true"[^>]*stroke="#2A2A2A"[^>]*stroke-width="2\.2"/i
     );
     expect(svg).toContain('data-door-palillo-ratio="0.6"');
     expect(svg).toContain('data-door-handle-clearance="true"');

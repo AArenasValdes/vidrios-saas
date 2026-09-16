@@ -7,6 +7,7 @@ import {
   buildComponentFormLinePricingSummary,
   filterLineTemplatesForComponent,
   getSheetSchemeOptions,
+  resolveVitrinaHojasBasePatch,
   shouldAutoSelectFirstSheetScheme,
   shouldShowSheetSchemeForComponent,
   type ComponentFormState,
@@ -328,6 +329,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
         ...current,
         sistema,
         configuracion: nextConfig,
+        ...resolveVitrinaHojasBasePatch({ tipo: current.subtipo, configuracion: nextConfig }),
         ...(shouldKeepComposition
           ? {}
           : {
@@ -359,6 +361,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
       return {
         ...current,
         configuracion,
+        ...resolveVitrinaHojasBasePatch({ tipo: current.subtipo, configuracion }),
         ...(shouldKeepComposition
           ? {}
           : {

@@ -27,7 +27,10 @@ import {
   isRecommendedGlass,
 } from "@/features/cotizaciones/services/glass-recommendations.service";
 import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
-import { generateComponentSVG } from "@/utils/window-drawings";
+import {
+  buildSubtypePreviewInput,
+  resolveComponentPreviewSvg,
+} from "@/features/cotizaciones/services/resolve-component-preview-svg";
 import { useQuoteDespiecePreview } from "@/features/fabricacion/hooks/use-quote-despiece-preview";
 
 const DespieceReviewSurface = dynamic(
@@ -389,24 +392,31 @@ export function PasoDosWizardMovil({
   const subtypePreviewMarkup = useMemo(
     () =>
       Object.fromEntries(
-        wizard.subtypeOptions.map((subtipo) => [
-          subtipo,
-          generateComponentSVG({
-            tipo: subtipo,
-            sistema: wizard.draft.subtipo === subtipo ? wizard.draft.sistema : undefined,
-            configuracion: wizard.draft.subtipo === subtipo ? wizard.draft.configuracion : undefined,
-            sheetScheme: wizard.draft.subtipo === subtipo ? wizard.draft.sheetScheme : undefined,
-            sheetVariant: wizard.draft.subtipo === subtipo ? wizard.draft.sheetVariant : undefined,
-            customSchemeDescription:
-              wizard.draft.subtipo === subtipo ? wizard.draft.customSchemeDescription : undefined,
-            isCustomScheme: wizard.draft.subtipo === subtipo ? wizard.draft.isCustomScheme : undefined,
-            ancho: null,
-            alto: null,
-            colorHex: wizard.draft.colorHex || getColorByMaterial(wizard.draft.material),
-            maxW: 62,
-            maxH: 54,
-          }),
-        ])
+        wizard.subtypeOptions.map((subtipo) => {
+          const isActiveSubtype = wizard.draft.subtipo === subtipo;
+          const previewInput = isActiveSubtype
+            ? {
+                type: subtipo,
+                system: wizard.draft.sistema,
+                configuration: wizard.draft.configuracion,
+                sheetScheme: wizard.draft.sheetScheme,
+                sheetVariant: wizard.draft.sheetVariant,
+                customSchemeDescription: wizard.draft.customSchemeDescription,
+                isCustomScheme: wizard.draft.isCustomScheme,
+                colorHex:
+                  wizard.draft.colorHex || getColorByMaterial(wizard.draft.material),
+                width: null,
+                height: null,
+                maxW: 62,
+                maxH: 54,
+              }
+            : buildSubtypePreviewInput(
+                subtipo,
+                wizard.draft.colorHex || getColorByMaterial(wizard.draft.material)
+              );
+
+          return [subtipo, resolveComponentPreviewSvg(previewInput)];
+        })
       ),
     [
       wizard.draft.colorHex,
@@ -503,13 +513,18 @@ export function PasoDosWizardMovil({
   const displaySystemOptions = showAllSystems
     ? wizard.systemOptions
     : visibleSystemOptions;
+  const showsAllConfigurationOptions =
+    wizard.draft.subtipo === "Puerta" ||
+    wizard.draft.subtipo === "Vitrina" ||
+    wizard.draft.subtipo === "Vidrio / Cristal";
   const visibleConfigurationOptions = wizard.configurationOptions.slice(
     0,
-    wizard.draft.subtipo === "Puerta" ? 6 : 3
+    showsAllConfigurationOptions ? 6 : 3
   );
   const isBowWindow = wizard.draft.subtipo === "Ventana" && wizard.draft.sistema === "Bow Window";
   const displayConfigurationOptions = showAllConfigurations
     || isBowWindow
+    || showsAllConfigurationOptions
     ? wizard.configurationOptions
     : visibleConfigurationOptions;
   const materialColorOptions =

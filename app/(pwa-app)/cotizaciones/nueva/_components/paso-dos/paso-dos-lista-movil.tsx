@@ -9,6 +9,8 @@ import {
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
+import { ComponentPreview } from "@/features/cotizaciones/components/component-preview";
+import { buildComponentPreviewInputFromWorkflowItem } from "@/features/cotizaciones/services/resolve-component-preview-svg";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 import { formatMeasurePairFromMm } from "@/features/organization-profile/services/measure-unit.service";
@@ -172,6 +174,10 @@ export function PasoDosListaMovil({
               const adjustedFromBaseCode = adjustedItems[item.id] ?? null;
               const isAdjusted = Boolean(adjustedFromBaseCode);
               const showProfileDetails = shouldRequireProfileMaterialForComponent(item.tipo);
+              const previewInput = buildComponentPreviewInputFromWorkflowItem(item, {
+                maxW: 72,
+                maxH: 56,
+              });
               const colorLabel =
                 itemMeta.material === "PVC"
                   ? "PVC blanco"
@@ -190,6 +196,34 @@ export function PasoDosListaMovil({
                   }`}
                 >
                   <div className={s.stepTwoMobileItemHead}>
+                    {previewInput ? (
+                      <div className={s.stepTwoMobileItemPreview}>
+                        <ComponentPreview
+                          type={previewInput.type}
+                          system={previewInput.system}
+                          configuration={previewInput.configuration}
+                          width={previewInput.width}
+                          height={previewInput.height}
+                          colorHex={previewInput.colorHex}
+                          material={previewInput.material}
+                          sheetScheme={previewInput.sheetScheme}
+                          sheetVariant={previewInput.sheetVariant}
+                          customSchemeDescription={previewInput.customSchemeDescription}
+                          isCustomScheme={previewInput.isCustomScheme}
+                          referencia={previewInput.referencia}
+                          palilloEnabled={previewInput.palilloEnabled}
+                          palilloType={previewInput.palilloType}
+                          guidedVisualConfig={previewInput.guidedVisualConfig}
+                          mirrorFormat={previewInput.mirrorFormat}
+                          mirrorPaneCount={previewInput.mirrorPaneCount}
+                          mirrorPaneDirection={previewInput.mirrorPaneDirection}
+                          mirrorInteriorLine={previewInput.mirrorInteriorLine}
+                          maxW={previewInput.maxW}
+                          maxH={previewInput.maxH}
+                          size="compact"
+                        />
+                      </div>
+                    ) : null}
                     <div className={s.stepTwoMobileItemHeadLeft}>
                       <div className={s.stepTwoMobileItemHeadMeta}>
                         <span className={s.stepTwoMobileItemCode}>{displayCode}</span>

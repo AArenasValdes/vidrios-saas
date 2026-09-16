@@ -35,6 +35,7 @@ export type GuidedVisualRenderOptions = {
   showSelection?: boolean;
   showLabels?: boolean;
   showDimensions?: boolean;
+  canvasBackground?: "#F3F5F7";
   /** Aisla defs SVG cuando la misma configuracion se renderiza varias veces en una pagina. */
   resourceKey?: string;
   /** Módulo en modo edición de palillos (atenuá el resto). */
@@ -1193,7 +1194,7 @@ export function renderGuidedVisualSvg(
 
   // Fondo del canvas (nunca azul; blanco / gris muy claro)
   body.push(
-    `<rect x="0" y="0" width="${px(layout.svgW)}" height="${px(layout.svgH)}" fill="${palette.canvasBg}" stroke="none" />`
+    `<rect x="0" y="0" width="${px(layout.svgW)}" height="${px(layout.svgH)}" fill="${options.canvasBackground ?? palette.canvasBg}" stroke="none" />`
   );
 
   const framePath = buildGuidedFramePath(

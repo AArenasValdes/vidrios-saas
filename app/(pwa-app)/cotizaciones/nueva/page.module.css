@@ -11348,6 +11348,7 @@
   align-items: baseline;
   gap: 0.45rem;
   min-width: 0;
+  flex: 1 1 auto;
 }
  
 .stepTwoMobileItemCode {
@@ -11721,6 +11722,32 @@
    CONFIG â€” BLOQUE HERO: Medidas
    MÃ¡ximo protagonismo â€” inputs grandes, fÃ¡ciles de tocar con una mano
 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.stepTwoMobileItemPreview {
+  width: 4.2rem;
+  height: 3.6rem;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  background: #f7faff;
+  border: 1px solid rgba(79, 125, 212, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.stepThreeItemPreview {
+  width: 3.2rem;
+  height: 2.8rem;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  background: #f7faff;
+  border: 1px solid rgba(79, 125, 212, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
 .stepTwoMobileBlockHero {
   background: #ffffff;
   border: 1.5px solid #D9E0EA;

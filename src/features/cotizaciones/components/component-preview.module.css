@@ -1,0 +1,45 @@
+.wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 7.5rem;
+}
+
+.wrapCompact {
+  min-height: 3.4rem;
+}
+
+.wrapHero {
+  min-height: 9rem;
+}
+
+.svgHost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
+}
+
+.svgHost svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
+}
+
+.fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3rem;
+  min-height: 3rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 12px;
+  background: #eef4ff;
+  color: #4f7dd4;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-align: center;
+}
