@@ -60,7 +60,8 @@ import {
   recipePreviewToLegacyCuttingPreview,
 } from "@/features/cotizaciones/line-templates/services/fabrication-recipe.service";
 import { LinePriceEditor } from "./line-template-price-editor";
-import { LineTemplateCatalogCard } from "./line-template-catalog-card";
+import { groupLineTemplatesByFamily } from "./line-template-catalog-family";
+import { LineTemplateCatalogAccordion } from "./line-template-catalog-accordion";
 import s from "./lineas-precios-page-client.module.css";
 import desktop from "./lineas-precios-page-client.desktop.module.css";
 import {
@@ -246,6 +247,9 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     LINE_TEMPLATE_PROVIDER_FILTER_ALL
   );
   const [desktopFiltersOpen, setDesktopFiltersOpen] = useState(false);
+  const [expandedFamilyAccordions, setExpandedFamilyAccordions] = useState<
+    Record<string, boolean>
+  >({});
   const [openMenuId, setOpenMenuId] = useState<string | number | null>(null);
   const [pendingLineAction, setPendingLineAction] = useState<{
     templateId: string | number;
@@ -475,6 +479,31 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
 
     return sections;
   }, [filteredTemplates, isChileCatalog]);
+
+  const catalogSectionsWithFamilies = useMemo(
+    () =>
+      catalogSections.map((section) => ({
+        ...section,
+        families: groupLineTemplatesByFamily(section.templates),
+      })),
+    [catalogSections]
+  );
+
+  const isFamilyAccordionExpanded = useCallback(
+    (accordionKey: string, defaultExpanded: boolean) =>
+      expandedFamilyAccordions[accordionKey] ?? defaultExpanded,
+    [expandedFamilyAccordions]
+  );
+
+  const toggleFamilyAccordion = useCallback(
+    (accordionKey: string, currentlyExpanded: boolean) => {
+      setExpandedFamilyAccordions((current) => ({
+        ...current,
+        [accordionKey]: !currentlyExpanded,
+      }));
+    },
+    []
+  );
 
   const pricePerM2 = parseMoney(draft.precioM2Sugerido);
   const minimum = parseMoney(draft.minimoCobrable);
@@ -1422,7 +1451,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
 
       {!isEmpty && !hasNoResults ? (
         <section className={`${s.list} ${desktop.list}`}>
-          {catalogSections.map((section) => (
+          {catalogSectionsWithFamilies.map((section) => (
             <section
               className={`${s.catalogGroup} ${desktop.catalogGroup} ${desktop.catalogOriginSection}`}
               key={section.id}
@@ -1439,41 +1468,44 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                 </small>
               </div>
 
-              <div className={`${s.groupCards} ${desktop.groupCards}`}>
-                {section.templates.map((template) => {
-                  const isMenuOpen = openMenuId === template.id;
-                  const pendingAction =
-                    pendingLineAction?.templateId === template.id
-                      ? pendingLineAction.kind
-                      : null;
-                  const technicalStatus = technicalStatusesByTemplateId.get(
-                    String(template.id)
+              <div className={desktop.familyAccordionList}>
+                {section.families.map((family, familyIndex) => {
+                  const accordionKey = `${section.id}:${family.key}`;
+                  const defaultExpanded = familyIndex === 0;
+                  const isExpanded = isFamilyAccordionExpanded(
+                    accordionKey,
+                    defaultExpanded
                   );
-                  if (!technicalStatus) return null;
 
                   return (
-                    <LineTemplateCatalogCard
-                      key={template.id}
-                      template={template}
-                      technicalStatus={technicalStatus}
+                    <LineTemplateCatalogAccordion
+                      key={accordionKey}
+                      familyKey={family.key}
+                      label={family.label}
+                      templates={family.templates}
+                      isExpanded={isExpanded}
+                      onToggle={() =>
+                        toggleFamilyAccordion(accordionKey, isExpanded)
+                      }
+                      technicalStatusesByTemplateId={technicalStatusesByTemplateId}
                       formatMoney={formatMoney}
-                      isMenuOpen={isMenuOpen}
+                      openMenuId={openMenuId}
                       isSaving={isSaving}
-                      pendingAction={pendingAction}
-                      onToggleMenu={() =>
+                      pendingLineAction={pendingLineAction}
+                      onToggleMenu={(templateId) =>
                         setOpenMenuId((current) =>
-                          current === template.id ? null : template.id
+                          current === templateId ? null : templateId
                         )
                       }
                       onCloseMenu={() => setOpenMenuId(null)}
-                      onDuplicate={() => void handleDuplicate(template.id)}
-                      onRequestDelete={() => {
+                      onDuplicate={(templateId) => void handleDuplicate(templateId)}
+                      onRequestDelete={(template) => {
                         setOpenMenuId(null);
                         setTemplatePendingDelete(template);
                       }}
-                      onEdit={() => openEditSheet(template)}
-                      onEditPrice={() => setPriceEditorTemplate(template)}
-                      onToggleActive={() => void handleToggleActive(template)}
+                      onEdit={openEditSheet}
+                      onEditPrice={setPriceEditorTemplate}
+                      onToggleActive={(template) => void handleToggleActive(template)}
                     />
                   );
                 })}

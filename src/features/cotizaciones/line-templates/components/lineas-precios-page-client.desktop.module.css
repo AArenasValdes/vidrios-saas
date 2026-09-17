@@ -3,6 +3,8 @@
   .page {
     width: min(calc(100% - 48px), 1480px) !important;
     gap: 22px !important;
+    background: #f6f8fb !important;
+    background-image: none !important;
   }
 
   .header {
@@ -18,10 +20,10 @@
     display: grid;
     gap: 12px;
     padding: 16px 18px;
-    border: 1px solid #e0e7f0;
+    border: 1px solid #e6eaf0;
     border-radius: 16px;
     background: #ffffff;
-    box-shadow: 0 12px 28px rgba(18, 34, 58, 0.045);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.035);
   }
 
   .toolbarMain {
@@ -51,12 +53,14 @@
     min-height: 40px;
     border-radius: 10px;
     background-color: #ffffff;
+    border-color: #e6eaf0;
   }
 
   .filtersTrigger {
     min-height: 40px;
     border-radius: 10px;
     box-shadow: none;
+    border-color: #e6eaf0;
   }
 
   .filtersPanel {
@@ -65,7 +69,7 @@
     align-items: end;
     gap: 16px;
     padding: 14px 0 0 !important;
-    border-top: 1px solid #edf1f5;
+    border-top: 1px solid #e6eaf0;
   }
 
   .filtersPanel > :not(.availabilityGroup):not(.filtersReset) {
@@ -87,22 +91,22 @@
   }
 
   .list {
-    gap: 28px !important;
+    gap: 24px !important;
     margin: 0 !important;
   }
 
   .catalogGroup {
-    gap: 12px !important;
+    gap: 14px !important;
     border: 0 !important;
   }
 
   .catalogOriginSection[data-origin="ventora"] {
-    padding-bottom: 4px;
+    padding-bottom: 2px;
   }
 
   .catalogOriginSection[data-origin="propias"] {
     padding-top: 8px;
-    border-top: 1px solid #e8edf3;
+    border-top: 1px solid #e6eaf0;
   }
 
   .groupHeader {
@@ -122,14 +126,14 @@
   }
 
   .originSectionHeader strong {
-    color: #0d1b30;
+    color: #0b1220;
     font-size: 18px;
     font-weight: 700;
     letter-spacing: -0.02em;
   }
 
   .originSectionHeader span {
-    color: #64748b;
+    color: #8a96a6;
     font-size: 13px;
     font-weight: 500;
     line-height: 1.35;
@@ -148,286 +152,9 @@
     white-space: nowrap;
   }
 
-  .groupCards {
-    display: grid !important;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 12px !important;
-    overflow: visible !important;
-    border: 0 !important;
-    border-radius: 0 !important;
-    background: transparent !important;
-  }
-
-  @media (min-width: 1024px) and (max-width: 1279px) {
-    .groupCards {
-      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    }
-  }
-
-  @media (min-width: 1400px) {
-    .groupCards {
-      grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    }
-  }
-
-  .groupCards:has(.cardMenuOpen) {
-    overflow: visible !important;
-  }
-
-  .cardMenuOpen {
-    z-index: 24 !important;
-    overflow: visible !important;
-  }
-
-  .card {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) !important;
-    grid-template-areas:
-      "badge"
-      "identity"
-      "price"
-      "technical"
-      "profiles"
-      "cta" !important;
-    align-content: start;
-    gap: 0;
-    min-height: 0 !important;
-    padding: 12px 14px 14px !important;
-    border: 1px solid #dde5ee !important;
-    border-radius: 14px !important;
-    background: #ffffff !important;
-    box-shadow: 0 4px 14px rgba(18, 34, 58, 0.04) !important;
-  }
-
-  .cardVentora {
-    border-color: #d4e4f8 !important;
-    background: linear-gradient(180deg, #fbfdff 0%, #ffffff 42%) !important;
-  }
-
-  .card:hover {
-    border-color: #c7d7e9 !important;
-    box-shadow: 0 10px 22px rgba(18, 34, 58, 0.07) !important;
-  }
-
-  .catalogStatusBadge {
-    grid-area: badge;
-    display: inline-flex;
-    align-items: center;
-    width: fit-content;
-    min-height: 26px;
-    margin-bottom: 10px;
-    padding: 0 10px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1;
-  }
-
-  .catalogStatusBadge_ready {
-    background: #e8f7ee;
-    color: #15803d;
-    border: 1px solid rgba(21, 128, 61, 0.16);
-  }
-
-  .catalogStatusBadge_pending {
-    background: #fff4e5;
-    color: #b45309;
-    border: 1px solid rgba(180, 83, 9, 0.16);
-  }
-
-  .catalogStatusBadge_muted {
-    background: #f1f5f9;
-    color: #64748b;
-    border: 1px solid rgba(100, 116, 139, 0.14);
-  }
-
-  .cardTop {
-    grid-area: identity !important;
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) auto !important;
-    gap: 8px;
-    padding: 0 !important;
-  }
-
-  .cardTitleBlock {
-    gap: 4px;
-  }
-
-  .cardTitleBlock strong {
-    color: #0d1b30;
-    font-size: 15px;
-    line-height: 1.2;
-  }
-
-  .ventoraOriginPill {
-    min-height: 24px;
-    padding: 0 8px;
-    border-radius: 999px;
-    background: #e8f2ff;
-    color: #1d5fbf;
-    border: 1px solid rgba(30, 136, 255, 0.18);
-    font-size: 11px;
-    font-weight: 700;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    white-space: nowrap;
-  }
-
-  .cardActions {
-    align-items: start;
-  }
-
-  .priceRow {
-    grid-area: price !important;
-    min-height: 0 !important;
-    padding: 10px 0 8px !important;
-    border: 0 !important;
-    align-items: center;
-  }
-
-  .priceRow strong {
-    font-size: 18px !important;
-    letter-spacing: -0.03em !important;
-  }
-
-  .priceRow span {
-    font-size: 12px !important;
-  }
-
-  .priceRow > div {
+  .familyAccordionList {
     display: grid;
-    min-width: 0;
-    gap: 5px;
-  }
-
-  .priceRow > button {
-    min-height: 32px;
-    padding: 0 11px;
-    border-radius: 9px;
-    font-size: 12px;
-    font-weight: 800;
-  }
-
-  .priceAction {
-    color: #1e6fc9;
-    background: #f5f9ff;
-    border: 1px solid #cfe0f4;
-  }
-
-  .priceAction:hover {
-    background: #edf5ff;
-    border-color: #b8d2f0;
-  }
-
-  .fabricationCompactRow {
-    grid-area: technical;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    min-height: 36px;
-    margin-bottom: 6px;
-    padding: 0 10px;
-    border: 1px solid #e8edf3;
-    border-radius: 10px;
-    background: #f8fafc;
-    color: #475569;
-    font-size: 12px;
-    font-weight: 650;
-    text-decoration: none;
-  }
-
-  .fabricationCompactRow > span {
-    display: grid;
-    min-width: 0;
-    gap: 2px;
-  }
-
-  .fabricationCompactRow small {
-    color: #8290a3;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  .fabricationCompactRow strong {
-    overflow: hidden;
-    color: inherit;
-    font-size: 12px;
-    font-weight: 700;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .fabricationCompactRow svg {
-    width: 14px;
-    height: 14px;
-    flex-shrink: 0;
-    color: #94a3b8;
-  }
-
-  .fabricationCompactRow[data-tech-status="validated"] {
-    border-color: #d4eadc;
-    background: #f3fbf6;
-    color: #166534;
-  }
-
-  .fabricationCompactRow[data-tech-status="testing"] {
-    border-color: #d8e7fb;
-    background: #f3f8ff;
-    color: #1d4ed8;
-  }
-
-  .fabricationCompactRow[data-tech-status="draft"] {
-    border-color: #f0dfc2;
-    background: #fff9ef;
-    color: #9a5b00;
-  }
-
-  .fabricationCompactRow:hover {
-    border-color: #c7d7e9;
-    background: #f1f5f9;
-  }
-
-  .cardProfiles {
-    grid-area: profiles !important;
-    margin-bottom: 8px;
-  }
-
-  .cardCtaRow {
-    grid-area: cta;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
     gap: 10px;
-    padding-top: 2px;
-  }
-
-  .cardPrimaryCta {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 38px;
-    padding: 0 14px;
-    border: 0;
-    border-radius: 10px;
-    background: #1e88ff;
-    color: #ffffff;
-    font-size: 13px;
-    font-weight: 700;
-    text-decoration: none;
-    cursor: pointer;
-    box-shadow: 0 8px 18px rgba(30, 136, 255, 0.2);
-  }
-
-  .cardPrimaryCta:hover {
-    filter: brightness(1.03);
-  }
-
-  .cardActiveSwitch {
-    flex-shrink: 0;
   }
 }
 
