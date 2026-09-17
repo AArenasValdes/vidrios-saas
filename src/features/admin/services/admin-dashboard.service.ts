@@ -22,6 +22,7 @@ import {
 } from "@/features/admin/services/admin-dashboard-metrics.logic";
 import { mapDbStatusToUi } from "@/features/growth/services/growth-prospect-mapper";
 import type { GrowthDbProspectStatus } from "@/features/growth/types/growth-supabase";
+import { getAdminProductoHomeSnapshot } from "@/features/admin/services/admin-producto.service";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const MS_DAY = 24 * 60 * 60 * 1000;
@@ -455,7 +456,7 @@ export async function getAdminDashboard(): Promise<AdminDashboard> {
   const snapshotPromise = listAdminOrganizationsSnapshot();
   const clientsPromise = snapshotPromise.then(listAdminClientsFromSnapshot);
 
-  const [clients, snapshot, prospectsResult, tasksResult, quotesResult, solicitudesResult] =
+  const [clients, snapshot, prospectsResult, tasksResult, quotesResult, solicitudesResult, productoSnapshot] =
     await Promise.all([
       clientsPromise,
       snapshotPromise,
@@ -483,6 +484,7 @@ export async function getAdminDashboard(): Promise<AdminDashboard> {
         .eq("contexto", "empresa-publica")
         .order("creado_en", { ascending: false })
         .limit(12),
+      getAdminProductoHomeSnapshot(),
     ]);
 
   const testOrgIds = new Set(
@@ -617,6 +619,7 @@ export async function getAdminDashboard(): Promise<AdminDashboard> {
         quotesThisMonth.map((quote) => Number(quote.organization_id))
       ).size,
     },
+    productoSnapshot,
     outboundProspecting: {
       activeProspects: activeProspects.length,
       contactedProspects: contactedProspects.length,

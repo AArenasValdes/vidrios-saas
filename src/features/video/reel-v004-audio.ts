@@ -12,7 +12,7 @@ export type ReelV004SfxCue = {
 };
 
 export const REEL_V004_MUSIC = staticFile(
-  "audio/reel-v003/ventora-v003-bed-original.wav",
+  "audio/reel-v004/ventora-v004-bed-dynamic.wav",
 );
 
 const AUDIO = {
@@ -89,7 +89,7 @@ export const REEL_V004_SFX_CUES: ReelV004SfxCue[] = [
 ];
 
 export const REEL_V004_AUDIO_SOURCES = {
-  music: "public/audio/reel-v003/ventora-v003-bed-original.wav",
+  music: "public/audio/reel-v004/ventora-v004-bed-dynamic.wav",
   sfx: {
     package: "@remotion/sfx@4.0.490",
     urls: {

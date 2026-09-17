@@ -31,12 +31,12 @@ const SCENES = [
   },
   {
     id: "mobile-quote",
-    src: staticFile("4to Video/Secuencia-3.png"),
+    src: staticFile("4to Video/flujo1.png"),
     durationInFrames: 4 * FPS,
   },
   {
     id: "professional-pdf",
-    src: staticFile("4to Video/Secuencia-4.png"),
+    src: staticFile("4to Video/flujo-2.png"),
     durationInFrames: 4 * FPS,
   },
   {

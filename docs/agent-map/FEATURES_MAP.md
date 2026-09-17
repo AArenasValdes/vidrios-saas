@@ -281,6 +281,27 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
 
 ---
 
+## Feature: Panel Uso del Producto (Founder)
+
+- **Que hace**: Consolida adopcion real del cotizador y setup de cuentas SaaS en un solo panel founder. Muestra split movil/PC, guiada/constructor/total global, solicitudes publicas, embudo de producto, cuellos de botella y tabla por cuenta con checklist de setup (empresa, PDF, pagina, canales, solicitud, lineas). Excluye `is_test_account`. No mide visitas ni clics WhatsApp (solo GA4 hoy).
+- **Rutas involucradas**: `/admin/producto`, `/api/admin/producto`
+- **Archivos principales**:
+  - `app/admin/producto/page.tsx`
+  - `app/api/admin/producto/route.ts`
+  - `src/features/admin/components/admin-producto-workspace.tsx`
+  - `src/features/admin/services/admin-producto.service.ts`
+  - `src/features/admin/services/admin-producto.logic.ts`
+  - `src/features/admin/services/admin-producto-filters.service.ts`
+  - `src/features/admin/types/admin-producto.ts`
+- **Tablas Supabase**: `cotizaciones` (`creation_surface`, `pricing_mode`, `solicitud_id`), `solicitudes_contacto`, `onboarding_checklists`, `organization_profile`, `cotizacion_line_templates`
+- **Flujo de datos**: guard founder -> `getAdminProductoWorkspace()` -> queries batch con `createAdminClient()` -> KPIs/embudo/filas por org
+- **Integraciones**: snapshot en `/admin` via `getAdminProductoHomeSnapshot()`; adopcion por cuenta en ficha `/admin/clientes/[organizationId]` via `getAdminClientProductAdoption()`; link desde `/admin/marketing`
+- **Donde editar UI**: `admin-producto-workspace.tsx`, nav en `admin-nav.config.ts`
+- **Donde editar logica**: `admin-producto.logic.ts`, `admin-producto.service.ts`
+- **Riesgos al modificar**: No duplicar calculos de marketing/activacion sin reutilizar helpers; mantener exclusion de cuentas prueba; no abrir CRM ni metricas decorativas
+
+---
+
 ## Feature: Founder Growth Panel
 
 - **Que hace**: Panel privado del fundador con tabs operativas: trabajo de hoy, prospectos, clientes/pagos y marketing/tareas. Persiste en Supabase (`growth_*`) con import idempotente desde `localStorage` v3 y separa `Real`, `Manual` y `Mock`. El control editorial vive en `/admin/marketing`; comienza con dos videos base de onboarding, creación de una pieza desde guiones base y uso real del cotizador; prospección y páginas públicas quedan como datos secundarios. La adopción excluye cuentas `is_test_account`, incluida rápida por ítems desde su instrumentación. Su bloque de prospectos se etiqueta como prospección saliente: no confundirlo con leads captados ni usarlo para atribuir anuncios. El onboarding automático vive en `/admin/marketing/onboarding`, sin mezclar contenido, activación y datos personales de clientes.

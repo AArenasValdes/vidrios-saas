@@ -7,6 +7,7 @@ import {
   LuFileText,
   LuGlobe,
   LuMegaphone,
+  LuMonitor,
   LuTarget,
   LuUsers,
   LuZap,
@@ -31,6 +32,12 @@ const KPI_ICONS: Record<string, ComponentType<{ className?: string; "aria-hidden
   constructor_items: LuZap,
   guided_items: LuFileText,
   constructor_pdf: LuBadgePercent,
+  mobile_usage: LuTarget,
+  desktop_usage: LuMonitor,
+  guided_usage: LuFileText,
+  constructor_usage: LuZap,
+  total_global_usage: LuFileText,
+  setup_incomplete: LuGlobe,
 };
 
 type AdminMarketingKpiRowProps = {

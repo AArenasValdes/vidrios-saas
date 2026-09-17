@@ -42,6 +42,15 @@ export type AdminDashboardActivityItem = {
   secondaryLabel?: string | null;
 };
 
+export type AdminDashboardProductoSnapshot = {
+  mobileQuotes: number;
+  desktopQuotes: number;
+  guidedQuotes: number;
+  constructorQuotes: number;
+  incompleteSetupAccounts: number;
+  solicitudesLast30Days: number;
+};
+
 export type AdminDashboard = {
   syncedAt: string;
   revenue: {
@@ -67,6 +76,7 @@ export type AdminDashboard = {
     pdfsGenerated: number;
     organizationsWithQuotes: number;
   };
+  productoSnapshot: AdminDashboardProductoSnapshot;
   outboundProspecting: {
     activeProspects: number;
     contactedProspects: number;

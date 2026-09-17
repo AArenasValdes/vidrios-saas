@@ -285,7 +285,10 @@ export function AdminDashboardWorkspace({
       <section className={s.usageSection}>
         <div className={s.sectionTitle}>
           <h2>Uso del producto · {dashboard.revenue.label}</h2>
-          <p>Cuentas de prueba excluidas.</p>
+          <p>
+            Cuentas de prueba excluidas.{" "}
+            <Link href="/admin/producto">Ver panel completo</Link>
+          </p>
         </div>
         <div className={s.usageMetrics}>
           <div>
@@ -302,6 +305,23 @@ export function AdminDashboardWorkspace({
             <LuUsers aria-hidden />
             <strong>{dashboard.productUsage.organizationsWithQuotes}</strong>
             <span>Empresas que cotizaron</span>
+          </div>
+          <div>
+            <LuTrendingUp aria-hidden />
+            <strong>
+              {dashboard.productoSnapshot.mobileQuotes}/{dashboard.productoSnapshot.desktopQuotes}
+            </strong>
+            <span>Móvil / PC (30 días)</span>
+          </div>
+          <div>
+            <LuFileText aria-hidden />
+            <strong>{dashboard.productoSnapshot.incompleteSetupAccounts}</strong>
+            <span>Setup incompleto</span>
+          </div>
+          <div>
+            <LuUsers aria-hidden />
+            <strong>{dashboard.productoSnapshot.solicitudesLast30Days}</strong>
+            <span>Solicitudes públicas</span>
           </div>
         </div>
       </section>

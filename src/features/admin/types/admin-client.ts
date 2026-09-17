@@ -2,6 +2,7 @@ import type {
   AdminPublicChannelDetail,
   AdminPublicChannelListItem,
 } from "@/features/admin/types/admin-public-channel";
+import type { ProductoClientAdoption } from "@/features/admin/types/admin-producto";
 import type {
   BillingPeriod,
   PaymentMethod,
@@ -134,4 +135,5 @@ export type AdminClientDetail = {
     publicPageActive: boolean;
   };
   publicChannel: AdminPublicChannelDetail;
+  productAdoption: ProductoClientAdoption;
 };

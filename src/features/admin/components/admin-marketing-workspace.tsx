@@ -201,7 +201,10 @@ export function AdminMarketingWorkspace() {
       <section className={s.sectionBlock} aria-label="Uso real del cotizador">
         <div className={s.sectionHeading}>
           <h2>Uso real del cotizador</h2>
-          <p>Solo cuentas reales · {workspace.period.label}. Dentro de por ítems: Guiada o Constructor de piezas.</p>
+          <p>
+            Solo cuentas reales · {workspace.period.label}. Dentro de por ítems: Guiada o Constructor
+            de piezas. <Link href="/admin/producto">Ver panel completo</Link>
+          </p>
         </div>
         <AdminMarketingKpiRow
           kpis={workspace.quoteUsageKpis}

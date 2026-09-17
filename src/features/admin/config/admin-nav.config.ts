@@ -1,5 +1,6 @@
 import type { IconType } from "react-icons";
 import {
+  LuActivity,
   LuCreditCard,
   LuLayoutDashboard,
   LuLogOut,
@@ -49,6 +50,11 @@ export const ADMIN_PRIMARY_NAV: AdminNavItem[] = [
     href: "/admin/activacion",
     title: "Activación",
     icon: LuZap,
+  },
+  {
+    href: "/admin/producto",
+    title: "Uso del producto",
+    icon: LuActivity,
   },
   {
     href: "/admin/tareas",

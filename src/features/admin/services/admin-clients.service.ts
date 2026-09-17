@@ -24,6 +24,7 @@ import {
   fetchAdminClientUsage,
   fetchAdminClientsUsageMap,
 } from "@/features/admin/services/admin-clients-enrichment.service";
+import { getAdminClientProductAdoption } from "@/features/admin/services/admin-producto.service";
 import {
   buildPublicChannelListLabel,
   fetchPublicChannelDetail,
@@ -328,10 +329,26 @@ export async function getAdminClientDetail(
     snapshot.profile,
     principalUserRow?.whatsapp ?? null
   );
-  const [usageSnapshot, publicChannel] = await Promise.all([
+  const [usageSnapshot, publicChannel, clientsListItem] = await Promise.all([
     fetchAdminClientUsage(organizationId),
     fetchPublicChannelDetail(organizationId),
+    listAdminClients().then((clients) =>
+      clients.find((client) => client.organizationId === organizationId) ?? null
+    ),
   ]);
+
+  const productAdoption =
+    clientsListItem !== null
+      ? await getAdminClientProductAdoption(organizationId, clientsListItem)
+      : {
+          quoteBreakdown: [],
+          setupSteps: [],
+          setupIncompleteCount: 0,
+          dominantSurface: "sin_datos" as const,
+          dominantSurfaceLabel: "Sin datos",
+          quotesFromRequests: 0,
+          lineTemplatesCount: 0,
+        };
 
   return {
     organizationId,
@@ -377,5 +394,6 @@ export async function getAdminClientDetail(
       publicPageActive: usageSnapshot.publicPageActive,
     },
     publicChannel,
+    productAdoption,
   };
 }

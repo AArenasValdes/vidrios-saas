@@ -276,7 +276,39 @@ export function AdminClientDetailWorkspace({
             <div><dt>Clientes registrados</dt><dd>{client.usage.clientesRegistradosCount}</dd></div>
             <div><dt>Página pública</dt><dd>{client.publicChannel.pageStatusLabel}</dd></div>
             <div><dt>Última actividad</dt><dd>{formatDate(client.usage.lastActivityAt)}</dd></div>
+            <div><dt>Uso dominante</dt><dd>{client.productAdoption.dominantSurfaceLabel}</dd></div>
+            <div>
+              <dt>Cotiz. desde solicitud</dt>
+              <dd>{client.productAdoption.quotesFromRequests}</dd>
+            </div>
+            <div>
+              <dt>Líneas configuradas</dt>
+              <dd>{client.productAdoption.lineTemplatesCount}</dd>
+            </div>
           </dl>
+          {client.productAdoption.quoteBreakdown.length > 0 ? (
+            <p className={s.emptyCompact}>
+              Superficies:{" "}
+              {client.productAdoption.quoteBreakdown
+                .map((item) => `${item.surface} (${item.count})`)
+                .join(" · ")}
+            </p>
+          ) : null}
+          <div className={s.quickActions}>
+            {client.productAdoption.setupSteps.map((step) => (
+              <span
+                key={step.key}
+                className={s.secondaryBtn}
+                style={{ opacity: step.completed ? 1 : 0.55 }}
+              >
+                {step.label}
+                {step.completed ? " ✓" : ""}
+              </span>
+            ))}
+          </div>
+          <Link href="/admin/producto" className={s.linkAction}>
+            Ver panel de uso del producto
+          </Link>
         </section>
 
         <AdminClientPublicChannelSection

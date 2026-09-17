@@ -85,5 +85,8 @@ docs/VENTORA_DESKTOP_TALLER_ROADMAP.md
 .out 
 .vercel
 .env*.local
-/public/audio
-/public/video-assets
+# Capturas y renders locales de videos (no subir al repo).
+/public/4to Video/
+/public/5to video/
+/public/6to video Maestro real/
+/public/audio/

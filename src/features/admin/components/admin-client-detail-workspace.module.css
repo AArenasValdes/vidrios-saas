@@ -197,6 +197,15 @@
   color: var(--admin-text);
 }
 
+.linkAction {
+  display: inline-flex;
+  margin-top: 10px;
+  color: #93c5fd;
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
 .bannerError,
 .bannerSuccess,
 .emptyCompact,
