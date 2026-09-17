@@ -30,7 +30,7 @@ export const LINE_TEMPLATE_FAMILY_LABELS: Record<LineTemplateFamilyKey, string> 
   fachadas: "Fachadas",
   cristales: "Cristales",
   especiales: "Especiales",
-  otras: "Otras líneas",
+  otras: "Sin clasificar",
 };
 
 function resolveFamilyFromLineConfiguration(lineConfiguration: string): LineTemplateFamilyKey | null {

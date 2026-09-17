@@ -11,9 +11,9 @@
 
 .header {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) auto;
+  grid-template-columns: 44px minmax(0, 1fr) max-content;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-height: 72px;
   padding: max(8px, env(safe-area-inset-top, 0px)) 16px 8px;
   background: #fff;
@@ -37,22 +37,30 @@
   height: 21px;
 }
 
+.header > div {
+  min-width: 0;
+}
+
 .header h2 {
   margin: 0;
-  font: 700 19px/1.15 var(--font-syne), sans-serif;
+  min-width: 0;
+  font: 700 22px/1.15 var(--font-syne), sans-serif;
   letter-spacing: -0.02em;
 }
 
 .header p {
-  margin: 3px 0 0;
+  margin: 4px 0 0;
   color: #64748b;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .stepCount {
+  flex: 0 0 auto;
+  min-width: max-content;
   color: #66758a;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .stepper {
@@ -68,27 +76,27 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 44px;
+  min-height: 46px;
   padding: 8px;
   color: #738197;
   text-align: left;
   background: transparent;
   border: 0;
   border-radius: 10px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
 }
 
 .stepper button > span {
   display: grid;
-  width: 25px;
-  height: 25px;
+  width: 26px;
+  height: 26px;
   flex: 0 0 auto;
   place-items: center;
   color: #66758a;
   background: #edf1f6;
   border-radius: 50%;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .stepper .stepActive {
@@ -131,21 +139,21 @@
 .fieldset legend,
 .usageList legend {
   color: #34445b;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .field input,
 .field select {
   width: 100%;
-  min-height: 48px;
-  padding: 0 13px;
+  min-height: 50px;
+  padding: 0 14px;
   color: #0f1b2d;
   background: #fff;
   border: 1px solid #dbe3ed;
   border-radius: 12px;
   outline: 0;
-  font: inherit;
+  font-size: 16px;
 }
 
 .field input:focus,
@@ -177,12 +185,13 @@
 }
 
 .segmented button {
-  min-height: 44px;
+  min-height: 46px;
   color: #5c6a7e;
   background: transparent;
   border: 0;
   border-radius: 10px;
-  font-weight: 800;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .segmented .segmentActive {
@@ -229,8 +238,8 @@
   cursor: pointer;
   list-style: none;
   color: #1c2b40;
-  font-size: 13px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 700;
 }
 
 .details summary::-webkit-details-marker {
@@ -240,7 +249,7 @@
 .details summary span {
   margin-top: 2px;
   color: #718096;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -266,12 +275,12 @@
 
 .activeRow strong {
   color: #1b2a3d;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .activeRow small {
   color: #718096;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .activeRow input {
@@ -298,7 +307,7 @@
 
 .explainer p {
   margin: 0;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
 }
 
@@ -331,12 +340,12 @@
 }
 
 .usageList strong {
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .usageList small {
   color: #64748b;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.4;
 }
 
@@ -367,8 +376,8 @@
   justify-content: space-between;
   min-height: 48px;
   color: #075fcf;
-  font-size: 13px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 700;
   text-decoration: none;
 }
 
@@ -396,7 +405,8 @@
   background: #1677e8;
   border: 0;
   border-radius: 13px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 700;
   box-shadow: 0 12px 24px -18px rgb(14 101 205 / 90%);
 }
 

@@ -1099,29 +1099,9 @@ export default function ConfiguracionEmpresaPage() {
           <div className={s.accordionPanel}>
             <div className={s.accordionInner}>
           <article className={s.catalogSummaryCard}>
-            <div className={s.catalogSummaryTop}>
-              <div className={s.triggerMain}>
-                <div className={s.triggerIcon}>
-                  <LuQrCode aria-hidden />
-                </div>
-                <div className={s.triggerCopy}>
-                  <span className={s.cardEyebrow}>Catálogo privado</span>
-                  <strong>Líneas, costos y precios</strong>
-                  <p>Define tus líneas comerciales, costos base y reglas de cobro propias.</p>
-                </div>
-              </div>
-
-              <div className={s.catalogSummaryMeta}>
-                <span className={s.catalogSummaryPill}>
-                  {isLoadingLineTemplates
-                    ? "Cargando..."
-                    : `${lineTemplates.length} lineas guardadas`}
-                </span>
-                <span className={s.catalogSummaryPillMuted}>
-                  {activeLineTemplatesCount} activas
-                </span>
-              </div>
-            </div>
+            <p className={s.catalogSummaryDescription}>
+              Define tus líneas comerciales, costos base y reglas de cobro propias.
+            </p>
 
             <div className={s.catalogSummaryActions}>
               <Link href="/configuracion/empresa/lineas-precios" scroll className={s.secondaryLink}>

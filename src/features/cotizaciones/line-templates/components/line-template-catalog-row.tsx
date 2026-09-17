@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { LuChevronRight } from "react-icons/lu";
+
 import type { TechnicalCardStatus } from "@/features/cotizaciones/line-templates/services/catalogo-fabricacion-card-status";
 import { isVentoraCatalogKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
@@ -58,13 +61,6 @@ function resolveRowStatus(
     return { label: "Precio pendiente", tone: "pending_price" };
   }
 
-  if (
-    template.categoria !== "vidrio" &&
-    (technicalStatus.tone === "quote_only" || technicalStatus.tone === "draft")
-  ) {
-    return { label: "Configuración pendiente", tone: "pending_config" };
-  }
-
   if (technicalStatus.tone === "validated") {
     return { label: "Fabricación validada", tone: "ready" };
   }
@@ -92,6 +88,8 @@ export function LineTemplateCatalogRow({
   const providerLabel = template.proveedor?.trim() || (isVentoraCatalogKey(template.catalogKey) ? "Ventora" : null);
   const materialLabel = LINE_TEMPLATE_CATEGORIA_LABELS[template.categoria];
   const rowStatus = resolveRowStatus(template, needsPrice, technicalStatus);
+  const fabricationHref = `/configuracion/empresa/lineas-precios/${template.id}/fabricacion`;
+  const showFabricationEntry = template.categoria !== "vidrio";
 
   return (
     <article
@@ -151,9 +149,41 @@ export function LineTemplateCatalogRow({
         )}
       </div>
 
-      <div className={`${row.statusPill} ${row[`statusPill_${rowStatus.tone}`]}`}>
-        <span className={row.statusDot} aria-hidden />
-        {rowStatus.label}
+      <div className={row.statusBlock}>
+        {needsPrice ? (
+          <span className={`${row.statusPill} ${row.statusPill_pending_price}`}>
+            <span className={row.statusDot} aria-hidden />
+            Precio pendiente
+          </span>
+        ) : null}
+
+        {!template.isActive ? (
+          <span className={`${row.statusPill} ${row.statusPill_muted}`}>
+            <span className={row.statusDot} aria-hidden />
+            Pausada
+          </span>
+        ) : null}
+
+        {showFabricationEntry ? (
+          <Link
+            href={fabricationHref}
+            className={row.fabricationLink}
+            data-tech-status={technicalStatus.tone}
+            aria-label={`Fabricación: ${technicalStatus.label}`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <span className={row.fabricationLinkCopy}>
+              <span className={row.fabricationLinkLabel}>Fabricación</span>
+              <span className={row.fabricationLinkValue}>{technicalStatus.label}</span>
+            </span>
+            <LuChevronRight className={row.fabricationLinkIcon} aria-hidden />
+          </Link>
+        ) : !needsPrice && template.isActive ? (
+          <span className={`${row.statusPill} ${row[`statusPill_${rowStatus.tone}`]}`}>
+            <span className={row.statusDot} aria-hidden />
+            {rowStatus.label}
+          </span>
+        ) : null}
       </div>
 
       <button

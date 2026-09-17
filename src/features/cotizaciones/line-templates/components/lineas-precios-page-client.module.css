@@ -4641,17 +4641,28 @@
 
 .sheetWizard .sheetHeaderCopy h2 {
   color: #0b1526;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 760;
   letter-spacing: -0.03em;
 }
 
 .sheetWizard .sheetHeaderCopy p {
   color: #5b6b82;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 520;
   line-height: 1.4;
   max-width: 54ch;
+}
+
+.sheetWizard .fieldLabel {
+  font-size: 13px;
+}
+
+.sheetWizard .textInput,
+.sheetWizard .moneyInput,
+.sheetWizard .selectInput,
+.sheetWizard .moneyPrefix {
+  font-size: 16px;
 }
 
 .sheetWizard .sheetBody {
@@ -4862,7 +4873,7 @@
 }
 
 .wizardProgressLabel {
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 720;
   line-height: 1.2;
   white-space: nowrap;
@@ -5202,7 +5213,7 @@
   }
 
   .sheetWizard .sheetHeaderCopy h2 {
-    font-size: 22px;
+    font-size: 24px;
   }
 
   .sheetWizard .sheetBody {
@@ -5243,7 +5254,7 @@
   }
 
   .wizardProgressLabel {
-    font-size: 12.5px;
+    font-size: 14px;
   }
 
   .wizardFooter .primaryButton {

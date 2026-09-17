@@ -1047,8 +1047,13 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         onEdit={openEditSheet}
         onEditPrice={setPriceEditorTemplate}
         onToggleActive={(template) => void handleToggleActive(template)}
+        onDuplicate={(template) => void handleDuplicate(template.id)}
+        onRequestDelete={setTemplatePendingDelete}
+        isSaving={isSaving}
+        pendingLineAction={pendingLineAction}
         formatMoney={formatMoney}
         isChileCatalog={isChileCatalog}
+        organizationName={profile?.empresaNombre}
       />
 
       <div className={`${s.page} ${s.desktopCatalog} ${desktop.page}`}>

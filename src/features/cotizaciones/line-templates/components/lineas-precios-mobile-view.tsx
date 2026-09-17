@@ -1,33 +1,46 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   LuArrowLeft,
+  LuChevronDown,
   LuChevronRight,
-  LuMonitor,
+  LuDoorOpen,
+  LuGem,
+  LuInfo,
+  LuLayers,
+  LuLayoutGrid,
   LuPlus,
   LuRotateCcw,
   LuSearch,
   LuSlidersHorizontal,
+  LuSparkles,
+  LuSquare,
+  LuUser,
   LuX,
 } from "react-icons/lu";
+import type { IconType } from "react-icons";
 
 import {
-  getLineTemplateSystemMetadata,
   lineTemplateNeedsCommercialPrice,
   type CotizacionLineTemplate,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import { partitionLineTemplatesByCatalogOrigin } from "@/features/cotizaciones/line-templates/services/line-template-group.service";
+
 import {
-  formatLineTemplateHabitualGlassLabel,
-} from "@/features/cotizaciones/line-templates/constants/line-template-habitual-glass";
+  groupLineTemplatesByFamily,
+  type LineTemplateFamilyKey,
+} from "./line-template-catalog-family";
+import type { LineTemplateActionKind } from "./line-template-card-actions";
+import {
+  LineasPreciosMobileLineRow,
+  resolveFabricationActionLabel,
+} from "./lineas-precios-mobile-line-row";
 import {
   formatLineTemplatePriceLabel,
-  LINE_TEMPLATE_CATEGORIA_LABELS,
 } from "@/features/cotizaciones/line-templates/utils/catalog-labels";
-
 import s from "./lineas-precios-mobile-view.module.css";
-import { LineProfileReferencesSection } from "./line-profile-references-section";
 
 export type MobileStatusFilter = "todas" | "activas" | "inactivas";
 export type MobileCategoryFilter = "Todo" | "aluminio" | "pvc" | "vidrio";
@@ -72,8 +85,16 @@ type Props = {
   onEdit: (template: CotizacionLineTemplate) => void;
   onEditPrice: (template: CotizacionLineTemplate) => void;
   onToggleActive: (template: CotizacionLineTemplate) => void;
+  onDuplicate: (template: CotizacionLineTemplate) => void;
+  onRequestDelete: (template: CotizacionLineTemplate) => void;
+  isSaving?: boolean;
+  pendingLineAction?: {
+    templateId: string | number;
+    kind: LineTemplateActionKind;
+  } | null;
   formatMoney: (value: number) => string;
   isChileCatalog?: boolean;
+  organizationName?: string;
 };
 
 const MATERIAL_OPTIONS: Array<{ value: MobileCategoryFilter; label: string }> = [
@@ -91,30 +112,16 @@ const TECHNICAL_OPTIONS: Array<{ value: MobileTechnicalFilter; label: string }> 
   { value: "validadas", label: "Validada" },
 ];
 
-function getCommercialStatus(
-  template: CotizacionLineTemplate,
-  needsPrice: boolean
-) {
-  if (!template.isActive) {
-    return {
-      tone: "paused",
-      label: "Pausada para cotizar",
-      detail: "No aparece al crear cotizaciones.",
-    } as const;
-  }
-  if (needsPrice) {
-    return {
-      tone: "pending",
-      label: "Precio pendiente",
-      detail: "Agrega un precio para poder cotizar.",
-    } as const;
-  }
-  return {
-    tone: "ready",
-    label: "Lista para cotizar",
-    detail: "Disponible al crear cotizaciones.",
-  } as const;
-}
+const FAMILY_ICONS: Record<LineTemplateFamilyKey | "propias", IconType> = {
+  propias: LuUser,
+  correderas: LuLayoutGrid,
+  proyectantes: LuSquare,
+  puertas: LuDoorOpen,
+  fachadas: LuLayers,
+  cristales: LuSparkles,
+  especiales: LuGem,
+  otras: LuLayers,
+};
 
 export function LineasPreciosMobileView({
   templates,
@@ -142,21 +149,106 @@ export function LineasPreciosMobileView({
   onEdit,
   onEditPrice,
   onToggleActive,
+  onDuplicate,
+  onRequestDelete,
+  isSaving = false,
+  pendingLineAction = null,
   formatMoney,
   isChileCatalog = false,
 }: Props) {
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [desktopNoticeDismissed, setDesktopNoticeDismissed] = useState(false);
+  const [desktopNoticeOpen, setDesktopNoticeOpen] = useState(false);
+  const [expandedFamilies, setExpandedFamilies] = useState<Record<string, boolean>>({});
+  const [selectedLine, setSelectedLine] = useState<CotizacionLineTemplate | null>(null);
+
+  const selectedLineContext = useMemo(() => {
+    if (!selectedLine) return null;
+
+    const needsPrice = lineTemplateNeedsCommercialPrice(selectedLine);
+    const technicalStatus = technicalStatuses.get(String(selectedLine.id)) ?? {
+      tone: "quote_only" as const,
+      label: "Sin configurar",
+      detail: "",
+      actionLabel: "Configurar fabricación",
+      filter: "solo_cotizar" as const,
+    };
+
+    const priceLabel = needsPrice
+      ? "Sin precio"
+      : formatLineTemplatePriceLabel(
+          selectedLine.unidadCobro,
+          selectedLine.precioM2Sugerido,
+          formatMoney
+        );
+
+    const subtitleParts = [priceLabel, selectedLine.isActive ? "Activa" : "Pausada"];
+
+    return {
+      needsPrice,
+      technicalStatus,
+      subtitle: subtitleParts.join(" · "),
+      fabricationActionLabel: resolveFabricationActionLabel(technicalStatus, needsPrice),
+    };
+  }, [formatMoney, selectedLine, technicalStatuses]);
+
   const appliedFilterCount = [
     categoryFilter !== "Todo",
     technicalFilter !== "todas",
     providerFilter !== providerFilterAll,
   ].filter(Boolean).length;
 
+  const catalogGroups = useMemo(() => {
+    const { ventora, propias } = partitionLineTemplatesByCatalogOrigin(filteredTemplates);
+    const groups: Array<{
+      key: string;
+      label: string;
+      iconKey: LineTemplateFamilyKey | "propias";
+      templates: CotizacionLineTemplate[];
+    }> = [];
+
+    if (propias.length > 0) {
+      groups.push({
+        key: "propias",
+        label: "Tus líneas",
+        iconKey: "propias",
+        templates: propias,
+      });
+    }
+
+    for (const family of groupLineTemplatesByFamily(ventora)) {
+      groups.push({
+        key: `ventora:${family.key}`,
+        label: family.label,
+        iconKey: family.key,
+        templates: family.templates,
+      });
+    }
+
+    return groups;
+  }, [filteredTemplates]);
+
   const clearSecondaryFilters = () => {
     onCategoryFilterChange("Todo");
     onTechnicalFilterChange("todas");
     onProviderFilterChange(providerFilterAll);
   };
+
+  const isFamilyExpanded = useCallback(
+    (familyKey: string, defaultExpanded: boolean) =>
+      expandedFamilies[familyKey] ?? defaultExpanded,
+    [expandedFamilies]
+  );
+
+  const toggleFamily = useCallback(
+    (familyKey: string, currentlyExpanded: boolean) => {
+      setExpandedFamilies((current) => ({
+        ...current,
+        [familyKey]: !currentlyExpanded,
+      }));
+    },
+    []
+  );
 
   return (
     <main className={s.page}>
@@ -168,21 +260,30 @@ export function LineasPreciosMobileView({
         >
           <LuArrowLeft aria-hidden />
         </Link>
+
         <div className={s.headerCopy}>
           {isChileCatalog ? (
             <span className={s.catalogRegionLabel}>Catálogo base de Chile</span>
           ) : null}
           <h1>Líneas y precios</h1>
-          <p>{templates.length} {templates.length === 1 ? "línea guardada" : "líneas guardadas"}</p>
+          <p className={s.headerCount}>
+            {templates.length}{" "}
+            {templates.length === 1 ? "línea guardada" : "líneas guardadas"}
+          </p>
         </div>
+
         <button type="button" className={s.newButton} onClick={onNew}>
-          <span aria-hidden>+</span>
-          <span>Nueva línea</span>
+          <LuPlus aria-hidden />
+          <span>Nueva</span>
         </button>
       </header>
 
       <section className={s.controls} aria-label="Buscar y filtrar líneas">
-        <div className={s.searchRow}>
+        <div
+          className={`${s.searchRow} ${
+            desktopNoticeDismissed ? s.searchRowCompact : ""
+          }`}
+        >
           <label className={s.searchField}>
             <LuSearch aria-hidden />
             <input
@@ -201,6 +302,16 @@ export function LineasPreciosMobileView({
             <LuSlidersHorizontal aria-hidden />
             {appliedFilterCount ? <span>{appliedFilterCount}</span> : null}
           </button>
+          {!desktopNoticeDismissed ? (
+            <button
+              type="button"
+              className={s.infoButton}
+              onClick={() => setDesktopNoticeOpen(true)}
+              aria-label="Información sobre fabricación en computador"
+            >
+              <LuInfo aria-hidden />
+            </button>
+          ) : null}
         </div>
 
         <div className={s.materialQuickFilters} role="group" aria-label="Filtrar por material">
@@ -217,7 +328,7 @@ export function LineasPreciosMobileView({
           ))}
         </div>
 
-        <div className={s.statusChips} aria-label="Estado de las líneas">
+        <div className={s.statusTabs} aria-label="Estado de las líneas">
           {([
             { value: "todas" as const, label: "Todas", count: templates.length },
             { value: "activas" as const, label: "Activas", count: activeCount },
@@ -226,7 +337,7 @@ export function LineasPreciosMobileView({
             <button
               key={option.value}
               type="button"
-              className={statusFilter === option.value ? s.chipActive : ""}
+              className={statusFilter === option.value ? s.tabActive : ""}
               onClick={() => onStatusFilterChange(option.value)}
               aria-pressed={statusFilter === option.value}
             >
@@ -244,20 +355,24 @@ export function LineasPreciosMobileView({
       ) : null}
       {error ? <div className={s.errorBand}>{error}</div> : null}
 
-      <aside className={s.desktopFabricationNotice} role="note">
-        <span className={s.desktopFabricationNoticeIcon} aria-hidden>
-          <LuMonitor />
-        </span>
-        <div>
-          <strong>Fabricación en el computador</strong>
-          <p>
-            Plantillas, cubicación, pauta de corte y despiece se configuran en
-            desktop. Aquí revisas precio y el estado de cada línea.
-          </p>
+      {isLoading ? (
+        <div className={s.loadingSkeleton} aria-busy="true" aria-label="Cargando líneas">
+          {[0, 1].map((groupIndex) => (
+            <div key={groupIndex} className={s.skeletonFamily}>
+              <div className={s.skeletonFamilyHeader} />
+              {[0, 1, 2].map((rowIndex) => (
+                <div key={rowIndex} className={s.skeletonRow}>
+                  <div className={s.skeletonRowTop}>
+                    <div className={s.skeletonRowLine} />
+                    <div className={s.skeletonRowLine} />
+                  </div>
+                  <div className={s.skeletonRowMeta} />
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
-      </aside>
-
-      {isLoading ? <div className={s.loading}>Cargando líneas…</div> : null}
+      ) : null}
 
       {!isLoading && templates.length === 0 ? (
         <section className={s.emptyState}>
@@ -284,107 +399,57 @@ export function LineasPreciosMobileView({
         </section>
       ) : null}
 
-      {filteredTemplates.length > 0 ? (
+      {catalogGroups.length > 0 ? (
         <section className={s.list} aria-label="Líneas guardadas">
-          {filteredTemplates.map((template) => {
-            const technicalStatus = technicalStatuses.get(String(template.id));
-            if (!technicalStatus) return null;
-            const needsPrice = lineTemplateNeedsCommercialPrice(template);
-            const system = getLineTemplateSystemMetadata(template.catalogMetadata).lineSystem;
-            const context = [template.proveedor, system].filter(Boolean).join(" · ");
-            const commercialStatus = getCommercialStatus(template, needsPrice);
-            const habitualGlassLabel = formatLineTemplateHabitualGlassLabel(
-              template.vidrioPrincipalRecomendado
-            );
+          {catalogGroups.map((group, groupIndex) => {
+            const defaultExpanded = groupIndex === 0;
+            const isExpanded = isFamilyExpanded(group.key, defaultExpanded);
+            const GroupIcon = FAMILY_ICONS[group.iconKey];
 
             return (
-              <article
-                key={template.id}
-                className={`${s.card} ${template.isActive ? "" : s.cardInactive}`}
+              <section
+                key={group.key}
+                className={s.familyPanel}
+                data-expanded={isExpanded ? "true" : "false"}
               >
-                <header className={s.cardHeader}>
-                  <div className={s.cardHeaderMain}>
-                    <span className={s.commercialBadge} data-tone={commercialStatus.tone}>
-                      {commercialStatus.label}
-                    </span>
-                    <h2>{template.nombre}</h2>
-                    <p>
-                      {LINE_TEMPLATE_CATEGORIA_LABELS[template.categoria]}
-                      {template.material ? ` · ${template.material}` : ""}
-                      {context ? ` · ${context}` : ""}
-                    </p>
-                  </div>
-                </header>
-
-                <div className={s.priceBlock}>
-                  <strong>
-                    {needsPrice
-                      ? "Sin precio"
-                      : formatLineTemplatePriceLabel(
-                          template.unidadCobro,
-                          template.precioM2Sugerido,
-                          formatMoney
-                        )}
-                  </strong>
-                  <span>
-                    Mínimo{" "}
-                    {template.minimoCobrable > 0
-                      ? formatMoney(template.minimoCobrable)
-                      : "sin definir"}
+                <button
+                  type="button"
+                  className={s.familyHeader}
+                  onClick={() => toggleFamily(group.key, isExpanded)}
+                  aria-expanded={isExpanded}
+                >
+                  <span className={s.familyHeaderLeading}>
+                    <LuChevronDown className={s.familyChevron} aria-hidden />
+                    <GroupIcon className={s.familyIcon} aria-hidden />
+                    <span className={s.familyName}>{group.label}</span>
                   </span>
-                  <button
-                    type="button"
-                    className={needsPrice ? s.addPriceBtn : s.editPriceBtn}
-                    onClick={() => onEditPrice(template)}
-                  >
-                    {needsPrice ? "Agregar precio" : "Editar precio"}
-                  </button>
-                  {habitualGlassLabel ? (
-                    <span className={s.habitualGlass}>
-                      Vidrio habitual: {habitualGlassLabel}
-                    </span>
-                  ) : null}
+                  <span className={s.familyCount}>
+                    {group.templates.length}{" "}
+                    {group.templates.length === 1 ? "línea" : "líneas"}
+                  </span>
+                </button>
+
+                <div className={`${s.familyBody} ${isExpanded ? s.familyBodyOpen : ""}`}>
+                  <div className={s.familyBodyInner}>
+                    {group.templates.map((template, rowIndex) => {
+                      const technicalStatus = technicalStatuses.get(String(template.id));
+                      if (!technicalStatus) return null;
+
+                      return (
+                        <LineasPreciosMobileLineRow
+                          key={template.id}
+                          template={template}
+                          technicalStatus={technicalStatus}
+                          formatMoney={formatMoney}
+                          onOpenActions={() => setSelectedLine(template)}
+                          onEditPrice={() => onEditPrice(template)}
+                          rowIndex={rowIndex}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
-
-                {template.categoria !== "vidrio" ? (
-                  <Link
-                    href={`/configuracion/empresa/lineas-precios/${template.id}/fabricacion`}
-                    className={s.fabricationRow}
-                    data-tone={technicalStatus.tone}
-                    aria-label={`Fabricación: ${technicalStatus.label}`}
-                  >
-                    <span>
-                      <small>Fabricación</small>
-                      <strong>{technicalStatus.label}</strong>
-                    </span>
-                    <LuChevronRight aria-hidden />
-                  </Link>
-                ) : null}
-
-                <LineProfileReferencesSection
-                  catalogMetadata={template.catalogMetadata}
-                  variant="mobile"
-                />
-
-                <div className={s.cardActions}>
-                  <button
-                    type="button"
-                    className={s.configureButton}
-                    onClick={() => onEdit(template)}
-                  >
-                    Configurar línea
-                  </button>
-                  <button
-                    type="button"
-                    className={`${s.switch} ${template.isActive ? s.switchOn : ""}`}
-                    onClick={() => onToggleActive(template)}
-                    aria-pressed={template.isActive}
-                    aria-label={`${template.isActive ? "Desactivar" : "Activar"} ${template.nombre}`}
-                  >
-                    <span className={s.switchThumb} />
-                  </button>
-                </div>
-              </article>
+              </section>
             );
           })}
         </section>
@@ -415,7 +480,9 @@ export function LineasPreciosMobileView({
                 <select value={providerFilter} onChange={(event) => onProviderFilterChange(event.target.value)}>
                   <option value={providerFilterAll}>Todos los proveedores</option>
                   {providerOptions.map((provider) => (
-                    <option key={provider} value={provider}>{provider}</option>
+                    <option key={provider} value={provider}>
+                      {provider}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -459,7 +526,163 @@ export function LineasPreciosMobileView({
                 Limpiar
               </button>
               <button type="button" className={s.applyButton} onClick={() => setFiltersOpen(false)}>
-                Ver {filteredTemplates.length} {filteredTemplates.length === 1 ? "línea" : "líneas"}
+                Ver {filteredTemplates.length}{" "}
+                {filteredTemplates.length === 1 ? "línea" : "líneas"}
+              </button>
+            </footer>
+          </section>
+        </div>
+      ) : null}
+
+      {selectedLine ? (
+        <div
+          className={s.sheetBackdrop}
+          role="presentation"
+          onClick={() => setSelectedLine(null)}
+        >
+          <section
+            className={s.lineActionSheet}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mobile-line-actions-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header>
+              <div>
+                <h2 id="mobile-line-actions-title">{selectedLine.nombre}</h2>
+                <p>{selectedLineContext?.subtitle}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedLine(null)}
+                aria-label="Cerrar acciones"
+              >
+                <LuX aria-hidden />
+              </button>
+            </header>
+
+            <div className={s.lineActionList}>
+              <button
+                type="button"
+                className={`${s.lineSheetAction} ${s.lineSheetActionPrimary}`}
+                onClick={() => {
+                  const template = selectedLine;
+                  setSelectedLine(null);
+                  onEdit(template);
+                }}
+              >
+                Configurar línea
+                <LuChevronRight aria-hidden />
+              </button>
+              <button
+                type="button"
+                className={s.lineSheetAction}
+                onClick={() => {
+                  const template = selectedLine;
+                  setSelectedLine(null);
+                  onEditPrice(template);
+                }}
+              >
+                {lineTemplateNeedsCommercialPrice(selectedLine)
+                  ? "Agregar precio"
+                  : "Editar precio"}
+              </button>
+              {selectedLine.categoria !== "vidrio" ? (
+                <Link
+                  href={`/configuracion/empresa/lineas-precios/${selectedLine.id}/fabricacion`}
+                  className={s.lineSheetAction}
+                  onClick={() => setSelectedLine(null)}
+                >
+                  {selectedLineContext?.fabricationActionLabel ?? "Cubicación y pauta"}
+                </Link>
+              ) : null}
+              <button
+                type="button"
+                className={s.lineSheetAction}
+                onClick={() => {
+                  const template = selectedLine;
+                  setSelectedLine(null);
+                  onToggleActive(template);
+                }}
+              >
+                {selectedLine.isActive ? "Desactivar" : "Activar"}
+              </button>
+              <button
+                type="button"
+                className={s.lineSheetAction}
+                disabled={isSaving}
+                onClick={() => {
+                  const template = selectedLine;
+                  setSelectedLine(null);
+                  onDuplicate(template);
+                }}
+              >
+                {pendingLineAction?.templateId === selectedLine.id &&
+                pendingLineAction.kind === "duplicate"
+                  ? "Duplicando..."
+                  : "Duplicar línea"}
+              </button>
+              <button
+                type="button"
+                className={`${s.lineSheetAction} ${s.lineSheetActionDanger}`}
+                disabled={isSaving}
+                onClick={() => {
+                  const template = selectedLine;
+                  setSelectedLine(null);
+                  onRequestDelete(template);
+                }}
+              >
+                Eliminar línea
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {desktopNoticeOpen ? (
+        <div
+          className={s.sheetBackdrop}
+          role="presentation"
+          onClick={() => setDesktopNoticeOpen(false)}
+        >
+          <section
+            className={s.infoSheet}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="desktop-fabrication-info-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header>
+              <h2 id="desktop-fabrication-info-title">Fabricación en el computador</h2>
+              <button
+                type="button"
+                onClick={() => setDesktopNoticeOpen(false)}
+                aria-label="Cerrar información"
+              >
+                <LuX aria-hidden />
+              </button>
+            </header>
+            <p>
+              Plantillas, cubicación, pauta de corte y despiece se configuran en
+              desktop. Aquí revisas precio y el estado de cada línea.
+            </p>
+            <footer>
+              <button
+                type="button"
+                className={s.dismissNoticeButton}
+                onClick={() => {
+                  setDesktopNoticeDismissed(true);
+                  setDesktopNoticeOpen(false);
+                }}
+              >
+                No volver a mostrar
+              </button>
+              <button
+                type="button"
+                className={s.applyButton}
+                onClick={() => setDesktopNoticeOpen(false)}
+              >
+                Entendido
               </button>
             </footer>
           </section>

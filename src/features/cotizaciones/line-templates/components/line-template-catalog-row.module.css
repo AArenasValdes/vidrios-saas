@@ -6,13 +6,14 @@
     minmax(180px, 1.35fr)
     minmax(130px, 0.85fr)
     minmax(150px, 0.95fr)
-    minmax(148px, 0.82fr)
+    minmax(156px, 0.9fr)
     auto
     auto
     auto;
   align-items: center;
   gap: 14px 16px;
   min-height: 72px;
+  align-content: center;
   padding: 12px 18px;
   border-top: 1px solid #e6eaf0;
   background: #ffffff;
@@ -147,10 +148,17 @@
   color: #1677e8;
 }
 
+.statusBlock {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
 .statusPill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  width: fit-content;
   min-height: 28px;
   padding: 0 10px;
   border-radius: 999px;
@@ -158,6 +166,92 @@
   font-weight: 650;
   line-height: 1;
   white-space: nowrap;
+}
+
+.fabricationLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid #e6eaf0;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #475569;
+  text-decoration: none;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.fabricationLink:hover {
+  background: #f1f5f9;
+  border-color: #d7dee8;
+  color: #334155;
+}
+
+.fabricationLinkCopy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fabricationLinkLabel {
+  color: #8a96a6;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.fabricationLinkValue {
+  overflow: hidden;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fabricationLinkIcon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: #94a3b8;
+}
+
+.fabricationLink[data-tech-status="validated"] {
+  border-color: #d4eadc;
+  background: #f3fbf6;
+  color: #166534;
+}
+
+.fabricationLink[data-tech-status="validated"] .fabricationLinkLabel {
+  color: #4d9a72;
+}
+
+.fabricationLink[data-tech-status="testing"] {
+  border-color: #d8e7fb;
+  background: #f3f8ff;
+  color: #1d4ed8;
+}
+
+.fabricationLink[data-tech-status="testing"] .fabricationLinkLabel {
+  color: #5b8fd4;
+}
+
+.fabricationLink[data-tech-status="draft"] {
+  border-color: #f0dfc2;
+  background: #fff8ed;
+  color: #9a5b00;
+}
+
+.fabricationLink[data-tech-status="draft"] .fabricationLinkLabel {
+  color: #b07a2d;
 }
 
 .statusDot {
