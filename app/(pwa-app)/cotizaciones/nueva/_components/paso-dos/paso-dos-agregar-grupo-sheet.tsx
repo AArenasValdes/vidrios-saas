@@ -2289,6 +2289,7 @@ export function PasoDosAgregarGrupoSheet({
                       lineTemplateId: draft.lineTemplateId,
                       tipo: draft.subtipo,
                       sistema: draft.sistema,
+                      vidrio: draft.vidrio,
                       fabricationRecipeId: draft.fabricationRecipeId,
                       fabricacionTipologia: draft.fabricacionTipologia,
                       fabricacionHojas: draft.fabricacionHojas,

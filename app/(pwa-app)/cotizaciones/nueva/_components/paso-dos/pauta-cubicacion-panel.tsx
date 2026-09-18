@@ -74,6 +74,7 @@ export type PautaCubicacionFormSlice = {
   lineTemplateId: string;
   tipo?: string;
   sistema?: string;
+  vidrio?: string;
   /** Variante/herraje elegido cuando hay varias recetas activas compatibles. */
   fabricationRecipeId?: string;
   fabricacionTipologia?: string;

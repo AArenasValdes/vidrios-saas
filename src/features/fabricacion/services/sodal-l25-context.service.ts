@@ -71,6 +71,8 @@ export function applySodalL25VidrioToForm<T extends {
   fabricacionReinforcement?: string;
   fabricacionVariante?: string;
   fabricacionGlazing?: string;
+  fabricacionHojas?: number | null;
+  sheetScheme?: string;
 }>(form: T, vidrio: string): T & { vidrio: string } {
   const catalogKey = resolveEffectiveSodalL25CatalogKey({
     catalogLineKey: form.catalogLineKey,
@@ -87,8 +89,12 @@ export function applySodalL25VidrioToForm<T extends {
       fabricacionLeg: form.fabricacionLeg ?? "",
       fabricacionReinforcement: form.fabricacionReinforcement ?? "",
       fabricacionVariante: form.fabricacionVariante ?? "",
+      fabricacionHojas: form.fabricacionHojas ?? null,
+      sheetScheme: form.sheetScheme ?? "",
     },
     vidrio,
+    fabricacionHojas: form.fabricacionHojas,
+    sheetScheme: form.sheetScheme,
   });
 
   return {
