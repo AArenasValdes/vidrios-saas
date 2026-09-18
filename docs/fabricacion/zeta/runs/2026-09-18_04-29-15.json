@@ -1,0 +1,31 @@
+{
+  "startedAt": "2026-09-18T07:28:47.920Z",
+  "finishedAt": "2026-09-18T07:29:15.643Z",
+  "command": "C:\\Program Files\\nodejs\\node.exe C:\\Users\\aless\\vidrios-saas\\scripts\\zeta\\extract.ts --live --nav=browser-use --manufacturer=SODAL --system=L25 --limit=1",
+  "mode": "live",
+  "targetsRequested": [
+    "dvh_pierna_abierta_2h_1800x1500"
+  ],
+  "processed": [
+    "dvh_pierna_abierta_2h_1800x1500"
+  ],
+  "confirmed": [],
+  "skipped": [],
+  "failed": [
+    "dvh_pierna_abierta_2h_1800x1500"
+  ],
+  "pending": [
+    "dvh_pierna_abierta_2h_1800x1500"
+  ],
+  "errors": [
+    {
+      "targetId": "dvh_pierna_abierta_2h_1800x1500",
+      "outcome": "AUTOMATION_ERROR",
+      "message": "Browser Use exit 1: <string>:153: SyntaxWarning: invalid escape sequence '\\+'\r\nTraceback (most recent call last):\r\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\r\n  File \"<frozen runpy>\", line 88, in _run_code\r\n  File \"C:\\Users\\aless\\.local\\bin\\browser-use.exe\\__main__.py\", line 10, in <module>\r\n  File \"C:\\Users\\aless\\AppData\\Roaming\\uv\\tools\\browser-use\\Lib\\site-packages\\browser_use\\cli.py\", line 433, in main\r\n    result, command = _dispatch(args)\r\n                      ^^^^^^^^^^^^^^^\r\n  File \"C:\\Users\\aless\\AppData\\Roaming\\uv\\tools\\browser-use\\Lib\\site-packages\\browser_use\\cli.py\", line 391, in _dispatch\r\n    return _run_browser_harness(), args[0] if args else 'run'\r\n           ^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"C:\\Users\\aless\\AppData\\Roaming\\uv\\tools\\browser-use\\Lib\\site-packages\\browser_use\\cli.py\", line 201, in _run_browser_harness\r\n    run.main()\r\n  File \"C:\\Users\\aless\\AppData\\Roaming\\uv\\tools\\browser-use\\Lib\\site-packages\\browser_harness\\run.py\", line 255, in main\r\n    _run(args)\r\n  File \"C:\\Users\\aless\\AppData\\Roaming\\uv\\tools\\browser-use\\Lib\\site-packages\\browser_harness\\run.py\", line 406, in _run\r\n    exec(code, globals())\r\n  File \"<string>\", line 153, in <module>\r\n  File \"<string>\", line 47, in require_step\r\nRuntimeError: new-frame fallÃ³: {\"ok\": false, \"reason\": \"no-match\", \"pattern\": \"nuevo marco|agregar marco|nuevo componente|nueva ventana|agregar componente|nueva pieza|agregar ventana|\\\\+\"}\r\n"
+    }
+  ],
+  "notes": [
+    "Navegación principal: Browser Use (Chrome CDP del usuario). Playwright queda como fallback con --nav=playwright.",
+    "Reintento limpio 1/1 para dvh_pierna_abierta_2h_1800x1500 en proyecto nuevo."
+  ]
+}

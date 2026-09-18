@@ -601,7 +601,7 @@ describe("PasoDosWizardConfiguracionMovil", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Precio manual o sin linea/i }));
     expect(screen.getByText("Precio pendiente")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Serie 25/i }));
+    fireEvent.click(screen.getByRole("button", { name: /L25/i }));
     expect(onSelectLineTemplate).not.toHaveBeenCalled();
     expect(screen.getByRole("heading", { name: "Agregar precio de la línea" })).toBeInTheDocument();
   });

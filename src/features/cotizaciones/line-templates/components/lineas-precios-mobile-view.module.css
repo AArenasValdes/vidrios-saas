@@ -473,13 +473,13 @@
   width: 100%;
   min-height: 92px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) max-content;
   grid-template-areas:
     "name price"
     "meta meta"
-    "action status";
+    "footer footer";
   align-content: center;
-  column-gap: 12px;
+  column-gap: 10px;
   row-gap: 6px;
   padding: 14px 36px 14px 16px;
   border: 0;
@@ -513,18 +513,23 @@
 
 .lineName {
   grid-area: name;
-  overflow: hidden;
+  min-width: 0;
   color: #0b1220;
   font-size: 16px;
   font-weight: 650;
   line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
 }
 
 .linePrice {
   grid-area: price;
   justify-self: end;
+  align-self: start;
+  flex-shrink: 0;
   color: #0b1220;
   font-size: 18px;
   font-weight: 750;
@@ -543,16 +548,9 @@
   font-weight: 650;
 }
 
-.lineRowBottom {
-  display: contents;
-}
-
-.lineBottomLeading {
-  display: contents;
-}
-
 .lineMeta {
   grid-area: meta;
+  min-width: 0;
   overflow: hidden;
   color: #8a96a6;
   font-size: 14px;
@@ -562,9 +560,17 @@
   white-space: nowrap;
 }
 
+.lineRowFooter {
+  grid-area: footer;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  min-width: 0;
+}
+
 .lineInlineAction {
-  grid-area: action;
-  justify-self: start;
+  flex: 0 0 auto;
   padding: 0;
   border: 0;
   background: transparent;
@@ -575,11 +581,11 @@
 }
 
 .lineStatusGroup {
-  grid-area: status;
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
+  gap: 8px 10px;
+  min-width: 0;
 }
 
 .lineStatusChip {
@@ -719,11 +725,17 @@
   border-bottom: 1px solid #e6eaf0;
 }
 
+.lineSheetHeaderCopy {
+  min-width: 0;
+  flex: 1;
+}
+
 .lineActionSheet h2 {
   margin: 0;
   font-size: 20px;
   font-weight: 700;
   line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .lineActionSheet header p {

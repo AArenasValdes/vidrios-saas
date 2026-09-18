@@ -316,13 +316,20 @@ Responsable: ingeniería
 - **Proposito**: Wizard comercial de linea. La configuracion `fabricationRecipePack` anterior se muestra deshabilitada como compatibilidad y deriva al administrador versionado.
 - **Cuando modificarlos**: Solo compatibilidad/lectura legacy. La escritura tecnica nueva vive en `src/features/fabricacion/components/`.
 
-### Componentes: FabricacionLineWorkspace / RecipeGuidedEditor / RecipeTestLab
+### Componentes: FabricacionLineWorkspace / FabricacionVariantTree / RecipeGuidedEditor / RecipeTestLab
 
-- **Archivos**: `src/features/fabricacion/components/fabricacion-line-workspace.tsx`, `recipe-guided-editor.tsx`, `recipe-glass-name-picker.tsx`, `recipe-test-lab.tsx`
+- **Archivos**: `src/features/fabricacion/components/fabricacion-line-workspace.tsx`, `fabricacion-variant-tree.tsx`, `recipe-guided-editor.tsx`, `recipe-glass-name-picker.tsx`, `recipe-test-lab.tsx`
+- **FabricacionVariantTree**: árbol jerárquico tipología → hojas → variantes dentro del workspace de línea. Muestra estado (validada, lista para probar, pendiente) y permite abrir/crear slots faltantes del catálogo base Ventora.
 - **Proposito**: Administrar versiones por linea, editar identidad/perfiles/vidrios/accesorios con primitivas controladas y comparar esperado vs calculado con el motor deterministico. `RecipeGlassNamePicker` expone catálogo Ventora + vidrio propio. `recipe-guided-editor` (2026-09-04): hero limpio, una alerta antes de piezas, tira comercial auto-aplicada a todas las piezas.
 - **Usado en**: `/configuracion/empresa/lineas-precios/[lineTemplateId]/fabricacion`
 - **Dependencias**: `useFabricationRecipes`, `evaluarRecetaListaParaProbar`, schemas Zod, `calcularCubicacionYPauta()`.
 - **Riesgos**: No agregar textarea JSON, expresiones libres, `eval`, SQL, IA ni edicion directa de una version validada. Vidrio base no debe bloquear **Probar** si perfiles obligatorios están listos.
+
+### Componente: FabricationVariantSelector
+
+- **Archivo**: `src/features/fabricacion/components/fabrication-variant-selector.tsx`
+- **Proposito**: Selector L25 en cotización (pierna abierta/cerrada + refuerzo normal/reforzada). Opciones dinámicas desde recetas Zeta `validated`; sin copy de validación pendiente.
+- **Usado en**: `pauta-cubicacion-panel.tsx` (desktop + mobile wizard grupo).
 
 ### Componente interno: PautaCubicacionPanel
 

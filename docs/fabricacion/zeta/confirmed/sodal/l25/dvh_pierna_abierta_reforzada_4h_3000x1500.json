@@ -1,0 +1,38 @@
+{
+  "manufacturer": "SODAL",
+  "system": "L25",
+  "variant": "DVH PIERNA ABIERTA REFORZADA",
+  "zeta_line": "L-25 DVH PIERNA ABIERTA REFORZADA",
+  "glazing": "dvh",
+  "leaves": 4,
+  "source": "Sistema Zeta",
+  "evidence": "plan_de_armado",
+  "plan": "PA-3",
+  "status": "confirmed",
+  "test_dimensions": { "width_mm": 3000, "height_mm": 1500 },
+  "profiles": [
+    { "code": "2501", "name": "RIEL SUPERIOR BLANCO", "quantity": 1, "length_mm": 2984, "cut_1_deg": 90, "cut_2_deg": 90, "position": null },
+    { "code": "2502", "name": "RIEL INFERIOR BLANCO", "quantity": 1, "length_mm": 2984, "cut_1_deg": 90, "cut_2_deg": 90, "position": null },
+    { "code": "2503", "name": "JAMBA BLANCO", "quantity": 2, "length_mm": 1500, "cut_1_deg": 90, "cut_2_deg": 90, "position": null },
+    { "code": "2516", "name": "ZOCALO - DVH BLANCO", "quantity": 8, "length_mm": 744, "cut_1_deg": 90, "cut_2_deg": 90, "position": null },
+    { "code": "2522", "name": "ADAPTADOR 4TA HOJA BLANCO", "quantity": 1, "length_mm": 1465, "cut_1_deg": 90, "cut_2_deg": 90, "position": null },
+    { "code": "2529R", "name": "PIERNA - ABIERTA DVH REFORZADA BLANCO", "quantity": 4, "length_mm": 1465, "cut_1_deg": 90, "cut_2_deg": 90, "position": null },
+    { "code": "2530R", "name": "TRASLAPO VENTANA - DVH REFORZADA BLANCO", "quantity": 4, "length_mm": 1465, "cut_1_deg": 90, "cut_2_deg": 90, "position": null }
+  ],
+  "glass": [
+    { "code": "TE4104", "name": "Termopanel Empavonado / Incoloro 4 + 10 + 4", "quantity": 4, "width_mm": 688, "height_mm": 1369 }
+  ],
+  "hardware": [
+    { "code": "GUIA-L25", "name": "GUIA L25/8000", "quantity": 8, "unit": "PZA" },
+    { "code": "18000000985", "name": "CAJA REG DOBLE BOLAS P/2505 NACIONAL 25KG ZINCALUM", "quantity": 8, "unit": "PZA" },
+    { "code": "14007NG", "name": "KIT MANILLA CRIZIA (MECANISMO UNIPUNTO Y MANILLA CREMONA)", "quantity": 3, "unit": "PZA" },
+    { "code": "TRLCB348", "name": "TORNILLO RL CB PH 3/4\" X 8", "quantity": 32, "unit": "PZA" },
+    { "code": "TORN-GUIA", "name": "TORNILLO PARA GUIA", "quantity": 16, "unit": "PZA" },
+    { "code": "TORN-CAJA", "name": "TORNILLO PARA CAJA", "quantity": 16, "unit": "PZA" },
+    { "code": "TORN-MAN", "name": "TORNILLO PARA MANILLA", "quantity": 6, "unit": "PZA" },
+    { "code": "18000000439", "name": "BURLETE TERMOPANEL S-399 EPDM X-69/24/24RPT SEAL (", "quantity": 17, "unit": "M" },
+    { "code": "FELPA7x6gen", "name": "Felpa 7x6 3P", "quantity": 30, "unit": "M" },
+    { "code": "07012STY", "name": "Sellotec 20 Silicona Neutra c/fung 300 ml BLANCO", "quantity": 2, "unit": "TUBO" },
+    { "code": "TORINSEST", "name": "Tornillo instalacion S/T/ESTRELLA", "quantity": 22, "unit": "PZA" }
+  ]
+}

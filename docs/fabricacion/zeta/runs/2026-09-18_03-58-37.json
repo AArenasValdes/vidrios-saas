@@ -1,0 +1,31 @@
+{
+  "startedAt": "2026-09-18T06:58:36.808Z",
+  "finishedAt": "2026-09-18T06:58:37.019Z",
+  "command": "C:\\Program Files\\nodejs\\node.exe C:\\Users\\aless\\vidrios-saas\\scripts\\zeta\\extract.ts --live --nav=browser-use --manufacturer=SODAL --system=L25 --limit=1",
+  "mode": "live",
+  "targetsRequested": [
+    "dvh_pierna_abierta_2h_1800x1500"
+  ],
+  "processed": [
+    "dvh_pierna_abierta_2h_1800x1500"
+  ],
+  "confirmed": [],
+  "skipped": [],
+  "failed": [
+    "dvh_pierna_abierta_2h_1800x1500"
+  ],
+  "pending": [
+    "dvh_pierna_abierta_2h_1800x1500"
+  ],
+  "errors": [
+    {
+      "targetId": "dvh_pierna_abierta_2h_1800x1500",
+      "outcome": "AUTOMATION_ERROR",
+      "message": "Browser Use no está disponible. Instala con `uv tool install --python 3.12 browser-use` o usa `--nav=playwright` como fallback técnico."
+    }
+  ],
+  "notes": [
+    "Navegación principal: Browser Use (Chrome CDP del usuario). Playwright queda como fallback con --nav=playwright.",
+    "Reintento limpio 1/1 para dvh_pierna_abierta_2h_1800x1500 en proyecto nuevo."
+  ]
+}

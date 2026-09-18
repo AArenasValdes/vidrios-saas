@@ -610,7 +610,7 @@ export function PasoDosSeccion({
                 className={d.desktopReviewDespieceButton}
                 onClick={() => setDespieceReviewOpen(true)}
               >
-                Revisar despiece
+                Revisar fabricación
               </button>
             ) : null}
             {!showQuoteStudioRapidaLayout ? (

@@ -62,6 +62,7 @@ import {
 } from "./pauta-cubicacion-panel";
 import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
+import { SodalL25QuoteConfigPanel } from "@/features/fabricacion/components/sodal-l25-quote-config-panel";
 import { getGlassRecommendations } from "@/features/cotizaciones/services/glass-recommendations.service";
 import { generateComponentSVG } from "@/utils/window-drawings";
 import {
@@ -161,6 +162,13 @@ type Props = {
     apertura: string;
     herraje: string;
     variante: string;
+  }) => void;
+  onFabricacionL25ConfigChange?: (value: {
+    catalogLineKey: string;
+    fabricacionGlazing: string;
+    fabricacionLeg: string;
+    fabricacionReinforcement: string;
+    fabricacionVariante: string;
   }) => void;
   /** Abre la revisión de despiece desktop compartida (rápida/guiada). */
   onOpenDespieceReview?: () => void;
@@ -432,6 +440,7 @@ export function PasoDosAgregarGrupoSheet({
   onFabricationRecipeIdChange,
   onFabricacionSnapshotChange,
   onFabricacionContextoChange,
+  onFabricacionL25ConfigChange,
   onOpenDespieceReview,
   onPrecioChange,
   onPrecioPorM2Change,
@@ -2150,6 +2159,27 @@ export function PasoDosAgregarGrupoSheet({
                       ) : null}
                     </div>
                   </div>
+
+                  {requiresProfileMaterial && draft.lineTemplateId ? (
+                    <SodalL25QuoteConfigPanel
+                      compact
+                      componentForm={{
+                        lineTemplateId: draft.lineTemplateId,
+                        catalogLineKey: draft.catalogLineKey,
+                        fabricacionGlazing: draft.fabricacionGlazing,
+                        fabricacionLeg: draft.fabricacionLeg,
+                        fabricacionReinforcement: draft.fabricacionReinforcement,
+                        fabricacionVariante: draft.fabricacionVariante,
+                        fabricacionHojas: draft.fabricacionHojas,
+                        sheetScheme: draft.sheetScheme,
+                        hojasBase: draft.hojasBase,
+                        guidedVisualConfig: draft.guidedVisualConfig,
+                        vidrio: draft.vidrio,
+                      }}
+                      selectedTemplate={selectedLineTemplate}
+                      onFabricacionL25ConfigChange={onFabricacionL25ConfigChange}
+                    />
+                  ) : null}
                 </section>
               </div>
 
@@ -2235,10 +2265,10 @@ export function PasoDosAgregarGrupoSheet({
                 <>
                   <div className={d.despieceReviewLaunch}>
                     <div>
-                      <strong>Revisión de despiece</strong>
+                      <strong>Revisión de fabricación</strong>
                       <p>
-                        Revisa cortes, barras y sobrantes. Los ajustes manuales solo afectan
-                        esta cotización.
+                        Revisa cortes, barras y sobrantes por componente o en consolidado.
+                        Los ajustes manuales solo afectan esta cotización.
                       </p>
                     </div>
                     {onOpenDespieceReview ? (
@@ -2247,7 +2277,7 @@ export function PasoDosAgregarGrupoSheet({
                         className={d.despieceReviewLaunchButton}
                         onClick={() => onOpenDespieceReview()}
                       >
-                        Abrir despiece
+                        Abrir revisión
                       </button>
                     ) : null}
                   </div>
@@ -2266,6 +2296,10 @@ export function PasoDosAgregarGrupoSheet({
                       fabricacionApertura: draft.fabricacionApertura,
                       fabricacionHerraje: draft.fabricacionHerraje,
                       fabricacionVariante: draft.fabricacionVariante,
+                      catalogLineKey: draft.catalogLineKey,
+                      fabricacionGlazing: draft.fabricacionGlazing,
+                      fabricacionLeg: draft.fabricacionLeg,
+                      fabricacionReinforcement: draft.fabricacionReinforcement,
                       fabricacionSnapshot: draft.fabricacionSnapshot,
                       cubicationSnapshot: draft.cubicationSnapshot,
                     }}
@@ -2276,6 +2310,7 @@ export function PasoDosAgregarGrupoSheet({
                     onFabricationRecipeIdChange={onFabricationRecipeIdChange}
                     onFabricacionSnapshotChange={onFabricacionSnapshotChange}
                     onFabricacionContextoChange={onFabricacionContextoChange}
+                    onFabricacionL25ConfigChange={onFabricacionL25ConfigChange}
                     lineSelectionHint="medidas"
                     showBarUsageInline
                     personalizadoAssistMode={personalizadoAssistMode}

@@ -15,6 +15,10 @@ import { LuCheck, LuChevronDown, LuSearch, LuX } from "react-icons/lu";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { getLineTemplateSystemMetadata, lineTemplateNeedsCommercialPrice } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import {
+  dedupeLineTemplatesForQuotePicker,
+  formatLineTemplateQuotePickerLabel,
+} from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import { CLP } from "@/features/cotizaciones/new-quote/workflow-ui";
 
 import { LinePriceEditor } from "./line-template-price-editor";
@@ -72,6 +76,7 @@ function renderTemplateOption(
     template.categoria === "vidrio" ? "Cristal" : isGlass ? "Cristal" : template.material;
   const provider = normalizeProvider(template.proveedor);
   const system = getLineTemplateSystemMetadata(template.catalogMetadata).lineSystem;
+  const displayName = formatLineTemplateQuotePickerLabel(template);
 
   return (
     <button
@@ -84,7 +89,7 @@ function renderTemplateOption(
     >
       <span className={styles.optionMain}>
         <span className={styles.optionTitleRow}>
-          <strong>{template.nombre}</strong>
+          <strong>{displayName}</strong>
           <span
             className={`${styles.materialChip} ${
               material === "PVC"
@@ -179,7 +184,14 @@ export function LineTemplatePicker({
 
   const isGlass = mode === "glass";
   const emptyLabel = isGlass ? "Precio manual o sin cristal" : "Precio manual o sin línea";
-  const selected = templates.find((template) => String(template.id) === value) ?? null;
+  const quoteTemplates = useMemo(
+    () => (isGlass ? [...templates] : dedupeLineTemplatesForQuotePicker(templates)),
+    [isGlass, templates]
+  );
+  const selected =
+    templates.find((template) => String(template.id) === value) ??
+    quoteTemplates.find((template) => String(template.id) === value) ??
+    null;
   const selectedProvider = normalizeProvider(selected?.proveedor);
 
   const providerOptions = useMemo(() => {
@@ -206,7 +218,7 @@ export function LineTemplatePicker({
   const filteredTemplates = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
-    return templates.filter((template) => {
+    return quoteTemplates.filter((template) => {
       const templateMaterial =
         template.categoria === "vidrio" ? "Cristal" : template.material;
       if (!isGlass && materialFilter !== "todos" && templateMaterial !== materialFilter) {
@@ -228,6 +240,7 @@ export function LineTemplatePicker({
         getLineTemplateSystemMetadata(template.catalogMetadata).lineSystem ?? "";
       const haystack = [
         template.nombre,
+        formatLineTemplateQuotePickerLabel(template),
         template.material,
         template.categoria,
         provider ?? "",
@@ -239,7 +252,7 @@ export function LineTemplatePicker({
 
       return haystack.includes(normalizedQuery);
     });
-  }, [isGlass, materialFilter, providerFilter, query, templates]);
+  }, [isGlass, materialFilter, providerFilter, query, quoteTemplates]);
 
   useEffect(() => {
     if (!open) {
@@ -504,7 +517,9 @@ export function LineTemplatePicker({
         {selected ? (
           <span className={styles.triggerBody}>
             <span className={styles.triggerTitleRow}>
-              <strong className={styles.triggerTitle}>{selected.nombre}</strong>
+              <strong className={styles.triggerTitle}>
+                {formatLineTemplateQuotePickerLabel(selected)}
+              </strong>
               <span
                 className={`${styles.materialChip} ${
                   selected.material === "PVC"

@@ -1,0 +1,16 @@
+{
+  "recipeId": "monolitico_pierna_abierta_2h_1800x1500__self-check",
+  "extractedAt": "2026-09-18T06:43:44.884Z",
+  "target": {
+    "manufacturer": "SODAL",
+    "system": "L25",
+    "line": "L-25 MONOLITICO PIERNA ABIERTA",
+    "leaves": 2,
+    "widthMm": 1800,
+    "heightMm": 1500,
+    "glassCode": "CTI5"
+  },
+  "warnings": [],
+  "errorText": null,
+  "screenshotWritten": false
+}

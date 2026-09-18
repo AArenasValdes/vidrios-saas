@@ -1991,6 +1991,13 @@ export default function CotizacionPrintPage() {
           </Link>
 
           <div className={s.toolbarActions}>
+            <Link
+              className={s.actionSecondary}
+              href={`/print/cotizaciones/${visibleCotizacion.id}/fabricacion`}
+            >
+              <LuRuler aria-hidden />
+              Despiece y pauta
+            </Link>
             <button
               className={s.actionSecondary}
               onClick={() => window.print()}
@@ -2009,13 +2016,6 @@ export default function CotizacionPrintPage() {
               <LuShare2 aria-hidden />
               {whatsappActionLabel}
             </button>
-            <Link
-              className={s.actionSecondary}
-              href={`/print/cotizaciones/${visibleCotizacion.id}/fabricacion`}
-            >
-              <LuRuler aria-hidden />
-              Despiece y pauta
-            </Link>
             {showWhatsappFallbackActions ? (
               <>
                 <button

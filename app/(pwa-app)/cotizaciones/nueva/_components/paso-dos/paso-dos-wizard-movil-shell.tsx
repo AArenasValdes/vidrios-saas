@@ -136,6 +136,13 @@ export type WizardActions = {
   onAddAlcanceDetalle: (initialNombre?: string) => void;
   onUpdateAlcanceDetalle: (detalleId: string, field: keyof AlcanceDetalle, value: string) => void;
   onRemoveAlcanceDetalle: (detalleId: string) => void;
+  onFabricacionL25ConfigChange: (value: {
+    catalogLineKey: string;
+    fabricacionGlazing: string;
+    fabricacionLeg: string;
+    fabricacionReinforcement: string;
+    fabricacionVariante: string;
+  }) => void;
 };
 
 type Props = {
@@ -656,8 +663,8 @@ export function PasoDosWizardMovil({
           onReturnToModeSelector={onReturnToModeSelector}
           onOpenCuaderno={canOpenCuaderno ? handleOpenCuadernoFromGuiada : undefined}
           onOpenDespieceReview={
-            hasDespiecePreviewAvailable && cuaderno?.onUpdateItem
-              ? () => openDespieceReview()
+            cuaderno?.onUpdateItem
+              ? (itemId) => openDespieceReview(itemId)
               : undefined
           }
         />
@@ -804,6 +811,7 @@ export function PasoDosWizardMovil({
                   onSetShowAllSystems={setShowAllSystems}
                   onSetVidSearch={setVidSearch}
                   onCreateCustomGlass={wizard.onCreateCustomGlass}
+                  onFabricacionL25ConfigChange={wizard.onFabricacionL25ConfigChange}
                 />
               ) : null}
 

@@ -1,10 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { LuArrowLeft, LuFileText, LuPencil, LuPencilRuler, LuPlus, LuTrash2 } from "react-icons/lu";
-
 import {
-  COLOR_OPTIONS,
+  LuArrowLeft,
+  LuCheck,
+  LuEllipsis,
+  LuFileText,
+  LuPencil,
+  LuPlus,
+  LuTrash2,
+  LuWrench,
+} from "react-icons/lu";
+
+import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
+import { resolveMobileComponentFabricacionSummary } from "@/features/fabricacion/services/mobile-component-fabricacion-summary.service";
+import {
+  resolveWorkflowItemDisplayName,
   shouldRequireProfileMaterialForComponent,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
@@ -43,8 +54,8 @@ type Props = {
   onReturnToModeSelector: () => void;
   /** Disponible solo en por items: abre el cuaderno de piezas. */
   onOpenCuaderno?: () => void;
-  /** Abre la revisión de despiece de la cotización. */
-  onOpenDespieceReview?: () => void;
+  /** Abre la revisión de fabricación, opcionalmente posicionada en un componente. */
+  onOpenDespieceReview?: (itemId?: string) => void;
 };
 
 export function PasoDosListaMovil({
@@ -67,7 +78,9 @@ export function PasoDosListaMovil({
   onOpenDespieceReview,
 }: Props) {
   const measureUnit = useOrganizationMeasureUnit();
+  const { recipes, organizationId } = useFabricationRecipes({ enabled: items.length > 0 });
   const [isCambiarModoDialogOpen, setIsCambiarModoDialogOpen] = useState(false);
+  const [isMoreOptionsOpen, setIsMoreOptionsOpen] = useState(false);
   const isGlobalPricing = quotePricingMode === "total_global";
   const pendingCount = isGlobalPricing
     ? 0
@@ -88,10 +101,22 @@ export function PasoDosListaMovil({
     }
     onReturnToModeSelector();
   };
+  const hasFabricationReview =
+    Boolean(onOpenDespieceReview) &&
+    !isGlobalPricing &&
+    items.some((item) => {
+      const itemMeta = decodeCotizacionItemPresentationMeta(item.observaciones);
+      const isFreeValueItem =
+        item.tipoItem === "item_libre_con_valor" || itemMeta.displayMode === "item_libre";
+      return !isFreeValueItem && shouldRequireProfileMaterialForComponent(item.tipo);
+    });
 
   return (
     <>
-      <section className={s.stepTwoMobileLoadedSection} id="component-list">
+      <section
+        className={s.stepTwoMobileLoadedSection}
+        id="component-list"
+      >
         <button
           type="button"
           className={s.stepTwoMobileBackToMode}
@@ -178,13 +203,11 @@ export function PasoDosListaMovil({
                 maxW: 72,
                 maxH: 56,
               });
-              const colorLabel =
-                itemMeta.material === "PVC"
-                  ? "PVC blanco"
-                  : COLOR_OPTIONS.find(
-                      (option) =>
-                        option.hex.toLowerCase() === itemMeta.colorHex.toLowerCase()
-                    )?.label ?? "Color personalizado";
+              const fabSummary = resolveMobileComponentFabricacionSummary(item, {
+                recipes,
+                organizationId,
+              });
+              const displayName = resolveWorkflowItemDisplayName(item);
 
               return (
                 <article
@@ -225,22 +248,42 @@ export function PasoDosListaMovil({
                       </div>
                     ) : null}
                     <div className={s.stepTwoMobileItemHeadLeft}>
-                      <div className={s.stepTwoMobileItemHeadMeta}>
-                        <span className={s.stepTwoMobileItemCode}>{displayCode}</span>
-                        {isAdjusted ? (
-                          <span className={s.stepTwoMobileItemAdjustedBadge}>Ajustada</span>
-                        ) : null}
-                        <span
-                          className={`${s.stepTwoMobileItemState} ${
-                            incomplete
-                              ? s.stepTwoMobileItemStatePending
-                              : s.stepTwoMobileItemStateReady
-                          }`}
-                        >
-                          {incomplete ? "Pendiente" : "Completo"}
-                        </span>
+                      <div className={s.stepTwoMobileItemHeadTop}>
+                        <div className={s.stepTwoMobileItemHeadMeta}>
+                          <span className={s.stepTwoMobileItemCode}>{displayCode}</span>
+                          {isAdjusted ? (
+                            <span className={s.stepTwoMobileItemAdjustedBadge}>Ajustada</span>
+                          ) : null}
+                          <span
+                            className={`${s.stepTwoMobileItemState} ${
+                              incomplete
+                                ? s.stepTwoMobileItemStatePending
+                                : s.stepTwoMobileItemStateReady
+                            }`}
+                          >
+                            {incomplete ? "Pendiente" : "Completo"}
+                          </span>
+                        </div>
+                        <div className={s.stepTwoMobileItemActions}>
+                          <button
+                            className={s.stepTwoMobileMiniButton}
+                            onClick={() => onEditItem(item)}
+                            type="button"
+                            aria-label={`Editar ${itemType}`}
+                          >
+                            <LuPencil aria-hidden size={13} />
+                          </button>
+                          <button
+                            className={`${s.stepTwoMobileMiniButton} ${s.stepTwoMobileMiniButtonDanger}`}
+                            onClick={() => onRemoveItem(item.id)}
+                            type="button"
+                            aria-label={`Eliminar ${itemType}`}
+                          >
+                            <LuTrash2 aria-hidden size={13} />
+                          </button>
+                        </div>
                       </div>
-                      <span className={s.stepTwoMobileItemName}>{itemType}</span>
+                      <span className={s.stepTwoMobileItemName}>{displayName || itemType}</span>
                       {(isGlobalPricing || isFreeValueItem) && item.descripcion ? (
                         <span className={s.stepTwoMobileItemAdjustedHint}>
                           {repairBrokenText(item.descripcion)}
@@ -251,24 +294,6 @@ export function PasoDosListaMovil({
                           Sale de {adjustedFromBaseCode}
                         </span>
                       ) : null}
-                    </div>
-                    <div className={s.stepTwoMobileItemActions}>
-                      <button
-                        className={s.stepTwoMobileMiniButton}
-                        onClick={() => onEditItem(item)}
-                        type="button"
-                        aria-label={`Editar ${itemType}`}
-                      >
-                        <LuPencil aria-hidden size={13} />
-                      </button>
-                      <button
-                        className={`${s.stepTwoMobileMiniButton} ${s.stepTwoMobileMiniButtonDanger}`}
-                        onClick={() => onRemoveItem(item.id)}
-                        type="button"
-                        aria-label={`Eliminar ${itemType}`}
-                      >
-                        <LuTrash2 aria-hidden size={13} />
-                      </button>
                     </div>
                   </div>
 
@@ -302,27 +327,51 @@ export function PasoDosListaMovil({
                     </>
                   ) : (
                     <>
-                      <div className={s.stepTwoMobileItemMeta}>
-                        {!isFreeValueItem && showProfileDetails && itemMeta.material ? (
-                          <span>{repairBrokenText(itemMeta.material)}</span>
-                        ) : null}
-                        {!isFreeValueItem && showProfileDetails && itemMeta.colorHex ? (
-                          <span className={s.stepTwoMobileItemColorChip}>
-                            <i
-                              className={s.stepTwoMobileItemColorSwatch}
-                              style={{ backgroundColor: itemMeta.colorHex }}
-                              aria-hidden
-                            />
-                            {repairBrokenText(colorLabel)}
-                          </span>
-                        ) : null}
-                        {!isFreeValueItem && item.vidrio ? (
-                          <span>{repairBrokenText(item.vidrio)}</span>
-                        ) : null}
-                        {!isFreeValueItem && itemMeta.referencia ? (
-                          <span>{repairBrokenText(itemMeta.referencia)}</span>
-                        ) : null}
-                      </div>
+                      {!isFreeValueItem && fabSummary.contextualLineLabel ? (
+                        <p className={s.stepTwoMobileItemLineLabel}>
+                          {repairBrokenText(fabSummary.contextualLineLabel)}
+                        </p>
+                      ) : null}
+                      {!isFreeValueItem && item.vidrio ? (
+                        <p className={s.stepTwoMobileItemGlassLabel}>
+                          {repairBrokenText(item.vidrio)}
+                        </p>
+                      ) : null}
+                      {!isFreeValueItem && showProfileDetails ? (
+                        onOpenDespieceReview ? (
+                          <button
+                            type="button"
+                            className={`${s.stepTwoMobileItemFabCompact} ${
+                              fabSummary.status === "ready"
+                                ? s.stepTwoMobileItemFabCompactReady
+                                : s.stepTwoMobileItemFabCompactPending
+                            }`}
+                            onClick={() => onOpenDespieceReview(item.id)}
+                          >
+                            {fabSummary.status === "ready" ? (
+                              <LuCheck size={14} aria-hidden />
+                            ) : null}
+                            {fabSummary.status === "ready"
+                              ? "Fabricación lista"
+                              : "Configuración pendiente"}
+                          </button>
+                        ) : (
+                          <p
+                            className={`${s.stepTwoMobileItemFabCompact} ${
+                              fabSummary.status === "ready"
+                                ? s.stepTwoMobileItemFabCompactReady
+                                : s.stepTwoMobileItemFabCompactPending
+                            }`}
+                          >
+                            {fabSummary.status === "ready" ? (
+                              <LuCheck size={14} aria-hidden />
+                            ) : null}
+                            {fabSummary.status === "ready"
+                              ? "Fabricación lista"
+                              : "Configuración pendiente"}
+                          </p>
+                        )
+                      ) : null}
                       <div className={s.stepTwoMobileItemFooter}>
                         <span className={s.stepTwoMobileItemFooterLabel}>
                           {isGlobalPricing ? "Total" : "Venta"}
@@ -352,30 +401,56 @@ export function PasoDosListaMovil({
               {quotePricingMode === "total_global" ? totalGlobalFooterValue : `Total ${total}`}
             </strong>
           </div>
-          <div className={s.stepTwoMobileFooterActions}>
+          <div className={s.stepTwoMobileFooterActionsCompact}>
             <button className={s.btnPrimary} onClick={onOpenWizard} type="button">
               <LuPlus aria-hidden />
               {quotePricingMode === "por_item" ? "Componente" : "Agregar"}
             </button>
-            {quotePricingMode === "por_item" ? (
-              <button className={s.btnGhost} onClick={onOpenFreeValueItemForm} type="button">
-                <LuPlus aria-hidden />
-                Item libre
+            {hasFabricationReview ? (
+              <button
+                className={s.btnPrimary}
+                onClick={() => onOpenDespieceReview?.()}
+                type="button"
+              >
+                <LuWrench aria-hidden />
+                Revisar fabricación
               </button>
             ) : null}
-            {onOpenDespieceReview ? (
-              <button className={s.btnGhost} onClick={onOpenDespieceReview} type="button">
-                <LuPencilRuler aria-hidden />
-                Ver cortes y tiras
+            {items.length > 0 ? (
+              <button
+                className={`${s.btnPrimary} ${s.stepTwoMobileFooterContinue}`}
+                onClick={onGoToSummary}
+                type="button"
+              >
+                Continuar al resumen
               </button>
             ) : null}
             <button
-              className={s.btnGhost}
-              onClick={items.length > 0 ? onGoToSummary : onSaveAndExit}
+              className={s.stepTwoMobileFooterTextButton}
+              onClick={() => setIsMoreOptionsOpen((current) => !current)}
               type="button"
+              aria-expanded={isMoreOptionsOpen}
             >
-              {items.length > 0 ? "Continuar al resumen" : "Guardar borrador"}
+              <LuEllipsis aria-hidden />
+              Más opciones
             </button>
+            {isMoreOptionsOpen ? (
+              <div className={s.stepTwoMobileFooterMoreMenu}>
+                {quotePricingMode === "por_item" ? (
+                  <button type="button" onClick={onOpenFreeValueItemForm}>
+                    Item libre con valor
+                  </button>
+                ) : null}
+                {onOpenCuaderno ? (
+                  <button type="button" onClick={onOpenCuaderno}>
+                    Constructor visual
+                  </button>
+                ) : null}
+                <button type="button" onClick={onSaveAndExit}>
+                  Guardar borrador
+                </button>
+              </div>
+            ) : null}
           </div>
         </footer>
       ) : null}

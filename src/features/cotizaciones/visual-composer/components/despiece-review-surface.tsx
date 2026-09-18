@@ -48,14 +48,13 @@ import {
   resolveFabricacionDespieceForQuoteItem,
   type FabricacionDespieceCotizacionResult,
 } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
 import {
-  createQuoteConstructorPresetConfig,
-  getQuoteConstructorItemConfig,
   isQuoteConstructorCompatibleItem,
   type QuoteConstructorItemPatch,
-  type QuoteConstructorPresetId,
 } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
-import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
+import { ComponentPreview } from "@/features/cotizaciones/components/component-preview";
+import { buildComponentPreviewInputFromWorkflowItem } from "@/features/cotizaciones/services/resolve-component-preview-svg";
 
 import styles from "./despiece-review-surface.module.css";
 
@@ -126,27 +125,6 @@ function resolveLineTemplate(
   return lineTemplates.find((template) => String(template.id) === lineTemplateId) ?? null;
 }
 
-function inferConfig(item: CotizacionWorkflowItem) {
-  const persisted = getQuoteConstructorItemConfig(item);
-  if (persisted) return persisted;
-  const haystack = `${item.tipo} ${item.nombre} ${item.lineaComercial}`.toLocaleLowerCase("es");
-  const preset: QuoteConstructorPresetId = haystack.includes("oscilo")
-    ? "oscilobatiente"
-    : haystack.includes("corre")
-      ? "corredera"
-      : haystack.includes("proyect")
-        ? "proyectante"
-        : haystack.includes("abat") || haystack.includes("puerta")
-          ? item.tipo.toLocaleLowerCase("es") === "puerta"
-            ? "puerta"
-            : "abatible"
-          : "fijo";
-  return createQuoteConstructorPresetConfig(preset, {
-    widthMm: item.ancho ?? 1200,
-    heightMm: item.alto ?? 1000,
-  });
-}
-
 function despieceStatusToneClass(status: DespieceUiStatus) {
   switch (status) {
     case "calculado_con_receta":
@@ -168,9 +146,37 @@ function areBarsCalculable(
   preview: CotizacionLineTemplateCuttingPreview | null,
   barsAvailableExplicit?: boolean
 ) {
+  if (preview && preview.bars.length > 0) return true;
   if (typeof barsAvailableExplicit === "boolean") return barsAvailableExplicit;
-  if (!preview || preview.bars.length === 0) return false;
-  return true;
+  return false;
+}
+
+function resolveFrozenCubicationSnapshot(item: CotizacionWorkflowItem) {
+  if (item.fabricacionSnapshot && item.fabricacionSnapshot.pauta.length > 0) {
+    return fabricacionSnapshotToLegacyCubicationSnapshot(item.fabricacionSnapshot);
+  }
+  return null;
+}
+
+function resolveItemReviewCubication(input: {
+  item: CotizacionWorkflowItem;
+  resolution?: FabricacionDespieceCotizacionResult | null;
+  template: CotizacionLineTemplate | null;
+}) {
+  if (input.resolution?.cubication && input.resolution.cubication.cuts.length > 0) {
+    return input.resolution.cubication;
+  }
+  const frozen = resolveFrozenCubicationSnapshot(input.item);
+  if (frozen) return frozen;
+  const allowGeometric =
+    !input.resolution ||
+    input.resolution.estado === "sin_linea" ||
+    input.resolution.estado === "sin_medidas";
+  if (!allowGeometric) return null;
+  return resolvePersonalizadoFallbackSnapshot({
+    item: input.item,
+    template: input.template,
+  });
 }
 
 function countCutUnits(cuts: CotizacionLineTemplateCut[]) {
@@ -311,21 +317,13 @@ export function DespieceReviewSurface({
   const activeResolution = selectedItem
     ? pieceResolutions.get(selectedItem.id) ?? null
     : null;
-  // Geométrico solo si no hay línea/receta formal pendiente: con línea L5000
-  // no inventar Marco/División cuando el resolver dice sin_receta.
-  const allowGeometricAssist =
-    personalizadoAssistMode &&
-    (!activeResolution ||
-      activeResolution.estado === "sin_linea" ||
-      activeResolution.estado === "sin_medidas");
-  const activeSnapshot =
-    activeResolution?.cubication ??
-    (selectedItem && allowGeometricAssist
-      ? resolvePersonalizadoFallbackSnapshot({
-          item: selectedItem,
-          template: selectedTemplate,
-        })
-      : null);
+  const activeSnapshot = selectedItem
+    ? resolveItemReviewCubication({
+        item: selectedItem,
+        resolution: activeResolution,
+        template: selectedTemplate,
+      })
+    : null;
   const preview = activeSnapshot ? cubicationSnapshotToPreview(activeSnapshot) : null;
   const rules = selectedTemplate
     ? getLineTemplateCuttingRules(selectedTemplate.catalogMetadata)
@@ -357,15 +355,11 @@ export function DespieceReviewSurface({
         const form = mapItemToForm(item);
         const template = resolveLineTemplate(lineTemplates, form.lineTemplateId);
         const resolution = pieceResolutions.get(item.id);
-        const allowGeometric =
-          !resolution ||
-          resolution.estado === "sin_linea" ||
-          resolution.estado === "sin_medidas";
-        const snapshot =
-          resolution?.cubication ??
-          (allowGeometric
-            ? resolvePersonalizadoFallbackSnapshot({ item, template })
-            : null);
+        const snapshot = resolveItemReviewCubication({
+          item,
+          resolution,
+          template,
+        });
         if (!snapshot) return null;
         return {
           codigo: item.codigo,
@@ -383,9 +377,10 @@ export function DespieceReviewSurface({
   );
   const consolidatedBarsCalculable = useMemo(
     () =>
-      Array.from(pieceResolutions.values()).some((entry) => entry.barsAvailable) &&
-      consolidated.totalBars > 0,
-    [pieceResolutions, consolidated.totalBars]
+      consolidated.totalBars > 0 &&
+      (Array.from(pieceResolutions.values()).some((entry) => entry.barsAvailable) ||
+        visualItems.some((item) => (item.fabricacionSnapshot?.pautaBarras?.barras.length ?? 0) > 0)),
+    [pieceResolutions, consolidated.totalBars, visualItems]
   );
   const warnings = useMemo(() => {
     return visualItems
@@ -394,15 +389,11 @@ export function DespieceReviewSurface({
         const template = resolveLineTemplate(lineTemplates, form.lineTemplateId);
         const view = buildPieceDomainView(item, quotePricingMode, template);
         const resolution = pieceResolutions.get(item.id) ?? null;
-        const allowGeometric =
-          !resolution ||
-          resolution.estado === "sin_linea" ||
-          resolution.estado === "sin_medidas";
-        const snapshot =
-          resolution?.cubication ??
-          (allowGeometric
-            ? resolvePersonalizadoFallbackSnapshot({ item, template })
-            : null);
+        const snapshot = resolveItemReviewCubication({
+          item,
+          resolution,
+          template,
+        });
         const previewForItem = snapshot ? cubicationSnapshotToPreview(snapshot) : null;
         const uiStatus = resolveDespieceUiStatus({
           snapshot,
@@ -638,19 +629,21 @@ export function DespieceReviewSurface({
   const showBarsIncompleteWarning =
     pieceUiStatus === "calculado_con_receta" && !barsCalculable;
 
-  const config = selectedItem ? inferConfig(selectedItem) : null;
+  const piecePreviewInput = selectedItem
+    ? buildComponentPreviewInputFromWorkflowItem(selectedItem, { maxW: 280, maxH: 180 })
+    : null;
   const colorHex = selectedForm?.colorHex;
 
   return createPortal(
     <>
-    <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Revisión de despiece">
+    <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Revisión de fabricación">
       <div className={styles.surface}>
         <header className={styles.header}>
           <div>
             <p className={styles.eyebrow}>Componentes</p>
-            <h2>Revisión de despiece</h2>
+            <h2>Revisión de fabricación</h2>
           </div>
-          <div className={styles.tabs} role="tablist" aria-label="Vista de despiece">
+          <div className={styles.tabs} role="tablist" aria-label="Vista de fabricación">
             <button
               type="button"
               role="tab"
@@ -658,7 +651,7 @@ export function DespieceReviewSurface({
               className={tab === "pieza" ? styles.tabActive : styles.tab}
               onClick={() => setTab("pieza")}
             >
-              Por pieza
+              Por componente
             </button>
             <button
               type="button"
@@ -689,16 +682,18 @@ export function DespieceReviewSurface({
 
           {!isLoadingRecipes && tab === "pieza" ? (
             <div className={styles.pieceLayout}>
-              <aside className={styles.pieceList} aria-label="Piezas de la cotización">
-                <p className={styles.listEyebrow}>Piezas</p>
+              <aside className={styles.pieceList} aria-label="Componentes de la cotización">
+                <p className={styles.listEyebrow}>Componentes</p>
                 <ul>
                   {visualItems.map((item) => {
                     const form = mapItemToForm(item);
                     const template = resolveLineTemplate(lineTemplates, form.lineTemplateId);
                     const resolution = pieceResolutions.get(item.id) ?? null;
-                    const snapshot =
-                      resolution?.cubication ??
-                      resolvePersonalizadoFallbackSnapshot({ item, template });
+                    const snapshot = resolveItemReviewCubication({
+                      item,
+                      resolution,
+                      template,
+                    });
                     const itemPreview = snapshot
                       ? cubicationSnapshotToPreview(snapshot)
                       : null;
@@ -729,7 +724,7 @@ export function DespieceReviewSurface({
               </aside>
 
               <div className={styles.pieceMainScroll}>
-                <section className={styles.pieceDetail} aria-label="Detalle de pieza">
+                <section className={styles.pieceDetail} aria-label="Detalle del componente">
               {selectedItem && selectedView && selectedForm ? (
                 <>
                   <header className={styles.detailHead}>
@@ -768,18 +763,14 @@ export function DespieceReviewSurface({
 
                   <div className={styles.visualMetrics}>
                     <div className={styles.drawingCard}>
-                      {config ? (
-                        <div
-                          className={styles.drawing}
-                          dangerouslySetInnerHTML={{
-                            __html: renderGuidedVisualSvg(config, {
-                              maxW: 280,
-                              maxH: 180,
-                              variant: "summary",
-                              colorHex,
-                            }),
-                          }}
-                        />
+                      {piecePreviewInput ? (
+                        <div className={styles.drawing}>
+                          <ComponentPreview
+                            {...piecePreviewInput}
+                            colorHex={colorHex ?? piecePreviewInput.colorHex}
+                            size="hero"
+                          />
+                        </div>
                       ) : (
                         <p className={styles.emptyDrawing}>Sin croquis</p>
                       )}
@@ -1052,7 +1043,7 @@ export function DespieceReviewSurface({
                   </div>
                 </>
               ) : (
-                <div className={styles.emptyTable}>Selecciona una pieza para revisar su despiece.</div>
+                <div className={styles.emptyTable}>Selecciona un componente para revisar su fabricación.</div>
               )}
                 </section>
 

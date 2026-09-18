@@ -61,6 +61,6 @@ describe("lineas-precios mobile row status", () => {
   it("no usa pendiente genérico para la acción de cubicación con precio", () => {
     expect(
       resolveFabricationActionLabel({ tone: "quote_only", label: "Sin configurar" }, false)
-    ).toBe("Cubicación y pauta (opcional)");
+    ).toBe("Configurar fabricación");
   });
 });

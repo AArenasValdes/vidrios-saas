@@ -4,6 +4,12 @@ import {
   seedStructuralDraftsForOrganization,
   type SeedStructuralDraftDeps,
 } from "@/features/cotizaciones/line-templates/services/seed-structural-draft";
+import {
+  seedLineVariantRecipesForOrganization,
+  type SeedLineVariantRecipesDeps,
+} from "@/features/cotizaciones/line-templates/services/seed-line-variant-recipes";
+import { seedSodalL25RecipesForOrganization } from "@/features/fabricacion/services/seed-sodal-l25-recipes";
+import { createFabricationRecipesRepository } from "@/features/fabricacion/repositories/fabrication-recipes.repository";
 import { fetchOrganizationCountryCodeClient } from "@/features/cotizaciones/line-templates/services/fetch-organization-country-code-client";
 import { isChileOrganizationCountry } from "@/features/cotizaciones/line-templates/services/line-catalog-country";
 
@@ -89,5 +95,67 @@ async function prepareStructuralDrafts(organizationId: string | number): Promise
 
   const repaired = await ensureCatalogDraftsClient(organizationId);
   const result = await seedStructuralDraftsForOrganization(organizationId, seedDeps);
-  return repaired > 0 || result.seeded > 0;
+
+  const variantSeedDeps: SeedLineVariantRecipesDeps = {
+    async listVentoraLineTemplates(orgId) {
+      const { data, error } = await supabase
+        .from("cotizacion_line_templates")
+        .select("id, catalog_key, nombre, proveedor")
+        .eq("organization_id", orgId)
+        .is("eliminado_en", null)
+        .not("catalog_key", "is", null);
+
+      if (error) throw error;
+      return data ?? [];
+    },
+    async listRecipesForOrganization(orgId) {
+      const repo = createFabricationRecipesRepository(supabase);
+      return repo.list({ organizationId: Number(orgId) });
+    },
+    async insertVariantRecipe(payload) {
+      const { error } = await supabase.from("fabrication_recipes").insert(payload);
+      if (error) throw error;
+    },
+  };
+
+  const variantResult = await seedLineVariantRecipesForOrganization(
+    organizationId,
+    variantSeedDeps
+  );
+
+  const sodalResult = await seedSodalL25RecipesForOrganization(organizationId, {
+    async listVentoraLineTemplates(orgId) {
+      const { data, error } = await supabase
+        .from("cotizacion_line_templates")
+        .select("id, catalog_key, nombre, proveedor")
+        .eq("organization_id", orgId)
+        .is("eliminado_en", null)
+        .not("catalog_key", "is", null);
+      if (error) throw error;
+      return data ?? [];
+    },
+    async listRecipesForOrganization(orgId) {
+      const repo = createFabricationRecipesRepository(supabase);
+      return repo.list({ organizationId: Number(orgId) });
+    },
+    async insertSodalRecipe(payload) {
+      const { error } = await supabase.from("fabrication_recipes").insert(payload);
+      if (error) throw error;
+    },
+    async archiveLegacyRecipe(recipeId) {
+      const { error } = await supabase
+        .from("fabrication_recipes")
+        .update({ status: "archived", eliminado_en: new Date().toISOString() })
+        .eq("id", recipeId);
+      if (error) throw error;
+    },
+  });
+
+  return (
+    repaired > 0 ||
+    result.seeded > 0 ||
+    variantResult.seeded > 0 ||
+    sodalResult.seeded > 0 ||
+    sodalResult.archived > 0
+  );
 }

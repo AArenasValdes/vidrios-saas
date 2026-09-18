@@ -21,6 +21,17 @@ Fecha de ejecución: 2026-09-14. La auditoría usa la misma identidad canónica 
 | Serie 5000 / `ventora:l5000` | estándar · corredera | 5001–5007 | 5001, 5002, 5003, 5005, 5004, 5006, 5007 → 12 | — | Sí | No | Según organización | Confirmar evidencia física completa |
 | Serie 20 / `ventora:l20` | estándar · corredera | 2001, 2002, 2009, 2004, 2005, 2010, 2019 | 2001, 2002, 2009, 2005, 2004, 2010, 2019 → 12 | — | Sí | No | Según organización | Confirmar evidencia física y precio del taller |
 | Serie 25 / `ventora:l25` | estándar · corredera | 2501, 2502, 2509, 2504, 2505, 2507, 2510 | 2501, 2502, 2509, 2505, 2504, 2510, 2507 → 12 | — | Sí | No | Según organización | Confirmar evidencia física y precio del taller |
+
+### Variantes L25 multi-hoja (2026-09-17)
+
+| Hojas | Variante | Receta | Calculable | Validada | Datos pendientes |
+|---:|---|---|---|---|---|
+| 2 | Caracol | Sí · receta existente conservada | Sí · ajustes documentados | No | Evidencia física completa; vidrio/accesorios |
+| 3 | Reforzada · Pierna abierta | Slot `draft` idempotente; sin fórmulas inventadas | No | No | Perfiles reforzados, descuentos pierna/encuentro, cantidades, 2531, vidrio/accesorios |
+| 4 | Reforzada · Pierna abierta | Slot `draft` idempotente; sin fórmulas inventadas | No | No | Igual que 3H + adaptador 4ª hoja (2521) si aplica |
+
+Referencias 2513, 2514, 2516, 2518, 2521, 2531 = metadata de catálogo; no entran al cálculo hasta configurarse en la receta. Una pieza 3H/4H **nunca** debe usar la receta 2H.
+
 | AL-32 / `ventora:l32` | normal · proyectante, composición pendiente | 3201, 3202, 3204, 3205, 3208 | 3201, 3201, 3202, 3202, 3208, 3208 → 12 | — | Parcial | No | Según organización | No declarar “Proyectante Normal estándar”; confirmar qué composición representan 3204/3205 |
 | AM-35 / `ventora:l35` | abatible · puerta abatible | 3502, 3501, 3508, 3503, 3504, 3506, 3507, 3509 | 3502, 3501, 3509 → 3 | 3508, 3503, 3504, 3506, 3507 (5) | Pendiente | No | Según organización | Confirmar composición y separar vaivén si corresponde |
 | Línea 15 / `ventora:serie-15-corredera-2h` | composición por resolver · corredera | 1501–1508 | 1501, 1502, 1503, 1504, 1505 → 10 | 1506, 1507, 1508 (3) | ALAR | No | Según organización | Resolver si 1506/1507/1508 son alternativas o simultáneos |

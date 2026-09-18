@@ -19,7 +19,7 @@ import {
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import type { CotizacionLineTemplateMaterial } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { RecipeGuidedEditor } from "@/features/fabricacion/components/recipe-guided-editor";
-import { FabricacionLineMobileHub } from "@/features/fabricacion/components/fabricacion-line-mobile-hub";
+import { FabricacionLineMobileShell } from "@/features/fabricacion/components/mobile/fabricacion-line-mobile-shell";
 import { isRecipeReadyToActivate } from "@/features/fabricacion/components/recipe-activate-panel";
 import { FabricacionTipologiaPreview } from "@/features/fabricacion/components/fabricacion-tipologia-preview";
 import { RecipeTestLab } from "@/features/fabricacion/components/recipe-test-lab";
@@ -502,15 +502,6 @@ export function FabricacionLineWorkspace({
     mediaQuery.addEventListener("change", syncViewport);
     return () => mediaQuery.removeEventListener("change", syncViewport);
   }, []);
-
-  useEffect(() => {
-    if (!hasResolvedWorkspaceViewport || isDesktopWorkspace) return;
-    if (view === "list") return;
-    setView("list");
-    setSelectedId(null);
-    setDraft(null);
-    setActiveStep("base");
-  }, [hasResolvedWorkspaceViewport, isDesktopWorkspace, view]);
 
   const template =
     templates.find((entry) => Number(entry.id) === lineTemplateId) ?? null;
@@ -1091,14 +1082,11 @@ export function FabricacionLineWorkspace({
     return <div className={s.loadingState}>Cargando fabricación...</div>;
   }
 
-  // Móvil: solo resumen de lo configurado en desktop (sin wizard ni IA).
   if (hasResolvedWorkspaceViewport && !isDesktopWorkspace) {
     return (
-      <FabricacionLineMobileHub
-        template={template}
-        currentRecipe={focusRecipe}
-        olderRecipes={lineRecipes.slice(1)}
-        error={error}
+      <FabricacionLineMobileShell
+        lineTemplateId={lineTemplateId}
+        initialSuggestedRecipeId={initialSuggestedRecipeId}
       />
     );
   }

@@ -100,6 +100,10 @@ describe("cotizacion-item-presentation", () => {
       fabricacionApertura: "",
       fabricacionHerraje: "",
       fabricacionVariante: "",
+      catalogLineKey: "",
+      fabricacionGlazing: "",
+      fabricacionLeg: "",
+      fabricacionReinforcement: "",
       fabricationRecipeId: "",
       raw: "Ventana living con vidrio claro",
     });
@@ -151,6 +155,10 @@ describe("cotizacion-item-presentation", () => {
       fabricacionApertura: "",
       fabricacionHerraje: "",
       fabricacionVariante: "",
+      catalogLineKey: "",
+      fabricacionGlazing: "",
+      fabricacionLeg: "",
+      fabricacionReinforcement: "",
       fabricationRecipeId: "",
       raw: "Cierre de terraza",
     });
@@ -354,6 +362,10 @@ describe("cotizacion-item-presentation", () => {
       fabricacionApertura: "",
       fabricacionHerraje: "",
       fabricacionVariante: "",
+      catalogLineKey: "",
+      fabricacionGlazing: "",
+      fabricacionLeg: "",
+      fabricacionReinforcement: "",
       fabricationRecipeId: "",
       raw: "",
     });
@@ -405,6 +417,10 @@ describe("cotizacion-item-presentation", () => {
       fabricacionApertura: "",
       fabricacionHerraje: "",
       fabricacionVariante: "",
+      catalogLineKey: "",
+      fabricacionGlazing: "",
+      fabricacionLeg: "",
+      fabricacionReinforcement: "",
       fabricationRecipeId: "",
       raw: "Ventana corredera",
     });

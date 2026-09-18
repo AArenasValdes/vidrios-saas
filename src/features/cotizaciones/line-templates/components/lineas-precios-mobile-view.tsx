@@ -8,7 +8,6 @@ import {
   LuChevronRight,
   LuDoorOpen,
   LuGem,
-  LuInfo,
   LuLayers,
   LuLayoutGrid,
   LuPlus,
@@ -157,8 +156,6 @@ export function LineasPreciosMobileView({
   isChileCatalog = false,
 }: Props) {
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [desktopNoticeDismissed, setDesktopNoticeDismissed] = useState(false);
-  const [desktopNoticeOpen, setDesktopNoticeOpen] = useState(false);
   const [expandedFamilies, setExpandedFamilies] = useState<Record<string, boolean>>({});
   const [selectedLine, setSelectedLine] = useState<CotizacionLineTemplate | null>(null);
 
@@ -279,11 +276,7 @@ export function LineasPreciosMobileView({
       </header>
 
       <section className={s.controls} aria-label="Buscar y filtrar líneas">
-        <div
-          className={`${s.searchRow} ${
-            desktopNoticeDismissed ? s.searchRowCompact : ""
-          }`}
-        >
+        <div className={s.searchRow}>
           <label className={s.searchField}>
             <LuSearch aria-hidden />
             <input
@@ -302,16 +295,6 @@ export function LineasPreciosMobileView({
             <LuSlidersHorizontal aria-hidden />
             {appliedFilterCount ? <span>{appliedFilterCount}</span> : null}
           </button>
-          {!desktopNoticeDismissed ? (
-            <button
-              type="button"
-              className={s.infoButton}
-              onClick={() => setDesktopNoticeOpen(true)}
-              aria-label="Información sobre fabricación en computador"
-            >
-              <LuInfo aria-hidden />
-            </button>
-          ) : null}
         </div>
 
         <div className={s.materialQuickFilters} role="group" aria-label="Filtrar por material">
@@ -378,8 +361,8 @@ export function LineasPreciosMobileView({
         <section className={s.emptyState}>
           <strong>Aún no tienes líneas en tu catálogo privado</strong>
           <p>
-            Crea una línea con precio y mínimo para cotizar. Las plantillas de
-            fabricación se aplican desde el computador.
+            Crea una línea con precio y mínimo para cotizar. Luego puedes
+            configurar fabricación y cubicación desde el celular.
           </p>
           <button type="button" onClick={onNew}>
             <LuPlus aria-hidden />
@@ -548,7 +531,7 @@ export function LineasPreciosMobileView({
             onClick={(event) => event.stopPropagation()}
           >
             <header>
-              <div>
+              <div className={s.lineSheetHeaderCopy}>
                 <h2 id="mobile-line-actions-title">{selectedLine.nombre}</h2>
                 <p>{selectedLineContext?.subtitle}</p>
               </div>
@@ -639,55 +622,6 @@ export function LineasPreciosMobileView({
         </div>
       ) : null}
 
-      {desktopNoticeOpen ? (
-        <div
-          className={s.sheetBackdrop}
-          role="presentation"
-          onClick={() => setDesktopNoticeOpen(false)}
-        >
-          <section
-            className={s.infoSheet}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="desktop-fabrication-info-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <header>
-              <h2 id="desktop-fabrication-info-title">Fabricación en el computador</h2>
-              <button
-                type="button"
-                onClick={() => setDesktopNoticeOpen(false)}
-                aria-label="Cerrar información"
-              >
-                <LuX aria-hidden />
-              </button>
-            </header>
-            <p>
-              Plantillas, cubicación, pauta de corte y despiece se configuran en
-              desktop. Aquí revisas precio y el estado de cada línea.
-            </p>
-            <footer>
-              <button
-                type="button"
-                className={s.dismissNoticeButton}
-                onClick={() => {
-                  setDesktopNoticeDismissed(true);
-                  setDesktopNoticeOpen(false);
-                }}
-              >
-                No volver a mostrar
-              </button>
-              <button
-                type="button"
-                className={s.applyButton}
-                onClick={() => setDesktopNoticeOpen(false)}
-              >
-                Entendido
-              </button>
-            </footer>
-          </section>
-        </div>
-      ) : null}
     </main>
   );
 }

@@ -40,7 +40,14 @@
     "video:capture-demo-assets": "node --experimental-strip-types scripts/capture-ventora-demo-assets.ts",
     "video:preview:demo-master": "remotion preview remotion/index.tsx --props='{}' --initial-composition=VentoraDemoMasterVertical",
     "video:render:demo-master": "remotion render remotion/index.tsx VentoraDemoMasterVertical out/ventora-demo-master-vertical.mp4 --concurrency=1 --crf=28",
-    "push:vapid": "web-push generate-vapid-keys"
+    "push:vapid": "web-push generate-vapid-keys",
+    "zeta:extract": "node --experimental-strip-types scripts/zeta/extract.ts",
+    "zeta:validate": "node --experimental-strip-types scripts/zeta/validate.ts",
+    "zeta:coverage": "node --experimental-strip-types scripts/zeta/coverage.ts",
+    "zeta:derive": "node --experimental-strip-types scripts/zeta/derive.ts",
+    "zeta:probe": "node --experimental-strip-types scripts/zeta/probe-ui.ts",
+    "zeta:ingest": "node --experimental-strip-types scripts/zeta/ingest-raw.ts",
+    "zeta:playwright:install": "playwright install chromium"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

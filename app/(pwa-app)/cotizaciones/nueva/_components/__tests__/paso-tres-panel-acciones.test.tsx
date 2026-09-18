@@ -77,7 +77,7 @@ describe("PasoTresPanelAcciones", () => {
     expect(screen.queryByText("Ver PDF profesional")).not.toBeInTheDocument();
   });
 
-  it("despues de guardar ofrece el PDF comercial y el despiece interno", () => {
+  it("despues de guardar ofrece el PDF comercial y el resumen interno de fabricacion", () => {
     renderPanel({
       savedRecord: { ...savedDraft, estado: "creada" },
       lastSaveMode: "creada",
@@ -94,7 +94,7 @@ describe("PasoTresPanelAcciones", () => {
     );
   });
 
-  it("no muestra despiece en el paso 3 antes de guardar la cotizacion", () => {
+  it("no muestra fabricacion en el paso 3 antes de guardar la cotizacion", () => {
     renderPanel({
       savedRecord: null,
       lastSaveMode: null,
@@ -102,6 +102,7 @@ describe("PasoTresPanelAcciones", () => {
     });
 
     expect(screen.getByRole("button", { name: /Abrir y guardar presupuesto/i })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Resumen de fabricaci/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Despiece y pauta/i })).not.toBeInTheDocument();
   });
 });

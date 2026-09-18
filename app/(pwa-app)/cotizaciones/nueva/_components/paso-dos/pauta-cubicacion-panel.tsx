@@ -38,11 +38,30 @@ import {
 import { resolveRecipeFromMetadata } from "@/features/cotizaciones/line-templates/services/fabrication-recipe.service";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
+import { resolveComponentFabricacionHojas } from "@/features/cotizaciones/new-quote/workflow-ui";
+import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import {
+  describeIncompleteFabricacionMessage,
+  formatVariantDisplayLabel,
+  isFabricacionRecipeReadyForSnapshot,
+} from "@/features/fabricacion/services/fabricacion-line-variant.service";
 import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import { resolveAperturaForRecipeMatch } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 import { buildFabricationRecipeSummary } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
-import { resolverRecetaFabricacionCompatible } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
+import { FabricationVariantSelector } from "@/features/fabricacion/components/fabrication-variant-selector";
+import {
+  formatSodalL25ContextualLineName,
+  formatSodalL25FullRecipeNameFromRecipe,
+  formatSodalL25FullRecipeNameFromVariant,
+} from "@/features/fabricacion/services/sodal-l25-presentation.service";
+import { SODAL_L25_CATALOG_KEY } from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
+import {
+  inferSodalL25GlazingFromGlass,
+  isSodalL25CatalogKey,
+  resolveSodalL25QuoteConfig,
+} from "@/features/fabricacion/services/sodal-l25-context.service";
+import { resolveFabricationRecipe } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
 import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 
@@ -60,9 +79,16 @@ export type PautaCubicacionFormSlice = {
   fabricacionTipologia?: string;
   fabricacionHojas?: number | null;
   fabricacionModulos?: number | null;
+  sheetScheme?: string;
+  hojasBase?: number | null;
+  guidedVisualConfig?: GuidedVisualConfig | null;
   fabricacionApertura?: string;
   fabricacionHerraje?: string;
   fabricacionVariante?: string;
+  catalogLineKey?: string;
+  fabricacionGlazing?: string;
+  fabricacionLeg?: string;
+  fabricacionReinforcement?: string;
   fabricacionSnapshot?: FabricacionCotizacionSnapshot | null;
   cubicationSnapshot?: CotizacionItemCubicationSnapshot | null;
 };
@@ -81,6 +107,13 @@ type Props = {
     apertura: string;
     herraje: string;
     variante: string;
+  }) => void;
+  onFabricacionL25ConfigChange?: (value: {
+    catalogLineKey: string;
+    fabricacionGlazing: string;
+    fabricacionLeg: string;
+    fabricacionReinforcement: string;
+    fabricacionVariante: string;
   }) => void;
   onSaveCubicationLineAdjustment?: (input?: {
     snapshot?: CotizacionItemCubicationSnapshot | null;
@@ -270,6 +303,7 @@ export function PautaCubicacionPanel({
   onFabricationRecipeIdChange,
   onFabricacionSnapshotChange,
   onFabricacionContextoChange,
+  onFabricacionL25ConfigChange,
   onSaveCubicationLineAdjustment,
   isSavingCubicationLineAdjustment,
   lineSelectionHint = "precio",
@@ -308,6 +342,40 @@ export function PautaCubicacionPanel({
       tipo: componentForm.tipo,
       sistema: componentForm.sistema,
     });
+  const effectiveFabricacionHojas = resolveComponentFabricacionHojas({
+    sheetScheme: componentForm.sheetScheme,
+    fabricacionHojas: componentForm.fabricacionHojas,
+    hojasBase: componentForm.hojasBase,
+    guidedVisualConfig: componentForm.guidedVisualConfig,
+  });
+  const catalogKey =
+    componentForm.catalogLineKey ||
+    selectedTemplate?.catalogKey ||
+    null;
+  const isSodalL25Line = isSodalL25CatalogKey(catalogKey);
+  const inferredGlazing = inferSodalL25GlazingFromGlass({
+    vidrio: componentForm.vidrio,
+    catalogEspesor: selectedTemplate?.catalogMetadata
+      ? String((selectedTemplate.catalogMetadata as Record<string, unknown>).espesor ?? "")
+      : "",
+    catalogTerminacion: selectedTemplate?.nombre ?? "",
+  });
+  const sodalConfig = isSodalL25Line
+    ? resolveSodalL25QuoteConfig({
+        catalogKey,
+        presentation: {
+          fabricacionGlazing: inferredGlazing || componentForm.fabricacionGlazing,
+          fabricacionLeg: componentForm.fabricacionLeg ?? "",
+          fabricacionReinforcement: componentForm.fabricacionReinforcement ?? "",
+          fabricacionVariante: componentForm.fabricacionVariante ?? "",
+          fabricacionHojas: effectiveFabricacionHojas,
+          sheetScheme: componentForm.sheetScheme ?? "",
+        },
+        vidrio: componentForm.vidrio,
+        sheetScheme: componentForm.sheetScheme ?? "",
+        fabricacionHojas: effectiveFabricacionHojas,
+      })
+    : null;
   const formalResolution = useMemo(() => {
     if (
       isLoadingPersistedRecipes ||
@@ -318,11 +386,22 @@ export function PautaCubicacionPanel({
       return null;
     }
 
-    return resolverRecetaFabricacionCompatible(persistedRecipes, {
+    if (isSodalL25Line && sodalConfig && !sodalConfig.complete) {
+      return {
+        estado: "sin_receta" as const,
+        receta: null,
+        candidatas: [],
+        descartadas: [],
+        advertencias: [],
+      };
+    }
+
+    return resolveFabricationRecipe(persistedRecipes, {
       organizationId,
       lineTemplateId: numericLineTemplateId,
+      catalogKey,
       tipologia: explicitTipologia,
-      hojas: componentForm.fabricacionHojas ?? null,
+      hojas: effectiveFabricacionHojas,
       modulos: componentForm.fabricacionModulos ?? null,
       apertura:
         resolveAperturaForRecipeMatch(
@@ -331,23 +410,62 @@ export function PautaCubicacionPanel({
         ) || null,
       herraje: componentForm.fabricacionHerraje || null,
       variante: componentForm.fabricacionVariante || null,
+      glazing: sodalConfig?.glazing ?? null,
+      leg: sodalConfig?.leg ?? null,
+      reinforcement: sodalConfig?.reinforcement ?? null,
       preferredRecipeId: componentForm.fabricationRecipeId || null,
       allowNonValidatedRecipeId: componentForm.fabricationRecipeId || null,
-      allowPreliminaryNonValidated: true,
+      allowPreliminaryNonValidated: !isSodalL25Line,
     });
   }, [
+    catalogKey,
     componentForm.fabricacionApertura,
     componentForm.fabricacionHerraje,
     componentForm.fabricacionHojas,
     componentForm.fabricacionModulos,
     componentForm.fabricacionVariante,
     componentForm.fabricationRecipeId,
+    componentForm.guidedVisualConfig,
+    componentForm.hojasBase,
+    componentForm.sheetScheme,
+    effectiveFabricacionHojas,
     explicitTipologia,
     isLoadingPersistedRecipes,
+    isSodalL25Line,
     numericLineTemplateId,
     organizationId,
     persistedRecipes,
     pieceApertura,
+    sodalConfig,
+  ]);
+  const sodalLineHeaderLabel = useMemo(() => {
+    if (!isSodalL25Line) {
+      return selectedTemplate?.nombre ?? "";
+    }
+
+    if (formalResolution?.estado === "receta_unica" && formalResolution.receta) {
+      return (
+        formatSodalL25FullRecipeNameFromRecipe(formalResolution.receta) ??
+        formatSodalL25ContextualLineName(effectiveFabricacionHojas)
+      );
+    }
+
+    if (sodalConfig?.complete) {
+      return (
+        formatSodalL25FullRecipeNameFromVariant({
+          leaves: sodalConfig.hojas,
+          variantSlug: sodalConfig.variantSlug,
+        }) ?? formatSodalL25ContextualLineName(sodalConfig.hojas)
+      );
+    }
+
+    return formatSodalL25ContextualLineName(effectiveFabricacionHojas);
+  }, [
+    effectiveFabricacionHojas,
+    formalResolution,
+    isSodalL25Line,
+    selectedTemplate?.nombre,
+    sodalConfig,
   ]);
   const useFormalDomain = persistedRecipes.length > 0;
   const selectedPersistedRecipe =
@@ -864,8 +982,10 @@ export function PautaCubicacionPanel({
     );
   };
 
-  const waitingReason = needsVariantChoice
-    ? "Elige el herraje o variante de fabricación para esta tipología."
+  const waitingReason = isSodalL25Line && sodalConfig && !sodalConfig.complete
+    ? "Selecciona la configuración L25 para generar la pauta de corte."
+    : needsVariantChoice
+    ? "Elige la variante de fabricación para esta configuración."
     : !selectedTemplate
     ? lineSelectionHint === "medidas"
       ? personalizadoAssistMode
@@ -875,9 +995,15 @@ export function PautaCubicacionPanel({
         ? "Elige una línea comercial en Precio para armar el borrador de pauta."
         : "Elige una línea comercial en Precio para generar la pauta de esta pieza."
     : useFormalDomain && formalResolution?.estado === "sin_receta"
-      ? formalResolution.candidatas.length > 0
-        ? "Hay recetas para esta linea, pero ninguna validada coincide con esta pieza."
-        : "Esta linea todavia no tiene una receta compatible validada."
+      ? effectiveFabricacionHojas != null
+        ? "No hay receta compatible con esta tipología y cantidad de hojas."
+        : formalResolution.candidatas.length > 0
+          ? "Hay recetas para esta linea, pero ninguna validada coincide con esta pieza."
+          : "Esta linea todavia no tiene una receta compatible validada."
+    : useFormalDomain && selectedPersistedRecipe && !selectedPersistedRecipeReady
+      ? describeIncompleteFabricacionMessage(
+          isFabricacionRecipeReadyForSnapshot(selectedPersistedRecipe).pendingFields
+        )
     : useFormalDomain && isLoadingPersistedRecipes
       ? "Cargando receta de fabricación…"
     : !useFormalDomain &&
@@ -909,15 +1035,17 @@ export function PautaCubicacionPanel({
             <small>{layout === "compact" ? "Estimación" : "Despiece"}</small>
             <strong>Cubicación y pauta</strong>
             <p>
-              Tipología ya elegida
-              {pieceApertura ? ` · ${pieceApertura.replaceAll("_", " ")}` : ""}. Elige solo
-              herraje o variante.
+              Tipología y hojas ya elegidas
+              {effectiveFabricacionHojas
+                ? ` · ${effectiveFabricacionHojas} hojas`
+                : ""}
+              . Elige la variante de fabricación.
             </p>
           </div>
           <em className={editor.cubicacionStatusMuted}>Elegir variante</em>
         </header>
         <label className={editor.cubicacionWaiting}>
-          <span>Herraje / variante</span>
+          <span>Variante de fabricación</span>
           <select
             value={componentForm.fabricationRecipeId ?? ""}
             onChange={(event) => {
@@ -944,10 +1072,7 @@ export function PautaCubicacionPanel({
             {useFormalDomain && formalResolution?.estado === "multiples_recetas"
               ? formalResolution.candidatas.map((candidate) => (
                   <option key={candidate.id} value={candidate.id}>
-                    {candidate.definition.identidad.variante}
-                    {candidate.definition.identidad.herraje
-                      ? ` · ${candidate.definition.identidad.herraje}`
-                      : ""}
+                    {formatVariantDisplayLabel(candidate)}
                     {` · ${candidate.definition.identidad.hojas} hojas · v${candidate.version}`}
                   </option>
                 ))
@@ -986,7 +1111,42 @@ export function PautaCubicacionPanel({
           </div>
           <em className={editor.cubicacionStatusMuted}>Pendiente</em>
         </header>
-        <div className={editor.cubicacionWaiting}>{waitingReason}</div>
+        <div className={editor.cubicacionWaiting}>
+          {waitingReason}
+          {isSodalL25Line && sodalConfig && effectiveFabricacionHojas ? (
+            <FabricationVariantSelector
+              recipes={persistedRecipes}
+              glazing={sodalConfig.glazing}
+              hojas={effectiveFabricacionHojas}
+              leg={(componentForm.fabricacionLeg as "" | "open" | "closed") ?? ""}
+              reinforcement={
+                (componentForm.fabricacionReinforcement as "" | "normal" | "reinforced") ?? ""
+              }
+              onLegChange={(value) => {
+                onFabricacionL25ConfigChange?.({
+                  catalogLineKey: SODAL_L25_CATALOG_KEY,
+                  fabricacionGlazing: sodalConfig.glazing,
+                  fabricacionLeg: value,
+                  fabricacionReinforcement: componentForm.fabricacionReinforcement ?? "",
+                  fabricacionVariante: componentForm.fabricacionVariante ?? "",
+                });
+              }}
+              onReinforcementChange={(value) => {
+                const variantSlug =
+                  componentForm.fabricacionLeg && value
+                    ? `${sodalConfig.glazing}_${componentForm.fabricacionLeg}_${value}`
+                    : componentForm.fabricacionVariante ?? "";
+                onFabricacionL25ConfigChange?.({
+                  catalogLineKey: SODAL_L25_CATALOG_KEY,
+                  fabricacionGlazing: sodalConfig.glazing,
+                  fabricacionLeg: componentForm.fabricacionLeg ?? "",
+                  fabricacionReinforcement: value,
+                  fabricacionVariante: variantSlug,
+                });
+              }}
+            />
+          ) : null}
+        </div>
       </section>
     );
   }
@@ -1014,7 +1174,7 @@ export function PautaCubicacionPanel({
           <p>
             {formatMm(widthMm)} × {formatMm(heightMm)} · {quantity}{" "}
             {quantity === 1 ? "unidad" : "unidades"}
-            {selectedTemplate ? ` · ${selectedTemplate.nombre}` : ""}
+            {sodalLineHeaderLabel ? ` · ${sodalLineHeaderLabel}` : ""}
           </p>
         </div>
         <em

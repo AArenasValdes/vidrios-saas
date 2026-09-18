@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { ensureCatalogDraftsClient } from "@/features/cotizaciones/line-templates/services/seed-structural-draft-client";
+import { ensureStructuralDraftsClient } from "@/features/cotizaciones/line-templates/services/seed-structural-draft-client";
 import { getFabricationRecipesClientService } from "@/features/fabricacion/services/fabrication-recipes.client";
 import type {
   CreateFabricationRecipeInput,
@@ -99,7 +99,7 @@ export function useFabricationRecipes(options: UseFabricationRecipesOptions = {}
     setError(null);
 
     try {
-      await ensureCatalogDraftsClient(organizationId);
+      await ensureStructuralDraftsClient(organizationId);
       const data = await getFabricationRecipesClientService().listRecipes({
         organizationId,
         lineTemplateId: options.lineTemplateId,

@@ -126,7 +126,7 @@ describe("PautaCubicacionPanel con recetas persistidas", () => {
       />
     );
 
-    fireEvent.change(screen.getByLabelText("Herraje / variante"), {
+    fireEvent.change(screen.getByLabelText("Variante de fabricación"), {
       target: { value: "recipe-premium" },
     });
 

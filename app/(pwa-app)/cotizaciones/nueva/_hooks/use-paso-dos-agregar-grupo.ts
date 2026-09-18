@@ -36,6 +36,12 @@ import {
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
+import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
+import { applySodalL25VidrioToForm } from "@/features/fabricacion/services/sodal-l25-context.service";
+import {
+  resolveEffectiveSodalL25CatalogKey,
+  resolveSodalL25CommercialLineDisplayName,
+} from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import { calculateLineTemplatePricing } from "@/features/cotizaciones/services/cotizacion-line-pricing.service";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import {
@@ -128,6 +134,10 @@ export type PasoDosGrupoDraft = {
   fabricacionApertura: string;
   fabricacionHerraje: string;
   fabricacionVariante: string;
+  catalogLineKey: string;
+  fabricacionGlazing: string;
+  fabricacionLeg: string;
+  fabricacionReinforcement: string;
   fabricacionSnapshot: FabricacionCotizacionSnapshot | null;
   referencia: string;
   ancho: string;
@@ -561,6 +571,7 @@ export function applyLineTemplateToGrupoDraft(
     | "nombre"
     | "categoria"
     | "material"
+    | "catalogKey"
     | "catalogMetadata"
     | "vidrioPrincipalRecomendado"
     | "precioM2Sugerido"
@@ -585,8 +596,25 @@ export function applyLineTemplateToGrupoDraft(
     fabricacionApertura: "",
     fabricacionHerraje: "",
     fabricacionVariante: "",
+    catalogLineKey:
+      resolveEffectiveSodalL25CatalogKey({
+        catalogKey: template.catalogKey,
+        nombre: template.nombre,
+      }) ??
+      template.catalogKey ??
+      "",
+    fabricacionGlazing: "",
+    fabricacionLeg: "",
+    fabricacionReinforcement: "",
     fabricacionSnapshot: null,
-    referencia: template.nombre,
+    referencia: resolveSodalL25CommercialLineDisplayName({
+      catalogKey:
+        resolveEffectiveSodalL25CatalogKey({
+          catalogKey: template.catalogKey,
+          nombre: template.nombre,
+        }) ?? template.catalogKey,
+      nombre: template.nombre,
+    }),
     vidrio:
       template.categoria === "vidrio"
         ? template.nombre
@@ -888,6 +916,10 @@ export function createInitialPasoDosGrupoDraft({
     fabricacionApertura: seedForm?.fabricacionApertura ?? "",
     fabricacionHerraje: seedForm?.fabricacionHerraje ?? "",
     fabricacionVariante: seedForm?.fabricacionVariante ?? "",
+    catalogLineKey: seedForm?.catalogLineKey ?? "",
+    fabricacionGlazing: seedForm?.fabricacionGlazing ?? "",
+    fabricacionLeg: seedForm?.fabricacionLeg ?? "",
+    fabricacionReinforcement: seedForm?.fabricacionReinforcement ?? "",
     fabricacionSnapshot: seedForm?.fabricacionSnapshot ?? null,
     referencia,
     ancho: sanitizeDigits(seedForm?.ancho ?? ""),
@@ -988,12 +1020,22 @@ export function buildPasoDosGrupoComponentForm({
     lineTemplateId: syncedDraft.lineTemplateId,
     cubicationSnapshot: syncedDraft.cubicationSnapshot,
     fabricationRecipeId: syncedDraft.fabricationRecipeId,
-    fabricacionTipologia: syncedDraft.fabricacionTipologia,
+    fabricacionTipologia:
+      syncedDraft.fabricacionTipologia ||
+      inferirTipologiaFabricacionPieza({
+        tipo: syncedDraft.subtipo,
+        sistema: syncedDraft.sistema,
+      }) ||
+      undefined,
     fabricacionHojas: syncedDraft.fabricacionHojas,
     fabricacionModulos: syncedDraft.fabricacionModulos,
     fabricacionApertura: syncedDraft.fabricacionApertura,
     fabricacionHerraje: syncedDraft.fabricacionHerraje,
     fabricacionVariante: syncedDraft.fabricacionVariante,
+    catalogLineKey: syncedDraft.catalogLineKey,
+    fabricacionGlazing: syncedDraft.fabricacionGlazing,
+    fabricacionLeg: syncedDraft.fabricacionLeg,
+    fabricacionReinforcement: syncedDraft.fabricacionReinforcement,
     fabricacionSnapshot: syncedDraft.fabricacionSnapshot,
     pricingMode: syncedDraft.pricingMode,
     vidrio: syncedDraft.vidrio,
@@ -1650,7 +1692,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   };
 
   const updateVidrio = (vidrio: string) => {
-    setDraft((current) => ({ ...current, vidrio }));
+    setDraft((current) => applySodalL25VidrioToForm(current, vidrio));
   };
 
   const updateCubicationSnapshot = (
@@ -1685,6 +1727,25 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
       fabricacionApertura: value.apertura,
       fabricacionHerraje: value.herraje,
       fabricacionVariante: value.variante,
+    }));
+  };
+
+  const updateFabricacionL25Config = (value: {
+    catalogLineKey: string;
+    fabricacionGlazing: string;
+    fabricacionLeg: string;
+    fabricacionReinforcement: string;
+    fabricacionVariante: string;
+  }) => {
+    setDraft((current) => ({
+      ...current,
+      catalogLineKey: value.catalogLineKey,
+      fabricacionGlazing: value.fabricacionGlazing,
+      fabricacionLeg: value.fabricacionLeg,
+      fabricacionReinforcement: value.fabricacionReinforcement,
+      fabricacionVariante: value.fabricacionVariante,
+      fabricacionSnapshot: null,
+      cubicationSnapshot: null,
     }));
   };
 
@@ -2029,6 +2090,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     updateFabricationRecipeId,
     updateFabricacionSnapshot,
     updateFabricacionContexto,
+    updateFabricacionL25Config,
     updateAncho,
     updateAlto,
     updatePrecio,

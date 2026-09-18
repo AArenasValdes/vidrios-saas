@@ -6,8 +6,17 @@ import {
   resolveArquetipoEstructuralId,
 } from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
 import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
-import { resolverRecetaFabricacionCompatible } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
+import { resolveCommercialFabricacionHojas } from "@/features/fabricacion/services/fabricacion-line-variant.service";
+import {
+  resolveFabricationRecipe,
+  resolverRecetaFabricacionCompatible,
+} from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
+import {
+  isSodalL25CatalogKey,
+  resolveSodalL25QuoteConfig,
+} from "@/features/fabricacion/services/sodal-l25-context.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
+import { countLeafModules } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 
 export type FabricacionLineaCotizacionContext = {
   fabricacionTipologia: string;
@@ -176,6 +185,17 @@ export function resolveFabricacionContextForLineAssignment(input: {
     | "configuracion"
     | "fabricacionHojas"
     | "fabricacionTipologia"
+    | "sheetScheme"
+    | "hojasBase"
+    | "guidedVisualConfig"
+    | "catalogLineKey"
+    | "fabricacionGlazing"
+    | "fabricacionLeg"
+    | "fabricacionReinforcement"
+    | "fabricacionVariante"
+    | "vidrio"
+    | "catalogEspesor"
+    | "catalogTerminacion"
   >;
 }): FabricacionLineaCotizacionContext | null {
   const catalogContext = resolveFabricacionContextFromLineCatalog(input.template);
@@ -200,17 +220,59 @@ export function resolveFabricacionContextForLineAssignment(input: {
     catalogContext?.fabricacionTipologia ||
     null;
 
+  const guidedVisualLeafCount = input.form.guidedVisualConfig?.root
+    ? countLeafModules(input.form.guidedVisualConfig.root)
+    : null;
   const hojasHint =
-    input.form.fabricacionHojas ?? catalogContext?.fabricacionHojas ?? null;
+    resolveCommercialFabricacionHojas({
+      sheetScheme: input.form.sheetScheme,
+      fabricacionHojas: input.form.fabricacionHojas,
+      hojasBase: input.form.hojasBase,
+      guidedVisualLeafCount:
+        guidedVisualLeafCount && guidedVisualLeafCount > 0 ? guidedVisualLeafCount : null,
+    }) ?? catalogContext?.fabricacionHojas ?? null;
 
   if (tipologiaHint && lineRecipes.length > 0) {
-    const resolution = resolverRecetaFabricacionCompatible(lineRecipes, {
-      organizationId: input.organizationId,
-      lineTemplateId,
-      tipologia: tipologiaHint,
-      hojas: hojasHint,
-      allowPreliminaryNonValidated: true,
-    });
+    const sodalConfig = isSodalL25CatalogKey(input.template.catalogKey)
+      ? resolveSodalL25QuoteConfig({
+          catalogKey: input.template.catalogKey,
+          presentation: {
+            fabricacionGlazing: input.form.fabricacionGlazing ?? "",
+            fabricacionLeg: input.form.fabricacionLeg ?? "",
+            fabricacionReinforcement: input.form.fabricacionReinforcement ?? "",
+            fabricacionVariante: input.form.fabricacionVariante ?? "",
+            fabricacionHojas: hojasHint,
+            sheetScheme: input.form.sheetScheme ?? "",
+          },
+          vidrio: input.form.vidrio,
+          catalogEspesor: input.form.catalogEspesor,
+          catalogTerminacion: input.form.catalogTerminacion,
+          sheetScheme: input.form.sheetScheme,
+          fabricacionHojas: hojasHint,
+        })
+      : null;
+
+    const resolution =
+      sodalConfig?.complete
+        ? resolveFabricationRecipe(lineRecipes, {
+            organizationId: input.organizationId,
+            lineTemplateId,
+            catalogKey: input.template.catalogKey,
+            tipologia: tipologiaHint,
+            hojas: sodalConfig.hojas,
+            glazing: sodalConfig.glazing,
+            leg: sodalConfig.leg,
+            reinforcement: sodalConfig.reinforcement,
+            variante: sodalConfig.variantSlug,
+            allowPreliminaryNonValidated: false,
+          })
+        : resolverRecetaFabricacionCompatible(lineRecipes, {
+            organizationId: input.organizationId,
+            lineTemplateId,
+            tipologia: tipologiaHint,
+            hojas: hojasHint,
+            allowPreliminaryNonValidated: !isSodalL25CatalogKey(input.template.catalogKey),
+          });
 
     const recipe =
       resolution.estado === "receta_unica" || resolution.estado === "receta_no_validada"

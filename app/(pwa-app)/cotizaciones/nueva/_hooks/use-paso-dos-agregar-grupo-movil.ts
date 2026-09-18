@@ -14,10 +14,13 @@ import {
   type PreferredProvider,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
+import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import { DEFAULT_MARGIN_PCT } from "@/features/cotizaciones/types/pricing-mode";
 import type { CostInputScope } from "@/features/cotizaciones/types/pricing-mode";
+import { applySodalL25VidrioToForm } from "@/features/fabricacion/services/sodal-l25-context.service";
 import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
 
 import type { PasoDosGrupoDraft } from "./use-paso-dos-agregar-grupo";
@@ -480,7 +483,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   };
 
   const updateVidrio = (vidrio: string) => {
-    setDraft((current) => ({ ...current, vidrio }));
+    setDraft((current) => applySodalL25VidrioToForm(current, vidrio));
   };
 
   const updateAncho = (value: string) => {
@@ -565,6 +568,60 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     }));
   };
 
+  const updateCubicationSnapshot = (
+    cubicationSnapshot: CotizacionItemCubicationSnapshot | null
+  ) => {
+    setDraft((current) => ({ ...current, cubicationSnapshot }));
+  };
+
+  const updateFabricationRecipeId = (fabricationRecipeId: string) => {
+    setDraft((current) => ({ ...current, fabricationRecipeId }));
+  };
+
+  const updateFabricacionSnapshot = (
+    fabricacionSnapshot: FabricacionCotizacionSnapshot | null
+  ) => {
+    setDraft((current) => ({ ...current, fabricacionSnapshot }));
+  };
+
+  const updateFabricacionContexto = (value: {
+    tipologia: string;
+    hojas: number;
+    modulos: number;
+    apertura: string;
+    herraje: string;
+    variante: string;
+  }) => {
+    setDraft((current) => ({
+      ...current,
+      fabricacionTipologia: value.tipologia,
+      fabricacionHojas: value.hojas,
+      fabricacionModulos: value.modulos,
+      fabricacionApertura: value.apertura,
+      fabricacionHerraje: value.herraje,
+      fabricacionVariante: value.variante,
+    }));
+  };
+
+  const updateFabricacionL25Config = (value: {
+    catalogLineKey: string;
+    fabricacionGlazing: string;
+    fabricacionLeg: string;
+    fabricacionReinforcement: string;
+    fabricacionVariante: string;
+  }) => {
+    setDraft((current) => ({
+      ...current,
+      catalogLineKey: value.catalogLineKey,
+      fabricacionGlazing: value.fabricacionGlazing,
+      fabricacionLeg: value.fabricacionLeg,
+      fabricacionReinforcement: value.fabricacionReinforcement,
+      fabricacionVariante: value.fabricacionVariante,
+      fabricacionSnapshot: null,
+      cubicationSnapshot: null,
+    }));
+  };
+
   const goBack = () => {
     if (entryMode === "free_total_single") {
       return;
@@ -639,6 +696,11 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     addAlcanceDetalle,
     updateAlcanceDetalle,
     removeAlcanceDetalle,
+    updateFabricacionL25Config,
+    updateCubicationSnapshot,
+    updateFabricationRecipeId,
+    updateFabricacionSnapshot,
+    updateFabricacionContexto,
     goBack,
     goNext,
   };

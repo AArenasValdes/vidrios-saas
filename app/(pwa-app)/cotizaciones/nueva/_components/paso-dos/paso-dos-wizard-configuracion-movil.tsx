@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState } from "react";
 import { LuChevronLeft, LuSearch, LuX } from "react-icons/lu";
@@ -27,6 +27,12 @@ import {
   type ComponentFormLinePricingSummary,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import { buildCotizacionMirrorPaneMeasure } from "@/utils/cotizacion-item-presentation";
+import { SodalL25QuoteConfigPanel } from "@/features/fabricacion/components/sodal-l25-quote-config-panel";
+import {
+  dedupeLineTemplatesForQuotePicker,
+  formatLineTemplateQuotePickerLabel,
+  resolveCotizacionItemSodalL25LineDisplayLabel,
+} from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import { MeasureDimensionInput } from "@/features/cotizaciones/components/measure-dimension-input";
 import { ComponentPreview } from "@/features/cotizaciones/components/component-preview";
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
@@ -155,6 +161,13 @@ type Props = {
   onSetShowAllSystems: (value: boolean) => void;
   onSetVidSearch: (value: string) => void;
   onCreateCustomGlass: (value: string) => void;
+  onFabricacionL25ConfigChange?: (value: {
+    catalogLineKey: string;
+    fabricacionGlazing: string;
+    fabricacionLeg: string;
+    fabricacionReinforcement: string;
+    fabricacionVariante: string;
+  }) => void;
 };
 
 export function PasoDosWizardConfiguracionMovil({
@@ -221,6 +234,7 @@ export function PasoDosWizardConfiguracionMovil({
   onSetShowAllSystems,
   onSetVidSearch,
   onCreateCustomGlass,
+  onFabricacionL25ConfigChange,
 }: Props) {
   const measureUnit = useOrganizationMeasureUnit();
   const { organizacionId } = useAuth();
@@ -245,7 +259,10 @@ export function PasoDosWizardConfiguracionMovil({
     Boolean(internalObservation.trim())
   );
   const [showPlantillas, setShowPlantillas] = useState(false);
-  const availableLineTemplates = lineTemplateOptions;
+  const availableLineTemplates = useMemo(
+    () => dedupeLineTemplatesForQuotePicker(lineTemplateOptions),
+    [lineTemplateOptions]
+  );
   const referencia = draft.referencia?.trim() ?? "";
   const precioPorM2 = draft.precioPorM2?.trim() ?? "";
   const isBowWindow = draft.subtipo === "Ventana" && draft.sistema === "Bow Window";
@@ -305,24 +322,53 @@ export function PasoDosWizardConfiguracionMovil({
   const visibleColorOptions = showAllColors ? colorOptions : primaryColorOptions;
   const selectedLineTemplate = useMemo(
     () =>
+      lineTemplateOptions.find((template) => String(template.id) === draft.lineTemplateId) ??
       availableLineTemplates.find((template) => String(template.id) === draft.lineTemplateId) ??
       null,
-    [availableLineTemplates, draft.lineTemplateId]
+    [availableLineTemplates, draft.lineTemplateId, lineTemplateOptions]
   );
   const selectedLineNeedsPrice = Boolean(
     selectedLineTemplate && lineTemplateNeedsCommercialPrice(selectedLineTemplate)
   );
+  const lineSummaryLabel = useMemo(() => {
+    return (
+      resolveCotizacionItemSodalL25LineDisplayLabel({
+        catalogLineKey: draft.catalogLineKey,
+        referencia,
+        fabricacionHojas: draft.fabricacionHojas,
+        sheetScheme: draft.sheetScheme,
+        hojasBase: draft.hojasBase,
+        fabricacionGlazing: draft.fabricacionGlazing,
+        fabricacionLeg: draft.fabricacionLeg,
+        fabricacionReinforcement: draft.fabricacionReinforcement,
+        fabricacionVariante: draft.fabricacionVariante,
+      }) ?? referencia
+    );
+  }, [
+    draft.catalogLineKey,
+    draft.fabricacionGlazing,
+    draft.fabricacionHojas,
+    draft.fabricacionLeg,
+    draft.fabricacionReinforcement,
+    draft.fabricacionVariante,
+    draft.hojasBase,
+    draft.sheetScheme,
+    referencia,
+  ]);
   const selectedLineLabel = useMemo(() => {
     if (!draft.lineTemplateId) {
       return isGlassProduct ? "Precio manual o sin cristal" : "Precio manual o sin linea";
     }
 
+    const matched =
+      lineTemplateOptions.find((template) => String(template.id) === draft.lineTemplateId) ??
+      availableLineTemplates.find((template) => String(template.id) === draft.lineTemplateId);
+
     return (
-      availableLineTemplates.find((template) => String(template.id) === draft.lineTemplateId)?.nombre ??
-      referencia ??
+      (matched ? formatLineTemplateQuotePickerLabel(matched) : referencia) ||
       (isGlassProduct ? "Precio manual o sin cristal" : "Precio manual o sin linea")
     );
-  }, [availableLineTemplates, draft.lineTemplateId, isGlassProduct, referencia]);
+  }, [availableLineTemplates, draft.lineTemplateId, isGlassProduct, lineTemplateOptions, referencia]);
 
   const filteredLineTemplates = useMemo(() => {
     const normalizedQuery = lineSelectorQuery.trim().toLowerCase();
@@ -332,7 +378,15 @@ export function PasoDosWizardConfiguracionMovil({
     }
 
     return availableLineTemplates.filter((template) =>
-      template.nombre.toLowerCase().includes(normalizedQuery)
+      [
+        template.nombre,
+        formatLineTemplateQuotePickerLabel(template),
+        template.material,
+        template.proveedor ?? "",
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedQuery)
     );
   }, [availableLineTemplates, lineSelectorQuery]);
 
@@ -1291,9 +1345,9 @@ export function PasoDosWizardConfiguracionMovil({
               Agregar precio ahora
             </button>
           </div>
-        ) : referencia && precioPorM2 ? (
+        ) : lineSummaryLabel && precioPorM2 ? (
           <div className={s.stepTwoMobileLineSummary}>
-            <span>{referencia}</span>
+            <span>{lineSummaryLabel}</span>
             <strong>
               {linePricingSummary.precioUnitarioSugerido !== null
                 ? `Sugerido: $${linePricingSummary.precioUnitarioSugerido.toLocaleString("es-CL")}`
@@ -1404,7 +1458,7 @@ export function PasoDosWizardConfiguracionMovil({
                       >
                         <div className={s.stepTwoMobileLineOptionBody}>
                           <div className={s.stepTwoMobileLineOptionTop}>
-                            <span>{template.nombre}</span>
+                            <span>{formatLineTemplateQuotePickerLabel(template)}</span>
                             <span
                               className={`${s.stepTwoMobileLineOptionMaterialChip} ${
                                 template.material === "PVC"
@@ -1871,6 +1925,29 @@ export function PasoDosWizardConfiguracionMovil({
               </button>
             ))}
           </div>
+        </div>
+      ) : null}
+
+      {requiresProfileMaterial && draft.lineTemplateId ? (
+        <div className={s.stepTwoMobileBlockSecundario}>
+          <SodalL25QuoteConfigPanel
+            compact
+            componentForm={{
+              lineTemplateId: draft.lineTemplateId,
+              catalogLineKey: draft.catalogLineKey,
+              fabricacionGlazing: draft.fabricacionGlazing,
+              fabricacionLeg: draft.fabricacionLeg,
+              fabricacionReinforcement: draft.fabricacionReinforcement,
+              fabricacionVariante: draft.fabricacionVariante,
+              fabricacionHojas: draft.fabricacionHojas,
+              sheetScheme: draft.sheetScheme,
+              hojasBase: draft.hojasBase,
+              guidedVisualConfig: draft.guidedVisualConfig,
+              vidrio: draft.vidrio,
+            }}
+            selectedTemplate={selectedLineTemplate}
+            onFabricacionL25ConfigChange={onFabricacionL25ConfigChange}
+          />
         </div>
       ) : null}
 

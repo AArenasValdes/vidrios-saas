@@ -1,0 +1,37 @@
+{
+  "recipeId": "dvh_pierna_abierta_2h_1800x1500",
+  "extractedAt": "2026-09-18T07:19:18.283Z",
+  "target": {
+    "manufacturer": "SODAL",
+    "system": "L25",
+    "line": "L-25 DVH PIERNA ABIERTA",
+    "leaves": 2,
+    "widthMm": 1800,
+    "heightMm": 1500,
+    "glassCode": "TE4104"
+  },
+  "sourceEvidence": {
+    "projectId": null,
+    "planId": null,
+    "pageUrl": "chrome-error://chromewebdata/",
+    "selectorsUsed": [
+      "browser-use:state-interact-state",
+      "url:chrome-error://chromewebdata/",
+      "navigationEngine:browser-use"
+    ],
+    "checkpointPaths": {
+      "projectCreated": "C:\\Users\\aless\\vidrios-saas\\docs\\fabricacion\\zeta\\raw\\sodal\\l25\\dvh_pierna_abierta_2h_1800x1500\\checkpoint-project-created.png",
+      "lineSelected": "C:\\Users\\aless\\vidrios-saas\\docs\\fabricacion\\zeta\\raw\\sodal\\l25\\dvh_pierna_abierta_2h_1800x1500\\checkpoint-line-selected.png",
+      "geometryConfigured": "C:\\Users\\aless\\vidrios-saas\\docs\\fabricacion\\zeta\\raw\\sodal\\l25\\dvh_pierna_abierta_2h_1800x1500\\checkpoint-geometry-configured.png",
+      "planVisible": "C:\\Users\\aless\\vidrios-saas\\docs\\fabricacion\\zeta\\raw\\sodal\\l25\\dvh_pierna_abierta_2h_1800x1500\\checkpoint-plan-visible.png",
+      "screenshot": "C:\\Users\\aless\\vidrios-saas\\docs\\fabricacion\\zeta\\raw\\sodal\\l25\\dvh_pierna_abierta_2h_1800x1500\\screenshot.png"
+    }
+  },
+  "warnings": [
+    "No se leyeron perfiles del Plan.",
+    "No se leyó vidrio del Plan.",
+    "No se leyeron accesorios del Plan."
+  ],
+  "errorText": null,
+  "screenshotWritten": true
+}

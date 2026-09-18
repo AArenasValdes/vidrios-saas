@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { useFabricationRecipes } from "../use-fabrication-recipes";
-import { ensureCatalogDraftsClient } from "@/features/cotizaciones/line-templates/services/seed-structural-draft-client";
+import { ensureStructuralDraftsClient } from "@/features/cotizaciones/line-templates/services/seed-structural-draft-client";
 
 const mockListRecipes = jest.fn().mockResolvedValue([]);
 jest.mock("@/features/auth/hooks/useAuth", () => ({
@@ -14,9 +14,9 @@ jest.mock("@/features/fabricacion/services/fabrication-recipes.client", () => ({
   }),
 }));
 jest.mock("@/features/cotizaciones/line-templates/services/seed-structural-draft-client", () => ({
-  ensureCatalogDraftsClient: jest.fn(),
+  ensureStructuralDraftsClient: jest.fn(),
 }));
-const mockRepair = jest.mocked(ensureCatalogDraftsClient);
+const mockRepair = jest.mocked(ensureStructuralDraftsClient);
 
 describe("carga del editor después de reparar AL-32/AL-42", () => {
   beforeEach(() => jest.clearAllMocks());

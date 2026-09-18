@@ -3279,6 +3279,7 @@ function goNextFromStep1() {
               onAddAlcanceDetalle: pasoDosAgregarGrupoMovil.addAlcanceDetalle,
               onUpdateAlcanceDetalle: pasoDosAgregarGrupoMovil.updateAlcanceDetalle,
               onRemoveAlcanceDetalle: pasoDosAgregarGrupoMovil.removeAlcanceDetalle,
+              onFabricacionL25ConfigChange: pasoDosAgregarGrupoMovil.updateFabricacionL25Config,
             },
           }}
           stepThreeProps={{ ...flujo.propsPasoTres, saveIntent: pasoTresGuardado.saveIntent }}
@@ -3417,6 +3418,7 @@ function goNextFromStep1() {
             onFabricationRecipeIdChange: pasoDosAgregarGrupo.updateFabricationRecipeId,
             onFabricacionSnapshotChange: pasoDosAgregarGrupo.updateFabricacionSnapshot,
             onFabricacionContextoChange: pasoDosAgregarGrupo.updateFabricacionContexto,
+            onFabricacionL25ConfigChange: pasoDosAgregarGrupo.updateFabricacionL25Config,
             onPrecioChange: pasoDosAgregarGrupo.updatePrecio,
             onPrecioPorM2Change: pasoDosAgregarGrupo.updatePrecioPorM2,
             onMinimoCobrableChange: pasoDosAgregarGrupo.updateMinimoCobrable,

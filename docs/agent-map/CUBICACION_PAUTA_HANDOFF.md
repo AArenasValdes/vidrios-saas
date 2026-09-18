@@ -15,6 +15,15 @@
 - UX editor: chips de tira comercial (6,00 / 5,95 / 5,90 m) aplican a todas las piezas al elegir; botón “Aplicar a todas las piezas” solo con medida custom.
 - Auditorías internas: `auditoria-catalogo-lineas-ventora` (fabricación por línea) y `auditoria-integridad-catalogo-lineas` (integridad de códigos; categorías mutuamente excluyentes que suman 29).
 
+### Actualización variantes multi-hoja 2026-09-17 (vigente)
+
+- **Fuente única activa:** `fabrication_recipes` (múltiples filas por `line_template_id`). No crear variantes nuevas en `fabricationRecipePack`.
+- **Matching cotización:** `line_template_id + typology + leaves_count (+ variant si hay varias compatibles)`. El número de hojas comercial (`sheetScheme`, p. ej. “3 hojas”) participa del matching; una receta 2H no calcula piezas 3H/4H.
+- **Cinco bases genéricas:** L5000, L20, L25, AL-32, AL-42. Catálogo de slots: `line-base-variant-catalog.ts`; seed idempotente al abrir Fabricación.
+- **L25 SODAL canónico (2026-09-18):** 18 recetas `validated` por org desde evidencia Zeta (`sodal-l25-zeta-recipes.ts`, gate 22 tests @ 0 mm). Seed/backfill idempotente `seed-sodal-l25-recipes.ts`; legacy L25 sin `zeta:confirmed:` se archiva. Resolver `resolveFabricationRecipe()` con identidad glazing × pierna × refuerzo; UI solo pierna/refuerzo (`FabricationVariantSelector`). Sin mensajes de “validación pendiente” ni editor de fórmulas para L25. Precio m² comercial independiente de receta técnica.
+- **L25 legacy caracol (pre-Zeta):** ignorada/archivada cuando existen recetas SODAL validated; snapshots históricos intactos.
+- **Snapshots:** `cotizacion_items.fabricacion_snapshot` inmutable; versionar recetas validadas, no sobrescribir.
+
 ### Actualización UX 2026-08-11 (vigente)
 
 - **Configurar una vez:** línea + tipología → perfiles (lenguaje humano) → medida de corte → accesorios → largo comercial **persistido en la receta** → probar → activar.
@@ -41,7 +50,7 @@ Reglas:
 3. No propongas nesting, CAD libre, optimizador de barras, inventario, fabricación automática ni CRM/Kanban.
 4. No propongas ampliar el selector de “partida” con tipologías (bow, abatible ventana, proyectante, etc.).
 5. Distingue siempre: **precio (línea)** ≠ **estimación (partida)** ≠ **tipología (constructor)**.
-6. L5000 / L20 / L25 = **“Plantillas iniciales sugeridas”**, no “verificadas”, hasta probar fabricaciones reales.
+6. L5000 / L20 = **“Plantillas iniciales sugeridas”**, no “verificadas”, hasta probar fabricaciones reales. **L25** = catálogo técnico SODAL canónico (18 recetas Zeta `validated` por org); no requiere validación de taller del cliente.
 7. Abatible / proyectante / puertas / paño fijo como base = **“Base pendiente de validación del taller”** — no vender como cubicación lista sin fórmulas validadas.
 8. En cotización: filtrar por tipología ya elegida en la pieza; pedir solo herraje/variante si hay varias recetas activas.
 9. El reporte `C:\Users\aless\OneDrive\Escritorio\deep-research-report.md` solo define catálogo reconocido y prioridad de integración; no autoriza fórmulas, descuentos ni cortes.
@@ -376,6 +385,7 @@ Motivo: Personalizado no se parece a una partida fija; forzar auto miente al tal
 - Cubicación/pauta aparece cuando hay línea con pauta + medidas.
 - Perfil sin código real muestra **Por asignar**; la función (Riel, Jamba…) sí se muestra.
 - Debe sentirse revisable / referencial, no “automática e infalible”.
+- Fabricación tiene **dos niveles**: revisión por componente y consolidado de la cotización (`DespieceReviewSurface`, header **Revisión de fabricación**, segmented **Por componente | Consolidado**). El Paso 3 comercial solo enlaza al **Resumen de fabricación** interno; no despliega la pauta ahí. En mobile, `/print/cotizaciones/[id]/fabricacion` usa lista + detalle (Resumen/Cortes/Despiece) y consolidado, sin acordeón.
 
 ### Principios UX para maestros
 - Poco scroll / poca densidad al entrar.

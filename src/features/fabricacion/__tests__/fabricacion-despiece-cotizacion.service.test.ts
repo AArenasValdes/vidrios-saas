@@ -470,4 +470,26 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
     expect(resolved.estado).toBe("calculado");
     expect(resolved.formal?.result.perfiles.length).toBeGreaterThan(0);
   });
+
+  it("muestra el despiece congelado si el recálculo en vivo no encuentra receta", () => {
+    const live = resolveFabricacionDespieceForQuoteItem({
+      item: quoteItem({}),
+      recipes: [recipeRecord()],
+      organizationId: 1,
+    });
+    expect(live.formal).toBeTruthy();
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item: {
+        ...quoteItem({ withLine: false }),
+        fabricacionSnapshot: live.formal,
+      },
+      recipes: [],
+      organizationId: 1,
+    });
+
+    expect(resolved.estado).not.toBe("calculado");
+    expect(resolved.cubication?.cuts.length).toBeGreaterThan(0);
+    expect(resolved.formal).toEqual(live.formal);
+  });
 });

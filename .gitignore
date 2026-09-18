@@ -30,13 +30,18 @@
 .codex-*
 pdf-ref-shot.png
 tmp-*
+/tmp/zeta-auth/
+
+# Cursor local state. Las skills del workflow Zeta sí se versionan.
+.cursor/*
+!.cursor/skills/
+!.cursor/skills/**
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
-.cursor/
 hs_err_*.log
 replay_*.log
 

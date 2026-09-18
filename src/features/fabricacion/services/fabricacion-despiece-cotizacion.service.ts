@@ -5,9 +5,16 @@
  */
 
 import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
+import { isFabricacionRecipeReadyForSnapshot } from "@/features/fabricacion/services/fabricacion-line-variant.service";
 import { resolveFabricacionHojasForRecipeMatch } from "@/features/fabricacion/services/fabricacion-hojas-resolver.service";
 import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
-import { resolverRecetaFabricacionCompatible } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
+import { resolveFabricationRecipe } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
+import {
+  describeSodalL25PautaMessage,
+  isSodalL25CatalogKey,
+  resolveSodalL25QuoteConfig,
+} from "@/features/fabricacion/services/sodal-l25-context.service";
+import { resolveEffectiveSodalL25CatalogKey } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import { tieneLargosComercialesPendientes } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
 import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
@@ -21,6 +28,7 @@ export type FabricacionDespieceCotizacionEstado =
   | "sin_linea"
   | "sin_receta"
   | "multiples_recetas"
+  | "receta_incompleta"
   | "calculado";
 
 export type FabricacionDespieceCotizacionResult = {
@@ -49,6 +57,29 @@ function resolveLeavesCount(
   return resolveFabricacionHojasForRecipeMatch(item, presentation);
 }
 
+function attachFrozenDespieceFallback(
+  result: FabricacionDespieceCotizacionResult,
+  item: CotizacionWorkflowItem
+): FabricacionDespieceCotizacionResult {
+  if (result.cubication && result.cubication.cuts.length > 0) {
+    return result;
+  }
+  const frozen = item.fabricacionSnapshot;
+  if (!frozen || frozen.pauta.length === 0) {
+    return result;
+  }
+  return {
+    ...result,
+    cubication: fabricacionSnapshotToLegacyCubicationSnapshot(frozen),
+    formal: result.formal ?? frozen,
+    barsAvailable:
+      result.barsAvailable ||
+      Boolean(
+        frozen.pautaBarras?.calculable && (frozen.pautaBarras.barras?.length ?? 0) > 0
+      ),
+  };
+}
+
 /** El Constructor guarda sistema/config como "Personalizado"; no es apertura de receta. */
 export function resolveAperturaForRecipeMatch(
   fabricacionApertura: string | null | undefined,
@@ -72,8 +103,21 @@ export function resolveFabricacionDespieceForQuoteItem(input: {
   recipes: FabricationRecipeRecord[];
   organizationId: number | null;
 }): FabricacionDespieceCotizacionResult {
+  return attachFrozenDespieceFallback(
+    resolveLiveFabricacionDespieceForQuoteItem(input),
+    input.item
+  );
+}
+
+function resolveLiveFabricacionDespieceForQuoteItem(input: {
+  item: CotizacionWorkflowItem;
+  recipes: FabricationRecipeRecord[];
+  organizationId: number | null;
+}): FabricacionDespieceCotizacionResult {
   const presentation = decodeCotizacionItemPresentationMeta(input.item.observaciones);
-  const lineTemplateId = normalizeLineTemplateId(presentation.lineTemplateId);
+  const lineTemplateId =
+    normalizeLineTemplateId(presentation.lineTemplateId) ??
+    normalizeLineTemplateId(input.item.fabricacionSnapshot?.lineTemplateId);
   const ancho = Math.round(input.item.ancho ?? 0);
   const alto = Math.round(input.item.alto ?? 0);
   const cantidad = Math.max(1, Math.round(input.item.cantidad || 1));
@@ -128,18 +172,51 @@ export function resolveFabricacionDespieceForQuoteItem(input: {
     presentation.sistema
   );
   const hojas = resolveLeavesCount(input.item, presentation);
-  const resolution = resolverRecetaFabricacionCompatible(input.recipes, {
+  const catalogKey =
+    resolveEffectiveSodalL25CatalogKey({
+      catalogLineKey: presentation.catalogLineKey,
+      nombre: input.item.lineaComercial,
+    }) || null;
+  const sodalConfig = isSodalL25CatalogKey(catalogKey)
+    ? resolveSodalL25QuoteConfig({
+        catalogKey,
+        presentation,
+        vidrio: input.item.vidrio,
+        catalogEspesor: presentation.catalogEspesor,
+        catalogTerminacion: presentation.catalogTerminacion,
+        sheetScheme: presentation.sheetScheme,
+        fabricacionHojas: hojas,
+      })
+    : null;
+
+  if (sodalConfig && !sodalConfig.complete) {
+    return {
+      estado: "receta_incompleta",
+      formal: null,
+      cubication: null,
+      recipe: null,
+      barsAvailable: false,
+      preliminary: false,
+      message: describeSodalL25PautaMessage(sodalConfig),
+    };
+  }
+
+  const resolution = resolveFabricationRecipe(input.recipes, {
     organizationId: input.organizationId,
     lineTemplateId,
+    catalogKey,
     tipologia,
     hojas,
-    modulos: presentation.fabricacionModulos,
+    modulos: isSodalL25CatalogKey(catalogKey) ? 1 : presentation.fabricacionModulos,
     apertura,
     herraje: presentation.fabricacionHerraje || null,
-    variante: presentation.fabricacionVariante || null,
+    variante: sodalConfig?.variantSlug || presentation.fabricacionVariante || null,
+    glazing: sodalConfig?.glazing ?? null,
+    leg: sodalConfig?.leg ?? null,
+    reinforcement: sodalConfig?.reinforcement ?? null,
     preferredRecipeId: presentation.fabricationRecipeId || null,
     allowNonValidatedRecipeId: presentation.fabricationRecipeId || null,
-    allowPreliminaryNonValidated: true,
+    allowPreliminaryNonValidated: !isSodalL25CatalogKey(catalogKey),
   });
 
   if (resolution.estado === "multiples_recetas") {
@@ -170,6 +247,21 @@ export function resolveFabricacionDespieceForQuoteItem(input: {
   }
 
   const recipe = resolution.receta;
+  const readiness = isFabricacionRecipeReadyForSnapshot(recipe);
+  if (!readiness.ready) {
+    return {
+      estado: "receta_incompleta",
+      formal: null,
+      cubication: null,
+      recipe,
+      barsAvailable: false,
+      preliminary: true,
+      message:
+        readiness.message ??
+        "Configuración pendiente de completar para esta variante de fabricación.",
+    };
+  }
+
   const formal = construirSnapshotFabricacionCotizacion({
     recipe,
     entrada: {
@@ -185,7 +277,8 @@ export function resolveFabricacionDespieceForQuoteItem(input: {
     formal.pautaBarras?.calculable && (formal.pautaBarras.barras?.length ?? 0) > 0
   );
   const preliminary =
-    resolution.estado === "receta_no_validada" || recipe.status !== "validated";
+    resolution.estado === "receta_no_validada" ||
+    (recipe.status !== "validated" && !isSodalL25CatalogKey(catalogKey));
 
   const cubication = fabricacionSnapshotToLegacyCubicationSnapshot(formal);
 

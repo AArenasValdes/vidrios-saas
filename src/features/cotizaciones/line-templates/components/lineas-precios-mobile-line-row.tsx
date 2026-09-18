@@ -82,18 +82,18 @@ export function resolveFabricationActionLabel(
   needsPrice: boolean
 ): string {
   if (needsPrice) {
-    return "Cubicación y pauta";
+    return "Configurar fabricación";
   }
 
-  if (technicalStatus.tone === "validated" || technicalStatus.tone === "testing") {
-    return "Ver cubicación y pauta";
+  if (technicalStatus.tone === "validated") {
+    return "Ver fabricación";
   }
 
-  if (technicalStatus.tone === "draft") {
-    return "Continuar cubicación";
+  if (technicalStatus.tone === "testing" || technicalStatus.tone === "draft") {
+    return "Continuar fabricación";
   }
 
-  return "Cubicación y pauta (opcional)";
+  return "Configurar fabricación";
 }
 
 export function LineasPreciosMobileLineRow({
@@ -138,20 +138,19 @@ export function LineasPreciosMobileLineRow({
           </span>
         </div>
 
-        <div className={s.lineRowBottom}>
-          <div className={s.lineBottomLeading}>
-            {metaLine ? <span className={s.lineMeta}>{metaLine}</span> : null}
-            <button
-              type="button"
-              className={s.lineInlineAction}
-              onClick={(event) => {
-                event.stopPropagation();
-                onEditPrice();
-              }}
-            >
-              {needsPrice ? "Agregar precio" : "Editar precio"}
-            </button>
-          </div>
+        {metaLine ? <span className={s.lineMeta}>{metaLine}</span> : null}
+
+        <div className={s.lineRowFooter}>
+          <button
+            type="button"
+            className={s.lineInlineAction}
+            onClick={(event) => {
+              event.stopPropagation();
+              onEditPrice();
+            }}
+          >
+            {needsPrice ? "Agregar precio" : "Editar precio"}
+          </button>
 
           <div className={s.lineStatusGroup}>
             <span className={s.lineStatusChip} data-tone={commercialStatus.tone}>

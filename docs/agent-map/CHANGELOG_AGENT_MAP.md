@@ -2,6 +2,47 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-18 - Resumen de fabricación mobile sin acordeón
+
+- `/print/cotizaciones/[id]/fabricacion` en viewport ≤719px usa `fabricacion-resumen-movil.tsx`: lista de componentes, detalle (Resumen/Cortes/Despiece) y consolidado.
+- Desktop, print y PDF interno conservan `FabricacionResumenView` con bloques colapsables.
+- Sin cambios de motor, snapshots ni recetas.
+
+## 2026-09-18 - UX de fabricación: revisión por componente y consolidado
+
+- Se recupera la arquitectura de dos niveles sin tocar motor, snapshots ni recetas L25.
+- Paso 2 móvil: cards con estado compacto (`Fabricación lista` / `Configuración pendiente`); el estado abre `DespieceReviewSurface` en ese componente.
+- Acceso global **Revisar fabricación** (navigation row) cuando hay al menos un componente con perfilería.
+- `DespieceReviewSurface`: header **Revisión de fabricación** y segmented **Por componente | Consolidado**.
+- Paso 3 comercial: acción secundaria **Resumen de fabricación** hacia `/print/cotizaciones/[id]/fabricacion`. No se despliega la pauta dentro del resumen comercial.
+- Se elimina el bottom sheet intermedio card → Ver pauta → despiece.
+
+## 2026-09-18 - Recetas SODAL L25 canónicas (catálogo técnico Ventora)
+
+- Fuente canónica en código: `src/features/fabricacion/fixtures/sodal-l25-zeta-recipes.ts` + loader Zeta (`src/features/fabricacion/zeta/`).
+- Gate obligatorio: 22 tests @ 0 mm en `sodal-l25-zeta-recipes.test.ts` (18 canónicas + 4 extra geométricos 3H @ 2400×1500).
+- Seed/backfill idempotente: `seed-sodal-l25-recipes.ts` integrado en `seed-structural-draft-client.ts`; script `scripts/backfill-sodal-l25-recipes.ts`.
+- 18 recetas `validated` por org con `source_reference` `zeta:confirmed:sodal/l25/{recipeId}`; legacy L25 sin prefijo zeta se archiva al backfill.
+- Resolver unificado `resolveFabricationRecipe()` con identidad glazing × leg × reinforcement; despiece L25 usa solo recetas Zeta validated.
+- UI cotización: `FabricationVariantSelector` (pierna + refuerzo) en pauta desktop/mobile; metadata `[fgl:][flg:][frf:][lck:]`.
+
+## 2026-09-18 - Workflow de evidencia Sistema Zeta
+
+- Infraestructura de extracción/normalización/cobertura en `scripts/zeta/` y `docs/fabricacion/zeta/` (`targets.json`, `coverage.json`, `derived/`, `runs/`).
+- Las recetas L25 confirmed existentes no se reescriben. El extractor no implementa `fabrication_recipes`.
+- Comandos PNPM: `zeta:extract`, `zeta:validate`, `zeta:coverage`, `zeta:derive`.
+- Skills: `.cursor/skills/ventora-zeta-extractor/` y `.cursor/skills/ventora-fabrication-auditor/`.
+
+## 2026-09-17 - Variantes de fabricación por línea (5 bases Ventora)
+
+- Modelo genérico multi-variante sobre `fabrication_recipes`: misma `line_template_id` + `typology` + `leaves_count` + `variant` + `definition.*`. Sin nuevas tablas ni reactivación de `system_lines` / `materials`.
+- Catálogo de slots: `line-base-variant-catalog.ts` (L5000, L20, L25, AL-32, AL-42). L25 conserva 2H caracol intacta; 3H/4H reforzada · pierna abierta quedan como `draft` configurables sin fórmulas inventadas.
+- Servicios: `fabricacion-line-variant.service.ts` (matching comercial, árbol, seed, gate snapshot), `seed-line-variant-recipes.ts`, `fabricacion-hojas-resolver.service.ts` (prioriza `sheetScheme`; no fuerza `hojasBase` en Personalizado).
+- Editor: `FabricacionVariantTree` + workspace jerárquico por tipología/hojas/variante.
+- Cotización: matching real por hojas comerciales + selector **Variante de fabricación**; receta incompleta → `receta_incompleta` sin pauta falsa; cotización comercial sigue operativa.
+- Tests: `fabricacion-line-variant.service.test.ts` + regresión despiece/L25 3H-4H.
+- Docs: `FEATURES_MAP.md`, `DATA_MODEL_MAP.md`, `COMPONENTS_MAP.md`, `PAUTA_AUDITORIA_25_LINEAS.md`, `CUBICACION_PAUTA_HANDOFF.md`.
+
 ## 2026-09-15 - Condiciones comerciales y visibilidad de IVA en PDF (DB)
 
 - `20260915100000_quote_default_commercial_conditions.sql`: plantillas en `organization_profile` (`validez_predeterminada`, `condiciones_venta_predeterminadas`, `terminos_condiciones_predeterminados`) y snapshot por cotización (`condiciones_de_pago`, `condiciones_venta`, `terminos_condiciones`).

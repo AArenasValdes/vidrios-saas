@@ -934,7 +934,7 @@ export function QuoteConstructorWorkspace({
               className={s.reviewDespieceButton}
               onClick={() => openDespieceReview(activeItem?.id)}
             >
-              Revisar despiece
+              Revisar fabricación
             </button>
           ) : null}
           {!embeddedInQuoteStudio ? (

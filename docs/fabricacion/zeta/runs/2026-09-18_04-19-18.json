@@ -1,0 +1,32 @@
+{
+  "startedAt": "2026-09-18T07:18:05.377Z",
+  "finishedAt": "2026-09-18T07:19:18.299Z",
+  "command": "C:\\Program Files\\nodejs\\node.exe C:\\Users\\aless\\vidrios-saas\\scripts\\zeta\\extract.ts --live --nav=browser-use --manufacturer=SODAL --system=L25 --limit=1",
+  "mode": "live",
+  "targetsRequested": [
+    "dvh_pierna_abierta_2h_1800x1500"
+  ],
+  "processed": [
+    "dvh_pierna_abierta_2h_1800x1500"
+  ],
+  "confirmed": [],
+  "skipped": [],
+  "failed": [
+    "dvh_pierna_abierta_2h_1800x1500"
+  ],
+  "pending": [
+    "dvh_pierna_abierta_2h_1800x1500"
+  ],
+  "errors": [
+    {
+      "targetId": "dvh_pierna_abierta_2h_1800x1500",
+      "outcome": "CONFIGURATION_ERROR",
+      "message": "Comparación contra target falló."
+    }
+  ],
+  "notes": [
+    "Navegación principal: Browser Use (Chrome CDP del usuario). Playwright queda como fallback con --nav=playwright.",
+    "Reintento limpio 1/1 para dvh_pierna_abierta_2h_1800x1500 en proyecto nuevo.",
+    "Comparación contra target dvh_pierna_abierta_2h_1800x1500: DIFERENCIAS\n- [fail] line: esperado L-25 DVH PIERNA ABIERTA / actual (vacío)\n- [fail] leaves: esperado 2 / actual (vacío)\n- [fail] widthMm: esperado 1800 / actual (vacío)\n- [fail] heightMm: esperado 1500 / actual (vacío)\n- [fail] glassCode: esperado TE4104 / actual (vacío)\n- [fail] profiles: esperado >0 / actual 0\n- [fail] glass: esperado >0 / actual 0\n- [fail] hardware: esperado >0 / actual 0"
+  ]
+}

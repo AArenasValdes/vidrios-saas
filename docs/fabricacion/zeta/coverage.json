@@ -1,0 +1,235 @@
+{
+  "generatedAt": "2026-09-18T09:41:28.802Z",
+  "summary": {
+    "confirmed": 22,
+    "pending": 0,
+    "conflicts": 4,
+    "errors": 0,
+    "unsupported": 0,
+    "totalKnown": 22
+  },
+  "families": [
+    {
+      "manufacturer": "SODAL",
+      "system": "L25",
+      "line": "L-25 DVH PIERNA ABIERTA",
+      "variant": "DVH PIERNA ABIERTA",
+      "glazing": "dvh",
+      "leaves": {
+        "2": {
+          "status": "confirmed",
+          "recipeId": "dvh_pierna_abierta_2h_1800x1500",
+          "widthMm": 1800,
+          "heightMm": 1500,
+          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+        },
+        "3": {
+          "status": "confirmed",
+          "recipeId": "dvh_pierna_abierta_3h_3000x1500",
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+        },
+        "4": {
+          "status": "confirmed",
+          "recipeId": "dvh_pierna_abierta_4h_3000x1500",
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+        }
+      },
+      "extraTests": []
+    },
+    {
+      "manufacturer": "SODAL",
+      "system": "L25",
+      "line": "L-25 DVH PIERNA ABIERTA REFORZADA",
+      "variant": "DVH PIERNA ABIERTA REFORZADA",
+      "glazing": "dvh",
+      "leaves": {
+        "2": {
+          "status": "confirmed",
+          "recipeId": "dvh_pierna_abierta_reforzada_2h_1800x1500",
+          "widthMm": 1800,
+          "heightMm": 1500,
+          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+        },
+        "3": {
+          "status": "confirmed",
+          "recipeId": "dvh_pierna_abierta_reforzada_3h_3000x1500",
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+        },
+        "4": {
+          "status": "confirmed",
+          "recipeId": "dvh_pierna_abierta_reforzada_4h_3000x1500",
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+        }
+      },
+      "extraTests": [
+        {
+          "id": "dvh_pierna_abierta_reforzada_3h_2400x1500",
+          "leaves": 3,
+          "widthMm": 2400,
+          "heightMm": 1500,
+          "status": "confirmed",
+          "purpose": "formula_geometry"
+        }
+      ]
+    },
+    {
+      "manufacturer": "SODAL",
+      "system": "L25",
+      "line": "L-25 DVH PIERNA CERRADA",
+      "variant": "DVH PIERNA CERRADA",
+      "glazing": "dvh",
+      "leaves": {
+        "2": {
+          "status": "confirmed",
+          "recipeId": "dvh_pierna_cerrada_2h_1800x1500",
+          "widthMm": 1800,
+          "heightMm": 1500,
+          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+        },
+        "3": {
+          "status": "confirmed",
+          "recipeId": "dvh_pierna_cerrada_3h_3000x1500",
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+        },
+        "4": {
+          "status": "confirmed",
+          "recipeId": "dvh_pierna_cerrada_4h_3000x1500",
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+        }
+      },
+      "extraTests": [
+        {
+          "id": "dvh_pierna_cerrada_3h_2400x1500",
+          "leaves": 3,
+          "widthMm": 2400,
+          "heightMm": 1500,
+          "status": "confirmed",
+          "purpose": "formula_geometry"
+        }
+      ]
+    },
+    {
+      "manufacturer": "SODAL",
+      "system": "L25",
+      "line": "L-25 MONOLITICO PIERNA ABIERTA",
+      "variant": "MONOLITICO PIERNA ABIERTA",
+      "glazing": "monolitico",
+      "leaves": {
+        "2": {
+          "status": "confirmed",
+          "recipeId": "monolitico_pierna_abierta_2h_1800x1500",
+          "widthMm": 1800,
+          "heightMm": 1500,
+          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+        },
+        "3": {
+          "status": "confirmed",
+          "recipeId": "monolitico_pierna_abierta_3h_3000x1500",
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+        },
+        "4": {
+          "status": "confirmed",
+          "recipeId": "monolitico_pierna_abierta_4h_3000x1500",
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+        }
+      },
+      "extraTests": [
+        {
+          "id": "monolitico_pierna_abierta_3h_2400x1500",
+          "leaves": 3,
+          "widthMm": 2400,
+          "heightMm": 1500,
+          "status": "confirmed",
+          "purpose": "formula_geometry"
+        }
+      ]
+    },
+    {
+      "manufacturer": "SODAL",
+      "system": "L25",
+      "line": "L-25 MONOLITICO PIERNA ABIERTA REFORZADA",
+      "variant": "MONOLITICO PIERNA ABIERTA REFORZADA",
+      "glazing": "monolitico",
+      "leaves": {
+        "2": {
+          "status": "confirmed",
+          "recipeId": "monolitico_pierna_abierta_reforzada_2h_1800x1500",
+          "widthMm": 1800,
+          "heightMm": 1500,
+          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+        },
+        "3": {
+          "status": "confirmed",
+          "recipeId": "monolitico_pierna_abierta_reforzada_3h_3000x1500",
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+        },
+        "4": {
+          "status": "confirmed",
+          "recipeId": "monolitico_pierna_abierta_reforzada_4h_3000x1500",
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+        }
+      },
+      "extraTests": [
+        {
+          "id": "monolitico_pierna_abierta_reforzada_3h_2400x1500",
+          "leaves": 3,
+          "widthMm": 2400,
+          "heightMm": 1500,
+          "status": "confirmed",
+          "purpose": "formula_geometry"
+        }
+      ]
+    },
+    {
+      "manufacturer": "SODAL",
+      "system": "L25",
+      "line": "L-25 MONOLITICO PIERNA CERRADA",
+      "variant": "MONOLITICO PIERNA CERRADA",
+      "glazing": "monolitico",
+      "leaves": {
+        "2": {
+          "status": "confirmed",
+          "recipeId": "monolitico_pierna_cerrada_2h_1800x1500",
+          "widthMm": 1800,
+          "heightMm": 1500,
+          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+        },
+        "3": {
+          "status": "confirmed",
+          "recipeId": "monolitico_pierna_cerrada_3h_3000x1500",
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+        },
+        "4": {
+          "status": "confirmed",
+          "recipeId": "monolitico_pierna_cerrada_4h_3000x1500",
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+        }
+      },
+      "extraTests": []
+    }
+  ]
+}

@@ -1,0 +1,210 @@
+{
+  "generatedAt": "2026-09-18T09:41:33.027Z",
+  "statusNote": "Estas fórmulas son candidatas derivadas de confirmed/. Nunca se marcan validated solo por venir de Zeta.",
+  "formulas": [
+    {
+      "id": "sodal_l25_dvh_pierna_abierta_allh_2501",
+      "manufacturer": "SODAL",
+      "system": "L25",
+      "line": "L-25 DVH PIERNA ABIERTA",
+      "variant": "DVH PIERNA ABIERTA",
+      "profileCode": "2501",
+      "profileName": "2501 - RIEL SUPERIOR BLANCO",
+      "formula": "lengthMm = widthMm - 16",
+      "inputs": [
+        "widthMm",
+        "heightMm",
+        "leaves"
+      ],
+      "evidenceIds": [
+        "dvh_pierna_abierta_2h_1800x1500",
+        "dvh_pierna_abierta_3h_3000x1500",
+        "dvh_pierna_abierta_4h_3000x1500"
+      ],
+      "observations": [
+        {
+          "recipeId": "dvh_pierna_abierta_2h_1800x1500",
+          "leaves": 2,
+          "widthMm": 1800,
+          "heightMm": 1500,
+          "lengthMm": 1784,
+          "quantity": 1
+        },
+        {
+          "recipeId": "dvh_pierna_abierta_3h_3000x1500",
+          "leaves": 3,
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lengthMm": 2984,
+          "quantity": 1
+        },
+        {
+          "recipeId": "dvh_pierna_abierta_4h_3000x1500",
+          "leaves": 4,
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lengthMm": 2984,
+          "quantity": 1
+        }
+      ],
+      "confidence": "high",
+      "status": "candidate",
+      "notes": [
+        "Candidata derivada de observaciones Zeta. No validada en taller."
+      ]
+    },
+    {
+      "id": "sodal_l25_dvh_pierna_abierta_allh_2502",
+      "manufacturer": "SODAL",
+      "system": "L25",
+      "line": "L-25 DVH PIERNA ABIERTA",
+      "variant": "DVH PIERNA ABIERTA",
+      "profileCode": "2502",
+      "profileName": "2502 - RIEL INFERIOR BLANCO",
+      "formula": "lengthMm = widthMm - 16",
+      "inputs": [
+        "widthMm",
+        "heightMm",
+        "leaves"
+      ],
+      "evidenceIds": [
+        "dvh_pierna_abierta_2h_1800x1500",
+        "dvh_pierna_abierta_3h_3000x1500",
+        "dvh_pierna_abierta_4h_3000x1500"
+      ],
+      "observations": [
+        {
+          "recipeId": "dvh_pierna_abierta_2h_1800x1500",
+          "leaves": 2,
+          "widthMm": 1800,
+          "heightMm": 1500,
+          "lengthMm": 1784,
+          "quantity": 1
+        },
+        {
+          "recipeId": "dvh_pierna_abierta_3h_3000x1500",
+          "leaves": 3,
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lengthMm": 2984,
+          "quantity": 1
+        },
+        {
+          "recipeId": "dvh_pierna_abierta_4h_3000x1500",
+          "leaves": 4,
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lengthMm": 2984,
+          "quantity": 1
+        }
+      ],
+      "confidence": "high",
+      "status": "candidate",
+      "notes": [
+        "Candidata derivada de observaciones Zeta. No validada en taller."
+      ]
+    },
+    {
+      "id": "sodal_l25_monolitico_pierna_cerrada_allh_2501",
+      "manufacturer": "SODAL",
+      "system": "L25",
+      "line": "L-25 MONOLITICO PIERNA CERRADA",
+      "variant": "MONOLITICO PIERNA CERRADA",
+      "profileCode": "2501",
+      "profileName": "RIEL SUPERIOR BLANCO",
+      "formula": "lengthMm = widthMm - 16",
+      "inputs": [
+        "widthMm",
+        "heightMm",
+        "leaves"
+      ],
+      "evidenceIds": [
+        "monolitico_pierna_cerrada_2h_1800x1500",
+        "monolitico_pierna_cerrada_3h_3000x1500",
+        "monolitico_pierna_cerrada_4h_3000x1500"
+      ],
+      "observations": [
+        {
+          "recipeId": "monolitico_pierna_cerrada_2h_1800x1500",
+          "leaves": 2,
+          "widthMm": 1800,
+          "heightMm": 1500,
+          "lengthMm": 1784,
+          "quantity": 1
+        },
+        {
+          "recipeId": "monolitico_pierna_cerrada_3h_3000x1500",
+          "leaves": 3,
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lengthMm": 2984,
+          "quantity": 1
+        },
+        {
+          "recipeId": "monolitico_pierna_cerrada_4h_3000x1500",
+          "leaves": 4,
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lengthMm": 2984,
+          "quantity": 1
+        }
+      ],
+      "confidence": "high",
+      "status": "candidate",
+      "notes": [
+        "Candidata derivada de observaciones Zeta. No validada en taller."
+      ]
+    },
+    {
+      "id": "sodal_l25_monolitico_pierna_cerrada_allh_2502",
+      "manufacturer": "SODAL",
+      "system": "L25",
+      "line": "L-25 MONOLITICO PIERNA CERRADA",
+      "variant": "MONOLITICO PIERNA CERRADA",
+      "profileCode": "2502",
+      "profileName": "RIEL INFERIOR BLANCO",
+      "formula": "lengthMm = widthMm - 16",
+      "inputs": [
+        "widthMm",
+        "heightMm",
+        "leaves"
+      ],
+      "evidenceIds": [
+        "monolitico_pierna_cerrada_2h_1800x1500",
+        "monolitico_pierna_cerrada_3h_3000x1500",
+        "monolitico_pierna_cerrada_4h_3000x1500"
+      ],
+      "observations": [
+        {
+          "recipeId": "monolitico_pierna_cerrada_2h_1800x1500",
+          "leaves": 2,
+          "widthMm": 1800,
+          "heightMm": 1500,
+          "lengthMm": 1784,
+          "quantity": 1
+        },
+        {
+          "recipeId": "monolitico_pierna_cerrada_3h_3000x1500",
+          "leaves": 3,
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lengthMm": 2984,
+          "quantity": 1
+        },
+        {
+          "recipeId": "monolitico_pierna_cerrada_4h_3000x1500",
+          "leaves": 4,
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lengthMm": 2984,
+          "quantity": 1
+        }
+      ],
+      "confidence": "high",
+      "status": "candidate",
+      "notes": [
+        "Candidata derivada de observaciones Zeta. No validada en taller."
+      ]
+    }
+  ]
+}

@@ -22,6 +22,11 @@ import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/s
 import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 import { formatMeasurePairFromMm } from "@/features/organization-profile/services/measure-unit.service";
+import {
+  formatLineTemplateQuotePickerLabel,
+  resolveCotizacionItemSodalL25LineDisplayLabel,
+} from "@/features/fabricacion/services/sodal-l25-presentation.service";
+import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 
 import { useMobileViewportStability } from "../../../_hooks/use-mobile-viewport-stability";
@@ -400,7 +405,7 @@ export function PasoDosCuadernoMovil({
                       className={`${s.lineChoice} ${active ? s.lineChoiceActive : ""}`}
                       onClick={() => setDefaultLineTemplateId(String(template.id))}
                     >
-                      <strong>{template.nombre}</strong>
+                      <strong>{formatLineTemplateQuotePickerLabel(template)}</strong>
                       <span>
                         {[template.proveedor, template.material, template.unidadCobro]
                           .filter(Boolean)
@@ -481,9 +486,23 @@ export function PasoDosCuadernoMovil({
                     · ×
                     {Math.max(1, item.cantidad)}
                   </p>
-                  {item.lineaComercial.trim() ? (
-                    <p className={s.pieceLine}>{item.lineaComercial.trim()}</p>
-                  ) : null}
+                  {(() => {
+                    const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+                    const lineLabel =
+                      resolveCotizacionItemSodalL25LineDisplayLabel({
+                        catalogLineKey: meta.catalogLineKey,
+                        referencia: meta.referencia,
+                        lineaComercial: item.lineaComercial,
+                        fabricacionHojas: meta.fabricacionHojas,
+                        sheetScheme: meta.sheetScheme,
+                        hojasBase: meta.hojasBase,
+                        fabricacionGlazing: meta.fabricacionGlazing,
+                        fabricacionLeg: meta.fabricacionLeg,
+                        fabricacionReinforcement: meta.fabricacionReinforcement,
+                        fabricacionVariante: meta.fabricacionVariante,
+                      }) ?? item.lineaComercial.trim();
+                    return lineLabel ? <p className={s.pieceLine}>{lineLabel}</p> : null;
+                  })()}
                   <span className={`${s.badge} ${badgeClass(view.priorityStatus)}`}>
                     {view.priorityLabel}
                   </span>

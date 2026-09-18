@@ -1,0 +1,24 @@
+{
+  "startedAt": "2026-09-18T06:43:44.847Z",
+  "finishedAt": "2026-09-18T06:43:44.887Z",
+  "command": "C:\\Program Files\\nodejs\\node.exe C:\\Users\\aless\\vidrios-saas\\scripts\\zeta\\extract.ts --self-check",
+  "mode": "self-check",
+  "targetsRequested": [
+    "monolitico_pierna_abierta_2h_1800x1500"
+  ],
+  "processed": [
+    "monolitico_pierna_abierta_2h_1800x1500"
+  ],
+  "confirmed": [
+    "monolitico_pierna_abierta_2h_1800x1500"
+  ],
+  "skipped": [],
+  "failed": [],
+  "pending": [],
+  "errors": [],
+  "notes": [
+    "Comparación monolitico_pierna_abierta_2h_1800x1500: OK\n- Sin diferencias esenciales.",
+    "Self-check no escribió ni modificó confirmed/.",
+    "Evidencia de self-check en docs/fabricacion/zeta/raw/sodal/l25/monolitico_pierna_abierta_2h_1800x1500__self-check (no reemplaza confirmed)."
+  ]
+}

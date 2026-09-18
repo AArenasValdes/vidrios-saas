@@ -13,6 +13,7 @@ import { DespieceReviewSurface } from "@/features/cotizaciones/visual-composer/c
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import { sanitizeFileNamePart } from "@/utils/sanitize-file-name";
 
+import { FabricacionResumenMovil } from "./fabricacion-resumen-movil";
 import { FabricacionResumenView } from "./fabricacion-resumen-view";
 import s from "./page.module.css";
 
@@ -116,6 +117,7 @@ export default function CotizacionFabricacionPrintPage() {
     setIsExporting(true);
     setExportError(null);
     documentRef.current.classList.add(s.exporting);
+    printRootRef.current?.classList.add(s.exportingRoot);
     try {
       await new Promise<void>((resolve) => {
         window.requestAnimationFrame(() => {
@@ -141,6 +143,7 @@ export default function CotizacionFabricacionPrintPage() {
       setExportError(formatCotizacionPdfError(error));
     } finally {
       documentRef.current?.classList.remove(s.exporting);
+      printRootRef.current?.classList.remove(s.exportingRoot);
       setIsExporting(false);
     }
   }, [fileName]);
@@ -170,23 +173,40 @@ export default function CotizacionFabricacionPrintPage() {
   return (
     <main ref={printRootRef} className={s.printRoot} data-fabricacion-print="1">
       <div className={s.workspace}>
-        <FabricacionResumenView
-          backHref={`/cotizaciones/${params.id}`}
-          pdfHref={`/print/cotizaciones/${params.id}`}
-          codigo={cotizacion.codigo}
-          clienteNombre={cotizacion.clienteNombre}
-          obra={cotizacion.obra}
-          summary={summary}
-          items={cotizacion.items}
-          expandedItemId={expandedItemId}
-          onToggleItem={handleToggleItem}
-          onOpenDespiece={handleOpenDespiece}
-          isExporting={isExporting}
-          exportError={exportError}
-          documentRef={documentRef}
-          onDownload={() => void handleDownload()}
-          onPrint={handlePrint}
-        />
+        <div className={s.desktopFabricacion} data-testid="fabricacion-desktop">
+          <FabricacionResumenView
+            backHref={`/cotizaciones/${params.id}`}
+            pdfHref={`/print/cotizaciones/${params.id}`}
+            codigo={cotizacion.codigo}
+            clienteNombre={cotizacion.clienteNombre}
+            obra={cotizacion.obra}
+            summary={summary}
+            items={cotizacion.items}
+            expandedItemId={expandedItemId}
+            onToggleItem={handleToggleItem}
+            onOpenDespiece={handleOpenDespiece}
+            isExporting={isExporting}
+            exportError={exportError}
+            documentRef={documentRef}
+            onDownload={() => void handleDownload()}
+            onPrint={handlePrint}
+          />
+        </div>
+        <div className={s.mobileFabricacion}>
+          <FabricacionResumenMovil
+            backHref={`/cotizaciones/${params.id}`}
+            pdfHref={`/print/cotizaciones/${params.id}`}
+            codigo={cotizacion.codigo}
+            clienteNombre={cotizacion.clienteNombre}
+            obra={cotizacion.obra}
+            summary={summary}
+            items={cotizacion.items}
+            isExporting={isExporting}
+            exportError={exportError}
+            onDownload={() => void handleDownload()}
+            onPrint={handlePrint}
+          />
+        </div>
       </div>
 
       <DespieceReviewSurface

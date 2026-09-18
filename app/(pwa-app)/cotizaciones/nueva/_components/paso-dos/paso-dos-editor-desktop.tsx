@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useMemo, useState } from "react";
 import { LuX, LuCheck, LuPencil, LuSearch } from "react-icons/lu";
@@ -1062,6 +1062,13 @@ function TabDespiece({
             onComponentChange("fabricacionApertura", context.apertura);
             onComponentChange("fabricacionHerraje", context.herraje);
             onComponentChange("fabricacionVariante", context.variante);
+          }}
+          onFabricacionL25ConfigChange={(value) => {
+            onComponentChange("catalogLineKey", value.catalogLineKey);
+            onComponentChange("fabricacionGlazing", value.fabricacionGlazing);
+            onComponentChange("fabricacionLeg", value.fabricacionLeg);
+            onComponentChange("fabricacionReinforcement", value.fabricacionReinforcement);
+            onComponentChange("fabricacionVariante", value.fabricacionVariante);
           }}
           onSaveCubicationLineAdjustment={onSaveCubicationLineAdjustment}
           isSavingCubicationLineAdjustment={isSavingCubicationLineAdjustment}

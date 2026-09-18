@@ -1,8 +1,18 @@
+import {
+  buildSodalL25VariantSlug,
+  SODAL_L25_CATALOG_KEY,
+  type SodalL25GlazingSlug,
+  type SodalL25LegSlug,
+  type SodalL25ReinforcementSlug,
+} from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
+import { isZetaConfirmedSourceReference } from "@/features/fabricacion/zeta/zeta-confirmed-loader";
 import type { FabricacionTipologia } from "@/features/fabricacion/types/fabricacion-domain";
 import type {
   FabricationRecipeRecord,
   FabricationRecipeStatus,
 } from "@/features/fabricacion/types/fabricacion-persistence";
+
+export { SODAL_L25_CATALOG_KEY };
 
 export type FabricacionRecetaResolucionInput = {
   organizationId: number | null;
@@ -18,6 +28,69 @@ export type FabricacionRecetaResolucionInput = {
   /** Cotización/UI: si no hay validada, permite una compatible en borrador/prueba. */
   allowPreliminaryNonValidated?: boolean;
 };
+
+export type ResolveFabricationRecipeInput = FabricacionRecetaResolucionInput & {
+  catalogKey?: string | null;
+  glazing?: SodalL25GlazingSlug | null;
+  leg?: SodalL25LegSlug | null;
+  reinforcement?: SodalL25ReinforcementSlug | null;
+};
+
+export function isSodalL25ZetaValidatedRecipe(recipe: FabricationRecipeRecord): boolean {
+  return (
+    recipe.status === "validated" &&
+    isZetaConfirmedSourceReference(recipe.sourceReference) &&
+    !recipe.eliminadoEn
+  );
+}
+
+export function filterRecipesForCatalogResolution(
+  recipes: FabricationRecipeRecord[],
+  catalogKey: string | null | undefined
+): FabricationRecipeRecord[] {
+  if (catalogKey !== SODAL_L25_CATALOG_KEY) {
+    return recipes;
+  }
+
+  const zetaValidated = recipes.filter((recipe) => isSodalL25ZetaValidatedRecipe(recipe));
+  if (zetaValidated.length > 0) {
+    return zetaValidated;
+  }
+
+  return recipes.filter(
+    (recipe) => !recipe.eliminadoEn && recipe.status !== "archived"
+  );
+}
+
+export function resolveFabricationRecipe(
+  recipes: FabricationRecipeRecord[],
+  input: ResolveFabricationRecipeInput
+): FabricacionRecetaResolucion {
+  const filtered = filterRecipesForCatalogResolution(recipes, input.catalogKey);
+  let variante = input.variante;
+
+  if (
+    input.catalogKey === SODAL_L25_CATALOG_KEY &&
+    input.glazing &&
+    input.leg &&
+    input.reinforcement
+  ) {
+    variante = buildSodalL25VariantSlug({
+      glazing: input.glazing,
+      leg: input.leg,
+      reinforcement: input.reinforcement,
+    });
+  }
+
+  return resolverRecetaFabricacionCompatible(filtered, {
+    ...input,
+    variante,
+    allowPreliminaryNonValidated:
+      input.catalogKey === SODAL_L25_CATALOG_KEY
+        ? false
+        : input.allowPreliminaryNonValidated,
+  });
+}
 
 export type FabricacionRecetaDescartada = {
   recipeId: string;

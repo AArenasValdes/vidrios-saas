@@ -103,6 +103,7 @@ export function buildComponentPreviewInputFromWorkflowItem(
     height: item.alto,
     colorHex: meta.colorHex,
     material: meta.material,
+    hojasBase: (meta.fabricacionHojas as 1 | 2 | 3 | 4 | 5 | null) ?? meta.hojasBase ?? null,
     sheetScheme: meta.sheetScheme,
     sheetVariant: meta.sheetVariant,
     customSchemeDescription: meta.customSchemeDescription,

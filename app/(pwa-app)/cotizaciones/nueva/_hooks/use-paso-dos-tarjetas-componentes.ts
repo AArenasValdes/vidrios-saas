@@ -12,6 +12,7 @@ import {
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { resolveCotizacionItemSodalL25LineDisplayLabel } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import { generateComponentSVG } from "@/utils/window-drawings";
 import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
 import { describeGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
@@ -75,8 +76,28 @@ export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponen
           mirrorPaneDirection,
           mirrorInteriorLine,
           guidedVisualConfig,
+          catalogLineKey,
+          fabricacionHojas,
+          hojasBase,
+          fabricacionGlazing,
+          fabricacionLeg,
+          fabricacionReinforcement,
+          fabricacionVariante,
         } =
           decodeCotizacionItemPresentationMeta(item.observaciones);
+        const sodalLineLabel = resolveCotizacionItemSodalL25LineDisplayLabel({
+          catalogLineKey,
+          referencia,
+          lineaComercial: item.lineaComercial,
+          fabricacionHojas,
+          sheetScheme,
+          hojasBase,
+          fabricacionGlazing,
+          fabricacionLeg,
+          fabricacionReinforcement,
+          fabricacionVariante,
+        });
+        const lineReferenceLabel = sodalLineLabel ?? referencia;
         const effectiveDraft = params.borradoresRapidos[item.id];
         const effectiveItem = item;
         const isFreeValueItem =
@@ -111,8 +132,8 @@ export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponen
           : buildDesktopListConfiguration({
               configuracion,
               sistema,
-              referencia,
-              lineaComercial: effectiveItem.lineaComercial,
+              referencia: lineReferenceLabel,
+              lineaComercial: sodalLineLabel ?? effectiveItem.lineaComercial,
               descripcion: effectiveItem.descripcion,
             });
         const measuresLabel =

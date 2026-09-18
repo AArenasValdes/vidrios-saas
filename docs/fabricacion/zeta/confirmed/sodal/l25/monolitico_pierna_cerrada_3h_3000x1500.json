@@ -1,0 +1,39 @@
+{
+  "manufacturer": "SODAL",
+  "system": "L25",
+  "variant": "MONOLITICO PIERNA CERRADA",
+  "zeta_line": "L-25 MONOLITICO PIERNA CERRADA",
+  "glazing": "monolitico",
+  "leaves": 3,
+  "source": "Sistema Zeta",
+  "evidence": "plan_de_armado",
+  "plan": "PA-45",
+  "status": "confirmed",
+  "test_dimensions": { "width_mm": 3000, "height_mm": 1500 },
+  "profiles": [
+    { "code": "2501", "name": "2501 - RIEL SUPERIOR BLANCO", "quantity": 1, "length_mm": 2984, "cut_1_deg": 90, "cut_2_deg": 90, "position": "Arriba" },
+    { "code": "2502", "name": "2502 - RIEL INFERIOR BLANCO", "quantity": 1, "length_mm": 2984, "cut_1_deg": 90, "cut_2_deg": 90, "position": "Abajo" },
+    { "code": "2504", "name": "2504 - CABEZAL BLANCO", "quantity": 3, "length_mm": 1014, "cut_1_deg": 90, "cut_2_deg": 90, "position": "Arriba" },
+    { "code": "2505", "name": "2505 - ZOCALO BLANCO", "quantity": 3, "length_mm": 1014, "cut_1_deg": 90, "cut_2_deg": 90, "position": "Abajo" },
+    { "code": "2507", "name": "2507 - TRASLAPO VENTANA BLANCO", "quantity": 4, "length_mm": 1465, "cut_1_deg": 90, "cut_2_deg": 90, "position": "Derecha, Izquierda" },
+    { "code": "2509", "name": "2509 - JAMBA BLANCO", "quantity": 2, "length_mm": 1500, "cut_1_deg": 90, "cut_2_deg": 90, "position": "Izquierda, Derecha" },
+    { "code": "2510", "name": "2510 - PIERNA - CERRADA BLANCO", "quantity": 2, "length_mm": 1465, "cut_1_deg": 90, "cut_2_deg": 90, "position": "Izquierda, Derecha" }
+  ],
+  "glass": [
+    { "code": "CTI5", "name": "Cristal Templado Incoloro 5mm", "quantity": 2, "width_mm": 945, "height_mm": 1372 },
+    { "code": "CTI5", "name": "Cristal Templado Incoloro 5mm", "quantity": 1, "width_mm": 958, "height_mm": 1372 }
+  ],
+  "hardware": [
+    { "code": "GUIA-L25", "name": "GUIA L25/8000", "quantity": 6, "unit": "PZA" },
+    { "code": "PES7411", "name": "Pestillo 7411/A/37/NEGRO S/LL (180)", "quantity": 2, "unit": "PZA" },
+    { "code": "18000000985", "name": "CAJA REG DOBLE BOLAS P/2505 NACIONAL 25KG ZINCALUM", "quantity": 6, "unit": "PZA" },
+    { "code": "TRLCB348", "name": "TORNILLO RL CB PH 3/4\" X 8", "quantity": 24, "unit": "PZA" },
+    { "code": "TORN-GUIA", "name": "TORNILLO PARA GUIA", "quantity": 12, "unit": "PZA" },
+    { "code": "TORN-PEST", "name": "TORNILLO PARA PESTILLO", "quantity": 4, "unit": "PZA" },
+    { "code": "TORN-CAJA", "name": "TORNILLO PARA CAJA", "quantity": 12, "unit": "PZA" },
+    { "code": "18000001116", "name": "BURLETE 305 (5MM)", "quantity": 14, "unit": "M" },
+    { "code": "FELPA7x6gen", "name": "Felpa 7x6 3P", "quantity": 25, "unit": "M" },
+    { "code": "07012STY", "name": "Sellotec 20 Silicona Neutra c/fung 300 ml BLANCO", "quantity": 2, "unit": "TUBO" },
+    { "code": "TORINSEST", "name": "Tornillo instalacion S/T/ESTRELLA", "quantity": 22, "unit": "PZA" }
+  ]
+}

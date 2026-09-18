@@ -61,6 +61,10 @@ export type CotizacionItemPresentationMeta = {
   fabricacionApertura: string;
   fabricacionHerraje: string;
   fabricacionVariante: string;
+  catalogLineKey: string;
+  fabricacionGlazing: string;
+  fabricacionLeg: string;
+  fabricacionReinforcement: string;
   fabricationRecipeId: string;
   raw: string;
 };
@@ -270,6 +274,10 @@ export function encodeCotizacionItemPresentationMeta(input: {
   fabricacionApertura?: string | null;
   fabricacionHerraje?: string | null;
   fabricacionVariante?: string | null;
+  catalogLineKey?: string | null;
+  fabricacionGlazing?: string | null;
+  fabricacionLeg?: string | null;
+  fabricacionReinforcement?: string | null;
   fabricationRecipeId?: string | null;
   raw?: string;
 }) {
@@ -360,6 +368,18 @@ export function encodeCotizacionItemPresentationMeta(input: {
   const fabricacionVariante = (input.fabricacionVariante ?? "")
     .trim()
     .replace(/\]/g, "");
+  const catalogLineKey = (input.catalogLineKey ?? "")
+    .trim()
+    .replace(/\]/g, "");
+  const fabricacionGlazing = (input.fabricacionGlazing ?? "")
+    .trim()
+    .replace(/\]/g, "");
+  const fabricacionLeg = (input.fabricacionLeg ?? "")
+    .trim()
+    .replace(/\]/g, "");
+  const fabricacionReinforcement = (input.fabricacionReinforcement ?? "")
+    .trim()
+    .replace(/\]/g, "");
   const fabricationRecipeId = (input.fabricationRecipeId ?? "")
     .trim()
     .replace(/\]/g, "");
@@ -408,6 +428,10 @@ export function encodeCotizacionItemPresentationMeta(input: {
     `[fap:${fabricacionApertura}]` +
     `[fhe:${fabricacionHerraje}]` +
     `[fv:${fabricacionVariante}]` +
+    `[lck:${catalogLineKey}]` +
+    `[fgl:${fabricacionGlazing}]` +
+    `[flg:${fabricacionLeg}]` +
+    `[frf:${fabricacionReinforcement}]` +
     `[frid:${fabricationRecipeId}]` +
     `[cub:${cubicationSnapshot}]`;
 
@@ -497,6 +521,14 @@ export function decodeCotizacionItemPresentationMeta(
     source.match(/\[fhe:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const fabricacionVariante =
     source.match(/\[fv:([^\]]*)\]/)?.[1]?.trim() ?? "";
+  const catalogLineKey =
+    source.match(/\[lck:([^\]]*)\]/)?.[1]?.trim() ?? "";
+  const fabricacionGlazing =
+    source.match(/\[fgl:([^\]]*)\]/)?.[1]?.trim() ?? "";
+  const fabricacionLeg =
+    source.match(/\[flg:([^\]]*)\]/)?.[1]?.trim() ?? "";
+  const fabricacionReinforcement =
+    source.match(/\[frf:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const fabricationRecipeId =
     source.match(/\[frid:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const cubicationSnapshot = parseCubicationSnapshot(
@@ -548,6 +580,10 @@ export function decodeCotizacionItemPresentationMeta(
     .replace(/\[fap:[^\]]*\]/g, "")
     .replace(/\[fhe:[^\]]*\]/g, "")
     .replace(/\[fv:[^\]]*\]/g, "")
+    .replace(/\[lck:[^\]]*\]/g, "")
+    .replace(/\[fgl:[^\]]*\]/g, "")
+    .replace(/\[flg:[^\]]*\]/g, "")
+    .replace(/\[frf:[^\]]*\]/g, "")
     .replace(/\[frid:[^\]]*\]/g, "")
     .replace(/\[cub:[^\]]*\]/g, "")
     .trim();
@@ -595,6 +631,10 @@ export function decodeCotizacionItemPresentationMeta(
     fabricacionApertura,
     fabricacionHerraje,
     fabricacionVariante,
+    catalogLineKey,
+    fabricacionGlazing,
+    fabricacionLeg,
+    fabricacionReinforcement,
     fabricationRecipeId,
     raw,
   };

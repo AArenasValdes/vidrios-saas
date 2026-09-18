@@ -126,6 +126,7 @@ function createWizard(overrides: Partial<WizardActions> = {}): WizardActions {
     onAddAlcanceDetalle: jest.fn(),
     onUpdateAlcanceDetalle: jest.fn(),
     onRemoveAlcanceDetalle: jest.fn(),
+    onFabricacionL25ConfigChange: jest.fn(),
     ...overrides,
   };
 }

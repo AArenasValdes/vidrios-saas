@@ -1,0 +1,31 @@
+{
+  "startedAt": "2026-09-18T07:23:05.931Z",
+  "finishedAt": "2026-09-18T07:24:57.297Z",
+  "command": "C:\\Program Files\\nodejs\\node.exe C:\\Users\\aless\\vidrios-saas\\scripts\\zeta\\extract.ts --live --nav=browser-use --manufacturer=SODAL --system=L25 --limit=1",
+  "mode": "live",
+  "targetsRequested": [
+    "dvh_pierna_abierta_2h_1800x1500"
+  ],
+  "processed": [
+    "dvh_pierna_abierta_2h_1800x1500"
+  ],
+  "confirmed": [],
+  "skipped": [],
+  "failed": [
+    "dvh_pierna_abierta_2h_1800x1500"
+  ],
+  "pending": [
+    "dvh_pierna_abierta_2h_1800x1500"
+  ],
+  "errors": [
+    {
+      "targetId": "dvh_pierna_abierta_2h_1800x1500",
+      "outcome": "AUTOMATION_ERROR",
+      "message": "Browser Use exit 1: Traceback (most recent call last):\r\n  File \"C:\\Users\\aless\\AppData\\Roaming\\uv\\tools\\browser-use\\Lib\\site-packages\\browser_harness\\helpers.py\", line 57, in _send\r\n    r = ipc.request(c, token, req)\r\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"C:\\Users\\aless\\AppData\\Roaming\\uv\\tools\\browser-use\\Lib\\site-packages\\browser_harness\\_ipc.py\", line 103, in request\r\n    chunk = c.recv(1 << 16)\r\n            ^^^^^^^^^^^^^^^\r\nTimeoutError: timed out\r\n\r\nThe above exception was the direct cause of the following exception:\r\n\r\nTraceback (most recent call last):\r\n  File \"C:\\Users\\aless\\AppData\\Roaming\\uv\\tools\\browser-use\\Lib\\site-packages\\browser_harness\\helpers.py\", line 336, in capture_screenshot\r\n    r = cdp(\r\n        ^^^^\r\n  File \"C:\\Users\\aless\\AppData\\Roaming\\uv\\tools\\browser-use\\Lib\\site-packages\\browser_harness\\helpers.py\", line 74, in cdp\r\n    return _send(\r\n           ^^^^^^\r\n  File \"C:\\Users\\aless\\AppData\\Roaming\\uv\\tools\\browser-use\\Lib\\site-packages\\browser_harness\\helpers.py\", line 63, in _send\r\n    raise _IPCResponseTimeout(\r\nbrowser_harness.helpers._IPCResponseTimeout: Page.captureScreenshot timed out after 60s waiting for the daemon\r\n\r\nThe above exception was the direct cause of the following exception:\r\n\r\nTraceback (most recent call last):\r\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\r\n  File \"<frozen runpy>\", line 88, in _run_code\r\n  File \"C:\\Users\\aless\\.local\\bin\\browser-use.exe\\__main__.py\", line 10, in <module>\r\n  File \"C:\\Users\\aless\\AppData\\Roaming\\uv\\tools\\browser-use\\Lib\\site-packages\\browser_use\\cli.py\", line 433, in main\r\n    result, command = _dispatch(args)\r\n                      ^^^^^^^^^^^^^^^\r\n  File \"C:\\Users\\aless\\AppData\\Roaming\\uv\\tools\\browser-use\\Lib\\site-packages\\browser_use\\cli.py\", line 391, in _dispatch\r\n    return _run_browser_harness(), args[0] if args else 'run'\r\n           ^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"C:\\Users\\aless\\AppData\\Roaming\\uv\\tools\\browser-use\\Lib\\site-packages\\browser_use\\cli.py\", line 201, in _run_browser_harness\r\n    run.main()\r\n  File \"C:\\Users\\aless\\AppData\\Roaming\\uv\\tools\\browser-use\\Lib\\site-packages\\browser_harness\\run.py\", line 255, in main\r\n    _run(args)\r\n  File \"C:\\Users\\aless\\AppData\\Roaming\\uv\\tools\\browser-use\\Lib\\site-packages\\browser_harness\\run.py\", line 406, in _run\r\n    exec(code, globals())\r\n  File \"<string>\", line 37, in <module>\r\n  File \"C:\\Users\\aless\\AppData\\Roaming\\uv\\tools\\browser-use\\Lib\\site-packages\\browser_harness\\run.py\", line 168, in wrapper\r\n    result = fn(*args, **kwargs)\r\n             ^^^^^^^^^^^^^^^^^^^\r\n  File \"C:\\Users\\aless\\AppData\\Roaming\\uv\\tools\\browser-use\\Lib\\site-packages\\browser_harness\\helpers.py\", line 343, in capture_screenshot\r\n    raise RuntimeError(\r\nRuntimeError: Page.captureScreenshot timed out after 60s\r\n"
+    }
+  ],
+  "notes": [
+    "Navegación principal: Browser Use (Chrome CDP del usuario). Playwright queda como fallback con --nav=playwright.",
+    "Reintento limpio 1/1 para dvh_pierna_abierta_2h_1800x1500 en proyecto nuevo."
+  ]
+}

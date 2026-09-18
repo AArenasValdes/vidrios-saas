@@ -8,8 +8,8 @@ import {
   LuFileCheck2,
   LuPencil,
   LuPlus,
-  LuRuler,
   LuSave,
+  LuWrench,
 } from "react-icons/lu";
 
 import { STATUS_COPY } from "@/features/cotizaciones/new-quote/workflow-ui";
@@ -153,7 +153,7 @@ export function PasoTresPanelAcciones({
               href={`/print/cotizaciones/${savedRecord.id}/fabricacion`}
               target="_blank"
             >
-              <LuRuler aria-hidden /> Despiece y pauta
+              <LuWrench aria-hidden /> Despiece y pauta
             </Link>
             <Link className={s.btnGhost} href="/configuracion/empresa?inicio=1">
               <LuBuilding2 aria-hidden /> Agregar mis datos de empresa

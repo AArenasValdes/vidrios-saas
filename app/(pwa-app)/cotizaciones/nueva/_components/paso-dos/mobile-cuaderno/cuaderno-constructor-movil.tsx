@@ -470,9 +470,9 @@ export function CuadernoConstructorMovil({
                             onClick={() => onOpenDespieceReview(item.id)}
                           >
                             <span>
-                              <p className={s.constructorLinkTitle}>Ver cortes y tiras</p>
+                              <p className={s.constructorLinkTitle}>Revisar fabricación</p>
                               <p className={s.constructorLinkHelp}>
-                                Pauta de corte y consolidado (solo lectura, no va al PDF).
+                                Por componente y consolidado. No va al PDF del cliente.
                               </p>
                             </span>
                             <LuPencilRuler size={18} aria-hidden />

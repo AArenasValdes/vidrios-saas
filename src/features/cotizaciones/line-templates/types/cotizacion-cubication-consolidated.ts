@@ -333,7 +333,7 @@ export function buildConsolidatedCubicationPauta(
   return finalizePauta(rowMap, glassMap, lineMeta, barLengthCounts, totals);
 }
 
-/** Consolida snapshots ya resueltos (p. ej. receta viva en Revisión de despiece). */
+/** Consolida snapshots ya resueltos (p. ej. receta viva en Revisión de fabricación). */
 export function buildConsolidatedCubicationPautaFromSnapshots(
   carriers: readonly SnapshotCarrier[]
 ): ConsolidatedCubicationPauta {

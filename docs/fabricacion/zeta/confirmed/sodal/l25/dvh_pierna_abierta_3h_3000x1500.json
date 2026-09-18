@@ -1,0 +1,39 @@
+{
+  "manufacturer": "SODAL",
+  "system": "L25",
+  "variant": "DVH PIERNA ABIERTA",
+  "zeta_line": "L-25 DVH PIERNA ABIERTA",
+  "glazing": "dvh",
+  "leaves": 3,
+  "source": "Sistema Zeta",
+  "evidence": "plan_de_armado",
+  "plan": "PA-47",
+  "status": "confirmed",
+  "test_dimensions": { "width_mm": 3000, "height_mm": 1500 },
+  "profiles": [
+    { "code": "2501", "name": "2501 - RIEL SUPERIOR BLANCO", "quantity": 1, "length_mm": 2984, "cut_1_deg": 90, "cut_2_deg": 90, "position": "Arriba" },
+    { "code": "2502", "name": "2502 - RIEL INFERIOR BLANCO", "quantity": 1, "length_mm": 2984, "cut_1_deg": 90, "cut_2_deg": 90, "position": "Abajo" },
+    { "code": "2503", "name": "2503 - JAMBA BLANCO", "quantity": 2, "length_mm": 1500, "cut_1_deg": 90, "cut_2_deg": 90, "position": "Izquierda, Derecha" },
+    { "code": "2516", "name": "2516 - ZOCALO - DVH BLANCO", "quantity": 4, "length_mm": 999, "cut_1_deg": 90, "cut_2_deg": 90, "position": "Abajo, Arriba" },
+    { "code": "2516", "name": "2516 - ZOCALO - DVH BLANCO", "quantity": 2, "length_mm": 1014, "cut_1_deg": 90, "cut_2_deg": 90, "position": "Abajo, Arriba" },
+    { "code": "2517", "name": "2517 - PIERNA - ABIERTA DVH BLANCO", "quantity": 2, "length_mm": 1465, "cut_1_deg": 90, "cut_2_deg": 90, "position": "Izquierda, Derecha" },
+    { "code": "2519", "name": "2519 - TRASLAPO VENTANA - DVH BLANCO", "quantity": 4, "length_mm": 1465, "cut_1_deg": 90, "cut_2_deg": 90, "position": "Derecha, Izquierda" }
+  ],
+  "glass": [
+    { "code": "TI4104", "name": "Termopanel Incoloro 4 + 10 + 4", "quantity": 2, "width_mm": 944, "height_mm": 1369 },
+    { "code": "TI4104", "name": "Termopanel Incoloro 4 + 10 + 4", "quantity": 1, "width_mm": 960, "height_mm": 1369 }
+  ],
+  "hardware": [
+    { "code": "GUIA-L25", "name": "GUIA L25/8000", "quantity": 6, "unit": "PZA" },
+    { "code": "CARRO DVH L25 REGULABLE", "name": "CARRO DVH L25 REGULABLE", "quantity": 6, "unit": "PZA" },
+    { "code": "14007NG", "name": "KIT MANILLA CRIZIA (MECANISMO UNIPUNTO Y MANILLA CREMONA)", "quantity": 2, "unit": "PZA" },
+    { "code": "TRLCB348", "name": "TORNILLO RL CB PH 3/4\" X 8", "quantity": 24, "unit": "PZA" },
+    { "code": "TORN-GUIA", "name": "TORNILLO PARA GUIA", "quantity": 12, "unit": "PZA" },
+    { "code": "TORN-CARRO", "name": "TORNILLO PARA CARRO", "quantity": 12, "unit": "PZA" },
+    { "code": "TORN-MAN", "name": "TORNILLO PARA MANILLA", "quantity": 4, "unit": "PZA" },
+    { "code": "18000000439", "name": "BURLETE TERMOPANEL S-399 EPDM X-69/24/24RPT SEAL (", "quantity": 14, "unit": "M" },
+    { "code": "FELPA7x6gen", "name": "Felpa 7x6 3P", "quantity": 24, "unit": "M" },
+    { "code": "07012STY BLANCO", "name": "Sellotec 20 Silicona Neutra c/fung 300 ml BLANCO", "quantity": 2, "unit": "TUBO" },
+    { "code": "TORINSEST", "name": "Tornillo instalacion S/T/ESTRELLA", "quantity": 22, "unit": "PZA" }
+  ]
+}

@@ -18,6 +18,14 @@ import {
   resolveFabricacionContextForLineAssignment,
   type FabricacionLineaCotizacionContext,
 } from "@/features/fabricacion/services/fabricacion-linea-cotizacion-context.service";
+import { SODAL_L25_CATALOG_KEY } from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
+import {
+  inferSodalL25GlazingFromGlass,
+  resolveSodalL25FabricacionSnapshot,
+  resolveSodalL25QuoteConfig,
+} from "@/features/fabricacion/services/sodal-l25-context.service";
+import { resolveSodalL25CommercialLineDisplayName, resolveEffectiveSodalL25CatalogKey } from "@/features/fabricacion/services/sodal-l25-presentation.service";
+import { resolveCommercialFabricacionHojas } from "@/features/fabricacion/services/fabricacion-line-variant.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import {
   getLineTemplateGlassMetadata,
@@ -49,6 +57,7 @@ import {
   type CotizacionItemFreeValueIvaMode,
 } from "@/utils/cotizacion-item-presentation";
 import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import { countLeafModules } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import { applyCommercialPalilloToGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/services/guided-visual-palillo-compat.service";
 import { resolveQuoteConstructorCommercialName, isQuoteConstructorPresetDefaultName } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import {
@@ -67,6 +76,24 @@ import {
   resolveCanonicalComponentType,
   splitComponentReference,
 } from "@/features/cotizaciones/services/component-catalog.service";
+
+export function resolveComponentFabricacionHojas(form: {
+  sheetScheme?: string | null;
+  fabricacionHojas?: number | null;
+  hojasBase?: number | null;
+  guidedVisualConfig?: ComponentFormState["guidedVisualConfig"];
+}): number | null {
+  const guidedVisualLeafCount = form.guidedVisualConfig?.root
+    ? countLeafModules(form.guidedVisualConfig.root)
+    : null;
+  return resolveCommercialFabricacionHojas({
+    sheetScheme: form.sheetScheme,
+    fabricacionHojas: form.fabricacionHojas,
+    hojasBase: form.hojasBase,
+    guidedVisualLeafCount:
+      guidedVisualLeafCount && guidedVisualLeafCount > 0 ? guidedVisualLeafCount : null,
+  });
+}
 
 export type StepKey = 1 | 2 | 3;
 export type { PreferredProvider };
@@ -125,6 +152,10 @@ export type ComponentFormState = {
   fabricacionApertura?: string;
   fabricacionHerraje?: string;
   fabricacionVariante?: string;
+  catalogLineKey?: string;
+  fabricacionGlazing?: string;
+  fabricacionLeg?: string;
+  fabricacionReinforcement?: string;
   fabricacionSnapshot?: FabricacionCotizacionSnapshot | null;
 };
 
@@ -1703,11 +1734,15 @@ export function hydrateComponentFormFromLineTemplate(
   const precioPorM2 = withFabricacion.precioPorM2?.trim() ?? "";
   const referencia = withFabricacion.referencia?.trim() ?? "";
   const templatePrice = Math.round(template.precioM2Sugerido);
+  const commercialName = resolveSodalL25CommercialLineDisplayName({
+    catalogKey: template.catalogKey,
+    nombre: template.nombre,
+  });
   const needsPricingHydration =
     !precioPorM2 ||
     !referencia ||
     Number(precioPorM2) !== templatePrice ||
-    referencia !== template.nombre;
+    (referencia !== template.nombre && referencia !== commercialName);
 
   if (!needsPricingHydration) {
     return withFabricacion;
@@ -2047,6 +2082,14 @@ export function applyLineTemplateToComponentForm(
 ) {
   const preserveManualPrice = form.precioAjustadoManual;
   const glassMetadata = getLineTemplateGlassMetadata(template.catalogMetadata);
+  const resolvedCatalogKey =
+    resolveEffectiveSodalL25CatalogKey({
+      catalogKey: template.catalogKey,
+      nombre: template.nombre,
+    }) ??
+    template.catalogKey ??
+    "";
+  const isSodalL25Line = resolvedCatalogKey === SODAL_L25_CATALOG_KEY;
   const fabricationContext =
     options?.fabricationContext ??
     resolveFabricacionContextForLineAssignment({
@@ -2064,8 +2107,22 @@ export function applyLineTemplateToComponentForm(
       catalogCategoria: template.categoria === "vidrio" ? "vidrio" : template.categoria === "pvc" ? "pvc" : "aluminio",
       catalogEspesor: glassMetadata.espesor ?? "",
       catalogTerminacion: glassMetadata.terminacion ?? "",
-      referencia: template.nombre,
+      referencia: resolveSodalL25CommercialLineDisplayName({
+        catalogKey: resolvedCatalogKey || template.catalogKey,
+        nombre: template.nombre,
+      }),
       lineTemplateId: String(template.id),
+      catalogLineKey: resolvedCatalogKey,
+      fabricacionGlazing: isSodalL25Line
+          ? inferSodalL25GlazingFromGlass({
+              vidrio:
+                template.categoria === "vidrio"
+                  ? template.nombre
+                  : template.vidrioPrincipalRecomendado?.trim() || form.vidrio,
+              catalogEspesor: glassMetadata.espesor ?? "",
+              catalogTerminacion: glassMetadata.terminacion ?? "",
+            })
+          : form.fabricacionGlazing ?? "",
       vidrio:
         template.categoria === "vidrio"
           ? template.nombre
@@ -2077,8 +2134,8 @@ export function applyLineTemplateToComponentForm(
       redondeoPrecio: String(Math.round(template.redondeoPrecio ?? 0)),
       precioAjustadoManual: preserveManualPrice,
       origenPrecio: preserveManualPrice ? "manual" : "plantilla",
-      cubicationSnapshot: null,
-      fabricacionSnapshot: null,
+      cubicationSnapshot: form.lineTemplateId === String(template.id) ? form.cubicationSnapshot ?? null : null,
+      fabricacionSnapshot: form.lineTemplateId === String(template.id) ? form.fabricacionSnapshot ?? null : null,
     },
       fabricationContext
     ),
@@ -2362,6 +2419,10 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     fabricacionApertura,
     fabricacionHerraje,
     fabricacionVariante,
+    catalogLineKey,
+    fabricacionGlazing,
+    fabricacionLeg,
+    fabricacionReinforcement,
     fabricationRecipeId,
   } =
     decodeCotizacionItemPresentationMeta(item.observaciones);
@@ -2477,6 +2538,16 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
       fabricacionVariante ||
       item.fabricacionSnapshot?.selectedVariant ||
       "",
+    catalogLineKey:
+      resolveEffectiveSodalL25CatalogKey({
+        catalogLineKey,
+        nombre: item.lineaComercial || referencia,
+      }) ??
+      catalogLineKey ??
+      "",
+    fabricacionGlazing: fabricacionGlazing || "",
+    fabricacionLeg: fabricacionLeg || "",
+    fabricacionReinforcement: fabricacionReinforcement || "",
     fabricacionSnapshot: item.fabricacionSnapshot ?? null,
   };
 }
@@ -2620,6 +2691,56 @@ export function buildItemFromForm(
     previousSnapshot: previousPresentation?.cubicationSnapshot ?? null,
     personalizadoAssistMode,
   });
+  const resolvedFabricacionHojas = resolveComponentFabricacionHojas({
+    sheetScheme,
+    fabricacionHojas: syncedForm.fabricacionHojas,
+    hojasBase,
+    guidedVisualConfig: syncedForm.guidedVisualConfig,
+  });
+  const lineTemplateIdNumber = syncedForm.lineTemplateId
+    ? Number(syncedForm.lineTemplateId)
+    : null;
+  const resolvedCatalogLineKey =
+    resolveEffectiveSodalL25CatalogKey({
+      catalogLineKey: syncedForm.catalogLineKey,
+      nombre: syncedForm.referencia,
+    }) ??
+    syncedForm.catalogLineKey ??
+    "";
+  const sodalConfig = resolveSodalL25QuoteConfig({
+    catalogKey: resolvedCatalogLineKey,
+    presentation: {
+      fabricacionGlazing: syncedForm.fabricacionGlazing ?? "",
+      fabricacionLeg: syncedForm.fabricacionLeg ?? "",
+      fabricacionReinforcement: syncedForm.fabricacionReinforcement ?? "",
+      fabricacionVariante: syncedForm.fabricacionVariante ?? "",
+      fabricacionHojas: resolvedFabricacionHojas,
+      sheetScheme,
+    },
+    vidrio: syncedForm.vidrio,
+    catalogEspesor: syncedForm.catalogEspesor,
+    catalogTerminacion: syncedForm.catalogTerminacion,
+    sheetScheme,
+    fabricacionHojas: resolvedFabricacionHojas,
+  });
+  const autoSodalSnapshot =
+    sodalConfig?.complete &&
+    options?.fabricationRecipes &&
+    lineTemplateIdNumber &&
+    Number.isInteger(lineTemplateIdNumber) &&
+    syncedForm.ancho &&
+    syncedForm.alto
+      ? resolveSodalL25FabricacionSnapshot({
+          organizationId: options.organizationId ?? null,
+          lineTemplateId: lineTemplateIdNumber,
+          recipes: options.fabricationRecipes,
+          config: sodalConfig,
+          anchoTotalMm: Math.round(Number(syncedForm.ancho)),
+          altoTotalMm: Math.round(Number(syncedForm.alto)),
+          cantidad: Math.round(Number(syncedForm.cantidad || 1)),
+          tipologia: syncedForm.fabricacionTipologia,
+        }).snapshot
+      : null;
   const formalFabricationSnapshot =
     syncedForm.fabricacionSnapshot &&
     syncedForm.fabricacionSnapshot.lineTemplateId ===
@@ -2639,7 +2760,7 @@ export function buildItemFromForm(
     (!syncedForm.fabricationRecipeId ||
       syncedForm.fabricacionSnapshot.recipeId === syncedForm.fabricationRecipeId)
       ? syncedForm.fabricacionSnapshot
-      : null;
+      : autoSodalSnapshot;
 
   return {
     ...calculateComponentItem({
@@ -2703,11 +2824,15 @@ export function buildItemFromForm(
           })
         : null,
       fabricacionTipologia: syncedForm.fabricacionTipologia,
-      fabricacionHojas: syncedForm.fabricacionHojas,
+      fabricacionHojas: resolvedFabricacionHojas,
       fabricacionModulos: syncedForm.fabricacionModulos,
       fabricacionApertura: syncedForm.fabricacionApertura,
       fabricacionHerraje: syncedForm.fabricacionHerraje,
-      fabricacionVariante: syncedForm.fabricacionVariante,
+      fabricacionVariante: sodalConfig?.variantSlug || syncedForm.fabricacionVariante,
+      catalogLineKey: resolvedCatalogLineKey,
+      fabricacionGlazing: sodalConfig?.glazing || syncedForm.fabricacionGlazing,
+      fabricacionLeg: syncedForm.fabricacionLeg,
+      fabricacionReinforcement: syncedForm.fabricacionReinforcement,
       fabricationRecipeId: syncedForm.fabricationRecipeId,
       cubicationSnapshot: formalFabricationSnapshot ? null : cubicationSnapshot,
       raw: syncedForm.observaciones,
