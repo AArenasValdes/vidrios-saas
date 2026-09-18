@@ -47,12 +47,14 @@ function renderAccordion(summaryOverrides: Partial<QuoteStudioFinancialSummary> 
 }
 
 describe("PasoTresCostosRentabilidadMovil", () => {
-  it("cerrado muestra rentabilidad pendiente si no hay base de costos", () => {
+  it("cerrado muestra opcional si no hay base de costos", () => {
     renderAccordion();
 
     expect(screen.getByRole("button", { name: "Costos y rentabilidad" })).toBeInTheDocument();
-    expect(screen.getByText("Rentabilidad pendiente")).toBeInTheDocument();
+    expect(screen.getByText("Opcional")).toBeInTheDocument();
+    expect(screen.queryByText("Rentabilidad pendiente")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Mano de obra")).not.toBeInTheDocument();
+    expect(buildCostosRentabilidadClosedSummary(buildSummary())).toBe("Opcional");
   });
 
   it("cerrado resume costo, utilidad y margen cuando hay base", () => {

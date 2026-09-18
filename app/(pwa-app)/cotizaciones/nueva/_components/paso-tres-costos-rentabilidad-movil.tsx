@@ -30,6 +30,14 @@ const MERMA_LABEL = "Merma de materiales %";
 const MARGEN_OBJETIVO_HELP_MOVIL = "Margen real que quieres obtener sobre la venta.";
 const BAJO_COSTO_COPY = "Esta cotización está bajo costo.";
 
+function scrollCostInputIntoView(event: { currentTarget: HTMLElement }) {
+  event.currentTarget.scrollIntoView({
+    block: "center",
+    inline: "nearest",
+    behavior: "auto",
+  });
+}
+
 function formatCurrencyField(value: number, formatCurrencyInput: (value: string) => string) {
   if (!Number.isFinite(value) || value <= 0) {
     return "";
@@ -58,7 +66,7 @@ export function isQuoteUnderCost(summary: QuoteStudioFinancialSummary) {
 
 export function buildCostosRentabilidadClosedSummary(summary: QuoteStudioFinancialSummary) {
   if (!summary.hasCostBasis) {
-    return QUOTE_PROFITABILITY_COPY.pendiente;
+    return "Opcional";
   }
 
   return `Costo ${formatAccordionClp(summary.costoTotal)} · Utilidad ${formatAccordionClp(summary.utilidadEstimada)} · Margen ${formatQuoteProfitabilityPct(summary.margenRealPct)}`;
@@ -112,10 +120,15 @@ export function PasoTresCostosRentabilidadMovil({
                 <input
                   id="paso-tres-mano-obra"
                   aria-label="Mano de obra"
-                  className={`${s.input} ${s.inputMono} ${s.moneyInput}`}
-                  inputMode="numeric"
+                  className={`${s.input} ${s.inputMono} ${s.moneyInput} ${s.stepThreeMobileNumericInput}`}
+                  inputMode="decimal"
+                  enterKeyHint="next"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
                   value={formatCurrencyField(adjustments.manoObra, formatCurrencyInput)}
                   onChange={(event) => onQuoteStudioFinancialChange("manoObra", event.target.value)}
+                  onFocus={scrollCostInputIntoView}
                   placeholder="0"
                 />
               </div>
@@ -127,10 +140,15 @@ export function PasoTresCostosRentabilidadMovil({
                 <input
                   id="paso-tres-traslado"
                   aria-label="Costo de traslado"
-                  className={`${s.input} ${s.inputMono} ${s.moneyInput}`}
-                  inputMode="numeric"
+                  className={`${s.input} ${s.inputMono} ${s.moneyInput} ${s.stepThreeMobileNumericInput}`}
+                  inputMode="decimal"
+                  enterKeyHint="next"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
                   value={formatCurrencyField(adjustments.traslado, formatCurrencyInput)}
                   onChange={(event) => onQuoteStudioFinancialChange("traslado", event.target.value)}
+                  onFocus={scrollCostInputIntoView}
                   placeholder="0"
                 />
               </div>
@@ -142,10 +160,15 @@ export function PasoTresCostosRentabilidadMovil({
                 <input
                   id="paso-tres-otros-costos"
                   aria-label="Otros costos"
-                  className={`${s.input} ${s.inputMono} ${s.moneyInput}`}
-                  inputMode="numeric"
+                  className={`${s.input} ${s.inputMono} ${s.moneyInput} ${s.stepThreeMobileNumericInput}`}
+                  inputMode="decimal"
+                  enterKeyHint="next"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
                   value={formatCurrencyField(adjustments.otrosCostos, formatCurrencyInput)}
                   onChange={(event) => onQuoteStudioFinancialChange("otrosCostos", event.target.value)}
+                  onFocus={scrollCostInputIntoView}
                   placeholder="0"
                 />
               </div>
@@ -157,10 +180,15 @@ export function PasoTresCostosRentabilidadMovil({
                 <input
                   id="paso-tres-merma"
                   aria-label={MERMA_LABEL}
-                  className={`${s.input} ${s.inputMono} ${s.moneyInput}`}
+                  className={`${s.input} ${s.inputMono} ${s.moneyInput} ${s.stepThreeMobileNumericInput}`}
                   inputMode="decimal"
+                  enterKeyHint="next"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
                   value={adjustments.mermaPct > 0 ? String(adjustments.mermaPct) : ""}
                   onChange={(event) => onQuoteStudioFinancialChange("mermaPct", event.target.value)}
+                  onFocus={scrollCostInputIntoView}
                   placeholder="0"
                 />
               </div>
@@ -171,14 +199,19 @@ export function PasoTresCostosRentabilidadMovil({
                 <span className={s.moneyPrefix}>%</span>
                 <input
                   id="paso-tres-margen-objetivo"
-                  className={`${s.input} ${s.inputMono} ${s.moneyInput}`}
+                  className={`${s.input} ${s.inputMono} ${s.moneyInput} ${s.stepThreeMobileNumericInput}`}
                   inputMode="decimal"
+                  enterKeyHint="done"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
                   value={String(adjustments.margenObjetivoRealPct)}
                   title={MARGEN_OBJETIVO_HELP_MOVIL}
                   aria-label={`${QUOTE_PROFITABILITY_COPY.margenObjetivo} %`}
                   onChange={(event) =>
                     onQuoteStudioFinancialChange("margenObjetivoRealPct", event.target.value)
                   }
+                  onFocus={scrollCostInputIntoView}
                   placeholder="30"
                 />
               </div>

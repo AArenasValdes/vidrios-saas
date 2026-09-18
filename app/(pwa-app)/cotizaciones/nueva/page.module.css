@@ -6546,7 +6546,8 @@
   flex-direction: column;
   gap: 0.75rem;
   min-height: auto;
-  padding-bottom: calc(18.25rem + var(--tabbar-h, 76px) + var(--shell-tabbar-edge-bottom, 12px));
+  --step-two-mobile-list-footer: 18.25rem;
+  padding-bottom: calc(var(--step-two-mobile-list-footer) + 12px + env(safe-area-inset-bottom, 0px));
 }
 
 .stepTwoMobilePointEditShell {
@@ -7544,7 +7545,7 @@
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(var(--tabbar-h, 76px) + var(--shell-tabbar-edge-bottom, 12px));
+  bottom: 0;
   z-index: 20;
 }
 
@@ -16900,7 +16901,9 @@ p.stepTwoMobileItemFabCompact {
   .stepThreeCostosEditor {
     display: grid;
     gap: 0.72rem;
-    padding: 0 0.9rem 0.96rem;
+    padding: 0 0.9rem 1.15rem;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   .stepThreeCostosReadRow,
@@ -16930,11 +16933,25 @@ p.stepTwoMobileItemFabCompact {
 
   .stepThreeCostosFields {
     display: grid;
-    gap: 0.62rem;
+    gap: 0.72rem;
   }
 
   .stepThreeCostosFields .field {
-    gap: 0.38rem;
+    gap: 0.42rem;
+  }
+
+  .stepThreeCostosFields .moneyInputWrap {
+    min-height: 48px;
+    border-radius: 14px;
+  }
+
+  .stepThreeCostosFields .stepThreeMobileNumericInput {
+    font-size: 16px;
+    min-height: 48px;
+    line-height: 1.25;
+    transform: none;
+    scroll-margin-block: 120px;
+    letter-spacing: 0;
   }
 
   .stepThreeCostosMetrics {
@@ -17110,7 +17127,7 @@ p.stepTwoMobileItemFabCompact {
 
   .rootStepTwoMobile .layoutStepTwo {
     padding-inline: 0.88rem;
-    padding-bottom: calc(8.75rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: 0;
   }
 
   .stepTwoModeChoice {
@@ -17282,7 +17299,7 @@ p.stepTwoMobileItemFabCompact {
     position: fixed;
     left: 0;
     right: 0;
-    bottom: calc(var(--tabbar-h, 76px) + var(--shell-tabbar-edge-bottom, 12px));
+    bottom: 0;
     padding: 0.72rem 0.88rem calc(0.82rem + env(safe-area-inset-bottom, 0px));
     border-top: 1px solid #d7e3f4;
     background: rgba(255, 255, 255, 0.96);
