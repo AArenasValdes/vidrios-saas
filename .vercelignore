@@ -8,3 +8,8 @@ node_modules/
 *.tsbuildinfo
 pdf-ref-shot.png
 tmp-*
+public/4to Video/
+public/5to video/
+public/6to video Maestro real/
+public/audio/
+public/video-assets/

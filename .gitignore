@@ -95,3 +95,5 @@ docs/VENTORA_DESKTOP_TALLER_ROADMAP.md
 /public/5to video/
 /public/6to video Maestro real/
 /public/audio/
+# Assets locales de Remotion: se conservan en el proyecto, pero no se versionan.
+/public/video-assets/
