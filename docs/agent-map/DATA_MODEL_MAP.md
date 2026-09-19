@@ -109,6 +109,7 @@ Clasificación: tablas activas core, tablas activas growth, tablas legacy/dormid
 - **No ampliar** tipologías de venta en el catálogo (bow, etc.): van al constructor. Plantillas comerciales L5000/L20/L25 viven en código (`fabrication-recipe-commercial-templates.ts`), no como filas de catálogo.
 - **Catálogo reconocido (2026-08-01)**: el reporte externo `C:\Users\aless\OneDrive\Escritorio\deep-research-report.md` puede alimentar nombres, proveedor/ecosistema, familia, revisión, prioridad y estado documental. No debe alimentar descuentos, cantidades, cortes, fórmulas ni `definition` ejecutable de `fabrication_recipes`.
 - **No confundir**: `catalog_metadata.lineSystem` (texto comercial opcional) ≠ `cubicationSystem` (partida de estimación V1).
+- **Snapshot comercial de optimización de vidrio**: la metadata interna de `cotizacion_items.observaciones` congela formato de plancha, costo, regla y merma con tags `[gsw:]`, `[gsh:]`, `[gsc:]`, `[gsr:]`, `[gmp:]`. El sanitizador público los elimina; sirven para reabrir/editar una pieza sin depender de que la línea siga activa o cambie después.
 - **Snapshot por pieza**: nuevo `cotizacion_items.fabricacion_snapshot` para recetas de `src/features/fabricacion/`; fallback de lectura `[cub:]` para historicos. Helpers nuevos: `fabricacion-cotizacion-snapshot.service.ts` y `fabrication-quote-summary.ts`.
 - **Handoff agentes**: `docs/agent-map/CUBICACION_PAUTA_HANDOFF.md`.
 - **Relaciones**: N:1 organizations
