@@ -56,6 +56,31 @@ describe("cotizacion-line-pricing.service", () => {
     expect(summary.motivoNoCalculado).toBe("La línea no tiene un precio por m² válido.");
   });
 
+  it("debe cotizar cristal por fraccion de plancha cuando la optimizacion esta activa", () => {
+    const summary = calculateLineTemplatePricing({
+      ancho: 1200,
+      alto: 800,
+      cantidad: 3,
+      precioM2Sugerido: 32000,
+      minimoCobrable: 0,
+      redondeoPrecio: 1000,
+      glassWastePct: 5,
+      glassSheetConfig: {
+        enabled: true,
+        widthMm: 3210,
+        heightMm: 2250,
+        costClp: 85000,
+        billingRule: "quarter",
+      },
+    });
+
+    expect(summary.areaTotalM2).toBe(2.88);
+    expect(summary.glassOptimization?.billableSheetFraction).toBe(0.5);
+    expect(summary.glassOptimization?.estimatedMaterialCostClp).toBe(42500);
+    expect(summary.totalSugerido).toBe(116000);
+    expect(summary.precioUnitarioSugerido).toBeCloseTo(38666.67, 2);
+  });
+
   it("debe redondear siempre hacia arriba y respetar sin redondeo", () => {
     expect(roundToPriceIncrement(261240, 1000)).toBe(262000);
     expect(roundToPriceIncrement(261760, 1000)).toBe(262000);
