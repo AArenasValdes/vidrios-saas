@@ -9,6 +9,8 @@ Historial de cambios en la documentacion del mapa tecnico.
 - Nuevo cálculo puro `glass-sheet-optimization.service.ts`: superficie requerida → merma → fracción de plancha → superficie cobrable/costo estimado.
 - Pricing asistido aplica la optimización tanto en Guiada como en el flujo por grupos y conserva el modo por m² cuando está desactivada.
 - Mobile muestra **Optimizado por Ventora** con fracción de plancha, merma y costo estimado cuando corresponde.
+- Cada ítem consolida su propia cantidad antes de calcular la fracción; V1 no consolida piezas de ítems distintos.
+- La configuración comercial se snapshottea en metadata interna del ítem para que editar una cotización conserve la regla usada aunque la línea cambie.
 - Alcance cerrado: no nesting 2D, inventario de remanentes, optimización física de cortes ni cambios de schema.
 
 ## 2026-09-18 - Resumen de fabricación mobile sin acordeón
