@@ -389,6 +389,8 @@ export function buildStructuredAlcanceDetalleForm(input: {
       precioPorM2: "",
       minimoCobrable: "",
       redondeoPrecio: "1000",
+      glassSheetConfig: null,
+      lineMermaPct: 0,
       precioPlantillaSugerido: "",
       precioAjustadoManual: false,
       origenPrecio: "manual",
@@ -1461,6 +1463,8 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
       precioPorM2: "",
       minimoCobrable: "",
       redondeoPrecio: "1000",
+      glassSheetConfig: null,
+      lineMermaPct: 0,
       colorHex: resolveMaterialColorHex(material, current.colorHex),
     }));
   };
