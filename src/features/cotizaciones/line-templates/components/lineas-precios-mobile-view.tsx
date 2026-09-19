@@ -80,7 +80,8 @@ type Props = {
   isLoading: boolean;
   error: string | null;
   feedback: { kind: "success" | "error"; message: string } | null;
-  onNew: () => void;
+  onNewLine: () => void;
+  onNewGlass: () => void;
   onEdit: (template: CotizacionLineTemplate) => void;
   onEditPrice: (template: CotizacionLineTemplate) => void;
   onToggleActive: (template: CotizacionLineTemplate) => void;
@@ -144,7 +145,8 @@ export function LineasPreciosMobileView({
   isLoading,
   error,
   feedback,
-  onNew,
+  onNewLine,
+  onNewGlass,
   onEdit,
   onEditPrice,
   onToggleActive,
@@ -269,10 +271,15 @@ export function LineasPreciosMobileView({
           </p>
         </div>
 
-        <button type="button" className={s.newButton} onClick={onNew}>
-          <LuPlus aria-hidden />
-          <span>Nueva</span>
-        </button>
+        <div className={s.headerNewActions}>
+          <button type="button" className={s.newButtonSecondary} onClick={onNewGlass}>
+            Vidrio
+          </button>
+          <button type="button" className={s.newButton} onClick={onNewLine}>
+            <LuPlus aria-hidden />
+            <span>Línea</span>
+          </button>
+        </div>
       </header>
 
       <section className={s.controls} aria-label="Buscar y filtrar líneas">
@@ -364,10 +371,14 @@ export function LineasPreciosMobileView({
             Crea una línea con precio y mínimo para cotizar. Luego puedes
             configurar fabricación y cubicación desde el celular.
           </p>
-          <button type="button" onClick={onNew}>
-            <LuPlus aria-hidden />
-            Crear línea
-          </button>
+          <div className={s.emptyStateActions}>
+            <button type="button" className={s.newButton} onClick={onNewGlass}>
+              Nuevo vidrio
+            </button>
+            <button type="button" className={s.newButtonSecondary} onClick={onNewLine}>
+              Nueva línea
+            </button>
+          </div>
         </section>
       ) : null}
 
