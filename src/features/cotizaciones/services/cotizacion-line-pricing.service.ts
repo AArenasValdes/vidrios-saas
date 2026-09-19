@@ -1,3 +1,9 @@
+import type { CotizacionGlassSheetConfig } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import {
+  calculateGlassSheetOptimization,
+  type GlassSheetOptimizationSummary,
+} from "@/features/cotizaciones/services/glass-sheet-optimization.service";
+
 type CalculateLineTemplatePricingInput = {
   ancho: number | null | undefined;
   alto: number | null | undefined;
@@ -5,6 +11,8 @@ type CalculateLineTemplatePricingInput = {
   precioM2Sugerido: number | null | undefined;
   minimoCobrable: number | null | undefined;
   redondeoPrecio: number | null | undefined;
+  glassSheetConfig?: CotizacionGlassSheetConfig | null;
+  glassWastePct?: number | null;
 };
 
 export type CotizacionLinePricingSummary = {
@@ -20,6 +28,7 @@ export type CotizacionLinePricingSummary = {
   cantidad: number | null;
   totalSugerido: number | null;
   motivoNoCalculado: string | null;
+  glassOptimization: GlassSheetOptimizationSummary | null;
 };
 
 function round(value: number, digits = 2) {
@@ -74,6 +83,11 @@ export function calculateLineTemplatePricing(
     areaM2Internal !== null ? round(areaM2Internal * cantidad, 4) : null;
   const areaTotalM2 =
     areaTotalM2Internal !== null ? round(areaTotalM2Internal, 2) : null;
+  const glassOptimization = calculateGlassSheetOptimization({
+    requiredAreaM2: areaTotalM2Internal,
+    wastePct: input.glassWastePct,
+    config: input.glassSheetConfig,
+  });
 
   if (!hasDimensions || !precioM2Sugerido) {
     let motivoNoCalculado = "Completa ancho, alto y una línea válida.";
@@ -97,6 +111,42 @@ export function calculateLineTemplatePricing(
       cantidad,
       totalSugerido: null,
       motivoNoCalculado,
+      glassOptimization,
+    };
+  }
+
+  if (glassOptimization) {
+    const precioBaseTotal = round(
+      glassOptimization.billableAreaM2 * precioM2Sugerido,
+      2
+    );
+    const precioConMinimoTotal = Math.max(precioBaseTotal, minimoCobrable);
+    const minimoAplicado =
+      minimoCobrable > precioBaseTotal ? minimoCobrable : null;
+    const totalSugerido = roundToPriceIncrement(
+      precioConMinimoTotal,
+      input.redondeoPrecio
+    );
+    const redondeoAplicado =
+      totalSugerido > precioConMinimoTotal
+        ? totalSugerido - precioConMinimoTotal
+        : 0;
+    const precioUnitarioSugerido = round(totalSugerido / cantidad, 2);
+
+    return {
+      areaM2,
+      areaTotalM2,
+      precioBaseUnitario: round(precioBaseTotal / cantidad, 0),
+      precioM2Sugerido,
+      minimoCobrable: minimoCobrable > 0 ? minimoCobrable : null,
+      minimoAplicado,
+      redondeoPrecio,
+      redondeoAplicado,
+      precioUnitarioSugerido,
+      cantidad,
+      totalSugerido,
+      motivoNoCalculado: null,
+      glassOptimization,
     };
   }
 
@@ -124,5 +174,6 @@ export function calculateLineTemplatePricing(
     cantidad,
     totalSugerido,
     motivoNoCalculado: null,
+    glassOptimization: null,
   };
 }
