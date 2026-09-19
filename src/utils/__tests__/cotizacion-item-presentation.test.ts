@@ -28,6 +28,11 @@ describe("cotizacion-item-presentation", () => {
       precioPorM2: 145000,
       minimoCobrable: 95000,
       redondeoPrecio: 1000,
+      glassSheetWidthMm: null,
+      glassSheetHeightMm: null,
+      glassSheetCostClp: null,
+      glassSheetBillingRule: null,
+      lineMermaPct: null,
       precioPlantillaSugerido: 261000,
       precioAjustadoManual: true,
       origenPrecio: "manual",
@@ -76,6 +81,11 @@ describe("cotizacion-item-presentation", () => {
       precioPorM2: 145000,
       minimoCobrable: 95000,
       redondeoPrecio: 1000,
+      glassSheetWidthMm: null,
+      glassSheetHeightMm: null,
+      glassSheetCostClp: null,
+      glassSheetBillingRule: null,
+      lineMermaPct: null,
       precioPlantillaSugerido: 261000,
       precioAjustadoManual: true,
       origenPrecio: "manual",
@@ -131,6 +141,11 @@ describe("cotizacion-item-presentation", () => {
       precioPorM2: null,
       minimoCobrable: null,
       redondeoPrecio: null,
+      glassSheetWidthMm: null,
+      glassSheetHeightMm: null,
+      glassSheetCostClp: null,
+      glassSheetBillingRule: null,
+      lineMermaPct: null,
       precioPlantillaSugerido: null,
       precioAjustadoManual: false,
       origenPrecio: "margen",
@@ -188,6 +203,38 @@ describe("cotizacion-item-presentation", () => {
         raw: "Cristal templado para vano fijo",
       })
     );
+  });
+
+  it("debe snapshotear optimizacion de vidrio sin exponerla en metadata publica", () => {
+    const encoded = encodeCotizacionItemPresentationMeta({
+      material: "Cristal",
+      catalogCategoria: "vidrio",
+      referencia: "Templado 10 mm",
+      glassSheetWidthMm: 3210,
+      glassSheetHeightMm: 2250,
+      glassSheetCostClp: 85000,
+      glassSheetBillingRule: "quarter",
+      lineMermaPct: 5,
+      raw: "Nota visible",
+    });
+
+    expect(decodeCotizacionItemPresentationMeta(encoded)).toEqual(
+      expect.objectContaining({
+        glassSheetWidthMm: 3210,
+        glassSheetHeightMm: 2250,
+        glassSheetCostClp: 85000,
+        glassSheetBillingRule: "quarter",
+        lineMermaPct: 5,
+        raw: "Nota visible",
+      })
+    );
+
+    const publicValue = sanitizeCotizacionItemPresentationForPublic(encoded);
+    expect(publicValue).not.toContain("[gsw:");
+    expect(publicValue).not.toContain("[gsh:");
+    expect(publicValue).not.toContain("[gsc:");
+    expect(publicValue).not.toContain("[gsr:");
+    expect(publicValue).not.toContain("[gmp:");
   });
 
   it("debe preservar sistema, configuracion y composicion de shower door sin variante", () => {
@@ -338,6 +385,11 @@ describe("cotizacion-item-presentation", () => {
       precioPorM2: null,
       minimoCobrable: null,
       redondeoPrecio: null,
+      glassSheetWidthMm: null,
+      glassSheetHeightMm: null,
+      glassSheetCostClp: null,
+      glassSheetBillingRule: null,
+      lineMermaPct: null,
       precioPlantillaSugerido: null,
       precioAjustadoManual: false,
       origenPrecio: "margen",
@@ -393,6 +445,11 @@ describe("cotizacion-item-presentation", () => {
       precioPorM2: null,
       minimoCobrable: null,
       redondeoPrecio: null,
+      glassSheetWidthMm: null,
+      glassSheetHeightMm: null,
+      glassSheetCostClp: null,
+      glassSheetBillingRule: null,
+      lineMermaPct: null,
       precioPlantillaSugerido: null,
       precioAjustadoManual: false,
       origenPrecio: "margen",
