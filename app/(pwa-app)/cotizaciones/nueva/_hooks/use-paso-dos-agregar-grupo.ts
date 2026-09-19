@@ -1692,7 +1692,10 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   };
 
   const updateVidrio = (vidrio: string) => {
-    setDraft((current) => applySodalL25VidrioToForm(current, vidrio));
+    setDraft((current) => ({
+      ...applySodalL25VidrioToForm(current, vidrio),
+      vidrioLineTemplateId: "",
+    }));
   };
 
   const updateCubicationSnapshot = (

@@ -483,7 +483,10 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   };
 
   const updateVidrio = (vidrio: string) => {
-    setDraft((current) => applySodalL25VidrioToForm(current, vidrio));
+    setDraft((current) => ({
+      ...applySodalL25VidrioToForm(current, vidrio),
+      vidrioLineTemplateId: "",
+    }));
   };
 
   const updateAncho = (value: string) => {

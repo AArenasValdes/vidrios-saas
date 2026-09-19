@@ -11,6 +11,30 @@ import {
 } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 
 describe("cotizacion-item-presentation", () => {
+  it("debe codificar y decodificar vidrioLineTemplateId para ventanas", () => {
+    const encoded = encodeCotizacionItemPresentationMeta({
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      vidrioLineTemplateId: "501",
+      raw: "Ventana con vidrio de catálogo",
+    });
+
+    expect(encoded).toContain("[vlti:501]");
+
+    expect(decodeCotizacionItemPresentationMeta(encoded)).toEqual(
+      expect.objectContaining({
+        vidrioLineTemplateId: "501",
+        raw: "Ventana con vidrio de catálogo",
+      })
+    );
+
+    expect(
+      decodeCotizacionItemPresentationMeta(
+        "Texto libre [vlti:glass-42] sin más tags"
+      ).vidrioLineTemplateId
+    ).toBe("glass-42");
+  });
+
   it("debe codificar y decodificar la metadata visual del componente", () => {
     const encoded = encodeCotizacionItemPresentationMeta({
       colorHex: "#2a2a2a",
@@ -73,6 +97,7 @@ describe("cotizacion-item-presentation", () => {
       isCustomScheme: false,
       pricingMode: "precio_directo",
       lineTemplateId: "tpl-1",
+      vidrioLineTemplateId: "",
       precioPorM2: 145000,
       minimoCobrable: 95000,
       redondeoPrecio: 1000,
@@ -128,6 +153,7 @@ describe("cotizacion-item-presentation", () => {
       isCustomScheme: false,
       pricingMode: "margen",
       lineTemplateId: "",
+      vidrioLineTemplateId: "",
       precioPorM2: null,
       minimoCobrable: null,
       redondeoPrecio: null,
@@ -335,6 +361,7 @@ describe("cotizacion-item-presentation", () => {
       isCustomScheme: false,
       pricingMode: "margen",
       lineTemplateId: "",
+      vidrioLineTemplateId: "",
       precioPorM2: null,
       minimoCobrable: null,
       redondeoPrecio: null,
@@ -390,6 +417,7 @@ describe("cotizacion-item-presentation", () => {
       isCustomScheme: false,
       pricingMode: "margen",
       lineTemplateId: "",
+      vidrioLineTemplateId: "",
       precioPorM2: null,
       minimoCobrable: null,
       redondeoPrecio: null,

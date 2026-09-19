@@ -1286,4 +1286,171 @@
   .consolidatedRow {
     min-width: 34rem;
   }
+
+  .glassOptimizationGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.glassDespieceSection {
+  margin-top: 1rem;
+  border: 1px solid #dbe4ef;
+  border-radius: 14px;
+  background: #f8fbff;
+  overflow: hidden;
+}
+
+.glassDespieceHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #dbe4ef;
+}
+
+.glassDespieceHead strong {
+  display: block;
+  color: #0b0f17;
+  font-size: 0.92rem;
+  font-weight: 780;
+}
+
+.glassDespieceHead span {
+  display: block;
+  margin-top: 0.15rem;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.glassDespieceHead em {
+  color: #0b0f17;
+  font-style: normal;
+  font-size: 0.92rem;
+  font-weight: 760;
+}
+
+.glassDespieceTable {
+  display: grid;
+  gap: 0;
+}
+
+.glassDespieceHeadRow,
+.glassDespieceRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) 4.5rem 5.5rem;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.55rem 1rem;
+}
+
+.glassDespieceHeadRow {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: #eef4fb;
+}
+
+.glassDespieceRow {
+  border-top: 1px solid #e5ebf2;
+  font-size: 0.82rem;
+}
+
+.glassDespieceRow strong {
+  color: #0b0f17;
+  font-weight: 700;
+}
+
+.glassOptimizationBlock {
+  margin-top: 0.85rem;
+  padding: 0.95rem 1rem 1rem;
+  border: 1px solid #c7daf3;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f5f9ff 0%, #ffffff 100%);
+}
+
+.glassOptimizationBlock header strong {
+  display: block;
+  color: #0b0f17;
+  font-size: 0.95rem;
+  font-weight: 820;
+}
+
+.glassOptimizationBlock header span {
+  display: block;
+  margin-top: 0.15rem;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.glassOptimizationEyebrow {
+  margin: 0 0 0.2rem;
+  color: #1e88ff;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.glassOptimizationGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 0.85rem;
+  margin: 0.85rem 0 0;
+}
+
+.glassOptimizationGrid div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.glassOptimizationGrid dt {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.glassOptimizationGrid dd {
+  margin: 0;
+  color: #0b0f17;
+  font-size: 0.86rem;
+  font-weight: 760;
+}
+
+.glassOptimizationCost {
+  grid-column: 1 / -1;
+  padding-top: 0.35rem;
+  border-top: 1px dashed #dbe4ef;
+}
+
+.glassOptimizationActions {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+.glassOptimizationFutureAction {
+  min-height: 2.5rem;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.glassOptimizationFutureAction:not(:disabled) {
+  color: #0b0f17;
+  border-color: #93c5fd;
+}
+
+.glassOptimizationNote {
+  margin: 0.75rem 0 0;
+  color: #64748b;
+  font-size: 0.74rem;
+  line-height: 1.45;
 }

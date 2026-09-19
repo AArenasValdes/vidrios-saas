@@ -352,7 +352,7 @@ export function PasoDosListaMovil({
                               <LuCheck size={14} aria-hidden />
                             ) : null}
                             {fabSummary.status === "ready"
-                              ? "Fabricación lista"
+                              ? "Ver despiece"
                               : "Configuración pendiente"}
                           </button>
                         ) : (
@@ -367,7 +367,7 @@ export function PasoDosListaMovil({
                               <LuCheck size={14} aria-hidden />
                             ) : null}
                             {fabSummary.status === "ready"
-                              ? "Fabricación lista"
+                              ? "Ver despiece"
                               : "Configuración pendiente"}
                           </p>
                         )
@@ -413,7 +413,7 @@ export function PasoDosListaMovil({
                 type="button"
               >
                 <LuWrench aria-hidden />
-                Revisar fabricación
+                Ver despiece
               </button>
             ) : null}
             {items.length > 0 ? (

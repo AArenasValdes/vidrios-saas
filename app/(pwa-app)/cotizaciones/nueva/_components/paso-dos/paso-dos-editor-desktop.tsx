@@ -685,6 +685,7 @@ function TabMedidas({
   recommendedGlassReason,
   lineTemplateRecommendedGlass,
   filteredGlassGroups,
+  glassCatalogTemplates,
   canCreateCustomGlass,
   onComponentChange,
   onToggleGlassPanel,
@@ -704,6 +705,7 @@ function TabMedidas({
   | "recommendedGlassReason"
   | "lineTemplateRecommendedGlass"
   | "filteredGlassGroups"
+  | "glassCatalogTemplates"
   | "canCreateCustomGlass"
   | "onComponentChange"
   | "onToggleGlassPanel"
@@ -817,6 +819,30 @@ function TabMedidas({
                       placeholder="Buscar por vidrio o categoria"
                     />
                   </div>
+                  {glassCatalogTemplates.length > 0 ? (
+                    <div className={s.stepTwoMobileGlassRecommendedBox}>
+                      <div className={s.stepTwoMobileGlassRecommendedHeader}>
+                        <strong>Del catálogo de vidrios</strong>
+                        <span>Vincula formato de plancha y costo técnico. No cambia el precio de la ventana.</span>
+                      </div>
+                      <div className={s.glassChipGrid}>
+                        {glassCatalogTemplates.map((template) => {
+                          const isActive =
+                            componentForm.vidrioLineTemplateId === String(template.id);
+                          return (
+                            <button
+                              key={template.id}
+                              type="button"
+                              className={`${s.glassChip} ${isActive ? s.glassChipActive : ""}`}
+                              onClick={() => onGlassSelect(template.nombre, String(template.id))}
+                            >
+                              {template.nombre}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
                   {recommendedGlassOptions.length > 0 ? (
                     <div className={s.stepTwoMobileGlassRecommendedBox}>
                       <div className={s.stepTwoMobileGlassRecommendedHeader}>
@@ -837,7 +863,7 @@ function TabMedidas({
                               key={option}
                               type="button"
                               className={`${s.glassChip} ${isActive ? s.glassChipActive : ""}`}
-                              onClick={() => onGlassSelect(option)}
+                              onClick={() => onGlassSelect(option, "")}
                             >
                               {option}
                             </button>
@@ -874,7 +900,7 @@ function TabMedidas({
                                   key={`${group.grupo}-${glassItem}`}
                                   type="button"
                                   className={`${s.glassChip} ${isActive ? s.glassChipActive : ""}`}
-                                  onClick={() => onGlassSelect(fullValue)}
+                                  onClick={() => onGlassSelect(fullValue, "")}
                                 >
                                   {glassItem}
                                 </button>
@@ -887,7 +913,7 @@ function TabMedidas({
                   </div>
                   <div className={s.inlineSelectorActions}>
                     {componentForm.vidrio ? (
-                      <button className={s.inlineSelectorClear} type="button" onClick={() => onGlassSelect("")}>
+                      <button className={s.inlineSelectorClear} type="button" onClick={() => onGlassSelect("", "")}>
                         Limpiar
                       </button>
                     ) : null}
@@ -1530,6 +1556,7 @@ export function PasoDosEditorDesktop(props: Props) {
             recommendedGlassReason={props.recommendedGlassReason}
             lineTemplateRecommendedGlass={props.lineTemplateRecommendedGlass}
             filteredGlassGroups={props.filteredGlassGroups}
+            glassCatalogTemplates={props.glassCatalogTemplates}
             canCreateCustomGlass={props.canCreateCustomGlass}
             onComponentChange={props.onComponentChange}
             onToggleGlassPanel={props.onToggleGlassPanel}

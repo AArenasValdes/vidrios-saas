@@ -67,7 +67,8 @@ export type PasoDosFormularioComponenteProps = {
   onTemplatePriceUpdated?: (updated: CotizacionLineTemplate) => void;
   onToggleGlassPanel: () => void;
   onGlassQueryChange: (value: string) => void;
-  onGlassSelect: (value: string) => void;
+  onGlassSelect: (value: string, vidrioLineTemplateId?: string) => void;
+  glassCatalogTemplates: CotizacionLineTemplate[];
   onCreateCustomGlass: (value: string) => void;
   onResetStep2Form: () => void;
   onSaveAndExit: () => void;

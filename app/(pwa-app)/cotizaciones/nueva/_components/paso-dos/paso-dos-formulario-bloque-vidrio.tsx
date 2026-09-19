@@ -18,6 +18,7 @@ type Props = Pick<
   | "recommendedGlassReason"
   | "lineTemplateRecommendedGlass"
   | "filteredGlassGroups"
+  | "glassCatalogTemplates"
   | "canCreateCustomGlass"
   | "onToggleGlassPanel"
   | "onGlassQueryChange"
@@ -34,6 +35,7 @@ export function PasoDosFormularioBloqueVidrio({
   recommendedGlassReason,
   lineTemplateRecommendedGlass,
   filteredGlassGroups,
+  glassCatalogTemplates,
   canCreateCustomGlass,
   onToggleGlassPanel,
   onGlassQueryChange,
@@ -87,6 +89,32 @@ export function PasoDosFormularioBloqueVidrio({
                 />
               </div>
 
+              {glassCatalogTemplates.length > 0 ? (
+                <div className={s.stepTwoMobileGlassRecommendedBox}>
+                  <div className={s.stepTwoMobileGlassRecommendedHeader}>
+                    <strong>Del catálogo de vidrios</strong>
+                    <span>Vincula formato de plancha y costo técnico. No cambia el precio de la ventana.</span>
+                  </div>
+                  <div className={s.glassChipGrid}>
+                    {glassCatalogTemplates.map((template) => {
+                      const isActive =
+                        componentForm.vidrioLineTemplateId === String(template.id);
+
+                      return (
+                        <button
+                          key={template.id}
+                          type="button"
+                          className={`${s.glassChip} ${isActive ? s.glassChipActive : ""}`}
+                          onClick={() => onGlassSelect(template.nombre, String(template.id))}
+                        >
+                          {template.nombre}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
               {recommendedGlassOptions.length > 0 ? (
                 <div className={s.stepTwoMobileGlassRecommendedBox}>
                   <div className={s.stepTwoMobileGlassRecommendedHeader}>
@@ -108,7 +136,7 @@ export function PasoDosFormularioBloqueVidrio({
                           key={option}
                           type="button"
                           className={`${s.glassChip} ${isActive ? s.glassChipActive : ""}`}
-                          onClick={() => onGlassSelect(option)}
+                          onClick={() => onGlassSelect(option, "")}
                         >
                           {option}
                         </button>
@@ -147,7 +175,7 @@ export function PasoDosFormularioBloqueVidrio({
                               key={`${group.grupo}-${glassItem}`}
                               type="button"
                               className={`${s.glassChip} ${isActive ? s.glassChipActive : ""}`}
-                              onClick={() => onGlassSelect(fullValue)}
+                              onClick={() => onGlassSelect(fullValue, "")}
                             >
                               {glassItem}
                             </button>
@@ -173,7 +201,7 @@ export function PasoDosFormularioBloqueVidrio({
                   </button>
                 ) : null}
                 {componentForm.vidrio ? (
-                  <button className={s.inlineSelectorClear} type="button" onClick={() => onGlassSelect("")}>
+                  <button className={s.inlineSelectorClear} type="button" onClick={() => onGlassSelect("", "")}>
                     Limpiar
                   </button>
                 ) : null}

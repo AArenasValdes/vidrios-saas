@@ -60,6 +60,7 @@ function createLinePricingForm(
     customSchemeDescription: "",
     isCustomScheme: false,
     lineTemplateId: "tpl-l5000",
+    vidrioLineTemplateId: "",
     pricingMode: "precio_directo",
     vidrio: "Incoloro monolitico 5mm",
     nombre: "",
