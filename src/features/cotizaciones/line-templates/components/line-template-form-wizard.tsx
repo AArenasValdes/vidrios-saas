@@ -25,6 +25,7 @@ import {
   type CotizacionLineTemplateCategoria,
   type CotizacionLineTemplateCuttingMode,
   type CotizacionLineTemplateEstimationMode,
+  type CotizacionGlassSheetBillingRule,
   type CotizacionLineTemplateMaterial,
   type CotizacionLineTemplateUnidadCobro,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
@@ -64,6 +65,11 @@ export type LineTemplateFormDraft = {
   material: CotizacionLineTemplateMaterial | "";
   espesor: string;
   terminacion: string;
+  glassSheetOptimizationEnabled: boolean;
+  glassSheetWidthMm: string;
+  glassSheetHeightMm: string;
+  glassSheetCostClp: string;
+  glassSheetBillingRule: CotizacionGlassSheetBillingRule;
   vidrioPrincipalRecomendado: string;
   costoBase: string;
   precioM2Sugerido: string;
@@ -204,6 +210,7 @@ function buildAdvancedDetailsSummary(draft: LineTemplateFormDraft) {
   const parts: string[] = [];
   if (draft.redondeoPrecio !== "0") parts.push("Redondeo");
   if (draft.mermaPct) parts.push("Merma");
+  if (draft.glassSheetOptimizationEnabled) parts.push("Optimización de vidrio");
   if (draft.margenObjetivoPct) parts.push("Margen objetivo");
   if (draft.proveedor.trim()) parts.push("Proveedor");
   if (draft.lineSystem.trim()) parts.push("Sistema");
