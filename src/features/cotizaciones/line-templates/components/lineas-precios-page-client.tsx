@@ -116,6 +116,23 @@ function formatDecimalInput(value: number) {
   return value > 0 ? String(value).replace(".", ",") : "";
 }
 
+function buildGlassDraft(template?: CotizacionLineTemplate): LineTemplateFormDraft {
+  const draft = buildDraft(template);
+  return {
+    ...draft,
+    categoria: "vidrio",
+    material: "Cristal",
+    unidadCobro: "m2",
+    lineSystem: "Cristal",
+    vidrioPrincipalRecomendado: "",
+    estimationMode: "vidrio",
+    estimationEnabled: false,
+    cuttingEnabled: false,
+    estimationFrameFactor: "",
+    estimationSashFactor: "",
+  };
+}
+
 function buildDraft(template?: CotizacionLineTemplate): LineTemplateFormDraft {
   const glassMetadata = getLineTemplateGlassMetadata(template?.catalogMetadata);
   const estimationRules = getLineTemplateEstimationRules(template?.catalogMetadata);
@@ -129,6 +146,10 @@ function buildDraft(template?: CotizacionLineTemplate): LineTemplateFormDraft {
     material: template?.material ?? "",
     espesor: glassMetadata.espesor ?? "",
     terminacion: glassMetadata.terminacion ?? "",
+    planchaAnchoMm:
+      glassMetadata.planchaAnchoMm != null ? String(glassMetadata.planchaAnchoMm) : "",
+    planchaAltoMm:
+      glassMetadata.planchaAltoMm != null ? String(glassMetadata.planchaAltoMm) : "",
     vidrioPrincipalRecomendado: template?.vidrioPrincipalRecomendado ?? "",
     costoBase: template && template.costoBase > 0 ? String(template.costoBase) : "",
     precioM2Sugerido:
@@ -601,11 +622,12 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
           heightMm: cuttingPreview.glass.heightMm - expectedGlassHeightValue,
         }
       : null;
-  const saveDisabled =
-    !draft.nombre.trim() ||
-    !draft.categoria ||
-    !draft.unidadCobro ||
-    (!isGlassDraft && !draft.material);
+  const saveDisabled = isGlassDraft
+    ? !draft.nombre.trim()
+    : !draft.nombre.trim() ||
+      !draft.categoria ||
+      !draft.unidadCobro ||
+      !draft.material;
   const sheetTitle =
     sheetMode === "edit"
       ? isGlassDraft
@@ -637,8 +659,28 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     setSheetMode("new");
   };
 
+  const openNewGlassSheet = () => {
+    const nextDraft = buildGlassDraft();
+    setDraft(nextDraft);
+    setWizardStep(1);
+    setShowAdvancedDetails(false);
+    setEditingTemplateId(null);
+    setOpenMenuId(null);
+    setFeedback(null);
+    setSheetMode("new");
+  };
+
+  const handleOpenNewCatalogEntry = () => {
+    if (categoryFilter === "vidrio") {
+      openNewGlassSheet();
+      return;
+    }
+    openNewSheet();
+  };
+
   const openEditSheet = useCallback((template: CotizacionLineTemplate) => {
-    const nextDraft = buildDraft(template);
+    const nextDraft =
+      template.categoria === "vidrio" ? buildGlassDraft(template) : buildDraft(template);
     setDraft(nextDraft);
     setWizardStep(1);
     setShowAdvancedDetails(draftHasAdvancedDetails(nextDraft));
@@ -851,6 +893,8 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                   ? {
                       espesor: draft.espesor,
                       terminacion: draft.terminacion,
+                      planchaAnchoMm: parseDecimal(draft.planchaAnchoMm) || null,
+                      planchaAltoMm: parseDecimal(draft.planchaAltoMm) || null,
                     }
                   : {}
               ),
@@ -876,7 +920,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
             }
           ),
           {
-            enabled: draft.estimationEnabled,
+            enabled: isGlassDraft ? false : draft.estimationEnabled,
             mode: isGlassDraft ? "vidrio" : draft.estimationMode,
             frameFactor: isGlassDraft ? 0 : estimationFrameFactor,
             sashFactor:
@@ -887,7 +931,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         {
           // Intent de pauta: se persiste aunque la receta aún no esté validada.
           // getLineTemplateCuttingRules solo habilita la pauta operativa si status === validada.
-          enabled: draft.estimationEnabled && draft.cuttingEnabled && !isGlassDraft,
+          enabled: !isGlassDraft && draft.estimationEnabled && draft.cuttingEnabled,
           mode: isGlassDraft ? "sin_corte" : draft.cuttingMode,
           barLengthMm: draft.fabricationRecipe?.defaultBarLengthMm
             ? draft.fabricationRecipe.defaultBarLengthMm
@@ -1043,7 +1087,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         isLoading={isLoading}
         error={error}
         feedback={feedback}
-        onNew={openNewSheet}
+        onNew={handleOpenNewCatalogEntry}
         onEdit={openEditSheet}
         onEditPrice={setPriceEditorTemplate}
         onToggleActive={(template) => void handleToggleActive(template)}
@@ -1076,11 +1120,13 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
           <button
             type="button"
             className={s.addButton}
-            onClick={openNewSheet}
-            aria-label="Nueva línea"
+            onClick={handleOpenNewCatalogEntry}
+            aria-label={categoryFilter === "vidrio" ? "Nuevo vidrio" : "Nueva línea"}
           >
             <LuPlus aria-hidden />
-            <span className={s.headerActionLabel}>Nueva línea</span>
+            <span className={s.headerActionLabel}>
+              {categoryFilter === "vidrio" ? "Nuevo vidrio" : "Nueva línea"}
+            </span>
           </button>
         </div>
       </header>

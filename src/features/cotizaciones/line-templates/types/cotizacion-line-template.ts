@@ -107,6 +107,9 @@ export function getLineTemplateProfilePreview(
 export type CotizacionGlassProductMetadata = {
   espesor: string | null;
   terminacion: string | null;
+  /** Formato comercial de plancha (mm). Solo categoría vidrio. */
+  planchaAnchoMm: number | null;
+  planchaAltoMm: number | null;
 };
 
 export type CotizacionLineTemplateSystemMetadata = {
@@ -298,6 +301,11 @@ function normalizeRoleLabel(value: unknown, fallback: string | null) {
   return normalizeMetadataText(value) ?? fallback;
 }
 
+function normalizeMetadataPositiveInteger(value: unknown): number | null {
+  const parsed = Math.round(Number(value));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
 export function getLineTemplateGlassMetadata(
   metadata: CotizacionLineTemplate["catalogMetadata"] | null | undefined
 ): CotizacionGlassProductMetadata {
@@ -306,7 +314,16 @@ export function getLineTemplateGlassMetadata(
     terminacion:
       normalizeMetadataText(metadata?.terminacion) ??
       normalizeMetadataText(metadata?.descripcion),
+    planchaAnchoMm: normalizeMetadataPositiveInteger(metadata?.planchaAnchoMm),
+    planchaAltoMm: normalizeMetadataPositiveInteger(metadata?.planchaAltoMm),
   };
+}
+
+export function hasLineTemplateGlassSheetConfig(
+  metadata: CotizacionLineTemplate["catalogMetadata"] | null | undefined
+): boolean {
+  const sheet = getLineTemplateGlassMetadata(metadata);
+  return sheet.planchaAnchoMm != null && sheet.planchaAltoMm != null;
 }
 
 export function mergeLineTemplateGlassMetadata(
@@ -325,6 +342,22 @@ export function mergeLineTemplateGlassMetadata(
     const value = input.terminacion?.trim() ?? "";
     if (value) next.terminacion = value.slice(0, 160);
     else delete next.terminacion;
+  }
+
+  if (input.planchaAnchoMm !== undefined) {
+    if (input.planchaAnchoMm != null && input.planchaAnchoMm > 0) {
+      next.planchaAnchoMm = Math.round(input.planchaAnchoMm);
+    } else {
+      delete next.planchaAnchoMm;
+    }
+  }
+
+  if (input.planchaAltoMm !== undefined) {
+    if (input.planchaAltoMm != null && input.planchaAltoMm > 0) {
+      next.planchaAltoMm = Math.round(input.planchaAltoMm);
+    } else {
+      delete next.planchaAltoMm;
+    }
   }
 
   return next;
