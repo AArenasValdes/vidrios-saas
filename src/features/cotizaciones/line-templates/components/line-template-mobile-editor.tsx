@@ -127,7 +127,13 @@ export function LineTemplateMobileEditor({
           <h2 id="mobile-line-editor-title">
             {sheetMode === "edit" ? "Editar línea" : "Nueva línea"}
           </h2>
-          <p>{activeStep === 1 ? "Datos comerciales" : "Cómo usarás esta línea"}</p>
+          <p>
+            {activeStep === 1
+              ? "Datos comerciales"
+              : isGlassDraft
+                ? "Optimización de vidrio"
+                : "Cómo usarás esta línea"}
+          </p>
         </div>
         <span className={s.stepCount}>{activeStep} de 2</span>
       </header>
@@ -149,7 +155,7 @@ export function LineTemplateMobileEditor({
           aria-current={activeStep === 2 ? "step" : undefined}
         >
           <span>2</span>
-          Uso de la línea
+          {isGlassDraft ? "Optimización" : "Uso de la línea"}
         </button>
       </nav>
 
@@ -335,6 +341,145 @@ export function LineTemplateMobileEditor({
               />
             </label>
           </form>
+        ) : isGlassDraft ? (
+          <div className={s.usageContent}>
+            <div className={s.explainer}>
+              <LuInfo aria-hidden />
+              <p>
+                Configura esto una sola vez. Al cotizar, Ventora calcula automáticamente
+                el consumo de plancha, la merma y el valor a considerar.
+              </p>
+            </div>
+
+            <fieldset className={s.usageList}>
+              <legend>¿Cómo quieres calcular este vidrio?</legend>
+              <button
+                type="button"
+                className={!draft.glassSheetOptimizationEnabled ? s.usageSelected : ""}
+                onClick={() => onDraftChange("glassSheetOptimizationEnabled", false)}
+                aria-pressed={!draft.glassSheetOptimizationEnabled}
+              >
+                <span className={s.radio} aria-hidden>
+                  {!draft.glassSheetOptimizationEnabled ? <span /> : null}
+                </span>
+                <span>
+                  <strong>Por m²</strong>
+                  <small>Mantiene el cálculo comercial actual.</small>
+                </span>
+              </button>
+              <button
+                type="button"
+                className={draft.glassSheetOptimizationEnabled ? s.usageSelected : ""}
+                onClick={() => onDraftChange("glassSheetOptimizationEnabled", true)}
+                aria-pressed={draft.glassSheetOptimizationEnabled}
+              >
+                <span className={s.radio} aria-hidden>
+                  {draft.glassSheetOptimizationEnabled ? <span /> : null}
+                </span>
+                <span>
+                  <strong>Optimizar por plancha</strong>
+                  <small>Ventora considera plancha, merma y fracción de cobro.</small>
+                </span>
+              </button>
+            </fieldset>
+
+            {draft.glassSheetOptimizationEnabled ? (
+              <div className={s.form}>
+                <div className={s.moneyGrid}>
+                  <label className={s.field}>
+                    <span>Ancho de plancha</span>
+                    <input
+                      inputMode="numeric"
+                      value={draft.glassSheetWidthMm}
+                      onChange={(event) =>
+                        onDraftChange(
+                          "glassSheetWidthMm",
+                          event.target.value.replace(/[^\d]/g, "")
+                        )
+                      }
+                      placeholder="Ej. 3210"
+                    />
+                    <small>mm</small>
+                  </label>
+                  <label className={s.field}>
+                    <span>Alto de plancha</span>
+                    <input
+                      inputMode="numeric"
+                      value={draft.glassSheetHeightMm}
+                      onChange={(event) =>
+                        onDraftChange(
+                          "glassSheetHeightMm",
+                          event.target.value.replace(/[^\d]/g, "")
+                        )
+                      }
+                      placeholder="Ej. 2250"
+                    />
+                    <small>mm</small>
+                  </label>
+                </div>
+
+                <label className={s.field}>
+                  <span>Costo de la plancha</span>
+                  <div className={s.moneyInput}>
+                    <span>$</span>
+                    <input
+                      inputMode="numeric"
+                      value={moneyValue(draft.glassSheetCostClp)}
+                      onChange={(event) =>
+                        onDraftChange(
+                          "glassSheetCostClp",
+                          event.target.value.replace(/[^\d]/g, "")
+                        )
+                      }
+                      placeholder="Opcional"
+                    />
+                  </div>
+                </label>
+
+                <label className={s.field}>
+                  <span>Merma habitual</span>
+                  <input
+                    inputMode="decimal"
+                    value={draft.mermaPct}
+                    onChange={(event) =>
+                      onDraftChange(
+                        "mermaPct",
+                        event.target.value.replace(/[^\d.,]/g, "")
+                      )
+                    }
+                    placeholder="Ej. 5"
+                  />
+                  <small>%</small>
+                </label>
+
+                <label className={s.field}>
+                  <span>Cómo cobras el consumo</span>
+                  <select
+                    value={draft.glassSheetBillingRule}
+                    onChange={(event) =>
+                      onDraftChange(
+                        "glassSheetBillingRule",
+                        event.target.value as LineTemplateFormDraft["glassSheetBillingRule"]
+                      )
+                    }
+                  >
+                    <option value="exact">Área utilizada</option>
+                    <option value="quarter">Siguiente ¼ de plancha</option>
+                    <option value="half">Siguiente ½ plancha</option>
+                    <option value="full">Plancha completa</option>
+                  </select>
+                </label>
+
+                <div className={s.explainer}>
+                  <LuInfo aria-hidden />
+                  <p>
+                    <strong>Optimizado por Ventora.</strong> Tus medidas se convierten
+                    automáticamente en consumo cobrable según esta configuración.
+                  </p>
+                </div>
+              </div>
+            ) : null}
+          </div>
         ) : (
           <div className={s.usageContent}>
             <div className={s.explainer}>
