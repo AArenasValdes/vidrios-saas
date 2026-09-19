@@ -953,6 +953,8 @@ export function createInitialPasoDosGrupoDraft({
     precioPorM2: sanitizeDigits(seedForm?.precioPorM2 ?? ""),
     minimoCobrable: sanitizeDigits(seedForm?.minimoCobrable ?? ""),
     redondeoPrecio: sanitizeDigits(seedForm?.redondeoPrecio ?? "1000"),
+    glassSheetConfig: seedForm?.glassSheetConfig ?? null,
+    lineMermaPct: seedForm?.lineMermaPct ?? 0,
     precioAjustadoManual: seedForm?.precioAjustadoManual ?? false,
     margenPct: sanitizeDigits(seedForm?.margenPct ?? suggestedForm.margenPct ?? "0"),
     ivaMode: "total_incluye_iva",
@@ -1072,6 +1074,8 @@ export function buildPasoDosGrupoComponentForm({
     precioPorM2: syncedDraft.precioPorM2,
     minimoCobrable: syncedDraft.minimoCobrable,
     redondeoPrecio: syncedDraft.redondeoPrecio || "1000",
+    glassSheetConfig: syncedDraft.glassSheetConfig ?? null,
+    lineMermaPct: syncedDraft.lineMermaPct ?? 0,
     precioAjustadoManual:
       syncedDraft.priceInputMode === "unit_direct" || syncedDraft.priceInputMode === "piece_total"
         ? true
