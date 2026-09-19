@@ -55,7 +55,7 @@ Comportamiento esperado:
 - Es el camino por defecto para `por_item`.
 - Mantiene el formulario conocido para usuarios que quieren ir paso a paso.
 - Desde la lista o encabezado puede abrir el Constructor si la cuenta esta en `por_item`.
-- No debe mostrar panel financiero desktop, costos internos, margen, merma ni Quote Studio en movil.
+- No debe mostrar panel financiero desktop, costos internos globales, margen real ni Quote Studio en movil. Excepción acotada: un producto de cristal puede mostrar su **Optimización de vidrio** propia (plancha + merma de línea) porque forma parte del cálculo del item, no del panel financiero de la cotización.
 - Item libre mantiene su flujo simplificado y no entra a quick edit visual.
 
 ## Flujo Constructor movil
@@ -176,6 +176,7 @@ Reglas importantes:
 - Si el usuario elige Aluminio, el selector debe priorizar lineas de Aluminio.
 - Si el usuario elige PVC, el selector debe priorizar lineas de PVC.
 - Las lineas de Cristal deben poder elegirse en el selector correcto cuando corresponde vidrio/cristal, pero la linea global no debe usarlas.
+- Si el producto de cristal tiene `glassSheetOptimization` activo, el precio por m² se calcula sobre la fracción comercial de plancha configurada y el móvil muestra **Optimizado por Ventora**. No abrir nesting, inventario ni dibujo de cortes en este flujo.
 - Al elegir una linea, el precio sugerido se calcula con `applyLineTemplateToComponentForm` y `buildComponentFormLinePricingSummary`.
 - Si el usuario escribe manualmente el precio, se marca como precio manual.
 - Cambiar material/color debe reflejarse en el preview del croquis mediante `colorHex`.
