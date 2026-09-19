@@ -109,6 +109,17 @@ export type CotizacionGlassProductMetadata = {
   terminacion: string | null;
 };
 
+export const GLASS_SHEET_BILLING_RULES = ["exact", "quarter", "half", "full"] as const;
+export type CotizacionGlassSheetBillingRule = (typeof GLASS_SHEET_BILLING_RULES)[number];
+
+export type CotizacionGlassSheetConfig = {
+  enabled: boolean;
+  widthMm: number;
+  heightMm: number;
+  costClp: number;
+  billingRule: CotizacionGlassSheetBillingRule;
+};
+
 export type CotizacionLineTemplateSystemMetadata = {
   lineSystem: string | null;
 };
@@ -326,6 +337,56 @@ export function mergeLineTemplateGlassMetadata(
     if (value) next.terminacion = value.slice(0, 160);
     else delete next.terminacion;
   }
+
+  return next;
+}
+
+function normalizeGlassSheetBillingRule(value: unknown): CotizacionGlassSheetBillingRule {
+  return value === "exact" || value === "half" || value === "full" ? value : "quarter";
+}
+
+export function getLineTemplateGlassSheetConfig(
+  metadata: CotizacionLineTemplate["catalogMetadata"] | null | undefined
+): CotizacionGlassSheetConfig {
+  const raw = metadata?.glassSheetOptimization;
+  if (!isMetadataRecord(raw)) {
+    return {
+      enabled: false,
+      widthMm: 0,
+      heightMm: 0,
+      costClp: 0,
+      billingRule: "quarter",
+    };
+  }
+
+  return {
+    enabled: raw.enabled === true,
+    widthMm: normalizeMetadataNumber(raw.widthMm, 0),
+    heightMm: normalizeMetadataNumber(raw.heightMm, 0),
+    costClp: normalizeMetadataNumber(raw.costClp, 0),
+    billingRule: normalizeGlassSheetBillingRule(raw.billingRule),
+  };
+}
+
+export function mergeLineTemplateGlassSheetConfig(
+  metadata: CotizacionLineTemplateCatalogMetadata | null | undefined,
+  input: CotizacionGlassSheetConfig
+): CotizacionLineTemplateCatalogMetadata {
+  const next: CotizacionLineTemplateCatalogMetadata = { ...(metadata ?? {}) };
+
+  if (!input.enabled) {
+    delete next.glassSheetOptimization;
+    return next;
+  }
+
+  next.glassSheetOptimization = {
+    version: 1,
+    enabled: true,
+    widthMm: Math.max(0, Math.round(Number(input.widthMm) || 0)),
+    heightMm: Math.max(0, Math.round(Number(input.heightMm) || 0)),
+    costClp: Math.max(0, Math.round(Number(input.costClp) || 0)),
+    billingRule: normalizeGlassSheetBillingRule(input.billingRule),
+  };
 
   return next;
 }
