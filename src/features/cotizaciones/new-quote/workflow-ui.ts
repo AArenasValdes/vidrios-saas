@@ -2420,6 +2420,11 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     precioPorM2,
     minimoCobrable,
     redondeoPrecio,
+    glassSheetWidthMm,
+    glassSheetHeightMm,
+    glassSheetCostClp,
+    glassSheetBillingRule,
+    lineMermaPct,
     precioPlantillaSugerido,
     precioAjustadoManual,
     origenPrecio,
@@ -2511,6 +2516,20 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
         : item.redondeoPrecio !== null
           ? String(Math.round(item.redondeoPrecio))
           : "1000",
+    glassSheetConfig:
+      glassSheetWidthMm !== null &&
+      glassSheetWidthMm > 0 &&
+      glassSheetHeightMm !== null &&
+      glassSheetHeightMm > 0
+        ? {
+            enabled: true,
+            widthMm: glassSheetWidthMm,
+            heightMm: glassSheetHeightMm,
+            costClp: glassSheetCostClp ?? 0,
+            billingRule: glassSheetBillingRule ?? "quarter",
+          }
+        : null,
+    lineMermaPct: lineMermaPct ?? 0,
     precioPlantillaSugerido:
       precioPlantillaSugerido !== null
         ? String(Math.round(precioPlantillaSugerido))
@@ -2823,6 +2842,11 @@ export function buildItemFromForm(
       precioPorM2: syncedForm.precioPorM2 ? Number(syncedForm.precioPorM2) : null,
       minimoCobrable: syncedForm.minimoCobrable ? Number(syncedForm.minimoCobrable) : null,
       redondeoPrecio: syncedForm.redondeoPrecio ? Number(syncedForm.redondeoPrecio) : null,
+      glassSheetWidthMm: syncedForm.glassSheetConfig?.widthMm ?? null,
+      glassSheetHeightMm: syncedForm.glassSheetConfig?.heightMm ?? null,
+      glassSheetCostClp: syncedForm.glassSheetConfig?.costClp ?? null,
+      glassSheetBillingRule: syncedForm.glassSheetConfig?.billingRule ?? null,
+      lineMermaPct: syncedForm.lineMermaPct ?? null,
       precioPlantillaSugerido:
         quotePricingMode === "total_global" ? null : linePricingSummary.precioUnitarioSugerido,
       precioAjustadoManual:
@@ -2896,6 +2920,11 @@ export function applyQuotePricingToItems(
       precioPorM2,
       minimoCobrable,
       redondeoPrecio,
+      glassSheetWidthMm,
+      glassSheetHeightMm,
+      glassSheetCostClp,
+      glassSheetBillingRule,
+      lineMermaPct,
       precioAjustadoManual,
       palilloEnabled,
       palilloType,
@@ -2956,6 +2985,11 @@ export function applyQuotePricingToItems(
         precioPorM2: precioPorM2 ?? item.precioPorM2,
         minimoCobrable: minimoCobrable ?? item.minimoCobrable,
         redondeoPrecio: redondeoPrecio ?? item.redondeoPrecio,
+        glassSheetWidthMm,
+        glassSheetHeightMm,
+        glassSheetCostClp,
+        glassSheetBillingRule,
+        lineMermaPct,
         precioPlantillaSugerido: item.precioPlantillaSugerido,
         precioAjustadoManual:
           pricingMode === "precio_directo"
