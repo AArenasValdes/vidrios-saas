@@ -37,6 +37,11 @@ export type CotizacionItemPresentationMeta = {
   precioPorM2: number | null;
   minimoCobrable: number | null;
   redondeoPrecio: number | null;
+  glassSheetWidthMm: number | null;
+  glassSheetHeightMm: number | null;
+  glassSheetCostClp: number | null;
+  glassSheetBillingRule: "exact" | "quarter" | "half" | "full" | null;
+  lineMermaPct: number | null;
   precioPlantillaSugerido: number | null;
   precioAjustadoManual: boolean;
   origenPrecio: CotizacionItemPriceOrigin;
@@ -167,6 +172,16 @@ function parseOptionalNumber(value: string | null | undefined) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function normalizeGlassSheetBillingRule(
+  value: string | null | undefined
+): "exact" | "quarter" | "half" | "full" | null {
+  if (value === "exact" || value === "quarter" || value === "half" || value === "full") {
+    return value;
+  }
+
+  return null;
+}
+
 function normalizePriceOrigin(
   value: string | null | undefined,
   pricingMode: PricingMode
@@ -250,6 +265,11 @@ export function encodeCotizacionItemPresentationMeta(input: {
   precioPorM2?: number | null;
   minimoCobrable?: number | null;
   redondeoPrecio?: number | null;
+  glassSheetWidthMm?: number | null;
+  glassSheetHeightMm?: number | null;
+  glassSheetCostClp?: number | null;
+  glassSheetBillingRule?: "exact" | "quarter" | "half" | "full" | null;
+  lineMermaPct?: number | null;
   precioPlantillaSugerido?: number | null;
   precioAjustadoManual?: boolean;
   origenPrecio?: CotizacionItemPriceOrigin;
@@ -312,6 +332,24 @@ export function encodeCotizacionItemPresentationMeta(input: {
   const redondeoPrecio =
     input.redondeoPrecio !== null && input.redondeoPrecio !== undefined
       ? String(Math.round(input.redondeoPrecio))
+      : "";
+  const glassSheetWidthMm =
+    input.glassSheetWidthMm !== null && input.glassSheetWidthMm !== undefined
+      ? String(Math.max(0, Math.round(input.glassSheetWidthMm)))
+      : "";
+  const glassSheetHeightMm =
+    input.glassSheetHeightMm !== null && input.glassSheetHeightMm !== undefined
+      ? String(Math.max(0, Math.round(input.glassSheetHeightMm)))
+      : "";
+  const glassSheetCostClp =
+    input.glassSheetCostClp !== null && input.glassSheetCostClp !== undefined
+      ? String(Math.max(0, Math.round(input.glassSheetCostClp)))
+      : "";
+  const glassSheetBillingRule =
+    normalizeGlassSheetBillingRule(input.glassSheetBillingRule) ?? "";
+  const lineMermaPct =
+    input.lineMermaPct !== null && input.lineMermaPct !== undefined
+      ? String(Math.max(0, Math.round(input.lineMermaPct * 100) / 100))
       : "";
   const precioPlantillaSugerido =
     input.precioPlantillaSugerido !== null && input.precioPlantillaSugerido !== undefined
@@ -405,6 +443,11 @@ export function encodeCotizacionItemPresentationMeta(input: {
     `[pm2:${precioPorM2}]` +
     `[min:${minimoCobrable}]` +
     `[rnd:${redondeoPrecio}]` +
+    `[gsw:${glassSheetWidthMm}]` +
+    `[gsh:${glassSheetHeightMm}]` +
+    `[gsc:${glassSheetCostClp}]` +
+    `[gsr:${glassSheetBillingRule}]` +
+    `[gmp:${lineMermaPct}]` +
     `[psu:${precioPlantillaSugerido}]` +
     `[man:${precioAjustadoManual}]` +
     `[po:${origenPrecio}]` +
@@ -483,6 +526,13 @@ export function decodeCotizacionItemPresentationMeta(
   const precioPorM2 = parseOptionalNumber(source.match(/\[pm2:([^\]]*)\]/)?.[1]);
   const minimoCobrable = parseOptionalNumber(source.match(/\[min:([^\]]*)\]/)?.[1]);
   const redondeoPrecio = parseOptionalNumber(source.match(/\[rnd:([^\]]*)\]/)?.[1]);
+  const glassSheetWidthMm = parseOptionalNumber(source.match(/\[gsw:([^\]]*)\]/)?.[1]);
+  const glassSheetHeightMm = parseOptionalNumber(source.match(/\[gsh:([^\]]*)\]/)?.[1]);
+  const glassSheetCostClp = parseOptionalNumber(source.match(/\[gsc:([^\]]*)\]/)?.[1]);
+  const glassSheetBillingRule = normalizeGlassSheetBillingRule(
+    source.match(/\[gsr:([^\]]*)\]/)?.[1]
+  );
+  const lineMermaPct = parseOptionalNumber(source.match(/\[gmp:([^\]]*)\]/)?.[1]);
   const precioPlantillaSugerido = parseOptionalNumber(
     source.match(/\[psu:([^\]]*)\]/)?.[1]
   );
@@ -557,6 +607,11 @@ export function decodeCotizacionItemPresentationMeta(
     .replace(/\[pm2:[^\]]*\]/g, "")
     .replace(/\[min:[^\]]*\]/g, "")
     .replace(/\[rnd:[^\]]*\]/g, "")
+    .replace(/\[gsw:[^\]]*\]/g, "")
+    .replace(/\[gsh:[^\]]*\]/g, "")
+    .replace(/\[gsc:[^\]]*\]/g, "")
+    .replace(/\[gsr:[^\]]*\]/g, "")
+    .replace(/\[gmp:[^\]]*\]/g, "")
     .replace(/\[psu:[^\]]*\]/g, "")
     .replace(/\[man:[^\]]*\]/g, "")
     .replace(/\[po:[^\]]*\]/g, "")
@@ -607,6 +662,11 @@ export function decodeCotizacionItemPresentationMeta(
     precioPorM2,
     minimoCobrable,
     redondeoPrecio,
+    glassSheetWidthMm,
+    glassSheetHeightMm,
+    glassSheetCostClp,
+    glassSheetBillingRule,
+    lineMermaPct,
     precioPlantillaSugerido,
     precioAjustadoManual,
     origenPrecio,
