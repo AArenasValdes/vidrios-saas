@@ -32,6 +32,8 @@ import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer
 import { describeGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import {
   getLineTemplateGlassMetadata,
+  getLineTemplateGlassSheetConfig,
+  type CotizacionGlassSheetConfig,
   type CotizacionLineTemplate,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
@@ -146,6 +148,8 @@ export type PasoDosGrupoDraft = {
   precioPorM2: string;
   minimoCobrable: string;
   redondeoPrecio: string;
+  glassSheetConfig?: CotizacionGlassSheetConfig | null;
+  lineMermaPct?: number;
   precioAjustadoManual: boolean;
   margenPct: string;
   palilloEnabled: boolean;
@@ -423,7 +427,14 @@ function moneyToNumber(value: string | null | undefined) {
 export function buildGrupoDraftLinePricingSummary(
   draft: Pick<
     PasoDosGrupoDraft,
-    "ancho" | "alto" | "cantidad" | "precioPorM2" | "minimoCobrable" | "redondeoPrecio"
+    | "ancho"
+    | "alto"
+    | "cantidad"
+    | "precioPorM2"
+    | "minimoCobrable"
+    | "redondeoPrecio"
+    | "glassSheetConfig"
+    | "lineMermaPct"
   >
 ) {
   return calculateLineTemplatePricing({
@@ -433,6 +444,8 @@ export function buildGrupoDraftLinePricingSummary(
     precioM2Sugerido: draft.precioPorM2 ? Number(draft.precioPorM2) : null,
     minimoCobrable: draft.minimoCobrable ? Number(draft.minimoCobrable) : 0,
     redondeoPrecio: draft.redondeoPrecio ? Number(draft.redondeoPrecio) : 1000,
+    glassSheetConfig: draft.glassSheetConfig ?? null,
+    glassWastePct: draft.lineMermaPct ?? 0,
   });
 }
 
@@ -577,9 +590,11 @@ export function applyLineTemplateToGrupoDraft(
     | "precioM2Sugerido"
     | "minimoCobrable"
     | "redondeoPrecio"
-  >
+  > &
+    Partial<Pick<CotizacionLineTemplate, "mermaPct">>
 ): PasoDosGrupoDraft {
   const glassMetadata = getLineTemplateGlassMetadata(template.catalogMetadata);
+  const glassSheetConfig = getLineTemplateGlassSheetConfig(template.catalogMetadata);
 
   return syncDraftTemplatePricing({
     ...draft,
@@ -624,6 +639,14 @@ export function applyLineTemplateToGrupoDraft(
     precioPorM2: String(Math.round(template.precioM2Sugerido)),
     minimoCobrable: String(Math.round(template.minimoCobrable)),
     redondeoPrecio: String(Math.round(template.redondeoPrecio || 1000)),
+    glassSheetConfig:
+      template.categoria === "vidrio" && glassSheetConfig.enabled
+        ? glassSheetConfig
+        : null,
+    lineMermaPct:
+      template.categoria === "vidrio" && "mermaPct" in template
+        ? Number(template.mermaPct ?? 0)
+        : 0,
     precioAjustadoManual: false,
     margenPct: "0",
   });
