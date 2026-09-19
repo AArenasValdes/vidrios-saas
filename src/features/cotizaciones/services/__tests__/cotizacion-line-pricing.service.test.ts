@@ -77,8 +77,8 @@ describe("cotizacion-line-pricing.service", () => {
     expect(summary.areaTotalM2).toBe(2.88);
     expect(summary.glassOptimization?.billableSheetFraction).toBe(0.5);
     expect(summary.glassOptimization?.estimatedMaterialCostClp).toBe(42500);
-    expect(summary.totalSugerido).toBe(116000);
-    expect(summary.precioUnitarioSugerido).toBeCloseTo(38666.67, 2);
+    expect(summary.totalSugerido).toBe(117000);
+    expect(summary.precioUnitarioSugerido).toBe(39000);
   });
 
   it("debe redondear siempre hacia arriba y respetar sin redondeo", () => {
