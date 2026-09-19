@@ -2072,7 +2072,7 @@ export function PasoDosWizardConfiguracionMovil({
                     { minimumFractionDigits: 0, maximumFractionDigits: 2 }
                   )}% merma
                   {linePricingSummary.glassOptimization.estimatedMaterialCostClp
-                    ? ` · costo estimado ${linePricingSummary.glassOptimization.estimatedMaterialCostClp.toLocaleString("es-CL")}`
+                    ? " · costo estimado $" + linePricingSummary.glassOptimization.estimatedMaterialCostClp.toLocaleString("es-CL")
                     : ""}
                 </span>
               </div>
