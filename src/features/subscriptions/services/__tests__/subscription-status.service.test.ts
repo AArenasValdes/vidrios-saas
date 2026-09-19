@@ -3,6 +3,7 @@ import {
   buildPlanContractWhatsappHref,
   canAccessPrivatePathWithSubscription,
   resolveOrganizationSubscriptionState,
+  resolveTrialNoticeMilestone,
   SubscriptionWriteAccessError,
 } from "../subscription-status.service";
 
@@ -39,6 +40,50 @@ describe("subscription-status.service", () => {
     expect(state.effectiveStatus).toBe("trial_expiring");
     expect(state.shouldShowTrialBanner).toBe(true);
     expect(state.daysRemaining).toBe(3);
+  });
+
+  it("propone una sola alerta de mitad de prueba en la ventana central", () => {
+    const state = resolveOrganizationSubscriptionState(
+      {
+        subscriptionStatus: "trial_active",
+        trialStartedAt: "2026-05-18T12:00:00.000Z",
+        trialEndsAt: "2026-06-02T12:00:00.000Z",
+        planType: "trial",
+      },
+      now
+    );
+
+    expect(state.daysRemaining).toBe(8);
+    expect(resolveTrialNoticeMilestone(state)).toBe("midpoint");
+  });
+
+  it("propone la alerta urgente solo al acercarse el vencimiento", () => {
+    const state = resolveOrganizationSubscriptionState(
+      {
+        subscriptionStatus: "trial_active",
+        trialStartedAt: "2026-05-20T12:00:00.000Z",
+        trialEndsAt: "2026-05-28T12:00:00.000Z",
+        planType: "trial",
+      },
+      now
+    );
+
+    expect(resolveTrialNoticeMilestone(state)).toBe("urgent");
+  });
+
+  it("no propone alerta entre los dos hitos", () => {
+    const state = resolveOrganizationSubscriptionState(
+      {
+        subscriptionStatus: "trial_active",
+        trialStartedAt: "2026-05-24T12:00:00.000Z",
+        trialEndsAt: "2026-05-31T12:00:00.000Z",
+        planType: "trial",
+      },
+      now
+    );
+
+    expect(state.daysRemaining).toBe(6);
+    expect(resolveTrialNoticeMilestone(state)).toBeNull();
   });
 
   it("marca trial vencido si no hay suscripcion activa y ya paso la fecha", () => {
