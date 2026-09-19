@@ -116,27 +116,31 @@ export function calculateLineTemplatePricing(
   }
 
   if (glassOptimization) {
+    // La optimización agrupa la superficie de la cantidad para decidir la fracción
+    // de plancha, pero conserva el contrato comercial existente de Ventora:
+    // mínimo y redondeo se aplican al valor unitario y luego se multiplican.
     const precioBaseTotal = round(
       glassOptimization.billableAreaM2 * precioM2Sugerido,
       2
     );
-    const precioConMinimoTotal = Math.max(precioBaseTotal, minimoCobrable);
+    const precioBaseUnitario = round(precioBaseTotal / cantidad, 2);
+    const precioConMinimoUnitario = Math.max(precioBaseUnitario, minimoCobrable);
     const minimoAplicado =
-      minimoCobrable > precioBaseTotal ? minimoCobrable : null;
-    const totalSugerido = roundToPriceIncrement(
-      precioConMinimoTotal,
+      minimoCobrable > precioBaseUnitario ? minimoCobrable : null;
+    const precioUnitarioSugerido = roundToPriceIncrement(
+      precioConMinimoUnitario,
       input.redondeoPrecio
     );
     const redondeoAplicado =
-      totalSugerido > precioConMinimoTotal
-        ? totalSugerido - precioConMinimoTotal
+      precioUnitarioSugerido > precioConMinimoUnitario
+        ? precioUnitarioSugerido - precioConMinimoUnitario
         : 0;
-    const precioUnitarioSugerido = round(totalSugerido / cantidad, 2);
+    const totalSugerido = round(precioUnitarioSugerido * cantidad, 2);
 
     return {
       areaM2,
       areaTotalM2,
-      precioBaseUnitario: round(precioBaseTotal / cantidad, 0),
+      precioBaseUnitario: round(precioBaseUnitario, 0),
       precioM2Sugerido,
       minimoCobrable: minimoCobrable > 0 ? minimoCobrable : null,
       minimoAplicado,
