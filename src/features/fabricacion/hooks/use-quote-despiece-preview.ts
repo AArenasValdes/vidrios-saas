@@ -6,6 +6,7 @@ import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotiz
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import {
   buildQuoteDespiecePreviewEligibility,
+  buildQuoteFabricationReviewEligibility,
   findFirstQuoteItemWithDespiecePreview,
 } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 
@@ -48,6 +49,26 @@ export function useQuoteDespiecePreview({
     [isReady, eligibilityByItemId]
   );
 
+  const fabricationReviewEligibilityByItemId = useMemo(
+    () =>
+      buildQuoteFabricationReviewEligibility({
+        items,
+        recipes,
+        organizationId,
+      }),
+    [items, recipes, organizationId]
+  );
+
+  const hasFabricationReviewAvailable = useMemo(
+    () => isReady && fabricationReviewEligibilityByItemId.size > 0,
+    [fabricationReviewEligibilityByItemId, isReady]
+  );
+
+  const isFabricationReviewEligibleForItem = useCallback(
+    (itemId: string) => fabricationReviewEligibilityByItemId.get(itemId) === true,
+    [fabricationReviewEligibilityByItemId]
+  );
+
   const canOpenDespieceForItem = useCallback(
     (itemId: string) => eligibilityByItemId.get(itemId) === true,
     [eligibilityByItemId]
@@ -80,6 +101,9 @@ export function useQuoteDespiecePreview({
     recipesError,
     eligibilityByItemId,
     hasDespiecePreviewAvailable,
+    fabricationReviewEligibilityByItemId,
+    hasFabricationReviewAvailable,
+    isFabricationReviewEligibleForItem,
     canOpenDespieceForItem,
     resolveDefaultDespieceItemId,
   };

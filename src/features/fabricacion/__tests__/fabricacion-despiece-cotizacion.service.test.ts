@@ -8,9 +8,12 @@ import { crearRecetaPlantillaVentoraProyectante } from "@/features/fabricacion/f
 import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import {
   anyQuoteItemCanOpenDespiecePreview,
+  anyQuoteItemHasFabricationReview,
   buildQuoteDespiecePreviewEligibility,
+  buildQuoteFabricationReviewEligibility,
   canOpenDespiecePreviewForQuoteItem,
   findFirstQuoteItemWithDespiecePreview,
+  isQuoteItemFabricationReviewEligible,
   resolveFabricacionDespieceForQuoteItem,
 } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
@@ -469,6 +472,82 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
 
     expect(resolved.estado).toBe("calculado");
     expect(resolved.formal?.result.perfiles.length).toBeGreaterThan(0);
+  });
+
+  it("no marca revisión de fabricación en línea comercial sin receta (Serie 20)", () => {
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "serie-20", withLine: true }),
+      lineaComercial: "Serie 20",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "serie-20",
+        sistema: "Corredera",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 3,
+        fabricacionModulos: 3,
+        fabricacionVariante: "estandar",
+      }),
+    };
+
+    expect(
+      isQuoteItemFabricationReviewEligible({
+        item,
+        recipes: [],
+        organizationId: 1,
+      })
+    ).toBe(false);
+  });
+
+  it("marca revisión de fabricación en L25 aunque falte configuración", () => {
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "10", withLine: true }),
+      lineaComercial: "L25 SODAL",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "10",
+        catalogLineKey: "ventora:l25",
+        sistema: "Corredera",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 2,
+        fabricacionModulos: 2,
+        fabricacionVariante: "estandar",
+      }),
+    };
+
+    expect(
+      isQuoteItemFabricationReviewEligible({
+        item,
+        recipes: [],
+        organizationId: 1,
+      })
+    ).toBe(true);
+  });
+
+  it("marca revisión de fabricación cuando la línea tiene receta de taller", () => {
+    const recipe = recipeRecord({}, "L5000");
+    const item = quoteItem({});
+
+    expect(
+      isQuoteItemFabricationReviewEligible({
+        item,
+        recipes: [recipe],
+        organizationId: 1,
+      })
+    ).toBe(true);
+
+    const eligibility = buildQuoteFabricationReviewEligibility({
+      items: [quoteItem({ withLine: false }), item],
+      recipes: [recipe],
+      organizationId: 1,
+    });
+
+    expect(eligibility.get("item-1")).toBe(true);
+    expect(
+      anyQuoteItemHasFabricationReview({
+        items: [quoteItem({ withLine: false }), item],
+        recipes: [recipe],
+        organizationId: 1,
+        eligibilityByItemId: eligibility,
+      })
+    ).toBe(true);
   });
 
   it("muestra el despiece congelado si el recálculo en vivo no encuentra receta", () => {

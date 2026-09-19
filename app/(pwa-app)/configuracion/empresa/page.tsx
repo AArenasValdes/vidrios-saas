@@ -1196,12 +1196,6 @@ export default function ConfiguracionEmpresaPage() {
                 </button>
               </div>
 
-              <article className={s.commercialMobileSummaryCard}>
-                <span className={s.label}>Preferencias de cotización</span>
-                <strong>{quotePreferencesSummary}</strong>
-                <p>Configura los textos largos desde computador para mantener el celular simple.</p>
-              </article>
-
               <div className={s.commercialDefaultsSection}>
                 <div className={s.commercialDefaultsHeader}>
                   <span className={s.label}>Condiciones predeterminadas de cotización</span>

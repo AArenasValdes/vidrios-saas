@@ -16,6 +16,7 @@ import {
   formatSodalL25ReinforcementLabel,
   formatSodalL25GlazingLabel,
 } from "@/features/fabricacion/services/sodal-l25-presentation.service";
+import { isQuoteItemFabricationReviewEligible } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 function isWorkflowItemCommerciallyIncomplete(item: CotizacionWorkflowItem) {
@@ -31,6 +32,8 @@ export type MobileComponentFabricacionStatus =
 export type MobileComponentFabricacionSummary = {
   status: MobileComponentFabricacionStatus;
   statusLabel: string;
+  /** Solo true cuando la línea tiene cubicación/despiece configurado o es L25. */
+  showReviewUi: boolean;
   contextualLineLabel: string | null;
   technicalBrief: string | null;
   canOpenPauta: boolean;
@@ -68,6 +71,7 @@ export function resolveMobileComponentFabricacionSummary(
     return {
       status: "no_recipe",
       statusLabel: "Sin fabricación",
+      showReviewUi: false,
       contextualLineLabel: null,
       technicalBrief: null,
       canOpenPauta: false,
@@ -81,6 +85,7 @@ export function resolveMobileComponentFabricacionSummary(
     return {
       status: "incomplete",
       statusLabel: "Completar datos",
+      showReviewUi: false,
       contextualLineLabel: null,
       technicalBrief: null,
       canOpenPauta: false,
@@ -95,6 +100,11 @@ export function resolveMobileComponentFabricacionSummary(
     nombre: item.lineaComercial,
   });
   const isL25 = isSodalL25CatalogKey(catalogKey);
+  const showReviewUi = isQuoteItemFabricationReviewEligible({
+    item,
+    recipes: options?.recipes ?? [],
+    organizationId: options?.organizationId ?? null,
+  });
   const hojas = resolveComponentFabricacionHojas({
     sheetScheme: meta.sheetScheme,
     fabricacionHojas: meta.fabricacionHojas,
@@ -186,10 +196,11 @@ export function resolveMobileComponentFabricacionSummary(
       ]
     : [];
 
-  if (isL25 && sodalConfig && !sodalConfig.complete) {
+  if (showReviewUi && isL25 && sodalConfig && !sodalConfig.complete) {
     return {
       status: "pending_l25",
       statusLabel: "Configuración pendiente",
+      showReviewUi,
       contextualLineLabel,
       technicalBrief,
       canOpenPauta: true,
@@ -199,10 +210,11 @@ export function resolveMobileComponentFabricacionSummary(
     };
   }
 
-  if (hasSnapshot && quoteRow) {
+  if (showReviewUi && hasSnapshot && quoteRow) {
     return {
       status: "ready",
       statusLabel: "Fabricación lista",
+      showReviewUi,
       contextualLineLabel,
       technicalBrief,
       canOpenPauta: true,
@@ -214,7 +226,8 @@ export function resolveMobileComponentFabricacionSummary(
 
   return {
     status: "no_recipe",
-    statusLabel: isL25 ? "Sin pauta activa" : "Sin fabricación",
+    statusLabel: showReviewUi && isL25 ? "Sin pauta activa" : "Sin fabricación",
+    showReviewUi,
     contextualLineLabel,
     technicalBrief,
     canOpenPauta: isL25,

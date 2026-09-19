@@ -313,6 +313,87 @@ export function canOpenDespiecePreviewForQuoteItem(input: {
   return resolution.formal?.result.calculable === true;
 }
 
+const FABRICATION_REVIEW_ELIGIBLE_ESTADOS: FabricacionDespieceCotizacionEstado[] = [
+  "calculado",
+  "receta_incompleta",
+  "multiples_recetas",
+];
+
+/** Línea con cubicación/despiece configurado o en camino (L25, receta del taller, etc.). */
+export function isQuoteItemFabricationReviewEligible(input: {
+  item: CotizacionWorkflowItem;
+  recipes: FabricationRecipeRecord[];
+  organizationId: number | null;
+}): boolean {
+  const presentation = decodeCotizacionItemPresentationMeta(input.item.observaciones);
+  if (
+    input.item.tipoItem === "item_libre_con_valor" ||
+    presentation.displayMode === "item_libre"
+  ) {
+    return false;
+  }
+
+  const frozen = input.item.fabricacionSnapshot;
+  if (
+    (frozen?.pauta?.length ?? 0) > 0 ||
+    (frozen?.pautaBarras?.barras?.length ?? 0) > 0
+  ) {
+    return true;
+  }
+
+  const catalogKey = resolveEffectiveSodalL25CatalogKey({
+    catalogLineKey: presentation.catalogLineKey,
+    nombre: input.item.lineaComercial,
+  });
+  if (isSodalL25CatalogKey(catalogKey)) {
+    return true;
+  }
+
+  if (input.organizationId == null) return false;
+
+  const resolution = resolveFabricacionDespieceForQuoteItem(input);
+  if (resolution.estado === "sin_medidas") return false;
+
+  return FABRICATION_REVIEW_ELIGIBLE_ESTADOS.includes(resolution.estado);
+}
+
+export function buildQuoteFabricationReviewEligibility(input: {
+  items: CotizacionWorkflowItem[];
+  recipes: FabricationRecipeRecord[];
+  organizationId: number | null;
+}): Map<string, boolean> {
+  const map = new Map<string, boolean>();
+  if (input.organizationId == null || input.items.length === 0) {
+    return map;
+  }
+
+  for (const item of input.items) {
+    if (
+      isQuoteItemFabricationReviewEligible({
+        item,
+        recipes: input.recipes,
+        organizationId: input.organizationId,
+      })
+    ) {
+      map.set(item.id, true);
+    }
+  }
+
+  return map;
+}
+
+export function anyQuoteItemHasFabricationReview(input: {
+  items: CotizacionWorkflowItem[];
+  recipes: FabricationRecipeRecord[];
+  organizationId: number | null;
+  eligibilityByItemId?: Map<string, boolean>;
+}): boolean {
+  if (input.eligibilityByItemId) {
+    return input.eligibilityByItemId.size > 0;
+  }
+  return buildQuoteFabricationReviewEligibility(input).size > 0;
+}
+
 export function buildQuoteDespiecePreviewEligibility(input: {
   items: CotizacionWorkflowItem[];
   recipes: FabricationRecipeRecord[];

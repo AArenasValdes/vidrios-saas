@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   LuArrowLeft,
   LuCheck,
@@ -13,11 +13,12 @@ import {
 } from "react-icons/lu";
 
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
-import { resolveMobileComponentFabricacionSummary } from "@/features/fabricacion/services/mobile-component-fabricacion-summary.service";
 import {
-  resolveWorkflowItemDisplayName,
-  shouldRequireProfileMaterialForComponent,
-} from "@/features/cotizaciones/new-quote/workflow-ui";
+  anyQuoteItemHasFabricationReview,
+  buildQuoteFabricationReviewEligibility,
+} from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import { resolveMobileComponentFabricacionSummary } from "@/features/fabricacion/services/mobile-component-fabricacion-summary.service";
+import { resolveWorkflowItemDisplayName } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import { ComponentPreview } from "@/features/cotizaciones/components/component-preview";
@@ -79,6 +80,15 @@ export function PasoDosListaMovil({
 }: Props) {
   const measureUnit = useOrganizationMeasureUnit();
   const { recipes, organizationId } = useFabricationRecipes({ enabled: items.length > 0 });
+  const fabricationReviewEligibilityByItemId = useMemo(
+    () =>
+      buildQuoteFabricationReviewEligibility({
+        items,
+        recipes,
+        organizationId,
+      }),
+    [items, organizationId, recipes]
+  );
   const [isCambiarModoDialogOpen, setIsCambiarModoDialogOpen] = useState(false);
   const [isMoreOptionsOpen, setIsMoreOptionsOpen] = useState(false);
   const isGlobalPricing = quotePricingMode === "total_global";
@@ -104,11 +114,11 @@ export function PasoDosListaMovil({
   const hasFabricationReview =
     Boolean(onOpenDespieceReview) &&
     !isGlobalPricing &&
-    items.some((item) => {
-      const itemMeta = decodeCotizacionItemPresentationMeta(item.observaciones);
-      const isFreeValueItem =
-        item.tipoItem === "item_libre_con_valor" || itemMeta.displayMode === "item_libre";
-      return !isFreeValueItem && shouldRequireProfileMaterialForComponent(item.tipo);
+    anyQuoteItemHasFabricationReview({
+      items,
+      recipes,
+      organizationId,
+      eligibilityByItemId: fabricationReviewEligibilityByItemId,
     });
 
   return (
@@ -198,7 +208,8 @@ export function PasoDosListaMovil({
               const displayCode = item.codigo || "--";
               const adjustedFromBaseCode = adjustedItems[item.id] ?? null;
               const isAdjusted = Boolean(adjustedFromBaseCode);
-              const showProfileDetails = shouldRequireProfileMaterialForComponent(item.tipo);
+              const showFabricationReview =
+                fabricationReviewEligibilityByItemId.get(item.id) === true;
               const previewInput = buildComponentPreviewInputFromWorkflowItem(item, {
                 maxW: 72,
                 maxH: 56,
@@ -337,7 +348,7 @@ export function PasoDosListaMovil({
                           {repairBrokenText(item.vidrio)}
                         </p>
                       ) : null}
-                      {!isFreeValueItem && showProfileDetails ? (
+                      {!isFreeValueItem && showFabricationReview && fabSummary.showReviewUi ? (
                         onOpenDespieceReview ? (
                           <button
                             type="button"
@@ -351,9 +362,7 @@ export function PasoDosListaMovil({
                             {fabSummary.status === "ready" ? (
                               <LuCheck size={14} aria-hidden />
                             ) : null}
-                            {fabSummary.status === "ready"
-                              ? "Ver despiece"
-                              : "Configuración pendiente"}
+                            {fabSummary.statusLabel}
                           </button>
                         ) : (
                           <p
@@ -366,9 +375,7 @@ export function PasoDosListaMovil({
                             {fabSummary.status === "ready" ? (
                               <LuCheck size={14} aria-hidden />
                             ) : null}
-                            {fabSummary.status === "ready"
-                              ? "Ver despiece"
-                              : "Configuración pendiente"}
+                            {fabSummary.statusLabel}
                           </p>
                         )
                       ) : null}
