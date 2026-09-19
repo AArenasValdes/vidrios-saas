@@ -279,6 +279,8 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
       precioPorM2: "",
       minimoCobrable: "",
       redondeoPrecio: "1000",
+      glassSheetConfig: null,
+      lineMermaPct: 0,
       colorHex: resolveMaterialColorHex(material, current.colorHex),
     }));
   };

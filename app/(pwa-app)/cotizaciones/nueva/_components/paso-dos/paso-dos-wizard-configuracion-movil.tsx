@@ -2058,6 +2058,26 @@ export function PasoDosWizardConfiguracionMovil({
               </span>
             </div>
           </div>
+          {linePricingSummary.glassOptimization ? (
+            <div className={s.quickPreviewCard} aria-live="polite">
+              <div className={s.quickPreviewBody}>
+                <strong>Optimizado por Ventora</strong>
+                <span>
+                  {linePricingSummary.glassOptimization.billableSheetFraction.toLocaleString(
+                    "es-CL",
+                    { minimumFractionDigits: 0, maximumFractionDigits: 2 }
+                  )}{" "}
+                  plancha · {linePricingSummary.glassOptimization.wastePct.toLocaleString(
+                    "es-CL",
+                    { minimumFractionDigits: 0, maximumFractionDigits: 2 }
+                  )}% merma
+                  {linePricingSummary.glassOptimization.estimatedMaterialCostClp
+                    ? " · costo estimado $" + linePricingSummary.glassOptimization.estimatedMaterialCostClp.toLocaleString("es-CL")
+                    : ""}
+                </span>
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : (
         <PasoDosWizardVidrioMovil

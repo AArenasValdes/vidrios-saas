@@ -31,7 +31,7 @@ Ventora es **software comercial para maestros, talleres y empresas de vidrio/alu
 
 1. **Cierre comercial** — cotización, PDF, WhatsApp, aprobación `/presupuesto/[token]`; es el núcleo del producto.
 2. **Captación complementaria** — link/QR `/solicitud/[empresa]`, centralizar solicitudes cuando la empresa lo activa.
-3. **Catálogo privado** — líneas y precios (`cotizacion_line_templates`).  
+3. **Catálogo privado** — líneas y precios (`cotizacion_line_templates`); los productos de cristal pueden activar **Optimización de vidrio** para aplicar formato de plancha, merma y fracción comercial automáticamente.  
 4. **Constructor** — tipologías/composiciones visuales complejas.  
 5. **Cubicación / pauta de corte (opcional)** — recetas + snapshot; ayuda revisable para el taller, no promesa de máquina.
 
@@ -142,7 +142,7 @@ Para marketing: `AGENTS_MARKETING.md` + `docs/marketing/`.
 
 ## 7. Fuera de alcance (sigue congelado)
 
-Inventario, ERP, IA de fórmulas, catálogo masivo de tipologías, optimización avanzada / nesting, historial navegable de versiones de receta, CRM/Kanban genérico, roles/equipos, `oportunidades`/`cobros`.
+Inventario, ERP, IA de fórmulas, catálogo masivo de tipologías, **optimización geométrica avanzada / nesting**, historial navegable de versiones de receta, CRM/Kanban genérico, roles/equipos, `oportunidades`/`cobros`. La **Optimización de vidrio** comercial por superficie/fracción de plancha sí forma parte del catálogo; no promete acomodación física óptima de cortes.
 
 ---
 

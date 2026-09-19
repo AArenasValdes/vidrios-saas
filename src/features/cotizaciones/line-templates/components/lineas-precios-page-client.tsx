@@ -20,11 +20,13 @@ import {
   buildLineTemplateCuttingPreview,
   getLineTemplateCubicationConfig,
   getLineTemplateGlassMetadata,
+  getLineTemplateGlassSheetConfig,
   getLineTemplateCuttingRules,
   getLineTemplateEstimationRules,
   getLineTemplateSystemMetadata,
   mergeLineTemplateCubicationConfig,
   mergeLineTemplateGlassMetadata,
+  mergeLineTemplateGlassSheetConfig,
   mergeLineTemplateCuttingRules,
   mergeLineTemplateEstimationRules,
   mergeLineTemplateSystemMetadata,
@@ -118,6 +120,7 @@ function formatDecimalInput(value: number) {
 
 function buildDraft(template?: CotizacionLineTemplate): LineTemplateFormDraft {
   const glassMetadata = getLineTemplateGlassMetadata(template?.catalogMetadata);
+  const glassSheetConfig = getLineTemplateGlassSheetConfig(template?.catalogMetadata);
   const estimationRules = getLineTemplateEstimationRules(template?.catalogMetadata);
   const cuttingRules = getLineTemplateCuttingRules(template?.catalogMetadata);
   const systemMetadata = getLineTemplateSystemMetadata(template?.catalogMetadata);
@@ -129,6 +132,11 @@ function buildDraft(template?: CotizacionLineTemplate): LineTemplateFormDraft {
     material: template?.material ?? "",
     espesor: glassMetadata.espesor ?? "",
     terminacion: glassMetadata.terminacion ?? "",
+    glassSheetOptimizationEnabled: template?.categoria === "vidrio" && glassSheetConfig.enabled,
+    glassSheetWidthMm: glassSheetConfig.widthMm > 0 ? String(glassSheetConfig.widthMm) : "",
+    glassSheetHeightMm: glassSheetConfig.heightMm > 0 ? String(glassSheetConfig.heightMm) : "",
+    glassSheetCostClp: glassSheetConfig.costClp > 0 ? String(glassSheetConfig.costClp) : "",
+    glassSheetBillingRule: glassSheetConfig.billingRule,
     vidrioPrincipalRecomendado: template?.vidrioPrincipalRecomendado ?? "",
     costoBase: template && template.costoBase > 0 ? String(template.costoBase) : "",
     precioM2Sugerido:
@@ -210,6 +218,7 @@ function draftHasAdvancedDetails(draft: LineTemplateFormDraft) {
       draft.vidrioPrincipalRecomendado ||
       draft.espesor.trim() ||
       draft.terminacion.trim() ||
+      draft.glassSheetOptimizationEnabled ||
       (draft.redondeoPrecio !== "0" && draft.redondeoPrecio !== "1000")
   );
 }
@@ -601,11 +610,17 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
           heightMm: cuttingPreview.glass.heightMm - expectedGlassHeightValue,
         }
       : null;
+  const glassSheetConfigValid =
+    !isGlassDraft ||
+    !draft.glassSheetOptimizationEnabled ||
+    (parseDecimal(draft.glassSheetWidthMm) > 0 &&
+      parseDecimal(draft.glassSheetHeightMm) > 0);
   const saveDisabled =
     !draft.nombre.trim() ||
     !draft.categoria ||
     !draft.unidadCobro ||
-    (!isGlassDraft && !draft.material);
+    (!isGlassDraft && !draft.material) ||
+    !glassSheetConfigValid;
   const sheetTitle =
     sheetMode === "edit"
       ? isGlassDraft
@@ -840,7 +855,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         ? templates.find((template) => template.id === editingTemplateId)
         : undefined;
 
-    const catalogMetadata = clearNeedsCommercialPriceFlag(
+    let catalogMetadata = clearNeedsCommercialPriceFlag(
       mergeLineTemplateCuttingRules(
         mergeLineTemplateEstimationRules(
           mergeLineTemplateCubicationConfig(
@@ -901,6 +916,14 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
       ),
       pricePerM2
     );
+
+    catalogMetadata = mergeLineTemplateGlassSheetConfig(catalogMetadata, {
+      enabled: isGlassDraft && draft.glassSheetOptimizationEnabled,
+      widthMm: parseDecimal(draft.glassSheetWidthMm),
+      heightMm: parseDecimal(draft.glassSheetHeightMm),
+      costClp: parseMoney(draft.glassSheetCostClp),
+      billingRule: draft.glassSheetBillingRule,
+    });
 
     if (pricePerM2 <= 0) {
       catalogMetadata.needsCommercialPrice = true;

@@ -2,6 +2,17 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-18 - Optimización de vidrio por plancha V1
+
+- Productos de catálogo `categoria='vidrio'` pueden activar **Optimizar por plancha** desde el editor móvil de líneas.
+- Configuración persistida sin migración nueva en `catalog_metadata.glassSheetOptimization`: formato de plancha, costo opcional y regla `exact|quarter|half|full`; reutiliza `merma_pct` de la línea.
+- Nuevo cálculo puro `glass-sheet-optimization.service.ts`: superficie requerida → merma → fracción de plancha → superficie cobrable/costo estimado.
+- Pricing asistido aplica la optimización tanto en Guiada como en el flujo por grupos y conserva el modo por m² cuando está desactivada.
+- Mobile muestra **Optimizado por Ventora** con fracción de plancha, merma y costo estimado cuando corresponde.
+- Cada ítem consolida su propia cantidad antes de calcular la fracción; V1 no consolida piezas de ítems distintos.
+- La configuración comercial se snapshottea en metadata interna del ítem para que editar una cotización conserve la regla usada aunque la línea cambie.
+- Alcance cerrado: no nesting 2D, inventario de remanentes, optimización física de cortes ni cambios de schema.
+
 ## 2026-09-18 - Resumen de fabricación mobile sin acordeón
 
 - `/print/cotizaciones/[id]/fabricacion` en viewport ≤719px usa `fabricacion-resumen-movil.tsx`: lista de componentes, detalle (Resumen/Cortes/Despiece) y consolidado.

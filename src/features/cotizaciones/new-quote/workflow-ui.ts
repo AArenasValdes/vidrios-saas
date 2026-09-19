@@ -29,6 +29,8 @@ import { resolveCommercialFabricacionHojas } from "@/features/fabricacion/servic
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import {
   getLineTemplateGlassMetadata,
+  getLineTemplateGlassSheetConfig,
+  type CotizacionGlassSheetConfig,
   type CotizacionLineTemplate,
   type CotizacionLineTemplateCatalogMetadata,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
@@ -126,6 +128,10 @@ export type ComponentFormState = {
   precioPorM2: string;
   minimoCobrable: string;
   redondeoPrecio: string;
+  /** Configuración comercial de plancha aplicada por la línea de cristal. */
+  glassSheetConfig?: CotizacionGlassSheetConfig | null;
+  /** Merma propia de la línea, separada de la merma financiera global de la cotización. */
+  lineMermaPct?: number;
   precioPlantillaSugerido: string;
   precioAjustadoManual: boolean;
   origenPrecio: "margen" | "plantilla" | "manual";
@@ -2003,6 +2009,8 @@ export function buildComponentFormLinePricingSummary(
     | "precioPorM2"
     | "minimoCobrable"
     | "redondeoPrecio"
+    | "glassSheetConfig"
+    | "lineMermaPct"
   >
 ) {
   return calculateLineTemplatePricing({
@@ -2012,6 +2020,8 @@ export function buildComponentFormLinePricingSummary(
     precioM2Sugerido: form.precioPorM2 ? Number(form.precioPorM2) : null,
     minimoCobrable: form.minimoCobrable ? Number(form.minimoCobrable) : 0,
     redondeoPrecio: form.redondeoPrecio ? Number(form.redondeoPrecio) : 1000,
+    glassSheetConfig: form.glassSheetConfig ?? null,
+    glassWastePct: form.lineMermaPct ?? 0,
   });
 }
 
@@ -2073,7 +2083,8 @@ export function applyLineTemplateToComponentForm(
     | "precioM2Sugerido"
     | "minimoCobrable"
     | "redondeoPrecio"
-  >,
+  > &
+    Partial<Pick<CotizacionLineTemplate, "mermaPct">>,
   options?: {
     fabricationContext?: FabricacionLineaCotizacionContext | null;
     fabricationRecipes?: FabricationRecipeRecord[];
@@ -2082,6 +2093,7 @@ export function applyLineTemplateToComponentForm(
 ) {
   const preserveManualPrice = form.precioAjustadoManual;
   const glassMetadata = getLineTemplateGlassMetadata(template.catalogMetadata);
+  const glassSheetConfig = getLineTemplateGlassSheetConfig(template.catalogMetadata);
   const resolvedCatalogKey =
     resolveEffectiveSodalL25CatalogKey({
       catalogKey: template.catalogKey,
@@ -2132,6 +2144,14 @@ export function applyLineTemplateToComponentForm(
       precioPorM2: String(Math.round(template.precioM2Sugerido)),
       minimoCobrable: String(Math.round(template.minimoCobrable)),
       redondeoPrecio: String(Math.round(template.redondeoPrecio ?? 0)),
+      glassSheetConfig:
+        template.categoria === "vidrio" && glassSheetConfig.enabled
+          ? glassSheetConfig
+          : null,
+      lineMermaPct:
+        template.categoria === "vidrio" && "mermaPct" in template
+          ? Number(template.mermaPct ?? 0)
+          : 0,
       precioAjustadoManual: preserveManualPrice,
       origenPrecio: preserveManualPrice ? "manual" : "plantilla",
       cubicationSnapshot: form.lineTemplateId === String(template.id) ? form.cubicationSnapshot ?? null : null,
@@ -2400,6 +2420,11 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     precioPorM2,
     minimoCobrable,
     redondeoPrecio,
+    glassSheetWidthMm,
+    glassSheetHeightMm,
+    glassSheetCostClp,
+    glassSheetBillingRule,
+    lineMermaPct,
     precioPlantillaSugerido,
     precioAjustadoManual,
     origenPrecio,
@@ -2491,6 +2516,20 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
         : item.redondeoPrecio !== null
           ? String(Math.round(item.redondeoPrecio))
           : "1000",
+    glassSheetConfig:
+      glassSheetWidthMm !== null &&
+      glassSheetWidthMm > 0 &&
+      glassSheetHeightMm !== null &&
+      glassSheetHeightMm > 0
+        ? {
+            enabled: true,
+            widthMm: glassSheetWidthMm,
+            heightMm: glassSheetHeightMm,
+            costClp: glassSheetCostClp ?? 0,
+            billingRule: glassSheetBillingRule ?? "quarter",
+          }
+        : null,
+    lineMermaPct: lineMermaPct ?? 0,
     precioPlantillaSugerido:
       precioPlantillaSugerido !== null
         ? String(Math.round(precioPlantillaSugerido))
@@ -2803,6 +2842,11 @@ export function buildItemFromForm(
       precioPorM2: syncedForm.precioPorM2 ? Number(syncedForm.precioPorM2) : null,
       minimoCobrable: syncedForm.minimoCobrable ? Number(syncedForm.minimoCobrable) : null,
       redondeoPrecio: syncedForm.redondeoPrecio ? Number(syncedForm.redondeoPrecio) : null,
+      glassSheetWidthMm: syncedForm.glassSheetConfig?.widthMm ?? null,
+      glassSheetHeightMm: syncedForm.glassSheetConfig?.heightMm ?? null,
+      glassSheetCostClp: syncedForm.glassSheetConfig?.costClp ?? null,
+      glassSheetBillingRule: syncedForm.glassSheetConfig?.billingRule ?? null,
+      lineMermaPct: syncedForm.lineMermaPct ?? null,
       precioPlantillaSugerido:
         quotePricingMode === "total_global" ? null : linePricingSummary.precioUnitarioSugerido,
       precioAjustadoManual:
@@ -2876,6 +2920,11 @@ export function applyQuotePricingToItems(
       precioPorM2,
       minimoCobrable,
       redondeoPrecio,
+      glassSheetWidthMm,
+      glassSheetHeightMm,
+      glassSheetCostClp,
+      glassSheetBillingRule,
+      lineMermaPct,
       precioAjustadoManual,
       palilloEnabled,
       palilloType,
@@ -2936,6 +2985,11 @@ export function applyQuotePricingToItems(
         precioPorM2: precioPorM2 ?? item.precioPorM2,
         minimoCobrable: minimoCobrable ?? item.minimoCobrable,
         redondeoPrecio: redondeoPrecio ?? item.redondeoPrecio,
+        glassSheetWidthMm,
+        glassSheetHeightMm,
+        glassSheetCostClp,
+        glassSheetBillingRule,
+        lineMermaPct,
         precioPlantillaSugerido: item.precioPlantillaSugerido,
         precioAjustadoManual:
           pricingMode === "precio_directo"
