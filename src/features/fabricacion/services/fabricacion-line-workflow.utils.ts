@@ -170,17 +170,19 @@ export function formatTypologyLabel(tipologia: string) {
 
 export function mapWorkflowStepToMobileWizard(
   step: RecipeWorkflowStepId
-): "origin" | "config" | "profiles" | "glass" | "test" {
-  if (step === "base") return "origin";
+): "product" | "profiles" | "glass" | "validate" {
+  if (step === "base") return "product";
   if (step === "components" || step === "rules") return "profiles";
-  return "test";
+  if (step === "plan") return "glass";
+  return "validate";
 }
 
 export function mapMobileWizardToWorkflowStep(
-  step: "origin" | "config" | "profiles" | "glass" | "test"
+  step: "product" | "profiles" | "glass" | "validate"
 ): RecipeWorkflowStepId {
-  if (step === "origin" || step === "config") return "base";
+  if (step === "product") return "base";
   if (step === "profiles") return "components";
+  if (step === "glass") return "components";
   return "test";
 }
 
@@ -191,15 +193,33 @@ export const FABRICACION_PRIMARY_WORKFLOW_STEPS = [
 ] as const;
 
 export const MOBILE_WIZARD_STEPS = [
-  { id: "origin" as const, label: "Origen" },
-  { id: "config" as const, label: "Configuración" },
+  { id: "product" as const, label: "Producto" },
   { id: "profiles" as const, label: "Perfiles" },
   { id: "glass" as const, label: "Vidrio y accesorios" },
-  { id: "test" as const, label: "Probar y guardar" },
+  { id: "validate" as const, label: "Validar" },
 ];
 
-export function getMobileWizardStepIndex(step: "origin" | "config" | "profiles" | "glass" | "test") {
+export function getMobileWizardStepIndex(
+  step: "product" | "profiles" | "glass" | "validate"
+) {
   return MOBILE_WIZARD_STEPS.findIndex((entry) => entry.id === step);
+}
+
+export type FabricacionVisualStatusId = "none" | "draft" | "validated" | "active";
+
+export function getFabricacionVisualStatus(
+  status: FabricationRecipeStatus | "quote_only" | null | undefined
+): { id: FabricacionVisualStatusId; label: string; tone: string } {
+  if (!status || status === "quote_only") {
+    return { id: "none", label: "Sin configurar", tone: "quote_only" };
+  }
+  if (status === "validated") {
+    return { id: "active", label: "Activa", tone: "active" };
+  }
+  if (status === "testing") {
+    return { id: "validated", label: "Validada", tone: "validated" };
+  }
+  return { id: "draft", label: "Borrador", tone: "draft" };
 }
 
 export function getPrimaryWorkflowIndex(step: PrimaryWorkflowStepId) {

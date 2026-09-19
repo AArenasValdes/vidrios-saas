@@ -21,15 +21,29 @@ const mockRepair = jest.mocked(ensureStructuralDraftsClient);
 describe("carga del editor después de reparar AL-32/AL-42", () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it("no carga las recetas antiguas mientras la reparación está pendiente", async () => {
+  it("prepara la línea y carga recetas filtradas en paralelo", async () => {
     let finish!: (count: number) => void;
     mockRepair.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    mockListRecipes.mockResolvedValue([{ id: "r1" }]);
     const { result } = renderHook(() => useFabricationRecipes({ lineTemplateId: 42 }));
+    await waitFor(() => expect(mockRepair).toHaveBeenCalledWith(8));
+    await waitFor(() =>
+      expect(mockListRecipes).toHaveBeenCalledWith({ organizationId: 8, lineTemplateId: 42 })
+    );
+    expect(result.current.isLoading).toBe(true);
+    await act(async () => { finish(1); });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+  });
+
+  it("espera la reparación antes de listar cuando no hay línea filtrada", async () => {
+    let finish!: (count: number) => void;
+    mockRepair.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    const { result } = renderHook(() => useFabricationRecipes());
     await waitFor(() => expect(mockRepair).toHaveBeenCalledWith(8));
     expect(mockListRecipes).not.toHaveBeenCalled();
     expect(result.current.isLoading).toBe(true);
     await act(async () => { finish(1); });
-    await waitFor(() => expect(mockListRecipes).toHaveBeenCalledWith({ organizationId: 8, lineTemplateId: 42 }));
+    await waitFor(() => expect(mockListRecipes).toHaveBeenCalledWith({ organizationId: 8, lineTemplateId: undefined }));
     expect(result.current.isLoading).toBe(false);
   });
 

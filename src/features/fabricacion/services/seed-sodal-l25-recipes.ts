@@ -3,6 +3,7 @@ import {
   buildAllSodalL25Recipes,
   type SodalL25RecipeBundle,
 } from "@/features/fabricacion/fixtures/sodal-l25-zeta-recipes";
+import { SODAL_L25_FORMULA_VERSION } from "@/features/fabricacion/zeta/sodal-l25-profile-roles";
 import { isZetaConfirmedSourceReference } from "@/features/fabricacion/zeta/zeta-confirmed-loader";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
@@ -47,6 +48,7 @@ function buildInsertPayload(input: {
     source_type: "manufacturer",
     source_name: "SODAL",
     source_reference: sourceReference,
+    source_revision: SODAL_L25_FORMULA_VERSION,
     validated_at: new Date().toISOString(),
   };
 }

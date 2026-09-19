@@ -179,6 +179,97 @@ export function resolveSodalL25QuoteConfig(input: {
   };
 }
 
+function sodalL25RecipeIdentityKey(recipe: FabricationRecipeRecord): string {
+  return `${recipe.definition.identidad.hojas}::${recipe.definition.identidad.variante}`;
+}
+
+export function mergeSodalL25WorkspaceRecipes(input: {
+  organization: FabricationRecipeRecord[];
+  ventora: FabricationRecipeRecord[];
+}): FabricationRecipeRecord[] {
+  const merged = new Map<string, FabricationRecipeRecord>();
+
+  for (const recipe of input.ventora) {
+    if (recipe.eliminadoEn || recipe.status === "archived") continue;
+    merged.set(sodalL25RecipeIdentityKey(recipe), recipe);
+  }
+
+  for (const recipe of input.organization) {
+    if (recipe.eliminadoEn || recipe.status === "archived") continue;
+    merged.set(sodalL25RecipeIdentityKey(recipe), recipe);
+  }
+
+  return Array.from(merged.values()).sort((left, right) => {
+    const hojasDiff =
+      left.definition.identidad.hojas - right.definition.identidad.hojas;
+    if (hojasDiff !== 0) return hojasDiff;
+    return left.definition.identidad.variante.localeCompare(
+      right.definition.identidad.variante,
+      "es-CL"
+    );
+  });
+}
+
+export function findSodalL25LineRecipe(
+  recipes: FabricationRecipeRecord[],
+  input: {
+    hojas: number;
+    glazing: SodalL25GlazingSlug;
+    leg: SodalL25LegSlug;
+    reinforcement: SodalL25ReinforcementSlug;
+  }
+): FabricationRecipeRecord | null {
+  const variantSlug = buildSodalL25VariantSlug(input);
+  const matches = recipes.filter(
+    (recipe) =>
+      !recipe.eliminadoEn &&
+      recipe.status !== "archived" &&
+      recipe.definition.identidad.hojas === input.hojas &&
+      recipe.definition.identidad.variante === variantSlug
+  );
+  return matches.sort((left, right) => {
+    if (left.scope === right.scope) {
+      return right.version - left.version;
+    }
+    return left.scope === "organization" ? -1 : 1;
+  })[0] ?? null;
+}
+
+export function summarizeSodalL25LineCoverage(recipes: FabricationRecipeRecord[]) {
+  const ready = recipes.filter(
+    (recipe) => !recipe.eliminadoEn && isSodalL25ZetaValidatedRecipe(recipe)
+  );
+  const leaves = ([2, 3, 4] as const).map((hojas) => ({
+    hojas,
+    ready: ready.some((recipe) => recipe.definition.identidad.hojas === hojas),
+    recipeCount: ready.filter((recipe) => recipe.definition.identidad.hojas === hojas)
+      .length,
+  }));
+
+  return {
+    readyCount: ready.length,
+    leaves,
+    allLeavesReady: leaves.every((entry) => entry.ready),
+  };
+}
+
+export function listSodalL25GlazingOptions(input: {
+  recipes: FabricationRecipeRecord[];
+  hojas: number;
+}): SodalL25VariantOption<SodalL25GlazingSlug>[] {
+  return (["monolithic", "dvh"] as const).map((glazing) => ({
+    value: glazing,
+    label: glazing === "dvh" ? "DVH" : "Monolítico",
+    available: input.recipes.some(
+      (recipe) =>
+        isSodalL25ZetaValidatedRecipe(recipe) &&
+        recipe.definition.identidad.hojas === input.hojas &&
+        parseSodalL25VariantSlug(recipe.definition.identidad.variante)?.glazing ===
+          glazing
+    ),
+  }));
+}
+
 export function listSodalL25LegOptions(input: {
   recipes: FabricationRecipeRecord[];
   glazing: SodalL25GlazingSlug;

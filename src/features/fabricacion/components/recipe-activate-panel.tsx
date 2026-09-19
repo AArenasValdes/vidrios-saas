@@ -26,6 +26,8 @@ import type {
   FabricacionTipologia,
 } from "@/features/fabricacion/types/fabricacion-domain";
 import type { FabricationRecipeTestRecord } from "@/features/fabricacion/types/fabricacion-persistence";
+import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
+import { evaluarGatesRecetaFabricacion } from "@/features/fabricacion/services/fabricacion-gates.service";
 import {
   buildFabricationRecipeSummary,
   getActiveRecipeProfileRules,
@@ -104,7 +106,11 @@ function profileHasWorkshopIdentity(
 
 export function buildRecipeActivateChecklist(
   recipe: FabricacionReceta,
-  tests: FabricationRecipeTestRecord[]
+  tests: FabricationRecipeTestRecord[],
+  gateContext?: {
+    record: FabricationRecipeRecord;
+    candidateRecipes?: FabricationRecipeRecord[];
+  }
 ) {
   const requiredTests = tests.filter((test) => test.isRequired !== false);
   const requiredProfilesOk =
@@ -121,7 +127,7 @@ export function buildRecipeActivateChecklist(
   const testsOk =
     requiredTests.length > 0 && requiredTests.every((test) => test.passed);
 
-  return [
+  const checklist = [
     {
       label: "La línea tiene un nombre y tipología definidos",
       done: Boolean(recipe.identidad.nombre.trim() && recipe.identidad.tipologia),
@@ -143,13 +149,44 @@ export function buildRecipeActivateChecklist(
       done: requiredProfilesOk && basicRulesOk && testsOk,
     },
   ];
+
+  if (gateContext) {
+    const evaluation = evaluarGatesRecetaFabricacion({
+      recipe,
+      record: gateContext.record,
+      tests,
+      candidateRecipes: gateContext.candidateRecipes,
+    });
+    const labels: Record<string, string> = {
+      source_exact: "La fuente exacta y los discriminadores están declarados",
+      distinct_geometry: "Hay pruebas aprobadas con geometrías distintas",
+      role_invariants: "Las invariantes de ancho y alto coinciden con cada rol",
+      resolver_unique: "El resolver encuentra una única receta compatible",
+      snapshot_despiece_pauta_e2e: "Snapshot, despiece y pauta generan salida calculable",
+      accessories_hardware_classified: "Accesorios y herrajes están clasificados",
+    };
+    evaluation.gates.forEach((gate) => {
+      checklist.push({
+        label: labels[gate.id] ?? gate.id,
+        done: gate.passed,
+      });
+    });
+  }
+
+  return checklist;
 }
 
 export function isRecipeReadyToActivate(
   recipe: FabricacionReceta,
-  tests: FabricationRecipeTestRecord[]
+  tests: FabricationRecipeTestRecord[],
+  gateContext?: {
+    record: FabricationRecipeRecord;
+    candidateRecipes?: FabricationRecipeRecord[];
+  }
 ) {
-  return buildRecipeActivateChecklist(recipe, tests).every((item) => item.done);
+  return buildRecipeActivateChecklist(recipe, tests, gateContext).every(
+    (item) => item.done
+  );
 }
 
 function pickReferenceInput(

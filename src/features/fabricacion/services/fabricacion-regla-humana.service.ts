@@ -493,11 +493,91 @@ export function describeAccesorioSheetLabel(
     /cantidad/i.test(detail)
   );
   if (cantidadPending) {
-    return { label: "Cantidad por configurar", pending: true };
+    return { label: `${nombre}: cantidad por configurar`, pending: true };
   }
   return {
     label: describeAccesorioReglaHumana(accessory),
     pending: false,
+  };
+}
+
+/**
+ * Etiqueta humana segura para UI. Nunca interpola un objeto
+ * (evita "[object Object]" en listados mobile).
+ */
+export function displayLabel(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+  if (typeof value === "boolean") return value ? "Sí" : "No";
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    if (typeof record.line === "string" && record.line.trim()) {
+      return record.line.trim();
+    }
+    if (typeof record.label === "string" && record.label.trim()) {
+      return record.label.trim();
+    }
+    if (typeof record.nombre === "string" && record.nombre.trim()) {
+      return record.nombre.trim();
+    }
+    return "";
+  }
+  return "";
+}
+
+export type FabricacionPerfilCardDisplay = {
+  rol: string;
+  perfil: string;
+  codigo: string;
+  nombre: string;
+  base: string;
+  ajuste: string;
+  cantidad: string;
+  largoComercial: string;
+  line: string;
+};
+
+function formatAjusteMm(ajusteMm: number | null | undefined): string {
+  if (ajusteMm == null || !Number.isFinite(ajusteMm) || ajusteMm === 0) {
+    return "0 mm";
+  }
+  const abs = Math.abs(ajusteMm).toLocaleString("es-CL");
+  return ajusteMm < 0 ? `−${abs} mm` : `+${abs} mm`;
+}
+
+/** Card compacta de regla activa: solo strings listos para renderizar. */
+export function describePerfilCardDisplay(
+  profile: FabricacionComponentePerfil,
+  receta?: FabricacionReceta | null
+): FabricacionPerfilCardDisplay {
+  const rol = displayLabel(profile.funcion) || "Perfil";
+  const codigo = displayLabel(profile.codigoPerfil);
+  const nombre = displayLabel(profile.nombrePerfil);
+  const perfilParts = [codigo, nombre].filter(Boolean);
+  const perfil = perfilParts.length > 0 ? perfilParts.join(" + ") : "Pendiente de validar";
+  const base = labelBaseMedida(profile.reglaMedida.base, "human");
+  const ajuste = formatAjusteMm(profile.reglaMedida.ajusteMm);
+  const cantidad = String(Math.max(1, Math.round(profile.reglaCantidad.cantidad)));
+  const largoMm = receta
+    ? resolveLargoComercialMm(profile, receta)
+    : profile.largoComercialMm ?? VENTORA_LARGO_COMERCIAL_PRESET_MM;
+  const largoComercial =
+    formatLargoComercialCorto(largoMm) ?? "6,00 m";
+  return {
+    rol,
+    perfil,
+    codigo: codigo || "Pendiente de validar",
+    nombre,
+    base,
+    ajuste,
+    cantidad,
+    largoComercial,
+    line: [rol, perfil, `${base} ${ajuste}`, `${cantidad} · ${largoComercial}`].join(
+      " · "
+    ),
   };
 }
 

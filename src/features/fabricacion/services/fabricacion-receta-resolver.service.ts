@@ -23,6 +23,8 @@ export type FabricacionRecetaResolucionInput = {
   apertura?: string | null;
   herraje?: string | null;
   variante?: string | null;
+  topology?: string | null;
+  hardwareMode?: string | null;
   preferredRecipeId?: string | null;
   allowNonValidatedRecipeId?: string | null;
   /** Cotización/UI: si no hay validada, permite una compatible en borrador/prueba. */
@@ -33,7 +35,7 @@ export type ResolveFabricationRecipeInput = FabricacionRecetaResolucionInput & {
   catalogKey?: string | null;
   glazing?: SodalL25GlazingSlug | null;
   leg?: SodalL25LegSlug | null;
-  reinforcement?: SodalL25ReinforcementSlug | null;
+    reinforcement?: SodalL25ReinforcementSlug | null;
 };
 
 export function isSodalL25ZetaValidatedRecipe(recipe: FabricationRecipeRecord): boolean {
@@ -82,9 +84,13 @@ export function resolveFabricationRecipe(
     });
   }
 
+  const topology =
+    input.catalogKey === SODAL_L25_CATALOG_KEY ? "corredera" : input.topology;
+
   return resolverRecetaFabricacionCompatible(filtered, {
     ...input,
     variante,
+    topology,
     allowPreliminaryNonValidated:
       input.catalogKey === SODAL_L25_CATALOG_KEY
         ? false
@@ -206,6 +212,22 @@ export function resolverRecetaFabricacionCompatible(
       normalizeText(identidad.apertura) !== normalizeText(input.apertura)
     ) {
       descartadas.push(discard(recipe, "La apertura no coincide."));
+      return false;
+    }
+    if (
+      input.topology &&
+      identidad.topology &&
+      normalizeText(identidad.topology) !== normalizeText(input.topology)
+    ) {
+      descartadas.push(discard(recipe, "La topologia no coincide."));
+      return false;
+    }
+    if (
+      input.hardwareMode &&
+      identidad.hardwareMode &&
+      normalizeText(identidad.hardwareMode) !== normalizeText(input.hardwareMode)
+    ) {
+      descartadas.push(discard(recipe, "El modo de herraje no coincide."));
       return false;
     }
     if (input.herraje && identidad.herraje && normalizeText(identidad.herraje) !== normalizeText(input.herraje)) {

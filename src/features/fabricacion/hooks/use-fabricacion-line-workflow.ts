@@ -20,10 +20,7 @@ import {
 } from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
 import { resolvePlantillaIdFromCatalogKey } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
-import {
-  contarBloqueosCriticosReceta,
-  crearRecetaFabricacionVacia,
-} from "@/features/fabricacion/services/fabricacion-receta-editor.service";
+import { crearRecetaFabricacionVacia } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 import { enriquecerCodigosPerfilRecetaFabricacion } from "@/features/fabricacion/services/fabricacion-receta-codigos.service";
 import { enriquecerRecetaDesdeCatalogo } from "@/features/fabricacion/services/enriquecer-receta-desde-catalogo.service";
@@ -38,6 +35,11 @@ import {
   mapMobileWizardToWorkflowStep,
   mapWorkflowStepToMobileWizard,
 } from "@/features/fabricacion/services/fabricacion-line-workflow.utils";
+import {
+  mergeSodalL25WorkspaceRecipes,
+  isSodalL25CatalogKey,
+} from "@/features/fabricacion/services/sodal-l25-context.service";
+import { resolveEffectiveSodalL25CatalogKey } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import {
   resolveVariantTreeGroups,
   type FabricacionVariantTreeItem,
@@ -98,12 +100,12 @@ export function useFabricacionLineWorkflow({
     createRecipeTest,
     runRecipeTest,
     validateRecipe,
-  } = useFabricationRecipes();
+  } = useFabricationRecipes({ lineTemplateId });
 
   const [view, setView] = useState<FabricacionWorkspaceView>("list");
   const [mobileView, setMobileView] = useState<FabricacionMobileView>("detail");
   const [mobileWizardStep, setMobileWizardStep] =
-    useState<MobileWizardStepId>("origin");
+    useState<MobileWizardStepId>("product");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<FabricacionReceta | null>(null);
   const [providerName, setProviderName] = useState("");
@@ -161,6 +163,23 @@ export function useFabricacionLineWorkflow({
       ),
     [lineTemplateId, recipes, template?.nombre]
   );
+  const effectiveCatalogKey = useMemo(
+    () =>
+      resolveEffectiveSodalL25CatalogKey({
+        catalogKey: template?.catalogKey,
+        nombre: template?.nombre,
+      }),
+    [template?.catalogKey, template?.nombre]
+  );
+  const fabricacionLineRecipes = useMemo(() => {
+    if (!isSodalL25CatalogKey(effectiveCatalogKey)) {
+      return lineRecipes;
+    }
+    return mergeSodalL25WorkspaceRecipes({
+      organization: lineRecipes,
+      ventora: ventoraRecipes,
+    });
+  }, [effectiveCatalogKey, lineRecipes, ventoraRecipes]);
   const suggestedRecipesForLine = useMemo(() => {
     const normalizedLine = template?.nombre.trim().toLocaleLowerCase("es-CL");
     const normalizedProvider = template?.proveedor?.trim().toLocaleLowerCase("es-CL");
@@ -203,7 +222,7 @@ export function useFabricacionLineWorkflow({
     setFeedback(null);
     setLineSetupError(null);
     setActiveStep("base");
-    setMobileWizardStep("origin");
+    setMobileWizardStep("product");
   }, []);
 
   const openEditor = useCallback(
@@ -266,15 +285,11 @@ export function useFabricacionLineWorkflow({
       recipe: FabricationRecipeRecord,
       step: "test" | "plan" | "validation" = "test"
     ) => {
-      setSelectedId(recipe.id);
-      setActiveStep(step);
+      openEditor(recipe, step);
       setView("test");
-      setMobileView("test");
-      setMobileWizardStep("test");
-      setFeedback(null);
       await loadTests(recipe.id);
     },
-    [loadTests]
+    [loadTests, openEditor]
   );
 
   const handleCreateFromDefinition = useCallback(
@@ -452,31 +467,56 @@ export function useFabricacionLineWorkflow({
       if (!selected || !recipeToSave) return null;
       const silent = options?.silent === true;
       const startModeMeta = resolveStartModePersistence(recipeToSave);
-      const updated = await updateRecipe(
-        selected.id,
-        {
-          providerName,
-          lineName,
-          typology: recipeToSave.identidad.tipologia,
-          leavesCount: recipeToSave.identidad.hojas,
-          variant: recipeToSave.identidad.variante,
-          definition: recipeToSave,
-          ...startModeMeta,
-        },
-        { quiet: silent }
-      );
+      const catalogKey = resolveEffectiveSodalL25CatalogKey({
+        catalogKey: template?.catalogKey,
+        nombre: template?.nombre,
+      });
+      const isL25ValidatedEdit =
+        selected.status === "validated" && isSodalL25CatalogKey(catalogKey);
+
+      const updated = isL25ValidatedEdit
+        ? await createRecipeVersion(
+            selected.id,
+            {
+              definition: recipeToSave,
+              status: "testing",
+            },
+            { quiet: silent }
+          )
+        : await updateRecipe(
+            selected.id,
+            {
+              providerName,
+              lineName,
+              typology: recipeToSave.identidad.tipologia,
+              leavesCount: recipeToSave.identidad.hojas,
+              variant: recipeToSave.identidad.variante,
+              definition: recipeToSave,
+              ...startModeMeta,
+            },
+            { quiet: silent }
+          );
+
       if (template && template.material !== lineMaterial) {
         await updateTemplate(template.id, { material: lineMaterial });
       }
+
+      setSelectedId(updated.id);
+      setDraft(cloneFabricacionRecipe(updated.definition));
+
       if (!silent) {
-        setDraft(cloneFabricacionRecipe(updated.definition));
-        setFeedback("Borrador guardado.");
+        setFeedback(
+          isL25ValidatedEdit
+            ? "Ajustes guardados. Puedes seguir editando esta variante."
+            : "Borrador guardado."
+        );
       }
       setHasChangedRecipeStartMode(false);
       setLineSetupError(null);
       return updated;
     },
     [
+      createRecipeVersion,
       draft,
       lineMaterial,
       lineName,
@@ -702,14 +742,9 @@ export function useFabricacionLineWorkflow({
         await handleCreate("manual");
         return;
       }
-      const stage = getRecipeStage(target, tests[target.id] ?? []);
-      if (stage.currentStep === "test" || stage.currentStep === "validation") {
-        await openTestLab(target, stage.currentStep === "validation" ? "validation" : "test");
-        return;
-      }
-      openEditor(target, stage.currentStep);
+      openEditor(target, "base");
     },
-    [focusRecipe, handleCreate, openEditor, openTestLab, tests]
+    [focusRecipe, handleCreate, openEditor]
   );
 
   const navigateMobileWizardStep = useCallback(
@@ -790,6 +825,7 @@ export function useFabricacionLineWorkflow({
     template,
     providerOptions,
     lineRecipes,
+    fabricacionLineRecipes,
     ventoraRecipes,
     suggestedRecipesForLine,
     variantTreeGroups,

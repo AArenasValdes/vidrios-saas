@@ -352,7 +352,7 @@ describe("fabrication-recipes.service", () => {
     });
   });
 
-  it("una receta se valida cuando todos los tests pasan", async () => {
+  it("una receta no se valida solo porque todos sus tests pasan", async () => {
     const { service } = createService([recipeRecord()]);
     const input = baseInput({ anchoTotalMm: 1500, altoTotalMm: 1100, cantidad: 2 });
     const expected = calcularCubicacionYPauta(
@@ -368,15 +368,18 @@ describe("fabrication-recipes.service", () => {
       expectedOutput: expected,
     });
 
-    const validated = await service.validateRecipe("receta-base", 10, "user-1");
-
-    expect(validated.status).toBe("validated");
-    expect(validated.validatedAt).toBe(NOW);
-    expect(validated.validatedBy).toBe("user-1");
-    expect(validated.definition.estado).toBe("validada");
+    await expect(service.validateRecipe("receta-base", 10, "user-1")).rejects.toMatchObject({
+      code: "VALIDACION_GATES_INCOMPLETOS",
+      details: {
+        gates: expect.arrayContaining([
+          expect.objectContaining({ id: "source_exact", passed: false }),
+          expect.objectContaining({ id: "distinct_geometry", passed: false }),
+        ]),
+      },
+    });
   });
 
-  it("ignora un caso opcional fallido si todos los obligatorios pasan", async () => {
+  it("mantiene los gates aunque un caso opcional fallido sea ignorado", async () => {
     const { service } = createService([recipeRecord()]);
     const input = baseInput();
     const expected = calcularCubicacionYPauta(
@@ -401,12 +404,12 @@ describe("fabrication-recipes.service", () => {
       isRequired: false,
     });
 
-    await expect(service.validateRecipe("receta-base", 10)).resolves.toMatchObject({
-      status: "validated",
+    await expect(service.validateRecipe("receta-base", 10)).rejects.toMatchObject({
+      code: "VALIDACION_GATES_INCOMPLETOS",
     });
   });
 
-  it("permite validar aunque falte el código comercial de un perfil obligatorio", async () => {
+  it("no activa una receta incompleta aunque el código comercial sea opcional en cálculo", async () => {
     const definition = {
       ...RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO,
       perfiles: RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO.perfiles.map(
@@ -426,8 +429,8 @@ describe("fabrication-recipes.service", () => {
       isRequired: true,
     });
 
-    await expect(service.validateRecipe("receta-base", 10)).resolves.toMatchObject({
-      status: "validated",
+    await expect(service.validateRecipe("receta-base", 10)).rejects.toMatchObject({
+      code: "VALIDACION_GATES_INCOMPLETOS",
     });
   });
 

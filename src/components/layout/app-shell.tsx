@@ -13,6 +13,10 @@ import type { IconType } from "react-icons";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import {
+  getFabricacionEditorOpen,
+  subscribeFabricacionEditorOpen,
+} from "@/features/fabricacion/services/fabricacion-editor-chrome.store";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   LuBell,
@@ -420,6 +424,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
         !usesMinimalShell && shouldLoadShellFeeds ? 45000 : 0,
     });
   const isNuevaCotizacionRoute = pathname.startsWith("/cotizaciones/nueva");
+  const isFabricacionEditorOpen = useSyncExternalStore(
+    subscribeFabricacionEditorOpen,
+    getFabricacionEditorOpen,
+    () => false
+  );
+  const hideMobileTabBar = isNuevaCotizacionRoute || isFabricacionEditorOpen;
   const isPerformanceSensitiveRoute =
     isNuevaCotizacionRoute ||
     pathname.startsWith("/configuracion/empresa/lineas-precios");
@@ -1755,7 +1765,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       ) : null}
 
       {!usesMinimalShell ? (
-      <nav className={`${s.tabBar}${isNuevaCotizacionRoute ? ` ${s.tabBarHidden}` : ""}`}>
+      <nav className={`${s.tabBar}${hideMobileTabBar ? ` ${s.tabBarHidden}` : ""}`}>
         <div
           className={`${s.tabBarInner}${
             canReviewSolicitudes ? ` ${s.tabBarInnerWithSolicitudes}` : ""

@@ -5,10 +5,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { ensureStructuralDraftsClient } from "@/features/cotizaciones/line-templates/services/seed-structural-draft-client";
 import { getFabricationRecipesClientService } from "@/features/fabricacion/services/fabrication-recipes.client";
+import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
 import type {
   CreateFabricationRecipeInput,
   CreateFabricationRecipeTestInput,
   FabricationRecipeRecord,
+  FabricationRecipeStatus,
   FabricationRecipeTestRecord,
   UpdateFabricationRecipeInput,
 } from "@/features/fabricacion/types/fabricacion-persistence";
@@ -87,7 +89,7 @@ export function useFabricationRecipes(options: UseFabricationRecipesOptions = {}
     };
   }, [cargando, userId]);
 
-  const loadRecipes = useCallback(async () => {
+  const loadRecipes = useCallback(async (loadOptions?: { background?: boolean }) => {
     if (!organizationId || options.enabled === false) {
       setRecipes([]);
       setIsLoading(false);
@@ -95,15 +97,30 @@ export function useFabricationRecipes(options: UseFabricationRecipesOptions = {}
     }
 
     const loadId = ++loadIdRef.current;
-    setIsLoading(true);
+    const background = loadOptions?.background === true;
+    if (!background) setIsLoading(true);
     setError(null);
 
     try {
-      await ensureStructuralDraftsClient(organizationId);
-      const data = await getFabricationRecipesClientService().listRecipes({
-        organizationId,
-        lineTemplateId: options.lineTemplateId,
-      });
+      const listRecipes = () =>
+        getFabricationRecipesClientService().listRecipes({
+          organizationId,
+          lineTemplateId: options.lineTemplateId,
+        });
+
+      const data =
+        options.lineTemplateId != null
+          ? (
+              await Promise.all([
+                ensureStructuralDraftsClient(organizationId),
+                listRecipes(),
+              ])
+            )[1]
+          : await (async () => {
+              await ensureStructuralDraftsClient(organizationId);
+              return listRecipes();
+            })();
+
       if (loadId === loadIdRef.current) setRecipes(data);
     } catch (loadError) {
       if (loadId === loadIdRef.current) {
@@ -114,16 +131,12 @@ export function useFabricationRecipes(options: UseFabricationRecipesOptions = {}
         );
       }
     } finally {
-      if (loadId === loadIdRef.current) setIsLoading(false);
+      if (loadId === loadIdRef.current && !background) setIsLoading(false);
     }
   }, [options.enabled, options.lineTemplateId, organizationId]);
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      void loadRecipes();
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
+    void loadRecipes();
   }, [loadRecipes]);
 
   const runMutation = useCallback(
@@ -143,13 +156,13 @@ export function useFabricationRecipes(options: UseFabricationRecipesOptions = {}
         if (patched) {
           setRecipes((current) => {
             const index = current.findIndex((recipe) => recipe.id === patched.id);
-            if (index < 0) return current;
+            if (index < 0) return [patched, ...current];
             const next = current.slice();
             next[index] = patched;
             return next;
           });
         } else {
-          await loadRecipes();
+          await loadRecipes({ background: quiet });
         }
         return result;
       } catch (mutationError) {
@@ -217,12 +230,26 @@ export function useFabricationRecipes(options: UseFabricationRecipesOptions = {}
   );
 
   const createRecipeVersion = useCallback(
-    (id: string) => {
+    (
+      id: string,
+      input?: {
+        definition?: FabricacionReceta;
+        status?: Extract<FabricationRecipeStatus, "draft" | "review_required" | "testing">;
+      },
+      options?: { quiet?: boolean }
+    ) => {
       if (!organizationId) throw new Error("No hay organizacion activa.");
-      return runMutation(() =>
-        getFabricationRecipesClientService().createRecipeVersion(id, {
-          organizationId,
-        })
+      return runMutation(
+        () =>
+          getFabricationRecipesClientService().createRecipeVersion(id, {
+            organizationId,
+            definition: input?.definition,
+            status: input?.status,
+          }),
+        {
+          quiet: options?.quiet,
+          replaceRecipe: (result) => result,
+        }
       );
     },
     [organizationId, runMutation]

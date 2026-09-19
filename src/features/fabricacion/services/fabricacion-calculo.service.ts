@@ -46,6 +46,14 @@ function matchesNumberRule(
   return true;
 }
 
+function matchesTextRule(value: string | null | undefined, rule: string | string[] | undefined) {
+  if (rule == null) return true;
+  const normalized = (value ?? "").trim().toLowerCase();
+  return (Array.isArray(rule) ? rule : [rule]).some(
+    (candidate) => normalized === candidate.trim().toLowerCase()
+  );
+}
+
 function cumpleCondicion(
   condicion: FabricacionCondicion | undefined,
   entrada: FabricacionEntradaCalculo
@@ -55,11 +63,10 @@ function cumpleCondicion(
   if (!matchesNumberRule(entrada.modulos, condicion.modulos)) return false;
   if (condicion.variante != null) {
     const variante = entrada.variante ?? "";
-    return Array.isArray(condicion.variante)
-      ? condicion.variante.includes(variante)
-      : condicion.variante === variante;
+    if (!matchesTextRule(variante, condicion.variante)) return false;
   }
-  return true;
+  if (!matchesTextRule(entrada.topology, condicion.topology)) return false;
+  return matchesTextRule(entrada.hardwareMode, condicion.hardwareMode);
 }
 
 function baseMedidaMm(regla: FabricacionReglaMedida, entrada: FabricacionEntradaCalculo): number {
@@ -103,6 +110,8 @@ function calcularMedida(
       hojas: entrada.hojas,
       modulos: entrada.modulos,
       variante: entrada.variante ?? null,
+      topology: entrada.topology ?? null,
+      hardwareMode: entrada.hardwareMode ?? null,
     },
     resultado: valor,
   };
@@ -148,6 +157,8 @@ function calcularCantidad(
         hojas: entrada.hojas,
         modulos: entrada.modulos,
         variante: entrada.variante ?? null,
+        topology: entrada.topology ?? null,
+        hardwareMode: entrada.hardwareMode ?? null,
       },
       resultado: valor,
     },
@@ -200,6 +211,8 @@ function validarEntradaCalculo(
       hojas: entrada.hojas,
       modulos: entrada.modulos,
       variante: entrada.variante ?? null,
+      topology: entrada.topology ?? null,
+      hardwareMode: entrada.hardwareMode ?? null,
     },
   };
 }

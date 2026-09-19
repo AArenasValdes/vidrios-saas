@@ -178,6 +178,10 @@ type Props = {
   onConfigureLengths?: () => void;
   onApplyPresetLengths?: () => Promise<void> | void;
   onActivate?: () => Promise<void> | void;
+  presentation?: "desktop" | "mobile";
+  onCorrectProfile?: (profileId: string) => void;
+  onSaveDraft?: () => Promise<void> | void;
+  allowInteractiveWhenValidated?: boolean;
 };
 
 export function RecipeTestLab({
@@ -189,8 +193,11 @@ export function RecipeTestLab({
   onSaveTest,
   onBackToRecipe,
   onConfigureLengths,
-  onApplyPresetLengths,
   onActivate,
+  presentation = "desktop",
+  onCorrectProfile,
+  onSaveDraft,
+  allowInteractiveWhenValidated = false,
 }: Props) {
   const identity = recipe.definition.identidad;
   const [name, setName] = useState("");
@@ -213,8 +220,6 @@ export function RecipeTestLab({
   const [correctingIds, setCorrectingIds] = useState<Set<string>>(
     () => new Set()
   );
-  const [isApplyingLengths, setIsApplyingLengths] = useState(false);
-
   const tiraEstandar = useMemo(
     () => resolveTiraEstandarRecetaLabel(recipe.definition),
     [recipe.definition]
@@ -289,6 +294,25 @@ export function RecipeTestLab({
     ]
   );
 
+  const isMobile = presentation === "mobile";
+  const recipeFingerprint = useMemo(
+    () =>
+      recipe.definition.perfiles
+        .map(
+          (profile) =>
+            `${profile.id}:${profile.reglaMedida.base}:${profile.reglaMedida.ajusteMm ?? ""}:${profile.reglaCantidad.cantidad}`
+        )
+        .join("|"),
+    [recipe.definition.perfiles]
+  );
+  const [calculatedFingerprint, setCalculatedFingerprint] = useState<string | null>(
+    null
+  );
+  const recipeChangedSinceCalc =
+    hasResults &&
+    calculatedFingerprint != null &&
+    calculatedFingerprint !== recipeFingerprint;
+
   const calculate = () => {
     const validMeasures = measures.filter(
       (row) => row.anchoMm > 0 && row.altoMm > 0 && row.cantidad > 0
@@ -313,6 +337,7 @@ export function RecipeTestLab({
     setConsolidado(result.consolidado);
     setBarPlan(result.pautaBarras);
     setCorrectingIds(new Set());
+    setCalculatedFingerprint(recipeFingerprint);
     setFeedback(
       result.consolidado.calculable
         ? null
@@ -340,21 +365,10 @@ export function RecipeTestLab({
     }
   };
 
-  const handleApplyPresetLengths = async () => {
-    if (!onApplyPresetLengths) {
-      onConfigureLengths?.();
-      return;
-    }
-    setIsApplyingLengths(true);
-    try {
-      await onApplyPresetLengths();
-      setFeedback(null);
-    } finally {
-      setIsApplyingLengths(false);
-    }
-  };
+  const recipeAlreadyActive =
+    isActivated || recipe.status === "validated" || recipe.status === "testing";
 
-  if (isActivated || recipe.status === "validated") {
+  if (recipeAlreadyActive && !allowInteractiveWhenValidated) {
     return (
       <div
         className={s.labFlow}
@@ -395,6 +409,7 @@ export function RecipeTestLab({
       className={`${s.labFlow} ${s.fabLabFlow}`}
       data-guided-desktop={desktopActiveStep ? "true" : "false"}
       data-has-results={hasResults ? "true" : "false"}
+      data-presentation={presentation}
     >
       <section className={`${s.editorSection} ${s.fabLabIntro}`}>
         <div className={s.fabLabIntroMain}>
@@ -405,6 +420,13 @@ export function RecipeTestLab({
               coincide con tu taller.
             </p>
           </header>
+
+          {recipeAlreadyActive && allowInteractiveWhenValidated ? (
+            <p className={s.fabLabActiveHint}>
+              Fabricación activa. Puedes probar medidas aquí y ajustar descuentos
+              en Perfiles.
+            </p>
+          ) : null}
 
           <div className={s.fabLabFormGrid}>
             <span>Nombre del caso (opcional)</span>
@@ -431,6 +453,7 @@ export function RecipeTestLab({
                   <span className={s.srOnly}>Ancho mm</span>
                   <input
                     type="number"
+                    inputMode="numeric"
                     min={1}
                     aria-label="Ancho mm"
                     value={row.anchoMm}
@@ -453,6 +476,7 @@ export function RecipeTestLab({
                   <span className={s.srOnly}>Alto mm</span>
                   <input
                     type="number"
+                    inputMode="numeric"
                     min={1}
                     aria-label="Alto mm"
                     value={row.altoMm}
@@ -475,6 +499,7 @@ export function RecipeTestLab({
                   <span className={s.srOnly}>Cantidad</span>
                   <input
                     type="number"
+                    inputMode="numeric"
                     min={1}
                     aria-label="Cantidad"
                     value={row.cantidad}
@@ -515,6 +540,7 @@ export function RecipeTestLab({
           <div className={s.fabLabActions}>
             <div className={s.fabLabActionMeta}>
               <p className={s.fabLabTiraHint}>{tiraEstandarLabel}</p>
+              {isMobile ? null : (
               <button
                 type="button"
                 className={s.fabGhostAction}
@@ -525,6 +551,7 @@ export function RecipeTestLab({
                 <Plus size={16} />
                 Otra medida
               </button>
+              )}
             </div>
             <button
               type="button"
@@ -532,9 +559,15 @@ export function RecipeTestLab({
               onClick={calculate}
             >
               <Play size={16} />
-              Calcular materiales
+              {isMobile ? "Calcular prueba" : "Calcular materiales"}
             </button>
             {feedback ? <span className={s.feedbackText}>{feedback}</span> : null}
+            {recipeChangedSinceCalc ? (
+              <span className={s.feedbackText} role="status">
+                Ajustaste una regla. Vuelve a calcular la prueba para ver el
+                resultado.
+              </span>
+            ) : null}
           </div>
         </div>
         {hasResults ? null : (
@@ -791,13 +824,17 @@ export function RecipeTestLab({
                         <button
                           type="button"
                           className={s.fabSheetEdit}
-                          onClick={() =>
+                          onClick={() => {
+                            if (onCorrectProfile) {
+                              onCorrectProfile(row.componenteId);
+                              return;
+                            }
                             setCorrectingIds((current) => {
                               const next = new Set(current);
                               next.add(row.componenteId);
                               return next;
-                            })
-                          }
+                            });
+                          }}
                         >
                           Corregir
                         </button>
@@ -809,6 +846,7 @@ export function RecipeTestLab({
                           <input
                             aria-label={`Medida esperada ${row.funcion}`}
                             type="number"
+                            inputMode="numeric"
                             min="1"
                             value={expectedRow?.medidaMm ?? row.medidaMm}
                             onChange={(event) =>
@@ -839,6 +877,7 @@ export function RecipeTestLab({
                           <input
                             aria-label={`Cantidad esperada ${row.funcion}`}
                             type="number"
+                            inputMode="numeric"
                             min="1"
                             value={
                               expectedRow?.cantidadPiezas ?? row.cantidadPiezas
@@ -917,7 +956,11 @@ export function RecipeTestLab({
                     onClick={() => void handleActivate()}
                   >
                     <CheckCircle2 size={18} />
-                    {isActivating ? "Guardando…" : "Dejar lista para cotizar"}
+                    {isActivating
+                      ? "Guardando…"
+                      : isMobile
+                        ? "Guardar y activar"
+                        : "Dejar lista para cotizar"}
                   </button>
                 ) : null}
               </div>
@@ -932,7 +975,15 @@ export function RecipeTestLab({
                   ajustar la medida de corte.
                 </p>
               </div>
-              {onBackToRecipe ? (
+              {onSaveDraft ? (
+                <button
+                  type="button"
+                  className={s.secondaryButton}
+                  onClick={() => void onSaveDraft()}
+                >
+                  Guardar borrador
+                </button>
+              ) : onBackToRecipe ? (
                 <button
                   type="button"
                   className={s.secondaryButton}

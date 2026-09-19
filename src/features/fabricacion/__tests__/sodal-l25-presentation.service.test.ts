@@ -4,6 +4,7 @@ import {
   formatSodalL25ContextualLineName,
   formatSodalL25FullRecipeName,
   formatSodalL25FullRecipeNameFromVariant,
+  formatSodalL25ConstructionLabel,
   formatSodalL25GlazingLabel,
   formatSodalL25LegLabel,
   formatSodalL25ReinforcementLabel,
@@ -15,6 +16,15 @@ import {
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 
 describe("sodal-l25-presentation.service", () => {
+  it("prioriza el nombre comercial L25 sobre un catalogKey ajeno", () => {
+    expect(
+      resolveEffectiveSodalL25CatalogKey({
+        catalogKey: "ventora:custom",
+        nombre: "Serie 25",
+      })
+    ).toBe("ventora:l25");
+  });
+
   it("reconoce Serie 25 legacy sin catalogKey explícito", () => {
     expect(
       resolveEffectiveSodalL25CatalogKey({
@@ -74,6 +84,10 @@ describe("sodal-l25-presentation.service", () => {
     expect(formatSodalL25LegLabel("closed")).toBe("Pierna cerrada");
     expect(formatSodalL25ReinforcementLabel("normal")).toBe("Normal");
     expect(formatSodalL25ReinforcementLabel("reinforced")).toBe("Reforzada");
+    expect(formatSodalL25ConstructionLabel("dvh_open_reinforced")).toBe(
+      "DVH · Pierna abierta · Reforzada"
+    );
+    expect(formatSodalL25ConstructionLabel("estandar")).toBeNull();
   });
 
   it("resuelve etiqueta de ítem con contexto o receta completa", () => {

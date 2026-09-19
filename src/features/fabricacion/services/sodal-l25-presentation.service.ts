@@ -55,6 +55,20 @@ export function formatSodalL25ReinforcementLabel(
   return "";
 }
 
+export function formatSodalL25ConstructionLabel(
+  variantSlug: string | null | undefined
+): string | null {
+  const parsed = parseSodalL25VariantSlug(variantSlug);
+  if (!parsed) return null;
+  return [
+    formatSodalL25GlazingLabel(parsed.glazing),
+    formatSodalL25LegLabel(parsed.leg),
+    formatSodalL25ReinforcementLabel(parsed.reinforcement),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 export function formatSodalL25ContextualLineName(leaves: number | null | undefined): string {
   if (!Number.isInteger(leaves) || !leaves || leaves <= 0) {
     return SODAL_L25_COMMERCIAL_BASE_NAME;
@@ -117,9 +131,6 @@ export function resolveEffectiveSodalL25CatalogKey(input: {
   if (isSodalL25CatalogKey(explicit)) {
     return SODAL_L25_CATALOG_KEY;
   }
-  if (explicit) {
-    return explicit;
-  }
 
   const normalizedNombre = (input.nombre ?? "")
     .trim()
@@ -134,6 +145,10 @@ export function resolveEffectiveSodalL25CatalogKey(input: {
     /^serie\s*25(\s|$|-)/.test(normalizedNombre)
   ) {
     return SODAL_L25_CATALOG_KEY;
+  }
+
+  if (explicit) {
+    return explicit;
   }
 
   return null;

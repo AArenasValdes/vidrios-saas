@@ -1,5 +1,7 @@
 "use client";
 
+import { ChevronRight, Minus, Plus } from "lucide-react";
+
 import { RecipeCommercialLengthPicker } from "@/features/fabricacion/components/recipe-commercial-length-picker";
 import { RecipeProfileReferencePicker } from "@/features/fabricacion/components/recipe-profile-reference-picker";
 import {
@@ -9,6 +11,7 @@ import {
   type FabricacionReceta,
 } from "@/features/fabricacion/types/fabricacion-domain";
 import {
+  formatLargoComercialCorto,
   labelBaseMedida,
   profileTieneOverrideLargoComercial,
 } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
@@ -38,16 +41,48 @@ type Props = {
   onRemove?: (profileId: string) => void;
 };
 
-function positiveNumber(value: string) {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+function ProfileQuantityStepper({
+  value,
+  readOnly,
+  onChange,
+}: {
+  value: number;
+  readOnly: boolean;
+  onChange: (next: number) => void;
+}) {
+  const quantity = Math.max(1, Math.round(value));
+
+  return (
+    <div className={s.profileStepper} role="group" aria-label="Cantidad">
+      <button
+        type="button"
+        className={s.profileStepperButton}
+        disabled={readOnly || quantity <= 1}
+        aria-label="Disminuir cantidad"
+        onClick={() => onChange(Math.max(1, quantity - 1))}
+      >
+        <Minus size={18} aria-hidden />
+      </button>
+      <span className={s.profileStepperValue} aria-live="polite">
+        {quantity}
+      </span>
+      <button
+        type="button"
+        className={s.profileStepperButton}
+        disabled={readOnly}
+        aria-label="Aumentar cantidad"
+        onClick={() => onChange(quantity + 1)}
+      >
+        <Plus size={18} aria-hidden />
+      </button>
+    </div>
+  );
 }
 
 export function FabricacionProfileFields({
   profile,
   recipe,
   index,
-  total,
   readOnly = false,
   tiraEstandarLabel,
   frequentLargos,
@@ -59,170 +94,221 @@ export function FabricacionProfileFields({
   onRemove,
 }: Props) {
   const pieceName = profile.funcion.trim() || `Perfil ${index + 1}`;
+  const baseLabel = labelBaseMedida(profile.reglaMedida.base, "human");
+  const largoLabel =
+    formatLargoComercialCorto(profile.largoComercialMm) ??
+    `Estándar (${tiraEstandarLabel})`;
 
   return (
-    <div className={s.sheetSection}>
-      <p>
-        Pieza {index + 1} de {total}
-      </p>
+    <div className={s.profileFieldsStack}>
+      <section className={s.profileEditorSection} aria-labelledby="profile-config-title">
+        <h3 id="profile-config-title" className={s.profileEditorSectionTitle}>
+          Configuración
+        </h3>
+        <ul className={s.profileEditorList}>
+          <li className={s.profileEditorListItem}>
+            <label className={s.profileEditorPickerRow} htmlFor={`profile-base-${profile.id}`}>
+              <span className={s.profileEditorRowLabel}>Base del cálculo</span>
+              <span className={s.profileEditorPickerValue}>
+                <select
+                  id={`profile-base-${profile.id}`}
+                  className={s.profileEditorSelect}
+                  value={profile.reglaMedida.base}
+                  disabled={readOnly}
+                  onChange={(event) =>
+                    onPatch(profile.id, (entry) => ({
+                      ...entry,
+                      reglaMedida: {
+                        ...entry.reglaMedida,
+                        base: event.target.value as FabricacionBaseMedida,
+                      },
+                    }))
+                  }
+                >
+                  {FABRICACION_BASES_MEDIDA.map((base) => (
+                    <option key={base} value={base}>
+                      {labelBaseMedida(base, "human")}
+                    </option>
+                  ))}
+                </select>
+                <span className={s.profileEditorPickerDisplay}>{baseLabel}</span>
+                <ChevronRight size={18} aria-hidden className={s.profileEditorChevron} />
+              </span>
+            </label>
+            <p className={s.profileEditorRowHint}>
+              Parte de la medida base de la ventana antes de aplicar descuentos.
+            </p>
+          </li>
 
-      <section className={s.sheetSection}>
-        <h3>Medida de corte</h3>
-        <label>
-          <span>Medida</span>
-          <select
-            value={profile.reglaMedida.base}
-            onChange={(event) =>
-              onPatch(profile.id, (entry) => ({
-                ...entry,
-                reglaMedida: {
-                  ...entry.reglaMedida,
-                  base: event.target.value as FabricacionBaseMedida,
-                },
-              }))
-            }
-            disabled={readOnly}
-          >
-            {FABRICACION_BASES_MEDIDA.map((base) => (
-              <option key={base} value={base}>
-                {labelBaseMedida(base, "human")}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>Descuento (mm)</span>
-          <input
-            type="number"
-            value={profile.reglaMedida.ajusteMm == null ? "" : profile.reglaMedida.ajusteMm}
-            placeholder="0"
-            onChange={(event) =>
-              onPatch(profile.id, (entry) => ({
-                ...entry,
-                reglaMedida: {
-                  ...entry.reglaMedida,
-                  ajusteMm:
-                    event.target.value.trim() === ""
-                      ? 0
-                      : Number.parseInt(event.target.value, 10),
-                },
-              }))
-            }
-            disabled={readOnly}
-          />
-        </label>
+          <li className={s.profileEditorListItem}>
+            <div className={s.profileEditorInputRow}>
+              <label className={s.profileEditorRowLabel} htmlFor={`profile-discount-${profile.id}`}>
+                Descuento del taller
+              </label>
+              <div className={s.profileEditorNumberWrap}>
+                <input
+                  id={`profile-discount-${profile.id}`}
+                  type="number"
+                  inputMode="numeric"
+                  className={s.profileEditorNumberInput}
+                  value={profile.reglaMedida.ajusteMm == null ? "" : profile.reglaMedida.ajusteMm}
+                  placeholder="0"
+                  disabled={readOnly}
+                  onChange={(event) =>
+                    onPatch(profile.id, (entry) => ({
+                      ...entry,
+                      reglaMedida: {
+                        ...entry.reglaMedida,
+                        ajusteMm:
+                          event.target.value.trim() === ""
+                            ? 0
+                            : Number.parseInt(event.target.value, 10),
+                      },
+                    }))
+                  }
+                />
+                <span className={s.profileEditorUnit}>mm</span>
+              </div>
+            </div>
+            <p className={s.profileEditorRowHint}>
+              Suma o resta milímetros según cómo corta tu taller.
+            </p>
+          </li>
+
+          <li className={s.profileEditorListItem} data-last="true">
+            <div className={s.profileEditorInputRow}>
+              <span className={s.profileEditorRowLabel}>Cantidad</span>
+              <ProfileQuantityStepper
+                value={profile.reglaCantidad.cantidad}
+                readOnly={readOnly}
+                onChange={(next) =>
+                  onPatch(profile.id, (entry) => ({
+                    ...entry,
+                    reglaCantidad: {
+                      ...entry.reglaCantidad,
+                      cantidad: next,
+                    },
+                  }))
+                }
+              />
+            </div>
+            <p className={s.profileEditorRowHint}>Piezas que genera este perfil por ventana.</p>
+          </li>
+        </ul>
       </section>
 
-      <section className={s.sheetSection}>
-        <h3>Largo especial (opcional)</h3>
-        <RecipeCommercialLengthPicker
-          value={profile.largoComercialMm}
-          usedByWorkshop={frequentLargos.usedByWorkshop}
-          otherFrequent={frequentLargos.otherFrequent}
-          readOnly={readOnly}
-          onChange={(nextValue) =>
-            onPatch(profile.id, (entry) => ({
-              ...entry,
-              largoComercialMm: nextValue,
-            }))
-          }
-        />
-        <p>
-          Si no defines uno, Ventora usa la tira estándar ({tiraEstandarLabel}).
-        </p>
-        {!readOnly && profileTieneOverrideLargoComercial(profile) ? (
-          <button
-            type="button"
-            className={s.secondaryButton}
-            onClick={() =>
-              onPatch(profile.id, (entry) => ({
-                ...entry,
-                largoComercialMm: null,
-              }))
-            }
-          >
-            Usar tira estándar
-          </button>
-        ) : null}
+      <section className={s.profileEditorSection} aria-labelledby="profile-optional-title">
+        <h3 id="profile-optional-title" className={s.profileEditorSectionTitle}>
+          Opcionales
+        </h3>
+        <ul className={s.profileEditorList}>
+          <li className={s.profileEditorListItem} data-last="true">
+            <div className={s.profileEditorLengthRow}>
+              <div className={s.profileEditorLengthCopy}>
+                <span className={s.profileEditorRowLabel}>Largo especial</span>
+                <span className={s.profileEditorRowMeta}>{largoLabel}</span>
+              </div>
+              <div className={s.profileEditorLengthPicker}>
+                <RecipeCommercialLengthPicker
+                  value={profile.largoComercialMm}
+                  usedByWorkshop={frequentLargos.usedByWorkshop}
+                  otherFrequent={frequentLargos.otherFrequent}
+                  readOnly={readOnly}
+                  emptyLabel="Ej. 5,80 m"
+                  showUnitSuffix={false}
+                  onChange={(nextValue) =>
+                    onPatch(profile.id, (entry) => ({
+                      ...entry,
+                      largoComercialMm: nextValue,
+                    }))
+                  }
+                />
+                <ChevronRight size={18} aria-hidden className={s.profileEditorChevron} />
+              </div>
+            </div>
+            <p className={s.profileEditorRowHint}>
+              Si no defines uno, Ventora usa la tira estándar ({tiraEstandarLabel}).
+            </p>
+            {!readOnly && profileTieneOverrideLargoComercial(profile) ? (
+              <button
+                type="button"
+                className={s.profileEditorTextAction}
+                onClick={() =>
+                  onPatch(profile.id, (entry) => ({
+                    ...entry,
+                    largoComercialMm: null,
+                  }))
+                }
+              >
+                Usar tira estándar
+              </button>
+            ) : null}
+          </li>
+        </ul>
       </section>
 
-      <section className={s.sheetSection}>
-        <h3>Cantidad</h3>
-        <label>
-          <span>Cantidad de piezas</span>
-          <input
-            type="number"
-            min="1"
-            value={profile.reglaCantidad.cantidad}
-            onChange={(event) =>
-              onPatch(profile.id, (entry) => ({
-                ...entry,
-                reglaCantidad: {
-                  ...entry.reglaCantidad,
-                  cantidad: positiveNumber(event.target.value),
-                },
-              }))
-            }
-            disabled={readOnly}
-          />
-        </label>
-      </section>
-
-      <section className={s.sheetSection}>
-        <h3>Identificar perfil (opcional)</h3>
-        <label>
-          <span>Función</span>
-          <input
-            value={profile.funcion}
-            placeholder={pieceName}
-            onChange={(event) =>
-              onPatch(profile.id, (entry) => ({
-                ...entry,
-                funcion: event.target.value,
-              }))
-            }
-            disabled={readOnly}
-          />
-        </label>
-        <label>
-          <span>Nombre usado en taller</span>
-          <input
-            value={profile.nombrePerfil}
-            placeholder="Opcional"
-            onChange={(event) =>
-              onPatch(profile.id, (entry) => ({
-                ...entry,
-                nombrePerfil: event.target.value,
-              }))
-            }
-            disabled={readOnly}
-          />
-        </label>
-        <label>
-          <span>Código de fabricante</span>
-          <input
-            value={profile.codigoPerfil}
-            placeholder="Ej. 2001"
-            onChange={(event) => onSetManufacturerCode(profile.id, event.target.value)}
-            disabled={readOnly}
-          />
-        </label>
-        <RecipeProfileReferencePicker
-          profile={profile}
-          recipe={recipe}
-          catalog={tallerPerfilCatalog}
-          suggestedProfiles={plantillaSuggestedProfiles}
-          readOnly={readOnly}
-          onSelect={(tallerPerfil) => onAssignTallerPerfil(profile.id, tallerPerfil)}
-        />
+      <section className={s.profileEditorSection} aria-labelledby="profile-advanced-title">
+        <details className={s.profileEditorDisclosure}>
+          <summary className={s.profileEditorDisclosureSummary}>
+            <span id="profile-advanced-title">Identificar perfil y opciones avanzadas</span>
+            <ChevronRight size={18} aria-hidden className={s.profileEditorDisclosureChevron} />
+          </summary>
+          <div className={s.profileEditorDisclosureBody}>
+            <label className={s.profileEditorField}>
+              <span>Función</span>
+              <input
+                value={profile.funcion}
+                placeholder={pieceName}
+                disabled={readOnly}
+                autoComplete="off"
+                onChange={(event) =>
+                  onPatch(profile.id, (entry) => ({
+                    ...entry,
+                    funcion: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label className={s.profileEditorField}>
+              <span>Nombre usado en taller</span>
+              <input
+                value={profile.nombrePerfil}
+                placeholder="Opcional"
+                disabled={readOnly}
+                autoComplete="off"
+                onChange={(event) =>
+                  onPatch(profile.id, (entry) => ({
+                    ...entry,
+                    nombrePerfil: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label className={s.profileEditorField}>
+              <span>Código de fabricante</span>
+              <input
+                value={profile.codigoPerfil}
+                placeholder="Ej. 2001"
+                inputMode="text"
+                autoComplete="off"
+                disabled={readOnly}
+                onChange={(event) => onSetManufacturerCode(profile.id, event.target.value)}
+              />
+            </label>
+            <RecipeProfileReferencePicker
+              profile={profile}
+              recipe={recipe}
+              catalog={tallerPerfilCatalog}
+              suggestedProfiles={plantillaSuggestedProfiles}
+              readOnly={readOnly}
+              onSelect={(tallerPerfil) => onAssignTallerPerfil(profile.id, tallerPerfil)}
+            />
+          </div>
+        </details>
       </section>
 
       {!readOnly && onRemove ? (
-        <button
-          type="button"
-          className={s.secondaryButton}
-          onClick={() => onRemove(profile.id)}
-        >
+        <button type="button" className={s.profileEditorDestructiveAction} onClick={() => onRemove(profile.id)}>
           Eliminar perfil
         </button>
       ) : null}

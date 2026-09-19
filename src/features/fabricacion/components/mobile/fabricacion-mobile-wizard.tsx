@@ -1,41 +1,49 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, ChevronLeft, Plus, Trash2 } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { ArrowLeft, ArrowRight, X } from "lucide-react";
 
-import { RecipeGlassNamePicker } from "@/features/fabricacion/components/recipe-glass-name-picker";
-import { RecipeGuidedEditor } from "@/features/fabricacion/components/recipe-guided-editor";
+import { FabricacionMobileValidateStep } from "@/features/fabricacion/components/mobile/fabricacion-mobile-validate-step";
+import { isRecipeReadyToActivate } from "@/features/fabricacion/components/recipe-activate-panel";
+import { FabricacionItemEditSheet } from "@/features/fabricacion/components/mobile/fabricacion-item-edit-sheet";
+import { FabricacionMobileMaterialsStep } from "@/features/fabricacion/components/mobile/fabricacion-mobile-materials-step";
+import { FabricacionMobileProductStep } from "@/features/fabricacion/components/mobile/fabricacion-mobile-product-step";
 import { FabricacionProfileEditSheet } from "@/features/fabricacion/components/mobile/fabricacion-profile-edit-sheet";
 import { FabricacionProfileList } from "@/features/fabricacion/components/mobile/fabricacion-profile-list";
 import {
   crearAccesorioFabricacionVacio,
+  crearPerfilFabricacionVacio,
   crearVidrioFabricacionVacio,
-  patchRecipeGlassNombre,
 } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
+import { getActiveRecipeProfileRules } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import { MOBILE_WIZARD_STEPS } from "@/features/fabricacion/services/fabricacion-line-workflow.utils";
 import type { MobileWizardStepId } from "@/features/fabricacion/types/fabricacion-line-workflow";
-import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
+import type {
+  FabricacionEntradaCalculo,
+  FabricacionReceta,
+  FabricacionResultadoCubicacion,
+} from "@/features/fabricacion/types/fabricacion-domain";
 import type {
   FabricationRecipeRecord,
-  FabricationRecipeSourceType,
+  FabricationRecipeTestRecord,
 } from "@/features/fabricacion/types/fabricacion-persistence";
-import type { CotizacionLineTemplateMaterial } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
-import type { RecipeStartMode } from "@/features/fabricacion/types/fabricacion-line-workflow";
 
 import s from "./fabricacion-mobile.module.css";
 
+type SheetState =
+  | { type: "profile"; id: string }
+  | { type: "glass"; id: string }
+  | { type: "accessory"; id: string }
+  | null;
+
 type Props = {
   templateName: string;
+  catalogKey?: string | null;
   selected: FabricationRecipeRecord;
+  lineRecipes?: FabricationRecipeRecord[];
   draft: FabricacionReceta;
-  providerName: string;
-  lineName: string;
-  lineMaterial: CotizacionLineTemplateMaterial;
-  providerOptions: string[];
-  recipeStartMode: RecipeStartMode;
-  sourceType: FabricationRecipeSourceType;
-  sourceReference: string | null;
-  workshopRecipes: FabricacionReceta[];
+  tests: FabricationRecipeTestRecord[];
   readOnly: boolean;
   isSaving: boolean;
   step: MobileWizardStepId;
@@ -43,27 +51,38 @@ type Props = {
   onStepChange: (step: MobileWizardStepId) => void;
   onClose: () => void;
   onDraftChange: (recipe: FabricacionReceta) => void;
-  onProviderNameChange: (value: string) => void;
-  onLineNameChange: (value: string) => void;
-  onMaterialChange: (value: CotizacionLineTemplateMaterial) => void;
-  onStartModeChange: (mode: RecipeStartMode) => void;
+  onSelectRecipe?: (recipe: FabricationRecipeRecord) => void;
   onContinueToRecipe: () => void;
   onPersistRecipe: (recipe: FabricacionReceta) => Promise<void>;
-  onOpenTest: () => void;
+  onSaveTest: (input: {
+    name: string;
+    input: FabricacionEntradaCalculo;
+    expectedOutput: FabricacionResultadoCubicacion;
+    isRequired: boolean;
+  }) => Promise<void>;
+  onActivate: () => Promise<void>;
+  onSaveDraft: (recipe: FabricacionReceta) => Promise<void>;
+};
+
+const stepVariants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? 16 : -16,
+    opacity: 0,
+  }),
+  center: { x: 0, opacity: 1 },
+  exit: (direction: number) => ({
+    x: direction > 0 ? -16 : 16,
+    opacity: 0,
+  }),
 };
 
 export function FabricacionMobileWizard({
   templateName,
+  catalogKey = null,
   selected,
+  lineRecipes = [],
   draft,
-  providerName,
-  lineName,
-  lineMaterial,
-  providerOptions,
-  recipeStartMode,
-  sourceType,
-  sourceReference,
-  workshopRecipes,
+  tests,
   readOnly,
   isSaving,
   step,
@@ -71,253 +90,227 @@ export function FabricacionMobileWizard({
   onStepChange,
   onClose,
   onDraftChange,
-  onProviderNameChange,
-  onLineNameChange,
-  onMaterialChange,
-  onStartModeChange,
+  onSelectRecipe,
   onContinueToRecipe,
   onPersistRecipe,
-  onOpenTest,
+  onSaveTest,
+  onActivate,
+  onSaveDraft,
 }: Props) {
-  const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
+  const reduceMotion = useReducedMotion();
+  const [direction, setDirection] = useState(1);
+  const [sheet, setSheet] = useState<SheetState>(null);
   const stepIndex = MOBILE_WIZARD_STEPS.findIndex((entry) => entry.id === step);
   const previousStep = MOBILE_WIZARD_STEPS[stepIndex - 1]?.id ?? null;
   const nextStep = MOBILE_WIZARD_STEPS[stepIndex + 1]?.id ?? null;
-
-  const stepTitle = useMemo(
-    () => MOBILE_WIZARD_STEPS.find((entry) => entry.id === step)?.label ?? "Fabricación",
-    [step]
+  const stepTitle =
+    MOBILE_WIZARD_STEPS.find((entry) => entry.id === step)?.label ?? "Fabricación";
+  const wizardProgressPct = Math.round(
+    ((stepIndex + 1) / MOBILE_WIZARD_STEPS.length) * 100
+  );
+  const workingRecipe = useMemo(
+    () => ({ ...selected, definition: draft }),
+    [draft, selected]
+  );
+  const canValidate =
+    workingRecipe.scope === "organization" &&
+    workingRecipe.status !== "validated" &&
+    isRecipeReadyToActivate(workingRecipe.definition, tests);
+  const profileIds = useMemo(
+    () => getActiveRecipeProfileRules(draft).map((profile) => profile.id),
+    [draft]
   );
 
+  const goTo = (next: MobileWizardStepId) => {
+    const nextIndex = MOBILE_WIZARD_STEPS.findIndex((entry) => entry.id === next);
+    setDirection(nextIndex >= stepIndex ? 1 : -1);
+    onStepChange(next);
+  };
+
   const goNext = () => {
-    if (step === "origin" || step === "config") {
+    if (step === "product") {
       onContinueToRecipe();
       return;
     }
-    if (step === "test") {
-      onOpenTest();
-      return;
-    }
-    if (nextStep) onStepChange(nextStep);
+    if (nextStep) goTo(nextStep);
   };
 
   const goBack = () => {
     if (previousStep) {
-      onStepChange(previousStep);
+      goTo(previousStep);
       return;
     }
     onClose();
   };
 
+  const openSheet = (next: SheetState) => {
+    setSheet(next);
+  };
+
   return (
-    <div className={s.wizard}>
+    <div
+      className={s.wizard}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="fabricacion-wizard-title"
+    >
       <header className={s.wizardHeader}>
         <div className={s.wizardTop}>
           <button type="button" className={s.backButton} onClick={goBack} aria-label="Atrás">
-            <ChevronLeft aria-hidden />
+            <ArrowLeft aria-hidden />
           </button>
-          <h1>{stepTitle}</h1>
+          <div className={s.wizardTitleBlock}>
+            <p className={s.stepMeta}>
+              Paso {stepIndex + 1} de {MOBILE_WIZARD_STEPS.length}
+            </p>
+            <h1 id="fabricacion-wizard-title">{stepTitle}</h1>
+          </div>
           <button type="button" className={s.backButton} onClick={onClose} aria-label="Cerrar">
-            ×
+            <X aria-hidden />
           </button>
         </div>
-        <nav className={s.stepper} aria-label="Pasos de fabricación">
-          {MOBILE_WIZARD_STEPS.map((entry, index) => (
-            <button
-              key={entry.id}
-              type="button"
-              className={s.stepChip}
-              data-active={entry.id === step ? "true" : "false"}
-              onClick={() => onStepChange(entry.id)}
-            >
-              {index + 1}. {entry.label}
-            </button>
-          ))}
-        </nav>
+        <div
+          className={s.wizardProgress}
+          role="progressbar"
+          aria-valuenow={wizardProgressPct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`Paso ${stepIndex + 1} de ${MOBILE_WIZARD_STEPS.length}`}
+        >
+          <span style={{ width: `${wizardProgressPct}%` }} />
+        </div>
       </header>
 
-      <div className={s.wizardBody}>
+      <div
+        className={`${s.wizardBody}${step === "validate" ? ` ${s.wizardBodyValidate}` : ""}`}
+      >
         {lineSetupError ? <div className={s.errorBand}>{lineSetupError}</div> : null}
+        <AnimatePresence mode="sync" custom={direction} initial={false}>
+          <motion.div
+            key={step}
+            className={s.stepPane}
+            custom={direction}
+            variants={reduceMotion ? undefined : stepVariants}
+            initial={reduceMotion ? false : "enter"}
+            animate="center"
+            exit={reduceMotion ? undefined : "exit"}
+            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {step === "product" ? (
+              <FabricacionMobileProductStep
+                templateName={templateName}
+                catalogKey={catalogKey}
+                selected={selected}
+                draft={draft}
+                recipes={lineRecipes}
+                readOnly={readOnly}
+                onDraftChange={onDraftChange}
+                onSelectRecipe={onSelectRecipe}
+              />
+            ) : null}
 
-        {step === "origin" || step === "config" ? (
-          <RecipeGuidedEditor
-            recipe={draft}
-            providerName={providerName}
-            lineName={lineName}
-            material={lineMaterial}
-            providerOptions={providerOptions}
-            startMode={recipeStartMode}
-            sourceType={sourceType}
-            sourceReference={sourceReference}
-            readOnly={readOnly}
-            desktopActiveStep="base"
-            onRecipeChange={onDraftChange}
-            onProviderNameChange={onProviderNameChange}
-            onLineNameChange={onLineNameChange}
-            onMaterialChange={onMaterialChange}
-            onStartModeChange={onStartModeChange}
-          />
-        ) : null}
+            {step === "profiles" ? (
+              <FabricacionProfileList
+                recipe={draft}
+                readOnly={readOnly}
+                onSelectProfile={(id) => openSheet({ type: "profile", id })}
+                onAddProfile={() => {
+                  const id = crypto.randomUUID();
+                  onDraftChange({
+                    ...draft,
+                    perfiles: [...draft.perfiles, crearPerfilFabricacionVacio(id)],
+                  });
+                  openSheet({ type: "profile", id });
+                }}
+              />
+            ) : null}
 
-        {step === "profiles" ? (
-          <FabricacionProfileList
-            profiles={draft.perfiles}
-            onSelectProfile={setEditingProfileId}
-          />
-        ) : null}
+            {step === "glass" ? (
+              <FabricacionMobileMaterialsStep
+                draft={draft}
+                readOnly={readOnly}
+                onAddGlass={() => {
+                  const id = crypto.randomUUID();
+                  onDraftChange({
+                    ...draft,
+                    vidrios: [...draft.vidrios, crearVidrioFabricacionVacio(id)],
+                  });
+                  openSheet({ type: "glass", id });
+                }}
+                onAddAccessory={() => {
+                  const id = crypto.randomUUID();
+                  onDraftChange({
+                    ...draft,
+                    accesorios: [...draft.accesorios, crearAccesorioFabricacionVacio(id)],
+                  });
+                  openSheet({ type: "accessory", id });
+                }}
+                onSelectGlass={(id) => openSheet({ type: "glass", id })}
+                onSelectAccessory={(id) => openSheet({ type: "accessory", id })}
+              />
+            ) : null}
 
-        {step === "glass" ? (
-          <div className={s.card}>
-            <div className={s.cardHeading}>
-              <div>
-                <h2>Vidrio</h2>
-                <p>Define el vidrio base de la receta</p>
-              </div>
-              {!readOnly ? (
-                <button
-                  type="button"
-                  className={s.secondaryButton}
-                  onClick={() =>
-                    onDraftChange({
-                      ...draft,
-                      vidrios: [
-                        ...draft.vidrios,
-                        crearVidrioFabricacionVacio(crypto.randomUUID()),
-                      ],
-                    })
-                  }
-                >
-                  <Plus size={16} aria-hidden />
-                  Agregar
-                </button>
-              ) : null}
-            </div>
-            {draft.vidrios.length === 0 ? (
-              <p>Sin vidrio definido. Puedes agregarlo ahora o al cotizar cada pieza.</p>
-            ) : (
-              draft.vidrios.map((glass) => (
-                <div key={glass.id} className={s.sheetSection}>
-                  <RecipeGlassNamePicker
-                    value={glass.nombre}
-                    readOnly={readOnly}
-                    onChange={(nextName) =>
-                      onDraftChange(patchRecipeGlassNombre(draft, glass.id, nextName))
-                    }
-                  />
-                  {!readOnly ? (
-                    <button
-                      type="button"
-                      className={s.secondaryButton}
-                      onClick={() =>
-                        onDraftChange({
-                          ...draft,
-                          vidrios: draft.vidrios.filter((entry) => entry.id !== glass.id),
-                        })
-                      }
-                    >
-                      <Trash2 size={15} aria-hidden />
-                      Quitar vidrio
-                    </button>
-                  ) : null}
-                </div>
-              ))
-            )}
-
-            <div className={s.cardHeading} style={{ marginTop: 18 }}>
-              <div>
-                <h2>Accesorios</h2>
-                <p>Lista preliminar para cubicación</p>
-              </div>
-              {!readOnly ? (
-                <button
-                  type="button"
-                  className={s.secondaryButton}
-                  onClick={() =>
-                    onDraftChange({
-                      ...draft,
-                      accesorios: [
-                        ...draft.accesorios,
-                        crearAccesorioFabricacionVacio(crypto.randomUUID()),
-                      ],
-                    })
-                  }
-                >
-                  <Plus size={16} aria-hidden />
-                  Agregar
-                </button>
-              ) : null}
-            </div>
-            {draft.accesorios.length === 0 ? (
-              <p>Sin accesorios definidos.</p>
-            ) : (
-              draft.accesorios.map((accessory) => (
-                <label key={accessory.id} className={s.sheetSection}>
-                  <span>Nombre</span>
-                  <input
-                    value={accessory.nombre}
-                    disabled={readOnly}
-                    onChange={(event) =>
-                      onDraftChange({
-                        ...draft,
-                        accesorios: draft.accesorios.map((entry) =>
-                          entry.id === accessory.id
-                            ? { ...entry, nombre: event.target.value }
-                            : entry
-                        ),
-                      })
-                    }
-                  />
-                </label>
-              ))
-            )}
-          </div>
-        ) : null}
-
-        {step === "test" ? (
-          <div className={s.card}>
-            <h2>Probar y guardar</h2>
-            <p>
-              Guarda el borrador y abre el laboratorio con una medida real para
-              validar la receta de {templateName}.
-            </p>
-            <button
-              type="button"
-              className={s.primaryButton}
-              disabled={isSaving}
-              onClick={() => void onPersistRecipe(draft).then(onOpenTest)}
-            >
-              Abrir laboratorio
-            </button>
-          </div>
-        ) : null}
+            {step === "validate" ? (
+              <FabricacionMobileValidateStep
+                recipe={workingRecipe}
+                isSaving={isSaving}
+                canActivateFromSaved={canValidate}
+                onBackToRecipe={() => goTo("profiles")}
+                onCorrectProfile={(profileId) => openSheet({ type: "profile", id: profileId })}
+                onSaveDraft={() => void onSaveDraft(draft)}
+                onActivate={
+                  workingRecipe.status === "validated" ? undefined : () => void onActivate()
+                }
+                onSaveTest={onSaveTest}
+              />
+            ) : null}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
-      <footer className={s.wizardFooter}>
-        <button type="button" className={s.secondaryButton} onClick={goBack}>
-          <ArrowLeft size={16} aria-hidden />
-          Atrás
-        </button>
-        <button
-          type="button"
-          className={s.primaryButton}
-          disabled={isSaving}
-          onClick={goNext}
-        >
-          {step === "test" ? "Probar" : "Continuar"}
-          <ArrowRight size={16} aria-hidden />
-        </button>
-      </footer>
+      {step !== "validate" ? (
+        <footer className={s.wizardFooter}>
+          <button type="button" className={s.secondaryButton} onClick={goBack}>
+            Atrás
+          </button>
+          <button
+            type="button"
+            className={s.primaryButton}
+            disabled={isSaving}
+            onClick={goNext}
+          >
+            Continuar
+            <ArrowRight size={16} aria-hidden />
+          </button>
+        </footer>
+      ) : null}
 
-      {editingProfileId ? (
+      {sheet?.type === "profile" ? (
         <FabricacionProfileEditSheet
+          key={`${selected.id}:${sheet.id}`}
           recipe={draft}
-          profileId={editingProfileId}
-          sourceType={sourceType}
-          sourceReference={sourceReference}
-          lineName={lineName}
-          workshopRecipes={workshopRecipes}
+          profileId={sheet.id}
+          profileIds={profileIds}
+          sourceType={selected.sourceType}
+          sourceReference={selected.sourceReference}
+          lineName={templateName}
+          workshopRecipes={[draft]}
           readOnly={readOnly}
-          onClose={() => setEditingProfileId(null)}
+          onClose={() => setSheet(null)}
+          onSelectProfile={(id) => setSheet({ type: "profile", id })}
+          onRecipeChange={onDraftChange}
+          onPersist={onPersistRecipe}
+        />
+      ) : null}
+
+      {sheet?.type === "glass" || sheet?.type === "accessory" ? (
+        <FabricacionItemEditSheet
+          recipe={draft}
+          kind={sheet.type}
+          itemId={sheet.id}
+          readOnly={readOnly}
+          isSaving={isSaving}
+          onClose={() => setSheet(null)}
           onRecipeChange={onDraftChange}
           onPersist={onPersistRecipe}
         />

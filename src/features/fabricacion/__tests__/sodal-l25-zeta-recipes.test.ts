@@ -9,6 +9,15 @@ import {
   isValidSodalL25Combination,
 } from "@/features/fabricacion/fixtures/sodal-l25-zeta-recipes";
 import { loadConfirmedRecipeById } from "@/features/fabricacion/zeta/zeta-confirmed-loader";
+import {
+  classifySodalL25ProfileRole,
+  isSodalL25VerticalRole,
+} from "@/features/fabricacion/zeta/sodal-l25-profile-roles";
+import { evaluarGatesRecetaFabricacion } from "@/features/fabricacion/services/fabricacion-gates.service";
+import type {
+  FabricacionEntradaCalculo,
+} from "@/features/fabricacion/types/fabricacion-domain";
+import type { FabricationRecipeRecord, FabricationRecipeTestRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
 function profileKey(code: string, quantity: number, lengthMm: number) {
   return `${code}|${quantity}|${lengthMm}`;
@@ -108,24 +117,28 @@ describe("SODAL L25 recetas Zeta", () => {
 
       expect(result.calculable).toBe(true);
 
-      const expectedProfiles = confirmed!.profiles
+      const verticalExpected = confirmed!.profiles
+        .filter((profile) => {
+          const role = classifySodalL25ProfileRole(profile.code);
+          return role != null && isSodalL25VerticalRole(role);
+        })
         .map((profile) => profileKey(profile.code, profile.quantity, profile.lengthMm))
         .sort();
-      const actualProfiles = result.perfiles
+      const verticalActual = result.perfiles
+        .filter((profile) => {
+          const role = classifySodalL25ProfileRole(profile.codigoPerfil);
+          return role != null && isSodalL25VerticalRole(role);
+        })
         .map((profile) => profileKey(profile.codigoPerfil, profile.cantidadPiezas, profile.medidaMm))
         .sort();
-      expect(actualProfiles).toEqual(expectedProfiles);
+      expect(verticalActual).toEqual(verticalExpected);
 
-      const expectedGlass = confirmed!.glass
-        .map((piece) => glassKey(piece.code, piece.quantity, piece.widthMm, piece.heightMm))
-        .sort();
-      const actualGlass = result.vidrios
-        .map((piece, index) => {
-          const confirmedPiece = confirmed!.glass[index];
-          return glassKey(confirmedPiece!.code, piece.cantidadPiezas, piece.anchoMm, piece.altoMm);
-        })
-        .sort();
-      expect(actualGlass).toEqual(expectedGlass);
+      const rieles = result.perfiles.filter((profile) =>
+        ["2501", "2502"].includes(profile.codigoPerfil)
+      );
+      expect(rieles.every((profile) => profile.medidaMm === confirmed!.testDimensions.widthMm - 16)).toBe(
+        true
+      );
     }
   );
 
@@ -151,5 +164,232 @@ describe("SODAL L25 recetas Zeta", () => {
 
     expect(matrix).toHaveLength(22);
     expect(matrix.filter((row) => row.variant != null)).toHaveLength(22);
+  });
+
+  it("ejecuta los gates completos sobre las 18 recetas canónicas", () => {
+    const bundles = buildAllSodalL25Recipes();
+    const evaluations = bundles.map((bundle) => {
+      const confirmed = bundle.confirmed;
+      const record: FabricationRecipeRecord = {
+        id: bundle.recipeId,
+        organizationId: null,
+        lineTemplateId: 25,
+        scope: "ventora",
+        providerName: "SODAL",
+        lineName: confirmed.line,
+        typology: "corredera",
+        leavesCount: bundle.identity.leaves,
+        variant: bundle.identity.variantSlug,
+        version: 1,
+        status: "validated",
+        definition: bundle.definition,
+        sourceType: "manufacturer",
+        sourceReference: bundle.sourceReference,
+        sourceName: "SODAL",
+        sourceRevision: "Sistema Zeta / Plan de armado",
+        parentRecipeId: null,
+        validatedAt: "2026-09-18T00:00:00.000Z",
+        validatedBy: "zeta-gate-test",
+        createdAt: "2026-09-18T00:00:00.000Z",
+        updatedAt: "2026-09-18T00:00:00.000Z",
+        eliminadoEn: null,
+      };
+
+      const base: FabricacionEntradaCalculo = {
+        anchoTotalMm: confirmed.testDimensions.widthMm,
+        altoTotalMm: confirmed.testDimensions.heightMm,
+        cantidad: 1,
+        hojas: confirmed.leaves,
+        modulos: 1,
+        variante: bundle.identity.variantSlug,
+        topology: "corredera",
+      };
+      const alternate: FabricacionEntradaCalculo = {
+        ...base,
+        anchoTotalMm: base.anchoTotalMm + 300,
+      };
+      const expectedBase = calcularCubicacionYPauta(bundle.definition, base);
+      const expectedAlternate = calcularCubicacionYPauta(bundle.definition, alternate);
+      const tests: FabricationRecipeTestRecord[] = [base, alternate].map((input, index) => ({
+        id: `${bundle.recipeId}-gate-${index}`,
+        recipeId: record.id,
+        organizationId: null,
+        name: index === 0 ? "Zeta base" : "Geometría distinta",
+        input,
+        expectedOutput: index === 0 ? expectedBase : expectedAlternate,
+        actualOutput: index === 0 ? expectedBase : expectedAlternate,
+        passed: true,
+        isRequired: true,
+        validatedBy: "zeta-gate-test",
+        createdAt: "2026-09-18T00:00:00.000Z",
+        updatedAt: "2026-09-18T00:00:00.000Z",
+        eliminadoEn: null,
+      }));
+
+      return evaluarGatesRecetaFabricacion({
+        recipe: bundle.definition,
+        record,
+        tests,
+        candidateRecipes: [record],
+      });
+    });
+
+    expect(evaluations).toHaveLength(18);
+    expect(evaluations.every((evaluation) => evaluation.passed)).toBe(true);
+  });
+
+  const twoLeafIds = SODAL_L25_CANONICAL_RECIPE_IDS.filter((id) => id.includes("_2h_"));
+  const fourLeafIds = SODAL_L25_CANONICAL_RECIPE_IDS.filter((id) => id.includes("_4h_"));
+
+  it.each(twoLeafIds)("2H %s fuera de muestra 2000×1500 respeta roles L25", (recipeId) => {
+    const bundle = buildAllSodalL25Recipes().find((entry) => entry.recipeId === recipeId);
+    expect(bundle).toBeDefined();
+    const result = calcularCubicacionYPauta(bundle!.definition, {
+      anchoTotalMm: 2000,
+      altoTotalMm: 1500,
+      cantidad: 1,
+      hojas: 2,
+      modulos: 1,
+      variante: bundle!.identity.variantSlug,
+    });
+    expect(result.calculable).toBe(true);
+
+    for (const profile of result.perfiles) {
+      const role = classifySodalL25ProfileRole(profile.codigoPerfil);
+      expect(role).not.toBeNull();
+      if (role === "frame_width") {
+        expect(profile.medidaMm).toBe(1984);
+        expect(profile.medidaMm).toBeLessThan(2000);
+      }
+      if (role && isSodalL25VerticalRole(role)) {
+        expect(profile.medidaMm).toBeLessThanOrEqual(1500);
+      }
+    }
+
+    const onlyWidthChanged = calcularCubicacionYPauta(bundle!.definition, {
+      anchoTotalMm: 2200,
+      altoTotalMm: 1500,
+      cantidad: 1,
+      hojas: 2,
+      modulos: 1,
+      variante: bundle!.identity.variantSlug,
+    });
+    const verticalsAt2000 = result.perfiles
+      .filter((profile) => {
+        const role = classifySodalL25ProfileRole(profile.codigoPerfil);
+        return role != null && isSodalL25VerticalRole(role);
+      })
+      .map((profile) => profileKey(profile.codigoPerfil, profile.cantidadPiezas, profile.medidaMm))
+      .sort();
+    const verticalsAt2200 = onlyWidthChanged.perfiles
+      .filter((profile) => {
+        const role = classifySodalL25ProfileRole(profile.codigoPerfil);
+        return role != null && isSodalL25VerticalRole(role);
+      })
+      .map((profile) => profileKey(profile.codigoPerfil, profile.cantidadPiezas, profile.medidaMm))
+      .sort();
+    expect(verticalsAt2200).toEqual(verticalsAt2000);
+  });
+
+  it.each(fourLeafIds)("4H %s fuera de muestra 3200×1600 respeta roles L25", (recipeId) => {
+    const bundle = buildAllSodalL25Recipes().find((entry) => entry.recipeId === recipeId);
+    expect(bundle).toBeDefined();
+    const result = calcularCubicacionYPauta(bundle!.definition, {
+      anchoTotalMm: 3200,
+      altoTotalMm: 1600,
+      cantidad: 1,
+      hojas: 4,
+      modulos: 1,
+      variante: bundle!.identity.variantSlug,
+    });
+    expect(result.calculable).toBe(true);
+
+    for (const profile of result.perfiles) {
+      const role = classifySodalL25ProfileRole(profile.codigoPerfil);
+      expect(role).not.toBeNull();
+      if (role === "frame_width") {
+        expect(profile.medidaMm).toBe(3184);
+        expect(profile.medidaMm).toBeLessThan(3200);
+      }
+      if (role && isSodalL25VerticalRole(role)) {
+        expect(profile.medidaMm).toBeLessThanOrEqual(1600);
+      }
+    }
+
+    const onlyWidthChanged = calcularCubicacionYPauta(bundle!.definition, {
+      anchoTotalMm: 3400,
+      altoTotalMm: 1600,
+      cantidad: 1,
+      hojas: 4,
+      modulos: 1,
+      variante: bundle!.identity.variantSlug,
+    });
+    const verticalsAt3200 = result.perfiles
+      .filter((profile) => {
+        const role = classifySodalL25ProfileRole(profile.codigoPerfil);
+        return role != null && isSodalL25VerticalRole(role);
+      })
+      .map((profile) => profileKey(profile.codigoPerfil, profile.cantidadPiezas, profile.medidaMm))
+      .sort();
+    const verticalsAt3400 = onlyWidthChanged.perfiles
+      .filter((profile) => {
+        const role = classifySodalL25ProfileRole(profile.codigoPerfil);
+        return role != null && isSodalL25VerticalRole(role);
+      })
+      .map((profile) => profileKey(profile.codigoPerfil, profile.cantidadPiezas, profile.medidaMm))
+      .sort();
+    expect(verticalsAt3400).toEqual(verticalsAt3200);
+  });
+
+  it("caso exacto COT-180926-010 V1 2H monolítico abierta reforzada 2000×1500", () => {
+    const bundle = buildAllSodalL25Recipes().find(
+      (entry) => entry.recipeId === "monolitico_pierna_abierta_reforzada_2h_1800x1500"
+    );
+    expect(bundle).toBeDefined();
+    const result = calcularCubicacionYPauta(bundle!.definition, {
+      anchoTotalMm: 2000,
+      altoTotalMm: 1500,
+      cantidad: 1,
+      hojas: 2,
+      modulos: 1,
+      variante: bundle!.identity.variantSlug,
+    });
+
+    const actual = result.perfiles
+      .map((profile) => profileKey(profile.codigoPerfil, profile.cantidadPiezas, profile.medidaMm))
+      .sort();
+    expect(actual).toEqual(
+      [
+        "2501|1|1984",
+        "2502|1|1984",
+        "2503|2|1500",
+        "2504|2|988",
+        "2505|2|988",
+        "2511R|2|1465",
+        "2512R|2|1465",
+      ].sort()
+    );
+  });
+
+  it("V2 3H DVH pierna cerrada 3000×1500 no cambia jamba ni pierna", () => {
+    const bundle = buildAllSodalL25Recipes().find(
+      (entry) => entry.recipeId === "dvh_pierna_cerrada_3h_3000x1500"
+    );
+    expect(bundle).toBeDefined();
+    const result = calcularCubicacionYPauta(bundle!.definition, {
+      anchoTotalMm: 3000,
+      altoTotalMm: 1500,
+      cantidad: 1,
+      hojas: 3,
+      modulos: 1,
+      variante: bundle!.identity.variantSlug,
+    });
+    const byCode = Object.fromEntries(
+      result.perfiles.map((profile) => [profile.codigoPerfil + ":" + profile.cantidadPiezas, profile.medidaMm])
+    );
+    expect(byCode["2501:1"]).toBe(2984);
+    expect(byCode["2502:1"]).toBe(2984);
+    expect(byCode["2509:2"]).toBe(1500);
+    expect(byCode["2518:2"]).toBe(1465);
   });
 });

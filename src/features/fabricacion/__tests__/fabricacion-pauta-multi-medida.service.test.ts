@@ -52,4 +52,30 @@ describe("fabricacion-pauta-multi-medida.service", () => {
       soloA.barras.length + soloB.barras.length
     );
   });
+
+  it("la prueba mobile usa el mismo motor que la cubicación real", () => {
+    const input = {
+      anchoTotalMm: 1200,
+      altoTotalMm: 1000,
+      cantidad: 1,
+      hojas: 2,
+      modulos: 2,
+    };
+    const cubicacion = calcularCubicacionYPauta(receta, input);
+    const prueba = calcularPautaBarrasMultiMedida({
+      receta,
+      medidas: [
+        {
+          anchoTotalMm: input.anchoTotalMm,
+          altoTotalMm: input.altoTotalMm,
+          cantidad: input.cantidad,
+        },
+      ],
+    });
+    const primary = prueba.resultadosPorFila[0];
+    expect(primary?.calculable).toBe(cubicacion.calculable);
+    expect(primary?.perfiles.map((row) => [row.componenteId, row.medidaMm, row.cantidadPiezas])).toEqual(
+      cubicacion.perfiles.map((row) => [row.componenteId, row.medidaMm, row.cantidadPiezas])
+    );
+  });
 });

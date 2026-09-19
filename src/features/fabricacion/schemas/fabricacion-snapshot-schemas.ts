@@ -24,5 +24,6 @@ export const fabricacionCotizacionSnapshotSchema = z.object({
   pauta: fabricacionResultadoCubicacionSchema.shape.perfiles,
   vidrios: fabricacionResultadoCubicacionSchema.shape.vidrios,
   advertencias: fabricacionResultadoCubicacionSchema.shape.advertencias,
+  formulaVersion: z.string().min(1).optional(),
   calculatedAt: z.string().datetime(),
 });

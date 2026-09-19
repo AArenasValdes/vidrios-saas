@@ -5,6 +5,13 @@ import { CheckCircle2, ChevronLeft, Pencil } from "lucide-react";
 
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { formatLineTemplatePriceLabel } from "@/features/cotizaciones/line-templates/utils/catalog-labels";
+import { getFabricacionVisualStatus } from "@/features/fabricacion/services/fabricacion-line-workflow.utils";
+import { SODAL_L25_CANONICAL_RECIPE_IDS } from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
+import { summarizeSodalL25LineCoverage } from "@/features/fabricacion/services/sodal-l25-context.service";
+import {
+  isSodalL25CatalogKey,
+  resolveEffectiveSodalL25CatalogKey,
+} from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import { buildFabricationRecipeSummary } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import { resolveLineFabricationDisplayIdentity } from "@/features/fabricacion/services/resolve-line-fabrication-display-identity.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
@@ -15,6 +22,7 @@ import s from "./fabricacion-mobile.module.css";
 type Props = {
   template: CotizacionLineTemplate;
   currentRecipe: FabricationRecipeRecord | null;
+  lineRecipes?: FabricationRecipeRecord[];
   olderRecipes: FabricationRecipeRecord[];
   error: string | null;
   feedback: string | null;
@@ -37,23 +45,17 @@ function resolvePrimaryCta(input: {
       disabled: input.isSaving,
     };
   }
-  if (input.recipe.status === "validated") {
-    return {
-      label: "Ver fabricación",
-      action: input.onEdit,
-      disabled: false,
-    };
-  }
   return {
-    label: "Editar fabricación",
+    label: "Revisar fabricación",
     action: input.onEdit,
-    disabled: input.isSaving,
+    disabled: input.isSaving && input.recipe.status !== "validated",
   };
 }
 
 export function FabricacionLineMobileDetail({
   template,
   currentRecipe,
+  lineRecipes = [],
   olderRecipes,
   error,
   feedback,
@@ -67,6 +69,15 @@ export function FabricacionLineMobileDetail({
     recipe: currentRecipe,
     status: currentRecipe?.status ?? "quote_only",
   });
+  const isL25 = isSodalL25CatalogKey(
+    resolveEffectiveSodalL25CatalogKey({
+      catalogKey: template.catalogKey,
+      nombre: template.nombre,
+    })
+  );
+  const l25Coverage = isL25 ? summarizeSodalL25LineCoverage(lineRecipes) : null;
+  const l25CanonicalCount = SODAL_L25_CANONICAL_RECIPE_IDS.length;
+  const visual = getFabricacionVisualStatus(currentRecipe?.status ?? "quote_only");
   const summary = currentRecipe
     ? buildFabricationRecipeSummary(currentRecipe.definition)
     : null;
@@ -76,10 +87,7 @@ export function FabricacionLineMobileDetail({
     onConfigure,
     onEdit,
   });
-  const showTestCta =
-    currentRecipe &&
-    currentRecipe.status !== "validated" &&
-    (summary?.compositionComplete || currentRecipe.status === "testing");
+  const showTestCta = Boolean(currentRecipe);
 
   return (
     <main className={`${s.shell} ${s.page}`}>
@@ -93,12 +101,12 @@ export function FabricacionLineMobileDetail({
         </Link>
         <div className={s.headerCopy}>
           <h1>{identity.lineTitle}</h1>
-          <p>{template.isActive ? "Activa" : "En pausa"}</p>
+          <p>{template.isActive ? "Línea comercial activa" : "Línea comercial en pausa"}</p>
         </div>
       </header>
 
-      {error ? <div className={s.errorBand}>{error}</div> : null}
-      {feedback ? <div className={s.successBand}>{feedback}</div> : null}
+      {error ? <div className={s.errorBand} role="alert">{error}</div> : null}
+      {feedback ? <div className={s.successBand} role="status">{feedback}</div> : null}
 
       <section className={s.card} aria-labelledby="commercial-title">
         <div className={s.cardHeading}>
@@ -135,11 +143,8 @@ export function FabricacionLineMobileDetail({
             <h2 id="fabrication-title">Fabricación</h2>
             <p>Habilita cubicación y pauta al cotizar</p>
           </div>
-          <span
-            className={s.statusPill}
-            data-tone={currentRecipe?.status ?? "quote_only"}
-          >
-            {identity.statusLabel}
+          <span className={s.statusPill} data-tone={visual.tone}>
+            {visual.label}
           </span>
         </div>
 
@@ -162,40 +167,28 @@ export function FabricacionLineMobileDetail({
           <>
             <div className={s.cardHeading}>
               <div>
-                <strong>{identity.fabricationTitle}</strong>
-                <p>Versión {currentRecipe.version}</p>
+                <strong>
+                  {isL25
+                    ? "Corredera L25 lista para cotizar"
+                    : identity.fabricationTitle}
+                </strong>
+                <p>
+                  {isL25
+                    ? l25Coverage?.allLeavesReady
+                      ? "2, 3 y 4 hojas · DVH y monolítico"
+                      : l25Coverage && l25Coverage.readyCount > 0
+                        ? `${l25Coverage.leaves
+                            .filter((entry) => entry.ready)
+                            .map((entry) => `${entry.hojas} hojas`)
+                            .join(" · ")} disponibles`
+                        : `${l25CanonicalCount} construcciones Ventora`
+                    : `Versión ${currentRecipe.version}`}
+                </p>
               </div>
-              {currentRecipe.status === "validated" ? (
+              {visual.id === "active" ? (
                 <CheckCircle2 color="#0f6b3f" aria-hidden />
               ) : null}
             </div>
-
-            <dl className={s.summaryList}>
-              <div>
-                <dt>Perfiles</dt>
-                <dd>
-                  {summary && summary.activeRuleCount > 0
-                    ? `${summary.activeRuleCount} reglas · ${summary.activePieceCount} cortes`
-                    : "Pendientes"}
-                </dd>
-              </div>
-              <div>
-                <dt>Vidrio</dt>
-                <dd>
-                  {summary && summary.activeGlassCount > 0
-                    ? `${summary.activeGlassCount} definido`
-                    : "Pendiente"}
-                </dd>
-              </div>
-              <div>
-                <dt>Accesorios</dt>
-                <dd>
-                  {summary && summary.activeAccessoryCount > 0
-                    ? `${summary.activeAccessoryCount} definido`
-                    : "Pendiente"}
-                </dd>
-              </div>
-            </dl>
 
             <button
               type="button"
@@ -209,12 +202,78 @@ export function FabricacionLineMobileDetail({
               <button
                 type="button"
                 className={s.secondaryButton}
-                style={{ width: "100%", marginTop: 10 }}
+                style={{ width: "100%", marginTop: 10, marginBottom: 14 }}
                 onClick={onTest}
               >
-                Probar
+                Probar con medidas
               </button>
             ) : null}
+
+            {isL25 ? (
+              <p className={s.hint} style={{ marginBottom: 12 }}>
+                No es solo una variante: al cotizar eliges hojas y construcción.
+                Aquí puedes revisar cada receta y ajustar descuentos de tu taller.
+              </p>
+            ) : null}
+
+            <dl className={s.summaryList}>
+              {isL25 ? (
+                <>
+                  <div>
+                    <dt>Hojas</dt>
+                    <dd>
+                      {l25Coverage?.allLeavesReady
+                        ? "2, 3 y 4 hojas listas"
+                        : l25Coverage && l25Coverage.readyCount > 0
+                          ? l25Coverage.leaves
+                              .filter((entry) => entry.ready)
+                              .map((entry) => `${entry.hojas}h`)
+                              .join(" · ")
+                          : "2 · 3 · 4 hojas"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Construcciones</dt>
+                    <dd>
+                      {l25Coverage && l25Coverage.readyCount > 0
+                        ? `${l25Coverage.readyCount} de ${l25CanonicalCount} listas`
+                        : `${l25CanonicalCount} integradas Ventora`}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Ajustes</dt>
+                    <dd>Descuentos editables por variante</dd>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <dt>Perfiles</dt>
+                    <dd>
+                      {summary && summary.activeRuleCount > 0
+                        ? `${summary.activeRuleCount} reglas · ${summary.activePieceCount} cortes`
+                        : "Pendientes"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Vidrio</dt>
+                    <dd>
+                      {summary && summary.activeGlassCount > 0
+                        ? `${summary.activeGlassCount} definido`
+                        : "Sin vidrio definido"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Accesorios</dt>
+                    <dd>
+                      {summary && summary.activeAccessoryCount > 0
+                        ? `${summary.activeAccessoryCount} definido`
+                        : "Sin accesorios"}
+                    </dd>
+                  </div>
+                </>
+              )}
+            </dl>
           </>
         )}
       </section>
@@ -226,12 +285,15 @@ export function FabricacionLineMobileDetail({
             <span>{olderRecipes.length}</span>
           </summary>
           <div className={s.historyList}>
-            {olderRecipes.map((recipe) => (
-              <article key={recipe.id}>
-                <strong>Versión {recipe.version}</strong>
-                <span>{recipe.status}</span>
-              </article>
-            ))}
+            {olderRecipes.map((recipe) => {
+              const older = getFabricacionVisualStatus(recipe.status);
+              return (
+                <article key={recipe.id}>
+                  <strong>Versión {recipe.version}</strong>
+                  <span>{older.label}</span>
+                </article>
+              );
+            })}
           </div>
         </details>
       ) : null}

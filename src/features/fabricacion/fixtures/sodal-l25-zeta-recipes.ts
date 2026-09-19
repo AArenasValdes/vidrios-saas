@@ -7,12 +7,14 @@ import {
 } from "@/features/fabricacion/types/fabricacion-domain";
 import {
   buildSodalL25VariantSlug,
+  SODAL_L25_CONTRATO_TECNICO,
   resolveSodalL25IdentityFromRecipeId,
   SODAL_L25_CANONICAL_RECIPE_IDS,
   SODAL_L25_FAMILIES,
   type SodalL25Identity,
 } from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
 import { formatSodalL25FullRecipeName } from "@/features/fabricacion/services/sodal-l25-presentation.service";
+import { SODAL_L25_FORMULA_VERSION } from "@/features/fabricacion/zeta/sodal-l25-profile-roles";
 import { deriveFormulasFromConfirmedFamily } from "@/features/fabricacion/zeta/zeta-formula-derivation";
 import {
   buildZetaSourceReference,
@@ -86,6 +88,15 @@ function mapAccessory(
     reglaCantidad: { tipo: "fija", cantidad: Math.max(1, Math.round(item.quantity)) },
     requerido: item.quantity > 0,
     unidad: normalizedUnit,
+    clasificacion: (() => {
+      const haystack = `${item.code} ${item.name}`.toLowerCase();
+      const rol = haystack.includes("burlete") || haystack.includes("felpa")
+        ? "seal"
+        : unit === "M" || unit === "TUBO"
+          ? "consumable"
+          : "hardware";
+      return { rol, impactos: ["accessories"] };
+    })(),
   };
 }
 
@@ -150,10 +161,13 @@ function buildDefinitionFromConfirmed(input: {
       apertura: "corredera",
       herraje: null,
       variante: input.identity.variantSlug,
+      topology: "corredera",
+      hardwareMode: null,
     },
     perfiles,
     vidrios,
     accesorios,
+    contratoTecnico: SODAL_L25_CONTRATO_TECNICO,
     configuracionCorte: {
       perdidaCorteMm: null,
       despunteInicialMm: null,
@@ -167,6 +181,7 @@ function buildDefinitionFromConfirmed(input: {
       input.confirmed.sourceEvidence.planId
         ? `Plan Zeta: ${input.confirmed.sourceEvidence.planId}`
         : "Plan Zeta confirmado.",
+      `Fórmulas: ${SODAL_L25_FORMULA_VERSION}`,
     ],
   };
 }

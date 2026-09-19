@@ -2,6 +2,10 @@ import type {
   FabricacionBaseMedida,
   FabricacionReglaMedida,
 } from "@/features/fabricacion/types/fabricacion-domain";
+import {
+  classifySodalL25ProfileRole,
+  type SodalL25ProfileRole,
+} from "@/features/fabricacion/zeta/sodal-l25-profile-roles";
 import type {
   ConfirmedRecipe,
   GlassMeasureObservation,
@@ -9,6 +13,7 @@ import type {
 } from "@/features/fabricacion/zeta/zeta-types";
 
 type MeasureObservation = {
+  recipeId?: string;
   widthMm: number;
   heightMm: number;
   leaves: number;
@@ -43,12 +48,12 @@ function evaluateReglaMedida(
   regla: FabricacionReglaMedida,
   observation: MeasureObservation
 ): number {
-  const base = baseValueForObservation(regla.base, observation);
-  const multiplicador = regla.multiplicador ?? 1;
-  const ajuste = regla.ajusteMm ?? 0;
   if (regla.base === "fijo_mm") {
     return Math.round(regla.valorFijoMm ?? 0);
   }
+  const base = baseValueForObservation(regla.base, observation);
+  const multiplicador = regla.multiplicador ?? 1;
+  const ajuste = regla.ajusteMm ?? 0;
   return Math.round(base * multiplicador + ajuste);
 }
 
@@ -61,50 +66,78 @@ function matchesAllObservations(
   );
 }
 
-function inferProfileRole(code: string): FabricacionBaseMedida {
-  if (code.startsWith("2501") || code.startsWith("2502")) return "ancho_total";
-  if (code.startsWith("2503") || code.startsWith("2509")) return "alto_total";
-  if (/^(2506|2507|2510|2518|2519|2529|2530)/.test(code)) return "alto_total";
-  return "ancho_por_hoja";
+function ruleFromBase(
+  base: FabricacionBaseMedida,
+  observations: MeasureObservation[]
+): FabricacionReglaMedida | null {
+  if (observations.length === 0) return null;
+  const offsets = observations.map(
+    (observation) => observation.lengthMm - baseValueForObservation(base, observation)
+  );
+  const unique = uniqueSorted(offsets);
+  if (unique.length !== 1) return null;
+  return { base, ajusteMm: unique[0] };
 }
 
-function buildCandidateRules(
-  observations: MeasureObservation[],
-  profileCode: string
-): FabricacionReglaMedida[] {
-  const candidates: FabricacionReglaMedida[] = [];
-  const lengths = uniqueSorted(observations.map((item) => item.lengthMm));
-  if (lengths.length === 1) {
-    candidates.push({ base: "fijo_mm", valorFijoMm: lengths[0] });
-  }
+function requiredBasesForRole(role: SodalL25ProfileRole): FabricacionBaseMedida[] {
+  if (role === "frame_width") return ["ancho_total"];
+  if (role === "frame_height" || role === "sash_height") return ["alto_total"];
+  return ["ancho_por_hoja", "ancho_total"];
+}
 
-  const bases: FabricacionBaseMedida[] = [
-    "ancho_total",
-    "alto_total",
-    "ancho_por_hoja",
-    "alto_por_hoja",
-  ];
+function compatibleObservationsForRole(input: {
+  role: SodalL25ProfileRole;
+  observations: MeasureObservation[];
+  canonicalRecipeId?: string;
+}): MeasureObservation[] {
+  const { observations, canonicalRecipeId } = input;
+  if (observations.length <= 1) return observations;
 
-  for (const base of bases) {
-    const offsets = observations.map(
-      (observation) => observation.lengthMm - baseValueForObservation(base, observation)
+  const canonical =
+    observations.find((item) => item.recipeId === canonicalRecipeId) ?? observations[0]!;
+  const kept: MeasureObservation[] = [canonical];
+
+  for (const observation of observations) {
+    if (observation === canonical) continue;
+    const stillMatches = requiredBasesForRole(input.role).some((base) =>
+      Boolean(ruleFromBase(base, [canonical, observation]))
     );
-    if (uniqueSorted(offsets).length === 1) {
-      candidates.push({ base, ajusteMm: offsets[0] });
-    }
+    if (stillMatches) kept.push(observation);
   }
 
-  if (observations.length === 1) {
-    const observation = observations[0]!;
-    const preferredBase = inferProfileRole(profileCode);
-    candidates.push({
-      base: preferredBase,
-      ajusteMm:
-        observation.lengthMm - baseValueForObservation(preferredBase, observation),
-    });
+  return kept;
+}
+
+function pickUnambiguousRule(
+  matching: FabricacionReglaMedida[],
+  profileCode: string,
+  preferredBases: FabricacionBaseMedida[]
+): FabricacionReglaMedida {
+  const withoutFixed = matching.filter((item) => item.base !== "fijo_mm");
+  const pool = withoutFixed.length > 0 ? withoutFixed : matching;
+  if (pool.length === 1) return pool[0]!;
+
+  for (const base of preferredBases) {
+    const preferred = pool.find((item) => item.base === base);
+    if (preferred) return preferred;
   }
 
-  return candidates;
+  const ranked = [...pool].sort((left, right) => {
+    const leftAbs = Math.abs(left.ajusteMm ?? 0);
+    const rightAbs = Math.abs(right.ajusteMm ?? 0);
+    return leftAbs - rightAbs;
+  });
+
+  const bestAbs = Math.abs(ranked[0]?.ajusteMm ?? 0);
+  const tied = ranked.filter((item) => Math.abs(item.ajusteMm ?? 0) === bestAbs);
+  if (tied.length !== 1) {
+    throw new ZetaFormulaDerivationConflictError(
+      `Regla ambigua para perfil ${profileCode}: ${tied
+        .map((item) => `${item.base}:${item.ajusteMm ?? 0}`)
+        .join(", ")}.`
+    );
+  }
+  return tied[0]!;
 }
 
 export class ZetaFormulaDerivationConflictError extends Error {
@@ -115,68 +148,86 @@ export class ZetaFormulaDerivationConflictError extends Error {
 }
 
 export function deriveProfileMeasureRule(
-  observations: ProfileMeasureObservation[]
+  observations: ProfileMeasureObservation[],
+  options?: { canonicalRecipeId?: string }
 ): FabricacionReglaMedida {
   if (observations.length === 0) {
     throw new ZetaFormulaDerivationConflictError("Sin observaciones de perfil.");
   }
 
   const profileCode = observations[0]?.code ?? "";
-  const measureObservations = observations.map((item) => ({
+  const role = classifySodalL25ProfileRole(profileCode);
+  if (!role) {
+    throw new ZetaFormulaDerivationConflictError(
+      `Perfil L25 sin rol explícito: ${profileCode}. No se elige una base arbitraria.`
+    );
+  }
+
+  const measureObservations: MeasureObservation[] = observations.map((item) => ({
+    recipeId: item.recipeId,
     widthMm: item.widthMm,
     heightMm: item.heightMm,
     leaves: item.leaves,
     lengthMm: item.lengthMm,
   }));
+  const usable = compatibleObservationsForRole({
+    role,
+    observations: measureObservations,
+    canonicalRecipeId: options?.canonicalRecipeId,
+  });
 
-  const candidates = buildCandidateRules(measureObservations, profileCode);
-  const matching = candidates.filter((candidate) =>
-    matchesAllObservations(candidate, measureObservations)
-  );
+  const matching: FabricacionReglaMedida[] = [];
+  for (const base of requiredBasesForRole(role)) {
+    const rule = ruleFromBase(base, usable);
+    if (rule && matchesAllObservations(rule, usable)) matching.push(rule);
+  }
+
+  if (matching.length === 0 && role === "sash_width") {
+    const lengths = uniqueSorted(usable.map((item) => item.lengthMm));
+    if (lengths.length === 1) {
+      matching.push({ base: "fijo_mm", valorFijoMm: lengths[0] });
+    }
+  }
 
   if (matching.length === 0) {
     throw new ZetaFormulaDerivationConflictError(
-      `No hay regla unívoca para perfil ${profileCode} (${observations
+      `No hay regla unívoca de rol ${role} para perfil ${profileCode} (${observations
         .map((item) => `${item.recipeId}:${item.lengthMm}`)
         .join(", ")}).`
     );
   }
 
-  const preferredOrder: FabricacionBaseMedida[] = [
-    "ancho_total",
-    "ancho_por_hoja",
-    "alto_total",
-    "alto_por_hoja",
-    "fijo_mm",
-  ];
-  matching.sort((left, right) => {
-    const leftIndex = preferredOrder.indexOf(left.base);
-    const rightIndex = preferredOrder.indexOf(right.base);
-    return leftIndex - rightIndex;
-  });
-
-  return matching[0]!;
+  return pickUnambiguousRule(matching, profileCode, requiredBasesForRole(role));
 }
 
 export function deriveGlassMeasureRule(
   observations: GlassMeasureObservation[],
-  dimension: "width" | "height"
+  dimension: "width" | "height",
+  options?: { canonicalRecipeId?: string }
 ): FabricacionReglaMedida {
   if (observations.length === 0) {
     throw new ZetaFormulaDerivationConflictError("Sin observaciones de vidrio.");
   }
 
-  const measureObservations = observations.map((item) => ({
+  const role: SodalL25ProfileRole = dimension === "width" ? "sash_width" : "sash_height";
+  const measureObservations: MeasureObservation[] = observations.map((item) => ({
+    recipeId: item.recipeId,
     widthMm: item.widthMm,
     heightMm: item.heightMm,
     leaves: item.leaves,
     lengthMm: dimension === "width" ? item.pieceWidthMm : item.pieceHeightMm,
   }));
+  const usable = compatibleObservationsForRole({
+    role,
+    observations: measureObservations,
+    canonicalRecipeId: options?.canonicalRecipeId,
+  });
 
-  const candidates = buildCandidateRules(measureObservations, "glass");
-  const matching = candidates.filter((candidate) =>
-    matchesAllObservations(candidate, measureObservations)
-  );
+  const matching: FabricacionReglaMedida[] = [];
+  for (const base of requiredBasesForRole(role)) {
+    const rule = ruleFromBase(base, usable);
+    if (rule && matchesAllObservations(rule, usable)) matching.push(rule);
+  }
 
   if (matching.length === 0) {
     throw new ZetaFormulaDerivationConflictError(
@@ -188,19 +239,7 @@ export function deriveGlassMeasureRule(
     );
   }
 
-  const preferredOrder: FabricacionBaseMedida[] = [
-    "ancho_por_hoja",
-    "ancho_total",
-    "alto_total",
-    "fijo_mm",
-  ];
-  matching.sort((left, right) => {
-    const leftIndex = preferredOrder.indexOf(left.base);
-    const rightIndex = preferredOrder.indexOf(right.base);
-    return leftIndex - rightIndex;
-  });
-
-  return matching[0]!;
+  return pickUnambiguousRule(matching, `glass:${dimension}`, requiredBasesForRole(role));
 }
 
 export function deriveFormulasFromConfirmedFamily(input: {
@@ -254,7 +293,7 @@ export function deriveFormulasFromConfirmedFamily(input: {
       });
     }
 
-    return deriveProfileMeasureRule(observations);
+    return deriveProfileMeasureRule(observations, { canonicalRecipeId: canonical.id });
   });
 
   const glassRules = canonical.glass.map((piece, glassIndex) => {
@@ -294,8 +333,12 @@ export function deriveFormulasFromConfirmedFamily(input: {
     }
 
     return {
-      width: deriveGlassMeasureRule(observations, "width"),
-      height: deriveGlassMeasureRule(observations, "height"),
+      width: deriveGlassMeasureRule(observations, "width", {
+        canonicalRecipeId: canonical.id,
+      }),
+      height: deriveGlassMeasureRule(observations, "height", {
+        canonicalRecipeId: canonical.id,
+      }),
     };
   });
 

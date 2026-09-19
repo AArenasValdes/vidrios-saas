@@ -1,6 +1,36 @@
 import type { ConfirmedRecipeId } from "@/features/fabricacion/zeta/zeta-confirmed-loader";
+import type { FabricacionContratoTecnico } from "@/features/fabricacion/types/fabricacion-domain";
 
 export const SODAL_L25_CATALOG_KEY = "ventora:l25";
+
+/** Contrato técnico de L25. El herraje queda fuera porque no discrimina la receta. */
+export const SODAL_L25_CONTRATO_TECNICO: FabricacionContratoTecnico = {
+  familia: "sodal:l25",
+  discriminadoresObligatorios: [
+    "lineTemplateId",
+    "typology",
+    "topology",
+    "leaves",
+    "glazing",
+    "leg",
+    "reinforcement",
+  ],
+  impactosAtributos: {
+    lineTemplateId: ["profiles", "glass"],
+    typology: ["geometry"],
+    topology: ["geometry", "profiles", "glass"],
+    leaves: ["geometry", "profiles", "glass", "accessories"],
+    width: ["geometry", "profiles", "glass"],
+    height: ["geometry", "profiles", "glass"],
+    glazing: ["profiles", "glass"],
+    leg: ["profiles"],
+    reinforcement: ["profiles"],
+    herraje: ["accessories"],
+    quantity: ["commercial_only"],
+  },
+  topology: "corredera",
+  hardwareMode: null,
+};
 
 export type SodalL25GlazingSlug = "monolithic" | "dvh";
 export type SodalL25LegSlug = "open" | "closed";
@@ -25,6 +55,7 @@ export type SodalL25FamilyConfig = {
   reinforcement: SodalL25ReinforcementSlug;
   canonicalByLeaves: Partial<Record<2 | 3 | 4, ConfirmedRecipeId>>;
   extraEvidenceByLeaves: Partial<Record<2 | 3 | 4, ConfirmedRecipeId[]>>;
+  requiredDiscriminators: string[];
 };
 
 export const SODAL_L25_FAMILIES: SodalL25FamilyConfig[] = [
@@ -40,6 +71,7 @@ export const SODAL_L25_FAMILIES: SodalL25FamilyConfig[] = [
       4: "dvh_pierna_abierta_4h_3000x1500",
     },
     extraEvidenceByLeaves: {},
+    requiredDiscriminators: SODAL_L25_CONTRATO_TECNICO.discriminadoresObligatorios,
   },
   {
     familyKey: "dvh_pierna_abierta_reforzada",
@@ -55,6 +87,7 @@ export const SODAL_L25_FAMILIES: SodalL25FamilyConfig[] = [
     extraEvidenceByLeaves: {
       3: ["dvh_pierna_abierta_reforzada_3h_2400x1500"],
     },
+    requiredDiscriminators: SODAL_L25_CONTRATO_TECNICO.discriminadoresObligatorios,
   },
   {
     familyKey: "dvh_pierna_cerrada",
@@ -70,6 +103,7 @@ export const SODAL_L25_FAMILIES: SodalL25FamilyConfig[] = [
     extraEvidenceByLeaves: {
       3: ["dvh_pierna_cerrada_3h_2400x1500"],
     },
+    requiredDiscriminators: SODAL_L25_CONTRATO_TECNICO.discriminadoresObligatorios,
   },
   {
     familyKey: "monolitico_pierna_abierta",
@@ -85,6 +119,7 @@ export const SODAL_L25_FAMILIES: SodalL25FamilyConfig[] = [
     extraEvidenceByLeaves: {
       3: ["monolitico_pierna_abierta_3h_2400x1500"],
     },
+    requiredDiscriminators: SODAL_L25_CONTRATO_TECNICO.discriminadoresObligatorios,
   },
   {
     familyKey: "monolitico_pierna_abierta_reforzada",
@@ -100,6 +135,7 @@ export const SODAL_L25_FAMILIES: SodalL25FamilyConfig[] = [
     extraEvidenceByLeaves: {
       3: ["monolitico_pierna_abierta_reforzada_3h_2400x1500"],
     },
+    requiredDiscriminators: SODAL_L25_CONTRATO_TECNICO.discriminadoresObligatorios,
   },
   {
     familyKey: "monolitico_pierna_cerrada",
@@ -113,6 +149,7 @@ export const SODAL_L25_FAMILIES: SodalL25FamilyConfig[] = [
       4: "monolitico_pierna_cerrada_4h_3000x1500",
     },
     extraEvidenceByLeaves: {},
+    requiredDiscriminators: SODAL_L25_CONTRATO_TECNICO.discriminadoresObligatorios,
   },
 ];
 

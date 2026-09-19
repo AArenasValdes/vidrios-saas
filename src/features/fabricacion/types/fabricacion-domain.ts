@@ -27,6 +27,47 @@ export const FABRICACION_TIPOLOGIAS = [
 
 export type FabricacionTipologia = (typeof FABRICACION_TIPOLOGIAS)[number];
 
+export const FABRICACION_ATRIBUTO_IMPACTOS = [
+  "commercial_only",
+  "geometry",
+  "profiles",
+  "glass",
+  "accessories",
+  "machining",
+] as const;
+
+export type FabricacionAtributoImpacto =
+  (typeof FABRICACION_ATRIBUTO_IMPACTOS)[number];
+
+export type FabricacionContratoTecnico = {
+  /** Identidad estable de la familia, no el texto comercial visible. */
+  familia: string;
+  /** Campos que el resolver debe conocer para elegir una sola receta. */
+  discriminadoresObligatorios: string[];
+  /** Un input puede impactar más de una capa técnica. */
+  impactosAtributos: Record<string, FabricacionAtributoImpacto[]>;
+  topology?: string | null;
+  hardwareMode?: string | null;
+};
+
+export const FABRICACION_ROLES_ACCESORIO = [
+  "hardware",
+  "consumable",
+  "seal",
+  "fastener",
+  "installation",
+  "machining",
+  "other",
+] as const;
+
+export type FabricacionRolAccesorio =
+  (typeof FABRICACION_ROLES_ACCESORIO)[number];
+
+export type FabricacionClasificacionAccesorio = {
+  rol: FabricacionRolAccesorio;
+  impactos: FabricacionAtributoImpacto[];
+};
+
 export type FabricacionIdentidadReceta = {
   recetaId: string;
   codigo: string;
@@ -37,12 +78,16 @@ export type FabricacionIdentidadReceta = {
   apertura?: string | null;
   herraje: string | null;
   variante: string;
+  topology?: string | null;
+  hardwareMode?: string | null;
 };
 
 export type FabricacionCondicion = {
   hojas?: number | { min?: number; max?: number; igual?: number };
   modulos?: number | { min?: number; max?: number; igual?: number };
   variante?: string | string[];
+  topology?: string | string[];
+  hardwareMode?: string | string[];
 };
 
 export const FABRICACION_BASES_MEDIDA = [
@@ -120,6 +165,7 @@ export type FabricacionAccesorio = {
   /** Fórmula textual de consumo cuando la fuente expresa metros/tramos. */
   formulaCantidad?: string;
   unidad?: string;
+  clasificacion?: FabricacionClasificacionAccesorio;
   observaciones?: string;
   datosPendientes?: string[];
 };
@@ -140,6 +186,7 @@ export type FabricacionReceta = {
   perfiles: FabricacionComponentePerfil[];
   vidrios: FabricacionVidrio[];
   accesorios: FabricacionAccesorio[];
+  contratoTecnico?: FabricacionContratoTecnico;
   configuracionCorte?: FabricacionConfiguracionCorte;
   /** Datos que impiden tratar la receta como pauta completa calculable. */
   datosPendientes?: string[];
@@ -153,6 +200,8 @@ export type FabricacionEntradaCalculo = {
   hojas: number;
   modulos: number;
   variante?: string | null;
+  topology?: string | null;
+  hardwareMode?: string | null;
 };
 
 export type FabricacionTrazabilidadRegla = {

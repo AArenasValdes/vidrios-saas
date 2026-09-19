@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { FabricacionLineWorkspace } from "@/features/fabricacion/components/fabricacion-line-workspace";
+import { FabricacionLinePageClient } from "@/features/fabricacion/components/fabricacion-line-page-client";
 
 type PageProps = {
   params: Promise<{ lineTemplateId: string }>;
@@ -15,7 +15,7 @@ export default async function FabricacionLineaPage({ params, searchParams }: Pag
   if (!Number.isInteger(parsedId) || parsedId <= 0) notFound();
 
   return (
-    <FabricacionLineWorkspace
+    <FabricacionLinePageClient
       lineTemplateId={parsedId}
       initialSuggestedRecipeId={plantilla ?? null}
     />

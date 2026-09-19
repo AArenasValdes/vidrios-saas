@@ -6,6 +6,8 @@ import {
   FABRICACION_ESTADOS_VALIDACION,
   FABRICACION_RECIPE_SCHEMA_VERSION,
   FABRICACION_REGLAS_CANTIDAD,
+  FABRICACION_ATRIBUTO_IMPACTOS,
+  FABRICACION_ROLES_ACCESORIO,
   FABRICACION_TIPOLOGIAS,
 } from "@/features/fabricacion/types/fabricacion-domain";
 
@@ -39,6 +41,8 @@ export const fabricacionCondicionSchema = z
       ])
       .optional(),
     variante: z.union([z.string().min(1), z.array(z.string().min(1))]).optional(),
+    topology: z.union([z.string().min(1), z.array(z.string().min(1))]).optional(),
+    hardwareMode: z.union([z.string().min(1), z.array(z.string().min(1))]).optional(),
   })
   .strict();
 
@@ -81,6 +85,8 @@ export const fabricacionIdentidadRecetaSchema = z
     apertura: z.string().min(1).nullable().optional(),
     herraje: z.string().min(1).nullable(),
     variante: z.string().min(1),
+    topology: z.string().min(1).nullable().optional(),
+    hardwareMode: z.string().min(1).nullable().optional(),
   })
   .strict();
 
@@ -123,6 +129,13 @@ export const fabricacionAccesorioSchema = z
     condicion: fabricacionCondicionSchema.optional(),
     formulaCantidad: z.string().min(1).optional(),
     unidad: z.string().min(1).optional(),
+    clasificacion: z
+      .object({
+        rol: z.enum(FABRICACION_ROLES_ACCESORIO),
+        impactos: z.array(z.enum(FABRICACION_ATRIBUTO_IMPACTOS)).min(1),
+      })
+      .strict()
+      .optional(),
     ...componentNotesShape,
   })
   .strict();
@@ -145,6 +158,19 @@ export const fabricacionRecetaSchema = z
     perfiles: z.array(fabricacionComponentePerfilSchema),
     vidrios: z.array(fabricacionVidrioSchema),
     accesorios: z.array(fabricacionAccesorioSchema),
+    contratoTecnico: z
+      .object({
+        familia: z.string().min(1),
+        discriminadoresObligatorios: z.array(z.string().min(1)).min(1),
+        impactosAtributos: z.record(
+          z.string().min(1),
+          z.array(z.enum(FABRICACION_ATRIBUTO_IMPACTOS)).min(1)
+        ),
+        topology: z.string().min(1).nullable().optional(),
+        hardwareMode: z.string().min(1).nullable().optional(),
+      })
+      .strict()
+      .optional(),
     configuracionCorte: fabricacionConfiguracionCorteSchema.optional(),
     datosPendientes: z.array(z.string().min(1)).optional(),
     notasValidacion: z.array(z.string()),
@@ -159,6 +185,8 @@ export const fabricacionEntradaCalculoSchema = z
     hojas: integerPositiveSchema,
     modulos: integerPositiveSchema,
     variante: z.string().min(1).nullable().optional(),
+    topology: z.string().min(1).nullable().optional(),
+    hardwareMode: z.string().min(1).nullable().optional(),
   })
   .strict();
 

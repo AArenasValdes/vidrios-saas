@@ -10,6 +10,11 @@ import {
   FABRICACION_COTIZACION_SNAPSHOT_SCHEMA_VERSION,
   type FabricacionCotizacionSnapshot,
 } from "@/features/fabricacion/types/fabricacion-snapshot";
+import {
+  isSodalL25SnapshotIdentity,
+  SODAL_L25_FORMULA_VERSION,
+} from "@/features/fabricacion/zeta/sodal-l25-profile-roles";
+import { isZetaConfirmedSourceReference } from "@/features/fabricacion/zeta/zeta-confirmed-loader";
 
 function cloneReceta(receta: FabricacionReceta): FabricacionReceta {
   return JSON.parse(JSON.stringify(receta)) as FabricacionReceta;
@@ -101,6 +106,23 @@ export function construirSnapshotFabricacionCotizacion(input: {
     vidrios: result.vidrios,
     advertencias: [...result.advertencias, ...pautaBarras.advertencias],
     pautaBarras,
+    formulaVersion: resolveSnapshotFormulaVersion(input.recipe, definition.identidad),
     calculatedAt: input.calculatedAt ?? new Date().toISOString(),
   };
+}
+
+function resolveSnapshotFormulaVersion(
+  recipe: FabricationRecipeRecord,
+  identity: FabricacionReceta["identidad"]
+): string | undefined {
+  if (
+    isZetaConfirmedSourceReference(recipe.sourceReference) ||
+    isSodalL25SnapshotIdentity({
+      codigo: identity.codigo,
+      variante: identity.variante,
+    })
+  ) {
+    return SODAL_L25_FORMULA_VERSION;
+  }
+  return undefined;
 }

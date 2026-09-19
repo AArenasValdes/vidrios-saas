@@ -11,6 +11,8 @@ type Props = {
   usedByWorkshop: number[];
   otherFrequent: number[];
   readOnly?: boolean;
+  emptyLabel?: string;
+  showUnitSuffix?: boolean;
   onChange: (value: number | null) => void;
 };
 
@@ -30,6 +32,8 @@ export function RecipeCommercialLengthPicker({
   usedByWorkshop,
   otherFrequent,
   readOnly = false,
+  emptyLabel = "Por confirmar",
+  showUnitSuffix = true,
   onChange,
 }: Props) {
   const panelId = useId();
@@ -41,7 +45,7 @@ export function RecipeCommercialLengthPicker({
   const label =
     typeof value === "number" && value > 0
       ? formatOptionLabel(value)
-      : "Por confirmar";
+      : emptyLabel;
 
   useEffect(() => {
     if (!open) return;
@@ -97,7 +101,7 @@ export function RecipeCommercialLengthPicker({
       >
         <span data-empty={!(typeof value === "number" && value > 0)}>{label}</span>
       </button>
-      <small>mm</small>
+      {showUnitSuffix ? <small>mm</small> : null}
 
       {open ? (
         <div

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
 import { fabricacionRecetaSchema } from "@/features/fabricacion/schemas/fabricacion-schemas";
 import { validarRecetaFabricacion } from "@/features/fabricacion/services/fabricacion-validacion.service";
+import { evaluarGatesRecetaFabricacion } from "@/features/fabricacion/services/fabricacion-gates.service";
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
 import type { FabricationRecipesRepository } from "@/features/fabricacion/repositories/fabrication-recipes.repository";
 import type { FabricationRecipeTestsRepository } from "@/features/fabricacion/repositories/fabrication-recipe-tests.repository";
@@ -450,6 +451,28 @@ export function createFabricationRecipesService(
         "VALIDACION_CON_FALLOS",
         "La receta no se puede validar porque hay casos de prueba fallidos.",
         { failedTestIds: failed.map((test) => test.id) }
+      );
+    }
+
+    const candidates = await deps.recipesRepository.list({
+      organizationId,
+      lineTemplateId: recipe.lineTemplateId ?? undefined,
+      includeArchived: false,
+    });
+    const gateEvaluation = evaluarGatesRecetaFabricacion({
+      recipe: validationDefinition,
+      record: {
+        ...recipe,
+        definition: validationDefinition,
+      },
+      tests: results,
+      candidateRecipes: candidates,
+    });
+    if (!gateEvaluation.passed) {
+      throw new FabricationRecipeServiceError(
+        "VALIDACION_GATES_INCOMPLETOS",
+        "La receta no se puede activar hasta completar todos los gates técnicos.",
+        { gates: gateEvaluation.gates.filter((entry) => !entry.passed) }
       );
     }
 

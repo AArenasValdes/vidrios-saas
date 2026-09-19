@@ -1,8 +1,11 @@
 import {
   describeAccesorioReglaHumana,
+  describePerfilCardDisplay,
   describePerfilReglaHumana,
   describePerfilSheetMeasure,
   describePerfilTallerResumen,
+  displayLabel,
+  getActiveRecipeProfileRules,
   resolveLargoComercialMm,
   resolveRecetaLargoComercialDefaultMm,
   summarizeTirasPorPerfil,
@@ -116,6 +119,58 @@ describe("fabricacion-regla-humana.service", () => {
     );
     expect(sheet.pending).toBe(true);
     expect(sheet.measure).toContain("Medida por configurar");
+  });
+
+  it("displayLabel nunca interpola objetos", () => {
+    expect(displayLabel({ line: "1 corte · Ancho de la ventana" })).toBe(
+      "1 corte · Ancho de la ventana"
+    );
+    expect(displayLabel({ foo: 1 })).toBe("");
+    expect(String(displayLabel(describePerfilTallerResumen(profile())))).not.toContain(
+      "[object Object]"
+    );
+    expect(displayLabel("3502")).toBe("3502");
+    expect(displayLabel(null)).toBe("");
+  });
+
+  it("describe la card de perfil con código, nombre, ajuste y largo", () => {
+    const receta = {
+      configuracionCorte: { largoComercialDefaultMm: 6000 },
+    } as FabricacionReceta;
+    const card = describePerfilCardDisplay(
+      profile({
+        funcion: "Marco",
+        codigoPerfil: "3502",
+        nombrePerfil: "Riel superior",
+        reglaMedida: { base: "ancho_total", ajusteMm: -3 },
+        reglaCantidad: { tipo: "fija", cantidad: 1 },
+      }),
+      receta
+    );
+    expect(card.rol).toBe("Marco");
+    expect(card.perfil).toBe("3502 + Riel superior");
+    expect(card.base).toBe("Ancho de la ventana");
+    expect(card.ajuste).toBe("−3 mm");
+    expect(card.cantidad).toBe("1");
+    expect(card.largoComercial).toBe("6,00 m");
+    expect(card.line).not.toContain("[object Object]");
+  });
+
+  it("excluye reglas inactivas del listado activo", () => {
+    const receta = {
+      identidad: { hojas: 2, modulos: 1, variante: "estandar" },
+      perfiles: [
+        profile({ id: "active", requerido: true }),
+        profile({
+          id: "optional",
+          requerido: false,
+          reglaMedida: { base: "ancho_total", ajusteMm: 0 },
+          reglaCantidad: { tipo: "fija", cantidad: 1 },
+        }),
+      ],
+    } as FabricacionReceta;
+    const active = getActiveRecipeProfileRules(receta);
+    expect(active.map((entry) => entry.id)).toEqual(["active"]);
   });
 
   it("agrupa tiras por perfil y largo", () => {

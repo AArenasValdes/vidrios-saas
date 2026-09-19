@@ -61,6 +61,7 @@ export type FabricacionCotizacionSnapshot = {
   vidrios: FabricacionVidrioResultado[];
   advertencias: FabricacionAdvertencia[];
   pautaBarras?: FabricacionPautaBarras;
+  formulaVersion?: string;
   calculatedAt: string;
 };
 

@@ -7,7 +7,7 @@ import type {
 
 export type FabricacionWorkspaceView = "list" | "edit" | "test";
 
-export type FabricacionMobileView = "detail" | "wizard" | "test";
+export type FabricacionMobileView = "detail" | "wizard";
 
 export type RecipeStartMode = "ventora" | "ai" | "blank";
 
@@ -25,12 +25,7 @@ export type RecipeWorkflowStepId =
 
 export type PrimaryWorkflowStepId = "line" | "recipe" | "activate";
 
-export type MobileWizardStepId =
-  | "origin"
-  | "config"
-  | "profiles"
-  | "glass"
-  | "test";
+export type MobileWizardStepId = "product" | "profiles" | "glass" | "validate";
 
 export type RecipeStageProgress = {
   componentCount: number;

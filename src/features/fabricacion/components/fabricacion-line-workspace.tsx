@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
   ArrowLeft,
@@ -464,7 +464,7 @@ export function FabricacionLineWorkspace({
     createRecipeTest,
     runRecipeTest,
     validateRecipe,
-  } = useFabricationRecipes();
+  } = useFabricationRecipes({ lineTemplateId });
 
   const [view, setView] = useState<WorkspaceView>("list");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -1084,10 +1084,12 @@ export function FabricacionLineWorkspace({
 
   if (hasResolvedWorkspaceViewport && !isDesktopWorkspace) {
     return (
-      <FabricacionLineMobileShell
-        lineTemplateId={lineTemplateId}
-        initialSuggestedRecipeId={initialSuggestedRecipeId}
-      />
+      <Suspense fallback={<div className={s.loadingState}>Cargando fabricación...</div>}>
+        <FabricacionLineMobileShell
+          lineTemplateId={lineTemplateId}
+          initialSuggestedRecipeId={initialSuggestedRecipeId}
+        />
+      </Suspense>
     );
   }
 
@@ -1406,7 +1408,11 @@ export function FabricacionLineWorkspace({
     );
     const showActivateReady = isRecipeReadyToActivate(
       workingSelected.definition,
-      selectedTests
+      selectedTests,
+      {
+        record: workingSelected,
+        candidateRecipes: recipes,
+      }
     );
     const canValidate =
       workingSelected.scope === "organization" &&

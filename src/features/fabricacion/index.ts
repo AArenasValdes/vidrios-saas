@@ -9,6 +9,7 @@ export * from "@/features/fabricacion/services/fabricacion-contexto-pieza.servic
 export * from "@/features/fabricacion/services/fabricacion-receta-editor.service";
 export * from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
 export * from "@/features/fabricacion/services/fabricacion-validacion.service";
+export * from "@/features/fabricacion/services/fabricacion-gates.service";
 export * from "@/features/fabricacion/types/fabricacion-persistence";
 export * from "@/features/fabricacion/types/fabricacion-snapshot";
 export * from "@/features/fabricacion/repositories/fabrication-recipes.repository";
