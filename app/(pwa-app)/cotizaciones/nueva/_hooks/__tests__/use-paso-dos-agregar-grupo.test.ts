@@ -145,6 +145,52 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
     expect(form.costoProveedorUnitario).toBe("120000");
   });
 
+  it("debe trasladar la optimizacion de vidrio del draft al item guardado", () => {
+    const form = buildPasoDosGrupoComponentForm({
+      items: [],
+      pricingMode: "precio_directo",
+      provider: "",
+      draft: createDraft({
+        categoria: "Vidrios y cristales",
+        subtipo: "Vidrio / Cristal",
+        material: "Cristal",
+        catalogCategoria: "vidrio",
+        vidrio: "Templado 10 mm",
+        referencia: "Templado 10 mm",
+        lineTemplateId: "glass-1",
+        priceInputMode: "line_m2",
+        cantidad: 3,
+        ancho: "1200",
+        alto: "800",
+        precio: "",
+        precioPorM2: "32000",
+        minimoCobrable: "0",
+        redondeoPrecio: "1000",
+        glassSheetConfig: {
+          enabled: true,
+          widthMm: 3210,
+          heightMm: 2250,
+          costClp: 85000,
+          billingRule: "quarter",
+        },
+        lineMermaPct: 5,
+      }),
+    });
+
+    expect(form.glassSheetConfig).toEqual(
+      expect.objectContaining({ widthMm: 3210, heightMm: 2250, billingRule: "quarter" })
+    );
+    expect(form.lineMermaPct).toBe(5);
+    expect(form.costoProveedorUnitario).toBe("39000");
+
+    const item = buildItemFromForm(form, [], null);
+    const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+    expect(meta.glassSheetWidthMm).toBe(3210);
+    expect(meta.glassSheetHeightMm).toBe(2250);
+    expect(meta.glassSheetBillingRule).toBe("quarter");
+    expect(meta.lineMermaPct).toBe(5);
+  });
+
   it("debe mostrar valor total sugerido por línea y guardar unitario correcto", () => {
     const draft = createDraft({
       cantidad: 3,
