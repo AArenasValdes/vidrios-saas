@@ -1289,6 +1289,79 @@ describe("workflow-ui paso 2", () => {
     ).toEqual(["Cristal templado 10 mm"]);
   });
 
+  it("debe conservar la optimizacion de vidrio al guardar y volver a editar una pieza", () => {
+    const template = {
+      id: "cr-opt-1",
+      organizationId: 1,
+      catalogKey: null,
+      nombre: "Templado 10 mm",
+      categoria: "vidrio",
+      unidadCobro: "m2",
+      material: "Cristal",
+      vidrioPrincipalRecomendado: null,
+      costoBase: 0,
+      precioM2Sugerido: 32000,
+      minimoCobrable: 0,
+      redondeoPrecio: 1000,
+      mermaPct: 5,
+      margenObjetivoPct: null,
+      proveedor: null,
+      vigenciaDesde: null,
+      vigenciaHasta: null,
+      catalogMetadata: {
+        glassSheetOptimization: {
+          version: 1,
+          enabled: true,
+          widthMm: 3210,
+          heightMm: 2250,
+          costClp: 85000,
+          billingRule: "quarter",
+        },
+      },
+      isActive: true,
+      sortOrder: 0,
+      creadoEn: null,
+      actualizadoEn: null,
+      eliminadoEn: null,
+    } as CotizacionLineTemplate;
+
+    const selected = applyLineTemplateToComponentForm(
+      {
+        ...createLinePricingForm({
+          tipo: "Vidrio / Cristal",
+          material: "Cristal",
+          catalogCategoria: "vidrio",
+          ancho: "1200",
+          alto: "800",
+          cantidad: "3",
+        }),
+      },
+      template
+    );
+
+    expect(selected.glassSheetConfig).toEqual(
+      expect.objectContaining({
+        widthMm: 3210,
+        heightMm: 2250,
+        billingRule: "quarter",
+      })
+    );
+    expect(selected.lineMermaPct).toBe(5);
+    expect(selected.costoProveedorUnitario).toBe("39000");
+
+    const item = buildItemFromForm(selected, [], null);
+    const restored = mapItemToForm(item);
+
+    expect(restored.glassSheetConfig).toEqual({
+      enabled: true,
+      widthMm: 3210,
+      heightMm: 2250,
+      costClp: 85000,
+      billingRule: "quarter",
+    });
+    expect(restored.lineMermaPct).toBe(5);
+  });
+
   it("debe mostrar lineas sin precio comercial (precio pendiente) en selectores de cotizacion", () => {
     const templates = [
       {
