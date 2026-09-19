@@ -2576,8 +2576,9 @@ function NuevaCotizacionPageContent() {
     setGlobalError(null);
   }
 
-  const handleGlassSelect = (nextGlass: string) => {
+  const handleGlassSelect = (nextGlass: string, vidrioLineTemplateId = "") => {
     handleComponentChange("vidrio", nextGlass);
+    handleComponentChange("vidrioLineTemplateId", vidrioLineTemplateId);
     setGlassQuery("");
 
     if (glassCloseTimeoutRef.current !== null) {
@@ -3046,8 +3047,8 @@ function goNextFromStep1() {
       });
     },
     onGlassQueryChange: setGlassQuery,
-    onGlassSelect: (value) => {
-      handleGlassSelect(value);
+    onGlassSelect: (value, vidrioLineTemplateId) => {
+      handleGlassSelect(value, vidrioLineTemplateId ?? "");
       if (!value) {
         setGlassQuery("");
       }

@@ -83,7 +83,7 @@ type UsePasoDosPresentacionParams = {
   onTemplatePriceUpdated?: (updated: CotizacionLineTemplate) => void;
   onToggleGlassPanel: () => void;
   onGlassQueryChange: (value: string) => void;
-  onGlassSelect: (value: string) => void;
+  onGlassSelect: (value: string, vidrioLineTemplateId?: string) => void;
   onCreateCustomGlass: (value: string) => void;
   onResetStep2Form: () => void;
   onSaveDraft: () => void;
@@ -191,6 +191,13 @@ export function usePasoDosPresentacion(
   const linePricingSummary = useMemo(
     () => buildComponentFormLinePricingSummary(params.componentForm),
     [params.componentForm]
+  );
+  const glassCatalogTemplates = useMemo(
+    () =>
+      params.activeLineTemplates.filter(
+        (template) => template.categoria === "vidrio" && template.isActive !== false
+      ),
+    [params.activeLineTemplates]
   );
 
   const currentComponentPreviewSvg = useMemo(() => {
@@ -317,6 +324,7 @@ export function usePasoDosPresentacion(
       recommendedGlassReason: glassRecommendation.reason,
       lineTemplateRecommendedGlass: glassRecommendation.lineTemplateRecommendedOption,
       filteredGlassGroups,
+      glassCatalogTemplates,
       canCreateCustomGlass,
       onQuotePricingModeChange: params.onQuotePricingModeChange,
       onPricingModeSelection: params.onPricingModeSelection,
@@ -344,6 +352,7 @@ export function usePasoDosPresentacion(
       batchPreviewTypeLabel,
       currentComponentPreviewSvg,
       filteredGlassGroups,
+      glassCatalogTemplates,
       canCreateCustomGlass,
       glassRecommendation.lineTemplateRecommendedOption,
       glassRecommendation.reason,

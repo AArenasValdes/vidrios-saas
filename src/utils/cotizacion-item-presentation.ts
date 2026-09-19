@@ -34,6 +34,8 @@ export type CotizacionItemPresentationMeta = {
   isCustomScheme: boolean;
   pricingMode: PricingMode;
   lineTemplateId: string;
+  /** Catálogo cristal vinculado en ventanas/puertas (solo formato/costo técnico). */
+  vidrioLineTemplateId: string;
   precioPorM2: number | null;
   minimoCobrable: number | null;
   redondeoPrecio: number | null;
@@ -247,6 +249,7 @@ export function encodeCotizacionItemPresentationMeta(input: {
   isCustomScheme?: boolean;
   pricingMode?: PricingMode;
   lineTemplateId?: string;
+  vidrioLineTemplateId?: string;
   precioPorM2?: number | null;
   minimoCobrable?: number | null;
   redondeoPrecio?: number | null;
@@ -301,6 +304,9 @@ export function encodeCotizacionItemPresentationMeta(input: {
   const isCustomScheme = input.isCustomScheme ? "1" : "0";
   const pricingMode = normalizePricingMode(input.pricingMode);
   const lineTemplateId = (input.lineTemplateId ?? "").trim().replace(/\]/g, "");
+  const vidrioLineTemplateId = (input.vidrioLineTemplateId ?? "")
+    .trim()
+    .replace(/\]/g, "");
   const precioPorM2 =
     input.precioPorM2 !== null && input.precioPorM2 !== undefined
       ? String(Math.round(input.precioPorM2))
@@ -402,6 +408,7 @@ export function encodeCotizacionItemPresentationMeta(input: {
     `[ct:${catalogTerminacion}]` +
     `[pm:${pricingMode}]` +
     `[lti:${lineTemplateId}]` +
+    `[vlti:${vidrioLineTemplateId}]` +
     `[pm2:${precioPorM2}]` +
     `[min:${minimoCobrable}]` +
     `[rnd:${redondeoPrecio}]` +
@@ -480,6 +487,7 @@ export function decodeCotizacionItemPresentationMeta(
   const isCustomScheme = source.match(/\[isc:(1|0)\]/)?.[1] === "1";
   const pricingMode = normalizePricingMode(source.match(/\[pm:([^\]]*)\]/)?.[1]);
   const lineTemplateId = source.match(/\[lti:([^\]]*)\]/)?.[1]?.trim() ?? "";
+  const vidrioLineTemplateId = source.match(/\[vlti:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const precioPorM2 = parseOptionalNumber(source.match(/\[pm2:([^\]]*)\]/)?.[1]);
   const minimoCobrable = parseOptionalNumber(source.match(/\[min:([^\]]*)\]/)?.[1]);
   const redondeoPrecio = parseOptionalNumber(source.match(/\[rnd:([^\]]*)\]/)?.[1]);
@@ -554,6 +562,7 @@ export function decodeCotizacionItemPresentationMeta(
     .replace(/\[ct:[^\]]*\]/g, "")
     .replace(/\[pm:[^\]]*\]/g, "")
     .replace(/\[lti:[^\]]*\]/g, "")
+    .replace(/\[vlti:[^\]]*\]/g, "")
     .replace(/\[pm2:[^\]]*\]/g, "")
     .replace(/\[min:[^\]]*\]/g, "")
     .replace(/\[rnd:[^\]]*\]/g, "")
@@ -604,6 +613,7 @@ export function decodeCotizacionItemPresentationMeta(
     isCustomScheme,
     pricingMode,
     lineTemplateId,
+    vidrioLineTemplateId,
     precioPorM2,
     minimoCobrable,
     redondeoPrecio,

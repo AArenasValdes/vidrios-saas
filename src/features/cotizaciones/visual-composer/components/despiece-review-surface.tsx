@@ -48,6 +48,10 @@ import {
   resolveFabricacionDespieceForQuoteItem,
   type FabricacionDespieceCotizacionResult,
 } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import {
+  buildConsolidatedGlassSheetOptimizations,
+  buildVidrioDespieceForQuoteItem,
+} from "@/features/fabricacion/services/vidrio-plancha-optimizacion.service";
 import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
 import {
   isQuoteConstructorCompatibleItem,
@@ -56,6 +60,10 @@ import {
 import { ComponentPreview } from "@/features/cotizaciones/components/component-preview";
 import { buildComponentPreviewInputFromWorkflowItem } from "@/features/cotizaciones/services/resolve-component-preview-svg";
 
+import {
+  GlassDespieceList,
+  GlassOptimizationBlock,
+} from "./glass-despiece-section";
 import styles from "./despiece-review-surface.module.css";
 
 type ReviewTab = "pieza" | "consolidado";
@@ -349,6 +357,25 @@ export function DespieceReviewSurface({
       manualGlass: activeSnapshot.glass,
     });
   }, [selectedTemplate, activeSnapshot, autoSnapshot, rules?.sashCount]);
+  const pieceGlassDespiece = useMemo(() => {
+    if (!selectedItem) return null;
+    return buildVidrioDespieceForQuoteItem({
+      item: selectedItem,
+      resolution: activeResolution,
+      lineTemplates,
+    });
+  }, [selectedItem, activeResolution, lineTemplates]);
+
+  const consolidatedGlassOptimizations = useMemo(
+    () =>
+      buildConsolidatedGlassSheetOptimizations({
+        items: visualItems,
+        resolutions: pieceResolutions,
+        lineTemplates,
+      }),
+    [visualItems, pieceResolutions, lineTemplates]
+  );
+
   const consolidated = useMemo(() => {
     const carriers = visualItems
       .map((item) => {
@@ -640,8 +667,8 @@ export function DespieceReviewSurface({
       <div className={styles.surface}>
         <header className={styles.header}>
           <div>
-            <p className={styles.eyebrow}>Componentes</p>
-            <h2>Revisión de fabricación</h2>
+            <p className={styles.eyebrow}>Fabricación</p>
+            <h2>Despiece</h2>
           </div>
           <div className={styles.tabs} role="tablist" aria-label="Vista de fabricación">
             <button
@@ -1041,6 +1068,22 @@ export function DespieceReviewSurface({
                       </p>
                     ) : null}
                   </div>
+
+                  {pieceGlassDespiece ? (
+                    <>
+                      <GlassDespieceList
+                        vidrioLabel={pieceGlassDespiece.vidrioLabel}
+                        pieces={pieceGlassDespiece.pieces}
+                        totalM2={pieceGlassDespiece.totalM2}
+                      />
+                      {pieceGlassDespiece.optimization ? (
+                        <GlassOptimizationBlock
+                          optimization={pieceGlassDespiece.optimization}
+                          showUseOptimizedCostAction
+                        />
+                      ) : null}
+                    </>
+                  ) : null}
                 </>
               ) : (
                 <div className={styles.emptyTable}>Selecciona un componente para revisar su fabricación.</div>
@@ -1243,6 +1286,17 @@ export function DespieceReviewSurface({
                   <LuCircleAlert aria-hidden />
                   {GLASS_PRELIMINARY_WARNING}
                 </p>
+              </section>
+            ) : null}
+
+            {consolidatedGlassOptimizations.length > 0 ? (
+              <section className={styles.lineGroup} aria-label="Estimación de vidrio consolidada">
+                {consolidatedGlassOptimizations.map((optimization) => (
+                  <GlassOptimizationBlock
+                    key={optimization.vidrioLabel}
+                    optimization={optimization}
+                  />
+                ))}
               </section>
             ) : null}
 

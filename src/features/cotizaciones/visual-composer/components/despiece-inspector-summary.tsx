@@ -129,7 +129,7 @@ export function DespieceInspectorSummary({
       ) : null}
       <div className={styles.inspectorActions}>
         <button type="button" className={styles.inspectorPrimary} onClick={onOpenReview}>
-          Abrir despiece
+          Ver despiece
         </button>
         <button
           type="button"

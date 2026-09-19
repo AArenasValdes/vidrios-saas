@@ -9,6 +9,7 @@ import {
   LuPlus,
   LuSearch,
   LuSlidersHorizontal,
+  LuSparkles,
 } from "react-icons/lu";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
@@ -104,6 +105,7 @@ type TechnicalFilterValue =
 
 type Props = {
   openNewByDefault?: boolean;
+  openNewGlassByDefault?: boolean;
 };
 
 function parseDecimal(value: string) {
@@ -114,6 +116,23 @@ function parseDecimal(value: string) {
 
 function formatDecimalInput(value: number) {
   return value > 0 ? String(value).replace(".", ",") : "";
+}
+
+function buildGlassDraft(template?: CotizacionLineTemplate): LineTemplateFormDraft {
+  const draft = buildDraft(template);
+  return {
+    ...draft,
+    categoria: "vidrio",
+    material: "Cristal",
+    unidadCobro: "m2",
+    lineSystem: "Cristal",
+    vidrioPrincipalRecomendado: "",
+    estimationMode: "vidrio",
+    estimationEnabled: false,
+    cuttingEnabled: false,
+    estimationFrameFactor: "",
+    estimationSashFactor: "",
+  };
 }
 
 function buildDraft(template?: CotizacionLineTemplate): LineTemplateFormDraft {
@@ -129,6 +148,10 @@ function buildDraft(template?: CotizacionLineTemplate): LineTemplateFormDraft {
     material: template?.material ?? "",
     espesor: glassMetadata.espesor ?? "",
     terminacion: glassMetadata.terminacion ?? "",
+    planchaAnchoMm:
+      glassMetadata.planchaAnchoMm != null ? String(glassMetadata.planchaAnchoMm) : "",
+    planchaAltoMm:
+      glassMetadata.planchaAltoMm != null ? String(glassMetadata.planchaAltoMm) : "",
     vidrioPrincipalRecomendado: template?.vidrioPrincipalRecomendado ?? "",
     costoBase: template && template.costoBase > 0 ? String(template.costoBase) : "",
     precioM2Sugerido:
@@ -214,7 +237,10 @@ function draftHasAdvancedDetails(draft: LineTemplateFormDraft) {
   );
 }
 
-export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
+export function LineasPreciosPageClient({
+  openNewByDefault = false,
+  openNewGlassByDefault = false,
+}: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -259,10 +285,12 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     useState<CotizacionLineTemplate | null>(null);
   const [priceEditorTemplate, setPriceEditorTemplate] = useState<CotizacionLineTemplate | null>(null);
   const [sheetMode, setSheetMode] = useState<"new" | "edit" | null>(() =>
-    openNewByDefault ? "new" : null
+    openNewByDefault || openNewGlassByDefault ? "new" : null
   );
   const [editingTemplateId, setEditingTemplateId] = useState<string | number | null>(null);
-  const [draft, setDraft] = useState<LineTemplateFormDraft>(() => buildDraft());
+  const [draft, setDraft] = useState<LineTemplateFormDraft>(() =>
+    openNewGlassByDefault ? buildGlassDraft() : buildDraft()
+  );
   const [wizardStep, setWizardStep] = useState(1);
   const [showAdvancedDetails, setShowAdvancedDetails] = useState(false);
   const [calibrationVanoWidthMm, setCalibrationVanoWidthMm] = useState("1200");
@@ -275,6 +303,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     null
   );
   const openedEditQueryRef = useRef<string | null>(null);
+  const openedNewQueryRef = useRef<string | null>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
@@ -601,11 +630,12 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
           heightMm: cuttingPreview.glass.heightMm - expectedGlassHeightValue,
         }
       : null;
-  const saveDisabled =
-    !draft.nombre.trim() ||
-    !draft.categoria ||
-    !draft.unidadCobro ||
-    (!isGlassDraft && !draft.material);
+  const saveDisabled = isGlassDraft
+    ? !draft.nombre.trim()
+    : !draft.nombre.trim() ||
+      !draft.categoria ||
+      !draft.unidadCobro ||
+      !draft.material;
   const sheetTitle =
     sheetMode === "edit"
       ? isGlassDraft
@@ -637,8 +667,20 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     setSheetMode("new");
   };
 
+  const openNewGlassSheet = () => {
+    const nextDraft = buildGlassDraft();
+    setDraft(nextDraft);
+    setWizardStep(1);
+    setShowAdvancedDetails(false);
+    setEditingTemplateId(null);
+    setOpenMenuId(null);
+    setFeedback(null);
+    setSheetMode("new");
+  };
+
   const openEditSheet = useCallback((template: CotizacionLineTemplate) => {
-    const nextDraft = buildDraft(template);
+    const nextDraft =
+      template.categoria === "vidrio" ? buildGlassDraft(template) : buildDraft(template);
     setDraft(nextDraft);
     setWizardStep(1);
     setShowAdvancedDetails(draftHasAdvancedDetails(nextDraft));
@@ -653,6 +695,21 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     setFeedback(null);
     setSheetMode("edit");
   }, []);
+
+  useEffect(() => {
+    if (isLoading) return;
+    const nueva = searchParams.get("nueva");
+    if (nueva && openedNewQueryRef.current !== nueva) {
+      openedNewQueryRef.current = nueva;
+      if (nueva === "vidrio") {
+        openNewGlassSheet();
+        return;
+      }
+      if (nueva === "1") {
+        openNewSheet();
+      }
+    }
+  }, [isLoading, searchParams]);
 
   useEffect(() => {
     const requestedId = searchParams.get("editar");
@@ -673,6 +730,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     setShowAdvancedDetails(false);
     setDraft(buildDraft());
     openedEditQueryRef.current = null;
+    openedNewQueryRef.current = null;
     resetQueryFlag();
   };
 
@@ -851,6 +909,8 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                   ? {
                       espesor: draft.espesor,
                       terminacion: draft.terminacion,
+                      planchaAnchoMm: parseDecimal(draft.planchaAnchoMm) || null,
+                      planchaAltoMm: parseDecimal(draft.planchaAltoMm) || null,
                     }
                   : {}
               ),
@@ -876,7 +936,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
             }
           ),
           {
-            enabled: draft.estimationEnabled,
+            enabled: isGlassDraft ? false : draft.estimationEnabled,
             mode: isGlassDraft ? "vidrio" : draft.estimationMode,
             frameFactor: isGlassDraft ? 0 : estimationFrameFactor,
             sashFactor:
@@ -887,7 +947,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         {
           // Intent de pauta: se persiste aunque la receta aún no esté validada.
           // getLineTemplateCuttingRules solo habilita la pauta operativa si status === validada.
-          enabled: draft.estimationEnabled && draft.cuttingEnabled && !isGlassDraft,
+          enabled: !isGlassDraft && draft.estimationEnabled && draft.cuttingEnabled,
           mode: isGlassDraft ? "sin_corte" : draft.cuttingMode,
           barLengthMm: draft.fabricationRecipe?.defaultBarLengthMm
             ? draft.fabricationRecipe.defaultBarLengthMm
@@ -1043,7 +1103,8 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         isLoading={isLoading}
         error={error}
         feedback={feedback}
-        onNew={openNewSheet}
+        onNewLine={openNewSheet}
+        onNewGlass={openNewGlassSheet}
         onEdit={openEditSheet}
         onEditPrice={setPriceEditorTemplate}
         onToggleActive={(template) => void handleToggleActive(template)}
@@ -1073,6 +1134,15 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         </div>
 
         <div className={s.headerActions}>
+          <button
+            type="button"
+            className={s.glassAddButton}
+            onClick={openNewGlassSheet}
+            aria-label="Nuevo vidrio"
+          >
+            <LuSparkles aria-hidden />
+            <span className={s.headerActionLabel}>Nuevo vidrio</span>
+          </button>
           <button
             type="button"
             className={s.addButton}
@@ -1440,10 +1510,16 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
           <p>
             Crea una línea con precio, mínimo y redondeo para reutilizarla en tus cotizaciones.
           </p>
-          <button type="button" className={s.primaryButton} onClick={openNewSheet}>
-            <LuPlus aria-hidden />
-            Crear línea
-          </button>
+          <div className={s.emptyStateActions}>
+            <button type="button" className={s.primaryButton} onClick={openNewGlassSheet}>
+              <LuSparkles aria-hidden />
+              Nuevo vidrio
+            </button>
+            <button type="button" className={s.secondaryButton} onClick={openNewSheet}>
+              <LuPlus aria-hidden />
+              Nueva línea
+            </button>
+          </div>
         </section>
       ) : null}
 

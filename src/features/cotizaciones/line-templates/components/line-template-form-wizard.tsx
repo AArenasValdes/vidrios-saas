@@ -54,6 +54,7 @@ import {
 } from "@/features/cotizaciones/line-templates/utils/catalog-labels";
 import { formatCurrency } from "@/utils/formatCurrency";
 
+import { GlassProductFormWizard } from "./glass-product-form-wizard";
 import { LineTemplateMobileEditor } from "./line-template-mobile-editor";
 import s from "./lineas-precios-page-client.module.css";
 
@@ -64,6 +65,8 @@ export type LineTemplateFormDraft = {
   material: CotizacionLineTemplateMaterial | "";
   espesor: string;
   terminacion: string;
+  planchaAnchoMm: string;
+  planchaAltoMm: string;
   vidrioPrincipalRecomendado: string;
   costoBase: string;
   precioM2Sugerido: string;
@@ -375,6 +378,7 @@ export function LineTemplateFormWizard({
   onSaveAndConfigure,
   onClose,
   pricePerM2,
+  costoBase,
   unidadCobro,
   calibrationVanoWidthMm,
   calibrationVanoHeightMm,
@@ -620,6 +624,26 @@ export function LineTemplateFormWizard({
       </button>
     );
   };
+
+  if (isGlassDraft) {
+    return (
+      <GlassProductFormWizard
+        sheetMode={sheetMode}
+        wizardStep={wizardStep}
+        onWizardStepChange={onWizardStepChange}
+        draft={draft}
+        onDraftChange={onDraftChange}
+        showAdvancedDetails={showAdvancedDetails}
+        onShowAdvancedDetailsChange={onShowAdvancedDetailsChange}
+        saveDisabled={saveDisabled}
+        isSaving={isSaving}
+        onSave={onSave}
+        onClose={onClose}
+        pricePerM2={pricePerM2}
+        costoBase={costoBase}
+      />
+    );
+  }
 
   if (isDesktopLayout === null) {
     return (
@@ -1203,6 +1227,36 @@ export function LineTemplateFormWizard({
                                   onDraftChange("terminacion", event.target.value)
                                 }
                                 placeholder="Ej: templado, laminado, espejo"
+                              />
+                            </label>
+
+                            <label className={s.fieldBlock}>
+                              <span className={s.fieldLabel}>
+                                Plancha ancho (mm) <em className={s.optionalMark}>opcional</em>
+                              </span>
+                              <input
+                                className={s.textInput}
+                                inputMode="numeric"
+                                value={draft.planchaAnchoMm}
+                                onChange={(event) =>
+                                  onDraftChange("planchaAnchoMm", event.target.value)
+                                }
+                                placeholder="Ej: 3210"
+                              />
+                            </label>
+
+                            <label className={s.fieldBlock}>
+                              <span className={s.fieldLabel}>
+                                Plancha alto (mm) <em className={s.optionalMark}>opcional</em>
+                              </span>
+                              <input
+                                className={s.textInput}
+                                inputMode="numeric"
+                                value={draft.planchaAltoMm}
+                                onChange={(event) =>
+                                  onDraftChange("planchaAltoMm", event.target.value)
+                                }
+                                placeholder="Ej: 2250"
                               />
                             </label>
                           </>

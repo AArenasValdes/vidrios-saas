@@ -8,5 +8,10 @@ export default async function ConfiguracionLineasPreciosPage({
   searchParams,
 }: ConfiguracionLineasPreciosPageProps) {
   const params = (await searchParams) ?? {};
-  return <LineasPreciosPageClient openNewByDefault={params.nueva === "1"} />;
+  return (
+    <LineasPreciosPageClient
+      openNewByDefault={params.nueva === "1"}
+      openNewGlassByDefault={params.nueva === "vidrio"}
+    />
+  );
 }

@@ -114,6 +114,8 @@ export type ComponentFormState = {
   customSchemeDescription: string;
   isCustomScheme: boolean;
   lineTemplateId: string;
+  /** Catálogo cristal vinculado en ventanas/puertas (formato/costo técnico; no precio comercial). */
+  vidrioLineTemplateId: string;
   pricingMode: PricingMode;
   vidrio: string;
   nombre: string;
@@ -2127,6 +2129,8 @@ export function applyLineTemplateToComponentForm(
         template.categoria === "vidrio"
           ? template.nombre
           : template.vidrioPrincipalRecomendado?.trim() || form.vidrio,
+      vidrioLineTemplateId:
+        template.categoria === "vidrio" ? "" : form.vidrioLineTemplateId ?? "",
       pricingMode: "precio_directo",
       margenPct: "0",
       precioPorM2: String(Math.round(template.precioM2Sugerido)),
@@ -2214,6 +2218,7 @@ export function buildSuggestedComponentForm(
     customSchemeDescription: current.customSchemeDescription ?? "",
     isCustomScheme: current.isCustomScheme ?? false,
     lineTemplateId: current.lineTemplateId ?? "",
+    vidrioLineTemplateId: current.vidrioLineTemplateId ?? "",
     pricingMode,
     vidrio: pickSuggestedString(current.vidrio, suggestion.vidrio),
     nombre: current.nombre ?? "",
@@ -2397,6 +2402,7 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     pricingMode,
     raw,
     lineTemplateId,
+    vidrioLineTemplateId,
     precioPorM2,
     minimoCobrable,
     redondeoPrecio,
@@ -2452,6 +2458,7 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     customSchemeDescription,
     isCustomScheme,
     lineTemplateId,
+    vidrioLineTemplateId,
     pricingMode,
     vidrio: item.vidrio ?? "",
     nombre: item.nombre,
@@ -2800,6 +2807,7 @@ export function buildItemFromForm(
       catalogTerminacion: syncedForm.catalogTerminacion,
       pricingMode,
       lineTemplateId: syncedForm.lineTemplateId,
+      vidrioLineTemplateId: syncedForm.vidrioLineTemplateId,
       precioPorM2: syncedForm.precioPorM2 ? Number(syncedForm.precioPorM2) : null,
       minimoCobrable: syncedForm.minimoCobrable ? Number(syncedForm.minimoCobrable) : null,
       redondeoPrecio: syncedForm.redondeoPrecio ? Number(syncedForm.redondeoPrecio) : null,

@@ -60,6 +60,7 @@ function createLinePricingForm(
     customSchemeDescription: "",
     isCustomScheme: false,
     lineTemplateId: "tpl-l5000",
+    vidrioLineTemplateId: "",
     pricingMode: "precio_directo",
     vidrio: "Incoloro monolitico 5mm",
     nombre: "",
@@ -1352,6 +1353,58 @@ describe("workflow-ui paso 2", () => {
         material: "Aluminio",
       }).map((template) => template.nombre)
     ).toEqual(["Serie Aluminio", "Serie PVC"]);
+  });
+
+  it("no debe sumar precio de catalogo vidrio al cotizar ventana con linea de perfil", () => {
+    const lineTemplates = [
+      {
+        id: "win-1",
+        nombre: "Serie 25 negra",
+        material: "Aluminio",
+        categoria: "aluminio",
+        precioM2Sugerido: 80000,
+        minimoCobrable: 0,
+        redondeoPrecio: 1000,
+      },
+      {
+        id: "glass-1",
+        nombre: "Float 10 mm templado",
+        material: "Cristal",
+        categoria: "vidrio",
+        precioM2Sugerido: 45000,
+        minimoCobrable: 0,
+        redondeoPrecio: 1000,
+      },
+    ] as unknown as readonly CotizacionLineTemplate[];
+
+    const ventanaConVidrioCatalogo = buildItemFromForm(
+      createLinePricingForm({
+        lineTemplateId: "win-1",
+        referencia: "Serie 25 negra",
+        precioPorM2: "",
+        costoProveedorUnitario: "",
+        vidrio: "Float: 10 mm templado",
+      }),
+      [],
+      null,
+      { lineTemplates, quotePricingMode: "por_item" }
+    );
+
+    const ventanaSoloPerfil = buildItemFromForm(
+      createLinePricingForm({
+        lineTemplateId: "win-1",
+        referencia: "Serie 25 negra",
+        precioPorM2: "",
+        costoProveedorUnitario: "",
+        vidrio: "Incoloro monolitico 5mm",
+      }),
+      [],
+      null,
+      { lineTemplates, quotePricingMode: "por_item" }
+    );
+
+    expect(ventanaConVidrioCatalogo.precioUnitario).toBe(96000);
+    expect(ventanaConVidrioCatalogo.precioUnitario).toBe(ventanaSoloPerfil.precioUnitario);
   });
 
   it("debe generar nombres comerciales para composiciones no correderas sin cambiar precio", () => {

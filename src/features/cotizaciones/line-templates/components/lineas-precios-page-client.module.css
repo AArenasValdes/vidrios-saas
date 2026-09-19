@@ -155,6 +155,28 @@
   box-shadow: 0 14px 28px rgba(79, 125, 212, 0.26);
 }
 
+.glassAddButton {
+  width: 44px;
+  height: 44px;
+  border: 1px solid #c5d0dc;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #1f3766;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(36, 59, 107, 0.06);
+}
+
+.emptyStateActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
 .headerCopy {
   min-width: 0;
   display: grid;
@@ -2762,7 +2784,8 @@
     gap: 8px;
   }
 
-  .addButton {
+  .addButton,
+  .glassAddButton {
     width: auto;
     height: 40px;
     min-width: 0;
@@ -2779,6 +2802,12 @@
     background: #1e88ff;
     color: #fff;
     box-shadow: 0 14px 26px rgba(30, 136, 255, 0.2);
+  }
+
+  .glassAddButton {
+    background: #fff;
+    color: #1f3766;
+    border-color: #c5d0dc;
   }
 
   .headerActionLabel {
