@@ -2184,6 +2184,8 @@ function NuevaCotizacionPageContent() {
             referencia: "",
             precioPorM2: "",
             minimoCobrable: "",
+            glassSheetConfig: null,
+            lineMermaPct: 0,
             precioPlantillaSugerido: "",
             precioAjustadoManual: false,
             origenPrecio: "manual",
