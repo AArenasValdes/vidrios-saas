@@ -44,7 +44,10 @@ import {
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
-import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import {
+  anyQuoteItemHasFabricationReview,
+  resolveFabricacionDespieceForQuoteItem,
+} from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import { GuidedVisualComposer } from "@/features/cotizaciones/visual-composer/components/guided-visual-composer";
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 import {
@@ -906,6 +909,16 @@ export function QuoteConstructorWorkspace({
         ? `Faltan precios en ${incompleteCount} ${incompleteCount === 1 ? "pieza" : "piezas"}`
         : "Completa los campos pendientes";
 
+  const hasFabricationReview = useMemo(
+    () =>
+      anyQuoteItemHasFabricationReview({
+        items: visualItems,
+        recipes: fabricationRecipes,
+        organizationId,
+      }),
+    [fabricationRecipes, organizationId, visualItems]
+  );
+
   return (
     <section
       className={`${s.workspace} ${embeddedInQuoteStudio ? s.workspaceEmbedded : ""}`}
@@ -928,7 +941,7 @@ export function QuoteConstructorWorkspace({
           </p>
         </div>
         <div className={s.headerTools}>
-          {visualItems.length > 0 ? (
+          {visualItems.length > 0 && hasFabricationReview ? (
             <button
               type="button"
               className={s.reviewDespieceButton}

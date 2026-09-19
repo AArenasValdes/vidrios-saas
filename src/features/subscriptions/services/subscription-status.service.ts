@@ -11,6 +11,8 @@ import type {
 
 export const TRIAL_DURATION_DAYS = 15;
 export const TRIAL_EXPIRING_SOON_DAYS = 3;
+export const TRIAL_MIDPOINT_MIN_REMAINING_DAYS = 7;
+export const TRIAL_MIDPOINT_MAX_REMAINING_DAYS = 8;
 export const DEFAULT_PAYMENT_GRACE_DAYS = 3;
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
@@ -248,6 +250,37 @@ export function resolveOrganizationSubscriptionState(
     isInPaymentGracePeriod,
     paymentGraceEndsAt: paymentGraceEndsAt?.toISOString() ?? null,
   };
+}
+
+export type TrialNoticeMilestone = "midpoint" | "urgent";
+
+export function resolveTrialNoticeMilestone(
+  subscription: Pick<
+    EffectiveSubscriptionState,
+    "isTrial" | "isExpired" | "daysRemaining"
+  >
+): TrialNoticeMilestone | null {
+  if (
+    !subscription.isTrial ||
+    subscription.isExpired ||
+    typeof subscription.daysRemaining !== "number" ||
+    subscription.daysRemaining <= 0
+  ) {
+    return null;
+  }
+
+  if (subscription.daysRemaining <= TRIAL_EXPIRING_SOON_DAYS) {
+    return "urgent";
+  }
+
+  if (
+    subscription.daysRemaining >= TRIAL_MIDPOINT_MIN_REMAINING_DAYS &&
+    subscription.daysRemaining <= TRIAL_MIDPOINT_MAX_REMAINING_DAYS
+  ) {
+    return "midpoint";
+  }
+
+  return null;
 }
 
 function addTrialDuration(date: Date) {

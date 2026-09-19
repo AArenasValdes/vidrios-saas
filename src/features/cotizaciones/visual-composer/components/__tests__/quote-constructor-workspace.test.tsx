@@ -262,7 +262,7 @@ describe("QuoteConstructorWorkspace", () => {
 
     expect(screen.queryByLabelText("Línea para nuevas piezas")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Aplicar a \d+ piezas?/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Revisar fabricación" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Revisar fabricación" })).not.toBeInTheDocument();
     expect(screen.getByLabelText("Línea de VEN-01")).toBeInTheDocument();
     expect(screen.getByText("L5000 · Aluminio")).toBeInTheDocument();
     expect(screen.getByText("Serie 20 · PVC")).toBeInTheDocument();
@@ -400,7 +400,7 @@ describe("QuoteConstructorWorkspace", () => {
       ),
     });
 
-    expect(screen.getByRole("button", { name: "Revisar fabricación" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Revisar fabricación" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Revisar cotizaci.n/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Abrir configuraci.n guiada/i })).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Continuar al resumen" })).toHaveLength(1);

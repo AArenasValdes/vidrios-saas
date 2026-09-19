@@ -27,6 +27,8 @@ import { PasoDosModoCotizacion } from "./paso-dos/paso-dos-modo-cotizacion";
 import { isQuoteStudioDesktopPieceInEdition } from "./paso-dos/quote-studio-desktop-edition";
 import { resolveQuoteStudioPieceEditionHeadline } from "./paso-dos/quote-studio-piece-edition-label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
+import { anyQuoteItemHasFabricationReview } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import { toast } from "sonner";
 import d from "./paso-dos-panel-desktop.module.css";
 import s from "../page.module.css";
@@ -119,6 +121,18 @@ export function PasoDosSeccion({
   const [constructorActiveItemId, setConstructorActiveItemId] = useState<string | null>(null);
   const [despieceReviewOpen, setDespieceReviewOpen] = useState(false);
   const primarySurfaceRef = useRef<HTMLDivElement>(null);
+  const { recipes: fabricationRecipes, organizationId } = useFabricationRecipes({
+    enabled: quoteModeChosen && quotePricingMode === "por_item" && panel.items.length > 0,
+  });
+  const hasFabricationReview = useMemo(
+    () =>
+      anyQuoteItemHasFabricationReview({
+        items: panel.items,
+        recipes: fabricationRecipes,
+        organizationId,
+      }),
+    [fabricationRecipes, organizationId, panel.items]
+  );
 
   const pendingRemoveItem = useMemo(
     () => panel.items.find((item) => item.id === pendingRemoveItemId) ?? null,
@@ -604,7 +618,7 @@ export function PasoDosSeccion({
             <span className={d.desktopComponentsSaveChip} aria-live="polite">
               {isSaving ? "Guardando…" : "Autoguardado activo"}
             </span>
-            {!showQuoteStudioRapidaLayout && panel.items.length > 0 ? (
+            {!showQuoteStudioRapidaLayout && panel.items.length > 0 && hasFabricationReview ? (
               <button
                 type="button"
                 className={d.desktopReviewDespieceButton}

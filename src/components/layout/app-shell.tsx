@@ -14,7 +14,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
-import { toast } from "sonner";
 import {
   LuBell,
   LuBadgeCheck,
@@ -54,6 +53,7 @@ import {
   isQuoteOnlyRestrictedPath,
   isWriteRestrictedPrivatePath,
   resolveOrganizationSubscriptionState,
+  resolveTrialNoticeMilestone,
 } from "@/features/subscriptions/services/subscription-status.service";
 import { getPlanLabel } from "@/features/subscriptions/types/subscription-summary";
 import { Button } from "@/components/ui/button";
@@ -211,10 +211,7 @@ const SPECIAL_SCREENS: ContextItem[] = [
 
 const ALERTS_SEEN_STORAGE_PREFIX = "vidrios-saas:alerts-seen:";
 const ALERTS_CLEARED_STORAGE_PREFIX = "vidrios-saas:alerts-cleared:";
-const TRIAL_NOTICE_DAILY_STORAGE_PREFIX = "ventora:trial-notice-day:";
-const TRIAL_NOTICE_SESSION_STORAGE_PREFIX = "ventora:trial-notice-session:";
-const TRIAL_REMINDER_DAILY_STORAGE_PREFIX = "ventora:trial-reminder-day:";
-const TRIAL_URGENT_DAYS = 3;
+const TRIAL_NOTICE_MILESTONE_STORAGE_PREFIX = "ventora:trial-notice-milestone:";
 const DESKTOP_VIEWPORT_QUERY = "(min-width: 861px)";
 
 function isActivePath(pathname: string, href: string) {
@@ -255,17 +252,15 @@ function getAlertsClearedStorageKey(
 function getTrialNoticeStorageKey(
   prefix: string,
   organizationId: string | number | null | undefined,
-  email: string | null | undefined
+  email: string | null | undefined,
+  trialEndsAt: string | null | undefined,
+  milestone: string
 ) {
-  if (!organizationId || !email) {
+  if (!organizationId || !email || !trialEndsAt) {
     return null;
   }
 
-  return `${prefix}${String(organizationId)}:${email.trim().toLowerCase()}`;
-}
-
-function getTodayStorageValue() {
-  return new Date().toISOString().slice(0, 10);
+  return `${prefix}${String(organizationId)}:${email.trim().toLowerCase()}:${encodeURIComponent(trialEndsAt)}:${milestone}`;
 }
 
 function scheduleDeferredShellWork(callback: () => void, delayMs = 650) {
@@ -435,7 +430,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [authBootStuck, setAuthBootStuck] = useState(false);
   const [showTrialWelcomeNotice, setShowTrialWelcomeNotice] = useState(false);
-  const [isTrialReminderDismissed, setIsTrialReminderDismissed] = useState(false);
+  const [showTrialUrgentBanner, setShowTrialUrgentBanner] = useState(false);
   const [trialStorageScope, setTrialStorageScope] = useState<string | null>(null);
   const hasHydrated = useSyncExternalStore(
     subscribeToHydrationSnapshot,
@@ -523,13 +518,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     isCotizacionDetailRoute ||
     isClienteDetailRoute;
   const trialDaysRemaining = subscription.daysRemaining ?? 0;
-  const isTrialInProgress =
-    subscription.isTrial &&
-    !subscription.isExpired &&
-    subscription.daysRemaining !== null &&
-    subscription.daysRemaining > 0;
-  const shouldShowSoftTrialNotice =
-    profile !== null && isTrialInProgress && trialDaysRemaining > TRIAL_URGENT_DAYS;
+  const trialNoticeMilestone = resolveTrialNoticeMilestone(subscription);
   const alertsSeenStorageKey = useMemo(
     () => getAlertsSeenStorageKey(organizacionId, user?.email),
     [organizacionId, user?.email]
@@ -542,63 +531,30 @@ export default function AppShell({ children }: { children: ReactNode }) {
     () => getSolicitudesSeenStorageKey(organizacionId, user?.email),
     [organizacionId, user?.email]
   );
-  const trialNoticeDailyStorageKey = useMemo(
-    () =>
-      getTrialNoticeStorageKey(
-        TRIAL_NOTICE_DAILY_STORAGE_PREFIX,
-        organizacionId,
-        user?.email
-      ),
-    [organizacionId, user?.email]
-  );
-  const trialNoticeSessionStorageKey = useMemo(
-    () =>
-      getTrialNoticeStorageKey(
-        TRIAL_NOTICE_SESSION_STORAGE_PREFIX,
-        organizacionId,
-        user?.email
-      ),
-    [organizacionId, user?.email]
-  );
-  const trialReminderDailyStorageKey = useMemo(
-    () =>
-      getTrialNoticeStorageKey(
-        TRIAL_REMINDER_DAILY_STORAGE_PREFIX,
-        organizacionId,
-        user?.email
-      ),
-    [organizacionId, user?.email]
-  );
-  const trialStorageScopeKey = useMemo(() => {
-    if (
-      !trialNoticeDailyStorageKey ||
-      !trialNoticeSessionStorageKey ||
-      !trialReminderDailyStorageKey
-    ) {
-      return null;
-    }
+  const trialNoticeStorageKey = useMemo(
+    () => {
+      if (!trialNoticeMilestone) {
+        return null;
+      }
 
-    return `${trialNoticeDailyStorageKey}|${trialNoticeSessionStorageKey}|${trialReminderDailyStorageKey}`;
-  }, [
-    trialNoticeDailyStorageKey,
-    trialNoticeSessionStorageKey,
-    trialReminderDailyStorageKey,
-  ]);
+      return getTrialNoticeStorageKey(
+        TRIAL_NOTICE_MILESTONE_STORAGE_PREFIX,
+        organizacionId,
+        user?.email,
+        subscription.trialEndsAt,
+        trialNoticeMilestone
+      );
+    },
+    [organizacionId, subscription.trialEndsAt, trialNoticeMilestone, user?.email]
+  );
+  const trialStorageScopeKey = trialNoticeStorageKey;
   const isTrialStorageReady =
     trialStorageScopeKey !== null && trialStorageScope === trialStorageScopeKey;
   const shouldShowDashboardTrialBanner =
     isTrialStorageReady &&
     !usesMinimalShell &&
     isDashboardRoute &&
-    isTrialInProgress &&
-    trialDaysRemaining <= TRIAL_URGENT_DAYS &&
-    !isTrialReminderDismissed;
-  const shouldShowDashboardTrialPill =
-    isTrialStorageReady &&
-    !usesMinimalShell &&
-    isDashboardRoute &&
-    isTrialInProgress &&
-    trialDaysRemaining > TRIAL_URGENT_DAYS;
+    showTrialUrgentBanner;
   const unreadAlerts = useMemo(
     () => alerts.filter((alert) => getAlertTimestamp(alert.occurredAt) > alertsSeenAt),
     [alerts, alertsSeenAt]
@@ -654,17 +610,16 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const dismissTrialWelcomeNotice = useCallback(() => {
     setShowTrialWelcomeNotice(false);
 
-    if (!trialNoticeDailyStorageKey || !trialNoticeSessionStorageKey) {
+    if (!trialNoticeStorageKey) {
       return;
     }
 
     try {
-      window.localStorage.setItem(trialNoticeDailyStorageKey, getTodayStorageValue());
-      window.sessionStorage.setItem(trialNoticeSessionStorageKey, "1");
+      window.localStorage.setItem(trialNoticeStorageKey, "1");
     } catch {
       // Storage can be unavailable in private modes; UI dismissal still works in memory.
     }
-  }, [trialNoticeDailyStorageKey, trialNoticeSessionStorageKey]);
+  }, [trialNoticeStorageKey]);
 
   const handleTrialNoticeOpenChange = useCallback(
     (isOpen: boolean) => {
@@ -681,21 +636,18 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }, [dismissTrialWelcomeNotice, router]);
 
   const dismissTrialReminder = useCallback(() => {
-    setIsTrialReminderDismissed(true);
+    setShowTrialUrgentBanner(false);
 
-    if (!trialReminderDailyStorageKey) {
+    if (!trialNoticeStorageKey) {
       return;
     }
 
     try {
-      window.localStorage.setItem(trialReminderDailyStorageKey, getTodayStorageValue());
-      toast("Te recordaremos despu\u00e9s", {
-        description: "El aviso vuelve a aparecer ma\u00f1ana si tu prueba sigue activa.",
-      });
+      window.localStorage.setItem(trialNoticeStorageKey, "1");
     } catch {
       // Storage can be unavailable in private modes; UI dismissal still works in memory.
     }
-  }, [trialReminderDailyStorageKey]);
+  }, [trialNoticeStorageKey]);
 
   const resolveGuardedHref = useCallback(
     (href: string) => {
@@ -850,43 +802,41 @@ export default function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     return scheduleDeferredShellWork(() => {
       if (
-        !trialNoticeDailyStorageKey ||
-        !trialNoticeSessionStorageKey ||
-        !trialReminderDailyStorageKey ||
-        !trialStorageScopeKey
+        usesMinimalShell ||
+        !trialNoticeStorageKey ||
+        !trialStorageScopeKey ||
+        !trialNoticeMilestone
       ) {
         setShowTrialWelcomeNotice(false);
-        setIsTrialReminderDismissed(false);
+        setShowTrialUrgentBanner(false);
         setTrialStorageScope(null);
         return;
       }
 
       try {
-        const today = getTodayStorageValue();
-        const dismissedToday =
-          window.localStorage.getItem(trialNoticeDailyStorageKey) === today;
-        const dismissedThisSession =
-          window.sessionStorage.getItem(trialNoticeSessionStorageKey) === "1";
-        const reminderDismissed =
-          window.localStorage.getItem(trialReminderDailyStorageKey) === today;
-
+        const milestoneSeen = window.localStorage.getItem(trialNoticeStorageKey) === "1";
         setShowTrialWelcomeNotice(
-          shouldShowSoftTrialNotice && !dismissedToday && !dismissedThisSession
+          trialNoticeMilestone === "midpoint" && !milestoneSeen
         );
-        setIsTrialReminderDismissed(reminderDismissed);
+        setShowTrialUrgentBanner(
+          trialNoticeMilestone === "urgent" && !milestoneSeen
+        );
         setTrialStorageScope(trialStorageScopeKey);
+
+        if (!milestoneSeen) {
+          window.localStorage.setItem(trialNoticeStorageKey, "1");
+        }
       } catch {
-        setIsTrialReminderDismissed(false);
         setShowTrialWelcomeNotice(false);
+        setShowTrialUrgentBanner(false);
         setTrialStorageScope(trialStorageScopeKey);
       }
     }, 0);
   }, [
-    shouldShowSoftTrialNotice,
-    trialNoticeDailyStorageKey,
-    trialNoticeSessionStorageKey,
-    trialReminderDailyStorageKey,
+    trialNoticeMilestone,
+    trialNoticeStorageKey,
     trialStorageScopeKey,
+    usesMinimalShell,
   ]);
 
   useEffect(() => {
@@ -1228,7 +1178,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         variant="outline"
         onClick={dismissTrialWelcomeNotice}
       >
-        {"Despu\u00e9s"}
+        Cerrar
       </Button>
     </>
   );
@@ -1569,17 +1519,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
               : ""
           }`}
         >
-          {shouldShowDashboardTrialPill ? (
-            <section className={s.trialCompactNotice} role="status" aria-live="polite">
-              <span>
-                Prueba activa &middot; quedan {trialDaysRemaining} {"d\u00edas"}
-              </span>
-              <Link href="/cuenta-vencida" prefetch={false}>
-                Ver planes
-              </Link>
-            </section>
-          ) : null}
-
           {shouldShowDashboardTrialBanner ? (
             <section className={s.trialUrgentBanner} role="status" aria-live="polite">
               <div>
@@ -1605,7 +1544,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   type="button"
                   onClick={dismissTrialReminder}
                 >
-                  {"Despu\u00e9s"}
+                  Cerrar
                 </button>
               </div>
             </section>
@@ -1643,11 +1582,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   </motion.span>
                   <span className={s.trialNoticeEyebrow}>Prueba activa</span>
                   <DialogTitle className={s.trialNoticeTitle}>
-                    Tu prueba termina pronto
+                    Ya llevas la mitad de tu prueba
                   </DialogTitle>
                   <DialogDescription className={s.trialNoticeText}>
                     Te quedan {trialDaysRemaining} {"d\u00edas"} para seguir usando
-                    Ventora sin interrupciones.
+                    Ventora. Cuando quieras, revisa los planes disponibles.
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter className={s.trialNoticeActions}>
@@ -1679,11 +1618,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   </motion.span>
                   <span className={s.trialNoticeEyebrow}>Prueba activa</span>
                   <DrawerTitle className={s.trialNoticeTitle}>
-                    Tu prueba termina pronto
+                    Ya llevas la mitad de tu prueba
                   </DrawerTitle>
                   <DrawerDescription className={s.trialNoticeText}>
                     Te quedan {trialDaysRemaining} {"d\u00edas"} para seguir usando
-                    Ventora sin interrupciones.
+                    Ventora. Cuando quieras, revisa los planes disponibles.
                   </DrawerDescription>
                 </DrawerHeader>
                 <DrawerFooter className={s.trialNoticeActions}>
