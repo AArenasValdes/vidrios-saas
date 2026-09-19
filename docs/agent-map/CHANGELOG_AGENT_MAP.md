@@ -2,6 +2,17 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-19 - Wizard mobile de fabricación (4 pasos) + elegibilidad de revisión en cotización
+
+- **Wizard mobile de línea** (`/configuracion/empresa/lineas-precios/[lineTemplateId]/fabricacion`): flujo de **4 pasos** — Producto → Perfiles → Vidrio y accesorios → Validar. Reemplaza el stepper horizontal de 5 pasos con origen/config mezclados.
+- Componentes nuevos: `fabricacion-mobile-product-step.tsx`, `fabricacion-mobile-materials-step.tsx`, `fabricacion-mobile-validate-step.tsx`, `fabricacion-profile-edit-sheet.tsx` (pulido), `fabricacion-editor-chrome.store.ts` (oculta tabbar en editor).
+- Paso **Validar** integra `RecipeTestLab` con el mismo motor de cálculo; **Guardar y siguiente** en perfiles no cierra el sheet (`use-fabrication-recipes.ts` recarga silenciosa + `replaceRecipe`).
+- Mapping de perfiles humano vía `describePerfilTallerResumen` / `groupProfilesForSheet`; no renderizar objetos crudos en cards.
+- **Cotización — revisión de fabricación condicional**: `isQuoteItemFabricationReviewEligible()` en `fabricacion-despiece-cotizacion.service.ts`. Solo muestra **Revisar fabricación** / badge de fabricación cuando la línea tiene cubicación/despiece (L25, receta de taller, snapshot con pauta). Líneas comerciales sin receta (ej. Serie 20) **no** muestran “Configuración pendiente” ni CTA de fabricación.
+- Hook `use-quote-despiece-preview.ts` expone `hasFabricationReviewAvailable` e `isFabricationReviewEligibleForItem`.
+- **Empresa — config comercial mobile**: se restaura edición de forma de pago, vigencia, condiciones de venta y términos en mobile (ya no solo resumen “configura desde computador”). Los textos heredan a cotizaciones nuevas y al PDF vía `quote-commercial-conditions.service.ts`.
+- **Producción**: commits `f9b9e372` (cotización + comercial) y `819a10d4` (wizard fabricación) en `main` / Vercel.
+
 ## 2026-09-18 - Resumen de fabricación mobile sin acordeón
 
 - `/print/cotizaciones/[id]/fabricacion` en viewport ≤719px usa `fabricacion-resumen-movil.tsx`: lista de componentes, detalle (Resumen/Cortes/Despiece) y consolidado.
@@ -12,7 +23,7 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 - Se recupera la arquitectura de dos niveles sin tocar motor, snapshots ni recetas L25.
 - Paso 2 móvil: cards con estado compacto (`Fabricación lista` / `Configuración pendiente`); el estado abre `DespieceReviewSurface` en ese componente.
-- Acceso global **Revisar fabricación** (navigation row) cuando hay al menos un componente con perfilería.
+- Acceso global **Revisar fabricación** (navigation row) cuando hay al menos un componente con perfilería. **Supersedido parcialmente 2026-09-19**: la elegibilidad ya no usa `shouldRequireProfileMaterialForComponent`; ver entrada 2026-09-19.
 - `DespieceReviewSurface`: header **Revisión de fabricación** y segmented **Por componente | Consolidado**.
 - Paso 3 comercial: acción secundaria **Resumen de fabricación** hacia `/print/cotizaciones/[id]/fabricacion`. No se despliega la pauta dentro del resumen comercial.
 - Se elimina el bottom sheet intermedio card → Ver pauta → despiece.

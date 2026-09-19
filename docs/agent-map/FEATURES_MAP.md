@@ -464,7 +464,8 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
 - **Extractor Zeta (2026-09-18)**: evidencia externa en `docs/fabricacion/zeta/` y scripts `scripts/zeta/` (`pnpm zeta:extract|validate|coverage|derive`). `confirmed/` es Plan de armado observado; no escribe `fabrication_recipes` ni toca cotización/UI/Supabase. Skills: `.cursor/skills/ventora-zeta-extractor/` y `ventora-fabrication-auditor/`.
 - **Recetas SODAL L25 canónicas (2026-09-18)**: 18 recetas `validated` por org desde `sodal-l25-zeta-recipes.ts` (gate 22 tests @ 0 mm). Seed idempotente `seed-sodal-l25-recipes.ts`; resolver `resolveFabricationRecipe()` filtra legacy L25; cotización L25 elige pierna/refuerzo vía `FabricationVariantSelector` + metadata `[fgl:][flg:][frf:]`.
 - **Resumen interno**: `/print/cotizaciones/[id]/fabricacion` lee primero `fabricacionSnapshot` formal; si no existe usa fallback legacy `[cub:]`. Desktop usa ancho de sistema, bloques colapsables por pieza (Cubicación / Despiece / Pauta) y reutiliza `DespieceReviewSurface` con el `itemId` persistente. Mobile (2026-09-18) deja el acordeón: lista compacta de componentes, detalle por pieza (`Resumen | Cortes | Despiece`) y consolidado por línea. Print/PDF siguen expandiendo todas las piezas desde la vista desktop.
-- **Revisión en cotización (2026-09-18)**: dos niveles de presentación, sin cambiar el motor. Paso 2 abre `DespieceReviewSurface` (**Revisión de fabricación**, segmented **Por componente | Consolidado**). Paso 3 solo enlaza al **Resumen de fabricación** interno; el PDF cliente no incluye pauta.
+- **Revisión en cotización (2026-09-18, elegibilidad 2026-09-19)**: dos niveles de presentación, sin cambiar el motor. Paso 2 abre `DespieceReviewSurface` (**Revisión de fabricación**, segmented **Por componente | Consolidado**). Paso 3 solo enlaza al **Resumen de fabricación** interno; el PDF cliente no incluye pauta. Desde 2026-09-19 la UI de revisión solo aparece si `isQuoteItemFabricationReviewEligible()` es true (L25, snapshot con pauta, o receta de taller en estados `calculado` / `receta_incompleta` / `multiples_recetas`). Líneas comerciales sin receta no muestran badge ni botón.
+- **Wizard mobile de fabricación (2026-09-19)**: en viewport mobile, `/configuracion/empresa/lineas-precios/[lineTemplateId]/fabricacion` usa `FabricacionMobileWizard` con pasos `product | profiles | glass | validate` (`MOBILE_WIZARD_STEPS` en `fabricacion-line-workflow.utils.ts`). Validar integra laboratorio con el motor existente; tabbar principal se oculta mientras el editor está abierto (`fabricacion-editor-chrome.store.ts` + `?editor=1`).
 - **Compatibilidad Fase 3**: `fabricationRecipePack`, espejo `fabricationRecipe` y snapshot `[cub:]` siguen como lectura/compatibilidad, pero el flujo nuevo no escribe snapshots tecnicos en `[cub:]`.
 - **Archivos Fase 3**:
   - `src/features/fabricacion/types/fabricacion-snapshot.ts`
@@ -489,7 +490,14 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
   - `src/features/fabricacion/services/fabrication-recipes.service.ts`
   - `src/features/fabricacion/services/fabricacion-receta-editor.service.ts`
   - `src/features/fabricacion/services/fabricacion-contexto-pieza.service.ts`
-  - `src/features/fabricacion/hooks/use-fabrication-recipes.ts`
+  - `src/features/fabricacion/hooks/use-fabrication-recipes.ts` (mutaciones con `quiet` + `replaceRecipe` para no desmontar wizard al guardar perfil)
+  - `src/features/fabricacion/components/mobile/fabricacion-mobile-wizard.tsx`
+  - `src/features/fabricacion/components/mobile/fabricacion-mobile-product-step.tsx`
+  - `src/features/fabricacion/components/mobile/fabricacion-mobile-materials-step.tsx`
+  - `src/features/fabricacion/components/mobile/fabricacion-mobile-validate-step.tsx`
+  - `src/features/fabricacion/components/mobile/fabricacion-profile-edit-sheet.tsx`
+  - `src/features/fabricacion/services/fabricacion-despiece-cotizacion.service.ts` (`isQuoteItemFabricationReviewEligible`, `buildQuoteFabricationReviewEligibility`)
+  - `src/features/fabricacion/hooks/use-quote-despiece-preview.ts`
   - `src/features/fabricacion/components/fabricacion-line-workspace.tsx`
   - `src/features/fabricacion/components/fabricacion-variant-tree.tsx`
   - `src/features/fabricacion/fixtures/line-base-variant-catalog.ts`
@@ -733,7 +741,7 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
 - **Donde editar UI**: `app/(pwa-app)/configuracion/`
 - **Donde editar logica**: `src/features/organization-profile/services/`, `src/features/landing-gallery/services/`
 - **Donde editar persistencia**: `src/features/organization-profile/repositories/`, `src/features/landing-gallery/repositories/`
-- **Consideraciones UX**: Galeria max 8 items. Horario por dia. Slug unico. Color presets. En Configuracion comercial, `unidad_medidas` (`mm` default / `cm`) solo cambia la visualizacion de ancho/alto al cotizar; internamente Ventora sigue en mm. Recetas, perfiles, largos comerciales y fabricacion no usan esta preferencia.
+- **Consideraciones UX**: Galeria max 8 items. Horario por dia. Slug unico. Color presets. En **Configuracion comercial** (mobile y desktop), el acordeon permite editar `forma_pago`, `validez_predeterminada`, `condiciones_venta_predeterminadas` y `terminos_condiciones_predeterminados`; se heredan a cotizaciones nuevas y al PDF. `unidad_medidas` (`mm` default / `cm`) solo cambia la visualizacion de ancho/alto al cotizar; internamente Ventora sigue en mm. Recetas, perfiles, largos comerciales y fabricacion no usan esta preferencia.
 - **Riesgos al modificar**: No cambiar slug sin actualizar indice unico. Upload logo requiere bucket `organization-assets`. `is_published` controla visibilidad landing. Tras endurecer grants de columna, `unidad_medidas` debe estar en GRANT INSERT/UPDATE de `authenticated` o el guardado falla.
 
 ---

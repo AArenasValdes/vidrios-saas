@@ -1,14 +1,10 @@
 # Components Map - Ventora
 
 Estado: vigente
-Actualizado: 2026-09-04
+Actualizado: 2026-09-19
 Responsable: ingeniería
 
 Los archivos descritos aquí deben seguir siendo reutilizables y coherentes con `FEATURES_MAP.md`; nuevos componentes compartidos requieren entrada y `pnpm docs:check`.
-
-Estado: vigente
-Actualizado: 2026-09-04
-Responsable: ingeniería
 
 ---
 
@@ -477,6 +473,38 @@ Responsable: ingeniería
 - **Archivo**: `app/presupuesto/[token]/public-quote-preview.tsx`
 - **Proposito**: Vista preview de cotizacion publica
 - **Usado en**: Pagina presupuesto publico
+
+---
+
+## Fabricacion mobile (wizard de linea)
+
+### Componente: FabricacionMobileWizard
+
+- **Archivo**: `src/features/fabricacion/components/mobile/fabricacion-mobile-wizard.tsx`
+- **Proposito**: Wizard mobile-first de 4 pasos para configurar receta de una linea: Producto, Perfiles, Vidrio y accesorios, Validar.
+- **Usado en**: `fabricacion-line-mobile-shell.tsx` en `/configuracion/empresa/lineas-precios/[lineTemplateId]/fabricacion`
+- **Dependencias**: pasos `FabricacionMobileProductStep`, `FabricacionProfileList`, `FabricacionMobileMaterialsStep`, `FabricacionMobileValidateStep`, `FabricacionProfileEditSheet`
+- **Riesgos**: No reintroducir stepper horizontal con scroll. Validar usa el mismo motor que cotizacion (`calcularCubicacionYPauta` via laboratorio).
+
+### Componente: FabricacionProfileEditSheet
+
+- **Archivo**: `src/features/fabricacion/components/mobile/fabricacion-profile-edit-sheet.tsx`
+- **Proposito**: Bottom sheet para editar una regla de perfil (base, ajuste, cantidad, largo comercial). **Guardar y siguiente** avanza al siguiente perfil sin cerrar el wizard.
+- **Usado en**: `FabricacionMobileWizard`
+- **Riesgos**: Mutaciones deben usar `use-fabrication-recipes` con `{ quiet: true, replaceRecipe }` para evitar desmontaje del wizard.
+
+### Componente: FabricacionProfileList
+
+- **Archivo**: `src/features/fabricacion/components/mobile/fabricacion-profile-list.tsx`
+- **Proposito**: Lista agrupada Marco / Hojas / Otros con labels humanos (`describePerfilTallerResumen`); tap abre sheet de edicion.
+- **Riesgos**: Nunca interpolar objetos de perfil directamente en JSX (evitar `[object Object]`).
+
+### Servicio: elegibilidad revision fabricacion en cotizacion
+
+- **Archivo**: `src/features/fabricacion/services/fabricacion-despiece-cotizacion.service.ts`
+- **Funciones**: `isQuoteItemFabricationReviewEligible`, `buildQuoteFabricationReviewEligibility`, `anyQuoteItemHasFabricationReview`
+- **Usado en**: `paso-dos-lista-movil.tsx`, `paso-dos-seccion.tsx`, `quote-constructor-workspace.tsx`, `mobile-component-fabricacion-summary.service.ts`
+- **Regla de producto**: fabricacion en cotizacion es **opcional**; no mostrar CTAs en lineas comerciales sin receta/pauta.
 
 ---
 

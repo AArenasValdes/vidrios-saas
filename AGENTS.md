@@ -72,7 +72,7 @@ docs/
 
 ## Estado actual
 
-Ultima actualizacion operativa: 2026-09-04
+Ultima actualizacion operativa: 2026-09-19
 
 - **Pasarela de pago**: Mercado Pago Chile **configurada en produccion** para suscripciones recurrentes CLP; el smoke final de checkout/webhook sigue siendo la prueba de salida. Runbook: `docs/billing/README.md`.
 - **Paso actual**: **Fase 4 — Cubicación V1 vendible multi-tipología**. Ver `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`.
@@ -179,6 +179,13 @@ Ultima actualizacion operativa: 2026-09-04
   - metadata comercial de items de cotizacion
   - pricing por linea con minimo y redondeo
   - override manual en edicion rapida
+
+### Ya resuelto en la pasada 2026-09-19
+
+- Wizard mobile de fabricación de línea rediseñado a **4 pasos** (Producto → Perfiles → Vidrio y accesorios → Validar) con laboratorio integrado en Validar, tabbar oculta en editor y **Guardar y siguiente** en perfiles sin cerrar el sheet
+- Elegibilidad de **Revisar fabricación** en cotización: solo líneas con cubicación/despiece configurado (`isQuoteItemFabricationReviewEligible`); Serie 20 y líneas comerciales sin receta no muestran badge ni botón
+- **Configuración comercial editable en mobile** (Empresa): forma de pago, vigencia, condiciones y términos vuelven a ser editables y se reflejan en PDF de cotizaciones nuevas
+- Producción en `main`: `819a10d4` (wizard) + fixes previos `f9b9e372` (cotización/comercial)
 
 ### Ya resuelto en la pasada 2026-09-04
 
