@@ -80,28 +80,6 @@ export async function POST(request: Request) {
   const pending = readPendingEmailSignup(user.user_metadata);
   const emailConfirmed = isAuthEmailConfirmed(user);
 
-  // #region agent log
-  fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "e60979",
-    },
-    body: JSON.stringify({
-      sessionId: "e60979",
-      hypothesisId: "A",
-      location: "complete-pending-signup/route.ts:POST",
-      message: "Complete pending email signup requested",
-      data: {
-        hasPendingSignup: Boolean(pending),
-        emailConfirmed,
-        usedBearer: Boolean(accessToken),
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
-
   if (!pending) {
     return NextResponse.json(
       { error: "No hay un alta de correo pendiente.", code: "no_pending_signup" },

@@ -113,28 +113,6 @@ export function createAuthServerService(
       ) {
         const pending = readPendingEmailSignup(user.user_metadata);
 
-        // #region agent log
-        fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Debug-Session-Id": "e60979",
-          },
-          body: JSON.stringify({
-            sessionId: "e60979",
-            hypothesisId: "B",
-            location: "auth-server.service.ts:handleOAuthCallback",
-            message: "Email callback needs signup",
-            data: {
-              hasPendingSignup: Boolean(pending),
-              usedTokenHash: Boolean(normalizedTokenHash),
-              usedCode: Boolean(normalizedCode),
-            },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
-
         if (pending) {
           const provisioned = await provisionOrganizationFromOAuthUser({
             authUserId: user.id,

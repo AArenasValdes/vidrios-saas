@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { AuthRouteAccessError } from "@/features/auth/services/auth-route-access.service";
 import {
   assertSubscriptionAllowsRequestManagement,
-  resolveAuthenticatedSubscriptionRouteContext,
+  resolveSolicitudesManagementAccess,
 } from "@/features/subscriptions/services/subscription-route-access.service";
 
 export default async function SolicitudesLayout({
@@ -13,12 +13,12 @@ export default async function SolicitudesLayout({
   children: ReactNode;
 }) {
   try {
-    const context = await resolveAuthenticatedSubscriptionRouteContext({
+    const context = await resolveSolicitudesManagementAccess({
       requireOrganization: true,
     });
 
     assertSubscriptionAllowsRequestManagement({
-      subscription: context.subscription,
+      subscription: { planCode: context.planCode },
     });
   } catch (error) {
     if (error instanceof AuthRouteAccessError && error.status === 401) {

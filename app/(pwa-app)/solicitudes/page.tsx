@@ -273,7 +273,7 @@ async function resolveCotizacionIdForSolicitud(solicitud: SolicitudContacto) {
 
 export default function SolicitudesPage() {
   const router = useRouter();
-  const { rol, user, organizacionId } = useAuth();
+  const { rol, user, organizacionId, cargando } = useAuth();
   const { profile, isReady: isProfileReady } = useOrganizationProfile();
   const solicitudesCacheKey = String(user?.id ?? profile?.organizationId ?? "default");
   const [busqueda, setBusqueda] = useState("");
@@ -304,7 +304,10 @@ export default function SolicitudesPage() {
     loadMoreSolicitudes,
     updateSolicitudEstado,
     deleteSolicitudes,
-  } = useSolicitudesContacto(canReviewSolicitudes, solicitudesCacheKey, {
+  } = useSolicitudesContacto(
+    cargando || canReviewSolicitudes,
+    solicitudesCacheKey,
+    {
     estado: filtroActivo,
     search: busquedaDiferida,
   });
@@ -685,7 +688,7 @@ export default function SolicitudesPage() {
       ? "1 consulta"
       : `${visibleSolicitudes.length} consultas`;
 
-  if (!canReviewSolicitudes) {
+  if (!cargando && !canReviewSolicitudes) {
     return (
       <PremiumPageReveal className={s.root}>
         <PremiumPageSection className={s.emptyState}>

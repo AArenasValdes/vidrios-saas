@@ -177,27 +177,6 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
 
     const pendingSignup = readPendingEmailSignup(user.user_metadata);
     if (pendingSignup && options?.accessToken) {
-      // #region agent log
-      fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "e60979",
-        },
-        body: JSON.stringify({
-          sessionId: "e60979",
-          hypothesisId: "A",
-          location: "auth.service.ts:resolveAuthenticatedState",
-          message: "Login without org; attempting pending email signup heal",
-          data: {
-            hasPendingSignup: true,
-            hasAccessToken: true,
-            throwOnMissingOrganization: options.throwOnMissingOrganization === true,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       const healedProfile = await completePendingEmailSignup(options.accessToken);
       if (healedProfile?.organizacionId) {
         return {

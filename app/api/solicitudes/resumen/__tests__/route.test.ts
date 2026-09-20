@@ -25,7 +25,7 @@ jest.mock("@/features/solicitudes/services/solicitudes-contacto.service", () => 
 
 jest.mock("@/features/subscriptions/services/subscription-route-access.service", () => ({
   assertSubscriptionAllowsRequestManagement: jest.fn(),
-  resolveAuthenticatedSubscriptionRouteContext: jest.fn(),
+  resolveSolicitudesManagementAccess: jest.fn(),
 }));
 
 import { GET } from "../route";
@@ -34,7 +34,7 @@ import {
   canAccessSolicitudes,
 } from "@/features/solicitudes/services/solicitudes-contacto-access";
 import { solicitudesContactoService } from "@/features/solicitudes/services/solicitudes-contacto.service";
-import { resolveAuthenticatedSubscriptionRouteContext } from "@/features/subscriptions/services/subscription-route-access.service";
+import { resolveSolicitudesManagementAccess } from "@/features/subscriptions/services/subscription-route-access.service";
 
 describe("/api/solicitudes/resumen", () => {
   beforeEach(() => {
@@ -42,10 +42,10 @@ describe("/api/solicitudes/resumen", () => {
   });
 
   it("usa el resumen global cuando el admin esta habilitado para revisar todo", async () => {
-    (resolveAuthenticatedSubscriptionRouteContext as jest.Mock).mockResolvedValue({
+    (resolveSolicitudesManagementAccess as jest.Mock).mockResolvedValue({
       user: { email: "alessandroreal2.0@gmail.com" },
       profile: { rol: "admin", organizationId: null },
-      subscription: { planCode: null },
+      planCode: null,
     });
     (canAccessSolicitudes as jest.Mock).mockReturnValue(true);
     (canAccessAllSolicitudes as jest.Mock).mockReturnValue(true);
@@ -105,10 +105,10 @@ describe("/api/solicitudes/resumen", () => {
   });
 
   it("mantiene el filtro por organizacion para admins normales", async () => {
-    (resolveAuthenticatedSubscriptionRouteContext as jest.Mock).mockResolvedValue({
+    (resolveSolicitudesManagementAccess as jest.Mock).mockResolvedValue({
       user: { email: "admin@ventora.cl" },
       profile: { rol: "admin", organizationId: "org-7" },
-      subscription: { planCode: "founder_full" },
+      planCode: "founder_full",
     });
     (canAccessSolicitudes as jest.Mock).mockReturnValue(true);
     (canAccessAllSolicitudes as jest.Mock).mockReturnValue(true);

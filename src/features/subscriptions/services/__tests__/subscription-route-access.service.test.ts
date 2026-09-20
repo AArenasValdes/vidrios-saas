@@ -1,4 +1,6 @@
 import { buildFreshTrialRepairSnapshot } from "../subscription-status.service";
+import { assertSubscriptionAllowsRequestManagement } from "../subscription-route-access.service";
+import { AuthRouteAccessError } from "@/features/auth/services/auth-route-access.service";
 import type { OrganizationSubscriptionSnapshot } from "@/features/subscriptions/types/subscription";
 
 describe("subscription-route-access.service", () => {
@@ -54,5 +56,19 @@ describe("subscription-route-access.service", () => {
     });
 
     expect(repaired).toBeNull();
+  });
+
+  it("bloquea solicitudes solo con plan_code, sin consultar billing completo", () => {
+    expect(() =>
+      assertSubscriptionAllowsRequestManagement({
+        subscription: { planCode: "quote_only" },
+      })
+    ).toThrow(AuthRouteAccessError);
+
+    expect(() =>
+      assertSubscriptionAllowsRequestManagement({
+        subscription: { planCode: "trial" },
+      })
+    ).not.toThrow();
   });
 });

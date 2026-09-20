@@ -166,6 +166,13 @@ describe("SolicitudesPage", () => {
       "false"
     );
     expect(screen.getByText("Solicitudes recibidas")).toBeInTheDocument();
+    expect(mockUseSolicitudesContacto).toHaveBeenCalledWith(
+      true,
+      "user-1",
+      expect.objectContaining({
+        estado: "all",
+      })
+    );
     expect(screen.getByRole("note", { name: "Sobre las solicitudes" })).toHaveTextContent(
       "Aquí empiezan tus próximos trabajos"
     );
@@ -174,6 +181,49 @@ describe("SolicitudesPage", () => {
     expect(screen.getAllByRole("button", { name: /Nuevas/ }).length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: /Seguimiento/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Cotizadas/ })).toBeInTheDocument();
+  });
+
+  it("sigue cargando la bandeja mientras auth hidrata y no muestra acceso restringido", () => {
+    mockUseAuth.mockReturnValue({
+      rol: null,
+      user: null,
+      organizacionId: null,
+      cargando: true,
+    });
+    mockCanAccessSolicitudes.mockReturnValue(false);
+    mockUseSolicitudesContacto.mockReturnValue({
+      solicitudes: [],
+      isReady: false,
+      isRefreshing: true,
+      isLoadingMore: false,
+      error: null,
+      totalCount: 0,
+      hasMore: false,
+      summary: {
+        total: 0,
+        hoy: 0,
+        counts: {
+          nueva: 0,
+          contactada: 0,
+          cerrada: 0,
+          descartada: 0,
+        },
+      },
+      refreshSolicitudes: jest.fn(),
+      loadMoreSolicitudes: jest.fn(),
+      updateSolicitudEstado: jest.fn(),
+    });
+
+    render(<SolicitudesPage />);
+
+    expect(screen.queryByText("Acceso restringido")).not.toBeInTheDocument();
+    expect(mockUseSolicitudesContacto).toHaveBeenCalledWith(
+      true,
+      "org-1",
+      expect.objectContaining({
+        estado: "all",
+      })
+    );
   });
 
   it("persiste las solicitudes nuevas como vistas al abrir la bandeja", async () => {

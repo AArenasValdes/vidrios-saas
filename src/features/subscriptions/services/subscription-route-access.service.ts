@@ -151,6 +151,8 @@ async function repairFreshTrialSnapshotIfNeeded(input: {
 export async function resolveAuthenticatedSubscriptionRouteContext(options: {
   requireOrganization?: boolean;
 } = {}) {
+  // Las lecturas de /solicitudes no deben usar este helper: van por
+  // resolveSolicitudesManagementAccess para no cargar billing/ledger.
   const context = await resolveAuthenticatedRouteContext(options);
 
   if (!context.profile.organizationId) {
@@ -194,7 +196,7 @@ export function assertAuthenticatedRouteAllowsWrite(input: {
 }
 
 export function assertSubscriptionAllowsRequestManagement(input: {
-  subscription: ReturnType<typeof resolveOrganizationSubscriptionState>;
+  subscription: { planCode?: string | null };
 }) {
   if (input.subscription.planCode === "quote_only") {
     throw new AuthRouteAccessError(
@@ -202,6 +204,50 @@ export function assertSubscriptionAllowsRequestManagement(input: {
       "El plan Cotización no incluye la gestión de solicitudes públicas."
     );
   }
+}
+
+async function getOrganizationPlanCode(
+  supabase: SupabaseClient,
+  organizationId: string | number
+) {
+  const { data, error } = await supabase
+    .from("organization_profile")
+    .select("plan_code")
+    .eq("organization_id", organizationId)
+    .maybeSingle();
+
+  if (error) {
+    throw new AuthRouteAccessError(
+      500,
+      "No pudimos validar el estado de la cuenta."
+    );
+  }
+
+  return (data as { plan_code?: string | null } | null)?.plan_code ?? null;
+}
+
+export async function resolveSolicitudesManagementAccess(options: {
+  requireOrganization?: boolean;
+} = {}) {
+  const context = await resolveAuthenticatedRouteContext(options);
+
+  if (!context.profile.organizationId) {
+    return {
+      ...context,
+      planCode: null,
+    };
+  }
+
+  const supabase = await createClient();
+  const planCode = await getOrganizationPlanCode(
+    supabase,
+    context.profile.organizationId
+  );
+
+  return {
+    ...context,
+    planCode,
+  };
 }
 
 export {

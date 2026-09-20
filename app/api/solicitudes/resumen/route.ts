@@ -10,7 +10,7 @@ import {
 import { solicitudesContactoService } from "@/features/solicitudes/services/solicitudes-contacto.service";
 import {
   assertSubscriptionAllowsRequestManagement,
-  resolveAuthenticatedSubscriptionRouteContext,
+  resolveSolicitudesManagementAccess,
 } from "@/features/subscriptions/services/subscription-route-access.service";
 
 export const dynamic = "force-dynamic";
@@ -46,11 +46,11 @@ export async function GET(request: Request) {
   let rol: string | null = null;
 
   try {
-    const context = await resolveAuthenticatedSubscriptionRouteContext({
+    const context = await resolveSolicitudesManagementAccess({
       requireOrganization: false,
     });
     assertSubscriptionAllowsRequestManagement({
-      subscription: context.subscription,
+      subscription: { planCode: context.planCode },
     });
     authReadyAt = performance.now();
     userEmail = context.user.email;

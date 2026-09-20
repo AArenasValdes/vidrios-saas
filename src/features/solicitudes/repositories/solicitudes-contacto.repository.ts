@@ -10,6 +10,7 @@ import type {
   SolicitudEmpresaPublicaConfig,
   SolicitudContacto,
 } from "@/features/solicitudes/types/solicitud-contacto";
+import { aggregateSolicitudesResumenGlobal } from "@/features/solicitudes/services/solicitudes-summary.service";
 
 type SolicitudesContactoRepositoryDeps = {
   clientFactory?: ReturnType<typeof createAdminClient>;
@@ -670,66 +671,43 @@ async function selectSolicitudesResumenPage(
   };
 }
 
-async function countSolicitudesBase(
-  supabase: ReturnType<typeof createAdminClient>,
-  options: {
-    organizationId?: string | number;
-    estado?: EstadoSolicitudContacto;
-    createdFrom?: string;
-  }
-) {
-  let query = supabase
-    .from(TABLE_NAME as never)
-    .select("id", { count: "exact", head: true });
-
-  if (options.organizationId !== undefined) {
-    query = query.eq("organization_id", options.organizationId as never);
-  }
-
-  if (options.estado) {
-    query = query.eq("estado", options.estado as never);
-  }
-
-  if (options.createdFrom) {
-    query = query.gte("creado_en", options.createdFrom);
-  }
-
-  const { count, error } = await query;
-
-  if (error) {
-    throw error;
-  }
-
-  return count ?? 0;
-}
+const RESUMEN_GLOBAL_BATCH_SIZE = 1000;
 
 async function selectSolicitudesResumenGlobal(
   supabase: ReturnType<typeof createAdminClient>,
   organizationId?: string | number
 ): Promise<SolicitudesResumenGlobal> {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayIso = today.toISOString();
+  const rows: Array<{ estado?: string | null; creado_en?: string | null }> = [];
 
-  const [total, hoy, nueva, contactada, cerrada, descartada] = await Promise.all([
-    countSolicitudesBase(supabase, { organizationId }),
-    countSolicitudesBase(supabase, { organizationId, createdFrom: todayIso }),
-    countSolicitudesBase(supabase, { organizationId, estado: "nueva" }),
-    countSolicitudesBase(supabase, { organizationId, estado: "contactada" }),
-    countSolicitudesBase(supabase, { organizationId, estado: "cerrada" }),
-    countSolicitudesBase(supabase, { organizationId, estado: "descartada" }),
-  ]);
+  for (let from = 0; ; from += RESUMEN_GLOBAL_BATCH_SIZE) {
+    let query = supabase
+      .from(TABLE_NAME as never)
+      .select("estado, creado_en")
+      .order("creado_en", { ascending: false })
+      .range(from, from + RESUMEN_GLOBAL_BATCH_SIZE - 1);
 
-  return {
-    total,
-    hoy,
-    counts: {
-      nueva,
-      contactada,
-      cerrada,
-      descartada,
-    },
-  };
+    if (organizationId !== undefined) {
+      query = query.eq("organization_id", organizationId as never);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    const batch = (data as Array<{
+      estado?: string | null;
+      creado_en?: string | null;
+    }> | null) ?? [];
+    rows.push(...batch);
+
+    if (batch.length < RESUMEN_GLOBAL_BATCH_SIZE) {
+      break;
+    }
+  }
+
+  return aggregateSolicitudesResumenGlobal(rows);
 }
 
 export function createSolicitudesContactoRepository(

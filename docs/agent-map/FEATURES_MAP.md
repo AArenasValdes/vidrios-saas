@@ -650,6 +650,8 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
 - **Rutas involucradas**: `/solicitudes`, `/solicitudes/canales`, `/solicitud/[empresa]` (publica)
 - **Archivos principales**:
   - `app/(pwa-app)/solicitudes/page.tsx` (644 lineas)
+  - `app/(pwa-app)/solicitudes/layout.tsx`
+  - `app/(pwa-app)/solicitudes/loading.tsx`
   - `app/(pwa-app)/solicitudes/canales/page.tsx`
   - `app/(pwa-app)/solicitudes/_components/solicitud-card.tsx`
   - `app/(landing-web)/solicitud/[empresa]/page.tsx` (441 lineas, server component)
@@ -669,7 +671,7 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
 - **Tablas Supabase**: `solicitudes_contacto`, `organization_profile` (para config publica)
 - **Flujo de datos**:
   - Captura: Formulario publico -> POST `/api/solicitud/[empresa]` -> `solicitudesContactoService.crearSolicitudEmpresa()` -> repository + push notification
-  - Gestion: Page -> `useSolicitudesContacto` -> API `/api/solicitudes/resumen` -> repository
+  - Gestion: Page -> `useSolicitudesContacto` -> API `/api/solicitudes/resumen` -> repository. El layout y el GET de resumen usan `resolveSolicitudesManagementAccess` (auth + `plan_code`); no reconsultar billing/ledger en cada visita. El resumen global se agrega en una lectura `estado, creado_en`, no en seis COUNT.
   - Canales: Page -> `useLeadChannels` (genera URLs con UTM) + `LeadChannels` (QR + copy)
 - **Estados importantes**: nueva, contactada, cerrada, descartada
 - **Donde editar UI**: `app/(pwa-app)/solicitudes/`, `app/(landing-web)/solicitud/[empresa]/`

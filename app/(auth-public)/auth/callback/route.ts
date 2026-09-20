@@ -67,30 +67,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=oauth_provider`);
   }
 
-  // #region agent log
-  fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "e60979",
-    },
-    body: JSON.stringify({
-      sessionId: "e60979",
-      hypothesisId: "C",
-      location: "auth/callback/route.ts:GET",
-      message: "Auth callback received",
-      data: {
-        hasCode: Boolean(code?.trim()),
-        hasTokenHash: Boolean(tokenHash?.trim()),
-        otpType: otpType ?? null,
-        intent,
-        provider,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
-
   if (!code && !tokenHash) {
     return NextResponse.redirect(`${origin}/login?error=oauth`);
   }
@@ -128,30 +104,7 @@ export async function GET(request: NextRequest) {
       NextResponse.redirect(redirectUrl),
       cookiesToSet
     );
-  } catch (error) {
-    // #region agent log
-    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "e60979",
-      },
-      body: JSON.stringify({
-        sessionId: "e60979",
-        hypothesisId: "C",
-        location: "auth/callback/route.ts:GET:catch",
-        message: "Auth callback failed before provision",
-        data: {
-          hasCode: Boolean(code?.trim()),
-          hasTokenHash: Boolean(tokenHash?.trim()),
-          errorName: error instanceof Error ? error.name : typeof error,
-          errorMessage:
-            error instanceof Error ? error.message.slice(0, 180) : "unknown",
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
+  } catch {
     return NextResponse.redirect(`${origin}/login?error=oauth`);
   }
 }
