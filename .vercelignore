@@ -55,18 +55,19 @@ public/video-assets/
 !/docs/fabricacion/zeta/confirmed/**
 
 # --- Tooling, QA, mobile wrapper y DB local ---
-.agents/
-.cursor/
-.impeccable/
-.github/
-plugins/
-remotion/
-SVG/
-caveman/
-android-twa/
-supabase/
-tests/
-__tests__/
+# IMPORTANTE: anclar con `/` al inicio. Sin eso, `supabase/` también excluye `src/lib/supabase/`.
+/.agents/
+/.cursor/
+/.impeccable/
+/.github/
+/plugins/
+/remotion/
+/SVG/
+/caveman/
+/android-twa/
+/supabase/
+/tests/
+/__tests__/
 
 # Scripts operativos: el build solo necesita el stub de polyfill
 /scripts/*
