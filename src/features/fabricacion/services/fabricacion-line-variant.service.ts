@@ -289,7 +289,10 @@ export function resolveL20SiblingLineTemplateId(
 ): number | null {
   const siblingCatalogKey = resolveL20SiblingCatalogKey(catalogKey);
   if (!siblingCatalogKey) return null;
-  return templates.find((entry) => entry.catalogKey === siblingCatalogKey)?.id ?? null;
+  const siblingId = templates.find((entry) => entry.catalogKey === siblingCatalogKey)?.id;
+  if (siblingId == null) return null;
+  const normalized = Number(siblingId);
+  return Number.isFinite(normalized) ? normalized : null;
 }
 
 export function mergeL20OrganizationRecipes(input: {
@@ -316,6 +319,7 @@ export function mergeL20OrganizationRecipes(input: {
     .filter(
       (recipe) =>
         recipe.scope === "organization" &&
+        recipe.lineTemplateId != null &&
         templateIds.has(recipe.lineTemplateId) &&
         !recipe.eliminadoEn
     )
