@@ -7,6 +7,8 @@ import {
   resolveOAuthIdentity,
   type OAuthIdentityResolution,
 } from "@/features/auth/services/auth-oauth-completion.service";
+import { readPendingEmailSignup } from "@/features/auth/services/auth-pending-email-signup.service";
+import type { EmailOtpType } from "@supabase/supabase-js";
 import {
   buildOAuthAnalyticsEvent,
   resolveOAuthProvider,
@@ -51,17 +53,20 @@ export function createAuthServerService(
 
   return {
     async handleOAuthCallback(input: {
-      code: string;
+      code?: string | null;
+      tokenHash?: string | null;
+      otpType?: string | null;
       intent: AuthOAuthIntent;
       provider: AuthCallbackProvider;
       nextPath?: string | null;
     }): Promise<OAuthCallbackResolution> {
-      const normalizedCode = input.code.trim();
+      const normalizedCode = input.code?.trim() ?? "";
+      const normalizedTokenHash = input.tokenHash?.trim() ?? "";
       const safeNext = sanitizeAuthNextPath(input.nextPath);
       const intent = input.intent === "signup" ? "signup" : "login";
       const provider = input.provider;
 
-      if (!normalizedCode) {
+      if (!normalizedCode && !normalizedTokenHash) {
         return {
           kind: "error_redirect",
           path: "/login?error=oauth",
@@ -73,7 +78,12 @@ export function createAuthServerService(
         };
       }
 
-      const { user, session } = await repository.exchangeCodeForSession(normalizedCode);
+      const { user, session } = normalizedTokenHash
+        ? await repository.verifyTokenHash(
+            normalizedTokenHash,
+            resolveEmailOtpType(input.otpType, intent)
+          )
+        : await repository.exchangeCodeForSession(normalizedCode);
 
       if (!user.email?.trim()) {
         return {
@@ -102,6 +112,28 @@ export function createAuthServerService(
         identity.status === "needs_signup"
       ) {
         const pending = readPendingEmailSignup(user.user_metadata);
+
+        // #region agent log
+        fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Debug-Session-Id": "e60979",
+          },
+          body: JSON.stringify({
+            sessionId: "e60979",
+            hypothesisId: "B",
+            location: "auth-server.service.ts:handleOAuthCallback",
+            message: "Email callback needs signup",
+            data: {
+              hasPendingSignup: Boolean(pending),
+              usedTokenHash: Boolean(normalizedTokenHash),
+              usedCode: Boolean(normalizedCode),
+            },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
 
         if (pending) {
           const provisioned = await provisionOrganizationFromOAuthUser({
@@ -195,27 +227,25 @@ function mapIdentityToCallbackResolution(input: {
   };
 }
 
-function readPendingEmailSignup(value: unknown) {
-  if (!value || typeof value !== "object") return null;
-  const pending = (value as Record<string, unknown>).ventora_signup;
-  if (!pending || typeof pending !== "object" || Array.isArray(pending)) {
-    return null;
+const EMAIL_OTP_TYPES = [
+  "signup",
+  "invite",
+  "magiclink",
+  "recovery",
+  "email_change",
+  "email",
+] as const satisfies readonly EmailOtpType[];
+
+function resolveEmailOtpType(
+  value: string | null | undefined,
+  intent: AuthOAuthIntent
+): EmailOtpType {
+  const normalized = value?.trim().toLowerCase() ?? "";
+  if ((EMAIL_OTP_TYPES as readonly string[]).includes(normalized)) {
+    return normalized as EmailOtpType;
   }
 
-  const fields = pending as Record<string, unknown>;
-  if (fields.version !== 1) return null;
-
-  return {
-    nombre: typeof fields.nombre === "string" ? fields.nombre : "",
-    empresaNombre:
-      typeof fields.empresaNombre === "string" ? fields.empresaNombre : "",
-    whatsapp: typeof fields.whatsapp === "string" ? fields.whatsapp : "",
-    ciudadComuna:
-      typeof fields.ciudadComuna === "string" ? fields.ciudadComuna : "",
-    countryCode:
-      typeof fields.countryCode === "string" ? fields.countryCode : "",
-    consentimientoAceptado: fields.consentimientoAceptado === true,
-  };
+  return intent === "signup" ? "signup" : "email";
 }
 
 export { resolveOAuthProvider };

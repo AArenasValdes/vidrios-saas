@@ -9,6 +9,20 @@ jest.mock("@/features/auth/services/auth-register-rate-limit.service", () => ({
 
 jest.mock("@/features/auth/services/auth-account-activation-email.service", () => ({
   sendAccountActivationEmail: jest.fn(),
+  buildEmailActivationCallbackUrl: jest.fn(
+    ({
+      origin,
+      hashedToken,
+      otpType,
+      nextPath,
+    }: {
+      origin: string;
+      hashedToken: string;
+      otpType: string;
+      nextPath: string;
+    }) =>
+      `${origin}/auth/callback?token_hash=${hashedToken}&type=${otpType}&intent=signup&provider=email&next=${encodeURIComponent(nextPath)}`
+  ),
 }));
 
 import { POST } from "@/app/api/auth/signup/route";
@@ -32,6 +46,7 @@ describe("POST /api/auth/signup", () => {
       data: {
         user: { id: "auth-new" },
         properties: {
+          hashed_token: "signup-hash-token",
           action_link:
             "https://yrtrwgkaopfumpidjthk.supabase.co/auth/v1/verify?token=one-time",
         },
@@ -70,7 +85,12 @@ describe("POST /api/auth/signup", () => {
         redirectTo: expect.stringContaining("provider=email"),
       }),
     }));
-    expect(sendActivationMock).toHaveBeenCalled();
+    expect(sendActivationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "nuevo@test.com",
+        actionLink: expect.stringContaining("token_hash=signup-hash-token"),
+      })
+    );
     await expect(response.json()).resolves.toMatchObject({
       ok: true,
       verificationRequired: true,

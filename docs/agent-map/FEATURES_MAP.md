@@ -1,7 +1,7 @@
 # Features Map - Ventora
 
 Estado: vigente
-Actualizado: 2026-09-04
+Actualizado: 2026-09-20
 Responsable: ingeniería
 
 Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente donde editar UI, logica y persistencia.
@@ -12,13 +12,15 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
 
 ## Feature: Autenticacion
 
-- **Que hace**: Login email/password y Google OAuth unico, PKCE, sesion persistida y alta SaaS inmediata antes de activacion. `/registro` separa visualmente el alta en dos pasos: identidad/acceso y datos de empresa. Solo el segundo confirma la creacion de cuenta, organizacion, perfil regional y trial; Google conserva una pantalla breve solo para completar los datos que OAuth no entrega.
+- **Que hace**: Login email/password y Google OAuth unico, PKCE, sesion persistida y alta SaaS inmediata antes de activacion. `/registro` separa visualmente el alta en dos pasos: identidad/acceso y datos de empresa. El segundo paso crea Auth sin provisionar; el enlace de activacion confirma el correo y recien ahi corre la RPC. Si el callback falla, el login puede completar el alta pendiente con la misma metadata. Google conserva una pantalla breve solo para completar los datos que OAuth no entrega.
 - **Rutas involucradas**: `/login`, `/registro`, `/auth/callback`, `/auth/completar-cuenta`, `/auth/logout`, `/cuenta-vencida`
 - **Archivos principales**:
   - `app/(auth-public)/login/page.tsx`
   - `app/(auth-public)/auth/callback/route.ts`
   - `app/(auth-public)/auth/completar-cuenta/page.tsx`
   - `app/api/auth/oauth/complete-registration/route.ts`
+  - `app/api/auth/complete-pending-signup/route.ts`
+  - `app/api/auth/signup/route.ts`
   - `app/(auth-public)/auth/logout/route.ts`
   - `src/features/auth/hooks/useAuth.ts`
   - `src/features/auth/services/auth.service.ts`
@@ -33,8 +35,9 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
 - **Componentes principales**: `LoginView`, `RegistroView`, `CompletarCuentaView`. `RegistroView` conserva los datos del paso 1 en memoria hasta completar el paso 2; no crea Auth ni registros parciales al avanzar.
 - **Hooks/servicios/actions**: `useAuth()`, `authService`, `authServerService`
 - **Tablas Supabase**: `auth.users`, `public.users`, `organizations`, `organization_profile`
-- **Flujo de datos**: Login form -> `useAuth.signIn()` -> `authService.signIn()` -> `authRepository.signIn()` -> Supabase Auth -> `authRepository.getProfile()` -> `public.users` (organization_id, rol) -> diagnostico local + eventos `login_success` / `login_failure`
+- **Flujo de datos**: Login form -> `useAuth.signIn()` -> `authService.signIn()` -> `authRepository.signIn()` -> Supabase Auth -> `authRepository.getProfile()` -> `public.users` (organization_id, rol) -> si no hay org y existe `ventora_signup` confirmado, `POST /api/auth/complete-pending-signup` -> diagnostico local + eventos `login_success` / `login_failure`
 - **Flujo Google nuevo/incompleto**: Google -> callback -> `/auth/completar-cuenta?next=/activacion` -> API autenticada -> RPC transaccional -> `/activacion`
+- **Flujo correo nuevo**: `/registro` -> `POST /api/auth/signup` (Auth + metadata `ventora_signup`, sin org) -> email con `token_hash` a `/auth/callback` -> `verifyOtp` -> RPC `complete_verified_auth_account` -> `/activacion`
 - **Estados importantes**: `cargando`, authenticated, unauthenticated
 - **Donde editar UI**: `app/(auth-public)/login/page.tsx`
 - **Donde editar logica**: `src/features/auth/services/auth.service.ts`
@@ -43,7 +46,7 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
 - **Consideraciones UX**: Proxy redirige autenticados a `/dashboard`, no autenticados a `/login?next=path`. El logout del shell sale por `/auth/logout` para evitar carreras entre App Router y cookies SSR. Al volver desde background/foco, el hook revalida sesion sin vaciar la UI. El login espera la cookie antes de redirigir y guarda un buffer local de diagnosticos para distinguir credencial invalida real vs cookie/PWA/red/perfil. La pantalla de login tambien permite ver/ocultar contrasena y reiniciar el estado local de la app en ese dispositivo cuando navegador web si entra pero la PWA instalada no.
 - **Consideraciones UX**: Proxy redirige autenticados a `/dashboard`, no autenticados a `/login?next=path`. El logout del shell sale por `/auth/logout` para evitar carreras entre App Router y cookies SSR. Al volver desde background/foco, el hook revalida sesion sin vaciar la UI. El login espera la cookie antes de redirigir y guarda un buffer local de diagnosticos para distinguir credencial invalida real vs cookie/PWA/red/perfil. La pantalla de login tambien permite ver/ocultar contrasena y reiniciar el estado local de la app en ese dispositivo cuando navegador web si entra pero la PWA instalada no. El prompt de instalacion PWA tiene fallback visual para Opera/Android con mockup simple del navegador y highlight orientativo del `menu O`.
 - **Registro regional**: `/registro` ofrece Chile, Argentina, Colombia, Mexico, Peru y Uruguay con moneda, locale, prefijo, etiqueta tributaria y telefono por preset. Esto no implica cobro local: checkout directo permanece habilitado inicialmente solo para Chile.
-- **Riesgos al modificar**: Google es el unico OAuth; Facebook legacy solo permanece como dato social fuera de auth. La RPC usa `service_role`, lock transaccional y upsert; no exponerla a `anon`/`authenticated`. El alta por correo debe crear Auth y llamar la misma RPC en servidor, con compensacion si falla; no pedir telefono nuevamente en login u onboarding.
+- **Riesgos al modificar**: Google es el unico OAuth; Facebook legacy solo permanece como dato social fuera de auth. La RPC usa `service_role`, lock transaccional y upsert; no exponerla a `anon`/`authenticated`. El alta por correo no debe depender de PKCE/`code` del `action_link` de Supabase; usar `token_hash` + `verifyOtp` y sanar en login si el correo ya se confirmo. No pedir telefono nuevamente en login u onboarding.
 
 ---
 

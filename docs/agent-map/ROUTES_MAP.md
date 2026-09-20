@@ -1,7 +1,7 @@
 # Routes Map - Ventora
 
 Estado: vigente
-Actualizado: 2026-09-14
+Actualizado: 2026-09-20
 Responsable: ingeniería
 
 Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las secciones detalladas siguen abajo; el bloque de inventario cubre también APIs y superficies internas.
@@ -636,6 +636,7 @@ Generado desde app/ y verificado por pnpm docs:check. El detalle funcional de ca
 | `/api/admin/pagos/reject` | api | api | `app/api/admin/pagos/reject/route.ts` |
 | `/api/admin/tareas` | api | api | `app/api/admin/tareas/route.ts` |
 | `/api/app-version` | api | api | `app/api/app-version/route.ts` |
+| `/api/auth/complete-pending-signup` | api | api | `app/api/auth/complete-pending-signup/route.ts` |
 | `/api/auth/oauth/complete-registration` | api | api | `app/api/auth/oauth/complete-registration/route.ts` |
 | `/api/auth/profile` | api | api | `app/api/auth/profile/route.ts` |
 | `/api/auth/register` | api | api | `app/api/auth/register/route.ts` |

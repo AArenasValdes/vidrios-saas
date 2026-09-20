@@ -230,6 +230,12 @@
       "source": "app/api/app-version/route.ts"
     },
     {
+      "path": "/api/auth/complete-pending-signup",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/auth/complete-pending-signup/route.ts"
+    },
+    {
       "path": "/api/auth/oauth/complete-registration",
       "type": "api",
       "area": "api",

@@ -2,6 +2,12 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-20 - Alta por correo: activacion sin PKCE + saneo en login
+
+- El registro por formulario deja Auth + metadata `ventora_signup` y no crea org hasta confirmar el correo.
+- El email de activacion usa `token_hash` hacia `/auth/callback` (`verifyOtp`); el `action_link` de Supabase no entrega PKCE usable en el celular.
+- Si el correo ya se confirmo y falta `public.users`, el login llama `POST /api/auth/complete-pending-signup` y corre la misma RPC.
+
 ## 2026-09-20 - Serie 4800 destajes SODAL Diamond
 
 - `ventora:serie-4800-corredera-2h` usa destajes Diamond corredera 2H: vidrio `X/2−44` / `Y−93` (solo monolítico), rieles `X−16`, jamba `Y`, zócalo/cabezal `X/2−15`, traslapo/pierna `Y−32`.

@@ -57,6 +57,8 @@ function applySessionCookies(response: NextResponse, cookiesToSet: CookieToSet[]
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
+  const tokenHash = searchParams.get("token_hash");
+  const otpType = searchParams.get("type");
   const intent = resolveIntent(searchParams.get("intent"));
   const provider = resolveOAuthProvider(searchParams.get("provider"));
   const nextPath = sanitizeAuthNextPath(searchParams.get("next"));
@@ -65,7 +67,31 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=oauth_provider`);
   }
 
-  if (!code) {
+  // #region agent log
+  fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "e60979",
+    },
+    body: JSON.stringify({
+      sessionId: "e60979",
+      hypothesisId: "C",
+      location: "auth/callback/route.ts:GET",
+      message: "Auth callback received",
+      data: {
+        hasCode: Boolean(code?.trim()),
+        hasTokenHash: Boolean(tokenHash?.trim()),
+        otpType: otpType ?? null,
+        intent,
+        provider,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+
+  if (!code && !tokenHash) {
     return NextResponse.redirect(`${origin}/login?error=oauth`);
   }
 
@@ -76,6 +102,8 @@ export async function GET(request: NextRequest) {
     });
     const resolution = await service.handleOAuthCallback({
       code,
+      tokenHash,
+      otpType,
       intent,
       provider,
       nextPath,
@@ -100,7 +128,30 @@ export async function GET(request: NextRequest) {
       NextResponse.redirect(redirectUrl),
       cookiesToSet
     );
-  } catch {
+  } catch (error) {
+    // #region agent log
+    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "e60979",
+      },
+      body: JSON.stringify({
+        sessionId: "e60979",
+        hypothesisId: "C",
+        location: "auth/callback/route.ts:GET:catch",
+        message: "Auth callback failed before provision",
+        data: {
+          hasCode: Boolean(code?.trim()),
+          hasTokenHash: Boolean(tokenHash?.trim()),
+          errorName: error instanceof Error ? error.name : typeof error,
+          errorMessage:
+            error instanceof Error ? error.message.slice(0, 180) : "unknown",
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     return NextResponse.redirect(`${origin}/login?error=oauth`);
   }
 }

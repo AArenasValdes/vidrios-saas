@@ -5,7 +5,10 @@ import {
   assertAuthRegisterIdentityRateLimit,
   assertAuthRegisterRateLimit,
 } from "@/features/auth/services/auth-register-rate-limit.service";
-import { sendAccountActivationEmail } from "@/features/auth/services/auth-account-activation-email.service";
+import {
+  buildEmailActivationCallbackUrl,
+  sendAccountActivationEmail,
+} from "@/features/auth/services/auth-account-activation-email.service";
 import {
   getWhatsappValidationHint,
   resolveSignupWhatsapp,
@@ -46,7 +49,7 @@ function getAdminAuthErrorMessage(error: {
   return "No pudimos crear tu acceso. Intenta de nuevo.";
 }
 
-function getVerificationRedirect(request: Request) {
+function getAppOrigin(request: Request) {
   const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim();
   const origin = new URL(configuredOrigin || request.url).origin;
 
@@ -54,7 +57,11 @@ function getVerificationRedirect(request: Request) {
     throw new Error("NEXT_PUBLIC_APP_URL es obligatoria para activar cuentas.");
   }
 
-  const redirect = new URL("/auth/callback", origin);
+  return origin;
+}
+
+function getVerificationRedirect(request: Request) {
+  const redirect = new URL("/auth/callback", getAppOrigin(request));
   redirect.searchParams.set("intent", "signup");
   redirect.searchParams.set("provider", "email");
   redirect.searchParams.set("next", "/activacion");
@@ -177,7 +184,15 @@ export async function POST(request: Request) {
     });
 
   const createdUser = activation.user;
-  const actionLink = activation.properties?.action_link;
+  const hashedToken = activation.properties?.hashed_token?.trim() ?? "";
+  const actionLink = hashedToken
+    ? buildEmailActivationCallbackUrl({
+        origin: getAppOrigin(request),
+        hashedToken,
+        otpType: "signup",
+        nextPath: "/activacion",
+      })
+    : activation.properties?.action_link;
 
   if (createAuthError || !createdUser || !actionLink) {
     return NextResponse.json(

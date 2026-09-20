@@ -3,7 +3,10 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendAccountActivationEmail } from "@/features/auth/services/auth-account-activation-email.service";
+import {
+  buildEmailActivationCallbackUrl,
+  sendAccountActivationEmail,
+} from "@/features/auth/services/auth-account-activation-email.service";
 import { seedDefaultLineCatalogServer } from "@/features/cotizaciones/line-templates/services/seed-line-catalog-server";
 
 export class OrganizationProvisionError extends Error {
@@ -145,7 +148,17 @@ export async function provisionOrganizationAccount(
         },
       });
 
-    if (authError || !authData.user || !authData.properties?.action_link) {
+    const hashedToken = authData.properties?.hashed_token?.trim() ?? "";
+    const actionLink = hashedToken
+      ? buildEmailActivationCallbackUrl({
+          origin: process.env.NEXT_PUBLIC_APP_URL!.trim(),
+          hashedToken,
+          otpType: "invite",
+          nextPath: "/auth/definir-contrasena",
+        })
+      : authData.properties?.action_link;
+
+    if (authError || !authData.user || !actionLink) {
       throw new OrganizationProvisionError(
         `No pudimos crear el usuario de acceso: ${authError?.message ?? "sin respuesta"}`
       );
@@ -215,7 +228,7 @@ export async function provisionOrganizationAccount(
     const activationEmail = await sendAccountActivationEmail({
       to: email,
       empresaNombre,
-      actionLink: authData.properties.action_link,
+      actionLink,
     });
 
     if (!activationEmail.sent) {

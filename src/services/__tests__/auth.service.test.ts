@@ -245,6 +245,56 @@ describe("authService", () => {
     expect(repository.signOut).toHaveBeenCalledTimes(1);
   });
 
+  it("completa el alta pendiente de correo si el login no encuentra empresa", async () => {
+    const repository = createRepositoryMock();
+    const user = createUser("pendiente@vidrios.cl");
+    user.user_metadata = {
+      email_verified: true,
+      ventora_signup: {
+        version: 1,
+        nombre: "Milton",
+        empresaNombre: "Vidrieria FyH",
+        whatsapp: "+56912345678",
+        ciudadComuna: "Codegua",
+        countryCode: "CL",
+        consentimientoAceptado: true,
+      },
+    };
+    const completePendingEmailSignup = jest.fn().mockResolvedValue({
+      organizacionId: 55,
+      rol: "admin",
+    });
+
+    repository.signInWithPassword.mockResolvedValue({
+      user,
+      session: {
+        access_token: "token-pendiente",
+      } as never,
+      accessToken: "token-pendiente",
+    });
+    repository.getUserProfile.mockResolvedValue(null);
+
+    const service = createAuthService({
+      repository,
+      bootstrapRetryCount: 0,
+      bootstrapRetryDelayMs: 0,
+      completePendingEmailSignup,
+    });
+
+    const resultado = await service.signIn({
+      email: "pendiente@vidrios.cl",
+      password: "secreta123",
+    });
+
+    expect(completePendingEmailSignup).toHaveBeenCalledWith("token-pendiente");
+    expect(repository.signOut).not.toHaveBeenCalled();
+    expect(resultado).toEqual({
+      user,
+      organizacionId: 55,
+      rol: "admin",
+    });
+  });
+
   it("debe caer a lookup directo si el bootstrap server-side del login no devuelve organizacion al primer intento", async () => {
     const repository = createRepositoryMock();
     const user = createUser("movil@vidrios.cl");

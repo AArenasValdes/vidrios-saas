@@ -3,7 +3,12 @@ import {
   type AuthRepository,
 } from "@/features/auth/repositories/auth.repository";
 import { GET_ORG_ID_PERMISSION_ERROR_MESSAGE } from "@/features/auth/services/auth-login-error.service";
+import {
+  completePendingEmailSignupFromSession,
+  readPendingEmailSignup,
+} from "@/features/auth/services/auth-pending-email-signup.service";
 import type {
+  AuthProfile,
   AuthProfileLookupOptions,
   AuthSignInInput,
   AuthSignInWithOAuthInput,
@@ -15,6 +20,7 @@ type AuthServiceDeps = {
   repository?: AuthRepository;
   bootstrapRetryCount?: number;
   bootstrapRetryDelayMs?: number;
+  completePendingEmailSignup?: (accessToken: string) => Promise<AuthProfile | null>;
 };
 
 const DEFAULT_BOOTSTRAP_RETRY_COUNT = 5;
@@ -91,6 +97,8 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
     deps.bootstrapRetryCount ?? DEFAULT_BOOTSTRAP_RETRY_COUNT;
   const bootstrapRetryDelayMs =
     deps.bootstrapRetryDelayMs ?? DEFAULT_BOOTSTRAP_RETRY_DELAY_MS;
+  const completePendingEmailSignup =
+    deps.completePendingEmailSignup ?? completePendingEmailSignupFromSession;
 
   async function resolveAuthenticatedState(
     user: NonNullable<AuthenticatedUser["user"]>,
@@ -164,6 +172,39 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
         }
 
         throw error;
+      }
+    }
+
+    const pendingSignup = readPendingEmailSignup(user.user_metadata);
+    if (pendingSignup && options?.accessToken) {
+      // #region agent log
+      fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Debug-Session-Id": "e60979",
+        },
+        body: JSON.stringify({
+          sessionId: "e60979",
+          hypothesisId: "A",
+          location: "auth.service.ts:resolveAuthenticatedState",
+          message: "Login without org; attempting pending email signup heal",
+          data: {
+            hasPendingSignup: true,
+            hasAccessToken: true,
+            throwOnMissingOrganization: options.throwOnMissingOrganization === true,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+      const healedProfile = await completePendingEmailSignup(options.accessToken);
+      if (healedProfile?.organizacionId) {
+        return {
+          user,
+          organizacionId: healedProfile.organizacionId,
+          rol: healedProfile.rol,
+        };
       }
     }
 
