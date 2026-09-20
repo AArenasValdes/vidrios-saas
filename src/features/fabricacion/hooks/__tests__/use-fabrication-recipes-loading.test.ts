@@ -54,4 +54,23 @@ describe("carga del editor después de reparar AL-32/AL-42", () => {
     await waitFor(() => expect(result.current.error).toBe("No se pudo preparar la línea"));
     expect(mockListRecipes).not.toHaveBeenCalled();
   });
+
+  it("formatea errores Zod de carga sin mostrar JSON crudo", async () => {
+    mockRepair.mockResolvedValue(false);
+    mockListRecipes.mockRejectedValue(
+      new Error(
+        JSON.stringify([
+          {
+            expected: "int",
+            code: "invalid_type",
+            path: ["perfiles", 3, "reglaMedida", "ajusteMm"],
+            message: "Invalid input: expected int, received number",
+          },
+        ])
+      )
+    );
+    const { result } = renderHook(() => useFabricationRecipes({ lineTemplateId: 35 }));
+    await waitFor(() => expect(result.current.error).toContain("perfiles.3.reglaMedida.ajusteMm"));
+    expect(result.current.error).not.toMatch(/^\[/);
+  });
 });

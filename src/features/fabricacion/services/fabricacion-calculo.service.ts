@@ -12,6 +12,7 @@ import {
   type FabricacionResultadoCubicacion,
   type FabricacionTrazabilidadRegla,
 } from "@/features/fabricacion/types/fabricacion-domain";
+import { isSodalL25SnapshotIdentity } from "@/features/fabricacion/zeta/sodal-l25-profile-roles";
 
 function matchesObservedMeasure(
   receta: FabricacionReceta,
@@ -375,6 +376,10 @@ export function calcularCubicacionYPauta(
 
   const totalLinealMm = perfiles.reduce((sum, perfil) => sum + perfil.totalLinealMm, 0);
   const totalVidrioM2 = vidrios.reduce((sum, vidrio) => sum + vidrio.totalM2, 0);
+  const usesDerivedL25Formulas = isSodalL25SnapshotIdentity({
+    codigo: receta.identidad.codigo,
+    variante: receta.identidad.variante,
+  });
 
   return {
     engineVersion: FABRICACION_ENGINE_VERSION,
@@ -390,7 +395,7 @@ export function calcularCubicacionYPauta(
     totalVidrioM2,
     calculable:
       !advertencias.some((entry) => entry.nivel === "error") &&
-      (receta.datosPendientes?.length ?? 0) === 0 &&
+      (usesDerivedL25Formulas || (receta.datosPendientes?.length ?? 0) === 0) &&
       (perfiles.length > 0 || vidrios.length > 0 || accesorios.length > 0),
   };
 }

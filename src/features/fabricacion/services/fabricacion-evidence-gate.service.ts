@@ -2,6 +2,7 @@ import {
   isObservedSodal4800Measure,
   isZeta4800SourceReference,
 } from "@/features/fabricacion/fixtures/sodal-4800-zeta-catalog";
+import { isZetaConfirmedSourceReference } from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
 import type {
   FabricacionEvidencia,
   FabricacionReceta,
@@ -9,6 +10,14 @@ import type {
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
 const LEGACY_SODAL_L25_FORMULA_VERSION = "sodal-l25-formula-v2";
+
+export function isSodalL25FormulaDerivedRecipe(recipe: FabricationRecipeRecord): boolean {
+  return (
+    isZetaConfirmedSourceReference(recipe.sourceReference) &&
+    recipe.sourceType === "manufacturer" &&
+    recipe.sourceRevision === LEGACY_SODAL_L25_FORMULA_VERSION
+  );
+}
 
 export function isZetaConfirmedRecipe(recipe: FabricationRecipeRecord): boolean {
   return recipe.sourceReference?.startsWith("zeta:confirmed:") === true;
@@ -78,14 +87,15 @@ export function isObservedZetaMeasure(
     );
   }
 
+  // Recetas L25 con fórmulas derivadas (no snapshot 1:1): extrapolan a cualquier medida.
+  if (isSodalL25FormulaDerivedRecipe(recipe)) {
+    return widthMm > 0 && heightMm > 0;
+  }
+
   // Compatibilidad deliberada: conserva recetas L25 históricas ya activas para
   // no interrumpir cotizaciones existentes. Toda nueva receta Zeta sin evidencia
   // completa queda en testing y no puede llegar aquí por el flujo normal.
-  return (
-    recipe.status === "validated" &&
-    recipe.sourceType === "manufacturer" &&
-    recipe.sourceRevision === LEGACY_SODAL_L25_FORMULA_VERSION
-  );
+  return false;
 }
 
 export function getZetaActivationBlockers(

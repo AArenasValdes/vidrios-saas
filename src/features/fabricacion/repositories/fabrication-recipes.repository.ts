@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
 
 import {
   fabricacionRecetaSchema,
@@ -43,6 +44,11 @@ type FabricationRecipeRow = {
 };
 
 function mapRecipeRow(row: FabricationRecipeRow): FabricationRecipeRecord {
+  const parsed = fabricacionRecetaSchema.safeParse(row.definition);
+  if (!parsed.success) {
+    throw new FabricationRecipeRowParseError(row, parsed.error);
+  }
+
   return {
     id: row.id,
     organizationId: row.organization_id,
@@ -55,7 +61,7 @@ function mapRecipeRow(row: FabricationRecipeRow): FabricationRecipeRecord {
     variant: row.variant,
     version: row.version,
     status: row.status,
-    definition: fabricacionRecetaSchema.parse(row.definition),
+    definition: parsed.data,
     sourceType: row.source_type,
     sourceReference: row.source_reference,
     sourceName: row.source_name,
@@ -67,6 +73,62 @@ function mapRecipeRow(row: FabricationRecipeRow): FabricationRecipeRecord {
     updatedAt: row.updated_at,
     eliminadoEn: row.eliminado_en,
   };
+}
+
+export class FabricationRecipeRowParseError extends Error {
+  readonly recipeId: string;
+  readonly lineName: string;
+  readonly zodError: z.ZodError;
+
+  constructor(row: FabricationRecipeRow, zodError: z.ZodError) {
+    const summary = formatFabricacionRecetaZodIssues(zodError);
+    super(`Receta "${row.line_name}" (${row.id}): ${summary}`);
+    this.name = "FabricationRecipeRowParseError";
+    this.recipeId = row.id;
+    this.lineName = row.line_name;
+    this.zodError = zodError;
+  }
+}
+
+export function formatFabricacionRecetaZodIssues(error: z.ZodError): string {
+  return error.issues
+    .slice(0, 4)
+    .map((issue) => {
+      const path = issue.path.length > 0 ? issue.path.join(".") : "definicion";
+      return `${path}: ${issue.message}`;
+    })
+    .join(" · ");
+}
+
+export function formatFabricationRecipesLoadError(error: unknown): string {
+  if (error instanceof FabricationRecipeRowParseError) {
+    return error.message;
+  }
+  if (error instanceof z.ZodError) {
+    return `Recetas con definición inválida: ${formatFabricacionRecetaZodIssues(error)}`;
+  }
+  if (error instanceof Error) {
+    const message = error.message.trim();
+    if (message.startsWith("[") && message.includes('"code"')) {
+      try {
+        const parsed = JSON.parse(message) as Array<{ path?: unknown[]; message?: string }>;
+        if (Array.isArray(parsed) && parsed.length > 0 && Array.isArray(parsed[0]?.path)) {
+          return `Recetas con definición inválida: ${parsed
+            .slice(0, 4)
+            .map((issue) => {
+              const path =
+                issue.path && issue.path.length > 0 ? issue.path.join(".") : "definicion";
+              return `${path}: ${issue.message ?? "error de validación"}`;
+            })
+            .join(" · ")}`;
+        }
+      } catch {
+        // Mensaje no JSON; usar texto original abajo.
+      }
+    }
+    if (message) return message;
+  }
+  return "No se pudieron cargar las recetas de fabricación.";
 }
 
 function buildInsertPayload(input: CreateFabricationRecipeInput) {
@@ -198,7 +260,36 @@ export function createFabricationRecipesRepository(supabase: SupabaseClient) {
     const { data, error } = await query;
     if (error) throw error;
 
-    return ((data as FabricationRecipeRow[] | null) ?? []).map(mapRecipeRow);
+    const rows = (data as FabricationRecipeRow[] | null) ?? [];
+    const records: FabricationRecipeRecord[] = [];
+    const skipped: FabricationRecipeRowParseError[] = [];
+
+    for (const row of rows) {
+      try {
+        records.push(mapRecipeRow(row));
+      } catch (parseError) {
+        if (parseError instanceof FabricationRecipeRowParseError) {
+          skipped.push(parseError);
+          continue;
+        }
+        throw parseError;
+      }
+    }
+
+    if (records.length === 0 && skipped.length > 0) {
+      throw new Error(
+        `No se pudieron cargar recetas de fabricación (${skipped.length} inválidas). ${skipped[0]!.message}`
+      );
+    }
+
+    if (skipped.length > 0 && typeof console !== "undefined") {
+      console.warn(
+        `[fabricacion] Se omitieron ${skipped.length} receta(s) con definición inválida:`,
+        skipped.map((item) => item.message).join(" | ")
+      );
+    }
+
+    return records;
   }
 
   async function update(id: string, input: UpdateFabricationRecipeInput) {

@@ -19,6 +19,7 @@ import { buildFabricationRecipeSummary } from "@/features/fabricacion/services/f
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
 import { isSodalL25ZetaValidatedRecipe } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
+import { isSodalL25FormulaDerivedRecipe } from "@/features/fabricacion/services/fabricacion-evidence-gate.service";
 import { formatSodalL25FullRecipeNameFromRecipe } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
@@ -517,9 +518,50 @@ function findVariantSlotForRecipe(recipe: FabricationRecipeRecord): LineVariantS
   return null;
 }
 
+function probeSodalL25RecipeCalculable(recipe: FabricationRecipeRecord): boolean {
+  const hojas = recipe.definition.identidad.hojas;
+  const sizes =
+    hojas === 3
+      ? [
+          { anchoTotalMm: 3000, altoTotalMm: 1500 },
+          { anchoTotalMm: 2000, altoTotalMm: 1800 },
+          { anchoTotalMm: 1200, altoTotalMm: 1000 },
+        ]
+      : hojas === 4
+        ? [
+            { anchoTotalMm: 3000, altoTotalMm: 1500 },
+            { anchoTotalMm: 1200, altoTotalMm: 1000 },
+          ]
+        : [
+            { anchoTotalMm: 1800, altoTotalMm: 1500 },
+            { anchoTotalMm: 1200, altoTotalMm: 1000 },
+          ];
+
+  return sizes.some((size) =>
+    calcularCubicacionYPauta(recipe.definition, {
+      ...size,
+      cantidad: 1,
+      hojas,
+      modulos: recipe.definition.identidad.modulos,
+      variante: recipe.definition.identidad.variante,
+    }).calculable
+  );
+}
+
 export function isFabricacionRecipeReadyForSnapshot(
   recipe: FabricationRecipeRecord
 ): { ready: boolean; pendingFields: string[]; message: string | null } {
+  if (isSodalL25FormulaDerivedRecipe(recipe)) {
+    if (probeSodalL25RecipeCalculable(recipe)) {
+      return { ready: true, pendingFields: [], message: null };
+    }
+    return {
+      ready: false,
+      pendingFields: [],
+      message: "No se pudo calcular la pauta L25 con las fórmulas derivadas.",
+    };
+  }
+
   if (isSodalL25ZetaValidatedRecipe(recipe)) {
     const probe = calcularCubicacionYPauta(recipe.definition, {
       anchoTotalMm: 1200,
@@ -552,7 +594,10 @@ export function isFabricacionRecipeReadyForSnapshot(
     }
   );
 
-  if ((recipe.definition.datosPendientes?.length ?? 0) > 0) {
+  if (
+    (recipe.definition.datosPendientes?.length ?? 0) > 0 &&
+    !isSodalL25FormulaDerivedRecipe(recipe)
+  ) {
     return {
       ready: false,
       pendingFields,

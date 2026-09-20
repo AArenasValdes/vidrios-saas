@@ -16,6 +16,9 @@ import {
 
 const integerPositiveSchema = z.number().int().positive();
 const integerNonNegativeSchema = z.number().int().nonnegative();
+
+/** Ajuste en mm: puede ser fraccionario en fórmulas (p. ej. (X+16)/3); el cálculo redondea al final. */
+const reglaAjusteMmSchema = z.number().finite().optional();
 const componentNotesShape = {
   observaciones: z.string().optional(),
   datosPendientes: z.array(z.string().min(1)).optional(),
@@ -53,7 +56,7 @@ export const fabricacionReglaMedidaSchema = z
   .object({
     base: z.enum(FABRICACION_BASES_MEDIDA),
     valorFijoMm: integerPositiveSchema.optional(),
-    ajusteMm: z.number().int().optional(),
+    ajusteMm: reglaAjusteMmSchema,
     multiplicador: z.number().positive().optional(),
     condicion: fabricacionCondicionSchema.optional(),
   })

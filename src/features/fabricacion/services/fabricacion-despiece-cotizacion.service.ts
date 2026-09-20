@@ -10,6 +10,7 @@ import { resolveFabricacionHojasForRecipeMatch } from "@/features/fabricacion/se
 import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import { resolveFabricationRecipe } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
+import { isSodalL25FormulaDerivedRecipe } from "@/features/fabricacion/services/fabricacion-evidence-gate.service";
 import {
   isL20CatalogKey,
   resolveL20AperturaForCatalogKey,
@@ -276,7 +277,8 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   const recipe = resolution.receta;
   if (resolution.estado === "receta_no_validada") {
     const preview = evaluarRecetaListaParaProbar(recipe.definition);
-    if (!preview.listaParaProbar) {
+    const bypassRecipeMetadataGate = isSodalL25FormulaDerivedRecipe(recipe);
+    if (!preview.listaParaProbar && !bypassRecipeMetadataGate) {
       return {
         estado: "receta_incompleta",
         formal: null,

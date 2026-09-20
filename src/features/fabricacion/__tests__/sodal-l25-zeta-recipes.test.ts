@@ -100,7 +100,7 @@ describe("SODAL L25 recetas Zeta", () => {
         expect(result.calculable).toBe(true);
         expect(bundle!.definition.datosPendientes ?? []).toHaveLength(0);
       } else {
-        expect(result.calculable).toBe(false);
+        expect(result.calculable).toBe(true);
         expect(bundle!.definition.datosPendientes?.length ?? 0).toBeGreaterThan(0);
       }
 

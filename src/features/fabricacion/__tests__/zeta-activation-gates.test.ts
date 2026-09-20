@@ -66,6 +66,36 @@ describe("gates de activación Zeta", () => {
     ]);
   });
 
+  it("permite medidas arbitrarias en recetas L25 con fórmulas derivadas v2", () => {
+    const bundle = buildAllSodalL25Recipes()[0]!;
+    const recipe: FabricationRecipeRecord = {
+      id: "recipe-formula-v2",
+      organizationId: 1,
+      lineTemplateId: 25,
+      scope: "organization",
+      providerName: "SODAL",
+      lineName: "L25",
+      typology: "corredera",
+      leavesCount: 2,
+      variant: bundle.identity.variantSlug,
+      version: 1,
+      status: "testing",
+      definition: bundle.definition,
+      sourceType: "manufacturer",
+      sourceReference: bundle.sourceReference,
+      sourceName: "SODAL",
+      sourceRevision: "sodal-l25-formula-v2",
+      parentRecipeId: null,
+      validatedAt: null,
+      validatedBy: null,
+      createdAt: "2026-09-19T00:00:00.000Z",
+      updatedAt: "2026-09-19T00:00:00.000Z",
+      eliminadoEn: null,
+    };
+
+    expect(isObservedZetaMeasure(recipe, 2000, 1800)).toBe(true);
+  });
+
   it("solo permite resolver medidas observadas para una receta Zeta con evidencia completa", () => {
     const bundle = buildAllSodalL25Recipes()[0]!;
     const recipe: FabricationRecipeRecord = {

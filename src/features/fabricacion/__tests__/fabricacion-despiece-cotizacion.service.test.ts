@@ -1,3 +1,8 @@
+import {
+  LINE_15_VARIANT_3H_3RIELES,
+  crearRecetaLine15Corredera,
+} from "@/features/fabricacion/fixtures/line-15-corredera-recipe";
+import { fabricacionRecetaSchema } from "@/features/fabricacion/schemas/fabricacion-schemas";
 import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import {
   crearRecetaPlantillaVentoraCorredera2H,
@@ -21,6 +26,13 @@ import {
   SERIE_45_FIXTURE_1500X2000,
   crearRecetaSerie45Practicable,
 } from "@/features/fabricacion/fixtures/serie-45-practicable-recipe";
+import {
+  buildAllSodalL25Recipes,
+  resetSodalL25RecipeCacheForTests,
+} from "@/features/fabricacion/fixtures/sodal-l25-zeta-recipes";
+import { resetZetaConfirmedCacheForTests } from "@/features/fabricacion/zeta/zeta-confirmed-loader";
+import { resetEvidenceSidecarCacheForTests } from "@/features/fabricacion/zeta/zeta-evidence-sidecar-loader";
+import { SODAL_L25_FORMULA_VERSION } from "@/features/fabricacion/zeta/sodal-l25-profile-roles";
 import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
@@ -54,6 +66,8 @@ function recipeRecord(
     definition,
     sourceType: overrides.sourceType ?? "manual",
     sourceReference: overrides.sourceReference ?? null,
+    sourceName: overrides.sourceName ?? null,
+    sourceRevision: overrides.sourceRevision ?? null,
     parentRecipeId: overrides.parentRecipeId ?? null,
     validatedAt: overrides.validatedAt ?? null,
     validatedBy: overrides.validatedBy ?? null,
@@ -679,5 +693,128 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
 
     expect(resolved.estado).toBe("receta_incompleta");
     expect(resolved.formal).toBeNull();
+  });
+
+  describe("L25 Zeta 3H cotización", () => {
+    beforeEach(() => {
+      resetZetaConfirmedCacheForTests();
+      resetEvidenceSidecarCacheForTests();
+      resetSodalL25RecipeCacheForTests();
+    });
+
+    it("calcula despiece a 2000×1800 con receta Zeta 3H", () => {
+      const bundle = buildAllSodalL25Recipes().find(
+        (entry) => entry.recipeId === "monolitico_pierna_abierta_3h_3000x1500"
+      );
+      expect(bundle).toBeDefined();
+
+      const recipe = recipeRecord({
+        id: "l25-3h-open-test",
+        lineTemplateId: 10,
+        lineName: "L25 SODAL",
+        status: "testing",
+        scope: "organization",
+        typology: "corredera",
+        leavesCount: 3,
+        variant: "monolithic_open_normal",
+        definition: bundle!.definition,
+        sourceReference: bundle!.sourceReference,
+        sourceType: "manufacturer",
+        sourceName: "SODAL",
+        sourceRevision: SODAL_L25_FORMULA_VERSION,
+      });
+
+      expect(fabricacionRecetaSchema.safeParse(recipe.definition).success).toBe(true);
+      expect(recipe.definition.identidad.variante).toBe("monolithic_open_normal");
+
+      const item: CotizacionWorkflowItem = {
+        ...quoteItem({ lineTemplateId: "10", withLine: true }),
+        ancho: 2000,
+        alto: 1800,
+        vidrio: "4mm",
+        lineaComercial: "L25 SODAL",
+        descripcion: "Ventana corredera 3 hojas",
+        observaciones: encodeCotizacionItemPresentationMeta({
+          lineTemplateId: "10",
+          catalogLineKey: "ventora:l25",
+          sistema: "Corredera",
+          fabricacionTipologia: "corredera",
+          fabricacionHojas: 3,
+          fabricacionModulos: 3,
+          fabricacionVariante: "monolithic_open_normal",
+          fabricacionGlazing: "monolithic",
+          fabricacionLeg: "open",
+          fabricacionReinforcement: "normal",
+        }),
+      };
+
+      const resolved = resolveFabricacionDespieceForQuoteItem({
+        item,
+        recipes: [recipe],
+        organizationId: 1,
+      });
+
+      expect(resolved.estado).toBe("calculado");
+      expect(resolved.formal?.result.calculable).toBe(true);
+      expect(resolved.formal?.result.perfiles.length).toBeGreaterThan(0);
+    });
+
+    it("sigue calculando L25 aunque convivan recetas con ajusteMm fraccionario (L15 3H)", () => {
+      const bundle = buildAllSodalL25Recipes().find(
+        (entry) => entry.recipeId === "monolitico_pierna_abierta_3h_3000x1500"
+      );
+      const line15 = crearRecetaLine15Corredera({
+        lineName: "Línea 15",
+        variant: LINE_15_VARIANT_3H_3RIELES,
+      });
+
+      expect(fabricacionRecetaSchema.safeParse(line15).success).toBe(true);
+      expect(line15.perfiles[3]?.reglaMedida.ajusteMm).not.toBe(
+        Math.round(line15.perfiles[3]?.reglaMedida.ajusteMm ?? 0)
+      );
+
+      const l25Recipe = recipeRecord({
+        id: "l25-3h-open-test",
+        lineTemplateId: 10,
+        status: "testing",
+        definition: bundle!.definition,
+        sourceReference: bundle!.sourceReference,
+        sourceType: "manufacturer",
+        sourceName: "SODAL",
+        sourceRevision: SODAL_L25_FORMULA_VERSION,
+      });
+      const line15Recipe = recipeRecord({
+        id: "line-15-3h-test",
+        lineTemplateId: 999,
+        lineName: "Línea 15",
+        status: "validated",
+        definition: line15,
+      });
+
+      const item: CotizacionWorkflowItem = {
+        ...quoteItem({ lineTemplateId: "10", withLine: true }),
+        ancho: 2000,
+        alto: 1800,
+        observaciones: encodeCotizacionItemPresentationMeta({
+          lineTemplateId: "10",
+          catalogLineKey: "ventora:l25",
+          fabricacionTipologia: "corredera",
+          fabricacionHojas: 3,
+          fabricacionModulos: 3,
+          fabricacionVariante: "monolithic_open_normal",
+          fabricacionGlazing: "monolithic",
+          fabricacionLeg: "open",
+          fabricacionReinforcement: "normal",
+        }),
+      };
+
+      const resolved = resolveFabricacionDespieceForQuoteItem({
+        item,
+        recipes: [l25Recipe, line15Recipe],
+        organizationId: 1,
+      });
+
+      expect(resolved.estado).toBe("calculado");
+    });
   });
 });

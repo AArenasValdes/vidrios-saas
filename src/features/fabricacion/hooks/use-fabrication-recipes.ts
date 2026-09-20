@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { ensureStructuralDraftsClient } from "@/features/cotizaciones/line-templates/services/seed-structural-draft-client";
 import { getFabricationRecipesClientService } from "@/features/fabricacion/services/fabrication-recipes.client";
+import { formatFabricationRecipesLoadError } from "@/features/fabricacion/repositories/fabrication-recipes.repository";
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
 import type {
   CreateFabricationRecipeInput,
@@ -21,6 +22,13 @@ type UseFabricationRecipesOptions = {
 };
 
 function getMutationErrorMessage(error: unknown) {
+  const formatted = formatFabricationRecipesLoadError(error);
+  if (/row-level security policy/i.test(formatted)) {
+    return "No pudimos confirmar el acceso de esta sesión al taller. Recarga la página e inténtalo nuevamente.";
+  }
+  if (formatted !== "No se pudieron cargar las recetas de fabricación.") {
+    return formatted;
+  }
   if (error instanceof Error && error.message) {
     if (/row-level security policy/i.test(error.message)) {
       return "No pudimos confirmar el acceso de esta sesión al taller. Recarga la página e inténtalo nuevamente.";
@@ -114,11 +122,7 @@ export function useFabricationRecipes(options: UseFabricationRecipesOptions = {}
       if (loadId === loadIdRef.current) setRecipes(data);
     } catch (loadError) {
       if (loadId === loadIdRef.current) {
-        setError(
-          loadError instanceof Error
-            ? loadError.message
-            : "No se pudieron cargar las recetas."
-        );
+        setError(formatFabricationRecipesLoadError(loadError));
       }
     } finally {
       if (loadId === loadIdRef.current && !background) setIsLoading(false);
