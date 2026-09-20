@@ -4,6 +4,10 @@ import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabric
 import { fabricacionRecetaSchema } from "@/features/fabricacion/schemas/fabricacion-schemas";
 import { validarRecetaFabricacion } from "@/features/fabricacion/services/fabricacion-validacion.service";
 import { evaluarGatesRecetaFabricacion } from "@/features/fabricacion/services/fabricacion-gates.service";
+import {
+  getDefinitionEvidenceBlockers,
+  isZetaConfirmedRecipe,
+} from "@/features/fabricacion/services/fabricacion-evidence-gate.service";
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
 import type { FabricationRecipesRepository } from "@/features/fabricacion/repositories/fabrication-recipes.repository";
 import type { FabricationRecipeTestsRepository } from "@/features/fabricacion/repositories/fabrication-recipe-tests.repository";
@@ -416,6 +420,17 @@ export function createFabricationRecipesService(
 
     assertOrganizationAccess(recipe, organizationId);
     assertEditable(recipe);
+
+    if (isZetaConfirmedRecipe(recipe)) {
+      const evidenceBlockers = getDefinitionEvidenceBlockers(recipe.definition);
+      if (evidenceBlockers.length > 0) {
+        throw new FabricationRecipeServiceError(
+          "VALIDACION_EVIDENCIA_INCOMPLETA",
+          "Una receta confirmada por Zeta necesita evidencia 1:1 completa antes de validarse.",
+          { blockers: evidenceBlockers },
+        );
+      }
+    }
 
     const validationDefinition = normalizeDefinition(
       recipe.definition,

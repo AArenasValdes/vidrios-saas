@@ -7,6 +7,7 @@ import {
   LuGem,
   LuLayers,
   LuLayoutGrid,
+  LuMinimize2,
   LuSparkles,
   LuSquare,
 } from "react-icons/lu";
@@ -22,6 +23,7 @@ import accordion from "./line-template-catalog-accordion.module.css";
 
 const FAMILY_ICONS: Record<LineTemplateFamilyKey, IconType> = {
   correderas: LuLayoutGrid,
+  fijos: LuMinimize2,
   proyectantes: LuSquare,
   puertas: LuDoorOpen,
   fachadas: LuLayers,

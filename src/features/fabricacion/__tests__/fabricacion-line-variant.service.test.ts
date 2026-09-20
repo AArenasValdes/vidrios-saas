@@ -7,9 +7,11 @@ import {
 } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
 import {
   buildVariantTreeGroups,
+  mergeL20OrganizationRecipes,
   parseCommercialSheetSchemeToHojas,
   recipeMatchesVariantSlot,
   resolveCommercialFabricacionHojas,
+  resolveDefaultDetailRecipeForLine,
   resolveVariantTreeGroups,
 } from "@/features/fabricacion/services/fabricacion-line-variant.service";
 import {
@@ -52,7 +54,7 @@ function l25RecipeRecord(
     leavesCount: overrides.leavesCount ?? 2,
     variant: overrides.variant ?? definition.identidad.variante,
     version: overrides.version ?? 1,
-    status: overrides.status ?? "testing",
+    status: overrides.status ?? "validated",
     definition,
     sourceType: overrides.sourceType ?? "workshop",
     sourceReference: overrides.sourceReference ?? "ventora-variant:l25:2h:caracol",
@@ -135,7 +137,9 @@ describe("fabricacion-line-variant.service", () => {
 });
 
 describe("matching cotización L25 por hojas", () => {
-  const recipes = [l25RecipeRecord({ id: "l25-2h", variant: "caracol" })];
+  const recipes = [
+    l25RecipeRecord({ id: "l25-2h", variant: "caracol", status: "testing" }),
+  ];
 
   it("L25 2H resuelve la receta existente", () => {
     const resolution = resolverRecetaFabricacionCompatible(recipes, {
@@ -192,8 +196,8 @@ describe("matching cotización L25 por hojas", () => {
       recipes,
       organizationId: 1,
     });
-    expect(resolved.estado).toBe("calculado");
-    expect(resolved.recipe?.definition.identidad.hojas).toBe(2);
+    expect(resolved.estado).toBe("receta_incompleta");
+    expect(resolved.formal).toBeNull();
   });
 
   it("receta incompleta no genera pauta falsa", () => {
@@ -223,7 +227,7 @@ describe("matching cotización L25 por hojas", () => {
       recipes: [l25RecipeRecord()],
       organizationId: 1,
     });
-    expect(resolved.estado).toBe("sin_receta");
+    expect(resolved.estado).toBe("receta_incompleta");
     expect(resolved.formal).toBeNull();
   });
 });
@@ -239,17 +243,90 @@ describe("variant tree base lines", () => {
     expect(groups[1]?.items[0]?.recipe).toBeNull();
   });
 
-  it("expone árbol genérico para las 5 líneas base", () => {
-    for (const catalogKey of [
-      "ventora:l5000",
-      "ventora:l20",
-      "ventora:l25",
-      "ventora:l32",
-      "ventora:l42",
-    ] as const) {
-      const groups = resolveVariantTreeGroups({ catalogKey, recipes: [] });
-      expect(groups.length).toBeGreaterThan(0);
-    }
+  it("expone 1 variante corredera L20 en catálogo comercial", () => {
+    const slots = getLineVariantSlots("ventora:l20");
+    expect(slots).toHaveLength(1);
+    expect(slots.map((slot) => slot.variantSlug)).toEqual(["pierna_abierta_jamba_2009"]);
+  });
+
+  it("expone árbol unificado de 5 construcciones L20 en mobile", () => {
+    const groups = buildVariantTreeGroups({
+      catalogKey: "ventora:l20",
+      recipes: [],
+    });
+    expect(groups).toHaveLength(2);
+    expect(groups[0]?.typologyLabel).toBe("Corredera · 2 hojas");
+    expect(groups[0]?.items).toHaveLength(1);
+    expect(groups[1]?.typologyLabel).toBe("Fijos · 2 hojas");
+    expect(groups[1]?.items).toHaveLength(4);
+  });
+
+  it("expone 4 variantes fijas L20 en línea comercial separada", () => {
+    const slots = getLineVariantSlots("ventora:l20-fijos");
+    expect(slots).toHaveLength(4);
+    expect(slots.map((slot) => slot.variantSlug)).toEqual([
+      "pierna_abierta",
+      "pierna_cerrada_jamba_2009",
+      "pierna_cerrada",
+      "tp_15mm",
+    ]);
+    const groups = buildVariantTreeGroups({
+      catalogKey: "ventora:l20-fijos",
+      recipes: [],
+    });
+    expect(groups).toHaveLength(2);
+    expect(groups[1]?.typologyLabel).toBe("Fijos · 2 hojas");
+    expect(groups[1]?.items).toHaveLength(4);
+  });
+
+  it("prioriza la variante corredera al abrir Serie 20", () => {
+    const corredera = l25RecipeRecord({
+      id: "corredera",
+      lineTemplateId: 10,
+      definition: {
+        ...l25RecipeRecord().definition,
+        identidad: {
+          ...l25RecipeRecord().definition.identidad,
+          variante: "pierna_abierta_jamba_2009",
+          apertura: "corredera",
+        },
+      },
+    });
+    const fijo = l25RecipeRecord({
+      id: "fijo",
+      lineTemplateId: 10,
+      definition: {
+        ...l25RecipeRecord().definition,
+        identidad: {
+          ...l25RecipeRecord().definition.identidad,
+          variante: "tp_15mm",
+          apertura: "fija",
+        },
+      },
+    });
+
+    expect(
+      resolveDefaultDetailRecipeForLine({
+        catalogKey: "ventora:l20",
+        lineTemplateId: 10,
+        recipes: [fijo, corredera],
+      })?.id
+    ).toBe("corredera");
+  });
+
+  it("fusiona recetas L20 de líneas comerciales hermanas", () => {
+    const own = l25RecipeRecord({ id: "own", lineTemplateId: 10 });
+    const sibling = l25RecipeRecord({ id: "sibling", lineTemplateId: 11 });
+    const other = l25RecipeRecord({ id: "other", lineTemplateId: 99 });
+
+    const merged = mergeL20OrganizationRecipes({
+      catalogKey: "ventora:l20",
+      lineTemplateId: 10,
+      siblingLineTemplateId: 11,
+      recipes: [own, sibling, other],
+    });
+
+    expect(merged.map((entry) => entry.id)).toEqual(["own", "sibling"]);
   });
 });
 

@@ -404,6 +404,8 @@ export function PautaCubicacionPanel({
       tipologia: explicitTipologia,
       hojas: effectiveFabricacionHojas,
       modulos: componentForm.fabricacionModulos ?? null,
+      anchoTotalMm: widthMm,
+      altoTotalMm: heightMm,
       apertura:
         resolveAperturaForRecipeMatch(
           componentForm.fabricacionApertura || pieceApertura,
@@ -415,8 +417,7 @@ export function PautaCubicacionPanel({
       leg: sodalConfig?.leg ?? null,
       reinforcement: sodalConfig?.reinforcement ?? null,
       preferredRecipeId: componentForm.fabricationRecipeId || null,
-      allowNonValidatedRecipeId: componentForm.fabricationRecipeId || null,
-      allowPreliminaryNonValidated: !isSodalL25Line,
+      allowPreliminaryNonValidated: false,
     });
   }, [
     catalogKey,
@@ -429,8 +430,10 @@ export function PautaCubicacionPanel({
     componentForm.guidedVisualConfig,
     componentForm.hojasBase,
     componentForm.sheetScheme,
+    componentForm.sistema,
     effectiveFabricacionHojas,
     explicitTipologia,
+    heightMm,
     isLoadingPersistedRecipes,
     isSodalL25Line,
     numericLineTemplateId,
@@ -438,6 +441,7 @@ export function PautaCubicacionPanel({
     persistedRecipes,
     pieceApertura,
     sodalConfig,
+    widthMm,
   ]);
   const sodalLineHeaderLabel = useMemo(() => {
     if (!isSodalL25Line) {

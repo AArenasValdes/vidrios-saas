@@ -6,7 +6,7 @@ import { compareRecipes, extractedPlanToComparable, formatCompareResult } from "
 import { writeCoverageArtifacts } from "./coverage.ts";
 import { rawEvidenceDir, writeRawEvidence } from "./evidence.ts";
 import { acquireExtractLock, extractLiveTarget, hasStoredSession, loginManually } from "./browser.ts";
-import { processExtractedTarget } from "./pipeline.ts";
+import { buildSourceFragments, processExtractedTarget } from "./pipeline.ts";
 import { matchesFilter, parseCliFlags } from "./cli-args.ts";
 import { createRunLog, printRunSummary, writeRunLog } from "./logger.ts";
 import { FIXTURES_DIR, repoRelative } from "./paths.ts";
@@ -86,6 +86,8 @@ async function runSelfCheck(flags: CliFlags, log: RunLog): Promise<void> {
     plan,
     consoleLines: plan.warnings,
     screenshotWritten: false,
+    runId: log.runId,
+    sourceFragments: buildSourceFragments(plan),
   });
   log.notes.push(`Evidencia de self-check en ${repoRelative(evidenceDir)} (no reemplaza confirmed).`);
 

@@ -4,9 +4,9 @@ import {
 } from "@/features/cotizaciones/line-templates/services/auditoria-catalogo-lineas-ventora.service";
 
 describe("auditoria-catalogo-lineas-ventora.service", () => {
-  it("audita las 29 líneas canónicas del catálogo Ventora", () => {
+  it("audita las 30 líneas canónicas del catálogo Ventora", () => {
     const rows = auditarCatalogoLineasVentora();
-    expect(rows).toHaveLength(29);
+    expect(rows).toHaveLength(30);
     expect(rows.every((row) => row.cotizacionComercial)).toBe(true);
   });
 
@@ -43,22 +43,79 @@ describe("auditoria-catalogo-lineas-ventora.service", () => {
     );
   });
 
-  it("mantiene las nuevas familias tradicionales como documentadas e incompletas", () => {
+  it("mantiene las familias tradicionales documentadas según su estado de pauta", () => {
     const rows = auditarCatalogoLineasVentora();
     for (const catalogKey of [
       "ventora:serie-15-corredera-2h",
       "ventora:serie-4000-corredera-2h",
-      "ventora:serie-45-puerta",
-      "ventora:serie-12-shower-corredera",
     ]) {
       const row = rows.find((candidate) => candidate.catalogKey === catalogKey);
       expect(row?.lineFamilyType).toBe("traditional");
       expect(row?.lineSourceModel).toBe("multiprovider");
       expect(row?.validationStatus).toBe("documented");
-      expect(row?.technicalStatus).toBe("incomplete");
-      expect(row?.pricingStatus).toBe("missing");
-      expect(row?.quotable).toBe(false);
+      expect(row?.technicalStatus).toBe("calculable");
+      expect(row?.listaParaProbar).toBe(true);
     }
+
+    const shower = rows.find(
+      (candidate) => candidate.catalogKey === "ventora:serie-12-shower-corredera"
+    );
+    expect(shower?.technicalStatus).toBe("incomplete");
+    expect(shower?.pricingStatus).toBe("missing");
+    expect(shower?.quotable).toBe(false);
+  });
+
+  it("expone Línea 45 con destajes Sodal/Indalum y sin validación de taller", () => {
+    const row = auditarCatalogoLineasVentora().find(
+      (candidate) => candidate.catalogKey === "ventora:serie-45-puerta"
+    );
+
+    expect(row?.lineFamilyType).toBe("traditional");
+    expect(row?.listaParaProbar).toBe(true);
+    expect(row?.fabricacionEstado).toBe("fabricacion_configurada");
+    expect(row?.technicalStatus).toBe("calculable");
+    expect(row?.validationStatus).toBe("documented");
+    expect(row?.codigosConfigurados).toEqual(
+      expect.arrayContaining(["4522", "4531", "4534"])
+    );
+  });
+
+  it("expone Línea 15 con destajes oficiales y sin validación de taller", () => {
+    const row = auditarCatalogoLineasVentora().find(
+      (candidate) => candidate.catalogKey === "ventora:serie-15-corredera-2h"
+    );
+
+    expect(row?.listaParaProbar).toBe(true);
+    expect(row?.fabricacionEstado).toBe("fabricacion_configurada");
+    expect(row?.codigosConfigurados).toEqual(
+      expect.arrayContaining(["1501", "1506", "1507"])
+    );
+  });
+
+  it("expone Línea 4000 con destajes Columbia y sin validación de taller", () => {
+    const row = auditarCatalogoLineasVentora().find(
+      (candidate) => candidate.catalogKey === "ventora:serie-4000-corredera-2h"
+    );
+
+    expect(row?.listaParaProbar).toBe(true);
+    expect(row?.fabricacionEstado).toBe("fabricacion_configurada");
+    expect(row?.codigosConfigurados).toEqual(
+      expect.arrayContaining(["4002", "4007", "4009"])
+    );
+  });
+
+  it("expone Serie 4800 con destajes SODAL Diamond y sin validación de taller", () => {
+    const row = auditarCatalogoLineasVentora().find(
+      (candidate) => candidate.catalogKey === "ventora:serie-4800-corredera-2h"
+    );
+
+    expect(row?.listaParaProbar).toBe(true);
+    expect(row?.fabricacionEstado).toBe("fabricacion_configurada");
+    expect(row?.technicalStatus).toBe("calculable");
+    expect(row?.validationStatus).toBe("documented");
+    expect(row?.codigosConfigurados).toEqual(
+      expect.arrayContaining(["4801", "4806", "4808", "4810", "4811"])
+    );
   });
 
   it("resume estados del catálogo base", () => {

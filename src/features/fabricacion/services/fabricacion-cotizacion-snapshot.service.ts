@@ -14,7 +14,7 @@ import {
   isSodalL25SnapshotIdentity,
   SODAL_L25_FORMULA_VERSION,
 } from "@/features/fabricacion/zeta/sodal-l25-profile-roles";
-import { isZetaConfirmedSourceReference } from "@/features/fabricacion/zeta/zeta-confirmed-loader";
+import { isZetaConfirmedSourceReference } from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
 
 function cloneReceta(receta: FabricacionReceta): FabricacionReceta {
   return JSON.parse(JSON.stringify(receta)) as FabricacionReceta;

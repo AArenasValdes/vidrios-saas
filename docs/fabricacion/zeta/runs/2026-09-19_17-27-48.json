@@ -1,0 +1,25 @@
+{
+  "runId": "0d75f200-87a2-45f7-aa4f-3ccbe95ecea8",
+  "startedAt": "2026-09-19T20:27:05.522Z",
+  "finishedAt": "2026-09-19T20:27:48.612Z",
+  "command": "same-context capture project 46418 dvh_pierna_abierta_3h_3000x1500",
+  "mode": "live",
+  "targetsRequested": [],
+  "processed": [],
+  "confirmed": [],
+  "skipped": [],
+  "failed": [
+    "dvh_pierna_abierta_3h_3000x1500"
+  ],
+  "pending": [
+    "dvh_pierna_abierta_3h_3000x1500"
+  ],
+  "errors": [
+    {
+      "targetId": "dvh_pierna_abierta_3h_3000x1500",
+      "outcome": "AUTOMATION_ERROR",
+      "message": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText(/^Crear ventana$/i).first()\u001b[22m\n\u001b[2m    - locator resolved to <span class=\"titulos-crear-ventanas\">Crear ventana</span>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div data-swal2-theme=\"light\" class=\"swal2-container swal2-center swal2-backdrop-show\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div data-swal2-theme=\"light\" class=\"swal2-container swal2-center swal2-backdrop-show\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    58 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div data-swal2-theme=\"light\" class=\"swal2-container swal2-center swal2-backdrop-show\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n"
+    }
+  ],
+  "notes": []
+}

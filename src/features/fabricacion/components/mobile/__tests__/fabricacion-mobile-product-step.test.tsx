@@ -89,4 +89,30 @@ describe("FabricacionMobileProductStep", () => {
       expect.objectContaining({ id: "r2", leavesCount: 2 })
     );
   });
+
+  it("muestra picker de apertura y construcción en Serie 20", () => {
+    const selected = recipe(2, "r20");
+    selected.lineName = "Serie 20";
+    selected.definition.identidad.variante = "pierna_abierta_jamba_2009";
+    selected.definition.identidad.apertura = "corredera";
+    render(
+      <FabricacionMobileProductStep
+        templateName="Serie 20"
+        catalogKey="ventora:l20"
+        selected={selected}
+        draft={selected.definition}
+        recipes={[selected]}
+        readOnly={false}
+        onDraftChange={() => undefined}
+        onSelectRecipe={() => undefined}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Corredera" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Fijos" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Pierna abierta · Jamba 2009" })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Abatible" })).not.toBeInTheDocument();
+  });
 });

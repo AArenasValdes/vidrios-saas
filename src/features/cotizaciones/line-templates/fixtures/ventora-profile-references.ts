@@ -134,6 +134,8 @@ const SERIE_4800_PROFILES: LineProfileReference[] = [
     role: "Hoja",
     description: "Pierna con aleta",
   }),
+  catalogRef({ code: "4810", name: "Traslapo reforzado", role: "Hoja" }),
+  catalogRef({ code: "4811", name: "Pierna reforzada", role: "Hoja" }),
 ];
 
 /** Códigos AL-32 proyectante (SODAL). La línea comercial AL-32 usa esta identidad. */
@@ -664,19 +666,18 @@ const LINE_15_PROFILES: LineProfileReference[] = [
   catalogRef({ code: "1503", name: "Jamba", role: "Marco", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
   catalogRef({ code: "1504", name: "Cabezal", role: "Hoja", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
   catalogRef({ code: "1505", name: "Zócalo", role: "Hoja", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
-  catalogRef({ code: "1506", name: "Pierna reforzada", role: "Hoja", provider: "ALAR", source: PROFILE_REFERENCE_SOURCES.ALAR_CATALOG }),
-  catalogRef({ code: "1507", name: "Pierna", role: "Hoja", provider: "ALAR", source: PROFILE_REFERENCE_SOURCES.ALAR_CATALOG }),
-  catalogRef({ code: "1508", name: "Traslapo reforzado", role: "Hoja", provider: "ALAR", source: PROFILE_REFERENCE_SOURCES.ALAR_CATALOG }),
+  catalogRef({ code: "1506", name: "Pierna", role: "Hoja", provider: "ALAR", source: PROFILE_REFERENCE_SOURCES.ALAR_CATALOG }),
+  catalogRef({ code: "1507", name: "Traslapo", role: "Hoja", provider: "ALAR", source: PROFILE_REFERENCE_SOURCES.ALAR_CATALOG }),
 ];
 
 const LINE_4000_PROFILES: LineProfileReference[] = [
-  catalogRef({ code: "4001", name: "Riel superior", role: "Marco", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
-  catalogRef({ code: "4002", name: "Riel inferior", role: "Marco", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
-  catalogRef({ code: "4003", name: "Jamba", role: "Marco", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
-  catalogRef({ code: "4004", name: "Cabezal", role: "Hoja", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
-  catalogRef({ code: "4005", name: "Zócalo", role: "Hoja", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
-  catalogRef({ code: "4007", name: "Traslapo", role: "Hoja", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
-  catalogRef({ code: "4008", name: "Pierna con aleta", role: "Hoja", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "4002", name: "Riel superior", role: "Marco", provider: "Columbia", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "4003", name: "Riel inferior", role: "Marco", provider: "Columbia", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "4005", name: "Jamba", role: "Marco", provider: "Columbia", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "4008", name: "Cabezal", role: "Hoja", provider: "Columbia", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "4004", name: "Zócalo", role: "Hoja", provider: "Columbia", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "4007", name: "Pierna", role: "Hoja", provider: "Columbia", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "4009", name: "Traslapo", role: "Hoja", provider: "Columbia", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
 ];
 
 const AM35_PROFILES: LineProfileReference[] = [
@@ -691,9 +692,9 @@ const AM35_PROFILES: LineProfileReference[] = [
 ];
 
 const LINE_45_PROFILES: LineProfileReference[] = [
-  catalogRef({ code: "4502", name: "Marco", role: "Marco", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
-  catalogRef({ code: "4504", name: "Junquillo", role: "Otro", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
-  catalogRef({ code: "4511", name: "Marco redondeado", role: "Marco", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
+  catalogRef({ code: "4522", name: "Marco", role: "Marco", provider: "Sodal / Indalum", source: PROFILE_REFERENCE_SOURCES.SODAL_CATALOG }),
+  catalogRef({ code: "4531", name: "Bastidor", role: "Hoja", provider: "Sodal / Indalum", source: PROFILE_REFERENCE_SOURCES.SODAL_CATALOG }),
+  catalogRef({ code: "4534", name: "Junquillo", role: "Otro", provider: "Sodal / Indalum", source: PROFILE_REFERENCE_SOURCES.SODAL_CATALOG }),
 ];
 
 const LINE_12_PROFILES: LineProfileReference[] = [
@@ -706,6 +707,7 @@ const LINE_12_PROFILES: LineProfileReference[] = [
 const CATALOG_KEY_PROFILE_SETS: Record<string, LineProfileReference[]> = {
   "ventora:l5000": SERIE_5000_PROFILES,
   "ventora:l20": SERIE_20_PROFILES,
+  "ventora:l20-fijos": SERIE_20_PROFILES,
   "ventora:l25": SERIE_25_PROFILES,
   "ventora:serie-4800-corredera-2h": SERIE_4800_PROFILES,
   "ventora:s33-corredera-2h": SERIE_S33_PROFILES,

@@ -50,8 +50,8 @@ export function confirmedIdentitySet(recipes: ConfirmedRecipe[]): Set<string> {
   );
 }
 
-export async function readPendingMarkdown(): Promise<string> {
-  const path = join(PENDING_DIR, "sodal", "l25", "PENDING.md");
+export async function readPendingMarkdown(system = "l25"): Promise<string> {
+  const path = join(PENDING_DIR, "sodal", system.toLowerCase(), "PENDING.md");
   return readFile(path, "utf8");
 }
 
@@ -61,6 +61,20 @@ export async function readConflictsMarkdown(): Promise<string> {
 }
 
 export function parsePendingRows(markdown: string): Array<{
+  system: string;
+  line: string;
+  leaves: number;
+  widthMm: number;
+  heightMm: number;
+  glassCode: string;
+  status: "pending";
+  reason: string;
+}> {
+  return parsePendingRowsForSystem(markdown, "L25");
+}
+
+export function parsePendingRowsForSystem(markdown: string, system: string): Array<{
+  system: string;
   line: string;
   leaves: number;
   widthMm: number;
@@ -70,6 +84,7 @@ export function parsePendingRows(markdown: string): Array<{
   reason: string;
 }> {
   const rows: Array<{
+    system: string;
     line: string;
     leaves: number;
     widthMm: number;
@@ -88,12 +103,23 @@ export function parsePendingRows(markdown: string): Array<{
       .split("|")
       .map((cell) => cell.trim());
     if (cells.length < 6) continue;
-    const [zetaLine, leavesRaw, measureRaw, glassCode, status, reason] = cells;
-    if (!zetaLine.startsWith("L-")) continue;
+    const lineIndex = cells.findIndex((cell) => /^L-\d+/i.test(cell));
+    if (lineIndex < 0) continue;
+    const zetaLine = cells[lineIndex];
+    const leavesRaw = cells[lineIndex + 1] ?? "";
+    const measureIndex = cells.findIndex(
+      (cell, index) => index > lineIndex && /(\d+)\s*[×x]\s*(\d+)/.test(cell),
+    );
+    if (measureIndex < 0) continue;
+    const measureRaw = cells[measureIndex];
+    const glassCode = cells[measureIndex + 1] ?? "";
+    const status = cells[measureIndex + 2] ?? "pending";
+    const reason = cells.slice(measureIndex + 3).join(" | ");
     const leaves = Number((leavesRaw.match(/\d+/) ?? [])[0]);
     const measure = measureRaw.match(/(\d+)\s*[×x]\s*(\d+)/);
     if (!leaves || !measure) continue;
     rows.push({
+      system: system.toUpperCase(),
       line: zetaLine,
       leaves,
       widthMm: Number(measure[1]),

@@ -1,294 +1,290 @@
 .root {
   display: grid;
-  gap: 14px;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
-  font-family: "Inter", "Segoe UI", sans-serif;
+  gap: 12px;
+  padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
 }
 
 .workspace {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .mainColumn,
 .sideColumn {
   display: grid;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
 }
 
 .loading,
 .publicCard,
 .channelsPanel,
-.channelCard,
-.qrCard,
-.sheet {
+.qrCard {
   border: 1px solid rgba(217, 224, 234, 0.96);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 253, 0.98));
-  box-shadow: 0 16px 34px rgba(36, 59, 107, 0.06);
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(36, 59, 107, 0.04);
 }
 
 .loading {
-  border-radius: 20px;
-  padding: 28px 20px;
+  border-radius: 16px;
+  padding: 24px 18px;
   text-align: center;
-  color: #667085;
+  color: #5b6b80;
   font-size: 14px;
-}
-
-.sectionLabel {
-  display: block;
-  font-family: "JetBrains Mono", monospace;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #4f7dd4;
-}
-
-.sectionTitle {
-  margin: 0;
-  color: #243b6b;
-  font-size: clamp(20px, 4.5vw, 24px);
-  line-height: 1.08;
-  letter-spacing: -0.035em;
-}
-
-.sectionText {
-  margin: 0;
-  color: #667085;
-  font-size: 13.5px;
-  line-height: 1.45;
 }
 
 .publicCard,
 .channelsPanel,
 .qrCard {
-  border-radius: 20px;
-  padding: 16px;
+  border-radius: 16px;
+  padding: 14px;
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .publicTop {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .publicCopy {
   display: grid;
-  gap: 8px;
+  gap: 6px;
+}
+
+.publicHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.publicTitle {
+  color: #243b6b;
+  font-size: 16px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
 }
 
 .publicCopy strong {
   color: #243b6b;
-  font-size: clamp(22px, 5vw, 28px);
-  line-height: 1.05;
-  letter-spacing: -0.04em;
-}
-
-.publicMetaRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.statusPill,
-.urlPill {
-  width: fit-content;
-  min-height: 30px;
-  padding: 0 10px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
-.statusPill {
-  background: #e6f7ee;
-  color: #2fa36b;
+.urlLine,
+.publicHint {
+  margin: 0;
+  color: #5b6b80;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
-.urlPill {
-  max-width: 100%;
-  background: #eef3fb;
-  color: #3d5a8a;
-  font-family: "JetBrains Mono", monospace;
-  font-size: 11px;
-  font-weight: 600;
+.urlLine {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.trackingHint {
-  margin: 0;
-  color: #667085;
-  font-size: 12.5px;
-  line-height: 1.4;
+.statusPill,
+.statusPending {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-.publicActions,
-.channelActions,
-.qrActions,
-.sheetActions {
+.statusPill {
+  background: #eef8f2;
+  color: #1f7a4d;
+}
+
+.statusPending {
+  background: #f4f7fb;
+  color: #5b6b80;
+}
+
+.publicActions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
 }
 
 .publicLinks {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px 16px;
+  gap: 8px 16px;
   padding-top: 2px;
-  border-top: 1px solid rgba(217, 224, 234, 0.9);
 }
 
 .sectionIntro {
   display: grid;
-  gap: 4px;
+  gap: 2px;
 }
 
-.channelList {
+.sectionTitle {
+  margin: 0;
+  color: #243b6b;
+  font-size: 15px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+.shareList {
   display: grid;
-  gap: 10px;
 }
 
-.channelCard {
-  border-radius: 16px;
-  padding: 12px;
+.shareRow {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
-  box-shadow: none;
-}
-
-.channelMain {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.channelIconWrap {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  background: #eef3fb;
-  color: #1e88ff;
+  padding: 12px 0;
+  border-top: 1px solid #eef2f7;
 }
 
-.channelIcon {
-  width: 18px;
-  height: 18px;
+.shareRow:first-child {
+  padding-top: 2px;
+  border-top: 0;
 }
 
-.channelCopy {
+.shareCopy {
   display: grid;
   gap: 2px;
   min-width: 0;
 }
 
-.channelLabel {
+.shareLabel {
   margin: 0;
   color: #243b6b;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 740;
-  letter-spacing: -0.02em;
 }
 
-.channelDescription {
+.shareDescription {
   margin: 0;
-  color: #667085;
+  color: #5b6b80;
   font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.trackingHint {
+  margin: 0;
+  color: #7a8faf;
+  font-size: 12px;
   line-height: 1.4;
 }
 
 .primaryAction,
 .secondaryAction,
-.ghostAction {
-  min-height: 42px;
-  border-radius: 13px;
+.rowAction {
+  min-height: 44px;
+  border-radius: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 6px;
   padding: 0 12px;
   font-size: 13px;
   font-weight: 700;
+  text-decoration: none;
   cursor: pointer;
-  transition:
-    transform 0.16s ease,
-    border-color 0.16s ease,
-    box-shadow 0.16s ease,
-    background 0.16s ease;
 }
 
 .primaryAction {
   border: 1px solid #1e88ff;
   background: #1e88ff;
   color: #ffffff;
-  box-shadow: 0 10px 18px rgba(30, 136, 255, 0.2);
 }
 
-.secondaryAction {
+.secondaryAction,
+.rowAction {
   border: 1px solid #d9e0ea;
   background: #ffffff;
   color: #243b6b;
 }
 
-.ghostAction {
-  grid-column: 1 / -1;
-  min-height: 36px;
-  border: none;
-  background: transparent;
-  color: #4f7dd4;
-  font-size: 12.5px;
-}
-
-.primaryAction:hover,
-.primaryAction:focus-visible,
-.secondaryAction:hover,
-.secondaryAction:focus-visible {
-  transform: translateY(-1px);
-}
-
-.primaryAction:hover,
-.primaryAction:focus-visible {
-  background: #1877e0;
-}
-
-.secondaryAction:hover,
-.secondaryAction:focus-visible {
-  border-color: rgba(79, 125, 212, 0.42);
-  box-shadow: 0 10px 18px rgba(79, 125, 212, 0.1);
+.rowAction {
+  min-width: 96px;
 }
 
 .inlineLink {
   border: none;
   background: transparent;
-  color: #4f7dd4;
+  color: #1e88ff;
   font-size: 13px;
   font-weight: 700;
   text-decoration: none;
   cursor: pointer;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
   padding: 0;
 }
 
-.inlineLink:hover,
-.inlineLink:focus-visible {
-  color: #1e88ff;
-  text-decoration: underline;
+.qrToggle {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
 }
 
-.qrCopy {
+.qrToggleCopy {
   display: grid;
-  gap: 6px;
+  gap: 2px;
+}
+
+.qrToggleTitle {
+  color: #243b6b;
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.qrToggleText {
+  color: #5b6b80;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.qrToggleAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #1e88ff;
+  font-size: 13px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.qrToggleAction svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.16s ease;
+}
+
+.qrChevronOpen {
+  transform: rotate(180deg);
+}
+
+.qrBody {
+  display: none;
+  gap: 12px;
+}
+
+.qrCardOpen .qrBody {
+  display: grid;
 }
 
 .qrPreviewWrap {
@@ -297,86 +293,22 @@
 }
 
 .qrPreview {
-  width: min(100%, 208px);
-  padding: 14px;
-  border-radius: 18px;
+  width: min(100%, 196px);
+  padding: 12px;
+  border-radius: 16px;
   border: 1px solid #e3e9f2;
   background: #ffffff;
 }
 
-.sheetBackdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: 16px;
-  background: rgba(15, 23, 42, 0.42);
-}
-
-.sheet {
-  width: min(100%, 480px);
-  border-radius: 22px 22px 18px 18px;
-  padding: 12px 16px 16px;
+.qrActions {
   display: grid;
-  gap: 14px;
-}
-
-.sheetHandle {
-  width: 42px;
-  height: 4px;
-  margin: 0 auto;
-  border-radius: 999px;
-  background: #d0d7e2;
-}
-
-.sheetCopy {
-  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.sheetTitle {
-  margin: 0;
-  color: #243b6b;
-  font-size: 20px;
-  letter-spacing: -0.03em;
-}
-
-.sheetHelper {
-  margin: 0;
-  color: #667085;
-  font-size: 13.5px;
-  line-height: 1.45;
-}
-
-.sheetUrl {
-  display: block;
-  padding: 12px;
-  border-radius: 12px;
-  background: #f3f6fb;
-  color: #3d5a8a;
-  font-family: "JetBrains Mono", monospace;
-  font-size: 11.5px;
-  line-height: 1.45;
-  word-break: break-all;
-}
-
-@media (min-width: 720px) {
-  .channelCard {
-    grid-template-columns: minmax(0, 1.2fr) minmax(220px, 1fr);
-    align-items: center;
-  }
-
-  .channelActions {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
-    align-items: center;
-  }
-
-  .ghostAction {
-    grid-column: auto;
-    min-height: 42px;
-    padding: 0 10px;
+@media (prefers-reduced-motion: reduce) {
+  .qrToggleAction svg {
+    transition: none;
   }
 }
 
@@ -384,8 +316,6 @@
   .root {
     gap: 0;
     padding-bottom: 8px;
-    color: #091426;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
 
   .workspace {
@@ -394,31 +324,16 @@
     align-items: start;
   }
 
-  .mainColumn {
-    gap: 14px;
-  }
-
   .sideColumn {
     position: sticky;
     top: 12px;
-  }
-
-  .loading,
-  .publicCard,
-  .channelsPanel,
-  .channelCard,
-  .qrCard,
-  .sheet {
-    border: 1px solid #dce3ec;
-    background: #ffffff;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   }
 
   .publicCard,
   .channelsPanel,
   .qrCard {
     border-radius: 16px;
-    padding: 18px;
+    padding: 16px;
   }
 
   .publicTop {
@@ -427,63 +342,25 @@
     gap: 16px;
   }
 
-  .publicCopy strong {
-    font-size: 22px;
-  }
-
   .publicActions {
-    width: min(280px, 100%);
-    grid-template-columns: 1fr;
+    width: min(220px, 100%);
   }
 
-  .sectionTitle {
-    font-size: 18px;
-    font-weight: 740;
+  .qrBody,
+  .qrCardOpen .qrBody {
+    display: grid;
   }
 
-  .channelCard {
-    border-radius: 12px;
-    padding: 12px 14px;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 16px;
+  .qrToggle {
+    cursor: default;
+    pointer-events: none;
   }
 
-  .channelActions {
-    width: auto;
-    grid-template-columns: auto auto auto;
-    gap: 8px;
-  }
-
-  .primaryAction,
-  .secondaryAction,
-  .ghostAction {
-    min-height: 38px;
-    border-radius: 11px;
-    font-size: 12.5px;
-    white-space: nowrap;
-  }
-
-  .ghostAction {
-    min-width: 72px;
-  }
-
-  .qrCard {
-    gap: 12px;
-  }
-
-  .qrPreview {
-    width: min(100%, 188px);
+  .qrToggleAction {
+    display: none;
   }
 
   .qrActions {
     grid-template-columns: 1fr;
-  }
-
-  .sheetBackdrop {
-    align-items: center;
-  }
-
-  .sheet {
-    border-radius: 16px;
   }
 }

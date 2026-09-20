@@ -161,6 +161,7 @@ function resolveUnique(input: FabricacionGateInput): boolean {
   ].filter((recipe) => recipe.status !== "archived" && recipe.eliminadoEn == null);
   if (input.record.lineTemplateId == null) return false;
   const identity = input.record.definition.identidad;
+  const firstTest = input.tests.find((test) => test.isRequired !== false);
   const resolution = resolverRecetaFabricacionCompatible(candidates, {
     organizationId: input.record.organizationId,
     lineTemplateId: input.record.lineTemplateId,
@@ -171,6 +172,8 @@ function resolveUnique(input: FabricacionGateInput): boolean {
     variante: identity.variante,
     topology: identity.topology,
     hardwareMode: identity.hardwareMode,
+    anchoTotalMm: firstTest?.input.anchoTotalMm ?? null,
+    altoTotalMm: firstTest?.input.altoTotalMm ?? null,
     allowPreliminaryNonValidated: false,
   });
   return resolution.estado === "receta_unica" && resolution.receta.id === input.record.id;

@@ -111,8 +111,9 @@ describe("FabricacionLineMobileDetail", () => {
 
     expect(screen.getByText("Corredera L25 lista para cotizar")).toBeInTheDocument();
     expect(
-      screen.getByText(/No es solo una variante: al cotizar eliges hojas y construcción/i)
+      screen.getByText(/No es solo una variante: eliges construcción en el primer paso/i)
     ).toBeInTheDocument();
+    expect(screen.getByText("Descuentos editables por variante")).toBeInTheDocument();
     expect(
       screen.queryByText(/L25 Corredera 3 hojas · DVH · Pierna abierta · Reforzada/i)
     ).not.toBeInTheDocument();

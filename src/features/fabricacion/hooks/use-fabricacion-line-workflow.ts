@@ -18,19 +18,23 @@ import {
   crearRecetaEstructuralParaLineaComercial,
   resolveArquetipoEstructuralId,
 } from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
-import { resolvePlantillaIdFromCatalogKey } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
+import { resolvePlantillaIdFromCatalogKey, shouldShowFabricationVariantGallery } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import { crearRecetaFabricacionVacia } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 import { enriquecerCodigosPerfilRecetaFabricacion } from "@/features/fabricacion/services/fabricacion-receta-codigos.service";
 import { enriquecerRecetaDesdeCatalogo } from "@/features/fabricacion/services/enriquecer-receta-desde-catalogo.service";
-import { resolveInitialFabricationStepForTemplate } from "@/features/fabricacion/services/fabricacion-workflow-initial-step.service";
+import {
+  resolveInitialFabricationStepForTemplate,
+  resolveMobileVariantTreeEntryStep,
+} from "@/features/fabricacion/services/fabricacion-workflow-initial-step.service";
 import {
   buildFabricationRecipeSummary,
   VENTORA_LARGO_COMERCIAL_PRESET_MM,
 } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import {
   cloneFabricacionRecipe,
+  countFabricacionRecipeHistory,
   getRecipeStage,
   mapMobileWizardToWorkflowStep,
   mapWorkflowStepToMobileWizard,
@@ -41,6 +45,10 @@ import {
 } from "@/features/fabricacion/services/sodal-l25-context.service";
 import { resolveEffectiveSodalL25CatalogKey } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import {
+  mergeL20OrganizationRecipes,
+  resolveDefaultDetailRecipeForLine,
+  resolveL20SiblingLineTemplateId,
+  resolveTargetLineTemplateForVariantSlot,
   resolveVariantTreeGroups,
   type FabricacionVariantTreeItem,
 } from "@/features/fabricacion/services/fabricacion-line-variant.service";
@@ -119,6 +127,7 @@ export function useFabricacionLineWorkflow({
   const [lineSetupError, setLineSetupError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isCreatingVariant, setIsCreatingVariant] = useState(false);
+  const [detailRecipeId, setDetailRecipeId] = useState<string | null>(null);
   const [activeStep, setActiveStep] = useState<RecipeWorkflowStepId>("base");
   const hasAppliedInitialSuggestion = useRef(false);
   const hasBootstrappedEmptyRecipe = useRef(false);
@@ -194,19 +203,65 @@ export function useFabricacionLineWorkflow({
   }, [template?.nombre, template?.proveedor]);
   const selected = recipes.find((recipe) => recipe.id === selectedId) ?? null;
   const selectedTests = selected ? tests[selected.id] ?? [] : [];
-  const focusRecipe = lineRecipes[0] ?? null;
+  const l20SiblingLineTemplateId = useMemo(
+    () => resolveL20SiblingLineTemplateId(templates, template?.catalogKey),
+    [template?.catalogKey, templates]
+  );
+  const variantTreeRecipes = useMemo(
+    () =>
+      mergeL20OrganizationRecipes({
+        catalogKey: template?.catalogKey,
+        lineTemplateId,
+        siblingLineTemplateId: l20SiblingLineTemplateId,
+        recipes,
+      }),
+    [l20SiblingLineTemplateId, lineTemplateId, recipes, template?.catalogKey]
+  );
+  const showVariantGallery = useMemo(
+    () =>
+      !isSodalL25CatalogKey(effectiveCatalogKey) &&
+      shouldShowFabricationVariantGallery(template?.catalogKey),
+    [effectiveCatalogKey, template?.catalogKey]
+  );
+  const defaultDetailRecipe = useMemo(
+    () =>
+      resolveDefaultDetailRecipeForLine({
+        catalogKey: template?.catalogKey,
+        lineTemplateId,
+        recipes: variantTreeRecipes,
+      }),
+    [lineTemplateId, template?.catalogKey, variantTreeRecipes]
+  );
+  const focusRecipe = defaultDetailRecipe;
+  const detailRecipe = useMemo(() => {
+    if (detailRecipeId) {
+      const selectedRecipe = variantTreeRecipes.find((recipe) => recipe.id === detailRecipeId);
+      if (selectedRecipe) return selectedRecipe;
+    }
+    return defaultDetailRecipe;
+  }, [defaultDetailRecipe, detailRecipeId, variantTreeRecipes]);
   const focusTests = focusRecipe ? tests[focusRecipe.id] ?? [] : [];
   const focusProgress = focusRecipe
     ? getRecipeStage(focusRecipe, focusTests)
     : null;
-  const archivedRecipeCount = Math.max(0, lineRecipes.length - 1);
+  const archivedRecipeCount = countFabricacionRecipeHistory(lineRecipes, {
+    showVariantGallery,
+    focusRecipeId: detailRecipeId ?? focusRecipe?.id ?? null,
+  });
   const variantTreeGroups = useMemo(
     () =>
       resolveVariantTreeGroups({
         catalogKey: template?.catalogKey,
-        recipes: lineRecipes,
+        recipes: variantTreeRecipes,
       }),
-    [lineRecipes, template?.catalogKey]
+    [template?.catalogKey, variantTreeRecipes]
+  );
+  const pickerRecipes = useMemo(
+    () =>
+      isSodalL25CatalogKey(effectiveCatalogKey)
+        ? fabricacionLineRecipes
+        : variantTreeRecipes,
+    [effectiveCatalogKey, fabricacionLineRecipes, variantTreeRecipes]
   );
 
   useEffect(() => {
@@ -218,6 +273,7 @@ export function useFabricacionLineWorkflow({
     setView("list");
     setMobileView("detail");
     setSelectedId(null);
+    setDetailRecipeId(null);
     setDraft(null);
     setFeedback(null);
     setLineSetupError(null);
@@ -637,20 +693,32 @@ export function useFabricacionLineWorkflow({
     }
   }, [draft, handleSave, lineName, prepareLineSetupDraft, selected]);
 
+  const selectDetailRecipe = useCallback((recipeId: string) => {
+    setDetailRecipeId(recipeId);
+  }, []);
+
   const handleCreateMissingVariant = useCallback(
     async (item: FabricacionVariantTreeItem) => {
       if (!template) return;
       setIsCreatingVariant(true);
       try {
-        const plantillaId = resolvePlantillaIdFromCatalogKey(template.catalogKey);
+        const targetLineTemplateId = resolveTargetLineTemplateForVariantSlot({
+          catalogKey: template.catalogKey,
+          lineTemplateId,
+          siblingLineTemplateId: l20SiblingLineTemplateId,
+          slot: item.slot,
+        });
+        const targetTemplate =
+          templates.find((entry) => Number(entry.id) === targetLineTemplateId) ?? template;
+        const plantillaId = resolvePlantillaIdFromCatalogKey(targetTemplate.catalogKey);
         const definition = item.slot.buildDefinition({
-          lineName: template.nombre,
+          lineName: targetTemplate.nombre,
           plantillaId,
         });
         const created = await createRecipe({
-          lineTemplateId,
-          providerName: template.proveedor ?? "",
-          lineName: template.nombre,
+          lineTemplateId: targetLineTemplateId,
+          providerName: targetTemplate.proveedor ?? "",
+          lineName: targetTemplate.nombre,
           typology: item.slot.typology,
           leavesCount: item.slot.leavesCount,
           variant: definition.identidad.variante,
@@ -659,11 +727,19 @@ export function useFabricacionLineWorkflow({
           sourceReference: item.slot.sourceReference,
         });
         openEditor(created);
+        setDetailRecipeId(created.id);
       } finally {
         setIsCreatingVariant(false);
       }
     },
-    [createRecipe, lineTemplateId, openEditor, template]
+    [
+      createRecipe,
+      lineTemplateId,
+      l20SiblingLineTemplateId,
+      openEditor,
+      template,
+      templates,
+    ]
   );
 
   const handleDuplicate = useCallback(
@@ -742,9 +818,39 @@ export function useFabricacionLineWorkflow({
         await handleCreate("manual");
         return;
       }
-      openEditor(target, "base");
+      openEditor(target);
     },
     [focusRecipe, handleCreate, openEditor]
+  );
+
+  const selectAndOpenVariantRecipe = useCallback(
+    (recipeId: string) => {
+      const recipe = variantTreeRecipes.find((entry) => entry.id === recipeId);
+      if (!recipe || !template) return;
+      setDetailRecipeId(recipeId);
+      openEditor(recipe, resolveMobileVariantTreeEntryStep(template, recipe));
+    },
+    [openEditor, template, variantTreeRecipes]
+  );
+
+  const openVariantRecipe = useCallback(
+    (recipeId: string) => {
+      const recipe = variantTreeRecipes.find((entry) => entry.id === recipeId);
+      if (!recipe) return;
+      setDetailRecipeId(recipeId);
+      void openMobileFabrication(recipe);
+    },
+    [openMobileFabrication, variantTreeRecipes]
+  );
+
+  const testVariantRecipe = useCallback(
+    (recipeId: string) => {
+      const recipe = variantTreeRecipes.find((entry) => entry.id === recipeId);
+      if (!recipe) return;
+      setDetailRecipeId(recipeId);
+      void openTestLab(recipe, "test");
+    },
+    [openTestLab, variantTreeRecipes]
   );
 
   const navigateMobileWizardStep = useCallback(
@@ -826,10 +932,17 @@ export function useFabricacionLineWorkflow({
     providerOptions,
     lineRecipes,
     fabricacionLineRecipes,
+    pickerRecipes,
     ventoraRecipes,
     suggestedRecipesForLine,
     variantTreeGroups,
+    showVariantGallery,
     focusRecipe,
+    detailRecipe,
+    selectDetailRecipe,
+    selectAndOpenVariantRecipe,
+    openVariantRecipe,
+    testVariantRecipe,
     focusTests,
     focusProgress,
     archivedRecipeCount,

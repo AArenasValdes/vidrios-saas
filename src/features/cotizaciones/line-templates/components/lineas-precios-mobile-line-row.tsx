@@ -9,6 +9,7 @@ import {
   formatLineTemplatePriceLabel,
   LINE_TEMPLATE_CATEGORIA_LABELS,
 } from "@/features/cotizaciones/line-templates/utils/catalog-labels";
+import { resolveLineFabricationActionLabel } from "@/features/cotizaciones/line-templates/utils/line-fabrication-entry";
 import { LuChevronRight } from "react-icons/lu";
 
 import s from "./lineas-precios-mobile-view.module.css";
@@ -79,21 +80,14 @@ export function resolveFabricationHint(
 
 export function resolveFabricationActionLabel(
   technicalStatus: TechnicalStatus,
-  needsPrice: boolean
+  needsPrice: boolean,
+  catalogKey?: string | null
 ): string {
-  if (needsPrice) {
-    return "Configurar fabricación";
-  }
-
-  if (technicalStatus.tone === "validated") {
-    return "Ver fabricación";
-  }
-
-  if (technicalStatus.tone === "testing" || technicalStatus.tone === "draft") {
-    return "Continuar fabricación";
-  }
-
-  return "Configurar fabricación";
+  return resolveLineFabricationActionLabel({
+    catalogKey,
+    technicalTone: technicalStatus.tone,
+    needsPrice,
+  });
 }
 
 export function LineasPreciosMobileLineRow({
@@ -117,10 +111,17 @@ export function LineasPreciosMobileLineRow({
       className={`${s.lineRow} ${template.isActive ? "" : s.lineRowInactive}`}
       style={{ animationDelay: `${Math.min(rowIndex, 8) * 24}ms` }}
     >
-      <button
-        type="button"
+      <div
         className={s.lineRowMain}
+        role="button"
+        tabIndex={0}
         onClick={onOpenActions}
+        onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) return;
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          onOpenActions();
+        }}
         aria-label={`Acciones de ${template.nombre}`}
       >
         <div className={s.lineRowTop}>
@@ -166,7 +167,7 @@ export function LineasPreciosMobileLineRow({
             ) : null}
           </div>
         </div>
-      </button>
+      </div>
 
       <LuChevronRight className={s.lineRowChevron} aria-hidden />
     </article>

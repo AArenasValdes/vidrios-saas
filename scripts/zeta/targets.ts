@@ -11,7 +11,7 @@ import {
   confirmedIdentitySet,
   isCanonicalMeasure,
   loadConfirmedRecipes,
-  parsePendingRows,
+  parsePendingRowsForSystem,
   readPendingMarkdown,
 } from "./inventory.ts";
 import { TARGETS_PATH, repoRelative } from "./paths.ts";
@@ -42,20 +42,20 @@ function targetFromConfirmed(recipe: ConfirmedRecipe): ExtractTarget {
   });
 }
 
-function targetFromPending(row: ReturnType<typeof parsePendingRows>[number]): ExtractTarget {
+function targetFromPending(row: ReturnType<typeof parsePendingRowsForSystem>[number]): ExtractTarget {
   const variant = variantFromLine(row.line);
   const glazing = inferGlazing(row.line);
   return extractTargetSchema.parse({
     id: buildRecipeId({
       manufacturer: "SODAL",
-      system: "L25",
+      system: row.system,
       variant,
       leaves: row.leaves,
       widthMm: row.widthMm,
       heightMm: row.heightMm,
     }),
     manufacturer: "SODAL",
-    system: "L25",
+    system: row.system,
     line: row.line,
     variant,
     glazing,
@@ -76,13 +76,23 @@ function targetFromPending(row: ReturnType<typeof parsePendingRows>[number]): Ex
 export async function buildTargetsFile(): Promise<TargetsFile> {
   const confirmed = await loadConfirmedRecipes();
   const confirmedSet = confirmedIdentitySet(confirmed.map((item) => item.recipe));
-  const pendingRows = parsePendingRows(await readPendingMarkdown());
+  const pendingSources = [
+    { system: "L25" },
+    { system: "4800" },
+  ];
+  const pendingRows = (
+    await Promise.all(
+      pendingSources.map(async ({ system }) =>
+        parsePendingRowsForSystem(await readPendingMarkdown(system), system),
+      ),
+    )
+  ).flat();
   const targets: ExtractTarget[] = confirmed.map((item) => targetFromConfirmed(item.recipe));
 
   for (const row of pendingRows) {
     const key = identityKey({
       manufacturer: "SODAL",
-      system: "L25",
+      system: row.system,
       line: row.line,
       leaves: row.leaves,
       widthMm: row.widthMm,
@@ -98,6 +108,7 @@ export async function buildTargetsFile(): Promise<TargetsFile> {
     source: [
       repoRelative(TARGETS_PATH).replace("targets.json", "confirmed/"),
       "docs/fabricacion/zeta/pending/sodal/l25/PENDING.md",
+      "docs/fabricacion/zeta/pending/sodal/4800/PENDING.md",
       "docs/fabricacion/zeta/INDEX.md",
     ],
     targets,

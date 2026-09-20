@@ -32,10 +32,26 @@ export type HardwareItem = {
 };
 
 export type SourceEvidence = {
+  runId?: string | null;
   projectId: string | null;
   planId: string | null;
   screenshotPaths: string[];
   rawPath: string | null;
+  htmlPath?: string | null;
+  textPath?: string | null;
+  capturedAt?: string | null;
+  extractorVersion?: string | null;
+  artifactHashes?: {
+    html?: string | null;
+    text?: string | null;
+    screenshots?: Record<string, string>;
+  };
+  sourceFragments?: Array<{
+    id: string;
+    tipo: "perfil" | "vidrio" | "accesorio" | "identidad" | "advertencia";
+    locator: string;
+    texto: string;
+  }>;
   sourceDocument?: string | null;
 };
 

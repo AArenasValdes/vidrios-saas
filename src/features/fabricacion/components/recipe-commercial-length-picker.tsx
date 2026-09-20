@@ -16,15 +16,30 @@ type Props = {
   onChange: (value: number | null) => void;
 };
 
-function formatOptionLabel(value: number) {
-  const meters = `${(value / 1000).toLocaleString("es-CL", {
+function formatMeters(value: number) {
+  return `${(value / 1000).toLocaleString("es-CL", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })} m`;
+}
+
+function formatOptionLabel(value: number) {
+  const meters = formatMeters(value);
   if (value === VENTORA_LARGO_COMERCIAL_PRESET_MM) {
     return `${meters} · sugerido Ventora`;
   }
   return meters;
+}
+
+function buildQuickOptions(usedByWorkshop: number[], otherFrequent: number[]) {
+  return Array.from(
+    new Set([
+      VENTORA_LARGO_COMERCIAL_PRESET_MM,
+      5950,
+      ...usedByWorkshop,
+      ...otherFrequent,
+    ])
+  ).filter((value) => Number.isFinite(value) && value > 0);
 }
 
 export function RecipeCommercialLengthPicker({
@@ -46,6 +61,7 @@ export function RecipeCommercialLengthPicker({
     typeof value === "number" && value > 0
       ? formatOptionLabel(value)
       : emptyLabel;
+  const quickOptions = buildQuickOptions(usedByWorkshop, otherFrequent);
 
   useEffect(() => {
     if (!open) return;
@@ -112,60 +128,34 @@ export function RecipeCommercialLengthPicker({
         >
           {!customMode ? (
             <>
-              <div className={s.recipeBuildPickerGroup}>
-                <p>Sugerido Ventora</p>
-                <ul>
-                  <li>
-                    <button
-                      type="button"
-                      onClick={() => applyValue(VENTORA_LARGO_COMERCIAL_PRESET_MM)}
-                    >
-                      <strong>{formatOptionLabel(VENTORA_LARGO_COMERCIAL_PRESET_MM)}</strong>
-                    </button>
-                  </li>
+              <div className={s.recipeBuildPickerGroup} data-picker-options="true">
+                <p>Elegir largo</p>
+                <ul data-picker-options-list="true">
+                  {quickOptions.map((largo) => (
+                    <li key={`quick-${largo}`}>
+                      <button
+                        type="button"
+                        data-picker-option="true"
+                        data-selected={value === largo}
+                        aria-pressed={value === largo}
+                        onClick={() => applyValue(largo)}
+                      >
+                        <strong>{formatMeters(largo)}</strong>
+                        {largo === VENTORA_LARGO_COMERCIAL_PRESET_MM ? (
+                          <small>Sugerido Ventora</small>
+                        ) : null}
+                      </button>
+                    </li>
+                  ))}
                 </ul>
               </div>
-
-              {usedByWorkshop.length > 0 ? (
-                <div className={s.recipeBuildPickerGroup}>
-                  <p>Usados en tus recetas</p>
-                  <ul>
-                    {usedByWorkshop
-                      .filter((largo) => largo !== VENTORA_LARGO_COMERCIAL_PRESET_MM)
-                      .map((largo) => (
-                      <li key={`used-${largo}`}>
-                        <button type="button" onClick={() => applyValue(largo)}>
-                          <strong>{formatOptionLabel(largo)}</strong>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-
-              {otherFrequent.length > 0 ? (
-                <div className={s.recipeBuildPickerGroup}>
-                  <p>{usedByWorkshop.length > 0 ? "Otros presets" : "Presets"}</p>
-                  <ul>
-                    {otherFrequent
-                      .filter((largo) => largo !== VENTORA_LARGO_COMERCIAL_PRESET_MM)
-                      .map((largo) => (
-                      <li key={`freq-${largo}`}>
-                        <button type="button" onClick={() => applyValue(largo)}>
-                          <strong>{formatOptionLabel(largo)}</strong>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
 
               <button
                 type="button"
                 className={s.recipeBuildPickerCreateAction}
                 onClick={() => setCustomMode(true)}
               >
-                Otro…
+                Otro largo…
               </button>
               {typeof value === "number" && value > 0 ? (
                 <button
@@ -186,7 +176,7 @@ export function RecipeCommercialLengthPicker({
                   type="number"
                   min={1}
                   value={customValue}
-                  placeholder="Ej. 6500"
+                  placeholder="Ej. 5950"
                   autoFocus
                   onChange={(event) => setCustomValue(event.target.value)}
                   onKeyDown={(event) => {

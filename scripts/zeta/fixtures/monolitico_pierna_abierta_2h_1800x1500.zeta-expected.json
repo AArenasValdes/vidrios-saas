@@ -1,0 +1,32 @@
+{
+  "source": "captura_independiente_plan_zeta",
+  "planId": "V-001",
+  "widthMm": 1800,
+  "heightMm": 1500,
+  "leaves": 2,
+  "profiles": [
+    { "code": "2501", "name": "RIEL SUPERIOR BLANCO", "function": "Riel superior", "quantity": 1, "lengthMm": 1784, "unit": "MM" },
+    { "code": "2502", "name": "RIEL INFERIOR BLANCO", "function": "Riel inferior", "quantity": 1, "lengthMm": 1784, "unit": "MM" },
+    { "code": "2503", "name": "JAMBA BLANCO", "function": "Jamba", "quantity": 2, "lengthMm": 1500, "unit": "MM" },
+    { "code": "2504", "name": "CABEZAL BLANCO", "function": "Cabezal de hoja", "quantity": 2, "lengthMm": 888, "unit": "MM" },
+    { "code": "2505", "name": "ZOCALO BLANCO", "function": "Zócalo de hoja", "quantity": 2, "lengthMm": 888, "unit": "MM" },
+    { "code": "2506", "name": "PIERNA - ABIERTA BLANCO", "function": "Pierna de hoja", "quantity": 2, "lengthMm": 1465, "unit": "MM" },
+    { "code": "2507", "name": "TRASLAPO VENTANA BLANCO", "function": "Traslapo de hoja", "quantity": 2, "lengthMm": 1465, "unit": "MM" }
+  ],
+  "glass": [
+    { "code": "CTI5", "name": "Cristal Templado Incoloro 5mm", "quantity": 2, "widthMm": 834, "heightMm": 1372, "unit": "MM" }
+  ],
+  "hardware": [
+    { "code": "GUIA-L25", "name": "GUIA L25/8000", "quantity": 4, "unit": "PZA" },
+    { "code": "18000000985", "name": "CAJA REG DOBLE BOLAS P/2505 NACIONAL 25KG ZINCALUM", "quantity": 4, "unit": "PZA" },
+    { "code": "14007NG", "name": "KIT MANILLA CRIZIA (MECANISMO UNIPUNTO Y MANILLA CREMONA)", "quantity": 2, "unit": "PZA" },
+    { "code": "TRLCB348", "name": "TORNILLO RL CB PH 3/4\" X 8", "quantity": 16, "unit": "PZA" },
+    { "code": "TORN-GUIA", "name": "TORNILLO PARA GUIA", "quantity": 8, "unit": "PZA" },
+    { "code": "TORN-CAJA", "name": "TORNILLO PARA CAJA", "quantity": 8, "unit": "PZA" },
+    { "code": "18000001116", "name": "BURLETE 305 (5MM)", "quantity": 9, "unit": "M" },
+    { "code": "FELPA7x6gen", "name": "Felpa 7x6 3P", "quantity": 16, "unit": "M" },
+    { "code": "07012STY", "name": "Sellotec 20 Silicona Neutra c/fung 300 ml BLANCO", "quantity": 2, "unit": "TUBO" },
+    { "code": "TORINSEST", "name": "Tornillo instalacion S/T/ESTRELLA", "quantity": 16, "unit": "PZA" }
+  ],
+  "warnings": []
+}

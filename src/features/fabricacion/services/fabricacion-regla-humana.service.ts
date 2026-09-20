@@ -12,6 +12,7 @@ import type {
   FabricacionReglaCantidad,
   FabricacionReglaCantidadTipo,
   FabricacionReglaMedida,
+  FabricacionVidrio,
 } from "@/features/fabricacion/types/fabricacion-domain";
 
 /** Preset sugerido por Ventora en UI. Nunca es “largo de empresa” fijo. */
@@ -482,6 +483,43 @@ export function describeTiraUsadaPieza(
     return `Tira usada: ${custom}`;
   }
   return `Tira usada: estándar ${defaultLabel}`;
+}
+
+/** Nombre genérico de vidrio en recetas seed o borradores sin tipo comercial. */
+export function isPlaceholderRecipeGlassName(
+  nombre: string | null | undefined
+): boolean {
+  const normalized = nombre?.trim().toLocaleLowerCase("es") ?? "";
+  return !normalized || normalized === "vidrio principal" || normalized === "vidrio";
+}
+
+export type RecipeGlassListRowDisplay = {
+  title: string;
+  secondary: string;
+  typePending: boolean;
+};
+
+/** Fila de vidrio en listados mobile/desktop: distingue placeholder de tipo comercial. */
+export function describeRecipeGlassListRow(
+  glass: FabricacionVidrio
+): RecipeGlassListRowDisplay {
+  const pieceCount = Math.max(1, Math.round(glass.reglaCantidad.cantidad));
+  const piecesLabel = pieceCount === 1 ? "1 pieza" : `${pieceCount} piezas`;
+  const typePending = isPlaceholderRecipeGlassName(glass.nombre);
+
+  if (typePending) {
+    return {
+      title: "Elegir tipo de vidrio",
+      secondary: `Sin definir · ${piecesLabel} · Tocar para elegir`,
+      typePending: true,
+    };
+  }
+
+  return {
+    title: glass.nombre.trim(),
+    secondary: piecesLabel,
+    typePending: false,
+  };
 }
 
 /** Accesorio en hoja técnica: cantidad humana o "Cantidad por configurar". */

@@ -6,7 +6,10 @@ import {
   fabricacionSnapshotMatchesCalculatedOutput,
 } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
-import { resolverRecetaFabricacionCompatible } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
+import {
+  resolverRecetaFabricacionCompatible,
+  resolverRecetaFabricacionCompatibleForControlledTest,
+} from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
@@ -156,13 +159,17 @@ describe("integracion receta fabricacion -> cotizacion", () => {
       hojas: 2,
       modulos: 2,
     });
-    const explicit = resolverRecetaFabricacionCompatible([draft], {
+    const explicit = resolverRecetaFabricacionCompatibleForControlledTest([draft], {
       organizationId: 1,
       lineTemplateId: 10,
       tipologia: "corredera",
       hojas: 2,
       modulos: 2,
-      allowNonValidatedRecipeId: draft.id,
+      controlledTest: {
+        mode: "controlled_test",
+        recipeId: draft.id,
+        organizationId: 1,
+      },
     });
 
     expect(blocked.estado).toBe("sin_receta");

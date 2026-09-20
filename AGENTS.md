@@ -180,6 +180,13 @@ Ultima actualizacion operativa: 2026-09-19
   - pricing por linea con minimo y redondeo
   - override manual en edicion rapida
 
+### Ya resuelto en la pasada 2026-09-20
+
+- **Línea 45** (`ventora:serie-45-puerta`) entra a Ventora con destajes Serie 45 practicable: vidrio `X−170` / `Y−183`, marco **4522**, bastidor **4531**, junquillo **4534**. Receta `serie-45-practicable-recipe.ts`. No usar destajes Alumétrica 4581/4584. Estado `lista_para_validar`; no es validación de taller.
+- **Serie 4800** (`ventora:serie-4800-corredera-2h`) entra con destajes SODAL Diamond: vidrio `X/2−44` / `Y−93` (solo monolítico), rieles `X−16`, jamba `Y`, zócalo/cabezal `X/2−15`, traslapo/pierna `Y−32`. Variantes **normal** (4806/4808) y **reforzada** (4810/4811). Receta `serie-4800-corredera-recipe.ts`. Estado `lista_para_validar`; no es validación de taller. Zeta 1:1 sigue solo para 2H 1800×1500 y 3H 3000×1500.
+- **Línea 15** y **Línea 4000** entran con despiece oficial corredera 2H (`line-15-corredera-recipe.ts`, `line-4000-corredera-recipe.ts`) más variantes 3H/4H para cabezal/zócalo. Estado `lista_para_validar`; no es validación de taller.
+- Catálogo canónico: **30 líneas**. Auditoría: `listaParaProbar` incluye Línea 45, Serie 4800, Línea 15 y Línea 4000.
+
 ### Ya resuelto en la pasada 2026-09-19
 
 - Wizard mobile de fabricación de línea rediseñado a **4 pasos** (Producto → Perfiles → Vidrio y accesorios → Validar) con laboratorio integrado en Validar, tabbar oculta en editor y **Guardar y siguiente** en perfiles sin cerrar el sheet

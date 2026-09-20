@@ -1,6 +1,7 @@
 import {
   describePerfilSheetMeasure,
   describePerfilTallerResumen,
+  isPlaceholderRecipeGlassName,
   resolveLargoComercialMm,
 } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import type {
@@ -29,11 +30,6 @@ function profileLabel(
   );
 }
 
-function isPlaceholderGlassName(nombre: string | null | undefined): boolean {
-  const normalized = nombre?.trim().toLocaleLowerCase("es") ?? "";
-  return !normalized || normalized === "vidrio principal" || normalized === "vidrio";
-}
-
 function glassMeasurePending(glass: FabricacionVidrio): boolean {
   const pendingDiscount = (glass.datosPendientes ?? []).some((detail) =>
     /descuento|ajuste/i.test(detail)
@@ -59,7 +55,7 @@ function glassMeasurePending(glass: FabricacionVidrio): boolean {
 function collectGlassAdvisories(receta: FabricacionReceta): string[] {
   const advertencias: string[] = [];
   const configuredGlass = receta.vidrios.filter(
-    (glass) => !isPlaceholderGlassName(glass.nombre)
+    (glass) => !isPlaceholderRecipeGlassName(glass.nombre)
   );
 
   if (configuredGlass.length === 0) {

@@ -1,0 +1,48 @@
+{
+  "runId": "f884c140-e0b7-441c-8ccd-4f132dcfc793",
+  "startedAt": "2026-09-19T19:36:05.986Z",
+  "finishedAt": "2026-09-19T19:36:06.019Z",
+  "command": "C:\\Program Files\\nodejs\\node.exe C:\\Users\\aless\\vidrios-saas\\scripts\\zeta\\extract.ts --dry-run",
+  "mode": "dry-run",
+  "targetsRequested": [
+    "monolitico_4h_3000x1500"
+  ],
+  "processed": [
+    "monolitico_4h_3000x1500"
+  ],
+  "confirmed": [],
+  "skipped": [
+    "dvh_pierna_abierta_2h_1800x1500",
+    "dvh_pierna_abierta_3h_3000x1500",
+    "dvh_pierna_abierta_4h_3000x1500",
+    "dvh_pierna_abierta_reforzada_2h_1800x1500",
+    "dvh_pierna_abierta_reforzada_3h_2400x1500",
+    "dvh_pierna_abierta_reforzada_3h_3000x1500",
+    "dvh_pierna_abierta_reforzada_4h_3000x1500",
+    "dvh_pierna_cerrada_2h_1800x1500",
+    "dvh_pierna_cerrada_3h_2400x1500",
+    "dvh_pierna_cerrada_3h_3000x1500",
+    "dvh_pierna_cerrada_4h_3000x1500",
+    "monolitico_2h_1800x1500",
+    "monolitico_3h_3000x1500",
+    "monolitico_pierna_abierta_2h_1800x1500",
+    "monolitico_pierna_abierta_3h_2400x1500",
+    "monolitico_pierna_abierta_3h_3000x1500",
+    "monolitico_pierna_abierta_4h_3000x1500",
+    "monolitico_pierna_abierta_reforzada_2h_1800x1500",
+    "monolitico_pierna_abierta_reforzada_3h_2400x1500",
+    "monolitico_pierna_abierta_reforzada_3h_3000x1500",
+    "monolitico_pierna_abierta_reforzada_4h_3000x1500",
+    "monolitico_pierna_cerrada_2h_1800x1500",
+    "monolitico_pierna_cerrada_3h_3000x1500",
+    "monolitico_pierna_cerrada_4h_3000x1500"
+  ],
+  "failed": [],
+  "pending": [
+    "monolitico_4h_3000x1500"
+  ],
+  "errors": [],
+  "notes": [
+    "Dry-run por defecto: no se abre Sistema Zeta ni se escribe confirmed/."
+  ]
+}

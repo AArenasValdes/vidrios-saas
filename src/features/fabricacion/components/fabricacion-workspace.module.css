@@ -9962,14 +9962,17 @@
 
 .variantTreeItem {
   width: 100%;
+  min-height: 44px;
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  padding: 0.55rem 0.65rem;
+  padding: 0.65rem 0.7rem;
   border-radius: 12px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   background: rgba(248, 250, 252, 0.9);
   text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease;
 }
 
 .variantTreeItem[data-selected="true"] {
@@ -9996,6 +9999,8 @@
 .variantTreeCopy {
   display: grid;
   gap: 0.1rem;
+  flex: 1;
+  min-width: 0;
 }
 
 .variantTreeCopy strong {
@@ -10005,6 +10010,25 @@
 .variantTreeCopy small {
   color: rgba(15, 23, 42, 0.62);
   font-size: 0.78rem;
+}
+
+.variantTreeAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  flex-shrink: 0;
+  color: rgba(15, 23, 42, 0.52);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.variantTreeItem[data-tone="missing"] .variantTreeAction {
+  color: #1e88ff;
+}
+
+.variantTreeItem:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .variantTreeHint {

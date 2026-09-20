@@ -44,10 +44,35 @@ export const hardwareItemSchema = z
 
 export const sourceEvidenceSchema = z
   .object({
+    runId: z.string().min(1).nullable().optional(),
     projectId: z.string().min(1).nullable(),
     planId: z.string().min(1).nullable(),
     screenshotPaths: z.array(z.string()),
     rawPath: z.string().min(1).nullable(),
+    htmlPath: z.string().min(1).nullable().optional(),
+    textPath: z.string().min(1).nullable().optional(),
+    capturedAt: z.string().min(1).nullable().optional(),
+    extractorVersion: z.string().min(1).nullable().optional(),
+    artifactHashes: z
+      .object({
+        html: z.string().min(1).nullable().optional(),
+        text: z.string().min(1).nullable().optional(),
+        screenshots: z.record(z.string(), z.string()).optional(),
+      })
+      .strict()
+      .optional(),
+    sourceFragments: z
+      .array(
+        z
+          .object({
+            id: z.string().min(1),
+            tipo: z.enum(["perfil", "vidrio", "accesorio", "identidad", "advertencia"]),
+            locator: z.string().min(1),
+            texto: z.string().min(1),
+          })
+          .strict(),
+      )
+      .optional(),
     sourceDocument: z.string().min(1).nullable().optional(),
   })
   .strict();

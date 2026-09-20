@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useMemo, useState } from "react";
-import { LuEllipsis, LuPlus, LuX } from "react-icons/lu";
+import { LuEllipsis, LuInfo, LuPlus, LuX } from "react-icons/lu";
 
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
@@ -344,6 +344,17 @@ export function PasoDosCuadernoMovil({
           </button>
         </div>
       </header>
+
+      <aside className={s.constructorInfo} role="note" aria-label="Sobre el constructor">
+        <LuInfo className={s.constructorInfoIcon} size={17} aria-hidden />
+        <div>
+          <strong>Para trabajos con varias piezas</strong>
+          <p>
+            Ajusta medidas, líneas y vidrios desde una sola vista. Para una pieza simple,
+            la vista Guiada suele ser más rápida.
+          </p>
+        </div>
+      </aside>
 
       <div className={s.quickBar}>
         <button type="button" className={s.addBtn} onClick={() => setAddPieceOpen(true)}>

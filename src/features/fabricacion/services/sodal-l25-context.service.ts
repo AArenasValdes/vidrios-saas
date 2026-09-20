@@ -358,6 +358,8 @@ export function resolveSodalL25FabricacionSnapshot(input: {
   const resolution = resolveFabricationRecipe(input.recipes, {
     organizationId: input.organizationId,
     lineTemplateId: input.lineTemplateId,
+    anchoTotalMm: input.anchoTotalMm,
+    altoTotalMm: input.altoTotalMm,
     catalogKey: SODAL_L25_CATALOG_KEY,
     tipologia: input.tipologia || "corredera",
     hojas: input.config.hojas,

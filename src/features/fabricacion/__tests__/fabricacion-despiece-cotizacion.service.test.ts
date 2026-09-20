@@ -14,8 +14,13 @@ import {
   canOpenDespiecePreviewForQuoteItem,
   findFirstQuoteItemWithDespiecePreview,
   isQuoteItemFabricationReviewEligible,
+  resolveAperturaForRecipeMatch,
   resolveFabricacionDespieceForQuoteItem,
 } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import {
+  SERIE_45_FIXTURE_1500X2000,
+  crearRecetaSerie45Practicable,
+} from "@/features/fabricacion/fixtures/serie-45-practicable-recipe";
 import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
@@ -45,7 +50,7 @@ function recipeRecord(
     leavesCount: overrides.leavesCount ?? 2,
     variant: overrides.variant ?? "estandar",
     version: overrides.version ?? 1,
-    status: overrides.status ?? "testing",
+    status: overrides.status ?? "validated",
     definition,
     sourceType: overrides.sourceType ?? "manual",
     sourceReference: overrides.sourceReference ?? null,
@@ -206,7 +211,7 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
     expect(resolved.formal?.result.totalLinealMm).toBe(10714);
     expect(resolved.barsAvailable).toBe(true);
     expect(resolved.formal?.pautaBarras?.barras.length ?? 0).toBeGreaterThan(0);
-    expect(resolved.message).toMatch(/preliminar/i);
+    expect(resolved.message).toBeNull();
   });
 
   it("CASO 5: código de perfil vacío no bloquea despiece", () => {
@@ -570,5 +575,109 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
     expect(resolved.estado).not.toBe("calculado");
     expect(resolved.cubication?.cuts.length).toBeGreaterThan(0);
     expect(resolved.formal).toEqual(live.formal);
+  });
+
+  it("no usa el sistema comercial Abatible como apertura de receta", () => {
+    expect(resolveAperturaForRecipeMatch("", "Abatible")).toBeNull();
+    expect(resolveAperturaForRecipeMatch("interior", "Abatible")).toBe("interior");
+  });
+
+  it("previsualiza destajes de Línea 45 en cotización guiada aunque la receta esté en borrador", () => {
+    const definition = crearRecetaSerie45Practicable({
+      lineName: "Línea 45 — Puerta",
+      createId: (() => {
+        let nextId = 0;
+        return () => `l45-quote-${nextId++}`;
+      })(),
+    });
+    const recipe = recipeRecord({
+      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      lineTemplateId: 540,
+      lineName: "Línea 45 — Puerta",
+      typology: "puerta_abatible",
+      leavesCount: 1,
+      variant: "puerta_1h",
+      status: "draft",
+      definition,
+      sourceReference: "sodal+indalum:serie-45-practicable:puerta:1h:v2",
+    });
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "540" }),
+      tipo: "Puerta",
+      lineaComercial: "Línea 45 — Puerta",
+      nombre: "Puerta abatible 1 hoja",
+      descripcion: "Puerta de aluminio con vidrio incoloro.",
+      ancho: SERIE_45_FIXTURE_1500X2000.anchoTotalMm,
+      alto: SERIE_45_FIXTURE_1500X2000.altoTotalMm,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "540",
+        catalogLineKey: "ventora:serie-45-puerta",
+        sistema: "Abatible",
+        fabricacionTipologia: "puerta_abatible",
+        fabricacionHojas: 1,
+        fabricacionModulos: 1,
+        fabricacionApertura: "interior",
+      }),
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [recipe],
+      organizationId: 1,
+    });
+
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.preliminary).toBe(true);
+    expect(resolved.formal?.result.perfiles.map((row) => row.codigoPerfil)).toEqual([
+      ...SERIE_45_FIXTURE_1500X2000.codes,
+    ]);
+    expect(resolved.formal?.result.perfiles.map((row) => row.medidaMm)).toEqual([
+      ...SERIE_45_FIXTURE_1500X2000.lengthsMm,
+    ]);
+    expect(resolved.formal?.result.vidrios[0]).toMatchObject({
+      anchoMm: SERIE_45_FIXTURE_1500X2000.glass.widthMm,
+      altoMm: SERIE_45_FIXTURE_1500X2000.glass.heightMm,
+    });
+    expect(
+      isQuoteItemFabricationReviewEligible({
+        item,
+        recipes: [recipe],
+        organizationId: 1,
+      })
+    ).toBe(true);
+  });
+
+  it("no calcula despiece de un borrador que aún no está listo para probar", () => {
+    const definition = crearRecetaSerie45Practicable({
+      lineName: "Línea 45 — Puerta",
+    });
+    definition.perfiles = [];
+    const recipe = recipeRecord({
+      lineTemplateId: 540,
+      typology: "puerta_abatible",
+      leavesCount: 1,
+      status: "draft",
+      definition,
+    });
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "540" }),
+      tipo: "Puerta",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "540",
+        sistema: "Abatible",
+        fabricacionTipologia: "puerta_abatible",
+        fabricacionHojas: 1,
+        fabricacionModulos: 1,
+      }),
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [recipe],
+      organizationId: 1,
+    });
+
+    expect(resolved.estado).toBe("receta_incompleta");
+    expect(resolved.formal).toBeNull();
   });
 });

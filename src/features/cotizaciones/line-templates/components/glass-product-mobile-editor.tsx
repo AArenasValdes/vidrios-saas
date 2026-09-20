@@ -118,8 +118,8 @@ export function GlassProductMobileEditor({
             <div className={s.moneyGrid}>
               <label className={s.field}>
                 <span>Precio de venta por m²</span>
-                <div className={s.moneyInput}>
-                  <span>$</span>
+                <div className={`${s.moneyInput} ${s.moneyInputWithSuffix}`}>
+                  <span className={s.moneyPrefix}>$</span>
                   <input
                     inputMode="numeric"
                     value={moneyValue(draft.precioM2Sugerido)}
@@ -131,13 +131,13 @@ export function GlassProductMobileEditor({
                     }
                     placeholder="0"
                   />
-                  <span>/ m²</span>
+                  <span className={s.moneySuffix}>/ m²</span>
                 </div>
               </label>
               <label className={s.field}>
                 <span>Mínimo cobrable (opcional)</span>
                 <div className={s.moneyInput}>
-                  <span>$</span>
+                  <span className={s.moneyPrefix}>$</span>
                   <input
                     inputMode="numeric"
                     value={moneyValue(draft.minimoCobrable)}
@@ -231,7 +231,7 @@ export function GlassProductMobileEditor({
               <label className={s.field}>
                 <span>Costo de compra de la plancha completa</span>
                 <div className={s.moneyInput}>
-                  <span>$</span>
+                  <span className={s.moneyPrefix}>$</span>
                   <input
                     inputMode="numeric"
                     value={moneyValue(draft.costoBase)}

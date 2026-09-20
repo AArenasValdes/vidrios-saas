@@ -1,0 +1,46 @@
+Fuente: Plan de armado visible en Sistema Zeta
+URL: https://sistemazeta.cl/zeta/reporte_planEjecucion?idProject=46421
+Plan de armado: PA-65
+Proyecto: ALE-65 - VENTORA-EXTRACT-L25-DVH-PA-3H-3000x1500
+Fecha visible: 2026-09-19 08:45:30
+Componente: V-001
+Cantidad: 1
+Dimensiones: 3000 mm x 1500 mm
+Serie de perfiles: L-25 DVH PIERNA ABIERTA
+Color: BLANCO
+Vidrios: Termopanel Incoloro 4 + 10 + 4
+Apertura: Corredera
+Vista: Exterior
+
+PERFILES - Componente 1 - V-001
+Código | Designación | Cant. Unit. | Cant.Total | Dimension | Corte 1 | Corte 2 | Posición
+2501 | 2501 - RIEL SUPERIOR BLANCO | 1 | 1 | 2,984 mm | 90° | 90° | Arriba
+2502 | 2502 - RIEL INFERIOR BLANCO | 1 | 1 | 2,984 mm | 90° | 90° | Abajo
+2503 | 2503 - JAMBA BLANCO | 2 | 2 | 1,500 mm | 90° | 90° | Izquierda; Derecha
+2516 | 2516 - ZOCALO - DVH BLANCO | 4 | 4 | 999 mm | 90° | 90° | Abajo; Arriba
+2516 | 2516 - ZOCALO - DVH BLANCO | 2 | 2 | 1,014 mm | 90° | 90° | Abajo; Arriba
+2517 | 2517 - PIERNA - ABIERTA DVH BLANCO | 2 | 2 | 1,465 mm | 90° | 90° | Izquierda; Derecha
+2519 | 2519 - TRASLAPO VENTANA - DVH BLANCO | 4 | 4 | 1,465 mm | 90° | 90° | Derecha; Izquierda
+
+ACCESORIOS - Componente 1 - V-001
+Código | Designación | Cant. Unit. | Cant.Total
+GUIA-L25 | GUIA L25/8000 | 6 PZA | 6 PZA
+CARRO DVH L25 REGULABLE | CARRO DVH L25 REGULABLE | 6 PZA | 6 PZA
+14007NG | KIT MANILLA CRIZIA (MECANISMO UNIPUNTO Y MANILLA CREMONA) | 2 PZA | 2 PZA
+TRLCB348 | TORNILLO RL CB PH 3/4" X 8 | 24 PZA | 24 PZA
+TORN-GUIA | TORNILLO PARA GUIA | 12 PZA | 12 PZA
+TORN-CARRO | TORNILLO PARA CARRO | 12 PZA | 12 PZA
+TORN-MAN | TORNILLO PARA MANILLA | 4 PZA | 4 PZA
+18000000439 | BURLETE TERMOPANEL S-399 EPDM X-69/24/24RPT SEAL ( | 14 M | 14 M
+FELPA7x6gen | Felpa 7x6 3P | 24 M | 24 M
+07012STY BLANCO | Sellotec 20 Silicona Neutra c/fung 300 ml BLANCO | 2 TUBO | 2 TUBO
+TORINSEST | Tornillo instalacion S/T/ESTRELLA | 22 PZA | 22 PZA
+
+CRISTALES - Componente 1 - V-001
+Código | Designación | Cant. Unit. | Cant. Total | Ancho | Alto | Posición
+TI4104 | Termopanel Incoloro 4 + 10 + 4 | 2,00 | 2,00 | 944 mm | 1.369 mm | 
+TI4104 | Termopanel Incoloro 4 + 10 + 4 | 1,00 | 1,00 | 960 mm | 1.369 mm | 
+
+Advertencia visible durante la selección: El perfil TUB 10050 no tiene perfiles compuestos asignados.
+Advertencias adicionales en Plan de armado: ninguna visible en el contenido capturado.
+Pauta de barras comerciales: no aparece en este Plan de armado; se conserva solo la lista de cortes observada.

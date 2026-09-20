@@ -5,7 +5,7 @@ import { CheckCircle2, ChevronLeft, Pencil } from "lucide-react";
 
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { formatLineTemplatePriceLabel } from "@/features/cotizaciones/line-templates/utils/catalog-labels";
-import { getFabricacionVisualStatus } from "@/features/fabricacion/services/fabricacion-line-workflow.utils";
+import { getFabricacionVisualStatus, formatFabricacionDate } from "@/features/fabricacion/services/fabricacion-line-workflow.utils";
 import { SODAL_L25_CANONICAL_RECIPE_IDS } from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
 import { summarizeSodalL25LineCoverage } from "@/features/fabricacion/services/sodal-l25-context.service";
 import {
@@ -13,6 +13,10 @@ import {
   resolveEffectiveSodalL25CatalogKey,
 } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import { buildFabricationRecipeSummary } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
+import {
+  describeLineVariantCoverage,
+  lineUsesVariantProductPicker,
+} from "@/features/fabricacion/services/line-variant-picker.service";
 import { resolveLineFabricationDisplayIdentity } from "@/features/fabricacion/services/resolve-line-fabrication-display-identity.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -75,8 +79,16 @@ export function FabricacionLineMobileDetail({
       nombre: template.nombre,
     })
   );
+  const usesVariantTemplate =
+    isL25 || lineUsesVariantProductPicker(template.catalogKey);
   const l25Coverage = isL25 ? summarizeSodalL25LineCoverage(lineRecipes) : null;
   const l25CanonicalCount = SODAL_L25_CANONICAL_RECIPE_IDS.length;
+  const variantCoverage = usesVariantTemplate
+    ? describeLineVariantCoverage({
+        catalogKey: template.catalogKey,
+        recipes: lineRecipes,
+      })
+    : null;
   const visual = getFabricacionVisualStatus(currentRecipe?.status ?? "quote_only");
   const summary = currentRecipe
     ? buildFabricationRecipeSummary(currentRecipe.definition)
@@ -88,6 +100,19 @@ export function FabricacionLineMobileDetail({
     onEdit,
   });
   const showTestCta = Boolean(currentRecipe);
+  const variantTitle = isL25
+    ? "Corredera L25 lista para cotizar"
+    : `${identity.lineTitle} lista para cotizar`;
+  const variantSubtitle = isL25
+    ? l25Coverage?.allLeavesReady
+      ? "2, 3 y 4 hojas · DVH y monolítico"
+      : l25Coverage && l25Coverage.readyCount > 0
+        ? `${l25Coverage.leaves
+            .filter((entry) => entry.ready)
+            .map((entry) => `${entry.hojas} hojas`)
+            .join(" · ")} disponibles`
+        : `${l25CanonicalCount} construcciones`
+    : variantCoverage?.subtitle ?? "Elige construcción en el primer paso";
 
   return (
     <main className={`${s.shell} ${s.page}`}>
@@ -148,40 +173,16 @@ export function FabricacionLineMobileDetail({
           </span>
         </div>
 
-        {!currentRecipe ? (
-          <>
-            <p>
-              Puedes cotizar esta línea. Configura la fabricación para generar
-              cubicación y pauta sugerida.
-            </p>
-            <button
-              type="button"
-              className={s.primaryButton}
-              disabled={primaryCta.disabled}
-              onClick={primaryCta.action}
-            >
-              {primaryCta.label}
-            </button>
-          </>
-        ) : (
+        {currentRecipe ? (
           <>
             <div className={s.cardHeading}>
               <div>
                 <strong>
-                  {isL25
-                    ? "Corredera L25 lista para cotizar"
-                    : identity.fabricationTitle}
+                  {usesVariantTemplate ? variantTitle : identity.fabricationTitle}
                 </strong>
                 <p>
-                  {isL25
-                    ? l25Coverage?.allLeavesReady
-                      ? "2, 3 y 4 hojas · DVH y monolítico"
-                      : l25Coverage && l25Coverage.readyCount > 0
-                        ? `${l25Coverage.leaves
-                            .filter((entry) => entry.ready)
-                            .map((entry) => `${entry.hojas} hojas`)
-                            .join(" · ")} disponibles`
-                        : `${l25CanonicalCount} construcciones Ventora`
+                  {usesVariantTemplate
+                    ? variantSubtitle
                     : `Versión ${currentRecipe.version}`}
                 </p>
               </div>
@@ -209,35 +210,41 @@ export function FabricacionLineMobileDetail({
               </button>
             ) : null}
 
-            {isL25 ? (
+            {usesVariantTemplate ? (
               <p className={s.hint} style={{ marginBottom: 12 }}>
-                No es solo una variante: al cotizar eliges hojas y construcción.
-                Aquí puedes revisar cada receta y ajustar descuentos de tu taller.
+                No es solo una variante: eliges construcción en el primer paso.
+                Los descuentos se ajustan por variante.
               </p>
             ) : null}
 
             <dl className={s.summaryList}>
-              {isL25 ? (
+              {usesVariantTemplate ? (
                 <>
-                  <div>
-                    <dt>Hojas</dt>
-                    <dd>
-                      {l25Coverage?.allLeavesReady
-                        ? "2, 3 y 4 hojas listas"
-                        : l25Coverage && l25Coverage.readyCount > 0
-                          ? l25Coverage.leaves
-                              .filter((entry) => entry.ready)
-                              .map((entry) => `${entry.hojas}h`)
-                              .join(" · ")
-                          : "2 · 3 · 4 hojas"}
-                    </dd>
-                  </div>
+                  {isL25 ? (
+                    <div>
+                      <dt>Hojas</dt>
+                      <dd>
+                        {l25Coverage?.allLeavesReady
+                          ? "2, 3 y 4 hojas listas"
+                          : l25Coverage && l25Coverage.readyCount > 0
+                            ? l25Coverage.leaves
+                                .filter((entry) => entry.ready)
+                                .map((entry) => `${entry.hojas}h`)
+                                .join(" · ")
+                            : "2 · 3 · 4 hojas"}
+                      </dd>
+                    </div>
+                  ) : null}
                   <div>
                     <dt>Construcciones</dt>
                     <dd>
-                      {l25Coverage && l25Coverage.readyCount > 0
-                        ? `${l25Coverage.readyCount} de ${l25CanonicalCount} listas`
-                        : `${l25CanonicalCount} integradas Ventora`}
+                      {isL25
+                        ? l25Coverage && l25Coverage.readyCount > 0
+                          ? `${l25Coverage.readyCount} de ${l25CanonicalCount} listas`
+                          : `${l25CanonicalCount} integradas`
+                        : variantCoverage
+                          ? `${variantCoverage.readyCount} de ${variantCoverage.totalCount} listas`
+                          : "Varias construcciones"}
                     </dd>
                   </div>
                   <div>
@@ -275,22 +282,44 @@ export function FabricacionLineMobileDetail({
               )}
             </dl>
           </>
+        ) : (
+          <>
+            <p>
+              Puedes cotizar esta línea. Configura la fabricación para generar
+              cubicación y pauta sugerida.
+            </p>
+            <button
+              type="button"
+              className={s.primaryButton}
+              disabled={primaryCta.disabled}
+              onClick={primaryCta.action}
+            >
+              {primaryCta.label}
+            </button>
+          </>
         )}
       </section>
 
       {olderRecipes.length > 0 ? (
         <details className={s.history}>
           <summary>
-            Versiones anteriores
+            Historial archivado
             <span>{olderRecipes.length}</span>
           </summary>
           <div className={s.historyList}>
             {olderRecipes.map((recipe) => {
               const older = getFabricacionVisualStatus(recipe.status);
               return (
-                <article key={recipe.id}>
-                  <strong>Versión {recipe.version}</strong>
-                  <span>{older.label}</span>
+                <article key={recipe.id} className={s.historyRow}>
+                  <div className={s.historyCopy}>
+                    <strong>{recipe.definition.identidad.nombre}</strong>
+                    <small>
+                      Versión {recipe.version} · {formatFabricacionDate(recipe.updatedAt)}
+                    </small>
+                  </div>
+                  <span className={s.historyStatus} data-tone={older.tone}>
+                    {older.label}
+                  </span>
                 </article>
               );
             })}

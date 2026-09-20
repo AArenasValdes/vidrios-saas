@@ -1,0 +1,377 @@
+{
+  "schemaVersion": 1,
+  "recipeId": "dvh_pierna_abierta_reforzada_3h_2400x1500",
+  "confirmedPath": "docs/fabricacion/zeta/confirmed/sodal/l25/dvh_pierna_abierta_reforzada_3h_2400x1500.json",
+  "manufacturer": "SODAL",
+  "system": "L25",
+  "traceabilityStatus": "partial",
+  "ventoraStatus": "testing",
+  "productionReady": false,
+  "observedMeasures": {
+    "widthMm": 2400,
+    "heightMm": 1500,
+    "leaves": 3
+  },
+  "observedProfiles": [
+    {
+      "order": 0,
+      "code": "2501",
+      "name": "2501 - RIEL SUPERIOR BLANCO",
+      "quantity": 1,
+      "lengthMm": 2984,
+      "cut1Deg": 90,
+      "cut2Deg": 90,
+      "classification": "observed"
+    },
+    {
+      "order": 1,
+      "code": "2502",
+      "name": "2502 - RIEL INFERIOR BLANCO",
+      "quantity": 1,
+      "lengthMm": 2984,
+      "cut1Deg": 90,
+      "cut2Deg": 90,
+      "classification": "observed"
+    },
+    {
+      "order": 2,
+      "code": "2503",
+      "name": "2503 - JAMBA BLANCO",
+      "quantity": 2,
+      "lengthMm": 1500,
+      "cut1Deg": 90,
+      "cut2Deg": 90,
+      "classification": "observed"
+    },
+    {
+      "order": 3,
+      "code": "2516",
+      "name": "2516 - ZOCALO - DVH BLANCO",
+      "quantity": 4,
+      "lengthMm": 998,
+      "cut1Deg": 90,
+      "cut2Deg": 90,
+      "classification": "observed"
+    },
+    {
+      "order": 4,
+      "code": "2516",
+      "name": "2516 - ZOCALO - DVH BLANCO",
+      "quantity": 2,
+      "lengthMm": 1013,
+      "cut1Deg": 90,
+      "cut2Deg": 90,
+      "classification": "observed"
+    },
+    {
+      "order": 5,
+      "code": "2529R",
+      "name": "2529R - PIERNA - ABIERTA DVH REFORZADA BLANCO",
+      "quantity": 2,
+      "lengthMm": 1465,
+      "cut1Deg": 90,
+      "cut2Deg": 90,
+      "classification": "observed"
+    },
+    {
+      "order": 6,
+      "code": "2530R",
+      "name": "2530R - TRASLAPO VENTANA - DVH REFORZADA BLANCO",
+      "quantity": 4,
+      "lengthMm": 1465,
+      "cut1Deg": 90,
+      "cut2Deg": 90,
+      "classification": "observed"
+    }
+  ],
+  "observedGlass": [
+    {
+      "order": 0,
+      "code": "TI4104",
+      "name": "Termopanel Incoloro 4 + 10 + 4",
+      "quantity": 2,
+      "widthMm": 942,
+      "heightMm": 1369,
+      "classification": "observed"
+    },
+    {
+      "order": 1,
+      "code": "TI4104",
+      "name": "Termopanel Incoloro 4 + 10 + 4",
+      "quantity": 1,
+      "widthMm": 961,
+      "heightMm": 1369,
+      "classification": "observed"
+    }
+  ],
+  "observedHardware": [
+    {
+      "order": 0,
+      "code": "GUIA-L25",
+      "name": "GUIA L25/8000",
+      "quantity": 6,
+      "unit": "PZA",
+      "classification": "observed"
+    },
+    {
+      "order": 1,
+      "code": "18000000985",
+      "name": "CAJA REG DOBLE BOLAS P/2505 NACIONAL 25KG ZINCALUM",
+      "quantity": 6,
+      "unit": "PZA",
+      "classification": "observed"
+    },
+    {
+      "order": 2,
+      "code": "14007NG",
+      "name": "KIT MANILLA CRIZIA (MECANISMO UNIPUNTO Y MANILLA CREMONA)",
+      "quantity": 2,
+      "unit": "PZA",
+      "classification": "observed"
+    },
+    {
+      "order": 3,
+      "code": "TRLCB348",
+      "name": "TORNILLO RL CB PH 3/4\" X 8",
+      "quantity": 24,
+      "unit": "PZA",
+      "classification": "observed"
+    },
+    {
+      "order": 4,
+      "code": "TORN-GUIA",
+      "name": "TORNILLO PARA GUIA",
+      "quantity": 12,
+      "unit": "PZA",
+      "classification": "observed"
+    },
+    {
+      "order": 5,
+      "code": "TORN-CAJA",
+      "name": "TORNILLO PARA CAJA",
+      "quantity": 12,
+      "unit": "PZA",
+      "classification": "observed"
+    },
+    {
+      "order": 6,
+      "code": "TORN-MAN",
+      "name": "TORNILLO PARA MANILLA",
+      "quantity": 4,
+      "unit": "PZA",
+      "classification": "observed"
+    },
+    {
+      "order": 7,
+      "code": "18000000439",
+      "name": "BURLETE TERMOPANEL S-399 EPDM X-69/24/24RPT SEAL (",
+      "quantity": 14,
+      "unit": "M",
+      "classification": "observed"
+    },
+    {
+      "order": 8,
+      "code": "FELPA7x6gen",
+      "name": "Felpa 7x6 3P",
+      "quantity": 24,
+      "unit": "M",
+      "classification": "observed"
+    },
+    {
+      "order": 9,
+      "code": "07012STY BLANCO",
+      "name": "Sellotec 20 Silicona Neutra c/fung 300 ml BLANCO",
+      "quantity": 1,
+      "unit": "TUBO",
+      "classification": "observed"
+    },
+    {
+      "order": 10,
+      "code": "TORINSEST",
+      "name": "Tornillo instalacion S/T/ESTRELLA",
+      "quantity": 19,
+      "unit": "PZA",
+      "classification": "observed"
+    }
+  ],
+  "artifacts": [
+    {
+      "kind": "pa_markdown_derived",
+      "path": "docs/fabricacion/zeta/raw/sodal/l25/PA-52_VENTORA-ZETA-BATCH-011.md",
+      "sha256": "2d828ebaf5ab6520316879b8a07ef6947695d97b9153d82415e9a2dc805c2e90",
+      "role": "primary",
+      "classification": "derived",
+      "note": "Transcripción documental del Plan Zeta; no sustituye plan.html original."
+    }
+  ],
+  "sourceEvidence": {
+    "runId": null,
+    "runLogPath": null,
+    "projectId": "46386",
+    "planId": "PA-52",
+    "rawPath": "docs/fabricacion/zeta/raw/sodal/l25/PA-52_VENTORA-ZETA-BATCH-011.md",
+    "htmlPath": null,
+    "textPath": "docs/fabricacion/zeta/raw/sodal/l25/PA-52_VENTORA-ZETA-BATCH-011.md",
+    "screenshotPaths": [],
+    "capturedAt": "2026-09-18T00:00:00.000Z",
+    "extractorVersion": "zeta-extractor-p1-2026-09-19",
+    "artifactHashes": {
+      "html": null,
+      "text": "2d828ebaf5ab6520316879b8a07ef6947695d97b9153d82415e9a2dc805c2e90",
+      "screenshots": {}
+    },
+    "sourceFragments": [
+      {
+        "id": "identidad",
+        "tipo": "identidad",
+        "locator": "confirmed/dvh_pierna_abierta_reforzada_3h_2400x1500",
+        "texto": "L-25 DVH PIERNA ABIERTA REFORZADA · 3H · 2400×1500 mm"
+      },
+      {
+        "id": "perfil-0",
+        "tipo": "perfil",
+        "locator": "confirmed.profiles[0]",
+        "texto": "2501 · 2501 - RIEL SUPERIOR BLANCO · 1×2984 mm"
+      },
+      {
+        "id": "perfil-1",
+        "tipo": "perfil",
+        "locator": "confirmed.profiles[1]",
+        "texto": "2502 · 2502 - RIEL INFERIOR BLANCO · 1×2984 mm"
+      },
+      {
+        "id": "perfil-2",
+        "tipo": "perfil",
+        "locator": "confirmed.profiles[2]",
+        "texto": "2503 · 2503 - JAMBA BLANCO · 2×1500 mm"
+      },
+      {
+        "id": "perfil-3",
+        "tipo": "perfil",
+        "locator": "confirmed.profiles[3]",
+        "texto": "2516 · 2516 - ZOCALO - DVH BLANCO · 4×998 mm"
+      },
+      {
+        "id": "perfil-4",
+        "tipo": "perfil",
+        "locator": "confirmed.profiles[4]",
+        "texto": "2516 · 2516 - ZOCALO - DVH BLANCO · 2×1013 mm"
+      },
+      {
+        "id": "perfil-5",
+        "tipo": "perfil",
+        "locator": "confirmed.profiles[5]",
+        "texto": "2529R · 2529R - PIERNA - ABIERTA DVH REFORZADA BLANCO · 2×1465 mm"
+      },
+      {
+        "id": "perfil-6",
+        "tipo": "perfil",
+        "locator": "confirmed.profiles[6]",
+        "texto": "2530R · 2530R - TRASLAPO VENTANA - DVH REFORZADA BLANCO · 4×1465 mm"
+      },
+      {
+        "id": "vidrio-0",
+        "tipo": "vidrio",
+        "locator": "confirmed.glass[0]",
+        "texto": "TI4104 · 2×942×1369 mm"
+      },
+      {
+        "id": "vidrio-1",
+        "tipo": "vidrio",
+        "locator": "confirmed.glass[1]",
+        "texto": "TI4104 · 1×961×1369 mm"
+      },
+      {
+        "id": "accesorio-0",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[0]",
+        "texto": "GUIA-L25 · GUIA L25/8000 · 6 PZA"
+      },
+      {
+        "id": "accesorio-1",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[1]",
+        "texto": "18000000985 · CAJA REG DOBLE BOLAS P/2505 NACIONAL 25KG ZINCALUM · 6 PZA"
+      },
+      {
+        "id": "accesorio-2",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[2]",
+        "texto": "14007NG · KIT MANILLA CRIZIA (MECANISMO UNIPUNTO Y MANILLA CREMONA) · 2 PZA"
+      },
+      {
+        "id": "accesorio-3",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[3]",
+        "texto": "TRLCB348 · TORNILLO RL CB PH 3/4\" X 8 · 24 PZA"
+      },
+      {
+        "id": "accesorio-4",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[4]",
+        "texto": "TORN-GUIA · TORNILLO PARA GUIA · 12 PZA"
+      },
+      {
+        "id": "accesorio-5",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[5]",
+        "texto": "TORN-CAJA · TORNILLO PARA CAJA · 12 PZA"
+      },
+      {
+        "id": "accesorio-6",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[6]",
+        "texto": "TORN-MAN · TORNILLO PARA MANILLA · 4 PZA"
+      },
+      {
+        "id": "accesorio-7",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[7]",
+        "texto": "18000000439 · BURLETE TERMOPANEL S-399 EPDM X-69/24/24RPT SEAL ( · 14 M"
+      },
+      {
+        "id": "accesorio-8",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[8]",
+        "texto": "FELPA7x6gen · Felpa 7x6 3P · 24 M"
+      },
+      {
+        "id": "accesorio-9",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[9]",
+        "texto": "07012STY BLANCO · Sellotec 20 Silicona Neutra c/fung 300 ml BLANCO · 1 TUBO"
+      },
+      {
+        "id": "accesorio-10",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[10]",
+        "texto": "TORINSEST · Tornillo instalacion S/T/ESTRELLA · 19 PZA"
+      }
+    ],
+    "sourceDocument": "docs/fabricacion/zeta/raw/sodal/l25/PA-52_VENTORA-ZETA-BATCH-011.md"
+  },
+  "fieldProvenance": {
+    "textPath": {
+      "classification": "derived",
+      "sourcePath": "docs/fabricacion/zeta/raw/sodal/l25/PA-52_VENTORA-ZETA-BATCH-011.md",
+      "note": "Evidencia textual derivada desde markdown PA."
+    },
+    "projectId": {
+      "classification": "observed",
+      "sourcePath": "docs/fabricacion/zeta/raw/sodal/l25/PA-52_VENTORA-ZETA-BATCH-011.md"
+    },
+    "planId": {
+      "classification": "observed",
+      "sourcePath": "docs/fabricacion/zeta/confirmed/sodal/l25/dvh_pierna_abierta_reforzada_3h_2400x1500.json",
+      "note": "Campo plan en JSON confirmed."
+    }
+  },
+  "datosPendientes": [
+    "Falta plan.html original de Zeta en raw/.",
+    "Falta screenshot.png o checkpoint-plan-visible.png verificable en disco.",
+    "Falta runId verificable en metadata.json o runs/*.json.",
+    "Trazabilidad 1:1 incompleta: se requiere plan.html, plan.txt, screenshot, runId, projectId y hashes verificables."
+  ],
+  "generatedFrom": "scripts/zeta/build-evidence-sidecars.ts",
+  "generatedAt": "2026-09-19T21:08:36.069Z"
+}

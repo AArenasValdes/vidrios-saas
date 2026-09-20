@@ -1,3 +1,7 @@
+# Ventora: subir a Vercel solo lo necesario para `next build` + assets servidos.
+# La documentación interna y tooling de agentes siguen en git, pero no en el deploy.
+
+# --- Build caches y artefactos locales ---
 .codex-*
 .jest-cache/
 .next/
@@ -8,8 +12,62 @@ node_modules/
 *.tsbuildinfo
 pdf-ref-shot.png
 tmp-*
+.tmp-qa/
+out/
+.kilo/
+.codex-build/
+.codex-edge/
+.codex-edge-ref/
+.codex-logs/
+
+# --- Medios pesados no versionados / solo locales (redundante con .gitignore) ---
 public/4to Video/
 public/5to video/
 public/6to video Maestro real/
 public/audio/
 public/video-assets/
+
+# --- Assets públicos muertos o duplicados (no referenciados en app/) ---
+/public/Ventora Landing Page/
+/public/nuevos Iconos Definitivos/
+
+# Brand: conservar solo logos/hero usados en login, landing y emails
+/public/brand/*
+!/public/brand/landing-cotizar-bg.webp
+!/public/brand/login-hero-premium.png
+!/public/brand/ventora-logo-boot.svg
+!/public/brand/ventora-logo-compact-on-light.svg
+!/public/brand/ventora-logo-login-clean-dark.svg
+!/public/brand/ventora-logo-premium-dark.svg
+
+# Landing: fuentes PNG/JPEG de trabajo; producción usa webp (+ 1 png de dashboard)
+/public/ventora-landing-page/**/*.png
+!/public/ventora-landing-page/dashboard-desktop.png
+/public/ventora-landing-page/**/*.jpeg
+/public/ventora-landing-page/**/*.jpg
+
+# --- Documentación interna (git sí, Vercel no) ---
+# Excepción obligatoria: JSON Zeta confirmados importados en runtime/build.
+/docs/**
+!/docs/fabricacion/
+!/docs/fabricacion/zeta/
+!/docs/fabricacion/zeta/confirmed/
+!/docs/fabricacion/zeta/confirmed/**
+
+# --- Tooling, QA, mobile wrapper y DB local ---
+.agents/
+.cursor/
+.impeccable/
+.github/
+plugins/
+remotion/
+SVG/
+caveman/
+android-twa/
+supabase/
+tests/
+__tests__/
+
+# Scripts operativos: el build solo necesita el stub de polyfill
+/scripts/*
+!/scripts/stub-next-polyfill-module.mjs

@@ -6,7 +6,7 @@ import { seedSodalL25RecipesForOrganization } from "@/features/fabricacion/servi
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
 describe("seed SODAL L25 recipes", () => {
-  it("inserta 18 recetas validated idempotentes por source_reference", async () => {
+  it("inserta 18 recetas testing idempotentes por source_reference", async () => {
     const inserted: Record<string, unknown>[] = [];
     const archived: string[] = [];
     const recipes: FabricationRecipeRecord[] = [
@@ -54,12 +54,12 @@ describe("seed SODAL L25 recipes", () => {
           leavesCount: 2,
           variant: String(payload.variant ?? ""),
           version: 1,
-          status: "validated",
+          status: "testing",
           definition: payload.definition as FabricationRecipeRecord["definition"],
           sourceType: "manufacturer",
           sourceReference: String(payload.source_reference ?? ""),
           parentRecipeId: null,
-          validatedAt: new Date().toISOString(),
+          validatedAt: null,
           validatedBy: null,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -77,7 +77,7 @@ describe("seed SODAL L25 recipes", () => {
     expect(inserted).toHaveLength(18);
     expect(new Set(inserted.map((row) => row.source_reference)).size).toBe(18);
     inserted.forEach((row) => {
-      expect(row.status).toBe("validated");
+      expect(row.status).toBe("testing");
       expect(row.source_type).toBe("manufacturer");
     });
 

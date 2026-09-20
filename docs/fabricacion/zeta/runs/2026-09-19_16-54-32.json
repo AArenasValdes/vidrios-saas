@@ -1,0 +1,17 @@
+{
+  "runId": "4419a64d-84e3-479b-9052-fbd8072f9710",
+  "startedAt": "2026-09-19T19:48:26.053Z",
+  "finishedAt": "2026-09-19T19:54:32.466Z",
+  "command": "C:\\Program Files\\nodejs\\node.exe C:\\Users\\aless\\vidrios-saas\\scripts\\zeta\\extract.ts --login",
+  "mode": "login",
+  "targetsRequested": [],
+  "processed": [],
+  "confirmed": [],
+  "skipped": [],
+  "failed": [],
+  "pending": [],
+  "errors": [],
+  "notes": [
+    "Sesión de Zeta guardada localmente. No se extrajo ninguna receta."
+  ]
+}

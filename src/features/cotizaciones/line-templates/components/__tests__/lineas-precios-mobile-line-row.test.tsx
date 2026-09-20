@@ -63,4 +63,14 @@ describe("lineas-precios mobile row status", () => {
       resolveFabricationActionLabel({ tone: "quote_only", label: "Sin configurar" }, false)
     ).toBe("Configurar fabricación");
   });
+
+  it("usa Ir a fabricación en líneas Ventora aunque falte precio o receta", () => {
+    expect(
+      resolveFabricationActionLabel(
+        { tone: "quote_only", label: "Sin configurar" },
+        true,
+        "ventora:l25"
+      )
+    ).toBe("Ir a fabricación");
+  });
 });

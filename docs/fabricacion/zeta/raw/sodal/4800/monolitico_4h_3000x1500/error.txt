@@ -1,0 +1,12 @@
+Configuración: SODAL / L-4800 MONOLITICO / 4H / 3000 × 1500 mm
+Categoría: CORREDERA LATINOAMERICANA
+Herraje: Estandar - L-4800 MONOLITICO
+Color: BLANCO
+Vidrio: CTI5 | Cristal Templado Incoloro 5mm
+
+Intentos en proyectos nuevos:
+- Proyecto 46410: "No se ha encontrado la línea de productos".
+- Proyecto 46414: aviso "La linea L-4800 MONOLITICO no tiene perfiles para extensiones"; luego "No se ha encontrado el producto para el perfil adaptador"; el guardado quedó bloqueado y no hubo Plan de armado.
+- Proyecto 46415 (reintento limpio): aviso "La linea L-4800 MONOLITICO no tiene perfiles para extensiones"; luego "No se ha encontrado el producto para el perfil adaptador"; no hubo Plan de armado.
+
+Clasificación: ZETA_UI_ERROR / PENDING. Esto no prueba que la receta no exista.

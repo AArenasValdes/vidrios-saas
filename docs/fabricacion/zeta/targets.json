@@ -1,8 +1,9 @@
 {
-  "generatedAt": "2026-09-18T09:41:28.798Z",
+  "generatedAt": "2026-09-20T06:58:08.160Z",
   "source": [
     "docs/fabricacion/zeta/confirmed/",
     "docs/fabricacion/zeta/pending/sodal/l25/PENDING.md",
+    "docs/fabricacion/zeta/pending/sodal/4800/PENDING.md",
     "docs/fabricacion/zeta/INDEX.md"
   ],
   "targets": [
@@ -170,6 +171,53 @@
       "status": "confirmed",
       "purpose": "canonical",
       "confirmedRecipeId": "dvh_pierna_cerrada_4h_3000x1500"
+    },
+    {
+      "id": "monolitico_2h_1800x1500",
+      "manufacturer": "SODAL",
+      "system": "4800",
+      "line": "L-4800 MONOLITICO",
+      "variant": "MONOLITICO",
+      "glazing": "monolitico",
+      "glassCode": "CTI5",
+      "leaves": 2,
+      "widthMm": 1800,
+      "heightMm": 1500,
+      "status": "confirmed",
+      "purpose": "canonical",
+      "confirmedRecipeId": "monolitico_2h_1800x1500"
+    },
+    {
+      "id": "monolitico_3h_3000x1500",
+      "manufacturer": "SODAL",
+      "system": "4800",
+      "line": "L-4800 MONOLITICO",
+      "variant": "MONOLITICO",
+      "glazing": "monolitico",
+      "glassCode": "CTI5",
+      "leaves": 3,
+      "widthMm": 3000,
+      "heightMm": 1500,
+      "status": "confirmed",
+      "purpose": "canonical",
+      "confirmedRecipeId": "monolitico_3h_3000x1500"
+    },
+    {
+      "id": "monolitico_4h_3000x1500",
+      "manufacturer": "SODAL",
+      "system": "4800",
+      "line": "L-4800 MONOLITICO",
+      "variant": "MONOLITICO",
+      "glazing": "monolitico",
+      "glassCode": "CTI5",
+      "leaves": 4,
+      "widthMm": 3000,
+      "heightMm": 1500,
+      "status": "pending",
+      "purpose": "canonical",
+      "reason": "Zeta mostró `No se ha encontrado la línea de productos`; no se generó Plan de armado",
+      "colorHint": "BLANCO",
+      "topologyHint": "CORREDERA LATINOAMERICANA"
     },
     {
       "id": "monolitico_pierna_abierta_2h_1800x1500",

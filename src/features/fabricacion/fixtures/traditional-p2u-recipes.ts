@@ -4,6 +4,9 @@ import {
   type FabricacionReceta,
   type FabricacionTipologia,
 } from "@/features/fabricacion/types/fabricacion-domain";
+import { crearRecetaSerie45Practicable } from "@/features/fabricacion/fixtures/serie-45-practicable-recipe";
+import { crearRecetasLine15Corredera } from "@/features/fabricacion/fixtures/line-15-corredera-recipe";
+import { crearRecetasLine4000Corredera } from "@/features/fabricacion/fixtures/line-4000-corredera-recipe";
 
 type RecipeInput = { lineName: string; createId?: () => string };
 
@@ -21,14 +24,14 @@ export const P2U_RECIPE_SOURCES = {
   line15: {
     sourceType: "supplier",
     sourceName: "ALAR",
-    sourceReference: "alar:catalogo-2011:p109:pauta-corte:serie-15",
-    sourceRevision: "Catálogo ALAR distribuido por Alumet, edición 2011, p. 109",
+    sourceReference: "ventora:line-15-corredera:2h:v1",
+    sourceRevision: "Despiece oficial Línea AL-15 corredera 2 hojas",
   },
   line4000: {
     sourceType: "manufacturer",
-    sourceName: "Arquetipo",
-    sourceReference: "arquetipo:catalogo-linea-estandar:p13-14:linea-4000",
-    sourceRevision: "Catálogo Perfiles de Aluminio Arquetipo, páginas 14-15",
+    sourceName: "Columbia",
+    sourceReference: "ventora:line-4000-corredera:2h:v1",
+    sourceRevision: "Despiece oficial Línea 4000 Columbia corredera 2 hojas",
   },
   am35: {
     sourceType: "manufacturer",
@@ -38,9 +41,9 @@ export const P2U_RECIPE_SOURCES = {
   },
   line45: {
     sourceType: "manufacturer",
-    sourceName: "Arquetipo",
-    sourceReference: "arquetipo:catalogo-linea-estandar:p19-20:linea-45",
-    sourceRevision: "Catálogo Perfiles de Aluminio Arquetipo, páginas 20-21",
+    sourceName: "Sodal / Indalum",
+    sourceReference: "sodal+indalum:serie-45-practicable:puerta:1h",
+    sourceRevision: "docs/fabricacion/2026-09-20-serie-45-practicable-formulas.md",
   },
   line12: {
     sourceType: "manufacturer",
@@ -124,63 +127,6 @@ function baseRecipe(
   };
 }
 
-function createLine15(input: RecipeInput): FabricacionReceta {
-  const createId = input.createId ?? fallbackId;
-  return baseRecipe({
-    ...input,
-    createId,
-    code: "ALAR-SERIE-15-2H-V1",
-    variant: "Pauta ALAR · composición por resolver",
-    typology: "corredera",
-    leaves: 2,
-    profiles: [
-      profile(createId, { code: "1501", name: "Riel superior", functionName: "Riel superior", base: "ancho_total", adjustmentMm: 0, quantity: 1 }),
-      profile(createId, { code: "1502", name: "Riel inferior", functionName: "Riel inferior", base: "ancho_total", adjustmentMm: 0, quantity: 1 }),
-      profile(createId, { code: "1503", name: "Jamba", functionName: "Jamba", base: "alto_total", adjustmentMm: -7, quantity: 2 }),
-      profile(createId, { code: "1504", name: "Cabezal", functionName: "Cabezal", base: "ancho_por_hoja", adjustmentMm: -3, quantity: 4 }),
-      profile(createId, { code: "1505", name: "Zócalo", functionName: "Zócalo", base: "ancho_por_hoja", adjustmentMm: -3, quantity: 2 }),
-      profile(createId, { code: "1506", name: "Pierna reforzada", functionName: "Pierna reforzada", base: "alto_total", adjustmentMm: -26, quantity: 2, required: false }),
-      profile(createId, { code: "1507", name: "Pierna", functionName: "Pierna", base: "alto_total", adjustmentMm: -26, quantity: 2, required: false }),
-      profile(createId, { code: "1508", name: "Traslapo reforzado", functionName: "Traslapo reforzado", base: "alto_total", adjustmentMm: -26, quantity: 2, required: false }),
-    ],
-    pending: ["Resolver si 1506, 1507 y 1508 son alternativas o componentes simultáneos."],
-    notes: [
-      "Pauta primaria ALAR: Catálogo distribuido por Alumet, edición 2011, p. 109.",
-      "Identidad de perfiles contrastada con el catálogo Arquetipo de Línea 15.",
-      "La pauta publica 1501–1508, pero no resuelve la composición entre pierna reforzada, pierna y traslapo reforzado; se muestran como opciones no obligatorias.",
-      "Ejemplo documental 1200 × 1000: 1501=1200, 1502=1200, 1503=993, 1504=597, 1505=597 y perfiles 1506/1507/1508=974.",
-      "No se agrega vidrio, accesorio ni largo comercial porque la pauta citada no los resuelve.",
-    ],
-  });
-}
-
-function createLine4000(input: RecipeInput): FabricacionReceta {
-  const createId = input.createId ?? fallbackId;
-  return baseRecipe({
-    ...input,
-    createId,
-    code: "ARQUETIPO-SERIE-4000-2H-V1",
-    variant: "Normal · Corredera 2 hojas",
-    typology: "corredera",
-    leaves: 2,
-    profiles: [
-      profile(createId, { code: "4001", name: "Riel superior", functionName: "Riel superior", base: "ancho_total", quantity: 1 }),
-      profile(createId, { code: "4002", name: "Riel inferior", functionName: "Riel inferior", base: "ancho_total", quantity: 1 }),
-      profile(createId, { code: "4003", name: "Jamba", functionName: "Jamba", base: "alto_total", quantity: 2 }),
-      profile(createId, { code: "4004", name: "Cabezal", functionName: "Cabezal", base: "ancho_por_hoja", quantity: 2 }),
-      profile(createId, { code: "4005", name: "Zócalo", functionName: "Zócalo", base: "ancho_por_hoja", quantity: 2 }),
-      profile(createId, { code: "4007", name: "Traslapo", functionName: "Traslapo", base: "alto_total", quantity: 2 }),
-      profile(createId, { code: "4008", name: "Pierna con aleta", functionName: "Pierna con aleta", base: "alto_total", quantity: 2 }),
-    ],
-    pending: ["Faltan ajustes y una pauta numérica oficial de corte para esta configuración."],
-    notes: [
-      "Identidad primaria Arquetipo: Catálogo Perfiles de Aluminio, Línea 4000, ventana corredera.",
-      "ALAR/Alumet confirman la familia Serie/Columbia 4000 y sus perfiles equivalentes, pero no se usa esa coincidencia para inventar descuentos.",
-      "Estado: línea tradicional documentada; pauta de corte pendiente, no lista para probar.",
-    ],
-  });
-}
-
 function createAm35(input: RecipeInput, typology: "puerta_abatible" | "puerta_vaiven"): FabricacionReceta {
   const createId = input.createId ?? fallbackId;
   const label = typology === "puerta_abatible" ? "Abatible" : "Vaivén";
@@ -211,25 +157,9 @@ function createAm35(input: RecipeInput, typology: "puerta_abatible" | "puerta_va
 }
 
 function createLine45(input: RecipeInput): FabricacionReceta {
-  const createId = input.createId ?? fallbackId;
-  return baseRecipe({
-    ...input,
-    createId,
-    code: "ARQUETIPO-SERIE-45-PUERTA-V1",
-    variant: "Puerta · composición pendiente",
-    typology: "puerta_abatible",
-    leaves: 1,
-    profiles: [
-      profile(createId, { code: "4502", name: "Marco", functionName: "Marco", base: "ancho_total", quantity: 1 }),
-      profile(createId, { code: "4504", name: "Junquillo", functionName: "Junquillo", base: "ancho_total", quantity: 1 }),
-      profile(createId, { code: "4511", name: "Marco redondeado", functionName: "Marco alternativo", base: "ancho_total", quantity: 1, required: false }),
-    ],
-    pending: ["Faltan bastidor/hoja, composición de la puerta, variante y pauta de corte."],
-    notes: [
-      "Arquetipo documenta Línea 45 como puerta y muestra 4502, 4504 y 4511.",
-      "ALAR/Alumet documentan más perfiles de Serie 45, pero no se mezclan automáticamente con la ficha Arquetipo.",
-      "No se construye una hoja solo con 4502 y 4504 ni se importan perfiles de otra serie.",
-    ],
+  return crearRecetaSerie45Practicable({
+    lineName: input.lineName,
+    createId: input.createId,
   });
 }
 
@@ -259,8 +189,8 @@ function createLine12(input: RecipeInput): FabricacionReceta {
 }
 
 export const P2U_RECIPE_FACTORIES = {
-  [P2U_CATALOG_KEYS.line15]: (input: RecipeInput) => [createLine15(input)],
-  [P2U_CATALOG_KEYS.line4000]: (input: RecipeInput) => [createLine4000(input)],
+  [P2U_CATALOG_KEYS.line15]: (input: RecipeInput) => crearRecetasLine15Corredera(input),
+  [P2U_CATALOG_KEYS.line4000]: (input: RecipeInput) => crearRecetasLine4000Corredera(input),
   [P2U_CATALOG_KEYS.am35]: (input: RecipeInput) => [
     createAm35(input, "puerta_abatible"),
     createAm35(input, "puerta_vaiven"),

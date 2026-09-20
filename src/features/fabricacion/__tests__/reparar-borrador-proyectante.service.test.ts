@@ -237,6 +237,113 @@ describe("reparación conservadora de borradores AL-32/AL-42", () => {
     expect(prepararReparacionBorradorProyectante("ventora:l42", { ...row, definition })).toBeNull();
   });
 
+  it("repara el arquetipo genérico de Línea 45 con destajes 4522/4531/4534", () => {
+    const row: BorradorProyectanteRow = {
+      id: "recipe-45",
+      line_template_id: 209,
+      line_name: "Línea 45 — Puerta",
+      status: "draft",
+      version: 1,
+      source_type: "manual",
+      source_reference: "ventora-arquetipo:puerta_abatible",
+      updated_at: "2026-09-20T00:00:00Z",
+      definition: crearRecetaDesdeArquetipoEstructural({
+        archetypeId: "puerta_abatible",
+        lineName: "Línea 45 — Puerta",
+        createId: (() => {
+          let id = 0;
+          return () => `old-l45-${++id}`;
+        })(),
+      }),
+    };
+
+    const recipe = prepararReparacionBorradorProyectante("ventora:serie-45-puerta", row);
+    expect(recipe?.identidad.recetaId).toBe("old-l45-1");
+    expect(recipe?.perfiles.filter((profile) => profile.requerido !== false)).toHaveLength(10);
+    expect(recipe?.perfiles.map((profile) => profile.codigoPerfil)).toEqual(
+      expect.arrayContaining(["4522", "4531", "4534"])
+    );
+    expect(recipe?.vidrios[0]?.reglaAncho.ajusteMm).toBe(-170);
+    expect(recipe?.vidrios[0]?.reglaAlto.ajusteMm).toBe(-183);
+    expect(recipe?.identidad.apertura).toBeFalsy();
+    expect(
+      prepararReparacionBorradorProyectante("ventora:serie-45-puerta", {
+        ...row,
+        source_reference: "sodal+indalum:serie-45-practicable:puerta:1h:v2",
+        definition: recipe,
+      })
+    ).toBeNull();
+  });
+
+  it("repara Línea 45 vigente si apertura tipológica bloquea el matching de cotización", () => {
+    const current = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:serie-45-puerta",
+      lineName: "Línea 45 — Puerta",
+    })!;
+    const row: BorradorProyectanteRow = {
+      id: "recipe-45-apertura",
+      line_template_id: 209,
+      line_name: "Línea 45 — Puerta",
+      status: "draft",
+      version: 1,
+      source_type: "manual",
+      source_reference: "sodal+indalum:serie-45-practicable:puerta:1h:v2",
+      updated_at: "2026-09-20T00:00:00Z",
+      definition: {
+        ...current,
+        identidad: { ...current.identidad, recetaId: "l45-apertura-1", apertura: "puerta_abatible" },
+      },
+    };
+
+    const recipe = prepararReparacionBorradorProyectante("ventora:serie-45-puerta", row);
+    expect(recipe?.identidad.recetaId).toBe("l45-apertura-1");
+    expect(recipe?.identidad.apertura).toBeFalsy();
+    expect(recipe?.perfiles.filter((profile) => profile.requerido !== false)).toHaveLength(10);
+  });
+
+  it("repara el arquetipo vacío de Serie 4800 con destajes SODAL Diamond", () => {
+    const row: BorradorProyectanteRow = {
+      id: "recipe-4800",
+      line_template_id: 313,
+      line_name: "Serie 4800 — Corredera 2 hojas",
+      status: "draft",
+      version: 1,
+      source_type: "manual",
+      source_reference: "ventora-arquetipo:corredera_2h",
+      updated_at: "2026-09-20T00:00:00Z",
+      definition: crearRecetaDesdeArquetipoEstructural({
+        archetypeId: "corredera_2h",
+        lineName: "Serie 4800 — Corredera 2 hojas",
+        catalogKey: "ventora:serie-4800-corredera-2h",
+        createId: (() => {
+          let id = 0;
+          return () => `old-l4800-${++id}`;
+        })(),
+      }),
+    };
+
+    const recipe = prepararReparacionBorradorProyectante("ventora:serie-4800-corredera-2h", row);
+    expect(recipe?.identidad.recetaId).toBe("old-l4800-1");
+    expect(recipe?.perfiles.map((profile) => profile.codigoPerfil)).toEqual([
+      "4801",
+      "4802",
+      "4803",
+      "4804",
+      "4805",
+      "4806",
+      "4808",
+    ]);
+    expect(recipe?.vidrios[0]?.reglaAncho.ajusteMm).toBe(-44);
+    expect(recipe?.vidrios[0]?.reglaAlto.ajusteMm).toBe(-93);
+    expect(
+      prepararReparacionBorradorProyectante("ventora:serie-4800-corredera-2h", {
+        ...row,
+        source_reference: "sodal:serie-4800-corredera:2h:normal:v1",
+        definition: recipe,
+      })
+    ).toBeNull();
+  });
+
   it("conserva otras líneas, fuentes, estados, versiones y datos inválidos", () => {
     expect(prepararReparacionBorradorProyectante("ventora:linea-no-p2u", seed())).toBeNull();
     expect(prepararReparacionBorradorProyectante(null, seed())).toBeNull();

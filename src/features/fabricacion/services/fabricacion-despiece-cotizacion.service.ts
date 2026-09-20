@@ -9,6 +9,11 @@ import { isFabricacionRecipeReadyForSnapshot } from "@/features/fabricacion/serv
 import { resolveFabricacionHojasForRecipeMatch } from "@/features/fabricacion/services/fabricacion-hojas-resolver.service";
 import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import { resolveFabricationRecipe } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
+import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
+import {
+  isL20CatalogKey,
+  resolveL20AperturaForCatalogKey,
+} from "@/features/fabricacion/fixtures/l20-alumetrica-variant-recipes";
 import {
   describeSodalL25PautaMessage,
   isSodalL25CatalogKey,
@@ -81,6 +86,22 @@ function attachFrozenDespieceFallback(
 }
 
 /** El Constructor guarda sistema/config como "Personalizado"; no es apertura de receta. */
+const COMMERCIAL_SISTEMA_AS_APERTURA = new Set([
+  "personalizado",
+  "personalizada",
+  "corredera",
+  "abatible",
+  "pivotante",
+  "plegable",
+  "vaiven",
+  "vaivén",
+  "vidrio templado",
+  "colgante",
+  "automatica",
+  "automática",
+  "otro",
+]);
+
 export function resolveAperturaForRecipeMatch(
   fabricacionApertura: string | null | undefined,
   sistema: string | null | undefined
@@ -90,7 +111,7 @@ export function resolveAperturaForRecipeMatch(
     const value = (candidate ?? "").trim();
     if (!value) continue;
     const normalized = value.toLowerCase();
-    if (normalized === "personalizado" || normalized === "personalizada") {
+    if (COMMERCIAL_SISTEMA_AS_APERTURA.has(normalized)) {
       continue;
     }
     return value;
@@ -167,7 +188,7 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     };
   }
 
-  const apertura = resolveAperturaForRecipeMatch(
+  const aperturaFromPresentation = resolveAperturaForRecipeMatch(
     presentation.fabricacionApertura,
     presentation.sistema
   );
@@ -176,7 +197,12 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     resolveEffectiveSodalL25CatalogKey({
       catalogLineKey: presentation.catalogLineKey,
       nombre: input.item.lineaComercial,
-    }) || null;
+    }) || presentation.catalogLineKey?.trim() || null;
+  const apertura =
+    aperturaFromPresentation ||
+    (isL20CatalogKey(catalogKey)
+      ? resolveL20AperturaForCatalogKey(catalogKey, presentation.fabricacionVariante)
+      : null);
   const sodalConfig = isSodalL25CatalogKey(catalogKey)
     ? resolveSodalL25QuoteConfig({
         catalogKey,
@@ -204,6 +230,8 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   const resolution = resolveFabricationRecipe(input.recipes, {
     organizationId: input.organizationId,
     lineTemplateId,
+    anchoTotalMm: ancho,
+    altoTotalMm: alto,
     catalogKey,
     tipologia,
     hojas,
@@ -215,8 +243,7 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     leg: sodalConfig?.leg ?? null,
     reinforcement: sodalConfig?.reinforcement ?? null,
     preferredRecipeId: presentation.fabricationRecipeId || null,
-    allowNonValidatedRecipeId: presentation.fabricationRecipeId || null,
-    allowPreliminaryNonValidated: !isSodalL25CatalogKey(catalogKey),
+    previewListaParaProbar: true,
   });
 
   if (resolution.estado === "multiples_recetas") {
@@ -247,6 +274,23 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   }
 
   const recipe = resolution.receta;
+  if (resolution.estado === "receta_no_validada") {
+    const preview = evaluarRecetaListaParaProbar(recipe.definition);
+    if (!preview.listaParaProbar) {
+      return {
+        estado: "receta_incompleta",
+        formal: null,
+        cubication: null,
+        recipe,
+        barsAvailable: false,
+        preliminary: true,
+        message:
+          preview.bloqueos[0] ??
+          "La receta aún no está lista para probar en cotización.",
+      };
+    }
+  }
+
   const readiness = isFabricacionRecipeReadyForSnapshot(recipe);
   if (!readiness.ready) {
     return {

@@ -108,18 +108,8 @@ export function useFabricationRecipes(options: UseFabricationRecipesOptions = {}
           lineTemplateId: options.lineTemplateId,
         });
 
-      const data =
-        options.lineTemplateId != null
-          ? (
-              await Promise.all([
-                ensureStructuralDraftsClient(organizationId),
-                listRecipes(),
-              ])
-            )[1]
-          : await (async () => {
-              await ensureStructuralDraftsClient(organizationId);
-              return listRecipes();
-            })();
+      await ensureStructuralDraftsClient(organizationId);
+      const data = await listRecipes();
 
       if (loadId === loadIdRef.current) setRecipes(data);
     } catch (loadError) {

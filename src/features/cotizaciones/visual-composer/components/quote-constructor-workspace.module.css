@@ -466,6 +466,32 @@
 
 .header p strong { color: #334155; }
 
+.constructorHint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: 560px;
+  margin-top: 8px;
+  padding: 6px 8px;
+  border: 1px solid #dbe8f7;
+  border-radius: 9px;
+  background: #f8fbff;
+  color: #5d6b7f;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.constructorHint > svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: #2f6fed;
+}
+
+.constructorHint strong {
+  color: #263a59;
+  font-weight: 800;
+}
+
 .reviewButton {
   display: inline-flex;
   align-items: center;

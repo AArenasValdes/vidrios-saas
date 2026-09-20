@@ -4,15 +4,15 @@ import { auditarIntegridadCatalogoLineasVentora } from "@/features/cotizaciones/
 
 describe("auditoria integridad catalogo lineas", () => {
 
-  it("clasifica las 29 líneas con categorías primarias mutuamente excluyentes", () => {
+  it("clasifica las 30 líneas con categorías primarias mutuamente excluyentes", () => {
 
     const { lineas, resumen } = auditarIntegridadCatalogoLineasVentora();
 
 
 
-    expect(lineas).toHaveLength(29);
+    expect(lineas).toHaveLength(30);
 
-    expect(resumen.totalLineas).toBe(29);
+    expect(resumen.totalLineas).toBe(30);
 
 
 
@@ -24,13 +24,13 @@ describe("auditoria integridad catalogo lineas", () => {
 
     );
 
-    expect(sumaPrimaria).toBe(29);
+    expect(sumaPrimaria).toBe(30);
 
 
 
     expect(resumen.clasificacionPrimaria).toEqual({
 
-      codigos_documentados_no_validados: 8,
+      codigos_documentados_no_validados: 9,
 
       codigos_referenciales_no_ambiguos: 15,
 
@@ -46,9 +46,9 @@ describe("auditoria integridad catalogo lineas", () => {
 
     expect(resumen.nomenclaturaAmbigua).toBe(1);
 
-    expect(resumen.conCodigosReferencialesEnFixtures).toBe(24);
+    expect(resumen.conCodigosReferencialesEnFixtures).toBe(25);
 
-    expect(resumen.gateTecnico.listaParaProbar).toBe(12);
+    expect(resumen.gateTecnico.listaParaProbar).toBe(16);
 
   });
 

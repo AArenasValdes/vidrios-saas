@@ -1,3 +1,7 @@
+import {
+  enrich4800SourceEvidence,
+  enrichL25SourceEvidence,
+} from "@/features/fabricacion/zeta/zeta-trace-enrichment";
 import type {
   ConfirmedRecipe,
   GlassPiece,
@@ -119,12 +123,43 @@ function normalizeEvidence(record: Record<string, unknown>): SourceEvidence {
     null;
 
   return {
+    runId: asString(pick(nestedRecord, ["runId", "run_id"])),
     projectId: asString(pick(nestedRecord, ["projectId", "project_id"])) ?? null,
     planId,
     screenshotPaths: Array.isArray(nestedRecord.screenshotPaths)
       ? nestedRecord.screenshotPaths.filter((item): item is string => typeof item === "string")
       : [],
     rawPath: asString(pick(nestedRecord, ["rawPath", "raw_path"])),
+    htmlPath: asString(pick(nestedRecord, ["htmlPath", "html_path"])),
+    textPath: asString(pick(nestedRecord, ["textPath", "text_path"])),
+    capturedAt: asString(pick(nestedRecord, ["capturedAt", "captured_at"])),
+    extractorVersion: asString(
+      pick(nestedRecord, ["extractorVersion", "extractor_version"]),
+    ),
+    artifactHashes: isRecord(nestedRecord.artifactHashes)
+      ? {
+          html: asString(nestedRecord.artifactHashes.html),
+          text: asString(nestedRecord.artifactHashes.text),
+          screenshots: isRecord(nestedRecord.artifactHashes.screenshots)
+            ? Object.fromEntries(
+                Object.entries(nestedRecord.artifactHashes.screenshots).filter(
+                  (entry): entry is [string, string] => typeof entry[1] === "string",
+                ),
+              )
+            : {},
+        }
+      : undefined,
+    sourceFragments: Array.isArray(nestedRecord.sourceFragments)
+      ? nestedRecord.sourceFragments.filter(isRecord).flatMap((fragment) => {
+          const id = asString(fragment.id);
+          const tipo = asString(fragment.tipo);
+          const locator = asString(fragment.locator);
+          const texto = asString(fragment.texto);
+          return id && locator && texto && ["perfil", "vidrio", "accesorio", "identidad", "advertencia"].includes(tipo ?? "")
+            ? [{ id, tipo: tipo as "perfil" | "vidrio" | "accesorio" | "identidad" | "advertencia", locator, texto }]
+            : [];
+        })
+      : undefined,
     sourceDocument: asString(pick(nestedRecord, ["sourceDocument", "source_document"])),
   };
 }
@@ -152,7 +187,7 @@ export function normalizeConfirmedRecipe(raw: unknown, recipeId: string): Confir
   const heightMm =
     asNumber(pick(dimensionsRecord, ["heightMm", "height_mm"])) ?? 0;
 
-  return {
+  const base: ConfirmedRecipe = {
     id: recipeId,
     manufacturer,
     system,
@@ -171,6 +206,13 @@ export function normalizeConfirmedRecipe(raw: unknown, recipeId: string): Confir
     hardware: normalizeHardware(raw.hardware),
     sourceEvidence: normalizeEvidence(raw),
   };
+
+  const sourceEvidence =
+    system.toUpperCase() === "4800"
+      ? enrich4800SourceEvidence(base)
+      : enrichL25SourceEvidence(base);
+
+  return { ...base, sourceEvidence };
 }
 
 export function identityKey(input: {

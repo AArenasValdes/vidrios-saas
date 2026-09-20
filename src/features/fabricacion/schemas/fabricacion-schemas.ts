@@ -3,6 +3,9 @@ import {
   FABRICACION_ADVERTENCIA_NIVELES,
   FABRICACION_BASES_MEDIDA,
   FABRICACION_ENGINE_VERSION,
+  FABRICACION_EVIDENCIA_ORIGENES,
+  FABRICACION_FUENTES_EVIDENCIA,
+  FABRICACION_NIVELES_CONFIANZA,
   FABRICACION_ESTADOS_VALIDACION,
   FABRICACION_RECIPE_SCHEMA_VERSION,
   FABRICACION_REGLAS_CANTIDAD,
@@ -149,6 +152,115 @@ export const fabricacionConfiguracionCorteSchema = z
   })
   .strict();
 
+export const fabricacionFuenteFragmentoSchema = z
+  .object({
+    id: z.string().min(1),
+    tipo: z.enum(["perfil", "vidrio", "accesorio", "identidad", "advertencia"]),
+    locator: z.string().min(1),
+    texto: z.string().min(1),
+  })
+  .strict();
+
+const fabricacionMedidaObservadaExternaSchema = z
+  .object({
+    anchoMm: integerPositiveSchema,
+    altoMm: integerPositiveSchema,
+    hojas: integerPositiveSchema.optional(),
+    modulos: integerPositiveSchema.optional(),
+    variante: z.string().min(1).nullable().optional(),
+  })
+  .strict();
+
+export const fabricacionEvidenciaSchema = z
+  .object({
+    fuente: z.literal("sistema_zeta"),
+    runId: z.string().min(1),
+    projectId: z.string().min(1),
+    planId: z.string().min(1),
+    rawPath: z.string().min(1),
+    htmlPath: z.string().min(1),
+    textPath: z.string().min(1),
+    screenshotPaths: z.array(z.string().min(1)).min(1),
+    fecha: z.string().min(1),
+    extractorVersion: z.string().min(1),
+    hashes: z
+      .object({
+        html: z.string().regex(/^[a-f0-9]{64}$/i),
+        text: z.string().regex(/^[a-f0-9]{64}$/i),
+        screenshots: z.record(z.string(), z.string().regex(/^[a-f0-9]{64}$/i)).refine(
+          (value) => Object.keys(value).length > 0,
+          "La evidencia Zeta requiere hash de al menos un screenshot.",
+        ),
+      })
+      .strict(),
+    sourceFragments: z.array(fabricacionFuenteFragmentoSchema).min(1),
+    medidasObservadas: z
+      .array(
+        z
+          .object({
+            anchoMm: integerPositiveSchema,
+            altoMm: integerPositiveSchema,
+          })
+          .strict(),
+      )
+      .min(1),
+    valores: z
+      .array(
+        z
+          .object({
+            fieldPath: z.string().min(1),
+            origen: z.enum(FABRICACION_EVIDENCIA_ORIGENES),
+            sourceFragmentId: z.string().min(1).nullable().optional(),
+          })
+          .strict(),
+      )
+      .min(1),
+  })
+  .strict();
+
+export const fabricacionEvidenciaExternaSchema = z
+  .object({
+    fuente: z.enum(["alumetrica", "haciendoventanas"]),
+    nombreFuente: z.string().min(1),
+    url: z.string().url().nullable().optional(),
+    archivo: z.string().min(1).nullable().optional(),
+    htmlPath: z.string().min(1).nullable().optional(),
+    screenshotPaths: z.array(z.string().min(1)).optional(),
+    pdfPath: z.string().min(1).nullable().optional(),
+    fecha: z.string().min(1),
+    sourceFragments: z.array(fabricacionFuenteFragmentoSchema).min(1),
+    medidasObservadas: z.array(fabricacionMedidaObservadaExternaSchema).min(1),
+    valores: z
+      .array(
+        z
+          .object({
+            fieldPath: z.string().min(1),
+            origen: z.enum(FABRICACION_EVIDENCIA_ORIGENES),
+            sourceFragmentId: z.string().min(1).nullable().optional(),
+          })
+          .strict(),
+      )
+      .min(1),
+    confianza: z.enum(FABRICACION_NIVELES_CONFIANZA),
+    conflictos: z.array(z.string().min(1)).optional(),
+  })
+  .strict();
+
+export const fabricacionAlcanceCalculoSchema = z.discriminatedUnion("modo", [
+  z
+    .object({
+      modo: z.literal("formula_general"),
+    })
+    .strict(),
+  z
+    .object({
+      modo: z.literal("observed_fixture_only"),
+      medidasObservadas: z.array(fabricacionMedidaObservadaExternaSchema).min(1),
+      calculableFueraDeMedidas: z.boolean(),
+    })
+    .strict(),
+]);
+
 export const fabricacionRecetaSchema = z
   .object({
     schemaVersion: z.literal(FABRICACION_RECIPE_SCHEMA_VERSION),
@@ -172,6 +284,9 @@ export const fabricacionRecetaSchema = z
       .strict()
       .optional(),
     configuracionCorte: fabricacionConfiguracionCorteSchema.optional(),
+    evidencia: fabricacionEvidenciaSchema.optional(),
+    evidenciasExternas: z.array(fabricacionEvidenciaExternaSchema).optional(),
+    alcanceCalculo: fabricacionAlcanceCalculoSchema.optional(),
     datosPendientes: z.array(z.string().min(1)).optional(),
     notasValidacion: z.array(z.string()),
   })

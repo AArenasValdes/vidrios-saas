@@ -117,7 +117,7 @@ describe("taller-perfiles.service", () => {
 
     const result = collectFrequentLargosMm([recipe]);
     expect(result.usedByWorkshop[0]).toBe(6000);
-    expect(result.otherFrequent).toEqual([5800, 6400]);
+    expect(result.otherFrequent).toEqual([5950, 5800, 6400]);
   });
 
   it("aplica un largo a todos los perfiles", () => {

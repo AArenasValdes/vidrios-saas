@@ -1,3 +1,4 @@
+import { L20_FIJOS_CATALOG_KEY } from "@/features/fabricacion/fixtures/l20-alumetrica-variant-recipes";
 import {
   ARQUETIPOS_ESTRUCTURALES,
   resolveArquetipoEstructuralId,
@@ -6,6 +7,7 @@ import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templa
 
 export type LineTemplateFamilyKey =
   | "correderas"
+  | "fijos"
   | "proyectantes"
   | "puertas"
   | "fachadas"
@@ -15,6 +17,7 @@ export type LineTemplateFamilyKey =
 
 export const LINE_TEMPLATE_FAMILY_ORDER: LineTemplateFamilyKey[] = [
   "correderas",
+  "fijos",
   "proyectantes",
   "puertas",
   "fachadas",
@@ -25,6 +28,7 @@ export const LINE_TEMPLATE_FAMILY_ORDER: LineTemplateFamilyKey[] = [
 
 export const LINE_TEMPLATE_FAMILY_LABELS: Record<LineTemplateFamilyKey, string> = {
   correderas: "Correderas",
+  fijos: "Fijos",
   proyectantes: "Proyectantes",
   puertas: "Puertas",
   fachadas: "Fachadas",
@@ -39,6 +43,14 @@ function resolveFamilyFromLineConfiguration(lineConfiguration: string): LineTemp
 
   if (normalized.includes("corredera") || normalized.includes("monorriel") || normalized.includes("riel")) {
     return "correderas";
+  }
+  if (
+    normalized.includes("fijo") ||
+    normalized.includes("fija") ||
+    normalized.includes("paño fijo") ||
+    normalized.includes("pano fijo")
+  ) {
+    return "fijos";
   }
   if (normalized.includes("proyectante")) {
     return "proyectantes";
@@ -67,6 +79,9 @@ function resolveFamilyFromArchetypeTipologia(
   if (tipologia === "corredera" || tipologia === "pvc_monorriel") {
     return "correderas";
   }
+  if (tipologia === "pano_fijo") {
+    return "fijos";
+  }
   if (tipologia === "proyectante") {
     return "proyectantes";
   }
@@ -90,6 +105,10 @@ export function resolveLineTemplateFamilyKey(
 ): LineTemplateFamilyKey {
   if (template.categoria === "vidrio") {
     return "cristales";
+  }
+
+  if (template.catalogKey === L20_FIJOS_CATALOG_KEY) {
+    return "fijos";
   }
 
   const metadata = template.catalogMetadata as Record<string, unknown> | null | undefined;

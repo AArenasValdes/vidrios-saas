@@ -1,0 +1,23 @@
+{
+  "startedAt": "2026-09-19T00:52:59.646Z",
+  "finishedAt": "2026-09-19T00:52:59.697Z",
+  "command": "C:\\Program Files\\nodejs\\node.exe C:\\Users\\aless\\vidrios-saas\\scripts\\zeta\\ingest-raw.ts --target=monolitico_2h_1800x1500",
+  "mode": "ingest",
+  "targetsRequested": [
+    "monolitico_2h_1800x1500"
+  ],
+  "processed": [
+    "monolitico_2h_1800x1500"
+  ],
+  "confirmed": [
+    "monolitico_2h_1800x1500"
+  ],
+  "skipped": [],
+  "failed": [],
+  "pending": [],
+  "errors": [],
+  "notes": [
+    "Ingest desde raw/ — la navegación manual no escribe confirmed directamente.",
+    "Comparación contra target monolitico_2h_1800x1500: OK\n- [ok] line: esperado L-4800 MONOLITICO / actual L-4800 MONOLITICO — 2H — 1800 × 1500 mm\n- [ok] leaves: esperado 2 / actual 2\n- [ok] widthMm: esperado 1800 / actual 1800\n- [ok] heightMm: esperado 1500 / actual 1500\n- [ok] glassCode: esperado CTI5 / actual CTI5\n- [ok] profiles: esperado >0 / actual 7\n- [ok] glass: esperado >0 / actual 1\n- [ok] hardware: esperado >0 / actual 12"
+  ]
+}

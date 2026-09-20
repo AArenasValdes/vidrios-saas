@@ -1,4 +1,5 @@
 import { writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 
 import { ensureDir, RUNS_DIR, repoRelative } from "./paths.ts";
@@ -6,6 +7,7 @@ import type { RunLog } from "./types.ts";
 
 export function createRunLog(command: string, mode: RunLog["mode"]): RunLog {
   return {
+    runId: randomUUID(),
     startedAt: new Date().toISOString(),
     finishedAt: "",
     command,

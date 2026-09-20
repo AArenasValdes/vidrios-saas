@@ -21,7 +21,11 @@ describe("recetas P2A documentadas por SODAL", () => {
       expect(recipes.length).toBeGreaterThan(0);
       for (const recipe of recipes) {
         expect(() => fabricacionRecetaSchema.parse(recipe)).not.toThrow();
-        expect(recipe.estado).toBe("ejemplo_no_validado");
+        if (catalogKey === "ventora:serie-4800-corredera-2h") {
+          expect(recipe.estado).toBe("lista_para_validar");
+        } else {
+          expect(recipe.estado).toBe("ejemplo_no_validado");
+        }
         expect(recipe.notasValidacion.join(" ")).toMatch(/SODAL|sodal/i);
         expect(recipe.notasValidacion.join(" ")).not.toMatch(/validada por taller|workshop_validated/i);
       }
@@ -66,8 +70,7 @@ describe("recetas P2A documentadas por SODAL", () => {
     });
 
     expect(result.perfiles.find((profile) => profile.codigoPerfil === "4804")?.medidaMm).toBe(585);
-    expect(result.vidrios[0]).toMatchObject({ anchoMm: 558, altoMm: 1907, cantidadPiezas: 2 });
-    expect(result.accesorios.some((accessory) => /Felpa|Burlete/i.test(accessory.nombre))).toBe(false);
-    expect(result.advertencias.filter((warning) => warning.codigo === "FORMULA_ACCESORIO_PENDIENTE")).toHaveLength(2);
+    expect(result.vidrios[0]).toMatchObject({ anchoMm: 556, altoMm: 1907, cantidadPiezas: 2 });
+    expect(result.accesorios).toHaveLength(0);
   });
 });

@@ -2,7 +2,10 @@
 
 import { RecipeGlassNamePicker } from "@/features/fabricacion/components/recipe-glass-name-picker";
 import { patchRecipeGlassNombre } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
-import { describeAccesorioReglaHumana } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
+import {
+  describeAccesorioReglaHumana,
+  describeRecipeGlassListRow,
+} from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
 
 import s from "./fabricacion-mobile.module.css";
@@ -44,7 +47,15 @@ export function FabricacionItemEditSheet({
 
   if (!glass && !accessory) return null;
 
-  const title = glass ? glass.nombre.trim() || "Vidrio" : accessory?.nombre.trim() || "Accesorio";
+  const glassDisplay = glass ? describeRecipeGlassListRow(glass) : null;
+  const title = glassDisplay
+    ? glassDisplay.title
+    : accessory?.nombre.trim() || "Accesorio";
+  const sheetSubtitle = glassDisplay
+    ? glassDisplay.typePending
+      ? "Elige el vidrio habitual de esta línea. También puedes definirlo al cotizar cada pieza."
+      : "Vidrio de la receta"
+    : "Accesorio de cubicación";
 
   const handleSave = async () => {
     await onPersist(recipe);
@@ -66,7 +77,7 @@ export function FabricacionItemEditSheet({
           </button>
           <div>
             <h2 id="fabricacion-item-sheet-title">{title}</h2>
-            <p>{glass ? "Vidrio de la receta" : "Accesorio de cubicación"}</p>
+            <p>{sheetSubtitle}</p>
           </div>
           <button
             type="button"

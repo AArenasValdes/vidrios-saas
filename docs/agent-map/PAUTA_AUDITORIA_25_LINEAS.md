@@ -1,6 +1,6 @@
-# Pauta de auditoría: catálogo canónico Ventora (29 líneas)
+# Pauta de auditoría: catálogo canónico Ventora (30 líneas)
 
-Fecha de corte remoto: 2026-09-14. El nombre histórico del archivo se conserva por compatibilidad; la tabla vigente P2U cubre **29 líneas canónicas**. La línea activa histórica `id=437` sin `catalog_key` queda fuera de este mapa y debe clasificarse antes de incorporarse. Precio configurado significa precio definido por el taller; Ventora no entrega precios. “Pauta documentada” significa referencia técnica de catálogo/documentación; no equivale a validación de taller. `evidenceLevel` se representa en el código como `validationStatus`.
+Fecha de corte remoto: 2026-09-14 (Línea 45 actualizada 2026-09-20). El nombre histórico del archivo se conserva por compatibilidad; la tabla vigente cubre **30 líneas canónicas**. La línea activa histórica `id=437` sin `catalog_key` queda fuera de este mapa y debe clasificarse antes de incorporarse. Precio configurado significa precio definido por el taller; Ventora no entrega precios. “Pauta documentada” significa referencia técnica de catálogo/documentación; no equivale a validación de taller. `evidenceLevel` se representa en el código como `validationStatus`.
 
 ## Criterio P0
 
@@ -12,7 +12,7 @@ Fecha de corte remoto: 2026-09-14. El nombre histórico del archivo se conserva 
 6. Serie 4600 debe resolver `puerta_vaiven`; Andes Monorriel debe resolver `pvc_monorriel`. Metadata histórica incompatible no puede ganar al `catalogKey` canónico.
 7. Esta pauta es interna y revisable. No es CNC, nesting, promesa de corte ni validación automática.
 
-## Auditoría P3 de consistencia semántica — 29 líneas
+## Auditoría P3 de consistencia semántica — 30 líneas
 
 Fecha de ejecución: 2026-09-14. La auditoría usa la misma identidad canónica que el catálogo y Fabricación. La columna **referencias del sistema** describe la familia documentada; **reglas activas** son solo las reglas de la variante seleccionada; **cortes** es la suma de sus cantidades; las opciones quedan fuera hasta selección explícita. “Receta persistida”, “pauta documentada”, “validada en taller” y “precio configurado” son estados independientes.
 
@@ -36,10 +36,10 @@ Referencias 2513, 2514, 2516, 2518, 2521, 2531 = metadata de catálogo; no entra
 | AM-35 / `ventora:l35` | abatible · puerta abatible | 3502, 3501, 3508, 3503, 3504, 3506, 3507, 3509 | 3502, 3501, 3509 → 3 | 3508, 3503, 3504, 3506, 3507 (5) | Pendiente | No | Según organización | Confirmar composición y separar vaivén si corresponde |
 | Línea 15 / `ventora:serie-15-corredera-2h` | composición por resolver · corredera | 1501–1508 | 1501, 1502, 1503, 1504, 1505 → 10 | 1506, 1507, 1508 (3) | ALAR | No | Según organización | Resolver si 1506/1507/1508 son alternativas o simultáneos |
 | Línea 4000 / `ventora:serie-4000-corredera-2h` | normal · corredera | 4001–4005, 4007, 4008 | 4001, 4002, 4003, 4004, 4005, 4007, 4008 → 12 | — | Arquetipo | No | Según organización | Completar medidas de corte |
-| Línea 45 / `ventora:serie-45-puerta` | puerta · puerta abatible | 4502, 4504, 4511 | 4502, 4504 → 2 | 4511 (1) | Arquetipo | No | Según organización | Confirmar bastidor, variante y cortes |
+| Línea 45 / `ventora:serie-45-puerta` | puerta 1 hoja · puerta abatible | 4522, 4531, 4534 | destajes 1–10 → 14 cortes | — | Sodal/Indalum | No | Según organización | Validar en taller |
 | Línea 12 / `ventora:serie-12-shower-corredera` | tina · shower | 1201–1204 | 1201, 1202, 1203, 1204 → 8 | — | Arquetipo | No | Según organización | Confirmar receptáculo, herrajes y pauta |
 | AL-42 / `ventora:l42` | normal · proyectante | 4201, 4209, 4202, 4204, 4229, 4206, 4231, 4220, 4230, 4250 | 4201, 4201, 4202, 4202, 4229 vertical → 10 | 4229 horizontal (1 regla · 2 cortes) | Parcial | No | Según organización | Aplicar migración local para completar el par de junquillos; no convertir la referencia en validación |
-| Serie 4800 / `ventora:serie-4800-corredera-2h` | normal y reforzada · corredera | 4801–4806, 4808 | normal: 4801–4806, 4808 → 12; reforzada: 4801–4805, 4810, 4811 → 12 | — | SODAL | No | Según organización | Alinear referencias de variante reforzada (4810/4811) |
+| Serie 4800 / `ventora:serie-4800-corredera-2h` | normal y reforzada · corredera | 4801–4806, 4808, 4810, 4811 | normal: 4801–4806, 4808 → 12; reforzada: 4801–4805, 4810, 4811 → 12 | — | SODAL Diamond | No | Según organización | Validar en taller; Zeta 1:1 solo 2H 1800×1500 y 3H 3000×1500 |
 | Óptima S-28 2H / `ventora:optima-s28-corredera-2h` | estándar · corredera | Sin códigos publicados | 7 reglas → 12 | — | Base tipológica | No | Según organización | Reemplazar base por fuente primaria y prueba |
 | Óptima S-28 3H / `ventora:optima-s28-corredera-3h` | estándar · corredera | Sin códigos publicados | 7 reglas → 16 | — | Base tipológica | No | Según organización | Reemplazar base por fuente primaria y prueba |
 | S-33 / `ventora:s33-corredera-2h` | normal · corredera | 3301, 3302, 3303, 3304, 3308 | 3324, 3324, 3308, 3308, 3303 → 14 | — | SODAL | No | Según organización | Resolver diferencia 3324 frente a referencias 3301/3302/3304 |
@@ -78,10 +78,10 @@ La migración local `20260914170000_l42_normal_double_junquillo.sql` cambia úni
 | AM-35 / `ventora:l35` | Abatible y vaivén | Sí · 2 variantes `draft`, `manufacturer` | Sí · Arquetipo + Alumet | No | Según organización | Incompleta; tradicional/multiproveedor | Obtener composición y pauta |
 | Línea 15 / `ventora:serie-15-corredera-2h` | Corredera 2H | Sí · `draft`, `supplier=ALAR` | Sí · Arquetipo + ALAR p. 109 | No | Pendiente · 0 | Incompleta; 1506/1507/1508 opcionales pendientes | Resolver alternativas/simultaneidad |
 | Línea 4000 / `ventora:serie-4000-corredera-2h` | Corredera 2H | Sí · `draft`, `manufacturer=Arquetipo` | Sí · Arquetipo | No | Pendiente · 0 | Incompleta; faltan medidas de corte | Obtener pauta numérica |
-| Línea 45 / `ventora:serie-45-puerta` | Puerta abatible | Sí · `draft`, `manufacturer=Arquetipo` | Sí · Arquetipo | No | Pendiente · 0 | Incompleta; no armar solo con 4502/4504 | Confirmar bastidor, variante y cortes |
+| Línea 45 / `ventora:serie-45-puerta` | Puerta abatible | Sí · Serie 45 practicable 1H | Sí · 4522/4531/4534 | No | Pendiente · 0 | Calculable; no validada en taller | Confirmar evidencia física |
 | Línea 12 / `ventora:serie-12-shower-corredera` | Shower Door | Sí · `draft`, `manufacturer=Arquetipo` | Sí · estructura 90°/45° | No | Pendiente · 0 | Incompleta; consumos y cortes pendientes | Confirmar receptáculo, herrajes y pauta |
 | AL-42 / `ventora:l42` | Proyectante | Sí · `draft`, `workshop`; 5 reglas/10 cortes visibles actualmente | Sí | No | Según organización | Configuración técnica pendiente; no validada automáticamente | Aplicar migración local para activar el junquillo 4229 horizontal; completar evidencia, vidrio, accesorios y precio |
-| Serie 4800 / `ventora:serie-4800-corredera-2h` | Corredera 2H | Sí · SODAL P2A | Sí | No | Según organización | Calculable/documentada | Validar fabricación real |
+| Serie 4800 / `ventora:serie-4800-corredera-2h` | Corredera 2H | Sí · SODAL Diamond destajes | Sí · 4801–4808 / 4810–4811 | No | Según organización | Calculable; no validada en taller | Confirmar evidencia física |
 | Óptima S-28 2H / `ventora:optima-s28-corredera-2h` | Corredera 2H | Sí · base `draft` | Sí · base tipológica | No | Según organización | Pendiente | Fuente primaria y prueba |
 | Óptima S-28 3H / `ventora:optima-s28-corredera-3h` | Corredera 3H | Sí · base `draft` | Sí · base tipológica | No | Según organización | Pendiente | Fuente primaria y prueba |
 | Serie 42 cámara / `ventora:serie-42-proyectante-camara` | Proyectante | Sí · base `draft` | Sí · base tipológica | No | Según organización | Pendiente | Fuente primaria y prueba |
@@ -110,7 +110,8 @@ Línea 15: la pauta ALAR es `1501=1×X`, `1502=1×X`, `1503=2×(Y−7)`, `1504=4
 | AM-35 | Línea 35 · abatible y vaivén | 3502, 3501, 3508, 3503, 3504, 3506, 3507, 3509 | Ninguno inferido; ajustes pendientes por variante | No reutilizar 3200/4600; separar variantes |
 | Línea 15 | Corredera 2 hojas | 1501–1508 | 1501/1502 0; 1503 −7; 1504/1505 −3; 1506/1507/1508 −26 documentados por ALAR, opcionales hasta resolver composición | Única pauta numérica P2U |
 | Línea 4000 | Corredera 2 hojas | 4001, 4002, 4003, 4004, 4005, 4007, 4008 | Pendientes; no hay pauta numérica primaria encontrada | Mostrar “faltan medidas de corte” |
-| Línea 45 | Puerta abatible | 4502, 4504, 4511 | Pendientes; no mezclar ALAR/Alumet automáticamente | Confirmar bastidor, hoja y variante |
+| Línea 45 | Puerta abatible | 4522, 4531, 4534 | 4522 `X`/`Y`; 4531 `X−158`/`Y−28`; 4534 `X−158`/`Y−177`; vidrio `X−170`×`Y−183` | Destajes 2026-09-20; X=ancho vano, Y=alto vano |
+| Serie 4800 | Corredera 2H | 4801–4806, 4808, 4810, 4811 | rieles `X−16`; jamba `Y`; zócalo/cabezal `X/2−15`; traslapo/pierna `Y−32`; vidrio `X/2−44`×`Y−93` | Destajes Diamond 2026-09-20; solo monolítico |
 | Línea 12 | Shower Door · corredera colgante | 1201, 1202, 1203, 1204 | Pendientes; solo cortes estructurales 90°/45° documentados | Confirmar receptáculo, herrajes y pauta |
 
 La columna “descuentos persistidos” no implica validación física del ajuste. Todas las recetas P2U son `draft`; `manufacturer`/`supplier` acredita documentación, no validación física.
@@ -129,7 +130,7 @@ La tabla siguiente conserva el corte detallado anterior para trazabilidad. No de
 | 315 | AL-32 / Serie 32 | Proyectante · composición exacta pendiente | Sí · v2 `review_required`, `workshop`; v1 archivada; conserva 3204/3205 | Sí · referencia de catálogo + marco/hoja confirmados por taller | No · evidencia parcial | Sí · 80.000/m² | Calculable; `unverified`; no es “Proyectante Normal estándar” | 3201 0; 3202 -21 confirmados; 3208 -3, 3205 -1, 3204 -4 persistidos sin validar | P1: confirmar vidrio, accesorios y composición completa |
 | 316 | AM-35 | Puerta abatible y vaivén | Sí · propia, `draft` | No · base pendiente | No | No · 0 | Configuración técnica pendiente; evidencia `unverified` | Pendientes | P1 |
 | 317 | AL-42 normal / Serie 42 | Proyectante | Sí · `draft`, `workshop`; 5 reglas/10 cortes actuales | Sí · referencia Ventora + marco/hoja confirmados por taller | No · evidencia parcial | No · 0 | Configuración técnica pendiente; `unverified`; precio pendiente | 4201 0; 4202 -17 persistidos con evidencia P1; 4229 -90 persistido sin validación física | P0 local: completar junquillo 4229 horizontal; luego confirmar vidrio, accesorios y prueba real |
-| 318 | Serie 4800 | Corredera 2H | Sí · 2 recetas v2/v3, `draft`, `manufacturer=SODAL`; v1 archivada | Sí · [Catálogo General SODAL 2018, p. 29](https://sodal.cl/wp-content/uploads/2024/03/catalogo_sodal.pdf), normal/reforzada | No · sin prueba física aportada | No · 0, configurable por taller | `calculable`; `documented`; fuente SODAL | 4801/4802 -16; 4803 0; 4804/4805 -15; 4806/4808 o 4810/4811 -32; vidrio -42/-93 | P2A: prueba física y cortes no publicados |
+| 318 | Serie 4800 | Corredera 2H | Sí · 2 recetas v2/v3, `draft`, `manufacturer=SODAL`; v1 archivada | Sí · Diamond destajes 2026-09-20 + [Catálogo General SODAL 2018, p. 29](https://sodal.cl/wp-content/uploads/2024/03/catalogo_sodal.pdf), normal/reforzada | No · sin prueba física aportada | No · 0, configurable por taller | `calculable`; `documented`; fuente SODAL | rieles `X−16`; jamba `Y`; zócalo/cabezal `X/2−15`; traslapo/pierna `Y−32`; vidrio `X/2−44` / `Y−93` | Validar en taller; Zeta 1:1 solo 2H 1800×1500 y 3H 3000×1500 |
 | 319 | Óptima S28 2H | Corredera 2H | Sí · `draft`, `manual` | Sí · base tipológica | No | No · 0 | Precio pendiente; evidencia `unverified` | Pendientes | P1 |
 | 320 | Óptima S28 3H | Corredera 3H | Sí · `draft`, `manual` | Sí · base tipológica | No | No · 0 | Precio pendiente; evidencia `unverified` | Pendientes | P1 |
 | 321 | S-33 | Corredera 2H | Sí · v2, `draft`, `manufacturer=SODAL`; v1 archivada | Sí · [Catálogo General SODAL 2018, p. 41](https://sodal.cl/wp-content/uploads/2024/03/catalogo_sodal.pdf) | No · sin prueba física aportada | No · 0, configurable por taller | `calculable`; `documented`; fuente SODAL | 3324 0; 3308 -4/-72; 3303 -72; vidrio -117/-186 | P2A: prueba física |

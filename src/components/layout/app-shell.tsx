@@ -132,7 +132,7 @@ const OPERATIVE_NAV_ITEMS: NavItem[] = [
     href: "/solicitudes",
     icon: LuInbox,
     label: "Solicitudes",
-    mobileLabel: "Solicitudes",
+    mobileLabel: "Consultas",
     description: "Contactos y demos que llegan desde la landing",
   },
 ];

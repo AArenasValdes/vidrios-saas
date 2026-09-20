@@ -464,6 +464,8 @@ function buildFabricacionSnapshotForItem(input: {
   const selected = resolverRecetaFabricacionCompatible(input.recipes, {
     organizationId: input.organizationId,
     lineTemplateId,
+    anchoTotalMm: Math.round(input.item.ancho),
+    altoTotalMm: Math.round(input.item.alto),
     tipologia,
     hojas:
       presentation.fabricacionHojas ??

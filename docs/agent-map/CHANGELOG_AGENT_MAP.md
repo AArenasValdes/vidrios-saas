@@ -2,6 +2,19 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-20 - Serie 4800 destajes SODAL Diamond
+
+- `ventora:serie-4800-corredera-2h` usa destajes Diamond corredera 2H: vidrio `X/2−44` / `Y−93` (solo monolítico), rieles `X−16`, jamba `Y`, zócalo/cabezal `X/2−15`, traslapo/pierna `Y−32`.
+- Variantes **normal** (4806/4808) y **reforzada** (4810/4811). Estado `lista_para_validar`; no es validación de taller.
+- Zeta 1:1 permanece solo para 2H 1800×1500 y 3H 3000×1500. El consumo ML +10% merma es documental.
+- Receta: `serie-4800-corredera-recipe.ts`. Doc: `docs/fabricacion/2026-09-20-serie-4800-corredera-formulas.md`.
+
+## 2026-09-20 - Línea 45 practicable (Sodal / Indalum)
+
+- `ventora:serie-45-puerta` en el catálogo con destajes Serie 45 practicable: vidrio `X−170` / `Y−183`, marco 4522, bastidor 4531, junquillo 4534. X = ancho del vano; Y = alto del vano.
+- Receta: `serie-45-practicable-recipe.ts`. No usa destajes Alumétrica 4581/4584. No es validación de taller.
+- Doc: `docs/fabricacion/2026-09-20-serie-45-practicable-formulas.md`.
+
 ## 2026-09-19 - Wizard mobile de fabricación (4 pasos) + elegibilidad de revisión en cotización
 
 - **Wizard mobile de línea** (`/configuracion/empresa/lineas-precios/[lineTemplateId]/fabricacion`): flujo de **4 pasos** — Producto → Perfiles → Vidrio y accesorios → Validar. Reemplaza el stepper horizontal de 5 pasos con origen/config mezclados.

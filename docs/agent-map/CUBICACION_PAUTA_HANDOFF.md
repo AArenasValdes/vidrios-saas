@@ -7,13 +7,13 @@
 
 ### Actualización catálogo y gate 2026-09-04 (vigente)
 
-- Catálogo comercial canónico: **29 líneas** Ventora (`default-line-catalog.ts`). AM-35 y las nuevas líneas 15, 4000, 45 y 12 son tradicionales/multiproveedor: identidad documentada, receta incompleta y sin validación automática.
+- Catálogo comercial canónico: **30 líneas** Ventora (`default-line-catalog.ts`). AM-35 y las líneas 15, 4000 y 12 son tradicionales/multiproveedor con identidad documentada, receta incompleta y sin validación automática. **Línea 45** (`ventora:serie-45-puerta`) usa destajes Serie 45 practicable (vidrio `X−170`/`Y−183`, marco 4522, bastidor 4531, junquillo 4534). Estado `lista_para_validar`; no es validación de taller. No usar destajes Alumétrica 4581/4584. **Serie 4800** (`ventora:serie-4800-corredera-2h`) usa destajes SODAL Diamond corredera 2H: vidrio `X/2−44` / `Y−93` (solo monolítico), rieles `X−16`, jamba `Y`, zócalo/cabezal `X/2−15`, traslapo/pierna `Y−32`. Variantes **normal** (4806/4808) y **reforzada** (4810/4811). Estado `lista_para_validar`. Zeta 1:1 queda solo para 2H 1800×1500 y 3H 3000×1500.
 - **AL-32 / AL-42** (`ventora:l32` / `ventora:l42`) son **proyectantes**. La corrección del 2026-09-13 reemplaza la clasificación antigua como corredera. La receta nueva usa los códigos de la plantilla proyectante; descuentos y pruebas quedan pendientes del taller. El bootstrap repara solo borradores genéricos intactos sin pruebas, con filtros por organización y control de cambios concurrentes.
 - Al asignar línea en cotización, propagar tipología/hojas/receta desde catálogo; no reutilizar receta validada si su tipología no coincide con la línea elegida.
 - **Vidrio base en receta = opcional.** El gate **Probar fabricación** bloquea solo perfiles/accesorios obligatorios incompletos; sin vidrio base aparece advertencia, no bloqueo (el maestro puede definir vidrio al cotizar cada pieza).
 - Editor de receta: selector de vidrio con catálogo Ventora completo + vidrio propio del taller (`RecipeGlassNamePicker`).
 - UX editor: chips de tira comercial (6,00 / 5,95 / 5,90 m) aplican a todas las piezas al elegir; botón “Aplicar a todas las piezas” solo con medida custom.
-- Auditorías internas: `auditoria-catalogo-lineas-ventora` (fabricación por línea) y `auditoria-integridad-catalogo-lineas` (integridad de códigos; categorías mutuamente excluyentes que suman 29).
+- Auditorías internas: `auditoria-catalogo-lineas-ventora` (fabricación por línea) y `auditoria-integridad-catalogo-lineas` (integridad de códigos; categorías mutuamente excluyentes que suman 30).
 
 ### Actualización variantes multi-hoja 2026-09-17 (vigente)
 

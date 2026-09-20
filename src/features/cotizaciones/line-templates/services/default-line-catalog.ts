@@ -62,7 +62,10 @@ function buildVentoraDefaultLine(
       definition.catalogKey === "ventora:serie-42-proyectante-camara" ||
       definition.catalogKey === "ventora:serie-42-proyectante-sin-camara" ||
       definition.catalogKey === "ventora:s33-corredera-2h" ||
-      definition.catalogKey === "ventora:s33-rpt-corredera-2h"
+      definition.catalogKey === "ventora:s33-rpt-corredera-2h" ||
+      definition.catalogKey === "ventora:serie-15-corredera-2h" ||
+      definition.catalogKey === "ventora:serie-4000-corredera-2h" ||
+      definition.catalogKey === "ventora:serie-4800-corredera-2h"
         ? definition.catalogKey === "ventora:s33-rpt-corredera-2h"
           ? "DVH 4+12+4"
           : "Incoloro monolítico 4mm"
@@ -213,6 +216,15 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     ventoraPlantillaId: "L20",
   },
   {
+    catalogKey: "ventora:l20-fijos",
+    nombre: "Serie 20 — Fijos",
+    material: "Aluminio",
+    configuracion: "Fijos 2 hojas",
+    proveedor: null,
+    lineSystem: "L20",
+    ventoraPlantillaId: "L20",
+  },
+  {
     catalogKey: "ventora:l25",
     nombre: "Serie 25",
     material: "Aluminio",
@@ -252,7 +264,7 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     lineFamilyType: "traditional",
     lineSourceModel: "multiprovider",
     identitySource: "Arquetipo · Catálogo Línea 15",
-    cuttingGuideSource: "ALAR · Pautas de Corte, p. 109",
+    cuttingGuideSource: "Despiece oficial Línea AL-15 corredera 2 hojas",
   },
   {
     catalogKey: "ventora:serie-4000-corredera-2h",
@@ -264,7 +276,8 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     ventoraPlantillaId: null,
     lineFamilyType: "traditional",
     lineSourceModel: "multiprovider",
-    identitySource: "Arquetipo · Catálogo Línea 4000",
+    identitySource: "Columbia · Línea 4000 corredera 2 hojas",
+    cuttingGuideSource: "Despiece oficial Línea 4000 Columbia corredera 2 hojas",
   },
   {
     catalogKey: "ventora:serie-45-puerta",
@@ -276,7 +289,8 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     ventoraPlantillaId: null,
     lineFamilyType: "traditional",
     lineSourceModel: "multiprovider",
-    identitySource: "Arquetipo · Catálogo Línea 45",
+    identitySource: "Sodal / Indalum · Serie 45 practicable",
+    cuttingGuideSource: "Matrices de extrusión Serie 45 practicable",
   },
   {
     catalogKey: "ventora:serie-12-shower-corredera",
@@ -304,9 +318,10 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     nombre: "Serie 4800 — Corredera 2 hojas",
     material: "Aluminio",
     configuracion: "Corredera 2 hojas",
-    proveedor: null,
-    lineSystem: null,
+    proveedor: "SODAL",
+    lineSystem: "Serie 4800",
     ventoraPlantillaId: null,
+    identitySource: "SODAL Diamond · Serie 4800 corredera 2 hojas",
   },
   {
     catalogKey: "ventora:optima-s28-corredera-2h",

@@ -10,7 +10,7 @@ export type TallerPerfilRef = {
   largoComercialMm: number | null;
 };
 
-export const DEFAULT_LARGO_COMERCIAL_OPTIONS_MM = [6000, 5800, 6400] as const;
+export const DEFAULT_LARGO_COMERCIAL_OPTIONS_MM = [6000, 5950, 5800, 6400] as const;
 
 const STORAGE_KEY = "ventora.taller-perfiles.v1";
 

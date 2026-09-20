@@ -1,0 +1,33 @@
+{
+  "recipeId": "monolitico_3h_3000x1500",
+  "extractedAt": "2026-09-19T00:45:29.875Z",
+  "target": {
+    "manufacturer": "SODAL",
+    "system": "4800",
+    "line": "L-4800 MONOLITICO",
+    "leaves": 3,
+    "widthMm": 3000,
+    "heightMm": 1500,
+    "glassCode": "CTI5"
+  },
+  "sourceEvidence": {
+    "projectId": "46407",
+    "planId": "PA-54",
+    "pageUrl": "https://sistemazeta.cl/zeta/reporte_planEjecucion?idProject=46407",
+    "selectorsUsed": [
+      "ingest-raw:existing-folder",
+      "raw-capture:finalize",
+      "navigationEngine:manual"
+    ],
+    "checkpointPaths": {
+      "projectCreated": "C:\\Users\\aless\\vidrios-saas\\docs\\fabricacion\\zeta\\raw\\sodal\\4800\\monolitico_3h_3000x1500\\checkpoint-project-created.png",
+      "lineSelected": "C:\\Users\\aless\\vidrios-saas\\docs\\fabricacion\\zeta\\raw\\sodal\\4800\\monolitico_3h_3000x1500\\checkpoint-line-selected.png",
+      "geometryConfigured": "C:\\Users\\aless\\vidrios-saas\\docs\\fabricacion\\zeta\\raw\\sodal\\4800\\monolitico_3h_3000x1500\\checkpoint-geometry-configured.png",
+      "planVisible": "C:\\Users\\aless\\vidrios-saas\\docs\\fabricacion\\zeta\\raw\\sodal\\4800\\monolitico_3h_3000x1500\\checkpoint-plan-visible.png",
+      "screenshot": "C:\\Users\\aless\\vidrios-saas\\docs\\fabricacion\\zeta\\raw\\sodal\\4800\\monolitico_3h_3000x1500\\screenshot.png"
+    }
+  },
+  "warnings": [],
+  "errorText": null,
+  "screenshotWritten": false
+}

@@ -150,6 +150,9 @@ describe("PasoDosCuadernoMovil", () => {
     render(<PasoDosCuadernoMovil {...defaultProps} />);
 
     expect(screen.getByRole("heading", { name: "Constructor de piezas" })).toBeInTheDocument();
+    expect(screen.getByRole("note", { name: "Sobre el constructor" })).toHaveTextContent(
+      "Para trabajos con varias piezas"
+    );
     expect(screen.getByText("Elige una tipologia y toca Agregar")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Agregar pieza" }));
     expect(screen.getByRole("dialog", { name: "Agregar pieza" })).toBeInTheDocument();

@@ -1,0 +1,25 @@
+{
+  "runId": "9340a223-1e57-4616-8ba0-0e802af9094b",
+  "startedAt": "2026-09-19T20:31:30.553Z",
+  "finishedAt": "2026-09-19T20:32:55.551Z",
+  "command": "one-context real capture dvh_pierna_abierta_3h_3000x1500",
+  "mode": "live",
+  "targetsRequested": [],
+  "processed": [],
+  "confirmed": [],
+  "skipped": [],
+  "failed": [
+    "dvh_pierna_abierta_3h_3000x1500"
+  ],
+  "pending": [
+    "dvh_pierna_abierta_3h_3000x1500"
+  ],
+  "errors": [
+    {
+      "targetId": "dvh_pierna_abierta_3h_3000x1500",
+      "outcome": "AUTOMATION_ERROR",
+      "message": "ZETA_VALIDATION: !\n¿Asignar cliente al proyecto?\nSi, asignar cliente\nCancelar"
+    }
+  ],
+  "notes": []
+}

@@ -5,6 +5,10 @@ import {
   CATALOG_KEY_TO_ARQUETIPO,
   resolveArquetipoEstructuralId,
 } from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
+import {
+  isL20CatalogKey,
+  resolveL20AperturaForCatalogKey,
+} from "@/features/fabricacion/fixtures/l20-alumetrica-variant-recipes";
 import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
 import { resolveCommercialFabricacionHojas } from "@/features/fabricacion/services/fabricacion-line-variant.service";
 import {
@@ -251,6 +255,13 @@ export function resolveFabricacionContextForLineAssignment(input: {
           fabricacionHojas: hojasHint,
         })
       : null;
+    const l20Apertura = isL20CatalogKey(input.template.catalogKey)
+      ? resolveL20AperturaForCatalogKey(
+          input.template.catalogKey,
+          input.form.fabricacionVariante,
+        )
+      : null;
+    const l20Variante = input.form.fabricacionVariante?.trim() || null;
 
     const resolution =
       sodalConfig?.complete
@@ -266,13 +277,24 @@ export function resolveFabricacionContextForLineAssignment(input: {
             variante: sodalConfig.variantSlug,
             allowPreliminaryNonValidated: false,
           })
-        : resolverRecetaFabricacionCompatible(lineRecipes, {
-            organizationId: input.organizationId,
-            lineTemplateId,
-            tipologia: tipologiaHint,
-            hojas: hojasHint,
-            allowPreliminaryNonValidated: !isSodalL25CatalogKey(input.template.catalogKey),
-          });
+        : isL20CatalogKey(input.template.catalogKey) && (l20Apertura || l20Variante)
+          ? resolveFabricationRecipe(lineRecipes, {
+              organizationId: input.organizationId,
+              lineTemplateId,
+              catalogKey: input.template.catalogKey,
+              tipologia: tipologiaHint,
+              hojas: hojasHint,
+              apertura: l20Apertura,
+              variante: l20Variante,
+              allowPreliminaryNonValidated: false,
+            })
+          : resolverRecetaFabricacionCompatible(lineRecipes, {
+              organizationId: input.organizationId,
+              lineTemplateId,
+              tipologia: tipologiaHint,
+              hojas: hojasHint,
+              allowPreliminaryNonValidated: false,
+            });
 
     const recipe =
       resolution.estado === "receta_unica" || resolution.estado === "receta_no_validada"

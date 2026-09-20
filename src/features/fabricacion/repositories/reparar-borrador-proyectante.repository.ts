@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { prepararReparacionBorradorCatalogo, type BorradorProyectanteRow } from "@/features/fabricacion/services/reparar-borrador-proyectante.service";
 import { listVentoraCatalogKeysWithProfileReferences } from "@/features/cotizaciones/line-templates/fixtures/ventora-profile-references";
+import { SERIE_45_SOURCE_REFERENCE } from "@/features/fabricacion/fixtures/serie-45-practicable-recipe";
+import { serie4800SourceReference } from "@/features/fabricacion/fixtures/serie-4800-corredera-recipe";
 
 /** Repara únicamente precargas intactas; el guardado usa comparación optimista. */
 export async function repararBorradoresProyectantes(
@@ -32,6 +34,8 @@ export async function repararBorradoresProyectantes(
       .select("id").eq("organization_id", organizationId).eq("recipe_id", row.id).limit(1);
     if (testError) throw testError;
     if (tests?.length) continue;
+    const isSerie45 = line?.catalog_key === "ventora:serie-45-puerta";
+    const isSerie4800 = line?.catalog_key === "ventora:serie-4800-corredera-2h";
     const isSerie3200 = line?.catalog_key === "ventora:serie-3200-puerta-abatible-1h";
     const isSerie32 = line?.catalog_key === "ventora:l32";
     const isSerie42 = line?.catalog_key === "ventora:l42" ||
@@ -45,7 +49,13 @@ export async function repararBorradoresProyectantes(
         typology: definition.identidad.tipologia,
         leaves_count: definition.identidad.hojas,
         variant: definition.identidad.variante,
-        source_reference: isSerie3200
+        source_reference: isSerie45
+          ? SERIE_45_SOURCE_REFERENCE
+          : isSerie4800
+          ? serie4800SourceReference(
+              definition.identidad.variante === "reforzada" ? "reforzada" : "normal"
+            )
+          : isSerie3200
           ? "ventora-serie-3200:catalogo-2026-09-13"
           : isSerie32
             ? "ventora-serie-32:normal:catalogo-2026-09-13-v2"

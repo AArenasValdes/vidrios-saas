@@ -1,0 +1,26 @@
+{
+  "runId": "ac233f67-4378-4a12-a352-64ad7a29c001",
+  "startedAt": "2026-09-19T21:05:00Z",
+  "finishedAt": "2026-09-19T21:07:00Z",
+  "command": "Codex Browser directo: Sistema Zeta autenticado",
+  "mode": "browser-direct",
+  "targetsRequested": ["dvh_pierna_abierta_4h_3000x1500"],
+  "processed": ["dvh_pierna_abierta_4h_3000x1500"],
+  "confirmed": [],
+  "skipped": [],
+  "failed": [],
+  "pending": ["dvh_pierna_abierta_4h_3000x1500"],
+  "errors": [],
+  "notes": [
+    "Proyecto Zeta nuevo idProject=46422; una sola configuración V-001.",
+    "Plan de armado visible PA-66.",
+    "Warning de Zeta conservado; no se escribió confirmed/.",
+    "HTML y PNG fueron capturados/observados en Browser, pero el bridge no expuso ruta local de persistencia."
+  ],
+  "evidence": {
+    "rawPath": "docs/fabricacion/zeta/raw/sodal/l25/dvh_pierna_abierta_4h_3000x1500",
+    "projectId": "46422",
+    "planId": "PA-66",
+    "pageUrl": "https://sistemazeta.cl/zeta/reporte_planEjecucion?idProject=46422"
+  }
+}

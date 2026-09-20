@@ -5,6 +5,12 @@ import {
   ARQUETIPOS_ESTRUCTURALES,
 } from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
 import { BASES_TIPOLOGICAS_VENTORA } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
+import {
+  isL20CatalogKey,
+  L20_ALUMETRICA_VARIANT_LABELS,
+  resolveL20AperturaFromVariant,
+  type L20AlumetricaVariantSlug,
+} from "@/features/fabricacion/fixtures/l20-alumetrica-variant-recipes";
 import { FABRICACION_STATUS_COPY } from "@/features/fabricacion/services/fabricacion-line-workflow.utils";
 import {
   formatSodalL25ContextualLineName,
@@ -48,22 +54,105 @@ function resolveCanonicalTipologia(input: {
   return input.recipe?.identidad.tipologia ?? null;
 }
 
+function isInternalPendingVariantLabel(variant: string | null | undefined) {
+  return /pendiente/i.test(variant?.trim() ?? "");
+}
+
+function formatHojasLabel(hojas: number) {
+  return hojas === 1 ? "1 hoja" : `${hojas} hojas`;
+}
+
+function titleCaseEsPhrase(value: string) {
+  return value
+    .split(/(\s+|·)/)
+    .map((token) => {
+      if (!token || /^\s+$/.test(token) || token === "·") return token;
+      return token.charAt(0).toLocaleUpperCase("es-CL") + token.slice(1);
+    })
+    .join("");
+}
+
+function formatVariantSlugForDisplay(
+  variant: string | null | undefined,
+  catalogKey?: string | null
+): string | null {
+  const trimmed = variant?.trim();
+  if (!trimmed) return null;
+  if (isInternalPendingVariantLabel(trimmed)) return null;
+
+  if (isL20CatalogKey(catalogKey)) {
+    const normalized = trimmed.toLowerCase();
+    if (normalized in L20_ALUMETRICA_VARIANT_LABELS) {
+      return L20_ALUMETRICA_VARIANT_LABELS[normalized as L20AlumetricaVariantSlug];
+    }
+  }
+
+  if (
+    catalogKey === "ventora:serie-45-puerta" &&
+    /^puerta([_\s-]*1h(oja)?s?)?$/i.test(trimmed)
+  ) {
+    return null;
+  }
+
+  if (trimmed === "estandar" || trimmed === "caracol" || trimmed === "normal") {
+    return trimmed.charAt(0).toLocaleUpperCase("es-CL") + trimmed.slice(1);
+  }
+
+  return titleCaseEsPhrase(
+    trimmed
+      .replaceAll("_", " ")
+      .replace(/\btp\b/gi, "TP")
+      .replace(/(\d+)\s*mm/gi, "$1 mm")
+  );
+}
+
+function resolveTipologiaLabelForDisplay(input: {
+  tipologia: string | null;
+  catalogKey?: string | null;
+  apertura?: string | null;
+  variante?: string | null;
+}) {
+  if (isL20CatalogKey(input.catalogKey)) {
+    const apertura =
+      input.apertura?.trim().toLowerCase() === "fija"
+        ? "fija"
+        : input.apertura?.trim().toLowerCase() === "corredera"
+          ? "corredera"
+          : resolveL20AperturaFromVariant(input.variante);
+    if (apertura === "fija") return "Fijos";
+    if (apertura === "corredera") return "Corredera";
+  }
+
+  return input.tipologia ? formatTipologiaLabel(input.tipologia) : null;
+}
+
 function buildFabricationTitle(input: {
   tipologia: string | null;
   hojas: number | null;
   variante: string | null;
   herraje: string | null;
+  catalogKey?: string | null;
+  apertura?: string | null;
 }) {
   const parts: string[] = [];
-  if (input.tipologia) {
-    const tipologiaLabel = formatTipologiaLabel(input.tipologia);
+  const tipologiaLabel = resolveTipologiaLabelForDisplay({
+    tipologia: input.tipologia,
+    catalogKey: input.catalogKey,
+    apertura: input.apertura,
+    variante: input.variante,
+  });
+
+  if (tipologiaLabel) {
     if (input.hojas && input.hojas > 0 && input.tipologia !== "pano_fijo") {
-      parts.push(`${tipologiaLabel} · ${input.hojas} hojas`);
+      parts.push(`${tipologiaLabel} · ${formatHojasLabel(input.hojas)}`);
     } else {
       parts.push(tipologiaLabel);
     }
   }
-  const variantLabel = input.variante?.trim() || input.herraje?.trim();
+
+  const variantLabel =
+    formatVariantSlugForDisplay(input.variante, input.catalogKey) ||
+    formatVariantSlugForDisplay(input.herraje, input.catalogKey);
   if (variantLabel) {
     parts.push(variantLabel);
   }
@@ -141,6 +230,8 @@ export function resolveLineFabricationDisplayIdentity(input: {
         hojas: alignedDefinition?.identidad.hojas ?? null,
         variante: alignedDefinition?.identidad.variante ?? null,
         herraje: alignedDefinition?.identidad.herraje ?? null,
+        catalogKey: input.template.catalogKey,
+        apertura: alignedDefinition?.identidad.apertura ?? null,
       }) || "Fabricación pendiente"
     );
   })();

@@ -939,6 +939,13 @@ export function QuoteConstructorWorkspace({
               </>
             ) : null}
           </p>
+          <div className={s.constructorHint} role="note">
+            <LuPencilRuler size={15} aria-hidden />
+            <span>
+              <strong>Para trabajos con varias piezas.</strong> Ajusta cada una desde una sola
+              vista; para una pieza simple, Guiada suele ser más rápida.
+            </span>
+          </div>
         </div>
         <div className={s.headerTools}>
           {visualItems.length > 0 && hasFabricationReview ? (

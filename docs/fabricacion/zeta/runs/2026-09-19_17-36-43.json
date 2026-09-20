@@ -1,0 +1,25 @@
+{
+  "runId": "03fcfcb3-41b7-4a54-8d60-db6865c25f48",
+  "startedAt": "2026-09-19T20:36:19.705Z",
+  "finishedAt": "2026-09-19T20:36:43.416Z",
+  "command": "new-project real capture dvh_pierna_abierta_3h_3000x1500",
+  "mode": "live",
+  "targetsRequested": [],
+  "processed": [],
+  "confirmed": [],
+  "skipped": [],
+  "failed": [
+    "dvh_pierna_abierta_3h_3000x1500"
+  ],
+  "pending": [
+    "dvh_pierna_abierta_3h_3000x1500"
+  ],
+  "errors": [
+    {
+      "targetId": "dvh_pierna_abierta_3h_3000x1500",
+      "outcome": "AUTOMATION_ERROR",
+      "message": "No apareció modal Datos del proyecto"
+    }
+  ],
+  "notes": []
+}

@@ -4,6 +4,7 @@ import { memo } from "react";
 import {
   LuCopy,
   LuEllipsisVertical,
+  LuEye,
   LuFilePlus2,
   LuGlobe,
   LuMail,
@@ -33,11 +34,13 @@ type SolicitudCardViewModel = {
   originLabel: string;
   message: string;
   whatsappUrl: string | null;
+  hasQuote: boolean;
 };
 
 type SolicitudCardProps = {
   item: SolicitudCardViewModel;
   isUpdating: boolean;
+  isOpeningQuote?: boolean;
   menuOpen: boolean;
   selectionMode?: boolean;
   isSelected?: boolean;
@@ -45,6 +48,7 @@ type SolicitudCardProps = {
   filterLabels: Record<EstadoSolicitudContacto, string>;
   stateBadgeClasses: Record<EstadoSolicitudContacto, string>;
   onCreateQuote: (solicitud: SolicitudContacto) => void;
+  onViewQuote: (solicitud: SolicitudContacto) => void;
   onToggleMenu: (solicitudId: string) => void;
   onToggleSelected?: (solicitudId: string) => void;
   onUpdateStatus: (id: string, estado: EstadoSolicitudContacto) => Promise<void>;
@@ -52,9 +56,12 @@ type SolicitudCardProps = {
   onCopyMessage: (value: string) => Promise<void>;
 };
 
+const GENERIC_ORIGINS = new Set(["Landing", "Pagina publica", "Página pública"]);
+
 export const SolicitudCard = memo(function SolicitudCard({
   item,
   isUpdating,
+  isOpeningQuote = false,
   menuOpen,
   selectionMode = false,
   isSelected = false,
@@ -62,6 +69,7 @@ export const SolicitudCard = memo(function SolicitudCard({
   filterLabels,
   stateBadgeClasses,
   onCreateQuote,
+  onViewQuote,
   onToggleMenu,
   onToggleSelected,
   onUpdateStatus,
@@ -72,6 +80,11 @@ export const SolicitudCard = memo(function SolicitudCard({
     onToggleSelected?.(item.solicitud.id);
   };
 
+  const showNamedOrigin = !GENERIC_ORIGINS.has(item.originLabel);
+  const showContactRow = Boolean(item.contactLabel && item.contactHref) && !item.whatsappUrl;
+  const showMetaRow = showContactRow || showNamedOrigin;
+  const quoteActionLabel = item.hasQuote ? "Ver cotización" : "Crear cotización";
+
   return (
     <article className={`${s.card}${selectionMode ? ` ${s.cardSelectable}` : ""}${isSelected ? ` ${s.cardSelected}` : ""}`}>
       {selectionMode ? (
@@ -80,14 +93,16 @@ export const SolicitudCard = memo(function SolicitudCard({
           type="button"
           onClick={handleSelect}
           aria-pressed={isSelected}
-          aria-label={`Seleccionar solicitud de ${item.solicitud.nombre}`}
+          aria-label={`Seleccionar consulta de ${item.solicitud.nombre}`}
         >
           <span className={`${s.selectionCircle} ${isSelected ? s.selectionCircleActive : ""}`} aria-hidden />
         </button>
       ) : null}
       <div className={s.cardTop}>
         <div className={s.cardIdentity}>
-          <div className={s.avatar}>{item.initials}</div>
+          <div className={s.avatar} aria-hidden>
+            {item.initials}
+          </div>
           <div className={s.identityCopy}>
             <h2 className={s.name}>{item.solicitud.nombre}</h2>
             <p className={s.workText}>{item.displayType}</p>
@@ -97,26 +112,31 @@ export const SolicitudCard = memo(function SolicitudCard({
         <div className={s.cardMeta}>
           <span className={`${s.statusPill} ${item.statusClassName}`}>{item.statusLabel}</span>
           <span className={s.dateText}>
-            {item.relativeLabel} · {item.calendarLabel}
+            {item.relativeLabel}
+            <span className={s.dateCalendar}> · {item.calendarLabel}</span>
           </span>
         </div>
       </div>
 
-      <div className={s.infoRows}>
-        {item.contactLabel && item.contactHref ? (
-          <a href={item.contactHref} className={s.infoRow}>
-            {item.contactIcon === "phone" ? <LuPhone aria-hidden /> : <LuMail aria-hidden />}
-            <span>{item.contactLabel}</span>
-          </a>
-        ) : null}
+      {showMetaRow ? (
+        <div className={s.infoRows}>
+          {showContactRow && item.contactLabel && item.contactHref ? (
+            <a href={item.contactHref} className={s.infoRow}>
+              {item.contactIcon === "phone" ? <LuPhone aria-hidden /> : <LuMail aria-hidden />}
+              <span>{item.contactLabel}</span>
+            </a>
+          ) : null}
 
-        <div className={s.infoRow}>
-          <LuGlobe aria-hidden />
-          <span>{item.originLabel}</span>
+          {showNamedOrigin ? (
+            <div className={s.infoRow}>
+              <LuGlobe aria-hidden />
+              <span>{item.originLabel}</span>
+            </div>
+          ) : null}
         </div>
-      </div>
+      ) : null}
 
-      <div className={s.messageBubble}>&ldquo;{item.message}&rdquo;</div>
+      <p className={s.messageBubble}>&ldquo;{item.message}&rdquo;</p>
 
       <div className={s.cardActions}>
         {selectionMode ? (
@@ -128,96 +148,106 @@ export const SolicitudCard = memo(function SolicitudCard({
           >
             {isSelected ? "Seleccionada" : "Seleccionar"}
           </button>
-        ) : item.whatsappUrl ? (
+        ) : (
+          <button
+            type="button"
+            className={s.primaryAction}
+            onClick={() =>
+              item.hasQuote ? onViewQuote(item.solicitud) : onCreateQuote(item.solicitud)
+            }
+            disabled={isOpeningQuote}
+          >
+            {item.hasQuote ? <LuEye aria-hidden /> : <LuFilePlus2 aria-hidden />}
+            {isOpeningQuote ? "Abriendo..." : quoteActionLabel}
+          </button>
+        )}
+
+        {!selectionMode && item.whatsappUrl ? (
           <a
             href={item.whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className={`${s.primaryAction} ${s.primaryWhatsappAction}`}
+            className={s.whatsappAction}
+            aria-label={`WhatsApp a ${item.solicitud.nombre}`}
             onClick={(event) => {
               event.stopPropagation();
             }}
           >
             <LuMessageCircleMore aria-hidden />
-            Contactar por WhatsApp
+            WhatsApp
           </a>
         ) : null}
-
-        {!selectionMode ? <button
-          type="button"
-          className={
-            item.whatsappUrl
-              ? `${s.secondaryAction} ${s.secondaryBlueAction}`
-              : s.primaryAction
-          }
-          onClick={() => onCreateQuote(item.solicitud)}
-        >
-          <LuFilePlus2 aria-hidden />
-          Crear cotizacion
-        </button> : null}
 
         {!selectionMode && !item.whatsappUrl && item.contactLabel && item.contactHref ? (
-          <a href={item.contactHref} className={s.iconAction}>
+          <a
+            href={item.contactHref}
+            className={s.iconAction}
+            aria-label={item.contactIcon === "mail" ? `Escribir a ${item.solicitud.nombre}` : `Llamar a ${item.solicitud.nombre}`}
+          >
             {item.contactIcon === "phone" ? <LuPhone aria-hidden /> : <LuMail aria-hidden />}
           </a>
-        ) : !selectionMode && !item.whatsappUrl ? (
-          <button type="button" className={s.iconAction} disabled>
-            <LuPhone aria-hidden />
-          </button>
         ) : null}
 
-        {!selectionMode ? <div className={s.menuWrap}>
-          <button
-            type="button"
-            className={`${s.iconAction} ${s.menuTrigger}`}
-            data-solicitud-menu-trigger="true"
-            onClick={() => onToggleMenu(item.solicitud.id)}
-            disabled={isUpdating}
-          >
-            <LuEllipsisVertical aria-hidden />
-          </button>
+        {!selectionMode ? (
+          <div className={s.menuWrap}>
+            <button
+              type="button"
+              className={`${s.iconAction} ${s.menuTrigger}`}
+              data-solicitud-menu-trigger="true"
+              onClick={() => onToggleMenu(item.solicitud.id)}
+              disabled={isUpdating}
+              aria-label={`Más acciones para ${item.solicitud.nombre}`}
+              aria-expanded={menuOpen}
+              aria-haspopup="menu"
+            >
+              <LuEllipsisVertical aria-hidden />
+            </button>
 
-          {menuOpen ? (
-            <div className={s.menuPanel} data-solicitud-menu="true">
-              <div className={s.menuSectionLabel}>Cambiar estado</div>
-              {stateOptions.map((estado) => (
+            {menuOpen ? (
+              <div className={s.menuPanel} data-solicitud-menu="true" role="menu">
+                <div className={s.menuSectionLabel}>Cambiar estado</div>
+                {stateOptions.map((estado) => (
+                  <button
+                    key={estado}
+                    type="button"
+                    role="menuitem"
+                    className={`${s.menuAction} ${
+                      item.solicitud.estado === estado ? s.menuActionActive : ""
+                    }`}
+                    onClick={() => void onUpdateStatus(item.solicitud.id, estado)}
+                  >
+                    <span
+                      className={`${s.menuStatusDot} ${stateBadgeClasses[estado]}`}
+                      aria-hidden
+                    />
+                    {filterLabels[estado]}
+                  </button>
+                ))}
+                <div className={s.menuDivider} />
+                {item.solicitud.contacto ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className={s.menuAction}
+                    onClick={() => void onCopyContact(item.solicitud.contacto!)}
+                  >
+                    <LuCopy aria-hidden />
+                    Copiar contacto
+                  </button>
+                ) : null}
                 <button
-                  key={estado}
                   type="button"
-                  className={`${s.menuAction} ${
-                    item.solicitud.estado === estado ? s.menuActionActive : ""
-                  }`}
-                  onClick={() => void onUpdateStatus(item.solicitud.id, estado)}
-                >
-                  <span
-                    className={`${s.menuStatusDot} ${stateBadgeClasses[estado]}`}
-                    aria-hidden
-                  />
-                  {estado === "cerrada" ? "Con cotizacion" : filterLabels[estado]}
-                </button>
-              ))}
-              <div className={s.menuDivider} />
-              {item.solicitud.contacto ? (
-                <button
-                  type="button"
+                  role="menuitem"
                   className={s.menuAction}
-                  onClick={() => void onCopyContact(item.solicitud.contacto!)}
+                  onClick={() => void onCopyMessage(item.message)}
                 >
-                  <LuCopy aria-hidden />
-                  Copiar contacto
+                  <LuText aria-hidden />
+                  Copiar mensaje
                 </button>
-              ) : null}
-              <button
-                type="button"
-                className={s.menuAction}
-                onClick={() => void onCopyMessage(item.message)}
-              >
-                <LuText aria-hidden />
-                Copiar mensaje
-              </button>
-            </div>
-          ) : null}
-        </div> : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </article>
   );

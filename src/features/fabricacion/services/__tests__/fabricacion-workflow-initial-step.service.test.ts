@@ -1,4 +1,7 @@
-import { resolveInitialFabricationStepForTemplate } from "@/features/fabricacion/services/fabricacion-workflow-initial-step.service";
+import {
+  resolveInitialFabricationStepForTemplate,
+  resolveMobileVariantTreeEntryStep,
+} from "@/features/fabricacion/services/fabricacion-workflow-initial-step.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import { crearRecetaFabricacionVacia } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
 
@@ -91,6 +94,62 @@ describe("resolveInitialFabricationStepForTemplate", () => {
         { catalogKey: "ventora:l5000" },
         recipe
       )
+    ).toBe("base");
+  });
+
+  it("abre en producto cuando la línea tiene variaciones", () => {
+    const recipe = buildRecipe({
+      definition: {
+        ...buildRecipe().definition,
+        perfiles: [
+          {
+            id: "p1",
+            funcion: "Riel superior",
+            nombrePerfil: "2001",
+            codigoPerfil: "2001",
+            requerido: true,
+            reglaMedida: { base: "ancho_total", ajusteMm: -12 },
+            reglaCantidad: { tipo: "fijo", cantidad: 1 },
+            largoComercialMm: 6000,
+            tallerPerfilId: null,
+          },
+        ],
+      },
+    });
+
+    expect(
+      resolveInitialFabricationStepForTemplate({ catalogKey: "ventora:l20" }, recipe)
+    ).toBe("base");
+    expect(
+      resolveInitialFabricationStepForTemplate({ catalogKey: "ventora:l25" }, recipe)
+    ).toBe("base");
+  });
+});
+
+describe("resolveMobileVariantTreeEntryStep", () => {
+  it("abre en producto al tocar una variante de línea con construcciones", () => {
+    const recipe = buildRecipe({
+      status: "validated",
+      definition: {
+        ...buildRecipe().definition,
+        perfiles: [
+          {
+            id: "p1",
+            funcion: "Riel superior",
+            nombrePerfil: "2001",
+            codigoPerfil: "2001",
+            requerido: true,
+            reglaMedida: { base: "ancho_total", ajusteMm: -12 },
+            reglaCantidad: { tipo: "fijo", cantidad: 1 },
+            largoComercialMm: 6000,
+            tallerPerfilId: null,
+          },
+        ],
+      },
+    });
+
+    expect(
+      resolveMobileVariantTreeEntryStep({ catalogKey: "ventora:l20-fijos" }, recipe)
     ).toBe("base");
   });
 });

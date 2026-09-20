@@ -1,0 +1,25 @@
+V-001 — L-4800 MONOLITICO — 3H — 3000 × 1500 mm
+
+**Fuente visible:** Plan de armado N° PA-54
+**Proyecto visible:** ALE-54 — VENTORA-ZETA-4800-NORMAL-2H
+**Serie de perfiles:** L-4800 MONOLITICO
+**Color:** BLANCO
+**Apertura:** Corredera
+**Nota de transcripción:** el dibujo del Plan muestra tres hojas y el vidrio aparece en dos renglones con cantidades 2 + 1; el nombre manual del proyecto conserva el texto NORMAL-2H.
+
+**Vidrio:** `CTI5 | Cristal Templado Incoloro 5mm | ancho 965 mm | alto 1.406 mm | cantidad 2,00`
+**Vidrio:** `CTI5 | Cristal Templado Incoloro 5mm | ancho 977 mm | alto 1.406 mm | cantidad 1,00`
+
+| Código perfil | Nombre | Cantidad | Largo | Corte 1 | Corte 2 |
+|---|---|---:|---:|---:|---:|
+| 4801 | 4801 - RIEL INFERIOR BLANCO | 1 | 2.984 mm | 90° | 90° |
+| 4802 | 4802 - RIEL SUPERIOR BLANCO | 1 | 2.984 mm | 90° | 90° |
+| 4803 | 4803 - JAMBA BLANCO | 2 | 1.500 mm | 90° | 90° |
+| 4804 | 4804 -ZOCALO BLANCO | 2 | 993 mm | 90° | 90° |
+| 4804 | 4804 -ZOCALO BLANCO | 1 | 1.005 mm | 90° | 90° |
+| 4805 | 4805 - CABEZAL BLANCO | 2 | 993 mm | 90° | 90° |
+| 4805 | 4805 - CABEZAL BLANCO | 1 | 1.005 mm | 90° | 90° |
+| 4806 | 4806 - TRASLAPO VENTANA BLANCO | 4 | 1.468 mm | 90° | 90° |
+| 4808 | 4808 - PIERNA - ABIERTA BLANCO | 2 | 1.468 mm | 90° | 90° |
+
+**Accesorios:** `18000000637 RODAMIENTO P/2005 CARGA 20KG X HOJA 6 PZA; 18000000832 GUIA L-4005 CON ALETA 6 PZA; 1040100140950 SOPORTE RODAMIENTO 4800 4 PZA; CARACOLGENERICO CIERRE CARACOL GENERICO 2 PZA; TRLCB348 TORNILLO RL CB PH 3/4" X 8 24 PZA; TORN-ROD TORNILLO PARA RODAMIENTO 12 PZA; TORN-SOPROD TORNILLO PARA SOPORTE RODAMIENTO 12 PZA; TORN-GUIA TORNILLO PARA GUIA 12 PZA; TORN-CIERRE TORNILLO PARA CIERRE 4 PZA; 18000000005 FELPA 5X5 3P ROLLO 500 30 M; 07012STY BLANCO Sellotec 20 Silicona Neutra c/fung 300 ml BLANCO 2 TUBO; TORINSEST Tornillo instalacion S/T/ESTRELLA 22 PZA.`

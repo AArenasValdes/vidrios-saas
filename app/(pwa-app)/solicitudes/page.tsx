@@ -2,23 +2,44 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   LuArrowUpRight,
   LuCheck,
   LuCopy,
+  LuEllipsisVertical,
   LuInbox,
   LuQrCode,
   LuSearch,
+  LuShare2,
   LuTrash2,
+  LuX,
 } from "react-icons/lu";
 
 import { PremiumPageReveal, PremiumPageSection } from "@/components/motion/premium-page-reveal";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { persistNuevaCotizacionSolicitudPrefill } from "@/features/cotizaciones/new-quote/solicitud-prefill";
+import { getCotizacionesResumenPage } from "@/features/cotizaciones/services/cotizaciones-summary.service";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
+import { useSharePublicPage } from "@/features/solicitudes/hooks/useSharePublicPage";
 import { useSolicitudesContacto } from "@/features/solicitudes/hooks/useSolicitudesContacto";
 import { buildPublicRequestShareClipboardText } from "@/features/solicitudes/services/public-request-share.service";
+import {
+  getSolicitudesPageNudgeStorageKey,
+  isSolicitudesPageNudgeDismissed,
+  persistSolicitudesMobilePane,
+  persistSolicitudesPageNudgeDismissed,
+  readSolicitudesMobilePane,
+  subscribeSolicitudesMobilePane,
+  type SolicitudesMobilePane,
+} from "@/features/solicitudes/services/solicitudes-mobile-ui-storage.service";
 import {
   getLatestSolicitudesSeenAt,
   getSolicitudesSeenStorageKey,
@@ -37,8 +58,8 @@ import s from "./page.module.css";
 
 const ESTADO_LABELS: Record<EstadoSolicitudContacto, string> = {
   nueva: "Nueva",
-  contactada: "Contactada",
-  cerrada: "Cotizacion creada",
+  contactada: "Seguimiento",
+  cerrada: "Cotizada",
   descartada: "Descartada",
 };
 
@@ -48,6 +69,22 @@ const FILTRO_LABELS: Record<EstadoSolicitudContacto, string> = {
   cerrada: "Con cotizacion",
   descartada: "Descartadas",
 };
+
+const FILTRO_CHIP_LABELS: Record<EstadoSolicitudContacto, string> = {
+  nueva: "Nuevas",
+  contactada: "Seguimiento",
+  cerrada: "Cotizadas",
+  descartada: "Descartadas",
+};
+
+const FILTRO_MENU_LABELS: Record<EstadoSolicitudContacto, string> = {
+  nueva: "Nueva",
+  contactada: "Seguimiento",
+  cerrada: "Cotizada",
+  descartada: "Descartada",
+};
+
+type MobilePane = SolicitudesMobilePane;
 
 const ESTADO_CARD_CLASS: Record<EstadoSolicitudContacto, string> = {
   nueva: s.filterBlue,
@@ -205,14 +242,51 @@ function getInitials(value: string) {
     .join("");
 }
 
+async function resolveCotizacionIdForSolicitud(solicitud: SolicitudContacto) {
+  const search = solicitud.nombre.trim();
+
+  if (!search) {
+    return null;
+  }
+
+  const page = await getCotizacionesResumenPage({
+    search,
+    pageSize: 25,
+  });
+  const normalizedName = search.toLowerCase();
+  const normalizedPhone =
+    normalizeChileMobilePhone(solicitud.telefono || solicitud.contacto || "") || "";
+
+  const match = page.cotizaciones.find((quote) => {
+    const quoteName = quote.clienteNombre.trim().toLowerCase();
+    const quotePhone = normalizeChileMobilePhone(quote.clienteTelefono) || "";
+
+    if (quoteName === normalizedName) {
+      return true;
+    }
+
+    return Boolean(normalizedPhone) && quotePhone === normalizedPhone;
+  });
+
+  return match?.id ?? null;
+}
+
 export default function SolicitudesPage() {
   const router = useRouter();
   const { rol, user, organizacionId } = useAuth();
-  const { profile } = useOrganizationProfile();
+  const { profile, isReady: isProfileReady } = useOrganizationProfile();
   const solicitudesCacheKey = String(user?.id ?? profile?.organizationId ?? "default");
   const [busqueda, setBusqueda] = useState("");
   const busquedaDiferida = useDeferredValue(busqueda);
   const [filtroActivo, setFiltroActivo] = useState<FiltroSolicitud>("all");
+  const storedMobilePane = useSyncExternalStore(
+    subscribeSolicitudesMobilePane,
+    readSolicitudesMobilePane,
+    () => null
+  );
+  const [pageNudgeClosed, setPageNudgeClosed] = useState(false);
+  const { sharePage, isCopied, copiedFeedback } = useSharePublicPage();
+  const [openingQuoteId, setOpeningQuoteId] = useState<string | null>(null);
   const canReviewSolicitudes = canAccessSolicitudes({
     email: user?.email,
     rol,
@@ -263,6 +337,16 @@ export default function SolicitudesPage() {
       channel: "direct",
     });
   }, [profile?.empresaNombre, publicRequestUrl]);
+  const isPagePublished = Boolean(profile?.isPublished);
+  const profileKnown = Boolean(profile) || isProfileReady;
+  const mobilePane: MobilePane =
+    storedMobilePane ?? (profileKnown && !isPagePublished ? "pagina" : "bandeja");
+  const pageNudgeStorageKey = useMemo(
+    () => getSolicitudesPageNudgeStorageKey(organizacionId),
+    [organizacionId]
+  );
+  const pageNudgeDismissed =
+    pageNudgeClosed || isSolicitudesPageNudgeDismissed(pageNudgeStorageKey);
 
   const resumen = useMemo(() => {
     return {
@@ -318,6 +402,7 @@ export default function SolicitudesPage() {
         contactIcon,
         originLabel,
         message,
+        hasQuote: solicitud.estado === "cerrada",
         whatsappUrl: telefonoContacto
           ? buildWhatsappMessageUrl(
               telefonoContacto,
@@ -379,6 +464,15 @@ export default function SolicitudesPage() {
     };
   }, [menuSolicitudId]);
 
+  const selectMobilePane = useCallback((pane: MobilePane) => {
+    persistSolicitudesMobilePane(pane);
+  }, []);
+
+  const dismissPageNudge = useCallback(() => {
+    setPageNudgeClosed(true);
+    persistSolicitudesPageNudgeDismissed(pageNudgeStorageKey);
+  }, [pageNudgeStorageKey]);
+
   useEffect(() => {
     if (!canReviewSolicitudes || !isReady || solicitudes.length === 0) {
       return;
@@ -405,6 +499,22 @@ export default function SolicitudesPage() {
       setFeedback("No pudimos copiar el texto con el enlace.");
     }
   }, [publicRequestShareText, publicRequestUrl]);
+
+  const handleSharePublicPage = useCallback(async () => {
+    if (!publicRequestUrl) {
+      selectMobilePane("pagina");
+      return;
+    }
+
+    await sharePage(
+      {
+        url: publicRequestUrl,
+        empresaNombre: profile?.empresaNombre,
+        channel: "direct",
+      },
+      "page"
+    );
+  }, [profile?.empresaNombre, publicRequestUrl, selectMobilePane, sharePage]);
 
   const handleCopyText = useCallback(async (value: string, message: string) => {
     try {
@@ -476,7 +586,7 @@ export default function SolicitudesPage() {
         setUpdatingSolicitudId(id);
         setMenuSolicitudId(null);
         await updateSolicitudEstado(id, estado);
-        setFeedback(`Solicitud movida a ${ESTADO_LABELS[estado].toLowerCase()}.`);
+        setFeedback(`Consulta movida a ${ESTADO_LABELS[estado].toLowerCase()}.`);
       } finally {
         setUpdatingSolicitudId(null);
       }
@@ -495,7 +605,7 @@ export default function SolicitudesPage() {
 
     try {
       const deletedCount = await deleteSolicitudes(ids);
-      setFeedback(`${deletedCount} solicitud(es) eliminada(s).`);
+      setFeedback(`${deletedCount} consulta(s) eliminada(s).`);
       setSelectedIds(new Set());
       setIsSelectionMode(false);
       setIsBulkDeleteModalOpen(false);
@@ -503,7 +613,7 @@ export default function SolicitudesPage() {
       setFeedback(
         error instanceof Error
           ? error.message
-          : "No pudimos eliminar las solicitudes."
+          : "No pudimos eliminar las consultas."
       );
     } finally {
       setIsBulkDeleting(false);
@@ -544,6 +654,37 @@ export default function SolicitudesPage() {
     [profile?.margenDefecto, profile?.modoPrecioPreferido, router]
   );
 
+  const handleViewQuoteFromSolicitud = useCallback(
+    async (solicitud: SolicitudContacto) => {
+      setOpeningQuoteId(solicitud.id);
+
+      try {
+        const cotizacionId = await resolveCotizacionIdForSolicitud(solicitud);
+
+        if (cotizacionId) {
+          router.push(`/cotizaciones/${cotizacionId}`);
+          return;
+        }
+
+        setFeedback("No encontramos la cotización asociada. Ábrela desde Cotizaciones.");
+        router.push("/cotizaciones");
+      } catch {
+        setFeedback("No pudimos abrir la cotización. Ábrela desde Cotizaciones.");
+        router.push("/cotizaciones");
+      } finally {
+        setOpeningQuoteId(null);
+      }
+    },
+    [router]
+  );
+
+  const isEmptyInbox =
+    !busquedaDiferida.trim() && filtroActivo === "all" && resumen.total === 0;
+  const visibleCountLabel =
+    visibleSolicitudes.length === 1
+      ? "1 consulta"
+      : `${visibleSolicitudes.length} consultas`;
+
   if (!canReviewSolicitudes) {
     return (
       <PremiumPageReveal className={s.root}>
@@ -560,8 +701,75 @@ export default function SolicitudesPage() {
     );
   }
 
+  const sharePageCopied = isCopied("page");
+  const showPageNudge = isPagePublished && !pageNudgeDismissed && !isColdBoot;
+  const publicPageHref = isPagePublished ? publicRequestUrl : previewPublicRequestUrl;
+
+  const captureActions = isPagePublished ? (
+    <div className={s.captureActions}>
+      <button
+        type="button"
+        className={s.heroActionPrimary}
+        onClick={() => void handleSharePublicPage()}
+      >
+        <LuShare2 aria-hidden />
+        {sharePageCopied ? copiedFeedback : "Compartir página"}
+      </button>
+      <div className={s.captureSecondary}>
+        {publicRequestUrl ? (
+          <a
+            className={s.heroActionSecondary}
+            href={publicRequestUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Ver página
+          </a>
+        ) : (
+          <button type="button" className={s.heroActionSecondary} disabled>
+            Ver página
+          </button>
+        )}
+        <Link href="/solicitudes/canales" className={s.heroActionSecondary} prefetch={false}>
+          QR y opciones
+        </Link>
+      </div>
+    </div>
+  ) : (
+    <div className={s.captureActions}>
+      <Link href="/configuracion/pagina-venta" className={s.heroActionPrimary} prefetch={false}>
+        Configurar mi página
+      </Link>
+      {publicPageHref ? (
+        <a
+          className={s.heroActionSecondary}
+          href={publicPageHref}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Ver vista previa
+        </a>
+      ) : (
+        <Link
+          href="/configuracion/pagina-venta"
+          className={s.heroActionSecondary}
+          prefetch={false}
+        >
+          Ver vista previa
+        </Link>
+      )}
+    </div>
+  );
+
   return (
-    <PremiumPageReveal className={s.root}>
+    <PremiumPageReveal
+      className={s.root}
+      data-mobile-pane={mobilePane}
+    >
+      <PremiumPageSection className={s.mobileHeader}>
+        <p className={s.mobileSubtitle}>Tus posibles trabajos, en un solo lugar.</p>
+      </PremiumPageSection>
+
       <PremiumPageSection className={s.desktopHeader}>
         <div>
           <h1 className={s.desktopTitle}>Solicitudes</h1>
@@ -592,15 +800,28 @@ export default function SolicitudesPage() {
           </span>
         </div>
 
+        <aside className={s.infoBanner} role="note" aria-label="Sobre las solicitudes">
+          <span className={s.infoBannerIcon} aria-hidden>
+            <LuInbox size={17} />
+          </span>
+          <div>
+            <strong>Aquí empiezan tus próximos trabajos</strong>
+            <p>
+              Las personas que escriben desde tu página pública llegan aquí. Revísalas,
+              contáctalas y conviértelas en una cotización cuando corresponda.
+            </p>
+          </div>
+        </aside>
+
         <div className={s.heroActions}>
-            <button
-              type="button"
-              className={s.heroActionPrimary}
-              onClick={() => void handleCopyPublicLink()}
-            >
-              <LuCopy aria-hidden />
-              Copiar enlace
-            </button>
+          <button
+            type="button"
+            className={s.heroActionPrimary}
+            onClick={() => void handleCopyPublicLink()}
+          >
+            <LuCopy aria-hidden />
+            Copiar enlace
+          </button>
           {previewPublicRequestUrl ? (
             <a
               className={s.heroActionSecondary}
@@ -624,181 +845,339 @@ export default function SolicitudesPage() {
         </div>
       </PremiumPageSection>
 
-      <PremiumPageSection className={s.filtersSection}>
-        <div className={s.searchBar}>
-          <LuSearch aria-hidden className={s.searchIcon} />
-          <input
-            className={s.searchInput}
-            type="search"
-            value={busqueda}
-            onChange={(event) => setBusqueda(event.target.value)}
-            placeholder="Buscar solicitud"
-            disabled={isColdBoot}
-          />
-        </div>
-        <button
-          type="button"
-          className={`${s.filterCard} ${s.filterCardAll} ${
-            filtroActivo === "all" ? s.filterActive : ""
-          }`}
-          onClick={() => setFiltroActivo("all")}
-        >
-          <div className={s.filterTop}>
-            <div className={s.filterInline}>
-              <strong className={s.filterInlineCount}>{resumen.total}</strong>
-              <span className={s.filterInlineLabel}>Todas</span>
-            </div>
-            {filtroActivo === "all" ? (
-              <span className={s.filterCheck}>
-                <LuCheck aria-hidden />
-              </span>
-            ) : null}
-          </div>
-        </button>
-
-        <div className={s.filterGrid}>
-          {SOLICITUD_STATE_OPTIONS.map((estado) => (
-            <button
-              key={estado}
-              type="button"
-              className={`${s.filterCard} ${ESTADO_CARD_CLASS[estado]} ${
-                filtroActivo === estado ? s.filterActive : ""
-              }`}
-              onClick={() => setFiltroActivo(estado)}
-            >
-              <div className={s.filterTop}>
-                <div className={s.filterInline}>
-                  <strong className={s.filterInlineCount}>{resumen.counts[estado]}</strong>
-                  <span className={s.filterInlineLabel}>{FILTRO_LABELS[estado]}</span>
-                </div>
-                {filtroActivo === estado ? (
-                  <span className={s.filterCheck}>
-                    <LuCheck aria-hidden />
-                  </span>
-                ) : null}
-              </div>
-            </button>
-          ))}
+      <PremiumPageSection className={s.mobilePaneSwitch} aria-label="Vista de consultas">
+        <div className={s.paneTabs} role="tablist">
+          <button
+            type="button"
+            role="tab"
+            className={`${s.paneTab} ${mobilePane === "bandeja" ? s.paneTabActive : ""}`}
+            aria-selected={mobilePane === "bandeja"}
+            onClick={() => selectMobilePane("bandeja")}
+          >
+            Bandeja
+          </button>
+          <button
+            type="button"
+            role="tab"
+            className={`${s.paneTab} ${mobilePane === "pagina" ? s.paneTabActive : ""}`}
+            aria-selected={mobilePane === "pagina"}
+            onClick={() => selectMobilePane("pagina")}
+          >
+            Mi página
+          </button>
         </div>
       </PremiumPageSection>
 
-      {feedback ? (
-        <PremiumPageSection className={s.feedbackBanner}>{feedback}</PremiumPageSection>
-      ) : null}
+      <PremiumPageSection
+        className={s.captureCard}
+        aria-hidden={mobilePane !== "pagina"}
+      >
+        <div className={s.captureHeader}>
+          <p className={s.captureTitle}>Tu página comercial</p>
+          {isPagePublished ? (
+            <span className={s.captureStatus}>
+              <LuCheck aria-hidden />
+              Activa
+            </span>
+          ) : (
+            <span className={s.captureStatusPending}>Configuración pendiente</span>
+          )}
+        </div>
+        <p className={s.captureCopy}>
+          {isPagePublished
+            ? "Compártela con tus clientes. Ellos pueden dejar sus datos y medidas, y la consulta aparecerá aquí automáticamente."
+            : "Configúrala para que tus clientes puedan enviarte solicitudes desde tu propio enlace."}
+        </p>
+        {captureActions}
+      </PremiumPageSection>
 
-      {error ? (
-        <PremiumPageSection className={s.errorBanner}>
-          <span>{error}</span>
-          <button type="button" onClick={() => void refreshSolicitudes()}>
-            Reintentar
-          </button>
-        </PremiumPageSection>
-      ) : null}
+      <div className={s.bandejaStack}>
+        {showPageNudge ? (
+          <PremiumPageSection className={s.pageNudge} role="note">
+            <div className={s.pageNudgeCopy}>
+              <strong>¿Quieres recibir consultas ordenadas?</strong>
+              <span>Comparte tu página comercial.</span>
+            </div>
+            <div className={s.pageNudgeActions}>
+              <button
+                type="button"
+                className={s.pageNudgeCta}
+                onClick={() => selectMobilePane("pagina")}
+              >
+                Ver mi página
+              </button>
+              <button
+                type="button"
+                className={s.pageNudgeClose}
+                onClick={dismissPageNudge}
+                aria-label="Cerrar aviso"
+              >
+                <LuX aria-hidden />
+              </button>
+            </div>
+          </PremiumPageSection>
+        ) : null}
 
-      {isColdBoot ? (
-        <PremiumPageSection className={s.loadingList}>
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div key={`solicitud-skeleton-${index}`} className={s.loadingCard}>
-              <div className={s.loadingCardTop}>
-                <span className={s.loadingAvatar} aria-hidden />
-                <div className={s.loadingIdentity}>
-                  <span className={s.loadingLineStrong} aria-hidden />
-                  <span className={s.loadingLine} aria-hidden />
-                </div>
-                <span className={s.loadingPill} aria-hidden />
-              </div>
-              <span className={s.loadingLineWide} aria-hidden />
-              <span className={s.loadingLine} aria-hidden />
-            </div>
-          ))}
-        </PremiumPageSection>
-      ) : solicitudes.length === 0 ? (
-        <PremiumPageSection className={s.emptyState}>
-          <div className={s.emptyIcon}>
-            <LuInbox aria-hidden />
-          </div>
-          <p className={s.emptyTitle}>
-            {busquedaDiferida.trim()
-              ? "No encontramos solicitudes"
-              : "Aun no llegan solicitudes"}
-          </p>
-          <p className={s.emptySub}>
-            {busquedaDiferida.trim()
-              ? "Prueba con otro nombre o cambia el filtro actual."
-              : "Cuando alguien escriba desde tu pagina publica, aparecera aqui."}
-          </p>
-        </PremiumPageSection>
-      ) : (
-        <PremiumPageSection className={s.list}>
-          <div className={s.listToolbar}>
-            <div className={s.listToolbarCopy}>
-              <strong>{visibleSolicitudes.length} solicitudes</strong>
-              <span>{filtroActivo === "all" ? "Bandeja visible" : FILTRO_LABELS[filtroActivo]}</span>
-            </div>
+        <PremiumPageSection className={s.filtersSection}>
+          <div className={s.filterChips} role="toolbar" aria-label="Filtrar consultas">
             <button
-              className={`${s.inlineSelectButton} ${isSelectionMode ? s.inlineSelectButtonActive : ""}`}
               type="button"
-              onClick={toggleSelectionMode}
-              disabled={isBulkDeleting}
-              aria-pressed={isSelectionMode}
+              className={`${s.filterChip} ${filtroActivo === "all" ? s.filterChipActive : ""}`}
+              aria-pressed={filtroActivo === "all"}
+              onClick={() => setFiltroActivo("all")}
             >
-              {isSelectionMode ? "Cancelar" : "Seleccionar"}
+              Todas {isColdBoot ? "" : resumen.total}
             </button>
+            {SOLICITUD_STATE_OPTIONS.map((estado) => (
+              <button
+                key={estado}
+                type="button"
+                className={`${s.filterChip} ${filtroActivo === estado ? s.filterChipActive : ""}`}
+                aria-pressed={filtroActivo === estado}
+                onClick={() => setFiltroActivo(estado)}
+              >
+                {FILTRO_CHIP_LABELS[estado]} {isColdBoot ? "" : resumen.counts[estado]}
+              </button>
+            ))}
           </div>
 
-          {isSelectionMode ? (
-            <div className={s.selectionBar}>
-              <div>
-                <strong>{selectedCount} seleccionada(s)</strong>
-                <span>{allVisibleSelected ? "Todas las visibles" : "Toca las solicitudes"}</span>
+          <div className={s.searchBar}>
+            <LuSearch aria-hidden className={s.searchIcon} />
+            <input
+              className={s.searchInput}
+              type="search"
+              value={busqueda}
+              onChange={(event) => setBusqueda(event.target.value)}
+              placeholder="Buscar"
+              aria-label="Buscar consultas"
+              disabled={isColdBoot}
+            />
+          </div>
+          <button
+            type="button"
+            className={`${s.filterCard} ${s.filterCardAll} ${
+              filtroActivo === "all" ? s.filterActive : ""
+            }`}
+            onClick={() => setFiltroActivo("all")}
+          >
+            <div className={s.filterTop}>
+              <div className={s.filterInline}>
+                <strong className={s.filterInlineCount}>{resumen.total}</strong>
+                <span className={s.filterInlineLabel}>Todas</span>
               </div>
-              <div className={s.selectionActions}>
-                <button className={s.ghostAction} type="button" onClick={toggleSelectAllVisible}>
-                  {allVisibleSelected ? "Quitar" : "Todas"}
-                </button>
-                <button
-                  className={s.bulkDeleteBtn}
-                  type="button"
-                  onClick={() => setIsBulkDeleteModalOpen(true)}
-                  disabled={selectedCount === 0 || isBulkDeleting}
-                >
-                  Eliminar
-                </button>
-              </div>
+              {filtroActivo === "all" ? (
+                <span className={s.filterCheck}>
+                  <LuCheck aria-hidden />
+                </span>
+              ) : null}
             </div>
-          ) : null}
+          </button>
 
-          {visibleSolicitudes.map((item) => (
-            <SolicitudCard
-              key={item.solicitud.id}
-              item={item}
-              isUpdating={updatingSolicitudId === item.solicitud.id}
-              menuOpen={menuSolicitudId === item.solicitud.id}
-              selectionMode={isSelectionMode}
-              isSelected={selectedIds.has(item.solicitud.id)}
+          <div className={s.filterGrid}>
+            {SOLICITUD_STATE_OPTIONS.map((estado) => (
+              <button
+                key={estado}
+                type="button"
+                className={`${s.filterCard} ${ESTADO_CARD_CLASS[estado]} ${
+                  filtroActivo === estado ? s.filterActive : ""
+                }`}
+                onClick={() => setFiltroActivo(estado)}
+              >
+                <div className={s.filterTop}>
+                  <div className={s.filterInline}>
+                    <strong className={s.filterInlineCount}>{resumen.counts[estado]}</strong>
+                    <span className={s.filterInlineLabel}>{FILTRO_LABELS[estado]}</span>
+                  </div>
+                  {filtroActivo === estado ? (
+                    <span className={s.filterCheck}>
+                      <LuCheck aria-hidden />
+                    </span>
+                  ) : null}
+                </div>
+              </button>
+            ))}
+          </div>
+        </PremiumPageSection>
+
+        {feedback ? (
+          <PremiumPageSection className={s.feedbackBanner}>{feedback}</PremiumPageSection>
+        ) : null}
+
+        {error ? (
+          <PremiumPageSection className={s.errorBanner}>
+            <span>{error}</span>
+            <button type="button" onClick={() => void refreshSolicitudes()}>
+              Reintentar
+            </button>
+          </PremiumPageSection>
+        ) : null}
+
+        {isColdBoot ? (
+          <PremiumPageSection className={s.loadingList}>
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={`solicitud-skeleton-${index}`} className={s.loadingCard}>
+                <div className={s.loadingCardTop}>
+                  <span className={s.loadingAvatar} aria-hidden />
+                  <div className={s.loadingIdentity}>
+                    <span className={s.loadingLineStrong} aria-hidden />
+                    <span className={s.loadingLine} aria-hidden />
+                  </div>
+                  <span className={s.loadingPill} aria-hidden />
+                </div>
+                <span className={s.loadingLineWide} aria-hidden />
+              </div>
+            ))}
+          </PremiumPageSection>
+        ) : solicitudes.length === 0 ? (
+          <PremiumPageSection className={s.emptyState}>
+            <div className={s.emptyIcon}>
+              <LuInbox aria-hidden />
+            </div>
+            <p className={s.emptyTitle}>
+              {isEmptyInbox
+                ? "No tienes consultas todavía"
+                : "No encontramos consultas"}
+            </p>
+            <p className={s.emptySub}>
+              {isEmptyInbox
+                ? isPagePublished
+                  ? "Comparte tu página para que tus clientes puedan enviarte los datos del trabajo."
+                  : "Configura tu página comercial para que tus clientes puedan enviarte sus datos y medidas."
+                : "Prueba con otro nombre o cambia el filtro actual."}
+            </p>
+            {isEmptyInbox ? (
+              <div className={s.emptyActions}>
+                {isPagePublished ? (
+                  <>
+                    <button
+                      type="button"
+                      className={s.primaryAction}
+                      onClick={() => void handleSharePublicPage()}
+                    >
+                      <LuShare2 aria-hidden />
+                      {sharePageCopied ? copiedFeedback : "Compartir página"}
+                    </button>
+                    {publicRequestUrl ? (
+                      <a
+                        className={s.secondaryAction}
+                        href={publicRequestUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Ver página
+                      </a>
+                    ) : null}
+                  </>
+                ) : (
+                  <Link
+                    href="/configuracion/pagina-venta"
+                    className={s.primaryAction}
+                    prefetch={false}
+                  >
+                    Configurar mi página
+                  </Link>
+                )}
+              </div>
+            ) : null}
+          </PremiumPageSection>
+        ) : (
+          <PremiumPageSection className={s.list}>
+            <div className={s.listToolbar}>
+              <p className={s.listCount}>{visibleCountLabel}</p>
+              <div className={s.listToolbarCopy}>
+                <strong>{visibleCountLabel}</strong>
+                {filtroActivo !== "all" ? <span>{FILTRO_LABELS[filtroActivo]}</span> : null}
+              </div>
+              {isSelectionMode ? (
+                <button
+                  className={`${s.inlineSelectButton} ${s.inlineSelectButtonActive}`}
+                  type="button"
+                  onClick={toggleSelectionMode}
+                  disabled={isBulkDeleting}
+                  aria-pressed
+                >
+                  Cancelar
+                </button>
+              ) : (
+                <div className={s.toolbarMenuWrap}>
+                  <button
+                    className={s.toolbarMenuButton}
+                    type="button"
+                    onClick={toggleSelectionMode}
+                    disabled={isBulkDeleting}
+                    aria-label="Seleccionar consultas"
+                  >
+                    <LuEllipsisVertical aria-hidden />
+                  </button>
+                  <button
+                    className={s.inlineSelectButton}
+                    type="button"
+                    onClick={toggleSelectionMode}
+                    disabled={isBulkDeleting}
+                    aria-pressed={false}
+                  >
+                    Seleccionar
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {isSelectionMode ? (
+              <div className={s.selectionBar}>
+                <div>
+                  <strong>{selectedCount} seleccionada(s)</strong>
+                  <span>{allVisibleSelected ? "Todas las visibles" : "Toca las consultas"}</span>
+                </div>
+                <div className={s.selectionActions}>
+                  <button className={s.ghostAction} type="button" onClick={toggleSelectAllVisible}>
+                    {allVisibleSelected ? "Quitar" : "Todas"}
+                  </button>
+                  <button
+                    className={s.bulkDeleteBtn}
+                    type="button"
+                    onClick={() => setIsBulkDeleteModalOpen(true)}
+                    disabled={selectedCount === 0 || isBulkDeleting}
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {visibleSolicitudes.map((item) => (
+              <SolicitudCard
+                key={item.solicitud.id}
+                item={item}
+                isUpdating={updatingSolicitudId === item.solicitud.id}
+                isOpeningQuote={openingQuoteId === item.solicitud.id}
+                menuOpen={menuSolicitudId === item.solicitud.id}
+                selectionMode={isSelectionMode}
+                isSelected={selectedIds.has(item.solicitud.id)}
                 stateOptions={SOLICITUD_STATE_OPTIONS}
-                filterLabels={FILTRO_LABELS}
+                filterLabels={FILTRO_MENU_LABELS}
                 stateBadgeClasses={ESTADO_BADGE_CLASS}
                 onCreateQuote={handleCreateQuoteFromSolicitud}
+                onViewQuote={(solicitud) => void handleViewQuoteFromSolicitud(solicitud)}
                 onToggleMenu={handleToggleMenu}
                 onToggleSelected={toggleSelectedId}
                 onUpdateStatus={handleUpdateStatus}
-              onCopyContact={handleCopyContact}
-              onCopyMessage={handleCopyMessage}
-            />
-          ))}
-          {hasMore ? (
-            <button
-              type="button"
-              className={s.loadMoreBtn}
-              onClick={() => void loadMoreSolicitudes()}
-              disabled={isLoadingMore || isRefreshing}
-            >
-              {isLoadingMore ? "Cargando..." : "Cargar más"}
-            </button>
-          ) : null}
-        </PremiumPageSection>
-      )}
+                onCopyContact={handleCopyContact}
+                onCopyMessage={handleCopyMessage}
+              />
+            ))}
+            {hasMore ? (
+              <button
+                type="button"
+                className={s.loadMoreBtn}
+                onClick={() => void loadMoreSolicitudes()}
+                disabled={isLoadingMore || isRefreshing}
+              >
+                {isLoadingMore ? "Cargando..." : "Cargar más"}
+              </button>
+            ) : null}
+          </PremiumPageSection>
+        )}
+      </div>
 
       {isBulkDeleteModalOpen ? (
         <div className={s.modalOverlay} role="presentation">
@@ -813,10 +1192,10 @@ export default function SolicitudesPage() {
               <LuTrash2 aria-hidden />
             </div>
             <p id="bulk-delete-solicitudes-title" className={s.modalTitle}>
-              Eliminar solicitudes
+              Eliminar consultas
             </p>
             <p id="bulk-delete-solicitudes-description" className={s.modalDescription}>
-              Vas a eliminar <strong>{selectedCount}</strong> solicitud(es) seleccionada(s).
+              Vas a eliminar <strong>{selectedCount}</strong> consulta(s) seleccionada(s).
             </p>
             <div className={s.modalActions}>
               <button

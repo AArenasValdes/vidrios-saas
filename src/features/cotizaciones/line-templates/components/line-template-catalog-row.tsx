@@ -14,6 +14,7 @@ import {
   formatLineTemplatePriceLabel,
   LINE_TEMPLATE_CATEGORIA_LABELS,
 } from "@/features/cotizaciones/line-templates/utils/catalog-labels";
+import { shouldOfferLineFabricationWorkspace } from "@/features/cotizaciones/line-templates/utils/line-fabrication-entry";
 
 import {
   LineTemplateCardActions,
@@ -89,7 +90,7 @@ export function LineTemplateCatalogRow({
   const materialLabel = LINE_TEMPLATE_CATEGORIA_LABELS[template.categoria];
   const rowStatus = resolveRowStatus(template, needsPrice, technicalStatus);
   const fabricationHref = `/configuracion/empresa/lineas-precios/${template.id}/fabricacion`;
-  const showFabricationEntry = template.categoria !== "vidrio";
+  const showFabricationEntry = shouldOfferLineFabricationWorkspace(template);
 
   return (
     <article

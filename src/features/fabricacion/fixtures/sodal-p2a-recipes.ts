@@ -7,6 +7,11 @@ import {
   type FabricacionTipologia,
   type FabricacionVidrio,
 } from "@/features/fabricacion/types/fabricacion-domain";
+import {
+  SERIE_4800_VARIANT_NORMAL,
+  SERIE_4800_VARIANT_REFORZADA,
+  crearRecetaSerie4800Corredera,
+} from "@/features/fabricacion/fixtures/serie-4800-corredera-recipe";
 
 type RecipeInput = {
   lineName: string;
@@ -156,43 +161,10 @@ function baseRecipe(input: RecipeInput & {
 }
 
 function create4800(input: RecipeInput, reinforced: boolean): FabricacionReceta {
-  const createId = input.createId ?? fallbackId;
-  const legCode = reinforced ? "4811" : "4808";
-  const overlapCode = reinforced ? "4810" : "4806";
-  const variant = reinforced ? "Reforzada" : "Normal";
-  return baseRecipe({
-    ...input,
-    createId,
-    code: `SODAL-4800-2H-${reinforced ? "REFORZADA" : "NORMAL"}-V1`,
-    variant,
-    typology: "corredera",
-    leaves: 2,
-    modules: 1,
-    profiles: [
-      profile(createId, { code: "4801", name: "Riel inferior", functionName: "Riel inferior", base: "ancho_total", adjustmentMm: -16, quantity: 1, cut: "—" }),
-      profile(createId, { code: "4802", name: "Riel superior", functionName: "Riel superior", base: "ancho_total", adjustmentMm: -16, quantity: 1, cut: "—" }),
-      profile(createId, { code: "4803", name: "Jamba", functionName: "Jamba", base: "alto_total", adjustmentMm: 0, quantity: 2, cut: "—" }),
-      profile(createId, { code: "4804", name: "Zócalo", functionName: "Zócalo de hoja", base: "ancho_por_hoja", adjustmentMm: -15, quantity: 2, cut: "—" }),
-      profile(createId, { code: "4805", name: "Cabezal", functionName: "Cabezal de hoja", base: "ancho_por_hoja", adjustmentMm: -15, quantity: 2, cut: "—" }),
-      profile(createId, { code: overlapCode, name: reinforced ? "Traslapo reforzado" : "Traslapo", functionName: "Traslapo de hoja", base: "alto_total", adjustmentMm: -32, quantity: 2, cut: "—" }),
-      profile(createId, { code: legCode, name: reinforced ? "Pierna reforzada" : "Pierna con aleta", functionName: "Pierna de hoja", base: "alto_total", adjustmentMm: -32, quantity: 2, cut: "—" }),
-    ],
-    glasses: [glass(createId, { name: "Vidrio de la hoja", widthBase: "ancho_por_hoja", widthAdjustmentMm: -42, heightBase: "alto_total", heightAdjustmentMm: -93, quantity: 2 })],
-    accessories: [
-      accessory(createId, { name: "Rodamiento 4800", quantity: 4, unit: "Pz" }),
-      accessory(createId, { name: "Soporte rodamiento 4800", quantity: 4, unit: "Pz" }),
-      accessory(createId, { name: "Guía superior 4800", quantity: 4, unit: "Pz" }),
-      accessory(createId, { name: "Caracol central", quantity: 1, unit: "Pz" }),
-      accessory(createId, { name: "Felpa 5 x 5", quantity: 1, unit: "Mt", formula: "4X + 6Y" }),
-      accessory(createId, { name: "Burlete", quantity: 1, unit: "Mt", formula: "2X + 4Y" }),
-      accessory(createId, { name: "Tornillo RL Binding 8 x 3/4\"", quantity: 16, unit: "Pz" }),
-    ],
-    notes: [
-      `Pauta primaria SODAL: Catálogo General 2018, p. 29, Serie 4800, dos hojas (${variant}).`,
-      "La fuente publica — para normal/reforzada — los perfiles alternativos 4806/4810 y 4808/4811; no se reutiliza Serie 5000.",
-      "Corte angular y largo comercial no publicados en la tabla consultada; no se inventan.",
-      "Pendiente: prueba física de taller con una medida real.",
-    ],
+  return crearRecetaSerie4800Corredera({
+    lineName: input.lineName,
+    createId: input.createId,
+    variant: reinforced ? SERIE_4800_VARIANT_REFORZADA : SERIE_4800_VARIANT_NORMAL,
   });
 }
 

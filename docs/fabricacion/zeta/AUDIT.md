@@ -1,6 +1,6 @@
 # Auditoría Zeta
 
-Recetas confirmed leídas: 22
+Recetas confirmed leídas: 24
 Errores: 0
 Advertencias: 0
 

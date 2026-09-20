@@ -217,9 +217,64 @@ export function getFabricacionVisualStatus(
     return { id: "active", label: "Activa", tone: "active" };
   }
   if (status === "testing") {
-    return { id: "validated", label: "Validada", tone: "validated" };
+    return { id: "draft", label: "En prueba", tone: "testing" };
+  }
+  if (status === "archived") {
+    return { id: "draft", label: "Archivada", tone: "archived" };
   }
   return { id: "draft", label: "Borrador", tone: "draft" };
+}
+
+function sortRecipesByRecentUpdate(
+  left: FabricationRecipeRecord,
+  right: FabricationRecipeRecord
+): number {
+  return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+}
+
+/** Historial real: nunca mezcla variantes hermanas como "versiones anteriores". */
+export function resolveFabricacionRecipeHistory(input: {
+  recipes: FabricationRecipeRecord[];
+  showVariantGallery: boolean;
+  focusRecipeId?: string | null;
+}): FabricationRecipeRecord[] {
+  const active = input.recipes.filter(
+    (recipe) => !recipe.eliminadoEn && recipe.status !== "archived"
+  );
+  const archived = input.recipes.filter(
+    (recipe) => !recipe.eliminadoEn && recipe.status === "archived"
+  );
+
+  if (input.showVariantGallery) {
+    return archived.sort(sortRecipesByRecentUpdate);
+  }
+
+  const focus =
+    active.find((recipe) => recipe.id === input.focusRecipeId) ?? active[0] ?? null;
+  const distinctVariants = new Set(
+    active.map((recipe) => (recipe.variant ?? "").trim().toLowerCase()).filter(Boolean)
+  );
+
+  if (distinctVariants.size > 1) {
+    return archived.sort(sortRecipesByRecentUpdate);
+  }
+
+  const olderVersions = focus
+    ? active.filter((recipe) => recipe.id !== focus.id)
+    : active.slice(1);
+
+  return [...olderVersions, ...archived].sort(sortRecipesByRecentUpdate);
+}
+
+export function countFabricacionRecipeHistory(
+  recipes: FabricationRecipeRecord[],
+  options: { showVariantGallery: boolean; focusRecipeId?: string | null }
+): number {
+  return resolveFabricacionRecipeHistory({
+    recipes,
+    showVariantGallery: options.showVariantGallery,
+    focusRecipeId: options.focusRecipeId,
+  }).length;
 }
 
 export function getPrimaryWorkflowIndex(step: PrimaryWorkflowStepId) {

@@ -10,6 +10,7 @@ import {
   LuGem,
   LuLayers,
   LuLayoutGrid,
+  LuMinimize2,
   LuPlus,
   LuRotateCcw,
   LuSearch,
@@ -39,6 +40,7 @@ import {
 import {
   formatLineTemplatePriceLabel,
 } from "@/features/cotizaciones/line-templates/utils/catalog-labels";
+import { shouldOfferLineFabricationWorkspace } from "@/features/cotizaciones/line-templates/utils/line-fabrication-entry";
 import s from "./lineas-precios-mobile-view.module.css";
 
 export type MobileStatusFilter = "todas" | "activas" | "inactivas";
@@ -115,6 +117,7 @@ const TECHNICAL_OPTIONS: Array<{ value: MobileTechnicalFilter; label: string }> 
 const FAMILY_ICONS: Record<LineTemplateFamilyKey | "propias", IconType> = {
   propias: LuUser,
   correderas: LuLayoutGrid,
+  fijos: LuMinimize2,
   proyectantes: LuSquare,
   puertas: LuDoorOpen,
   fachadas: LuLayers,
@@ -187,7 +190,12 @@ export function LineasPreciosMobileView({
       needsPrice,
       technicalStatus,
       subtitle: subtitleParts.join(" · "),
-      fabricationActionLabel: resolveFabricationActionLabel(technicalStatus, needsPrice),
+      fabricationActionLabel: resolveFabricationActionLabel(
+        technicalStatus,
+        needsPrice,
+        selectedLine.catalogKey
+      ),
+      showFabricationAction: shouldOfferLineFabricationWorkspace(selectedLine),
     };
   }, [formatMoney, selectedLine, technicalStatuses]);
 
@@ -272,8 +280,14 @@ export function LineasPreciosMobileView({
         </div>
 
         <div className={s.headerNewActions}>
-          <button type="button" className={s.newButtonSecondary} onClick={onNewGlass}>
-            Vidrio
+          <button
+            type="button"
+            className={s.newButtonSecondary}
+            onClick={onNewGlass}
+            aria-label="Agregar vidrio"
+          >
+            <LuPlus aria-hidden />
+            <span>Vidrio</span>
           </button>
           <button type="button" className={s.newButton} onClick={onNewLine}>
             <LuPlus aria-hidden />
@@ -317,6 +331,18 @@ export function LineasPreciosMobileView({
             </button>
           ))}
         </div>
+
+        {categoryFilter === "vidrio" ? (
+          <aside className={s.materialInfoBanner} role="note" aria-label="Productos de cristal">
+            <LuSparkles aria-hidden />
+            <div>
+              <strong>Vidrios, espejos y más</strong>
+              <span>
+                Aquí puedes administrar los productos de cristal que ofreces y dejarlos listos para cotizar.
+              </span>
+            </div>
+          </aside>
+        ) : null}
 
         <div className={s.statusTabs} aria-label="Estado de las líneas">
           {([
@@ -581,13 +607,13 @@ export function LineasPreciosMobileView({
                   ? "Agregar precio"
                   : "Editar precio"}
               </button>
-              {selectedLine.categoria !== "vidrio" ? (
+              {selectedLineContext?.showFabricationAction ? (
                 <Link
                   href={`/configuracion/empresa/lineas-precios/${selectedLine.id}/fabricacion`}
                   className={s.lineSheetAction}
                   onClick={() => setSelectedLine(null)}
                 >
-                  {selectedLineContext?.fabricationActionLabel ?? "Cubicación y pauta"}
+                  {selectedLineContext.fabricationActionLabel}
                 </Link>
               ) : null}
               <button

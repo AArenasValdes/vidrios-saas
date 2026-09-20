@@ -1,0 +1,22 @@
+{
+  "runId": "e6ee97e0-2c1e-4bb1-96b2-40fb1c9117e0",
+  "startedAt": "2026-09-19T19:44:46.746Z",
+  "finishedAt": "2026-09-19T19:44:46.777Z",
+  "command": "C:\\Program Files\\nodejs\\node.exe C:\\Users\\aless\\vidrios-saas\\scripts\\zeta\\extract.ts --live --manufacturer=SODAL --system=4800 --limit=1",
+  "mode": "live",
+  "targetsRequested": [
+    "monolitico_4h_3000x1500"
+  ],
+  "processed": [],
+  "confirmed": [],
+  "skipped": [],
+  "failed": [],
+  "pending": [],
+  "errors": [
+    {
+      "outcome": "AUTOMATION_ERROR",
+      "message": "No hay sesión Playwright local. Ejecuta pnpm zeta:extract -- --login, o captura raw/ con Cursor Browser y pnpm zeta:ingest."
+    }
+  ],
+  "notes": []
+}

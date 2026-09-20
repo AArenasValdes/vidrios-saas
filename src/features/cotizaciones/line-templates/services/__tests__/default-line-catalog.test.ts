@@ -100,8 +100,9 @@ describe("seedDefaultLineCatalog", () => {
   it("incluye las dos líneas nuevas del catálogo chileno", () => {
     const keys = VENTORA_DEFAULT_LINE_CATALOG.map((line) => line.catalogKey);
     expect(keys).toContain("ventora:l35");
+    expect(keys).toContain("ventora:l20-fijos");
     expect(keys).toContain("ventora:winhouse-andes-monorriel");
-    expect(catalogSize).toBe(29);
+    expect(catalogSize).toBe(30);
   });
 
   it("maneja unique violation (23505) sin romper", async () => {

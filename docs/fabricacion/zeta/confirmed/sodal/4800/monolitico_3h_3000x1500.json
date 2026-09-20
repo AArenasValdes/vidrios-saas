@@ -1,0 +1,200 @@
+{
+  "id": "monolitico_3h_3000x1500",
+  "manufacturer": "SODAL",
+  "system": "4800",
+  "line": "L-4800 MONOLITICO",
+  "variant": "MONOLITICO",
+  "glazing": "monolitico",
+  "leaves": 3,
+  "topology": "CORREDERA LATINOAMERICANA",
+  "source": "sistema_zeta",
+  "evidenceType": "plan_de_armado",
+  "status": "confirmed",
+  "extractedAt": "2026-09-19T00:45:29.877Z",
+  "testDimensions": {
+    "widthMm": 3000,
+    "heightMm": 1500
+  },
+  "profiles": [
+    {
+      "code": "4801",
+      "name": "4801 - RIEL INFERIOR BLANCO",
+      "position": null,
+      "quantity": 1,
+      "lengthMm": 2984,
+      "cut1Deg": 90,
+      "cut2Deg": 90
+    },
+    {
+      "code": "4802",
+      "name": "4802 - RIEL SUPERIOR BLANCO",
+      "position": null,
+      "quantity": 1,
+      "lengthMm": 2984,
+      "cut1Deg": 90,
+      "cut2Deg": 90
+    },
+    {
+      "code": "4803",
+      "name": "4803 - JAMBA BLANCO",
+      "position": null,
+      "quantity": 2,
+      "lengthMm": 1500,
+      "cut1Deg": 90,
+      "cut2Deg": 90
+    },
+    {
+      "code": "4804",
+      "name": "4804 -ZOCALO BLANCO",
+      "position": null,
+      "quantity": 2,
+      "lengthMm": 993,
+      "cut1Deg": 90,
+      "cut2Deg": 90
+    },
+    {
+      "code": "4804",
+      "name": "4804 -ZOCALO BLANCO",
+      "position": null,
+      "quantity": 1,
+      "lengthMm": 1005,
+      "cut1Deg": 90,
+      "cut2Deg": 90
+    },
+    {
+      "code": "4805",
+      "name": "4805 - CABEZAL BLANCO",
+      "position": null,
+      "quantity": 2,
+      "lengthMm": 993,
+      "cut1Deg": 90,
+      "cut2Deg": 90
+    },
+    {
+      "code": "4805",
+      "name": "4805 - CABEZAL BLANCO",
+      "position": null,
+      "quantity": 1,
+      "lengthMm": 1005,
+      "cut1Deg": 90,
+      "cut2Deg": 90
+    },
+    {
+      "code": "4806",
+      "name": "4806 - TRASLAPO VENTANA BLANCO",
+      "position": null,
+      "quantity": 4,
+      "lengthMm": 1468,
+      "cut1Deg": 90,
+      "cut2Deg": 90
+    },
+    {
+      "code": "4808",
+      "name": "4808 - PIERNA - ABIERTA BLANCO",
+      "position": null,
+      "quantity": 2,
+      "lengthMm": 1468,
+      "cut1Deg": 90,
+      "cut2Deg": 90
+    }
+  ],
+  "glass": [
+    {
+      "code": "CTI5",
+      "name": "Cristal Templado Incoloro 5mm",
+      "quantity": 2,
+      "widthMm": 965,
+      "heightMm": 1406
+    },
+    {
+      "code": "CTI5",
+      "name": "Cristal Templado Incoloro 5mm",
+      "quantity": 1,
+      "widthMm": 977,
+      "heightMm": 1406
+    }
+  ],
+  "hardware": [
+    {
+      "code": "18000000637",
+      "name": "RODAMIENTO P/2005 CARGA 20KG X HOJA",
+      "quantity": 6,
+      "unit": "PZA"
+    },
+    {
+      "code": "18000000832",
+      "name": "GUIA L-4005 CON ALETA",
+      "quantity": 6,
+      "unit": "PZA"
+    },
+    {
+      "code": "1040100140950",
+      "name": "SOPORTE RODAMIENTO 4800",
+      "quantity": 4,
+      "unit": "PZA"
+    },
+    {
+      "code": "CARACOLGENERICO",
+      "name": "CIERRE CARACOL GENERICO",
+      "quantity": 2,
+      "unit": "PZA"
+    },
+    {
+      "code": "TRLCB348",
+      "name": "TORNILLO RL CB PH 3/4\" X 8",
+      "quantity": 24,
+      "unit": "PZA"
+    },
+    {
+      "code": "TORN-ROD",
+      "name": "TORNILLO PARA RODAMIENTO",
+      "quantity": 12,
+      "unit": "PZA"
+    },
+    {
+      "code": "TORN-SOPROD",
+      "name": "TORNILLO PARA SOPORTE RODAMIENTO",
+      "quantity": 12,
+      "unit": "PZA"
+    },
+    {
+      "code": "TORN-GUIA",
+      "name": "TORNILLO PARA GUIA",
+      "quantity": 12,
+      "unit": "PZA"
+    },
+    {
+      "code": "TORN-CIERRE",
+      "name": "TORNILLO PARA CIERRE",
+      "quantity": 4,
+      "unit": "PZA"
+    },
+    {
+      "code": "18000000005",
+      "name": "FELPA 5X5 3P ROLLO 500",
+      "quantity": 30,
+      "unit": "M"
+    },
+    {
+      "code": "07012STY",
+      "name": "BLANCO Sellotec 20 Silicona Neutra c/fung 300 ml BLANCO",
+      "quantity": 2,
+      "unit": "TUBO"
+    },
+    {
+      "code": "TORINSEST",
+      "name": "Tornillo instalacion S/T/ESTRELLA",
+      "quantity": 22,
+      "unit": "PZA"
+    }
+  ],
+  "sourceEvidence": {
+    "projectId": "46407",
+    "planId": "PA-54",
+    "screenshotPaths": [
+      "docs/fabricacion/zeta/raw/sodal/4800/monolitico_3h_3000x1500/screenshot.png"
+    ],
+    "rawPath": "docs/fabricacion/zeta/raw/sodal/4800/monolitico_3h_3000x1500",
+    "sourceDocument": null
+  }
+}

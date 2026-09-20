@@ -46,12 +46,21 @@ async function ingestExistingRaw(target: ExtractTarget, log: RunLog, writeConfir
     ? (JSON.parse(await readFile(metadataPath, "utf8")) as {
         sourceEvidence?: { projectId?: string | null; planId?: string | null; pageUrl?: string | null };
         errorText?: string | null;
+        warnings?: string[];
       })
     : {};
+  const consoleLogPath = join(dir, "console.log");
+  const consoleLines = existsSync(consoleLogPath)
+    ? (await readFile(consoleLogPath, "utf8"))
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+    : [];
 
   const plan = html ? parsePlanFromHtml(html) : parsePlanFromText(text);
   plan.planHtml = html;
   plan.planText = text;
+  plan.warnings = [...new Set([...plan.warnings, ...(metadata.warnings ?? [])])];
 
   const artifacts = await finalizeRawCapture({
     target,
@@ -62,7 +71,7 @@ async function ingestExistingRaw(target: ExtractTarget, log: RunLog, writeConfir
       url: metadata.sourceEvidence?.pageUrl ?? "",
       projectId: metadata.sourceEvidence?.projectId ?? null,
       planId: metadata.sourceEvidence?.planId ?? null,
-      consoleLines: [],
+      consoleLines,
       errorText: metadata.errorText ?? null,
       checkpointPaths: {
         projectCreated: join(dir, "checkpoint-project-created.png"),

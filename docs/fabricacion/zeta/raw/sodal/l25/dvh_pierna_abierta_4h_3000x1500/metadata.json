@@ -1,0 +1,48 @@
+{
+  "recipeId": "dvh_pierna_abierta_4h_3000x1500",
+  "runId": "ac233f67-4378-4a12-a352-64ad7a29c001",
+  "extractedAt": "2026-09-19T21:07:00Z",
+  "extractorVersion": "browser-direct-1",
+  "status": "pending",
+  "target": {
+    "manufacturer": "SODAL",
+    "system": "L25",
+    "line": "L-25 DVH PIERNA ABIERTA",
+    "variant": "DVH PIERNA ABIERTA",
+    "leaves": 4,
+    "widthMm": 3000,
+    "heightMm": 1500,
+    "glassCode": "TI4104"
+  },
+  "sourceEvidence": {
+    "projectId": "46422",
+    "planId": "PA-66",
+    "rawPath": "docs/fabricacion/zeta/raw/sodal/l25/dvh_pierna_abierta_4h_3000x1500",
+    "html": {
+      "path": null,
+      "captured": false,
+      "reason": "El bridge Browser no expuso ruta local de exportación HTML."
+    },
+    "textPath": "docs/fabricacion/zeta/raw/sodal/l25/dvh_pierna_abierta_4h_3000x1500/plan.txt",
+    "screenshot": {
+      "path": null,
+      "capturedInBrowser": true,
+      "bytes": 190700,
+      "sha256": "ca26b523903011a34b829828fdeef68e73d7db9e200d96188b9eb6126f649c46",
+      "reason": "Screenshot fullPage capturado por Browser; la ruta local no fue expuesta."
+    },
+    "pageUrl": "https://sistemazeta.cl/zeta/reporte_planEjecucion?idProject=46422",
+    "sourceRowOrFragment": [
+      "PERFILES - Componente 1 - V-001",
+      "ACCESORIOS - Componente 1 - V-001",
+      "CRISTALES - Componente 1 - V-001"
+    ],
+    "values": "observed"
+  },
+  "warnings": [
+    "El perfil TUB 10050 no tiene perfiles compuestos asignados"
+  ],
+  "errorText": null,
+  "productionActivation": "blocked_by_warning",
+  "artifactsHashable": ["plan.txt", "metadata.json", "console.log"]
+}

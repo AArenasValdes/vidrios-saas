@@ -3,6 +3,13 @@ import type { FabricacionContratoTecnico } from "@/features/fabricacion/types/fa
 
 export const SODAL_L25_CATALOG_KEY = "ventora:l25";
 
+/** Identificador puro de procedencia; no carga evidencia ni filesystem. */
+export function isZetaConfirmedSourceReference(
+  sourceReference: string | null | undefined,
+): boolean {
+  return (sourceReference ?? "").startsWith("zeta:confirmed:sodal/l25/");
+}
+
 /** Contrato técnico de L25. El herraje queda fuera porque no discrimina la receta. */
 export const SODAL_L25_CONTRATO_TECNICO: FabricacionContratoTecnico = {
   familia: "sodal:l25",

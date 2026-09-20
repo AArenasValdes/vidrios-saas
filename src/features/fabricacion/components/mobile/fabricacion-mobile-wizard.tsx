@@ -11,6 +11,7 @@ import { FabricacionMobileMaterialsStep } from "@/features/fabricacion/component
 import { FabricacionMobileProductStep } from "@/features/fabricacion/components/mobile/fabricacion-mobile-product-step";
 import { FabricacionProfileEditSheet } from "@/features/fabricacion/components/mobile/fabricacion-profile-edit-sheet";
 import { FabricacionProfileList } from "@/features/fabricacion/components/mobile/fabricacion-profile-list";
+import type { LineVariantSlot } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
 import {
   crearAccesorioFabricacionVacio,
   crearPerfilFabricacionVacio,
@@ -52,6 +53,7 @@ type Props = {
   onClose: () => void;
   onDraftChange: (recipe: FabricacionReceta) => void;
   onSelectRecipe?: (recipe: FabricationRecipeRecord) => void;
+  onCreateMissingSlot?: (slot: LineVariantSlot) => void;
   onContinueToRecipe: () => void;
   onPersistRecipe: (recipe: FabricacionReceta) => Promise<void>;
   onSaveTest: (input: {
@@ -91,6 +93,7 @@ export function FabricacionMobileWizard({
   onClose,
   onDraftChange,
   onSelectRecipe,
+  onCreateMissingSlot,
   onContinueToRecipe,
   onPersistRecipe,
   onSaveTest,
@@ -206,6 +209,7 @@ export function FabricacionMobileWizard({
                 readOnly={readOnly}
                 onDraftChange={onDraftChange}
                 onSelectRecipe={onSelectRecipe}
+                onCreateMissingSlot={onCreateMissingSlot}
               />
             ) : null}
 

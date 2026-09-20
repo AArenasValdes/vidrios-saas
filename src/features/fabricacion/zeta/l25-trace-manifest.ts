@@ -1,0 +1,246 @@
+/**
+ * @deprecated Reemplazado por sidecars JSON en docs/fabricacion/zeta/evidence/.
+ * Conservado solo como referencia histórica de mapeo PA/proyecto.
+ */
+export type L25TraceManifestEntry = {
+  recipeId: string;
+  planId: string;
+  projectId: string;
+  runId: string;
+  capturedAt: string;
+  /** Markdown PA dedicado, si existe. */
+  paMarkdownPath: string | null;
+  /** Carpeta raw/<recipeId>/ con plan.html, plan.txt, screenshot, etc. */
+  rawCaptureDir: string | null;
+  /** Documento primario cuando no hay PA dedicado (p. ej. lote PA-3). */
+  primaryDocumentPath: string;
+};
+
+const DOC_ROOT = "docs/fabricacion/zeta";
+const L25_RAW = `${DOC_ROOT}/raw/sodal/l25`;
+const SODAL_L25_DOC = "docs/SODAL_LINEA25_ZETA_2026-09-18.md";
+
+export const L25_TRACE_MANIFEST: Record<string, L25TraceManifestEntry> = {
+  monolitico_pierna_abierta_2h_1800x1500: {
+    recipeId: "monolitico_pierna_abierta_2h_1800x1500",
+    planId: "PA-3",
+    projectId: "ALE-3-test1L25",
+    runId: "2026-09-18-pa-3-v001",
+    capturedAt: "2026-09-18T00:00:00.000Z",
+    paMarkdownPath: null,
+    rawCaptureDir: null,
+    primaryDocumentPath: SODAL_L25_DOC,
+  },
+  monolitico_pierna_abierta_3h_3000x1500: {
+    recipeId: "monolitico_pierna_abierta_3h_3000x1500",
+    planId: "PA-3",
+    projectId: "ALE-3-test1L25",
+    runId: "2026-09-18-pa-3-v002",
+    capturedAt: "2026-09-18T00:00:00.000Z",
+    paMarkdownPath: null,
+    rawCaptureDir: null,
+    primaryDocumentPath: SODAL_L25_DOC,
+  },
+  monolitico_pierna_abierta_4h_3000x1500: {
+    recipeId: "monolitico_pierna_abierta_4h_3000x1500",
+    planId: "PA-3",
+    projectId: "ALE-3-test1L25",
+    runId: "2026-09-18-pa-3-v003",
+    capturedAt: "2026-09-18T00:00:00.000Z",
+    paMarkdownPath: null,
+    rawCaptureDir: null,
+    primaryDocumentPath: SODAL_L25_DOC,
+  },
+  dvh_pierna_abierta_reforzada_2h_1800x1500: {
+    recipeId: "dvh_pierna_abierta_reforzada_2h_1800x1500",
+    planId: "PA-3",
+    projectId: "ALE-3-test1L25",
+    runId: "2026-09-18-pa-3-v004",
+    capturedAt: "2026-09-18T00:00:00.000Z",
+    paMarkdownPath: null,
+    rawCaptureDir: null,
+    primaryDocumentPath: SODAL_L25_DOC,
+  },
+  dvh_pierna_abierta_reforzada_3h_3000x1500: {
+    recipeId: "dvh_pierna_abierta_reforzada_3h_3000x1500",
+    planId: "PA-3",
+    projectId: "ALE-3-test1L25",
+    runId: "2026-09-18-pa-3-v005",
+    capturedAt: "2026-09-18T00:00:00.000Z",
+    paMarkdownPath: null,
+    rawCaptureDir: null,
+    primaryDocumentPath: SODAL_L25_DOC,
+  },
+  dvh_pierna_abierta_reforzada_4h_3000x1500: {
+    recipeId: "dvh_pierna_abierta_reforzada_4h_3000x1500",
+    planId: "PA-3",
+    projectId: "ALE-3-test1L25",
+    runId: "2026-09-18-pa-3-v006",
+    capturedAt: "2026-09-18T00:00:00.000Z",
+    paMarkdownPath: null,
+    rawCaptureDir: null,
+    primaryDocumentPath: SODAL_L25_DOC,
+  },
+  monolitico_pierna_abierta_reforzada_2h_1800x1500: {
+    recipeId: "monolitico_pierna_abierta_reforzada_2h_1800x1500",
+    planId: "PA-5",
+    projectId: "46339",
+    runId: "2026-09-18-pa-5",
+    capturedAt: "2026-09-18T12:00:00.000Z",
+    paMarkdownPath: null,
+    rawCaptureDir: null,
+    primaryDocumentPath: SODAL_L25_DOC,
+  },
+  monolitico_pierna_abierta_reforzada_3h_3000x1500: {
+    recipeId: "monolitico_pierna_abierta_reforzada_3h_3000x1500",
+    planId: "PA-5",
+    projectId: "46339",
+    runId: "2026-09-18-pa-5",
+    capturedAt: "2026-09-18T12:00:00.000Z",
+    paMarkdownPath: null,
+    rawCaptureDir: null,
+    primaryDocumentPath: SODAL_L25_DOC,
+  },
+  monolitico_pierna_abierta_reforzada_4h_3000x1500: {
+    recipeId: "monolitico_pierna_abierta_reforzada_4h_3000x1500",
+    planId: "PA-40",
+    projectId: "46374",
+    runId: "2026-09-18-pa-40",
+    capturedAt: "2026-09-18T18:00:00.000Z",
+    paMarkdownPath: `${L25_RAW}/PA-40_VENTORA-ZETA-PENDING-001.md`,
+    rawCaptureDir: null,
+    primaryDocumentPath: `${L25_RAW}/PA-40_VENTORA-ZETA-PENDING-001.md`,
+  },
+  monolitico_pierna_cerrada_2h_1800x1500: {
+    recipeId: "monolitico_pierna_cerrada_2h_1800x1500",
+    planId: "PA-2",
+    projectId: "46336",
+    runId: "2026-09-18-pa-2",
+    capturedAt: "2026-09-18T12:00:00.000Z",
+    paMarkdownPath: null,
+    rawCaptureDir: null,
+    primaryDocumentPath: SODAL_L25_DOC,
+  },
+  monolitico_pierna_cerrada_3h_3000x1500: {
+    recipeId: "monolitico_pierna_cerrada_3h_3000x1500",
+    planId: "PA-45",
+    projectId: "46379",
+    runId: "2026-09-18-pa-45",
+    capturedAt: "2026-09-18T20:00:00.000Z",
+    paMarkdownPath: `${L25_RAW}/PA-45_VENTORA-ZETA-BATCH-004.md`,
+    rawCaptureDir: null,
+    primaryDocumentPath: `${L25_RAW}/PA-45_VENTORA-ZETA-BATCH-004.md`,
+  },
+  monolitico_pierna_cerrada_4h_3000x1500: {
+    recipeId: "monolitico_pierna_cerrada_4h_3000x1500",
+    planId: "PA-46",
+    projectId: "46380",
+    runId: "2026-09-18-pa-46",
+    capturedAt: "2026-09-18T20:00:00.000Z",
+    paMarkdownPath: `${L25_RAW}/PA-46_VENTORA-ZETA-BATCH-005.md`,
+    rawCaptureDir: null,
+    primaryDocumentPath: `${L25_RAW}/PA-46_VENTORA-ZETA-BATCH-005.md`,
+  },
+  dvh_pierna_abierta_2h_1800x1500: {
+    recipeId: "dvh_pierna_abierta_2h_1800x1500",
+    planId: "PA-41",
+    projectId: "46375",
+    runId: "2026-09-18-pa-41",
+    capturedAt: "2026-09-18T07:19:18.283Z",
+    paMarkdownPath: `${L25_RAW}/PA-41_VENTORA-ZETA-PENDING-BATCH-001.md`,
+    rawCaptureDir: `${L25_RAW}/dvh_pierna_abierta_2h_1800x1500`,
+    primaryDocumentPath: `${L25_RAW}/PA-41_VENTORA-ZETA-PENDING-BATCH-001.md`,
+  },
+  dvh_pierna_abierta_3h_3000x1500: {
+    recipeId: "dvh_pierna_abierta_3h_3000x1500",
+    planId: "PA-47",
+    projectId: "46381",
+    runId: "2026-09-18-pa-47",
+    capturedAt: "2026-09-18T20:00:00.000Z",
+    paMarkdownPath: `${L25_RAW}/PA-47_VENTORA-ZETA-BATCH-006.md`,
+    rawCaptureDir: null,
+    primaryDocumentPath: `${L25_RAW}/PA-47_VENTORA-ZETA-BATCH-006.md`,
+  },
+  dvh_pierna_abierta_4h_3000x1500: {
+    recipeId: "dvh_pierna_abierta_4h_3000x1500",
+    planId: "PA-48",
+    projectId: "46382",
+    runId: "2026-09-18-pa-48",
+    capturedAt: "2026-09-18T20:00:00.000Z",
+    paMarkdownPath: `${L25_RAW}/PA-48_VENTORA-ZETA-BATCH-007.md`,
+    rawCaptureDir: null,
+    primaryDocumentPath: `${L25_RAW}/PA-48_VENTORA-ZETA-BATCH-007.md`,
+  },
+  dvh_pierna_cerrada_2h_1800x1500: {
+    recipeId: "dvh_pierna_cerrada_2h_1800x1500",
+    planId: "PA-42",
+    projectId: "46376",
+    runId: "2026-09-18-pa-42",
+    capturedAt: "2026-09-18T20:00:00.000Z",
+    paMarkdownPath: `${L25_RAW}/PA-42_VENTORA-ZETA-BATCH-001.md`,
+    rawCaptureDir: null,
+    primaryDocumentPath: `${L25_RAW}/PA-42_VENTORA-ZETA-BATCH-001.md`,
+  },
+  dvh_pierna_cerrada_3h_3000x1500: {
+    recipeId: "dvh_pierna_cerrada_3h_3000x1500",
+    planId: "PA-43",
+    projectId: "46377",
+    runId: "2026-09-18-pa-43",
+    capturedAt: "2026-09-18T20:00:00.000Z",
+    paMarkdownPath: `${L25_RAW}/PA-43_VENTORA-ZETA-BATCH-002.md`,
+    rawCaptureDir: null,
+    primaryDocumentPath: `${L25_RAW}/PA-43_VENTORA-ZETA-BATCH-002.md`,
+  },
+  dvh_pierna_cerrada_4h_3000x1500: {
+    recipeId: "dvh_pierna_cerrada_4h_3000x1500",
+    planId: "PA-44",
+    projectId: "46378",
+    runId: "2026-09-18-pa-44",
+    capturedAt: "2026-09-18T20:00:00.000Z",
+    paMarkdownPath: `${L25_RAW}/PA-44_VENTORA-ZETA-BATCH-003.md`,
+    rawCaptureDir: null,
+    primaryDocumentPath: `${L25_RAW}/PA-44_VENTORA-ZETA-BATCH-003.md`,
+  },
+  monolitico_pierna_abierta_3h_2400x1500: {
+    recipeId: "monolitico_pierna_abierta_3h_2400x1500",
+    planId: "PA-50",
+    projectId: "46384",
+    runId: "2026-09-18-pa-50",
+    capturedAt: "2026-09-18T21:00:00.000Z",
+    paMarkdownPath: `${L25_RAW}/PA-50_VENTORA-ZETA-BATCH-009.md`,
+    rawCaptureDir: null,
+    primaryDocumentPath: `${L25_RAW}/PA-50_VENTORA-ZETA-BATCH-009.md`,
+  },
+  monolitico_pierna_abierta_reforzada_3h_2400x1500: {
+    recipeId: "monolitico_pierna_abierta_reforzada_3h_2400x1500",
+    planId: "PA-51",
+    projectId: "46385",
+    runId: "2026-09-18-pa-51",
+    capturedAt: "2026-09-18T21:00:00.000Z",
+    paMarkdownPath: `${L25_RAW}/PA-51_VENTORA-ZETA-BATCH-010.md`,
+    rawCaptureDir: null,
+    primaryDocumentPath: `${L25_RAW}/PA-51_VENTORA-ZETA-BATCH-010.md`,
+  },
+  dvh_pierna_abierta_reforzada_3h_2400x1500: {
+    recipeId: "dvh_pierna_abierta_reforzada_3h_2400x1500",
+    planId: "PA-52",
+    projectId: "46386",
+    runId: "2026-09-18-pa-52",
+    capturedAt: "2026-09-18T21:00:00.000Z",
+    paMarkdownPath: `${L25_RAW}/PA-52_VENTORA-ZETA-BATCH-011.md`,
+    rawCaptureDir: null,
+    primaryDocumentPath: `${L25_RAW}/PA-52_VENTORA-ZETA-BATCH-011.md`,
+  },
+  dvh_pierna_cerrada_3h_2400x1500: {
+    recipeId: "dvh_pierna_cerrada_3h_2400x1500",
+    planId: "PA-53",
+    projectId: "46387",
+    runId: "2026-09-18-pa-53",
+    capturedAt: "2026-09-18T21:00:00.000Z",
+    paMarkdownPath: `${L25_RAW}/PA-53_VENTORA-ZETA-BATCH-012.md`,
+    rawCaptureDir: null,
+    primaryDocumentPath: `${L25_RAW}/PA-53_VENTORA-ZETA-BATCH-012.md`,
+  },
+};
+
+export const L25_TRACE_RECIPE_IDS = Object.keys(L25_TRACE_MANIFEST);

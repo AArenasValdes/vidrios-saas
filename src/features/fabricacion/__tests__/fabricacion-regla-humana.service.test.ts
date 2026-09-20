@@ -4,8 +4,10 @@ import {
   describePerfilReglaHumana,
   describePerfilSheetMeasure,
   describePerfilTallerResumen,
+  describeRecipeGlassListRow,
   displayLabel,
   getActiveRecipeProfileRules,
+  isPlaceholderRecipeGlassName,
   resolveLargoComercialMm,
   resolveRecetaLargoComercialDefaultMm,
   summarizeTirasPorPerfil,
@@ -15,6 +17,7 @@ import type {
   FabricacionAccesorio,
   FabricacionComponentePerfil,
   FabricacionReceta,
+  FabricacionVidrio,
 } from "@/features/fabricacion/types/fabricacion-domain";
 
 function profile(
@@ -193,5 +196,35 @@ describe("fabricacion-regla-humana.service", () => {
     expect(groups).toHaveLength(1);
     expect(groups[0]?.tiras).toBe(2);
     expect(groups[0]?.usadoMm).toBe(5800);
+  });
+
+  it("detecta nombres placeholder de vidrio y describe la fila mobile", () => {
+    const placeholderGlass: FabricacionVidrio = {
+      id: "g1",
+      nombre: "Vidrio",
+      reglaAncho: { base: "ancho_por_hoja", ajusteMm: -57 },
+      reglaAlto: { base: "alto_total", ajusteMm: -101 },
+      reglaCantidad: { tipo: "fija", cantidad: 2 },
+    };
+    const configuredGlass: FabricacionVidrio = {
+      ...placeholderGlass,
+      id: "g2",
+      nombre: "Monolítico incoloro 4 mm",
+    };
+
+    expect(isPlaceholderRecipeGlassName("Vidrio")).toBe(true);
+    expect(isPlaceholderRecipeGlassName("vidrio principal")).toBe(true);
+    expect(isPlaceholderRecipeGlassName("Monolítico incoloro 4 mm")).toBe(false);
+
+    expect(describeRecipeGlassListRow(placeholderGlass)).toEqual({
+      title: "Elegir tipo de vidrio",
+      secondary: "Sin definir · 2 piezas · Tocar para elegir",
+      typePending: true,
+    });
+    expect(describeRecipeGlassListRow(configuredGlass)).toEqual({
+      title: "Monolítico incoloro 4 mm",
+      secondary: "2 piezas",
+      typePending: false,
+    });
   });
 });

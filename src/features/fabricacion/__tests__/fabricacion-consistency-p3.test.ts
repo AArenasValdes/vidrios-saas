@@ -8,22 +8,24 @@ import {
 import { auditCanonicalFabricationLines } from "@/features/fabricacion/services/fabricacion-consistency-audit.service";
 
 describe("P3 — semántica única de referencias, reglas y cortes", () => {
-  it("Línea 15 no cuenta alternativas 1506/1507/1508 como cortes activos", () => {
+  it("Línea 15 calcula los siete destajes oficiales activos", () => {
     const recipe = crearRecetasP2U({
       catalogKey: "ventora:serie-15-corredera-2h",
       lineName: "Línea 15",
     })[0]!;
     const summary = buildFabricationRecipeSummary(recipe);
 
-    expect(summary.activeRuleCount).toBe(5);
-    expect(summary.activePieceCount).toBe(10);
-    expect(summary.optionalProfileCount).toBe(3);
+    expect(summary.activeRuleCount).toBe(7);
+    expect(summary.activePieceCount).toBe(12);
+    expect(summary.optionalProfileCount).toBe(0);
     expect(getActiveRecipeProfileRules(recipe).map((profile) => profile.codigoPerfil)).toEqual([
       "1501",
       "1502",
       "1503",
       "1504",
       "1505",
+      "1506",
+      "1507",
     ]);
 
     const result = calcularCubicacionYPauta(recipe, {
@@ -31,7 +33,7 @@ describe("P3 — semántica única de referencias, reglas y cortes", () => {
       altoTotalMm: 1000,
       cantidad: 1,
       hojas: 2,
-      modulos: 1,
+      modulos: 2,
       variante: recipe.identidad.variante,
     });
     expect(result.perfiles.map((profile) => profile.codigoPerfil)).toEqual([
@@ -40,6 +42,8 @@ describe("P3 — semántica única de referencias, reglas y cortes", () => {
       "1503",
       "1504",
       "1505",
+      "1506",
+      "1507",
     ]);
   });
 
@@ -84,11 +88,11 @@ describe("P3 — semántica única de referencias, reglas y cortes", () => {
     expect(buildFabricationRecipeSummary(notSelected).activeRuleCount).toBe(0);
   });
 
-  it("audita exactamente las 29 líneas canónicas sin inventar una discrepancia por variantes", () => {
+  it("audita exactamente las 30 líneas canónicas sin inventar una discrepancia por variantes", () => {
     const rows = auditCanonicalFabricationLines();
 
-    expect(rows).toHaveLength(29);
-    expect(new Set(rows.map((row) => row.catalogKey)).size).toBe(29);
+    expect(rows).toHaveLength(30);
+    expect(new Set(rows.map((row) => row.catalogKey)).size).toBe(30);
     expect(rows.find((row) => row.catalogKey === "ventora:serie-4600-puerta-vaiven")).toMatchObject({
       referenciasSistema: ["4601", "4603", "4604", "4602"],
       variantesReceta: expect.arrayContaining([

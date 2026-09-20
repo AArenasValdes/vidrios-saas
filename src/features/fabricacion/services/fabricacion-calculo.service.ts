@@ -13,6 +13,23 @@ import {
   type FabricacionTrazabilidadRegla,
 } from "@/features/fabricacion/types/fabricacion-domain";
 
+function matchesObservedMeasure(
+  receta: FabricacionReceta,
+  entrada: FabricacionEntradaCalculo,
+): boolean {
+  const alcance = receta.alcanceCalculo;
+  if (!alcance || alcance.modo !== "observed_fixture_only") return true;
+
+  return alcance.medidasObservadas.some(
+    (measure) =>
+      measure.anchoMm === entrada.anchoTotalMm &&
+      measure.altoMm === entrada.altoTotalMm &&
+      (measure.hojas == null || measure.hojas === entrada.hojas) &&
+      (measure.modulos == null || measure.modulos === entrada.modulos) &&
+      (measure.variante == null || measure.variante === entrada.variante),
+  );
+}
+
 function emptyResult(
   receta: FabricacionReceta,
   advertencias: FabricacionAdvertencia[],
@@ -103,7 +120,10 @@ function calcularMedida(
     reglaId: `${componenteId}:medida`,
     componenteId,
     base: regla.base,
-    formula: `redondear((${regla.base} ${base}) x ${multiplicador} + ${ajuste} mm)`,
+    formula:
+      regla.base === "fijo_mm"
+        ? `valor_observado(${base} mm)`
+        : `redondear((${regla.base} ${base}) x ${multiplicador} + ${ajuste} mm)`,
     entrada: {
       anchoTotalMm: entrada.anchoTotalMm,
       altoTotalMm: entrada.altoTotalMm,
@@ -234,6 +254,16 @@ export function calcularCubicacionYPauta(
     ...entradaParse.data,
     variante: entradaParse.data.variante ?? receta.identidad.variante,
   };
+
+  if (!matchesObservedMeasure(receta, entradaNormalizada)) {
+    advertencias.push({
+      codigo: "MEDIDA_NO_OBSERVADA",
+      nivel: "advertencia",
+      mensaje:
+        "La receta solo tiene un fixture observado para esta medida; no se inventa una fórmula general.",
+    });
+    return emptyResult(receta, advertencias, entradaNormalizada);
+  }
 
   if (!validacionReceta.ok) {
     return emptyResult(receta, advertencias, entradaNormalizada);

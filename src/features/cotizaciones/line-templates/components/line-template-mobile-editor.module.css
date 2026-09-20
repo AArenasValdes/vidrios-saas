@@ -212,15 +212,26 @@
 .moneyInput > span {
   position: absolute;
   top: 50%;
-  left: 14px;
   z-index: 1;
   color: #607087;
   transform: translateY(-50%);
   font-weight: 700;
 }
 
+.moneyPrefix {
+  left: 14px;
+}
+
+.moneySuffix {
+  right: 14px;
+}
+
 .moneyInput input {
   padding-left: 31px;
+}
+
+.moneyInputWithSuffix input {
+  padding-right: 48px;
 }
 
 .details {

@@ -1,18 +1,31 @@
 import {
+  SODAL_4800_CATALOG_KEY,
+  isZeta4800SourceReference,
+  isObservedSodal4800Measure,
+} from "@/features/fabricacion/fixtures/sodal-4800-zeta-catalog";
+import {
+  isCurrentSerie4800CorrederaRecipe,
+  isSerie4800FormulaSourceReference,
+} from "@/features/fabricacion/fixtures/serie-4800-corredera-recipe";
+import {
   buildSodalL25VariantSlug,
+  isZetaConfirmedSourceReference,
   SODAL_L25_CATALOG_KEY,
   type SodalL25GlazingSlug,
   type SodalL25LegSlug,
   type SodalL25ReinforcementSlug,
 } from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
-import { isZetaConfirmedSourceReference } from "@/features/fabricacion/zeta/zeta-confirmed-loader";
 import type { FabricacionTipologia } from "@/features/fabricacion/types/fabricacion-domain";
 import type {
   FabricationRecipeRecord,
   FabricationRecipeStatus,
 } from "@/features/fabricacion/types/fabricacion-persistence";
+import {
+  isObservedZetaMeasure,
+  isZetaConfirmedRecipe,
+} from "@/features/fabricacion/services/fabricacion-evidence-gate.service";
 
-export { SODAL_L25_CATALOG_KEY };
+export { SODAL_L25_CATALOG_KEY, SODAL_4800_CATALOG_KEY };
 
 export type FabricacionRecetaResolucionInput = {
   organizationId: number | null;
@@ -26,16 +39,34 @@ export type FabricacionRecetaResolucionInput = {
   topology?: string | null;
   hardwareMode?: string | null;
   preferredRecipeId?: string | null;
-  allowNonValidatedRecipeId?: string | null;
-  /** Cotización/UI: si no hay validada, permite una compatible en borrador/prueba. */
+  /** Solo se conserva para compatibilidad de entrada; la resolución pública lo ignora. */
   allowPreliminaryNonValidated?: boolean;
+  anchoTotalMm?: number | null;
+  altoTotalMm?: number | null;
 };
 
 export type ResolveFabricationRecipeInput = FabricacionRecetaResolucionInput & {
   catalogKey?: string | null;
   glazing?: SodalL25GlazingSlug | null;
   leg?: SodalL25LegSlug | null;
-    reinforcement?: SodalL25ReinforcementSlug | null;
+  reinforcement?: SodalL25ReinforcementSlug | null;
+  /**
+   * Solo despiece interno de cotización: permite recetas draft/testing
+   * listas para probar, marcadas como cálculo preliminar. No valida el taller.
+   */
+  previewListaParaProbar?: boolean;
+};
+
+export type ControlledRecipeTestInput = FabricacionRecetaResolucionInput & {
+  catalogKey?: string | null;
+  glazing?: SodalL25GlazingSlug | null;
+  leg?: SodalL25LegSlug | null;
+  reinforcement?: SodalL25ReinforcementSlug | null;
+  controlledTest: {
+    mode: "controlled_test";
+    recipeId: string;
+    organizationId: number;
+  };
 };
 
 export function isSodalL25ZetaValidatedRecipe(recipe: FabricationRecipeRecord): boolean {
@@ -46,10 +77,41 @@ export function isSodalL25ZetaValidatedRecipe(recipe: FabricationRecipeRecord): 
   );
 }
 
+function isSodalP2A4800Fallback(recipe: FabricationRecipeRecord): boolean {
+  if (isSerie4800FormulaSourceReference(recipe.sourceReference)) return false;
+  if (isCurrentSerie4800CorrederaRecipe(recipe.definition)) return false;
+  const code = recipe.definition.identidad.codigo?.toUpperCase() ?? "";
+  const source = recipe.sourceReference?.toUpperCase() ?? "";
+  return (
+    code.includes("SODAL-4800") ||
+    source.includes("SODAL-4800") ||
+    (recipe.sourceType === "manufacturer" &&
+      recipe.sourceName?.toUpperCase() === "SODAL" &&
+      !isZeta4800SourceReference(recipe.sourceReference))
+  );
+}
+
+function isSerie4800FormulaRecord(recipe: FabricationRecipeRecord): boolean {
+  return (
+    isSerie4800FormulaSourceReference(recipe.sourceReference) ||
+    isCurrentSerie4800CorrederaRecipe(recipe.definition)
+  );
+}
+
 export function filterRecipesForCatalogResolution(
   recipes: FabricationRecipeRecord[],
   catalogKey: string | null | undefined
 ): FabricationRecipeRecord[] {
+  if (catalogKey === SODAL_4800_CATALOG_KEY) {
+    return recipes.filter(
+      (recipe) =>
+        !recipe.eliminadoEn &&
+        recipe.status !== "archived" &&
+        (isZeta4800SourceReference(recipe.sourceReference) ||
+          isSerie4800FormulaRecord(recipe))
+    );
+  }
+
   if (catalogKey !== SODAL_L25_CATALOG_KEY) {
     return recipes;
   }
@@ -87,14 +149,46 @@ export function resolveFabricationRecipe(
   const topology =
     input.catalogKey === SODAL_L25_CATALOG_KEY ? "corredera" : input.topology;
 
-  return resolverRecetaFabricacionCompatible(filtered, {
+  const filteredForResolution =
+    input.catalogKey === SODAL_4800_CATALOG_KEY
+      ? filtered.filter((recipe) => !isSodalP2A4800Fallback(recipe))
+      : filtered;
+
+  if (input.catalogKey === SODAL_4800_CATALOG_KEY) {
+    const observed = isObservedSodal4800Measure({
+      leaves: input.hojas ?? 0,
+      widthMm: input.anchoTotalMm ?? 0,
+      heightMm: input.altoTotalMm ?? 0,
+    });
+    if (!observed) {
+      const formulaRecipes = filteredForResolution.filter(isSerie4800FormulaRecord);
+      if (formulaRecipes.length === 0) {
+        return {
+          estado: "sin_receta",
+          receta: null,
+          candidatas: [],
+          descartadas: filteredForResolution.map((recipe) =>
+            discard(recipe, "Medida no observada en evidencia Zeta L-4800.")
+          ),
+          advertencias: ["L-4800 solo admite 2H 1800×1500 o 3H 3000×1500."],
+        };
+      }
+      return resolverRecetaFabricacionCompatible(formulaRecipes, {
+        ...input,
+        variante,
+        topology,
+        allowPreliminaryNonValidated: Boolean(input.previewListaParaProbar),
+      });
+    }
+  }
+
+  return resolverRecetaFabricacionCompatible(filteredForResolution, {
     ...input,
     variante,
     topology,
-    allowPreliminaryNonValidated:
-      input.catalogKey === SODAL_L25_CATALOG_KEY
-        ? false
-        : input.allowPreliminaryNonValidated,
+    // Snapshot/PDF y matching comercial siguen exigiendo receta validada.
+    // El despiece interno de cotización puede previsualizar lista_para_probar.
+    allowPreliminaryNonValidated: Boolean(input.previewListaParaProbar),
   });
 }
 
@@ -170,9 +264,10 @@ function discard(recipe: FabricationRecipeRecord, motivo: string): FabricacionRe
   };
 }
 
-export function resolverRecetaFabricacionCompatible(
+function resolverRecetaFabricacionCompatibleInternal(
   recipes: FabricationRecipeRecord[],
-  input: FabricacionRecetaResolucionInput
+  input: FabricacionRecetaResolucionInput,
+  controlledRecipeId?: string | null,
 ): FabricacionRecetaResolucion {
   const descartadas: FabricacionRecetaDescartada[] = [];
   const compatible = recipes.filter((recipe) => {
@@ -184,6 +279,15 @@ export function resolverRecetaFabricacionCompatible(
     }
     if (recipe.lineTemplateId !== input.lineTemplateId) {
       descartadas.push(discard(recipe, "Pertenece a otra linea comercial."));
+      return false;
+    }
+    if (
+      isZetaConfirmedRecipe(recipe) &&
+      !isObservedZetaMeasure(recipe, input.anchoTotalMm, input.altoTotalMm)
+    ) {
+      descartadas.push(
+        discard(recipe, "La medida no está observada en la evidencia Zeta de esta receta."),
+      );
       return false;
     }
     if (
@@ -244,7 +348,7 @@ export function resolverRecetaFabricacionCompatible(
 
   const explicitNonValidated = compatible.find(
     (recipe) =>
-      recipe.id === input.allowNonValidatedRecipeId &&
+      recipe.id === controlledRecipeId &&
       !statusAllowsAutomaticUse(recipe.status)
   );
   if (explicitNonValidated) {
@@ -344,4 +448,76 @@ export function resolverRecetaFabricacionCompatible(
     descartadas,
     advertencias: ["Hay mas de una receta validada compatible; elige variante o herraje."],
   };
+}
+
+export function resolverRecetaFabricacionCompatible(
+  recipes: FabricationRecipeRecord[],
+  input: FabricacionRecetaResolucionInput,
+): FabricacionRecetaResolucion {
+  return resolverRecetaFabricacionCompatibleInternal(recipes, input, null);
+}
+
+/**
+ * Entrada exclusiva para el laboratorio/pruebas internas.
+ * No debe ser usada por cotización, snapshot ni componentes públicos.
+ */
+export function resolverRecetaFabricacionCompatibleForControlledTest(
+  recipes: FabricationRecipeRecord[],
+  input: ControlledRecipeTestInput,
+): FabricacionRecetaResolucion {
+  if (
+    !Number.isInteger(input.controlledTest.organizationId) ||
+    input.controlledTest.organizationId <= 0 ||
+    input.organizationId !== input.controlledTest.organizationId ||
+    !input.controlledTest.recipeId
+  ) {
+    return {
+      estado: "sin_receta",
+      receta: null,
+      candidatas: [],
+      descartadas: [],
+      advertencias: [
+        "La prueba controlada requiere organización y recipeId explícitos.",
+      ],
+    };
+  }
+
+  if (
+    input.catalogKey === SODAL_4800_CATALOG_KEY &&
+    !isObservedSodal4800Measure({
+      leaves: input.hojas ?? 0,
+      widthMm: input.anchoTotalMm ?? 0,
+      heightMm: input.altoTotalMm ?? 0,
+    })
+  ) {
+    return {
+      estado: "sin_receta",
+      receta: null,
+      candidatas: [],
+      descartadas: [],
+      advertencias: ["L-4800 4H o medida no observada permanece bloqueada."],
+    };
+  }
+
+  return resolverRecetaFabricacionCompatibleInternal(
+    filterRecipesForCatalogResolution(recipes, input.catalogKey),
+    {
+      ...input,
+      allowPreliminaryNonValidated: false,
+    },
+    input.controlledTest.recipeId,
+  );
+}
+
+export function resolveFabricationRecipeForControlledTest(
+  recipes: FabricationRecipeRecord[],
+  input: ResolveFabricationRecipeInput & {
+    controlledTest: ControlledRecipeTestInput["controlledTest"];
+  },
+): FabricacionRecetaResolucion {
+  return resolverRecetaFabricacionCompatibleForControlledTest(recipes, {
+    ...input,
+    organizationId: input.controlledTest.organizationId,
+    controlledTest: input.controlledTest,
+  });
 }

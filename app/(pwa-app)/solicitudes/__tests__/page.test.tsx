@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import SolicitudesPage from "../page";
 
@@ -69,6 +69,14 @@ jest.mock("@/features/cotizaciones/new-quote/solicitud-prefill", () => ({
   persistNuevaCotizacionSolicitudPrefill: jest.fn(),
 }));
 
+jest.mock("@/features/cotizaciones/services/cotizaciones-summary.service", () => ({
+  getCotizacionesResumenPage: jest.fn(),
+}));
+
+jest.mock("../_components/solicitud-card", () => ({
+  SolicitudCard: () => <div data-testid="solicitud-card" />,
+}));
+
 jest.mock("../_components/solicitud-card", () => ({
   SolicitudCard: () => <div data-testid="solicitud-card" />,
 }));
@@ -77,6 +85,7 @@ describe("SolicitudesPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     window.localStorage.clear();
+    window.sessionStorage.clear();
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       value: jest.fn().mockImplementation(() => ({
@@ -100,7 +109,9 @@ describe("SolicitudesPage", () => {
         organizationId: "org-1",
         solicitudPublicaSlug: "empresa-demo",
         empresaNombre: "Vidrieria Demo",
+        isPublished: true,
       },
+      isReady: true,
     });
     mockCanAccessSolicitudes.mockReturnValue(true);
     mockUseOnboardingChecklist.mockReturnValue({
@@ -147,8 +158,22 @@ describe("SolicitudesPage", () => {
     render(<SolicitudesPage />);
 
     expect(screen.queryByText("Cargando solicitudes")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Consultas" })).not.toBeInTheDocument();
+    expect(screen.getByText("Tus posibles trabajos, en un solo lugar.")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Bandeja" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Mi página" })).toHaveAttribute(
+      "aria-selected",
+      "false"
+    );
     expect(screen.getByText("Solicitudes recibidas")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Buscar solicitud")).toBeInTheDocument();
+    expect(screen.getByRole("note", { name: "Sobre las solicitudes" })).toHaveTextContent(
+      "Aquí empiezan tus próximos trabajos"
+    );
+    expect(screen.getByPlaceholderText("Buscar")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /Todas/ }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: /Nuevas/ }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /Seguimiento/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Cotizadas/ })).toBeInTheDocument();
   });
 
   it("persiste las solicitudes nuevas como vistas al abrir la bandeja", async () => {
@@ -209,5 +234,116 @@ describe("SolicitudesPage", () => {
         )
       ).toBe(String(new Date("2026-05-23T14:00:00.000Z").getTime()));
     });
+
+    expect(screen.getByTestId("solicitud-card")).toBeInTheDocument();
+    expect(screen.getAllByText("1 consulta").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Bandeja visible")).not.toBeInTheDocument();
+  });
+
+  it("muestra el empty state comercial y abre Mi página como pestaña secundaria", async () => {
+    mockUseSolicitudesContacto.mockReturnValue({
+      solicitudes: [],
+      isReady: true,
+      isRefreshing: false,
+      isLoadingMore: false,
+      error: null,
+      totalCount: 0,
+      hasMore: false,
+      summary: {
+        total: 0,
+        hoy: 0,
+        counts: {
+          nueva: 0,
+          contactada: 0,
+          cerrada: 0,
+          descartada: 0,
+        },
+      },
+      refreshSolicitudes: jest.fn(),
+      loadMoreSolicitudes: jest.fn(),
+      updateSolicitudEstado: jest.fn(),
+      deleteSolicitudes: jest.fn(),
+    });
+
+    render(<SolicitudesPage />);
+
+    expect(screen.getByText("No tienes consultas todavía")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Comparte tu página para que tus clientes puedan enviarte los datos del trabajo."
+      )
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Compartir página" }).length).toBeGreaterThan(
+      0
+    );
+    expect(screen.getAllByRole("link", { name: "Ver página" })[0]).toHaveAttribute(
+      "href",
+      expect.stringContaining("/solicitud/empresa-demo")
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: "Mi página" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: "Mi página" })).toHaveAttribute(
+        "aria-selected",
+        "true"
+      );
+    });
+    expect(screen.getByText("Tu página comercial")).toBeInTheDocument();
+    expect(screen.getByText("Activa")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Compartir página" }).length).toBeGreaterThan(
+      0
+    );
+    expect(screen.getByRole("link", { name: "QR y opciones" })).toHaveAttribute(
+      "href",
+      "/solicitudes/canales"
+    );
+  });
+
+  it("abre Mi página por defecto si la página comercial no está publicada", () => {
+    mockUseOrganizationProfile.mockReturnValue({
+      profile: {
+        organizationId: "org-1",
+        solicitudPublicaSlug: "empresa-demo",
+        empresaNombre: "Vidrieria Demo",
+        isPublished: false,
+      },
+      isReady: true,
+    });
+    mockUseSolicitudesContacto.mockReturnValue({
+      solicitudes: [],
+      isReady: true,
+      isRefreshing: false,
+      isLoadingMore: false,
+      error: null,
+      totalCount: 0,
+      hasMore: false,
+      summary: {
+        total: 0,
+        hoy: 0,
+        counts: {
+          nueva: 0,
+          contactada: 0,
+          cerrada: 0,
+          descartada: 0,
+        },
+      },
+      refreshSolicitudes: jest.fn(),
+      loadMoreSolicitudes: jest.fn(),
+      updateSolicitudEstado: jest.fn(),
+      deleteSolicitudes: jest.fn(),
+    });
+
+    render(<SolicitudesPage />);
+
+    expect(screen.getByRole("tab", { name: "Mi página" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    expect(screen.getByText("Configuración pendiente")).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Configurar mi página" })[0]).toHaveAttribute(
+      "href",
+      "/configuracion/pagina-venta"
+    );
   });
 });

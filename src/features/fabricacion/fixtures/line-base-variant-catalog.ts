@@ -7,12 +7,55 @@ import {
   crearRecetaSerie32ProyectanteNormal,
   crearRecetaSerie42Proyectante,
 } from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
+import {
+  crearRecetaL20AlumetricaVariant,
+  isL20CatalogKey,
+  L20_ALUMETRICA_VARIANT_LABELS,
+  L20_CORREDERA_VARIANT_SLUGS,
+  L20_FIJOS_CATALOG_KEY,
+  L20_FIJOS_VARIANT_SLUGS,
+  type L20AlumetricaVariantSlug,
+  resolveL20AperturaFromVariant,
+} from "@/features/fabricacion/fixtures/l20-alumetrica-variant-recipes";
+import {
+  SERIE_4800_CATALOG_KEY,
+  SERIE_4800_SOURCE_REFERENCE_NORMAL,
+  SERIE_4800_SOURCE_REFERENCE_REFORZADA,
+  SERIE_4800_VARIANT_NORMAL,
+  SERIE_4800_VARIANT_REFORZADA,
+  crearRecetaSerie4800Corredera,
+} from "@/features/fabricacion/fixtures/serie-4800-corredera-recipe";
+import {
+  LINE_15_CATALOG_KEY,
+  LINE_15_SOURCE_REFERENCE_2H,
+  LINE_15_SOURCE_REFERENCE_3H_3RIELES,
+  LINE_15_SOURCE_REFERENCE_4H_2RIELES,
+  LINE_15_SOURCE_REFERENCE_4H_4RIELES,
+  LINE_15_VARIANT_2H,
+  LINE_15_VARIANT_3H_3RIELES,
+  LINE_15_VARIANT_4H_2RIELES,
+  LINE_15_VARIANT_4H_4RIELES,
+  crearRecetaLine15Corredera,
+} from "@/features/fabricacion/fixtures/line-15-corredera-recipe";
+import {
+  LINE_4000_CATALOG_KEY,
+  LINE_4000_SOURCE_REFERENCE_2H,
+  LINE_4000_SOURCE_REFERENCE_3H_3RIELES,
+  LINE_4000_SOURCE_REFERENCE_4H_2RIELES,
+  LINE_4000_SOURCE_REFERENCE_4H_4RIELES,
+  LINE_4000_VARIANT_2H,
+  LINE_4000_VARIANT_3H_3RIELES,
+  LINE_4000_VARIANT_4H_2RIELES,
+  LINE_4000_VARIANT_4H_4RIELES,
+  crearRecetaLine4000Corredera,
+} from "@/features/fabricacion/fixtures/line-4000-corredera-recipe";
 import type { FabricacionReceta, FabricacionTipologia } from "@/features/fabricacion/types/fabricacion-domain";
 import { VENTORA_LARGO_COMERCIAL_PRESET_MM } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 
 export const BASE_LINE_CATALOG_KEYS = [
   "ventora:l5000",
   "ventora:l20",
+  L20_FIJOS_CATALOG_KEY,
   "ventora:l25",
   "ventora:l32",
   "ventora:l42",
@@ -34,6 +77,8 @@ export type LineVariantSlot = {
   variantSlug: string;
   /** Etiqueta humana en UI. */
   variantLabel: string;
+  /** Apertura comercial para resolver receta en cotización (p. ej. L20 fijos). */
+  apertura?: string | null;
   herraje?: string | null;
   evidenceLevel: LineVariantEvidenceLevel;
   /** Tiene perfiles con ajusteMm documentado y composición calculable. */
@@ -140,6 +185,34 @@ function correderaCaracolSlot(
   };
 }
 
+function l20AlumetricaSlot(variant: L20AlumetricaVariantSlug): LineVariantSlot {
+  const label = L20_ALUMETRICA_VARIANT_LABELS[variant];
+  const isReferenceVariant = variant === "pierna_cerrada_jamba_2009";
+  return {
+    typology: "corredera",
+    leavesCount: 2,
+    modulesCount: 2,
+    variantSlug: variant,
+    variantLabel: label,
+    apertura: resolveL20AperturaFromVariant(variant),
+    herraje: null,
+    evidenceLevel: isReferenceVariant ? "workshop_partial" : "documented",
+    complete: true,
+    pendingFields: isReferenceVariant
+      ? ["Confirmar evidencia física completa en taller"]
+      : ["Confirmar evidencia física completa en taller", "Confirmar accesorios"],
+    sourceReference: `ventora-variant:l20:2h:${variant}`,
+    buildDefinition: ({ lineName }) =>
+      crearRecetaL20AlumetricaVariant({ variant, lineName }),
+  };
+}
+
+function l20AlumetricaSlotsForVariants(
+  variants: readonly L20AlumetricaVariantSlug[],
+): LineVariantSlot[] {
+  return variants.map((variant) => l20AlumetricaSlot(variant));
+}
+
 function l25ExtendedSlots(plantillaId: PlantillaVentoraCorrederaId): LineVariantSlot[] {
   return [
     {
@@ -191,7 +264,8 @@ function l25ExtendedSlots(plantillaId: PlantillaVentoraCorrederaId): LineVariant
 
 export const LINE_BASE_VARIANT_CATALOG: Partial<Record<BaseLineCatalogKey, LineVariantSlot[]>> = {
   "ventora:l5000": [correderaCaracolSlot("L5000", "ventora-variant:l5000:2h:caracol")],
-  "ventora:l20": [correderaCaracolSlot("L20", "ventora-variant:l20:2h:caracol")],
+  "ventora:l20": l20AlumetricaSlotsForVariants(L20_CORREDERA_VARIANT_SLUGS),
+  [L20_FIJOS_CATALOG_KEY]: l20AlumetricaSlotsForVariants(L20_FIJOS_VARIANT_SLUGS),
   "ventora:l25": [
     correderaCaracolSlot("L25", "ventora-variant:l25:2h:caracol"),
     ...l25ExtendedSlots("L25"),
@@ -239,9 +313,177 @@ export const LINE_BASE_VARIANT_CATALOG: Partial<Record<BaseLineCatalogKey, LineV
   ],
 };
 
+const SERIE_4800_VARIANT_SLOTS: LineVariantSlot[] = [
+  {
+    typology: "corredera",
+    leavesCount: 2,
+    modulesCount: 2,
+    variantSlug: SERIE_4800_VARIANT_NORMAL,
+    variantLabel: "Normal",
+    evidenceLevel: "documented",
+    complete: true,
+    pendingFields: [],
+    sourceReference: SERIE_4800_SOURCE_REFERENCE_NORMAL,
+    buildDefinition: ({ lineName }) =>
+      crearRecetaSerie4800Corredera({
+        lineName,
+        variant: SERIE_4800_VARIANT_NORMAL,
+      }),
+  },
+  {
+    typology: "corredera",
+    leavesCount: 2,
+    modulesCount: 2,
+    variantSlug: SERIE_4800_VARIANT_REFORZADA,
+    variantLabel: "Reforzada",
+    evidenceLevel: "documented",
+    complete: true,
+    pendingFields: [],
+    sourceReference: SERIE_4800_SOURCE_REFERENCE_REFORZADA,
+    buildDefinition: ({ lineName }) =>
+      crearRecetaSerie4800Corredera({
+        lineName,
+        variant: SERIE_4800_VARIANT_REFORZADA,
+      }),
+  },
+];
+
+const LINE_15_VARIANT_SLOTS: LineVariantSlot[] = [
+  {
+    typology: "corredera",
+    leavesCount: 2,
+    modulesCount: 2,
+    variantSlug: LINE_15_VARIANT_2H,
+    variantLabel: "Corredera 2 hojas",
+    evidenceLevel: "documented",
+    complete: true,
+    pendingFields: [],
+    sourceReference: LINE_15_SOURCE_REFERENCE_2H,
+    buildDefinition: ({ lineName }) =>
+      crearRecetaLine15Corredera({ lineName, variant: LINE_15_VARIANT_2H }),
+  },
+  {
+    typology: "corredera",
+    leavesCount: 3,
+    modulesCount: 3,
+    variantSlug: LINE_15_VARIANT_3H_3RIELES,
+    variantLabel: "3 hojas · 3 rieles",
+    evidenceLevel: "documented",
+    complete: true,
+    pendingFields: ["Vidrio por variante"],
+    sourceReference: LINE_15_SOURCE_REFERENCE_3H_3RIELES,
+    buildDefinition: ({ lineName }) =>
+      crearRecetaLine15Corredera({ lineName, variant: LINE_15_VARIANT_3H_3RIELES }),
+  },
+  {
+    typology: "corredera",
+    leavesCount: 4,
+    modulesCount: 4,
+    variantSlug: LINE_15_VARIANT_4H_2RIELES,
+    variantLabel: "4 hojas · 2 rieles",
+    evidenceLevel: "documented",
+    complete: true,
+    pendingFields: ["Vidrio por variante"],
+    sourceReference: LINE_15_SOURCE_REFERENCE_4H_2RIELES,
+    buildDefinition: ({ lineName }) =>
+      crearRecetaLine15Corredera({ lineName, variant: LINE_15_VARIANT_4H_2RIELES }),
+  },
+  {
+    typology: "corredera",
+    leavesCount: 4,
+    modulesCount: 4,
+    variantSlug: LINE_15_VARIANT_4H_4RIELES,
+    variantLabel: "4 hojas · 4 rieles",
+    evidenceLevel: "documented",
+    complete: true,
+    pendingFields: ["Vidrio por variante"],
+    sourceReference: LINE_15_SOURCE_REFERENCE_4H_4RIELES,
+    buildDefinition: ({ lineName }) =>
+      crearRecetaLine15Corredera({ lineName, variant: LINE_15_VARIANT_4H_4RIELES }),
+  },
+];
+
+const LINE_4000_VARIANT_SLOTS: LineVariantSlot[] = [
+  {
+    typology: "corredera",
+    leavesCount: 2,
+    modulesCount: 2,
+    variantSlug: LINE_4000_VARIANT_2H,
+    variantLabel: "Corredera 2 hojas",
+    evidenceLevel: "documented",
+    complete: true,
+    pendingFields: [],
+    sourceReference: LINE_4000_SOURCE_REFERENCE_2H,
+    buildDefinition: ({ lineName }) =>
+      crearRecetaLine4000Corredera({ lineName, variant: LINE_4000_VARIANT_2H }),
+  },
+  {
+    typology: "corredera",
+    leavesCount: 3,
+    modulesCount: 3,
+    variantSlug: LINE_4000_VARIANT_3H_3RIELES,
+    variantLabel: "3 hojas · 3 rieles",
+    evidenceLevel: "documented",
+    complete: true,
+    pendingFields: ["Vidrio por variante"],
+    sourceReference: LINE_4000_SOURCE_REFERENCE_3H_3RIELES,
+    buildDefinition: ({ lineName }) =>
+      crearRecetaLine4000Corredera({ lineName, variant: LINE_4000_VARIANT_3H_3RIELES }),
+  },
+  {
+    typology: "corredera",
+    leavesCount: 4,
+    modulesCount: 4,
+    variantSlug: LINE_4000_VARIANT_4H_2RIELES,
+    variantLabel: "4 hojas · 2 rieles",
+    evidenceLevel: "documented",
+    complete: true,
+    pendingFields: ["Vidrio por variante"],
+    sourceReference: LINE_4000_SOURCE_REFERENCE_4H_2RIELES,
+    buildDefinition: ({ lineName }) =>
+      crearRecetaLine4000Corredera({ lineName, variant: LINE_4000_VARIANT_4H_2RIELES }),
+  },
+  {
+    typology: "corredera",
+    leavesCount: 4,
+    modulesCount: 4,
+    variantSlug: LINE_4000_VARIANT_4H_4RIELES,
+    variantLabel: "4 hojas · 4 rieles",
+    evidenceLevel: "documented",
+    complete: true,
+    pendingFields: ["Vidrio por variante"],
+    sourceReference: LINE_4000_SOURCE_REFERENCE_4H_4RIELES,
+    buildDefinition: ({ lineName }) =>
+      crearRecetaLine4000Corredera({ lineName, variant: LINE_4000_VARIANT_4H_4RIELES }),
+  },
+];
+
 export function getLineVariantSlots(catalogKey: string | null | undefined): LineVariantSlot[] {
   if (!catalogKey) return [];
+  if (catalogKey === SERIE_4800_CATALOG_KEY) return SERIE_4800_VARIANT_SLOTS;
+  if (catalogKey === LINE_15_CATALOG_KEY) return LINE_15_VARIANT_SLOTS;
+  if (catalogKey === LINE_4000_CATALOG_KEY) return LINE_4000_VARIANT_SLOTS;
   return LINE_BASE_VARIANT_CATALOG[catalogKey as BaseLineCatalogKey] ?? [];
+}
+
+/** Árbol de fabricación: Serie 20 muestra corredera y fijos juntos. */
+export function getLineVariantSlotsForFabricationTree(
+  catalogKey: string | null | undefined
+): LineVariantSlot[] {
+  if (isL20CatalogKey(catalogKey)) {
+    return [
+      ...l20AlumetricaSlotsForVariants(L20_CORREDERA_VARIANT_SLUGS),
+      ...l20AlumetricaSlotsForVariants(L20_FIJOS_VARIANT_SLUGS),
+    ];
+  }
+  return getLineVariantSlots(catalogKey);
+}
+
+export function shouldShowFabricationVariantGallery(
+  catalogKey: string | null | undefined
+): boolean {
+  if (isL20CatalogKey(catalogKey)) return true;
+  return getLineVariantSlots(catalogKey).length > 1;
 }
 
 export function isBaseLineCatalogKey(
@@ -254,7 +496,7 @@ export function resolvePlantillaIdFromCatalogKey(
   catalogKey: string | null | undefined
 ): PlantillaVentoraCorrederaId | undefined {
   if (catalogKey === "ventora:l5000") return "L5000";
-  if (catalogKey === "ventora:l20") return "L20";
+  if (catalogKey === "ventora:l20" || catalogKey === L20_FIJOS_CATALOG_KEY) return "L20";
   if (catalogKey === "ventora:l25") return "L25";
   return undefined;
 }

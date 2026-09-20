@@ -3,12 +3,72 @@ import { writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import { compareExtractedAgainstTarget, formatTargetComparison } from "./compare-target.ts";
-import { evidencePointer, writeRawEvidence } from "./evidence.ts";
+import { extractionBlockingIssues } from "./extraction-gates.ts";
+import { writeRawEvidence, type RawEvidencePaths, type SourceFragment } from "./evidence.ts";
 import { slugPart } from "./normalize.ts";
 import { CONFIRMED_DIR, ensureDir, repoRelative } from "./paths.ts";
 import { confirmedRecipeSchema } from "./schema.ts";
 import { collectCoherenceIssues } from "./validate.ts";
 import type { CliFlags, ConfirmedRecipe, ExtractTarget, ExtractedPlan, RunLog } from "./types.ts";
+
+function sourceLineFor(plan: ExtractedPlan, needle: string): { locator: string; texto: string } {
+  const lines = plan.planText.split(/\r?\n/);
+  const normalizedNeedle = needle.trim().toLowerCase();
+  const lineIndex = lines.findIndex((line) => line.toLowerCase().includes(normalizedNeedle));
+  if (lineIndex >= 0) {
+    return { locator: `plan.txt:line:${lineIndex + 1}`, texto: lines[lineIndex].trim() };
+  }
+  return { locator: "plan.parsed", texto: needle.trim() };
+}
+
+export function buildSourceFragments(plan: ExtractedPlan): SourceFragment[] {
+  const fragments: SourceFragment[] = [];
+  const identity = sourceLineFor(plan, plan.lineName ?? "Plan de armado");
+  fragments.push({ id: "identidad", tipo: "identidad", ...identity });
+
+  plan.profiles.forEach((profile, index) => {
+    const source = sourceLineFor(plan, profile.code);
+    fragments.push({ id: `perfil-${index}`, tipo: "perfil", ...source });
+  });
+  plan.glass.forEach((glass, index) => {
+    const source = sourceLineFor(plan, glass.code || glass.name);
+    fragments.push({ id: `vidrio-${index}`, tipo: "vidrio", ...source });
+  });
+  plan.hardware.forEach((item, index) => {
+    const source = sourceLineFor(plan, item.code || item.name);
+    fragments.push({ id: `accesorio-${index}`, tipo: "accesorio", ...source });
+  });
+  plan.warnings.forEach((warning, index) => {
+    fragments.push({
+      id: `advertencia-${index}`,
+      tipo: "advertencia",
+      ...sourceLineFor(plan, warning),
+    });
+  });
+  return fragments;
+}
+
+function sourceEvidenceBlockers(
+  raw: RawEvidencePaths,
+  artifacts: Pick<ExtractionArtifacts, "projectId" | "planId" | "plan">,
+): string[] {
+  const blockers: string[] = [];
+  if (!artifacts.projectId) blockers.push("Falta projectId de Zeta.");
+  if (!artifacts.planId) blockers.push("Falta planId de Zeta.");
+  const sourceFragments = buildSourceFragments(artifacts.plan);
+  if (sourceFragments.length === 0) {
+    blockers.push("Falta fila o fragmento de origen.");
+  }
+  if (sourceFragments.some((fragment) => fragment.locator === "plan.parsed")) {
+    blockers.push("Hay valores sin fila o fragmento localizable en el raw.");
+  }
+  if (!raw.artifactHashes.html) blockers.push("Falta hash del HTML raw.");
+  if (!raw.artifactHashes.text) blockers.push("Falta hash del texto raw.");
+  if (Object.keys(raw.artifactHashes.screenshots).length === 0) {
+    blockers.push("Falta screenshot raw.");
+  }
+  return blockers;
+}
 
 export type ExtractionArtifacts = {
   plan: ExtractedPlan;
@@ -35,10 +95,9 @@ export function confirmedPathFor(target: ExtractTarget): string {
 function recipeFromPlan(
   target: ExtractTarget,
   plan: ExtractedPlan,
-  rawPath: string,
-  artifacts: Pick<ExtractionArtifacts, "projectId" | "planId" | "checkpoints">,
+  raw: RawEvidencePaths,
+  artifacts: Pick<ExtractionArtifacts, "projectId" | "planId" | "checkpoints"> & { runId: string },
 ): ConfirmedRecipe {
-  const rawRoot = rawPath;
   return confirmedRecipeSchema.parse({
     id: target.id,
     manufacturer: target.manufacturer,
@@ -60,13 +119,17 @@ function recipeFromPlan(
     glass: plan.glass,
     hardware: plan.hardware,
     sourceEvidence: {
+      runId: artifacts.runId,
       projectId: artifacts.projectId,
       planId: artifacts.planId,
-      screenshotPaths: [
-        repoRelative(join(rawRoot, "screenshot.png")),
-        repoRelative(join(rawRoot, "checkpoint-plan-visible.png")),
-      ].filter((_, index) => index === 0 || existsSync(join(rawRoot, "checkpoint-plan-visible.png"))),
-      rawPath: repoRelative(rawRoot),
+      screenshotPaths: Object.keys(raw.artifactHashes.screenshots),
+      rawPath: repoRelative(raw.directory),
+      htmlPath: repoRelative(raw.planHtml),
+      textPath: repoRelative(raw.planTxt),
+      capturedAt: new Date().toISOString(),
+      extractorVersion: "zeta-extractor-p1-2026-09-19",
+      artifactHashes: raw.artifactHashes,
+      sourceFragments: buildSourceFragments(plan),
       sourceDocument: null,
     },
   });
@@ -102,6 +165,7 @@ async function writeConfirmedAtomic(recipe: ConfirmedRecipe, target: ExtractTarg
 export async function persistRawEvidence(
   target: ExtractTarget,
   artifacts: ExtractionArtifacts,
+  runId: string,
 ): Promise<ReturnType<typeof writeRawEvidence>> {
   return writeRawEvidence({
     target,
@@ -118,6 +182,8 @@ export async function persistRawEvidence(
       `navigationEngine:${artifacts.navigationEngine}`,
     ],
     checkpoints: artifacts.checkpoints,
+    runId,
+    sourceFragments: buildSourceFragments(artifacts.plan),
   });
 }
 
@@ -134,17 +200,18 @@ export async function processExtractedTarget(
     return;
   }
 
-  const raw = await persistRawEvidence(target, artifacts);
+  const raw = await persistRawEvidence(target, artifacts, log.runId);
 
-  if (artifacts.errorText) {
+  const blockingIssues = extractionBlockingIssues(artifacts);
+  if (blockingIssues.length > 0) {
     log.failed.push(target.id);
     log.pending.push(target.id);
     log.errors.push({
       targetId: target.id,
-      outcome: "ZETA_UI_ERROR",
-      message: artifacts.errorText,
+      outcome: artifacts.errorText ? "ZETA_UI_ERROR" : "CONFIGURATION_ERROR",
+      message: blockingIssues.join(" | "),
     });
-    log.notes.push("El error de UI no prueba que la receta no exista. Se conserva PENDING.");
+    log.notes.push("La evidencia contiene warning/error de Zeta. Se conserva PENDING.");
     return;
   }
 
@@ -166,7 +233,22 @@ export async function processExtractedTarget(
     return;
   }
 
-  const recipe = recipeFromPlan(target, artifacts.plan, raw.directory, artifacts);
+  const rawEvidenceBlockers = sourceEvidenceBlockers(raw, artifacts);
+  if (rawEvidenceBlockers.length > 0) {
+    log.failed.push(target.id);
+    log.pending.push(target.id);
+    log.errors.push({
+      targetId: target.id,
+      outcome: "CONFIGURATION_ERROR",
+      message: rawEvidenceBlockers.join(" | "),
+    });
+    return;
+  }
+
+  const recipe = recipeFromPlan(target, artifacts.plan, raw, {
+    ...artifacts,
+    runId: log.runId,
+  });
   const issues = collectCoherenceIssues(recipe);
   if (issues.length > 0) {
     log.failed.push(target.id);

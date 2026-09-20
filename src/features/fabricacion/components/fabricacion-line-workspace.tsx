@@ -55,9 +55,13 @@ import {
   crearRecetaEstructuralParaLineaComercial,
   resolveArquetipoEstructuralId,
 } from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
+import { shouldShowFabricationVariantGallery } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
 import { enriquecerCodigosPerfilRecetaFabricacion } from "@/features/fabricacion/services/fabricacion-receta-codigos.service";
 import { enriquecerRecetaDesdeCatalogo } from "@/features/fabricacion/services/enriquecer-receta-desde-catalogo.service";
 import { resolveInitialFabricationStepForTemplate } from "@/features/fabricacion/services/fabricacion-workflow-initial-step.service";
+import {
+  resolveFabricacionRecipeHistory,
+} from "@/features/fabricacion/services/fabricacion-line-workflow.utils";
 import type {
   FabricacionEntradaCalculo,
   FabricacionReceta,
@@ -560,7 +564,14 @@ export function FabricacionLineWorkspace({
   const focusProgress = focusRecipe
     ? getRecipeStage(focusRecipe, focusTests)
     : null;
-  const archivedRecipeCount = Math.max(0, lineRecipes.length - 1);
+  const showVariantGallery =
+    shouldShowFabricationVariantGallery(template?.catalogKey);
+  const recipeHistory = resolveFabricacionRecipeHistory({
+    recipes: lineRecipes,
+    showVariantGallery,
+    focusRecipeId: focusRecipe?.id ?? null,
+  });
+  const archivedRecipeCount = recipeHistory.length;
 
   useEffect(() => {
     if (view !== "list" || !focusRecipe || tests[focusRecipe.id]) return;
@@ -1652,9 +1663,9 @@ export function FabricacionLineWorkspace({
 
             {archivedRecipeCount > 0 ? (
               <details className={s.recipeHistory}>
-                <summary>Versiones anteriores <span>{archivedRecipeCount}</span></summary>
+                <summary>Historial archivado <span>{archivedRecipeCount}</span></summary>
                 <div className={s.recipeList}>
-                  {lineRecipes.slice(1).map((recipe) => {
+                  {recipeHistory.map((recipe) => {
                     const status = STATUS_COPY[recipe.status];
                     return (
                       <article key={recipe.id} className={s.recipeRow} data-tone={status.tone}>

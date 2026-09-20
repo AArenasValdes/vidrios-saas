@@ -63,6 +63,7 @@ export function resolvePreviewZoneFromFuncion(
 type Props = {
   tipologia: FabricacionTipologia;
   hojas?: number;
+  apertura?: string | null;
   highlightZone?: FabricacionPreviewZone;
   className?: string;
   size?: "sm" | "md";
@@ -196,126 +197,129 @@ function SashOutline({
   );
 }
 
+function CorrederaSashes({
+  hojas,
+  showArrows,
+  active,
+}: {
+  hojas: number;
+  showArrows: boolean;
+  active: (zone: NonNullable<FabricacionPreviewZone>) => "true" | "false";
+}) {
+  const paneCount = Math.min(4, Math.max(2, Math.round(hojas)));
+  const frameX = 22;
+  const frameY = 24;
+  const frameW = 116;
+  const frameH = 72;
+  const paneW = frameW / paneCount;
+
+  return (
+    <>
+      {Array.from({ length: paneCount }, (_, index) => {
+        const x = frameX + index * paneW;
+        const isFront = index === paneCount - 1 || index === Math.floor(paneCount / 2);
+        return (
+          <g key={index}>
+            <rect
+              className={s.fabPreviewSash}
+              data-front={isFront ? "true" : undefined}
+              x={x}
+              y={frameY}
+              width={paneW}
+              height={frameH}
+              rx="2"
+              fill="none"
+              strokeWidth="2.5"
+            />
+            <rect
+              className={s.fabPreviewZone}
+              data-active={active("sashTop")}
+              x={x + 4}
+              y={frameY + 2}
+              width={paneW - 8}
+              height="5"
+              rx="1"
+            />
+            <rect
+              className={s.fabPreviewZone}
+              data-active={active("sashBottom")}
+              x={x + 4}
+              y={frameY + frameH - 7}
+              width={paneW - 8}
+              height="5"
+              rx="1"
+            />
+          </g>
+        );
+      })}
+      <rect
+        className={s.fabPreviewZone}
+        data-active={active("sashOuter")}
+        x={frameX + 2}
+        y={frameY + 8}
+        width="5"
+        height={frameH - 16}
+        rx="1"
+      />
+      <rect
+        className={s.fabPreviewZone}
+        data-active={active("sashOuter")}
+        x={frameX + frameW - 7}
+        y={frameY + 8}
+        width="5"
+        height={frameH - 16}
+        rx="1"
+      />
+      {showArrows ? (
+        <path
+          className={s.fabPreviewHint}
+          d={`M${frameX + paneW * 0.35} 58 h${Math.max(12, paneW * 0.28)} m-4 -4 l4 4 l-4 4`}
+          fill="none"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ) : null}
+    </>
+  );
+}
+
 /**
  * Mini ilustración técnica (no CAD). Esquemas simples por tipología.
  */
 export function FabricacionTipologiaPreview({
   tipologia,
   hojas = 2,
+  apertura = null,
   highlightZone = null,
   className,
   size = "md",
 }: Props) {
   const isCorredera =
     (tipologia === "corredera" || tipologia === "pvc_monorriel") && hojas >= 2;
-  const isFijo = tipologia === "pano_fijo";
+  const isFijo = tipologia === "pano_fijo" && !isCorredera;
   const isPuerta = tipologia === "puerta_abatible" || tipologia === "puerta_vaiven";
   const isAbatible = tipologia === "abatible";
   const isProyectante = tipologia === "proyectante";
   const active = (zone: NonNullable<FabricacionPreviewZone>) =>
     highlightZone === zone ? "true" : "false";
+  const showSlidingHint = isCorredera && apertura !== "fija";
 
   return (
     <div
       className={`${s.fabTypologyPreview} ${className ?? ""}`}
       data-size={size}
       data-tipologia={tipologia}
+      data-hojas={hojas}
       aria-hidden="true"
     >
       <svg viewBox="0 0 160 120" role="presentation">
         {isCorredera ? (
           <FrameShell active={active}>
-            <rect
-              className={s.fabPreviewSash}
-              x="22"
-              y="24"
-              width="58"
-              height="72"
-              rx="2"
-              fill="none"
-              strokeWidth="2.5"
-            />
-            <rect
-              className={s.fabPreviewSash}
-              data-front="true"
-              x="70"
-              y="24"
-              width="58"
-              height="72"
-              rx="2"
-              fill="none"
-              strokeWidth="2.5"
-            />
-            <rect
-              className={s.fabPreviewZone}
-              data-active={active("sashTop")}
-              x="26"
-              y="26"
-              width="50"
-              height="5"
-              rx="1"
-            />
-            <rect
-              className={s.fabPreviewZone}
-              data-active={active("sashTop")}
-              x="74"
-              y="26"
-              width="50"
-              height="5"
-              rx="1"
-            />
-            <rect
-              className={s.fabPreviewZone}
-              data-active={active("sashBottom")}
-              x="26"
-              y="89"
-              width="50"
-              height="5"
-              rx="1"
-            />
-            <rect
-              className={s.fabPreviewZone}
-              data-active={active("sashBottom")}
-              x="74"
-              y="89"
-              width="50"
-              height="5"
-              rx="1"
-            />
-            <rect
-              className={s.fabPreviewZone}
-              data-active={active("sashOuter")}
-              x="24"
-              y="32"
-              width="5"
-              height="56"
-              rx="1"
-            />
-            <rect
-              className={s.fabPreviewZone}
-              data-active={active("sashOuter")}
-              x="121"
-              y="32"
-              width="5"
-              height="56"
-              rx="1"
-            />
-            <rect
-              className={s.fabPreviewZone}
-              data-active={active("sashMeeting")}
-              x="74"
-              y="32"
-              width="6"
-              height="56"
-              rx="1"
-            />
-            <path
-              className={s.fabPreviewHint}
-              d="M48 58 h18 m-4 -4 l4 4 l-4 4"
-              fill="none"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+            <CorrederaSashes
+              hojas={hojas}
+              showArrows={showSlidingHint}
+              active={active}
             />
           </FrameShell>
         ) : isFijo ? (

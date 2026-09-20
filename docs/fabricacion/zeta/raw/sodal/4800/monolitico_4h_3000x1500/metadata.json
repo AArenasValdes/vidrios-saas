@@ -1,0 +1,47 @@
+{
+  "recipeId": "monolitico_4h_3000x1500",
+  "extractedAt": "2026-09-19T16:26:00.000Z",
+  "target": {
+    "manufacturer": "SODAL",
+    "system": "4800",
+    "line": "L-4800 MONOLITICO",
+    "leaves": 4,
+    "widthMm": 3000,
+    "heightMm": 1500,
+    "glassCode": "CTI5"
+  },
+  "sourceEvidence": {
+    "projectId": "46415",
+    "pageUrl": "https://sistemazeta.cl/zeta/design2/?idProject=46415&viewer=design&KEG=1789835265408",
+    "selectorsUsed": [
+      "navigationEngine:manual",
+      "error-capture:visible-ui",
+      "new-project-retry"
+    ]
+  },
+  "attempts": [
+    {
+      "projectId": "46410",
+      "result": "pending",
+      "errorText": "No se ha encontrado la línea de productos"
+    },
+    {
+      "projectId": "46414",
+      "result": "pending",
+      "errorText": "No se ha encontrado el producto para el perfil adaptador"
+    },
+    {
+      "projectId": "46415",
+      "result": "pending",
+      "errorText": "No se ha encontrado el producto para el perfil adaptador"
+    }
+  ],
+  "warnings": [
+    "La linea L-4800 MONOLITICO no tiene perfiles para extensiones",
+    "No se ha encontrado el producto para el perfil adaptador"
+  ],
+  "errorText": "No se ha encontrado el producto para el perfil adaptador",
+  "classification": "ZETA_UI_ERROR",
+  "planGenerated": false,
+  "status": "pending"
+}

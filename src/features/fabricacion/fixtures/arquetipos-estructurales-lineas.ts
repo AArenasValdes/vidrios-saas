@@ -17,6 +17,10 @@ import {
   type SodalP2ACatalogKey,
 } from "@/features/fabricacion/fixtures/sodal-p2a-recipes";
 import {
+  SERIE_4800_VARIANT_NORMAL,
+  crearRecetaSerie4800Corredera,
+} from "@/features/fabricacion/fixtures/serie-4800-corredera-recipe";
+import {
   crearRecetaP2U,
   type P2UCatalogKey,
 } from "@/features/fabricacion/fixtures/traditional-p2u-recipes";
@@ -581,6 +585,7 @@ export const ARQUETIPOS_ESTRUCTURALES: Record<ArquetipoEstructuralId, ArquetipoE
 export const CATALOG_KEY_TO_ARQUETIPO: Record<string, ArquetipoEstructuralId> = {
   "ventora:l5000": "corredera_2h",
   "ventora:l20": "corredera_2h",
+  "ventora:l20-fijos": "corredera_2h",
   "ventora:l25": "corredera_2h",
   "ventora:serie-4800-corredera-2h": "corredera_2h",
   "ventora:optima-s28-corredera-2h": "corredera_2h",
@@ -626,6 +631,7 @@ const SERIE_S33_VARIANT_BY_CATALOG_KEY: Record<string, SerieS33VariantId> = {
 const PLANTILLA_BY_CATALOG_KEY: Partial<Record<string, PlantillaVentoraCorrederaId>> = {
   "ventora:l5000": "L5000",
   "ventora:l20": "L20",
+  "ventora:l20-fijos": "L20",
   "ventora:l25": "L25",
 };
 
@@ -870,6 +876,13 @@ export function crearRecetaEstructuralParaLineaComercial(input: {
       catalogKey: input.catalogKey as P2UCatalogKey,
       lineName: input.lineName,
       createId: input.createId,
+    });
+  }
+  if (input.catalogKey === "ventora:serie-4800-corredera-2h") {
+    return crearRecetaSerie4800Corredera({
+      lineName: input.lineName,
+      createId: input.createId,
+      variant: SERIE_4800_VARIANT_NORMAL,
     });
   }
   if (input.catalogKey && input.catalogKey in SODAL_P2A_CATALOG_KEYS) {

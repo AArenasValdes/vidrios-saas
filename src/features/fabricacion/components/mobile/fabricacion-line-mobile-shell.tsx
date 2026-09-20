@@ -7,6 +7,8 @@ import { FabricacionLineLoadingSkeleton } from "@/features/fabricacion/component
 import { FabricacionLineMobileDetail } from "@/features/fabricacion/components/mobile/fabricacion-line-mobile-detail";
 import { FabricacionMobileWizard } from "@/features/fabricacion/components/mobile/fabricacion-mobile-wizard";
 import { setFabricacionEditorOpen } from "@/features/fabricacion/services/fabricacion-editor-chrome.store";
+import { resolveFabricacionRecipeHistory } from "@/features/fabricacion/services/fabricacion-line-workflow.utils";
+import { buildVariantTreeItem } from "@/features/fabricacion/services/fabricacion-line-variant.service";
 import {
   isSodalL25CatalogKey,
   resolveEffectiveSodalL25CatalogKey,
@@ -39,8 +41,10 @@ export function FabricacionLineMobileShell({
   const {
     template,
     focusRecipe,
+    detailRecipe,
+    handleCreateMissingVariant,
     lineRecipes,
-    fabricacionLineRecipes,
+    pickerRecipes,
     selected,
     selectedTests,
     draft,
@@ -66,6 +70,10 @@ export function FabricacionLineMobileShell({
   } = workflow;
 
   const editorOpen = mobileView === "wizard";
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, []);
 
   useEffect(() => {
     setFabricacionEditorOpen(editorOpen);
@@ -120,7 +128,7 @@ export function FabricacionLineMobileShell({
         })}
         catalogKey={template.catalogKey}
         selected={selected}
-        lineRecipes={fabricacionLineRecipes}
+        lineRecipes={pickerRecipes}
         draft={draft}
         tests={selectedTests}
         readOnly={readOnly}
@@ -131,6 +139,9 @@ export function FabricacionLineMobileShell({
         onClose={() => setMobileView("detail")}
         onDraftChange={setDraft}
         onSelectRecipe={(recipe) => openEditor(recipe, "base")}
+        onCreateMissingSlot={(slot) =>
+          void handleCreateMissingVariant(buildVariantTreeItem(slot, null))
+        }
         onContinueToRecipe={handleContinueToRecipe}
         onPersistRecipe={async (recipe) => {
           setDraft(recipe);
@@ -168,21 +179,22 @@ export function FabricacionLineMobileShell({
   return (
     <FabricacionLineMobileDetail
       template={template}
-      currentRecipe={focusRecipe}
-      lineRecipes={fabricacionLineRecipes}
-      olderRecipes={
-        isL25
-          ? []
-          : lineRecipes.slice(1)
-      }
+      currentRecipe={detailRecipe}
+      lineRecipes={pickerRecipes}
+      olderRecipes={resolveFabricacionRecipeHistory({
+        recipes: lineRecipes,
+        showVariantGallery: false,
+        focusRecipeId: detailRecipe?.id ?? focusRecipe?.id ?? null,
+      })}
       error={error}
       feedback={feedback}
       isSaving={isSaving}
       onConfigure={() => void openMobileFabrication()}
-      onEdit={() => void openMobileFabrication(focusRecipe)}
+      onEdit={() => void openMobileFabrication(detailRecipe ?? focusRecipe)}
       onTest={() => {
-        if (!focusRecipe) return;
-        void openTestLab(focusRecipe, "test");
+        const recipe = detailRecipe ?? focusRecipe;
+        if (!recipe) return;
+        void openTestLab(recipe, "test");
       }}
     />
   );

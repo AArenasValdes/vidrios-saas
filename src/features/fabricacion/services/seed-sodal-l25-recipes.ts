@@ -43,13 +43,14 @@ function buildInsertPayload(input: {
     leaves_count: identity.leaves,
     variant: identity.variantSlug,
     version: 1,
-    status: "validated",
+    // CONFIRMED de Zeta es evidencia documental. No equivale a validación de taller.
+    status: "testing",
     definition,
     source_type: "manufacturer",
     source_name: "SODAL",
     source_reference: sourceReference,
     source_revision: SODAL_L25_FORMULA_VERSION,
-    validated_at: new Date().toISOString(),
+    validated_at: null,
   };
 }
 

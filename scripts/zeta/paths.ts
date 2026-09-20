@@ -11,6 +11,7 @@ export const PENDING_DIR = join(ZETA_DOCS, "pending");
 export const CONFLICTS_DIR = join(ZETA_DOCS, "conflicts");
 export const RAW_DIR = join(ZETA_DOCS, "raw");
 export const DERIVED_DIR = join(ZETA_DOCS, "derived");
+export const EVIDENCE_DIR = join(ZETA_DOCS, "evidence");
 export const RUNS_DIR = join(ZETA_DOCS, "runs");
 export const TARGETS_PATH = join(ZETA_DOCS, "targets.json");
 export const COVERAGE_PATH = join(ZETA_DOCS, "coverage.json");

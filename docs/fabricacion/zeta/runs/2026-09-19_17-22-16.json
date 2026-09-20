@@ -1,0 +1,25 @@
+{
+  "runId": "eaa3ac48-b528-4d99-9941-6275a77621a6",
+  "startedAt": "2026-09-19T20:21:34.816Z",
+  "finishedAt": "2026-09-19T20:22:16.168Z",
+  "command": "manual same-context capture dvh_pierna_abierta_3h_3000x1500",
+  "mode": "live",
+  "targetsRequested": [],
+  "processed": [],
+  "confirmed": [],
+  "skipped": [],
+  "failed": [
+    "dvh_pierna_abierta_3h_3000x1500"
+  ],
+  "pending": [
+    "dvh_pierna_abierta_3h_3000x1500"
+  ],
+  "errors": [
+    {
+      "targetId": "dvh_pierna_abierta_3h_3000x1500",
+      "outcome": "AUTOMATION_ERROR",
+      "message": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText(/^Crear ventana$/i).first()\u001b[22m\n\u001b[2m    - locator resolved to <span class=\"titulos-crear-ventanas\">Crear ventana</span>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div tabindex=\"-1\" role=\"dialog\" aria-modal=\"true\" class=\"modal show\" id=\"modalDatosProyecto\" data-bs-backdrop=\"static\" aria-labelledby=\"exampleModalLabel\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div tabindex=\"-1\" role=\"dialog\" aria-modal=\"true\" class=\"modal show\" id=\"modalDatosProyecto\" data-bs-backdrop=\"static\" aria-labelledby=\"exampleModalLabel\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    58 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div tabindex=\"-1\" role=\"dialog\" aria-modal=\"true\" class=\"modal show\" id=\"modalDatosProyecto\" data-bs-backdrop=\"static\" aria-labelledby=\"exampleModalLabel\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n"
+    }
+  ],
+  "notes": []
+}

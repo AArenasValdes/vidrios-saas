@@ -1,0 +1,26 @@
+{
+  "runId": "5a90caf5-524e-4496-8dd0-59db0d89f725",
+  "startedAt": "2026-09-19T20:46:00.000Z",
+  "finishedAt": "2026-09-19T20:55:41.000Z",
+  "command": "Codex Browser directo: Sistema Zeta autenticado",
+  "mode": "browser-direct",
+  "targetsRequested": ["dvh_pierna_abierta_3h_3000x1500"],
+  "processed": ["dvh_pierna_abierta_3h_3000x1500"],
+  "confirmed": [],
+  "skipped": [],
+  "failed": [],
+  "pending": ["dvh_pierna_abierta_3h_3000x1500"],
+  "errors": [],
+  "notes": [
+    "Proyecto Zeta nuevo idProject=46421; una sola configuración V-001.",
+    "Plan de armado visible PA-65 en reporte_planEjecucion.",
+    "La captura queda pending por warning de Zeta y por falta de ruta local para HTML/PNG desde el Browser bridge.",
+    "No se escribió confirmed/ ni se modificó código, catálogo, precios o Ventora."
+  ],
+  "evidence": {
+    "rawPath": "docs/fabricacion/zeta/raw/sodal/l25/dvh_pierna_abierta_3h_3000x1500",
+    "projectId": "46421",
+    "planId": "PA-65",
+    "pageUrl": "https://sistemazeta.cl/zeta/reporte_planEjecucion?idProject=46421"
+  }
+}

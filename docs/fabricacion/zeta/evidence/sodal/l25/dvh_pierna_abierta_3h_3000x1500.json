@@ -1,0 +1,387 @@
+{
+  "schemaVersion": 1,
+  "recipeId": "dvh_pierna_abierta_3h_3000x1500",
+  "confirmedPath": "docs/fabricacion/zeta/confirmed/sodal/l25/dvh_pierna_abierta_3h_3000x1500.json",
+  "manufacturer": "SODAL",
+  "system": "L25",
+  "traceabilityStatus": "partial",
+  "ventoraStatus": "testing",
+  "productionReady": false,
+  "observedMeasures": {
+    "widthMm": 3000,
+    "heightMm": 1500,
+    "leaves": 3
+  },
+  "observedProfiles": [
+    {
+      "order": 0,
+      "code": "2501",
+      "name": "2501 - RIEL SUPERIOR BLANCO",
+      "quantity": 1,
+      "lengthMm": 2984,
+      "cut1Deg": 90,
+      "cut2Deg": 90,
+      "classification": "observed"
+    },
+    {
+      "order": 1,
+      "code": "2502",
+      "name": "2502 - RIEL INFERIOR BLANCO",
+      "quantity": 1,
+      "lengthMm": 2984,
+      "cut1Deg": 90,
+      "cut2Deg": 90,
+      "classification": "observed"
+    },
+    {
+      "order": 2,
+      "code": "2503",
+      "name": "2503 - JAMBA BLANCO",
+      "quantity": 2,
+      "lengthMm": 1500,
+      "cut1Deg": 90,
+      "cut2Deg": 90,
+      "classification": "observed"
+    },
+    {
+      "order": 3,
+      "code": "2516",
+      "name": "2516 - ZOCALO - DVH BLANCO",
+      "quantity": 4,
+      "lengthMm": 999,
+      "cut1Deg": 90,
+      "cut2Deg": 90,
+      "classification": "observed"
+    },
+    {
+      "order": 4,
+      "code": "2516",
+      "name": "2516 - ZOCALO - DVH BLANCO",
+      "quantity": 2,
+      "lengthMm": 1014,
+      "cut1Deg": 90,
+      "cut2Deg": 90,
+      "classification": "observed"
+    },
+    {
+      "order": 5,
+      "code": "2517",
+      "name": "2517 - PIERNA - ABIERTA DVH BLANCO",
+      "quantity": 2,
+      "lengthMm": 1465,
+      "cut1Deg": 90,
+      "cut2Deg": 90,
+      "classification": "observed"
+    },
+    {
+      "order": 6,
+      "code": "2519",
+      "name": "2519 - TRASLAPO VENTANA - DVH BLANCO",
+      "quantity": 4,
+      "lengthMm": 1465,
+      "cut1Deg": 90,
+      "cut2Deg": 90,
+      "classification": "observed"
+    }
+  ],
+  "observedGlass": [
+    {
+      "order": 0,
+      "code": "TI4104",
+      "name": "Termopanel Incoloro 4 + 10 + 4",
+      "quantity": 2,
+      "widthMm": 944,
+      "heightMm": 1369,
+      "classification": "observed"
+    },
+    {
+      "order": 1,
+      "code": "TI4104",
+      "name": "Termopanel Incoloro 4 + 10 + 4",
+      "quantity": 1,
+      "widthMm": 960,
+      "heightMm": 1369,
+      "classification": "observed"
+    }
+  ],
+  "observedHardware": [
+    {
+      "order": 0,
+      "code": "GUIA-L25",
+      "name": "GUIA L25/8000",
+      "quantity": 6,
+      "unit": "PZA",
+      "classification": "observed"
+    },
+    {
+      "order": 1,
+      "code": "CARRO DVH L25 REGULABLE",
+      "name": "CARRO DVH L25 REGULABLE",
+      "quantity": 6,
+      "unit": "PZA",
+      "classification": "observed"
+    },
+    {
+      "order": 2,
+      "code": "14007NG",
+      "name": "KIT MANILLA CRIZIA (MECANISMO UNIPUNTO Y MANILLA CREMONA)",
+      "quantity": 2,
+      "unit": "PZA",
+      "classification": "observed"
+    },
+    {
+      "order": 3,
+      "code": "TRLCB348",
+      "name": "TORNILLO RL CB PH 3/4\" X 8",
+      "quantity": 24,
+      "unit": "PZA",
+      "classification": "observed"
+    },
+    {
+      "order": 4,
+      "code": "TORN-GUIA",
+      "name": "TORNILLO PARA GUIA",
+      "quantity": 12,
+      "unit": "PZA",
+      "classification": "observed"
+    },
+    {
+      "order": 5,
+      "code": "TORN-CARRO",
+      "name": "TORNILLO PARA CARRO",
+      "quantity": 12,
+      "unit": "PZA",
+      "classification": "observed"
+    },
+    {
+      "order": 6,
+      "code": "TORN-MAN",
+      "name": "TORNILLO PARA MANILLA",
+      "quantity": 4,
+      "unit": "PZA",
+      "classification": "observed"
+    },
+    {
+      "order": 7,
+      "code": "18000000439",
+      "name": "BURLETE TERMOPANEL S-399 EPDM X-69/24/24RPT SEAL (",
+      "quantity": 14,
+      "unit": "M",
+      "classification": "observed"
+    },
+    {
+      "order": 8,
+      "code": "FELPA7x6gen",
+      "name": "Felpa 7x6 3P",
+      "quantity": 24,
+      "unit": "M",
+      "classification": "observed"
+    },
+    {
+      "order": 9,
+      "code": "07012STY BLANCO",
+      "name": "Sellotec 20 Silicona Neutra c/fung 300 ml BLANCO",
+      "quantity": 2,
+      "unit": "TUBO",
+      "classification": "observed"
+    },
+    {
+      "order": 10,
+      "code": "TORINSEST",
+      "name": "Tornillo instalacion S/T/ESTRELLA",
+      "quantity": 22,
+      "unit": "PZA",
+      "classification": "observed"
+    }
+  ],
+  "artifacts": [
+    {
+      "kind": "zeta_plan_text",
+      "path": "docs/fabricacion/zeta/raw/sodal/l25/dvh_pierna_abierta_3h_3000x1500/plan.txt",
+      "sha256": "820bacc0b5511b70225abf6a58a1f8095913a41ed5e5b0832d351dcc1ecf2211",
+      "role": "primary",
+      "classification": "observed"
+    },
+    {
+      "kind": "checkpoint",
+      "path": "docs/fabricacion/zeta/raw/sodal/l25/dvh_pierna_abierta_3h_3000x1500/checkpoint-project-created.png",
+      "sha256": "0c097ba2992a77246ddc5dbb023463c4fac4e148b7eaeae7da765825e79420e1",
+      "role": "supporting",
+      "classification": "observed"
+    },
+    {
+      "kind": "run_log",
+      "path": "docs/fabricacion/zeta/runs/2026-09-19_17-55-41-browser-l25-3h.json",
+      "sha256": "90a145dface32383a03c459ff676215a4139f3db4b916ebddcecc14771419f0a",
+      "role": "supporting",
+      "classification": "observed"
+    }
+  ],
+  "sourceEvidence": {
+    "runId": "5a90caf5-524e-4496-8dd0-59db0d89f725",
+    "runLogPath": "docs/fabricacion/zeta/runs/2026-09-19_17-55-41-browser-l25-3h.json",
+    "projectId": "46421",
+    "planId": "PA-47",
+    "rawPath": "docs/fabricacion/zeta/raw/sodal/l25/dvh_pierna_abierta_3h_3000x1500",
+    "htmlPath": null,
+    "textPath": "docs/fabricacion/zeta/raw/sodal/l25/dvh_pierna_abierta_3h_3000x1500/plan.txt",
+    "screenshotPaths": [],
+    "capturedAt": "2026-09-19T17:55:41-03:00",
+    "extractorVersion": "browser-direct-1",
+    "artifactHashes": {
+      "html": null,
+      "text": "820bacc0b5511b70225abf6a58a1f8095913a41ed5e5b0832d351dcc1ecf2211",
+      "screenshots": {}
+    },
+    "sourceFragments": [
+      {
+        "id": "identidad",
+        "tipo": "identidad",
+        "locator": "confirmed/dvh_pierna_abierta_3h_3000x1500",
+        "texto": "L-25 DVH PIERNA ABIERTA · 3H · 3000×1500 mm"
+      },
+      {
+        "id": "perfil-0",
+        "tipo": "perfil",
+        "locator": "confirmed.profiles[0]",
+        "texto": "2501 · 2501 - RIEL SUPERIOR BLANCO · 1×2984 mm"
+      },
+      {
+        "id": "perfil-1",
+        "tipo": "perfil",
+        "locator": "confirmed.profiles[1]",
+        "texto": "2502 · 2502 - RIEL INFERIOR BLANCO · 1×2984 mm"
+      },
+      {
+        "id": "perfil-2",
+        "tipo": "perfil",
+        "locator": "confirmed.profiles[2]",
+        "texto": "2503 · 2503 - JAMBA BLANCO · 2×1500 mm"
+      },
+      {
+        "id": "perfil-3",
+        "tipo": "perfil",
+        "locator": "confirmed.profiles[3]",
+        "texto": "2516 · 2516 - ZOCALO - DVH BLANCO · 4×999 mm"
+      },
+      {
+        "id": "perfil-4",
+        "tipo": "perfil",
+        "locator": "confirmed.profiles[4]",
+        "texto": "2516 · 2516 - ZOCALO - DVH BLANCO · 2×1014 mm"
+      },
+      {
+        "id": "perfil-5",
+        "tipo": "perfil",
+        "locator": "confirmed.profiles[5]",
+        "texto": "2517 · 2517 - PIERNA - ABIERTA DVH BLANCO · 2×1465 mm"
+      },
+      {
+        "id": "perfil-6",
+        "tipo": "perfil",
+        "locator": "confirmed.profiles[6]",
+        "texto": "2519 · 2519 - TRASLAPO VENTANA - DVH BLANCO · 4×1465 mm"
+      },
+      {
+        "id": "vidrio-0",
+        "tipo": "vidrio",
+        "locator": "confirmed.glass[0]",
+        "texto": "TI4104 · 2×944×1369 mm"
+      },
+      {
+        "id": "vidrio-1",
+        "tipo": "vidrio",
+        "locator": "confirmed.glass[1]",
+        "texto": "TI4104 · 1×960×1369 mm"
+      },
+      {
+        "id": "accesorio-0",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[0]",
+        "texto": "GUIA-L25 · GUIA L25/8000 · 6 PZA"
+      },
+      {
+        "id": "accesorio-1",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[1]",
+        "texto": "CARRO DVH L25 REGULABLE · CARRO DVH L25 REGULABLE · 6 PZA"
+      },
+      {
+        "id": "accesorio-2",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[2]",
+        "texto": "14007NG · KIT MANILLA CRIZIA (MECANISMO UNIPUNTO Y MANILLA CREMONA) · 2 PZA"
+      },
+      {
+        "id": "accesorio-3",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[3]",
+        "texto": "TRLCB348 · TORNILLO RL CB PH 3/4\" X 8 · 24 PZA"
+      },
+      {
+        "id": "accesorio-4",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[4]",
+        "texto": "TORN-GUIA · TORNILLO PARA GUIA · 12 PZA"
+      },
+      {
+        "id": "accesorio-5",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[5]",
+        "texto": "TORN-CARRO · TORNILLO PARA CARRO · 12 PZA"
+      },
+      {
+        "id": "accesorio-6",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[6]",
+        "texto": "TORN-MAN · TORNILLO PARA MANILLA · 4 PZA"
+      },
+      {
+        "id": "accesorio-7",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[7]",
+        "texto": "18000000439 · BURLETE TERMOPANEL S-399 EPDM X-69/24/24RPT SEAL ( · 14 M"
+      },
+      {
+        "id": "accesorio-8",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[8]",
+        "texto": "FELPA7x6gen · Felpa 7x6 3P · 24 M"
+      },
+      {
+        "id": "accesorio-9",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[9]",
+        "texto": "07012STY BLANCO · Sellotec 20 Silicona Neutra c/fung 300 ml BLANCO · 2 TUBO"
+      },
+      {
+        "id": "accesorio-10",
+        "tipo": "accesorio",
+        "locator": "confirmed.hardware[10]",
+        "texto": "TORINSEST · Tornillo instalacion S/T/ESTRELLA · 22 PZA"
+      }
+    ],
+    "sourceDocument": "docs/fabricacion/zeta/raw/sodal/l25/PA-47_VENTORA-ZETA-BATCH-006.md"
+  },
+  "fieldProvenance": {
+    "runId": {
+      "classification": "observed",
+      "sourcePath": "docs/fabricacion/zeta/runs/2026-09-19_17-55-41-browser-l25-3h.json"
+    },
+    "projectId": {
+      "classification": "observed",
+      "sourcePath": "docs/fabricacion/zeta/raw/sodal/l25/PA-47_VENTORA-ZETA-BATCH-006.md"
+    },
+    "planId": {
+      "classification": "observed",
+      "sourcePath": "docs/fabricacion/zeta/confirmed/sodal/l25/dvh_pierna_abierta_3h_3000x1500.json",
+      "note": "Campo plan en JSON confirmed."
+    }
+  },
+  "datosPendientes": [
+    "Falta screenshot.png o checkpoint-plan-visible.png verificable en disco.",
+    "Trazabilidad 1:1 incompleta: se requiere plan.html, plan.txt, screenshot, runId, projectId y hashes verificables."
+  ],
+  "generatedFrom": "scripts/zeta/build-evidence-sidecars.ts",
+  "generatedAt": "2026-09-19T21:08:36.069Z"
+}

@@ -3,18 +3,16 @@ import {
   crearRecetaP2U,
   crearRecetasP2U,
 } from "@/features/fabricacion/fixtures/traditional-p2u-recipes";
+import { LINE_15_FIXTURE_1200X1000 } from "@/features/fabricacion/fixtures/line-15-corredera-recipe";
+import { LINE_4000_FIXTURE_1200X1000 } from "@/features/fabricacion/fixtures/line-4000-corredera-recipe";
+import { SERIE_45_FIXTURE_1200X1000 } from "@/features/fabricacion/fixtures/serie-45-practicable-recipe";
 
 describe("P2U líneas tradicionales / multiproveedor", () => {
-  it("mantiene las cuatro líneas nuevas y AM-35 como recetas documentales", () => {
-    const keys = [
-      "ventora:serie-15-corredera-2h",
-      "ventora:serie-4000-corredera-2h",
+  it("mantiene AM-35 y Línea 12 como recetas documentales incompletas", () => {
+    for (const catalogKey of [
       "ventora:l35",
-      "ventora:serie-45-puerta",
       "ventora:serie-12-shower-corredera",
-    ] as const;
-
-    for (const catalogKey of keys) {
+    ] as const) {
       const recipes = crearRecetasP2U({ catalogKey, lineName: catalogKey });
       expect(recipes.length).toBeGreaterThan(0);
       expect(recipes.every((recipe) => recipe.estado === "ejemplo_no_validado")).toBe(true);
@@ -24,49 +22,90 @@ describe("P2U líneas tradicionales / multiproveedor", () => {
     expect(crearRecetasP2U({ catalogKey: "ventora:l35", lineName: "AM-35" })).toHaveLength(2);
   });
 
-  it("conserva la pauta ALAR de Línea 15 y deja 1506/1507/1508 como alternativas", () => {
-    const recipe = crearRecetaP2U({
+  it("expone destajes oficiales de Línea 15 con cuatro variantes", () => {
+    const recipes = crearRecetasP2U({
       catalogKey: "ventora:serie-15-corredera-2h",
       lineName: "Línea 15",
     });
-    const byCode = Object.fromEntries(
-      recipe.perfiles.map((profile) => [profile.codigoPerfil, profile])
-    );
+    expect(recipes).toHaveLength(4);
+    expect(recipes[0]?.estado).toBe("lista_para_validar");
+    expect(recipes[0]?.perfiles.map((profile) => profile.codigoPerfil)).toEqual([
+      "1501",
+      "1502",
+      "1503",
+      "1504",
+      "1505",
+      "1506",
+      "1507",
+    ]);
 
-    expect(byCode["1501"]?.reglaMedida).toEqual({ base: "ancho_total", ajusteMm: 0 });
-    expect(byCode["1502"]?.reglaMedida).toEqual({ base: "ancho_total", ajusteMm: 0 });
-    expect(byCode["1503"]?.reglaMedida).toEqual({ base: "alto_total", ajusteMm: -7 });
-    expect(byCode["1504"]?.reglaMedida).toEqual({ base: "ancho_por_hoja", ajusteMm: -3 });
-    expect(byCode["1505"]?.reglaMedida).toEqual({ base: "ancho_por_hoja", ajusteMm: -3 });
-    expect(byCode["1506"]?.requerido).toBe(false);
-    expect(byCode["1507"]?.requerido).toBe(false);
-    expect(byCode["1508"]?.requerido).toBe(false);
-
-    const result = calcularCubicacionYPauta(recipe, {
+    const result = calcularCubicacionYPauta(recipes[0]!, {
       anchoTotalMm: 1200,
       altoTotalMm: 1000,
       cantidad: 1,
       hojas: 2,
-      modulos: 1,
+      modulos: 2,
     });
-    const medidas = Object.fromEntries(
-      result.perfiles.map((profile) => [profile.codigoPerfil, profile.medidaMm])
-    );
-    expect(medidas).toMatchObject({ "1501": 1200, "1502": 1200, "1503": 993, "1504": 597, "1505": 597 });
-    expect(result.calculable).toBe(false);
-    expect(result.advertencias.some((warning) => warning.codigo === "RECETA_DATOS_PENDIENTES")).toBe(true);
+    expect(result.calculable).toBe(true);
+    expect(result.perfiles.map((profile) => profile.medidaMm)).toEqual([
+      ...LINE_15_FIXTURE_1200X1000.lengthsMm,
+    ]);
   });
 
-  it("no infiere descuentos ni validación para 4000, 45, Shower 12 o AM-35", () => {
-    for (const catalogKey of [
-      "ventora:serie-4000-corredera-2h",
-      "ventora:serie-45-puerta",
-      "ventora:serie-12-shower-corredera",
-      "ventora:l35",
-    ] as const) {
-      const recipes = crearRecetasP2U({ catalogKey, lineName: catalogKey });
-      expect(recipes.every((recipe) => recipe.estado !== "validada")).toBe(true);
-      expect(recipes.every((recipe) => recipe.perfiles.every((profile) => profile.reglaMedida.ajusteMm == null))).toBe(true);
-    }
+  it("expone destajes oficiales de Línea 4000 Columbia con cuatro variantes", () => {
+    const recipes = crearRecetasP2U({
+      catalogKey: "ventora:serie-4000-corredera-2h",
+      lineName: "Línea 4000",
+    });
+    expect(recipes).toHaveLength(4);
+    expect(recipes[0]?.estado).toBe("lista_para_validar");
+    expect(recipes[0]?.perfiles.map((profile) => profile.codigoPerfil)).toEqual([
+      "4002",
+      "4003",
+      "4005",
+      "4008",
+      "4004",
+      "4007",
+      "4009",
+    ]);
+
+    const result = calcularCubicacionYPauta(recipes[0]!, {
+      anchoTotalMm: 1200,
+      altoTotalMm: 1000,
+      cantidad: 1,
+      hojas: 2,
+      modulos: 2,
+    });
+    expect(result.calculable).toBe(true);
+    expect(result.perfiles.map((profile) => profile.medidaMm)).toEqual([
+      ...LINE_4000_FIXTURE_1200X1000.lengthsMm,
+    ]);
+  });
+
+  it("usa la pauta Serie 45 practicable y no deja composición pendiente", () => {
+    const recipe = crearRecetaP2U({
+      catalogKey: "ventora:serie-45-puerta",
+      lineName: "Línea 45 — Puerta",
+    });
+
+    expect(recipe.estado).toBe("lista_para_validar");
+    expect(recipe.datosPendientes).toEqual([]);
+    expect(recipe.identidad.variante).toBe("puerta_1h");
+
+    const result = calcularCubicacionYPauta(recipe, {
+      anchoTotalMm: SERIE_45_FIXTURE_1200X1000.anchoTotalMm,
+      altoTotalMm: SERIE_45_FIXTURE_1200X1000.altoTotalMm,
+      cantidad: 1,
+      hojas: 1,
+      modulos: 1,
+    });
+    expect(result.calculable).toBe(true);
+    expect(result.perfiles.map((profile) => profile.medidaMm)).toEqual([
+      ...SERIE_45_FIXTURE_1200X1000.lengthsMm,
+    ]);
+    expect(result.vidrios[0]).toMatchObject({
+      anchoMm: SERIE_45_FIXTURE_1200X1000.glass.widthMm,
+      altoMm: SERIE_45_FIXTURE_1200X1000.glass.heightMm,
+    });
   });
 });

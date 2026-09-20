@@ -2,11 +2,11 @@ import {
   FABRICACION_RECIPE_SCHEMA_VERSION,
   type FabricacionAccesorio,
   type FabricacionComponentePerfil,
+  type FabricacionEvidencia,
   type FabricacionReceta,
   type FabricacionVidrio,
 } from "@/features/fabricacion/types/fabricacion-domain";
 import {
-  buildSodalL25VariantSlug,
   SODAL_L25_CONTRATO_TECNICO,
   resolveSodalL25IdentityFromRecipeId,
   SODAL_L25_CANONICAL_RECIPE_IDS,
@@ -15,6 +15,10 @@ import {
 } from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
 import { formatSodalL25FullRecipeName } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import { SODAL_L25_FORMULA_VERSION } from "@/features/fabricacion/zeta/sodal-l25-profile-roles";
+import {
+  isTraceabilityComplete,
+  resolveSidecarDatosPendientes,
+} from "@/features/fabricacion/zeta/zeta-trace-enrichment";
 import { deriveFormulasFromConfirmedFamily } from "@/features/fabricacion/zeta/zeta-formula-derivation";
 import {
   buildZetaSourceReference,
@@ -24,12 +28,12 @@ import {
 import type { ConfirmedRecipe } from "@/features/fabricacion/zeta/zeta-types";
 
 export {
+  buildSodalL25VariantSlug,
   SODAL_L25_CATALOG_KEY,
   SODAL_L25_CANONICAL_RECIPE_IDS,
   SODAL_L25_EXTRA_GEOMETRY_TEST_IDS,
   SODAL_L25_GATE_TEST_IDS,
   SODAL_L25_FAMILIES,
-  buildSodalL25VariantSlug,
   parseSodalL25VariantSlug,
   resolveCanonicalRecipeIdForIdentity,
   resolveSodalL25IdentityFromRecipeId,
@@ -140,12 +144,21 @@ function buildDefinitionFromConfirmed(input: {
   }));
 
   const accesorios = input.confirmed.hardware.map((item) => mapAccessory(createId, item));
-  const lineName = input.lineName?.trim() || "L25";
+  const evidencia = buildZetaEvidence(input.confirmed);
+  const sidecarPending = resolveSidecarDatosPendientes(input.confirmed.id);
+  const datosPendientes =
+    evidencia && isTraceabilityComplete(input.confirmed.id)
+      ? undefined
+      : sidecarPending.length > 0
+        ? sidecarPending
+        : [
+            "Evidencia Zeta 1:1 incompleta: run, proyecto, Plan, raw, hashes y fragmentos son obligatorios antes de activar.",
+          ];
 
   return {
     schemaVersion: FABRICACION_RECIPE_SCHEMA_VERSION,
     version: 1,
-    estado: "validada",
+    estado: "lista_para_validar",
     identidad: {
       recetaId: createId(),
       codigo: `SODAL-L25-${input.identity.leaves}H-${input.identity.variantSlug.toUpperCase()}-ZETA-V1`,
@@ -174,15 +187,101 @@ function buildDefinitionFromConfirmed(input: {
       sobranteMinimoAprovechableMm: null,
       largoComercialDefaultMm: DEFAULT_BAR_LENGTH_MM,
     },
+    evidencia,
+    datosPendientes,
     notasValidacion: [
-      "Catálogo técnico SODAL L25 verificado contra Sistema Zeta (confirmed).",
-      "Ventora administra esta receta; no requiere validación de fórmulas en taller del cliente.",
+      "Documentación SODAL L25 confirmada contra Sistema Zeta; no equivale a validación de taller.",
+      "La receta permanece en prueba hasta completar evidencia 1:1 y validación explícita del taller.",
       `Fuente: ${buildZetaSourceReference(input.confirmed.id)}`,
       input.confirmed.sourceEvidence.planId
         ? `Plan Zeta: ${input.confirmed.sourceEvidence.planId}`
         : "Plan Zeta confirmado.",
       `Fórmulas: ${SODAL_L25_FORMULA_VERSION}`,
     ],
+  };
+}
+
+function buildZetaEvidence(confirmed: ConfirmedRecipe): FabricacionEvidencia | undefined {
+  const source = confirmed.sourceEvidence;
+  const hashes = source.artifactHashes;
+  if (
+    !source.runId ||
+    !source.projectId ||
+    !source.planId ||
+    !source.rawPath ||
+    !source.htmlPath ||
+    !source.textPath ||
+    !source.capturedAt ||
+    !source.extractorVersion ||
+    !hashes?.html ||
+    !hashes.text ||
+    !hashes.screenshots ||
+    Object.keys(hashes.screenshots).length === 0 ||
+    source.screenshotPaths.length === 0 ||
+    !source.sourceFragments?.length
+  ) {
+    return undefined;
+  }
+
+  const valores = [
+    "identidad.linea",
+    "identidad.hojas",
+    "identidad.variante",
+    "identidad.modulos",
+    ...confirmed.profiles.flatMap((_, index) => [
+      `perfiles[${index}].codigoPerfil`,
+      `perfiles[${index}].nombrePerfil`,
+      `perfiles[${index}].reglaMedida`,
+      `perfiles[${index}].reglaCantidad`,
+      `perfiles[${index}].funcion`,
+    ]),
+    ...confirmed.glass.flatMap((_, index) => [
+      `vidrios[${index}].reglaAncho`,
+      `vidrios[${index}].reglaAlto`,
+      `vidrios[${index}].reglaCantidad`,
+    ]),
+    ...confirmed.hardware.map((_, index) => `accesorios[${index}].reglaCantidad`),
+  ].map((fieldPath) => ({
+    fieldPath,
+    origen: /funcion|reglaMedida|reglaAncho|reglaAlto/.test(fieldPath)
+      ? "derivado" as const
+      : fieldPath === "identidad.modulos"
+        ? "asumido" as const
+        : "observado" as const,
+    sourceFragmentId:
+      fieldPath.startsWith("perfiles[")
+        ? `perfil-${fieldPath.match(/^perfiles\[(\d+)\]/)?.[1] ?? "0"}`
+        : fieldPath.startsWith("vidrios[")
+          ? `vidrio-${fieldPath.match(/^vidrios\[(\d+)\]/)?.[1] ?? "0"}`
+          : fieldPath.startsWith("accesorios[")
+            ? `accesorio-${fieldPath.match(/^accesorios\[(\d+)\]/)?.[1] ?? "0"}`
+            : "identidad",
+  }));
+
+  return {
+    fuente: "sistema_zeta",
+    runId: source.runId,
+    projectId: source.projectId,
+    planId: source.planId,
+    rawPath: source.rawPath,
+    htmlPath: source.htmlPath,
+    textPath: source.textPath,
+    screenshotPaths: source.screenshotPaths,
+    fecha: source.capturedAt,
+    extractorVersion: source.extractorVersion,
+    hashes: {
+      html: hashes.html,
+      text: hashes.text,
+      screenshots: hashes.screenshots,
+    },
+    sourceFragments: source.sourceFragments,
+    medidasObservadas: [
+      {
+        anchoMm: confirmed.testDimensions.widthMm,
+        altoMm: confirmed.testDimensions.heightMm,
+      },
+    ],
+    valores,
   };
 }
 
@@ -229,6 +328,11 @@ export function buildSodalL25Recipe(
 }
 
 let cachedBundles: SodalL25RecipeBundle[] | null = null;
+
+/** Invalida cache en tests o tras cambios de trazabilidad. */
+export function resetSodalL25RecipeCacheForTests(): void {
+  cachedBundles = null;
+}
 
 export function buildAllSodalL25Recipes(options?: {
   createId?: () => string;

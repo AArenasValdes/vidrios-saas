@@ -92,6 +92,41 @@ describe("reparación persistida por taller", () => {
     ]));
   });
 
+  it("persiste Línea 45 con destajes 4522 y referencia v2", async () => {
+    const row45 = {
+      ...row,
+      line_name: "Línea 45 — Puerta",
+      source_reference: "ventora-arquetipo:puerta_abatible",
+      definition: crearRecetaDesdeArquetipoEstructural({
+        archetypeId: "puerta_abatible",
+        lineName: "Línea 45 — Puerta",
+      }),
+    };
+    const { client, queries } = mockClient([
+      { data: [{ id: 42, catalog_key: "ventora:serie-45-puerta" }] },
+      { data: [row45] },
+      { data: [] },
+      { data: [{ id: row45.id }] },
+    ]);
+
+    expect(await repararBorradoresProyectantes(client, 8)).toBe(1);
+    expect(queries[3].calls).toEqual(expect.arrayContaining([
+      ["update", expect.objectContaining({
+        source_reference: "sodal+indalum:serie-45-practicable:puerta:1h:v2",
+        typology: "puerta_abatible",
+        leaves_count: 1,
+        definition: expect.objectContaining({
+          vidrios: [
+            expect.objectContaining({
+              reglaAncho: expect.objectContaining({ ajusteMm: -170 }),
+              reglaAlto: expect.objectContaining({ ajusteMm: -183 }),
+            }),
+          ],
+        }),
+      })],
+    ]));
+  });
+
   it("no reemplaza un borrador con pruebas, aunque estén archivadas", async () => {
     const { client, queries } = mockClient(responses([{ id: "test-1" }]));
     expect(await repararBorradoresProyectantes(client, 8)).toBe(0);

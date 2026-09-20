@@ -109,7 +109,7 @@ export function renderIndexMarkdown(coverage: CoverageFile, conflictTitles: stri
   const lines = [
     "<!-- Generado por `pnpm zeta:coverage`. No editar a mano. Fuente: JSON en confirmed/ + targets.json -->",
     "",
-    "# Índice de recetas Zeta — SODAL / L25",
+    "# Índice de recetas Zeta — SODAL",
     "",
     "`CONFIRMED` solo significa que existe un Plan de armado real observado en Sistema Zeta. No equivale a validación física de taller ni a receta implementada en Ventora.",
     "",
@@ -126,8 +126,8 @@ export function renderIndexMarkdown(coverage: CoverageFile, conflictTitles: stri
         .map((item) => item.recipeId)
         .filter((item): item is string => Boolean(item))
         .slice(0, 1)
-        .map((id) => `confirmed/sodal/l25/${id}.json`)
-        .join(", ") || "pending/sodal/l25/PENDING.md";
+        .map((id) => `confirmed/sodal/${family.system.toLowerCase()}/${id}.json`)
+        .join(", ") || `pending/sodal/${family.system.toLowerCase()}/PENDING.md`;
     const familyStatus = LEAF_COLUMNS.every((leaves) => family.leaves[String(leaves)]?.status === "confirmed")
       ? "CONFIRMED"
       : LEAF_COLUMNS.some((leaves) => family.leaves[String(leaves)]?.status === "confirmed")

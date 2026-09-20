@@ -14,6 +14,7 @@ import {
   formatLineTemplatePriceLabel,
   LINE_TEMPLATE_CATEGORIA_LABELS,
 } from "@/features/cotizaciones/line-templates/utils/catalog-labels";
+import { shouldOfferLineFabricationWorkspace } from "@/features/cotizaciones/line-templates/utils/line-fabrication-entry";
 
 import { LineProfileReferencesSection } from "./line-profile-references-section";
 import {
@@ -147,7 +148,7 @@ export function LineTemplateCatalogCard({
         </button>
       </div>
 
-      {template.categoria !== "vidrio" ? (
+      {shouldOfferLineFabricationWorkspace(template) ? (
         <Link
           href={`/configuracion/empresa/lineas-precios/${template.id}/fabricacion`}
           className={`${desktop.fabricationCompactRow}`}

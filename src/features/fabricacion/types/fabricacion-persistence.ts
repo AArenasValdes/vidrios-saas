@@ -156,6 +156,7 @@ export type FabricationRecipeErrorCode =
   | "VALIDACION_CON_FALLOS"
   | "VALIDACION_GATES_INCOMPLETOS"
   | "VALIDACION_COMPONENTES_INCOMPLETOS"
+  | "VALIDACION_EVIDENCIA_INCOMPLETA"
   | "ACCESO_ORGANIZACION_INVALIDO";
 
 export class FabricationRecipeServiceError extends Error {

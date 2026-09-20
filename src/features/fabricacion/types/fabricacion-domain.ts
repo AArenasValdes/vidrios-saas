@@ -1,6 +1,29 @@
 export const FABRICACION_RECIPE_SCHEMA_VERSION = 1 as const;
 export const FABRICACION_ENGINE_VERSION = 1 as const;
 
+export const FABRICACION_EVIDENCIA_ORIGENES = [
+  "observado",
+  "derivado",
+  "asumido",
+] as const;
+
+export const FABRICACION_FUENTES_EVIDENCIA = [
+  "sistema_zeta",
+  "alumetrica",
+  "haciendoventanas",
+] as const;
+
+export const FABRICACION_NIVELES_CONFIANZA = ["alta", "media", "baja"] as const;
+
+export type FabricacionFuenteEvidencia =
+  (typeof FABRICACION_FUENTES_EVIDENCIA)[number];
+
+export type FabricacionNivelConfianza =
+  (typeof FABRICACION_NIVELES_CONFIANZA)[number];
+
+export type FabricacionEvidenciaOrigen =
+  (typeof FABRICACION_EVIDENCIA_ORIGENES)[number];
+
 export const FABRICACION_ESTADOS_VALIDACION = [
   "borrador",
   "ejemplo_no_validado",
@@ -178,6 +201,74 @@ export type FabricacionConfiguracionCorte = {
   largoComercialDefaultMm?: number | null;
 };
 
+export type FabricacionFuenteFragmento = {
+  id: string;
+  tipo: "perfil" | "vidrio" | "accesorio" | "identidad" | "advertencia";
+  locator: string;
+  texto: string;
+};
+
+export type FabricacionTrazabilidadValor = {
+  fieldPath: string;
+  origen: FabricacionEvidenciaOrigen;
+  sourceFragmentId?: string | null;
+};
+
+export type FabricacionEvidencia = {
+  fuente: "sistema_zeta";
+  runId: string;
+  projectId: string;
+  planId: string;
+  rawPath: string;
+  htmlPath: string;
+  textPath: string;
+  screenshotPaths: string[];
+  fecha: string;
+  extractorVersion: string;
+  hashes: {
+    html: string;
+    text: string;
+    screenshots: Record<string, string>;
+  };
+  sourceFragments: FabricacionFuenteFragmento[];
+  medidasObservadas: FabricacionEntradaMedidaObservada[];
+  valores: FabricacionTrazabilidadValor[];
+};
+
+export type FabricacionEvidenciaExterna = {
+  fuente: Exclude<FabricacionFuenteEvidencia, "sistema_zeta">;
+  nombreFuente: string;
+  url?: string | null;
+  archivo?: string | null;
+  htmlPath?: string | null;
+  screenshotPaths?: string[];
+  pdfPath?: string | null;
+  fecha: string;
+  sourceFragments: FabricacionFuenteFragmento[];
+  medidasObservadas: FabricacionEntradaMedidaObservada[];
+  valores: FabricacionTrazabilidadValor[];
+  confianza: FabricacionNivelConfianza;
+  conflictos?: string[];
+};
+
+export type FabricacionEntradaMedidaObservada = {
+  anchoMm: number;
+  altoMm: number;
+  hojas?: number;
+  modulos?: number;
+  variante?: string | null;
+};
+
+export type FabricacionAlcanceCalculo =
+  | {
+      modo: "formula_general";
+    }
+  | {
+      modo: "observed_fixture_only";
+      medidasObservadas: FabricacionEntradaMedidaObservada[];
+      calculableFueraDeMedidas: boolean;
+    };
+
 export type FabricacionReceta = {
   schemaVersion: typeof FABRICACION_RECIPE_SCHEMA_VERSION;
   version: number;
@@ -188,6 +279,9 @@ export type FabricacionReceta = {
   accesorios: FabricacionAccesorio[];
   contratoTecnico?: FabricacionContratoTecnico;
   configuracionCorte?: FabricacionConfiguracionCorte;
+  evidencia?: FabricacionEvidencia;
+  evidenciasExternas?: FabricacionEvidenciaExterna[];
+  alcanceCalculo?: FabricacionAlcanceCalculo;
   /** Datos que impiden tratar la receta como pauta completa calculable. */
   datosPendientes?: string[];
   notasValidacion: string[];

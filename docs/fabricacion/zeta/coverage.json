@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-09-18T09:41:28.802Z",
+  "generatedAt": "2026-09-20T06:58:08.171Z",
   "summary": {
-    "confirmed": 22,
-    "pending": 0,
+    "confirmed": 24,
+    "pending": 1,
     "conflicts": 4,
     "errors": 0,
     "unsupported": 0,
-    "totalKnown": 22
+    "totalKnown": 25
   },
   "families": [
     {
@@ -21,21 +21,21 @@
           "recipeId": "dvh_pierna_abierta_2h_1800x1500",
           "widthMm": 1800,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+          "lastCheckedAt": "2026-09-20T06:58:08.160Z"
         },
         "3": {
           "status": "confirmed",
           "recipeId": "dvh_pierna_abierta_3h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+          "lastCheckedAt": "2026-09-20T06:58:08.160Z"
         },
         "4": {
           "status": "confirmed",
           "recipeId": "dvh_pierna_abierta_4h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+          "lastCheckedAt": "2026-09-20T06:58:08.160Z"
         }
       },
       "extraTests": []
@@ -52,21 +52,21 @@
           "recipeId": "dvh_pierna_abierta_reforzada_2h_1800x1500",
           "widthMm": 1800,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+          "lastCheckedAt": "2026-09-20T06:58:08.160Z"
         },
         "3": {
           "status": "confirmed",
           "recipeId": "dvh_pierna_abierta_reforzada_3h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+          "lastCheckedAt": "2026-09-20T06:58:08.160Z"
         },
         "4": {
           "status": "confirmed",
           "recipeId": "dvh_pierna_abierta_reforzada_4h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+          "lastCheckedAt": "2026-09-20T06:58:08.160Z"
         }
       },
       "extraTests": [
@@ -92,21 +92,21 @@
           "recipeId": "dvh_pierna_cerrada_2h_1800x1500",
           "widthMm": 1800,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+          "lastCheckedAt": "2026-09-20T06:58:08.160Z"
         },
         "3": {
           "status": "confirmed",
           "recipeId": "dvh_pierna_cerrada_3h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+          "lastCheckedAt": "2026-09-20T06:58:08.160Z"
         },
         "4": {
           "status": "confirmed",
           "recipeId": "dvh_pierna_cerrada_4h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+          "lastCheckedAt": "2026-09-20T06:58:08.160Z"
         }
       },
       "extraTests": [
@@ -132,21 +132,21 @@
           "recipeId": "monolitico_pierna_abierta_2h_1800x1500",
           "widthMm": 1800,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+          "lastCheckedAt": "2026-09-20T06:58:08.160Z"
         },
         "3": {
           "status": "confirmed",
           "recipeId": "monolitico_pierna_abierta_3h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+          "lastCheckedAt": "2026-09-20T06:58:08.160Z"
         },
         "4": {
           "status": "confirmed",
           "recipeId": "monolitico_pierna_abierta_4h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+          "lastCheckedAt": "2026-09-20T06:58:08.160Z"
         }
       },
       "extraTests": [
@@ -172,21 +172,21 @@
           "recipeId": "monolitico_pierna_abierta_reforzada_2h_1800x1500",
           "widthMm": 1800,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+          "lastCheckedAt": "2026-09-20T06:58:08.160Z"
         },
         "3": {
           "status": "confirmed",
           "recipeId": "monolitico_pierna_abierta_reforzada_3h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+          "lastCheckedAt": "2026-09-20T06:58:08.160Z"
         },
         "4": {
           "status": "confirmed",
           "recipeId": "monolitico_pierna_abierta_reforzada_4h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+          "lastCheckedAt": "2026-09-20T06:58:08.160Z"
         }
       },
       "extraTests": [
@@ -212,21 +212,53 @@
           "recipeId": "monolitico_pierna_cerrada_2h_1800x1500",
           "widthMm": 1800,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+          "lastCheckedAt": "2026-09-20T06:58:08.160Z"
         },
         "3": {
           "status": "confirmed",
           "recipeId": "monolitico_pierna_cerrada_3h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+          "lastCheckedAt": "2026-09-20T06:58:08.160Z"
         },
         "4": {
           "status": "confirmed",
           "recipeId": "monolitico_pierna_cerrada_4h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-18T09:41:28.798Z"
+          "lastCheckedAt": "2026-09-20T06:58:08.160Z"
+        }
+      },
+      "extraTests": []
+    },
+    {
+      "manufacturer": "SODAL",
+      "system": "4800",
+      "line": "L-4800 MONOLITICO",
+      "variant": "MONOLITICO",
+      "glazing": "monolitico",
+      "leaves": {
+        "2": {
+          "status": "confirmed",
+          "recipeId": "monolitico_2h_1800x1500",
+          "widthMm": 1800,
+          "heightMm": 1500,
+          "lastCheckedAt": "2026-09-20T06:58:08.160Z"
+        },
+        "3": {
+          "status": "confirmed",
+          "recipeId": "monolitico_3h_3000x1500",
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lastCheckedAt": "2026-09-20T06:58:08.160Z"
+        },
+        "4": {
+          "status": "pending",
+          "recipeId": null,
+          "widthMm": 3000,
+          "heightMm": 1500,
+          "lastCheckedAt": null,
+          "reason": "Zeta mostró `No se ha encontrado la línea de productos`; no se generó Plan de armado"
         }
       },
       "extraTests": []

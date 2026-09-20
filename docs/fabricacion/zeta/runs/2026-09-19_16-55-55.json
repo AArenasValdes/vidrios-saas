@@ -1,0 +1,27 @@
+{
+  "runId": "0d508c12-7ddc-4739-9429-44912815fbb4",
+  "startedAt": "2026-09-19T19:55:53.645Z",
+  "finishedAt": "2026-09-19T19:55:55.615Z",
+  "command": "browser-extract dvh_pierna_abierta_3h_3000x1500",
+  "mode": "live",
+  "targetsRequested": [
+    "dvh_pierna_abierta_3h_3000x1500"
+  ],
+  "processed": [],
+  "confirmed": [],
+  "skipped": [],
+  "failed": [
+    "dvh_pierna_abierta_3h_3000x1500"
+  ],
+  "pending": [
+    "dvh_pierna_abierta_3h_3000x1500"
+  ],
+  "errors": [
+    {
+      "targetId": "dvh_pierna_abierta_3h_3000x1500",
+      "outcome": "AUTOMATION_ERROR",
+      "message": "Sesión no autenticada. Ejecuta `pnpm zeta:extract -- --login` e inicia sesión manualmente."
+    }
+  ],
+  "notes": []
+}

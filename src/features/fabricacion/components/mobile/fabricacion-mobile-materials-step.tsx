@@ -3,7 +3,10 @@
 import { useMemo } from "react";
 import { ChevronRight, Plus } from "lucide-react";
 
-import { labelReglaCantidadTipo } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
+import {
+  describeRecipeGlassListRow,
+  labelReglaCantidadTipo,
+} from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import type {
   FabricacionAccesorio,
   FabricacionReceta,
@@ -64,7 +67,9 @@ export function FabricacionMobileMaterialsStep({
           </p>
         ) : (
           <ul className={s.groupList}>
-            {draft.vidrios.map((glass, index) => (
+            {draft.vidrios.map((glass, index) => {
+              const display = describeRecipeGlassListRow(glass);
+              return (
               <li
                 key={glass.id}
                 className={s.groupListItem}
@@ -75,13 +80,12 @@ export function FabricacionMobileMaterialsStep({
                   className={s.groupListRow}
                   onClick={() => onSelectGlass(glass.id)}
                 >
-                  <div className={s.groupListRowMain}>
-                    <strong>{glass.nombre.trim() || "Vidrio"}</strong>
-                    {glass.reglaCantidad.cantidad > 1 ? (
-                      <span className={s.groupListRowSecondary}>
-                        {glass.reglaCantidad.cantidad} piezas
-                      </span>
-                    ) : null}
+                  <div
+                    className={s.groupListRowMain}
+                    data-type-pending={display.typePending ? "true" : "false"}
+                  >
+                    <strong>{display.title}</strong>
+                    <span className={s.groupListRowSecondary}>{display.secondary}</span>
                   </div>
                   <div className={s.groupListRowTrailing}>
                     <span className={s.groupListQuantity}>
@@ -91,7 +95,8 @@ export function FabricacionMobileMaterialsStep({
                   </div>
                 </button>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </section>

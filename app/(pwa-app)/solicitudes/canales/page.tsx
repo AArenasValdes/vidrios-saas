@@ -34,29 +34,13 @@ export default function LeadChannelsPage() {
         </div>
       </PremiumPageSection>
 
-      <PremiumPageSection className={s.mobileHero}>
-        <div className={s.mobileHeroCopy}>
-          <span className={s.mobileEyebrow}>Solicitudes</span>
-          <h1 className={s.mobileTitle}>Comparte tu página por canal</h1>
-          <p className={s.mobileText}>
-            Copia el link correcto y sigue de dónde llegan las solicitudes.
-          </p>
-        </div>
-
-        <div className={s.mobileHeroActions}>
-          <Link href="/solicitudes" className={s.headerSecondary} prefetch={false}>
-            <LuArrowLeft aria-hidden />
-            Volver
-          </Link>
-          <Link
-            href="/configuracion/pagina-venta"
-            className={s.headerPrimary}
-            prefetch={false}
-          >
-            <LuArrowUpRight aria-hidden />
-            Editar página
-          </Link>
-        </div>
+      <PremiumPageSection className={s.mobileHero} data-onboarding-target="canales-hero-mobile">
+        <Link href="/solicitudes" className={s.mobileBack} prefetch={false}>
+          <LuArrowLeft aria-hidden />
+          Volver
+        </Link>
+        <h1 className={s.mobileTitle}>QR y opciones</h1>
+        <p className={s.mobileText}>Usa tu página donde tus clientes te encuentren.</p>
       </PremiumPageSection>
 
       <LeadChannels

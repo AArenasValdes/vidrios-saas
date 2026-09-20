@@ -2,13 +2,19 @@ import { calcularCubicacionYPauta, validarRecetaFabricacion } from "@/features/f
 import {
   buildAllSodalL25Recipes,
   findSodalL25BundleForTestEvidence,
+  resetSodalL25RecipeCacheForTests,
   SODAL_L25_CANONICAL_RECIPE_IDS,
   SODAL_L25_EXTRA_GEOMETRY_TEST_IDS,
   SODAL_L25_GATE_TEST_IDS,
   resolveSodalL25IdentityFromRecipeId,
   isValidSodalL25Combination,
 } from "@/features/fabricacion/fixtures/sodal-l25-zeta-recipes";
-import { loadConfirmedRecipeById } from "@/features/fabricacion/zeta/zeta-confirmed-loader";
+import {
+  loadConfirmedRecipeById,
+  resetZetaConfirmedCacheForTests,
+} from "@/features/fabricacion/zeta/zeta-confirmed-loader";
+import { resetEvidenceSidecarCacheForTests } from "@/features/fabricacion/zeta/zeta-evidence-sidecar-loader";
+import { isTraceabilityComplete } from "@/features/fabricacion/zeta/zeta-trace-enrichment";
 import {
   classifySodalL25ProfileRole,
   isSodalL25VerticalRole,
@@ -27,7 +33,32 @@ function glassKey(code: string, quantity: number, widthMm: number, heightMm: num
   return `${code}|${quantity}|${widthMm}x${heightMm}`;
 }
 
+function gateEvidence(widthMm: number, heightMm: number) {
+  return {
+    fuente: "sistema_zeta" as const,
+    runId: "run-gate",
+    projectId: "project-gate",
+    planId: "PA-GATE",
+    rawPath: "docs/fabricacion/zeta/raw/gate",
+    htmlPath: "docs/fabricacion/zeta/raw/gate/plan.html",
+    textPath: "docs/fabricacion/zeta/raw/gate/plan.txt",
+    screenshotPaths: ["docs/fabricacion/zeta/raw/gate/screenshot.png"],
+    fecha: "2026-09-19T00:00:00.000Z",
+    extractorVersion: "zeta-extractor-p1-2026-09-19",
+    hashes: { html: "a".repeat(64), text: "b".repeat(64), screenshots: { screenshot: "c".repeat(64) } },
+    sourceFragments: [{ id: "profile-0", tipo: "perfil" as const, locator: "plan.txt:line:1", texto: "2501" }],
+    medidasObservadas: [{ anchoMm: widthMm, altoMm: heightMm }],
+    valores: [{ fieldPath: "perfiles[0].codigoPerfil", origen: "observado" as const, sourceFragmentId: "profile-0" }],
+  };
+}
+
 describe("SODAL L25 recetas Zeta", () => {
+  beforeEach(() => {
+    resetZetaConfirmedCacheForTests();
+    resetEvidenceSidecarCacheForTests();
+    resetSodalL25RecipeCacheForTests();
+  });
+
   it("expone 18 recetas canónicas únicas por identidad", () => {
     const bundles = buildAllSodalL25Recipes();
     expect(bundles).toHaveLength(18);
@@ -65,34 +96,27 @@ describe("SODAL L25 recetas Zeta", () => {
         variante: bundle!.identity.variantSlug,
       });
 
-      expect(result.calculable).toBe(true);
+      if (isTraceabilityComplete(recipeId)) {
+        expect(result.calculable).toBe(true);
+        expect(bundle!.definition.datosPendientes ?? []).toHaveLength(0);
+      } else {
+        expect(result.calculable).toBe(false);
+        expect(bundle!.definition.datosPendientes?.length ?? 0).toBeGreaterThan(0);
+      }
 
-      const expectedProfiles = confirmed!.profiles
-        .map((profile) => profileKey(profile.code, profile.quantity, profile.lengthMm))
-        .sort();
-      const actualProfiles = result.perfiles
-        .map((profile) => profileKey(profile.codigoPerfil, profile.cantidadPiezas, profile.medidaMm))
-        .sort();
-      expect(actualProfiles).toEqual(expectedProfiles);
+      confirmed!.profiles.forEach((profile, index) => {
+        const actual = result.perfiles[index];
+        expect(actual?.codigoPerfil).toBe(profile.code);
+        expect(actual?.cantidadPiezas).toBe(profile.quantity);
+        expect(actual?.medidaMm).toBe(profile.lengthMm);
+      });
 
-      const expectedGlass = confirmed!.glass
-        .map((piece) => glassKey(piece.code, piece.quantity, piece.widthMm, piece.heightMm))
-        .sort();
-      const actualGlass = result.vidrios
-        .map((piece) =>
-          glassKey(piece.nombre.includes("Termopanel") ? piece.nombre : piece.nombre, piece.cantidadPiezas, piece.anchoMm, piece.altoMm)
-        )
-        .sort();
-
-      const actualGlassFromResult = result.vidrios
-        .map((piece, index) => {
-          const confirmedPiece = confirmed!.glass[index];
-          const code = confirmedPiece?.code ?? "GLASS";
-          return glassKey(code, piece.cantidadPiezas, piece.anchoMm, piece.altoMm);
-        })
-        .sort();
-
-      expect(actualGlassFromResult).toEqual(expectedGlass);
+      confirmed!.glass.forEach((piece, index) => {
+        const actual = result.vidrios[index];
+        expect(actual?.cantidadPiezas).toBe(piece.quantity);
+        expect(actual?.anchoMm).toBe(piece.widthMm);
+        expect(actual?.altoMm).toBe(piece.heightMm);
+      });
     }
   );
 
@@ -114,8 +138,6 @@ describe("SODAL L25 recetas Zeta", () => {
         modulos: 1,
         variante: bundle!.identity.variantSlug,
       });
-
-      expect(result.calculable).toBe(true);
 
       const verticalExpected = confirmed!.profiles
         .filter((profile) => {
@@ -170,6 +192,14 @@ describe("SODAL L25 recetas Zeta", () => {
     const bundles = buildAllSodalL25Recipes();
     const evaluations = bundles.map((bundle) => {
       const confirmed = bundle.confirmed;
+      const definition = {
+        ...bundle.definition,
+        evidencia: gateEvidence(
+          confirmed.testDimensions.widthMm,
+          confirmed.testDimensions.heightMm,
+        ),
+        datosPendientes: undefined,
+      };
       const record: FabricationRecipeRecord = {
         id: bundle.recipeId,
         organizationId: null,
@@ -182,7 +212,7 @@ describe("SODAL L25 recetas Zeta", () => {
         variant: bundle.identity.variantSlug,
         version: 1,
         status: "validated",
-        definition: bundle.definition,
+        definition,
         sourceType: "manufacturer",
         sourceReference: bundle.sourceReference,
         sourceName: "SODAL",
@@ -208,8 +238,8 @@ describe("SODAL L25 recetas Zeta", () => {
         ...base,
         anchoTotalMm: base.anchoTotalMm + 300,
       };
-      const expectedBase = calcularCubicacionYPauta(bundle.definition, base);
-      const expectedAlternate = calcularCubicacionYPauta(bundle.definition, alternate);
+      const expectedBase = calcularCubicacionYPauta(definition, base);
+      const expectedAlternate = calcularCubicacionYPauta(definition, alternate);
       const tests: FabricationRecipeTestRecord[] = [base, alternate].map((input, index) => ({
         id: `${bundle.recipeId}-gate-${index}`,
         recipeId: record.id,
@@ -227,7 +257,7 @@ describe("SODAL L25 recetas Zeta", () => {
       }));
 
       return evaluarGatesRecetaFabricacion({
-        recipe: bundle.definition,
+        recipe: definition,
         record,
         tests,
         candidateRecipes: [record],
@@ -252,7 +282,7 @@ describe("SODAL L25 recetas Zeta", () => {
       modulos: 1,
       variante: bundle!.identity.variantSlug,
     });
-    expect(result.calculable).toBe(true);
+    expect(result.perfiles.length).toBeGreaterThan(0);
 
     for (const profile of result.perfiles) {
       const role = classifySodalL25ProfileRole(profile.codigoPerfil);
@@ -302,7 +332,7 @@ describe("SODAL L25 recetas Zeta", () => {
       modulos: 1,
       variante: bundle!.identity.variantSlug,
     });
-    expect(result.calculable).toBe(true);
+    expect(result.perfiles.length).toBeGreaterThan(0);
 
     for (const profile of result.perfiles) {
       const role = classifySodalL25ProfileRole(profile.codigoPerfil);

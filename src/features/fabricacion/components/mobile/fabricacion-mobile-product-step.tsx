@@ -26,6 +26,12 @@ import {
   isSodalL25CatalogKey,
   resolveEffectiveSodalL25CatalogKey,
 } from "@/features/fabricacion/services/sodal-l25-presentation.service";
+import type { LineVariantSlot } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
+import { getLineVariantSlotsForFabricationTree } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
+import {
+  buildLineVariantPickerModel,
+  resolveLineVariantPick,
+} from "@/features/fabricacion/services/line-variant-picker.service";
 import type { FabricacionReceta, FabricacionTipologia } from "@/features/fabricacion/types/fabricacion-domain";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
@@ -50,6 +56,7 @@ type Props = {
   readOnly: boolean;
   onDraftChange: (recipe: FabricacionReceta) => void;
   onSelectRecipe?: (recipe: FabricationRecipeRecord) => void;
+  onCreateMissingSlot?: (slot: LineVariantSlot) => void;
 };
 
 function formatVariantFact(variante: string | null | undefined): string {
@@ -69,6 +76,7 @@ function ProductSummaryCard({
   typologyLabel,
   hojasLabel,
   variantLabel,
+  extraFacts = [],
 }: {
   templateName: string;
   draft: FabricacionReceta;
@@ -76,6 +84,7 @@ function ProductSummaryCard({
   typologyLabel: string;
   hojasLabel: string;
   variantLabel: string;
+  extraFacts?: SummaryFact[];
 }) {
   const parsed = parseSodalL25VariantSlug(draft.identidad.variante);
   const facts: SummaryFact[] = [
@@ -93,6 +102,8 @@ function ProductSummaryCard({
       { label: "Pierna", value: formatSodalL25LegLabel(parsed.leg) },
       { label: "Refuerzo", value: formatSodalL25ReinforcementLabel(parsed.reinforcement) }
     );
+  } else if (extraFacts.length > 0) {
+    facts.push(...extraFacts);
   } else if (!isL25) {
     facts.push({ label: "Construcción", value: variantLabel });
   }
@@ -102,6 +113,7 @@ function ProductSummaryCard({
       <FabricacionTipologiaPreview
         tipologia={draft.identidad.tipologia}
         hojas={draft.identidad.hojas}
+        apertura={draft.identidad.apertura}
         size="sm"
       />
       <div className={s.productSummaryBody}>
@@ -270,6 +282,100 @@ function L25ProductPicker({
   );
 }
 
+function LineVariantProductPicker({
+  catalogKey,
+  draft,
+  recipes,
+  onSelectRecipe,
+  onCreateMissingSlot,
+}: {
+  catalogKey: string | null;
+  draft: FabricacionReceta;
+  recipes: FabricationRecipeRecord[];
+  onSelectRecipe?: (recipe: FabricationRecipeRecord) => void;
+  onCreateMissingSlot?: (slot: LineVariantSlot) => void;
+}) {
+  const model = buildLineVariantPickerModel({
+    catalogKey,
+    recipes,
+    recipe: draft,
+  });
+  if (!model || model.axes.length === 0) return null;
+  const slots = getLineVariantSlotsForFabricationTree(catalogKey);
+
+  const applySelection = (next: {
+    hojas: number;
+    apertura: string | null;
+    variantSlug: string;
+  }) => {
+    const resolved = resolveLineVariantPick({
+      slots,
+      recipes,
+      selection: next,
+    });
+    if (resolved.recipe) {
+      onSelectRecipe?.(resolved.recipe);
+      return;
+    }
+    if (resolved.slot) {
+      onCreateMissingSlot?.(resolved.slot);
+    }
+  };
+
+  return (
+    <>
+      {model.axes.map((axis) => (
+        <fieldset key={axis.id} className={s.choiceSet}>
+          <legend>{axis.label}</legend>
+          <div className={s.choiceGrid}>
+            {axis.options.map((option) => {
+              const selectedValue =
+                axis.id === "hojas"
+                  ? String(model.selection.hojas)
+                  : axis.id === "apertura"
+                    ? model.selection.apertura
+                    : model.selection.variantSlug;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={s.choiceChip}
+                  data-active={selectedValue === option.value ? "true" : "false"}
+                  disabled={!option.available}
+                  aria-pressed={selectedValue === option.value}
+                  onClick={() => {
+                    if (axis.id === "hojas") {
+                      applySelection({
+                        ...model.selection,
+                        hojas: Number(option.value),
+                      });
+                      return;
+                    }
+                    if (axis.id === "apertura") {
+                      applySelection({
+                        ...model.selection,
+                        apertura: option.value,
+                        variantSlug: "",
+                      });
+                      return;
+                    }
+                    applySelection({
+                      ...model.selection,
+                      variantSlug: option.value,
+                    });
+                  }}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+      ))}
+    </>
+  );
+}
+
 export function FabricacionMobileProductStep({
   templateName,
   catalogKey = null,
@@ -279,6 +385,7 @@ export function FabricacionMobileProductStep({
   readOnly,
   onDraftChange,
   onSelectRecipe,
+  onCreateMissingSlot,
 }: Props) {
   const isL25 = Boolean(
     formatSodalL25ConstructionLabel(draft.identidad.variante) ||
@@ -289,7 +396,13 @@ export function FabricacionMobileProductStep({
         })
       )
   );
-  const canEditIdentity = !readOnly && !isL25;
+  const variantPicker = buildLineVariantPickerModel({
+    catalogKey,
+    recipes,
+    recipe: draft,
+  });
+  const usesVariantPicker = isL25 || Boolean(variantPicker && variantPicker.axes.length > 0);
+  const canEditIdentity = !readOnly && !usesVariantPicker;
   const showHojasPicker =
     canEditIdentity &&
     (tipologiaPideSelectorHojas(draft.identidad.tipologia) ||
@@ -334,6 +447,23 @@ export function FabricacionMobileProductStep({
         typologyLabel={typologyLabel}
         hojasLabel={hojasLabel}
         variantLabel={variantLabel}
+        extraFacts={
+          variantPicker
+            ? variantPicker.axes
+                .filter((axis) => axis.id !== "hojas")
+                .map((axis) => ({
+                  label: axis.label,
+                  value:
+                    axis.options.find(
+                      (option) =>
+                        option.value ===
+                        (axis.id === "apertura"
+                          ? variantPicker.selection.apertura
+                          : variantPicker.selection.variantSlug)
+                    )?.label ?? variantLabel,
+                }))
+            : []
+        }
       />
 
       {isL25 && onSelectRecipe ? (
@@ -346,6 +476,20 @@ export function FabricacionMobileProductStep({
             draft={draft}
             recipes={recipes}
             onSelectRecipe={onSelectRecipe}
+          />
+        </section>
+      ) : variantPicker && (onSelectRecipe || onCreateMissingSlot) ? (
+        <section className={s.configSection} aria-labelledby="product-config-title">
+          <h2 id="product-config-title">Configuración</h2>
+          <p className={s.configHint}>
+            Elige la construcción. Los descuentos se ajustan en Perfiles.
+          </p>
+          <LineVariantProductPicker
+            catalogKey={catalogKey}
+            draft={draft}
+            recipes={recipes}
+            onSelectRecipe={onSelectRecipe}
+            onCreateMissingSlot={onCreateMissingSlot}
           />
         </section>
       ) : (
@@ -403,7 +547,7 @@ export function FabricacionMobileProductStep({
         </>
       )}
 
-      {!isL25 && !canEditIdentity && !readOnly ? (
+      {!usesVariantPicker && !canEditIdentity && !readOnly ? (
         <p className={s.hint}>Versión {selected.version}</p>
       ) : null}
     </div>

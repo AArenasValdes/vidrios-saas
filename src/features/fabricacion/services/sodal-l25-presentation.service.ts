@@ -1,12 +1,12 @@
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import {
+  isZetaConfirmedSourceReference,
   parseSodalL25VariantSlug,
   SODAL_L25_CATALOG_KEY,
   type SodalL25GlazingSlug,
   type SodalL25LegSlug,
   type SodalL25ReinforcementSlug,
 } from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
-import { isZetaConfirmedSourceReference } from "@/features/fabricacion/zeta/zeta-confirmed-loader";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
 export const SODAL_L25_COMMERCIAL_BASE_NAME = "L25";

@@ -10,7 +10,7 @@ import {
 
 describe("arquetipos estructurales de líneas comerciales", () => {
   it("mapea todas las líneas Ventora del catálogo fase 3", () => {
-    expect(Object.keys(CATALOG_KEY_TO_ARQUETIPO)).toHaveLength(28);
+    expect(Object.keys(CATALOG_KEY_TO_ARQUETIPO)).toHaveLength(29);
     expect(CATALOG_KEY_TO_ARQUETIPO["ventora:l5000"]).toBe("corredera_2h");
     expect(CATALOG_KEY_TO_ARQUETIPO["ventora:optima-s28-corredera-3h"]).toBe(
       "corredera_3h"
@@ -153,6 +153,25 @@ describe("arquetipos estructurales de líneas comerciales", () => {
 
     expect(recipe?.identidad.tipologia).toBe("puerta_vaiven");
     expect(recipe?.perfiles.length).toBeGreaterThan(0);
+  });
+
+  it("crea destajes SODAL 4800 al resolver la línea comercial", () => {
+    const recipe = crearRecetaEstructuralParaLineaComercial({
+      catalogKey: "ventora:serie-4800-corredera-2h",
+      lineName: "Serie 4800 — Corredera 2 hojas",
+    });
+
+    expect(recipe?.identidad.tipologia).toBe("corredera");
+    expect(recipe?.identidad.variante).toBe("normal");
+    expect(recipe?.perfiles.map((profile) => profile.codigoPerfil)).toEqual([
+      "4801",
+      "4802",
+      "4803",
+      "4804",
+      "4805",
+      "4806",
+      "4808",
+    ]);
   });
 
   it("mantiene Andes Monorriel separado de una corredera PVC de dos rieles", () => {

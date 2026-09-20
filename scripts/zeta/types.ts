@@ -21,6 +21,8 @@ export const EXTRACT_OUTCOMES = [
 
 export type ExtractOutcome = (typeof EXTRACT_OUTCOMES)[number];
 
+export const ZETA_EXTRACTOR_VERSION = "zeta-extractor-p1-2026-09-19" as const;
+
 export const GLAZING_TYPES = ["monolitico", "dvh"] as const;
 export type GlazingType = (typeof GLAZING_TYPES)[number];
 
@@ -66,10 +68,26 @@ export type HardwareItem = {
 };
 
 export type SourceEvidence = {
+  runId?: string | null;
   projectId: string | null;
   planId: string | null;
   screenshotPaths: string[];
   rawPath: string | null;
+  htmlPath?: string | null;
+  textPath?: string | null;
+  capturedAt?: string | null;
+  extractorVersion?: string | null;
+  artifactHashes?: {
+    html?: string | null;
+    text?: string | null;
+    screenshots?: Record<string, string>;
+  };
+  sourceFragments?: Array<{
+    id: string;
+    tipo: "perfil" | "vidrio" | "accesorio" | "identidad" | "advertencia";
+    locator: string;
+    texto: string;
+  }>;
   sourceDocument?: string | null;
 };
 
@@ -212,6 +230,7 @@ export type DerivedFormula = {
 };
 
 export type RunLog = {
+  runId: string;
   startedAt: string;
   finishedAt: string;
   command: string;

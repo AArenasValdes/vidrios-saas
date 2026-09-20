@@ -1,4 +1,14 @@
 import { ARQUETIPOS_ESTRUCTURALES, crearRecetaDesdeArquetipoEstructural, crearRecetaEstructuralParaLineaComercial } from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
+import {
+  SERIE_45_CATALOG_KEY,
+  isCurrentSerie45PracticableRecipe,
+} from "@/features/fabricacion/fixtures/serie-45-practicable-recipe";
+import {
+  SERIE_4800_CATALOG_KEY,
+  SERIE_4800_VARIANT_REFORZADA,
+  crearRecetaSerie4800Corredera,
+  isCurrentSerie4800CorrederaRecipe,
+} from "@/features/fabricacion/fixtures/serie-4800-corredera-recipe";
 import { fabricacionRecetaSchema } from "@/features/fabricacion/schemas/fabricacion-schemas";
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
 import { enriquecerRecetaDesdeCatalogo } from "@/features/fabricacion/services/enriquecer-receta-desde-catalogo.service";
@@ -116,6 +126,84 @@ function isLegacySerie32Seed(
   );
 }
 
+const LINE_45_LEGACY_CODES = new Set(["4501", "4502", "4504", "4508", "4511"]);
+
+function isStaleSerie45VentoraDraft(
+  catalogKey: string,
+  sourceReference: string | null,
+  recipe: FabricacionReceta
+): boolean {
+  if (catalogKey !== SERIE_45_CATALOG_KEY) return false;
+  if (isCurrentSerie45PracticableRecipe(recipe)) return false;
+  const source = sourceReference ?? "";
+  if (source.startsWith("ventora-arquetipo:")) return true;
+  if (source.includes("serie-45")) return true;
+  const codes = recipe.perfiles
+    .map((profile) => profile.codigoPerfil?.trim())
+    .filter((code): code is string => Boolean(code));
+  if (codes.length > 0 && codes.every((code) => LINE_45_LEGACY_CODES.has(code))) {
+    return true;
+  }
+  return recipe.identidad.tipologia === "puerta_abatible" && recipe.perfiles.length <= 6;
+}
+
+function isStaleSerie4800VentoraDraft(
+  catalogKey: string,
+  sourceReference: string | null,
+  recipe: FabricacionReceta
+): boolean {
+  if (catalogKey !== SERIE_4800_CATALOG_KEY) return false;
+  if (isCurrentSerie4800CorrederaRecipe(recipe)) return false;
+  const source = sourceReference ?? "";
+  if (source.startsWith("ventora-arquetipo:")) return true;
+  if (source.includes("serie-4800") || source.toLowerCase().includes("sodal-4800")) return true;
+  const codes = recipe.perfiles
+    .map((profile) => profile.codigoPerfil?.trim())
+    .filter((code): code is string => Boolean(code));
+  return recipe.identidad.tipologia === "corredera" && (codes.length === 0 || recipe.perfiles.length <= 7);
+}
+
+function buildSerie4800Replacement(
+  row: BorradorProyectanteRow,
+  recetaId: string,
+  current: FabricacionReceta
+): FabricacionReceta {
+  const variant =
+    current.identidad.variante === SERIE_4800_VARIANT_REFORZADA
+      ? SERIE_4800_VARIANT_REFORZADA
+      : "normal";
+  const replacement = crearRecetaSerie4800Corredera({
+    lineName: row.line_name,
+    variant,
+  });
+  return {
+    ...enriquecerRecetaDesdeCatalogo({
+      receta: replacement,
+      catalogKey: SERIE_4800_CATALOG_KEY,
+    }),
+    estado: "borrador",
+    identidad: { ...replacement.identidad, recetaId },
+  };
+}
+
+function buildCatalogReplacement(
+  catalogKey: string | null | undefined,
+  row: BorradorProyectanteRow,
+  recetaId: string
+): FabricacionReceta | null {
+  const replacement = crearRecetaEstructuralParaLineaComercial({
+    catalogKey,
+    lineName: row.line_name,
+  });
+  return replacement
+    ? {
+        ...enriquecerRecetaDesdeCatalogo({ receta: replacement, catalogKey }),
+        estado: "borrador",
+        identidad: { ...replacement.identidad, recetaId },
+      }
+    : null;
+}
+
 // La comparación histórica solo ignora identificadores aleatorios y estado.
 function comparable(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(comparable);
@@ -137,6 +225,12 @@ export function prepararReparacionBorradorCatalogo(
     sourceReference === "ventora-proyectante:catalogo-2026-09-13";
   const parsed = fabricacionRecetaSchema.safeParse(row.definition);
   if (!parsed.success) return null;
+  if (isStaleSerie45VentoraDraft(catalogKey ?? "", sourceReference, parsed.data)) {
+    return buildCatalogReplacement(catalogKey, row, parsed.data.identidad.recetaId);
+  }
+  if (isStaleSerie4800VentoraDraft(catalogKey ?? "", sourceReference, parsed.data)) {
+    return buildSerie4800Replacement(row, parsed.data.identidad.recetaId, parsed.data);
+  }
   const isLegacySerie42 = isLegacySerie42Seed(catalogKey ?? "", sourceReference, parsed.data);
   const isLegacySerie32 = isLegacySerie32Seed(catalogKey ?? "", sourceReference, parsed.data);
   if (

@@ -1,10 +1,20 @@
 import {
   BASE_LINE_CATALOG_KEYS,
   getLineVariantSlots,
+  getLineVariantSlotsForFabricationTree,
   isBaseLineCatalogKey,
   resolvePlantillaIdFromCatalogKey,
   type LineVariantSlot,
 } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
+import {
+  formatL20VariantTreeGroupLabel,
+  isL20CatalogKey,
+  L20_CATALOG_KEY,
+  L20_FIJOS_CATALOG_KEY,
+  resolveL20AperturaFromVariant,
+  resolveL20CatalogKeyForVariant,
+} from "@/features/fabricacion/fixtures/l20-alumetrica-variant-recipes";
+import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { buildFabricationRecipeSummary } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
@@ -28,6 +38,7 @@ export type FabricacionVariantTreeGroup = {
   typology: string;
   typologyLabel: string;
   leavesCount: number;
+  apertura?: string | null;
   items: FabricacionVariantTreeItem[];
 };
 
@@ -84,6 +95,27 @@ export function variantSlugMatchesRecipe(
       (recipe.includes("pierna") || recipe.includes("pierna_abierta"))
     );
   }
+  if (slot === "pierna_cerrada_jamba_2009") {
+    return (
+      recipe === slot ||
+      (recipe.includes("pierna_cerrada") && recipe.includes("2009")) ||
+      recipe === "caracol" ||
+      recipe === "estandar" ||
+      recipe === "normal"
+    );
+  }
+  if (slot === "pierna_cerrada" && recipe.includes("pierna_cerrada")) {
+    return !recipe.includes("2009");
+  }
+  if (slot === "pierna_abierta_jamba_2009") {
+    return recipe === slot || (recipe.includes("pierna_abierta") && recipe.includes("2009"));
+  }
+  if (slot === "pierna_abierta" && recipe === "pierna_abierta") {
+    return true;
+  }
+  if (slot === "tp_15mm") {
+    return recipe === slot || recipe.includes("tp_15");
+  }
   return false;
 }
 
@@ -96,6 +128,13 @@ export function recipeMatchesVariantSlot(
     return false;
   }
   if (identidad.hojas !== slot.leavesCount) return false;
+  if (
+    slot.apertura &&
+    identidad.apertura &&
+    normalizeText(identidad.apertura) !== normalizeText(slot.apertura)
+  ) {
+    return false;
+  }
   return variantSlugMatchesRecipe(identidad.variante, slot.variantSlug);
 }
 
@@ -139,6 +178,35 @@ export function formatTypologyLeavesLabel(input: {
   return `${tipologia} · ${input.leavesCount} ${input.leavesCount === 1 ? "hoja" : "hojas"}`;
 }
 
+function formatVariantTreeGroupLabel(
+  catalogKey: string | null | undefined,
+  slot: LineVariantSlot
+): string {
+  if (isL20CatalogKey(catalogKey) && slot.apertura) {
+    const apertura = resolveL20AperturaFromVariant(slot.apertura) ?? slot.apertura;
+    if (apertura === "corredera" || apertura === "fija") {
+      return formatL20VariantTreeGroupLabel({
+        apertura,
+        leavesCount: slot.leavesCount,
+      });
+    }
+  }
+  return formatTypologyLeavesLabel({
+    typology: slot.typology,
+    leavesCount: slot.leavesCount,
+  });
+}
+
+function variantTreeGroupSortRank(group: FabricacionVariantTreeGroup): number {
+  const aperturaRank =
+    group.apertura === "fija"
+      ? 1
+      : group.apertura === "corredera"
+        ? 0
+        : 2;
+  return group.leavesCount * 10 + aperturaRank;
+}
+
 function collectPendingFields(recipe: FabricacionReceta | null, slot: LineVariantSlot): string[] {
   const pending = new Set<string>(slot.pendingFields);
   if (recipe?.datosPendientes?.length) {
@@ -179,11 +247,21 @@ export function buildVariantTreeItem(
   const validated = recipe?.status === "validated";
 
   let statusLabel = "Sin configurar";
-  if (!recipe) statusLabel = "Pendiente de crear";
-  else if (validated) statusLabel = "Validada en taller";
-  else if (calculable && listaParaProbar) statusLabel = "Lista para probar";
-  else if (compositionComplete) statusLabel = "Revisar ajustes";
-  else statusLabel = "Configuración pendiente";
+  if (!recipe) {
+    statusLabel = "Agregar a tu taller";
+  } else if (validated) {
+    statusLabel = "Validada en taller";
+  } else if (recipe.status === "testing") {
+    statusLabel = "En prueba";
+  } else if (calculable && listaParaProbar) {
+    statusLabel = "Fórmulas listas";
+  } else if (compositionComplete) {
+    statusLabel = "Perfiles cargados";
+  } else if (recipe.definition.perfiles.length > 0) {
+    statusLabel = "Revisar perfiles";
+  } else {
+    statusLabel = "Completar receta";
+  }
 
   return {
     slot,
@@ -197,17 +275,108 @@ export function buildVariantTreeItem(
   };
 }
 
+export function resolveL20SiblingCatalogKey(
+  catalogKey: string | null | undefined
+): typeof L20_CATALOG_KEY | typeof L20_FIJOS_CATALOG_KEY | null {
+  if (catalogKey === L20_CATALOG_KEY) return L20_FIJOS_CATALOG_KEY;
+  if (catalogKey === L20_FIJOS_CATALOG_KEY) return L20_CATALOG_KEY;
+  return null;
+}
+
+export function resolveL20SiblingLineTemplateId(
+  templates: Pick<CotizacionLineTemplate, "id" | "catalogKey">[],
+  catalogKey: string | null | undefined
+): number | null {
+  const siblingCatalogKey = resolveL20SiblingCatalogKey(catalogKey);
+  if (!siblingCatalogKey) return null;
+  return templates.find((entry) => entry.catalogKey === siblingCatalogKey)?.id ?? null;
+}
+
+export function mergeL20OrganizationRecipes(input: {
+  catalogKey: string | null | undefined;
+  lineTemplateId: number;
+  siblingLineTemplateId: number | null;
+  recipes: FabricationRecipeRecord[];
+}): FabricationRecipeRecord[] {
+  if (!isL20CatalogKey(input.catalogKey)) {
+    return input.recipes.filter(
+      (recipe) =>
+        recipe.scope === "organization" &&
+        recipe.lineTemplateId === input.lineTemplateId &&
+        !recipe.eliminadoEn
+    );
+  }
+
+  const templateIds = new Set<number>([input.lineTemplateId]);
+  if (input.siblingLineTemplateId != null) {
+    templateIds.add(input.siblingLineTemplateId);
+  }
+
+  return input.recipes
+    .filter(
+      (recipe) =>
+        recipe.scope === "organization" &&
+        templateIds.has(recipe.lineTemplateId) &&
+        !recipe.eliminadoEn
+    )
+    .sort(
+      (left, right) =>
+        new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
+    );
+}
+
+export function resolveDefaultDetailRecipeForLine(input: {
+  catalogKey: string | null | undefined;
+  lineTemplateId: number;
+  recipes: FabricationRecipeRecord[];
+}): FabricationRecipeRecord | null {
+  const ownRecipes = input.recipes.filter((recipe) => recipe.lineTemplateId === input.lineTemplateId);
+  const primarySlots = getLineVariantSlots(input.catalogKey);
+
+  for (const slot of primarySlots) {
+    const match = findRecipeForVariantSlot(ownRecipes, slot);
+    if (match) return match;
+  }
+
+  if (isL20CatalogKey(input.catalogKey)) {
+    for (const slot of primarySlots) {
+      const match = findRecipeForVariantSlot(input.recipes, slot);
+      if (match) return match;
+    }
+  }
+
+  return ownRecipes[0] ?? input.recipes[0] ?? null;
+}
+
+export function resolveTargetLineTemplateForVariantSlot(input: {
+  catalogKey: string | null | undefined;
+  lineTemplateId: number;
+  siblingLineTemplateId: number | null;
+  slot: LineVariantSlot;
+}): number {
+  if (!isL20CatalogKey(input.catalogKey)) {
+    return input.lineTemplateId;
+  }
+
+  const slotCatalogKey = resolveL20CatalogKeyForVariant(input.slot.variantSlug);
+  if (slotCatalogKey === input.catalogKey) {
+    return input.lineTemplateId;
+  }
+
+  return input.siblingLineTemplateId ?? input.lineTemplateId;
+}
+
 export function buildVariantTreeGroups(input: {
   catalogKey: string | null | undefined;
   recipes: FabricationRecipeRecord[];
 }): FabricacionVariantTreeGroup[] {
-  const slots = getLineVariantSlots(input.catalogKey);
+  const slots = getLineVariantSlotsForFabricationTree(input.catalogKey);
   if (slots.length === 0) return [];
 
   const groupMap = new Map<string, FabricacionVariantTreeGroup>();
 
   slots.forEach((slot) => {
-    const key = `${slot.typology}:${slot.leavesCount}`;
+    const key = `${slot.typology}:${slot.leavesCount}:${slot.apertura ?? "default"}`;
     const recipe = findRecipeForVariantSlot(input.recipes, slot);
     const item = buildVariantTreeItem(slot, recipe);
     const existing = groupMap.get(key);
@@ -217,17 +386,15 @@ export function buildVariantTreeGroups(input: {
     }
     groupMap.set(key, {
       typology: slot.typology,
-      typologyLabel: formatTypologyLeavesLabel({
-        typology: slot.typology,
-        leavesCount: slot.leavesCount,
-      }),
+      typologyLabel: formatVariantTreeGroupLabel(input.catalogKey, slot),
       leavesCount: slot.leavesCount,
+      apertura: slot.apertura ?? null,
       items: [item],
     });
   });
 
   return Array.from(groupMap.values()).sort(
-    (left, right) => left.leavesCount - right.leavesCount
+    (left, right) => variantTreeGroupSortRank(left) - variantTreeGroupSortRank(right)
   );
 }
 
@@ -289,7 +456,7 @@ export function listMissingVariantSlots(input: {
   catalogKey: string | null | undefined;
   recipes: FabricationRecipeRecord[];
 }): LineVariantSlot[] {
-  return getLineVariantSlots(input.catalogKey).filter(
+  return getLineVariantSlotsForFabricationTree(input.catalogKey).filter(
     (slot) => !findRecipeForVariantSlot(input.recipes, slot)
   );
 }

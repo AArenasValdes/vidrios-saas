@@ -21,6 +21,8 @@ import monolitico_pierna_cerrada_2h_1800x1500 from "../../../../docs/fabricacion
 import monolitico_pierna_cerrada_3h_3000x1500 from "../../../../docs/fabricacion/zeta/confirmed/sodal/l25/monolitico_pierna_cerrada_3h_3000x1500.json";
 import monolitico_pierna_cerrada_4h_3000x1500 from "../../../../docs/fabricacion/zeta/confirmed/sodal/l25/monolitico_pierna_cerrada_4h_3000x1500.json";
 
+export { isZetaConfirmedSourceReference } from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
+
 import { normalizeConfirmedRecipe } from "@/features/fabricacion/zeta/zeta-normalize";
 import type { ConfirmedRecipe } from "@/features/fabricacion/zeta/zeta-types";
 
@@ -58,6 +60,11 @@ export const SODAL_L25_CONFIRMED_RECIPE_IDS = Object.keys(
 let cachedConfirmed: ConfirmedRecipe[] | null = null;
 let cachedById: Map<string, ConfirmedRecipe> | null = null;
 
+export function resetZetaConfirmedCacheForTests(): void {
+  cachedConfirmed = null;
+  cachedById = null;
+}
+
 export function loadAllConfirmedRecipes(): ConfirmedRecipe[] {
   if (cachedConfirmed) return cachedConfirmed;
   cachedConfirmed = SODAL_L25_CONFIRMED_RECIPE_IDS.map((recipeId) =>
@@ -81,12 +88,6 @@ export function loadConfirmedRecipesById(): Map<string, ConfirmedRecipe> {
 
 export function buildZetaSourceReference(recipeId: string): string {
   return `zeta:confirmed:sodal/l25/${recipeId}`;
-}
-
-export function isZetaConfirmedSourceReference(
-  sourceReference: string | null | undefined
-): boolean {
-  return (sourceReference ?? "").startsWith("zeta:confirmed:sodal/l25/");
 }
 
 export function recipeIdFromZetaSourceReference(

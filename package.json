@@ -42,6 +42,8 @@
     "video:render:demo-master": "remotion render remotion/index.tsx VentoraDemoMasterVertical out/ventora-demo-master-vertical.mp4 --concurrency=1 --crf=28",
     "push:vapid": "web-push generate-vapid-keys",
     "zeta:extract": "node --experimental-strip-types scripts/zeta/extract.ts",
+    "zeta:build-evidence-sidecars": "node --experimental-strip-types scripts/zeta/build-evidence-sidecars.ts",
+    "zeta:audit-evidence-gaps": "node --experimental-strip-types scripts/zeta/audit-evidence-gaps.ts",
     "zeta:validate": "node --experimental-strip-types scripts/zeta/validate.ts",
     "zeta:coverage": "node --experimental-strip-types scripts/zeta/coverage.ts",
     "zeta:derive": "node --experimental-strip-types scripts/zeta/derive.ts",

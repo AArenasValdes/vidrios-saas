@@ -1,6 +1,6 @@
 <!-- Generado por `pnpm zeta:coverage`. No editar a mano. Fuente: JSON en confirmed/ + targets.json -->
 
-# Índice de recetas Zeta — SODAL / L25
+# Índice de recetas Zeta — SODAL
 
 `CONFIRMED` solo significa que existe un Plan de armado real observado en Sistema Zeta. No equivale a validación física de taller ni a receta implementada en Ventora.
 
@@ -12,6 +12,7 @@
 | SODAL | L25 | MONOLITICO PIERNA ABIERTA | monolitico | CONFIRMED | CONFIRMED | CONFIRMED | confirmed/sodal/l25/monolitico_pierna_abierta_2h_1800x1500.json | CONFIRMED |
 | SODAL | L25 | MONOLITICO PIERNA ABIERTA REFORZADA | monolitico | CONFIRMED | CONFIRMED | CONFIRMED | confirmed/sodal/l25/monolitico_pierna_abierta_reforzada_2h_1800x1500.json | CONFIRMED |
 | SODAL | L25 | MONOLITICO PIERNA CERRADA | monolitico | CONFIRMED | CONFIRMED | CONFIRMED | confirmed/sodal/l25/monolitico_pierna_cerrada_2h_1800x1500.json | CONFIRMED |
+| SODAL | 4800 | MONOLITICO | monolitico | CONFIRMED | CONFIRMED | PENDING | confirmed/sodal/4800/monolitico_2h_1800x1500.json | PARTIAL |
 
 ## Pruebas geométricas extra
 
@@ -22,10 +23,10 @@
 
 ## Resumen
 
-- confirmed: 22
-- pending: 0
+- confirmed: 24
+- pending: 1
 - conflicts: 4
-- totalKnown: 22
+- totalKnown: 25
 
 ## Límites
 
