@@ -639,8 +639,11 @@ export default function CotizacionPrintPage() {
   } as CSSProperties;
 
   const exportFileName = visibleCotizacion ? buildPrintPdfFileName(visibleCotizacion) : "cotizacion.pdf";
+  // Increment this when changing the PDF renderer so a same-session Blob cache
+  // cannot return a file generated from an older drawing/layout.
+  const pdfRenderRevision = "separate-export-sheet-v8-svg-bounds";
   const pdfCacheKey = visibleCotizacion
-    ? `${visibleCotizacion.id}:${visibleCotizacion.updatedAt}:${organizationProfile.brandColor}`
+    ? `${visibleCotizacion.id}:${visibleCotizacion.updatedAt}:${organizationProfile.brandColor}:${pdfRenderRevision}`
     : null;
   const approvalUrl =
     visibleCotizacion?.approvalToken ? buildCotizacionApprovalUrl(visibleCotizacion.approvalToken) : null;
@@ -894,6 +897,7 @@ export default function CotizacionPrintPage() {
           customSchemeDescription,
           isCustomScheme,
           referencia,
+          itemLabel: item.nombre,
           ancho: item.ancho,
           alto: item.alto,
           colorHex,
@@ -1091,6 +1095,18 @@ export default function CotizacionPrintPage() {
     setShowExportRender,
     setShowWhatsappFallbackActions,
   ]);
+
+  const handlePrint = useCallback(() => {
+    const isMobileBrowser =
+      typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    if (isMobileBrowser || typeof window.print !== "function") {
+      void handleDownloadPdf();
+      return;
+    }
+
+    window.print();
+  }, [handleDownloadPdf]);
 
   const handleWhatsappShare = useCallback(async () => {
     try {
@@ -1630,6 +1646,7 @@ export default function CotizacionPrintPage() {
                     customSchemeDescription: presentation?.customSchemeDescription,
                     isCustomScheme: presentation?.isCustomScheme,
                     referencia: presentation?.referencia,
+                    itemLabel: item.nombre,
                     ancho: item.ancho,
                     alto: item.alto,
                     colorHex,
@@ -2000,7 +2017,7 @@ export default function CotizacionPrintPage() {
             </Link>
             <button
               className={s.actionSecondary}
-              onClick={() => window.print()}
+              onClick={handlePrint}
               type="button"
               disabled={isExporting}
             >
@@ -2101,6 +2118,7 @@ export default function CotizacionPrintPage() {
           </section>
         </div>
       ) : null}
+
     </main>
   );
 }

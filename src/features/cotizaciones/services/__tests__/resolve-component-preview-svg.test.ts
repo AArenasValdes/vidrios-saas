@@ -78,6 +78,29 @@ describe("resolveComponentPreviewSvg", () => {
     expect(resized).toContain("1800 mm");
   });
 
+  it("activa el dibujo 25/50/25 solo con la presentación de la cotización móvil", () => {
+    const input = {
+      type: "Ventana",
+      system: "Corredera",
+      sheetScheme: "3 hojas",
+      sheetVariant: "2 móviles + 1 fija",
+      width: 2000,
+      height: 1200,
+      colorHex: "#a8a8a8",
+      maxW: 240,
+      maxH: 164,
+    };
+    const mobileGuided = resolveComponentPreviewSvg({
+      ...input,
+      presentation: "mobile-guided",
+    });
+    const generic = resolveComponentPreviewSvg(input);
+
+    expect(mobileGuided).toContain('data-window-fixed-label="true"');
+    expect(mobileGuided).toContain('aria-label="Ventana corredera de 3 hojas, centro fijo"');
+    expect(generic).not.toContain('data-window-fixed-label="true"');
+  });
+
   it("no renderiza items libres con valor", () => {
     expect(shouldRenderComponentPreview("Trabajo libre / Mantencion")).toBe(false);
     expect(resolveComponentPreviewSvg({ type: "Trabajo libre / Mantencion" })).toBe("");

@@ -6,6 +6,7 @@ import {
 } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import {
   generateComponentSVG,
+  isThreeLeafCenterFixedSlidingWindowPresentation,
   resolveLightCierrePreviewBackground,
   resolveLightDoorPreviewBackground,
   resolveLightFixedPanePreviewBackground,
@@ -24,6 +25,7 @@ type ResolveItemDrawingSvgInput = {
   customSchemeDescription?: string | null;
   isCustomScheme?: boolean;
   referencia?: string | null;
+  itemLabel?: string | null;
   ancho: number | null;
   alto: number | null;
   colorHex: string;
@@ -38,6 +40,7 @@ type ResolveItemDrawingSvgInput = {
   maxW?: number;
   maxH?: number;
   variant?: "pdf" | "default";
+  presentation?: "mobile-guided";
 };
 
 /** Misma prioridad que PDF: guided formal/bridge primero, legacy después. */
@@ -48,19 +51,67 @@ export function resolveCotizacionItemDrawingSvg(
   const maxH = input.maxH ?? 260;
   const variant = input.variant ?? "pdf";
   const guidedVariant = variant === "pdf" ? "pdf" : "thumbnail";
+  const componentSvgParams: ComponentSVGParams = {
+    tipo: input.tipo,
+    sistema: input.sistema ?? undefined,
+    configuracion: input.configuracion ?? undefined,
+    hojasBase: input.hojasBase ?? undefined,
+    sheetScheme: input.sheetScheme ?? undefined,
+    sheetVariant: input.sheetVariant ?? undefined,
+    customSchemeDescription: input.customSchemeDescription ?? undefined,
+    isCustomScheme: input.isCustomScheme,
+    referencia: input.referencia ?? undefined,
+    ancho: input.ancho,
+    alto: input.alto,
+    colorHex: input.colorHex,
+    material: input.material,
+    presentation: variant === "pdf" ? "quote-pdf" : input.presentation,
+    maxW,
+    maxH,
+    variant,
+    palilloEnabled: input.palilloEnabled,
+    palilloType: input.palilloType || undefined,
+    mirrorFormat: input.mirrorFormat,
+    mirrorPaneCount: input.mirrorPaneCount ?? undefined,
+    mirrorPaneDirection: input.mirrorPaneDirection,
+    mirrorInteriorLine: input.mirrorInteriorLine,
+  };
+  const normalizedItemLabel = (input.itemLabel ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const isNamedThreeLeafCenterFixedPdf = variant === "pdf" &&
+    normalizedItemLabel.includes("corredera") &&
+    normalizedItemLabel.includes("3 hojas") &&
+    normalizedItemLabel.includes("2 moviles + 1 fija");
+  const targetSvgParams = isNamedThreeLeafCenterFixedPdf
+    ? {
+        ...componentSvgParams,
+        tipo: "Ventana",
+        sistema: "Corredera",
+        hojasBase: 3 as const,
+        sheetScheme: "3 hojas",
+        sheetVariant: "2 móviles + 1 fija",
+        customSchemeDescription: undefined,
+        isCustomScheme: false,
+      }
+    : componentSvgParams;
 
   try {
+    // Esta variante necesita conservar el dibujo de 3 paños también en PDF.
+    // La configuración guiada puede existir, pero su renderer no representa
+    // la distribución comercial 25/50/25 de esta presentación.
+    if (isNamedThreeLeafCenterFixedPdf || isThreeLeafCenterFixedSlidingWindowPresentation(targetSvgParams)) {
+      return generateComponentSVG(targetSvgParams);
+    }
+
     if (input.guidedVisualConfig) {
       const guidedVisualConfig = applyCommercialPalilloToGuidedVisualConfig({
         config: ensureGuidedVisualConfig(input.guidedVisualConfig),
         palilloEnabled: input.palilloEnabled,
         palilloType: input.palilloType,
       });
-      const previewBackgroundParams: ComponentSVGParams = {
-        ...input,
-        tipo: input.tipo,
-        palilloType: input.palilloType ?? undefined,
-      };
+      const previewBackgroundParams = componentSvgParams;
 
       return renderGuidedVisualSvg(guidedVisualConfig, {
         maxW,
@@ -83,29 +134,5 @@ export function resolveCotizacionItemDrawingSvg(
     // fallback legacy abajo
   }
 
-  return generateComponentSVG({
-    tipo: input.tipo,
-    sistema: input.sistema ?? undefined,
-    configuracion: input.configuracion ?? undefined,
-    hojasBase: input.hojasBase ?? undefined,
-    sheetScheme: input.sheetScheme ?? undefined,
-    sheetVariant: input.sheetVariant ?? undefined,
-    customSchemeDescription: input.customSchemeDescription ?? undefined,
-    isCustomScheme: input.isCustomScheme,
-    referencia: input.referencia ?? undefined,
-    ancho: input.ancho,
-    alto: input.alto,
-    colorHex: input.colorHex,
-    material: input.material,
-    presentation: variant === "pdf" ? "quote-pdf" : undefined,
-    maxW,
-    maxH,
-    variant,
-    palilloEnabled: input.palilloEnabled,
-    palilloType: input.palilloType || undefined,
-    mirrorFormat: input.mirrorFormat,
-    mirrorPaneCount: input.mirrorPaneCount ?? undefined,
-    mirrorPaneDirection: input.mirrorPaneDirection,
-    mirrorInteriorLine: input.mirrorInteriorLine,
-  });
+  return generateComponentSVG(componentSvgParams);
 }

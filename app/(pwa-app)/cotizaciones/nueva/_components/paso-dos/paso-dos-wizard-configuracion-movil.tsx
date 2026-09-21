@@ -266,6 +266,13 @@ export function PasoDosWizardConfiguracionMovil({
   const referencia = draft.referencia?.trim() ?? "";
   const precioPorM2 = draft.precioPorM2?.trim() ?? "";
   const isBowWindow = draft.subtipo === "Ventana" && draft.sistema === "Bow Window";
+  const isMobileGuidedThreeLeafCentralFixedSlidingWindow =
+    draft.subtipo === "Ventana" &&
+    draft.sistema === "Corredera" &&
+    draft.sheetScheme === "3 hojas" &&
+    draft.sheetVariant === "2 móviles + 1 fija" &&
+    !draft.isCustomScheme &&
+    !draft.customSchemeDescription?.trim();
   const showSheetScheme = shouldShowSheetSchemeForComponent({
     tipo: draft.subtipo,
     sistema: draft.sistema,
@@ -1963,6 +1970,7 @@ export function PasoDosWizardConfiguracionMovil({
           material={draft.material}
           sheetScheme={draft.sheetScheme}
           sheetVariant={draft.sheetVariant}
+          presentation={isMobileGuidedThreeLeafCentralFixedSlidingWindow ? "mobile-guided" : undefined}
           customSchemeDescription={draft.customSchemeDescription}
           isCustomScheme={draft.isCustomScheme}
           hojasBase={draft.hojasBase}

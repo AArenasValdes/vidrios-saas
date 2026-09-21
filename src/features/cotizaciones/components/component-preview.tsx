@@ -21,6 +21,7 @@ export type ComponentPreviewProps = {
   material?: string | null;
   sheetScheme?: string | null;
   sheetVariant?: string | null;
+  presentation?: "mobile-guided";
   customSchemeDescription?: string | null;
   isCustomScheme?: boolean;
   hojasBase?: 1 | 2 | 3 | 4 | 5 | null;
@@ -51,6 +52,7 @@ function buildPreviewInput(props: ComponentPreviewProps): ComponentPreviewInput 
     material: props.material,
     sheetScheme: props.sheetScheme,
     sheetVariant: props.sheetVariant,
+    presentation: props.presentation,
     customSchemeDescription: props.customSchemeDescription,
     isCustomScheme: props.isCustomScheme,
     hojasBase: props.hojasBase,
@@ -93,6 +95,7 @@ export function ComponentPreview(props: ComponentPreviewProps) {
     props.mirrorPaneDirection,
     props.palilloEnabled,
     props.palilloType,
+    props.presentation,
     props.referencia,
     props.sheetScheme,
     props.sheetVariant,

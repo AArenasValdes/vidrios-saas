@@ -8,6 +8,14 @@ Historial de cambios en la documentacion del mapa tecnico.
 - Panel founder `/admin/novedades` para borradores, publicación explícita, edición, archivo y enlace opcional a propuestas implementadas.
 - Migración local `20260921164735_product_announcements.sql`; RLS habilitada y tablas disponibles solo mediante rutas servidor autenticadas.
 - Feed móvil simplificado a tarjetas compactas; **Ver actualización** despliega el detalle y registra la lectura, quitando ese anuncio del contador de la campana.
+- El detalle del comunicado separa párrafos, encabezados y listas para facilitar la lectura en móvil. La actualización del 21 de septiembre dirige a las rutas reales para configurar vidrios, costos y líneas; mantiene referencias secundarias al flujo de cotización sin cambiar Supabase ni el estado de lectura.
+
+## 2026-09-21 - Croquis móvil de corredera de 3 hojas
+
+- `PasoDosWizardConfiguracionMovil` activa una representación específica para Ventana + Corredera + 3 hojas + “2 móviles + 1 fija”: 25/50/25, fijo central rotulado y flechas hacia el centro. Cotas exteriores conservan el ancho y alto ingresados.
+- La misma representación se reutiliza en el PDF de esa variante exacta; el SVG genérico y las demás variantes permanecen sin cambios.
+- La clave de caché del PDF incluye una revisión del render para evitar reutilizar en la misma sesión un archivo con el dibujo anterior.
+- QA 21-09: descarga rasterizaba una hoja oculta distinta de la vista que usa `window.print()`, manteniendo dos rutas de render. PDF ahora rasteriza la misma hoja visible que se imprime; móvil abre/descarga ese mismo PDF porque `window.print()` no es fiable en webviews. Se elimina la hoja oculta y su clase de exportación inexistente; la caché pasa a revisión `single-preview-print-source-v4`.
 
 ## 2026-09-21 - Catálogo VERATEC PVC 7400
 

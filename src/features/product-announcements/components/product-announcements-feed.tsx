@@ -16,6 +16,133 @@ function formatDate(value: string | null) {
   return new Intl.DateTimeFormat("es-CL", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value));
 }
 
+type AnnouncementBodySection = {
+  heading: string | null;
+  paragraphs: string[];
+  listItems: string[];
+  location?: string;
+  locationLabel?: string;
+  note?: string;
+  privacy?: string;
+};
+
+type AnnouncementFeedPresentation = {
+  title: string;
+  summary: string;
+  bodySections: AnnouncementBodySection[];
+};
+
+const ANNOUNCEMENT_PRESENTATION_OVERRIDES: Record<string, AnnouncementFeedPresentation> = {
+  "9026be5c-f53d-45c2-bf95-b13ef0f87073": {
+    title: "Más formas de cotizar y controlar tus trabajos",
+    summary: "Vidrios, rentabilidad y nuevas líneas.",
+    bodySections: [
+      {
+        heading: "Vidrios y cristales",
+        paragraphs: [
+          "Guarda productos de cristal con espesor, terminación y precio por m²; reutilízalos en reposiciones, espejos, termopaneles y opciones personalizadas.",
+        ],
+        listItems: [],
+        location: "Configuración de empresa → Catálogo privado → Líneas y precios → Nuevo vidrio",
+        locationLabel: "Configúralos en:",
+      },
+      {
+        heading: "Costos y rentabilidad",
+        paragraphs: [
+          "Define mano de obra, traslado, otros costos, merma y margen objetivo. Si agregas el costo de materiales, Ventora estima utilidad y margen antes de enviar.",
+        ],
+        listItems: [],
+        location: "Configuración de empresa → Costos y rentabilidad. La estimación aparece en el Paso 3.",
+        locationLabel: "Configúralos en:",
+        privacy: "Los costos son internos y no aparecen en el PDF del cliente.",
+      },
+      {
+        heading: "Más líneas y variantes",
+        paragraphs: [
+          "Veratec 7400 PVC (corredera de 2 hojas), Serie 45 practicable, Serie 4800 SODAL, líneas 15 y 4000 y variantes ALAR/SODAL para AL-42.",
+        ],
+        listItems: [],
+        location: "Configuración de empresa → Catálogo privado → Líneas y precios. Ahí revisas precios y cuáles están activas para cotizar.",
+        locationLabel: "Adminístralas en:",
+        note: "La cubicación y el despiece varían por línea; algunas pautas siguen en validación.",
+      },
+      {
+        heading: "¿Falta una línea que utilizas?",
+        paragraphs: [
+          "Envíanos proveedor, línea y tipo de apertura. Así priorizamos nuevas incorporaciones.",
+        ],
+        listItems: [],
+      },
+    ],
+  },
+};
+
+function toSentenceCase(value: string) {
+  const text = value.trim().toLocaleLowerCase("es-CL");
+  return text.replace(/^([¿¡]?\s*)(\p{L})/u, (_, prefix: string, firstLetter: string) =>
+    `${prefix}${firstLetter.toLocaleUpperCase("es-CL")}`
+  );
+}
+
+function isSectionHeading(line: string) {
+  const letterCount = (line.match(/\p{L}/gu) ?? []).length;
+  return line.length <= 80 && letterCount >= 3 && line === line.toLocaleUpperCase("es-CL");
+}
+
+function parseAnnouncementBody(body: string): AnnouncementBodySection[] {
+  const sections: AnnouncementBodySection[] = [];
+  let current: AnnouncementBodySection = { heading: null, paragraphs: [], listItems: [] };
+  let paragraphLines: string[] = [];
+  let continuingList = false;
+
+  const flushParagraph = () => {
+    if (paragraphLines.length > 0) {
+      current.paragraphs.push(paragraphLines.join(" "));
+      paragraphLines = [];
+    }
+    continuingList = false;
+  };
+  const saveSection = () => {
+    if (current.heading || current.paragraphs.length > 0 || current.listItems.length > 0) {
+      sections.push(current);
+    }
+  };
+
+  for (const rawLine of body.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) {
+      flushParagraph();
+      continue;
+    }
+
+    if (isSectionHeading(line)) {
+      flushParagraph();
+      saveSection();
+      current = { heading: toSentenceCase(line), paragraphs: [], listItems: [] };
+      continue;
+    }
+
+    const bullet = line.match(/^(?:•|[-–])\s+(.+)$/);
+    if (bullet) {
+      flushParagraph();
+      current.listItems.push(bullet[1]);
+      continuingList = true;
+      continue;
+    }
+
+    if (continuingList && current.listItems.length > 0) {
+      const lastIndex = current.listItems.length - 1;
+      current.listItems[lastIndex] = `${current.listItems[lastIndex]} ${line}`;
+    } else {
+      paragraphLines.push(line);
+    }
+  }
+
+  flushParagraph();
+  saveSection();
+  return sections;
+}
+
 function publishUnreadCount(count: number) {
   window.dispatchEvent(new CustomEvent("ventora:novedades-unread", { detail: count }));
 }
@@ -106,6 +233,8 @@ export function ProductAnnouncementsFeed() {
         <section className={s.list} aria-label="Actualizaciones publicadas">
           {announcements.map((announcement) => {
             const categoryLabel = PRODUCT_ANNOUNCEMENT_CATEGORIES.find((item) => item.value === announcement.category)?.label ?? "Actualización";
+            const presentation = ANNOUNCEMENT_PRESENTATION_OVERRIDES[announcement.id];
+            const bodySections = presentation?.bodySections ?? parseAnnouncementBody(announcement.body);
             const isExpanded = expandedIds.includes(announcement.id);
             const isReading = readingIds.includes(announcement.id);
             const detailsId = `announcement-details-${announcement.id}`;
@@ -118,12 +247,50 @@ export function ProductAnnouncementsFeed() {
                   {!announcement.isRead ? <span className={s.newLabel}>Nueva</span> : null}
                   <time dateTime={announcement.publishedAt ?? undefined}>{formatDate(announcement.publishedAt)}</time>
                 </div>
-                <h2>{announcement.title}</h2>
-                <p className={s.summary}>{announcement.summary}</p>
+                <h2>{presentation?.title ?? announcement.title}</h2>
+                <p className={s.summary}>{presentation?.summary ?? announcement.summary}</p>
 
                 {isExpanded ? (
                   <div className={s.details} id={detailsId}>
-                    <p className={s.body}>{announcement.body}</p>
+                    <div className={s.readingContent}>
+                      {bodySections.map((section, index) => (
+                        section.heading ? (
+                          <section className={s.bodySection} aria-labelledby={`${detailsId}-section-${index}`} key={`${index}-${section.heading}`}>
+                            <h3 className={s.bodyHeading} id={`${detailsId}-section-${index}`}>{section.heading}</h3>
+                            {section.paragraphs.map((paragraph, paragraphIndex) => (
+                              <p className={s.bodyParagraph} key={`${index}-paragraph-${paragraphIndex}`}>{paragraph}</p>
+                            ))}
+                            {section.location ? (
+                              <p className={s.bodyLocation} key={`${index}-location`}>
+                                <strong>{section.locationLabel ?? "Dónde:"}</strong> {section.location}
+                              </p>
+                            ) : null}
+                            {section.note ? (
+                              <p className={s.bodyNote} key={`${index}-note`}>{section.note}</p>
+                            ) : null}
+                            {section.privacy ? (
+                              <p className={s.bodyPrivacy} key={`${index}-privacy`}>{section.privacy}</p>
+                            ) : null}
+                            {section.listItems.length > 0 ? (
+                              <ul className={s.bodyList}>
+                                {section.listItems.map((item, itemIndex) => <li key={`${index}-item-${itemIndex}`}>{item}</li>)}
+                              </ul>
+                            ) : null}
+                          </section>
+                        ) : (
+                          <div className={s.bodyIntro} key={`${index}-intro`}>
+                            {section.paragraphs.map((paragraph, paragraphIndex) => (
+                              <p className={s.bodyLead} key={`${index}-lead-${paragraphIndex}`}>{paragraph}</p>
+                            ))}
+                            {section.listItems.length > 0 ? (
+                              <ul className={s.bodyList}>
+                                {section.listItems.map((item, itemIndex) => <li key={`${index}-intro-item-${itemIndex}`}>{item}</li>)}
+                              </ul>
+                            ) : null}
+                          </div>
+                        )
+                      ))}
+                    </div>
                     {announcement.actionHref && announcement.actionLabel ? (
                       <Link className={s.actionLink} href={announcement.actionHref}>
                         {announcement.actionLabel}<LuArrowUpRight aria-hidden />

@@ -927,6 +927,63 @@ describe("generateComponentSVG", () => {
     expect(fijaCentral).not.toEqual(fijasLaterales);
   });
 
+  it("dibuja 25/50/25 para la vista móvil y PDF de 3 hojas con fijo central", () => {
+    const base = {
+      tipo: "Ventana",
+      sistema: "Corredera",
+      sheetScheme: "3 hojas",
+      sheetVariant: "2 móviles + 1 fija",
+      presentation: "mobile-guided" as const,
+      maxW: 240,
+      maxH: 164,
+      colorHex: "#a8a8a8",
+    };
+
+    for (const [ancho, alto] of [[2000, 1200], [1500, 1000]] as const) {
+      const svg = generateComponentSVG({ ...base, ancho, alto });
+      const glassWidths = [...svg.matchAll(/data-window-glass="true"[^>]*\swidth="([\d.]+)"/g)]
+        .map((match) => Number(match[1]));
+
+      expect(glassWidths).toHaveLength(3);
+      expect(glassWidths[1] / glassWidths[0]).toBeCloseTo(2, 1);
+      expect(glassWidths[2] / glassWidths[0]).toBeCloseTo(1, 1);
+      expect(svg.match(/data-window-fixed-panel="true"/g)).toHaveLength(1);
+      expect(svg).toContain('data-window-fixed-label="true"');
+      expect(svg).toContain(">FIJO</text>");
+      expect(svg.match(/data-window-slide-direction="right"/g)).toHaveLength(1);
+      expect(svg.match(/data-window-slide-direction="left"/g)).toHaveLength(1);
+      expect(svg).toContain(`>${ancho} mm</text>`);
+      expect(svg).toContain(`>${alto} mm</text>`);
+
+      const handles = [...svg.matchAll(/data-window-handle="recessed" x="([\d.]+)"[^>]*width="([\d.]+)"/g)]
+        .map((match) => Number(match[1]) + Number(match[2]) / 2);
+      const panes = [...svg.matchAll(/data-window-glass="true"[^>]*\sx="([\d.]+)"[^>]*\swidth="([\d.]+)"/g)]
+        .map((match) => ({ x: Number(match[1]), width: Number(match[2]) }));
+
+      expect(handles).toHaveLength(2);
+      expect(handles[0]).toBeGreaterThan(panes[0].x + panes[0].width / 2);
+      expect(handles[1]).toBeLessThan(panes[2].x + panes[2].width / 2);
+    }
+
+    const generic = generateComponentSVG({
+      ...base,
+      presentation: undefined,
+      ancho: 2000,
+      alto: 1200,
+    });
+    const pdf = generateComponentSVG({
+      ...base,
+      presentation: "quote-pdf",
+      variant: "pdf",
+      ancho: 2000,
+      alto: 1200,
+    });
+
+    expect(generic).not.toContain('data-window-fixed-label="true"');
+    expect(pdf).toContain('data-window-fixed-label="true"');
+    expect(pdf).toContain('aria-label="Ventana corredera de 3 hojas, centro fijo"');
+  });
+
   it("dibuja proyectante con fijo como dos paños verticales y no como dos proyectantes", () => {
     const svg = generateComponentSVG({
       tipo: "Ventana",

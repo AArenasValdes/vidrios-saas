@@ -23,6 +23,7 @@ export type ComponentPreviewInput = {
   material?: string | null;
   sheetScheme?: string | null;
   sheetVariant?: string | null;
+  presentation?: "mobile-guided";
   customSchemeDescription?: string | null;
   isCustomScheme?: boolean;
   hojasBase?: 1 | 2 | 3 | 4 | 5 | null;
@@ -149,6 +150,7 @@ export function resolveComponentPreviewSvg(input: ComponentPreviewInput): string
       hojasBase: input.hojasBase ?? undefined,
       sheetScheme: input.sheetScheme,
       sheetVariant: input.sheetVariant,
+      presentation: input.presentation,
       customSchemeDescription: input.customSchemeDescription,
       isCustomScheme: input.isCustomScheme,
       referencia: input.referencia,

@@ -114,6 +114,7 @@ export function resolveTotalGlobalDetailDrawingSvg(input: {
       customSchemeDescription: meta.customSchemeDescription,
       isCustomScheme: meta.isCustomScheme,
       referencia: meta.referencia,
+      itemLabel: input.item.nombre,
       ancho: input.item.ancho,
       alto: input.item.alto,
       colorHex: meta.colorHex,

@@ -3784,6 +3784,19 @@ export function isMobileGuidedTwoLeafSlidingWindow(params: ComponentSVGParams): 
     isStandardTwoLeafSlidingWindow(params);
 }
 
+export function isThreeLeafCenterFixedSlidingWindowPresentation(params: ComponentSVGParams): boolean {
+  const isTargetPresentation =
+    (params.presentation === "mobile-guided" && params.variant !== "pdf") ||
+    (params.presentation === "quote-pdf" && params.variant === "pdf");
+
+  return isTargetPresentation &&
+    normalizeType(params.tipo) === "Ventana" && resolveSistema(params) === "Corredera" &&
+    normalizeSearchText(params.sheetScheme) === "3 hojas" &&
+    normalizeSearchText(params.sheetVariant) === "2 moviles + 1 fija" &&
+    resolveWindowLeafCount(params, "Corredera") === 3 &&
+    !params.isCustomScheme && !params.customSchemeDescription?.trim();
+}
+
 const MOBILE_SLIDING_VISUAL = {
   maxWidth: 240, maxHeight: 164,
   left: 38, top: 36, right: 8, bottom: 10,
@@ -3952,7 +3965,75 @@ function drawTwoLeafSlidingWindow(params: ComponentSVGParams): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${totalH}" width="${totalW * outputScale}" height="${totalH * outputScale}"${responsiveStyle} role="img" aria-label="Ventana corredera de 2 hojas"><title>Ventana corredera de 2 hojas</title>${background}${reveal}${outerFrame}${sashes}${glass}${meetingRail}${handles}${arrows}${dimensions}</svg>`;
 }
 
+function drawThreeLeafCenterFixedSlidingWindow(params: ComponentSVGParams): string {
+  const m = MOBILE_SLIDING_VISUAL;
+  const p = resolveWindowPalette(params.colorHex);
+  const validMeasure = (value: number | null, fallback: number) =>
+    value !== null && Number.isFinite(value) && value > 0 ? value : fallback;
+  const defaultWindowSize = baseSizeFor("Ventana");
+  const realW = validMeasure(params.ancho, defaultWindowSize.w);
+  const realH = validMeasure(params.alto, defaultWindowSize.h);
+  const maxW = params.maxW ?? m.maxWidth;
+  const maxH = params.maxH ?? m.maxHeight;
+  const scale = Math.min(maxW / realW, maxH / realH);
+  const w = realW * scale;
+  const h = realH * scale;
+  const shortSide = Math.min(w, h);
+  const detailScale = Math.min(1, shortSide / 80);
+  const frame = clamp(shortSide * m.frame.ratio, m.frame.min, m.frame.max) * detailScale;
+  const x = m.left;
+  const y = m.top;
+  const innerX = x + frame;
+  const innerY = y + frame;
+  const innerW = w - 2 * frame;
+  const innerH = h - 2 * frame;
+  const widths = [innerW * 0.25, innerW * 0.5, innerW * 0.25];
+  let paneX = innerX;
+  const panes = widths.map((paneW) => {
+    const pane = {
+      x: paneX,
+      y: innerY,
+      w: paneW,
+      h: innerH,
+      centerX: paneX + paneW / 2,
+      centerY: innerY + innerH / 2,
+    };
+    paneX += paneW;
+    return pane;
+  });
+  const [leftPane, centerPane, rightPane] = panes;
+  const revealInset = frame * 0.5;
+  const reveal = `<g data-sketch-part="reveal"><rect data-window-frame-reveal="true" x="${px(x + revealInset)}" y="${px(y + revealInset)}" width="${px(w - 2 * revealInset)}" height="${px(h - 2 * revealInset)}" fill="${p.frame}"/></g>`;
+  const outerFrame = `<g data-sketch-part="outerFrame">${drawWindowProfileFrame(x, y, w, h, frame, p, "outer", { skipInnerChannel: true })}</g>`;
+  const tracks = `<g data-sketch-part="tracks">${drawInnerTrack(x, y, w, h, "mobile-guided", p)}</g>`;
+  const sashes = `<g data-sketch-part="sashes">${drawSlidingSash(leftPane, "mobile-guided", p, "right", "right")}${drawFixedPanel(centerPane, "mobile-guided", p)}${drawSlidingSash(rightPane, "mobile-guided", p, "left", "left")}</g>`;
+  const meetingRails = `<g data-sketch-part="meetingRail">${drawMeetingProfiles(panes, "mobile-guided", p)}</g>`;
+  const fixedLabelWidth = Math.min(46, centerPane.w * 0.72);
+  const fixedLabel = `<g data-sketch-part="fixedLabel" data-window-fixed-label="true"><rect x="${px(centerPane.centerX - fixedLabelWidth / 2)}" y="${px(centerPane.centerY - 9)}" width="${px(fixedLabelWidth)}" height="18" rx="3" fill="rgba(248,250,252,0.92)" stroke="${p.detail}" stroke-width="1"/><text x="${px(centerPane.centerX)}" y="${px(centerPane.centerY + 3.5)}" text-anchor="middle" font-size="9" font-family="sans-serif" fill="${p.detail}" font-weight="700" letter-spacing="0.06em">FIJO</text></g>`;
+  const dimensions = `<g data-sketch-part="dimensions">${dimH(x, y - 14, w, formatMm(params.ancho), p, "mobile-guided")}${dimV(x - 16, y, h, formatMm(params.alto), p, "mobile-guided")}</g>`;
+  const totalW = w + m.left + m.right;
+  const totalH = h + m.top + m.bottom;
+  const background = drawPreviewBackground(
+    totalW,
+    totalH,
+    normalizeWindowProfileColor(params.colorHex) === "#FFFFFF" ? "#F3F5F7" : undefined
+  );
+  const isPdf = params.variant === "pdf";
+  const pdfMaxHeight = Math.min(maxH, 248);
+  const outputScale = isPdf ? Math.min(maxW / totalW, pdfMaxHeight / totalH) : 1;
+  // Mantener el SVG dentro de la caja del PDF y evitar margen inline: html2canvas
+  // desplaza ese margen al rasterizar, aunque el preview del navegador se vea bien.
+  const responsiveStyle = isPdf
+    ? ""
+    : ' style="display:block;max-width:100%;height:auto;margin-inline:auto"';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${totalH}" width="${totalW * outputScale}" height="${totalH * outputScale}"${responsiveStyle} role="img" aria-label="Ventana corredera de 3 hojas, centro fijo"><title>Ventana corredera de 3 hojas, centro fijo</title>${background}${reveal}${outerFrame}${tracks}${sashes}${meetingRails}${fixedLabel}${dimensions}</svg>`;
+}
+
 export function generateComponentSVG(params: ComponentSVGParams): string {
+  if (isThreeLeafCenterFixedSlidingWindowPresentation(params)) {
+    return drawThreeLeafCenterFixedSlidingWindow(params);
+  }
   if (isMobileGuidedTwoLeafSlidingWindow(params) ||
     (params.presentation === "quote-pdf" && params.variant === "pdf" && isStandardTwoLeafSlidingWindow(params))) {
     return drawTwoLeafSlidingWindow(params);
