@@ -2907,7 +2907,7 @@ export function PasoDosAgregarGrupoSheet({
                     <label className={s.field}>
                       <span className={s.label}>Nombre del item</span>
                       <input
-                        className={s.input}
+                        className={`${s.input} ${isSingleStepFreeTotal ? s.stepTwoMobileQuickTotalInput : ""}`}
                         maxLength={120}
                         placeholder="Ej: Mantencion de ventanas"
                         value={draft.nombre}
@@ -2923,7 +2923,7 @@ export function PasoDosAgregarGrupoSheet({
                         </div>
                       ) : null}
                       <textarea
-                        className={s.textarea}
+                        className={`${s.textarea} ${isSingleStepFreeTotal ? s.stepTwoMobileQuickTotalInput : ""}`}
                         maxLength={360}
                         placeholder="Ej: Mantencion de 5 ventanas existentes, ajuste de corredera y limpieza de rieles."
                         rows={3}

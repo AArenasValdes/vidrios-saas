@@ -66,7 +66,7 @@ function buildStepHref(
     return slug ? `/solicitud/${slug}?preview=1` : "/configuracion/empresa";
   }
 
-  if (stepKey === "first_quote") return "/cotizaciones/nueva";
+  if (stepKey === "first_quote") return "/cotizaciones/nueva?nueva=1";
   if (latestQuoteId) return `/cotizaciones/${latestQuoteId}`;
   return "/cotizaciones";
 }

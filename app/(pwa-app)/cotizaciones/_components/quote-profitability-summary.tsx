@@ -57,37 +57,43 @@ export function QuoteProfitabilitySummary({
   tone = "default",
   formatMoney = formatCurrency,
 }: QuoteProfitabilitySummaryProps) {
-  const hasCostBasis = summary.hasCostBasis;
+  const isComplete = summary.isProfitabilityComplete;
   const [isOpen, setIsOpen] = useState(false);
-  const compactLine = hasCostBasis
+  const incompleteLabel =
+    summary.materialCostSource === "none" && summary.costoMateriales <= 0
+      ? QUOTE_PROFITABILITY_COPY.pendiente
+      : QUOTE_PROFITABILITY_COPY.incompleta;
+  const incompleteHint =
+    summary.materialCostSource === "none" && summary.costoMateriales <= 0
+      ? QUOTE_PROFITABILITY_COPY.pendienteHint
+      : QUOTE_PROFITABILITY_COPY.incompletaHint;
+  const compactLine = isComplete
     ? `${QUOTE_PROFITABILITY_COPY.costoTotal} ${money(summary.costoTotal, formatMoney)} · ${QUOTE_PROFITABILITY_COPY.utilidad} ${money(summary.utilidadEstimada, formatMoney)} · ${QUOTE_PROFITABILITY_COPY.margenReal} ${formatQuoteProfitabilityPct(summary.margenRealPct)}`
-    : QUOTE_PROFITABILITY_COPY.pendiente;
+    : incompleteLabel;
 
   if (variant === "detail") {
     return (
       <section className={`${s.detail} ${tone === "onDark" ? s.onDark : ""}`} aria-label="Rentabilidad interna">
         <header className={s.header}>
           <strong>Rentabilidad interna</strong>
-          {!hasCostBasis ? (
-            <span className={s.status}>{QUOTE_PROFITABILITY_COPY.pendiente}</span>
-          ) : null}
+          {!isComplete ? <span className={s.status}>{incompleteLabel}</span> : null}
         </header>
-        {hasCostBasis ? (
+        {isComplete ? (
           <MetricsGrid summary={summary} formatMoney={formatMoney} />
         ) : (
-          <p className={s.hint}>{QUOTE_PROFITABILITY_COPY.pendienteHint}</p>
+          <p className={s.hint}>{incompleteHint}</p>
         )}
         <p className={s.privacy}>{QUOTE_PROFITABILITY_COPY.soloInterno}</p>
       </section>
     );
   }
 
-  if (!hasCostBasis) {
+  if (!isComplete) {
     return (
       <section className={`${s.compact} ${tone === "onDark" ? s.onDark : ""}`} aria-label="Rentabilidad interna">
         <p className={s.toggleLabel}>Rentabilidad interna</p>
-        <strong className={s.togglePending}>{QUOTE_PROFITABILITY_COPY.pendiente}</strong>
-        <p className={s.hint}>{QUOTE_PROFITABILITY_COPY.pendienteHint}</p>
+        <strong className={s.togglePending}>{incompleteLabel}</strong>
+        <p className={s.hint}>{incompleteHint}</p>
         <p className={s.privacy}>{QUOTE_PROFITABILITY_COPY.soloInterno}</p>
       </section>
     );

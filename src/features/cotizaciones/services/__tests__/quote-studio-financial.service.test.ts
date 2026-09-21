@@ -1,8 +1,10 @@
 import {
   applyQuoteStudioRecommendedPrice,
   buildQuoteStudioFinancialSummary,
+  buildQuoteStudioFinancialSummaryFromPersistedSnapshot,
   calculateSaleFromCostRecargo,
   calculateRecargoLivePreview,
+  canApplyQuoteStudioRecommendedPrice,
   QUOTE_PROFITABILITY_COPY,
 } from "../quote-studio-financial.service";
 import {
@@ -69,6 +71,9 @@ describe("quote-studio-financial.service", () => {
       margenObjetivoRealPct: 30,
     });
 
+    expect(summary.materialCostSource).toBe("calculated");
+    expect(summary.costBasisStatus).toBe("materiales_completos");
+    expect(summary.isProfitabilityComplete).toBe(true);
     expect(summary.costoTotal).toBe(700000);
     expect(summary.precioRecomendadoNeto).toBe(1000000);
     expect(summary.utilidadEstimada).toBe(300000);
@@ -101,6 +106,7 @@ describe("quote-studio-financial.service", () => {
       total: 0,
     });
 
+    expect(summary.isProfitabilityComplete).toBe(false);
     expect(summary.hasCostBasis).toBe(false);
     expect(summary.costoTotal).toBe(0);
     expect(summary.precioRecomendadoNeto).toBe(0);
@@ -146,10 +152,56 @@ describe("quote-studio-financial.service", () => {
       total: 595000,
     });
 
+    expect(summary.materialCostSource).toBe("none");
+    expect(summary.isProfitabilityComplete).toBe(false);
     expect(summary.hasCostBasis).toBe(false);
     expect(summary.costoMateriales).toBe(0);
     expect(summary.costoTotal).toBe(0);
     expect(summary.margenRealPct).toBe(0);
+    expect(summary.precioRecomendadoNeto).toBe(0);
+  });
+
+  it("marca rentabilidad parcial cuando hay mezcla de recargo y precio directo", () => {
+    const summary = buildQuoteStudioFinancialSummary({
+      items: [
+        createItem({
+          id: "item-1",
+          costoProveedorUnitario: 100000,
+          costoProveedorTotal: 100000,
+        }),
+        createItem({
+          id: "item-2",
+          codigo: "V2",
+          costoProveedorUnitario: 80000,
+          costoProveedorTotal: 80000,
+        }),
+        createItem({
+          id: "item-3",
+          codigo: "P1",
+          precioUnitario: 192000,
+          precioTotal: 192000,
+          observaciones: encodeCotizacionItemPresentationMeta({
+            colorHex: "#a8a8a8",
+            material: "Aluminio",
+            referencia: "Serie prueba",
+            pricingMode: "precio_directo",
+            origenPrecio: "manual",
+            displayMode: "componente",
+            raw: "",
+          }),
+        }),
+      ],
+      quotePricingMode: "por_item",
+      neto: 491634,
+      total: 585044,
+    });
+
+    expect(summary.materialCostSource).toBe("partial");
+    expect(summary.costBasisStatus).toBe("materiales_parciales");
+    expect(summary.isProfitabilityComplete).toBe(false);
+    expect(summary.costoMateriales).toBe(180000);
+    expect(summary.costoTotal).toBe(0);
+    expect(summary.utilidadEstimada).toBe(0);
     expect(summary.precioRecomendadoNeto).toBe(0);
   });
 
@@ -174,7 +226,7 @@ describe("quote-studio-financial.service", () => {
     expect(summary.margenRealPct).toBe(-12.5);
   });
 
-  it("considera ajustes manuales del panel como base de costo explicita", () => {
+  it("no completa rentabilidad solo con mano de obra sin materiales", () => {
     const summary = buildQuoteStudioFinancialSummary({
       items: [
         createItem({
@@ -200,10 +252,36 @@ describe("quote-studio-financial.service", () => {
       manoObra: 150000,
     });
 
-    expect(summary.hasCostBasis).toBe(true);
+    expect(summary.isProfitabilityComplete).toBe(false);
+    expect(summary.hasCostBasis).toBe(false);
     expect(summary.costoMateriales).toBe(0);
-    expect(summary.costoTotal).toBe(150000);
-    expect(summary.utilidadEstimada).toBe(250000);
+    expect(summary.costoTotal).toBe(0);
+    expect(summary.utilidadEstimada).toBe(0);
+  });
+
+  it("usa override manual total sin sumar piezas", () => {
+    const summary = buildQuoteStudioFinancialSummary({
+      items: [
+        createItem({
+          costoProveedorUnitario: 100000,
+          costoProveedorTotal: 100000,
+        }),
+      ],
+      quotePricingMode: "por_item",
+      neto: 500000,
+      total: 595000,
+      costoMaterialesManual: 250000,
+      manoObra: 50000,
+      mermaPct: 4,
+    });
+
+    expect(summary.materialCostSource).toBe("manual");
+    expect(summary.costBasisStatus).toBe("materiales_manual");
+    expect(summary.isProfitabilityComplete).toBe(true);
+    expect(summary.costoMateriales).toBe(250000);
+    expect(summary.merma).toBe(10000);
+    expect(summary.costoTotal).toBe(310000);
+    expect(summary.utilidadEstimada).toBe(190000);
   });
 
   it("calcula rentabilidad sobre la suma de varios componentes en modo por_item", () => {
@@ -264,11 +342,12 @@ describe("quote-studio-financial.service", () => {
       margenObjetivoRealPct: 30,
     });
 
+    expect(summary.materialCostSource).toBe("none");
+    expect(summary.isProfitabilityComplete).toBe(false);
     expect(summary.precioFinalNeto).toBe(491634);
-    expect(summary.costoTotal).toBe(152222);
-    expect(summary.utilidadEstimada).toBe(339412);
-    expect(summary.margenRealPct).toBe(69.04);
-    expect(summary.precioRecomendadoNeto).toBe(217460);
+    expect(summary.costoTotal).toBe(0);
+    expect(summary.utilidadEstimada).toBe(0);
+    expect(summary.precioRecomendadoNeto).toBe(0);
   });
 
   it("aplica precio recomendado escalando items en modo por_item", () => {
@@ -554,6 +633,33 @@ describe("quote-studio-financial.service", () => {
     expect(recargo.recargoEquivalentePct).toBeGreaterThan(summary.margenRealPct);
   });
 
+  it("respeta snapshot persistido sin recalcular métricas históricas", () => {
+    const summary = buildQuoteStudioFinancialSummaryFromPersistedSnapshot({
+      quotePricingMode: "por_item",
+      neto: 900000,
+      total: 1071000,
+      costoTotal: 610000,
+      utilidadTotal: 290000,
+      margenPct: 32.22,
+      precioRecomendadoNeto: 920000,
+      costoMaterialesTotal: 500000,
+      costoManoObraTotal: 80000,
+      costoTrasladoTotal: 20000,
+      costoOtrosTotal: 10000,
+      mermaTotal: 0,
+      mermaPct: 0,
+      margenObjetivoPct: 30,
+      costBasisStatus: "materiales_completos",
+    });
+
+    expect(summary.isProfitabilityComplete).toBe(true);
+    expect(summary.costoTotal).toBe(610000);
+    expect(summary.utilidadEstimada).toBe(290000);
+    expect(summary.margenRealPct).toBe(32.22);
+    expect(summary.precioRecomendadoNeto).toBe(920000);
+    expect(summary.costBasisStatus).toBe("materiales_completos");
+  });
+
   it("limita el margen objetivo real para no producir infinito ni NaN", () => {
     const summary = buildQuoteStudioFinancialSummary({
       items: [createItem()],
@@ -608,5 +714,38 @@ describe("quote-studio-financial.service", () => {
       utilidad: 120000,
       margenRealPct: 50,
     });
+  });
+
+  it("oculta el CTA de precio recomendado cuando la venta ya está en el recomendado", () => {
+    const alreadyAtRecommended = {
+      isProfitabilityComplete: true,
+      precioRecomendadoNeto: 1000000,
+      precioFinalNeto: 1000000,
+    } as ReturnType<typeof buildQuoteStudioFinancialSummary>;
+    const belowRecommended = {
+      ...alreadyAtRecommended,
+      precioFinalNeto: 900000,
+    };
+
+    expect(canApplyQuoteStudioRecommendedPrice(alreadyAtRecommended)).toBe(false);
+    expect(canApplyQuoteStudioRecommendedPrice(belowRecommended)).toBe(true);
+  });
+
+  it("una cotización nueva sin override no marca materiales como manual", () => {
+    const summary = buildQuoteStudioFinancialSummary({
+      items: [],
+      quotePricingMode: "por_item",
+      neto: 0,
+      total: 0,
+      costoMaterialesManual: null,
+      manoObra: 30000,
+      traslado: 15000,
+      otrosCostos: 5000,
+      mermaPct: 5,
+      margenObjetivoRealPct: 30,
+    });
+
+    expect(summary.materialCostSource).toBe("none");
+    expect(summary.costBasisStatus).toBe("sin_materiales");
   });
 });

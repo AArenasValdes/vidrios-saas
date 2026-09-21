@@ -43,6 +43,7 @@ type UsePasoDosPresentacionParams = {
     value: string
   ) => void;
   onApplyQuoteStudioRecommendedPrice: () => void;
+  onRestoreQuoteStudioProfitabilityDefaults: () => void;
   formatCurrencyInput: (value: string) => string;
   items: CotizacionWorkflowItem[];
   editingItemId: string | null;
@@ -380,6 +381,8 @@ export function usePasoDosPresentacion(
       quoteStudioFinancial: params.quoteStudioFinancial,
       onQuoteStudioFinancialChange: params.onQuoteStudioFinancialChange,
       onApplyQuoteStudioRecommendedPrice: params.onApplyQuoteStudioRecommendedPrice,
+      onRestoreQuoteStudioProfitabilityDefaults:
+        params.onRestoreQuoteStudioProfitabilityDefaults,
       formatCurrencyInput: params.formatCurrencyInput,
       selectedQuickEditItem: params.selectedQuickEditItem,
       selectedQuickEditViewItem: params.selectedQuickEditViewItem,

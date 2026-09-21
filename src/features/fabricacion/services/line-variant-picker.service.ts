@@ -85,10 +85,18 @@ export function resolveLineVariantPickerSelection(
             slot.leavesCount === recipe.identidad.hojas
         ) ??
         slots.find((slot) => slot.variantSlug === recipe.identidad.variante);
+  const apertureOptions = uniqueStrings(slots.map((slot) => slot.apertura));
+  const apertura = matchedSlot
+    ? matchedSlot.apertura ?? null
+    : apertureOptions.length === 1
+      ? apertureOptions[0] ?? null
+      : apertureOptions.length > 1
+        ? recipe?.identidad.apertura ?? null
+        : null;
 
   return {
     hojas: matchedSlot?.leavesCount ?? recipe?.identidad.hojas ?? slots[0]?.leavesCount ?? 2,
-    apertura: matchedSlot?.apertura ?? recipe?.identidad.apertura ?? slots[0]?.apertura ?? null,
+    apertura,
     variantSlug:
       matchedSlot?.variantSlug ??
       recipe?.identidad.variante ??
@@ -197,12 +205,19 @@ export function buildLineVariantPickerModel(input: {
   const constructionOptions = constructionSlots.map((slot) => ({
     value: slot.variantSlug,
     label: slot.variantLabel,
-    available: Boolean(findRecipeForVariantSlot(input.recipes, slot) || slot.complete),
+    // Incomplete supplier variants still have an explicit draft-creation path.
+    // Keep them selectable so the workshop can choose the right source first.
+    available: Boolean(
+      findRecipeForVariantSlot(input.recipes, slot) ||
+        slot.complete ||
+        slot.sourceName?.trim()
+    ),
   }));
   if (constructionOptions.length > 1 || (constructionOptions.length === 1 && axes.length > 0)) {
+    const hasSupplierChoices = constructionSlots.some((slot) => slot.sourceName?.trim());
     axes.push({
       id: "construccion",
-      label: "Construcción",
+      label: hasSupplierChoices ? "Proveedor y variante" : "Construcción",
       options: constructionOptions,
     });
   }

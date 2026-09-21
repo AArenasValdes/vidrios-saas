@@ -33,6 +33,7 @@ export type Cotizacion = {
   margenPct: number | null;
   utilidadTotal: number | null;
   costoMaterialesTotal?: number | null;
+  costoMaterialesManual?: number | null;
   costoManoObraTotal?: number | null;
   costoTrasladoTotal?: number | null;
   costoOtrosTotal?: number | null;
@@ -81,6 +82,7 @@ export type CrearCotizacionInput = {
   margenPct?: number | null;
   utilidadTotal?: number | null;
   costoMaterialesTotal?: number | null;
+  costoMaterialesManual?: number | null;
   costoManoObraTotal?: number | null;
   costoTrasladoTotal?: number | null;
   costoOtrosTotal?: number | null;

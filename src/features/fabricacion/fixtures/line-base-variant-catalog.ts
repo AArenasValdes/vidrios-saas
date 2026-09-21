@@ -49,7 +49,13 @@ import {
   LINE_4000_VARIANT_4H_4RIELES,
   crearRecetaLine4000Corredera,
 } from "@/features/fabricacion/fixtures/line-4000-corredera-recipe";
+import {
+  crearRecetaSerie42Alar,
+  crearRecetaSerie42Sodal,
+  SERIE_42_PROVIDER_VARIANTS,
+} from "@/features/fabricacion/fixtures/serie-42-provider-recipes";
 import type { FabricacionReceta, FabricacionTipologia } from "@/features/fabricacion/types/fabricacion-domain";
+import type { FabricationRecipeSourceType } from "@/features/fabricacion/types/fabricacion-persistence";
 import { VENTORA_LARGO_COMERCIAL_PRESET_MM } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 
 export const BASE_LINE_CATALOG_KEYS = [
@@ -80,6 +86,10 @@ export type LineVariantSlot = {
   /** Apertura comercial para resolver receta en cotización (p. ej. L20 fijos). */
   apertura?: string | null;
   herraje?: string | null;
+  /** Procedencia documental cuando la variante viene de fabricante/proveedor. */
+  sourceType?: Extract<FabricationRecipeSourceType, "manufacturer" | "supplier">;
+  sourceName?: string;
+  sourceRevision?: string;
   evidenceLevel: LineVariantEvidenceLevel;
   /** Tiene perfiles con ajusteMm documentado y composición calculable. */
   complete: boolean;
@@ -309,6 +319,61 @@ export const LINE_BASE_VARIANT_CATALOG: Partial<Record<BaseLineCatalogKey, LineV
           variant: "normal",
           lineName,
         }),
+    },
+    {
+      typology: "proyectante",
+      leavesCount: 1,
+      modulesCount: 1,
+      variantSlug: SERIE_42_PROVIDER_VARIANTS.alar,
+      variantLabel: "ALAR · Marco fijo 4201",
+      sourceType: "supplier",
+      sourceName: "ALAR",
+      sourceRevision: "pauta-aportada-2026-09-21-v1",
+      evidenceLevel: "workshop_partial",
+      complete: false,
+      pendingFields: [
+        "Definir medida interior del junquillo 4229/4206",
+        "Confirmar medida de vidrio",
+      ],
+      sourceReference: "user-provided:alar-linea42:proyectante-4201:2026-09-21",
+      buildDefinition: ({ lineName }) => crearRecetaSerie42Alar({ lineName }),
+    },
+    {
+      typology: "proyectante",
+      leavesCount: 1,
+      modulesCount: 1,
+      variantSlug: SERIE_42_PROVIDER_VARIANTS.alarWaterChamber,
+      variantLabel: "ALAR · Cámara de agua 4204",
+      sourceType: "supplier",
+      sourceName: "ALAR",
+      sourceRevision: "pauta-aportada-2026-09-21-v1",
+      evidenceLevel: "workshop_partial",
+      complete: false,
+      pendingFields: [
+        "Definir medida interior del junquillo 4229/4206",
+        "Confirmar medida de vidrio",
+        "Confirmar ángulo de corte del 4204 para el ensamble real",
+      ],
+      sourceReference:
+        "user-provided:alar-linea42:4204-camara-agua:2026-09-21",
+      buildDefinition: ({ lineName }) =>
+        crearRecetaSerie42Alar({ lineName, waterChamber: true }),
+    },
+    {
+      typology: "proyectante",
+      leavesCount: 1,
+      modulesCount: 1,
+      variantSlug: SERIE_42_PROVIDER_VARIANTS.sodal,
+      variantLabel: "SODAL · Sin cámara · Monolítico",
+      sourceType: "manufacturer",
+      sourceName: "SODAL",
+      sourceRevision: "alumetrica-serie-4200-2026-09-21-v1",
+      evidenceLevel: "documented",
+      complete: true,
+      pendingFields: ["Probar una fabricación real antes de validar"],
+      sourceReference:
+        "alumetrica:sodal-serie-4200:proyectante-sin-camara:monolitico:v1",
+      buildDefinition: ({ lineName }) => crearRecetaSerie42Sodal({ lineName }),
     },
   ],
 };

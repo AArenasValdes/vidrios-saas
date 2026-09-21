@@ -153,6 +153,9 @@ export function resolveFabricationRecipe(
     input.catalogKey === SODAL_4800_CATALOG_KEY
       ? filtered.filter((recipe) => !isSodalP2A4800Fallback(recipe))
       : filtered;
+  const controlledPreviewRecipeId = input.previewListaParaProbar
+    ? input.preferredRecipeId
+    : null;
 
   if (input.catalogKey === SODAL_4800_CATALOG_KEY) {
     const observed = isObservedSodal4800Measure({
@@ -173,23 +176,23 @@ export function resolveFabricationRecipe(
           advertencias: ["L-4800 solo admite 2H 1800×1500 o 3H 3000×1500."],
         };
       }
-      return resolverRecetaFabricacionCompatible(formulaRecipes, {
+      return resolverRecetaFabricacionCompatibleInternal(formulaRecipes, {
         ...input,
         variante,
         topology,
         allowPreliminaryNonValidated: Boolean(input.previewListaParaProbar),
-      });
+      }, controlledPreviewRecipeId);
     }
   }
 
-  return resolverRecetaFabricacionCompatible(filteredForResolution, {
+  return resolverRecetaFabricacionCompatibleInternal(filteredForResolution, {
     ...input,
     variante,
     topology,
     // Snapshot/PDF y matching comercial siguen exigiendo receta validada.
     // El despiece interno de cotización puede previsualizar lista_para_probar.
     allowPreliminaryNonValidated: Boolean(input.previewListaParaProbar),
-  });
+  }, controlledPreviewRecipeId);
 }
 
 export type FabricacionRecetaDescartada = {
@@ -349,7 +352,7 @@ function resolverRecetaFabricacionCompatibleInternal(
   const explicitNonValidated = compatible.find(
     (recipe) =>
       recipe.id === controlledRecipeId &&
-      !statusAllowsAutomaticUse(recipe.status)
+      statusAllowsPreliminaryUse(recipe.status)
   );
   if (explicitNonValidated) {
     return {

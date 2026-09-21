@@ -69,6 +69,8 @@ type PasoTresResumenProps = {
     field: keyof QuoteStudioFinancialDraft,
     value: string
   ) => void;
+  onApplyQuoteStudioRecommendedPrice: () => void;
+  onRestoreQuoteStudioProfitabilityDefaults: () => void;
 };
 
 function formatStepThreeMeasure(item: CotizacionWorkflowItem, unit: MeasureUnit) {
@@ -200,6 +202,8 @@ export function PasoTresResumen({
   formatCurrencyInput,
   financialSummary,
   onQuoteStudioFinancialChange,
+  onApplyQuoteStudioRecommendedPrice,
+  onRestoreQuoteStudioProfitabilityDefaults,
 }: PasoTresResumenProps) {
   const measureUnit = useOrganizationMeasureUnit();
   const [isManualTotalOpen, setIsManualTotalOpen] = useState(
@@ -858,6 +862,8 @@ export function PasoTresResumen({
           formatCurrencyInput={formatCurrencyInput}
           financialSummary={financialSummary}
           onQuoteStudioFinancialChange={handleQuoteStudioFinancialChange}
+          onApplyQuoteStudioRecommendedPrice={onApplyQuoteStudioRecommendedPrice}
+          onRestoreQuoteStudioProfitabilityDefaults={onRestoreQuoteStudioProfitabilityDefaults}
           onCondicionesDePagoChange={onCondicionesPagoChange}
           onCondicionesVentaChange={onCondicionesVentaChange}
           onTerminosCondicionesChange={onTerminosCondicionesChange}

@@ -19,7 +19,69 @@ import type {
 type UseFabricationRecipesOptions = {
   enabled?: boolean;
   lineTemplateId?: number;
+  /**
+   * Cotización / despiece: listar recetas sin esperar seed estructural.
+   * El seed sigue lanzándose en background para no retrasar el botón.
+   */
+  skipStructuralSeed?: boolean;
 };
+
+const recipeListInflight = new Map<string, Promise<FabricationRecipeRecord[]>>();
+const RECIPE_LIST_CACHE_TTL_MS = 30_000;
+const recipeListCache = new Map<
+  string,
+  { at: number; data: FabricationRecipeRecord[] }
+>();
+
+function buildRecipeListCacheKey(organizationId: number, lineTemplateId?: number) {
+  return `${organizationId}:${lineTemplateId ?? "all"}`;
+}
+
+function listRecipesCached(input: {
+  organizationId: number;
+  lineTemplateId?: number;
+}): Promise<FabricationRecipeRecord[]> {
+  const key = buildRecipeListCacheKey(input.organizationId, input.lineTemplateId);
+  const cached = recipeListCache.get(key);
+  if (cached && Date.now() - cached.at < RECIPE_LIST_CACHE_TTL_MS) {
+    return Promise.resolve(cached.data);
+  }
+
+  const inflight = recipeListInflight.get(key);
+  if (inflight) return inflight;
+
+  const request = getFabricationRecipesClientService()
+    .listRecipes({
+      organizationId: input.organizationId,
+      lineTemplateId: input.lineTemplateId,
+    })
+    .then((data) => {
+      recipeListCache.set(key, { at: Date.now(), data });
+      return data;
+    })
+    .finally(() => {
+      recipeListInflight.delete(key);
+    });
+
+  recipeListInflight.set(key, request);
+  return request;
+}
+
+/** Invalida caché de listado tras mutaciones locales. */
+export function invalidateFabricationRecipesListCache(organizationId?: number | null) {
+  if (organizationId == null) {
+    recipeListCache.clear();
+    recipeListInflight.clear();
+    return;
+  }
+  const prefix = `${organizationId}:`;
+  for (const key of recipeListCache.keys()) {
+    if (key.startsWith(prefix)) recipeListCache.delete(key);
+  }
+  for (const key of recipeListInflight.keys()) {
+    if (key.startsWith(prefix)) recipeListInflight.delete(key);
+  }
+}
 
 function getMutationErrorMessage(error: unknown) {
   const formatted = formatFabricationRecipesLoadError(error);
@@ -111,14 +173,17 @@ export function useFabricationRecipes(options: UseFabricationRecipesOptions = {}
 
     try {
       const listRecipes = () =>
-        getFabricationRecipesClientService().listRecipes({
+        listRecipesCached({
           organizationId,
           lineTemplateId: options.lineTemplateId,
         });
 
-      await ensureStructuralDraftsClient(organizationId);
+      if (options.skipStructuralSeed) {
+        void ensureStructuralDraftsClient(organizationId).catch(() => {});
+      } else {
+        await ensureStructuralDraftsClient(organizationId);
+      }
       const data = await listRecipes();
-
       if (loadId === loadIdRef.current) setRecipes(data);
     } catch (loadError) {
       if (loadId === loadIdRef.current) {
@@ -127,7 +192,7 @@ export function useFabricationRecipes(options: UseFabricationRecipesOptions = {}
     } finally {
       if (loadId === loadIdRef.current && !background) setIsLoading(false);
     }
-  }, [options.enabled, options.lineTemplateId, organizationId]);
+  }, [options.enabled, options.lineTemplateId, options.skipStructuralSeed, organizationId]);
 
   useEffect(() => {
     void loadRecipes();
@@ -148,6 +213,7 @@ export function useFabricationRecipes(options: UseFabricationRecipesOptions = {}
         const result = await action();
         const patched = options?.replaceRecipe?.(result) ?? null;
         if (patched) {
+          invalidateFabricationRecipesListCache(organizationId);
           setRecipes((current) => {
             const index = current.findIndex((recipe) => recipe.id === patched.id);
             if (index < 0) return [patched, ...current];
@@ -156,6 +222,7 @@ export function useFabricationRecipes(options: UseFabricationRecipesOptions = {}
             return next;
           });
         } else {
+          invalidateFabricationRecipesListCache(organizationId);
           await loadRecipes({ background: quiet });
         }
         return result;

@@ -17,6 +17,8 @@ function buildSummary(
 ): QuoteStudioFinancialSummary {
   return {
     quotePricingMode: "por_item",
+    materialCostSource: "none",
+    costBasisStatus: "sin_materiales",
     costoMateriales: 0,
     manoObra: 0,
     traslado: 0,
@@ -30,7 +32,9 @@ function buildSummary(
     utilidadEstimada: 0,
     margenRealPct: 0,
     markupEquivalentePct: 0,
+    isProfitabilityComplete: false,
     hasCostBasis: false,
+    unknownMaterialItemCount: 0,
     ...overrides,
   };
 }
@@ -81,6 +85,8 @@ describe("QuoteStudioFinancialPanel", () => {
 
   it("muestra margen con objetivo, delta y CTA anclado al recomendado", () => {
     const summary = buildSummary({
+      materialCostSource: "calculated",
+      isProfitabilityComplete: true,
       hasCostBasis: true,
       costoMateriales: 120000,
       costoTotal: 120000,
@@ -111,6 +117,8 @@ describe("QuoteStudioFinancialPanel", () => {
       <QuoteStudioFinancialPanel
         {...buildProps(
           buildSummary({
+            materialCostSource: "calculated",
+            isProfitabilityComplete: true,
             hasCostBasis: true,
             costoTotal: 100000,
             precioRecomendadoNeto: 150000,
@@ -134,11 +142,28 @@ describe("QuoteStudioFinancialPanel", () => {
     expect(canApplyQuoteStudioRecommendedPrice(buildSummary())).toBe(false);
     expect(
       canApplyQuoteStudioRecommendedPrice(
-        buildSummary({ hasCostBasis: true, precioRecomendadoNeto: 200000 })
+        buildSummary({
+          isProfitabilityComplete: true,
+          hasCostBasis: true,
+          precioRecomendadoNeto: 200000,
+          precioFinalNeto: 180000,
+        })
       )
     ).toBe(true);
+    expect(
+      canApplyQuoteStudioRecommendedPrice(
+        buildSummary({
+          isProfitabilityComplete: true,
+          hasCostBasis: true,
+          precioRecomendadoNeto: 200000,
+          precioFinalNeto: 200000,
+        })
+      )
+    ).toBe(false);
 
     const summary = buildSummary({
+      materialCostSource: "calculated",
+      isProfitabilityComplete: true,
       hasCostBasis: true,
       precioRecomendadoNeto: 200000,
       precioFinalNeto: 180000,

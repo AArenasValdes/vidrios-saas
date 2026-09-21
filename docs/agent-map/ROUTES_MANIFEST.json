@@ -68,10 +68,22 @@
       "source": "app/admin/pagos-y-planes/page.tsx"
     },
     {
+      "path": "/admin/producto",
+      "type": "page",
+      "area": "admin",
+      "source": "app/admin/producto/page.tsx"
+    },
+    {
       "path": "/admin/prospectos",
       "type": "page",
       "area": "admin",
       "source": "app/admin/prospectos/page.tsx"
+    },
+    {
+      "path": "/admin/sugerencias",
+      "type": "page",
+      "area": "admin",
+      "source": "app/admin/sugerencias/page.tsx"
     },
     {
       "path": "/admin/tareas",
@@ -216,6 +228,24 @@
       "type": "api",
       "area": "api",
       "source": "app/api/admin/pagos/reject/route.ts"
+    },
+    {
+      "path": "/api/admin/producto",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/producto/route.ts"
+    },
+    {
+      "path": "/api/admin/sugerencias",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/sugerencias/route.ts"
+    },
+    {
+      "path": "/api/admin/sugerencias/[id]",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/sugerencias/[id]/route.ts"
     },
     {
       "path": "/api/admin/tareas",
@@ -396,6 +426,12 @@
       "type": "api",
       "area": "api",
       "source": "app/api/subscriptions/webpay/crear/route.ts"
+    },
+    {
+      "path": "/api/sugerencias",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/sugerencias/route.ts"
     },
     {
       "path": "/auth/callback",
@@ -600,6 +636,12 @@
       "type": "page",
       "area": "private",
       "source": "app/(pwa-app)/solicitudes/canales/page.tsx"
+    },
+    {
+      "path": "/sugerencias",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/sugerencias/page.tsx"
     },
     {
       "path": "/terms",

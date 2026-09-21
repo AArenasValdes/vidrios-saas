@@ -61,6 +61,11 @@ type OrganizationProfileRow = {
   proveedor_preferido: string | null;
   modo_precio_preferido: string | null;
   margen_defecto: number | null;
+  margen_objetivo_defecto?: number | null;
+  merma_materiales_defecto?: number | null;
+  costo_mano_obra_defecto?: number | null;
+  costo_traslado_defecto?: number | null;
+  costo_otros_defecto?: number | null;
   unidad_medidas?: string | null;
   creado_en: string | null;
   actualizado_en: string | null;
@@ -200,6 +205,11 @@ function mapOrganizationProfile(
     proveedorPreferido: normalizePreferredProvider(row.proveedor_preferido),
     modoPrecioPreferido: normalizePricingMode(row.modo_precio_preferido),
     margenDefecto: row.margen_defecto ?? 100,
+    margenObjetivoDefecto: row.margen_objetivo_defecto ?? null,
+    mermaMaterialesDefecto: row.merma_materiales_defecto ?? null,
+    costoManoObraDefecto: row.costo_mano_obra_defecto ?? null,
+    costoTrasladoDefecto: row.costo_traslado_defecto ?? null,
+    costoOtrosDefecto: row.costo_otros_defecto ?? null,
     unidadMedidas: normalizeMeasureUnit(row.unidad_medidas),
     creadoEn: row.creado_en,
     actualizadoEn: row.actualizado_en,
@@ -364,6 +374,11 @@ export function createOrganizationProfileRepository(
           proveedor_preferido: input.proveedorPreferido || null,
           modo_precio_preferido: normalizePricingMode(input.modoPrecioPreferido),
           margen_defecto: input.margenDefecto,
+          margen_objetivo_defecto: input.margenObjetivoDefecto,
+          merma_materiales_defecto: input.mermaMaterialesDefecto,
+          costo_mano_obra_defecto: input.costoManoObraDefecto,
+          costo_traslado_defecto: input.costoTrasladoDefecto,
+          costo_otros_defecto: input.costoOtrosDefecto,
           unidad_medidas: normalizeMeasureUnit(input.unidadMedidas),
           actualizado_en: new Date().toISOString(),
           public_name: input.publicName || null,

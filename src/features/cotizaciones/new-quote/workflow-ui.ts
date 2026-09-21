@@ -506,6 +506,16 @@ export function buildWorkflowStorageKey(editId: string | null, duplicateId: stri
   return "cotizacion-workflow:new";
 }
 
+export const EXPLICIT_NEW_QUOTE_QUERY = "nueva=1";
+
+export function buildExplicitNewQuoteHref(path = "/cotizaciones/nueva") {
+  return `${path}?${EXPLICIT_NEW_QUOTE_QUERY}`;
+}
+
+export function isExplicitNewQuoteRequest(value: string | null | undefined) {
+  return value === "1" || value === "true" || value === "si";
+}
+
 export function loadPersistedWorkflowState(
   storageKey: string,
   defaults: {

@@ -427,3 +427,10 @@ Notas:
 - Ambas migraciones reemiten los grants columnares de `organization_profile` para `authenticated`, incluyendo `validez_predeterminada`, `condiciones_venta_predeterminadas`, `terminos_condiciones_predeterminados` y `mostrar_iva_en_pdf`.
 - `cotizaciones` hereda el aislamiento existente por `organization_id = get_org_id()`; los campos nuevos no requieren grants adicionales porque la tabla ya tenía INSERT/UPDATE tenant-scoped.
 - La RPC `complete_google_oauth_account(..., p_country_code text)` continua revocada para `public`, `anon` y `authenticated`; solo `service_role` puede ejecutarla.
+
+## Addendum 2026-09-21 - Sugerencias de mejora (pendiente remoto)
+
+- La migración local `20260921043440_product_feedback.sql` aún no se ha aplicado ni verificado en remoto.
+- `product_feedback` habilita RLS, revoca todos los privilegios a `anon` y `authenticated`, y concede a `authenticated` únicamente `INSERT`; `service_role` obtiene CRUD para las rutas server.
+- La policy `product_feedback_insert_own_organization` valida que `auth_user_id = auth.uid()` y `organization_id = get_org_id()`.
+- El cliente no puede leer ni cambiar registros. Las rutas de consulta y actualización usan `service_role` solo después de resolver el allowlist founder (`resolveVentoraAdminRouteContext()`).

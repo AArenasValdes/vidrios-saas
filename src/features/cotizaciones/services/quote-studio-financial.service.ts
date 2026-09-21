@@ -1,4 +1,5 @@
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import { formatCurrency } from "@/utils/formatCurrency";
 import {
   normalizeQuotePricingMode,
   type QuotePricingMode,
@@ -15,6 +16,17 @@ import {
 
 const DEFAULT_TARGET_REAL_MARGIN_PCT = 30;
 
+export type MaterialCostSource = "none" | "partial" | "calculated" | "manual";
+
+export type CostBasisStatus =
+  | "sin_materiales"
+  | "materiales_parciales"
+  | "materiales_completos"
+  | "materiales_manual"
+  | "sin_costos"
+  | "estimado"
+  | "manual";
+
 export const QUOTE_PROFITABILITY_COPY = {
   recargoSobreCosto: "Recargo sobre costo",
   recargoModeTitle: "Costo + recargo",
@@ -28,7 +40,21 @@ export const QUOTE_PROFITABILITY_COPY = {
   costoTotal: "Costo total",
   utilidad: "Utilidad",
   pendiente: "Rentabilidad pendiente",
+  incompleta: "Rentabilidad incompleta",
   pendienteHint: "Agrega tus costos internos para calcular utilidad y margen real.",
+  incompletaHint:
+    "Faltan costos de materiales en alguna pieza. Completa los costos de cada componente para calcular utilidad y margen real.",
+  mermaEstimadaLabel: "Merma estimada de materiales %",
+  materialOrigenEstimado: "Origen: Estimado comercial",
+  materialOrigenParcial: "Origen: Parcial — incompleto",
+  materialOrigenSinDatos: "Origen: Sin datos",
+  materialOrigenManual: "Origen: Manual",
+  valoresPredeterminados: "Valores predeterminados",
+  personalizado: "Personalizado",
+  restaurarPredeterminados: "Restaurar predeterminados",
+  costoMaterialesManualLabel: "Costo total de materiales (manual)",
+  costoMaterialesManualHint:
+    "Reemplaza por completo el cálculo por pieza. No se suma al costo calculado.",
   soloInterno: "Solo visible para tu empresa",
   recargoDuplica: "100% de recargo duplica el costo.",
   recargoHelpMobile: "Recargo que se suma al costo. No es el margen real sobre la venta.",
@@ -41,6 +67,29 @@ export const QUOTE_PROFITABILITY_COPY = {
   agregarCostos: "Agregar costos",
   ocultarCostos: "Ocultar costos",
 } as const;
+
+export function resolveProfitabilityStatusCopy(summary: QuoteStudioFinancialSummary) {
+  if (summary.isProfitabilityComplete) {
+    return null;
+  }
+
+  return {
+    label: QUOTE_PROFITABILITY_COPY.incompleta,
+    hint: QUOTE_PROFITABILITY_COPY.incompletaHint,
+  };
+}
+
+export function formatMaterialCostLabel(summary: QuoteStudioFinancialSummary, formattedValue: string) {
+  if (summary.materialCostSource === "partial") {
+    return `${formattedValue} · parcial`;
+  }
+
+  if (summary.materialCostSource === "none") {
+    return "No disponible";
+  }
+
+  return formattedValue;
+}
 
 export function formatQuoteProfitabilityPct(value: number) {
   if (!Number.isFinite(value)) {
@@ -140,23 +189,187 @@ function normalizeTargetMargin(value: number | null | undefined) {
   return Math.min(95, Math.max(0, Number(value)));
 }
 
-function resolveExplicitItemMaterialCost(item: CotizacionWorkflowItem) {
-  if (item.tipoItem === "item_libre_con_valor") {
-    return 0;
+function isItemEligibleForMaterialCompleteness(item: CotizacionWorkflowItem) {
+  return item.tipoItem !== "item_libre_con_valor";
+}
+
+function itemHasKnownMaterialCost(item: CotizacionWorkflowItem) {
+  if (!isItemEligibleForMaterialCompleteness(item)) {
+    return false;
   }
 
   const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
   const pricingMode = normalizePricingMode(presentation.pricingMode);
 
   if (pricingMode !== "margen") {
-    return 0;
+    return false;
   }
 
-  return normalizeNonNegative(item.costoProveedorTotal);
+  return normalizeNonNegative(item.costoProveedorTotal) > 0;
+}
+
+function itemHasUnknownMaterialCost(item: CotizacionWorkflowItem) {
+  return isItemEligibleForMaterialCompleteness(item) && !itemHasKnownMaterialCost(item);
+}
+
+function hasManualMaterialOverride(value: number | null | undefined): value is number {
+  return value !== null && value !== undefined && Number.isFinite(value) && value >= 0;
+}
+
+function buildCompleteProfitabilitySummary(input: {
+  quotePricingMode: QuotePricingMode;
+  materialCostSource: MaterialCostSource;
+  costBasisStatus: CostBasisStatus;
+  costoMateriales: number;
+  manoObra: number;
+  traslado: number;
+  otrosCostos: number;
+  merma: number;
+  margenObjetivoRealPct: number;
+  precioFinalNeto: number;
+  precioFinalCliente: number;
+  unknownMaterialItemCount?: number;
+}): QuoteStudioFinancialSummary {
+  const costoTotal = round(
+    input.costoMateriales + input.manoObra + input.traslado + input.otrosCostos + input.merma,
+    2
+  );
+  const utilidadEstimada = round(input.precioFinalNeto - costoTotal, 2);
+  const margenRealPct =
+    input.precioFinalNeto > 0 ? round((utilidadEstimada / input.precioFinalNeto) * 100, 2) : 0;
+  const precioRecomendadoNeto = round(
+    costoTotal / (1 - input.margenObjetivoRealPct / 100),
+    2
+  );
+  const markupEquivalentePct =
+    costoTotal > 0 ? round((utilidadEstimada / costoTotal) * 100, 2) : 0;
+
+  return {
+    quotePricingMode: input.quotePricingMode,
+    materialCostSource: input.materialCostSource,
+    costBasisStatus: input.costBasisStatus,
+    costoMateriales: input.costoMateriales,
+    manoObra: input.manoObra,
+    traslado: input.traslado,
+    otrosCostos: input.otrosCostos,
+    merma: input.merma,
+    costoTotal,
+    margenObjetivoRealPct: input.margenObjetivoRealPct,
+    precioRecomendadoNeto,
+    precioFinalNeto: input.precioFinalNeto,
+    precioFinalCliente: input.precioFinalCliente,
+    utilidadEstimada,
+    margenRealPct,
+    markupEquivalentePct,
+    isProfitabilityComplete: true,
+    hasCostBasis: true,
+    unknownMaterialItemCount: input.unknownMaterialItemCount ?? 0,
+  };
+}
+
+export function resolveMaterialCostFromItems(items: CotizacionWorkflowItem[]) {
+  const eligibleItems = items.filter(isItemEligibleForMaterialCompleteness);
+  const knownItems = eligibleItems.filter(itemHasKnownMaterialCost);
+  const unknownItems = eligibleItems.filter(itemHasUnknownMaterialCost);
+  const costoMaterialesCalculado = round(
+    knownItems.reduce(
+      (accumulator, item) => accumulator + normalizeNonNegative(item.costoProveedorTotal),
+      0
+    ),
+    2
+  );
+
+  if (eligibleItems.length === 0 || knownItems.length === 0) {
+    return {
+      materialCostSource: "none" as const,
+      costBasisStatus: "sin_materiales" as const,
+      costoMaterialesCalculado,
+      unknownMaterialItemCount: unknownItems.length,
+    };
+  }
+
+  if (unknownItems.length > 0) {
+    return {
+      materialCostSource: "partial" as const,
+      costBasisStatus: "materiales_parciales" as const,
+      costoMaterialesCalculado,
+      unknownMaterialItemCount: unknownItems.length,
+    };
+  }
+
+  return {
+    materialCostSource: "calculated" as const,
+    costBasisStatus: "materiales_completos" as const,
+    costoMaterialesCalculado,
+    unknownMaterialItemCount: 0,
+  };
+}
+
+export function normalizePersistedCostBasisStatus(
+  value: string | null | undefined
+): CostBasisStatus {
+  switch (value) {
+    case "sin_materiales":
+    case "materiales_parciales":
+    case "materiales_completos":
+    case "materiales_manual":
+    case "sin_costos":
+    case "estimado":
+    case "manual":
+      return value;
+    default:
+      return "sin_materiales";
+  }
+}
+
+export function deriveMaterialCostSourceFromPersisted(input: {
+  costBasisStatus: string | null | undefined;
+  costoMaterialesTotal: number | null | undefined;
+}): MaterialCostSource {
+  const status = normalizePersistedCostBasisStatus(input.costBasisStatus);
+  const costoMateriales = normalizeNonNegative(input.costoMaterialesTotal);
+
+  switch (status) {
+    case "materiales_manual":
+      return "manual";
+    case "materiales_completos":
+    case "estimado":
+      return costoMateriales > 0 ? "calculated" : "none";
+    case "materiales_parciales":
+      return "partial";
+    case "manual":
+      return costoMateriales > 0 ? "calculated" : "partial";
+    case "sin_costos":
+    case "sin_materiales":
+    default:
+      return "none";
+  }
+}
+
+export function isPersistedProfitabilityComplete(input: {
+  costBasisStatus: string | null | undefined;
+  costoTotal: number | null | undefined;
+  utilidadTotal: number | null | undefined;
+}): boolean {
+  const costoTotal = normalizeNonNegative(input.costoTotal);
+  if (costoTotal <= 0 || input.utilidadTotal === null || input.utilidadTotal === undefined) {
+    return false;
+  }
+
+  const status = normalizePersistedCostBasisStatus(input.costBasisStatus);
+
+  return (
+    status === "materiales_completos" ||
+    status === "materiales_manual" ||
+    status === "estimado" ||
+    status === "manual"
+  );
 }
 
 export type QuoteStudioFinancialSummary = {
   quotePricingMode: QuotePricingMode;
+  materialCostSource: MaterialCostSource;
+  costBasisStatus: CostBasisStatus;
   costoMateriales: number;
   manoObra: number;
   traslado: number;
@@ -170,7 +383,10 @@ export type QuoteStudioFinancialSummary = {
   utilidadEstimada: number;
   margenRealPct: number;
   markupEquivalentePct: number;
+  isProfitabilityComplete: boolean;
+  /** @deprecated Usar isProfitabilityComplete */
   hasCostBasis: boolean;
+  unknownMaterialItemCount: number;
 };
 
 export type ApplyQuoteStudioRecommendedPriceResult = {
@@ -361,12 +577,117 @@ export function applyQuoteStudioRecommendedPrice(input: {
   };
 }
 
+function buildIncompleteProfitabilityMetrics(input: {
+  quotePricingMode: QuotePricingMode;
+  materialCostSource: MaterialCostSource;
+  costBasisStatus: CostBasisStatus;
+  costoMateriales: number;
+  manoObra: number;
+  traslado: number;
+  otrosCostos: number;
+  merma: number;
+  margenObjetivoRealPct: number;
+  precioFinalNeto: number;
+  precioFinalCliente: number;
+  unknownMaterialItemCount: number;
+}): QuoteStudioFinancialSummary {
+  return {
+    quotePricingMode: input.quotePricingMode,
+    materialCostSource: input.materialCostSource,
+    costBasisStatus: input.costBasisStatus,
+    costoMateriales: input.costoMateriales,
+    manoObra: input.manoObra,
+    traslado: input.traslado,
+    otrosCostos: input.otrosCostos,
+    merma: input.merma,
+    costoTotal: 0,
+    margenObjetivoRealPct: input.margenObjetivoRealPct,
+    precioRecomendadoNeto: 0,
+    precioFinalNeto: input.precioFinalNeto,
+    precioFinalCliente: input.precioFinalCliente,
+    utilidadEstimada: 0,
+    margenRealPct: 0,
+    markupEquivalentePct: 0,
+    isProfitabilityComplete: false,
+    hasCostBasis: false,
+    unknownMaterialItemCount: input.unknownMaterialItemCount,
+  };
+}
+
+export function buildQuoteStudioFinancialSummaryFromPersistedSnapshot(input: {
+  quotePricingMode?: QuotePricingMode;
+  neto: number;
+  total: number;
+  costoTotal: number | null | undefined;
+  utilidadTotal: number | null | undefined;
+  margenPct: number | null | undefined;
+  precioRecomendadoNeto: number | null | undefined;
+  costoMaterialesTotal: number | null | undefined;
+  costoManoObraTotal: number | null | undefined;
+  costoTrasladoTotal: number | null | undefined;
+  costoOtrosTotal: number | null | undefined;
+  mermaTotal: number | null | undefined;
+  mermaPct: number | null | undefined;
+  margenObjetivoPct: number | null | undefined;
+  costBasisStatus: string | null | undefined;
+}): QuoteStudioFinancialSummary {
+  const quotePricingMode = normalizeQuotePricingMode(input.quotePricingMode);
+  const costoMateriales = round(normalizeNonNegative(input.costoMaterialesTotal), 2);
+  const manoObra = round(normalizeNonNegative(input.costoManoObraTotal), 2);
+  const traslado = round(normalizeNonNegative(input.costoTrasladoTotal), 2);
+  const otrosCostos = round(normalizeNonNegative(input.costoOtrosTotal), 2);
+  const merma = round(normalizeNonNegative(input.mermaTotal), 2);
+  const costoTotal = round(normalizeNonNegative(input.costoTotal), 2);
+  const utilidadEstimada = round(Number(input.utilidadTotal ?? 0), 2);
+  const margenRealPct = round(Number(input.margenPct ?? 0), 2);
+  const precioRecomendadoNeto = round(normalizeNonNegative(input.precioRecomendadoNeto), 2);
+  const margenObjetivoRealPct = normalizeTargetMargin(input.margenObjetivoPct);
+  const precioFinalNeto = round(normalizeNonNegative(input.neto), 2);
+  const precioFinalCliente = round(normalizeNonNegative(input.total), 2);
+  const costBasisStatus = normalizePersistedCostBasisStatus(input.costBasisStatus);
+  const materialCostSource = deriveMaterialCostSourceFromPersisted({
+    costBasisStatus: input.costBasisStatus,
+    costoMaterialesTotal: input.costoMaterialesTotal,
+  });
+  const isProfitabilityComplete = isPersistedProfitabilityComplete({
+    costBasisStatus: input.costBasisStatus,
+    costoTotal: input.costoTotal,
+    utilidadTotal: input.utilidadTotal,
+  });
+
+  return {
+    quotePricingMode,
+    materialCostSource,
+    costBasisStatus,
+    costoMateriales,
+    manoObra,
+    traslado,
+    otrosCostos,
+    merma,
+    costoTotal: isProfitabilityComplete ? costoTotal : 0,
+    margenObjetivoRealPct,
+    precioRecomendadoNeto: isProfitabilityComplete ? precioRecomendadoNeto : 0,
+    precioFinalNeto,
+    precioFinalCliente,
+    utilidadEstimada: isProfitabilityComplete ? utilidadEstimada : 0,
+    margenRealPct: isProfitabilityComplete ? margenRealPct : 0,
+    markupEquivalentePct:
+      isProfitabilityComplete && costoTotal > 0
+        ? round((utilidadEstimada / costoTotal) * 100, 2)
+        : 0,
+    isProfitabilityComplete,
+    hasCostBasis: isProfitabilityComplete,
+    unknownMaterialItemCount: 0,
+  };
+}
+
 export function buildQuoteStudioFinancialSummary(input: {
   items: CotizacionWorkflowItem[];
   quotePricingMode?: QuotePricingMode;
   neto: number;
   total: number;
   costoTotalFabricacion?: number | null;
+  costoMaterialesManual?: number | null;
   margenObjetivoRealPct?: number | null;
   manoObra?: number | null;
   traslado?: number | null;
@@ -374,57 +695,182 @@ export function buildQuoteStudioFinancialSummary(input: {
   mermaPct?: number | null;
 }): QuoteStudioFinancialSummary {
   const quotePricingMode = normalizeQuotePricingMode(input.quotePricingMode);
-  const costoMateriales = round(
-    input.items.reduce(
-      (accumulator, item) => accumulator + resolveExplicitItemMaterialCost(item),
-      0
-    ),
-    2
-  );
+  const materialResolution = resolveMaterialCostFromItems(input.items);
   const costoTotalFabricacion = normalizeNonNegative(input.costoTotalFabricacion);
   const manoObra = normalizeNonNegative(input.manoObra);
   const traslado = normalizeNonNegative(input.traslado);
   const otrosCostosBase = normalizeNonNegative(input.otrosCostos);
   const mermaPct = normalizeNonNegative(input.mermaPct);
-  const merma = round(costoMateriales * (mermaPct / 100), 2);
-  const costoDesglosado = round(costoMateriales + manoObra + traslado + otrosCostosBase + merma, 2);
-  const costoTotal =
-    quotePricingMode === "total_global" && costoTotalFabricacion > 0
-      ? round(costoTotalFabricacion, 2)
-      : costoDesglosado;
-  const otrosCostos =
-    quotePricingMode === "total_global" && costoTotalFabricacion > costoDesglosado
-      ? round(otrosCostosBase + (costoTotalFabricacion - costoDesglosado), 2)
-      : otrosCostosBase;
   const margenObjetivoRealPct = normalizeTargetMargin(input.margenObjetivoRealPct);
-  const precioRecomendadoNeto =
-    costoTotal > 0
-      ? round(costoTotal / (1 - margenObjetivoRealPct / 100), 2)
-      : 0;
   const precioFinalNeto = round(normalizeNonNegative(input.neto), 2);
   const precioFinalCliente = round(normalizeNonNegative(input.total), 2);
-  const hasCostBasis = costoTotal > 0;
-  const utilidadEstimada = hasCostBasis ? round(precioFinalNeto - costoTotal, 2) : 0;
-  const margenRealPct =
-    hasCostBasis && precioFinalNeto > 0 ? round((utilidadEstimada / precioFinalNeto) * 100, 2) : 0;
-  const markupEquivalentePct =
-    hasCostBasis ? round((utilidadEstimada / costoTotal) * 100, 2) : 0;
 
-  return {
+  if (quotePricingMode === "total_global") {
+    const costoMateriales = materialResolution.costoMaterialesCalculado;
+    const merma =
+      costoTotalFabricacion > 0
+        ? round(costoMateriales * (mermaPct / 100), 2)
+        : 0;
+    const costoDesglosado = round(costoMateriales + manoObra + traslado + otrosCostosBase + merma, 2);
+    const costoTotal =
+      costoTotalFabricacion > 0 ? round(costoTotalFabricacion, 2) : costoDesglosado;
+    const otrosCostos =
+      costoTotalFabricacion > costoDesglosado
+        ? round(otrosCostosBase + (costoTotalFabricacion - costoDesglosado), 2)
+        : otrosCostosBase;
+    const isProfitabilityComplete = costoTotalFabricacion > 0;
+    const utilidadEstimada = isProfitabilityComplete
+      ? round(precioFinalNeto - costoTotal, 2)
+      : 0;
+    const margenRealPct =
+      isProfitabilityComplete && precioFinalNeto > 0
+        ? round((utilidadEstimada / precioFinalNeto) * 100, 2)
+        : 0;
+    const precioRecomendadoNeto = isProfitabilityComplete
+      ? round(costoTotal / (1 - margenObjetivoRealPct / 100), 2)
+      : 0;
+
+    return {
+      quotePricingMode,
+      materialCostSource: isProfitabilityComplete ? "calculated" : materialResolution.materialCostSource,
+      costBasisStatus: isProfitabilityComplete
+        ? "materiales_completos"
+        : materialResolution.costBasisStatus,
+      costoMateriales,
+      manoObra,
+      traslado,
+      otrosCostos,
+      merma,
+      costoTotal: isProfitabilityComplete ? costoTotal : 0,
+      margenObjetivoRealPct,
+      precioRecomendadoNeto,
+      precioFinalNeto,
+      precioFinalCliente,
+      utilidadEstimada,
+      margenRealPct,
+      markupEquivalentePct:
+        isProfitabilityComplete && costoTotal > 0
+          ? round((utilidadEstimada / costoTotal) * 100, 2)
+          : 0,
+      isProfitabilityComplete,
+      hasCostBasis: isProfitabilityComplete,
+      unknownMaterialItemCount: materialResolution.unknownMaterialItemCount,
+    };
+  }
+
+  if (hasManualMaterialOverride(input.costoMaterialesManual)) {
+    const costoMateriales = round(input.costoMaterialesManual, 2);
+    const merma = round(costoMateriales * (mermaPct / 100), 2);
+
+    return buildCompleteProfitabilitySummary({
+      quotePricingMode,
+      materialCostSource: "manual",
+      costBasisStatus: "materiales_manual",
+      costoMateriales,
+      manoObra,
+      traslado,
+      otrosCostos: otrosCostosBase,
+      merma,
+      margenObjetivoRealPct,
+      precioFinalNeto,
+      precioFinalCliente,
+    });
+  }
+
+  const costoMateriales = materialResolution.costoMaterialesCalculado;
+  const isProfitabilityComplete = materialResolution.materialCostSource === "calculated";
+  const merma = isProfitabilityComplete ? round(costoMateriales * (mermaPct / 100), 2) : 0;
+  const otrosCostos = otrosCostosBase;
+
+  if (!isProfitabilityComplete) {
+    return buildIncompleteProfitabilityMetrics({
+      quotePricingMode,
+      materialCostSource: materialResolution.materialCostSource,
+      costBasisStatus: materialResolution.costBasisStatus,
+      costoMateriales,
+      manoObra,
+      traslado,
+      otrosCostos,
+      merma,
+      margenObjetivoRealPct,
+      precioFinalNeto,
+      precioFinalCliente,
+      unknownMaterialItemCount: materialResolution.unknownMaterialItemCount,
+    });
+  }
+
+  return buildCompleteProfitabilitySummary({
     quotePricingMode,
+    materialCostSource: materialResolution.materialCostSource,
+    costBasisStatus: materialResolution.costBasisStatus,
     costoMateriales,
     manoObra,
     traslado,
     otrosCostos,
     merma,
-    costoTotal,
     margenObjetivoRealPct,
-    precioRecomendadoNeto,
     precioFinalNeto,
     precioFinalCliente,
-    utilidadEstimada,
-    margenRealPct,
-    markupEquivalentePct,
-    hasCostBasis,
-  };
+  });
+}
+
+export function canApplyQuoteStudioRecommendedPrice(summary: QuoteStudioFinancialSummary) {
+  if (!summary.isProfitabilityComplete || summary.precioRecomendadoNeto <= 0) {
+    return false;
+  }
+
+  return Math.round(summary.precioRecomendadoNeto - summary.precioFinalNeto) !== 0;
+}
+
+export function buildQuoteStudioRecommendedDeltaLabel(
+  summary: QuoteStudioFinancialSummary,
+  formatMoney: (value: number) => string = formatCurrency
+): string | null {
+  if (!canApplyQuoteStudioRecommendedPrice(summary)) {
+    return null;
+  }
+
+  const delta = Math.round(summary.precioRecomendadoNeto - summary.precioFinalNeto);
+
+  if (delta === 0) {
+    return "La venta ya está en el precio recomendado.";
+  }
+
+  if (delta > 0) {
+    return `Faltan ${formatMoney(delta)} para el recomendado.`;
+  }
+
+  return `Sobran ${formatMoney(Math.abs(delta))} sobre el recomendado.`;
+}
+
+export function buildQuoteStudioApplyRecommendedLabel(
+  summary: QuoteStudioFinancialSummary,
+  formatMoney: (value: number) => string = formatCurrency
+): string {
+  if (!canApplyQuoteStudioRecommendedPrice(summary)) {
+    return "Usar precio recomendado";
+  }
+
+  const delta = Math.round(summary.precioRecomendadoNeto - summary.precioFinalNeto);
+
+  if (delta === 0) {
+    return "Usar precio recomendado";
+  }
+
+  const signed = delta > 0 ? `+${formatMoney(delta)}` : formatMoney(delta);
+  return `Usar precio recomendado · ${signed}`;
+}
+
+export function resolveMaterialCostOriginLabel(source: MaterialCostSource) {
+  switch (source) {
+    case "calculated":
+      return QUOTE_PROFITABILITY_COPY.materialOrigenEstimado;
+    case "manual":
+      return QUOTE_PROFITABILITY_COPY.materialOrigenManual;
+    case "partial":
+      return QUOTE_PROFITABILITY_COPY.materialOrigenParcial;
+    case "none":
+    default:
+      return QUOTE_PROFITABILITY_COPY.materialOrigenSinDatos;
+  }
 }

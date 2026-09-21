@@ -30,6 +30,7 @@ export function useQuoteDespiecePreview({
     error: recipesError,
   } = useFabricationRecipes({
     enabled: shouldLoad,
+    skipStructuralSeed: true,
   });
 
   const isReady = !isLoading && organizationId != null;

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, type KeyboardEvent } from "react";
 
 import type { Cliente } from "@/features/clientes/types/cliente";
-import { SOLICITUD_PREFILL_CLIENT_ID_PREFIX } from "@/features/cotizaciones/new-quote/solicitud-prefill";
+import { isSolicitudPrefillClientId } from "@/features/cotizaciones/new-quote/solicitud-prefill";
 
 type UsePasoUnoClienteParams = {
   clientes: Cliente[];
@@ -30,9 +30,7 @@ export function usePasoUnoCliente(params: UsePasoUnoClienteParams) {
     onAplicarClienteSeleccionado,
   } = params;
   const ultimoClienteAplicadoRef = useRef<string | number | null>(null);
-  const isSolicitudPrefillSelected = selectedClientId.startsWith(
-    SOLICITUD_PREFILL_CLIENT_ID_PREFIX
-  );
+  const isSolicitudPrefillSelected = isSolicitudPrefillClientId(selectedClientId);
 
   const clienteSolicitudPrefill = useMemo<Cliente | null>(() => {
     if (!isSolicitudPrefillSelected || !draftClienteNombre.trim()) {

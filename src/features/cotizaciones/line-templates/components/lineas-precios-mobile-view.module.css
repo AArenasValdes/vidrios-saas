@@ -622,6 +622,42 @@
 .lineMeta {
   grid-area: meta;
   min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.lineProviderSummary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.lineProviderLabel {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.lineProviderBadge {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid #bfd5f8;
+  border-radius: 999px;
+  color: #153d75;
+  background: #edf4ff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.lineMetaDetails {
+  display: block;
+  min-width: 0;
   overflow: hidden;
   color: #8a96a6;
   font-size: 14px;

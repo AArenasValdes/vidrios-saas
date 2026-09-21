@@ -717,14 +717,17 @@ export function useFabricacionLineWorkflow({
         });
         const created = await createRecipe({
           lineTemplateId: targetLineTemplateId,
-          providerName: targetTemplate.proveedor ?? "",
+          providerName: item.slot.sourceName ?? targetTemplate.proveedor ?? "",
           lineName: targetTemplate.nombre,
           typology: item.slot.typology,
           leavesCount: item.slot.leavesCount,
           variant: definition.identidad.variante,
           definition,
-          sourceType: item.slot.complete ? "workshop" : "manual",
+          sourceType:
+            item.slot.sourceType ?? (item.slot.complete ? "workshop" : "manual"),
           sourceReference: item.slot.sourceReference,
+          sourceName: item.slot.sourceName,
+          sourceRevision: item.slot.sourceRevision,
         });
         openEditor(created);
         setDetailRecipeId(created.id);

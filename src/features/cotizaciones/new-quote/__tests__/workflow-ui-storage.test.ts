@@ -1,7 +1,9 @@
 /** @jest-environment jsdom */
 
 import {
+  buildExplicitNewQuoteHref,
   clearPersistedWorkflowState,
+  isExplicitNewQuoteRequest,
   safelySetWorkflowStorageValue,
 } from "../workflow-ui";
 
@@ -46,5 +48,11 @@ describe("persistencia local del flujo de cotizacion", () => {
       }
     }
 
+  });
+
+  it("distingue nueva cotización explícita de reabrir el mismo path", () => {
+    expect(buildExplicitNewQuoteHref()).toBe("/cotizaciones/nueva?nueva=1");
+    expect(isExplicitNewQuoteRequest("1")).toBe(true);
+    expect(isExplicitNewQuoteRequest(null)).toBe(false);
   });
 });

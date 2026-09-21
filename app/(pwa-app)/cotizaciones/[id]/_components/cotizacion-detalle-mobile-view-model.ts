@@ -7,12 +7,15 @@ import {
   resolveCotizacionWorkflowState,
 } from "@/features/cotizaciones/services/cotizacion-display-state.service";
 import {
+  buildQuoteStudioFinancialSummaryFromPersistedSnapshot,
+  type QuoteStudioFinancialSummary,
+} from "@/features/cotizaciones/services/quote-studio-financial.service";
+import {
   buildCotizacionMirrorFormatLabel,
   buildCotizacionMirrorPaneMeasure,
   decodeCotizacionItemPresentationMeta,
   isCotizacionMirrorDivided,
 } from "@/utils/cotizacion-item-presentation";
-import type { QuoteStudioFinancialSummary } from "@/features/cotizaciones/services/quote-studio-financial.service";
 import { repairBrokenText } from "@/utils/repair-broken-text";
 import { formatMeasurePairFromMm } from "@/features/organization-profile/services/measure-unit.service";
 import type { MeasureUnit } from "@/features/organization-profile/types/measure-unit";
@@ -175,27 +178,28 @@ export function buildCotizacionDetalleMobileViewModel(
     record.descuentoValor ??
     (record.descuentoPct > 0 ? Math.round(subtotal * (record.descuentoPct / 100)) : 0);
 
-  const costoTotal = Number(record.costoTotalFabricacion ?? 0);
-  const ventaNeta = Number(record.neto ?? 0);
-  const utilidadTotal = Number(record.utilidadTotal ?? 0);
-  const hasCostBasis = !isTotalGlobal && costoTotal > 0;
-  const profitabilitySummary: QuoteStudioFinancialSummary = {
+  const financialDraft = record.quoteStudioFinancial;
+  const persistedCostoTotal = isTotalGlobal
+    ? Number(record.costoTotalFabricacion ?? 0)
+    : Number(record.costoTotalFabricacion ?? 0);
+
+  const profitabilitySummary = buildQuoteStudioFinancialSummaryFromPersistedSnapshot({
     quotePricingMode: isTotalGlobal ? "total_global" : "por_item",
-    costoMateriales: 0,
-    manoObra: 0,
-    traslado: 0,
-    otrosCostos: 0,
-    merma: 0,
-    costoTotal,
-    margenObjetivoRealPct: 0,
-    precioRecomendadoNeto: 0,
-    precioFinalNeto: ventaNeta,
-    precioFinalCliente: record.total,
-    utilidadEstimada: hasCostBasis ? utilidadTotal : 0,
-    margenRealPct: hasCostBasis ? Number(record.margenGlobalPct ?? 0) : 0,
-    markupEquivalentePct: 0,
-    hasCostBasis,
-  };
+    neto: Number(record.neto ?? 0),
+    total: record.total,
+    costoTotal: persistedCostoTotal,
+    utilidadTotal: record.utilidadTotal ?? null,
+    margenPct: record.margenGlobalPct ?? null,
+    precioRecomendadoNeto: record.precioRecomendadoNeto ?? null,
+    costoMaterialesTotal: record.costoMaterialesTotal ?? null,
+    costoManoObraTotal: financialDraft?.manoObra ?? null,
+    costoTrasladoTotal: financialDraft?.traslado ?? null,
+    costoOtrosTotal: financialDraft?.otrosCostos ?? null,
+    mermaTotal: record.mermaTotal ?? null,
+    mermaPct: financialDraft?.mermaPct ?? null,
+    margenObjetivoPct: financialDraft?.margenObjetivoRealPct ?? null,
+    costBasisStatus: record.costBasisStatus ?? null,
+  });
 
   return {
     code: record.codigo,

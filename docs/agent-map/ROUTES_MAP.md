@@ -243,6 +243,21 @@ Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las
 
 ---
 
+## Ruta: /admin/sugerencias
+
+- **Tipo**: Privada (autenticada + founder allowlist)
+- **Archivo principal**: `app/admin/sugerencias/page.tsx`
+- **Layout usado**: `app/admin/layout.tsx` -> `AdminShell`
+- **Proposito**: Bandeja interna para agrupar propuestas por categoria, taller y estado; los aportes son privados para Ventora.
+- **Usuario objetivo**: Founder/admin interno allowlist por correo
+- **Funcionalidades visibles**: Menciones y talleres por categoria, busqueda por taller/comentario, filtro por estado y seguimiento (nueva, en revision, planificada, en desarrollo, implementada o no priorizada)
+- **API usada**: `GET /api/admin/sugerencias`, `PATCH /api/admin/sugerencias/[id]`
+- **Tablas Supabase relacionadas**: `product_feedback` (migracion local preparada; pendiente de aplicar remotamente), `organizations`
+- **Acceso**: `resolveVentoraAdminRouteContext()` antes de toda lectura/escritura; `createAdminClient()` solo en servidor.
+- **Riesgos**: No exponer lectura global a cuentas cliente. No aceptar cambios de estado sin founder allowlist.
+
+---
+
 ## Ruta: /cotizaciones
 
 - **Tipo**: Privada (autenticada)
@@ -396,6 +411,22 @@ Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las
 - **Acciones principales**: Copiar link, descargar QR, ver URLs por canal
 - **Archivos a tocar para modificar**: `app/(pwa-app)/solicitudes/canales/page.tsx`, `src/features/solicitudes/components/lead-channels.tsx`, `src/features/solicitudes/components/lead-channels.module.css`, `src/features/solicitudes/hooks/useLeadChannels.ts`
 - **Riesgos**: No romper generacion de QR, URLs con UTM ni la marca de `channel_ready`. Esta pantalla debe redirigir a `/cuenta-vencida` cuando la cuenta ya no puede operar.
+
+---
+
+## Ruta: /sugerencias
+
+- **Tipo**: Privada (autenticada)
+- **Archivo principal**: `app/(pwa-app)/sugerencias/page.tsx`
+- **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
+- **Proposito**: Recibir propuestas por categoria y comentarios opcionales de maestros para priorizar el desarrollo de Ventora.
+- **Usuario objetivo**: Usuario autenticado del taller
+- **Entrada**: Menu de cuenta -> **Propuestas para Ventora** (separado de Plan y suscripcion)
+- **Funcionalidades visibles**: Una categoria por envio, comentario opcional y confirmacion de recepcion; el texto recuerda no incluir datos privados de clientes.
+- **API usada**: `POST /api/sugerencias`
+- **Tablas Supabase relacionadas**: `product_feedback` (migracion local preparada; pendiente de aplicar remotamente)
+- **Acceso y persistencia**: La API obtiene usuario y organizacion de la sesion; el cliente autenticado solo tiene permiso de INSERT y la policy exige `auth.uid()` y `get_org_id()`.
+- **Riesgos**: No mostrar ideas de otros talleres a usuarios cliente ni aceptar `organization_id` desde el body.
 
 ---
 

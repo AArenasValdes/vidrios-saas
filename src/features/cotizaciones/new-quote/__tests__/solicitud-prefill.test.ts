@@ -1,4 +1,8 @@
-import { buildNuevaCotizacionSolicitudPrefillState } from "@/features/cotizaciones/new-quote/solicitud-prefill";
+import {
+  buildNuevaCotizacionSolicitudPrefillState,
+  isSolicitudPrefillClientId,
+  resolvePersistedClientIdForSave,
+} from "@/features/cotizaciones/new-quote/solicitud-prefill";
 
 describe("solicitud prefill para nueva cotización", () => {
   it("arma un borrador limpio con datos de la solicitud", () => {
@@ -20,6 +24,8 @@ describe("solicitud prefill para nueva cotización", () => {
     expect(result.draft.items).toEqual([]);
     expect(result.componentForm.pricingMode).toBe("margen");
     expect(result.showStep1MoreData).toBe(true);
+    expect(isSolicitudPrefillClientId(result.selectedClientId)).toBe(true);
+    expect(resolvePersistedClientIdForSave(result.selectedClientId)).toBeUndefined();
   });
 
   it("usa fallback comercial cuando la obra viene vacía", () => {
@@ -33,5 +39,12 @@ describe("solicitud prefill para nueva cotización", () => {
     expect(result.draft.obra).toBe("Solicitud comercial");
     expect(result.draft.clienteTelefono).toBe("");
     expect(result.showStep1MoreData).toBe(false);
+  });
+
+  it("no envía ids sintéticos de prefill como cliente persistido", () => {
+    expect(resolvePersistedClientIdForSave("solicitud-prefill:eduardo-briones")).toBeUndefined();
+    expect(resolvePersistedClientIdForSave("42")).toBe("42");
+    expect(resolvePersistedClientIdForSave(42)).toBe(42);
+    expect(resolvePersistedClientIdForSave("")).toBeUndefined();
   });
 });

@@ -10,6 +10,7 @@ import {
   type ComponentFormState,
   type FieldErrors,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { resolvePersistedClientIdForSave } from "@/features/cotizaciones/new-quote/solicitud-prefill";
 import { calculateGlobalQuoteWorkflowTotals } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import type { QuotePricingOptions } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import type {
@@ -192,7 +193,10 @@ export function usePasoTresGuardado(params: UsePasoTresGuardadoParams) {
           estado,
           existingId: recordMeta?.id,
           existingCode: recordMeta?.codigo,
-          existingClientId: selectedClientId || recordMeta?.clientId || undefined,
+          existingClientId:
+            resolvePersistedClientIdForSave(selectedClientId) ??
+            resolvePersistedClientIdForSave(recordMeta?.clientId) ??
+            undefined,
           existingProjectId: recordMeta?.projectId,
         });
 
@@ -246,7 +250,13 @@ export function usePasoTresGuardado(params: UsePasoTresGuardadoParams) {
             ? "No hay conexion a internet en este momento. Revisa tu red y vuelve a intentar guardar."
             : error instanceof Error
               ? error.message
-              : "No se pudo guardar la cotizacion"
+              : typeof error === "object" &&
+                  error &&
+                  "message" in error &&
+                  typeof (error as { message?: unknown }).message === "string" &&
+                  (error as { message: string }).message.trim()
+                ? (error as { message: string }).message
+                : "No se pudo guardar la cotizacion"
         );
       }
     },

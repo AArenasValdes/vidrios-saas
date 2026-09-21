@@ -708,7 +708,7 @@ export default function CotizacionesPage() {
             {isExporting ? "Preparando..." : "Exportar CSV"}
           </button>
           <div>
-            <Link className={s.btnPrimary} href="/cotizaciones/nueva">
+            <Link className={s.btnPrimary} href="/cotizaciones/nueva?nueva=1">
               <LuPlus aria-hidden />
               Nueva cotizacion
             </Link>
@@ -1002,7 +1002,7 @@ export default function CotizacionesPage() {
               Limpiar filtros
             </button>
           ) : (
-            <Link className={s.btnPrimary} href="/cotizaciones/nueva">
+            <Link className={s.btnPrimary} href="/cotizaciones/nueva?nueva=1">
               <LuFilePlus2 aria-hidden />
               <span className={s.desktopEmptyCopy}>Crear primera cotizacion</span>
               <span className={s.mobileEmptyCopy}>Nueva cotizacion</span>

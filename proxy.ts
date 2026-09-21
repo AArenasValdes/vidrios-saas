@@ -16,6 +16,7 @@ const protectedPrefixes = [
   "/clientes",
   "/cotizaciones",
   "/solicitudes",
+  "/sugerencias",
   "/configuracion",
   "/cuenta-vencida",
 ];
@@ -420,6 +421,7 @@ export const config = {
     "/clientes/:path*",
     "/cotizaciones/:path*",
     "/solicitudes/:path*",
+    "/sugerencias/:path*",
     "/configuracion/:path*",
     "/cuenta-vencida/:path*",
     "/api/admin/:path*",

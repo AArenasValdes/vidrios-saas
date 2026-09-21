@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ChangeEvent } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   LuBellRing,
   LuBuilding2,
@@ -11,6 +11,7 @@ import {
   LuChevronDown,
   LuCopy,
   LuCreditCard,
+  LuDollarSign,
   LuEye,
   LuFileCheck2,
   LuGlobe,
@@ -45,9 +46,10 @@ import {
 import type { UpdateOrganizationProfileInput } from "@/features/organization-profile/types/organization-profile";
 import { VALIDEZ_OPTIONS } from "@/features/cotizaciones/new-quote/workflow-ui";
 import {
-  buildQuotePreferencesSummary,
+  formatValidezPredeterminadaLabel,
   hasActiveQuoteCommercialDefaults,
 } from "@/features/cotizaciones/services/quote-commercial-conditions.service";
+import { hasActiveQuoteProfitabilityDefaults } from "@/features/cotizaciones/services/quote-profitability-defaults.service";
 import { SubscriptionDetail } from "@/features/subscriptions/components/subscription-detail";
 import { fetchSubscriptionSummary } from "@/features/subscriptions/services/subscription-summary-client.service";
 import { getPlanLabel } from "@/features/subscriptions/types/subscription-summary";
@@ -91,6 +93,11 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = buildEmpresaProfileInput({
   proveedorPreferido: "",
   modoPrecioPreferido: "margen",
   margenDefecto: 100,
+  margenObjetivoDefecto: null,
+  mermaMaterialesDefecto: null,
+  costoManoObraDefecto: null,
+  costoTrasladoDefecto: null,
+  costoOtrosDefecto: null,
   creadoEn: null,
   actualizadoEn: null,
   publicName: "",
@@ -121,7 +128,8 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = buildEmpresaProfileInput({
   isPublished: false,
 });
 
-type SectionId = "empresa" | "marca" | "catalogo" | "comercial" | "notificaciones" | "soporte" | "suscripcion";
+type SectionId = "empresa" | "marca" | "catalogo" | "comercial" | "rentabilidad" | "notificaciones" | "soporte" | "suscripcion";
+type DefaultClpCostField = "costoManoObraDefecto" | "costoTrasladoDefecto" | "costoOtrosDefecto";
 type DeviceAlertsState = {
   kind: "checking" | "enabled" | "available" | "unsupported" | "error";
   message: string;
@@ -155,6 +163,25 @@ async function persistSubscription(subscription: PushSubscription) {
 }
 
 const compactJoin = (values: Array<string | null | undefined>) => values.filter(Boolean).join(" · ");
+const formatDefaultClpAmount = (value: number | null | undefined) =>
+  value == null || !Number.isFinite(value)
+    ? ""
+    : new Intl.NumberFormat("es-CL", { maximumFractionDigits: 0 }).format(value);
+const parseDefaultClpAmount = (value: string) => {
+  const digits = value.replace(/[^\d]/g, "");
+  return digits ? Number(digits) : null;
+};
+const findCaretAfterDigits = (value: string, digitCount: number) => {
+  if (digitCount === 0) return 0;
+
+  let digitsSeen = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    if (/\d/.test(value[index])) digitsSeen += 1;
+    if (digitsSeen === digitCount) return index + 1;
+  }
+
+  return value.length;
+};
 const shorten = (text: string, max = 32) =>
   text.trim().length > max ? `${text.trim().slice(0, max - 1)}...` : text.trim();
 const notificationsSummary = (kind: DeviceAlertsState["kind"]) =>
@@ -179,8 +206,12 @@ export default function ConfiguracionEmpresaPage() {
     error: lineTemplatesError,
   } = useCotizacionLineTemplates();
   const [form, setForm] = useState<UpdateOrganizationProfileInput>(EMPTY_FORM);
+  const companyAccordionTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const commercialAccordionTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const profitabilityAccordionTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [openSection, setOpenSection] = useState<SectionId | null>(null);
+  const [isCountrySettingsOpen, setIsCountrySettingsOpen] = useState(false);
   const [savingSection, setSavingSection] = useState<SectionId | null>(null);
   const [sectionFeedback, setSectionFeedback] = useState<SectionFeedback | null>(null);
   const [publicLinkCopied, setPublicLinkCopied] = useState(false);
@@ -442,6 +473,28 @@ export default function ConfiguracionEmpresaPage() {
     []
   );
 
+  const handleDefaultClpAmountChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>, key: DefaultClpCostField) => {
+      const input = event.currentTarget;
+      const rawValue = input.value;
+      const caret = input.selectionStart ?? rawValue.length;
+      const digitsBeforeCaret = rawValue.slice(0, caret).replace(/[^\d]/g, "").length;
+      const amount = parseDefaultClpAmount(rawValue);
+
+      handleFieldChange(key, amount);
+      window.requestAnimationFrame(() => {
+        if (document.activeElement !== input) return;
+
+        const nextCaret = findCaretAfterDigits(
+          formatDefaultClpAmount(amount),
+          digitsBeforeCaret
+        );
+        input.setSelectionRange(nextCaret, nextCaret);
+      });
+    },
+    [handleFieldChange]
+  );
+
   const handleEmpresaNombreChange = useCallback((value: string) => {
     setForm((current) => {
       const currentSlug = current.solicitudPublicaSlug.trim();
@@ -521,6 +574,30 @@ export default function ConfiguracionEmpresaPage() {
         await saveProfile(nextForm);
         setSectionFeedback({ section, kind: "success", message: "Guardado." });
         setOpenSection((current) => (current === section ? null : current));
+
+        const triggerRef =
+          section === "empresa"
+            ? companyAccordionTriggerRef
+            : section === "comercial"
+              ? commercialAccordionTriggerRef
+              : section === "rentabilidad"
+                ? profitabilityAccordionTriggerRef
+                : null;
+
+        if (triggerRef) {
+          window.requestAnimationFrame(() => {
+            const trigger = triggerRef.current;
+            if (!trigger) return;
+
+            trigger.scrollIntoView({
+              behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+                ? "auto"
+                : "smooth",
+              block: "start",
+            });
+            trigger.focus({ preventScroll: true });
+          });
+        }
       } catch (error) {
         setSectionFeedback({
           section,
@@ -584,7 +661,12 @@ export default function ConfiguracionEmpresaPage() {
       (form.empresaLogoUrl || previewUrl)
   );
   const commercialComplete = hasActiveQuoteCommercialDefaults(form);
-  const quotePreferencesSummary = buildQuotePreferencesSummary(form);
+  const profitabilityComplete = hasActiveQuoteProfitabilityDefaults(form);
+  const hasDefaultCosts = [
+    form.costoManoObraDefecto,
+    form.costoTrasladoDefecto,
+    form.costoOtrosDefecto,
+  ].some((value) => value !== null && value !== undefined);
   const notificationsComplete = notificationsEnabled;
   const activeLineTemplatesCount = lineTemplates.filter((item) => item.isActive).length;
   const setupSteps: Array<{
@@ -634,10 +716,16 @@ export default function ConfiguracionEmpresaPage() {
     form.brandColor.toUpperCase(),
     form.empresaLogoUrl || previewUrl ? "Logo subido" : "Sin logo",
   ]);
-  const commercialSummary = compactJoin([
-    quotePreferencesSummary,
-    form.unidadMedidas === "cm" ? "Medidas en cm" : "Medidas en mm",
-  ]);
+  const commercialSummary = formatValidezPredeterminadaLabel(form.validezPredeterminada);
+  const profitabilitySummary = compactJoin([
+    form.margenObjetivoDefecto === null || form.margenObjetivoDefecto === undefined
+      ? null
+      : `Margen ${form.margenObjetivoDefecto}%`,
+    form.mermaMaterialesDefecto === null || form.mermaMaterialesDefecto === undefined
+      ? null
+      : `Merma ${form.mermaMaterialesDefecto}%`,
+    hasDefaultCosts ? "Costos prellenados" : null,
+  ]) || "Opcional";
   const previewIdentity = previewUrl ?? form.empresaLogoUrl;
   const previewInitials = buildOrganizationInitials(form.empresaNombre || "Mi empresa");
 
@@ -911,7 +999,7 @@ export default function ConfiguracionEmpresaPage() {
 
       <div className={s.accordionList}>
         <section className={`${s.accordion} ${openSection === "empresa" ? s.accordionOpen : ""}`}>
-          <button type="button" className={s.accordionTrigger} onClick={() => setOpenSection((current) => (current === "empresa" ? null : "empresa"))} aria-expanded={openSection === "empresa"}>
+          <button ref={companyAccordionTriggerRef} type="button" className={`${s.accordionTrigger} ${s.saveReturnAccordionTrigger}`} onClick={() => setOpenSection((current) => (current === "empresa" ? null : "empresa"))} aria-expanded={openSection === "empresa"}>
             <div className={s.triggerMain}>
               <div className={s.triggerIcon}><LuBuilding2 aria-hidden /></div>
               <div className={s.triggerCopy}>
@@ -952,15 +1040,9 @@ export default function ConfiguracionEmpresaPage() {
                     <span className={s.inlineInfo}>Tu página pública de venta quedará como {publicRequestUrl}.</span>
                   </label>
                 ) : null}
-                <label className={s.field}>
-                  <span className={s.label}>Pais</span>
-                  <select className={s.input} value={form.countryCode} onChange={(event) => handleFieldChange("countryCode", event.target.value as SupportedCountryCode)}>
-                    {COUNTRY_PRESET_OPTIONS.map((preset) => (
-                      <option key={preset.countryCode} value={preset.countryCode}>{preset.label}</option>
-                    ))}
-                  </select>
-                  <span className={s.inlineInfo}>Actualiza los valores regionales editables de abajo.</span>
-                </label>
+              </div>
+
+              <div className={s.fieldGrid}>
                 <label className={s.field}>
                   <span className={s.label}>Telefono</span>
                   <input className={s.input} value={form.empresaTelefono} onChange={(event) => handleFieldChange("empresaTelefono", event.target.value)} placeholder={getCountryPreset(form.countryCode).phonePlaceholder} />
@@ -976,34 +1058,78 @@ export default function ConfiguracionEmpresaPage() {
                   <input className={s.input} value={form.empresaEmail} onChange={(event) => handleFieldChange("empresaEmail", event.target.value)} placeholder="contacto@empresa.cl" />
                   <span className={s.inlineInfo}>Se usa como dato de contacto visible.</span>
                 </label>
-                <label className={s.field}>
-                  <span className={s.label}>Moneda</span>
-                  <input className={s.input} value={form.currencyCode} onChange={(event) => handleFieldChange("currencyCode", event.target.value.toUpperCase())} maxLength={3} />
-                </label>
-                <label className={s.field}>
-                  <span className={s.label}>Idioma regional</span>
-                  <input className={s.input} value={form.locale} onChange={(event) => handleFieldChange("locale", event.target.value)} placeholder="es-CL" maxLength={5} />
-                </label>
-                <label className={s.field}>
-                  <span className={s.label}>Zona horaria</span>
-                  <input className={s.input} value={form.timezone} onChange={(event) => handleFieldChange("timezone", event.target.value)} placeholder="America/Santiago" maxLength={80} />
-                </label>
-                <label className={s.field}>
-                  <span className={s.label}>Codigo telefonico</span>
-                  <input className={s.input} value={form.phoneCountryCode} onChange={(event) => handleFieldChange("phoneCountryCode", event.target.value)} placeholder="+56" maxLength={5} />
-                </label>
-                <label className={s.field}>
-                  <span className={s.label}>Impuesto por defecto</span>
-                  <input className={s.input} value={form.taxLabel} onChange={(event) => handleFieldChange("taxLabel", event.target.value)} maxLength={40} />
-                </label>
-                <label className={s.field}>
-                  <span className={s.label}>Tasa por defecto (%)</span>
-                  <input className={s.input} type="number" min="0" max="100" step="0.01" value={form.taxRateDefault} onChange={(event) => handleFieldChange("taxRateDefault", Number(event.target.value))} />
-                </label>
-                <label className={s.field}>
-                  <span className={s.label}>Identificador tributario</span>
-                  <input className={s.input} value={form.taxIdLabel} onChange={(event) => handleFieldChange("taxIdLabel", event.target.value)} maxLength={40} />
-                </label>
+              </div>
+
+              <div className={s.countrySettingsGroup}>
+                <button
+                  type="button"
+                  className={s.countrySettingsTrigger}
+                  aria-expanded={isCountrySettingsOpen}
+                  aria-controls="company-country-settings"
+                  onClick={() => setIsCountrySettingsOpen((current) => !current)}
+                >
+                  <span className={s.countrySettingsIcon} aria-hidden>
+                    <LuSettings2 />
+                  </span>
+                  <span className={s.countrySettingsCopy}>
+                    <strong>Configuración de país</strong>
+                    <small>{getCountryPreset(form.countryCode).label} · moneda, impuestos y formatos</small>
+                  </span>
+                  <span className={s.countrySettingsAction}>
+                    {isCountrySettingsOpen ? "Ocultar" : "Editar"}
+                  </span>
+                  <LuChevronDown
+                    className={`${s.countrySettingsChevron} ${isCountrySettingsOpen ? s.countrySettingsChevronOpen : ""}`}
+                    aria-hidden
+                  />
+                </button>
+
+                <div
+                  id="company-country-settings"
+                  className={s.countrySettingsFields}
+                  hidden={!isCountrySettingsOpen}
+                >
+                  <label className={s.field}>
+                    <span className={s.label}>País</span>
+                    <select className={s.input} value={form.countryCode} onChange={(event) => handleFieldChange("countryCode", event.target.value as SupportedCountryCode)}>
+                      {COUNTRY_PRESET_OPTIONS.map((preset) => (
+                        <option key={preset.countryCode} value={preset.countryCode}>{preset.label}</option>
+                      ))}
+                    </select>
+                    <span className={s.inlineInfo}>Al cambiarlo, se actualizan los valores regionales de abajo.</span>
+                  </label>
+
+                  <div className={`${s.fieldGrid} ${s.countrySettingsGrid}`}>
+                    <label className={s.field}>
+                      <span className={s.label}>Moneda</span>
+                      <input className={s.input} value={form.currencyCode} onChange={(event) => handleFieldChange("currencyCode", event.target.value.toUpperCase())} maxLength={3} />
+                    </label>
+                    <label className={s.field}>
+                      <span className={s.label}>Idioma regional</span>
+                      <input className={s.input} value={form.locale} onChange={(event) => handleFieldChange("locale", event.target.value)} placeholder="es-CL" maxLength={5} />
+                    </label>
+                    <label className={s.field}>
+                      <span className={s.label}>Zona horaria</span>
+                      <input className={s.input} value={form.timezone} onChange={(event) => handleFieldChange("timezone", event.target.value)} placeholder="America/Santiago" maxLength={80} />
+                    </label>
+                    <label className={s.field}>
+                      <span className={s.label}>Codigo telefonico</span>
+                      <input className={s.input} value={form.phoneCountryCode} onChange={(event) => handleFieldChange("phoneCountryCode", event.target.value)} placeholder="+56" maxLength={5} />
+                    </label>
+                    <label className={s.field}>
+                      <span className={s.label}>Impuesto por defecto</span>
+                      <input className={s.input} value={form.taxLabel} onChange={(event) => handleFieldChange("taxLabel", event.target.value)} maxLength={40} />
+                    </label>
+                    <label className={s.field}>
+                      <span className={s.label}>Tasa por defecto (%)</span>
+                      <input className={s.input} type="number" min="0" max="100" step="0.01" value={form.taxRateDefault} onChange={(event) => handleFieldChange("taxRateDefault", Number(event.target.value))} />
+                    </label>
+                    <label className={s.field}>
+                      <span className={s.label}>Identificador tributario</span>
+                      <input className={s.input} value={form.taxIdLabel} onChange={(event) => handleFieldChange("taxIdLabel", event.target.value)} maxLength={40} />
+                    </label>
+                  </div>
+                </div>
               </div>
               {sectionFeedback?.section === "empresa" ? <p className={sectionFeedback.kind === "error" ? s.error : s.success}>{sectionFeedback.message}</p> : null}
               <div className={s.sectionActions}>
@@ -1130,7 +1256,7 @@ export default function ConfiguracionEmpresaPage() {
         </section>
 
         <section className={`${s.accordion} ${openSection === "comercial" ? s.accordionOpen : ""}`}>
-          <button type="button" className={s.accordionTrigger} onClick={() => setOpenSection((current) => (current === "comercial" ? null : "comercial"))} aria-expanded={openSection === "comercial"}>
+          <button ref={commercialAccordionTriggerRef} type="button" className={`${s.accordionTrigger} ${s.saveReturnAccordionTrigger}`} onClick={() => setOpenSection((current) => (current === "comercial" ? null : "comercial"))} aria-expanded={openSection === "comercial"}>
             <div className={s.triggerMain}>
               <div className={s.triggerIcon}><LuSettings2 aria-hidden /></div>
               <div className={s.triggerCopy}>
@@ -1176,39 +1302,19 @@ export default function ConfiguracionEmpresaPage() {
                 </p>
               </div>
 
-              <div className={s.commercialPdfIvaRow}>
-                <div className={s.commercialPdfIvaCopy}>
-                  <span className={s.label}>Mostrar IVA en el PDF</span>
-                  <p className={s.measureUnitHint}>
-                    Si lo ocultas, Ventora igual lo calcula y el cliente verá solo el total final.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className={`${s.switch} ${form.mostrarIvaEnPdf ? s.switchOn : ""}`}
-                  onClick={() =>
-                    handleFieldChange("mostrarIvaEnPdf", !(form.mostrarIvaEnPdf ?? true))
-                  }
-                  aria-pressed={form.mostrarIvaEnPdf ?? true}
-                  aria-label="Mostrar IVA en el PDF"
-                >
-                  <span className={s.switchThumb} />
-                </button>
-              </div>
-
               <div className={s.commercialDefaultsSection}>
                 <div className={s.commercialDefaultsHeader}>
                   <span className={s.label}>Condiciones predeterminadas de cotización</span>
                   <p className={s.measureUnitHint}>
-                    Se heredan automáticamente al crear una cotización. Puedes ajustarlas por presupuesto sin cambiar esta plantilla.
+                    Se aplican a cada cotización nueva y puedes ajustarlas en ella.
                   </p>
                 </div>
 
                 <label className={s.field}>
                   <span className={s.label}>Forma de pago predeterminada</span>
                   <textarea
-                    className={s.textarea}
-                    rows={3}
+                    className={`${s.textarea} ${s.paymentTermsTextarea}`}
+                    rows={2}
                     value={form.formaPago}
                     onChange={(event) => handleFieldChange("formaPago", event.target.value)}
                     placeholder="Ej: 50% al inicio y 50% al finalizar"
@@ -1270,6 +1376,125 @@ export default function ConfiguracionEmpresaPage() {
                 <button type="button" className={s.saveButton} onClick={() => void handleSaveSection("comercial")} disabled={isSaving || savingSection === "comercial"}>
                   <LuSave aria-hidden />
                   {savingSection === "comercial" ? "Guardando..." : "Guardar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className={`${s.accordion} ${openSection === "rentabilidad" ? s.accordionOpen : ""}`}>
+          <button ref={profitabilityAccordionTriggerRef} type="button" className={`${s.accordionTrigger} ${s.saveReturnAccordionTrigger}`} onClick={() => setOpenSection((current) => (current === "rentabilidad" ? null : "rentabilidad"))} aria-expanded={openSection === "rentabilidad"}>
+            <div className={s.triggerMain}>
+              <div className={s.triggerIcon}><LuDollarSign aria-hidden /></div>
+              <div className={s.triggerCopy}>
+                <span className={s.cardEyebrow}>Predeterminados</span>
+                <strong>Costos y rentabilidad</strong>
+                <p>{profitabilitySummary}</p>
+              </div>
+            </div>
+            <div className={s.triggerMeta}>
+              <span className={s.statePill} data-complete={profitabilityComplete}>{profitabilityComplete ? "Configurado" : "Opcional"}</span>
+              {sectionFeedback?.section === "rentabilidad" && sectionFeedback.kind === "success" ? <span className={s.savedPill}>Guardado</span> : null}
+              <LuChevronDown className={s.chevron} aria-hidden />
+            </div>
+          </button>
+
+          <div className={s.accordionPanel}>
+            <div className={s.accordionInner}>
+              <div className={s.commercialDefaultsSection}>
+                <div className={s.optionalProfitabilityNote}>
+                  <span>Opcional</span>
+                  <p>Para revisar la rentabilidad, indica también el costo de los materiales en cada cotización.</p>
+                </div>
+
+                <div className={s.profitabilityFieldsGrid}>
+                  <label className={s.field}>
+                    <span className={s.label}>Margen objetivo real</span>
+                    <div className={s.inputWithSuffix}>
+                      <input
+                        className={s.input}
+                        inputMode="decimal"
+                        value={form.margenObjetivoDefecto ?? ""}
+                        onChange={(event) => {
+                          const parsed = Number(event.target.value.replace(",", "."));
+                          handleFieldChange(
+                            "margenObjetivoDefecto",
+                            event.target.value.trim() === "" || !Number.isFinite(parsed)
+                              ? null
+                              : parsed
+                          );
+                        }}
+                        placeholder="Vacío = 30% en cotización nueva"
+                      />
+                      <span className={s.inputSuffix} aria-hidden="true">%</span>
+                    </div>
+                  </label>
+
+                  <label className={s.field}>
+                    <span className={s.label}>Merma comercial estimada</span>
+                    <div className={s.inputWithSuffix}>
+                      <input
+                        className={s.input}
+                        inputMode="decimal"
+                        value={form.mermaMaterialesDefecto ?? ""}
+                        onChange={(event) => {
+                          const parsed = Number(event.target.value.replace(",", "."));
+                          handleFieldChange(
+                            "mermaMaterialesDefecto",
+                            event.target.value.trim() === "" || !Number.isFinite(parsed)
+                              ? null
+                              : parsed
+                          );
+                        }}
+                        placeholder="Vacío = 0%"
+                      />
+                      <span className={s.inputSuffix} aria-hidden="true">%</span>
+                    </div>
+                  </label>
+
+                  <label className={s.field}>
+                    <span className={s.label}>Mano de obra predeterminada (CLP)</span>
+                    <input
+                      className={`${s.input} ${s.clpAmountInput}`}
+                      type="text"
+                      inputMode="numeric"
+                      value={formatDefaultClpAmount(form.costoManoObraDefecto)}
+                      onChange={(event) => handleDefaultClpAmountChange(event, "costoManoObraDefecto")}
+                      placeholder="Vacío = no prellenar"
+                    />
+                  </label>
+
+                  <label className={s.field}>
+                    <span className={s.label}>Traslado predeterminado (CLP)</span>
+                    <input
+                      className={`${s.input} ${s.clpAmountInput}`}
+                      type="text"
+                      inputMode="numeric"
+                      value={formatDefaultClpAmount(form.costoTrasladoDefecto)}
+                      onChange={(event) => handleDefaultClpAmountChange(event, "costoTrasladoDefecto")}
+                      placeholder="Vacío = no prellenar"
+                    />
+                  </label>
+
+                  <label className={s.field}>
+                    <span className={s.label}>Otros costos predeterminados (CLP)</span>
+                    <input
+                      className={`${s.input} ${s.clpAmountInput}`}
+                      type="text"
+                      inputMode="numeric"
+                      value={formatDefaultClpAmount(form.costoOtrosDefecto)}
+                      onChange={(event) => handleDefaultClpAmountChange(event, "costoOtrosDefecto")}
+                      placeholder="Vacío = no prellenar"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {sectionFeedback?.section === "rentabilidad" ? <p className={sectionFeedback.kind === "error" ? s.error : s.success}>{sectionFeedback.message}</p> : null}
+              <div className={s.sectionActions}>
+                <button type="button" className={s.saveButton} onClick={() => void handleSaveSection("rentabilidad")} disabled={isSaving || savingSection === "rentabilidad"}>
+                  <LuSave aria-hidden />
+                  {savingSection === "rentabilidad" ? "Guardando..." : "Guardar costos"}
                 </button>
               </div>
             </div>

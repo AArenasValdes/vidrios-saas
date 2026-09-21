@@ -293,13 +293,14 @@ export function PasoDosWizardMovil({
   const quotePricingMode = formulario.quotePricingMode;
   const {
     isReady: isDespiecePreviewReady,
-    hasDespiecePreviewAvailable,
     canOpenDespieceForItem,
     resolveDefaultDespieceItemId,
+    recipes: fabricationRecipes,
+    organizationId: fabricationOrganizationId,
   } = useQuoteDespiecePreview({
     items,
     enabled: quotePricingMode === "por_item",
-    preload: wizard.isOpen,
+    preload: wizard.isOpen || items.length > 0,
   });
 
   const openDespieceReview = useCallback(
@@ -328,6 +329,8 @@ export function PasoDosWizardMovil({
         }}
         onSaveCubicationLineAdjustment={formulario.onSaveCubicationLineAdjustment}
         isSavingCubicationLineAdjustment={formulario.isSavingCubicationLineAdjustment}
+        recipes={fabricationRecipes}
+        organizationId={fabricationOrganizationId}
       />
     ) : null;
 
@@ -667,6 +670,8 @@ export function PasoDosWizardMovil({
               ? (itemId) => openDespieceReview(itemId)
               : undefined
           }
+          fabricationRecipes={fabricationRecipes}
+          fabricationOrganizationId={fabricationOrganizationId}
         />
       ) : null}
 

@@ -28,6 +28,13 @@ import {
   resolveSyncedPorItemTotalClienteManual,
 } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import { buildQuoteCommercialDefaultsFromProfile } from "@/features/cotizaciones/services/quote-commercial-conditions.service";
+import {
+  applyOrganizationProfitabilityDefaultsToWorkflowDraft,
+  buildQuoteProfitabilityDefaultsFromProfile,
+  hasPendingAutomaticProfitabilityInheritance,
+  restoreQuoteProfitabilityParametersToDefaults,
+  startFreshQuoteWorkflowDraft,
+} from "@/features/cotizaciones/services/quote-profitability-defaults.service";
 import { buildQuotePdfDisplayDefaultsFromProfile } from "@/features/cotizaciones/services/quote-pdf-display.service";
 import {
   applyQuoteStudioRecommendedPrice,
@@ -92,6 +99,7 @@ import {
   mapFreeValueItemToForm,
   validateFreeValueItemForm,
   withResolvedStep1QuickQuoteDefaults,
+  isExplicitNewQuoteRequest,
   type FreeValueItemFormState,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import {
@@ -163,6 +171,7 @@ function NuevaCotizacionPageContent() {
   const duplicateId = searchParams.get("duplicate");
   const requestedStepParam = searchParams.get("step");
   const requestedModeParam = searchParams.get("modo");
+  const forceFreshQuote = isExplicitNewQuoteRequest(searchParams.get("nueva"));
   const requestedStep: StepKey | null =
     requestedStepParam === "2" ? 2 : requestedStepParam === "3" ? 3 : null;
   const requestedConstructorMode = requestedModeParam === "constructor";
@@ -194,7 +203,12 @@ function NuevaCotizacionPageContent() {
     }),
     [organizationProfile]
   );
+  const quoteProfitabilityDefaults = useMemo(
+    () => buildQuoteProfitabilityDefaultsFromProfile(organizationProfile),
+    [organizationProfile]
+  );
   const commercialDefaultsAppliedRef = useRef(false);
+  const profitabilityDefaultsAppliedRef = useRef(false);
   const {
     activeTemplates: activeLineTemplates,
     createTemplate: createLineTemplate,
@@ -205,7 +219,7 @@ function NuevaCotizacionPageContent() {
   const {
     recipes: fabricationRecipes,
     organizationId: fabricationOrganizationId,
-  } = useFabricationRecipes({ enabled: step !== 1 });
+  } = useFabricationRecipes({ enabled: step !== 1, skipStructuralSeed: true });
   const [isSavingCubicationLineAdjustment, setIsSavingCubicationLineAdjustment] =
     useState(false);
   const [componentForm, setComponentForm] = useState<ComponentFormState>(() =>
@@ -275,6 +289,17 @@ function NuevaCotizacionPageContent() {
     });
   }, []);
 
+  useEffect(() => {
+    if (!forceFreshQuote || editId || duplicateId) {
+      return;
+    }
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete("nueva");
+    const nextQuery = nextParams.toString();
+    router.replace(nextQuery ? `/cotizaciones/nueva?${nextQuery}` : "/cotizaciones/nueva");
+  }, [duplicateId, editId, forceFreshQuote, router, searchParams]);
+
   const suggestionProvider: PreferredProvider = "";
   const preferredPricingMode = normalizePricingMode(
     organizationProfile?.modoPrecioPreferido
@@ -314,11 +339,13 @@ function NuevaCotizacionPageContent() {
     editId,
     duplicateId,
     requestedStep,
+    forceFreshQuote,
     sourceRecord,
     loadCotizacionById,
     suggestionProvider,
     preferredPricingMode,
     quoteCommercialDefaults,
+    quoteProfitabilityDefaults,
     draft,
     componentForm,
     editingItemId,
@@ -342,37 +369,65 @@ function NuevaCotizacionPageContent() {
   });
 
   useEffect(() => {
-    if (!organizationProfile || editId || duplicateId || commercialDefaultsAppliedRef.current) {
+    if (!organizationProfile || editId || duplicateId) {
       return;
     }
 
     setDraft((current) => {
-      const pristineDraft = createCotizacionWorkflowDraft();
-      const isPristineCommercial =
-        current.items.length === 0 &&
-        !current.clienteNombre.trim() &&
-        current.validez === pristineDraft.validez &&
-        (current.condicionesDePago ?? "") === (pristineDraft.condicionesDePago ?? "") &&
-        (current.condicionesVenta ?? "") === (pristineDraft.condicionesVenta ?? "") &&
-        (current.terminosCondiciones ?? "") === (pristineDraft.terminosCondiciones ?? "") &&
-        (current.mostrarIvaEnPdf ?? true) === (pristineDraft.mostrarIvaEnPdf ?? true);
+      let nextDraft = current;
 
-      commercialDefaultsAppliedRef.current = true;
+      if (!commercialDefaultsAppliedRef.current) {
+        const pristineDraft = createCotizacionWorkflowDraft(quoteCommercialDefaults);
+        const isPristineCommercial =
+          current.items.length === 0 &&
+          !current.clienteNombre.trim() &&
+          current.validez === pristineDraft.validez &&
+          (current.condicionesDePago ?? "") === (pristineDraft.condicionesDePago ?? "") &&
+          (current.condicionesVenta ?? "") === (pristineDraft.condicionesVenta ?? "") &&
+          (current.terminosCondiciones ?? "") === (pristineDraft.terminosCondiciones ?? "") &&
+          (current.mostrarIvaEnPdf ?? true) === (pristineDraft.mostrarIvaEnPdf ?? true);
 
-      if (!isPristineCommercial) {
-        return current;
+        commercialDefaultsAppliedRef.current = true;
+
+        if (isPristineCommercial) {
+          nextDraft = {
+            ...nextDraft,
+            validez: quoteCommercialDefaults.validez,
+            condicionesDePago: quoteCommercialDefaults.condicionesDePago,
+            condicionesVenta: quoteCommercialDefaults.condicionesVenta,
+            terminosCondiciones: quoteCommercialDefaults.terminosCondiciones,
+            mostrarIvaEnPdf: quoteCommercialDefaults.mostrarIvaEnPdf,
+          };
+        }
       }
 
-      return {
-        ...current,
-        validez: quoteCommercialDefaults.validez,
-        condicionesDePago: quoteCommercialDefaults.condicionesDePago,
-        condicionesVenta: quoteCommercialDefaults.condicionesVenta,
-        terminosCondiciones: quoteCommercialDefaults.terminosCondiciones,
-        mostrarIvaEnPdf: quoteCommercialDefaults.mostrarIvaEnPdf,
-      };
+      const shouldApplyProfitability =
+        !profitabilityDefaultsAppliedRef.current &&
+        hasPendingAutomaticProfitabilityInheritance(
+          nextDraft.quoteStudioFinancial,
+          quoteProfitabilityDefaults
+        );
+
+      if (shouldApplyProfitability) {
+        nextDraft = applyOrganizationProfitabilityDefaultsToWorkflowDraft(
+          nextDraft,
+          quoteProfitabilityDefaults
+        );
+        profitabilityDefaultsAppliedRef.current = true;
+      } else if (
+        !profitabilityDefaultsAppliedRef.current &&
+        nextDraft.quoteStudioFinancial &&
+        !hasPendingAutomaticProfitabilityInheritance(
+          nextDraft.quoteStudioFinancial,
+          quoteProfitabilityDefaults
+        )
+      ) {
+        profitabilityDefaultsAppliedRef.current = true;
+      }
+
+      return nextDraft;
     });
-  }, [organizationProfile, editId, duplicateId, quoteCommercialDefaults]);
+  }, [organizationProfile, editId, duplicateId, quoteCommercialDefaults, quoteProfitabilityDefaults]);
 
   useEffect(() => {
     return () => {
@@ -487,6 +542,7 @@ function NuevaCotizacionPageContent() {
         neto: totals.neto,
         total: totals.total,
         costoTotalFabricacion: totals.costoTotalFabricacion,
+        costoMaterialesManual: quoteStudioFinancial.costoMaterialesManual,
         manoObra: quoteStudioFinancial.manoObra,
         traslado: quoteStudioFinancial.traslado,
         otrosCostos: quoteStudioFinancial.otrosCostos,
@@ -626,6 +682,18 @@ function NuevaCotizacionPageContent() {
     setDraft((current) => {
       const currentFinancial = createQuoteStudioFinancialDraft(current.quoteStudioFinancial);
 
+      if (field === "costoMaterialesManual") {
+        const normalizedValue = normalizeCurrencyInput(value);
+
+        return {
+          ...current,
+          quoteStudioFinancial: {
+            ...currentFinancial,
+            costoMaterialesManual: normalizedValue ? Number(normalizedValue) : null,
+          },
+        };
+      }
+
       if (field === "mermaPct" || field === "margenObjetivoRealPct") {
         const parsed = Number(value.replace(",", "."));
         const normalized = Number.isFinite(parsed) ? parsed : 0;
@@ -651,6 +719,18 @@ function NuevaCotizacionPageContent() {
           ...currentFinancial,
           [field]: normalizedValue ? Number(normalizedValue) : 0,
         },
+      };
+    });
+  };
+
+  const handleRestoreQuoteStudioProfitabilityDefaults = () => {
+    setDraft((current) => {
+      const restored = restoreQuoteProfitabilityParametersToDefaults(
+        createQuoteStudioFinancialDraft(current.quoteStudioFinancial)
+      );
+      return {
+        ...current,
+        quoteStudioFinancial: restored,
       };
     });
   };
@@ -859,7 +939,10 @@ function NuevaCotizacionPageContent() {
   }
 
   function resetWorkflowToBlank() {
-    const nextDraft = createCotizacionWorkflowDraft(quoteCommercialDefaults);
+    const nextDraft = startFreshQuoteWorkflowDraft(
+      createCotizacionWorkflowDraft(quoteCommercialDefaults),
+      quoteProfitabilityDefaults
+    );
     const nextComponentForm = createEmptyComponentForm(
       [],
       suggestionProvider,
@@ -894,7 +977,10 @@ function NuevaCotizacionPageContent() {
   }
 
   const handleResetStep1 = () => {
-    const nextDraft = createCotizacionWorkflowDraft(quoteCommercialDefaults);
+    const nextDraft = {
+      ...createCotizacionWorkflowDraft(quoteCommercialDefaults),
+      quoteStudioFinancial: quoteProfitabilityDefaults,
+    };
 
     setSelectedClientId("");
     setClientQuery("");
@@ -2442,23 +2528,22 @@ function NuevaCotizacionPageContent() {
     saveWorkflow: (input) => saveWorkflow({ ...input, sourceSolicitudId }),
     onQuoteCreated: async (record) => {
       if (sourceSolicitudId) {
-        try {
-          await fetch("/api/solicitudes", {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              id: sourceSolicitudId,
-              estado: "cerrada",
-            }),
-          });
-        } finally {
-          clearNuevaCotizacionSolicitudSourceId();
-          setSourceSolicitudId(null);
-        }
+        const closingSolicitudId = sourceSolicitudId;
+        clearNuevaCotizacionSolicitudSourceId();
+        setSourceSolicitudId(null);
+        void fetch("/api/solicitudes", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id: closingSolicitudId,
+            estado: "cerrada",
+          }),
+        }).catch(() => {});
       }
 
+      router.prefetch(`/print/cotizaciones/${record.id}`);
       router.push(`/print/cotizaciones/${record.id}?created=1`);
       return true;
     },
@@ -2956,6 +3041,7 @@ function goNextFromStep1() {
     financialSummary: quoteStudioFinancialSummary,
     quoteStudioFinancial,
     onQuoteStudioFinancialChange: handleQuoteStudioFinancialChange,
+    onRestoreQuoteStudioProfitabilityDefaults: handleRestoreQuoteStudioProfitabilityDefaults,
     onApplyQuoteStudioRecommendedPrice: handleApplyQuoteStudioRecommendedPrice,
     fieldErrors,
     clientQuery,

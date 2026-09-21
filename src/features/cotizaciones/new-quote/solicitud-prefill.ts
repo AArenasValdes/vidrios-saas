@@ -10,6 +10,38 @@ import {
 export const SOLICITUD_PREFILL_CLIENT_ID_PREFIX = "solicitud-prefill:";
 const SOLICITUD_PREFILL_SOURCE_KEY = "cotizacion-workflow:new:solicitud-source";
 
+export function isSolicitudPrefillClientId(value: string | number | null | undefined) {
+  if (value === null || value === undefined) {
+    return false;
+  }
+
+  return String(value).startsWith(SOLICITUD_PREFILL_CLIENT_ID_PREFIX);
+}
+
+/** IDs reales de cliente en DB (bigint). El prefill usa un id sintético no persistible. */
+export function resolvePersistedClientIdForSave(
+  value: string | number | null | undefined
+): string | number | undefined {
+  if (value === null || value === undefined || value === "") {
+    return undefined;
+  }
+
+  if (isSolicitudPrefillClientId(value)) {
+    return undefined;
+  }
+
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value > 0 ? value : undefined;
+  }
+
+  const normalized = String(value).trim();
+  if (!/^\d+$/.test(normalized)) {
+    return undefined;
+  }
+
+  return normalized;
+}
+
 export type NuevaCotizacionSolicitudPrefill = {
   sourceSolicitudId?: string;
   clienteNombre: string;

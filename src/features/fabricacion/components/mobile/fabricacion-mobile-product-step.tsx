@@ -401,6 +401,9 @@ export function FabricacionMobileProductStep({
     recipes,
     recipe: draft,
   });
+  const hasSupplierChoices = Boolean(
+    variantPicker?.axes.some((axis) => axis.id === "construccion" && axis.label === "Proveedor y variante")
+  );
   const usesVariantPicker = isL25 || Boolean(variantPicker && variantPicker.axes.length > 0);
   const canEditIdentity = !readOnly && !usesVariantPicker;
   const showHojasPicker =
@@ -482,7 +485,9 @@ export function FabricacionMobileProductStep({
         <section className={s.configSection} aria-labelledby="product-config-title">
           <h2 id="product-config-title">Configuración</h2>
           <p className={s.configHint}>
-            Elige la construcción. Los descuentos se ajustan en Perfiles.
+            {hasSupplierChoices
+              ? "Elige el proveedor y la variante que corresponden a tus perfiles."
+              : "Elige la construcción. Los descuentos se ajustan en Perfiles."}
           </p>
           <LineVariantProductPicker
             catalogKey={catalogKey}

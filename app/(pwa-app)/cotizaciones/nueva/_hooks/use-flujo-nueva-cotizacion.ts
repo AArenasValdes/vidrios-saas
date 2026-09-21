@@ -39,6 +39,7 @@ type UseFlujoNuevaCotizacionParams = {
     value: string
   ) => void;
   onApplyQuoteStudioRecommendedPrice: () => void;
+  onRestoreQuoteStudioProfitabilityDefaults: () => void;
   fieldErrors: FieldErrors;
   clientQuery: string;
   estadoBusquedaCliente: string;
@@ -190,6 +191,7 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     quoteStudioFinancial: params.quoteStudioFinancial,
     onQuoteStudioFinancialChange: params.onQuoteStudioFinancialChange,
     onApplyQuoteStudioRecommendedPrice: params.onApplyQuoteStudioRecommendedPrice,
+    onRestoreQuoteStudioProfitabilityDefaults: params.onRestoreQuoteStudioProfitabilityDefaults,
     formatCurrencyInput: params.formatCurrencyInput,
     items: params.items,
     editingItemId: params.editingItemId,
@@ -338,6 +340,8 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     formatCurrencyInput: params.formatCurrencyInput,
     financialSummary: params.financialSummary,
     onQuoteStudioFinancialChange: params.onQuoteStudioFinancialChange,
+    onApplyQuoteStudioRecommendedPrice: params.onApplyQuoteStudioRecommendedPrice,
+    onRestoreQuoteStudioProfitabilityDefaults: params.onRestoreQuoteStudioProfitabilityDefaults,
   }), [params]);
 
   const propsResumenDesktop = useMemo(() => ({

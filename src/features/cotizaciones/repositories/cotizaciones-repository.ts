@@ -38,6 +38,7 @@ type CotizacionRow = {
   margen_pct: number | string | null;
   utilidad_total: number | string | null;
   costo_materiales_total: number | string | null;
+  costo_materiales_manual?: number | string | null;
   costo_mano_obra_total: number | string | null;
   costo_traslado_total: number | string | null;
   costo_otros_total: number | string | null;
@@ -115,7 +116,7 @@ type CotizacionItemBreakdownRow = {
 };
 
 const COTIZACION_DETAIL_SELECT =
-  "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, condiciones_de_pago, condiciones_venta, terminos_condiciones, mostrar_iva_en_pdf, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, costo_materiales_total, costo_mano_obra_total, costo_traslado_total, costo_otros_total, merma_pct, merma_total, margen_objetivo_pct, precio_recomendado_neto, iva_pct, financial_snapshot_version, financial_snapshot_calculado_en, cost_basis_status, pricing_mode, creation_surface, estado_comercial, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, pdf_descargado_en, regional_snapshot, solicitud_id, creado_en, total";
+  "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, condiciones_de_pago, condiciones_venta, terminos_condiciones, mostrar_iva_en_pdf, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, costo_materiales_total, costo_materiales_manual, costo_mano_obra_total, costo_traslado_total, costo_otros_total, merma_pct, merma_total, margen_objetivo_pct, precio_recomendado_neto, iva_pct, financial_snapshot_version, financial_snapshot_calculado_en, cost_basis_status, pricing_mode, creation_surface, estado_comercial, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, pdf_descargado_en, regional_snapshot, solicitud_id, creado_en, total";
 const COTIZACION_DETAIL_SELECT_LEGACY =
   "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, estado_comercial, creado_en, total";
 const COTIZACION_LIST_SELECT =
@@ -262,6 +263,7 @@ function isMissingApprovalFieldsError(error: unknown) {
       haystack.includes("cliente_respuesta_canal") ||
       haystack.includes("pdf_descargado_en") ||
       haystack.includes("costo_materiales_total") ||
+      haystack.includes("costo_materiales_manual") ||
       haystack.includes("costo_mano_obra_total") ||
       haystack.includes("costo_traslado_total") ||
       haystack.includes("costo_otros_total") ||
@@ -418,6 +420,7 @@ function mapCotizacion(row: CotizacionRow): Cotizacion {
     margenPct: toNumber(row.margen_pct ?? null),
     utilidadTotal: toNumber(row.utilidad_total ?? null),
     costoMaterialesTotal: toNumber(row.costo_materiales_total ?? null),
+    costoMaterialesManual: toNumber(row.costo_materiales_manual ?? null),
     costoManoObraTotal: toNumber(row.costo_mano_obra_total ?? null),
     costoTrasladoTotal: toNumber(row.costo_traslado_total ?? null),
     costoOtrosTotal: toNumber(row.costo_otros_total ?? null),
@@ -651,6 +654,7 @@ function buildCotizacionUpdatePayload(input: CrearCotizacionInput) {
     margen_pct: input.margenPct ?? null,
     utilidad_total: input.utilidadTotal ?? null,
     costo_materiales_total: input.costoMaterialesTotal ?? null,
+    costo_materiales_manual: input.costoMaterialesManual ?? null,
     costo_mano_obra_total: input.costoManoObraTotal ?? null,
     costo_traslado_total: input.costoTrasladoTotal ?? null,
     costo_otros_total: input.costoOtrosTotal ?? null,
@@ -695,6 +699,7 @@ function stripLegacyCotizacionExtensionFields(payload: CotizacionWritePayload) {
     cliente_respondio_en: clienteRespondioEn,
     cliente_respuesta_canal: clienteRespuestaCanal,
     costo_materiales_total: costoMaterialesTotal,
+    costo_materiales_manual: costoMaterialesManual,
     costo_mano_obra_total: costoManoObraTotal,
     costo_traslado_total: costoTrasladoTotal,
     costo_otros_total: costoOtrosTotal,
@@ -717,6 +722,7 @@ function stripLegacyCotizacionExtensionFields(payload: CotizacionWritePayload) {
   void clienteRespondioEn;
   void clienteRespuestaCanal;
   void costoMaterialesTotal;
+  void costoMaterialesManual;
   void costoManoObraTotal;
   void costoTrasladoTotal;
   void costoOtrosTotal;
@@ -1669,16 +1675,37 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
         const cotizacion = mapCotizacion(data as CotizacionRow);
         createdQuoteId = cotizacion.id;
 
-        for (const item of input.items) {
-          const createdItem = await createCotizacionItem(item, cotizacion.id);
-          await insertBreakdownEntries(
-            item.breakdown ?? [],
-            createdItem.id,
-            item.organizationId
-          );
+        const createdItemRows = await Promise.all(
+          input.items.map(async (item) => {
+            const createdItem = await createCotizacionItem(item, cotizacion.id);
+            await insertBreakdownEntries(
+              item.breakdown ?? [],
+              createdItem.id,
+              item.organizationId
+            );
+            return createdItem;
+          })
+        );
+
+        // Evita re-fetch de items/breakdown recién insertados (cuello típico al abrir PDF).
+        const needsHydrateBreakdown = input.items.some(
+          (item) => (item.breakdown?.length ?? 0) > 0
+        );
+        if (needsHydrateBreakdown) {
+          return hydrateCotizacion(cotizacion);
         }
 
-        return hydrateCotizacion(cotizacion);
+        return {
+          ...cotizacion,
+          items: createdItemRows
+            .map((row) => mapCotizacionItem(row, []))
+            .sort((left, right) => {
+              const leftOrden = left.orden ?? 0;
+              const rightOrden = right.orden ?? 0;
+              if (leftOrden !== rightOrden) return leftOrden - rightOrden;
+              return String(left.id).localeCompare(String(right.id));
+            }),
+        };
       } catch (error) {
         if (createdQuoteId !== null) {
           try {

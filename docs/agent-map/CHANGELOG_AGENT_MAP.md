@@ -2,6 +2,13 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-21 - Serie 42 separada por proveedor ALAR / SODAL
+
+- `ventora:l42` agrega variantes de fabricante/proveedor para proyectante 1 hoja: ALAR marco fijo 4201, ALAR con cámara de agua 4204 y SODAL sin cámara monolítico.
+- Se conserva la variante Ventora/taller existente. Las nuevas recetas entran como `draft` con `source_name` y `source_revision`; no se marcan como validadas.
+- ALAR permanece incompleta porque la pauta no da medida numérica del junquillo ni del vidrio. SODAL conserva los cortes documentados; sus mermas por perfil quedan anotadas, no se convierten en largos ni barras.
+- Detalle y fuentes: `docs/fabricacion/2026-09-21-serie-42-proveedores.md`.
+
 ## 2026-09-20 - Alta por correo: activacion sin PKCE + saneo en login
 
 - El registro por formulario deja Auth + metadata `ventora_signup` y no crea org hasta confirmar el correo.

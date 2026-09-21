@@ -11,12 +11,22 @@ export type EstadoCotizacionWorkflow =
   | "rechazada"
   | "terminada";
 
+export type QuoteProfitabilityDefaultsSnapshot = {
+  manoObra: number;
+  traslado: number;
+  otrosCostos: number;
+  mermaPct: number;
+  margenObjetivoRealPct: number;
+};
+
 export type QuoteStudioFinancialDraft = {
   manoObra: number;
   traslado: number;
   otrosCostos: number;
   mermaPct: number;
   margenObjetivoRealPct: number;
+  costoMaterialesManual: number | null;
+  inheritedDefaultsSnapshot?: QuoteProfitabilityDefaultsSnapshot;
 };
 
 export function createQuoteStudioFinancialDraft(
@@ -28,6 +38,7 @@ export function createQuoteStudioFinancialDraft(
     otrosCostos: 0,
     mermaPct: 0,
     margenObjetivoRealPct: 30,
+    costoMaterialesManual: null,
     ...overrides,
   };
 }
@@ -105,6 +116,10 @@ export type CotizacionWorkflowRecord = {
   mostrarIva?: boolean;
   mostrarIvaEnPdf?: boolean;
   quoteStudioFinancial?: QuoteStudioFinancialDraft;
+  costBasisStatus?: string | null;
+  costoMaterialesTotal?: number | null;
+  precioRecomendadoNeto?: number | null;
+  mermaTotal?: number | null;
 };
 
 export type CotizacionWorkflowDraft = {

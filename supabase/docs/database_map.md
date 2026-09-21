@@ -1023,6 +1023,13 @@ auth.users (1) ──── (N) users
 - `20260915113000_mostrar_iva_en_pdf.sql` agrega `mostrar_iva_en_pdf` como preferencia de empresa y override opcional por cotización. El cálculo tributario sigue en `iva`/`total`; el flag solo afecta presentación en PDF y vistas cliente.
 - No hay tablas, policies RLS ni índices nuevos. Los grants columnares de `organization_profile` para `authenticated` se reemiten en ambas migraciones para incluir los campos agregados.
 
+## Addendum 2026-09-21 - Sugerencias de mejora (pendiente remoto)
+
+- La migración local `20260921043440_product_feedback.sql` prepara `product_feedback`; todavía no está aplicada ni verificada en remoto.
+- Guarda organización y usuario autenticado, categoría, comentario opcional, ruta de origen, estado interno y timestamps. Categorías y estados quedan limitados por `CHECK`.
+- Índices: `created_at DESC`, `(category, created_at DESC)`, `(organization_id, created_at DESC)` y `auth_user_id` para la FK/cascada.
+- No actualizar el total remoto de tablas hasta aplicar y verificar la migración.
+
 ## Addendum 2026-09-14 - P2U líneas tradicionales/multiproveedor
 
 - La migración `20260914162442_p2u_traditional_multivendor_lines.sql` agrega cuatro `catalog_key` canónicos y actualiza solo metadata de AM-35 (`ventora:l35`). No crea tablas ni columnas nuevas.

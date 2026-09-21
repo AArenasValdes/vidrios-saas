@@ -1,0 +1,222 @@
+.page {
+  width: min(100%, 820px);
+  margin: 0 auto;
+  padding: 24px 18px 40px;
+  color: #172b4d;
+}
+
+.header {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.header h1 {
+  margin: 0;
+  color: #243b6b;
+  font-size: clamp(24px, 5vw, 32px);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+
+.header p,
+.categoryFieldset > p,
+.formFooter > p {
+  margin: 0;
+  color: #667085;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.form {
+  display: grid;
+  gap: 24px;
+}
+
+.categoryFieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.categoryFieldset legend {
+  padding: 0;
+  color: #243b6b;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.categoryFieldset > p {
+  margin-bottom: 4px;
+}
+
+.categoryList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.categoryButton {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid #d9e0ea;
+  border-radius: 14px;
+  background: #fff;
+  color: #344563;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background-color 0.16s ease, color 0.16s ease;
+}
+
+.categoryButton:hover {
+  border-color: #9bb6e8;
+  background: #f6f9ff;
+}
+
+.categoryButtonSelected {
+  border-color: #4f7dd4;
+  background: #eef4ff;
+  color: #214c91;
+  box-shadow: inset 0 0 0 1px #4f7dd4;
+}
+
+.categoryButton:focus-visible,
+.submitButton:focus-visible {
+  outline: 3px solid rgba(79, 125, 212, 0.3);
+  outline-offset: 2px;
+}
+
+.commentField {
+  display: grid;
+  gap: 8px;
+  color: #243b6b;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.optionalLabel {
+  margin-left: 6px;
+  color: #7a869a;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.commentField textarea {
+  width: 100%;
+  min-height: 132px;
+  padding: 12px 14px;
+  border: 1px solid #d9e0ea;
+  border-radius: 14px;
+  background: #fff;
+  color: #172b4d;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.commentField textarea::placeholder {
+  color: #98a2b3;
+}
+
+.commentField textarea:focus {
+  border-color: #4f7dd4;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(79, 125, 212, 0.1);
+}
+
+.commentHint {
+  color: #7a869a;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.formFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 18px;
+  border-top: 1px solid #e8edf4;
+}
+
+.submitButton {
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid #3d6fc1;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #4f7dd4;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.submitButton:disabled {
+  border-color: #cbd5e3;
+  background: #d7deea;
+  color: #667085;
+  cursor: not-allowed;
+}
+
+.errorMessage,
+.successMessage {
+  margin: 0;
+  border-radius: 12px;
+  padding: 11px 13px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.errorMessage {
+  border: 1px solid #f0c6c6;
+  background: #fff7f7;
+  color: #a12f2f;
+}
+
+.successMessage {
+  margin-bottom: 18px;
+  border: 1px solid #b9e4cd;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f4fbf7;
+  color: #176b43;
+}
+
+.successMessage svg {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 560px) {
+  .page {
+    padding: 20px 16px 32px;
+  }
+
+  .formFooter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .submitButton {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .categoryButton {
+    transition: none;
+  }
+}

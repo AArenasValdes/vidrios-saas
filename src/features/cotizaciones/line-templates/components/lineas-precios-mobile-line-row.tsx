@@ -10,9 +10,15 @@ import {
   LINE_TEMPLATE_CATEGORIA_LABELS,
 } from "@/features/cotizaciones/line-templates/utils/catalog-labels";
 import { resolveLineFabricationActionLabel } from "@/features/cotizaciones/line-templates/utils/line-fabrication-entry";
+import { getLineVariantSlotsForFabricationTree } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
 import { LuChevronRight } from "react-icons/lu";
 
 import s from "./lineas-precios-mobile-view.module.css";
+
+const SERIES_42_PROVIDER_BY_CATALOG_KEY: Record<string, string> = {
+  "ventora:serie-42-proyectante-camara": "ALAR",
+  "ventora:serie-42-proyectante-sin-camara": "SODAL",
+};
 
 type TechnicalStatus = {
   tone: "quote_only" | "draft" | "testing" | "validated";
@@ -37,6 +43,32 @@ function resolveLineCode(template: CotizacionLineTemplate) {
       : "";
 
   return lineSystem || plantillaId || null;
+}
+
+function resolveProviderSummary(template: CotizacionLineTemplate) {
+  const lineProvider = template.proveedor?.trim();
+  if (lineProvider) {
+    return { label: "Proveedor", providers: [lineProvider] };
+  }
+
+  const specificProvider = template.catalogKey
+    ? SERIES_42_PROVIDER_BY_CATALOG_KEY[template.catalogKey]
+    : null;
+  if (specificProvider) {
+    return { label: "Proveedor", providers: [specificProvider] };
+  }
+
+  const providers = Array.from(
+    new Set(
+      getLineVariantSlotsForFabricationTree(template.catalogKey)
+        .map((slot) => slot.sourceName?.trim())
+        .filter((provider): provider is string => Boolean(provider))
+    )
+  );
+
+  return providers.length > 0
+    ? { label: providers.length > 1 ? "Variantes de proveedor" : "Proveedor", providers }
+    : null;
 }
 
 export function resolveLineCommercialStatus(
@@ -101,8 +133,8 @@ export function LineasPreciosMobileLineRow({
   const needsPrice = lineTemplateNeedsCommercialPrice(template);
   const lineCode = resolveLineCode(template);
   const materialLabel = template.material || LINE_TEMPLATE_CATEGORIA_LABELS[template.categoria];
-  const metaParts = [lineCode, materialLabel].filter(Boolean);
-  const metaLine = metaParts.join(" · ");
+  const providerSummary = resolveProviderSummary(template);
+  const metaLine = [lineCode, materialLabel].filter(Boolean).join(" · ");
   const commercialStatus = resolveLineCommercialStatus(template, needsPrice);
   const fabricationHint = resolveFabricationHint(template, technicalStatus, needsPrice);
 
@@ -139,7 +171,24 @@ export function LineasPreciosMobileLineRow({
           </span>
         </div>
 
-        {metaLine ? <span className={s.lineMeta}>{metaLine}</span> : null}
+        {providerSummary || metaLine ? (
+          <div className={s.lineMeta}>
+            {providerSummary ? (
+              <span
+                className={s.lineProviderSummary}
+                aria-label={`${providerSummary.label}: ${providerSummary.providers.join(", ")}`}
+              >
+                <span className={s.lineProviderLabel}>{providerSummary.label}</span>
+                {providerSummary.providers.map((provider) => (
+                  <span className={s.lineProviderBadge} key={provider}>
+                    {provider}
+                  </span>
+                ))}
+              </span>
+            ) : null}
+            {metaLine ? <span className={s.lineMetaDetails}>{metaLine}</span> : null}
+          </div>
+        ) : null}
 
         <div className={s.lineRowFooter}>
           <button

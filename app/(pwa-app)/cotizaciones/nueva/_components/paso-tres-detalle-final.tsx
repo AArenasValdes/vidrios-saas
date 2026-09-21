@@ -50,6 +50,8 @@ type PasoTresDetalleFinalProps = {
     field: keyof QuoteStudioFinancialDraft,
     value: string
   ) => void;
+  onApplyQuoteStudioRecommendedPrice: () => void;
+  onRestoreQuoteStudioProfitabilityDefaults: () => void;
   onCondicionesDePagoChange: (value: string) => void;
   onCondicionesVentaChange: (value: string) => void;
   onTerminosCondicionesChange: (value: string) => void;
@@ -80,6 +82,8 @@ export function PasoTresDetalleFinal({
   formatCurrencyInput,
   financialSummary,
   onQuoteStudioFinancialChange,
+  onApplyQuoteStudioRecommendedPrice,
+  onRestoreQuoteStudioProfitabilityDefaults,
   onCondicionesDePagoChange,
   onCondicionesVentaChange,
   onTerminosCondicionesChange,
@@ -316,6 +320,8 @@ export function PasoTresDetalleFinal({
           quoteStudioFinancial={draft.quoteStudioFinancial}
           formatCurrencyInput={formatCurrencyInput}
           onQuoteStudioFinancialChange={onQuoteStudioFinancialChange}
+          onApplyRecommendedPrice={onApplyQuoteStudioRecommendedPrice}
+          onRestoreProfitabilityDefaults={onRestoreQuoteStudioProfitabilityDefaults}
         />
       ) : null}
     </section>

@@ -106,6 +106,7 @@ export type PasoDosPanelComponentesProps = {
     value: string
   ) => void;
   onApplyQuoteStudioRecommendedPrice: () => void;
+  onRestoreQuoteStudioProfitabilityDefaults: () => void;
   formatCurrencyInput: (value: string) => string;
   selectedQuickEditItem: CotizacionWorkflowItem | null;
   selectedQuickEditViewItem: CotizacionWorkflowItem | null;

@@ -37,8 +37,8 @@ export function OnboardingActivationCard({
     return null;
   }
 
-  const primaryHref = checklist.nextAction?.href ?? "/cotizaciones/nueva";
-  const secondaryHref = "/cotizaciones/nueva";
+  const primaryHref = checklist.nextAction?.href ?? "/cotizaciones/nueva?nueva=1";
+  const secondaryHref = "/cotizaciones/nueva?nueva=1";
 
   return (
     <section className={s.activationRoot} aria-labelledby="onboarding-activation-title">

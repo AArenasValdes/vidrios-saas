@@ -34,6 +34,12 @@
     linear-gradient(180deg, #f7f9fc 0%, var(--flow-bg) 22%, #edf2f8 100%);
 }
 
+@media (max-width: 860px) {
+  .stepTwoMobileQuickTotalInput {
+    font-size: 16px !important;
+  }
+}
+
 @media (min-width: 861px) {
   .desktopStepOne {
     display: grid;
@@ -16974,6 +16980,70 @@ p.stepTwoMobileItemFabCompact {
     font-size: 0.76rem;
     font-weight: 650;
     line-height: 1.4;
+  }
+
+  .stepThreeCostosRecommended {
+    display: grid;
+    gap: 0.48rem;
+    margin-top: 0.12rem;
+    padding: 0.72rem 0.78rem;
+    border: 1px solid #d7e4f5;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #f7faff 0%, #f1f6fd 100%);
+  }
+
+  .stepThreeCostosRecommendedDone {
+    margin-top: 0.12rem;
+    padding: 0.62rem 0.78rem;
+    border: 1px solid #cfe5d8;
+    border-radius: 14px;
+    background: #f4faf6;
+  }
+
+  .stepThreeCostosRecommendedDone .stepThreeCostosRecommendedHint {
+    color: #145337;
+  }
+
+  .stepThreeCostosRecommendedHint {
+    margin: 0;
+    color: #4b5f7a;
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .stepThreeCostosRecommendedButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 48px;
+    padding: 0.72rem 0.9rem;
+    border: 1px solid rgba(36, 59, 107, 0.92);
+    border-radius: 12px;
+    background: linear-gradient(180deg, #304e8f 0%, var(--flow-accent-strong) 100%);
+    color: #fff;
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: 0;
+    text-align: center;
+    white-space: normal;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(36, 59, 107, 0.16);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .stepThreeCostosRecommendedButton:hover:not(:disabled),
+  .stepThreeCostosRecommendedButton:focus-visible:not(:disabled) {
+    opacity: 0.98;
+    box-shadow: 0 14px 26px rgba(36, 59, 107, 0.22);
+  }
+
+  .stepThreeCostosRecommendedButton:active:not(:disabled) {
+    transform: translateY(1px);
   }
 
   .stepThreeFreightIcon {

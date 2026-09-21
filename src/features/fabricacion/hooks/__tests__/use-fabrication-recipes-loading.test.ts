@@ -1,6 +1,9 @@
 /** @jest-environment jsdom */
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { useFabricationRecipes } from "../use-fabrication-recipes";
+import {
+  invalidateFabricationRecipesListCache,
+  useFabricationRecipes,
+} from "../use-fabrication-recipes";
 import { ensureStructuralDraftsClient } from "@/features/cotizaciones/line-templates/services/seed-structural-draft-client";
 
 const mockListRecipes = jest.fn().mockResolvedValue([]);
@@ -19,7 +22,12 @@ jest.mock("@/features/cotizaciones/line-templates/services/seed-structural-draft
 const mockRepair = jest.mocked(ensureStructuralDraftsClient);
 
 describe("carga del editor después de reparar AL-32/AL-42", () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.resetAllMocks();
+    invalidateFabricationRecipesListCache();
+    mockListRecipes.mockResolvedValue([]);
+    mockRepair.mockResolvedValue(false);
+  });
 
   it("espera la reparación antes de listar recetas de la línea", async () => {
     let finish!: (count: number) => void;
@@ -72,5 +80,27 @@ describe("carga del editor después de reparar AL-32/AL-42", () => {
     const { result } = renderHook(() => useFabricationRecipes({ lineTemplateId: 35 }));
     await waitFor(() => expect(result.current.error).toContain("perfiles.3.reglaMedida.ajusteMm"));
     expect(result.current.error).not.toMatch(/^\[/);
+  });
+
+  it("en path de cotización no espera el seed estructural antes de listar", async () => {
+    let resolveRepair!: (ok: boolean) => void;
+    mockRepair.mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveRepair = resolve;
+        })
+    );
+    mockListRecipes.mockResolvedValue([{ id: "r1" }]);
+
+    const { result } = renderHook(() =>
+      useFabricationRecipes({ skipStructuralSeed: true })
+    );
+
+    await waitFor(() => expect(mockListRecipes).toHaveBeenCalled());
+    await waitFor(() => expect(result.current.recipes).toEqual([{ id: "r1" }]));
+    expect(result.current.isLoading).toBe(false);
+    expect(mockRepair).toHaveBeenCalledWith(8);
+    // El seed aún no termina: listado no dependió de él.
+    resolveRepair(false);
   });
 });

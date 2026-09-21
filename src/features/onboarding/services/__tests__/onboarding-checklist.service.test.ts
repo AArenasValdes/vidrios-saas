@@ -139,7 +139,7 @@ describe("onboarding-checklist.service", () => {
     });
 
     expect(checklist.firstPendingStepKey).toBe("first_quote");
-    expect(checklist.nextAction?.href).toBe("/cotizaciones/nueva");
+    expect(checklist.nextAction?.href).toBe("/cotizaciones/nueva?nueva=1");
     expect(checklist.nextAction?.label).toBe("Crear mi primera cotizacion");
   });
 

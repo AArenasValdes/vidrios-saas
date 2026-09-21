@@ -134,6 +134,113 @@
   display: grid;
 }
 
+.countrySettingsGroup {
+  display: grid;
+  gap: 8px;
+}
+
+.countrySettingsTrigger {
+  width: 100%;
+  min-height: 62px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto 16px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #e1e8f1;
+  border-radius: 14px;
+  background: #fbfdff;
+  color: #243b6b;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.16s, background-color 0.16s, box-shadow 0.16s;
+}
+
+.countrySettingsTrigger:hover {
+  border-color: #c7d7ec;
+  background: #f7faff;
+}
+
+.countrySettingsTrigger:focus-visible {
+  outline: 3px solid rgba(79, 125, 212, 0.3);
+  outline-offset: 2px;
+}
+
+.countrySettingsIcon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: #eef4ff;
+  color: #335ea9;
+}
+
+.countrySettingsCopy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.countrySettingsCopy strong {
+  color: #243b6b;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.countrySettingsCopy small {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.countrySettingsAction {
+  color: #335ea9;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.countrySettingsChevron {
+  width: 16px;
+  height: 16px;
+  color: #7b8aa5;
+  transition: transform 0.18s ease;
+}
+
+.countrySettingsChevronOpen {
+  transform: rotate(180deg);
+}
+
+.countrySettingsFields {
+  display: grid;
+  gap: 10px;
+  margin-left: 16px;
+  padding: 4px 0 2px 14px;
+  border-left: 2px solid #e1e8f1;
+}
+
+.countrySettingsFields[hidden] {
+  display: none;
+}
+
+.countrySettingsGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 640px) {
+  .countrySettingsTrigger {
+    grid-template-columns: 34px minmax(0, 1fr) auto 14px;
+    gap: 8px;
+    padding-inline: 10px;
+  }
+
+  .countrySettingsGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .publicCardTop {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
@@ -512,6 +619,10 @@
   z-index: 0;
 }
 
+.saveReturnAccordionTrigger {
+  scroll-margin-top: 92px;
+}
+
 .triggerMain {
   grid-template-columns: auto minmax(0, 1fr);
   gap: 12px;
@@ -673,6 +784,13 @@
   line-height: 1.5;
   padding: 12px 14px;
   font-family: inherit;
+}
+
+.paymentTermsTextarea {
+  min-height: 84px;
+  max-height: 180px;
+  overflow-y: auto;
+  resize: vertical;
 }
 
 .input::placeholder,
@@ -964,27 +1082,82 @@
   box-shadow: 0 10px 22px rgba(36, 59, 107, 0.05);
 }
 
-.commercialPdfIvaRow {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  border-radius: 18px;
-  border: 1px solid #d9e0ea;
-  background: #fff;
-  padding: 14px;
-  box-shadow: 0 10px 22px rgba(36, 59, 107, 0.05);
-}
-
-.commercialPdfIvaCopy {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-
 .commercialDefaultsSection {
   display: grid;
   gap: 14px;
+}
+
+.profitabilityFieldsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.clpAmountInput {
+  font-variant-numeric: tabular-nums;
+}
+
+.optionalProfitabilityNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid #e5ebf3;
+  border-radius: 12px;
+  background: #f8faff;
+}
+
+.optionalProfitabilityNote > span {
+  flex: 0 0 auto;
+  color: #526b95;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.optionalProfitabilityNote p {
+  margin: 0;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.inputWithSuffix {
+  display: flex;
+  min-width: 0;
+  border-radius: 16px;
+}
+
+.inputWithSuffix .input {
+  min-width: 0;
+  flex: 1 1 auto;
+  border-radius: 16px 0 0 16px;
+}
+
+.inputSuffix {
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid #d9e0ea;
+  border-left: 0;
+  border-radius: 0 16px 16px 0;
+  display: grid;
+  place-items: center;
+  background: #f8fbff;
+  color: #667085;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.inputWithSuffix:focus-within {
+  box-shadow: 0 0 0 4px rgba(79, 125, 212, 0.1);
+}
+
+.inputWithSuffix .input:focus {
+  box-shadow: none;
+}
+
+.inputWithSuffix:focus-within .input,
+.inputWithSuffix:focus-within .inputSuffix {
+  border-color: #4f7dd4;
 }
 
 .commercialDefaultsHeader {
@@ -1952,5 +2125,11 @@
   .chevron,
   .switchThumb {
     transition: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .profitabilityFieldsGrid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

@@ -123,6 +123,7 @@ export function PasoDosSeccion({
   const primarySurfaceRef = useRef<HTMLDivElement>(null);
   const { recipes: fabricationRecipes, organizationId } = useFabricationRecipes({
     enabled: quoteModeChosen && quotePricingMode === "por_item" && panel.items.length > 0,
+    skipStructuralSeed: true,
   });
   const hasFabricationReview = useMemo(
     () =>
@@ -488,6 +489,7 @@ export function PasoDosSeccion({
             adjustments={panel.quoteStudioFinancial}
             formatCurrencyInput={formatCurrencyInput}
             onAdjustmentChange={panel.onQuoteStudioFinancialChange}
+            onRestoreProfitabilityDefaults={panel.onRestoreQuoteStudioProfitabilityDefaults}
             onApplyRecommendedPrice={panel.onApplyQuoteStudioRecommendedPrice}
           />
         </details>
@@ -764,6 +766,8 @@ export function PasoDosSeccion({
         }}
         onSaveCubicationLineAdjustment={formulario.onSaveCubicationLineAdjustment}
         isSavingCubicationLineAdjustment={formulario.isSavingCubicationLineAdjustment}
+        recipes={fabricationRecipes}
+        organizationId={organizationId}
       />
     </div>
   );

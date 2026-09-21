@@ -550,25 +550,53 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
           : [record, ...currentCotizaciones]
       );
       let nextClientes = clientesRef.current;
+      const savedClientId = record.clientId;
 
-      if (currentCotizaciones.find((c) => c.clientId === record.clientId)) {
-        nextClientes = clientesRef.current.map((c) =>
-          c.id === record.clientId
-            ? {
-                ...c,
-                nombre: record.clienteNombre,
-                telefono: record.clienteTelefono,
-                direccion: record.direccion,
-              }
-            : c
-        );
-      } else {
-        try {
-          nextClientes = await loadClientes(organizacionId);
-        } catch (error) {
-          if (!isConnectivityError(error)) {
-            throw error;
-          }
+      if (savedClientId) {
+        const existingClient =
+          nextClientes.find((client) => String(client.id) === String(savedClientId)) ?? null;
+
+        if (existingClient) {
+          nextClientes = nextClientes.map((client) =>
+            String(client.id) === String(savedClientId)
+              ? {
+                  ...client,
+                  nombre: record.clienteNombre,
+                  telefono: record.clienteTelefono || null,
+                  direccion: record.direccion || null,
+                }
+              : client
+          );
+        } else {
+          // No bloquea el PDF: inserta el cliente del guardado y refresca la lista en background.
+          nextClientes = [
+            {
+              id: savedClientId,
+              organizationId: organizacionId,
+              nombre: record.clienteNombre,
+              telefono: record.clienteTelefono || null,
+              direccion: record.direccion || null,
+              correo: null,
+              creadoEn: null,
+              actualizadoEn: null,
+              eliminadoEn: null,
+            },
+            ...nextClientes,
+          ];
+          void loadClientes(organizacionId)
+            .then((clientRecords) => {
+              if (!isMountedRef.current) return;
+              clientesRef.current = clientRecords;
+              setClientes(clientRecords);
+              const nextCacheEntry = {
+                organizationId: String(organizacionId),
+                cotizaciones: cotizacionesRef.current,
+                clientes: clientRecords,
+              };
+              cotizacionesCache.set(String(organizacionId), nextCacheEntry);
+              persistCotizacionesCache(nextCacheEntry);
+            })
+            .catch(() => {});
         }
       }
 

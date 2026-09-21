@@ -375,4 +375,47 @@ describe("cotizaciones-workflow.service", () => {
     expect(totals.neto).toBe(217460);
     expect(totals.totalClienteManual).toBe(217460);
   });
+
+  it("en precios finales con total manual sincronizado no revierte IVA sobre el neto", () => {
+    const totals = calculateWorkflowTotalsForPricingMode({
+      items: [createItem({ precioUnitario: 671429, precioTotal: 671429 })],
+      descuentoPct: 0,
+      flete: 0,
+      quotePricingMode: "por_item",
+      totalClienteManual: 671429,
+      mostrarIva: false,
+    });
+
+    expect(totals.neto).toBe(671429);
+    expect(totals.iva).toBe(0);
+    expect(totals.total).toBe(671429);
+    expect(totals.totalClienteManual).toBe(671429);
+  });
+
+  it("tras aplicar precio recomendado en precios finales el neto queda en el objetivo", () => {
+    const { applyQuoteStudioRecommendedPrice } = require("../quote-studio-financial.service") as typeof import("../quote-studio-financial.service");
+
+    const items = [createItem({ precioUnitario: 799000, precioTotal: 799000 })];
+    const recommendedNeto = 671428.57;
+    const applied = applyQuoteStudioRecommendedPrice({
+      items,
+      quotePricingMode: "por_item",
+      precioRecomendadoNeto: recommendedNeto,
+      currentNeto: 799000,
+      targetSubtotal: recommendedNeto,
+    });
+
+    const totals = calculateWorkflowTotalsForPricingMode({
+      items: applied.items,
+      descuentoPct: 0,
+      flete: 0,
+      quotePricingMode: "por_item",
+      totalClienteManual: applied.totalClienteManual,
+      mostrarIva: false,
+    });
+
+    expect(applied.applied).toBe(true);
+    expect(Math.round(totals.neto)).toBe(Math.round(recommendedNeto));
+    expect(Math.round(recommendedNeto - totals.neto)).toBe(0);
+  });
 });

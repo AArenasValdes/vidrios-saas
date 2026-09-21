@@ -527,7 +527,8 @@ describe("cotizaciones.service", () => {
         ivaPct: 19,
         financialSnapshotVersion: 1,
         financialSnapshotCalculadoEn: expect.any(String),
-        costBasisStatus: "estimado",
+        costBasisStatus: "materiales_completos",
+        costoMaterialesManual: null,
         items: [],
       })
     );
@@ -597,7 +598,8 @@ describe("cotizaciones.service", () => {
         mermaPct: 5,
         mermaTotal: 15000,
         margenObjetivoPct: 35,
-        costBasisStatus: "manual",
+        costBasisStatus: "materiales_completos",
+        costoMaterialesManual: null,
         financialSnapshotVersion: 1,
       })
     );

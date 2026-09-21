@@ -112,21 +112,27 @@ describe("buildCotizacionDetalleMobileViewModel", () => {
     });
   });
 
-  it("muestra rentabilidad interna cuando hay costo persistido", () => {
+  it("muestra rentabilidad interna cuando hay snapshot financiero persistido", () => {
     const model = buildCotizacionDetalleMobileViewModel(
       createRecord({
         neto: 900000,
+        total: 1071000,
         costoTotalFabricacion: 600000,
         utilidadTotal: 300000,
         margenGlobalPct: 33.33,
+        costBasisStatus: "materiales_completos",
+        costoMaterialesTotal: 500000,
+        precioRecomendadoNeto: 920000,
       })
     );
 
+    expect(model.profitabilitySummary.isProfitabilityComplete).toBe(true);
     expect(model.profitabilitySummary.hasCostBasis).toBe(true);
     expect(model.profitabilitySummary.costoTotal).toBe(600000);
     expect(model.profitabilitySummary.utilidadEstimada).toBe(300000);
     expect(model.profitabilitySummary.margenRealPct).toBe(33.33);
     expect(model.profitabilitySummary.precioFinalNeto).toBe(900000);
+    expect(model.profitabilitySummary.costBasisStatus).toBe("materiales_completos");
   });
 
   it("traduce el canal de seguimiento para enlace publico y app", () => {

@@ -547,6 +547,7 @@ export function QuoteConstructorWorkspace({
     : null;
   const { organizationId, recipes: fabricationRecipes } = useFabricationRecipes({
     enabled: true,
+    skipStructuralSeed: true,
   });
   const activeFabricationResolution = useMemo(() => {
     if (!activeItem) return null;

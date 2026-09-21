@@ -43,6 +43,7 @@ import {
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
+import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import { fabricacionSnapshotMatchesCalculatedOutput } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import {
   resolveFabricacionDespieceForQuoteItem,
@@ -105,6 +106,9 @@ type Props = {
     snapshot?: CotizacionItemCubicationSnapshot | null;
   }) => Promise<void> | void;
   isSavingCubicationLineAdjustment?: boolean;
+  /** Si el padre ya cargó recetas, evita un segundo fetch al abrir el modal. */
+  recipes?: FabricationRecipeRecord[];
+  organizationId?: number | null;
 };
 
 function formatMm(value: number) {
@@ -265,6 +269,8 @@ export function DespieceReviewSurface({
   onContinueToSummary,
   onSaveCubicationLineAdjustment,
   isSavingCubicationLineAdjustment,
+  recipes: recipesFromParent,
+  organizationId: organizationIdFromParent,
 }: Props) {
   const [tab, setTab] = useState<ReviewTab>("pieza");
   const [mounted, setMounted] = useState(false);
@@ -279,15 +285,20 @@ export function DespieceReviewSurface({
     () => items.filter(isQuoteConstructorCompatibleItem),
     [items]
   );
+  const hasParentRecipes = recipesFromParent !== undefined;
   const {
-    organizationId,
-    recipes: persistedRecipes,
+    organizationId: loadedOrganizationId,
+    recipes: loadedRecipes,
     isLoading: isLoadingRecipes,
     error: recipesError,
   } = useFabricationRecipes({
-    enabled: open,
+    enabled: open && !hasParentRecipes,
   });
-  const recipesReady = !isLoadingRecipes && organizationId != null;
+  const organizationId = hasParentRecipes ? organizationIdFromParent ?? null : loadedOrganizationId;
+  const persistedRecipes = hasParentRecipes ? (recipesFromParent ?? []) : loadedRecipes;
+  const recipesReady = hasParentRecipes
+    ? organizationId != null
+    : !isLoadingRecipes && organizationId != null;
   const pieceResolutions = useMemo(() => {
     const map = new Map<string, FabricacionDespieceCotizacionResult>();
     if (!recipesReady) return map;
@@ -438,21 +449,24 @@ export function DespieceReviewSurface({
   }, [visualItems, lineTemplates, quotePricingMode, pieceResolutions]);
 
   useEffect(() => {
-    if (!open) return;
-    visualItems.forEach((item) => {
-      const resolution = pieceResolutions.get(item.id);
-      if (!resolution || resolution.estado !== "calculado" || !resolution.formal) {
-        return;
-      }
-      if (fabricacionSnapshotMatchesCalculatedOutput(item.fabricacionSnapshot, resolution.formal)) {
-        return;
-      }
-      onUpdateItem(item.id, {
-        fabricacionSnapshot: resolution.formal,
-        cubicationSnapshot: resolution.cubication,
-      });
+    if (!open || !selectedItem) return;
+    const resolution = pieceResolutions.get(selectedItem.id);
+    if (!resolution || resolution.estado !== "calculado" || !resolution.formal) {
+      return;
+    }
+    if (
+      fabricacionSnapshotMatchesCalculatedOutput(
+        selectedItem.fabricacionSnapshot,
+        resolution.formal
+      )
+    ) {
+      return;
+    }
+    onUpdateItem(selectedItem.id, {
+      fabricacionSnapshot: resolution.formal,
+      cubicationSnapshot: resolution.cubication,
     });
-  }, [open, visualItems, pieceResolutions, onUpdateItem]);
+  }, [open, selectedItem, pieceResolutions, onUpdateItem]);
 
   useEffect(() => {
     setMounted(true);

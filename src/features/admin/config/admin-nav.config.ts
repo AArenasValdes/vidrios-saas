@@ -5,6 +5,7 @@ import {
   LuLayoutDashboard,
   LuLogOut,
   LuMegaphone,
+  LuMessageSquare,
   LuSparkles,
   LuTarget,
   LuUsers,
@@ -55,6 +56,11 @@ export const ADMIN_PRIMARY_NAV: AdminNavItem[] = [
     href: "/admin/producto",
     title: "Uso del producto",
     icon: LuActivity,
+  },
+  {
+    href: "/admin/sugerencias",
+    title: "Propuestas",
+    icon: LuMessageSquare,
   },
   {
     href: "/admin/tareas",

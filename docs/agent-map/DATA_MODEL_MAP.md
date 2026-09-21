@@ -294,6 +294,18 @@ Estas tablas no están aprobadas para implementación inmediata. No crear migrac
 - `oportunidades`
 - `cobros`
 
+## Tabla preparada localmente, pendiente de aplicar en remoto
+
+### Tabla: product_feedback
+
+- **Estado**: migración local `20260921043440_product_feedback.sql`; no aplicada ni verificada en la base remota.
+- **Propósito**: capturar sugerencias opcionales de mejora de clientes Ventora y agruparlas en el panel interno founder.
+- **Campos importantes**: `id` (uuid PK), `organization_id` (bigint FK), `auth_user_id` (uuid FK), `category`, `description` (nullable, máximo 1000), `page_path` (nullable, máximo 180), `status` (`new|triage|planned|in_progress|done|not_planned`), `created_at`, `updated_at`.
+- **Categorías**: `cotizaciones`, `catalogo_precios`, `clientes_solicitudes`, `fabricacion`, `pagina_venta`, `aplicacion_movil`, `otro`.
+- **RLS/grants propuestos**: RLS habilitado; `authenticated` puede insertar solo una sugerencia ligada a su `auth.uid()` y a `get_org_id()`. No tiene SELECT/UPDATE/DELETE. `service_role` opera desde rutas servidor protegidas por allowlist founder.
+- **Privacidad**: una empresa cliente no puede leer sugerencias propias ni de otros talleres; la bandeja global existe solo en `/admin/sugerencias`.
+- **Índices**: creación descendente, categoría+creación, organización+creación y usuario Auth (FK/cascada).
+
 ---
 
 ## Tablas legacy/dormidas (NO tocar sin instruccion explicita)

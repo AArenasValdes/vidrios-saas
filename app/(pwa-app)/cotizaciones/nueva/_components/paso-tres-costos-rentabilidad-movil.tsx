@@ -4,10 +4,15 @@ import { useState } from "react";
 import { LuCalculator, LuChevronDown } from "react-icons/lu";
 
 import {
+  buildQuoteStudioApplyRecommendedLabel,
+  buildQuoteStudioRecommendedDeltaLabel,
+  canApplyQuoteStudioRecommendedPrice,
   formatQuoteProfitabilityPct,
   QUOTE_PROFITABILITY_COPY,
+  resolveMaterialCostOriginLabel,
   type QuoteStudioFinancialSummary,
 } from "@/features/cotizaciones/services/quote-studio-financial.service";
+import { resolveProfitabilityParametersOrigin } from "@/features/cotizaciones/services/quote-profitability-defaults.service";
 import {
   createQuoteStudioFinancialDraft,
   type QuoteStudioFinancialDraft,
@@ -23,10 +28,11 @@ type PasoTresCostosRentabilidadMovilProps = {
   quoteStudioFinancial?: QuoteStudioFinancialDraft;
   formatCurrencyInput: (value: string) => string;
   onQuoteStudioFinancialChange: (field: QuoteStudioFinancialField, value: string) => void;
+  onApplyRecommendedPrice?: () => void;
+  onRestoreProfitabilityDefaults?: () => void;
 };
 
 const UNAVAILABLE_LABEL = "No disponible";
-const MERMA_LABEL = "Merma de materiales %";
 const MARGEN_OBJETIVO_HELP_MOVIL = "Margen real que quieres obtener sobre la venta.";
 const BAJO_COSTO_COPY = "Esta cotización está bajo costo.";
 
@@ -57,19 +63,49 @@ export function formatAccordionClp(value: number) {
 }
 
 export function isQuoteUnderCost(summary: QuoteStudioFinancialSummary) {
-  if (!summary.hasCostBasis) {
+  if (!summary.isProfitabilityComplete) {
     return false;
   }
 
   return summary.utilidadEstimada < 0 || summary.costoTotal > summary.precioFinalNeto;
 }
 
+function resolveIncompleteStatus(summary: QuoteStudioFinancialSummary) {
+  if (summary.isProfitabilityComplete) {
+    return null;
+  }
+
+  if (summary.materialCostSource === "none" && summary.costoMateriales <= 0) {
+    return {
+      label: QUOTE_PROFITABILITY_COPY.pendiente,
+      hint: QUOTE_PROFITABILITY_COPY.pendienteHint,
+    };
+  }
+
+  return {
+    label: QUOTE_PROFITABILITY_COPY.incompleta,
+    hint: QUOTE_PROFITABILITY_COPY.incompletaHint,
+  };
+}
+
 export function buildCostosRentabilidadClosedSummary(summary: QuoteStudioFinancialSummary) {
-  if (!summary.hasCostBasis) {
-    return "Opcional";
+  if (!summary.isProfitabilityComplete) {
+    return resolveIncompleteStatus(summary)?.label ?? QUOTE_PROFITABILITY_COPY.incompleta;
   }
 
   return `Costo ${formatAccordionClp(summary.costoTotal)} · Utilidad ${formatAccordionClp(summary.utilidadEstimada)} · Margen ${formatQuoteProfitabilityPct(summary.margenRealPct)}`;
+}
+
+function resolveMaterialesValue(summary: QuoteStudioFinancialSummary) {
+  if (summary.materialCostSource === "none" && summary.costoMateriales <= 0) {
+    return UNAVAILABLE_LABEL;
+  }
+
+  if (summary.materialCostSource === "partial") {
+    return `${formatAccordionClp(summary.costoMateriales)} · parcial`;
+  }
+
+  return formatAccordionClp(summary.costoMateriales);
 }
 
 export function PasoTresCostosRentabilidadMovil({
@@ -77,14 +113,21 @@ export function PasoTresCostosRentabilidadMovil({
   quoteStudioFinancial,
   formatCurrencyInput,
   onQuoteStudioFinancialChange,
+  onApplyRecommendedPrice,
+  onRestoreProfitabilityDefaults,
 }: PasoTresCostosRentabilidadMovilProps) {
   const [isOpen, setIsOpen] = useState(false);
   const adjustments = createQuoteStudioFinancialDraft(quoteStudioFinancial);
+  const parametersOrigin = resolveProfitabilityParametersOrigin(adjustments);
   const closedSummary = buildCostosRentabilidadClosedSummary(financialSummary);
   const underCost = isQuoteUnderCost(financialSummary);
-  const materialesValue = financialSummary.hasCostBasis
-    ? formatAccordionClp(financialSummary.costoMateriales)
-    : UNAVAILABLE_LABEL;
+  const isComplete = financialSummary.isProfitabilityComplete;
+  const incompleteStatus = resolveIncompleteStatus(financialSummary);
+  const materialesValue = resolveMaterialesValue(financialSummary);
+  const formatMoney = (value: number) => formatCurrencyInput(String(Math.round(value)));
+  const canApplyRecommended = canApplyQuoteStudioRecommendedPrice(financialSummary);
+  const recommendedDeltaLabel = buildQuoteStudioRecommendedDeltaLabel(financialSummary, formatMoney);
+  const applyRecommendedLabel = buildQuoteStudioApplyRecommendedLabel(financialSummary, formatMoney);
 
   return (
     <div className={s.stepThreeAdjustmentItem}>
@@ -107,12 +150,53 @@ export function PasoTresCostosRentabilidadMovil({
 
       {isOpen ? (
         <div className={s.stepThreeCostosEditor}>
+          {incompleteStatus ? (
+            <p className={s.helpText}>{incompleteStatus.hint}</p>
+          ) : (
+            <p className={s.helpText}>
+              {parametersOrigin === "organization_defaults"
+                ? QUOTE_PROFITABILITY_COPY.valoresPredeterminados
+                : QUOTE_PROFITABILITY_COPY.personalizado}
+            </p>
+          )}
+
           <div className={s.stepThreeCostosReadRow}>
             <span>Materiales</span>
             <strong>{materialesValue}</strong>
           </div>
+          <div className={s.stepThreeCostosReadRow}>
+            <span>Origen materiales</span>
+            <strong>{resolveMaterialCostOriginLabel(financialSummary.materialCostSource)}</strong>
+          </div>
 
           <div className={s.stepThreeCostosFields}>
+            <label className={s.field} htmlFor="paso-tres-materiales-manual">
+              <span className={s.label}>{QUOTE_PROFITABILITY_COPY.costoMaterialesManualLabel}</span>
+              <div className={s.moneyInputWrap}>
+                <span className={s.moneyPrefix}>CLP</span>
+                <input
+                  id="paso-tres-materiales-manual"
+                  aria-label={QUOTE_PROFITABILITY_COPY.costoMaterialesManualLabel}
+                  className={`${s.input} ${s.inputMono} ${s.moneyInput} ${s.stepThreeMobileNumericInput}`}
+                  inputMode="decimal"
+                  enterKeyHint="next"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  value={
+                    adjustments.costoMaterialesManual !== null
+                      ? formatCurrencyField(adjustments.costoMaterialesManual, formatCurrencyInput)
+                      : ""
+                  }
+                  onChange={(event) =>
+                    onQuoteStudioFinancialChange("costoMaterialesManual", event.target.value)
+                  }
+                  onFocus={scrollCostInputIntoView}
+                  placeholder="Usar cálculo por pieza"
+                />
+              </div>
+              <span className={s.helpText}>{QUOTE_PROFITABILITY_COPY.costoMaterialesManualHint}</span>
+            </label>
             <label className={s.field} htmlFor="paso-tres-mano-obra">
               <span className={s.label}>Mano de obra</span>
               <div className={s.moneyInputWrap}>
@@ -174,12 +258,12 @@ export function PasoTresCostosRentabilidadMovil({
               </div>
             </label>
             <label className={s.field} htmlFor="paso-tres-merma">
-              <span className={s.label}>{MERMA_LABEL}</span>
+              <span className={s.label}>{QUOTE_PROFITABILITY_COPY.mermaEstimadaLabel}</span>
               <div className={s.moneyInputWrap}>
                 <span className={s.moneyPrefix}>%</span>
                 <input
                   id="paso-tres-merma"
-                  aria-label={MERMA_LABEL}
+                  aria-label={QUOTE_PROFITABILITY_COPY.mermaEstimadaLabel}
                   className={`${s.input} ${s.inputMono} ${s.moneyInput} ${s.stepThreeMobileNumericInput}`}
                   inputMode="decimal"
                   enterKeyHint="next"
@@ -219,24 +303,59 @@ export function PasoTresCostosRentabilidadMovil({
             </label>
           </div>
 
-          <dl className={s.stepThreeCostosMetrics}>
-            <div className={s.stepThreeCostosMetric}>
-              <dt>{QUOTE_PROFITABILITY_COPY.costoTotal}</dt>
-              <dd>{formatAccordionClp(financialSummary.costoTotal)}</dd>
+          {isComplete ? (
+            <dl className={s.stepThreeCostosMetrics}>
+              <div className={s.stepThreeCostosMetric}>
+                <dt>{QUOTE_PROFITABILITY_COPY.costoTotal}</dt>
+                <dd>{formatAccordionClp(financialSummary.costoTotal)}</dd>
+              </div>
+              <div className={s.stepThreeCostosMetric}>
+                <dt>{QUOTE_PROFITABILITY_COPY.utilidad}</dt>
+                <dd>{formatAccordionClp(financialSummary.utilidadEstimada)}</dd>
+              </div>
+              <div className={s.stepThreeCostosMetric}>
+                <dt>{QUOTE_PROFITABILITY_COPY.margenReal}</dt>
+                <dd>{formatQuoteProfitabilityPct(financialSummary.margenRealPct)}</dd>
+              </div>
+              <div className={s.stepThreeCostosMetric}>
+                <dt>{QUOTE_PROFITABILITY_COPY.ventaNeta}</dt>
+                <dd>{formatAccordionClp(financialSummary.precioFinalNeto)}</dd>
+              </div>
+            </dl>
+          ) : null}
+
+          {parametersOrigin === "customized" && onRestoreProfitabilityDefaults ? (
+            <button
+              type="button"
+              className={s.stepThreeSecondaryButton}
+              onClick={onRestoreProfitabilityDefaults}
+            >
+              {QUOTE_PROFITABILITY_COPY.restaurarPredeterminados}
+            </button>
+          ) : null}
+
+          {canApplyRecommended && onApplyRecommendedPrice ? (
+            <div className={s.stepThreeCostosRecommended}>
+              {recommendedDeltaLabel ? (
+                <p className={s.stepThreeCostosRecommendedHint}>{recommendedDeltaLabel}</p>
+              ) : null}
+              <button
+                type="button"
+                className={s.stepThreeCostosRecommendedButton}
+                onClick={onApplyRecommendedPrice}
+              >
+                {applyRecommendedLabel}
+              </button>
             </div>
-            <div className={s.stepThreeCostosMetric}>
-              <dt>{QUOTE_PROFITABILITY_COPY.utilidad}</dt>
-              <dd>{formatAccordionClp(financialSummary.utilidadEstimada)}</dd>
+          ) : isComplete && financialSummary.precioRecomendadoNeto > 0 ? (
+            <div className={s.stepThreeCostosRecommendedDone}>
+              <p className={s.stepThreeCostosRecommendedHint}>
+                Venta alineada al precio recomendado (
+                {formatMoney(financialSummary.precioRecomendadoNeto)}).
+              </p>
             </div>
-            <div className={s.stepThreeCostosMetric}>
-              <dt>{QUOTE_PROFITABILITY_COPY.margenReal}</dt>
-              <dd>{formatQuoteProfitabilityPct(financialSummary.margenRealPct)}</dd>
-            </div>
-            <div className={s.stepThreeCostosMetric}>
-              <dt>{QUOTE_PROFITABILITY_COPY.ventaNeta}</dt>
-              <dd>{formatAccordionClp(financialSummary.precioFinalNeto)}</dd>
-            </div>
-          </dl>
+          ) : null}
+
           {underCost ? <p className={s.stepThreeCostosUnderCost}>{BAJO_COSTO_COPY}</p> : null}
           <p className={s.stepThreeCostosPrivacy}>{QUOTE_PROFITABILITY_COPY.soloInterno}</p>
         </div>

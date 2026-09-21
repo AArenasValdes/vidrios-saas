@@ -59,6 +59,11 @@ export type OrganizationProfile = OrganizationRegionSettings & {
   proveedorPreferido: PreferredProvider;
   modoPrecioPreferido: PricingMode;
   margenDefecto: number;
+  margenObjetivoDefecto: number | null;
+  mermaMaterialesDefecto: number | null;
+  costoManoObraDefecto: number | null;
+  costoTrasladoDefecto: number | null;
+  costoOtrosDefecto: number | null;
   unidadMedidas: MeasureUnit;
   creadoEn: string | null;
   actualizadoEn: string | null;
@@ -127,6 +132,11 @@ export type UpdateOrganizationProfileInput = OrganizationRegionSettings & {
   proveedorPreferido: PreferredProvider;
   modoPrecioPreferido: PricingMode;
   margenDefecto: number;
+  margenObjetivoDefecto: number | null;
+  mermaMaterialesDefecto: number | null;
+  costoManoObraDefecto: number | null;
+  costoTrasladoDefecto: number | null;
+  costoOtrosDefecto: number | null;
   unidadMedidas: MeasureUnit;
   publicName: string;
   publicSubtitle: string;

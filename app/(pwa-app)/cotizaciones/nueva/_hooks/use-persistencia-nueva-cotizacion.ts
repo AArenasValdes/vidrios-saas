@@ -9,7 +9,13 @@ import type { QuoteCommercialDefaults } from "@/features/cotizaciones/services/q
 import type {
   CotizacionWorkflowDraft,
   CotizacionWorkflowRecord,
+  QuoteStudioFinancialDraft,
 } from "@/features/cotizaciones/types/cotizacion-workflow";
+import {
+  applyOrganizationProfitabilityDefaultsToWorkflowDraft,
+  startFreshQuoteWorkflowDraft,
+} from "@/features/cotizaciones/services/quote-profitability-defaults.service";
+import { createQuoteStudioFinancialDraft } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import {
   buildWorkflowDirtySignature,
@@ -58,11 +64,13 @@ type UsePersistenciaNuevaCotizacionParams = {
   editId: string | null;
   duplicateId: string | null;
   requestedStep: StepKey | null;
+  forceFreshQuote?: boolean;
   sourceRecord: CotizacionWorkflowRecord | null;
   loadCotizacionById: (id: string) => Promise<unknown>;
   suggestionProvider: PreferredProvider;
   preferredPricingMode: PricingMode;
   quoteCommercialDefaults?: QuoteCommercialDefaults;
+  quoteProfitabilityDefaults?: QuoteStudioFinancialDraft;
   draft: CotizacionWorkflowDraft;
   componentForm: ComponentFormState;
   editingItemId: string | null;
@@ -95,6 +103,7 @@ export function usePersistenciaNuevaCotizacion(
     editId,
     duplicateId,
     requestedStep,
+    forceFreshQuote = false,
     sourceRecord,
     loadCotizacionById,
     suggestionProvider,
@@ -267,7 +276,21 @@ export function usePersistenciaNuevaCotizacion(
         provider: suggestionProvider,
         pricingMode: preferredPricingMode,
       });
-      const blankDraft = createCotizacionWorkflowDraft(params.quoteCommercialDefaults);
+      const blankDraft = startFreshQuoteWorkflowDraft(
+        createCotizacionWorkflowDraft(params.quoteCommercialDefaults),
+        params.quoteProfitabilityDefaults
+      );
+      const persistedDraft = persisted
+        ? forceFreshQuote
+          ? startFreshQuoteWorkflowDraft(
+              persisted.draft,
+              params.quoteProfitabilityDefaults
+            )
+          : applyOrganizationProfitabilityDefaultsToWorkflowDraft(
+              persisted.draft,
+              createQuoteStudioFinancialDraft(params.quoteProfitabilityDefaults)
+            )
+        : null;
       const blankComponentForm = createEmptyComponentForm(
         [],
         suggestionProvider,
@@ -287,9 +310,9 @@ export function usePersistenciaNuevaCotizacion(
 
       const shouldStartAtRequestedStep = requestedStep === 2;
 
-      if (persisted && !shouldStartAtRequestedStep) {
+      if (persisted && persistedDraft && !shouldStartAtRequestedStep) {
         programarBootstrapWorkflow({
-          draft: persisted.draft,
+          draft: persistedDraft,
           componentForm: persisted.componentForm,
           editingItemId: persisted.editingItemId,
           selectedClientId: persisted.selectedClientId,

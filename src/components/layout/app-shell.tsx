@@ -32,6 +32,7 @@ import {
   LuLayoutDashboard,
   LuLayers,
   LuLogOut,
+  LuMessageSquare,
   LuRefreshCw,
   LuSettings,
   LuSparkles,
@@ -182,7 +183,13 @@ const NAV_ITEMS: NavItem[] = [...OPERATIVE_NAV_ITEMS, ...CONFIG_NAV_ITEMS];
 
 const SPECIAL_SCREENS: ContextItem[] = [
   {
-    href: "/cotizaciones/nueva",
+    href: "/sugerencias",
+    label: "Propuestas para Ventora",
+    mobileLabel: "Propuestas",
+    description: "Comparte tus propuestas para Ventora",
+  },
+  {
+    href: "/cotizaciones/nueva?nueva=1",
     label: "Crear cotizacion",
     mobileLabel: "Crear",
     description: "Flujo principal para crear una cotizacion desde cero.",
@@ -718,6 +725,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
         >
           <LuCreditCard aria-hidden />
           Plan y suscripcion
+        </Link>
+        <Link
+          href={resolveGuardedHref("/sugerencias")}
+          className={s.accountMenuLink}
+          prefetch={false}
+          onClick={() => setProfileMenuAnchor(null)}
+        >
+          <LuMessageSquare aria-hidden />
+          Propuestas para Ventora
         </Link>
         <button
           className={s.accountMenuAction}
@@ -1290,7 +1306,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
         <div className={s.sidebarCta}>
           <Link
-            href={resolveGuardedHref("/cotizaciones/nueva")}
+            href={resolveGuardedHref("/cotizaciones/nueva?nueva=1")}
             prefetch={false}
             className={`${s.sidebarCtaButton}${isNuevaCotizacionRoute ? ` ${s.sidebarCtaButtonActive}` : ""}`}
           >
@@ -1788,7 +1804,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             Cotizaciones
           </Link>
           <Link
-            href={resolveGuardedHref("/cotizaciones/nueva")}
+            href={resolveGuardedHref("/cotizaciones/nueva?nueva=1")}
             prefetch={false}
             className={`${s.tabItem} ${s.tabItemCreate}${isNuevaCotizacionRoute ? ` ${s.tabItemCreateActive}` : ""}`}
             aria-label="Crear nueva cotizacion"

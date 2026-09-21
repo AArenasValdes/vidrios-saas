@@ -158,7 +158,7 @@ export function PasoTresPanelAcciones({
             <Link className={s.btnGhost} href="/configuracion/empresa?inicio=1">
               <LuBuilding2 aria-hidden /> Agregar mis datos de empresa
             </Link>
-            <Link className={s.btnGhost} href="/cotizaciones/nueva">
+            <Link className={s.btnGhost} href="/cotizaciones/nueva?nueva=1">
               <LuPlus aria-hidden /> Crear otra cotizacion
             </Link>
             <button className={s.btnGhost} type="button" onClick={onGoToStepTwo}>

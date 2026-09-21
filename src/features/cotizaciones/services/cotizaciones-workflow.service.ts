@@ -621,17 +621,17 @@ export function calculateWorkflowTotalsForPricingMode(
   );
 
   if (!mostrarIva) {
-    const taxRate = resolveTaxRate(pricingOptions.taxRatePct);
-    const netoReverse = round(manualAmount / (1 + taxRate), 2);
-    const ivaReverse = round(manualAmount - netoReverse, 2);
+    // Precios finales: el manual sincronizado está en la misma unidad que los ítems
+    // (lo que paga el cliente). No revertir IVA — eso rompía rentabilidad y el CTA
+    // "Usar precio recomendado" (neto quedaba en manual/1.19).
     const ajusteComercial = round(manualAmount - rawComponentSum, 2);
 
     return {
       ...componentTotals,
       subtotal: manualAmount,
       descuentoValor: 0,
-      neto: netoReverse,
-      iva: ivaReverse,
+      neto: manualAmount,
+      iva: 0,
       flete: fleteAmount,
       redondeoComercial: 0,
       total: manualAmount,

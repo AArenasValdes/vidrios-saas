@@ -11,6 +11,7 @@ import {
   type ProjectsRepository,
 } from "@/features/projects/repositories/projects.repository";
 import { reconcileWorkflowItemsPricing } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { isSolicitudPrefillClientId } from "@/features/cotizaciones/new-quote/solicitud-prefill";
 import { createClient } from "@/lib/supabase/client";
 import { createCotizacionItemVisualConfigsService } from "@/features/cotizaciones/visual-composer/services/cotizacion-item-visual-configs.service";
 import {
@@ -359,7 +360,12 @@ function mapCotizacionToWorkflowRecord(input: {
       otrosCostos: input.cotizacion.costoOtrosTotal ?? 0,
       mermaPct: input.cotizacion.mermaPct ?? 0,
       margenObjetivoRealPct: input.cotizacion.margenObjetivoPct ?? 30,
+      costoMaterialesManual: input.cotizacion.costoMaterialesManual ?? null,
     }),
+    costBasisStatus: input.cotizacion.costBasisStatus ?? null,
+    costoMaterialesTotal: input.cotizacion.costoMaterialesTotal ?? null,
+    precioRecomendadoNeto: input.cotizacion.precioRecomendadoNeto ?? null,
+    mermaTotal: input.cotizacion.mermaTotal ?? null,
   };
 }
 
@@ -621,8 +627,18 @@ export function createCotizacionesAppService(
       throw new Error("El nombre del cliente es obligatorio");
     }
 
-    const existingById = input.existingClientId
-      ? await clientesRepo.getById(input.existingClientId, input.organizationId)
+    const existingClientId =
+      input.existingClientId !== null &&
+      input.existingClientId !== undefined &&
+      !isSolicitudPrefillClientId(input.existingClientId) &&
+      (typeof input.existingClientId === "number"
+        ? Number.isFinite(input.existingClientId) && input.existingClientId > 0
+        : /^\d+$/.test(String(input.existingClientId).trim()))
+        ? input.existingClientId
+        : null;
+
+    const existingById = existingClientId
+      ? await clientesRepo.getById(existingClientId, input.organizationId)
       : null;
 
     if (existingById) {
@@ -1070,29 +1086,35 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
     }
 
     if (normalizedItems.length > 0 && hasSupabaseBrowserEnv()) {
-      const organizationIdForFabricacion = normalizeOrganizationIdForFabricacion(
-        input.organizationId
+      const needsFabricacionSnapshot = normalizedItems.some(
+        (item) => !item.fabricacionSnapshot
       );
 
-      try {
-        const recipes = await listValidatedFabricationRecipesForQuote({
-          organizationId: organizationIdForFabricacion,
-        });
-        normalizedItems = normalizedItems.map((item) => ({
-          ...item,
-          fabricacionSnapshot:
-            item.fabricacionSnapshot ??
-            buildFabricacionSnapshotForItem({
-              item,
-              recipes,
-              organizationId: organizationIdForFabricacion,
-            }),
-        }));
-      } catch (recipeError) {
-        console.error(
-          "No se pudo calcular snapshot tecnico de fabricacion; se guarda la cotizacion sin bloquear.",
-          recipeError
+      if (needsFabricacionSnapshot) {
+        const organizationIdForFabricacion = normalizeOrganizationIdForFabricacion(
+          input.organizationId
         );
+
+        try {
+          const recipes = await listValidatedFabricationRecipesForQuote({
+            organizationId: organizationIdForFabricacion,
+          });
+          normalizedItems = normalizedItems.map((item) => ({
+            ...item,
+            fabricacionSnapshot:
+              item.fabricacionSnapshot ??
+              buildFabricacionSnapshotForItem({
+                item,
+                recipes,
+                organizationId: organizationIdForFabricacion,
+              }),
+          }));
+        } catch (recipeError) {
+          console.error(
+            "No se pudo calcular snapshot tecnico de fabricacion; se guarda la cotizacion sin bloquear.",
+            recipeError
+          );
+        }
       }
     }
 
@@ -1134,27 +1156,47 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
         });
       };
 
-      if (!isAnonymousClient && clientResult) {
-        projectResult = await withTimeout(
-          ensureProject({
-            organizationId: input.organizationId,
-            existingProjectId: input.existingProjectId,
-            clientId: clientResult.record.id,
-            clientName: clientResult.record.nombre,
-            titulo: input.draft.obra,
-          }),
-          "crear o actualizar proyecto"
-        );
+      const needsRegionalLookup = !existingCotizacion?.regionalSnapshot;
+      const projectPromise =
+        !isAnonymousClient && clientResult
+          ? withTimeout(
+              ensureProject({
+                organizationId: input.organizationId,
+                existingProjectId: input.existingProjectId,
+                clientId: clientResult.record.id,
+                clientName: clientResult.record.nombre,
+                titulo: input.draft.obra,
+              }),
+              "crear o actualizar proyecto"
+            )
+          : Promise.resolve(null);
+      const regionalPromise = needsRegionalLookup
+        ? organizationProfileRepo.getByOrganizationId(input.organizationId)
+        : Promise.resolve(null);
+      const codePromise = input.existingCode
+        ? Promise.resolve(input.existingCode)
+        : withTimeout(
+            cotizacionesRepo.reserveNextCode(input.organizationId),
+            "reservar código de cotización"
+          );
 
-        if (projectResult.rollback) {
-          rollbackStack.push(projectResult.rollback);
-        }
+      const [resolvedProject, regionalProfile, reservedCode] = await Promise.all([
+        projectPromise,
+        regionalPromise,
+        codePromise,
+      ]);
+
+      projectResult = resolvedProject;
+      if (projectResult?.rollback) {
+        rollbackStack.push(projectResult.rollback);
       }
       const proyectoId = projectResult?.record?.id ?? null;
 
-      const regionalSnapshot = existingCotizacion?.regionalSnapshot ?? createQuoteRegionSnapshot({
-        region: await organizationProfileRepo.getByOrganizationId(input.organizationId),
-      });
+      const regionalSnapshot =
+        existingCotizacion?.regionalSnapshot ??
+        createQuoteRegionSnapshot({
+          region: regionalProfile,
+        });
       const regionalPricing = resolveQuotePricingSettings(regionalSnapshot);
       const quotePricingMode = normalizeQuotePricingMode(input.draft.quotePricingMode);
       const totals = calculateWorkflowTotalsForPricingMode({
@@ -1171,6 +1213,7 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
         neto: totals.neto,
         total: totals.total,
         costoTotalFabricacion: totals.costoTotalFabricacion,
+        costoMaterialesManual: financialDraft.costoMaterialesManual,
         manoObra: financialDraft.manoObra,
         traslado: financialDraft.traslado,
         otrosCostos: financialDraft.otrosCostos,
@@ -1183,9 +1226,9 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
       const ivaPct = totals.neto > 0 ? round((totals.iva / totals.neto) * 100, 4) : 0;
       const financialSnapshotCalculatedAt = new Date().toISOString();
       const codigo =
-        input.existingCode ??
-        (await cotizacionesRepo.reserveNextCode(input.organizationId)) ??
-        buildCotizacionCode();
+        (typeof reservedCode === "string" && reservedCode.trim()
+          ? reservedCode.trim()
+          : null) ?? buildCotizacionCode();
       const cotizacionInput: CrearCotizacionInput = {
         organizationId: input.organizationId,
         solicitudId: input.sourceSolicitudId ?? existingCotizacion?.solicitudId ?? null,
@@ -1207,6 +1250,7 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
         margenPct,
         utilidadTotal,
         costoMaterialesTotal: financialSummary.costoMateriales,
+        costoMaterialesManual: financialDraft.costoMaterialesManual,
         costoManoObraTotal: financialSummary.manoObra,
         costoTrasladoTotal: financialSummary.traslado,
         costoOtrosTotal: financialSummary.otrosCostos,
@@ -1217,14 +1261,7 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
         ivaPct,
         financialSnapshotVersion: 1,
         financialSnapshotCalculadoEn: financialSnapshotCalculatedAt,
-        costBasisStatus: financialSummary.hasCostBasis
-          ? financialDraft.manoObra > 0 ||
-            financialDraft.traslado > 0 ||
-            financialDraft.otrosCostos > 0 ||
-            financialDraft.mermaPct > 0
-            ? "manual"
-            : "estimado"
-          : "sin_costos",
+        costBasisStatus: financialSummary.costBasisStatus,
         approvalToken: existingCotizacion?.approvalToken ?? createApprovalToken(),
         approvalTokenExpiresAt: existingCotizacion?.approvalTokenExpiresAt ?? null,
         clienteVioEn: existingCotizacion?.clienteVioEn ?? null,
@@ -1246,35 +1283,47 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
           )
         : await withTimeout(cotizacionesRepo.create(cotizacionInput), "crear cotización");
 
+      // El sync visual no debe retrasar la apertura del PDF: corre en background.
       if (hasSupabaseBrowserEnv()) {
-        try {
-          const visualConfigsService = createCotizacionItemVisualConfigsService(createClient());
-          await visualConfigsService.syncFromPersistedItems({
+        const visualConfigsService = createCotizacionItemVisualConfigsService(createClient());
+        void visualConfigsService
+          .syncFromPersistedItems({
             organizationId: input.organizationId,
             items: (persisted.items ?? []).map((item) => ({
               id: item.id,
               observaciones: item.observaciones,
               color: item.color,
             })),
+          })
+          .catch((visualError) => {
+            console.error(
+              "No se pudo sincronizar cotizacion_item_visual_configs (el guardado comercial sí ocurrió).",
+              visualError
+            );
           });
-        } catch (visualError) {
-          console.error(
-            "No se pudo sincronizar cotizacion_item_visual_configs (el guardado comercial sí ocurrió).",
-            visualError
-          );
-        }
       }
 
-      const workflowRecord = await withTimeout(
-        getWorkflowById(persisted.id, input.organizationId),
-        "recuperar cotización guardada"
-      );
-
-      if (!workflowRecord) {
-        throw new Error("No se pudo recuperar la cotizacion guardada");
-      }
-
-return workflowRecord;
+      // Evita re-fetch completo (items + project + client + visual): ya tenemos seed en memoria.
+      const mapped = mapCotizacionToWorkflowRecord({
+        cotizacion: persisted,
+        clientId: clientResult?.record.id ?? null,
+        clientName:
+          clientResult?.record.nombre ??
+          (isAnonymousClient ? "Cliente" : input.draft.clienteNombre.trim() || "Cliente"),
+        clientPhone:
+          clientResult?.record.telefono ??
+          (isAnonymousClient ? "" : input.draft.clienteTelefono),
+        clientAddress:
+          clientResult?.record.direccion ??
+          (isAnonymousClient ? "" : input.draft.direccion),
+        projectTitle:
+          projectResult?.record.titulo ??
+          resolveWorkflowObraTitle({
+            obra: input.draft.obra,
+            clienteNombre: input.draft.clienteNombre,
+          }),
+      });
+      return mapped;
     } catch (error) {
       if (!input.existingId) {
         await rollbackEntities(rollbackStack);

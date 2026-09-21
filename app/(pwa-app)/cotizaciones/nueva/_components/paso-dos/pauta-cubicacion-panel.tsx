@@ -336,6 +336,7 @@ export function PautaCubicacionPanel({
       Number.isInteger(numericLineTemplateId) && numericLineTemplateId > 0
         ? numericLineTemplateId
         : undefined,
+    skipStructuralSeed: true,
   });
   const explicitTipologia =
     componentForm.fabricacionTipologia ||
@@ -417,7 +418,7 @@ export function PautaCubicacionPanel({
       leg: sodalConfig?.leg ?? null,
       reinforcement: sodalConfig?.reinforcement ?? null,
       preferredRecipeId: componentForm.fabricationRecipeId || null,
-      allowPreliminaryNonValidated: false,
+      previewListaParaProbar: true,
     });
   }, [
     catalogKey,
@@ -676,14 +677,14 @@ export function PautaCubicacionPanel({
     ? "Borrador manual"
     : isManual
       ? "Ajustada manualmente"
-      : draftMatches || savedMatches
-        ? "Snapshot guardado"
-        : selectedPersistedRecipe
+      : selectedPersistedRecipe
           ? !selectedPersistedRecipeReady
             ? "Configuración técnica pendiente"
             : selectedPersistedRecipe.status === "validated"
               ? "Validada por tu taller"
-              : "Receta en prueba"
+              : "Cálculo preliminar"
+        : draftMatches || savedMatches
+          ? "Snapshot guardado"
         : fabricationRecipe
           ? RECIPE_STATUS_LABELS[fabricationRecipe.status]
           : cubicationConfig
@@ -957,8 +958,30 @@ export function PautaCubicacionPanel({
     const recipe = formalResolution?.candidatas.find(
       (candidate) => candidate.id === recipeId
     );
-    if (!recipe || widthMm <= 0 || heightMm <= 0) {
+    if (!recipe) {
       onFabricacionSnapshotChange?.(null);
+      onCubicationSnapshotChange(null);
+      return;
+    }
+
+    onFabricacionContextoChange?.({
+      tipologia: recipe.definition.identidad.tipologia,
+      hojas: recipe.definition.identidad.hojas,
+      modulos: recipe.definition.identidad.modulos,
+      apertura: recipe.definition.identidad.apertura ?? pieceApertura ?? "",
+      herraje: recipe.definition.identidad.herraje ?? "",
+      variante: recipe.definition.identidad.variante,
+    });
+
+    const compositionComplete = buildFabricationRecipeSummary(
+      recipe.definition
+    ).compositionComplete;
+    const technicalGate =
+      recipe.status === "validated" ||
+      evaluarRecetaListaParaProbar(recipe.definition).listaParaProbar;
+    if (!compositionComplete || !technicalGate || widthMm <= 0 || heightMm <= 0) {
+      onFabricacionSnapshotChange?.(null);
+      onCubicationSnapshotChange(null);
       return;
     }
 
@@ -972,14 +995,6 @@ export function PautaCubicacionPanel({
         modulos: recipe.definition.identidad.modulos,
         variante: recipe.definition.identidad.variante,
       },
-    });
-    onFabricacionContextoChange?.({
-      tipologia: recipe.definition.identidad.tipologia,
-      hojas: recipe.definition.identidad.hojas,
-      modulos: recipe.definition.identidad.modulos,
-      apertura: recipe.definition.identidad.apertura ?? pieceApertura ?? "",
-      herraje: recipe.definition.identidad.herraje ?? "",
-      variante: recipe.definition.identidad.variante,
     });
     onFabricacionSnapshotChange?.(snapshot);
     onCubicationSnapshotChange(
@@ -1216,7 +1231,12 @@ export function PautaCubicacionPanel({
         </span>
       </div>
 
-      {readOnlyFormalSnapshot ? (
+      {readOnlyFormalSnapshot && selectedPersistedRecipe?.status !== "validated" ? (
+        <p className={editor.cubicacionNotice}>
+          Cálculo preliminar basado en una receta documentada. Tu taller aún debe
+          validarla antes de usarla como pauta de fabricación.
+        </p>
+      ) : readOnlyFormalSnapshot ? (
         <p className={editor.cubicacionNotice}>
           Snapshot de receta version {formalSnapshot?.recipeVersion}. Para cambiar la
           pauta, crea una nueva version de la receta.

@@ -492,8 +492,13 @@ export function buildSeedPayloadForVariantSlot(input: {
     version: 1,
     status: "draft",
     definition,
-    source_type: input.slot.complete ? "workshop" : "manual",
+    source_type:
+      input.slot.sourceType ?? (input.slot.complete ? "workshop" : "manual"),
     source_reference: input.slot.sourceReference,
+    ...(input.slot.sourceName ? { source_name: input.slot.sourceName } : {}),
+    ...(input.slot.sourceRevision
+      ? { source_revision: input.slot.sourceRevision }
+      : {}),
   };
 }
 

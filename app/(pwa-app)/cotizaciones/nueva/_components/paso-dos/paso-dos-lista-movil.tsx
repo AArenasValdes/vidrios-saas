@@ -13,6 +13,7 @@ import {
 } from "react-icons/lu";
 
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
+import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import {
   anyQuoteItemHasFabricationReview,
   buildQuoteFabricationReviewEligibility,
@@ -57,6 +58,9 @@ type Props = {
   onOpenCuaderno?: () => void;
   /** Abre la revisión de fabricación, opcionalmente posicionada en un componente. */
   onOpenDespieceReview?: (itemId?: string) => void;
+  /** Recetas precargadas desde el wizard (evita un fetch duplicado al abrir despiece). */
+  fabricationRecipes?: FabricationRecipeRecord[];
+  fabricationOrganizationId?: number | null;
 };
 
 export function PasoDosListaMovil({
@@ -77,9 +81,25 @@ export function PasoDosListaMovil({
   onReturnToModeSelector,
   onOpenCuaderno,
   onOpenDespieceReview,
+  fabricationRecipes: fabricationRecipesFromParent,
+  fabricationOrganizationId: fabricationOrganizationIdFromParent,
 }: Props) {
   const measureUnit = useOrganizationMeasureUnit();
-  const { recipes, organizationId } = useFabricationRecipes({ enabled: items.length > 0 });
+  const recipesOwnedByParent = fabricationRecipesFromParent !== undefined;
+  const { recipes: loadedRecipes, organizationId: loadedOrganizationId } = useFabricationRecipes({
+    enabled: items.length > 0 && !recipesOwnedByParent,
+    skipStructuralSeed: true,
+  });
+  const recipes = useMemo(
+    () =>
+      recipesOwnedByParent
+        ? (fabricationRecipesFromParent ?? [])
+        : loadedRecipes,
+    [fabricationRecipesFromParent, loadedRecipes, recipesOwnedByParent]
+  );
+  const organizationId = recipesOwnedByParent
+    ? (fabricationOrganizationIdFromParent ?? null)
+    : loadedOrganizationId;
   const fabricationReviewEligibilityByItemId = useMemo(
     () =>
       buildQuoteFabricationReviewEligibility({

@@ -102,6 +102,7 @@ export function PasoDosPanelComponentes({
               adjustments={props.quoteStudioFinancial}
               formatCurrencyInput={props.formatCurrencyInput}
               onAdjustmentChange={props.onQuoteStudioFinancialChange}
+              onRestoreProfitabilityDefaults={props.onRestoreQuoteStudioProfitabilityDefaults}
               onApplyRecommendedPrice={props.onApplyQuoteStudioRecommendedPrice}
             />
           </div>
