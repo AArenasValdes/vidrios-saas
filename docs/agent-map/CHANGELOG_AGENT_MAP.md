@@ -2,6 +2,20 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-21 - Novedades de Ventora
+
+- Nuevo feed autenticado `/novedades`, estado de lectura por usuario y entrada con contador en notificaciones, separada de las alertas comerciales.
+- Panel founder `/admin/novedades` para borradores, publicación explícita, edición, archivo y enlace opcional a propuestas implementadas.
+- Migración local `20260921164735_product_announcements.sql`; RLS habilitada y tablas disponibles solo mediante rutas servidor autenticadas.
+- Feed móvil simplificado a tarjetas compactas; **Ver actualización** despliega el detalle y registra la lectura, quitando ese anuncio del contador de la campana.
+
+## 2026-09-21 - Catálogo VERATEC PVC 7400
+
+- Se incorpora `ventora:veratec-7400-corredera` al catálogo canónico compartido por cotizador mobile y desktop, con proveedor VERATEC y precio pendiente del taller.
+- La ficha documenta 15 perfiles, barra de 5.800 mm, tres variantes de 2 hojas, cortes, vidrio y 13 herrajes. Las recetas se siembran por organización como borradores de fabricante, sin migración remota.
+- Monolítico 4 mm queda lista para probar; 20 mm y 24 mm conservan bloqueos por contradicciones explícitas de la fuente. Ninguna receta equivale a validación de taller.
+- Evidencia: `docs/fabricacion/alumetrica/2026-09-21-veratec-7400.md`.
+
 ## 2026-09-21 - Serie 42 separada por proveedor ALAR / SODAL
 
 - `ventora:l42` agrega variantes de fabricante/proveedor para proyectante 1 hoja: ALAR marco fijo 4201, ALAR con cámara de agua 4204 y SODAL sin cámara monolítico.

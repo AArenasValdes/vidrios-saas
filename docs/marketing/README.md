@@ -24,6 +24,7 @@ La ejecución operativa vive en `docs/growth-os/README.md`. Esta carpeta conserv
 - `VIDEO_BRIEF_TEMPLATE.md`: brief reutilizable para cada pieza
 - `briefs/`: briefs de produccion listos para grabar o diseñar por semana
 - `SEMANA_1_CONTENIDO_LISTO.md`: paquete ejecutable de contenido de la semana actual
+- `briefs/W2609_SEMANA_21-27_SEPTIEMBRE.md`: campaña ejecutable del 21 al 27 de septiembre, con copies, guiones, respuestas y medición
 - `VIDEO_LINEAS_25_PC_MOVIL.md`: brief y guion para catálogo de 25 líneas, configuración PC y uso móvil
 - `DISENO_HANDOFF_IA.md`: contexto reusable para trabajar con otra IA exclusivamente en diseño/UI
 - `PLANILLA_CONTENIDO_VENTORA.csv`: registro de publicaciones, UTMs, métricas y aprendizajes

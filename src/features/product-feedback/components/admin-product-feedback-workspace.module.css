@@ -224,6 +224,16 @@
   font-size: 12px;
 }
 
+.announcementLink {
+  width: fit-content;
+  color: #315b9c;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.announcementLink:hover { text-decoration: underline; }
+
 .statusControl {
   display: grid;
   gap: 5px;

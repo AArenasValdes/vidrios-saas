@@ -306,6 +306,17 @@ Estas tablas no están aprobadas para implementación inmediata. No crear migrac
 - **Privacidad**: una empresa cliente no puede leer sugerencias propias ni de otros talleres; la bandeja global existe solo en `/admin/sugerencias`.
 - **Índices**: creación descendente, categoría+creación, organización+creación y usuario Auth (FK/cascada).
 
+### Tablas: product_announcements y product_announcement_reads
+
+- **Estado**: migración local `20260921164735_product_announcements.sql`; no aplicada ni verificada en la base remota.
+- **Propósito**: publicar novedades de producto para talleres autenticados y mantener la lectura individual.
+- **Campos importantes — novedades**: título, resumen, contenido, categoría (`nueva_funcion|mejora|correccion|general`), estado (`draft|published|archived`), fecha de publicación, enlace interno opcional, `related_feedback_id`, autor y timestamps.
+- **Campos importantes — lecturas**: `announcement_id`, `organization_id`, `auth_user_id`, `read_at`; clave primaria por anuncio y usuario.
+- **Relaciones**: `related_feedback_id` apunta a `product_feedback` y pasa a null si se elimina la propuesta; lecturas se eliminan junto con anuncio, organización o usuario.
+- **RLS/grants**: RLS habilitada en ambas tablas; acceso directo `anon` y `authenticated` revocado. Solo `service_role` tiene grants explícitos. Las rutas servidor validan sesión/allowlist antes de usar el cliente admin y filtran cada marca de lectura por organización y usuario derivados del perfil.
+- **Privacidad**: el feed entrega solo estado `published` con `published_at` vigente; borradores y archivados solo existen en el panel admin.
+- **Índices**: fecha de publicación, estado+creación y usuario+organización en lecturas.
+
 ---
 
 ## Tablas legacy/dormidas (NO tocar sin instruccion explicita)

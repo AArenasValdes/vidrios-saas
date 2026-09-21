@@ -63,6 +63,11 @@ export const ADMIN_PRIMARY_NAV: AdminNavItem[] = [
     icon: LuMessageSquare,
   },
   {
+    href: "/admin/novedades",
+    title: "Novedades",
+    icon: LuMegaphone,
+  },
+  {
     href: "/admin/tareas",
     title: "Tareas",
     icon: LuSparkles,

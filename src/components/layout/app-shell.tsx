@@ -32,6 +32,7 @@ import {
   LuLayoutDashboard,
   LuLayers,
   LuLogOut,
+  LuMegaphone,
   LuMessageSquare,
   LuRefreshCw,
   LuSettings,
@@ -182,6 +183,12 @@ function formatSidebarSubscriptionDate(iso: string): string {
 const NAV_ITEMS: NavItem[] = [...OPERATIVE_NAV_ITEMS, ...CONFIG_NAV_ITEMS];
 
 const SPECIAL_SCREENS: ContextItem[] = [
+  {
+    href: "/novedades",
+    label: "Novedades de Ventora",
+    mobileLabel: "Novedades",
+    description: "Mejoras y funciones nuevas de Ventora",
+  },
   {
     href: "/sugerencias",
     label: "Propuestas para Ventora",
@@ -462,6 +469,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const [alertsSeenAt, setAlertsSeenAt] = useState(0);
   const [alertsClearedAt, setAlertsClearedAt] = useState(0);
   const [solicitudesSeenAt, setSolicitudesSeenAt] = useState(0);
+  const [announcementUnreadCount, setAnnouncementUnreadCount] = useState(0);
   const [isCompactMobile, setIsCompactMobile] = useState(false);
   const isMountedRef = useRef(true);
 
@@ -599,6 +607,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     [solicitudesSeenAt, solicitudesShell]
   );
   const commercialAlertCount = alertCount + nuevasSolicitudesCount;
+  const totalNotificationCount = commercialAlertCount + announcementUnreadCount;
   const visibleSolicitudAlerts = useMemo(
     () =>
       solicitudesShell
@@ -606,6 +615,40 @@ export default function AppShell({ children }: { children: ReactNode }) {
         .slice(0, isCompactMobile ? 3 : 4),
     [isCompactMobile, solicitudesShell]
   );
+
+  const refreshAnnouncementUnreadCount = useCallback(async () => {
+    if (!user?.id || !organizacionId) return;
+    try {
+      const response = await fetch("/api/novedades?summary=1", { cache: "no-store" });
+      if (!response.ok) return;
+      const payload = (await response.json()) as { unreadCount?: number };
+      if (typeof payload.unreadCount === "number") {
+        setAnnouncementUnreadCount(payload.unreadCount);
+      }
+    } catch {
+      // Novedades no interrumpe el uso normal de la app si no está disponible.
+    }
+  }, [organizacionId, user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || !organizacionId || usesMinimalShell) {
+      if (!user?.id || !organizacionId) setAnnouncementUnreadCount(0);
+      return;
+    }
+
+    const handleUnreadCount = (event: Event) => {
+      const unreadCount = (event as CustomEvent<unknown>).detail;
+      if (typeof unreadCount === "number" && Number.isFinite(unreadCount)) {
+        setAnnouncementUnreadCount(Math.max(0, unreadCount));
+      }
+    };
+
+    window.addEventListener("ventora:novedades-unread", handleUnreadCount);
+    void refreshAnnouncementUnreadCount();
+    return () => {
+      window.removeEventListener("ventora:novedades-unread", handleUnreadCount);
+    };
+  }, [organizacionId, pathname, refreshAnnouncementUnreadCount, user?.id, usesMinimalShell]);
 
   const handleLogout = async () => {
     if (isSigningOut) {
@@ -1146,6 +1189,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       markAlertsAsSeen();
       markSolicitudesAsSeen();
       void refresh();
+      void refreshAnnouncementUnreadCount();
     }
   };
 
@@ -1163,6 +1207,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           markAlertsAsSeen();
           markSolicitudesAsSeen();
           void refresh();
+          void refreshAnnouncementUnreadCount();
         }
         return nextIsOpen;
       });
@@ -1172,7 +1217,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     return () => {
       window.removeEventListener("ventora:toggle-shell-alerts", onToggleShellAlerts);
     };
-  }, [isDashboardRoute, markAlertsAsSeen, markSolicitudesAsSeen, refresh]);
+  }, [isDashboardRoute, markAlertsAsSeen, markSolicitudesAsSeen, refresh, refreshAnnouncementUnreadCount]);
 
   const handleClearAlerts = () => {
     markAlertsAsSeen();
@@ -1433,15 +1478,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <button
               className={`${s.mobileGhostBtn}${isAlertsOpen ? ` ${s.mobileGhostBtnActive}` : ""}`}
               type="button"
-              aria-label="Notificaciones"
+              aria-label={totalNotificationCount > 0 ? `Notificaciones, ${totalNotificationCount} sin revisar` : "Notificaciones"}
               aria-expanded={isAlertsOpen}
               data-alerts-trigger="true"
               onClick={handleToggleAlerts}
             >
               <LuBell aria-hidden />
-              {commercialAlertCount > 0 ? (
+              {totalNotificationCount > 0 ? (
                 <span className={s.alertDot}>
-                  {commercialAlertCount > 9 ? "9+" : commercialAlertCount}
+                  {totalNotificationCount > 9 ? "9+" : totalNotificationCount}
                 </span>
               ) : null}
             </button>
@@ -1497,14 +1542,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 className={`${s.ghostAction}${isAlertsOpen ? ` ${s.ghostActionActive}` : ""}`}
                 type="button"
                 aria-expanded={isAlertsOpen}
+                aria-label={totalNotificationCount > 0 ? `Alertas y novedades, ${totalNotificationCount} sin revisar` : "Alertas y novedades"}
                 data-alerts-trigger="true"
                 onClick={handleToggleAlerts}
               >
                 <LuBell aria-hidden />
-                Alertas
-                {commercialAlertCount > 0 ? (
+                Notificaciones
+                {totalNotificationCount > 0 ? (
                   <span className={s.alertPill}>
-                    {commercialAlertCount > 9 ? "9+" : commercialAlertCount}
+                    {totalNotificationCount > 9 ? "9+" : totalNotificationCount}
                   </span>
                 ) : null}
               </button>
@@ -1664,11 +1710,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <aside className={s.alertsPanel} data-alerts-panel="true">
           <div className={s.alertsHeader}>
             <div>
-              <strong>Alertas comerciales</strong>
+              <strong>Notificaciones</strong>
               <p>
                 {commercialAlertCount > 0
-                  ? `${commercialAlertCount} alerta${commercialAlertCount === 1 ? "" : "s"} para revisar`
-                  : "Sin alertas activas"}
+                  ? `${commercialAlertCount} alerta${commercialAlertCount === 1 ? "" : "s"} comercial${commercialAlertCount === 1 ? "" : "es"} · ${announcementUnreadCount} novedad${announcementUnreadCount === 1 ? "" : "es"} sin leer`
+                  : announcementUnreadCount > 0
+                    ? `${announcementUnreadCount} novedad${announcementUnreadCount === 1 ? "" : "es"} sin leer`
+                    : "Sin alertas ni novedades nuevas"}
               </p>
             </div>
             <div className={s.alertsHeaderActions}>
@@ -1691,6 +1739,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
             </div>
           </div>
 
+          <Link className={s.announcementAlertLink} href="/novedades" onClick={() => setIsAlertsOpen(false)}>
+            <span className={s.announcementAlertIcon}><LuMegaphone aria-hidden /></span>
+            <span>
+              <strong>Novedades de Ventora</strong>
+              <small>{announcementUnreadCount > 0
+                ? `${announcementUnreadCount} actualización${announcementUnreadCount === 1 ? "" : "es"} sin leer`
+                : "Mejoras y funciones nuevas"}</small>
+            </span>
+            {announcementUnreadCount > 0 ? <b>{announcementUnreadCount > 9 ? "9+" : announcementUnreadCount}</b> : <LuChevronRight aria-hidden />}
+          </Link>
+
           {isAlertsLoading && alerts.length === 0 ? (
             <div className={s.alertsLoadingState}>
               <span className={s.alertsSpinner} aria-hidden />
@@ -1709,6 +1768,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
           ) : null}
 
           {visibleSolicitudAlerts.length > 0 || visibleAlerts.length > 0 ? (
+            <>
+            <div className={s.alertsSectionLabel}>Alertas comerciales</div>
             <div className={s.alertsList}>
               {visibleSolicitudAlerts.map((solicitud) => (
                 <Link
@@ -1764,6 +1825,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 );
               })}
             </div>
+            </>
           ) : !isAlertsLoading && !alertsError ? (
             <div className={s.alertsEmptyState}>
               <strong>Sin respuestas nuevas</strong>

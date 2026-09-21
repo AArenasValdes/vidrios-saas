@@ -19,6 +19,10 @@ out/
 .codex-edge/
 .codex-edge-ref/
 .codex-logs/
+/.tmp-qa/
+/playwright-report/
+/test-results/
+/.nyc_output/
 
 # --- Medios pesados no versionados / solo locales (redundante con .gitignore) ---
 public/4to Video/
@@ -68,6 +72,12 @@ public/video-assets/
 /supabase/
 /tests/
 /__tests__/
+
+# Pruebas unitarias y snapshots dentro de src; no participan en el runtime ni en `next build`.
+**/__tests__/**
+**/__snapshots__/**
+**/*.test.*
+**/*.spec.*
 
 # Scripts operativos: el build solo necesita el stub de polyfill
 /scripts/*

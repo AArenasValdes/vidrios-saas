@@ -1,0 +1,61 @@
+.page {
+  --news-ink: #18355f;
+  --news-body: #314b70;
+  --news-muted: #5d6d83;
+  --news-accent: #245eae;
+  --news-border: #dce4ef;
+  --news-surface: #fff;
+  --news-soft: #f4f7fc;
+  display: grid;
+  gap: 20px;
+  width: min(100%, 760px);
+  margin: 0 auto;
+  padding: 4px 0 36px;
+  color: var(--news-ink);
+}
+
+.header { display: grid; gap: 8px; }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; color: var(--news-accent); font-size: 12px; font-weight: 700; letter-spacing: .075em; text-transform: uppercase; }
+.eyebrow svg { width: 16px; height: 16px; }
+.header h1 { margin: 0; color: var(--news-ink); font-size: clamp(26px, 4vw, 32px); letter-spacing: -.035em; line-height: 1.15; }
+.header p { max-width: 58ch; margin: 0; color: var(--news-muted); font-size: 15px; line-height: 1.55; }
+
+.list { display: grid; gap: 12px; }
+.card { min-width: 0; padding: 18px; border: 1px solid var(--news-border); border-radius: 18px; background: var(--news-surface); box-shadow: 0 5px 16px rgba(24, 53, 95, .045); }
+.unread { border-color: #b8d0f5; box-shadow: inset 3px 0 #4f7dd4, 0 5px 16px rgba(24, 53, 95, .045); }
+.meta { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; color: var(--news-muted); font-size: 12px; line-height: 1.3; }
+.meta time { margin-left: auto; white-space: nowrap; }
+.category, .newLabel { min-height: 25px; padding: 4px 9px; border-radius: 999px; display: inline-flex; align-items: center; font-size: 11px; font-weight: 700; }
+.category { background: #edf3ff; color: #315b9c; }
+.newLabel { gap: 5px; border: 1px solid #c6dcfb; background: #f1f7ff; color: #1f5caa; }
+.newLabel::before { width: 6px; height: 6px; border-radius: 50%; background: currentColor; content: ""; }
+.card h2 { margin: 12px 0 0; color: var(--news-ink); font-size: 18px; line-height: 1.35; letter-spacing: -.015em; overflow-wrap: anywhere; }
+.summary { margin: 6px 0 0; color: var(--news-body); font-size: 14px; line-height: 1.55; }
+.details { margin-top: 12px; padding-top: 12px; border-top: 1px solid #edf0f5; }
+.body { margin: 0; color: #4d5f77; font-size: 14px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.actionLink { width: fit-content; min-height: 44px; margin-top: 8px; display: inline-flex; align-items: center; gap: 7px; color: var(--news-accent); font-size: 14px; font-weight: 700; text-decoration: none; }
+.actionLink:hover { text-decoration: underline; }
+.actionLink svg { width: 15px; height: 15px; }
+.cardFooter { margin-top: 13px; }
+.readButton { width: 100%; min-height: 48px; padding: 0 14px; border: 1px solid #d5e2f5; border-radius: 13px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--news-soft); color: var(--news-accent); font: inherit; font-size: 14px; font-weight: 700; text-align: left; cursor: pointer; touch-action: manipulation; }
+.readButton:hover { border-color: #b8d0f5; background: #edf4ff; }
+.readButton svg { width: 18px; height: 18px; flex: 0 0 auto; }
+.readButton:disabled { opacity: .65; cursor: wait; }
+.readButton:focus-visible, .actionLink:focus-visible { outline: 3px solid rgba(79, 125, 212, .4); outline-offset: 3px; }
+.readError { margin: 0 0 9px; color: #9b3434; font-size: 13px; line-height: 1.45; }
+.emptyState { min-height: 148px; padding: 22px; border: 1px solid var(--news-border); border-radius: 18px; display: grid; align-content: center; justify-items: center; gap: 7px; background: var(--news-surface); text-align: center; }
+.emptyIcon { width: 42px; height: 42px; margin-bottom: 3px; border-radius: 14px; display: grid; place-items: center; background: #edf3ff; color: var(--news-accent); }
+.emptyIcon svg { width: 19px; height: 19px; }
+.emptyState strong { color: var(--news-ink); font-size: 15px; line-height: 1.4; }
+.emptyState > span:last-child { color: var(--news-muted); font-size: 14px; line-height: 1.5; }
+.loadingState { min-height: 100px; display: grid; align-content: center; color: var(--news-muted); font-size: 14px; }
+.error { padding: 12px 14px; border: 1px solid #eccaca; border-radius: 12px; background: #fff7f7; color: #8f2e2e; font-size: 14px; line-height: 1.45; }
+
+@media (max-width: 600px) {
+  .page { gap: 17px; padding: 2px 0 32px; }
+  .header { gap: 7px; }
+  .header p { font-size: 14px; }
+  .card { padding: 15px; border-radius: 16px; }
+  .meta { gap: 6px; }
+  .meta time { margin-left: auto; font-size: 11px; }
+}

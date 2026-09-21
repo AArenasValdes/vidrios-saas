@@ -13,6 +13,8 @@ export const PROFILE_REFERENCE_SOURCES = {
     "https://www.alumet.cl/wp-content/uploads/2020/05/alar_catalogo_2011.pdf",
   ALUMET_CATALOG:
     "https://www.alumet.cl/wp-content/uploads/2020/02/202700803-ALUMET-ALUMCO-ALUMINIO.pdf",
+  ALUMETRICA_CATALOG:
+    "https://alumetrica.comunaclic.cl/Catalogo/Lineas/Detalle/3b5e6093-5b49-4640-b9e5-5db111dc4ffb",
 } as const;
 
 export type LineProfileReferenceCodeStatus =

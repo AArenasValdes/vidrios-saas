@@ -13,9 +13,12 @@ Pendientes. No son líneas comerciales Ventora y no deben sembrarse ni convertir
 | Serie G-50 - MURO CORTINA | Sodal S.A. | Aluminio | Sin tipologías registradas | 5 | 0 | https://alumetrica.comunaclic.cl/Catalogo/Lineas/Detalle/b9c3df9a-8dc0-46ac-8c27-896255f0a461 |
 | PVC PD10 | VEKA | PVC | 1H+1F espejo; mono/DVH; 3–5, 17–20, 18–19–20, 24–25 mm; 2 hojas | 21 | 6 | https://alumetrica.comunaclic.cl/Catalogo/Lineas/Detalle/927fda38-d3b4-4440-a2f3-09c253847f02 |
 | Softline 39DJ | VEKA | PVC | Fijo/abatible/proyectante; mono 4–5; TP 17–20/22–24; 1–2 hojas visibles | 5 | 8 | https://alumetrica.comunaclic.cl/Catalogo/Lineas/Detalle/3526af13-cafb-48fa-a767-1167d7ac7db7 |
-| PVC 7400 CORREDERA | VERATEC | PVC | Sliding 7400; monolítico 4, 20, 24 mm; 2 hojas | 15 | 3 | https://alumetrica.comunaclic.cl/Catalogo/Lineas/Detalle/3b5e6093-5b49-4640-b9e5-5db111dc4ffb |
 
 ## Siguiente paso permitido
 
 Validar identidad y documentación contra Haciendo Ventanas y Sistema Zeta. No activar
 catálogo, precios ni recetas con esta lista.
+
+## Resuelta el 2026-09-21
+
+VERATEC 7400 fue incorporada al catálogo comercial con tres recetas de proveedor. La evidencia, fórmulas, secciones, barras, herrajes y discrepancias está en [2026-09-21-veratec-7400.md](2026-09-21-veratec-7400.md). Las variantes TP 20 mm y TP 24 mm siguen bloqueadas hasta resolver lo indicado en esa ficha.

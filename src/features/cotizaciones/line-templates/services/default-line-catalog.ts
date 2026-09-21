@@ -324,6 +324,18 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     identitySource: "SODAL Diamond · Serie 4800 corredera 2 hojas",
   },
   {
+    catalogKey: "ventora:veratec-7400-corredera",
+    nombre: "Veratec 7400 — Corredera 2 hojas",
+    material: "PVC",
+    configuracion: "Corredera Sliding 7400 · 2 hojas",
+    proveedor: "VERATEC",
+    lineSystem: "7400",
+    ventoraPlantillaId: null,
+    identitySource: "VERATEC · Catálogo Alumétrica · Línea 7400 PVC",
+    cuttingGuideSource:
+      "Alumétrica · Veratec 7400 corredera 2 hojas · pauta de corte visible",
+  },
+  {
     catalogKey: "ventora:optima-s28-corredera-2h",
     nombre: "Óptima S-28 — Corredera 2 hojas",
     material: "Aluminio",

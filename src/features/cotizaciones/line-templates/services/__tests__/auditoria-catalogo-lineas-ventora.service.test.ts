@@ -4,10 +4,31 @@ import {
 } from "@/features/cotizaciones/line-templates/services/auditoria-catalogo-lineas-ventora.service";
 
 describe("auditoria-catalogo-lineas-ventora.service", () => {
-  it("audita las 30 líneas canónicas del catálogo Ventora", () => {
+  it("audita las 31 líneas canónicas del catálogo Ventora", () => {
     const rows = auditarCatalogoLineasVentora();
-    expect(rows).toHaveLength(30);
+    expect(rows).toHaveLength(31);
     expect(rows.every((row) => row.cotizacionComercial)).toBe(true);
+  });
+
+  it("incluye Veratec 7400 con pauta documentada, sin validación ni precio asignado", () => {
+    const row = auditarCatalogoLineasVentora().find(
+      (candidate) => candidate.catalogKey === "ventora:veratec-7400-corredera"
+    );
+
+    expect(row).toMatchObject({
+      nombre: "Veratec 7400 — Corredera 2 hojas",
+      material: "PVC",
+      sistema: "7400",
+      fabricacionEstado: "fabricacion_configurada",
+      listaParaProbar: true,
+      validationStatus: "documented",
+      pricingStatus: "missing",
+      quotable: false,
+      sourceType: "manufacturer",
+    });
+    expect(row?.codigosConfigurados).toEqual(
+      expect.arrayContaining(["7401", "7414", "7418", "6306", "69014STL001", "69069STL000"])
+    );
   });
 
   it("representa AM-35 con variantes documentadas y sin validación de taller", () => {

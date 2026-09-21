@@ -1124,10 +1124,10 @@
   );
   max-height: min(72dvh, 720px);
   border: 1px solid rgba(217, 224, 234, 0.96);
-  border-radius: 24px;
-  padding: 18px;
+  border-radius: 22px;
+  padding: 16px;
   display: grid;
-  gap: 14px;
+  gap: 12px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 254, 0.96)),
     var(--surface);
@@ -1151,20 +1151,44 @@
 
 .alertsHeader strong {
   display: block;
-  font-size: 18px;
+  font-size: 17px;
   color: var(--text);
 }
 
 .alertsHeader p {
-  margin-top: 4px;
+  margin-top: 3px;
   color: var(--muted);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
+.announcementAlertLink {
+  min-height: 56px;
+  padding: 8px 10px;
+  border: 1px solid #dce6f5;
+  border-radius: 14px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  background: #f7faff;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.announcementAlertLink:hover { border-color: #b9d2fb; background: #f1f6ff; }
+.announcementAlertIcon { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: #e9f1ff; color: var(--goldStrong); }
+.announcementAlertIcon svg { width: 17px; height: 17px; }
+.announcementAlertLink > span:nth-child(2) { min-width: 0; display: grid; gap: 3px; }
+.announcementAlertLink strong { color: var(--text); font-size: 13px; line-height: 1.3; }
+.announcementAlertLink small { color: var(--muted); font-size: 11px; line-height: 1.35; }
+.announcementAlertLink > svg { width: 16px; height: 16px; color: var(--muted); }
+.announcementAlertLink b { min-width: 21px; height: 21px; padding: 0 5px; border-radius: 999px; display: inline-grid; place-items: center; background: #4f7dd4; color: #fff; font: 700 10px/1 var(--font-jetbrains), ui-monospace, monospace; }
+.alertsSectionLabel { color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+
 .alertsRefreshBtn {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border: 1px solid var(--border);
   border-radius: 14px;
   display: grid;
@@ -1175,7 +1199,7 @@
 }
 
 .alertsClearBtn {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -1253,33 +1277,43 @@
 
 .alertsList {
   display: grid;
-  gap: 10px;
+  gap: 0;
   overflow-y: auto;
   max-height: min(46dvh, 460px);
   padding-right: 4px;
 }
 
 .alertItem {
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 14px;
+  min-height: 76px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  padding: 10px 4px;
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 12px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
   text-decoration: none;
   color: inherit;
-  background: rgba(255, 255, 255, 0.92);
+  background: transparent;
 }
 
+.alertItem:last-child { border-bottom-color: transparent; }
+
 .alertItem:hover {
-  border-color: rgba(79, 125, 212, 0.24);
-  background: #f8fbff;
+  border-radius: 11px;
+  background: #f5f8fd;
+}
+
+.alertItem:focus-visible {
+  border-radius: 11px;
+  outline: 3px solid rgba(79, 125, 212, 0.38);
+  outline-offset: 2px;
 }
 
 .alertItemIcon {
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
   display: grid;
   place-items: center;
   background: #edf3ff;
@@ -1290,26 +1324,27 @@
 .alertItemBody {
   min-width: 0;
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 
 .alertItemTop {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
 }
 
 .alertItemTop strong {
-  font-size: 14px;
-  line-height: 1.35;
+  font-size: 13px;
+  line-height: 1.3;
   color: var(--text);
 }
 
 .alertItemBody p {
+  margin: 0;
   color: var(--muted);
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .alertItemMeta {
@@ -1319,20 +1354,20 @@
   gap: 12px;
   color: #7b8697;
   font-family: var(--font-jetbrains), ui-monospace, monospace;
-  font-size: 10px;
-  letter-spacing: 0.06em;
+  font-size: 9px;
+  letter-spacing: 0.035em;
   text-transform: uppercase;
 }
 
 .alertChip {
-  min-height: 26px;
-  padding: 0 10px;
+  min-height: 22px;
+  padding: 0 8px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-jetbrains), ui-monospace, monospace;
-  font-size: 10px;
+  font-size: 9px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   border: 1px solid transparent;
@@ -1364,22 +1399,24 @@
 }
 
 .alertsFooterLink {
-  min-height: 48px;
-  border-radius: 16px;
+  width: fit-content;
+  min-height: 44px;
+  padding: 0 8px;
+  border-radius: 12px;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  border: 1px solid var(--border);
-  background: #ffffff;
-  color: var(--text);
-  font-size: 14px;
+  justify-content: flex-start;
+  border: 0;
+  background: transparent;
+  color: var(--goldStrong);
+  font-size: 13px;
   font-weight: 700;
   text-decoration: none;
 }
 
 .alertsFooterLink:hover {
-  border-color: rgba(79, 125, 212, 0.24);
-  background: #f4f8ff;
+  background: #f1f6ff;
+  text-decoration: underline;
 }
 
 @keyframes shell-spin {
@@ -1652,11 +1689,13 @@
     width: auto;
     max-height: min(68dvh, 640px);
     border-radius: 22px;
+    padding: 14px;
+    gap: 10px;
   }
 
   .alertItemMeta {
-    font-size: 11px;
-    letter-spacing: 0.04em;
+    font-size: 10px;
+    letter-spacing: 0.035em;
   }
 
   .accountMenuMobile {
@@ -1725,12 +1764,12 @@
     padding: 0;
   }
 
-  :global(html:has(body[data-ventora-desktop-step-two="true"])) {
+  :global(html:has(body[data-ventora-desktop-step-two="true"])):has(.root) {
     height: 100dvh;
     overflow: hidden;
   }
 
-  :global(body[data-ventora-desktop-step-two="true"]) {
+  :global(body[data-ventora-desktop-step-two="true"]):has(.root) {
     height: 100dvh;
     overflow: hidden;
   }

@@ -17,6 +17,11 @@ import {
   crearRecetaSerie42Proyectante,
   type PlantillaVentoraProyectanteId,
 } from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
+import {
+  crearRecetaVeratec7400Corredera,
+  VERATEC_7400_CATALOG_KEY,
+  VERATEC_7400_VARIANT_MONOLITICO_4MM,
+} from "@/features/fabricacion/fixtures/veratec-7400-corredera-recipe";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 import { deriveLineOperationalStatus } from "@/features/fabricacion/services/line-operational-status.service";
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
@@ -96,6 +101,13 @@ function resolveReferenceRecipe(
   line: Omit<CreateCotizacionLineTemplateInput, "organizationId">
 ): FabricacionReceta | null {
   const meta = readMetadata(line);
+  if (line.catalogKey === VERATEC_7400_CATALOG_KEY) {
+    return crearRecetaVeratec7400Corredera({
+      lineName: line.nombre,
+      variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+    });
+  }
+
   const plantillaCorredera = PLANTILLAS_CORREDERA.find(
     (id) => id === meta.ventoraPlantillaId
   );
@@ -248,6 +260,7 @@ export function auditarLineaCatalogoVentora(
     listaParaProbar: probar.listaParaProbar,
     workshopCodes,
   });
+  const isVeratec7400 = line.catalogKey === VERATEC_7400_CATALOG_KEY;
   const operationalStatus = deriveLineOperationalStatus({
     template: {
       isActive: line.isActive !== false,
@@ -256,18 +269,21 @@ export function auditarLineaCatalogoVentora(
     referenceRecipe: recipe,
     referenceSource: recipe
       ? {
-          sourceType:
-            meta.lineFamilyType === "traditional"
+          sourceType: isVeratec7400
+            ? "manufacturer"
+            : meta.lineFamilyType === "traditional"
               ? meta.cuttingGuideSource
                 ? "supplier"
                 : "manufacturer"
               : "ventora_reference",
-          sourceReference:
-            meta.lineFamilyType === "traditional"
+          sourceReference: isVeratec7400
+            ? meta.cuttingGuideSource ?? line.catalogKey
+            : meta.lineFamilyType === "traditional"
               ? meta.cuttingGuideSource ?? meta.identitySource ?? line.catalogKey
               : line.catalogKey,
-          sourceName:
-            meta.lineFamilyType === "traditional"
+          sourceName: isVeratec7400
+            ? "VERATEC"
+            : meta.lineFamilyType === "traditional"
               ? meta.cuttingGuideSource
                 ? "ALAR"
                 : "Arquetipo"

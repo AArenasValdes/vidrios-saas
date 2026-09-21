@@ -111,6 +111,15 @@ exports[`auditoria-catalogo-lineas-ventora.service resume estados del catálogo 
     "tipologia": "corredera",
   },
   {
+    "catalogKey": "ventora:veratec-7400-corredera",
+    "codigos": 15,
+    "fabricacionEstado": "fabricacion_configurada",
+    "listaParaProbar": true,
+    "nombre": "Veratec 7400 — Corredera 2 hojas",
+    "perfiles": "12/12",
+    "tipologia": "corredera",
+  },
+  {
     "catalogKey": "ventora:optima-s28-corredera-2h",
     "codigos": 0,
     "fabricacionEstado": "fabricacion_pendiente",

@@ -428,6 +428,30 @@ Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las
 - **Acceso y persistencia**: La API obtiene usuario y organizacion de la sesion; el cliente autenticado solo tiene permiso de INSERT y la policy exige `auth.uid()` y `get_org_id()`.
 - **Riesgos**: No mostrar ideas de otros talleres a usuarios cliente ni aceptar `organization_id` desde el body.
 
+## Ruta: /admin/novedades
+
+- **Tipo**: Privada (autenticada + founder allowlist)
+- **Archivo principal**: `app/admin/novedades/page.tsx`
+- **Layout usado**: `app/admin/layout.tsx` -> `AdminShell`
+- **Propósito**: Redactar, guardar borradores, publicar o archivar actualizaciones del producto para los talleres.
+- **Funcionalidades visibles**: Editor con categoría, resumen, detalle, enlace interno opcional y asociación a una propuesta implementada; lista de publicaciones existentes.
+- **API usada**: `GET, POST /api/admin/novedades`, `PATCH /api/admin/novedades/[id]`
+- **Tablas Supabase relacionadas**: `product_announcements`, `product_feedback`
+- **Acceso**: Toda lectura/escritura valida `resolveVentoraAdminRouteContext()`; la ruta server usa `createAdminClient()`.
+- **Riesgos**: Crear borrador no notifica. Solo publicar lo hace visible a usuarios autenticados. Los enlaces de acción son rutas internas.
+
+## Ruta: /novedades
+
+- **Tipo**: Privada (autenticada)
+- **Archivo principal**: `app/(pwa-app)/novedades/page.tsx`
+- **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
+- **Propósito**: Mostrar las mejoras y funciones nuevas publicadas por Ventora y el estado de lectura personal.
+  - **Funcionalidades visibles**: Feed compacto por fecha y categoría; el detalle se abre al tocar **Ver actualización** y registra la lectura personal.
+- **API usada**: `GET, POST /api/novedades`
+- **Tablas Supabase relacionadas**: `product_announcements`, `product_announcement_reads`
+- **Acceso**: La API valida sesión y deriva `organization_id` y `auth_user_id`; no recibe identificadores de empresa desde el cliente.
+- **Riesgos**: Solo se entregan novedades publicadas. La campana mantiene por separado esta entrada y las alertas comerciales.
+
 ---
 
 ## Ruta: /cuenta-vencida
@@ -639,8 +663,11 @@ Generado desde app/ y verificado por pnpm docs:check. El detalle funcional de ca
 | `/admin/growth` | page | admin | `app/admin/growth/page.tsx` |
 | `/admin/marketing` | page | admin | `app/admin/marketing/page.tsx` |
 | `/admin/marketing/onboarding` | page | admin | `app/admin/marketing/onboarding/page.tsx` |
+| `/admin/novedades` | page | admin | `app/admin/novedades/page.tsx` |
 | `/admin/pagos-y-planes` | page | admin | `app/admin/pagos-y-planes/page.tsx` |
+| `/admin/producto` | page | admin | `app/admin/producto/page.tsx` |
 | `/admin/prospectos` | page | admin | `app/admin/prospectos/page.tsx` |
+| `/admin/sugerencias` | page | admin | `app/admin/sugerencias/page.tsx` |
 | `/admin/tareas` | page | admin | `app/admin/tareas/page.tsx` |
 | `/api/admin/activacion` | api | api | `app/api/admin/activacion/route.ts` |
 | `/api/admin/clientes` | api | api | `app/api/admin/clientes/route.ts` |
@@ -662,9 +689,14 @@ Generado desde app/ y verificado por pnpm docs:check. El detalle funcional de ca
 | `/api/admin/marketing` | api | api | `app/api/admin/marketing/route.ts` |
 | `/api/admin/marketing/content` | api | api | `app/api/admin/marketing/content/route.ts` |
 | `/api/admin/marketing/onboarding` | api | api | `app/api/admin/marketing/onboarding/route.ts` |
+| `/api/admin/novedades` | api | api | `app/api/admin/novedades/route.ts` |
+| `/api/admin/novedades/[id]` | api | api | `app/api/admin/novedades/[id]/route.ts` |
 | `/api/admin/pagos` | api | api | `app/api/admin/pagos/route.ts` |
 | `/api/admin/pagos/confirm` | api | api | `app/api/admin/pagos/confirm/route.ts` |
 | `/api/admin/pagos/reject` | api | api | `app/api/admin/pagos/reject/route.ts` |
+| `/api/admin/producto` | api | api | `app/api/admin/producto/route.ts` |
+| `/api/admin/sugerencias` | api | api | `app/api/admin/sugerencias/route.ts` |
+| `/api/admin/sugerencias/[id]` | api | api | `app/api/admin/sugerencias/[id]/route.ts` |
 | `/api/admin/tareas` | api | api | `app/api/admin/tareas/route.ts` |
 | `/api/app-version` | api | api | `app/api/app-version/route.ts` |
 | `/api/auth/complete-pending-signup` | api | api | `app/api/auth/complete-pending-signup/route.ts` |
@@ -679,6 +711,7 @@ Generado desde app/ y verificado por pnpm docs:check. El detalle funcional de ca
 | `/api/cotizaciones/resumen` | api | api | `app/api/cotizaciones/resumen/route.ts` |
 | `/api/dashboard/summary` | api | api | `app/api/dashboard/summary/route.ts` |
 | `/api/fabricacion/asistente-texto` | api | api | `app/api/fabricacion/asistente-texto/route.ts` |
+| `/api/novedades` | api | api | `app/api/novedades/route.ts` |
 | `/api/onboarding/activation/status` | api | api | `app/api/onboarding/activation/status/route.ts` |
 | `/api/onboarding/videos` | api | api | `app/api/onboarding/videos/route.ts` |
 | `/api/organization-assets/upload` | api | api | `app/api/organization-assets/upload/route.ts` |
@@ -695,6 +728,7 @@ Generado desde app/ y verificado por pnpm docs:check. El detalle funcional de ca
 | `/api/subscriptions/summary` | api | api | `app/api/subscriptions/summary/route.ts` |
 | `/api/subscriptions/webpay/confirmar` | api | api | `app/api/subscriptions/webpay/confirmar/route.ts` |
 | `/api/subscriptions/webpay/crear` | api | api | `app/api/subscriptions/webpay/crear/route.ts` |
+| `/api/sugerencias` | api | api | `app/api/sugerencias/route.ts` |
 | `/auth/callback` | api | auth | `app/(auth-public)/auth/callback/route.ts` |
 | `/auth/completar-cuenta` | page | auth | `app/(auth-public)/auth/completar-cuenta/page.tsx` |
 | `/auth/definir-contrasena` | page | auth | `app/(auth-public)/auth/definir-contrasena/page.tsx` |
@@ -718,6 +752,7 @@ Generado desde app/ y verificado por pnpm docs:check. El detalle funcional de ca
 | `/dashboard` | page | private | `app/(pwa-app)/dashboard/page.tsx` |
 | `/login` | page | auth | `app/(auth-public)/login/page.tsx` |
 | `/mis-recetas` | page | private | `app/(pwa-app)/mis-recetas/page.tsx` |
+| `/novedades` | page | private | `app/(pwa-app)/novedades/page.tsx` |
 | `/offline` | page | private | `app/(landing-web)/offline/page.tsx` |
 | `/planes` | page | public | `app/(landing-web)/planes/page.tsx` |
 | `/presupuesto/[token]` | page | public | `app/presupuesto/[token]/page.tsx` |
@@ -729,4 +764,5 @@ Generado desde app/ y verificado por pnpm docs:check. El detalle funcional de ca
 | `/solicitud/[empresa]` | page | public | `app/(landing-web)/solicitud/[empresa]/page.tsx` |
 | `/solicitudes` | page | public | `app/(pwa-app)/solicitudes/page.tsx` |
 | `/solicitudes/canales` | page | public | `app/(pwa-app)/solicitudes/canales/page.tsx` |
+| `/sugerencias` | page | private | `app/(pwa-app)/sugerencias/page.tsx` |
 | `/terms` | page | private | `app/(landing-web)/terms/page.tsx` |

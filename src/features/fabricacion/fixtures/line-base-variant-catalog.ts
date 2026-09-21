@@ -54,6 +54,12 @@ import {
   crearRecetaSerie42Sodal,
   SERIE_42_PROVIDER_VARIANTS,
 } from "@/features/fabricacion/fixtures/serie-42-provider-recipes";
+import {
+  crearRecetaVeratec7400Corredera,
+  VERATEC_7400_CATALOG_KEY,
+  VERATEC_7400_SOURCE_REVISION,
+  VERATEC_7400_SOURCE_VARIANTS,
+} from "@/features/fabricacion/fixtures/veratec-7400-corredera-recipe";
 import type { FabricacionReceta, FabricacionTipologia } from "@/features/fabricacion/types/fabricacion-domain";
 import type { FabricationRecipeSourceType } from "@/features/fabricacion/types/fabricacion-persistence";
 import { VENTORA_LARGO_COMERCIAL_PRESET_MM } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
@@ -65,6 +71,7 @@ export const BASE_LINE_CATALOG_KEYS = [
   "ventora:l25",
   "ventora:l32",
   "ventora:l42",
+  VERATEC_7400_CATALOG_KEY,
 ] as const;
 
 export type BaseLineCatalogKey = (typeof BASE_LINE_CATALOG_KEYS)[number];
@@ -376,6 +383,39 @@ export const LINE_BASE_VARIANT_CATALOG: Partial<Record<BaseLineCatalogKey, LineV
       buildDefinition: ({ lineName }) => crearRecetaSerie42Sodal({ lineName }),
     },
   ],
+  [VERATEC_7400_CATALOG_KEY]: VERATEC_7400_SOURCE_VARIANTS.map((variant) => {
+    const isMonolithic = variant.slug === "monolitico_4mm";
+    const isTwentyFour = variant.slug === "termopanel_24mm";
+    return {
+      typology: "corredera",
+      leavesCount: 2,
+      modulesCount: 2,
+      variantSlug: variant.slug,
+      variantLabel: variant.label,
+      sourceType: "manufacturer",
+      sourceName: "VERATEC",
+      sourceRevision: VERATEC_7400_SOURCE_REVISION,
+      evidenceLevel: "documented",
+      complete: isMonolithic,
+      pendingFields: isMonolithic
+        ? ["Probar una fabricación real en taller antes de validar"]
+        : isTwentyFour
+          ? [
+              "Confirmar si la fórmula del junquillo debe usar 6307 o 7063",
+              "Probar una fabricación real en taller antes de validar",
+            ]
+          : [
+              "Aclarar la diferencia entre el nombre ‘Monolítico 20 mm’ y la categoría termopanel de la ficha",
+              "Probar una fabricación real en taller antes de validar",
+            ],
+      sourceReference: variant.sourceReference,
+      buildDefinition: ({ lineName }) =>
+        crearRecetaVeratec7400Corredera({
+          lineName,
+          variant: variant.slug,
+        }),
+    };
+  }),
 };
 
 const SERIE_4800_VARIANT_SLOTS: LineVariantSlot[] = [
@@ -526,6 +566,9 @@ const LINE_4000_VARIANT_SLOTS: LineVariantSlot[] = [
 export function getLineVariantSlots(catalogKey: string | null | undefined): LineVariantSlot[] {
   if (!catalogKey) return [];
   if (catalogKey === SERIE_4800_CATALOG_KEY) return SERIE_4800_VARIANT_SLOTS;
+  if (catalogKey === VERATEC_7400_CATALOG_KEY) {
+    return LINE_BASE_VARIANT_CATALOG[VERATEC_7400_CATALOG_KEY] ?? [];
+  }
   if (catalogKey === LINE_15_CATALOG_KEY) return LINE_15_VARIANT_SLOTS;
   if (catalogKey === LINE_4000_CATALOG_KEY) return LINE_4000_VARIANT_SLOTS;
   return LINE_BASE_VARIANT_CATALOG[catalogKey as BaseLineCatalogKey] ?? [];

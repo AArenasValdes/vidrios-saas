@@ -97,12 +97,32 @@ describe("seedDefaultLineCatalog", () => {
     expect(result.skipped).toBe(2);
   });
 
-  it("incluye las dos líneas nuevas del catálogo chileno", () => {
+  it("incluye las líneas nuevas del catálogo chileno", () => {
     const keys = VENTORA_DEFAULT_LINE_CATALOG.map((line) => line.catalogKey);
     expect(keys).toContain("ventora:l35");
     expect(keys).toContain("ventora:l20-fijos");
     expect(keys).toContain("ventora:winhouse-andes-monorriel");
-    expect(catalogSize).toBe(30);
+    expect(keys).toContain("ventora:veratec-7400-corredera");
+    expect(catalogSize).toBe(31);
+  });
+
+  it("registra Veratec como PVC del proveedor VERATEC con sus 15 referencias Alumétrica", () => {
+    const line = VENTORA_DEFAULT_LINE_CATALOG.find(
+      (candidate) => candidate.catalogKey === "ventora:veratec-7400-corredera"
+    );
+    const profiles = line?.catalogMetadata?.workshopProfiles as
+      | { profiles?: Array<{ code?: string | null; provider?: string | null; source?: string | null }> }
+      | undefined;
+
+    expect(line).toMatchObject({
+      nombre: "Veratec 7400 — Corredera 2 hojas",
+      material: "PVC",
+      proveedor: "VERATEC",
+      precioM2Sugerido: 0,
+    });
+    expect(profiles?.profiles).toHaveLength(15);
+    expect(profiles?.profiles?.every((profile) => profile.provider === "VERATEC")).toBe(true);
+    expect(profiles?.profiles?.every((profile) => profile.source?.includes("3b5e6093-5b49-4640-b9e5-5db111dc4ffb"))).toBe(true);
   });
 
   it("maneja unique violation (23505) sin romper", async () => {

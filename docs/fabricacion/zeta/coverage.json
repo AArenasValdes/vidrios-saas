@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-21T05:59:01.673Z",
+  "generatedAt": "2026-09-21T15:47:13.115Z",
   "summary": {
     "confirmed": 24,
     "pending": 1,
@@ -21,21 +21,21 @@
           "recipeId": "dvh_pierna_abierta_2h_1800x1500",
           "widthMm": 1800,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-21T05:59:01.670Z"
+          "lastCheckedAt": "2026-09-21T15:47:13.111Z"
         },
         "3": {
           "status": "confirmed",
           "recipeId": "dvh_pierna_abierta_3h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-21T05:59:01.670Z"
+          "lastCheckedAt": "2026-09-21T15:47:13.111Z"
         },
         "4": {
           "status": "confirmed",
           "recipeId": "dvh_pierna_abierta_4h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-21T05:59:01.670Z"
+          "lastCheckedAt": "2026-09-21T15:47:13.111Z"
         }
       },
       "extraTests": []
@@ -52,21 +52,21 @@
           "recipeId": "dvh_pierna_abierta_reforzada_2h_1800x1500",
           "widthMm": 1800,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-21T05:59:01.670Z"
+          "lastCheckedAt": "2026-09-21T15:47:13.111Z"
         },
         "3": {
           "status": "confirmed",
           "recipeId": "dvh_pierna_abierta_reforzada_3h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-21T05:59:01.670Z"
+          "lastCheckedAt": "2026-09-21T15:47:13.111Z"
         },
         "4": {
           "status": "confirmed",
           "recipeId": "dvh_pierna_abierta_reforzada_4h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-21T05:59:01.670Z"
+          "lastCheckedAt": "2026-09-21T15:47:13.111Z"
         }
       },
       "extraTests": [
@@ -92,21 +92,21 @@
           "recipeId": "dvh_pierna_cerrada_2h_1800x1500",
           "widthMm": 1800,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-21T05:59:01.670Z"
+          "lastCheckedAt": "2026-09-21T15:47:13.111Z"
         },
         "3": {
           "status": "confirmed",
           "recipeId": "dvh_pierna_cerrada_3h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-21T05:59:01.670Z"
+          "lastCheckedAt": "2026-09-21T15:47:13.111Z"
         },
         "4": {
           "status": "confirmed",
           "recipeId": "dvh_pierna_cerrada_4h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-21T05:59:01.670Z"
+          "lastCheckedAt": "2026-09-21T15:47:13.111Z"
         }
       },
       "extraTests": [
@@ -132,21 +132,21 @@
           "recipeId": "monolitico_pierna_abierta_2h_1800x1500",
           "widthMm": 1800,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-21T05:59:01.670Z"
+          "lastCheckedAt": "2026-09-21T15:47:13.111Z"
         },
         "3": {
           "status": "confirmed",
           "recipeId": "monolitico_pierna_abierta_3h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-21T05:59:01.670Z"
+          "lastCheckedAt": "2026-09-21T15:47:13.111Z"
         },
         "4": {
           "status": "confirmed",
           "recipeId": "monolitico_pierna_abierta_4h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-21T05:59:01.670Z"
+          "lastCheckedAt": "2026-09-21T15:47:13.111Z"
         }
       },
       "extraTests": [
@@ -172,21 +172,21 @@
           "recipeId": "monolitico_pierna_abierta_reforzada_2h_1800x1500",
           "widthMm": 1800,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-21T05:59:01.670Z"
+          "lastCheckedAt": "2026-09-21T15:47:13.111Z"
         },
         "3": {
           "status": "confirmed",
           "recipeId": "monolitico_pierna_abierta_reforzada_3h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-21T05:59:01.670Z"
+          "lastCheckedAt": "2026-09-21T15:47:13.111Z"
         },
         "4": {
           "status": "confirmed",
           "recipeId": "monolitico_pierna_abierta_reforzada_4h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-21T05:59:01.670Z"
+          "lastCheckedAt": "2026-09-21T15:47:13.111Z"
         }
       },
       "extraTests": [
@@ -212,21 +212,21 @@
           "recipeId": "monolitico_pierna_cerrada_2h_1800x1500",
           "widthMm": 1800,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-21T05:59:01.670Z"
+          "lastCheckedAt": "2026-09-21T15:47:13.111Z"
         },
         "3": {
           "status": "confirmed",
           "recipeId": "monolitico_pierna_cerrada_3h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-21T05:59:01.670Z"
+          "lastCheckedAt": "2026-09-21T15:47:13.111Z"
         },
         "4": {
           "status": "confirmed",
           "recipeId": "monolitico_pierna_cerrada_4h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-21T05:59:01.670Z"
+          "lastCheckedAt": "2026-09-21T15:47:13.111Z"
         }
       },
       "extraTests": []
@@ -243,14 +243,14 @@
           "recipeId": "monolitico_2h_1800x1500",
           "widthMm": 1800,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-21T05:59:01.670Z"
+          "lastCheckedAt": "2026-09-21T15:47:13.111Z"
         },
         "3": {
           "status": "confirmed",
           "recipeId": "monolitico_3h_3000x1500",
           "widthMm": 3000,
           "heightMm": 1500,
-          "lastCheckedAt": "2026-09-21T05:59:01.670Z"
+          "lastCheckedAt": "2026-09-21T15:47:13.111Z"
         },
         "4": {
           "status": "pending",

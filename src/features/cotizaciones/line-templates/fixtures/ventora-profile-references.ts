@@ -138,6 +138,41 @@ const SERIE_4800_PROFILES: LineProfileReference[] = [
   catalogRef({ code: "4811", name: "Pierna reforzada", role: "Hoja" }),
 ];
 
+function veratecProfileRef(input: {
+  code: string;
+  name: string;
+  role: string;
+  section?: string;
+}): LineProfileReference {
+  return {
+    code: input.code,
+    name: input.name,
+    role: input.role,
+    description: `${input.section ? `Sección ${input.section} mm` : "Sección no indicada"} · barra 5.800 mm`,
+    provider: "VERATEC",
+    source: PROFILE_REFERENCE_SOURCES.ALUMETRICA_CATALOG,
+    codeStatus: "catalog_reference",
+  };
+}
+
+const VERATEC_7400_PROFILES: LineProfileReference[] = [
+  veratecProfileRef({ code: "6306", name: "Junquillo para vidrio 4 mm", role: "Junquillo", section: "35×20" }),
+  veratecProfileRef({ code: "6307", name: "Junquillo para vidrio 20 mm", role: "Junquillo", section: "20×20" }),
+  veratecProfileRef({ code: "69014STL001", name: "ref_marco corredera", role: "Refuerzo" }),
+  veratecProfileRef({ code: "69069STL000", name: "ref_hoja corredera grande", role: "Refuerzo" }),
+  veratecProfileRef({ code: "7063", name: "Junquillo para vidrio 24 mm", role: "Junquillo", section: "15×20" }),
+  veratecProfileRef({ code: "7401", name: "Marco corredera 2 hojas", role: "Marco", section: "52×56" }),
+  veratecProfileRef({ code: "7405", name: "Remate Monorriel", role: "Otro", section: "45×20" }),
+  veratecProfileRef({ code: "7411", name: "Marco monorriel", role: "Marco", section: "95×71" }),
+  veratecProfileRef({ code: "7413", name: "Marco corredera 3 hojas", role: "Marco", section: "137×56" }),
+  veratecProfileRef({ code: "7414", name: "Hoja corredera grande", role: "Hoja", section: "52×93" }),
+  veratecProfileRef({ code: "7415", name: "Hoja Corredera Chica", role: "Hoja", section: "52×75" }),
+  veratecProfileRef({ code: "7416", name: "Barra T Corredera", role: "Otro" }),
+  veratecProfileRef({ code: "7418", name: "Traslapo Hoja Corredera Grande", role: "Hoja", section: "55×52" }),
+  veratecProfileRef({ code: "7419", name: "Traslapo Hoja Corredera", role: "Hoja", section: "55×43" }),
+  veratecProfileRef({ code: "AB01016-E", name: "Riel Anodizado Nat. p/ Mar…", role: "Marco" }),
+];
+
 /** Códigos AL-32 proyectante (SODAL). La línea comercial AL-32 usa esta identidad. */
 const L32_PROYECTANTE_VISUAL_REFERENCES: LineProfileReference[] = [
   visualRef({ code: "3201", name: "Marco simple", role: "Marco", description: "L32 · Proyectante" }),
@@ -710,6 +745,7 @@ const CATALOG_KEY_PROFILE_SETS: Record<string, LineProfileReference[]> = {
   "ventora:l20-fijos": SERIE_20_PROFILES,
   "ventora:l25": SERIE_25_PROFILES,
   "ventora:serie-4800-corredera-2h": SERIE_4800_PROFILES,
+  "ventora:veratec-7400-corredera": VERATEC_7400_PROFILES,
   "ventora:s33-corredera-2h": SERIE_S33_PROFILES,
   "ventora:s33-rpt-corredera-2h": SERIE_S33_RPT_PROFILES,
   "ventora:serie-42-proyectante-camara": SERIE_42_PROYECTANTE_PROFILES,

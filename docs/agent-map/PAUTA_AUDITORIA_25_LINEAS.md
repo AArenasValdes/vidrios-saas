@@ -1,6 +1,6 @@
-# Pauta de auditoría: catálogo canónico Ventora (30 líneas)
+# Pauta de auditoría: catálogo canónico Ventora (31 líneas actuales)
 
-Fecha de corte remoto: 2026-09-14 (Línea 45 actualizada 2026-09-20). El nombre histórico del archivo se conserva por compatibilidad; la tabla vigente cubre **30 líneas canónicas**. La línea activa histórica `id=437` sin `catalog_key` queda fuera de este mapa y debe clasificarse antes de incorporarse. Precio configurado significa precio definido por el taller; Ventora no entrega precios. “Pauta documentada” significa referencia técnica de catálogo/documentación; no equivale a validación de taller. `evidenceLevel` se representa en el código como `validationStatus`.
+Fecha de corte remoto del snapshot P3: 2026-09-14 (Línea 45 actualizada 2026-09-20). El nombre histórico del archivo se conserva por compatibilidad. El catálogo canónico actual tiene **31 líneas**; la tabla P3 abajo conserva el snapshot de su fecha y el addendum registra Veratec 7400. La línea activa histórica `id=437` sin `catalog_key` queda fuera de este mapa y debe clasificarse antes de incorporarse. Precio configurado significa precio definido por el taller; Ventora no entrega precios. “Pauta documentada” significa referencia técnica de catálogo/documentación; no equivale a validación de taller. `evidenceLevel` se representa en el código como `validationStatus`.
 
 ## Criterio P0
 
@@ -12,7 +12,7 @@ Fecha de corte remoto: 2026-09-14 (Línea 45 actualizada 2026-09-20). El nombre 
 6. Serie 4600 debe resolver `puerta_vaiven`; Andes Monorriel debe resolver `pvc_monorriel`. Metadata histórica incompatible no puede ganar al `catalogKey` canónico.
 7. Esta pauta es interna y revisable. No es CNC, nesting, promesa de corte ni validación automática.
 
-## Auditoría P3 de consistencia semántica — 30 líneas
+## Auditoría P3 de consistencia semántica — snapshot 2026-09-14
 
 Fecha de ejecución: 2026-09-14. La auditoría usa la misma identidad canónica que el catálogo y Fabricación. La columna **referencias del sistema** describe la familia documentada; **reglas activas** son solo las reglas de la variante seleccionada; **cortes** es la suma de sus cantidades; las opciones quedan fuera hasta selección explícita. “Receta persistida”, “pauta documentada”, “validada en taller” y “precio configurado” son estados independientes.
 
@@ -58,6 +58,10 @@ Referencias 2513, 2514, 2516, 2518, 2521, 2531 = metadata de catálogo; no entra
 | WinHouse Andes doble / `ventora:winhouse-andes-doble-riel` | estándar · corredera | PL-SLA-TC-H66-12, PL-SLA-TC-H66-15, PL-SLA-TC-MCA-12 | 10 reglas → 19 | — | Base tipológica | No | Según organización | Fuente primaria y prueba |
 | WinHouse Andes Monorriel / `ventora:winhouse-andes-monorriel` | estándar · `pvc_monorriel` | PL-SLA-TC-MLT-12, PL-SLA-TC-H54-12, HL-ACC-5X5-APOC-MA | 10 reglas → 19 | — | Identidad canónica | No | Según organización | Nunca `pvc_corredera_2h`; completar receta específica |
 | WinHouse Andes proyectante / `ventora:winhouse-andes-proyectante` | estándar · proyectante | Sin códigos publicados | 6 reglas → 7 | — | Base tipológica | No | Según organización | Fuente primaria y prueba |
+
+## Addendum 2026-09-21 — VERATEC 7400
+
+Se agrega la línea canónica `ventora:veratec-7400-corredera`, fabricante VERATEC, material PVC y barra documentada de 5.800 mm. La ficha Alumétrica lista 12 destajes por variante, vidrio `X/2−158` / `Y−177` y 13 consumos de herrajes por ventana. La variante monolítica 4 mm está documentada y lista para probar; TP 20 mm y TP 24 mm no se pueden probar ni seleccionar hasta resolver las discrepancias de tipo de cristal y código de junquillo. Ninguna receta nueva está validada en taller. Evidencia completa: `docs/fabricacion/alumetrica/2026-09-21-veratec-7400.md`.
 
 Resultado de la auditoría: **29/29 claves únicas**, sin `OPTIONAL_PROFILE_COUNTED_AS_ACTIVE`, sin mezcla de variantes en Serie 4600 y con tipologías canónicas `puerta_vaiven` y `pvc_monorriel`. Las diferencias de referencias frente a reglas activas son advertencias de trazabilidad, no autorización para copiar todas las referencias a Fabricación. El auditor no altera datos ni reemplaza recetas persistidas.
 

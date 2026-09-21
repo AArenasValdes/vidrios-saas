@@ -20,6 +20,7 @@ compatibilidades ni reglas de fabricación.
 
 ## Archivos
 
+- `2026-09-21-veratec-7400.md`: ficha VERATEC 7400, perfiles, fórmulas, herrajes y contradicciones preservadas; monolítico 4 mm listo para probar, TP 20/24 bloqueados.
 - `2026-09-19-matriz-lineas.md`: matriz Alumétrica ↔ Ventora, líneas nuevas y brechas.
 - `2026-09-19-formulas-observadas.md`: índice de fórmulas visibles; L5000 en este archivo,
   Serie 20 en documento dedicado.
@@ -29,7 +30,8 @@ compatibilidades ni reglas de fabricación.
 
 - No escribir en `docs/fabricacion/zeta/confirmed/`.
 - No llamar `zeta:ingest`, `zeta:validate` ni `zeta:coverage`: esta fuente no es Zeta.
-- Las fórmulas observadas **no** entran solas a `fabrication_recipes`. Solo se copian a
-  recetas Ventora `testing` cuando hay decisión explícita de producto (hoy: Serie 20).
+- Las fórmulas observadas **no** entran solas a `fabrication_recipes`. Una decisión explícita
+  de producto puede incorporarlas como borradores documentales `manufacturer` (Serie 20,
+  VERATEC 7400); esto no acredita equivalencia ni validación de taller.
 - Antes de validar una equivalencia, cruzar contra Haciendo Ventanas y Sistema Zeta.
 - La UI de Ventora no muestra marca Alumétrica.

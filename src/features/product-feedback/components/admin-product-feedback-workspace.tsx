@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { LuRefreshCw, LuSearch } from "react-icons/lu";
 
 import {
@@ -188,6 +189,11 @@ export function AdminProductFeedbackWorkspace() {
                     </div>
                     <p>{suggestion.description || "El taller señaló esta área sin agregar un comentario."}</p>
                     {suggestion.pagePath ? <small>Desde {suggestion.pagePath}</small> : null}
+                    {suggestion.status === "done" ? (
+                      <Link className={s.announcementLink} href={`/admin/novedades?propuesta=${encodeURIComponent(suggestion.id)}`}>
+                        Preparar novedad para los talleres
+                      </Link>
+                    ) : null}
                   </div>
                   <label className={s.statusControl}>
                     <span>Estado</span>

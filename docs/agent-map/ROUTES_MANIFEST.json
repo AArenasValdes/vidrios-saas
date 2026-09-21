@@ -62,6 +62,12 @@
       "source": "app/admin/marketing/onboarding/page.tsx"
     },
     {
+      "path": "/admin/novedades",
+      "type": "page",
+      "area": "admin",
+      "source": "app/admin/novedades/page.tsx"
+    },
+    {
       "path": "/admin/pagos-y-planes",
       "type": "page",
       "area": "admin",
@@ -212,6 +218,18 @@
       "source": "app/api/admin/marketing/onboarding/route.ts"
     },
     {
+      "path": "/api/admin/novedades",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/novedades/route.ts"
+    },
+    {
+      "path": "/api/admin/novedades/[id]",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/novedades/[id]/route.ts"
+    },
+    {
       "path": "/api/admin/pagos",
       "type": "api",
       "area": "api",
@@ -330,6 +348,12 @@
       "type": "api",
       "area": "api",
       "source": "app/api/fabricacion/asistente-texto/route.ts"
+    },
+    {
+      "path": "/api/novedades",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/novedades/route.ts"
     },
     {
       "path": "/api/onboarding/activation/status",
@@ -570,6 +594,12 @@
       "type": "page",
       "area": "private",
       "source": "app/(pwa-app)/mis-recetas/page.tsx"
+    },
+    {
+      "path": "/novedades",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/novedades/page.tsx"
     },
     {
       "path": "/offline",
