@@ -272,7 +272,7 @@ describe("generateComponentSVG", () => {
     expect(svg).not.toContain("#5F6670");
   });
 
-  it("unifica marco y hojas en aluminio mate dentro del croquis PDF de 2 hojas", () => {
+  it("usa el renderer estándar para marco y hojas en aluminio mate dentro del croquis PDF de 2 hojas", () => {
     const svg = generateComponentSVG({
       tipo: "Ventana",
       sistema: "Corredera",
@@ -285,24 +285,19 @@ describe("generateComponentSVG", () => {
       presentation: "quote-pdf",
     });
 
-    expect(svg).toContain('data-sketch-part="outerFrame"');
-    expect(svg).toContain('data-sketch-part="sashes"');
-    expect(svg).toContain('data-window-frame-part="sash"');
+    expect(svg).toContain('data-window-frame-part="outer"');
+    expect(svg).toContain('data-window-panel-role="sliding"');
     expect(svg).not.toContain('data-window-frame="outline"');
     expect(svg).not.toContain("#5F6670");
-    expect((svg.match(/data-window-sash-layer=/g) ?? []).length).toBe(0);
+    expect((svg.match(/data-window-sash-layer="outer"/g) ?? []).length).toBe(2);
+    expect((svg.match(/data-window-sash-layer="inner-channel"/g) ?? []).length).toBe(2);
 
-    const sashProfiles = svg.match(/data-window-frame-part="sash"[^/]*\/>/g) ?? [];
-    expect(sashProfiles).toHaveLength(2);
-    expect(sashProfiles.every((part) => part.includes('stroke="#6B7280"'))).toBe(true);
-
-    const outerProfiles = svg.match(/data-window-frame-part="outer"[^/]*\/>/g) ?? [];
+    const outerProfiles = svg.match(/data-window-frame="outer"[^>]*data-window-frame-part="outer"[^/]*\/>/g) ?? [];
     expect(outerProfiles).toHaveLength(1);
     expect(outerProfiles.every((part) => part.includes('stroke="#6B7280"'))).toBe(true);
-    expect(svg).toContain('data-window-frame-reveal="true"');
-    expect(svg).toMatch(/data-window-frame-reveal="true"[^>]*fill="#6B7280"/);
-    expect((svg.match(/data-window-sash-reveal="true"/g) ?? []).length).toBe(2);
-    expect(svg).not.toContain('data-window-frame="inner-channel"');
+    expect(svg).not.toContain('data-window-frame-reveal="true"');
+    expect(svg).not.toContain('data-window-sash-reveal="true"');
+    expect(svg).toContain('data-window-frame="inner-channel"');
   });
 
   it("marca contorno visible en correderas claras para aluminio y pvc", () => {
@@ -925,6 +920,28 @@ describe("generateComponentSVG", () => {
     expect((fijasLaterales.match(/data-window-fixed-panel="true"/g) ?? []).length).toBe(2);
     expect((todasMoviles.match(/data-window-fixed-panel="true"/g) ?? []).length).toBe(0);
     expect(fijaCentral).not.toEqual(fijasLaterales);
+  });
+
+  it("distribuye 3 hojas con fijos laterales en 25/50/25", () => {
+    const svg = generateComponentSVG({
+      tipo: "Ventana",
+      sistema: "Corredera",
+      sheetScheme: "3 hojas",
+      sheetVariant: "1 móvil + 2 fijas",
+      ancho: 2000,
+      alto: 1200,
+      colorHex: "#a8a8a8",
+      variant: "pdf",
+      presentation: "quote-pdf",
+    });
+    const paneWidths = [...svg.matchAll(/data-window-glass="true"[^>]*\swidth="([\d.]+)"/g)]
+      .map((match) => Number(match[1]));
+
+    expect(paneWidths).toHaveLength(3);
+    expect(paneWidths[1] / paneWidths[0]).toBeCloseTo(2, 1);
+    expect(paneWidths[2] / paneWidths[0]).toBeCloseTo(1, 1);
+    expect((svg.match(/data-window-fixed-panel="true"/g) ?? []).length).toBe(2);
+    expect((svg.match(/data-window-slide-direction=/g) ?? []).length).toBe(1);
   });
 
   it("dibuja 25/50/25 para la vista móvil y PDF de 3 hojas con fijo central", () => {

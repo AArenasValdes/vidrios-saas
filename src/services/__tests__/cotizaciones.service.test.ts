@@ -186,7 +186,11 @@ function createCotizacionesRepositoryMock(): jest.Mocked<CotizacionesRepository>
       ],
       total: 714000,
     }),
-    create: jest.fn().mockResolvedValue({ id: 100 }),
+    create: jest.fn().mockImplementation(async (input) => ({
+      id: 100,
+      ...input,
+      items: input.items ?? [],
+    })),
     update: jest.fn(),
     softDelete: jest.fn(),
     updateApprovalAccess: jest.fn(),
@@ -471,7 +475,7 @@ describe("cotizaciones.service", () => {
         ],
       })
     );
-    expect(record.codigo).toBe("COT-123456");
+    expect(record.codigo).toBe("COT-210326-001");
     expect(record.clienteNombre).toBe("Roberto Fuentes");
     expect(record.obra).toBe("Casa Coquimbo");
     expect(record.items[0].codigo).toBe("V1");
@@ -1098,7 +1102,7 @@ describe("cotizaciones.service", () => {
       cotizacionesRepository,
     });
 
-    const record = await service.saveWorkflow({
+    await service.saveWorkflow({
       organizationId: 77,
       estado: "creada",
       draft: {

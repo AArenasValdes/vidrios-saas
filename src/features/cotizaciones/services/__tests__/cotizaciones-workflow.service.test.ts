@@ -4,6 +4,7 @@ import {
   calculateGlobalQuoteWorkflowTotals,
   calculateWorkflowTotalsForPricingMode,
 } from "../cotizaciones-workflow.service";
+import { applyQuoteStudioRecommendedPrice } from "../quote-studio-financial.service";
 import type { CotizacionWorkflowItem } from "../../types/cotizacion-workflow";
 
 function createItem(overrides: Partial<CotizacionWorkflowItem> = {}): CotizacionWorkflowItem {
@@ -393,8 +394,6 @@ describe("cotizaciones-workflow.service", () => {
   });
 
   it("tras aplicar precio recomendado en precios finales el neto queda en el objetivo", () => {
-    const { applyQuoteStudioRecommendedPrice } = require("../quote-studio-financial.service") as typeof import("../quote-studio-financial.service");
-
     const items = [createItem({ precioUnitario: 799000, precioTotal: 799000 })];
     const recommendedNeto = 671428.57;
     const applied = applyQuoteStudioRecommendedPrice({

@@ -280,7 +280,7 @@ function mapCotizacionToWorkflowRecord(input: {
 }): CotizacionWorkflowRecord {
   const quotePricingMode = normalizeQuotePricingMode(input.cotizacion.pricingMode);
   const items = reconcileWorkflowItemsPricing(
-    input.cotizacion.items.map(mapDatabaseItemToWorkflowItem),
+    (input.cotizacion.items ?? []).map(mapDatabaseItemToWorkflowItem),
     quotePricingMode
   );
   const workflowTotals = calculateWorkflowTotalsForPricingMode({

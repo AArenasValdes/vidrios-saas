@@ -863,7 +863,8 @@ describe("workflow-ui paso 2", () => {
     );
 
     expect(actualizado.lineTemplateId).toBe("tpl-new");
-    expect(actualizado.referencia).toBe("Serie 25");
+    // Serie 25 y L25 son el mismo catálogo canónico SODAL; la UI conserva L25.
+    expect(actualizado.referencia).toBe("L25");
     expect(actualizado.vidrio).toBe("Templado 8mm");
     expect(actualizado.costoProveedorUnitario).toBe("160000");
     expect(actualizado.precioAjustadoManual).toBe(true);

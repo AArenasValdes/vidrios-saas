@@ -58,6 +58,12 @@ public/video-assets/
 !/docs/fabricacion/zeta/confirmed/
 !/docs/fabricacion/zeta/confirmed/**
 
+# Evidencia Zeta local modificada: se mantiene en git para trabajo futuro,
+# pero no forma parte de este deployment.
+/docs/fabricacion/zeta/coverage.json
+/docs/fabricacion/zeta/derived/sodal/l25/candidates.json
+/docs/fabricacion/zeta/targets.json
+
 # --- Tooling, QA, mobile wrapper y DB local ---
 # IMPORTANTE: anclar con `/` al inicio. Sin eso, `supabase/` también excluye `src/lib/supabase/`.
 /.agents/
