@@ -40,6 +40,17 @@ function shouldSeedProfileReferences(
 function getGlassRecommendationPatch(
   row: LineTemplateProfileSeedRow
 ): string | null | undefined {
+  if (
+    row.catalog_key === "ventora:winhouse-new-s75-doble-riel" ||
+    row.catalog_key === "ventora:winhouse-new-s75-triple-riel"
+  ) {
+    // The official WinHouse workbook opens with this 19 mm composition. Keep a
+    // workshop's existing glass choice intact; only seed an empty recommendation.
+    return row.vidrio_principal_recomendado?.trim()
+      ? undefined
+      : "DVH 4+10+5";
+  }
+
   const recommendation =
     row.catalog_key === "ventora:serie-3200-puerta-abatible-1h" ||
     row.catalog_key === "ventora:l42" ||
@@ -177,18 +188,19 @@ export async function seedProfileReferencesForOrganization(
   let skipped = 0;
 
   for (const line of ventoraLines) {
+    const seedProfileReferences = shouldSeedProfileReferences(line);
     const identityPatch = getLegacyLineIdentityPatch(line);
     const glassRecommendationPatch = getGlassRecommendationPatch(line);
-    if (!shouldSeedProfileReferences(line) && !identityPatch && !glassRecommendationPatch) {
+    if (!seedProfileReferences && !identityPatch && !glassRecommendationPatch) {
       skipped += 1;
       continue;
     }
 
-    const workshopProfiles = getVentoraProfileReferencesForCatalogKey(
-      line.catalog_key
-    );
+    const workshopProfiles = seedProfileReferences
+      ? getVentoraProfileReferencesForCatalogKey(line.catalog_key)
+      : null;
 
-    if (!workshopProfiles) {
+    if (seedProfileReferences && !workshopProfiles) {
       skipped += 1;
       continue;
     }
@@ -205,7 +217,7 @@ export async function seedProfileReferencesForOrganization(
         catalogMetadata: {
           ...currentMetadata,
           ...(identityPatch ?? {}),
-          workshopProfiles,
+          ...(workshopProfiles ? { workshopProfiles } : {}),
         },
         vidrioPrincipalRecomendado: glassRecommendationPatch,
       });

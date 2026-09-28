@@ -162,6 +162,7 @@ type Props = {
     apertura: string;
     herraje: string;
     variante: string;
+    anchoHojaAMm: number | null;
   }) => void;
   onFabricacionL25ConfigChange?: (value: {
     catalogLineKey: string;
@@ -2297,6 +2298,7 @@ export function PasoDosAgregarGrupoSheet({
                       fabricacionApertura: draft.fabricacionApertura,
                       fabricacionHerraje: draft.fabricacionHerraje,
                       fabricacionVariante: draft.fabricacionVariante,
+                      fabricacionAnchoHojaAMm: draft.fabricacionAnchoHojaAMm,
                       catalogLineKey: draft.catalogLineKey,
                       fabricacionGlazing: draft.fabricacionGlazing,
                       fabricacionLeg: draft.fabricacionLeg,

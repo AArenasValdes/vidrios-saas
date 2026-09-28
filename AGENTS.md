@@ -69,6 +69,18 @@ docs/
 | `pnpm run build` | Build produccion |
 | `pnpm run lint` | Linter ESLint |
 | `pnpm test` | Tests Jest |
+| `pnpm fabrication:verify` | Regresión de líneas, cotización, impresión, tipos y rutas |
+
+## Integración de líneas con fabricación
+
+Antes de agregar o ampliar una línea, leer `docs/fabricacion/WORKFLOW_INTEGRAR_NUEVA_LINEA.md` y copiar `docs/fabricacion/PLANTILLA_INTEGRACION_LINEA.md` a la carpeta de evidencia de esa línea.
+
+- Trazar fuente → fixture → catálogo/seed → selección de cotización → snapshot → despiece/pauta interna. La presencia en el selector no demuestra integración.
+- Agregar pruebas numéricas independientes por geometría, casos no soportados y regresiones de selección; conservar ajustes del taller, aislamiento por organización y snapshots guardados.
+- Ejecutar `pnpm fabrication:verify`; usar `pnpm fabrication:verify --build` cuando cambie código de aplicación. No reconstruir `.next` mientras otra instancia lo está usando.
+- No omitir suites fallidas ni actualizar snapshots a ciegas. Registrar comando, informe y fallos pendientes. El verificador descubre pruebas nuevas automáticamente en las carpetas cubiertas.
+- Cerrar con smoke real en cuenta QA autorizada: elegir componente/línea/vidrio, abrir despiece, guardar, reabrir y revisar pauta interna y PDF cliente. Reportar por separado pruebas automáticas y navegador; no afirmar que uno prueba el otro.
+- Los datos de taller pendientes no bloquean por sí solos la pauta preliminar autorizada cuando hay fórmula calculable. No inventar geometrías ni marcar una receta como validada por pasar tests.
 
 ## Estado actual
 

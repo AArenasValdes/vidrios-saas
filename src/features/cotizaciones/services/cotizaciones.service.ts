@@ -40,10 +40,7 @@ import {
   type QuotePricingMode,
 } from "@/features/cotizaciones/types/quote-pricing-mode";
 import { buildQuoteStudioFinancialSummary } from "@/features/cotizaciones/services/quote-studio-financial.service";
-import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
-import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
-import { resolveFabricacionHojasForRecipeMatch } from "@/features/fabricacion/services/fabricacion-hojas-resolver.service";
-import { resolverRecetaFabricacionCompatible } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
+import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import {
@@ -159,6 +156,36 @@ function formatValidez(value: string | null) {
   }
 
   return "30 dias";
+}
+
+function resolvePersistedTotalGlobalManualAmount(input: {
+  subtotalNeto: number | null;
+  descuentoPct: number;
+  items: CotizacionWorkflowItem[];
+}) {
+  if (input.subtotalNeto === null || !Number.isFinite(input.subtotalNeto)) {
+    return null;
+  }
+
+  const discountRate = Math.min(100, Math.max(0, input.descuentoPct)) / 100;
+  if (discountRate >= 1) {
+    return null;
+  }
+
+  // subtotal_neto ya tiene aplicado el descuento. El cuadernillo necesita
+  // reconstruir el monto ingresado antes del descuento para poder editarlo.
+  const subtotalBeforeDiscount = round(
+    input.subtotalNeto / (1 - discountRate),
+    2
+  );
+  const separatelyPricedFreeItems = round(
+    input.items
+      .filter((item) => item.tipoItem === "item_libre_con_valor" && item.precioTotal > 0)
+      .reduce((sum, item) => sum + item.precioTotal, 0),
+    2
+  );
+
+  return round(Math.max(0, subtotalBeforeDiscount - separatelyPricedFreeItems), 2);
 }
 
 function resolveValidoHasta(value: string) {
@@ -283,6 +310,18 @@ function mapCotizacionToWorkflowRecord(input: {
     (input.cotizacion.items ?? []).map(mapDatabaseItemToWorkflowItem),
     quotePricingMode
   );
+  const totalClienteManual =
+    quotePricingMode === "total_global"
+      ? resolvePersistedTotalGlobalManualAmount({
+          subtotalNeto: input.cotizacion.subtotalNeto,
+          descuentoPct: input.cotizacion.descuentoPct ?? 0,
+          items,
+        })
+      : null;
+  const mostrarIva =
+    input.cotizacion.iva === null || input.cotizacion.iva === undefined
+      ? true
+      : input.cotizacion.iva > 0;
   const workflowTotals = calculateWorkflowTotalsForPricingMode({
     items,
     descuentoPct: input.cotizacion.descuentoPct ?? 0,
@@ -290,8 +329,8 @@ function mapCotizacionToWorkflowRecord(input: {
     quotePricingMode,
     costoTotalFabricacion: input.cotizacion.costoTotal ?? 0,
     margenGlobalPct: input.cotizacion.margenPct ?? 0,
-    totalClienteManual: quotePricingMode === "total_global" ? input.cotizacion.total : null,
-    mostrarIva: input.cotizacion.iva ? input.cotizacion.iva > 0 : true,
+    totalClienteManual,
+    mostrarIva,
   }, resolveQuotePricingSettings(input.cotizacion.regionalSnapshot));
   const subtotal = workflowTotals.subtotal;
   const neto = input.cotizacion.subtotalNeto ?? workflowTotals.neto;
@@ -351,8 +390,8 @@ function mapCotizacionToWorkflowRecord(input: {
     costoTotalFabricacion,
     margenGlobalPct,
     utilidadTotal,
-    totalClienteManual: quotePricingMode === "total_global" ? input.cotizacion.total : null,
-    mostrarIva: input.cotizacion.iva ? input.cotizacion.iva > 0 : true,
+    totalClienteManual,
+    mostrarIva,
     mostrarIvaEnPdf: input.cotizacion.mostrarIvaEnPdf ?? true,
     quoteStudioFinancial: createQuoteStudioFinancialDraft({
       manoObra: input.cotizacion.costoManoObraTotal ?? 0,
@@ -430,22 +469,10 @@ function normalizeOrganizationIdForFabricacion(organizationId: EntityId): number
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
-function normalizeLineTemplateIdForFabricacion(value: string): number | null {
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
-}
-
 function hasSupabaseBrowserEnv() {
   return Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
-}
-
-function resolveLeavesCount(
-  item: CotizacionWorkflowItem,
-  presentation: ReturnType<typeof decodeCotizacionItemPresentationMeta>
-) {
-  return resolveFabricacionHojasForRecipeMatch(item, presentation);
 }
 
 function buildFabricacionSnapshotForItem(input: {
@@ -456,63 +483,22 @@ function buildFabricacionSnapshotForItem(input: {
   if (input.item.tipoItem === "item_libre_con_valor") return null;
   if (!input.item.ancho || !input.item.alto || input.item.cantidad <= 0) return null;
 
-  const presentation = decodeCotizacionItemPresentationMeta(input.item.observaciones);
-  const lineTemplateId = normalizeLineTemplateIdForFabricacion(presentation.lineTemplateId);
-  const tipologia =
-    presentation.fabricacionTipologia ||
-    inferirTipologiaFabricacionPieza({
-      tipo: input.item.tipo,
-      nombre: input.item.nombre,
-      descripcion: input.item.descripcion,
-    });
-  if (!lineTemplateId || !tipologia) return null;
-
-  const selected = resolverRecetaFabricacionCompatible(input.recipes, {
+  const resolution = resolveFabricacionDespieceForQuoteItem({
+    item: input.item,
+    recipes: input.recipes,
     organizationId: input.organizationId,
-    lineTemplateId,
-    anchoTotalMm: Math.round(input.item.ancho),
-    altoTotalMm: Math.round(input.item.alto),
-    tipologia,
-    hojas:
-      presentation.fabricacionHojas ??
-      resolveLeavesCount(input.item, presentation),
-    modulos: presentation.fabricacionModulos,
-    apertura: (() => {
-      for (const candidate of [
-        presentation.fabricacionApertura,
-        presentation.sistema,
-      ]) {
-        const value = (candidate ?? "").trim();
-        if (!value) continue;
-        const normalized = value.toLowerCase();
-        if (normalized === "personalizado" || normalized === "personalizada") {
-          continue;
-        }
-        return value;
-      }
-      return null;
-    })(),
-    herraje: presentation.fabricacionHerraje || null,
-    variante: presentation.fabricacionVariante || null,
-    preferredRecipeId: presentation.fabricationRecipeId || null,
   });
 
-  if (selected.estado !== "receta_unica") {
+  // Las variantes WinHouse pueden previsualizarse como preliminares en el
+  // despiece, pero solo una receta validada se congela en la cotización.
+  if (
+    resolution.estado !== "calculado" ||
+    resolution.recipe?.status !== "validated" ||
+    !resolution.formal
+  ) {
     return null;
   }
-
-  const receta = selected.receta.definition;
-  return construirSnapshotFabricacionCotizacion({
-    recipe: selected.receta,
-    entrada: {
-      anchoTotalMm: Math.round(input.item.ancho),
-      altoTotalMm: Math.round(input.item.alto),
-      cantidad: Math.round(input.item.cantidad),
-      hojas: receta.identidad.hojas,
-      modulos: receta.identidad.modulos,
-      variante: receta.identidad.variante,
-    },
-  });
+  return resolution.formal;
 }
 
 type FabricationRecipeQuoteRow = {

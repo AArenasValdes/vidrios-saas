@@ -1088,6 +1088,7 @@ function TabDespiece({
             onComponentChange("fabricacionApertura", context.apertura);
             onComponentChange("fabricacionHerraje", context.herraje);
             onComponentChange("fabricacionVariante", context.variante);
+            onComponentChange("fabricacionAnchoHojaAMm", context.anchoHojaAMm);
           }}
           onFabricacionL25ConfigChange={(value) => {
             onComponentChange("catalogLineKey", value.catalogLineKey);

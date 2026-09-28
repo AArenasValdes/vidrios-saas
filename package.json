@@ -19,6 +19,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "jest",
+    "fabrication:smoke": "jest --runInBand --runTestsByPath src/features/fabricacion/__tests__/fabrication-line-recipes.smoke.test.ts",
+    "fabrication:verify": "node scripts/fabrication/verify.mjs",
     "docs:check": "node scripts/check-docs-drift.mjs",
     "test:e2e:auth-mobile": "playwright test tests/e2e/auth-logout.mobile.spec.ts --project=mobile-chromium",
     "test:e2e:list": "playwright test --list",

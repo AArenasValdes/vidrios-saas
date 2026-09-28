@@ -5,6 +5,8 @@ import type { ComponentProps } from "react";
 
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
+import { WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY } from "@/features/fabricacion/fixtures/winhouse-new-s75-recipes";
 import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { QuoteConstructorWorkspace } from "../quote-constructor-workspace";
@@ -15,7 +17,7 @@ jest.mock("@/features/cotizaciones/visual-composer/components/guided-visual-comp
 }));
 
 jest.mock("@/features/organization-profile/hooks/use-organization-measure-unit", () => ({
-  useOrganizationMeasureUnit: () => "mm",
+  useOrganizationMeasureUnit: jest.fn(() => "mm"),
 }));
 
 jest.mock("@/features/fabricacion/hooks/use-fabrication-recipes", () => ({
@@ -143,6 +145,10 @@ function renderWorkspace(overrides: Partial<ComponentProps<typeof QuoteConstruct
 }
 
 describe("QuoteConstructorWorkspace", () => {
+  afterEach(() => {
+    jest.mocked(useOrganizationMeasureUnit).mockReturnValue("mm");
+  });
+
   it("muestra presets y varias piezas en el mismo cuaderno", () => {
     const props = renderWorkspace();
     expect(screen.getByLabelText("Más tipologías")).toBeInTheDocument();
@@ -404,6 +410,137 @@ describe("QuoteConstructorWorkspace", () => {
     expect(screen.queryByRole("button", { name: /Revisar cotizaci.n/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Abrir configuraci.n guiada/i })).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Continuar al resumen" })).toHaveLength(1);
+  });
+
+  it("permite elegir geometría y hojas de corte New S75 desde la cotización rápida", () => {
+    const template = lineTemplate({
+      id: 226,
+      nombre: "WinHouse New S75 — Doble riel",
+      categoria: "pvc",
+      material: "PVC",
+      catalogKey: WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY,
+    });
+    const quoteItem: CotizacionWorkflowItem = {
+      ...itemWithLine("s75", "S75-01", template),
+      tipo: "Ventana corredera",
+      vidrio: "DVH 4+10+5",
+      lineaComercial: template.nombre,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        colorHex: "#ffffff",
+        material: "PVC",
+        lineTemplateId: "226",
+        guidedVisualConfig: createQuoteConstructorPresetConfig("corredera"),
+      }),
+    };
+    const props = renderWorkspace({
+      items: [quoteItem],
+      lineTemplates: [template],
+      activeItemId: "s75",
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Cubicación y despiece/ }));
+    const selector = screen.getByLabelText("Configuración de corte WinHouse New S75");
+    expect(selector.querySelectorAll("option")).toHaveLength(10);
+    fireEvent.change(selector, {
+      target: { value: "doble_riel_4h_80" },
+    });
+
+    expect(props.onUpdateItem).toHaveBeenCalledWith(
+      "s75",
+      expect.objectContaining({
+        catalogLineKey: WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY,
+        fabricacionVariante: "doble_riel_4h_80_dvh_17_20",
+        fabricacionHojas: 4,
+        fabricacionModulos: 4,
+        fabricationRecipeId: "",
+        fabricacionSnapshot: null,
+        cubicationSnapshot: null,
+      })
+    );
+  });
+
+  it("resuelve el despiece S75 desde la línea seleccionada aunque el ítem antiguo no guarde su ID", () => {
+    const template = lineTemplate({
+      id: 226,
+      nombre: "WinHouse New S75 — Doble riel",
+      categoria: "pvc",
+      material: "PVC",
+      catalogKey: WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY,
+    });
+    const quoteItem: CotizacionWorkflowItem = {
+      ...itemWithLine("s75-legacy", "S75-02", template),
+      tipo: "Ventana",
+      nombre: "Ventana corredera",
+      lineaComercial: template.nombre,
+      vidrio: "DVH 4+10+5",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        colorHex: "#ffffff",
+        material: "PVC",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 4,
+        fabricacionModulos: 4,
+        fabricacionVariante: "doble_riel_4h_80_dvh_17_20",
+        guidedVisualConfig: createQuoteConstructorPresetConfig("corredera"),
+      }),
+    };
+    renderWorkspace({
+      items: [quoteItem],
+      lineTemplates: [template],
+      activeItemId: "s75-legacy",
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Cubicación y despiece/ }));
+
+    expect(screen.getByText("Despiece calculado")).toBeInTheDocument();
+    expect(screen.getByText("Cortes", { exact: true })).toBeInTheDocument();
+  });
+
+  it("pide el ancho A al elegir una geometría S75 asimétrica de dos hojas", () => {
+    jest.mocked(useOrganizationMeasureUnit).mockReturnValue("cm");
+    const template = lineTemplate({
+      id: 226,
+      nombre: "WinHouse New S75 — Doble riel",
+      categoria: "pvc",
+      material: "PVC",
+      catalogKey: WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY,
+    });
+    const quoteItem: CotizacionWorkflowItem = {
+      ...itemWithLine("s75", "S75-01", template),
+      ancho: 180,
+      tipo: "Ventana corredera",
+      vidrio: "DVH 4+10+5",
+      lineaComercial: template.nombre,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        colorHex: "#ffffff",
+        material: "PVC",
+        lineTemplateId: "226",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 2,
+        fabricacionVariante: "doble_riel_2h_asimetrica_80_dvh_17_20",
+        fabricacionAnchoHojaAMm: 700,
+        guidedVisualConfig: createQuoteConstructorPresetConfig("corredera"),
+      }),
+    };
+    const props = renderWorkspace({
+      items: [quoteItem],
+      lineTemplates: [template],
+      activeItemId: "s75",
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Cubicación y despiece/ }));
+    const widthA = screen.getByLabelText("Ancho hoja A WinHouse New S75 (mm)");
+    fireEvent.change(widthA, { target: { value: "750" } });
+    fireEvent.blur(widthA);
+
+    expect(props.onUpdateItem).toHaveBeenCalledWith(
+      "s75",
+      expect.objectContaining({
+        fabricacionAnchoHojaAMm: 750,
+        fabricationRecipeId: "",
+        fabricacionSnapshot: null,
+        cubicationSnapshot: null,
+      })
+    );
   });
 
   it("no escribe medidas inválidas y bloquea el CTA hasta corregir", () => {

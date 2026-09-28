@@ -1,4 +1,6 @@
 import { createCotizacionesAppService as createCotizacionesAppServiceBase } from "../cotizaciones.service";
+import { calculateWorkflowTotalsForPricingMode } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
+import { mapRecordToDraft } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { ClientesRepository } from "@/repositories/clientes-repository";
 import type { CotizacionesRepository } from "@/repositories/cotizaciones-repository";
 import type { ProjectsRepository } from "@/repositories/projects.repository";
@@ -318,6 +320,182 @@ describe("cotizaciones.service", () => {
     expect(record?.clienteNombre).toBe("Cliente cacheado");
     expect(record?.obra).toBe("Obra cacheada");
     expect(record?.items).toHaveLength(1);
+  });
+
+  it("conserva el monto neto del cuadernillo al reabrir una cotizacion con IVA", async () => {
+    const cotizacionesRepository = createCotizacionesRepositoryMock();
+    cotizacionesRepository.getById.mockResolvedValueOnce({
+      id: 100,
+      proyectoId: 10,
+      organizationId: 77,
+      numero: "COT-123456",
+      estado: "creada",
+      descuentoPct: 0,
+      flete: 0,
+      iva: 188290,
+      notas: "",
+      validoHasta: "2026-03-29",
+      subtotalNeto: 991000,
+      costoTotal: 0,
+      margenPct: 0,
+      utilidadTotal: 0,
+      pricingMode: "total_global",
+      approvalToken: "approval-token-1",
+      approvalTokenExpiresAt: null,
+      clienteVioEn: null,
+      clienteRespondioEn: null,
+      clienteRespuestaCanal: null,
+      creadoEn: "2026-03-14T10:00:00.000Z",
+      actualizadoEn: "2026-03-14T10:00:00.000Z",
+      eliminadoEn: null,
+      items: [],
+      total: 1180000,
+    });
+    const service = createCotizacionesAppService({
+      clientesRepository: createClientesRepositoryMock(),
+      projectsRepository: createProjectsRepositoryMock(),
+      cotizacionesRepository,
+    });
+
+    const record = await service.getWorkflowById(100, 77, { ensureApprovalToken: false });
+    expect(record).not.toBeNull();
+
+    const reopenedDraft = mapRecordToDraft(record!);
+    const totals = calculateWorkflowTotalsForPricingMode(reopenedDraft, {
+      taxRatePct: 19,
+      commercialRoundingIncrement: 1000,
+    });
+
+    expect(reopenedDraft.totalClienteManual).toBe(991000);
+    expect(totals.neto).toBe(991000);
+    expect(totals.iva).toBe(188290);
+    expect(totals.total).toBe(1180000);
+  });
+
+  it("reconstruye el monto del cuadernillo antes del descuento y resta ítems cobrados aparte", async () => {
+    const cotizacionesRepository = createCotizacionesRepositoryMock();
+    cotizacionesRepository.getById.mockResolvedValueOnce({
+      id: 100,
+      proyectoId: 10,
+      organizationId: 77,
+      numero: "COT-123456",
+      estado: "creada",
+      descuentoPct: 10,
+      flete: 0,
+      iva: 171000,
+      notas: "",
+      validoHasta: "2026-03-29",
+      subtotalNeto: 900000,
+      costoTotal: 0,
+      margenPct: 0,
+      utilidadTotal: 0,
+      pricingMode: "total_global",
+      approvalToken: "approval-token-1",
+      approvalTokenExpiresAt: null,
+      clienteVioEn: null,
+      clienteRespondioEn: null,
+      clienteRespuestaCanal: null,
+      creadoEn: "2026-03-14T10:00:00.000Z",
+      actualizadoEn: "2026-03-14T10:00:00.000Z",
+      eliminadoEn: null,
+      items: [
+        {
+          id: 201,
+          cotizacionId: 100,
+          organizationId: 77,
+          cantidad: 1,
+          precioUnitario: 100000,
+          subtotal: 100000,
+          ancho: null,
+          alto: null,
+          areaM2: null,
+          linea: null,
+          color: null,
+          vidrio: null,
+          nombre: "Trabajo adicional",
+          descripcion: "Trabajo adicional",
+          unidad: "unidad",
+          observaciones: null,
+          tipoItem: "item_libre_con_valor",
+          creadoEn: null,
+          actualizadoEn: null,
+          eliminadoEn: null,
+          productTypeId: null,
+          systemLineId: null,
+          configurationId: null,
+          costoUnitario: 0,
+          costoTotal: 0,
+          margenPct: 0,
+          utilidad: 0,
+          codigo: "L1",
+          tipoComponente: "Trabajo personalizado",
+          orden: 1,
+          breakdown: [],
+        },
+      ],
+      total: 1071000,
+    });
+    const service = createCotizacionesAppService({
+      clientesRepository: createClientesRepositoryMock(),
+      projectsRepository: createProjectsRepositoryMock(),
+      cotizacionesRepository,
+    });
+
+    const record = await service.getWorkflowById(100, 77, { ensureApprovalToken: false });
+
+    expect(record?.totalClienteManual).toBe(900000);
+    const totals = calculateWorkflowTotalsForPricingMode(mapRecordToDraft(record!), {
+      taxRatePct: 19,
+      commercialRoundingIncrement: 1000,
+    });
+    expect(totals.neto).toBe(900000);
+    expect(totals.total).toBe(1071000);
+  });
+
+  it("mantiene desactivado el IVA al reabrir una cotizacion de precio final", async () => {
+    const cotizacionesRepository = createCotizacionesRepositoryMock();
+    cotizacionesRepository.getById.mockResolvedValueOnce({
+      id: 100,
+      proyectoId: 10,
+      organizationId: 77,
+      numero: "COT-123456",
+      estado: "creada",
+      descuentoPct: 0,
+      flete: 0,
+      iva: 0,
+      notas: "",
+      validoHasta: "2026-03-29",
+      subtotalNeto: 989000,
+      costoTotal: 0,
+      margenPct: 0,
+      utilidadTotal: 0,
+      pricingMode: "total_global",
+      approvalToken: "approval-token-1",
+      approvalTokenExpiresAt: null,
+      clienteVioEn: null,
+      clienteRespondioEn: null,
+      clienteRespuestaCanal: null,
+      creadoEn: "2026-03-14T10:00:00.000Z",
+      actualizadoEn: "2026-03-14T10:00:00.000Z",
+      eliminadoEn: null,
+      items: [],
+      total: 989000,
+    });
+    const service = createCotizacionesAppService({
+      clientesRepository: createClientesRepositoryMock(),
+      projectsRepository: createProjectsRepositoryMock(),
+      cotizacionesRepository,
+    });
+
+    const record = await service.getWorkflowById(100, 77, { ensureApprovalToken: false });
+    expect(record?.mostrarIva).toBe(false);
+
+    const totals = calculateWorkflowTotalsForPricingMode(mapRecordToDraft(record!), {
+      taxRatePct: 19,
+      commercialRoundingIncrement: 1000,
+    });
+    expect(totals.iva).toBe(0);
+    expect(totals.total).toBe(989000);
   });
 
   it("debe hidratar items con margen negativo legacy sin lanzar error", async () => {

@@ -63,6 +63,7 @@ export type CotizacionItemPresentationMeta = {
   fabricacionApertura: string;
   fabricacionHerraje: string;
   fabricacionVariante: string;
+  fabricacionAnchoHojaAMm: number | null;
   catalogLineKey: string;
   fabricacionGlazing: string;
   fabricacionLeg: string;
@@ -277,6 +278,7 @@ export function encodeCotizacionItemPresentationMeta(input: {
   fabricacionApertura?: string | null;
   fabricacionHerraje?: string | null;
   fabricacionVariante?: string | null;
+  fabricacionAnchoHojaAMm?: number | null;
   catalogLineKey?: string | null;
   fabricacionGlazing?: string | null;
   fabricacionLeg?: string | null;
@@ -374,6 +376,10 @@ export function encodeCotizacionItemPresentationMeta(input: {
   const fabricacionVariante = (input.fabricacionVariante ?? "")
     .trim()
     .replace(/\]/g, "");
+  const fabricacionAnchoHojaAMm =
+    input.fabricacionAnchoHojaAMm != null && input.fabricacionAnchoHojaAMm > 0
+      ? String(Math.round(input.fabricacionAnchoHojaAMm))
+      : "";
   const catalogLineKey = (input.catalogLineKey ?? "")
     .trim()
     .replace(/\]/g, "");
@@ -435,6 +441,7 @@ export function encodeCotizacionItemPresentationMeta(input: {
     `[fap:${fabricacionApertura}]` +
     `[fhe:${fabricacionHerraje}]` +
     `[fv:${fabricacionVariante}]` +
+    `[fwa:${fabricacionAnchoHojaAMm}]` +
     `[lck:${catalogLineKey}]` +
     `[fgl:${fabricacionGlazing}]` +
     `[flg:${fabricacionLeg}]` +
@@ -529,6 +536,9 @@ export function decodeCotizacionItemPresentationMeta(
     source.match(/\[fhe:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const fabricacionVariante =
     source.match(/\[fv:([^\]]*)\]/)?.[1]?.trim() ?? "";
+  const fabricacionAnchoHojaAMm = parseOptionalNumber(
+    source.match(/\[fwa:([^\]]*)\]/)?.[1]
+  );
   const catalogLineKey =
     source.match(/\[lck:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const fabricacionGlazing =
@@ -589,6 +599,7 @@ export function decodeCotizacionItemPresentationMeta(
     .replace(/\[fap:[^\]]*\]/g, "")
     .replace(/\[fhe:[^\]]*\]/g, "")
     .replace(/\[fv:[^\]]*\]/g, "")
+    .replace(/\[fwa:[^\]]*\]/g, "")
     .replace(/\[lck:[^\]]*\]/g, "")
     .replace(/\[fgl:[^\]]*\]/g, "")
     .replace(/\[flg:[^\]]*\]/g, "")
@@ -641,6 +652,7 @@ export function decodeCotizacionItemPresentationMeta(
     fabricacionApertura,
     fabricacionHerraje,
     fabricacionVariante,
+    fabricacionAnchoHojaAMm,
     catalogLineKey,
     fabricacionGlazing,
     fabricacionLeg,

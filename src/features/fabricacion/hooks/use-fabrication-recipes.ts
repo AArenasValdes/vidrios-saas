@@ -24,6 +24,8 @@ type UseFabricationRecipesOptions = {
    * El seed sigue lanzándose en background para no retrasar el botón.
    */
   skipStructuralSeed?: boolean;
+  /** Identidad de las líneas del borrador para refrescar la siembra al cambiarlas. */
+  seedContextKey?: string;
 };
 
 const recipeListInflight = new Map<string, Promise<FabricationRecipeRecord[]>>();
@@ -178,10 +180,25 @@ export function useFabricationRecipes(options: UseFabricationRecipesOptions = {}
           lineTemplateId: options.lineTemplateId,
         });
 
+      const structuralSeed = ensureStructuralDraftsClient(
+        organizationId,
+        options.seedContextKey
+      );
       if (options.skipStructuralSeed) {
-        void ensureStructuralDraftsClient(organizationId).catch(() => {});
+        void structuralSeed
+          .then(async () => {
+            if (loadId !== loadIdRef.current) return;
+            invalidateFabricationRecipesListCache(organizationId);
+            const refreshed = await listRecipes();
+            if (loadId === loadIdRef.current) setRecipes(refreshed);
+          })
+          .catch((seedError) => {
+            if (loadId === loadIdRef.current) {
+              setError(formatFabricationRecipesLoadError(seedError));
+            }
+          });
       } else {
-        await ensureStructuralDraftsClient(organizationId);
+        await structuralSeed;
       }
       const data = await listRecipes();
       if (loadId === loadIdRef.current) setRecipes(data);
@@ -192,7 +209,13 @@ export function useFabricationRecipes(options: UseFabricationRecipesOptions = {}
     } finally {
       if (loadId === loadIdRef.current && !background) setIsLoading(false);
     }
-  }, [options.enabled, options.lineTemplateId, options.skipStructuralSeed, organizationId]);
+  }, [
+    options.enabled,
+    options.lineTemplateId,
+    options.seedContextKey,
+    options.skipStructuralSeed,
+    organizationId,
+  ]);
 
   useEffect(() => {
     void loadRecipes();

@@ -5,6 +5,7 @@ import { useCallback, useMemo } from "react";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import {
+  buildQuoteRecipeSeedContextKey,
   buildQuoteDespiecePreviewEligibility,
   buildQuoteFabricationReviewEligibility,
   findFirstQuoteItemWithDespiecePreview,
@@ -31,6 +32,7 @@ export function useQuoteDespiecePreview({
   } = useFabricationRecipes({
     enabled: shouldLoad,
     skipStructuralSeed: true,
+    seedContextKey: buildQuoteRecipeSeedContextKey(items),
   });
 
   const isReady = !isLoading && organizationId != null;

@@ -70,6 +70,21 @@ docs/VENTORA_DESKTOP_TALLER_ROADMAP.md
 *.swp
 *.swo
 
+# Renders y material audiovisual de produccion: conservar solo en la maquina local.
+/public/Plan semanal 20-27/
+/docs/**/*.mp4
+/docs/**/*.mov
+/docs/**/*.webm
+/docs/**/*.m4v
+/docs/**/*.mkv
+/docs/**/*.avi
+/public/**/*.mp4
+/public/**/*.mov
+/public/**/*.webm
+/public/**/*.m4v
+/public/**/*.mkv
+/public/**/*.avi
+
 # Impeccable: cache y capturas locales. Configuración y críticas compartidas quedan versionadas.
 .impeccable/config.local.json
 .impeccable/hook.cache.json

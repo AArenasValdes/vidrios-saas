@@ -21,6 +21,7 @@ import {
 } from "@/features/fabricacion/zeta/zeta-confirmed-loader";
 import { loadEvidenceSidecarByRecipeId, resetEvidenceSidecarCacheForTests } from "@/features/fabricacion/zeta/zeta-evidence-sidecar-loader";
 import { isTraceabilityComplete } from "@/features/fabricacion/zeta/zeta-trace-enrichment";
+import { getDefinitionEvidenceBlockers } from "@/features/fabricacion/services/fabricacion-evidence-gate.service";
 import {
   buildZetaSmokeExpectedFromConfirmed,
   type ZetaSmokeExpected,
@@ -31,9 +32,10 @@ import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabri
 function assertMotorMatchesExpected(
   recipeId: string,
   expected: ZetaSmokeExpected,
-  result: FabricacionResultadoCubicacion
+  result: FabricacionResultadoCubicacion,
+  usesDerivedL25Formulas = false,
 ) {
-  if (isTraceabilityComplete(recipeId)) {
+  if (usesDerivedL25Formulas || isTraceabilityComplete(recipeId)) {
     expect(result.calculable).toBe(true);
   } else {
     expect(result.calculable).toBe(false);
@@ -89,7 +91,9 @@ describe("Zeta smoke independiente", () => {
             variante: bundle!.identity.variantSlug,
           })
         );
-        runs.forEach((result) => assertMotorMatchesExpected(recipeId, expected, result));
+        // L25 derived formulas deliberately calculate while evidence remains incomplete.
+        // Preserve independent numeric comparisons; this is not an activation approval.
+        runs.forEach((result) => assertMotorMatchesExpected(recipeId, expected, result, true));
         expect(runs[1]).toEqual(runs[0]);
         expect(runs[2]).toEqual(runs[0]);
 
@@ -231,7 +235,7 @@ describe("Zeta smoke independiente", () => {
   });
 
   describe("L25 gate negativo", () => {
-    it("no calcula si datosPendientes por evidencia incompleta", () => {
+    it("calcula fórmulas L25 con aviso, pero no acredita evidencia completa", () => {
       const bundle = buildAllSodalL25Recipes()[0]!;
       const receta = {
         ...bundle.definition,
@@ -246,7 +250,9 @@ describe("Zeta smoke independiente", () => {
         modulos: 1,
         variante: bundle.identity.variantSlug,
       });
-      expect(result.calculable).toBe(false);
+      expect(result.calculable).toBe(true);
+      expect(result.advertencias.some((entry) => entry.codigo === "RECETA_DATOS_PENDIENTES")).toBe(true);
+      expect(getDefinitionEvidenceBlockers(receta)).toContain("Falta evidencia 1:1 de la fuente primaria.");
     });
   });
 });

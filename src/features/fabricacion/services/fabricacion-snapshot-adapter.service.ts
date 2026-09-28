@@ -32,6 +32,7 @@ export function fabricacionSnapshotToLegacyCubicationSnapshot(
       // El label queda por compatibilidad legacy; la UI debe leer profileCode/profileName.
       label: profileCode || profileName || "Por asignar",
       functionLabel: row.funcion,
+      cutAngle: row.corte ?? null,
       profileCode,
       profileName,
       quantity: row.cantidadPiezas,
@@ -52,6 +53,7 @@ export function fabricacionSnapshotToLegacyCubicationSnapshot(
         return {
         label: profileCode || barra.nombrePerfil.trim() || "Por asignar",
         functionLabel: corte.funcion,
+        cutAngle: corte.corte ?? null,
         profileCode,
         profileName: barra.nombrePerfil.trim() || corte.funcion,
         quantity: 1,

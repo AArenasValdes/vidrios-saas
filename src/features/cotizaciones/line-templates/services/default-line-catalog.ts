@@ -21,8 +21,13 @@ export const DEFAULT_PRICE_ROUNDING_CLP = 1000;
 export type SeedLineTemplateDeps = {
   listAllTemplates: (
     organizationId: string | number
-  ) => Promise<Array<{ catalog_key?: string | null }>>;
+  ) => Promise<Array<{ catalog_key?: string | null; vidrio_principal_recomendado?: string | null }>>;
   insertTemplate: (payload: Record<string, unknown>) => Promise<void>;
+  setRecommendedGlassIfEmpty?: (
+    organizationId: string | number,
+    catalogKey: string,
+    glass: string
+  ) => Promise<void>;
 };
 
 export const VENTORA_LINE_CATALOG_KEY_PREFIX = "ventora:";
@@ -65,10 +70,15 @@ function buildVentoraDefaultLine(
       definition.catalogKey === "ventora:s33-rpt-corredera-2h" ||
       definition.catalogKey === "ventora:serie-15-corredera-2h" ||
       definition.catalogKey === "ventora:serie-4000-corredera-2h" ||
-      definition.catalogKey === "ventora:serie-4800-corredera-2h"
+      definition.catalogKey === "ventora:serie-4800-corredera-2h" ||
+      definition.catalogKey === "ventora:winhouse-s60" ||
+      definition.catalogKey === "ventora:winhouse-new-s75-doble-riel" ||
+      definition.catalogKey === "ventora:winhouse-new-s75-triple-riel"
         ? definition.catalogKey === "ventora:s33-rpt-corredera-2h"
           ? "DVH 4+12+4"
-          : "Incoloro monolítico 4mm"
+          : definition.catalogKey.startsWith("ventora:winhouse-new-s75-")
+            ? "DVH 4+10+5"
+            : "Incoloro monolítico 4mm"
         : null,
     catalogMetadata: {
       needsCommercialPrice: true,
@@ -167,6 +177,37 @@ export async function seedDefaultLineCatalog(
   }
 
   const existing = await deps.listAllTemplates(organizationId);
+  const existingByKey = new Map(
+    existing
+      .filter((row): row is { catalog_key: string; vidrio_principal_recomendado?: string | null } => Boolean(row.catalog_key))
+      .map((row) => [row.catalog_key, row])
+  );
+  const s60 = VENTORA_DEFAULT_LINE_CATALOG.find(
+    (line) => line.catalogKey === "ventora:winhouse-s60"
+  );
+  const recommendedS60Glass = s60?.vidrioPrincipalRecomendado;
+  const existingS60 = existingByKey.get("ventora:winhouse-s60");
+  if (
+    deps.setRecommendedGlassIfEmpty &&
+    s60 &&
+    recommendedS60Glass &&
+    existingS60 &&
+    !existingS60.vidrio_principal_recomendado?.trim()
+  ) {
+    try {
+      await deps.setRecommendedGlassIfEmpty(
+        organizationId,
+        "ventora:winhouse-s60",
+        recommendedS60Glass
+      );
+    } catch (error) {
+      console.warn(
+        "[seedDefaultLineCatalog] no se pudo completar el vidrio recomendado S60",
+        { organizationId },
+        error
+      );
+    }
+  }
   const toInsert = getMissingVentoraCatalogLines(existing.map((row) => row.catalog_key));
 
   let seeded = 0;

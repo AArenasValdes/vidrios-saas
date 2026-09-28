@@ -210,6 +210,8 @@ export type CotizacionLineTemplateCut = {
   profileCode?: string;
   /** Nombre de perfil persistido, separado de la función de corte. */
   profileName?: string;
+  /** Cortes por extremo cuando la receta los informa, por ejemplo 45° / 45°. */
+  cutAngle?: string | null;
   quantity: number;
   lengthMm: number;
   totalLinealMm: number;

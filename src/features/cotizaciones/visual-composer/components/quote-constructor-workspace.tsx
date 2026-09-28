@@ -45,9 +45,19 @@ import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-prici
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import {
+  WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY,
+  WINHOUSE_NEW_S75_TRIPLE_CATALOG_KEY,
+  WINHOUSE_NEW_S75_VARIANTS,
+} from "@/features/fabricacion/fixtures/winhouse-new-s75-recipes";
+import {
   anyQuoteItemHasFabricationReview,
+  inferWinHouseCatalogKey,
   resolveFabricacionDespieceForQuoteItem,
 } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import {
+  resolveWinHouseNewS75GlassBand,
+  resolveWinHouseNewS75QuoteVariant,
+} from "@/features/fabricacion/services/winhouse-new-s75-quote-config.service";
 import { GuidedVisualComposer } from "@/features/cotizaciones/visual-composer/components/guided-visual-composer";
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 import {
@@ -208,6 +218,14 @@ function resolveLineTemplate(
 ) {
   if (!lineTemplateId) return null;
   return lineTemplates.find((template) => String(template.id) === lineTemplateId) ?? null;
+}
+
+function normalizeLineName(value: string | null | undefined) {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
 }
 
 function formatPieceLineCaption(
@@ -543,7 +561,13 @@ export function QuoteConstructorWorkspace({
     return types.size === 1 ? leaves[0]?.type ?? null : "pano_libre";
   }, [activeConfig]);
   const activeTemplate = activeForm
-    ? resolveLineTemplate(lineTemplates, activeForm.lineTemplateId)
+    ? resolveLineTemplate(lineTemplates, activeForm.lineTemplateId) ??
+      lineTemplates.find(
+        (template) =>
+          normalizeLineName(template.nombre) ===
+          normalizeLineName(activeItem?.lineaComercial || activeForm.referencia)
+      ) ??
+      null
     : null;
   const { organizationId, recipes: fabricationRecipes } = useFabricationRecipes({
     enabled: true,
@@ -551,15 +575,133 @@ export function QuoteConstructorWorkspace({
   });
   const activeFabricationResolution = useMemo(() => {
     if (!activeItem) return null;
-    return resolveFabricacionDespieceForQuoteItem({
+    const result = resolveFabricacionDespieceForQuoteItem({
       item: activeItem,
       recipes: fabricationRecipes,
       organizationId,
+      lineTemplateId: activeForm?.lineTemplateId || activeTemplate?.id,
+      lineCatalogKey:
+        activeTemplate?.catalogKey ?? inferWinHouseCatalogKey(activeItem),
     });
-  }, [activeItem, fabricationRecipes, organizationId]);
+    return result;
+  }, [activeForm, activeItem, activeTemplate, fabricationRecipes, organizationId]);
   const activeView = activeItem
-    ? buildPieceDomainView(activeItem, quotePricingMode, activeTemplate)
+    ? buildPieceDomainView(
+        activeFabricationResolution?.estado === "calculado" &&
+          activeFabricationResolution.formal
+          ? { ...activeItem, fabricacionSnapshot: activeFabricationResolution.formal }
+          : activeItem,
+        quotePricingMode,
+        activeTemplate
+      )
     : null;
+  const inferredS75CatalogKey = activeItem
+    ? (() => {
+        const selectedLineName = [
+          activeItem.lineaComercial,
+          activeItem.nombre,
+          activeTemplate?.nombre,
+          activeForm?.referencia,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase();
+        if (!selectedLineName.includes("winhouse") || !selectedLineName.includes("s75")) {
+          return null;
+        }
+        if (selectedLineName.includes("triple")) return WINHOUSE_NEW_S75_TRIPLE_CATALOG_KEY;
+        if (selectedLineName.includes("doble")) return WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY;
+        return null;
+      })()
+    : null;
+  const activeCatalogKey = activeItem
+    ? [
+        getPiecePresentationMeta(activeItem).catalogLineKey,
+        activeTemplate?.catalogKey,
+        inferredS75CatalogKey,
+        inferWinHouseCatalogKey(activeItem),
+      ].find(
+        (catalogKey) =>
+          catalogKey === WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY ||
+          catalogKey === WINHOUSE_NEW_S75_TRIPLE_CATALOG_KEY,
+      ) ??
+      getPiecePresentationMeta(activeItem).catalogLineKey ??
+      activeTemplate?.catalogKey ??
+      inferWinHouseCatalogKey(activeItem)
+    : null;
+  const s75RailCount =
+    activeCatalogKey === WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY
+      ? 2
+      : activeCatalogKey === WINHOUSE_NEW_S75_TRIPLE_CATALOG_KEY
+        ? 3
+        : null;
+  const activeS75SelectedVariant = WINHOUSE_NEW_S75_VARIANTS.find(
+    (variant) =>
+      variant.slug ===
+      (activeForm?.fabricacionVariante || activeItem?.fabricacionSnapshot?.selectedVariant)
+  );
+  const activeS75Leaves = activeForm
+    ? activeS75SelectedVariant?.leaves ??
+      activeItem?.fabricacionSnapshot?.recipeIdentity.hojas ??
+      activeFabricationResolution?.recipe?.definition.identidad.hojas ??
+      activeForm.fabricacionHojas ??
+      (activeForm.hojasBase && activeForm.hojasBase > 1 ? activeForm.hojasBase : null) ??
+      (s75RailCount === 3 ? 3 : 2)
+    : null;
+  const activeS75Config =
+    s75RailCount && activeForm
+      ? resolveWinHouseNewS75QuoteVariant({
+          catalogKey: activeCatalogKey,
+          tipologia: activeForm.fabricacionTipologia || "corredera",
+          hojas: activeS75Leaves,
+          vidrio: activeForm.vidrio || activeItem?.vidrio,
+          variantHint: activeForm.fabricacionVariante,
+          configuration: activeForm.configuracion,
+          componentName: activeItem?.tipo,
+          system: activeForm.sistema,
+        }).variant ?? activeS75SelectedVariant ?? null
+      : null;
+  const activeS75GlassBand =
+    (activeItem
+      ? resolveWinHouseNewS75GlassBand(activeForm?.vidrio || activeItem.vidrio)
+      : null) ??
+    activeS75SelectedVariant?.glassBand ??
+    null;
+  const activeS75GeometryOptions =
+    s75RailCount && activeS75GlassBand
+      ? WINHOUSE_NEW_S75_VARIANTS.filter(
+          (variant, index, allVariants) =>
+            variant.railCount === s75RailCount &&
+            variant.glassBand === activeS75GlassBand &&
+            allVariants.findIndex(
+              (candidate) =>
+                candidate.geometrySlug === variant.geometrySlug &&
+                candidate.glassBand === variant.glassBand
+            ) === index
+        )
+      : [];
+  const activeS75GeometrySlug =
+    activeS75Config?.geometrySlug ??
+    activeS75SelectedVariant?.geometrySlug ??
+    (s75RailCount === 3
+      ? "triple_riel_3h_simetrica_80"
+      : activeS75Leaves === 4
+        ? "doble_riel_4h_80"
+        : activeS75Leaves === 3
+          ? "doble_riel_3h_simetrica_80"
+          : "doble_riel_2h_simetrica_80");
+  const activeS75NeedsLeafAWidth =
+    activeS75GeometrySlug.startsWith("doble_riel_2h_asimetrica_");
+  const [s75LeafAWidthDraft, setS75LeafAWidthDraft] = useState("");
+  useEffect(() => {
+    setS75LeafAWidthDraft(
+      activeForm?.fabricacionAnchoHojaAMm != null
+        ? String(activeForm.fabricacionAnchoHojaAMm)
+        : ""
+    );
+  }, [activeItem?.id, activeForm?.fabricacionAnchoHojaAMm]);
   useEffect(() => {
     if (!activeItem || !activeFabricationResolution) return;
     if (
@@ -1596,6 +1738,70 @@ export function QuoteConstructorWorkspace({
                   )}
                   onToggle={() => toggleSection("cubicacion")}
                 >
+                  {activeS75GeometryOptions.length > 1 && s75RailCount ? (
+                    <label className={s.inspectorField}>
+                      <span>Geometría de corte WinHouse New S75</span>
+                      <select
+                        aria-label="Configuración de corte WinHouse New S75"
+                        value={activeS75GeometrySlug}
+                        onChange={(event) => {
+                          const nextVariant = activeS75GeometryOptions.find(
+                            (variant) => variant.geometrySlug === event.target.value
+                          );
+                          if (!nextVariant || !activeItem) return;
+                          onUpdateItem(activeItem.id, {
+                            catalogLineKey:
+                              s75RailCount === 3
+                                ? WINHOUSE_NEW_S75_TRIPLE_CATALOG_KEY
+                                : WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY,
+                            fabricacionVariante: nextVariant.slug,
+                            fabricationRecipeId: "",
+                            fabricacionHojas: nextVariant.leaves,
+                            fabricacionModulos: nextVariant.leaves,
+                            fabricacionAnchoHojaAMm: nextVariant.geometrySlug.startsWith(
+                              "doble_riel_2h_asimetrica_"
+                            )
+                              ? activeForm.fabricacionAnchoHojaAMm ?? null
+                              : null,
+                            fabricacionSnapshot: null,
+                            cubicationSnapshot: null,
+                          });
+                        }}
+                      >
+                        {activeS75GeometryOptions.map((variant) => (
+                          <option key={variant.geometrySlug} value={variant.geometrySlug}>
+                            {variant.geometryLabel}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+                  {activeS75NeedsLeafAWidth && activeItem && activeForm ? (
+                    <label className={s.inspectorField}>
+                      <span>Ancho de la hoja A (mm)</span>
+                      <input
+                        aria-label="Ancho hoja A WinHouse New S75 (mm)"
+                        inputMode="numeric"
+                        value={s75LeafAWidthDraft}
+                        onChange={(event) => setS75LeafAWidthDraft(event.target.value)}
+                        onBlur={() => {
+                          const width = Number(s75LeafAWidthDraft.replace(/[^\d]/g, ""));
+                          const totalWidth = Number(
+                            parseMeasureToMm(activeForm.ancho, measureUnit)
+                          );
+                          if (!Number.isFinite(width) || width <= 0 || width >= totalWidth) {
+                            return;
+                          }
+                          onUpdateItem(activeItem.id, {
+                            fabricacionAnchoHojaAMm: Math.round(width),
+                            fabricationRecipeId: "",
+                            fabricacionSnapshot: null,
+                            cubicationSnapshot: null,
+                          });
+                        }}
+                      />
+                    </label>
+                  ) : null}
                   <DespieceInspectorSummary
                     view={activeView}
                     canRecalculate={Boolean(

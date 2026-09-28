@@ -97,6 +97,11 @@ describe("quote constructor workspace service", () => {
     expect(isQuoteConstructorCompatibleItem(item({ tipoItem: "item_libre_con_valor" }))).toBe(false);
   });
 
+  it("incluye paño fijo simple en revisión aunque no tenga configuración visual guardada", () => {
+    expect(isQuoteConstructorCompatibleItem(item({ tipo: "Paño fijo" }))).toBe(true);
+    expect(isQuoteConstructorCompatibleItem(item({ tipo: "Pano fijo" }))).toBe(true);
+  });
+
   it("sincroniza la composicion persistida con las medidas comerciales vigentes", () => {
     const staleConfig = createQuoteConstructorPresetConfig("fijo", {
       widthMm: 1200,

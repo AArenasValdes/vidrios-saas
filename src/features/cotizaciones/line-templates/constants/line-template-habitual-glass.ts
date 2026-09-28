@@ -28,6 +28,18 @@ export const LINE_TEMPLATE_HABITUAL_GLASS_OPTIONS = [
     label: "DVH",
   },
   {
+    value: buildGlassValue("DVH", "4+10+5"),
+    label: "DVH 19 mm · 4+10+5",
+  },
+  {
+    value: buildGlassValue("DVH", "6+10+6"),
+    label: "DVH 22 mm · 6+10+6",
+  },
+  {
+    value: buildGlassValue("DVH", "4+16+4"),
+    label: "DVH 24 mm",
+  },
+  {
     value: buildGlassValue("Templado", "6mm"),
     label: "Templado",
   },

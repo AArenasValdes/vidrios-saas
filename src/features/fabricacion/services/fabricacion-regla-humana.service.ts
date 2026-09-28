@@ -292,6 +292,8 @@ const MEASURE_LABELS: Record<FabricacionBaseMedida, string> = {
   ancho_modulo: "Ancho de módulo",
   alto_modulo: "Alto de módulo",
   ancho_por_hoja: "Ancho por hoja",
+  ancho_hoja_a: "Ancho de hoja A",
+  ancho_hoja_b: "Ancho de hoja B",
   alto_por_hoja: "Alto de la hoja",
   fijo_mm: "Medida fija",
 };
@@ -302,6 +304,8 @@ const MEASURE_LABELS_TECHNICAL: Record<FabricacionBaseMedida, string> = {
   ancho_modulo: "Ancho de modulo",
   alto_modulo: "Alto de modulo",
   ancho_por_hoja: "Ancho dividido por hojas",
+  ancho_hoja_a: "Ancho de hoja A ingresado",
+  ancho_hoja_b: "Ancho total menos hoja A",
   alto_por_hoja: "Alto total por hoja",
   fijo_mm: "Medida fija",
 };
@@ -355,6 +359,8 @@ function describeMedidaBaseCompacta(regla: FabricacionReglaMedida) {
     return `${fixed.toLocaleString("es-CL")} mm`;
   }
   if (regla.base === "ancho_por_hoja") return "Ancho por hoja";
+  if (regla.base === "ancho_hoja_a") return "Ancho hoja A";
+  if (regla.base === "ancho_hoja_b") return "Ancho hoja B";
   if (regla.base === "alto_por_hoja") return "Alto de la hoja";
   return labelBaseMedida(regla.base, "human");
 }

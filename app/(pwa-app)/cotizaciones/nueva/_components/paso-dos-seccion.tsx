@@ -28,7 +28,10 @@ import { isQuoteStudioDesktopPieceInEdition } from "./paso-dos/quote-studio-desk
 import { resolveQuoteStudioPieceEditionHeadline } from "./paso-dos/quote-studio-piece-edition-label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
-import { anyQuoteItemHasFabricationReview } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import {
+  anyQuoteItemHasFabricationReview,
+  buildQuoteRecipeSeedContextKey,
+} from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import { toast } from "sonner";
 import d from "./paso-dos-panel-desktop.module.css";
 import s from "../page.module.css";
@@ -121,9 +124,15 @@ export function PasoDosSeccion({
   const [constructorActiveItemId, setConstructorActiveItemId] = useState<string | null>(null);
   const [despieceReviewOpen, setDespieceReviewOpen] = useState(false);
   const primarySurfaceRef = useRef<HTMLDivElement>(null);
-  const { recipes: fabricationRecipes, organizationId } = useFabricationRecipes({
+  const {
+    recipes: fabricationRecipes,
+    organizationId,
+    isLoading: isLoadingFabricationRecipes,
+    error: fabricationRecipesError,
+  } = useFabricationRecipes({
     enabled: quoteModeChosen && quotePricingMode === "por_item" && panel.items.length > 0,
     skipStructuralSeed: true,
+    seedContextKey: buildQuoteRecipeSeedContextKey(panel.items),
   });
   const hasFabricationReview = useMemo(
     () =>
@@ -768,6 +777,8 @@ export function PasoDosSeccion({
         isSavingCubicationLineAdjustment={formulario.isSavingCubicationLineAdjustment}
         recipes={fabricationRecipes}
         organizationId={organizationId}
+        isLoadingRecipes={isLoadingFabricationRecipes}
+        recipesError={fabricationRecipesError}
       />
     </div>
   );

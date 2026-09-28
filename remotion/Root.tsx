@@ -55,6 +55,26 @@ import {
   REEL_V006_DURATION,
   REEL_V006_FPS,
 } from "../src/features/video/ReelV006";
+import {
+  ReelPlanSemanal,
+  REEL_PLAN_SEMANAL_DURATION,
+  REEL_PLAN_SEMANAL_FPS,
+} from "../src/features/video/ReelPlanSemanal/ReelPlanSemanal";
+import {
+  ReelPlanSemanal02,
+  REEL_PLAN_SEMANAL_02_DURATION,
+  REEL_PLAN_SEMANAL_02_FPS,
+} from "../src/features/video/ReelPlanSemanal02/ReelPlanSemanal02";
+import {
+  ReelDemostracionReal,
+  REEL_DEMOSTRACION_REAL_DURATION,
+  REEL_DEMOSTRACION_REAL_FPS,
+} from "../src/features/video/ReelDemostracionReal/ReelDemostracionReal";
+import {
+  ReelPrecioLinea,
+  REEL_PRECIO_LINEA_DURATION,
+  REEL_PRECIO_LINEA_FPS,
+} from "../src/features/video/ReelPrecioLinea/ReelPrecioLinea";
 
 const LANDSCAPE_WIDTH = 1920;
 const LANDSCAPE_HEIGHT = 1080;
@@ -202,6 +222,38 @@ export const RemotionRoot = () => {
           musicVolume: 1.15,
           sfxVolume: 1.7,
         }}
+      />
+      <Composition
+        id="VentoraReelPlanSemanal20-27"
+        component={ReelPlanSemanal}
+        durationInFrames={REEL_PLAN_SEMANAL_DURATION}
+        fps={REEL_PLAN_SEMANAL_FPS}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="VentoraReelPlanSemanal2"
+        component={ReelPlanSemanal02}
+        durationInFrames={REEL_PLAN_SEMANAL_02_DURATION}
+        fps={REEL_PLAN_SEMANAL_02_FPS}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="VentoraReelDemostracionReal"
+        component={ReelDemostracionReal}
+        durationInFrames={REEL_DEMOSTRACION_REAL_DURATION}
+        fps={REEL_DEMOSTRACION_REAL_FPS}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="VentoraReelPrecioLinea"
+        component={ReelPrecioLinea}
+        durationInFrames={REEL_PRECIO_LINEA_DURATION}
+        fps={REEL_PRECIO_LINEA_FPS}
+        width={1080}
+        height={1920}
       />
     </>
   );

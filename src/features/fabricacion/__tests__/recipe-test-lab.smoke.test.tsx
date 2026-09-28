@@ -18,7 +18,7 @@ function buildRecipeRecord(): FabricationRecipeRecord {
     leavesCount: 2,
     variant: "estandar",
     version: 1,
-    status: "testing",
+    status: "draft",
     definition: RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO,
     sourceType: "manual",
     sourceReference: null,

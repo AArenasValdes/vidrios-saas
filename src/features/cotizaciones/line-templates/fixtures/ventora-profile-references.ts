@@ -443,72 +443,80 @@ const OPTIMA_S28_3H_PROFILES: LineProfileReference[] = [
   }),
 ];
 
+const WINHOUSE_S75_REFERENCE_SOURCE = "https://winhouse-chile.cl/descargas/";
+
 const WINHOUSE_NEW_S75_DOUBLE_RAIL_PROFILES: LineProfileReference[] = [
-  pendingStudyRef({
-    name: "Marco doble riel New S75",
+  ...[
+    ["7160S00101", "blanco"], ["7193S00001D", "roble dorado"],
+    ["7193S00001B", "nogal"], ["7193S00001L", "grafito"], ["7193S00018Q", "New Black"],
+  ].map(([code, color]) => catalogRef({
+    code,
+    name: `Marco doble riel New S75 · ${color}`,
     role: "Marco",
     provider: "WinHouse",
-    description: "Marco 48 × 75 mm; código interno WinHouse pendiente.",
-  }),
-  pendingStudyRef({
-    name: "Hoja ventana corredera 80 New S75",
+    source: WINHOUSE_S75_REFERENCE_SOURCE,
+    description: `Referencia de color listada en la pauta oficial WinHouse; marco 48 × 75 mm.`,
+  })),
+  ...[
+    ["716CS00102", "blanco"], ["7193S00002D", "roble dorado"],
+    ["7193S00002B", "nogal"], ["7193S00002L", "grafito"], ["7193S00002Q", "New Black"],
+  ].map(([code, color]) => catalogRef({
+    code,
+    name: `Hoja ventana corredera 80 New S75 · ${color}`,
     role: "Hoja",
     provider: "WinHouse",
-  }),
-  pendingStudyRef({
-    name: "Hoja puerta corredera 98 New S75",
+    source: WINHOUSE_S75_REFERENCE_SOURCE,
+  })),
+  ...[
+    ["7160S00104", "blanco"], ["7193S00104D", "roble dorado"],
+    ["7193S00104B", "nogal"], ["7193S00104Q", "New Black"],
+  ].map(([code, color]) => catalogRef({
+    code,
+    name: `Traslapo corredera hoja 80 New S75 · ${color}`,
     role: "Hoja",
     provider: "WinHouse",
-  }),
-  pendingStudyRef({
-    name: "Traslapo hoja 80/98 New S75",
-    role: "Hoja",
-    provider: "WinHouse",
-  }),
-  pendingStudyRef({
-    name: "Refuerzo Box New S75",
-    role: "Refuerzo",
-    provider: "WinHouse",
-  }),
-  pendingStudyRef({
-    name: "Junquillo New S75",
-    role: "Otro",
-    provider: "WinHouse",
-  }),
+    source: WINHOUSE_S75_REFERENCE_SOURCE,
+  })),
+  ...[
+    ["716CS00105", "blanco"], ["7193S00105D", "roble dorado"],
+    ["7193S00105B", "nogal"], ["7193S00105L", "grafito"], ["7193S00105Q", "New Black"],
+  ].map(([code, color]) => catalogRef({ code, name: `Junquillo corredera New S75 · monolítico 3–5 mm · ${color}`, role: "Otro", provider: "WinHouse", source: WINHOUSE_S75_REFERENCE_SOURCE })),
+  catalogRef({ code: "716CZ00479", name: "Junquillo corredera New S75 · referencia de pauta monolítico 4–6 mm · color por confirmar", role: "Otro", provider: "WinHouse", source: WINHOUSE_S75_REFERENCE_SOURCE }),
+  ...[
+    ["716CS00106", "blanco"], ["7193S00106D", "roble dorado"],
+    ["7193S00106B", "nogal"], ["7193S00106Q", "New Black"],
+  ].map(([code, color]) => catalogRef({ code, name: `Junquillo corredera New S75 · termopanel 17–20 mm · ${color}`, role: "Otro", provider: "WinHouse", source: WINHOUSE_S75_REFERENCE_SOURCE })),
+  pendingStudyRef({ name: "Junquillo corredera New S75 · termopanel 17–20 mm · grafito", role: "Otro", provider: "WinHouse" }),
+  ...[
+    ["716CZ00004", "blanco"], ["7193Z00004D", "roble dorado"],
+    ["7193Z00004B", "nogal"], ["7193Z00004L", "grafito"], ["7193Z00004Q", "New Black"],
+  ].map(([code, color]) => catalogRef({ code, name: `Junquillo corredera New S75 · termopanel 20–22 mm · ${color}`, role: "Otro", provider: "WinHouse", source: WINHOUSE_S75_REFERENCE_SOURCE })),
+  pendingStudyRef({ name: "Refuerzo de marco Box 1,2 mm New S75 · asociar código/color", role: "Refuerzo", provider: "WinHouse" }),
+  pendingStudyRef({ name: "Riel aluminio New S75 · asociar código de catálogo/taller", role: "Marco", provider: "WinHouse" }),
+  pendingStudyRef({ name: "Traslapo puerta corredera 98 New S75 · completar variantes de color", role: "Hoja", provider: "WinHouse" }),
+  pendingStudyRef({ name: "Refuerzo hoja 98 mm 2 mm New S75", role: "Refuerzo", provider: "WinHouse" }),
 ];
 
 const WINHOUSE_NEW_S75_TRIPLE_RAIL_PROFILES: LineProfileReference[] = [
-  pendingStudyRef({
-    name: "Marco triple riel New S75",
+  ...[
+    ["7160S00114", "blanco"], ["7193S00014D", "roble dorado"],
+    ["7193S00014B", "nogal"], ["7193S00014L", "grafito"], ["7193S00019Q", "New Black"],
+  ].map(([code, color]) => catalogRef({
+    code,
+    name: `Marco triple riel New S75 · ${color}`,
     role: "Marco",
     provider: "WinHouse",
-    description: "Marco 48 × 135 mm; código interno WinHouse pendiente.",
-  }),
-  pendingStudyRef({
-    name: "Hoja ventana corredera 80 New S75",
-    role: "Hoja",
-    provider: "WinHouse",
-  }),
-  pendingStudyRef({
-    name: "Hoja puerta corredera 98 New S75",
-    role: "Hoja",
-    provider: "WinHouse",
-  }),
-  pendingStudyRef({
-    name: "Traslapo hoja 80/98 New S75",
-    role: "Hoja",
-    provider: "WinHouse",
-  }),
-  pendingStudyRef({
-    name: "Refuerzo Box New S75",
-    role: "Refuerzo",
-    provider: "WinHouse",
-  }),
-  pendingStudyRef({
-    name: "Junquillo New S75",
-    role: "Otro",
-    provider: "WinHouse",
-  }),
+    source: WINHOUSE_S75_REFERENCE_SOURCE,
+    description: "Referencia de color listada en la pauta oficial WinHouse; marco 48 × 135 mm.",
+  })),
+  ...WINHOUSE_NEW_S75_DOUBLE_RAIL_PROFILES.filter((profile) =>
+    /Hoja ventana|Traslapo corredera hoja 80|Junquillo/.test(profile.name)
+  ),
+  pendingStudyRef({ name: "Refuerzo de marco Box triple riel 1,2 mm New S75 · asociar código/color", role: "Refuerzo", provider: "WinHouse" }),
+  pendingStudyRef({ name: "Riel aluminio triple riel New S75 · asociar código de catálogo/taller", role: "Marco", provider: "WinHouse" }),
+  pendingStudyRef({ name: "Hoja puerta corredera 98 New S75 · código por color pendiente", role: "Hoja", provider: "WinHouse" }),
+  pendingStudyRef({ name: "Traslapo puerta corredera 98 New S75 · código por color pendiente", role: "Hoja", provider: "WinHouse" }),
+  pendingStudyRef({ name: "Refuerzo hoja 98 mm 2 mm New S75", role: "Refuerzo", provider: "WinHouse" }),
 ];
 
 const WINHOUSE_S60_PROFILES: LineProfileReference[] = [

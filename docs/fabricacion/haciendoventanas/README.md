@@ -4,6 +4,18 @@ Fecha de consulta: **2026-09-19**
 Fuente: [haceventanas.com](https://www.haceventanas.com/#appMain)  
 Estado de acceso: sesión autenticada visible en la aplicación (`alessandroreal2.0@gmail.com`, plan Gratis).
 
+## Actualización WinHouse New S75 — 2026-09-26
+
+Se capturaron en una pasada independiente las 12 opciones PVC WinHouse New S75
+del selector de Haceventanas. La matriz por variante, largos, cantidades, vidrio
+y límites de evidencia está en
+[`2026-09-26-winhouse-new-s75.md`](./2026-09-26-winhouse-new-s75.md).
+El cruce de la pauta Excel y las fichas técnicas oficiales WinHouse está en
+[`2026-09-26-winhouse-new-s75-fuentes-oficiales.md`](./2026-09-26-winhouse-new-s75-fuentes-oficiales.md).
+Las fórmulas de la pauta quedan como reglas candidatas hasta normalizar las 12
+variantes y validar los valores de borde; estos documentos no activan recetas
+en Ventora.
+
 ## Alcance
 
 Esta pasada cruza únicamente las 13 coincidencias exactas ya clasificadas entre

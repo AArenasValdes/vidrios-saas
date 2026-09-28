@@ -17,6 +17,7 @@ export type FabricacionCorteBarra = {
   componenteId: string;
   codigoPerfil: string;
   funcion: string;
+  corte?: string | null;
   largoMm: number;
 };
 

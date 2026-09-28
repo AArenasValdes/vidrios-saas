@@ -32,11 +32,11 @@ describe("auditoria integridad catalogo lineas", () => {
 
       codigos_documentados_no_validados: 9,
 
-      codigos_referenciales_no_ambiguos: 16,
+      codigos_referenciales_no_ambiguos: 18,
 
       codigos_referenciales_ambiguos: 1,
 
-      sin_codigos_tecnicos_en_fixtures: 5,
+      sin_codigos_tecnicos_en_fixtures: 3,
 
       solo_comercial: 0,
 
@@ -46,7 +46,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
     expect(resumen.nomenclaturaAmbigua).toBe(1);
 
-    expect(resumen.conCodigosReferencialesEnFixtures).toBe(26);
+    expect(resumen.conCodigosReferencialesEnFixtures).toBe(28);
 
     expect(resumen.gateTecnico.listaParaProbar).toBe(17);
 
@@ -136,7 +136,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
 
 
-    expect(sinCodigos).toHaveLength(5);
+    expect(sinCodigos).toHaveLength(3);
 
     expect(sinCodigos.map((line) => line.catalogKey).sort()).toEqual(
 
@@ -148,10 +148,6 @@ describe("auditoria integridad catalogo lineas", () => {
 
 
         "ventora:winhouse-andes-proyectante",
-
-        "ventora:winhouse-new-s75-doble-riel",
-
-        "ventora:winhouse-new-s75-triple-riel",
 
       ].sort()
 

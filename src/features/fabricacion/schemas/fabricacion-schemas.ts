@@ -298,6 +298,7 @@ export const fabricacionRecetaSchema = z
 export const fabricacionEntradaCalculoSchema = z
   .object({
     anchoTotalMm: integerPositiveSchema,
+    anchoHojaAMm: integerPositiveSchema.nullable().optional(),
     altoTotalMm: integerPositiveSchema,
     cantidad: integerPositiveSchema,
     hojas: integerPositiveSchema,
@@ -334,6 +335,7 @@ export const fabricacionFilaPautaSchema = z
     codigoPerfil: z.string(),
     nombrePerfil: z.string(),
     funcion: z.string().min(1),
+    corte: z.string().nullable().optional(),
     medidaMm: integerPositiveSchema,
     cantidadPiezas: integerPositiveSchema,
     totalLinealMm: integerNonNegativeSchema,

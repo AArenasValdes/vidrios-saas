@@ -49,6 +49,7 @@ import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/s
 import { resolveAperturaForRecipeMatch } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 import { buildFabricationRecipeSummary } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
+import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
 import { FabricationVariantSelector } from "@/features/fabricacion/components/fabrication-variant-selector";
 import {
   formatSodalL25ContextualLineName,
@@ -63,7 +64,17 @@ import {
 } from "@/features/fabricacion/services/sodal-l25-context.service";
 import { resolveFabricationRecipe } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
 import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
+import {
+  WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY,
+  WINHOUSE_NEW_S75_TRIPLE_CATALOG_KEY,
+  WINHOUSE_NEW_S75_VARIANTS,
+} from "@/features/fabricacion/fixtures/winhouse-new-s75-recipes";
+import {
+  resolveWinHouseNewS75GlassBand,
+  resolveWinHouseNewS75QuoteVariant,
+} from "@/features/fabricacion/services/winhouse-new-s75-quote-config.service";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
+import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
 import editor from "./pauta-cubicacion-panel.module.css";
 
@@ -86,6 +97,7 @@ export type PautaCubicacionFormSlice = {
   fabricacionApertura?: string;
   fabricacionHerraje?: string;
   fabricacionVariante?: string;
+  fabricacionAnchoHojaAMm?: number | null;
   catalogLineKey?: string;
   fabricacionGlazing?: string;
   fabricacionLeg?: string;
@@ -93,6 +105,33 @@ export type PautaCubicacionFormSlice = {
   fabricacionSnapshot?: FabricacionCotizacionSnapshot | null;
   cubicationSnapshot?: CotizacionItemCubicationSnapshot | null;
 };
+
+function isPreviewableWinHouseDraft(input: {
+  recipe: FabricationRecipeRecord;
+  catalogKey: string | null;
+  widthMm: number;
+  heightMm: number;
+  quantity: number;
+}): boolean {
+  if (
+    !input.catalogKey?.startsWith("ventora:winhouse-") ||
+    input.recipe.status === "validated" ||
+    input.widthMm <= 0 ||
+    input.heightMm <= 0 ||
+    input.quantity <= 0
+  ) {
+    return false;
+  }
+
+  return calcularCubicacionYPauta(input.recipe.definition, {
+    anchoTotalMm: input.widthMm,
+    altoTotalMm: input.heightMm,
+    cantidad: input.quantity,
+    hojas: input.recipe.definition.identidad.hojas,
+    modulos: input.recipe.definition.identidad.modulos,
+    variante: input.recipe.definition.identidad.variante,
+  }).calculable;
+}
 
 type Props = {
   componentForm: PautaCubicacionFormSlice;
@@ -108,6 +147,7 @@ type Props = {
     apertura: string;
     herraje: string;
     variante: string;
+    anchoHojaAMm: number | null;
   }) => void;
   onFabricacionL25ConfigChange?: (value: {
     catalogLineKey: string;
@@ -330,6 +370,7 @@ export function PautaCubicacionPanel({
     organizationId,
     recipes: persistedRecipes,
     isLoading: isLoadingPersistedRecipes,
+    error: persistedRecipeError,
   } = useFabricationRecipes({
     enabled: Number.isInteger(numericLineTemplateId) && numericLineTemplateId > 0,
     lineTemplateId:
@@ -355,6 +396,52 @@ export function PautaCubicacionPanel({
     selectedTemplate?.catalogKey ||
     null;
   const isSodalL25Line = isSodalL25CatalogKey(catalogKey);
+  const selectedS75Variant = WINHOUSE_NEW_S75_VARIANTS.find(
+    (variant) => variant.slug === componentForm.fabricacionVariante
+  );
+  const s75LineRailCount =
+    catalogKey === WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY
+      ? 2
+      : catalogKey === WINHOUSE_NEW_S75_TRIPLE_CATALOG_KEY
+        ? 3
+        : null;
+  const resolvedS75Variant = s75LineRailCount
+    ? resolveWinHouseNewS75QuoteVariant({
+        catalogKey,
+        tipologia: explicitTipologia,
+        hojas: effectiveFabricacionHojas,
+        vidrio: componentForm.vidrio,
+        variantHint: componentForm.fabricacionVariante,
+        componentName: componentForm.tipo,
+        system: componentForm.sistema,
+      }).variant
+    : null;
+  const s75GlassBand =
+    resolveWinHouseNewS75GlassBand(componentForm.vidrio) ??
+    selectedS75Variant?.glassBand ??
+    resolvedS75Variant?.glassBand ??
+    "mono_4_6";
+  const s75VariantOptions =
+    s75LineRailCount
+      ? WINHOUSE_NEW_S75_VARIANTS.filter(
+          (variant) =>
+            variant.railCount === s75LineRailCount &&
+            variant.glassBand === s75GlassBand
+        )
+      : [];
+  const selectedS75Geometry =
+    selectedS75Variant?.geometrySlug ??
+    resolvedS75Variant?.geometrySlug ??
+    (s75LineRailCount === 3
+      ? "triple_riel_3h_simetrica_80"
+      : "doble_riel_2h_simetrica_80");
+  const needsS75LeafAWidth = Boolean(
+    catalogKey === WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY &&
+      selectedS75Geometry.startsWith("doble_riel_2h_asimetrica_")
+  );
+  const s75LeafAWidth = componentForm.fabricacionAnchoHojaAMm ?? null;
+  const s75LeafAWidthValid =
+    s75LeafAWidth != null && s75LeafAWidth > 0 && s75LeafAWidth < widthMm;
   const inferredGlazing = inferSodalL25GlazingFromGlass({
     vidrio: componentForm.vidrio,
     catalogEspesor: selectedTemplate?.catalogMetadata
@@ -487,12 +574,23 @@ export function PautaCubicacionPanel({
     const technicalGate =
       selectedPersistedRecipe.status === "validated" ||
       evaluarRecetaListaParaProbar(selectedPersistedRecipe.definition).listaParaProbar;
-    return compositionComplete && technicalGate;
-  }, [selectedPersistedRecipe]);
+    const calculableWinHouseDraft = isPreviewableWinHouseDraft({
+      recipe: selectedPersistedRecipe,
+      catalogKey,
+      widthMm,
+      heightMm,
+      quantity,
+    });
+    // Las recetas Ventora WinHouse se muestran como pauta preliminar cuando
+    // sus fórmulas sí calculan, aunque el taller aún deba completar códigos,
+    // largos comerciales u otros datos de validación.
+    return (compositionComplete && technicalGate) || calculableWinHouseDraft;
+  }, [catalogKey, heightMm, quantity, selectedPersistedRecipe, widthMm]);
   const formalSnapshot = useMemo(() => {
     if (
       !selectedPersistedRecipe ||
       !selectedPersistedRecipeReady ||
+      (needsS75LeafAWidth && !s75LeafAWidthValid) ||
       widthMm <= 0 ||
       heightMm <= 0 ||
       quantity <= 0
@@ -504,6 +602,7 @@ export function PautaCubicacionPanel({
       recipe: selectedPersistedRecipe,
       entrada: {
         anchoTotalMm: widthMm,
+        anchoHojaAMm: s75LeafAWidth,
         altoTotalMm: heightMm,
         cantidad: quantity,
         hojas: selectedPersistedRecipe.definition.identidad.hojas,
@@ -521,6 +620,9 @@ export function PautaCubicacionPanel({
     quantity,
     selectedPersistedRecipe,
     selectedPersistedRecipeReady,
+    needsS75LeafAWidth,
+    s75LeafAWidth,
+    s75LeafAWidthValid,
     widthMm,
   ]);
   const formalLegacySnapshot = useMemo(
@@ -546,7 +648,9 @@ export function PautaCubicacionPanel({
       current?.input.anchoTotalMm === formalSnapshot.input.anchoTotalMm &&
       current?.input.altoTotalMm === formalSnapshot.input.altoTotalMm &&
       current?.input.cantidad === formalSnapshot.input.cantidad;
-    if (alreadySynced) return;
+    const sameLeafAWidth =
+      current?.input.anchoHojaAMm === formalSnapshot.input.anchoHojaAMm;
+    if (alreadySynced && sameLeafAWidth) return;
 
     onFabricationRecipeIdChange?.(selectedPersistedRecipe.id);
     onFabricacionContextoChange?.({
@@ -559,6 +663,7 @@ export function PautaCubicacionPanel({
         "",
       herraje: selectedPersistedRecipe.definition.identidad.herraje ?? "",
       variante: selectedPersistedRecipe.definition.identidad.variante,
+      anchoHojaAMm: s75LeafAWidth,
     });
     onFabricacionSnapshotChange?.(formalSnapshot);
     onCubicationSnapshotChange(formalLegacySnapshot);
@@ -971,6 +1076,7 @@ export function PautaCubicacionPanel({
       apertura: recipe.definition.identidad.apertura ?? pieceApertura ?? "",
       herraje: recipe.definition.identidad.herraje ?? "",
       variante: recipe.definition.identidad.variante,
+      anchoHojaAMm: s75LeafAWidth,
     });
 
     const compositionComplete = buildFabricationRecipeSummary(
@@ -978,8 +1084,21 @@ export function PautaCubicacionPanel({
     ).compositionComplete;
     const technicalGate =
       recipe.status === "validated" ||
-      evaluarRecetaListaParaProbar(recipe.definition).listaParaProbar;
-    if (!compositionComplete || !technicalGate || widthMm <= 0 || heightMm <= 0) {
+      evaluarRecetaListaParaProbar(recipe.definition).listaParaProbar ||
+      isPreviewableWinHouseDraft({
+        recipe,
+        catalogKey,
+        widthMm,
+        heightMm,
+        quantity,
+      });
+    if (
+      !compositionComplete ||
+      !technicalGate ||
+      (needsS75LeafAWidth && !s75LeafAWidthValid) ||
+      widthMm <= 0 ||
+      heightMm <= 0
+    ) {
       onFabricacionSnapshotChange?.(null);
       onCubicationSnapshotChange(null);
       return;
@@ -989,6 +1108,7 @@ export function PautaCubicacionPanel({
       recipe,
       entrada: {
         anchoTotalMm: widthMm,
+        anchoHojaAMm: s75LeafAWidth,
         altoTotalMm: heightMm,
         cantidad: quantity,
         hojas: recipe.definition.identidad.hojas,
@@ -1002,8 +1122,12 @@ export function PautaCubicacionPanel({
     );
   };
 
-  const waitingReason = isSodalL25Line && sodalConfig && !sodalConfig.complete
+  const waitingReason = persistedRecipeError
+    ? `No se pudo cargar la receta de fabricación: ${persistedRecipeError}`
+    : isSodalL25Line && sodalConfig && !sodalConfig.complete
     ? "Selecciona la configuración L25 para generar la pauta de corte."
+    : needsS75LeafAWidth && !s75LeafAWidthValid
+      ? "Indica el ancho de la hoja A; la hoja B se calcula con el ancho restante."
     : needsVariantChoice
     ? "Elige la variante de fabricación para esta configuración."
     : !selectedTemplate
@@ -1036,6 +1160,79 @@ export function PautaCubicacionPanel({
         : !hasCuts
           ? "Con estas medidas aún no hay cortes para mostrar."
           : null;
+
+  const s75LeafWidthControl = needsS75LeafAWidth ? (
+    <label className={editor.s75LeafSplitControl}>
+      <span>Ancho hoja A (mm)</span>
+      <input
+        type="number"
+        min={1}
+        max={Math.max(1, widthMm - 1)}
+        step={1}
+        value={s75LeafAWidth ?? ""}
+        onChange={(event) => {
+          const raw = event.currentTarget.value;
+          const nextWidth = raw.trim() ? parsePositiveIntegerInput(raw, 0) : null;
+          onFabricacionContextoChange?.({
+            tipologia: selectedPersistedRecipe?.definition.identidad.tipologia ?? explicitTipologia ?? "corredera",
+            hojas: selectedPersistedRecipe?.definition.identidad.hojas ?? 2,
+            modulos: selectedPersistedRecipe?.definition.identidad.modulos ?? 2,
+            apertura: selectedPersistedRecipe?.definition.identidad.apertura ?? "corredera",
+            herraje: selectedPersistedRecipe?.definition.identidad.herraje ?? "",
+            variante: componentForm.fabricacionVariante ?? "",
+            anchoHojaAMm: nextWidth,
+          });
+          onFabricacionSnapshotChange?.(null);
+          onCubicationSnapshotChange(null);
+        }}
+        aria-label="Ancho de la hoja A en milímetros"
+      />
+      <small>
+        {s75LeafAWidthValid
+          ? `Hoja B: ${formatMm(widthMm - s75LeafAWidth)}`
+          : "La hoja A debe ser menor que el ancho total."}
+      </small>
+    </label>
+  ) : null;
+
+  const s75GeometryControl = s75LineRailCount ? (
+    <label className={editor.s75GeometryControl}>
+      <span>Configuración de corte WinHouse New S75</span>
+      <select
+        aria-label="Configuración de corte WinHouse New S75"
+        value={selectedS75Geometry}
+        disabled={s75VariantOptions.length === 0}
+        onChange={(event) => {
+          const nextVariant = s75VariantOptions.find(
+            (variant) => variant.geometrySlug === event.currentTarget.value
+          );
+          if (!nextVariant) return;
+
+          const isTwoLeafAsymmetric =
+            nextVariant.geometrySlug.startsWith("doble_riel_2h_asimetrica_");
+          onFabricationRecipeIdChange?.("");
+          onFabricacionContextoChange?.({
+            tipologia: nextVariant.typology,
+            hojas: nextVariant.leaves,
+            modulos: nextVariant.leaves,
+            apertura: "corredera",
+            herraje: "",
+            variante: nextVariant.slug,
+            anchoHojaAMm: isTwoLeafAsymmetric ? s75LeafAWidth : null,
+          });
+          onFabricacionSnapshotChange?.(null);
+          onCubicationSnapshotChange(null);
+        }}
+      >
+        {s75VariantOptions.map((variant) => (
+          <option key={variant.geometrySlug} value={variant.geometrySlug}>
+            {variant.geometryLabel}
+          </option>
+        ))}
+      </select>
+      <small>El vidrio elegido selecciona automáticamente la banda de junquillo de la pauta.</small>
+    </label>
+  ) : null;
 
 
   if (
@@ -1133,6 +1330,8 @@ export function PautaCubicacionPanel({
         </header>
         <div className={editor.cubicacionWaiting}>
           {waitingReason}
+          {s75GeometryControl}
+          {s75LeafWidthControl}
           {isSodalL25Line && sodalConfig && effectiveFabricacionHojas ? (
             <FabricationVariantSelector
               recipes={persistedRecipes}
@@ -1208,6 +1407,9 @@ export function PautaCubicacionPanel({
         </em>
       </header>
 
+
+      {s75GeometryControl}
+      {s75LeafWidthControl}
       <div className={editor.cubicacionHero} aria-label="Resumen de cubicación">
         <span>
           <small>{personalizadoAssistMode ? "Vidrio (vano)" : "Vidrio"}</small>
@@ -1261,7 +1463,8 @@ export function PautaCubicacionPanel({
         </p>
       ) : !isValidated ? (
         <p className={editor.cubicacionNotice}>
-          Pauta sugerida. Revisa la línea antes de usarla como fabricación.
+          Configuración sugerida por Ventora. Revísala y ajústala según cómo trabaja tu taller.
+          Esta pauta aún no ha sido validada por tu taller.
         </p>
       ) : null}
 

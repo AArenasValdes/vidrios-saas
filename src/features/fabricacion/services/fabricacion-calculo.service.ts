@@ -99,6 +99,12 @@ function baseMedidaMm(regla: FabricacionReglaMedida, entrada: FabricacionEntrada
       return entrada.altoTotalMm / entrada.modulos;
     case "ancho_por_hoja":
       return entrada.anchoTotalMm / entrada.hojas;
+    case "ancho_hoja_a":
+      return entrada.anchoHojaAMm ?? 0;
+    case "ancho_hoja_b":
+      return entrada.anchoHojaAMm == null
+        ? 0
+        : entrada.anchoTotalMm - entrada.anchoHojaAMm;
     case "alto_por_hoja":
       return entrada.altoTotalMm;
     case "fijo_mm":
@@ -127,6 +133,7 @@ function calcularMedida(
         : `redondear((${regla.base} ${base}) x ${multiplicador} + ${ajuste} mm)`,
     entrada: {
       anchoTotalMm: entrada.anchoTotalMm,
+      anchoHojaAMm: entrada.anchoHojaAMm ?? null,
       altoTotalMm: entrada.altoTotalMm,
       hojas: entrada.hojas,
       modulos: entrada.modulos,
@@ -227,6 +234,7 @@ function validarEntradaCalculo(
     ok: true,
     data: {
       anchoTotalMm: entrada.anchoTotalMm,
+      anchoHojaAMm: entrada.anchoHojaAMm ?? null,
       altoTotalMm: entrada.altoTotalMm,
       cantidad: entrada.cantidad,
       hojas: entrada.hojas,
@@ -255,6 +263,22 @@ export function calcularCubicacionYPauta(
     ...entradaParse.data,
     variante: entradaParse.data.variante ?? receta.identidad.variante,
   };
+
+  const requiresLeafAWidth = [...receta.perfiles.map((profile) => profile.reglaMedida), ...receta.vidrios.flatMap((glass) => [glass.reglaAncho, glass.reglaAlto])]
+    .some((rule) => rule.base === "ancho_hoja_a" || rule.base === "ancho_hoja_b");
+  if (
+    requiresLeafAWidth &&
+    (entradaNormalizada.anchoHojaAMm == null ||
+      entradaNormalizada.anchoHojaAMm <= 0 ||
+      entradaNormalizada.anchoHojaAMm >= entradaNormalizada.anchoTotalMm)
+  ) {
+    advertencias.push({
+      codigo: "ANCHO_HOJA_A_REQUERIDO",
+      nivel: "error",
+      mensaje: "Indica un ancho A mayor que 0 y menor que el ancho total para calcular la corredera asimétrica.",
+    });
+    return emptyResult(receta, advertencias, entradaNormalizada);
+  }
 
   if (!matchesObservedMeasure(receta, entradaNormalizada)) {
     advertencias.push({
@@ -299,6 +323,7 @@ export function calcularCubicacionYPauta(
         codigoPerfil: perfil.codigoPerfil,
         nombrePerfil: perfil.nombrePerfil,
         funcion: perfil.funcion,
+        corte: perfil.corte ?? null,
         medidaMm,
         cantidadPiezas: cantidad.valor,
         totalLinealMm: medidaMm * cantidad.valor,

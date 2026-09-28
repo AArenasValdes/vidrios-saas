@@ -37,6 +37,7 @@ import {
 import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
+import { resolveFabricacionContextFromLineCatalog } from "@/features/fabricacion/services/fabricacion-linea-cotizacion-context.service";
 import { applySodalL25VidrioToForm } from "@/features/fabricacion/services/sodal-l25-context.service";
 import {
   resolveEffectiveSodalL25CatalogKey,
@@ -134,6 +135,7 @@ export type PasoDosGrupoDraft = {
   fabricacionApertura: string;
   fabricacionHerraje: string;
   fabricacionVariante: string;
+  fabricacionAnchoHojaAMm: number | null;
   catalogLineKey: string;
   fabricacionGlazing: string;
   fabricacionLeg: string;
@@ -580,6 +582,17 @@ export function applyLineTemplateToGrupoDraft(
   >
 ): PasoDosGrupoDraft {
   const glassMetadata = getLineTemplateGlassMetadata(template.catalogMetadata);
+  const catalogLineKey =
+    resolveEffectiveSodalL25CatalogKey({
+      catalogKey: template.catalogKey,
+      nombre: template.nombre,
+    }) ??
+    template.catalogKey ??
+    "";
+  const fabricationContext = resolveFabricacionContextFromLineCatalog({
+    catalogKey: catalogLineKey,
+    catalogMetadata: template.catalogMetadata,
+  });
 
   return syncDraftTemplatePricing({
     ...draft,
@@ -589,20 +602,15 @@ export function applyLineTemplateToGrupoDraft(
     catalogTerminacion: glassMetadata.terminacion ?? "",
     lineTemplateId: String(template.id),
     cubicationSnapshot: null,
-    fabricationRecipeId: "",
-    fabricacionTipologia: "",
-    fabricacionHojas: null,
-    fabricacionModulos: null,
-    fabricacionApertura: "",
-    fabricacionHerraje: "",
-    fabricacionVariante: "",
-    catalogLineKey:
-      resolveEffectiveSodalL25CatalogKey({
-        catalogKey: template.catalogKey,
-        nombre: template.nombre,
-      }) ??
-      template.catalogKey ??
-      "",
+    fabricationRecipeId: fabricationContext?.fabricationRecipeId ?? "",
+    fabricacionTipologia: fabricationContext?.fabricacionTipologia ?? "",
+    fabricacionHojas: fabricationContext?.fabricacionHojas ?? null,
+    fabricacionModulos: fabricationContext?.fabricacionModulos ?? null,
+    fabricacionApertura: fabricationContext?.fabricacionApertura ?? "",
+    fabricacionHerraje: fabricationContext?.fabricacionHerraje ?? "",
+    fabricacionVariante: fabricationContext?.fabricacionVariante ?? "",
+    fabricacionAnchoHojaAMm: null,
+    catalogLineKey,
     fabricacionGlazing: "",
     fabricacionLeg: "",
     fabricacionReinforcement: "",
@@ -916,6 +924,7 @@ export function createInitialPasoDosGrupoDraft({
     fabricacionApertura: seedForm?.fabricacionApertura ?? "",
     fabricacionHerraje: seedForm?.fabricacionHerraje ?? "",
     fabricacionVariante: seedForm?.fabricacionVariante ?? "",
+    fabricacionAnchoHojaAMm: seedForm?.fabricacionAnchoHojaAMm ?? null,
     catalogLineKey: seedForm?.catalogLineKey ?? "",
     fabricacionGlazing: seedForm?.fabricacionGlazing ?? "",
     fabricacionLeg: seedForm?.fabricacionLeg ?? "",
@@ -1032,6 +1041,7 @@ export function buildPasoDosGrupoComponentForm({
     fabricacionApertura: syncedDraft.fabricacionApertura,
     fabricacionHerraje: syncedDraft.fabricacionHerraje,
     fabricacionVariante: syncedDraft.fabricacionVariante,
+    fabricacionAnchoHojaAMm: syncedDraft.fabricacionAnchoHojaAMm,
     catalogLineKey: syncedDraft.catalogLineKey,
     fabricacionGlazing: syncedDraft.fabricacionGlazing,
     fabricacionLeg: syncedDraft.fabricacionLeg,
@@ -1721,16 +1731,24 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     apertura: string;
     herraje: string;
     variante: string;
+    anchoHojaAMm: number | null;
   }) => {
-    setDraft((current) => ({
-      ...current,
-      fabricacionTipologia: value.tipologia,
-      fabricacionHojas: value.hojas,
-      fabricacionModulos: value.modulos,
-      fabricacionApertura: value.apertura,
-      fabricacionHerraje: value.herraje,
-      fabricacionVariante: value.variante,
-    }));
+    setDraft((current) => {
+      const splitChanged = current.fabricacionAnchoHojaAMm !== value.anchoHojaAMm;
+      return {
+        ...current,
+        fabricacionTipologia: value.tipologia,
+        fabricacionHojas: value.hojas,
+        fabricacionModulos: value.modulos,
+        fabricacionApertura: value.apertura,
+        fabricacionHerraje: value.herraje,
+        fabricacionVariante: value.variante,
+        fabricacionAnchoHojaAMm: value.anchoHojaAMm,
+        ...(splitChanged
+          ? { fabricacionSnapshot: null, cubicationSnapshot: null }
+          : {}),
+      };
+    });
   };
 
   const updateFabricacionL25Config = (value: {

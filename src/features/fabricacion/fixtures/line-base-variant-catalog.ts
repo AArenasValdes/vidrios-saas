@@ -60,6 +60,19 @@ import {
   VERATEC_7400_SOURCE_REVISION,
   VERATEC_7400_SOURCE_VARIANTS,
 } from "@/features/fabricacion/fixtures/veratec-7400-corredera-recipe";
+import {
+  crearRecetaWinHouseS60Candidata,
+  WINHOUSE_S60_CANDIDATE_VARIANTS,
+  WINHOUSE_S60_CATALOG_KEY,
+  WINHOUSE_S60_SOURCE_REVISION,
+} from "@/features/fabricacion/fixtures/winhouse-s60-recipes";
+import {
+  crearRecetaWinHouseNewS75,
+  WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY,
+  WINHOUSE_NEW_S75_SOURCE_REVISION,
+  WINHOUSE_NEW_S75_TRIPLE_CATALOG_KEY,
+  WINHOUSE_NEW_S75_VARIANTS,
+} from "@/features/fabricacion/fixtures/winhouse-new-s75-recipes";
 import type { FabricacionReceta, FabricacionTipologia } from "@/features/fabricacion/types/fabricacion-domain";
 import type { FabricationRecipeSourceType } from "@/features/fabricacion/types/fabricacion-persistence";
 import { VENTORA_LARGO_COMERCIAL_PRESET_MM } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
@@ -72,6 +85,9 @@ export const BASE_LINE_CATALOG_KEYS = [
   "ventora:l32",
   "ventora:l42",
   VERATEC_7400_CATALOG_KEY,
+  WINHOUSE_S60_CATALOG_KEY,
+  WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY,
+  WINHOUSE_NEW_S75_TRIPLE_CATALOG_KEY,
 ] as const;
 
 export type BaseLineCatalogKey = (typeof BASE_LINE_CATALOG_KEYS)[number];
@@ -416,6 +432,89 @@ export const LINE_BASE_VARIANT_CATALOG: Partial<Record<BaseLineCatalogKey, LineV
         }),
     };
   }),
+  [WINHOUSE_S60_CATALOG_KEY]: WINHOUSE_S60_CANDIDATE_VARIANTS.map((variant) => ({
+    typology: variant.typology,
+    leavesCount: variant.leaves,
+    modulesCount: variant.leaves,
+    variantSlug: variant.slug,
+    variantLabel: variant.label,
+    apertura: variant.aperture,
+    sourceType: "supplier",
+    sourceName: "Alumétrica · WinHouse S60",
+    sourceRevision: WINHOUSE_S60_SOURCE_REVISION,
+    evidenceLevel: "documented",
+    complete: variant.kind === "fixed",
+    pendingFields: [
+      ...variant.pending,
+      ...(variant.kind === "fixed"
+        ? [
+            "Confirmar identidad del perfil físico con el código de taller",
+            "Confirmar largo comercial, kerf y despunte antes de validar la pauta",
+            "Probar con una fabricación real antes de validar",
+          ]
+        : [
+            "Confirmar identidad del perfil físico y cruzarlo con el catálogo de taller",
+            "Confirmar largo comercial, kerf y despunte antes de pauta por barra",
+            "Completar herrajes/accesorios y probar con una fabricación real",
+          ]),
+    ],
+    sourceReference: `alumetrica:winhouse-s60:card-${variant.card}:v2`,
+    buildDefinition: ({ lineName }) =>
+      crearRecetaWinHouseS60Candidata({ lineName, variant: variant.slug }),
+  })),
+  [WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY]: WINHOUSE_NEW_S75_VARIANTS
+    .filter((variant) => variant.railCount === 2)
+    .map((variant) => ({
+      typology: variant.typology,
+      leavesCount: variant.leaves,
+      modulesCount: variant.leaves,
+      variantSlug: variant.slug,
+      variantLabel: variant.label,
+      apertura: "corredera",
+      sourceType: "supplier",
+      sourceName: "WinHouse",
+      sourceRevision: WINHOUSE_NEW_S75_SOURCE_REVISION,
+      evidenceLevel: "documented",
+      complete: variant.complete,
+      pendingFields: variant.complete
+        ? [
+            "Asignar los códigos físicos de perfil según color y taller",
+            "Definir kerf, despunte y sobrante aprovechable propios del taller",
+            "Revisar refuerzos condicionales al superar 2300 mm de alto",
+            "Probar las fórmulas con una fabricación real antes de validar",
+          ]
+        : [
+            "Faltan anchos A/B/C por hoja; el motor actual no calcula anchos asimétricos",
+            "Completar reglas diferenciadas de vidrio, refuerzo, junquillo y traslapo por hoja",
+          ],
+      sourceReference: `winhouse:new-s75:${variant.slug}:${WINHOUSE_NEW_S75_SOURCE_REVISION}`,
+      buildDefinition: ({ lineName }) =>
+        crearRecetaWinHouseNewS75({ lineName, variant: variant.slug }),
+    })),
+  [WINHOUSE_NEW_S75_TRIPLE_CATALOG_KEY]: WINHOUSE_NEW_S75_VARIANTS
+    .filter((variant) => variant.railCount === 3)
+    .map((variant) => ({
+      typology: variant.typology,
+      leavesCount: variant.leaves,
+      modulesCount: variant.leaves,
+      variantSlug: variant.slug,
+      variantLabel: variant.label,
+      apertura: "corredera",
+      sourceType: "supplier",
+      sourceName: "WinHouse",
+      sourceRevision: WINHOUSE_NEW_S75_SOURCE_REVISION,
+      evidenceLevel: "documented",
+      complete: variant.complete,
+      pendingFields: [
+        "Asignar los códigos físicos de perfil según color y taller",
+        "Definir kerf, despunte y sobrante aprovechable propios del taller",
+        "Revisar refuerzos condicionales al superar 2300 mm de alto",
+        "Probar las fórmulas con una fabricación real antes de validar",
+      ],
+      sourceReference: `winhouse:new-s75:${variant.slug}:${WINHOUSE_NEW_S75_SOURCE_REVISION}`,
+      buildDefinition: ({ lineName }) =>
+        crearRecetaWinHouseNewS75({ lineName, variant: variant.slug }),
+    })),
 };
 
 const SERIE_4800_VARIANT_SLOTS: LineVariantSlot[] = [

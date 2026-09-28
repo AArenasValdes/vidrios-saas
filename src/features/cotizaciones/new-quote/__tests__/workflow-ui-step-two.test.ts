@@ -35,6 +35,7 @@ import { getSystemOptionsForComponent } from "../../services/component-catalog.s
 import { calculateComponentItem } from "../../services/cotizaciones-workflow.service";
 import type { CotizacionLineTemplate } from "../../line-templates/types/cotizacion-line-template";
 import type { CotizacionWorkflowItem } from "../../types/cotizacion-workflow";
+import { WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY } from "@/features/fabricacion/fixtures/winhouse-new-s75-recipes";
 import { decodeCotizacionItemPresentationMeta, encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import {
   countPalilloSplits,
@@ -200,6 +201,48 @@ describe("workflow-ui paso 2", () => {
       },
       { lineTemplates: [template] }
     ).precioPorM2).toBe("100000");
+  });
+
+  it("conserva la variante S75 elegida al hidratar de nuevo la línea para cotizar", () => {
+    const template: CotizacionLineTemplate = {
+      id: 226,
+      nombre: "WinHouse New S75 — Doble riel",
+      categoria: "pvc",
+      material: "PVC",
+      catalogKey: null,
+      catalogMetadata: {},
+      vidrioPrincipalRecomendado: "DVH 4+10+5",
+      precioM2Sugerido: 80000,
+      minimoCobrable: 35000,
+      redondeoPrecio: 0,
+    };
+    const form = createLinePricingForm({
+      referencia: "",
+      catalogLineKey: WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY,
+      lineTemplateId: "226",
+      fabricacionHojas: 4,
+      fabricacionModulos: 4,
+      fabricacionVariante: "doble_riel_4h_80_dvh_17_20",
+      fabricationRecipeId: "",
+      fabricacionSnapshot: null,
+    });
+
+    const hydrated = hydrateComponentFormFromLineTemplate(form, {
+      lineTemplates: [template],
+      fabricationRecipes: [],
+    });
+
+    expect(hydrated.fabricacionHojas).toBe(4);
+    expect(hydrated.fabricacionModulos).toBe(4);
+    expect(hydrated.fabricacionVariante).toBe("doble_riel_4h_80_dvh_17_20");
+    expect(hydrated.fabricationRecipeId).toBe("");
+
+    const item = buildItemFromForm(hydrated, [], "s75-4h", {
+      lineTemplates: [template],
+    });
+    const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
+    expect(presentation.fabricacionHojas).toBe(4);
+    expect(presentation.fabricacionVariante).toBe("doble_riel_4h_80_dvh_17_20");
   });
 
   it("debe regenerar el nombre comercial cuando cambia el tipo y queda un nombre viejo", () => {

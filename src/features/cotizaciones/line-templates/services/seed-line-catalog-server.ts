@@ -52,7 +52,7 @@ export async function seedDefaultLineCatalogServer(
     async listAllTemplates(orgId) {
       const { data, error } = await admin
         .from("cotizacion_line_templates")
-        .select("catalog_key")
+        .select("catalog_key, vidrio_principal_recomendado")
         .eq("organization_id", orgId)
         .is("eliminado_en", null);
 
@@ -63,7 +63,10 @@ export async function seedDefaultLineCatalogServer(
         throw error;
       }
 
-      return (data ?? []) as Array<{ catalog_key?: string | null }>;
+      return (data ?? []) as Array<{
+        catalog_key?: string | null;
+        vidrio_principal_recomendado?: string | null;
+      }>;
     },
 
     async insertTemplate(payload) {
@@ -74,6 +77,27 @@ export async function seedDefaultLineCatalogServer(
       if (error) {
         throw error;
       }
+    },
+
+    async setRecommendedGlassIfEmpty(orgId, catalogKey, glass) {
+      const blankResult = await admin
+        .from("cotizacion_line_templates")
+        .update({ vidrio_principal_recomendado: glass })
+        .eq("organization_id", orgId)
+        .eq("catalog_key", catalogKey)
+        .eq("vidrio_principal_recomendado", "")
+        .is("eliminado_en", null);
+      if (blankResult.error) throw blankResult.error;
+
+      const nullResult = await admin
+        .from("cotizacion_line_templates")
+        .update({ vidrio_principal_recomendado: glass })
+        .eq("organization_id", orgId)
+        .eq("catalog_key", catalogKey)
+        .is("vidrio_principal_recomendado", null)
+        .is("eliminado_en", null);
+
+      if (nullResult.error) throw nullResult.error;
     },
   };
 

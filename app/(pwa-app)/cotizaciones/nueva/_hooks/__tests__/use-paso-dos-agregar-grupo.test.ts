@@ -6,6 +6,7 @@ import {
   buildPasoDosGrupoComponentForm,
   buildPasoDosGrupoSummary,
   buildStructuredAlcanceDetalleItem,
+  applyLineTemplateToGrupoDraft,
   createInitialPasoDosGrupoDraft,
   getConfigurationOptionsForSubtype,
   getSubtypeOptionsForCategory,
@@ -66,6 +67,45 @@ function createDraft(overrides: Record<string, unknown> = {}) {
 }
 
 describe("use-paso-dos-agregar-grupo helpers", () => {
+  it("preserva el contexto de fabricación de las líneas WinHouse al agregarlas a una cotización", () => {
+    const s60 = applyLineTemplateToGrupoDraft(createDraft(), {
+      id: 225,
+      nombre: "WinHouse S60",
+      categoria: "pvc",
+      material: "PVC",
+      catalogKey: "ventora:winhouse-s60",
+      catalogMetadata: { lineConfiguration: "Abatible / doble contacto" },
+      vidrioPrincipalRecomendado: "Incoloro monolítico 4mm",
+      precioM2Sugerido: 80000,
+      minimoCobrable: 35000,
+      redondeoPrecio: 1000,
+    });
+
+    expect(s60.catalogLineKey).toBe("ventora:winhouse-s60");
+    expect(s60.fabricacionTipologia).toBe("abatible");
+    expect(s60.fabricacionHojas).toBe(1);
+    expect(s60.material).toBe("PVC");
+
+    const s75 = applyLineTemplateToGrupoDraft(createDraft(), {
+      id: 226,
+      nombre: "WinHouse New S75 — Doble riel",
+      categoria: "pvc",
+      material: "PVC",
+      catalogKey: "ventora:winhouse-new-s75-doble-riel",
+      catalogMetadata: { lineConfiguration: "Doble riel" },
+      vidrioPrincipalRecomendado: "DVH 4+10+5",
+      precioM2Sugerido: 80000,
+      minimoCobrable: 35000,
+      redondeoPrecio: 1000,
+    });
+
+    expect(s75.catalogLineKey).toBe("ventora:winhouse-new-s75-doble-riel");
+    expect(s75.fabricacionTipologia).toBe("corredera");
+    expect(s75.fabricacionHojas).toBe(2);
+    expect(s75.material).toBe("PVC");
+    expect(s75.vidrio).toBe("DVH 4+10+5");
+  });
+
   it("debe sembrar el flujo desde el formulario actual cuando ya existe contexto", () => {
     const draft = createInitialPasoDosGrupoDraft({
       items: [],

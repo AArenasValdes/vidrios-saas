@@ -119,6 +119,8 @@ export const FABRICACION_BASES_MEDIDA = [
   "ancho_modulo",
   "alto_modulo",
   "ancho_por_hoja",
+  "ancho_hoja_a",
+  "ancho_hoja_b",
   "alto_por_hoja",
   "fijo_mm",
 ] as const;
@@ -289,6 +291,8 @@ export type FabricacionReceta = {
 
 export type FabricacionEntradaCalculo = {
   anchoTotalMm: number;
+  /** Ancho A ingresado para pautas de hojas asimétricas. B se deriva del ancho total. */
+  anchoHojaAMm?: number | null;
   altoTotalMm: number;
   cantidad: number;
   hojas: number;
@@ -312,6 +316,8 @@ export type FabricacionFilaPauta = {
   codigoPerfil: string;
   nombrePerfil: string;
   funcion: string;
+  /** Ángulos de corte publicados por la fuente; no altera la regla de largo. */
+  corte?: string | null;
   medidaMm: number;
   cantidadPiezas: number;
   totalLinealMm: number;

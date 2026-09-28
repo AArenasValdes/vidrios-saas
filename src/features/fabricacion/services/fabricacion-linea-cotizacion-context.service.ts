@@ -19,6 +19,11 @@ import {
   isSodalL25CatalogKey,
   resolveSodalL25QuoteConfig,
 } from "@/features/fabricacion/services/sodal-l25-context.service";
+import {
+  resolveWinHouseS60QuoteTypology,
+  resolveWinHouseS60QuoteVariant,
+} from "@/features/fabricacion/services/winhouse-s60-quote-config.service";
+import { resolveWinHouseNewS75QuoteVariant } from "@/features/fabricacion/services/winhouse-new-s75-quote-config.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import { countLeafModules } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 
@@ -31,6 +36,12 @@ export type FabricacionLineaCotizacionContext = {
   fabricacionHerraje: string;
   fabricacionVariante: string;
 };
+
+const WINHOUSE_CATALOG_KEYS = new Set([
+  "ventora:winhouse-s60",
+  "ventora:winhouse-new-s75-doble-riel",
+  "ventora:winhouse-new-s75-triple-riel",
+]);
 
 function normalizeLineTemplateId(value: string | number | null | undefined): number | null {
   if (typeof value === "number" && Number.isInteger(value) && value > 0) return value;
@@ -212,22 +223,37 @@ export function resolveFabricacionContextForLineAssignment(input: {
     (recipe) => recipe.lineTemplateId === lineTemplateId && !recipe.eliminadoEn
   );
 
-  const tipologiaHint =
-    input.form.fabricacionTipologia ||
-    inferirTipologiaFabricacionPieza({
+  const inferredTipologia = inferirTipologiaFabricacionPieza({
       tipo: input.form.tipo,
       nombre: input.form.nombre,
       descripcion: input.form.descripcion,
       sistema: input.form.sistema,
       configuracion: input.form.configuracion,
-    }) ||
-    catalogContext?.fabricacionTipologia ||
-    null;
+    });
+  // Al cambiar la línea comercial, no heredar la tipología de la pieza anterior:
+  // por ejemplo, una Ventana corredera genérica no convierte S60 en corredera.
+  const hasAuthoritativeWinHouseContext = WINHOUSE_CATALOG_KEYS.has(
+    input.template.catalogKey ?? ""
+  );
+  const explicitS60Typology = input.template.catalogKey === "ventora:winhouse-s60"
+    ? resolveWinHouseS60QuoteTypology({
+        selectedTypology: input.form.fabricacionTipologia,
+        componentType: input.form.tipo,
+        componentName: input.form.nombre,
+        description: input.form.descripcion,
+      })
+    : null;
+  const tipologiaHint = hasAuthoritativeWinHouseContext
+    ? explicitS60Typology || catalogContext?.fabricacionTipologia || inferredTipologia || null
+    : input.form.fabricacionTipologia ||
+      inferredTipologia ||
+      catalogContext?.fabricacionTipologia ||
+      null;
 
   const guidedVisualLeafCount = input.form.guidedVisualConfig?.root
     ? countLeafModules(input.form.guidedVisualConfig.root)
     : null;
-  const hojasHint =
+  const resolvedHojasHint =
     resolveCommercialFabricacionHojas({
       sheetScheme: input.form.sheetScheme,
       fabricacionHojas: input.form.fabricacionHojas,
@@ -235,8 +261,40 @@ export function resolveFabricacionContextForLineAssignment(input: {
       guidedVisualLeafCount:
         guidedVisualLeafCount && guidedVisualLeafCount > 0 ? guidedVisualLeafCount : null,
     }) ?? catalogContext?.fabricacionHojas ?? null;
+  const hojasHint =
+    input.template.catalogKey === "ventora:winhouse-s60" &&
+    (explicitS60Typology === "pano_fijo" || explicitS60Typology === "proyectante")
+      ? 1
+      : hasAuthoritativeWinHouseContext &&
+          input.template.catalogKey !== "ventora:winhouse-s60"
+        ? catalogContext?.fabricacionHojas ?? resolvedHojasHint
+        : resolvedHojasHint;
 
   if (tipologiaHint && lineRecipes.length > 0) {
+    const s60Config = resolveWinHouseS60QuoteVariant({
+      catalogKey: input.template.catalogKey,
+      tipologia: tipologiaHint,
+      hojas: hojasHint,
+      vidrio: input.form.vidrio,
+    });
+    const s60Variant = s60Config.variant || input.form.fabricacionVariante?.trim() || null;
+    const s75Config = resolveWinHouseNewS75QuoteVariant({
+      catalogKey: input.template.catalogKey,
+      tipologia: tipologiaHint,
+      hojas: hojasHint,
+      vidrio: input.form.vidrio,
+      variantHint: input.form.fabricacionVariante,
+      configuration: input.form.configuracion,
+      componentName: input.form.nombre,
+      system: input.form.sistema,
+    });
+    const s75Variant = s75Config.variant?.slug || null;
+    if (s60Config.handled && !s60Config.variant && !input.form.fabricacionVariante?.trim()) {
+      return catalogContext;
+    }
+    if (s75Config.handled && !s75Config.variant) {
+      return catalogContext;
+    }
     const sodalConfig = isSodalL25CatalogKey(input.template.catalogKey)
       ? resolveSodalL25QuoteConfig({
           catalogKey: input.template.catalogKey,
@@ -288,6 +346,26 @@ export function resolveFabricacionContextForLineAssignment(input: {
               variante: l20Variante,
               allowPreliminaryNonValidated: false,
             })
+          : s75Variant
+            ? resolveFabricationRecipe(lineRecipes, {
+                organizationId: input.organizationId,
+                lineTemplateId,
+                catalogKey: input.template.catalogKey,
+                tipologia: tipologiaHint,
+                hojas: hojasHint,
+                variante: s75Variant,
+                allowPreliminaryNonValidated: false,
+              })
+          : s60Variant
+            ? resolveFabricationRecipe(lineRecipes, {
+                organizationId: input.organizationId,
+                lineTemplateId,
+                catalogKey: input.template.catalogKey,
+                tipologia: tipologiaHint,
+                hojas: hojasHint,
+                variante: s60Variant,
+                allowPreliminaryNonValidated: false,
+              })
           : resolverRecetaFabricacionCompatible(lineRecipes, {
               organizationId: input.organizationId,
               lineTemplateId,
@@ -323,6 +401,45 @@ export function resolveFabricacionContextForLineAssignment(input: {
     if (tipologiasCoinciden && formCoincide) {
       return contextFromRecipe(validated[0]);
     }
+  }
+
+  const selectedS60 = resolveWinHouseS60QuoteVariant({
+    catalogKey: input.template.catalogKey,
+    tipologia: tipologiaHint,
+    hojas: hojasHint,
+    vidrio: input.form.vidrio,
+  });
+  const selectedS75 = resolveWinHouseNewS75QuoteVariant({
+    catalogKey: input.template.catalogKey,
+    tipologia: tipologiaHint,
+    hojas: hojasHint,
+    vidrio: input.form.vidrio,
+    variantHint: input.form.fabricacionVariante,
+    configuration: input.form.configuracion,
+    componentName: input.form.nombre,
+    system: input.form.sistema,
+  });
+  if (selectedS75.variant && tipologiaHint) {
+    return {
+      fabricacionTipologia: tipologiaHint,
+      fabricacionHojas: hojasHint,
+      fabricacionModulos: hojasHint,
+      fabricationRecipeId: "",
+      fabricacionApertura: "corredera",
+      fabricacionHerraje: "",
+      fabricacionVariante: selectedS75.variant.slug,
+    };
+  }
+  if (selectedS60.variant && tipologiaHint) {
+    return {
+      fabricacionTipologia: tipologiaHint,
+      fabricacionHojas: hojasHint,
+      fabricacionModulos: hojasHint,
+      fabricationRecipeId: "",
+      fabricacionApertura: "",
+      fabricacionHerraje: "",
+      fabricacionVariante: selectedS60.variant,
+    };
   }
 
   return catalogContext;

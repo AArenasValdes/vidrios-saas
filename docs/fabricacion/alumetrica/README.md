@@ -20,6 +20,8 @@ compatibilidades ni reglas de fabricación.
 
 ## Archivos
 
+- `2026-09-26-winhouse-s60-auditoria.md`: extracción de las 32 tarjetas S60; registra fórmulas visibles y contradicciones que bloquean la integración como recetas.
+- `2026-09-26-winhouse-s60-matriz-reglas.md`: cruce de fuentes oficiales WinHouse con las 32 tarjetas; inventario de aperturas, perfiles, fórmulas candidatas y pendientes separados para cubicación, despiece y pauta.
 - `2026-09-21-veratec-7400.md`: ficha VERATEC 7400, perfiles, fórmulas, herrajes y contradicciones preservadas; monolítico 4 mm listo para probar, TP 20/24 bloqueados.
 - `2026-09-19-matriz-lineas.md`: matriz Alumétrica ↔ Ventora, líneas nuevas y brechas.
 - `2026-09-19-formulas-observadas.md`: índice de fórmulas visibles; L5000 en este archivo,

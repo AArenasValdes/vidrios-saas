@@ -35,7 +35,7 @@ export function FabricacionBarraCorte({
       mm: cut.largoMm,
       kind: "cut" as const,
       label: formatMm(cut.largoMm),
-      title: `${cut.funcion || "Corte"}: ${formatMm(cut.largoMm)} mm`,
+      title: `${cut.funcion || "Corte"}: ${formatMm(cut.largoMm)} mm${cut.corte ? ` · ${cut.corte}` : ""}`,
     })),
     ...(bar.sobranteMm > 0
       ? [

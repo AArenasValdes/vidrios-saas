@@ -1,5 +1,9 @@
 import { isVentoraCatalogKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import {
+  WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY,
+  WINHOUSE_NEW_S75_TRIPLE_CATALOG_KEY,
+} from "@/features/fabricacion/fixtures/winhouse-new-s75-recipes";
+import {
   buildSeedPayloadForVariantSlot,
   findRecipeForVariantSlot,
   listMissingVariantSlots,
@@ -23,6 +27,24 @@ export type SeedLineVariantRecipesDeps = {
   insertVariantRecipe: (payload: Record<string, unknown>) => Promise<void>;
 };
 
+function resolveVariantSeedCatalogKey(row: LineTemplateVariantSeedRow): string | null {
+  if (isVentoraCatalogKey(row.catalog_key)) return row.catalog_key!;
+
+  const name = row.nombre
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const provider = (row.proveedor ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  if (!name.includes("winhouse") || !name.includes("s75")) return null;
+  if (provider && !provider.includes("winhouse")) return null;
+  if (name.includes("triple")) return WINHOUSE_NEW_S75_TRIPLE_CATALOG_KEY;
+  if (name.includes("doble")) return WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY;
+  return null;
+}
+
 /**
  * Inserta recetas faltantes por variante documentada (idempotente).
  * No sobrescribe recetas existentes ni variantes ya presentes.
@@ -32,7 +54,10 @@ export async function seedLineVariantRecipesForOrganization(
   deps: SeedLineVariantRecipesDeps
 ): Promise<{ seeded: number; skipped: number }> {
   const templates = await deps.listVentoraLineTemplates(organizationId);
-  const ventoraLines = templates.filter((row) => isVentoraCatalogKey(row.catalog_key));
+  const ventoraLines = templates.flatMap((row) => {
+    const catalogKey = resolveVariantSeedCatalogKey(row);
+    return catalogKey ? [{ ...row, catalog_key: catalogKey }] : [];
+  });
   if (ventoraLines.length === 0) {
     return { seeded: 0, skipped: 0 };
   }
@@ -68,26 +93,19 @@ export async function seedLineVariantRecipesForOrganization(
         continue;
       }
 
-      try {
-        const payload = buildSeedPayloadForVariantSlot({
-          organizationId,
-          lineTemplateId: line.id,
-          lineName: line.nombre,
-          providerName: line.proveedor,
-          catalogKey: line.catalog_key,
-          slot,
-        });
-        await deps.insertVariantRecipe(payload);
-        seeded += 1;
-      } catch (error) {
-        console.warn(
-          "[seedLineVariantRecipesForOrganization] insert failed",
-          line.catalog_key,
-          slot.sourceReference,
-          error
-        );
-        skipped += 1;
-      }
+      const payload = buildSeedPayloadForVariantSlot({
+        organizationId,
+        lineTemplateId: line.id,
+        lineName: line.nombre,
+        providerName: line.proveedor,
+        catalogKey: line.catalog_key,
+        slot,
+      });
+      // Let persistence failures reach the caller. Previously each failure was
+      // counted as a skipped slot, making the quote screen appear as if no
+      // fabrication rules existed.
+      await deps.insertVariantRecipe(payload);
+      seeded += 1;
     }
   }
 

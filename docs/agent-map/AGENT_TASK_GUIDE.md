@@ -89,6 +89,12 @@ Reglas:
 8. Cotización + línea: `fabricacion-linea-cotizacion-context.service.ts`, `workflow-ui.ts` (`hydrateComponentFormFromLineTemplate`)
 9. Print: `app/print/cotizaciones/[id]/fabricacion/`
 
+Flujo obligatorio para nuevas líneas y comando smoke automatizado:
+
+- Leer `docs/fabricacion/WORKFLOW_INTEGRAR_NUEVA_LINEA.md` antes de crear/registrar variantes.
+- Copiar `docs/fabricacion/PLANTILLA_INTEGRACION_LINEA.md` a la carpeta de evidencia; añadir casos numéricos independientes por variante y regresiones en cada tramo afectado.
+- Cerrar con `pnpm fabrication:verify` (pruebas, tipos, rutas y documentación), `--build` si cambia aplicación, y smoke en navegador. El informe distingue lo automático de lo no comprobado; no llamar validada a una receta por pasar tests de motor.
+
 ### Decisión Camino 2 (2026-07-19) — obligatoria
 
 - **No ampliar** `LINE_TEMPLATE_CUBICATION_SYSTEMS` con bow / abatible ventana / proyectante / etc.

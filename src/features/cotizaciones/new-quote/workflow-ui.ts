@@ -20,6 +20,11 @@ import {
 } from "@/features/fabricacion/services/fabricacion-linea-cotizacion-context.service";
 import { SODAL_L25_CATALOG_KEY } from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
 import {
+  WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY,
+  WINHOUSE_NEW_S75_TRIPLE_CATALOG_KEY,
+  WINHOUSE_NEW_S75_VARIANTS,
+} from "@/features/fabricacion/fixtures/winhouse-new-s75-recipes";
+import {
   inferSodalL25GlazingFromGlass,
   resolveSodalL25FabricacionSnapshot,
   resolveSodalL25QuoteConfig,
@@ -80,9 +85,25 @@ import {
 export function resolveComponentFabricacionHojas(form: {
   sheetScheme?: string | null;
   fabricacionHojas?: number | null;
+  fabricacionVariante?: string | null;
+  referencia?: string | null;
+  catalogLineKey?: string | null;
   hojasBase?: number | null;
   guidedVisualConfig?: ComponentFormState["guidedVisualConfig"];
 }): number | null {
+  const winHouseS75Variant = WINHOUSE_NEW_S75_VARIANTS.find(
+    (variant) => variant.slug === form.fabricacionVariante
+  );
+  const normalizedLineIdentity = (form.referencia ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const isWinHouseS75Line =
+    form.catalogLineKey === WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY ||
+    form.catalogLineKey === WINHOUSE_NEW_S75_TRIPLE_CATALOG_KEY ||
+    (normalizedLineIdentity.includes("winhouse") && normalizedLineIdentity.includes("s75"));
+  if (isWinHouseS75Line && winHouseS75Variant) return winHouseS75Variant.leaves;
+
   const guidedVisualLeafCount = form.guidedVisualConfig?.root
     ? countLeafModules(form.guidedVisualConfig.root)
     : null;
@@ -154,6 +175,7 @@ export type ComponentFormState = {
   fabricacionApertura?: string;
   fabricacionHerraje?: string;
   fabricacionVariante?: string;
+  fabricacionAnchoHojaAMm?: number | null;
   catalogLineKey?: string;
   fabricacionGlazing?: string;
   fabricacionLeg?: string;
@@ -1738,13 +1760,46 @@ export function hydrateComponentFormFromLineTemplate(
   });
 
   const withFabricacion = mergeFabricacionLineaContextIntoForm(form, fabricationContext);
+  const selectedWinHouseS75Variant = WINHOUSE_NEW_S75_VARIANTS.find(
+    (variant) => variant.slug === form.fabricacionVariante
+  );
+  const normalizedTemplateName = (template.nombre ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const templateIdentifiesS75Double =
+    template.catalogKey === WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY ||
+    form.catalogLineKey === WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY ||
+    (normalizedTemplateName.includes("winhouse") &&
+      normalizedTemplateName.includes("s75") &&
+      normalizedTemplateName.includes("doble"));
+  const templateIdentifiesS75Triple =
+    template.catalogKey === WINHOUSE_NEW_S75_TRIPLE_CATALOG_KEY ||
+    form.catalogLineKey === WINHOUSE_NEW_S75_TRIPLE_CATALOG_KEY ||
+    (normalizedTemplateName.includes("winhouse") &&
+      normalizedTemplateName.includes("s75") &&
+      normalizedTemplateName.includes("triple"));
+  const s75VariantMatchesTemplate =
+    selectedWinHouseS75Variant != null &&
+    ((templateIdentifiesS75Double && selectedWinHouseS75Variant.railCount === 2) ||
+      (templateIdentifiesS75Triple && selectedWinHouseS75Variant.railCount === 3));
+  const effectiveWithFabricacion = s75VariantMatchesTemplate
+    ? {
+        ...withFabricacion,
+        fabricacionHojas: form.fabricacionHojas ?? selectedWinHouseS75Variant.leaves,
+        fabricacionModulos:
+          form.fabricacionModulos ?? form.fabricacionHojas ?? selectedWinHouseS75Variant.leaves,
+        fabricacionVariante: selectedWinHouseS75Variant.slug,
+        fabricationRecipeId: form.fabricationRecipeId ?? "",
+      }
+    : withFabricacion;
 
   if (form.precioAjustadoManual || !isLineTemplatePricingSource(template)) {
-    return withFabricacion;
+    return effectiveWithFabricacion;
   }
 
-  const precioPorM2 = withFabricacion.precioPorM2?.trim() ?? "";
-  const referencia = withFabricacion.referencia?.trim() ?? "";
+  const precioPorM2 = effectiveWithFabricacion.precioPorM2?.trim() ?? "";
+  const referencia = effectiveWithFabricacion.referencia?.trim() ?? "";
   const templatePrice = Math.round(template.precioM2Sugerido);
   const commercialName = resolveSodalL25CommercialLineDisplayName({
     catalogKey: template.catalogKey,
@@ -1757,14 +1812,24 @@ export function hydrateComponentFormFromLineTemplate(
     (referencia !== template.nombre && referencia !== commercialName);
 
   if (!needsPricingHydration) {
-    return withFabricacion;
+    return effectiveWithFabricacion;
   }
 
-  return applyLineTemplateToComponentForm(withFabricacion, template, {
+  const appliedTemplateForm = applyLineTemplateToComponentForm(effectiveWithFabricacion, template, {
     fabricationContext,
     fabricationRecipes: options?.fabricationRecipes,
     organizationId: options?.organizationId,
   });
+  return s75VariantMatchesTemplate
+    ? {
+        ...appliedTemplateForm,
+        fabricacionHojas: form.fabricacionHojas ?? selectedWinHouseS75Variant.leaves,
+        fabricacionModulos:
+          form.fabricacionModulos ?? form.fabricacionHojas ?? selectedWinHouseS75Variant.leaves,
+        fabricacionVariante: selectedWinHouseS75Variant.slug,
+        fabricationRecipeId: form.fabricationRecipeId ?? "",
+      }
+    : appliedTemplateForm;
 }
 
 function resolveLineTemplateCatalogMetadataForForm(
@@ -2270,6 +2335,7 @@ export function buildSuggestedComponentForm(
     fabricacionApertura: current.fabricacionApertura ?? "",
     fabricacionHerraje: current.fabricacionHerraje ?? "",
     fabricacionVariante: current.fabricacionVariante ?? "",
+    fabricacionAnchoHojaAMm: current.fabricacionAnchoHojaAMm ?? null,
     fabricacionSnapshot: current.fabricacionSnapshot ?? null,
   };
 }
@@ -2369,6 +2435,7 @@ export function mapRecordToDraft(record: CotizacionWorkflowRecord): CotizacionWo
     margenGlobalPct: record.margenGlobalPct ?? 100,
     utilidadTotal: record.utilidadTotal ?? 0,
     totalClienteManual: record.totalClienteManual ?? null,
+    mostrarIva: record.mostrarIva ?? true,
     quoteStudioFinancial: createQuoteStudioFinancialDraft(record.quoteStudioFinancial),
   };
 }
@@ -2435,6 +2502,7 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     fabricacionApertura,
     fabricacionHerraje,
     fabricacionVariante,
+    fabricacionAnchoHojaAMm,
     catalogLineKey,
     fabricacionGlazing,
     fabricacionLeg,
@@ -2555,6 +2623,8 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
       fabricacionVariante ||
       item.fabricacionSnapshot?.selectedVariant ||
       "",
+    fabricacionAnchoHojaAMm:
+      fabricacionAnchoHojaAMm ?? item.fabricacionSnapshot?.input.anchoHojaAMm ?? null,
     catalogLineKey:
       resolveEffectiveSodalL25CatalogKey({
         catalogLineKey,
@@ -2711,6 +2781,9 @@ export function buildItemFromForm(
   const resolvedFabricacionHojas = resolveComponentFabricacionHojas({
     sheetScheme,
     fabricacionHojas: syncedForm.fabricacionHojas,
+    fabricacionVariante: syncedForm.fabricacionVariante,
+    referencia: syncedForm.referencia,
+    catalogLineKey: syncedForm.catalogLineKey,
     hojasBase,
     guidedVisualConfig: syncedForm.guidedVisualConfig,
   });
@@ -2768,6 +2841,8 @@ export function buildItemFromForm(
       (syncedForm.alto ? Math.round(Number(syncedForm.alto)) : 0) &&
     syncedForm.fabricacionSnapshot.input.cantidad ===
       Math.round(Number(syncedForm.cantidad || 1)) &&
+    (syncedForm.fabricacionSnapshot.input.anchoHojaAMm ?? null) ===
+      (syncedForm.fabricacionAnchoHojaAMm ?? null) &&
     (!syncedForm.fabricacionTipologia ||
       syncedForm.fabricacionSnapshot.recipeIdentity.tipologia ===
         syncedForm.fabricacionTipologia) &&
@@ -2847,6 +2922,7 @@ export function buildItemFromForm(
       fabricacionApertura: syncedForm.fabricacionApertura,
       fabricacionHerraje: syncedForm.fabricacionHerraje,
       fabricacionVariante: sodalConfig?.variantSlug || syncedForm.fabricacionVariante,
+      fabricacionAnchoHojaAMm: syncedForm.fabricacionAnchoHojaAMm ?? null,
       catalogLineKey: resolvedCatalogLineKey,
       fabricacionGlazing: sodalConfig?.glazing || syncedForm.fabricacionGlazing,
       fabricacionLeg: syncedForm.fabricacionLeg,
@@ -2908,6 +2984,7 @@ export function applyQuotePricingToItems(
       fabricacionApertura,
       fabricacionHerraje,
       fabricacionVariante,
+      fabricacionAnchoHojaAMm,
       fabricationRecipeId,
     } = decodeCotizacionItemPresentationMeta(item.observaciones);
 
@@ -2973,6 +3050,7 @@ export function applyQuotePricingToItems(
         fabricacionApertura,
         fabricacionHerraje,
         fabricacionVariante,
+        fabricacionAnchoHojaAMm,
         fabricationRecipeId,
         cubicationSnapshot: null,
         raw,

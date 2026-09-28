@@ -25,7 +25,7 @@ describe("ventora profile references", () => {
     ]);
   });
 
-  it("deja Óptima S-28 y PVC sin códigos inventados", () => {
+  it("deja Óptima S-28 pendiente y mantiene S75 como referencia documental", () => {
     const optima = getVentoraProfileReferencesForCatalogKey(
       "ventora:optima-s28-corredera-2h"
     );
@@ -36,7 +36,11 @@ describe("ventora profile references", () => {
     expect(optima?.profiles.length).toBeGreaterThan(0);
     expect(pvc?.profiles.length).toBeGreaterThan(0);
     expect(optima?.profiles.every((profile) => profile.code == null)).toBe(true);
-    expect(pvc?.profiles.every((profile) => profile.code == null)).toBe(true);
+    expect(pvc?.profiles.filter((profile) => profile.code != null)).toHaveLength(29);
+    expect(pvc?.profiles[0]).toMatchObject({ code: "7160S00101", codeStatus: "catalog_reference" });
+    expect(pvc?.profiles.filter((profile) => profile.code != null).every((profile) => profile.codeStatus === "catalog_reference")).toBe(true);
+    expect(pvc?.profiles.filter((profile) => profile.code == null)).toHaveLength(5);
+    expect(pvc?.profiles.filter((profile) => profile.code == null).every((profile) => profile.codeStatus === "pending_validation")).toBe(true);
     expect(
       optima?.profiles.every(
         (profile) => profile.codeStatus === "pending_validation"

@@ -19,6 +19,7 @@ type CorteExpandido = {
   codigoPerfil: string;
   nombrePerfil: string;
   funcion: string;
+  corte: string | null;
   largoMm: number;
   largoComercialMm: number;
 };
@@ -91,6 +92,7 @@ export function construirPautaBarrasFabricacion(input: {
         codigoPerfil,
         nombrePerfil: perfil.nombrePerfil.trim() || fila.nombrePerfil || fila.funcion,
         funcion: fila.funcion,
+        corte: fila.corte ?? null,
         largoMm: fila.medidaMm,
         largoComercialMm,
       });
@@ -151,6 +153,7 @@ export function construirPautaBarrasFabricacion(input: {
       componenteId: corte.componenteId,
       codigoPerfil: corte.codigoPerfil,
       funcion: corte.funcion,
+      corte: corte.corte,
       largoMm: corte.largoMm,
     });
   });

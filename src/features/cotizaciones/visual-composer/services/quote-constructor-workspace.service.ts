@@ -78,6 +78,12 @@ export type QuoteConstructorItemPatch = Partial<
     | "guidedVisualConfig"
     | "cubicationSnapshot"
     | "fabricacionSnapshot"
+    | "fabricacionVariante"
+    | "fabricationRecipeId"
+    | "fabricacionAnchoHojaAMm"
+    | "fabricacionHojas"
+    | "fabricacionModulos"
+    | "catalogLineKey"
   >
 > & {
   markPriceManual?: boolean;
@@ -152,7 +158,13 @@ export function isQuoteConstructorCompatibleItem(item: CotizacionWorkflowItem) {
   if (item.tipoItem === "item_libre_con_valor") return false;
   if (getQuoteConstructorItemConfig(item)) return true;
   const type = textField(item.tipo).toLocaleLowerCase("es");
-  return type === "ventana" || type === "puerta" || type === "trabajo personalizado";
+  return (
+    type === "ventana" ||
+    type === "puerta" ||
+    type === "paño fijo" ||
+    type === "pano fijo" ||
+    type === "trabajo personalizado"
+  );
 }
 
 export function moveQuoteConstructorItem(

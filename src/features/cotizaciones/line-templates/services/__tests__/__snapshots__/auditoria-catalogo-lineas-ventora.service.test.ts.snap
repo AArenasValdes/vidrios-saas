@@ -229,7 +229,7 @@ exports[`auditoria-catalogo-lineas-ventora.service resume estados del catálogo 
   },
   {
     "catalogKey": "ventora:winhouse-new-s75-doble-riel",
-    "codigos": 0,
+    "codigos": 29,
     "fabricacionEstado": "fabricacion_pendiente",
     "listaParaProbar": false,
     "nombre": "WinHouse New S75 — Doble riel",
@@ -238,7 +238,7 @@ exports[`auditoria-catalogo-lineas-ventora.service resume estados del catálogo 
   },
   {
     "catalogKey": "ventora:winhouse-new-s75-triple-riel",
-    "codigos": 0,
+    "codigos": 29,
     "fabricacionEstado": "fabricacion_pendiente",
     "listaParaProbar": false,
     "nombre": "WinHouse New S75 — Triple riel",

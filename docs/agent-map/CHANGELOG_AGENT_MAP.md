@@ -2,6 +2,33 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-27 - Verificación repetible para integrar líneas
+
+- `pnpm fabrication:verify` descubre suites de fabricación, catálogo, cotización y print; ejecuta regresiones, TypeScript y comprobación documental de rutas. `--build` añade compilación; no ejecuta migraciones ni activa recetas.
+- Informe renovado por ejecución en `test-results/fabrication/verification.json`: comandos, suites, resultados y límites explícitos de navegador/base remota/taller. Falla ante etapas fallidas, suites críticas ausentes o pruebas omitidas; el verificador tiene tests propios.
+- Workflow de pull request en `.github/workflows/fabrication-verify.yml`, sin secretos de negocio, con resultados como artefactos. Su ejecución remota y la protección de rama requieren verificación en GitHub.
+- `AGENTS.md`, guía de tareas y workflow de integración exigen matriz de fuente/reglas, pruebas independientes y smoke QA; `PLANTILLA_INTEGRACION_LINEA.md` conserva el expediente para otro agente.
+- S75: 72 casos numéricos (12 geometrías × 3 bandas × 2 tamaños), cantidades y ángulos, más cobertura completa del registro y seis regresiones de precedencia/aislamiento. La prueba de soft delete detectó y corrigió que una receta eliminada podía ocultar la base preliminar.
+- Expectativas antiguas reconciliadas con evidencia: S75 tiene 29 códigos de referencia y cinco roles pendientes; snapshot de catálogo cambia solo esos conteos. El laboratorio se prueba desde `draft`; el smoke L25 conserva comparación numérica independiente y separa cálculo derivado de evidencia incompleta, sin cambiar su motor ni validación.
+- Sin rutas, tablas ni migraciones nuevas. Smoke visual no repetido en esta tarea de tooling; la verificación automática no acredita cobertura completa de navegador.
+- Verificación local: 140 suites / 1.016 pruebas Jest, 10 pruebas del verificador, TypeScript, inventario de 113 rutas y build aprobados. CI todavía no ejecutado en GitHub.
+
+## 2026-09-27 - Vista preliminar de recetas WinHouse en cotización
+
+- La cotización admite mostrar cortes y pauta de una receta WinHouse no validada si las fórmulas sí calculan para esa pieza; códigos/largos u otros pendientes ya no ocultan automáticamente el resultado calculable.
+- La vista activa del Constructor consume de inmediato el snapshot que devuelve el resolutor, aunque el borrador no haya persistido aún el cambio.
+- Para S75, una receta local exacta pero estructuralmente incompleta ya no tapa la base oficial preliminar; una receta de taller validada o lista para calcular conserva precedencia.
+- El resultado se conserva como preliminar, con aviso para ajustar la configuración al taller; no habilita validación ni marca la receta como probada.
+- El seed estructural no conserva un resultado vacío durante toda la sesión; vuelve a intentar cuando las líneas se agregan después de abrir el cotizador.
+- Verificación: pruebas de seed/reintento y despiece preliminar S60. El smoke visual de cotización continúa mostrando falta de recetas en la cuenta abierta y no se considera aprobado.
+
+## 2026-09-26 - Enlace del vidrio cotizado con variantes WinHouse S60
+
+- `ventora:winhouse-s60` propone monolítico incoloro 4 mm como vidrio inicial; el seed completa el campo solo si está vacío y respeta ajustes de empresa.
+- El vidrio final seleccionado en la cotización determina la variante documental S60 por tipología y composición (monolítico 4/5, DVH 17–20 o 22–24 mm), tanto al preparar la línea como al resolver el despiece guardado.
+- Fijos tarjetas Alumétrica 9–11 usan sus códigos, largos, cantidades y ángulos para cálculo preliminar; la pauta interna ahora conserva y muestra el ángulo junto al largo. Ventora aplica su preset de barra de 6.000 mm hasta que el taller configure el largo real.
+- Proyectantes y abatibles dobles siguen bloqueadas por cruces pendientes. Las recetas permanecen `draft`; el cálculo preliminar no las marca probadas ni validadas.
+
 ## 2026-09-21 - Novedades de Ventora
 
 - Nuevo feed autenticado `/novedades`, estado de lectura por usuario y entrada con contador en notificaciones, separada de las alertas comerciales.
@@ -2518,3 +2545,20 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
 
 ---
 - 2026-08-31 — Pricing V2: catálogo server-side único con cuatro variantes CLP, precios integrados en la landing única `/#precios`, `/planes` como redirect de compatibilidad, selector anual por defecto, API por producto/período, configuración asistida separada y KPI admin basado en contrato real. Nueva migración `20260831120000_preserve_founder_price_lock.sql`; IDs Mercado Pago cargados en Vercel Production y smoke de checkout/webhook pendiente.
+- 2026-09-26 — Alumétrica WinHouse S60: se registraron las 32 tarjetas abiertas y se documentaron fórmulas y conflictos. No se generaron recetas ni seeds porque varias tarjetas contradicen apertura, hojas/vidrios, cristal admitido o cortes por eje; faltan además reglas de barras/pérdidas y cruce fiable de códigos.
+- 2026-09-26 — WinHouse S60: se agregó matriz de trabajo que cruza las 32 tarjetas Alumétrica con las 18 aperturas oficiales, perfiles/secciones, refuerzos y límites publicados; incluye las 15 configuraciones plegables como familia separada. Se dividieron pendientes entre cubicación, largos de despiece y política de pauta. Sigue siendo matriz documental: no crea recetas ejecutables ni modifica el arquetipo genérico.
+- 2026-09-26 — WinHouse S60: se agregó fixture de ocho variantes candidatas (fijo 4–5/17–20/22–24, proyectante 4–5/17–20/22–24 y abatible doble 17–20/22–24) al catálogo multi-variante. Se guardan como borradores `draft`, con reglas de Alumétrica y pendientes explícitos; perfil/hoja sin equivalencia reciben código vacío y no se puede habilitar prueba hasta resolver los campos. El seed idempotente existente las incorporará por organización. No se escribió en Supabase remoto.
+- 2026-09-26 — WinHouse New S75: primera incorporación de la pauta multi-variante. La nota sobre las cuatro geometrías asimétricas bloqueadas quedó superada al añadirse anchos A/B/C el 2026-09-27.
+- 2026-09-27 — WinHouse New S75: se añadieron anchos individuales a cubicación y snapshot. 2H asimétrica solicita ancho A y deriva B; 3H centro ancho calcula A/C = X/4 y B = X/2. La pauta pasa a cubrir las 12 geometrías y 3 bandas de vidrio, aún requiere configurar códigos físicos por taller y validar en taller.
+- 2026-09-27 — Fabricación: se agregó `pnpm fabrication:smoke` y una suite común S60/S75 con cálculos, gates, selección de variante, pauta y persistencia del split en snapshot. La prueba encontró y corrigió la pérdida de `anchoHojaAMm` al normalizar entradas. Se añadió `docs/fabricacion/WORKFLOW_INTEGRAR_NUEVA_LINEA.md` como checklist reproducible de evidencia, código, pruebas, smoke visual y cierre.
+- 2026-09-27 — WinHouse New S75 en cotización: se agregó un selector explícito para elegir cualquiera de las geometrías con pestaña en la pauta XLSX, filtradas por doble/triple riel y vidrio. La opción fija la cantidad de hojas de la receta, limpia snapshots previos y recalcula; también pide ancho A para 2H asimétrica. Las 12 geometrías del archivo quedan disponibles sin validación previa del taller; sus ajustes continúan configurables. Las aperturas ilustradas en el póster pero sin pestaña en el XLSX siguen sin fórmula de origen. Regresión de interfaz y cobertura de 30 variantes doble riel + 6 triple riel.
+## 2026-09-27 — Reconsulta de recetas al cambiar línea en cotización
+
+- `ensureStructuralDraftsClient` comparte solo siembras en curso y libera el resultado al terminar, para no retener una lista obsoleta por organización/sesión.
+- `useFabricationRecipes` recibe `seedContextKey`; cotización desktop y mobile lo derivan de líneas activas y vuelven a cargar recetas cuando cambia el borrador.
+- Se agrega regresión para repetir la consulta idempotente tras una siembra exitosa y se actualiza `docs/fabricacion/WORKFLOW_INTEGRAR_NUEVA_LINEA.md`.
+- Se corrige el filtro de componentes de `DespieceReviewSurface`: paños fijos simples ahora entran a revisión aunque no tengan `guidedVisualConfig`; regresión agregada a `quote-constructor-workspace.service.test.ts`.
+- Se corrige la resolución S60 en cotización: `Paño fijo` prevalece sobre la etiqueta comercial `Abatible / doble contacto`, fija una hoja y toma la apertura `fijo` de la variante elegida. Se agregan regresiones en el contexto de línea y el resolvedor de despiece.
+- Se corrige la captura de ancho A S75 en talleres configurados en cm (se compara en mm como el dato de la hoja) y la prueba de preview recibe ese ancho para habilitar recetas asimétricas.
+- El seed de variantes ya incluye filas antiguas sin `catalog_key` y recupera la identidad S75 solo con proveedor WinHouse y nombre explícito de riel. Se agrega prueba que exige las 30 variantes de doble riel; smoke dirigido: 5 suites, 84 pruebas; `tsc` y build de producción pasan.
+- El despiece S75 agrega un borrador oficial determinista cuando falta el registro persistido de la combinación exacta; prevalece la receta de organización si ya existe. La prueba de servicio cubre 2H asimétrica sin seed y verifica pauta/cortes preliminares.

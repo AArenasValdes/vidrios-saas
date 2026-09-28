@@ -36,20 +36,26 @@ export function ensureCatalogDraftsClient(organizationId: string | number): Prom
 /** Compatibilidad para las cargas que solo conocían AL-32/AL-42. */
 export const ensureProyectanteDraftsClient = ensureCatalogDraftsClient;
 
-/** Rellena borradores técnicos faltantes. Una vez por org y sesión. Solo organizaciones CL. */
+/** Rellena recetas técnicas faltantes. Solo comparte trabajo concurrente y opera en organizaciones CL. */
 export function ensureStructuralDraftsClient(
-  organizationId: string | number
+  organizationId: string | number,
+  seedContextKey = ""
 ): Promise<boolean> {
-  const key = String(organizationId);
+  const key = `${organizationId}:${seedContextKey}`;
   const existing = structuralSeedRuns.get(key);
   if (existing) return existing;
 
-  const run = prepareStructuralDrafts(organizationId).catch((error) => {
-    structuralSeedRuns.delete(key);
-    throw error;
+  let trackedRun: Promise<boolean>;
+  trackedRun = prepareStructuralDrafts(organizationId).finally(() => {
+      // Compartimos solo el trabajo concurrente. El catálogo o sus variantes
+      // pueden cambiar durante la sesión y una promesa resuelta no debe dejar
+      // sin sembrar una línea nueva (p. ej. WinHouse New S75).
+      if (structuralSeedRuns.get(key) === trackedRun) {
+        structuralSeedRuns.delete(key);
+      }
   });
-  structuralSeedRuns.set(key, run);
-  return run;
+  structuralSeedRuns.set(key, trackedRun);
+  return trackedRun;
 }
 
 async function prepareStructuralDrafts(organizationId: string | number): Promise<boolean> {
@@ -102,8 +108,7 @@ async function prepareStructuralDrafts(organizationId: string | number): Promise
         .from("cotizacion_line_templates")
         .select("id, catalog_key, nombre, proveedor")
         .eq("organization_id", orgId)
-        .is("eliminado_en", null)
-        .not("catalog_key", "is", null);
+        .is("eliminado_en", null);
 
       if (error) throw error;
       return data ?? [];

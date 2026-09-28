@@ -58,7 +58,9 @@ function roleInvariantPasses(input: {
     for (let rightIndex = leftIndex + 1; rightIndex < passed.length; rightIndex += 1) {
       const left = passed[leftIndex]!;
       const right = passed[rightIndex]!;
-      const widthChanged = left.input.anchoTotalMm !== right.input.anchoTotalMm;
+      const splitWidthChanged = left.input.anchoHojaAMm !== right.input.anchoHojaAMm;
+      const widthChanged =
+        left.input.anchoTotalMm !== right.input.anchoTotalMm || splitWidthChanged;
       const heightChanged = left.input.altoTotalMm !== right.input.altoTotalMm;
       if (!widthChanged && !heightChanged) continue;
 
@@ -72,7 +74,10 @@ function roleInvariantPasses(input: {
           const rightRow = rightOutput.perfiles.find((row) => row.componenteId === profile.id);
           if (!leftRow || !rightRow) return false;
           const shouldRemainEqual =
-            role === "alto_total" || role === "alto_por_hoja" || role === "fijo_mm";
+            role === "alto_total" ||
+            role === "alto_por_hoja" ||
+            role === "fijo_mm" ||
+            (role === "ancho_hoja_a" && !splitWidthChanged);
           if (shouldRemainEqual && leftRow.medidaMm !== rightRow.medidaMm) return false;
           if (!shouldRemainEqual && leftRow.medidaMm === rightRow.medidaMm) return false;
         }
@@ -85,7 +90,9 @@ function roleInvariantPasses(input: {
           const widthDependsOnWidth =
             widthRole === "ancho_total" ||
             widthRole === "ancho_modulo" ||
-            widthRole === "ancho_por_hoja";
+            widthRole === "ancho_por_hoja" ||
+            widthRole === "ancho_hoja_b" ||
+            (widthRole === "ancho_hoja_a" && splitWidthChanged);
           if (widthDependsOnWidth && leftPiece.anchoMm === rightPiece.anchoMm) return false;
           if (!widthDependsOnWidth && leftPiece.anchoMm !== rightPiece.anchoMm) return false;
         }
@@ -98,7 +105,12 @@ function roleInvariantPasses(input: {
           const rightRow = rightOutput.perfiles.find((row) => row.componenteId === profile.id);
           if (!leftRow || !rightRow) return false;
           const shouldRemainEqual =
-            role === "ancho_total" || role === "ancho_modulo" || role === "ancho_por_hoja" || role === "fijo_mm";
+            role === "ancho_total" ||
+            role === "ancho_modulo" ||
+            role === "ancho_por_hoja" ||
+            role === "ancho_hoja_a" ||
+            role === "ancho_hoja_b" ||
+            role === "fijo_mm";
           if (shouldRemainEqual && leftRow.medidaMm !== rightRow.medidaMm) return false;
           if (!shouldRemainEqual && leftRow.medidaMm === rightRow.medidaMm) return false;
         }

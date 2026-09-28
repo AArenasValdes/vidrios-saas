@@ -5,6 +5,10 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { PautaCubicacionPanel } from "@/app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/pauta-cubicacion-panel";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO } from "@/features/fabricacion/fixtures/receta-corredera-dos-hojas.fixture";
+import {
+  crearRecetaWinHouseNewS75,
+  WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY,
+} from "@/features/fabricacion/fixtures/winhouse-new-s75-recipes";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
 const mockUseFabricationRecipes = jest.fn();
@@ -143,5 +147,183 @@ describe("PautaCubicacionPanel con recetas persistidas", () => {
         variante: "termopanel",
       })
     );
+  });
+
+  it("captura y propaga el ancho A de una corredera S75 asimétrica", async () => {
+    const variant = "doble_riel_2h_asimetrica_80_mono_4_6";
+    const definition = crearRecetaWinHouseNewS75({
+      lineName: "WinHouse New S75",
+      variant,
+      createId: (() => {
+        let id = 0;
+        return () => `s75-panel-${++id}`;
+      })(),
+    });
+    mockUseFabricationRecipes.mockReturnValue({
+      organizationId: 10,
+      recipes: [
+        {
+          id: "recipe-s75-asymmetric",
+          organizationId: 10,
+          lineTemplateId: 226,
+          scope: "organization",
+          providerName: "WinHouse",
+          lineName: "WinHouse New S75",
+          typology: "corredera",
+          leavesCount: 2,
+          variant,
+          version: 1,
+          status: "draft",
+          definition,
+          sourceType: "manufacturer",
+          sourceReference: "manufacturer:winhouse:new-s75:test",
+          parentRecipeId: null,
+          validatedAt: null,
+          validatedBy: null,
+          createdAt: "2026-09-27T00:00:00.000Z",
+          updatedAt: "2026-09-27T00:00:00.000Z",
+          eliminadoEn: null,
+        },
+      ],
+      isLoading: false,
+    });
+    const onContext = jest.fn();
+    const componentForm = {
+      ancho: "1200",
+      alto: "1000",
+      cantidad: "1",
+      lineTemplateId: "226",
+      catalogLineKey: WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY,
+      tipo: "Ventana corredera",
+      sistema: "PVC",
+      fabricacionTipologia: "corredera",
+      fabricacionHojas: 2,
+      fabricacionModulos: 2,
+      fabricacionApertura: "corredera",
+      fabricacionVariante: variant,
+      vidrio: "Monolítico 4 mm",
+      fabricacionAnchoHojaAMm: null,
+    };
+    const panel = (form: typeof componentForm) => (
+      <PautaCubicacionPanel
+        componentForm={form}
+        selectedTemplate={{
+          ...selectedTemplate,
+          id: 226,
+          nombre: "WinHouse New S75",
+          catalogKey: WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY,
+        }}
+        onCubicationSnapshotChange={jest.fn()}
+        onFabricacionSnapshotChange={jest.fn()}
+        onFabricationRecipeIdChange={jest.fn()}
+        onFabricacionContextoChange={onContext}
+      />
+    );
+
+    const { rerender } = render(panel(componentForm));
+
+    expect(screen.getByLabelText("Ancho de la hoja A en milímetros")).toBeInTheDocument();
+    expect(screen.getByText("La hoja A debe ser menor que el ancho total.")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Ancho de la hoja A en milímetros"), {
+      target: { value: "700" },
+    });
+
+    await waitFor(() =>
+      expect(onContext).toHaveBeenCalledWith(
+        expect.objectContaining({ variante: variant, anchoHojaAMm: 700 })
+      )
+    );
+    rerender(panel({ ...componentForm, fabricacionAnchoHojaAMm: 700 }));
+    expect(screen.getByText("Hoja B: 500 mm")).toBeInTheDocument();
+  });
+
+  it("permite elegir otra geometría de las pestañas WinHouse para S75", () => {
+    const currentVariant = "doble_riel_2h_simetrica_80_mono_4_6";
+    const definition = crearRecetaWinHouseNewS75({
+      lineName: "WinHouse New S75",
+      variant: currentVariant,
+      createId: (() => {
+        let id = 0;
+        return () => `s75-geometry-${++id}`;
+      })(),
+    });
+    mockUseFabricationRecipes.mockReturnValue({
+      organizationId: 10,
+      recipes: [
+        {
+          id: "recipe-s75-geometry",
+          organizationId: 10,
+          lineTemplateId: 226,
+          scope: "organization",
+          providerName: "WinHouse",
+          lineName: "WinHouse New S75",
+          typology: "corredera",
+          leavesCount: 2,
+          variant: currentVariant,
+          version: 1,
+          status: "draft",
+          definition,
+          sourceType: "manufacturer",
+          sourceReference: "manufacturer:winhouse:new-s75:test",
+          parentRecipeId: null,
+          validatedAt: null,
+          validatedBy: null,
+          createdAt: "2026-09-27T00:00:00.000Z",
+          updatedAt: "2026-09-27T00:00:00.000Z",
+          eliminadoEn: null,
+        },
+      ],
+      isLoading: false,
+    });
+    const onContext = jest.fn();
+    const onRecipeIdChange = jest.fn();
+
+    render(
+      <PautaCubicacionPanel
+        componentForm={{
+          ancho: "1200",
+          alto: "1000",
+          cantidad: "1",
+          lineTemplateId: "226",
+          catalogLineKey: WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY,
+          tipo: "Ventana corredera",
+          sistema: "PVC",
+          fabricacionTipologia: "corredera",
+          fabricacionHojas: 2,
+          fabricacionModulos: 2,
+          fabricacionApertura: "corredera",
+          fabricacionVariante: currentVariant,
+          vidrio: "Monolítico 4 mm",
+        }}
+        selectedTemplate={{
+          ...selectedTemplate,
+          id: 226,
+          nombre: "WinHouse New S75",
+          catalogKey: WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY,
+        }}
+        onCubicationSnapshotChange={jest.fn()}
+        onFabricacionSnapshotChange={jest.fn()}
+        onFabricationRecipeIdChange={onRecipeIdChange}
+        onFabricacionContextoChange={onContext}
+      />
+    );
+
+    const geometrySelect = screen.getByLabelText("Configuración de corte WinHouse New S75");
+    expect(geometrySelect.querySelectorAll("option")).toHaveLength(10);
+    fireEvent.change(geometrySelect, {
+      target: { value: "doble_riel_2h_asimetrica_98" },
+    });
+
+    expect(onContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tipologia: "corredera",
+        hojas: 2,
+        modulos: 2,
+        apertura: "corredera",
+        variante: "doble_riel_2h_asimetrica_98_mono_4_6",
+        anchoHojaAMm: null,
+      })
+    );
+    expect(onRecipeIdChange).toHaveBeenCalledWith("");
   });
 });

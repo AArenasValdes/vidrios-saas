@@ -27,6 +27,7 @@ export type MobileComponentFabricacionStatus =
   | "incomplete"
   | "pending_l25"
   | "no_recipe"
+  | "preliminary"
   | "ready";
 
 export type MobileComponentFabricacionSummary = {
@@ -211,9 +212,12 @@ export function resolveMobileComponentFabricacionSummary(
   }
 
   if (showReviewUi && hasSnapshot && quoteRow) {
+    const recipeValidated = item.fabricacionSnapshot
+      ? item.fabricacionSnapshot.recipeStatus === "validated"
+      : quoteRow.recipe?.status === "validada";
     return {
-      status: "ready",
-      statusLabel: "Fabricación lista",
+      status: recipeValidated ? "ready" : "preliminary",
+      statusLabel: recipeValidated ? "Fabricación lista" : "Despiece preliminar",
       showReviewUi,
       contextualLineLabel,
       technicalBrief,

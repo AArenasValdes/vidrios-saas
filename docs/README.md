@@ -22,6 +22,8 @@ Entrada única para agentes, desarrollo, billing, base de datos y Growth OS.
 | Trabajar desde otro equipo | `docs/growth-os/MANUAL_TRABAJO_MULTIEQUIPO.md` | Sincronización, contexto y secretos |
 | Marca y contenido | `docs/marketing/README.md` | Biblioteca táctica y branding |
 | Handoff técnico | `docs/agent-map/` | Constructor, móvil, cubicación y onboarding |
+| Integrar/validar líneas de fabricación | `docs/fabricacion/WORKFLOW_INTEGRAR_NUEVA_LINEA.md` | Gate `pnpm fabrication:verify`, evidencia, recetas y smoke seguro |
+| Expediente de una línea nueva | `docs/fabricacion/PLANTILLA_INTEGRACION_LINEA.md` | Matriz, recorrido, pruebas numéricas y entrega reproducible |
 
 ## Jerarquía documental
 

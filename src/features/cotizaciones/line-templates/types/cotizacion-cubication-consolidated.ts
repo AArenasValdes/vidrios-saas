@@ -24,6 +24,7 @@ export type ConsolidatedCubicationRow = {
   totalLinealMm: number;
   pieceCodes: string[];
   measureExplanation?: string | null;
+  cutAngle?: string | null;
 };
 
 export type ConsolidatedCubicationPauta = {
@@ -167,6 +168,7 @@ function accumulateFromSnapshot(
       snapshot.lineTemplateId,
       resolveCutProfileCode(cut) || profile.toLowerCase(),
       functionLabel.toLowerCase(),
+      cut.cutAngle?.toLowerCase() ?? "",
       String(lengthMm),
     ].join("|");
     const existing = rowMap.get(key);
@@ -188,6 +190,7 @@ function accumulateFromSnapshot(
       lineName,
       profile,
       functionLabel,
+      cutAngle: cut.cutAngle ?? null,
       lengthMm,
       quantity,
       totalLinealMm,

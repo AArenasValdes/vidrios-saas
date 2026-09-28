@@ -34,7 +34,7 @@ describe("carga del editor después de reparar AL-32/AL-42", () => {
     mockRepair.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
     mockListRecipes.mockResolvedValue([{ id: "r1" }]);
     const { result } = renderHook(() => useFabricationRecipes({ lineTemplateId: 42 }));
-    await waitFor(() => expect(mockRepair).toHaveBeenCalledWith(8));
+    await waitFor(() => expect(mockRepair).toHaveBeenCalledWith(8, undefined));
     expect(mockListRecipes).not.toHaveBeenCalled();
     expect(result.current.isLoading).toBe(true);
     await act(async () => { finish(1); });
@@ -48,7 +48,7 @@ describe("carga del editor después de reparar AL-32/AL-42", () => {
     let finish!: (count: number) => void;
     mockRepair.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
     const { result } = renderHook(() => useFabricationRecipes());
-    await waitFor(() => expect(mockRepair).toHaveBeenCalledWith(8));
+    await waitFor(() => expect(mockRepair).toHaveBeenCalledWith(8, undefined));
     expect(mockListRecipes).not.toHaveBeenCalled();
     expect(result.current.isLoading).toBe(true);
     await act(async () => { finish(1); });
@@ -82,7 +82,7 @@ describe("carga del editor después de reparar AL-32/AL-42", () => {
     expect(result.current.error).not.toMatch(/^\[/);
   });
 
-  it("en path de cotización no espera el seed estructural antes de listar", async () => {
+  it("en cotización lista rápido y vuelve a consultar tras terminar el seed, aunque no reporte inserts", async () => {
     let resolveRepair!: (ok: boolean) => void;
     mockRepair.mockImplementation(
       () =>
@@ -90,17 +90,48 @@ describe("carga del editor después de reparar AL-32/AL-42", () => {
           resolveRepair = resolve;
         })
     );
-    mockListRecipes.mockResolvedValue([{ id: "r1" }]);
+    mockListRecipes
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: "seeded-recipe" }]);
 
     const { result } = renderHook(() =>
       useFabricationRecipes({ skipStructuralSeed: true })
     );
 
     await waitFor(() => expect(mockListRecipes).toHaveBeenCalled());
-    await waitFor(() => expect(result.current.recipes).toEqual([{ id: "r1" }]));
+    await waitFor(() => expect(result.current.recipes).toEqual([]));
     expect(result.current.isLoading).toBe(false);
-    expect(mockRepair).toHaveBeenCalledWith(8);
-    // El seed aún no termina: listado no dependió de él.
-    resolveRepair(false);
+    expect(mockRepair).toHaveBeenCalledWith(8, undefined);
+    expect(mockListRecipes).toHaveBeenCalledTimes(1);
+
+    await act(async () => { resolveRepair(false); });
+    await waitFor(() =>
+      expect(result.current.recipes).toEqual([{ id: "seeded-recipe" }])
+    );
+    expect(mockListRecipes).toHaveBeenCalledTimes(2);
+  });
+
+  it("repite la carga cuando cambia la línea incluida en el borrador", async () => {
+    const { rerender } = renderHook(
+      ({ lineKey }) =>
+        useFabricationRecipes({
+          enabled: true,
+          skipStructuralSeed: true,
+          seedContextKey: lineKey,
+        }),
+      { initialProps: { lineKey: "ventora:serie-20" } }
+    );
+
+    await waitFor(() =>
+      expect(mockRepair).toHaveBeenCalledWith(8, "ventora:serie-20")
+    );
+    await waitFor(() => expect(mockListRecipes).toHaveBeenCalledTimes(2));
+
+    rerender({ lineKey: "ventora:winhouse-new-s75-doble-riel" });
+
+    await waitFor(() =>
+      expect(mockRepair).toHaveBeenCalledWith(8, "ventora:winhouse-new-s75-doble-riel")
+    );
+    await waitFor(() => expect(mockListRecipes).toHaveBeenCalledTimes(3));
   });
 });

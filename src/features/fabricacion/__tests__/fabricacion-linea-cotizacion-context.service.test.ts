@@ -2,6 +2,8 @@ import {
   resolveFabricacionContextForLineAssignment,
   resolveFabricacionContextFromLineCatalog,
 } from "@/features/fabricacion/services/fabricacion-linea-cotizacion-context.service";
+import { WINHOUSE_S60_VARIANTS } from "@/features/fabricacion/fixtures/winhouse-s60-recipes";
+import { resolveWinHouseS60QuoteTypology } from "@/features/fabricacion/services/winhouse-s60-quote-config.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
 function buildRecipe(input: {
@@ -130,5 +132,89 @@ describe("fabricacion-linea-cotizacion-context.service", () => {
     expect(context?.fabricacionTipologia).toBe("proyectante");
     expect(context?.fabricacionHojas).toBe(1);
     expect(context?.fabricationRecipeId).toBe("");
+  });
+
+  it("no conserva la tipología anterior al cambiar a WinHouse S60", () => {
+    const context = resolveFabricacionContextForLineAssignment({
+      template: {
+        id: 60,
+        catalogKey: "ventora:winhouse-s60",
+        catalogMetadata: { lineConfiguration: "Abatible / doble contacto" },
+      },
+      recipes: [],
+      organizationId: 1,
+      form: {
+        tipo: "Ventana",
+        nombre: "Ventana corredera",
+        descripcion: "",
+        sistema: "Corredera",
+        configuracion: "",
+        fabricacionHojas: 2,
+        fabricacionTipologia: "corredera",
+      },
+    });
+
+    expect(context?.fabricacionTipologia).toBe("abatible");
+    expect(context?.fabricacionHojas).toBe(1);
+  });
+
+  it("mantiene paño fijo S60 aunque la configuración comercial diga abatible", () => {
+    expect(
+      resolveWinHouseS60QuoteTypology({
+        selectedTypology: "abatible",
+        componentType: "Paño fijo",
+        componentName: "Paño fijo con perfilería",
+      })
+    ).toBe("pano_fijo");
+    const context = resolveFabricacionContextForLineAssignment({
+      template: {
+        id: 60,
+        catalogKey: "ventora:winhouse-s60",
+        catalogMetadata: { lineConfiguration: "Abatible / doble contacto" },
+      },
+      recipes: [],
+      organizationId: 1,
+      form: {
+        tipo: "Paño fijo",
+        nombre: "Paño fijo con perfilería",
+        descripcion: "",
+        sistema: "Abatible / doble contacto",
+        configuracion: "Con perfilería",
+        fabricacionHojas: 2,
+        fabricacionTipologia: "abatible",
+        vidrio: "Incoloro monolítico 4mm",
+      },
+    });
+
+    expect(context).toMatchObject({
+      fabricacionTipologia: "pano_fijo",
+      fabricacionHojas: 1,
+      fabricacionModulos: 1,
+      fabricacionVariante: WINHOUSE_S60_VARIANTS.fijoMonolitico,
+    });
+  });
+
+  it("impone la geometría base de New S75 aunque la pieza previa fuera proyectante", () => {
+    const context = resolveFabricacionContextForLineAssignment({
+      template: {
+        id: 75,
+        catalogKey: "ventora:winhouse-new-s75-triple-riel",
+        catalogMetadata: { lineConfiguration: "Triple riel" },
+      },
+      recipes: [],
+      organizationId: 1,
+      form: {
+        tipo: "Ventana",
+        nombre: "Ventana proyectante",
+        descripcion: "",
+        sistema: "Proyectante",
+        configuracion: "",
+        fabricacionHojas: 1,
+        fabricacionTipologia: "proyectante",
+      },
+    });
+
+    expect(context?.fabricacionTipologia).toBe("corredera");
+    expect(context?.fabricacionHojas).toBe(3);
   });
 });

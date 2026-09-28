@@ -297,6 +297,8 @@ export function PasoDosWizardMovil({
     resolveDefaultDespieceItemId,
     recipes: fabricationRecipes,
     organizationId: fabricationOrganizationId,
+    isLoading: isLoadingFabricationRecipes,
+    recipesError: fabricationRecipesError,
   } = useQuoteDespiecePreview({
     items,
     enabled: quotePricingMode === "por_item",
@@ -331,6 +333,8 @@ export function PasoDosWizardMovil({
         isSavingCubicationLineAdjustment={formulario.isSavingCubicationLineAdjustment}
         recipes={fabricationRecipes}
         organizationId={fabricationOrganizationId}
+        isLoadingRecipes={isLoadingFabricationRecipes}
+        recipesError={fabricationRecipesError}
       />
     ) : null;
 

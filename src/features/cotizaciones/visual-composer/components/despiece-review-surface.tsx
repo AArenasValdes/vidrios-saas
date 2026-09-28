@@ -42,6 +42,7 @@ import {
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import { fabricacionSnapshotMatchesCalculatedOutput } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
@@ -109,6 +110,8 @@ type Props = {
   /** Si el padre ya cargó recetas, evita un segundo fetch al abrir el modal. */
   recipes?: FabricationRecipeRecord[];
   organizationId?: number | null;
+  recipesError?: string | null;
+  isLoadingRecipes?: boolean;
 };
 
 function formatMm(value: number) {
@@ -135,6 +138,35 @@ function resolveLineTemplate(
 ) {
   if (!lineTemplateId) return null;
   return lineTemplates.find((template) => String(template.id) === lineTemplateId) ?? null;
+}
+
+function resolveLineTemplateForItem(
+  lineTemplates: CotizacionLineTemplate[],
+  item: CotizacionWorkflowItem,
+  lineTemplateId: string
+) {
+  const byId = resolveLineTemplate(lineTemplates, lineTemplateId);
+  if (byId) return byId;
+
+  const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
+  const normalize = (value: string | null | undefined) =>
+    (value ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase();
+  const catalogLineKey = presentation.catalogLineKey.trim();
+  if (catalogLineKey) {
+    const byCatalogKey = lineTemplates.filter(
+      (template) => template.catalogKey === catalogLineKey
+    );
+    if (byCatalogKey.length === 1) return byCatalogKey[0];
+  }
+
+  const lineName = normalize(item.lineaComercial);
+  if (!lineName) return null;
+  const byName = lineTemplates.filter((template) => normalize(template.nombre) === lineName);
+  return byName.length === 1 ? byName[0] : null;
 }
 
 function despieceStatusToneClass(status: DespieceUiStatus) {
@@ -271,6 +303,8 @@ export function DespieceReviewSurface({
   isSavingCubicationLineAdjustment,
   recipes: recipesFromParent,
   organizationId: organizationIdFromParent,
+  recipesError: recipesErrorFromParent,
+  isLoadingRecipes: isLoadingRecipesFromParent = false,
 }: Props) {
   const [tab, setTab] = useState<ReviewTab>("pieza");
   const [mounted, setMounted] = useState(false);
@@ -297,30 +331,45 @@ export function DespieceReviewSurface({
   const organizationId = hasParentRecipes ? organizationIdFromParent ?? null : loadedOrganizationId;
   const persistedRecipes = hasParentRecipes ? (recipesFromParent ?? []) : loadedRecipes;
   const recipesReady = hasParentRecipes
-    ? organizationId != null
+    ? organizationId != null && !isLoadingRecipesFromParent
     : !isLoadingRecipes && organizationId != null;
+  const visibleRecipesError = hasParentRecipes
+    ? recipesErrorFromParent ?? null
+    : recipesError;
+  const visibleRecipesLoading = hasParentRecipes
+    ? isLoadingRecipesFromParent
+    : isLoadingRecipes;
   const pieceResolutions = useMemo(() => {
     const map = new Map<string, FabricacionDespieceCotizacionResult>();
     if (!recipesReady) return map;
     visualItems.forEach((item) => {
+      const form = mapItemToForm(item);
+      const lineTemplate = resolveLineTemplateForItem(
+        lineTemplates,
+        item,
+        form.lineTemplateId
+      );
       map.set(
         item.id,
         resolveFabricacionDespieceForQuoteItem({
           item,
           recipes: persistedRecipes,
           organizationId,
+          lineTemplateId: lineTemplate?.id,
+          lineCatalogKey: lineTemplate?.catalogKey,
         })
       );
     });
     return map;
-  }, [visualItems, persistedRecipes, organizationId, recipesReady]);
+  }, [visualItems, lineTemplates, persistedRecipes, organizationId, recipesReady]);
 
   const selectedItem =
     visualItems.find((item) => item.id === activeItemId) ?? visualItems[0] ?? null;
   const selectedForm = selectedItem ? mapItemToForm(selectedItem) : null;
-  const selectedTemplate = selectedForm
-    ? resolveLineTemplate(lineTemplates, selectedForm.lineTemplateId)
-    : null;
+  const selectedTemplate =
+    selectedForm && selectedItem
+      ? resolveLineTemplateForItem(lineTemplates, selectedItem, selectedForm.lineTemplateId)
+      : null;
   const selectedView = selectedItem
     ? buildPieceDomainView(selectedItem, quotePricingMode, selectedTemplate)
     : null;
@@ -603,6 +652,8 @@ export function DespieceReviewSurface({
       item: selectedItem,
       recipes: persistedRecipes,
       organizationId,
+      lineTemplateId: selectedTemplate?.id,
+      lineCatalogKey: selectedTemplate?.catalogKey,
     });
     setHasOfferedAdjustmentChoice(false);
     setIsAdjustmentChoiceOpen(false);
@@ -710,18 +761,18 @@ export function DespieceReviewSurface({
         </header>
 
         <div className={styles.body}>
-          {isLoadingRecipes ? (
+          {visibleRecipesLoading ? (
             <div className={styles.loadingState} role="status">
               Cargando recetas de fabricación…
             </div>
           ) : null}
-          {recipesError ? (
+          {visibleRecipesError ? (
             <div className={styles.errorState} role="alert">
-              {recipesError}
+              {visibleRecipesError}
             </div>
           ) : null}
 
-          {!isLoadingRecipes && tab === "pieza" ? (
+          {!visibleRecipesLoading && tab === "pieza" ? (
             <div className={styles.pieceLayout}>
               <aside className={styles.pieceList} aria-label="Componentes de la cotización">
                 <p className={styles.listEyebrow}>Componentes</p>
@@ -1009,6 +1060,7 @@ export function DespieceReviewSurface({
                               ) : (
                                 <span role="cell" className={styles.functionReadCell}>
                                   <strong>{cut.functionLabel}</strong>
+                                  {cut.cutAngle ? <small>{cut.cutAngle}</small> : null}
                                   {showCalculationDetail && cut.measureExplanation ? (
                                     <small className={styles.formulaLine}>
                                       {cut.measureExplanation}
@@ -1071,7 +1123,9 @@ export function DespieceReviewSurface({
                       </div>
                     ) : (
                       <div className={styles.emptyTable}>
-                        {pieceUiStatus === "sin_reglas"
+                        {activeResolution?.estado !== "calculado" && activeResolution?.message
+                          ? activeResolution.message
+                          : pieceUiStatus === "sin_reglas"
                           ? "Esta pieza no tiene reglas técnicas de cubicación. Puedes cotizar igual; define la pauta cuando el taller la tenga."
                           : "Aún no hay cortes para esta pieza. Completa línea y medidas, o agrega cortes manualmente."}
                       </div>
@@ -1245,7 +1299,10 @@ export function DespieceReviewSurface({
                             >
                               {row.profile}
                             </strong>
-                            <span role="cell">{row.functionLabel}</span>
+                            <span role="cell">
+                              {row.functionLabel}
+                              {row.cutAngle ? ` · ${row.cutAngle}` : ""}
+                            </span>
                             <span role="cell" className={styles.numCell}>
                               {formatMm(row.lengthMm)}
                             </span>

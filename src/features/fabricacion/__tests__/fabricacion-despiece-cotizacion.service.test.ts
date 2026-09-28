@@ -34,6 +34,15 @@ import { resetZetaConfirmedCacheForTests } from "@/features/fabricacion/zeta/zet
 import { resetEvidenceSidecarCacheForTests } from "@/features/fabricacion/zeta/zeta-evidence-sidecar-loader";
 import { SODAL_L25_FORMULA_VERSION } from "@/features/fabricacion/zeta/sodal-l25-profile-roles";
 import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
+import {
+  crearRecetaWinHouseS60Candidata,
+  WINHOUSE_S60_VARIANTS,
+} from "@/features/fabricacion/fixtures/winhouse-s60-recipes";
+import {
+  crearRecetaWinHouseNewS75,
+  WINHOUSE_NEW_S75_VARIANTS,
+} from "@/features/fabricacion/fixtures/winhouse-new-s75-recipes";
+import { resolveMobileComponentFabricacionSummary } from "@/features/fabricacion/services/mobile-component-fabricacion-summary.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 
@@ -659,6 +668,379 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
         organizationId: 1,
       })
     ).toBe(true);
+  });
+
+  it("previsualiza despiece S60 calculable como sugerencia aunque falte largo comercial", () => {
+    const variant = WINHOUSE_S60_VARIANTS.fijoMonolitico;
+    const definition = crearRecetaWinHouseS60Candidata({
+      lineName: "WinHouse S60",
+      variant,
+    });
+    const recipe = recipeRecord({
+      id: "winhouse-s60-fixed-preview",
+      lineTemplateId: 560,
+      lineName: "WinHouse S60",
+      typology: "pano_fijo",
+      leavesCount: 1,
+      variant,
+      status: "draft",
+      definition,
+    });
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "560" }),
+      tipo: "Ventana",
+      nombre: "Ventana fija",
+      descripcion: "Paño fijo",
+      lineaComercial: "WinHouse S60",
+      vidrio: "Vidrio monolítico 4 mm",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "560",
+        catalogLineKey: "ventora:winhouse-s60",
+        sistema: "Fijo",
+        fabricacionTipologia: "pano_fijo",
+        fabricacionHojas: 1,
+        fabricacionModulos: 1,
+      }),
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [recipe],
+      organizationId: 1,
+    });
+
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.preliminary).toBe(true);
+    expect(resolved.formal?.result.perfiles.length).toBeGreaterThan(0);
+    expect(resolved.cubication?.cuts.length).toBeGreaterThan(0);
+  });
+
+  it("resuelve S60 paño fijo desde la cotización aunque la etiqueta comercial diga abatible", () => {
+    const variant = WINHOUSE_S60_VARIANTS.fijoMonolitico;
+    const recipe = recipeRecord({
+      id: "winhouse-s60-fixed-commercial-label-preview",
+      lineTemplateId: 560,
+      lineName: "WinHouse S60",
+      typology: "pano_fijo",
+      leavesCount: 1,
+      variant,
+      status: "draft",
+      definition: crearRecetaWinHouseS60Candidata({
+        lineName: "WinHouse S60",
+        variant,
+      }),
+    });
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "560" }),
+      tipo: "Paño fijo",
+      nombre: "Paño fijo con perfilería",
+      descripcion: "",
+      lineaComercial: "WinHouse S60",
+      vidrio: "Incoloro monolítico 4mm",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "560",
+        catalogLineKey: "ventora:winhouse-s60",
+        sistema: "Abatible / doble contacto",
+        fabricacionTipologia: "abatible",
+        fabricacionHojas: 2,
+        fabricacionModulos: 2,
+      }),
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [recipe],
+      organizationId: 1,
+    });
+
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.recipe?.definition.identidad.variante).toBe(variant);
+    expect(resolved.formal?.result.perfiles.length).toBeGreaterThan(0);
+    expect(resolved.cubication?.cuts.length).toBeGreaterThan(0);
+  });
+
+  it("infiere la clave S60 para un borrador antiguo que no la guardó en observaciones", () => {
+    const monoVariant = WINHOUSE_S60_VARIANTS.fijoMonolitico;
+    const termopanelVariant = WINHOUSE_S60_VARIANTS.fijoTermopanel1720;
+    const recipes = [
+      recipeRecord({
+        id: "winhouse-s60-fixed-mono-legacy",
+        organizationId: 3,
+        lineTemplateId: 226,
+        lineName: "WinHouse S60",
+        typology: "pano_fijo",
+        leavesCount: 1,
+        variant: monoVariant,
+        status: "draft",
+        definition: crearRecetaWinHouseS60Candidata({
+          lineName: "WinHouse S60",
+          variant: monoVariant,
+        }),
+      }),
+      recipeRecord({
+        id: "winhouse-s60-fixed-dvh-legacy",
+        organizationId: 3,
+        lineTemplateId: 226,
+        lineName: "WinHouse S60",
+        typology: "pano_fijo",
+        leavesCount: 1,
+        variant: termopanelVariant,
+        status: "draft",
+        definition: crearRecetaWinHouseS60Candidata({
+          lineName: "WinHouse S60",
+          variant: termopanelVariant,
+        }),
+      }),
+    ];
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "226" }),
+      tipo: "Ventana",
+      nombre: "Ventana fija",
+      descripcion: "",
+      lineaComercial: "WinHouse S60",
+      vidrio: "Incoloro monolítico 4mm",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "226",
+        sistema: "Fijo",
+        fabricacionHojas: 1,
+        fabricacionModulos: 1,
+      }),
+    };
+
+    const resolvedLegacyDraft = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes,
+      organizationId: 3,
+    });
+    const resolvedFromSelectedLine = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes,
+      organizationId: 3,
+      lineCatalogKey: "ventora:winhouse-s60",
+    });
+
+    expect(resolvedLegacyDraft.estado).toBe("calculado");
+    expect(resolvedLegacyDraft.recipe?.definition.identidad.variante).toBe(monoVariant);
+    expect(resolvedFromSelectedLine.estado).toBe("calculado");
+    expect(resolvedFromSelectedLine.recipe?.definition.identidad.variante).toBe(monoVariant);
+    expect(resolvedFromSelectedLine.cubication?.cuts.length).toBeGreaterThan(0);
+  });
+
+  it("resuelve una S75 doble riel 2H desde la línea y el vidrio aunque el draft no guardara la variante", () => {
+    const recipes = WINHOUSE_NEW_S75_VARIANTS.filter((variant) => variant.railCount === 2).map(
+      (variant) =>
+        recipeRecord({
+          id: `winhouse-new-s75-${variant.slug}`,
+          organizationId: 3,
+          lineTemplateId: 224,
+          lineName: "WinHouse New S75 — Doble riel",
+          typology: "corredera",
+          leavesCount: variant.leaves,
+          variant: variant.slug,
+          status: "draft",
+          sourceType: "supplier",
+          sourceName: "WinHouse",
+          sourceReference: `winhouse:new-s75:${variant.slug}`,
+          definition: crearRecetaWinHouseNewS75({
+            lineName: "WinHouse New S75 — Doble riel",
+            variant: variant.slug,
+          }),
+        })
+    );
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "224" }),
+      tipo: "Ventana",
+      nombre: "Ventana corredera 2 hojas",
+      descripcion: "Corredera 2 hojas",
+      lineaComercial: "WinHouse New S75 — Doble riel",
+      vidrio: "DVH 4+10+5",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "224",
+        sistema: "Corredera",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 2,
+        fabricacionModulos: 2,
+      }),
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes,
+      organizationId: 3,
+    });
+
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.preliminary).toBe(true);
+    expect(resolved.recipe?.variant).toBe("doble_riel_2h_simetrica_80_dvh_17_20");
+    expect(resolved.formal?.result.perfiles.length).toBeGreaterThan(0);
+    expect(resolved.cubication?.cuts.length).toBeGreaterThan(0);
+
+    const legacyDraft = {
+      ...item,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        sistema: "Corredera",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 2,
+        fabricacionModulos: 2,
+      }),
+    };
+    const resolvedLegacyDraft = resolveFabricacionDespieceForQuoteItem({
+      item: legacyDraft,
+      recipes,
+      organizationId: 3,
+      lineTemplateId: 224,
+      lineCatalogKey: "ventora:winhouse-new-s75-doble-riel",
+    });
+    expect(resolvedLegacyDraft.estado).toBe("calculado");
+    expect(resolvedLegacyDraft.cubication?.cuts.length).toBeGreaterThan(0);
+
+    const mobileSummary = resolveMobileComponentFabricacionSummary(item, {
+      recipes,
+      organizationId: 3,
+    });
+    expect(mobileSummary.status).toBe("preliminary");
+    expect(mobileSummary.statusLabel).toBe("Despiece preliminar");
+    expect(mobileSummary.canOpenDespiece).toBe(true);
+  });
+
+  it("calcula S75 asimétrica oficial aunque la receta de esa variante todavía no esté sembrada", () => {
+    const variant = "doble_riel_2h_asimetrica_80_dvh_17_20";
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "226" }),
+      tipo: "Ventana",
+      nombre: "Ventana corredera",
+      descripcion: "2 hojas asimétricas",
+      lineaComercial: "WinHouse New S75 — Doble riel",
+      vidrio: "DVH 4+10+5",
+      ancho: 1800,
+      alto: 1500,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "226",
+        catalogLineKey: "ventora:winhouse-new-s75-doble-riel",
+        sistema: "Corredera",
+        configuracion: "2 hojas asimétricas, hoja 80 mm",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 2,
+        fabricacionModulos: 2,
+        fabricacionVariante: variant,
+        fabricacionAnchoHojaAMm: 900,
+      }),
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [],
+      organizationId: 3,
+    });
+
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.preliminary).toBe(true);
+    expect(resolved.recipe?.id).toBe(`ventora-preview:226:${variant}`);
+    expect(resolved.formal?.input.anchoHojaAMm).toBe(900);
+    expect(resolved.formal?.result.perfiles.length).toBeGreaterThan(0);
+    expect(resolved.cubication?.cuts.length).toBeGreaterThan(0);
+  });
+
+  it("usa la base oficial S75 cuando la receta local exacta está incompleta", () => {
+    const variant = "doble_riel_2h_asimetrica_80_dvh_17_20";
+    const definition = crearRecetaWinHouseNewS75({
+      lineName: "WinHouse New S75 — Doble riel",
+      variant,
+    });
+    definition.perfiles = [];
+    const localDraft = recipeRecord({
+      id: "s75-local-incomplete",
+      organizationId: 3,
+      lineTemplateId: 226,
+      providerName: "WinHouse",
+      lineName: "WinHouse New S75 — Doble riel",
+      typology: "corredera",
+      leavesCount: 2,
+      variant,
+      status: "draft",
+      definition,
+    });
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "226" }),
+      tipo: "Ventana",
+      nombre: "Ventana corredera",
+      descripcion: "2 hojas asimétricas",
+      lineaComercial: "WinHouse New S75 — Doble riel",
+      vidrio: "DVH 4+10+5",
+      ancho: 1800,
+      alto: 1500,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "226",
+        catalogLineKey: "ventora:winhouse-new-s75-doble-riel",
+        sistema: "Corredera",
+        configuracion: "2 hojas asimétricas, hoja 80 mm",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 2,
+        fabricacionModulos: 2,
+        fabricacionVariante: variant,
+        fabricacionAnchoHojaAMm: 900,
+      }),
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [localDraft],
+      organizationId: 3,
+    });
+
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.preliminary).toBe(true);
+    expect(resolved.recipe?.id).toBe(`ventora-preview:226:${variant}`);
+    expect(resolved.formal?.result.perfiles.length).toBeGreaterThan(0);
+  });
+
+  describe("precedencia segura de recetas S75", () => {
+    const variant = "doble_riel_2h_simetrica_80_mono_4_6";
+    const catalogKey = "ventora:winhouse-new-s75-doble-riel";
+    const createItem = (): CotizacionWorkflowItem => ({
+      ...quoteItem({ lineTemplateId: "226" }),
+      lineaComercial: "WinHouse New S75 — Doble riel",
+      vidrio: "Monolítico 4 mm",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "226", catalogLineKey: catalogKey,
+        sistema: "Corredera", fabricacionTipologia: "corredera",
+        fabricacionHojas: 2, fabricacionModulos: 2, fabricacionVariante: variant,
+      }),
+    });
+    function localRecipe(overrides: Partial<FabricationRecipeRecord> = {}) {
+      const definition = crearRecetaWinHouseNewS75({ lineName: "WinHouse New S75", variant });
+      // Simulated workshop configuration, not a claim about physical supplier codes.
+      definition.perfiles.forEach((profile, index) => { profile.codigoPerfil = `QA-${index}`; });
+      definition.perfiles.find((profile) => profile.funcion === "Marco horizontal")!.reglaMedida.ajusteMm = 9;
+      return recipeRecord({
+        id: "workshop-s75", organizationId: 3, lineTemplateId: 226,
+        providerName: "WinHouse", lineName: "WinHouse New S75", variant,
+        definition, status: "draft", ...overrides,
+      });
+    }
+
+    it.each(["draft", "validated"] as const)("respeta ajustes del taller en %s sin mutar la receta", (status) => {
+      const recipe = localRecipe({ status });
+      const before = JSON.stringify(recipe);
+      const resolved = resolveFabricacionDespieceForQuoteItem({ item: createItem(), recipes: [recipe], organizationId: 3 });
+      expect(resolved.estado).toBe("calculado");
+      expect(resolved.recipe?.id).toBe("workshop-s75");
+      expect(resolved.formal?.result.perfiles.find((row) => row.funcion === "Marco horizontal")?.medidaMm).toBe(1209);
+      expect(JSON.stringify(recipe)).toBe(before);
+    });
+
+    it.each([
+      { reason: "otra organización", overrides: { organizationId: 99 } },
+      { reason: "otra línea", overrides: { lineTemplateId: 999 } },
+      { reason: "archivada", overrides: { status: "archived" as const } },
+      { reason: "eliminada", overrides: { status: "validated" as const, eliminadoEn: "2026-09-27T00:00:00Z" } },
+    ])("excluye receta $reason y conserva la base preliminar", ({ overrides }) => {
+      const resolved = resolveFabricacionDespieceForQuoteItem({ item: createItem(), recipes: [localRecipe(overrides)], organizationId: 3 });
+      expect(resolved.estado).toBe("calculado");
+      expect(resolved.preliminary).toBe(true);
+      expect(resolved.recipe?.id).toBe(`ventora-preview:226:${variant}`);
+      expect(resolved.formal?.result.perfiles.find((row) => row.funcion === "Marco horizontal")?.medidaMm).toBe(1205);
+    });
   });
 
   it("no calcula despiece de un borrador que aún no está listo para probar", () => {
