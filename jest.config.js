@@ -14,6 +14,8 @@ const customJestConfig = {
     "<rootDir>/.next/",
     "<rootDir>/node_modules/",
     "<rootDir>/.kilo/",
+    // Zeta extraction has a separate Node test runner; do not mix it into Ventora's Jest suite.
+    "<rootDir>/scripts/zeta/",
   ],
   modulePathIgnorePatterns: ["<rootDir>/.next/", "<rootDir>/.kilo/"],
   watchPathIgnorePatterns: ["<rootDir>/.next/", "<rootDir>/.kilo/"],

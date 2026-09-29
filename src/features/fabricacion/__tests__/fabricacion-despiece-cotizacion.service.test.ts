@@ -4,6 +4,7 @@ import {
 } from "@/features/fabricacion/fixtures/line-15-corredera-recipe";
 import { fabricacionRecetaSchema } from "@/features/fabricacion/schemas/fabricacion-schemas";
 import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import {
   crearRecetaPlantillaVentoraCorredera2H,
   crearRecetaReferenciaL5000Corredera2H,
@@ -194,6 +195,62 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
     expect(resolved.formal).toBeNull();
     expect(resolved.cubication).toBeNull();
     expect(resolved.message).toMatch(/no configurada/i);
+  });
+
+  it("does not reuse a compatible line recipe for a structurally changed quick composition", () => {
+    const item = quoteItem({});
+    item.observaciones = encodeCotizacionItemPresentationMeta({
+      lineTemplateId: "135",
+      sistema: "Corredera",
+      fabricacionTipologia: "corredera",
+      fabricacionHojas: 2,
+      fabricacionModulos: 2,
+      fabricacionVariante: "estandar",
+      quickCompositionAdjustment: {
+        ...createEmptyQuickCompositionAdjustment(),
+        paneTypes: { "leaf-1": "fixed" },
+      },
+    });
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [recipeRecord()],
+      organizationId: 1,
+    });
+
+    expect(resolved).toMatchObject({
+      estado: "composicion_sin_receta",
+      formal: null,
+      cubication: null,
+      recipe: null,
+      barsAvailable: false,
+    });
+    expect(resolved.message).toMatch(/composición de hojas cambió/i);
+  });
+
+  it("mantiene la pauta al cambiar solo los palillos visuales", () => {
+    const item = quoteItem({});
+    item.observaciones = encodeCotizacionItemPresentationMeta({
+      lineTemplateId: "135",
+      sistema: "Corredera",
+      fabricacionTipologia: "corredera",
+      fabricacionHojas: 2,
+      fabricacionModulos: 2,
+      fabricacionVariante: "estandar",
+      quickCompositionAdjustment: {
+        ...createEmptyQuickCompositionAdjustment(),
+        paneDecorations: { "leaf-1": "vertical" },
+      },
+    });
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [recipeRecord()],
+      organizationId: 1,
+    });
+
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.cubication?.cuts.length).toBeGreaterThan(0);
   });
 
   it("CASO 4b: con largos comerciales → despiece y tiras", () => {

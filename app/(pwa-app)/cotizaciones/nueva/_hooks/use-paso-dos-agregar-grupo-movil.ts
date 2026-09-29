@@ -16,6 +16,8 @@ import {
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
+import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import { hasQuickCompositionStructuralChanges } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import { DEFAULT_MARGIN_PCT } from "@/features/cotizaciones/types/pricing-mode";
@@ -332,6 +334,10 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
         ...current,
         sistema,
         configuracion: nextConfig,
+        guidedVisualConfig: null,
+        quickCompositionAdjustment: null,
+        cubicationSnapshot: null,
+        fabricacionSnapshot: null,
         ...resolveVitrinaHojasBasePatch({ tipo: current.subtipo, configuracion: nextConfig }),
         ...(shouldKeepComposition
           ? {}
@@ -364,6 +370,10 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
       return {
         ...current,
         configuracion,
+        guidedVisualConfig: null,
+        quickCompositionAdjustment: null,
+        cubicationSnapshot: null,
+        fabricacionSnapshot: null,
         ...resolveVitrinaHojasBasePatch({ tipo: current.subtipo, configuracion }),
         ...(shouldKeepComposition
           ? {}
@@ -402,6 +412,10 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     setDraft((current) => ({
       ...current,
       sheetScheme,
+      guidedVisualConfig: null,
+      quickCompositionAdjustment: null,
+      cubicationSnapshot: null,
+      fabricacionSnapshot: null,
       sheetVariant: "",
       customSchemeDescription: sheetScheme === "Personalizado" ? current.customSchemeDescription : "",
       isCustomScheme: sheetScheme === "Personalizado",
@@ -412,8 +426,32 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     setDraft((current) => ({
       ...current,
       sheetVariant,
+      guidedVisualConfig: null,
+      quickCompositionAdjustment: null,
+      cubicationSnapshot: null,
+      fabricacionSnapshot: null,
       customSchemeDescription: sheetVariant === "Otro" ? current.customSchemeDescription : "",
       isCustomScheme: current.sheetScheme === "Personalizado" || sheetVariant === "Otro",
+    }));
+  };
+
+  const updateGuidedVisualAdjustment = (config: GuidedVisualConfig | null) => {
+    setDraft((current) => ({
+      ...current,
+      guidedVisualConfig: config,
+      palilloEnabled: config ? false : current.palilloEnabled,
+      palilloType: config ? "" : current.palilloType,
+      cubicationSnapshot: config?.quickCompositionStructural ? null : current.cubicationSnapshot,
+      fabricacionSnapshot: config?.quickCompositionStructural ? null : current.fabricacionSnapshot,
+    }));
+  };
+
+  const updateQuickCompositionAdjustment = (adjustment: PasoDosGrupoDraft["quickCompositionAdjustment"]) => {
+    setDraft((current) => ({
+      ...current,
+      quickCompositionAdjustment: adjustment,
+      cubicationSnapshot: hasQuickCompositionStructuralChanges(adjustment) ? null : current.cubicationSnapshot,
+      fabricacionSnapshot: hasQuickCompositionStructuralChanges(adjustment) ? null : current.fabricacionSnapshot,
     }));
   };
 
@@ -680,6 +718,8 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     updateCostInputScope,
     updateSheetScheme,
     updateSheetVariant,
+    updateGuidedVisualAdjustment,
+    updateQuickCompositionAdjustment,
     updateCustomSchemeDescription,
     updateMirrorFormat,
     updateMirrorPaneCount,

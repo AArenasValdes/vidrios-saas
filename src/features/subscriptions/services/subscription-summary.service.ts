@@ -6,6 +6,7 @@ import {
   resolveCanonicalSubscriptionSnapshot,
 } from "@/features/subscriptions/services/subscription-billing-state.service";
 import { resolveOrganizationSubscriptionState } from "@/features/subscriptions/services/subscription-status.service";
+import { synchronizeMercadoPagoSubscriptionForOrganization } from "@/features/subscriptions/services/mercadopago-webhook.service";
 import {
   getBillingPlanLabel,
   type SubscriptionPaymentReceipt,
@@ -55,6 +56,12 @@ function mapPaymentReceipt(
 export async function getSubscriptionSummary(
   organizationId: number
 ): Promise<SubscriptionSummary | null> {
+  try {
+    await synchronizeMercadoPagoSubscriptionForOrganization(organizationId);
+  } catch (error) {
+    console.error("[subscriptions:summary] No se pudo sincronizar con Mercado Pago.", error);
+  }
+
   const billingState = await getOrganizationBillingState(organizationId);
   if (!billingState.profile) return null;
 

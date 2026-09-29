@@ -57,6 +57,24 @@ describe("Mercado Pago client", () => {
     );
   });
 
+  it("busca las facturas por preapproval_id sin filtros de paginacion rechazados por MP", async () => {
+    const fetchMock = jest.spyOn(global, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ results: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    await createMercadoPagoClient("access-token").searchAuthorizedPayments(
+      "preapproval-1"
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.mercadopago.com/authorized_payments/search?preapproval_id=preapproval-1",
+      expect.objectContaining({ method: "GET" })
+    );
+  });
+
   it("expone el mensaje de error devuelto por Mercado Pago", async () => {
     jest.spyOn(global, "fetch").mockResolvedValue(
       new Response(

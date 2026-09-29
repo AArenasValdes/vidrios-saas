@@ -8,6 +8,10 @@ import {
   serializeGuidedVisualConfig,
   type GuidedVisualConfig,
 } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import {
+  normalizeQuickCompositionAdjustment,
+  type QuickCompositionAdjustment,
+} from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 
 export type ComponentMaterial = "Aluminio" | "PVC" | "Cristal";
 export type CotizacionItemCatalogCategoria = "aluminio" | "pvc" | "vidrio" | "otros";
@@ -56,6 +60,7 @@ export type CotizacionItemPresentationMeta = {
   mirrorPaneDirection: CotizacionMirrorPaneDirection;
   mirrorInteriorLine: CotizacionMirrorInteriorLine;
   guidedVisualConfig: GuidedVisualConfig | null;
+  quickCompositionAdjustment: QuickCompositionAdjustment | null;
   cubicationSnapshot: CotizacionItemCubicationSnapshot | null;
   fabricacionTipologia: string;
   fabricacionHojas: number | null;
@@ -110,6 +115,7 @@ const PUBLIC_PRESENTATION_META_TAGS = new Set([
   "mpd",
   "mil",
   "gvc",
+  "qca",
 ]);
 
 /**
@@ -271,6 +277,7 @@ export function encodeCotizacionItemPresentationMeta(input: {
   mirrorPaneDirection?: CotizacionMirrorPaneDirection;
   mirrorInteriorLine?: CotizacionMirrorInteriorLine;
   guidedVisualConfig?: GuidedVisualConfig | null;
+  quickCompositionAdjustment?: QuickCompositionAdjustment | null;
   cubicationSnapshot?: CotizacionItemCubicationSnapshot | null;
   fabricacionTipologia?: string | null;
   fabricacionHojas?: number | null;
@@ -356,6 +363,9 @@ export function encodeCotizacionItemPresentationMeta(input: {
   const guidedVisualConfig = input.guidedVisualConfig
     ? serializeGuidedVisualConfig(input.guidedVisualConfig).replace(/\]/g, "")
     : "";
+  const quickCompositionAdjustment = input.quickCompositionAdjustment
+    ? encodeURIComponent(JSON.stringify(input.quickCompositionAdjustment))
+    : "";
   const fabricacionTipologia = (input.fabricacionTipologia ?? "")
     .trim()
     .replace(/\]/g, "");
@@ -435,6 +445,7 @@ export function encodeCotizacionItemPresentationMeta(input: {
     `[mpd:${mirrorPaneDirection}]` +
     `[mil:${mirrorInteriorLine}]` +
     `[gvc:${guidedVisualConfig}]` +
+    `[qca:${quickCompositionAdjustment}]` +
     `[ft:${fabricacionTipologia}]` +
     `[fh:${fabricacionHojas}]` +
     `[fmo:${fabricacionModulos}]` +
@@ -523,6 +534,15 @@ export function decodeCotizacionItemPresentationMeta(
   const guidedVisualConfig = parseGuidedVisualConfig(
     source.match(/\[gvc:([^\]]*)\]/)?.[1]
   );
+  let quickCompositionAdjustment: QuickCompositionAdjustment | null = null;
+  const encodedQuickAdjustment = source.match(/\[qca:([^\]]*)\]/)?.[1];
+  if (encodedQuickAdjustment) {
+    try {
+      quickCompositionAdjustment = normalizeQuickCompositionAdjustment(JSON.parse(decodeURIComponent(encodedQuickAdjustment)));
+    } catch {
+      quickCompositionAdjustment = null;
+    }
+  }
   const fabricacionTipologia = source.match(/\[ft:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const fabricacionHojas = parseOptionalNumber(
     source.match(/\[fh:([^\]]*)\]/)?.[1]
@@ -593,6 +613,7 @@ export function decodeCotizacionItemPresentationMeta(
     .replace(/\[mpd:[^\]]*\]/g, "")
     .replace(/\[mil:[^\]]*\]/g, "")
     .replace(/\[gvc:[^\]]*\]/g, "")
+    .replace(/\[qca:[^\]]*\]/g, "")
     .replace(/\[ft:[^\]]*\]/g, "")
     .replace(/\[fh:[^\]]*\]/g, "")
     .replace(/\[fmo:[^\]]*\]/g, "")
@@ -645,6 +666,7 @@ export function decodeCotizacionItemPresentationMeta(
     mirrorPaneDirection,
     mirrorInteriorLine,
     guidedVisualConfig,
+    quickCompositionAdjustment,
     cubicationSnapshot,
     fabricacionTipologia,
     fabricacionHojas,

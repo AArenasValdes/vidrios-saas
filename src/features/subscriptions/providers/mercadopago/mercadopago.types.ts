@@ -39,6 +39,8 @@ export type MercadoPagoAuthorizedPayment = {
   currency_id?: string | null;
   transaction_amount?: number | null;
   debit_date?: string | null;
+  date_created?: string | null;
+  last_modified?: string | null;
   status?: string | null;
   summarized?: string | null;
   payment?: {
@@ -46,6 +48,10 @@ export type MercadoPagoAuthorizedPayment = {
     status?: string | null;
     status_detail?: string | null;
   } | null;
+};
+
+export type MercadoPagoAuthorizedPaymentsSearch = {
+  results?: MercadoPagoAuthorizedPayment[];
 };
 
 export type MercadoPagoPayment = {

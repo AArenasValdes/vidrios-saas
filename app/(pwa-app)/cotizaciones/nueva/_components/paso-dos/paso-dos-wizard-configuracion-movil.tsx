@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { LuChevronLeft, LuSearch, LuX } from "react-icons/lu";
+import { LuChevronLeft, LuPencil, LuSearch, LuX } from "react-icons/lu";
 
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
@@ -35,6 +35,8 @@ import {
 } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import { MeasureDimensionInput } from "@/features/cotizaciones/components/measure-dimension-input";
 import { ComponentPreview } from "@/features/cotizaciones/components/component-preview";
+import { buildQuickCompositionBaseConfig } from "@/features/cotizaciones/visual-composer/services/quick-composition-adjustment.service";
+import type { QuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 import {
   formatMeasurePairFromMm,
@@ -60,6 +62,7 @@ import {
 } from "./paso-dos-wizard-movil.utils";
 import { PasoDosWizardPrecioMovil } from "./paso-dos-wizard-precio-movil";
 import { PasoDosWizardVidrioMovil } from "./paso-dos-wizard-vidrio-movil";
+import { AjusteComposicionMovil } from "./ajuste-composicion-movil";
 import s from "../../page.module.css";
 
 type GlassCatalogGroup = {
@@ -95,6 +98,7 @@ type Props = {
   displayConfigurationOptions: readonly string[];
   displaySystemOptions: readonly string[];
   draft: PasoDosGrupoDraft;
+  onQuickCompositionAdjustment: (adjustment: QuickCompositionAdjustment | null) => void;
   formattedPriceValue: string;
   glassCatalogGroups: readonly GlassCatalogGroup[];
   isRecommendedGlass: (option: string) => boolean;
@@ -176,6 +180,7 @@ export function PasoDosWizardConfiguracionMovil({
   displayConfigurationOptions,
   displaySystemOptions,
   draft,
+  onQuickCompositionAdjustment,
   formattedPriceValue,
   glassCatalogGroups,
   isRecommendedGlass,
@@ -239,6 +244,7 @@ export function PasoDosWizardConfiguracionMovil({
   const measureUnit = useOrganizationMeasureUnit();
   const { organizacionId } = useAuth();
   const [showAllColors, setShowAllColors] = useState(false);
+  const [isQuickCompositionOpen, setIsQuickCompositionOpen] = useState(false);
   const [isIphoneViewport] = useState(() => {
     if (typeof window === "undefined") {
       return false;
@@ -282,6 +288,19 @@ export function PasoDosWizardConfiguracionMovil({
   const isGlassProduct =
     !requiresProfileMaterial || draft.catalogCategoria === "vidrio" || draft.material === "Cristal";
   const isTrabajoPersonalizado = draft.subtipo === "Trabajo personalizado";
+  const quickCompositionBase = useMemo(() => buildQuickCompositionBaseConfig({
+    tipo: draft.subtipo,
+    sistema: draft.sistema,
+    configuracion: draft.configuracion,
+    sheetScheme: draft.sheetScheme,
+    sheetVariant: draft.sheetVariant,
+    ancho: Number(draft.ancho),
+    alto: Number(draft.alto),
+    hojasBase: draft.hojasBase,
+    mirrorPaneCount: draft.mirrorPaneCount,
+    existing: draft.quickCompositionAdjustment,
+  }), [draft.ancho, draft.alto, draft.configuracion, draft.hojasBase, draft.mirrorPaneCount, draft.quickCompositionAdjustment, draft.sheetScheme, draft.sheetVariant, draft.sistema, draft.subtipo]);
+  const quickAdjustmentEnabled = quickCompositionBase.supported;
   const isFreeValue = isFreeValueComponentType(draft.subtipo);
   const freeValueGuidance = getComponentDescripcion(draft.subtipo);
   const shouldShowFreeValuePrice =
@@ -1206,7 +1225,7 @@ export function PasoDosWizardConfiguracionMovil({
         </div>
       ) : null}
 
-      {!isTrabajoPersonalizado && !isFreeValue && draft.subtipo === "Puerta" ? (
+      {!isTrabajoPersonalizado && !isFreeValue && draft.subtipo === "Puerta" && !quickCompositionBase.supported ? (
         <div className={s.stepTwoMobileBlockSecundario}>
           <div className={s.stepTwoMobileBlockLabel}>Palillo</div>
           <div className={s.stepTwoMobileChoiceChips}>
@@ -1959,7 +1978,27 @@ export function PasoDosWizardConfiguracionMovil({
       ) : null}
 
       <div className={s.stepTwoMobileBlockHero}>
-        <div className={s.stepTwoMobileBlockLabel}>Medidas</div>
+        <div className={s.stepTwoMobileCompositionHeader}>
+          <div className={s.stepTwoMobileBlockLabel}>Medidas</div>
+          <button
+            type="button"
+            className={s.stepTwoMobileCompositionAdjustHint}
+            disabled={!quickAdjustmentEnabled}
+            title={!quickAdjustmentEnabled ? "Ingresa medidas exteriores válidas para habilitar el ajuste" : undefined}
+            onClick={() => setIsQuickCompositionOpen(true)}
+            aria-label="Ajustar composición del componente"
+          >
+            <LuPencil aria-hidden="true" /> Ajustar
+          </button>
+        </div>
+        <button
+          type="button"
+          className={s.stepTwoMobileCompositionPreviewAction}
+          disabled={!quickAdjustmentEnabled}
+          title={!quickAdjustmentEnabled ? "Ingresa medidas exteriores válidas para habilitar el ajuste" : undefined}
+          onClick={() => setIsQuickCompositionOpen(true)}
+          aria-label="Abrir el ajuste de composición desde el croquis"
+        >
         <ComponentPreview
           type={draft.subtipo}
           system={draft.sistema}
@@ -1978,6 +2017,7 @@ export function PasoDosWizardConfiguracionMovil({
           palilloEnabled={draft.palilloEnabled}
           palilloType={draft.palilloType}
           guidedVisualConfig={draft.guidedVisualConfig}
+          quickCompositionAdjustment={draft.quickCompositionAdjustment}
           mirrorFormat={draft.mirrorFormat}
           mirrorPaneCount={draft.mirrorPaneCount}
           mirrorPaneDirection={draft.mirrorPaneDirection}
@@ -1986,6 +2026,7 @@ export function PasoDosWizardConfiguracionMovil({
           maxH={164}
           size="hero"
         />
+        </button>
         <div className={s.stepTwoMobileMedidasRow}>
           <div className={s.stepTwoMobileMedidaField}>
             <label className={s.stepTwoMobileMedidaLabel} htmlFor="grupo-ancho">
@@ -2094,6 +2135,21 @@ export function PasoDosWizardConfiguracionMovil({
             closeLineSelector();
           }}
           onClose={() => setPriceEditorTarget(null)}
+        />
+      ) : null}
+      {isQuickCompositionOpen && quickAdjustmentEnabled ? (
+        <AjusteComposicionMovil
+          draft={draft}
+          onApply={(adjustment, composition) => {
+            if (composition && composition.sheetScheme !== draft.sheetScheme) {
+              onSheetSchemeChange(composition.sheetScheme);
+              onSheetVariantChange(composition.sheetVariant);
+            } else if (composition && composition.sheetVariant !== draft.sheetVariant) {
+              onSheetVariantChange(composition.sheetVariant);
+            }
+            onQuickCompositionAdjustment(adjustment);
+          }}
+          onClose={() => setIsQuickCompositionOpen(false)}
         />
       ) : null}
     </div>

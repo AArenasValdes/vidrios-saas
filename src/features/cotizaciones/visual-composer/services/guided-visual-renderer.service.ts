@@ -76,6 +76,7 @@ export type GuidedLayoutModule = {
   selected: boolean;
   glassShape: GuidedGlassShape;
   openingSide: GuidedOpeningSide;
+  renderAsSingleLeaf?: boolean;
   /** Compat / proyección plana. */
   palillos: Array<GuidedPalillo & { x1: number; y1: number; x2: number; y2: number }>;
   /** Segmentos reales del árbol (pueden ser parciales). */
@@ -96,6 +97,7 @@ export type GuidedLayoutSplit = {
   selected: boolean;
   firstSizeMm: number;
   secondSizeMm: number;
+  quickFixedSide?: "top" | "bottom" | "left" | "right";
 };
 
 export type GuidedVisualLayout = {
@@ -706,7 +708,8 @@ function drawModuleCue(
   h: number,
   palette: ProfilePalette,
   scale: StrokeScale,
-  variant: GuidedRenderVariant
+  variant: GuidedRenderVariant,
+  renderAsSingleLeaf = false
 ) {
   const detail = palette.detail;
   const stroke = scale.cue;
@@ -727,6 +730,7 @@ function drawModuleCue(
   }
 
   if (type === "corredera") {
+    if (renderAsSingleLeaf) return drawSingleSlidingLeaf(x, y, w, h, palette, scale, openingSide);
     return drawSlidingSystem(x, y, w, h, palette, scale, variant);
   }
 
@@ -907,14 +911,15 @@ function drawModuleCue(
   }
 
   if (type === "puerta_corredera") {
-    parts.push(
-      drawSlidingSystem(x, y, w, h, palette, scale, variant),
-      `<line x1="${px(x + inset * 0.4)}" y1="${px(y + h - inset * 0.4)}" x2="${px(x + w - inset * 0.4)}" y2="${px(y + h - inset * 0.4)}" stroke="${detail}" stroke-width="${px(stroke)}" opacity="0.65" ${cueJoin} />`
-    );
+    parts.push(renderAsSingleLeaf
+      ? drawSingleSlidingLeaf(x, y, w, h, palette, scale, openingSide)
+      : drawSlidingSystem(x, y, w, h, palette, scale, variant));
+    parts.push(`<line x1="${px(x + inset * 0.4)}" y1="${px(y + h - inset * 0.4)}" x2="${px(x + w - inset * 0.4)}" y2="${px(y + h - inset * 0.4)}" stroke="${detail}" stroke-width="${px(stroke)}" opacity="0.65" ${cueJoin} />`);
     return parts.join("");
   }
 
   if (type === "shower_frontal") {
+    if (renderAsSingleLeaf) return drawSingleSlidingLeaf(x, y, w, h, palette, scale, openingSide);
     const dividerX = x + w * 0.42;
     const freeSide: GuidedOpeningSide = openingSide === "right" ? "left" : "right";
     const handle = resolveHardwareAnchor({
@@ -944,6 +949,9 @@ function drawModuleCue(
   }
 
   if (type === "shower_corredera") {
+    if (renderAsSingleLeaf) {
+      return `${drawSingleSlidingLeaf(x, y, w, h, palette, scale, openingSide)}<line x1="${px(x)}" y1="${px(y + h - Math.max(2, stroke))}" x2="${px(x + w)}" y2="${px(y + h - Math.max(2, stroke))}" stroke="${palette.div}" stroke-width="${px(Math.max(2, scale.sash * 0.72))}" ${PROFILE_JOIN} />`;
+    }
     parts.push(
       drawSlidingSystem(x, y, w, h, palette, scale, variant),
       `<line x1="${px(x)}" y1="${px(y + h - Math.max(2, stroke))}" x2="${px(x + w)}" y2="${px(y + h - Math.max(2, stroke))}" stroke="${palette.div}" stroke-width="${px(Math.max(2, scale.sash * 0.72))}" ${PROFILE_JOIN} />`
@@ -964,6 +972,30 @@ function drawModuleCue(
   }
 
   return "";
+}
+
+function drawSingleSlidingLeaf(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  palette: ProfilePalette,
+  scale: StrokeScale,
+  openingSide: GuidedOpeningSide
+) {
+  const arrowDirection = openingSide === "right" ? "right" : "left";
+  const centerX = x + w / 2;
+  const centerY = y + h / 2;
+  const length = Math.max(8, Math.min(28, w * 0.22));
+  const startX = arrowDirection === "right" ? centerX - length / 2 : centerX + length / 2;
+  const endX = arrowDirection === "right" ? centerX + length / 2 : centerX - length / 2;
+  const sign = arrowDirection === "right" ? 1 : -1;
+  const inset = Math.max(4, Math.min(w, h) * 0.08);
+  return [
+    drawOperableSashFrame(x, y, w, h, palette, scale),
+    `<g data-guided-opening="slide-${arrowDirection}" stroke="${palette.detail}" stroke-width="${px(scale.cue)}" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"><line x1="${px(startX)}" y1="${px(centerY)}" x2="${px(endX)}" y2="${px(centerY)}"/><polyline points="${px(endX - sign * 4)},${px(centerY - 3.5)} ${px(endX)},${px(centerY)} ${px(endX - sign * 4)},${px(centerY + 3.5)}"/></g>`,
+    `<line x1="${px(arrowDirection === "right" ? x + w - inset : x + inset)}" y1="${px(centerY - 5)}" x2="${px(arrowDirection === "right" ? x + w - inset : x + inset)}" y2="${px(centerY + 5)}" stroke="${palette.detail}" stroke-width="${px(Math.max(1.5, scale.cue))}" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`,
+  ].join("");
 }
 
 /**
@@ -1091,6 +1123,7 @@ export function calculateGuidedVisualLayout(
         selected: showSelection && rect.id === config.selectedNodeId,
         glassShape: rect.glassShape ?? { kind: "rect" as const },
         openingSide: rect.openingSide ?? "left",
+        renderAsSingleLeaf: rect.renderAsSingleLeaf,
         palillos,
         palilloSegments,
         palilloCells,
@@ -1131,6 +1164,7 @@ export function calculateGuidedVisualLayout(
         selected: showSelection && rect.id === config.selectedNodeId,
         firstSizeMm,
         secondSizeMm,
+        quickFixedSide: rect.quickFixedSide,
       };
     });
 
@@ -1354,7 +1388,8 @@ export function renderGuidedVisualSvg(
         sash.h,
         modulePalette,
         scale,
-        variant
+        variant,
+        layoutModule.renderAsSingleLeaf
       ),
       `</g>`
     );

@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 jest.mock("@/features/auth/hooks/useAuth", () => ({
   useAuth: () => ({ organizacionId: "test-org-1", userId: "test-user" }),
@@ -11,6 +11,11 @@ jest.mock("@/features/organization-profile/hooks/use-organization-measure-unit",
 }));
 
 import { PasoDosWizardConfiguracionMovil } from "../paso-dos-wizard-configuracion-movil";
+import { createDefaultGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+
+beforeAll(() => {
+  Object.defineProperty(window, "scrollTo", { value: jest.fn(), writable: true });
+});
 
 const baseProps = {
   activePricingMode: "margen" as const,
@@ -105,6 +110,7 @@ const baseProps = {
   onVidrioChange: jest.fn(),
   onPalilloEnabledChange: jest.fn(),
   onPalilloTypeChange: jest.fn(),
+  onQuickCompositionAdjustment: jest.fn(),
   onCostInputScopeChange: jest.fn(),
   onCobraPrecioSeparadoChange: jest.fn(),
   onAddAlcanceDetalle: jest.fn(),
@@ -134,6 +140,101 @@ const baseProps = {
 };
 
 describe("PasoDosWizardConfiguracionMovil", () => {
+  it("permite abrir Ajustar composición cuando el sistema ya está elegido y aún no hay esquema de hojas", () => {
+    render(<PasoDosWizardConfiguracionMovil {...baseProps} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Ajustar composición del componente" }));
+
+    expect(screen.getByRole("heading", { name: "Ajustar composición" })).toBeInTheDocument();
+  });
+
+  it("mantiene el croquis como acceso táctil y muestra Ajustar fuera del dibujo", () => {
+    render(<PasoDosWizardConfiguracionMovil {...baseProps} />);
+
+    const adjustButton = screen.getByRole("button", { name: "Ajustar composición del componente" });
+    const drawingButton = screen.getByRole("button", { name: "Abrir el ajuste de composición desde el croquis" });
+    expect(adjustButton.parentElement).toContainElement(screen.getByText("Medidas"));
+    expect(drawingButton).toBeInTheDocument();
+    expect(drawingButton).not.toContainElement(adjustButton);
+  });
+
+  it("permite dividir y aplicar el croquis de componentes sin esquema de hojas", () => {
+    const onQuickCompositionAdjustment = jest.fn();
+    render(
+      <PasoDosWizardConfiguracionMovil
+        {...baseProps}
+        onQuickCompositionAdjustment={onQuickCompositionAdjustment}
+        draft={{ ...baseProps.draft, subtipo: "Espejo", sistema: "Muro", configuracion: "Pegado", sheetScheme: "" }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Ajustar composición del componente" }));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "2 hojas" }));
+    expect(within(dialog).getByText(/La composición cambió\. La pauta automática queda pendiente/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar cambios" }));
+
+    expect(onQuickCompositionAdjustment).toHaveBeenCalledWith(expect.objectContaining({ paneCount: 2, leafWidths: [600, 600] }));
+  });
+
+  it("permite cambiar una hoja seleccionada a abatible y lo aplica al croquis", () => {
+    const onQuickCompositionAdjustment = jest.fn();
+    render(<PasoDosWizardConfiguracionMovil {...baseProps} onQuickCompositionAdjustment={onQuickCompositionAdjustment} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Ajustar composición del componente" }));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Abatible" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Aplicar cambios" }));
+
+    expect(onQuickCompositionAdjustment).toHaveBeenCalledWith(expect.objectContaining({ paneTypes: { "leaf-1": "casement" } }));
+  });
+
+  it("permite aplicar un cambio visual aunque el esquema existente no tenga variante elegida", () => {
+    const onQuickCompositionAdjustment = jest.fn();
+    render(
+      <PasoDosWizardConfiguracionMovil
+        {...baseProps}
+        onQuickCompositionAdjustment={onQuickCompositionAdjustment}
+        draft={{ ...baseProps.draft, sheetScheme: "2 hojas", sheetVariant: "" }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Ajustar composición del componente" }));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Abatible" }));
+
+    expect(within(dialog).getByRole("button", { name: "Aplicar cambios" })).toBeEnabled();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Aplicar cambios" }));
+    expect(onQuickCompositionAdjustment).toHaveBeenCalledWith(expect.objectContaining({ paneTypes: { "leaf-1": "casement" } }));
+  });
+
+  it("mantiene interactivo Ajustar también para esquemas personalizados", () => {
+    render(
+      <PasoDosWizardConfiguracionMovil
+        {...baseProps}
+        draft={{ ...baseProps.draft, sheetScheme: "Personalizado" }}
+      />
+    );
+
+    expect(screen.getByText("Ajustar")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Ajustar composición del componente" }));
+    expect(screen.getByRole("heading", { name: "Ajustar composición" })).toBeInTheDocument();
+  });
+
+  it("permite abrir el ajuste si el croquis ya tiene un árbol visual guiado", () => {
+    render(
+      <PasoDosWizardConfiguracionMovil
+        {...baseProps}
+        draft={{ ...baseProps.draft, guidedVisualConfig: createDefaultGuidedVisualConfig({ widthMm: 1200, heightMm: 1500 }) }}
+      />
+    );
+
+    const adjust = screen.getByRole("button", { name: "Ajustar composición del componente" });
+    expect(adjust).toBeEnabled();
+    fireEvent.click(adjust);
+    expect(screen.getByRole("heading", { name: "Ajustar composición" })).toBeInTheDocument();
+  });
+
   it("debe mostrar tipo de apertura y composicion dinamica para Bow Window", () => {
     render(
       <PasoDosWizardConfiguracionMovil

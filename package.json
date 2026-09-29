@@ -51,6 +51,7 @@
     "zeta:derive": "node --experimental-strip-types scripts/zeta/derive.ts",
     "zeta:probe": "node --experimental-strip-types scripts/zeta/probe-ui.ts",
     "zeta:ingest": "node --experimental-strip-types scripts/zeta/ingest-raw.ts",
+    "zeta:test": "node --experimental-strip-types --test scripts/zeta/__tests__/zeta-workflow.test.ts",
     "zeta:playwright:install": "playwright install chromium"
   },
   "dependencies": {

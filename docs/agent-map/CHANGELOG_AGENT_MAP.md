@@ -2,6 +2,55 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-29 - Ubicación del acceso Ajustar en el croquis móvil
+
+- El botón **Ajustar** pasa al encabezado de **Medidas**, fuera del dibujo para no tapar ni competir con el croquis en pantallas angostas.
+- El croquis completo conserva su acceso táctil independiente y ambos accesos respetan la disponibilidad por medidas válidas.
+- Se actualiza el handoff móvil y el mapa de Cotizaciones.
+
+## 2026-09-29 - Coherencia de pauta tras ajustar composición
+
+- Al cambiar estructura/tipo de hojas con `[qca:]`, revisión, dominio de pieza y panel de cubicación dejan de mostrar snapshots anteriores o regenerar cortes basados solo en medidas y tipología. El resumen interno enumera esas composiciones pendientes y no atribuye sus cortes a la pauta compatible. Se informa **Composición por revisar**; la cotización comercial y su precio no se bloquean.
+- El aviso de impacto se ubica sutilmente en el footer sticky, sobre **Aplicar cambios**, y solo aparece para cambios estructurales. El panel Palillos aclara que los cortes de palillo aún no están incluidos en la pauta.
+- Palillos e inversión visual no invalidan snapshots. La marca opcional `[qca:]` existente sigue siendo la fuente para reconocer ajustes; sin ella la prioridad histórica de snapshots se conserva.
+- Verificación automática: `fabrication:verify --build` pasó 141 suites / 1.070 pruebas, TypeScript y build; falló solo `docs:check` por `ROUTES_MANIFEST.json` desactualizado y `/api/cron/mercadopago-billing` sin documentar. ESLint focalizado pasa con warnings de React hooks/memoización en paneles largos; `pnpm run lint` falla por `prefer-const` en `seed-structural-draft-client.ts:49`, ajeno a este cambio. QA autenticado y rasterizado de PDF deben reportarse por separado.
+
+## 2026-09-29 - Aplicar composición con variante comercial heredada vacía
+
+- Aplicar un ajuste visual ya no exige seleccionar una variante si se mantiene el esquema comercial existente sin cambiarlo. Al cambiar el esquema/variante sí se mantiene la validación; se evita bloquear el guardado visual por una variante antigua vacía.
+- Verificación: prueba de wizard y ESLint focalizado.
+
+## 2026-09-29 - Ajuste de composición global en Guiada móvil
+
+- “Ajustar” queda disponible para cualquier tipo y sistema del catálogo con medidas exteriores válidas. Se conservan esquemas comerciales cuando existen; los demás croquis admiten de 1 a 6 módulos visuales, fijos periféricos y palillos por módulo.
+- El renderer compartido dibuja selección/divisiones y fijos genéricos fuera de ventanas. Cambiar sistema/configuración reinicia el ajuste; cambios estructurales invalidan snapshots y palillos/inversión visual los conservan.
+- Metadata `[qca:]` agrega `paneCount` opcional, sin tablas ni columnas nuevas. Se actualizan handoff y mapa de Cotizaciones.
+- La affordance y el editor no excluyen composiciones con `GuidedVisualConfig` previo; cuando existe `[qca:]` confirmado, este prevalece explícitamente al renderizar.
+- Las divisiones genéricas permanecen dibujadas después de aplicar; el editor las nombra como hojas. Igualar guarda la proporción aunque coincida con el reparto uniforme, permitiendo sustituir el 25/50/25 predeterminado del corredera 3H.
+- Verificación local: lint focalizado, pruebas de renderer/servicio/wizard y build; el smoke visual autenticado debe repetirse recargando la pestaña con datos de prueba.
+
+## 2026-09-29 - Recomendacion publica para instalar Ventora en Android
+
+- Se monta el prompt de instalación PWA también en landing, login y registro; la guía conserva el evento nativo del navegador y fallback manual existente.
+- En Android se recomienda Chrome y se indica instalar desde el navegador, sin descargar APK externo. El prompt se oculta en modo standalone y permite cerrar el aviso.
+- Verificación: ESLint focalizado y Jest (2 pruebas) pasan; no hay `adb` disponible para QA en emulador. Esto no publica la TWA ni cambia su paquete Android.
+
+## 2026-09-29 - Refinamiento de Ajustar composición móvil
+
+- Croquis ampliado y selector táctil por hoja; pestañas, estados activos, microfeedback y movimiento respetan `prefers-reduced-motion`.
+- El mismo botón espacial agrega/quita un fijo, con medidas editables en filas compactas. Los esquemas/variantes de hojas vienen de los helpers comerciales actuales y se aplican junto con el ajuste sin cambiar los datos de precio o materiales.
+- Footer desactivado cuando no hay cambios y unidad de organización en espacio disponible. Se actualiza el handoff móvil y el mapa de Cotizaciones.
+- Verificación local: ESLint focalizado, 17 pruebas de composición y `pnpm run build`; QA en navegador limitado porque la pestaña original mantiene una edición local abierta y no se recargó para preservar ese borrador. No se verificó dispositivo físico ni resoluciones de 390/430 px.
+
+## 2026-09-29 - Renderer comercial para ajuste de composicion movil
+
+- El ajuste móvil guarda `QuickCompositionAdjustment` en metadata opcional `[qca:]`; palillos y fijos ya no convierten ventanas comerciales a `GuidedVisualConfig`.
+- Renderer comercial compartido conserva perfiles, manillas, flechas y cotas; fijos periféricos dejan las hojas en el vano útil y las proporciones suman el ancho disponible.
+- El editor transaccional expone herramientas compactas de distribución, fijos periféricos y palillos por hoja. Se acota la entrada a ventanas soportadas; Constructor conserva el renderer guiado.
+- La marca es visual: no altera precios, líneas, fabricación, cubicación ni snapshots. Metadata ausente mantiene el render histórico y el caso 3H comercial conserva su camino.
+- Archivos: tipo/servicio de ajuste rápido, `window-drawings.ts`, preview/resolución compartida, presentación de cotización, editor y handoff móvil. Sin tablas/columnas nuevas.
+- Verificación automática focalizada: 6 suites / 155 pruebas y TypeScript; QA de navegador, dispositivo físico y PDF rasterizado se reporta por separado.
+
 ## 2026-09-27 - Verificación repetible para integrar líneas
 
 - `pnpm fabrication:verify` descubre suites de fabricación, catálogo, cotización y print; ejecuta regresiones, TypeScript y comprobación documental de rutas. `--build` añade compilación; no ejecuta migraciones ni activa recetas.
@@ -2562,3 +2611,5 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
 - Se corrige la captura de ancho A S75 en talleres configurados en cm (se compara en mm como el dato de la hoja) y la prueba de preview recibe ese ancho para habilitar recetas asimétricas.
 - El seed de variantes ya incluye filas antiguas sin `catalog_key` y recupera la identidad S75 solo con proveedor WinHouse y nombre explícito de riel. Se agrega prueba que exige las 30 variantes de doble riel; smoke dirigido: 5 suites, 84 pruebas; `tsc` y build de producción pasan.
 - El despiece S75 agrega un borrador oficial determinista cuando falta el registro persistido de la combinación exacta; prevalece la receta de organización si ya existe. La prueba de servicio cubre 2H asimétrica sin seed y verifica pauta/cortes preliminares.
+- 2026-09-29 — Editor móvil de composición: elegir una posición agrega de inmediato el fijo inicial editable y marca la zona activa; el croquis queda contenido en su tarjeta para evitar que el marco se recorte junto al encabezado.
+- 2026-09-29 — Ajuste de composición Guiada móvil: selector por hoja con **Según sistema**, **Fija**, **Corredera**, **Abatible** y **Proyectante**, también sobre croquis genéricos; tipo de hoja invalida snapshot estructural. Palillos dibujados como perfiles de aluminio con cuerpo, contorno y faceta; los croquis históricos sin ajuste conservan su representación.

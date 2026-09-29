@@ -511,7 +511,7 @@ export function FabricacionResumenMovil({
             <MetricCell label="Perfiles" value={formatMl(summary.totalProfilesMl)} />
             <MetricCell label="Vidrio" value={formatM2(summary.totalGlassM2)} />
             <MetricCell label="Tiras" value={String(summary.totalBars)} />
-            <MetricCell label="Componentes" value={String(summary.items.length)} />
+            <MetricCell label="Con pauta" value={`${summary.items.length}/${summary.totalItems}`} />
           </section>
           <div className={s.mSegmentWrap}>
             <SegmentedControl
@@ -543,6 +543,17 @@ export function FabricacionResumenMovil({
       {exportError ? <p className={s.mExportNotice}>{exportError}</p> : null}
 
       <div className={s.mContent}>
+        {!detailRow && summary.compositionsPendingRecipe.length > 0 ? (
+          <section className={s.compositionReviewNotice} aria-label="Composiciones pendientes de receta">
+            <strong>Composición por revisar</strong>
+            <p>La pauta automática queda pendiente hasta tener una receta compatible.</p>
+            <ul>
+              {summary.compositionsPendingRecipe.map((item) => (
+                <li key={item.itemId}>{item.codigo} · {item.nombre}</li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
         {detailRow ? (
           detailTab === "resumen" ? (
             <DetailResumen row={detailRow} sourceItem={detailSource} />
@@ -553,7 +564,9 @@ export function FabricacionResumenMovil({
           )
         ) : summary.items.length === 0 ? (
           <p className={s.mEmpty}>
-            Esta cotización aún no tiene pauta de fabricación congelada en las piezas.
+            {summary.compositionsPendingRecipe.length > 0
+              ? "No hay componentes con pauta compatible para esta composición."
+              : "Esta cotización aún no tiene pauta de fabricación congelada en las piezas."}
           </p>
         ) : homeTab === "componentes" ? (
           <div className={s.mCardStack}>

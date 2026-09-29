@@ -12,6 +12,14 @@ const RegisterServiceWorker = dynamic(
   { ssr: false },
 );
 
+const InstallAppPrompt = dynamic(
+  () =>
+    import("@/components/pwa/install-app-prompt").then((m) => ({
+      default: m.InstallAppPrompt,
+    })),
+  { ssr: false },
+);
+
 function isMarketingPublicPath(pathname: string | null) {
   if (!pathname) return false;
   if (pathname === "/") return true;
@@ -27,7 +35,8 @@ function isMarketingPublicPath(pathname: string | null) {
 
 /**
  * bundle-defer-third-party / bundle-conditional:
- * en marketing no montamos SW ni install prompt hasta idle (no compiten con FCP).
+ * en marketing el SW espera a idle; el prompt ligero se monta antes para no perder
+ * el evento `beforeinstallprompt` y ofrecer la instalación desde rutas públicas.
  * en app privada el SW entra al hidratar (PWA real).
  */
 export function DynamicPwaComponents() {
@@ -78,12 +87,13 @@ export function DynamicPwaComponents() {
   }, [marketing]);
 
   if (!allowPwa) {
-    return null;
+    return <InstallAppPrompt />;
   }
 
   return (
     <>
       <RegisterServiceWorker />
+      <InstallAppPrompt />
     </>
   );
 }

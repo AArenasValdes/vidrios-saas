@@ -57,6 +57,55 @@ describe("resolveCotizacionItemDrawingSvg", () => {
     expect([...svg.matchAll(/data-window-glass="true"[^>]*\swidth="([\d.]+)"/g)]).toHaveLength(3);
   });
 
+  it("prioriza un ajuste rápido explícito sobre el dibujo legacy 3H", () => {
+    const base = createDefaultGuidedVisualConfig({ widthMm: 2000, heightMm: 1200 });
+    const adjusted = {
+      ...base,
+      quickAdjustment: true,
+      root: { ...base.root, type: "corredera" as const, renderAsSingleLeaf: true },
+    };
+    const svg = resolveCotizacionItemDrawingSvg({
+      tipo: "Ventana",
+      sistema: "Corredera",
+      sheetScheme: "3 hojas",
+      sheetVariant: "2 móviles + 1 fija",
+      ancho: 2000,
+      alto: 1200,
+      colorHex: "#a8a8a8",
+      variant: "pdf",
+      guidedVisualConfig: adjusted,
+    });
+    expect(svg).toContain('data-guided-opening="slide-');
+    expect(svg).not.toContain('data-window-fixed-label="true"');
+  });
+
+  it("aplica el ajuste rápido aunque el item conserve un árbol guiado", () => {
+    const svg = resolveCotizacionItemDrawingSvg({
+      tipo: "Ventana",
+      sistema: "Corredera",
+      sheetScheme: "2 hojas",
+      ancho: 1800,
+      alto: 1200,
+      colorHex: "#a8a8a8",
+      variant: "default",
+      guidedVisualConfig: createDefaultGuidedVisualConfig({ widthMm: 1800, heightMm: 1200 }),
+      quickCompositionAdjustment: {
+        version: 1,
+        fixedTopMm: null,
+        fixedBottomMm: null,
+        fixedLeftMm: 240,
+        fixedRightMm: null,
+        leafWidths: null,
+        paneCount: null,
+        paneDecorations: {},
+        mirrored: false,
+      },
+    });
+
+    expect(svg).toContain('data-window-fixed-panel="true"');
+    expect(svg).not.toContain("data-guided-opening=");
+  });
+
   it("fuerza el croquis correcto por el nombre del ítem si faltan los metadatos de paños", () => {
     const svg = resolveCotizacionItemDrawingSvg({
       tipo: "Ventana",

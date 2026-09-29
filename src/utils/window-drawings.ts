@@ -32,6 +32,8 @@ export type ComponentSVGParams = {
   mirrorPaneCount?: number | null;
   mirrorPaneDirection?: "vertical" | "horizontal";
   mirrorInteriorLine?: "fine" | "marked";
+  quickCompositionAdjustment?: import("@/features/cotizaciones/visual-composer/types/quick-composition-adjustment").QuickCompositionAdjustment | null;
+  quickSelectedPaneIndex?: number | null;
 };
 
 type Palette = {
@@ -43,7 +45,7 @@ type Palette = {
   label: string;  // etiquetas
 };
 
-type WindowLeafCount = 1 | 2 | 3 | 4 | 5;
+type WindowLeafCount = 1 | 2 | 3 | 4 | 5 | 6;
 
 // ─── Vidrio: 100% uniforme en todos los componentes ─────────────────────────
 
@@ -197,7 +199,7 @@ function normalizeLeafCount(value: number | string | null | undefined): WindowLe
   const parsed =
     typeof value === "number" ? value : Number.parseInt(String(value ?? ""), 10);
 
-  if (parsed === 1 || parsed === 2 || parsed === 3 || parsed === 4 || parsed === 5) {
+  if (parsed === 1 || parsed === 2 || parsed === 3 || parsed === 4 || parsed === 5 || parsed === 6) {
     return parsed;
   }
 
@@ -211,6 +213,9 @@ function extractLeafCountFromText(value: string | null | undefined): WindowLeafC
 }
 
 function resolveWindowLeafCount(params: ComponentSVGParams, sistemaNorm: string): WindowLeafCount | null {
+  const quickCount = normalizeLeafCount(params.quickCompositionAdjustment?.paneCount);
+  if (quickCount) return quickCount;
+
   const schemeLeafCount =
     extractLeafCountFromText(params.sheetScheme) ??
     extractLeafCountFromText(params.customSchemeDescription) ??
@@ -253,6 +258,9 @@ function normalizeSearchText(value: string | null | undefined): string {
 }
 
 function resolveBowWindowPaneCount(params: ComponentSVGParams): WindowLeafCount {
+  const quickCount = normalizeLeafCount(params.quickCompositionAdjustment?.paneCount);
+  if (quickCount) return quickCount;
+
   const source = normalizeSearchText(
     [params.sheetScheme, params.sheetVariant, params.customSchemeDescription]
       .filter(Boolean)
@@ -904,6 +912,58 @@ function drawFixedPanel(pane: WindowPane, v: string, p: WindowVisualPalette): st
   ].join("");
 }
 
+function drawQuickPaneDecoration(pane: WindowPane, preset: string | undefined, p: WindowVisualPalette, v: string): string {
+  if (!preset || preset === "none") return "";
+  const inset = Math.max(5, windowFrameInset(v) * 1.45);
+  const x1 = pane.x + inset, x2 = pane.x + pane.w - inset;
+  const y1 = pane.y + inset, y2 = pane.y + pane.h - inset;
+  if (x2 <= x1 || y2 <= y1) return "";
+  const vertical = [drawQuickAluminumMuntin(pane.centerX, y1, pane.centerX, y2, "vertical", p, v)];
+  const horizontal = [drawQuickAluminumMuntin(x1, pane.centerY, x2, pane.centerY, "horizontal", p, v)];
+  if (preset === "vertical") return vertical.join("");
+  if (preset === "horizontal") return horizontal.join("");
+  if (preset === "cross") return [...vertical, ...horizontal].join("");
+  if (preset === "grid") {
+    return [
+      drawQuickAluminumMuntin(x1 + (x2 - x1) / 3, y1, x1 + (x2 - x1) / 3, y2, "grid", p, v),
+      drawQuickAluminumMuntin(x1 + 2 * (x2 - x1) / 3, y1, x1 + 2 * (x2 - x1) / 3, y2, "grid", p, v),
+      drawQuickAluminumMuntin(x1, y1 + (y2 - y1) / 2, x2, y1 + (y2 - y1) / 2, "grid", p, v),
+    ].join("");
+  }
+  return "";
+}
+
+function drawQuickAluminumMuntin(x1: number, y1: number, x2: number, y2: number, marker: string, p: WindowVisualPalette, v: string): string {
+  const vertical = Math.abs(x2 - x1) < Math.abs(y2 - y1);
+  const thickness = Math.max(4.2, windowSashWeight(v) * 0.92);
+  const width = vertical ? thickness : Math.abs(x2 - x1);
+  const height = vertical ? Math.abs(y2 - y1) : thickness;
+  const x = vertical ? x1 - thickness / 2 : Math.min(x1, x2);
+  const y = vertical ? Math.min(y1, y2) : y1 - thickness / 2;
+  const bevel = Math.max(0.8, thickness * 0.16);
+  return `<g data-quick-palillo="${marker}" data-quick-palillo-profile="aluminum"><rect x="${px(x)}" y="${px(y)}" width="${px(width)}" height="${px(height)}" fill="${p.frame}" stroke="${p.relief}" stroke-width="0.9"/><rect x="${px(x + (vertical ? bevel : 0))}" y="${px(y + (vertical ? 0 : bevel))}" width="${px(Math.max(0, width - (vertical ? bevel * 2 : 0)))}" height="${px(Math.max(0, height - (vertical ? 0 : bevel * 2)))}" fill="${p.frameInner}" opacity="0.72"/><line x1="${px(vertical ? x + bevel * 0.65 : x + bevel)}" y1="${px(vertical ? y : y + bevel * 0.65)}" x2="${px(vertical ? x + bevel * 0.65 : x + width - bevel)}" y2="${px(vertical ? y + height : y + bevel * 0.65)}" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.75"/></g>`;
+}
+
+function drawQuickPaneType(pane: WindowPane, paneType: import("@/features/cotizaciones/visual-composer/types/quick-composition-adjustment").QuickPaneType | undefined, v: string, p: WindowVisualPalette, index: number): string {
+  if (!paneType || pane.w < 10 || pane.h < 10) return "";
+  const inset = Math.max(2.5, windowFrameInset(v) * 0.58);
+  const sashPane = { ...pane, x: pane.x + inset, y: pane.y + inset, w: Math.max(1, pane.w - inset * 2), h: Math.max(1, pane.h - inset * 2) };
+  sashPane.centerX = sashPane.x + sashPane.w / 2;
+  sashPane.centerY = sashPane.y + sashPane.h / 2;
+  const side = index % 2 === 0 ? "left" : "right";
+  const replacement = `<rect x="${px(pane.x)}" y="${px(pane.y)}" width="${px(pane.w)}" height="${px(pane.h)}" fill="${p.glass}" fill-opacity="1" stroke="none"/>`;
+  let drawing = "";
+  if (paneType === "fixed") drawing = drawFixedPanel(sashPane, v, p);
+  if (paneType === "sliding") drawing = drawSlidingSash(sashPane, v, p, side, side === "left" ? "right" : "left");
+  if (paneType === "casement") drawing = [drawGlassPanel(sashPane, v, p), drawSashFrame(sashPane, v, p), drawHinges(sashPane, side, v, p), drawSwingArc(sashPane, side, v, p)].join("");
+  if (paneType === "projecting") drawing = [drawGlassPanel(sashPane, v, p), drawSashFrame(sashPane, v, p), drawProjectionIndicator(sashPane, v, p)].join("");
+  return `<g data-quick-pane-type="${paneType}" data-quick-pane-index="${index}">${replacement}${drawing}</g>`;
+}
+
+function drawQuickPaneSelection(pane: WindowPane): string {
+  return `<rect data-quick-selected-pane="true" x="${px(pane.x + 2)}" y="${px(pane.y + 2)}" width="${px(Math.max(0, pane.w - 4))}" height="${px(Math.max(0, pane.h - 4))}" fill="#1E88FF" fill-opacity="0.13" stroke="#1E88FF" stroke-opacity="0.82" stroke-width="1.4"/>`;
+}
+
 function drawRecessedHandle(
   x: number,
   cy: number,
@@ -1184,7 +1244,9 @@ function drawVentanaCorredera(
   v: string,
   p: Palette,
   hojas: WindowLeafCount,
-  fixedPaneIndexes: Set<number>
+  fixedPaneIndexes: Set<number>,
+  paneWidthRatios?: readonly number[],
+  mirrorOpening = false
 ): string {
   const weightedThreePaneRatios =
     hojas === 3 && fixedPaneIndexes.size > 0 ? [0.25, 0.5, 0.25] : undefined;
@@ -1196,7 +1258,7 @@ function drawVentanaCorredera(
     v,
     hojas,
     p,
-    weightedThreePaneRatios
+    paneWidthRatios ?? weightedThreePaneRatios
   );
 
   if (hojas === 1) {
@@ -1215,8 +1277,9 @@ function drawVentanaCorredera(
         return drawFixedPanel(pane, v, palette);
       }
 
-      const direction = index % 2 === 0 ? "right" : "left";
-      const handleSide = index % 2 === 0 ? "right" : "left";
+      const normalRight = index % 2 === 0;
+      const direction = normalRight !== mirrorOpening ? "right" : "left";
+      const handleSide = normalRight !== mirrorOpening ? "right" : "left";
 
       return drawSlidingSash(pane, v, palette, direction, handleSide);
     })
@@ -1374,9 +1437,10 @@ function drawVentanaAbatible(
   h: number,
   v: string,
   p: Palette,
-  hojas: 1 | 2
+  hojas: WindowLeafCount,
+  paneWidthRatios?: readonly number[]
 ): string {
-  const { outer, divider, panes, palette } = buildWindowPanes(x, y, w, h, v, hojas, p);
+  const { outer, divider, panes, palette } = buildWindowPanes(x, y, w, h, v, hojas, p, paneWidthRatios);
   const handleH = clamp(h * 0.14, 13, 19);
 
   const leaf = (pane: WindowPane, side: "left" | "right") => {
@@ -1403,15 +1467,11 @@ function drawVentanaAbatible(
     ].join("");
   }
 
-  const leftPane = panes[0];
-  const rightPane = panes[1];
-
   return [
     outer,
     divider,
     drawInnerTrack(x, y, w, h, v, palette, "vertical"),
-    leaf(leftPane, "left"),
-    leaf(rightPane, "right"),
+    panes.map((pane, index) => leaf(pane, index % 2 === 0 ? "left" : "right")).join(""),
   ].join("");
 }
 
@@ -1426,9 +1486,10 @@ function drawVentanaProyectante(
   h: number,
   v: string,
   p: Palette,
-  hojas: 1 | 2
+  hojas: WindowLeafCount,
+  paneWidthRatios?: readonly number[]
 ): string {
-  const { outer, divider, panes, palette } = buildWindowPanes(x, y, w, h, v, hojas, p);
+  const { outer, divider, panes, palette } = buildWindowPanes(x, y, w, h, v, hojas, p, paneWidthRatios);
   const handleH = clamp(h * 0.12, 12, 17);
   const hinges = panes
     .map((pane) => {
@@ -1539,7 +1600,7 @@ function drawBowWindow(
   const D = windowSashWeight(v);
   const DT = windowDetailWeight(v);
   const FI = windowFrameInset(v);
-  const count = clamp(paneCount, 3, 5);
+  const count = clamp(paneCount, 3, 6);
   const depth = Math.min(h * 0.1, 18);
   const normalizedOpening = normalizeSearchText(opening);
   const normalizedComposition = normalizeSearchText(composition);
@@ -1861,9 +1922,10 @@ function drawVentanaOscilobatiente(
   h: number,
   v: string,
   p: Palette,
-  hojas: 1 | 2
+  hojas: WindowLeafCount,
+  paneWidthRatios?: readonly number[]
 ): string {
-  const { outer, divider, panes, palette } = buildWindowPanes(x, y, w, h, v, hojas, p);
+  const { outer, divider, panes, palette } = buildWindowPanes(x, y, w, h, v, hojas, p, paneWidthRatios);
   const handleH = clamp(h * 0.14, 13, 19);
   const leaf = (pane: WindowPane, side: "left" | "right") => {
     const handleX =
@@ -1893,8 +1955,7 @@ function drawVentanaOscilobatiente(
     outer,
     divider,
     drawInnerTrack(x, y, w, h, v, palette, "vertical"),
-    leaf(panes[0], "left"),
-    leaf(panes[1], "right"),
+    panes.map((pane, index) => leaf(pane, index % 2 === 0 ? "left" : "right")).join(""),
   ].join("");
 }
 
@@ -3621,7 +3682,9 @@ function routeDrawing(
   mirrorFormat?: "single" | "divided",
   mirrorPaneCount?: number | null,
   mirrorPaneDirection?: "vertical" | "horizontal",
-  mirrorInteriorLine?: "fine" | "marked"
+  mirrorInteriorLine?: "fine" | "marked",
+  paneWidthRatios?: readonly number[],
+  mirrorOpening?: boolean
 ): string {
   const binaryLeafCount: 1 | 2 = hojasBase === 1 ? 1 : 2;
 
@@ -3636,13 +3699,13 @@ function routeDrawing(
       if (sistemaNorm === "Celosia") {
         return drawVentanaCelosia(x, y, w, h, v, p, bowComposition || doorConfig);
       }
-      if (sistemaNorm === "Oscilobatiente") return drawVentanaOscilobatiente(x, y, w, h, v, p, binaryLeafCount);
-      if (sistemaNorm === "Abatible")    return drawVentanaAbatible(x, y, w, h, v, p, binaryLeafCount);
+      if (sistemaNorm === "Oscilobatiente") return drawVentanaOscilobatiente(x, y, w, h, v, p, hojasBase ?? binaryLeafCount, paneWidthRatios);
+      if (sistemaNorm === "Abatible")    return drawVentanaAbatible(x, y, w, h, v, p, hojasBase ?? binaryLeafCount, paneWidthRatios);
       if (sistemaNorm === "Proyectante" && projectedFixedLayout !== "none") {
         return drawVentanaProyectanteFijoVertical(x, y, w, h, v, p, projectedFixedLayout);
       }
-      if (sistemaNorm === "Proyectante") return drawVentanaProyectante(x, y, w, h, v, p, binaryLeafCount);
-      return drawVentanaCorredera(x, y, w, h, v, p, hojasBase ?? 2, fixedSlidingPaneIndexes); // Corredera por defecto
+      if (sistemaNorm === "Proyectante") return drawVentanaProyectante(x, y, w, h, v, p, hojasBase ?? binaryLeafCount, paneWidthRatios);
+      return drawVentanaCorredera(x, y, w, h, v, p, hojasBase ?? 2, fixedSlidingPaneIndexes, paneWidthRatios, mirrorOpening); // Corredera por defecto
 
     case "Puerta":
       return drawPuertaComposite(x, y, w, h, v, p, sistemaNorm, doorConfig, palilloEnabled, palilloType);
@@ -3891,7 +3954,7 @@ function drawThreeLeafCenterFixedSlidingWindow(params: ComponentSVGParams): stri
   const [leftPane, centerPane, rightPane] = panes;
   const outerFrame = `<g data-sketch-part="outerFrame">${drawOuterAluminumFrame(x, y, drawW, drawH, renderVariant, p)}</g>`;
   const tracks = `<g data-sketch-part="tracks">${drawInnerTrack(x, y, drawW, drawH, renderVariant, p)}</g>`;
-  const sashes = `<g data-sketch-part="sashes">${drawSlidingSash(leftPane, renderVariant, p, "right", "right")}${drawFixedPanel(centerPane, renderVariant, p)}${drawSlidingSash(rightPane, renderVariant, p, "left", "left")}</g>`;
+  const sashes = `<g data-sketch-part="sashes">${drawSlidingSash(leftPane, renderVariant, p, params.quickCompositionAdjustment?.mirrored ? "left" : "right", params.quickCompositionAdjustment?.mirrored ? "left" : "right")}${drawFixedPanel(centerPane, renderVariant, p)}${drawSlidingSash(rightPane, renderVariant, p, params.quickCompositionAdjustment?.mirrored ? "right" : "left", params.quickCompositionAdjustment?.mirrored ? "right" : "left")}</g>`;
   const meetingRails = `<g data-sketch-part="meetingRail">${drawMeetingProfiles(panes, renderVariant, p)}</g>`;
   const fixedLabelWidth = Math.min(46, centerPane.w * 0.72);
   const fixedLabel = `<g data-sketch-part="fixedLabel" data-window-fixed-label="true"><rect x="${px(centerPane.centerX - fixedLabelWidth / 2)}" y="${px(centerPane.centerY - 9)}" width="${px(fixedLabelWidth)}" height="18" rx="3" fill="rgba(248,250,252,0.92)" stroke="${p.detail}" stroke-width="1"/><text x="${px(centerPane.centerX)}" y="${px(centerPane.centerY + 3.5)}" text-anchor="middle" font-size="9" font-family="sans-serif" fill="${p.detail}" font-weight="700" letter-spacing="0.06em">FIJO</text></g>`;
@@ -3903,6 +3966,15 @@ function drawThreeLeafCenterFixedSlidingWindow(params: ComponentSVGParams): stri
   const labelEl = label
     ? `<text x="${px(x + drawW / 2)}" y="${px(totalH - 8)}" text-anchor="middle" font-size="10" font-family="sans-serif" fill="${p.label}" font-weight="500">${escapeXml(label)}</text>`
     : "";
+  const decorations = panes.map((pane, index) => {
+    const paneNumber = params.quickCompositionAdjustment?.mirrored ? panes.length - index : index + 1;
+    const type = params.quickCompositionAdjustment?.paneTypes?.[`leaf-${paneNumber}`];
+    return `${drawQuickPaneType(pane, type, renderVariant, p, index)}${drawQuickPaneDecoration(pane, params.quickCompositionAdjustment?.paneDecorations[`leaf-${paneNumber}`], p, renderVariant)}`;
+  }).join("");
+  const selectedIndex = params.quickCompositionAdjustment?.mirrored && params.quickSelectedPaneIndex !== null && params.quickSelectedPaneIndex !== undefined
+    ? panes.length - params.quickSelectedPaneIndex - 1
+    : params.quickSelectedPaneIndex;
+  const selection = selectedIndex === null || selectedIndex === undefined ? "" : drawQuickPaneSelection(panes[selectedIndex]);
   const background = resolveComponentSketchBackground(params);
   const outputScale = variant === "pdf"
     ? Math.min(maxW / totalW, 248 / totalH)
@@ -3910,11 +3982,14 @@ function drawThreeLeafCenterFixedSlidingWindow(params: ComponentSVGParams): stri
   const outputWidth = Math.round(totalW * outputScale * 1000) / 1000;
   const outputHeight = Math.round(totalH * outputScale * 1000) / 1000;
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${outputWidth}" height="${outputHeight}" viewBox="0 0 ${totalW} ${totalH}" role="img" aria-label="Ventana corredera de 3 hojas, centro fijo"><title>Ventana corredera de 3 hojas, centro fijo</title>${background ? drawPreviewBackground(totalW, totalH, background) : ""}<g>${outerFrame}${tracks}${sashes}${meetingRails}${fixedLabel}${dimensions}${labelEl}</g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${outputWidth}" height="${outputHeight}" viewBox="0 0 ${totalW} ${totalH}" role="img" aria-label="Ventana corredera de 3 hojas, centro fijo"><title>Ventana corredera de 3 hojas, centro fijo</title>${background ? drawPreviewBackground(totalW, totalH, background) : ""}<g>${outerFrame}${tracks}${sashes}${selection}${decorations}${meetingRails}${fixedLabel}${dimensions}${labelEl}</g></svg>`;
 }
 
 export function generateComponentSVG(params: ComponentSVGParams): string {
-  if (isThreeLeafCenterFixedSlidingWindowPresentation(params)) {
+  const specialQuickHasFixed = Boolean(params.quickCompositionAdjustment && (params.quickCompositionAdjustment.fixedTopMm || params.quickCompositionAdjustment.fixedBottomMm || params.quickCompositionAdjustment.fixedLeftMm || params.quickCompositionAdjustment.fixedRightMm));
+  const hasExplicitQuickDistribution = Boolean(params.quickCompositionAdjustment?.paneCount || params.quickCompositionAdjustment?.leafWidths?.length);
+  const hasExplicitQuickPaneTypes = Object.keys(params.quickCompositionAdjustment?.paneTypes ?? {}).length > 0;
+  if (isThreeLeafCenterFixedSlidingWindowPresentation(params) && !specialQuickHasFixed && !hasExplicitQuickDistribution && !hasExplicitQuickPaneTypes) {
     return drawThreeLeafCenterFixedSlidingWindow(params);
   }
   const variant   = params.variant ?? "default";
@@ -3993,6 +4068,28 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
   const originX = dimLeft;
   const originY = topPad;
 
+  const quick = params.quickCompositionAdjustment;
+  const visualLeft = (quick?.mirrored ? quick?.fixedRightMm : quick?.fixedLeftMm) ?? 0;
+  const visualRight = (quick?.mirrored ? quick?.fixedLeftMm : quick?.fixedRightMm) ?? 0;
+  const visualTop = quick?.fixedTopMm ?? 0;
+  const visualBottom = quick?.fixedBottomMm ?? 0;
+  const validHorizontalFixed = visualLeft + visualRight <= rW - 300;
+  const validVerticalFixed = visualTop + visualBottom <= rH - 300;
+  const fixedLeft = validHorizontalFixed ? visualLeft : 0;
+  const fixedRight = validHorizontalFixed ? visualRight : 0;
+  const fixedTop = validVerticalFixed ? visualTop : 0;
+  const fixedBottom = validVerticalFixed ? visualBottom : 0;
+  const quickHasFixed = fixedLeft + fixedRight + fixedTop + fixedBottom > 0;
+  const quickScaleX = drawW / rW;
+  const quickScaleY = drawH / rH;
+  const compositionX = originX + fixedLeft * quickScaleX;
+  const compositionY = originY + fixedTop * quickScaleY;
+  const compositionW = drawW - (fixedLeft + fixedRight) * quickScaleX;
+  const compositionH = drawH - (fixedTop + fixedBottom) * quickScaleY;
+  const ratios = tipoNorm === "Ventana" && quick?.leafWidths?.length === hojasBase
+    ? sisNorm === "Corredera" && quick.mirrored ? [...quick.leafWidths].reverse() : quick.leafWidths
+    : undefined;
+
   const drawing = routeDrawing(
     tipoNorm,
     sisNorm,
@@ -4001,10 +4098,10 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
     projectedFixedLayout,
     bowPaneCount,
     bowComposition,
-    originX,
-    originY,
-    drawW,
-    drawH,
+    quickHasFixed ? compositionX : originX,
+    quickHasFixed ? compositionY : originY,
+    quickHasFixed ? compositionW : drawW,
+    quickHasFixed ? compositionH : drawH,
     variant,
     palette,
     params.configuracion,
@@ -4013,8 +4110,69 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
     params.mirrorFormat,
     params.mirrorPaneCount,
     params.mirrorPaneDirection,
-    params.mirrorInteriorLine
+    params.mirrorInteriorLine,
+    ratios,
+    Boolean(quick?.mirrored)
   );
+
+  const quickLayers: string[] = [];
+  const quickPalette = resolveWindowPalette(params.colorHex);
+  if (quickHasFixed) {
+    const fixedRects = [
+      fixedTop ? { x: originX, y: originY, w: drawW, h: fixedTop * quickScaleY } : null,
+      fixedBottom ? { x: originX, y: originY + drawH - fixedBottom * quickScaleY, w: drawW, h: fixedBottom * quickScaleY } : null,
+      fixedLeft ? { x: originX, y: originY + fixedTop * quickScaleY, w: fixedLeft * quickScaleX, h: compositionH } : null,
+      fixedRight ? { x: originX + drawW - fixedRight * quickScaleX, y: originY + fixedTop * quickScaleY, w: fixedRight * quickScaleX, h: compositionH } : null,
+    ].filter((rect): rect is { x: number; y: number; w: number; h: number } => Boolean(rect));
+    for (const rect of fixedRects) {
+      const pane = { ...rect, centerX: rect.x + rect.w / 2, centerY: rect.y + rect.h / 2 };
+      quickLayers.push(drawFixedPanel(pane, variant, quickPalette));
+    }
+    quickLayers.push(drawOuterAluminumFrame(originX, originY, drawW, drawH, variant, quickPalette));
+  }
+  if (tipoNorm === "Ventana" && (params.quickSelectedPaneIndex !== null && params.quickSelectedPaneIndex !== undefined || (quick?.paneDecorations && Object.keys(quick.paneDecorations).length > 0) || Object.keys(quick?.paneTypes ?? {}).length > 0 || Boolean(quick?.paneCount || quick?.leafWidths?.length))) {
+    const count = hojasBase ?? 1;
+    const ratiosForOverlay = ratios?.length === count ? ratios : Array.from({ length: count }, () => 1);
+    const ratioSum = ratiosForOverlay.reduce((sum, value) => sum + value, 0) || count;
+    const paneDivider = count > 1 ? Math.max(3.2, windowSashWeight(variant) * 1.55) : 0;
+    const paneInset = windowFrameInset(variant);
+    const available = compositionW - paneInset * 2 - paneDivider * (count - 1);
+    let cursorX = compositionX + paneInset;
+    for (let index = 0; index < count; index += 1) {
+      const paneWidth = available * ratiosForOverlay[index] / ratioSum;
+      const pane = { x: cursorX, y: compositionY + paneInset, w: paneWidth, h: compositionH - paneInset * 2, centerX: cursorX + paneWidth / 2, centerY: compositionY + compositionH / 2 };
+      const decorationIndex = quick?.mirrored ? count - index : index + 1;
+      quickLayers.push(drawQuickPaneType(pane, quick?.paneTypes?.[`leaf-${decorationIndex}`], variant, quickPalette, index));
+      if (params.quickSelectedPaneIndex === index) quickLayers.push(drawQuickPaneSelection(pane));
+      quickLayers.push(drawQuickPaneDecoration(pane, quick?.paneDecorations[`leaf-${decorationIndex}`], quickPalette, variant));
+      cursorX += paneWidth + paneDivider;
+    }
+  }
+  if (tipoNorm !== "Ventana" && (params.quickSelectedPaneIndex !== null && params.quickSelectedPaneIndex !== undefined || (quick?.paneDecorations && Object.keys(quick.paneDecorations).length > 0) || Object.keys(quick?.paneTypes ?? {}).length > 0 || Boolean(quick?.paneCount || quick?.leafWidths?.length))) {
+    const configuredCount = Number((params.sheetScheme ?? params.configuracion ?? "").match(/^\s*([1-6])\s*(?:hojas|paños|panos)/i)?.[1]);
+    const count = quick?.paneCount ?? quick?.leafWidths?.length ?? params.mirrorPaneCount ?? (configuredCount || hojasBase || 1);
+    const countSafe = Math.max(1, Math.min(6, Math.round(count)));
+    const paneRatios = quick?.leafWidths?.length === countSafe ? quick.leafWidths : Array.from({ length: countSafe }, () => 1);
+    const ratioSum = paneRatios.reduce((sum, value) => sum + value, 0) || countSafe;
+    const paneInset = Math.max(4, windowFrameInset(variant));
+    const divider = countSafe > 1 ? Math.max(2.5, windowSashWeight(variant) * 1.2) : 0;
+    const available = Math.max(0, compositionW - paneInset * 2 - divider * (countSafe - 1));
+    const paneHeight = Math.max(0, compositionH - paneInset * 2);
+    let cursorX = compositionX + paneInset;
+    for (let index = 0; index < countSafe; index += 1) {
+      const paneWidth = Math.max(0, available * paneRatios[index] / ratioSum);
+      const pane = { x: cursorX, y: compositionY + paneInset, w: paneWidth, h: paneHeight, centerX: cursorX + paneWidth / 2, centerY: compositionY + compositionH / 2 };
+      const decorationIndex = quick?.mirrored ? countSafe - index : index + 1;
+      quickLayers.push(drawQuickPaneType(pane, quick?.paneTypes?.[`leaf-${decorationIndex}`], variant, quickPalette, index));
+      if (params.quickSelectedPaneIndex === index) quickLayers.push(drawQuickPaneSelection(pane));
+      quickLayers.push(drawQuickPaneDecoration(pane, quick?.paneDecorations[`leaf-${decorationIndex}`], quickPalette, variant));
+      if (index < countSafe - 1) {
+        const dividerX = cursorX + paneWidth + divider / 2;
+        quickLayers.push(`<line data-quick-module-divider="true" x1="${px(dividerX)}" y1="${px(compositionY)}" x2="${px(dividerX)}" y2="${px(compositionY + compositionH)}" stroke="${quickPalette.frame}" stroke-width="${px(Math.max(1.8, divider))}"/>`);
+      }
+      cursorX += paneWidth + divider;
+    }
+  }
 
   const dimY = variant === "pdf" ? originY - 18 : originY + drawH + 18;
   const dimensions = isMesaCircular
@@ -4050,6 +4208,7 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
     sketchBackground ? drawPreviewBackground(totalW, totalH, sketchBackground) : "",
     "<g>",
     drawing,
+    quickLayers.join(""),
     dimensions,
     labelEl,
     "</g>",

@@ -2,6 +2,7 @@ import "server-only";
 
 import type {
   MercadoPagoAuthorizedPayment,
+  MercadoPagoAuthorizedPaymentsSearch,
   MercadoPagoPayment,
   MercadoPagoPreapproval,
   MercadoPagoPreapprovalPlan,
@@ -142,6 +143,15 @@ export function createMercadoPagoClient(accessToken: string) {
     getAuthorizedPayment(id: string) {
       return request<MercadoPagoAuthorizedPayment>(
         `/authorized_payments/${encodeURIComponent(id)}`
+      );
+    },
+    searchAuthorizedPayments(preapprovalId: string) {
+      const query = new URLSearchParams({
+        preapproval_id: preapprovalId,
+      });
+
+      return request<MercadoPagoAuthorizedPaymentsSearch>(
+        `/authorized_payments/search?${query.toString()}`
       );
     },
     getPayment(id: string) {

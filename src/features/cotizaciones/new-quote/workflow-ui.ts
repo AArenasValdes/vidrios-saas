@@ -62,6 +62,8 @@ import {
   type CotizacionItemFreeValueIvaMode,
 } from "@/utils/cotizacion-item-presentation";
 import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import type { QuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
+import { hasQuickCompositionStructuralChanges } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import { countLeafModules } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import { applyCommercialPalilloToGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/services/guided-visual-palillo-compat.service";
 import { resolveQuoteConstructorCommercialName, isQuoteConstructorPresetDefaultName } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
@@ -164,6 +166,7 @@ export type ComponentFormState = {
   mirrorInteriorLine?: CotizacionMirrorInteriorLine;
   mirrorCustomPaneCount?: string;
   guidedVisualConfig?: GuidedVisualConfig | null;
+  quickCompositionAdjustment?: QuickCompositionAdjustment | null;
   /** Borrador de cubicación de esta pieza (auto o ajuste manual). */
   cubicationSnapshot?: CotizacionItemCubicationSnapshot | null;
   /** Variante de receta elegida cuando hay varias activas compatibles. */
@@ -2495,6 +2498,7 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     mirrorPaneDirection,
     mirrorInteriorLine,
     guidedVisualConfig,
+    quickCompositionAdjustment,
     cubicationSnapshot,
     fabricacionTipologia,
     fabricacionHojas,
@@ -2596,6 +2600,7 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     mirrorInteriorLine,
     mirrorCustomPaneCount: mirrorPaneCount !== null && mirrorPaneCount > 6 ? String(mirrorPaneCount) : "",
     guidedVisualConfig,
+    quickCompositionAdjustment,
     cubicationSnapshot: formalCubicationSnapshot ?? cubicationSnapshot,
     fabricationRecipeId:
       fabricationRecipeId || item.fabricacionSnapshot?.recipeId || "",
@@ -2777,6 +2782,7 @@ export function buildItemFromForm(
     draftSnapshot: syncedForm.cubicationSnapshot ?? null,
     previousSnapshot: previousPresentation?.cubicationSnapshot ?? null,
     personalizadoAssistMode,
+    quickCompositionAdjusted: Boolean(syncedForm.guidedVisualConfig?.quickCompositionStructural) || hasQuickCompositionStructuralChanges(syncedForm.quickCompositionAdjustment),
   });
   const resolvedFabricacionHojas = resolveComponentFabricacionHojas({
     sheetScheme,
@@ -2814,6 +2820,9 @@ export function buildItemFromForm(
     fabricacionHojas: resolvedFabricacionHojas,
   });
   const autoSodalSnapshot =
+    syncedForm.guidedVisualConfig?.quickCompositionStructural || hasQuickCompositionStructuralChanges(syncedForm.quickCompositionAdjustment)
+      ? null
+      :
     sodalConfig?.complete &&
     options?.fabricationRecipes &&
     lineTemplateIdNumber &&
@@ -2831,7 +2840,9 @@ export function buildItemFromForm(
           tipologia: syncedForm.fabricacionTipologia,
         }).snapshot
       : null;
-  const formalFabricationSnapshot =
+  const formalFabricationSnapshot = syncedForm.guidedVisualConfig?.quickCompositionStructural || hasQuickCompositionStructuralChanges(syncedForm.quickCompositionAdjustment)
+    ? null
+    :
     syncedForm.fabricacionSnapshot &&
     syncedForm.fabricacionSnapshot.lineTemplateId ===
       (syncedForm.lineTemplateId ? Number(syncedForm.lineTemplateId) : null) &&
@@ -2916,6 +2927,7 @@ export function buildItemFromForm(
             palilloType: syncedForm.palilloType,
           })
         : null,
+      quickCompositionAdjustment: syncedForm.quickCompositionAdjustment ?? null,
       fabricacionTipologia: syncedForm.fabricacionTipologia,
       fabricacionHojas: resolvedFabricacionHojas,
       fabricacionModulos: syncedForm.fabricacionModulos,

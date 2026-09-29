@@ -809,6 +809,7 @@ export default function CotizacionPrintPage() {
         mirrorPaneDirection,
         mirrorInteriorLine,
         guidedVisualConfig,
+        quickCompositionAdjustment,
       } = decodeCotizacionItemPresentationMeta(item.observaciones);
       const colorName = getColorName(colorHex);
       const surface = formatSurface(item.ancho, item.alto, item.cantidad);
@@ -912,6 +913,7 @@ export default function CotizacionPrintPage() {
           mirrorPaneDirection,
           mirrorInteriorLine,
           guidedVisualConfig,
+          quickCompositionAdjustment,
         }),
       });
     }
@@ -1661,6 +1663,7 @@ export default function CotizacionPrintPage() {
                     mirrorPaneDirection: fallbackDrawingMeta.mirrorPaneDirection,
                     mirrorInteriorLine: fallbackDrawingMeta.mirrorInteriorLine,
                     guidedVisualConfig: fallbackDrawingMeta.guidedVisualConfig,
+                    quickCompositionAdjustment: fallbackDrawingMeta.quickCompositionAdjustment,
                   });
                 const itemBadgeLabel = `ITEM ${String(absoluteIndex).padStart(2, "0")}`;
 

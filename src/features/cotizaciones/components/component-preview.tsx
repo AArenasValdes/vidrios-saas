@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 
 import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import type { QuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import {
   resolveComponentPreviewSvg,
   shouldRenderComponentPreview,
@@ -33,6 +34,8 @@ export type ComponentPreviewProps = {
   mirrorPaneDirection?: "vertical" | "horizontal";
   mirrorInteriorLine?: "fine" | "marked";
   guidedVisualConfig?: GuidedVisualConfig | null;
+  quickCompositionAdjustment?: QuickCompositionAdjustment | null;
+  quickSelectedPaneIndex?: number | null;
   maxW?: number;
   maxH?: number;
   className?: string;
@@ -64,6 +67,8 @@ function buildPreviewInput(props: ComponentPreviewProps): ComponentPreviewInput 
     mirrorPaneDirection: props.mirrorPaneDirection,
     mirrorInteriorLine: props.mirrorInteriorLine,
     guidedVisualConfig: props.guidedVisualConfig,
+    quickCompositionAdjustment: props.quickCompositionAdjustment,
+    quickSelectedPaneIndex: props.quickSelectedPaneIndex,
     maxW: props.maxW,
     maxH: props.maxH,
   };
@@ -83,6 +88,8 @@ export function ComponentPreview(props: ComponentPreviewProps) {
     props.configuration,
     props.customSchemeDescription,
     props.guidedVisualConfig,
+    props.quickCompositionAdjustment,
+    props.quickSelectedPaneIndex,
     props.height,
     props.hojasBase,
     props.isCustomScheme,

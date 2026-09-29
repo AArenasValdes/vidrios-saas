@@ -496,6 +496,7 @@ export function PublicQuoteDocument({
         customSchemeDescription,
         isCustomScheme,
         guidedVisualConfig,
+        quickCompositionAdjustment,
       } = decodeCotizacionItemPresentationMeta(item.observaciones);
       const colorName = getColorName(colorHex);
       const surface = formatSurface(item.ancho, item.alto, item.cantidad);
@@ -574,6 +575,7 @@ export function PublicQuoteDocument({
           colorHex,
           material,
           guidedVisualConfig,
+          quickCompositionAdjustment,
           maxW: 470,
           maxH: 260,
           variant: "pdf",
@@ -827,6 +829,7 @@ export function PublicQuoteDocument({
                           colorHex,
                           material,
                           guidedVisualConfig: itemMeta.guidedVisualConfig,
+                          quickCompositionAdjustment: itemMeta.quickCompositionAdjustment,
                           maxW: 470,
                           maxH: 260,
                           variant: "pdf",

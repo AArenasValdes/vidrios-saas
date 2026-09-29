@@ -192,9 +192,37 @@ export async function getOrganizationBillingState(
     throw new Error(`Error al leer pagos aprobados: ${paymentResult.error.message}`);
   }
 
+  let latestApprovedPayment =
+    (paymentResult.data as PagoSuscripcionRow | null) ?? null;
+
+  if (recurringSubscription?.provider === "mercadopago") {
+    const linkedPaymentResult = await admin
+      .from("pagos_suscripcion")
+      .select(
+        "id, organization_id, plan_code, billing_period, amount_clp, amount, currency, currency_code, subscription_id, provider_payment_id, payment_provider, provider_token, provider_order_id, provider_status, provider_response, checkout_url, buy_order, status, paid_at, period_starts_at, period_ends_at, creado_en, actualizado_en, eliminado_en"
+      )
+      .eq("organization_id", organizationId)
+      .eq("subscription_id", recurringSubscription.id)
+      .eq("status", "aprobado")
+      .is("eliminado_en", null)
+      .order("paid_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (linkedPaymentResult.error) {
+      throw new Error(
+        `Error al leer pagos de la suscripcion: ${linkedPaymentResult.error.message}`
+      );
+    }
+
+    latestApprovedPayment =
+      (linkedPaymentResult.data as PagoSuscripcionRow | null) ??
+      latestApprovedPayment;
+  }
+
   return {
     profile: (profileResult.data as ProfileBillingRow | null) ?? null,
     recurringSubscription,
-    latestApprovedPayment: (paymentResult.data as PagoSuscripcionRow | null) ?? null,
+    latestApprovedPayment,
   };
 }

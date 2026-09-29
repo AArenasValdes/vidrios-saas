@@ -40,6 +40,7 @@ import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types
 import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { hasQuickCompositionStructuralChanges } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 
 export type FabricacionDespieceCotizacionEstado =
   | "sin_medidas"
@@ -47,6 +48,7 @@ export type FabricacionDespieceCotizacionEstado =
   | "sin_receta"
   | "multiples_recetas"
   | "receta_incompleta"
+  | "composicion_sin_receta"
   | "calculado";
 
 export type FabricacionDespieceCotizacionResult = {
@@ -216,6 +218,21 @@ export function resolveFabricacionDespieceForQuoteItem(input: {
   /** Fallback del template seleccionado para drafts que preceden a catalogLineKey. */
   lineCatalogKey?: string | null;
 }): FabricacionDespieceCotizacionResult {
+  const presentation = decodeCotizacionItemPresentationMeta(input.item.observaciones);
+  if (
+    presentation.guidedVisualConfig?.quickCompositionStructural ||
+    hasQuickCompositionStructuralChanges(presentation.quickCompositionAdjustment)
+  ) {
+    return {
+      estado: "composicion_sin_receta",
+      formal: null,
+      cubication: null,
+      recipe: null,
+      barsAvailable: false,
+      preliminary: false,
+      message: "La composición de hojas cambió. Esta línea aún no tiene una receta compatible; los cortes y la pauta quedan pendientes de revisión.",
+    };
+  }
   return attachFrozenDespieceFallback(
     resolveLiveFabricacionDespieceForQuoteItem(input),
     input.item
@@ -594,6 +611,7 @@ export function canOpenDespiecePreviewForQuoteItem(input: {
 const FABRICATION_REVIEW_ELIGIBLE_ESTADOS: FabricacionDespieceCotizacionEstado[] = [
   "calculado",
   "receta_incompleta",
+  "composicion_sin_receta",
   "multiples_recetas",
 ];
 

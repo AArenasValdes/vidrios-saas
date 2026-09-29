@@ -16,6 +16,7 @@ import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { hasQuickCompositionStructuralChanges } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 
 export type FabricationSummaryItem = {
   itemId: string;
@@ -38,6 +39,12 @@ export type FabricationSummaryItem = {
 
 export type FabricationQuoteSummary = {
   items: FabricationSummaryItem[];
+  compositionsPendingRecipe: Array<{
+    itemId: string;
+    codigo: string;
+    nombre: string;
+    lineName: string;
+  }>;
   totalItems: number;
   totalProfilesMl: number;
   totalGlassM2: number;
@@ -72,6 +79,10 @@ function resolveDisplaySnapshot(
     organizationId?: number | null;
   }
 ): CotizacionItemCubicationSnapshot | null {
+  if (
+    meta.guidedVisualConfig?.quickCompositionStructural ||
+    hasQuickCompositionStructuralChanges(meta.quickCompositionAdjustment)
+  ) return null;
   const frozen = item.fabricacionSnapshot
     ? fabricacionSnapshotToLegacyCubicationSnapshot(item.fabricacionSnapshot)
     : meta.cubicationSnapshot;
@@ -126,9 +137,22 @@ export function buildFabricationQuoteSummary(
   }
 ): FabricationQuoteSummary {
   const rows: FabricationSummaryItem[] = [];
+  const compositionsPendingRecipe: FabricationQuoteSummary["compositionsPendingRecipe"] = [];
 
   for (const item of items) {
     const meta = decodeCotizacionItemPresentationMeta(item.observaciones ?? "");
+    const structuralCompositionChanged = Boolean(
+      meta.guidedVisualConfig?.quickCompositionStructural ||
+      hasQuickCompositionStructuralChanges(meta.quickCompositionAdjustment)
+    );
+    if (structuralCompositionChanged) {
+      compositionsPendingRecipe.push({
+        itemId: String(item.id),
+        codigo: (item.codigo ?? "").trim() || "-",
+        nombre: (item.nombre ?? "").trim() || "Pieza",
+        lineName: (item.lineaComercial ?? "").trim() || meta.referencia.trim(),
+      });
+    }
     const snapshot = resolveDisplaySnapshot(item, meta, options);
     if (!snapshot || snapshot.cuts.length === 0) continue;
 
@@ -161,6 +185,7 @@ export function buildFabricationQuoteSummary(
 
   return {
     items: rows,
+    compositionsPendingRecipe,
     totalItems: items.length,
     totalProfilesMl: rows.reduce((sum, row) => sum + row.profilesMl, 0),
     totalGlassM2: rows.reduce((sum, row) => sum + row.glassM2, 0),

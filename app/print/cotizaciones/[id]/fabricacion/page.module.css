@@ -701,6 +701,35 @@
   color: #5d7190;
 }
 
+.compositionReviewNotice {
+  margin: 10px 0 16px;
+  padding: 12px 14px;
+  border: 1px solid #dbe4f0;
+  border-left: 3px solid #7a9bc4;
+  border-radius: 10px;
+  background: #f7f9fc;
+  color: #44546a;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.compositionReviewNotice strong {
+  color: #24364c;
+}
+
+.compositionReviewNotice p {
+  margin: 3px 0 0;
+}
+
+.compositionReviewNotice ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.compositionReviewNotice li + li {
+  margin-top: 2px;
+}
+
 .srOnly {
   position: absolute;
   width: 1px;
@@ -1162,6 +1191,12 @@
   color: #6b7280;
   font-size: 14px;
   line-height: 1.45;
+}
+
+.compositionReviewNotice {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  font-size: 12px;
 }
 
 .mExportNotice {

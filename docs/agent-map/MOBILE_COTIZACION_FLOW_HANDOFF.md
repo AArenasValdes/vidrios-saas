@@ -1,6 +1,6 @@
 # Handoff - Flujo movil de cotizacion por items / Constructor
 
-Ultima consolidacion: 2026-07-27.
+Ultima consolidacion: 2026-09-28.
 
 ## Proposito
 
@@ -211,6 +211,22 @@ Reglas esperadas:
 - Debe evitar pasos extra tipo "elegir y despues buscar otra vez".
 
 ## Editor de composicion movil
+
+### Ajuste rapido desde Guiada / Datos
+
+En Guiada, subpaso **Datos**, el croquis abre `ajuste-composicion-movil.tsx` para cualquier tipo o sistema del catálogo cuando el vano exterior tiene medidas válidas. El editor es transaccional: X, Escape o cancelar descartan todo; **Aplicar cambios** actualiza una sola vez el `ComponentForm` y el camino existente de persistencia. Cambiar sistema, configuración o esquema comercial reinicia el ajuste; cambiar el vano exterior conserva proporciones.
+
+- Dominio: `QuickCompositionAdjustment` en `visual-composer/types/quick-composition-adjustment.ts`; `GuidedVisualConfig` sigue reservado al Constructor y a composiciones libres.
+- El ajuste rápido usa el renderer comercial compartido (`window-drawings.ts`) para ventanas y para superponer divisiones persistentes sobre los demás croquis. Conserva esquemas comerciales donde existen; tipos/configuraciones sin esquema de hojas parten como una hoja editable y pueden dividirse en hasta seis hojas, con fijos periféricos, tipo visual por hoja (**Según sistema**, fija, corredera, abatible o proyectante) y palillos por hoja. El tipo explícito de hoja produce perfiles/apertura legibles sobre el croquis de cualquier componente. Los palillos se dibujan como perfiles de aluminio con ancho, contorno y faceta, no como trazos centrales. `Invertir` se mantiene solo en correderas donde el renderer reconoce apertura lateral.
+- La metadata opcional `[qca:]` es aditiva y se propaga por bridge/presentation metadata a Paso 3, detalle, salida pública y PDF. Ausencia mantiene exactamente el dibujo histórico. No hay tabla ni columna nueva.
+- Fijos periféricos no sustituyen hojas ni cambian el vano exterior; las hojas se redistribuyen en el ancho útil. Cambios de fijos, cantidad/proporción o tipo de hoja invalidan snapshots de cubicación/fabricación y bloquean su regeneración automática basada solo en el vano; palillos e inversión conservan snapshots. Mientras no exista una receta que represente la estructura ajustada, revisión omite snapshots/cortes anteriores y muestra **Composición por revisar**; el resumen interno lista las piezas pendientes de receta por separado, sin contar sus cortes como pauta. La cotización y su precio siguen disponibles. La pauta actual tampoco calcula cortes de palillos y el editor lo indica junto al selector de diseño. El aviso estructural va en el footer sticky, inmediatamente sobre **Aplicar cambios**, y solo aparece cuando el cambio puede invalidar la pauta.
+- En el editor guiado, tocar una posición agrega de inmediato un fijo inicial de aproximadamente 20% del eje disponible; volver a tocarla lo quita. Las medidas de fijos activos se editan en filas compactas y el límite visual respeta seis módulos.
+- Distribución expone esquemas numéricos y variantes reales de `getSheetSchemeOptions` / `getSheetVariantOptions`; donde no existe esquema comercial, ofrece divisiones visuales genéricas que se conservan luego de aplicar. La hoja seleccionada en el croquis tiene un selector global de tipo: **Según sistema**, **Fija**, **Corredera**, **Abatible** y **Proyectante**. Igualar hojas guarda explícitamente el reparto uniforme aunque el preset comercial tuviera otra proporción. El cambio se confirma junto con el ajuste y reinicia proporciones/decoraciones/tipos de hoja incompatibles, sin alterar identidad, línea, vidrio ni precio.
+- El croquis ocupa 270–310 px según viewport; tocar una hoja selecciona también sus controles. La acción **Ajustar** se ubica junto al rótulo **Medidas**, nunca flotando sobre el dibujo; el croquis completo sigue siendo un acceso táctil independiente. Tabs, estados seleccionados y botones tienen feedback breve; `prefers-reduced-motion`, safe areas y disabled del footer están contemplados.
+- Restablecer devuelve el croquis a la selección comercial original sin cerrar el editor. Las dimensiones de espacio restante respetan la unidad configurada.
+- Constructor y presets desktop siguen usando `GuidedVisualConfig`; sus diseños mantienen prioridad histórica mientras no exista un ajuste rápido explícito. Si el usuario confirma `[qca:]` en Guiada, ese ajuste prevalece al renderizar. Los items históricos 3H sin ajuste explícito conservan su excepción comercial.
+
+### Editor existente del Constructor
 
 Componente:
 

@@ -184,17 +184,18 @@ export default function SuscripcionPage() {
 
   useEffect(() => {
     fetchSubscriptionSummary()
-      .then(setSummary)
-      .catch(() => setError("No pudimos cargar los datos de tu suscripci\u00f3n."));
-  }, []);
+      .then(async (nextSummary) => {
+        setSummary(nextSummary);
 
-  useEffect(() => {
-    fetch("/api/subscriptions/pagos")
-      .then((r) => r.json())
-      .then((data: { pagos?: PagoHistoryEntry[] }) => {
+        const response = await fetch("/api/subscriptions/pagos", {
+          cache: "no-store",
+        });
+        if (!response.ok) return;
+
+        const data = (await response.json()) as { pagos?: PagoHistoryEntry[] };
         if (data.pagos) setPagos(data.pagos);
       })
-      .catch(() => {});
+      .catch(() => setError("No pudimos cargar los datos de tu suscripci\u00f3n."));
   }, []);
 
   const approvedPayments = pagos.filter((pago) => pago.status === APPROVED_STATUS);

@@ -88,6 +88,48 @@ export function createOrganizationSubscriptionRepository() {
       return (data as OrganizationSubscriptionRow | null) ?? null;
     },
 
+    async listRecentPendingMercadoPago(
+      createdSince: string,
+      limit = 50
+    ): Promise<OrganizationSubscriptionRow[]> {
+      const { data, error } = await db()
+        .select(COLS)
+        .eq("provider", "mercadopago")
+        .eq("status", "pending")
+        .not("provider_subscription_id", "is", null)
+        .gte("creado_en", createdSince)
+        .is("eliminado_en", null)
+        .order("creado_en", { ascending: true })
+        .limit(limit);
+
+      if (error) {
+        throw new Error(`Error al buscar checkouts Mercado Pago recientes: ${error.message}`);
+      }
+
+      return (data as OrganizationSubscriptionRow[] | null) ?? [];
+    },
+
+    async listMercadoPagoDueBefore(
+      dueBefore: string,
+      limit = 50
+    ): Promise<OrganizationSubscriptionRow[]> {
+      const { data, error } = await db()
+        .select(COLS)
+        .eq("provider", "mercadopago")
+        .in("status", ["active", "past_due"])
+        .not("next_payment_at", "is", null)
+        .lte("next_payment_at", dueBefore)
+        .is("eliminado_en", null)
+        .order("next_payment_at", { ascending: true })
+        .limit(limit);
+
+      if (error) {
+        throw new Error(`Error al buscar suscripciones Mercado Pago por vencer: ${error.message}`);
+      }
+
+      return (data as OrganizationSubscriptionRow[] | null) ?? [];
+    },
+
     async getByProviderSubscriptionId(
       providerSubscriptionId: string
     ): Promise<OrganizationSubscriptionRow | null> {

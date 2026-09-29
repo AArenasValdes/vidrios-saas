@@ -5,6 +5,8 @@ import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { LuX } from "react-icons/lu";
 
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import type { QuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type {
   CotizacionLineTemplate,
@@ -99,6 +101,7 @@ export type WizardActions = {
   onBack: () => void;
   onNext: () => void;
   onConfirm: () => void;
+  onQuickCompositionAdjustment: (adjustment: QuickCompositionAdjustment | null) => void;
   onSelectCategoria: (categoria: PasoDosGrupoDraft["categoria"]) => void;
   onSelectSubtipo: (subtipo: string) => void;
   onSelectCantidad: (cantidad: number) => void;
@@ -750,6 +753,7 @@ export function PasoDosWizardMovil({
                   activePricingMode={activePricingMode}
                   colorOptions={materialColorOptions}
                   draft={wizard.draft}
+                  onQuickCompositionAdjustment={wizard.onQuickCompositionAdjustment}
                   displayConfigurationOptions={displayConfigurationOptions}
                   displaySystemOptions={displaySystemOptions}
                   formattedPriceValue={formattedPriceValue}

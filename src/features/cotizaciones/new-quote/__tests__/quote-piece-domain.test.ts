@@ -5,6 +5,7 @@ import {
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 
 import {
   buildPieceDomainView,
@@ -133,6 +134,25 @@ describe("quote-piece-domain", () => {
       observaciones: legacyCubObservaciones(snapshot({ widthMm: 1200 })),
     });
     expect(derivePieceTechnicalStatus(item)).toBe("requiere_revision");
+  });
+
+  it("marca composición por revisar y oculta snapshot antiguo tras cambiar una hoja", () => {
+    const adjustment = {
+      ...createEmptyQuickCompositionAdjustment(),
+      paneTypes: { "leaf-1": "fixed" as const },
+    };
+    const item = baseItem({
+      observaciones: encodeCotizacionItemPresentationMeta({
+        quickCompositionAdjustment: adjustment,
+        cubicationSnapshot: snapshot(),
+      }),
+    });
+
+    const view = buildPieceDomainView(item, "por_item");
+    expect(view.technicalStatus).toBe("requiere_revision");
+    expect(view.technicalSummary.hasSnapshot).toBe(false);
+    expect(view.technicalSummary.cortes).toBe(0);
+    expect(view.cubicationSnapshot).toBeNull();
   });
 
   it("marca sin reglas cuando la línea no tiene cuttingEnabled", () => {

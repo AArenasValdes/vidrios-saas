@@ -23,6 +23,8 @@ declare global {
 const DISMISS_KEY = "ventora:pwa-install-dismissed";
 const MANUAL_INSTALL_FALLBACK_DELAY_MS = 1800;
 const INSTALL_PROMPT_ALLOWED_PREFIXES = [
+  "/login",
+  "/registro",
   "/activacion",
   "/admin",
   "/clientes",
@@ -37,6 +39,10 @@ const INSTALL_PROMPT_ALLOWED_PREFIXES = [
 function shouldShowInstallPromptOnPath(pathname: string | null) {
   if (!pathname) {
     return false;
+  }
+
+  if (pathname === "/") {
+    return true;
   }
 
   return INSTALL_PROMPT_ALLOWED_PREFIXES.some(
@@ -352,13 +358,13 @@ export function InstallAppPrompt() {
     <div className={s.root}>
       <div className={s.bar}>
         <div className={s.barCopy}>
-          <p className={s.barTitle}>Usar desde el celular</p>
+          <p className={s.barTitle}>Instala Ventora en tu teléfono</p>
           <p className={s.barText}>
-            {deferredPrompt
-              ? "Guardala en tu inicio."
-              : showAndroidHint && androidHint
-              ? `Instalala en ${androidHint.browserLabel} en 3 pasos.`
-              : "Guardala en tu celular."}
+            {androidHint
+              ? "En Android recomendamos instalarla desde Chrome. No descargues APKs externos."
+              : deferredPrompt
+              ? "Agrégala a tu inicio directamente desde el navegador."
+              : "Agrégala a la pantalla de inicio de tu celular."}
           </p>
         </div>
 
@@ -369,11 +375,11 @@ export function InstallAppPrompt() {
         <div className={s.barActions}>
           {deferredPrompt ? (
             <button type="button" className={s.primary} onClick={handleInstall}>
-              Entrar a Ventora
+              Instalar Ventora
             </button>
           ) : (
             <button type="button" className={s.primary} onClick={openGuide}>
-              Usar desde el celular
+              Cómo instalar
             </button>
           )}
         </div>
@@ -390,9 +396,9 @@ export function InstallAppPrompt() {
                     : "Instalar Ventora"}
                 </p>
                 <p className={s.text}>
-                  {showAndroidHint && androidHint
-                    ? "Haz esto una vez."
-                    : "Haz esto una vez."}
+                  {androidHint
+                    ? "Te recomendamos Chrome. Instálala desde el menú del navegador; no necesitas bajar un APK."
+                    : "Haz esto una vez desde el menú de tu navegador."}
                 </p>
               </div>
 

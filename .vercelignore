@@ -52,17 +52,20 @@ public/video-assets/
 
 # --- Documentación interna (git sí, Vercel no) ---
 # Excepción obligatoria: JSON Zeta confirmados importados en runtime/build.
-/docs/**
-!/docs/fabricacion/
-!/docs/fabricacion/zeta/
-!/docs/fabricacion/zeta/confirmed/
-!/docs/fabricacion/zeta/confirmed/**
+docs/*
+!docs/fabricacion
+docs/fabricacion/*
+!docs/fabricacion/zeta
+docs/fabricacion/zeta/*
+!docs/fabricacion/zeta/confirmed
+docs/fabricacion/zeta/confirmed/*
+!docs/fabricacion/zeta/confirmed/**
 
 # Evidencia Zeta local modificada: se mantiene en git para trabajo futuro,
 # pero no forma parte de este deployment.
-/docs/fabricacion/zeta/coverage.json
-/docs/fabricacion/zeta/derived/sodal/l25/candidates.json
-/docs/fabricacion/zeta/targets.json
+docs/fabricacion/zeta/coverage.json
+docs/fabricacion/zeta/derived/sodal/l25/candidates.json
+docs/fabricacion/zeta/targets.json
 
 # Renders y material audiovisual de produccion: conservar solo localmente.
 /public/Plan semanal 20-27/
@@ -92,6 +95,7 @@ public/video-assets/
 /android-twa/
 /supabase/
 /tests/
+/tools/
 /__tests__/
 
 # Pruebas unitarias y snapshots dentro de src; no participan en el runtime ni en `next build`.

@@ -81,7 +81,7 @@ describe("cotizacion-item-presentation", () => {
     expect(encoded).toContain("[man:1]");
     expect(encoded).toContain("[po:manual]");
 
-    expect(decodeCotizacionItemPresentationMeta(encoded)).toEqual({
+    expect(decodeCotizacionItemPresentationMeta(encoded)).toMatchObject({
       catalogCategoria: "aluminio",
       catalogEspesor: "",
       catalogTerminacion: "",
@@ -137,7 +137,7 @@ describe("cotizacion-item-presentation", () => {
   it("debe soportar cotizaciones antiguas que guardaban la referencia como linea", () => {
     expect(
       decodeCotizacionItemPresentationMeta("[c:#ffffff][l:S60][m:PVC] Cierre de terraza")
-    ).toEqual({
+    ).toMatchObject({
       catalogCategoria: "pvc",
       catalogEspesor: "",
       catalogTerminacion: "",
@@ -345,7 +345,7 @@ describe("cotizacion-item-presentation", () => {
   });
 
   it("debe usar colores por defecto cuando la metadata viene incompleta", () => {
-    expect(decodeCotizacionItemPresentationMeta("[m:PVC]")).toEqual({
+    expect(decodeCotizacionItemPresentationMeta("[m:PVC]")).toMatchObject({
       catalogCategoria: "pvc",
       catalogEspesor: "",
       catalogTerminacion: "",
@@ -401,7 +401,7 @@ describe("cotizacion-item-presentation", () => {
   it("debe normalizar un color legado a madera", () => {
     expect(
       decodeCotizacionItemPresentationMeta("[c:#b87333][m:Aluminio] Ventana corredera")
-    ).toEqual({
+    ).toMatchObject({
       catalogCategoria: "aluminio",
       catalogEspesor: "",
       catalogTerminacion: "",

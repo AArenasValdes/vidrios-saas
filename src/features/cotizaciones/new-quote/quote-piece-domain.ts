@@ -19,6 +19,7 @@ import {
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
+import { hasQuickCompositionStructuralChanges } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 /** Modos de trabajo desktop (Paso 2). Misma pieza; distinta presentación. */
@@ -145,6 +146,14 @@ export function getPiecePresentationMeta(item: CotizacionWorkflowItem) {
   return decodeCotizacionItemPresentationMeta(item.observaciones);
 }
 
+function hasUnmappedStructuralComposition(item: CotizacionWorkflowItem) {
+  const meta = getPiecePresentationMeta(item);
+  return Boolean(
+    meta.guidedVisualConfig?.quickCompositionStructural ||
+    hasQuickCompositionStructuralChanges(meta.quickCompositionAdjustment)
+  );
+}
+
 /**
  * Reglas duras actuales para avanzar al resumen.
  * No exigen línea ni vidrio (compatibles con presets del cuaderno).
@@ -198,8 +207,9 @@ export function derivePieceTechnicalSummary(
   item: CotizacionWorkflowItem
 ): PieceTechnicalSummary {
   const meta = getPiecePresentationMeta(item);
-  const formal = item.fabricacionSnapshot ?? null;
-  const snapshot = formal
+  const compositionNeedsRecipe = hasUnmappedStructuralComposition(item);
+  const formal = compositionNeedsRecipe ? null : item.fabricacionSnapshot ?? null;
+  const snapshot = compositionNeedsRecipe ? null : formal
     ? null
     : meta.cubicationSnapshot;
   const areaVanoM2 =
@@ -271,6 +281,7 @@ export function derivePieceTechnicalStatus(
   if (item.tipoItem === "item_libre_con_valor") return "sin_reglas";
 
   const meta = getPiecePresentationMeta(item);
+  if (hasUnmappedStructuralComposition(item)) return "requiere_revision";
   const formal = item.fabricacionSnapshot ?? null;
   const snapshot = formal ? null : meta.cubicationSnapshot;
   const widthMm = item.ancho ?? 0;
@@ -344,7 +355,9 @@ export function buildPieceDomainView(
     technicalStatus,
     technicalLabel: PIECE_TECHNICAL_STATUS_LABELS[technicalStatus],
     technicalSummary: derivePieceTechnicalSummary(item),
-    cubicationSnapshot: formalCubication ?? meta.cubicationSnapshot,
+    cubicationSnapshot: hasUnmappedStructuralComposition(item)
+      ? null
+      : formalCubication ?? meta.cubicationSnapshot,
     lineTemplateId: meta.lineTemplateId,
     guidedVisualConfigPresent: Boolean(meta.guidedVisualConfig),
   };

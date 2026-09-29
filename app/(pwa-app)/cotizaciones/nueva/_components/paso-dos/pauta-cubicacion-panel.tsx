@@ -40,6 +40,7 @@ import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabricat
 import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
 import { resolveComponentFabricacionHojas } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import { hasQuickCompositionStructuralChanges, type QuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import {
   describeIncompleteFabricacionMessage,
   formatVariantDisplayLabel,
@@ -94,6 +95,7 @@ export type PautaCubicacionFormSlice = {
   sheetScheme?: string;
   hojasBase?: number | null;
   guidedVisualConfig?: GuidedVisualConfig | null;
+  quickCompositionAdjustment?: QuickCompositionAdjustment | null;
   fabricacionApertura?: string;
   fabricacionHerraje?: string;
   fabricacionVariante?: string;
@@ -204,6 +206,10 @@ function resolveActiveCubicationSnapshotInternal(input: {
   savedCubicationSnapshot?: CotizacionItemCubicationSnapshot | null;
   personalizadoAssistMode?: boolean;
 }): CotizacionItemCubicationSnapshot | null {
+  if (
+    input.componentForm.guidedVisualConfig?.quickCompositionStructural ||
+    hasQuickCompositionStructuralChanges(input.componentForm.quickCompositionAdjustment)
+  ) return null;
   const widthMm = parsePositiveIntegerInput(input.componentForm.ancho);
   const heightMm = parsePositiveIntegerInput(input.componentForm.alto);
   const quantity = parsePositiveIntegerInput(input.componentForm.cantidad, 1);
@@ -355,6 +361,10 @@ export function PautaCubicacionPanel({
   const widthMm = parsePositiveIntegerInput(componentForm.ancho);
   const heightMm = parsePositiveIntegerInput(componentForm.alto);
   const quantity = parsePositiveIntegerInput(componentForm.cantidad, 1);
+  const compositionNeedsRecipeReview = Boolean(
+    componentForm.guidedVisualConfig?.quickCompositionStructural ||
+    hasQuickCompositionStructuralChanges(componentForm.quickCompositionAdjustment)
+  );
   const lineTemplateId = selectedTemplate
     ? String(selectedTemplate.id)
     : componentForm.lineTemplateId;
@@ -466,6 +476,15 @@ export function PautaCubicacionPanel({
       })
     : null;
   const formalResolution = useMemo(() => {
+    if (compositionNeedsRecipeReview) {
+      return {
+        estado: "sin_receta" as const,
+        receta: null,
+        candidatas: [],
+        descartadas: [],
+        advertencias: [],
+      };
+    }
     if (
       isLoadingPersistedRecipes ||
       !explicitTipologia ||
@@ -509,6 +528,7 @@ export function PautaCubicacionPanel({
     });
   }, [
     catalogKey,
+    compositionNeedsRecipeReview,
     componentForm.fabricacionApertura,
     componentForm.fabricacionHerraje,
     componentForm.fabricacionHojas,
@@ -713,6 +733,7 @@ export function PautaCubicacionPanel({
   );
   const savedMatches = cubicationSnapshotMatchesDimensions(savedCubicationSnapshot, dims);
   const legacyAutoSnapshot =
+    !compositionNeedsRecipeReview &&
     !useFormalDomain &&
     !personalizadoAssistMode &&
     selectedTemplate &&
@@ -733,7 +754,7 @@ export function PautaCubicacionPanel({
       : null;
   const autoSnapshot = useFormalDomain ? formalLegacySnapshot : legacyAutoSnapshot;
   useEffect(() => {
-    if (!personalizadoAssistMode || !selectedTemplate || widthMm <= 0 || heightMm <= 0) {
+    if (compositionNeedsRecipeReview || !personalizadoAssistMode || !selectedTemplate || widthMm <= 0 || heightMm <= 0) {
       return;
     }
     const hasUsableManual =
@@ -755,6 +776,7 @@ export function PautaCubicacionPanel({
     // Solo sembrar cuando faltan medidas/manual usable; no reaccionar al objeto draft.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- seed acotado a dims/modo
   }, [
+    compositionNeedsRecipeReview,
     personalizadoAssistMode,
     selectedTemplate?.id,
     widthMm,
@@ -1124,6 +1146,8 @@ export function PautaCubicacionPanel({
 
   const waitingReason = persistedRecipeError
     ? `No se pudo cargar la receta de fabricación: ${persistedRecipeError}`
+    : compositionNeedsRecipeReview
+      ? "La composición cambió. La pauta automática queda pendiente hasta tener una receta compatible."
     : isSodalL25Line && sodalConfig && !sodalConfig.complete
     ? "Selecciona la configuración L25 para generar la pauta de corte."
     : needsS75LeafAWidth && !s75LeafAWidthValid

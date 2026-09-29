@@ -2,6 +2,8 @@ import {
   serializeCubicationSnapshot,
   type CotizacionItemCubicationSnapshot,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
+import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
+import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 import {
   buildFabricationQuoteSummary,
@@ -109,5 +111,36 @@ describe("fabrication quote summary", () => {
   it("muestra Sin línea cuando la pieza no tiene identidad de línea", () => {
     expect(formatFabricationItemLineCaption("", "")).toBe("Sin línea");
     expect(formatFabricationItemLineCaption("L25", "")).toBe("L25");
+  });
+
+  it("omite snapshots anteriores cuando la composición estructural cambió", () => {
+    const adjustment = {
+      ...createEmptyQuickCompositionAdjustment(),
+      paneTypes: { "leaf-1": "fixed" as const },
+    };
+    const summary = buildFabricationQuoteSummary([
+      {
+        id: "edited-1",
+        codigo: "V1",
+        nombre: "Ventana ajustada",
+        lineaComercial: "L5000",
+        ancho: 1200,
+        alto: 1000,
+        cantidad: 1,
+        observaciones: encodeCotizacionItemPresentationMeta({
+          quickCompositionAdjustment: adjustment,
+          cubicationSnapshot: snapshot(),
+        }),
+      },
+    ], {
+      recipes: [],
+      organizationId: 1,
+    });
+
+    expect(summary.items).toHaveLength(0);
+    expect(summary.compositionsPendingRecipe).toEqual([
+      { itemId: "edited-1", codigo: "V1", nombre: "Ventana ajustada", lineName: "L5000" },
+    ]);
+    expect(summary.totalProfilesMl).toBe(0);
   });
 });

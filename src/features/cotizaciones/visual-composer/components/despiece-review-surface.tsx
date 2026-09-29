@@ -43,6 +43,7 @@ import {
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { hasQuickCompositionStructuralChanges } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import { fabricacionSnapshotMatchesCalculatedOutput } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
@@ -74,12 +75,14 @@ type DespieceUiStatus =
   | "calculado_con_receta"
   | "configuracion_incompleta"
   | "estimacion_geometrica"
+  | "composicion_por_revisar"
   | "sin_reglas";
 
 const DESPIECE_UI_STATUS_LABELS: Record<DespieceUiStatus, string> = {
   calculado_con_receta: "Despiece calculado",
   configuracion_incompleta: "Fabricación no configurada",
   estimacion_geometrica: "Estimación geométrica",
+  composicion_por_revisar: "Composición por revisar",
   sin_reglas: "Fabricación no configurada",
 };
 
@@ -173,6 +176,7 @@ function despieceStatusToneClass(status: DespieceUiStatus) {
   switch (status) {
     case "calculado_con_receta":
       return styles.statusOk;
+    case "composicion_por_revisar":
     case "configuracion_incompleta":
     case "estimacion_geometrica":
       return styles.statusWarn;
@@ -180,6 +184,14 @@ function despieceStatusToneClass(status: DespieceUiStatus) {
     default:
       return styles.statusMuted;
   }
+}
+
+function hasUnmappedStructuralComposition(item: CotizacionWorkflowItem) {
+  const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+  return Boolean(
+    meta.guidedVisualConfig?.quickCompositionStructural ||
+    hasQuickCompositionStructuralChanges(meta.quickCompositionAdjustment)
+  );
 }
 
 function isMissingProfileLabel(cut: CotizacionLineTemplateCut) {
@@ -207,6 +219,10 @@ function resolveItemReviewCubication(input: {
   resolution?: FabricacionDespieceCotizacionResult | null;
   template: CotizacionLineTemplate | null;
 }) {
+  if (
+    input.resolution?.estado === "composicion_sin_receta" ||
+    hasUnmappedStructuralComposition(input.item)
+  ) return null;
   if (input.resolution?.cubication && input.resolution.cubication.cuts.length > 0) {
     return input.resolution.cubication;
   }
@@ -233,6 +249,7 @@ function resolveDespieceUiStatus(input: {
   resolution?: FabricacionDespieceCotizacionResult | null;
 }): DespieceUiStatus {
   const { snapshot, preview, resolution } = input;
+  if (resolution?.estado === "composicion_sin_receta") return "composicion_por_revisar";
   if (resolution?.estado === "calculado" && preview && preview.cuts.length > 0) {
     return "calculado_con_receta";
   }
@@ -418,7 +435,7 @@ export function DespieceReviewSurface({
     });
   }, [selectedTemplate, activeSnapshot, autoSnapshot, rules?.sashCount]);
   const pieceGlassDespiece = useMemo(() => {
-    if (!selectedItem) return null;
+    if (!selectedItem || hasUnmappedStructuralComposition(selectedItem)) return null;
     return buildVidrioDespieceForQuoteItem({
       item: selectedItem,
       resolution: activeResolution,
@@ -429,7 +446,7 @@ export function DespieceReviewSurface({
   const consolidatedGlassOptimizations = useMemo(
     () =>
       buildConsolidatedGlassSheetOptimizations({
-        items: visualItems,
+        items: visualItems.filter((item) => !hasUnmappedStructuralComposition(item)),
         resolutions: pieceResolutions,
         lineTemplates,
       }),
@@ -493,7 +510,8 @@ export function DespieceReviewSurface({
         ({ uiStatus }) =>
           uiStatus === "sin_reglas" ||
           uiStatus === "configuracion_incompleta" ||
-          uiStatus === "estimacion_geometrica"
+          uiStatus === "estimacion_geometrica" ||
+          uiStatus === "composicion_por_revisar"
       );
   }, [visualItems, lineTemplates, quotePricingMode, pieceResolutions]);
 

@@ -675,7 +675,10 @@ export function resolveCubicationSnapshotForSave(input: {
    * Si la línea tiene receta de fabricación, la receta manda.
    */
   personalizadoAssistMode?: boolean;
+  /** Croquis móvil con estructura distinta a la selección comercial base. */
+  quickCompositionAdjusted?: boolean;
 }): CotizacionItemCubicationSnapshot | null {
+  if (input.quickCompositionAdjusted) return null;
   const lineTemplateId = input.lineTemplateId.trim();
   const widthMm = normalizePositiveInteger(input.widthMm, 0);
   const heightMm = normalizePositiveInteger(input.heightMm, 0);

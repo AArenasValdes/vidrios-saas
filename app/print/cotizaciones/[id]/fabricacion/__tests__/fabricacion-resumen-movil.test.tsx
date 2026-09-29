@@ -8,6 +8,7 @@ import {
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import { buildFabricationQuoteSummary } from "@/features/cotizaciones/line-templates/types/fabrication-quote-summary";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 
 import { FabricacionResumenMovil } from "../fabricacion-resumen-movil";
 
@@ -140,8 +141,8 @@ const items = [
   ),
 ];
 
-function ViewHarness() {
-  const summary = buildFabricationQuoteSummary(items);
+function ViewHarness({ extraItems = items }: { extraItems?: CotizacionWorkflowItem[] } = {}) {
+  const summary = buildFabricationQuoteSummary(extraItems);
   return (
     <FabricacionResumenMovil
       backHref="/cotizaciones/q1"
@@ -150,7 +151,7 @@ function ViewHarness() {
       clienteNombre="Alessandro"
       obra="Obra norte"
       summary={summary}
-      items={items}
+      items={extraItems}
       isExporting={false}
       exportError={null}
       onDownload={jest.fn()}
@@ -172,6 +173,22 @@ describe("FabricacionResumenMovil", () => {
     expect(screen.getByRole("link", { name: /PDF cliente/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Descargar resumen/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Imprimir/i })).toBeInTheDocument();
+  });
+
+  it("muestra en móvil los componentes cuya pauta quedó pendiente por estructura", () => {
+    const item = workflowItem("adjusted", "V9", "Ventana ajustada", "L25", snapshot());
+    const adjustment = {
+      ...createEmptyQuickCompositionAdjustment(),
+      paneTypes: { "leaf-1": "fixed" as const },
+    };
+    item.observaciones += `[qca:${encodeURIComponent(JSON.stringify(adjustment))}]`;
+
+    render(<ViewHarness extraItems={[item]} />);
+
+    expect(screen.getByText("Composición por revisar")).toBeInTheDocument();
+    expect(screen.getByText("La pauta automática queda pendiente hasta tener una receta compatible.")).toBeInTheDocument();
+    expect(screen.getByText("Con pauta")).toBeInTheDocument();
+    expect(screen.getByText("0/1")).toBeInTheDocument();
   });
 
   it("abre el detalle del componente con Resumen, Cortes y Despiece", () => {

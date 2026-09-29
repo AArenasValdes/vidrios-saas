@@ -44,6 +44,7 @@ MERCADOPAGO_CL_QUOTE_ONLY_MONTHLY_PLAN_ID=
 MERCADOPAGO_CL_FOUNDER_MONTHLY_PLAN_ID=
 MERCADOPAGO_CL_FOUNDER_YEARLY_PLAN_ID=
 MERCADOPAGO_CL_QUOTE_ONLY_YEARLY_PLAN_ID=
+CRON_SECRET=
 ```
 
 - No usar prefijo `NEXT_PUBLIC_` en secretos ni tokens.
@@ -63,9 +64,28 @@ Topics mínimos: **Planes y suscripciones** (`subscription_preapproval`, `subscr
 1. Usuario autenticado en `/cuenta-vencida` elige plan.
 2. `POST /api/subscriptions/mercadopago/create` reserva una suscripción local `pending`, valida plan/monto en API MP y crea `preapproval`.
 3. Redirect a checkout Mercado Pago (`init_point`).
-4. Retorno navegador → `/dashboard?mp=confirming` con toast Sonner: primero "Confirmando...", luego éxito cuando el webhook proyecta `active` (polling ~30 s).
+4. Retorno navegador → `/dashboard?mp=confirming` con toast Sonner: primero "Confirmando...", sincroniza la cuenta con Mercado Pago y confirma el resultado (polling hasta ~30 s si sigue pendiente).
 5. Webhook firmado consulta el recurso real en MP y reconcilia suscripción + ledger vía RPC `service_role`.
 6. `/cuenta/suscripcion` muestra estado, próximo cobro y permite cancelar renovación.
+
+El retorno del checkout y la carga de `/api/subscriptions/summary` también
+consultan la preaprobación y sus facturas en Mercado Pago. Así recuperan estado,
+pago e historial si la notificación no llegó, tanto al contratar durante la
+prueba como al reactivar una cuenta vencida. La consulta valida que la
+preaprobación corresponda a la reserva de la organización autenticada antes de
+reconciliarla.
+
+Como respaldo para renovaciones, `/api/cron/mercadopago-billing` consulta cada
+día checkouts recientes y suscripciones con cobro próximo o vencido. El cron
+usa `CRON_SECRET`; los webhooks siguen siendo el camino inmediato. La
+sincronización solo registra lo que Mercado Pago confirma y no inicia cobros.
+
+Los eventos asociados a referencias `ventora:cl:` que llegan antes de que la
+reserva local quede vinculada fallan de forma recuperable: el endpoint responde
+error para que Mercado Pago reintente. Los pagos ajenos a Ventora siguen siendo
+ignorados. Un pago que ya figure como `processed` no se recupera por replay
+con el mismo `request_id`; su recuperación requiere reemitir el evento o
+reconciliar el recurso desde Mercado Pago con su ID original.
 
 ## Comportamientos importantes
 

@@ -1,6 +1,7 @@
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { resolveCotizacionItemDrawingSvg } from "@/features/cotizaciones/visual-composer/services/resolve-item-drawing-svg";
 import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import type { QuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import {
   getSheetSchemeOptions,
@@ -35,6 +36,8 @@ export type ComponentPreviewInput = {
   mirrorPaneDirection?: "vertical" | "horizontal";
   mirrorInteriorLine?: "fine" | "marked";
   guidedVisualConfig?: GuidedVisualConfig | null;
+  quickCompositionAdjustment?: QuickCompositionAdjustment | null;
+  quickSelectedPaneIndex?: number | null;
   maxW?: number;
   maxH?: number;
 };
@@ -117,6 +120,7 @@ export function buildComponentPreviewInputFromWorkflowItem(
     mirrorPaneDirection: meta.mirrorPaneDirection,
     mirrorInteriorLine: meta.mirrorInteriorLine,
     guidedVisualConfig: meta.guidedVisualConfig,
+    quickCompositionAdjustment: meta.quickCompositionAdjustment,
     maxW: options?.maxW,
     maxH: options?.maxH,
   };
@@ -159,6 +163,8 @@ export function resolveComponentPreviewSvg(input: ComponentPreviewInput): string
       colorHex,
       material: input.material,
       guidedVisualConfig: input.guidedVisualConfig,
+      quickCompositionAdjustment: input.quickCompositionAdjustment,
+      quickSelectedPaneIndex: input.quickSelectedPaneIndex,
       palilloEnabled: input.palilloEnabled,
       palilloType: input.palilloType,
       mirrorFormat: input.mirrorFormat,

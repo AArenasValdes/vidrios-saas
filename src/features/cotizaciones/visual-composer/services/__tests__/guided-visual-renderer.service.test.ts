@@ -52,6 +52,16 @@ describe("guided-visual-renderer V2", () => {
     );
   });
 
+  it("renderiza una hoja corredera individual sin duplicar el sistema de dos hojas", () => {
+    const config = createDefaultGuidedVisualConfig({ widthMm: 900, heightMm: 1200 });
+    const pane = listLeafModules(config.root)[0];
+    const svg = renderGuidedVisualSvg({
+      ...config,
+      root: { ...pane, type: "corredera", renderAsSingleLeaf: true },
+    }, { variant: "thumbnail", showDimensions: false });
+    expect([...svg.matchAll(/data-guided-opening="slide-/g)]).toHaveLength(1);
+  });
+
   it("serializa V2 y parsea V1 legacy", () => {
     let config = createDefaultGuidedVisualConfig({ widthMm: 1600, heightMm: 1200 });
     config = addGuidedDivision(config, "corredera");

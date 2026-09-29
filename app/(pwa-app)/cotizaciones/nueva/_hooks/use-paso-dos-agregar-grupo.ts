@@ -29,6 +29,7 @@ import {
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import type { QuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import { describeGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import {
   getLineTemplateGlassMetadata,
@@ -125,6 +126,7 @@ export type PasoDosGrupoDraft = {
   mirrorInteriorLine: NonNullable<ComponentFormState["mirrorInteriorLine"]>;
   mirrorCustomPaneCount: string;
   guidedVisualConfig: GuidedVisualConfig | null;
+  quickCompositionAdjustment: QuickCompositionAdjustment | null;
   vidrio: string;
   lineTemplateId: string;
   cubicationSnapshot: CotizacionItemCubicationSnapshot | null;
@@ -914,6 +916,7 @@ export function createInitialPasoDosGrupoDraft({
     mirrorInteriorLine: seedForm?.mirrorInteriorLine ?? "fine",
     mirrorCustomPaneCount: seedForm?.mirrorCustomPaneCount ?? "",
     guidedVisualConfig: seedForm?.guidedVisualConfig ?? null,
+    quickCompositionAdjustment: seedForm?.quickCompositionAdjustment ?? null,
     vidrio: seedForm?.vidrio?.trim() || suggestedForm.vidrio,
     lineTemplateId: seedForm?.lineTemplateId ?? "",
     cubicationSnapshot: seedForm?.cubicationSnapshot ?? null,
@@ -987,6 +990,7 @@ export function buildPasoDosGrupoComponentForm({
       mirrorInteriorLine: syncedDraft.mirrorInteriorLine,
       mirrorCustomPaneCount: syncedDraft.mirrorCustomPaneCount,
       guidedVisualConfig: syncedDraft.guidedVisualConfig,
+      quickCompositionAdjustment: syncedDraft.quickCompositionAdjustment,
       nombre: syncedDraft.nombre ?? "",
       descripcion: syncedDraft.descripcion ?? "",
       pricingMode: syncedDraft.pricingMode,
@@ -1024,6 +1028,7 @@ export function buildPasoDosGrupoComponentForm({
     mirrorInteriorLine: syncedDraft.mirrorInteriorLine,
     mirrorCustomPaneCount: syncedDraft.mirrorCustomPaneCount,
     guidedVisualConfig: syncedDraft.guidedVisualConfig,
+    quickCompositionAdjustment: syncedDraft.quickCompositionAdjustment,
     nombre: syncedDraft.nombre ?? "",
     descripcion: syncedDraft.descripcion ?? "",
     lineTemplateId: syncedDraft.lineTemplateId,
@@ -1109,6 +1114,7 @@ export function buildPasoDosGrupoSelectionPatch({
     | "mirrorPaneDirection"
     | "mirrorInteriorLine"
     | "mirrorCustomPaneCount"
+    | "quickCompositionAdjustment"
     | "nombre"
     | "descripcion"
     | "cobraPrecioSeparado"
@@ -1140,6 +1146,7 @@ export function buildPasoDosGrupoSelectionPatch({
     mirrorPaneDirection: "vertical",
     mirrorInteriorLine: "fine",
     mirrorCustomPaneCount: "",
+    quickCompositionAdjustment: null,
     nombre: buildDefaultFreeValueName(subtipo),
     descripcion: isFreeValueComponentType(subtipo)
       ? ""

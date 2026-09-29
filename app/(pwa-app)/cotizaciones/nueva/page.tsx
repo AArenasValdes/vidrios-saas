@@ -3320,6 +3320,7 @@ function goNextFromStep1() {
               onBack: pasoDosAgregarGrupoMovil.goBack,
               onNext: pasoDosAgregarGrupoMovil.goNext,
               onConfirm: handleConfirmAddGroupMovil,
+              onQuickCompositionAdjustment: pasoDosAgregarGrupoMovil.updateQuickCompositionAdjustment,
               onSelectCategoria: pasoDosAgregarGrupoMovil.selectCategoria,
               onSelectSubtipo: pasoDosAgregarGrupoMovil.selectSubtipo,
               onSelectCantidad: pasoDosAgregarGrupoMovil.selectCantidad,

@@ -619,9 +619,23 @@ export function FabricacionResumenView({
           </div>
         </section>
 
+        {summary.compositionsPendingRecipe.length > 0 ? (
+          <section className={s.compositionReviewNotice} aria-label="Composiciones pendientes de receta">
+            <strong>Composición por revisar</strong>
+            <p>La pauta automática está pendiente hasta contar con una receta compatible.</p>
+            <ul>
+              {summary.compositionsPendingRecipe.map((item) => (
+                <li key={item.itemId}>{item.codigo} · {item.nombre}{item.lineName ? ` · ${item.lineName}` : ""}</li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
         {summary.items.length === 0 ? (
           <p className={s.emptyState}>
-            Esta cotización aún no tiene pauta de fabricación congelada en las piezas.
+            {summary.compositionsPendingRecipe.length > 0
+              ? "No hay componentes con pauta compatible para esta composición."
+              : "Esta cotización aún no tiene pauta de fabricación congelada en las piezas."}
           </p>
         ) : (
           summary.items.map((row) => {

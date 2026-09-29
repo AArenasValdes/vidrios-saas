@@ -15,6 +15,7 @@ import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabric
 import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
 import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
+import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 
 import {
   FabricacionResumenView,
@@ -243,6 +244,22 @@ describe("FabricacionResumenView", () => {
     const cubicacion = screen.getByLabelText(/Cubicación de V1/i);
     expect(within(cubicacion).queryByText(/Sobra/i)).not.toBeInTheDocument();
     expect(screen.getAllByText(/Sobra/i).length).toBeGreaterThan(0);
+  });
+
+  it("informa pauta pendiente para composición estructural sin reutilizar cortes previos", () => {
+    const item = workflowItem("adjusted", "V9", "Ventana ajustada", "L5000", "Aluminio", snapshot());
+    const adjustment = {
+      ...createEmptyQuickCompositionAdjustment(),
+      paneTypes: { "leaf-1": "fixed" as const },
+    };
+    item.observaciones += `[qca:${encodeURIComponent(JSON.stringify(adjustment))}]`;
+
+    render(<ViewHarness extraItems={[item]} />);
+
+    expect(screen.getByText("Composición por revisar")).toBeInTheDocument();
+    expect(screen.getByText(/V9 · Ventana ajustada · L5000/)).toBeInTheDocument();
+    expect(screen.queryByText("Por asignar · Riel superior")).not.toBeInTheDocument();
+    expect(screen.getByText("No hay componentes con pauta compatible para esta composición.")).toBeInTheDocument();
   });
 
   it("mantiene línea y cubicación propias por pieza", () => {

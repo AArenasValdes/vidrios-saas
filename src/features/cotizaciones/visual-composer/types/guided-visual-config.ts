@@ -167,6 +167,8 @@ export type GuidedModuleNode = {
   glassShape: GuidedGlassShape;
   /** Lado visual de bisagra/apertura. Compat: ausente equivale a left. */
   openingSide?: GuidedOpeningSide;
+  /** Renderiza una sola hoja móvil dentro de una composición exterior. */
+  renderAsSingleLeaf?: boolean;
 };
 
 export type GuidedSplitNode = {
@@ -177,6 +179,8 @@ export type GuidedSplitNode = {
   ratio: number;
   first: GuidedRegionNode;
   second: GuidedRegionNode;
+  /** Posición del fijo agregado desde el ajuste rápido móvil. */
+  quickFixedSide?: "top" | "bottom" | "left" | "right";
 };
 
 export type GuidedRegionNode = GuidedModuleNode | GuidedSplitNode;
@@ -190,6 +194,10 @@ export type GuidedVisualConfig = {
   selectedPalilloId: string | null;
   /** Silueta del vano/marco (solo visual; no cambia precio ni cubicación). */
   frameShape: GuidedFrameShape;
+  /** Marca persistida para priorizar el croquis ajustado al resolver renderers. */
+  quickAdjustment?: boolean;
+  /** Cambio de geometría que vuelve obsoleta la pauta técnica previa. */
+  quickCompositionStructural?: boolean;
 };
 
 /** Forma legacy plana (schema 1). */
@@ -222,6 +230,8 @@ export type GuidedNodeRect = {
   palilloLayout?: GuidedPalilloNode | null;
   glassShape?: GuidedGlassShape;
   openingSide?: GuidedOpeningSide;
+  renderAsSingleLeaf?: boolean;
+  quickFixedSide?: "top" | "bottom" | "left" | "right";
   direction?: GuidedSplitDirection;
   ratio?: number;
   /** Línea divisoria en mm (coordenada absoluta). */
@@ -504,6 +514,7 @@ export function normalizeGuidedVisualConfig(
         openingSide: normalizeGuidedOpeningSide(
           (node as GuidedModuleNode).openingSide
         ),
+        ...(node.renderAsSingleLeaf ? { renderAsSingleLeaf: true } : {}),
       };
     }
 
@@ -514,6 +525,7 @@ export function normalizeGuidedVisualConfig(
       ratio: clampRatio(node.ratio),
       first: normalizeNode(node.first),
       second: normalizeNode(node.second),
+      ...(node.quickFixedSide ? { quickFixedSide: node.quickFixedSide } : {}),
     };
   };
 
@@ -546,6 +558,8 @@ export function normalizeGuidedVisualConfig(
       : leaves[0]?.id ?? null,
     selectedPalilloId,
     frameShape: normalizeGuidedFrameShape(config.frameShape, heightMm),
+    ...(config.quickAdjustment ? { quickAdjustment: true } : {}),
+    ...(config.quickCompositionStructural ? { quickCompositionStructural: true } : {}),
   };
 }
 
@@ -718,6 +732,7 @@ export function calculateNodeRects(
         palilloLayout: node.palilloLayout,
         glassShape: node.glassShape,
         openingSide: normalizeGuidedOpeningSide(node.openingSide),
+        renderAsSingleLeaf: node.renderAsSingleLeaf,
       });
       return;
     }
@@ -737,6 +752,7 @@ export function calculateNodeRects(
         leafIndex: null,
         direction: node.direction,
         ratio,
+        quickFixedSide: node.quickFixedSide,
         dividerMm,
       });
       walk(node.first, xMm, yMm, firstW, heightMm);
@@ -757,6 +773,7 @@ export function calculateNodeRects(
       leafIndex: null,
       direction: node.direction,
       ratio,
+      quickFixedSide: node.quickFixedSide,
       dividerMm,
     });
     walk(node.first, xMm, yMm, widthMm, firstH);
@@ -1403,6 +1420,8 @@ export function serializeGuidedVisualConfig(config: GuidedVisualConfig): string 
     h: normalized.heightMm,
     root: normalized.root,
     fs: normalized.frameShape,
+      qa: normalized.quickAdjustment ? 1 : undefined,
+      qs: normalized.quickCompositionStructural ? 1 : undefined,
   });
   return `${GUIDED_VISUAL_SCHEMA_VERSION}|${encodeUtf8ToBase64Url(json)}`;
 }
@@ -1475,6 +1494,8 @@ export function parseGuidedVisualConfig(
         h?: number;
         root?: GuidedRegionNode;
         fs?: GuidedFrameShape;
+        qa?: number;
+        qs?: number;
       };
       if (data.v !== GUIDED_VISUAL_SCHEMA_VERSION || !data.root) {
         return null;
@@ -1487,6 +1508,8 @@ export function parseGuidedVisualConfig(
         selectedNodeId: listLeafModules(data.root)[0]?.id ?? null,
         selectedPalilloId: null,
         frameShape: data.fs ?? { kind: "rect" },
+        quickAdjustment: data.qa === 1,
+        quickCompositionStructural: data.qs === 1,
       });
     } catch {
       return null;

@@ -109,8 +109,14 @@ async function reconcilePreapproval(resource: MercadoPagoPreapproval) {
   const repository = createOrganizationSubscriptionRepository();
   const local = await findLocalSubscription(resource);
 
-  if (!local || !local.provider_plan_id) {
-    return false;
+  if (!local) {
+    throw new Error(
+      "La suscripcion Mercado Pago aun no esta vinculada en Ventora; reintentaremos el webhook."
+    );
+  }
+
+  if (!local.provider_plan_id) {
+    throw new Error("La reserva de suscripcion no tiene un plan asociado.");
   }
 
   assertSubscriptionIdentity({ local, resource });
@@ -168,8 +174,14 @@ async function reconcilePayment(input: {
   const repository = createOrganizationSubscriptionRepository();
   const local = await findLocalSubscription(input.preapproval);
 
-  if (!local || !local.provider_plan_id) {
-    return false;
+  if (!local) {
+    throw new Error(
+      "El pago Mercado Pago aun no esta vinculado a una suscripcion Ventora; reintentaremos el webhook."
+    );
+  }
+
+  if (!local.provider_plan_id) {
+    throw new Error("La reserva de pago no tiene un plan asociado.");
   }
 
   assertSubscriptionIdentity({ local, resource: input.preapproval });
@@ -318,8 +330,20 @@ export async function processMercadoPagoWebhook(input: {
   const repository = createOrganizationSubscriptionRepository();
   const local = await repository.getByExternalReference(externalReference);
 
-  if (!local?.provider_subscription_id) {
+  if (!local) {
+    if (externalReference.startsWith("ventora:cl:")) {
+      throw new Error(
+        "El pago Ventora llego antes de vincular su reserva; reintentaremos el webhook."
+      );
+    }
+
     return false;
+  }
+
+  if (!local.provider_subscription_id) {
+    throw new Error(
+      "El pago Ventora llego antes de vincular la suscripcion; reintentaremos el webhook."
+    );
   }
 
   const preapproval = await client.getPreapproval(local.provider_subscription_id);
@@ -340,4 +364,110 @@ export async function processMercadoPagoWebhook(input: {
     },
     preapproval,
   });
+}
+
+/**
+ * Recupera el estado directamente desde Mercado Pago cuando el navegador vuelve
+ * del checkout o consulta Mi plan. No depende de que el webhook haya llegado.
+ */
+export async function synchronizeMercadoPagoSubscriptionForOrganization(
+  organizationId: number,
+  options: { includePaymentDetails?: boolean } = {}
+): Promise<boolean> {
+  const { accessToken } = getMercadoPagoChileConfig();
+
+  if (!accessToken) {
+    return false;
+  }
+
+  const repository = createOrganizationSubscriptionRepository();
+  const local = await repository.getOpenMercadoPagoByOrganizationId(
+    organizationId
+  );
+
+  if (!local?.provider_subscription_id || !local.provider_plan_id) {
+    return false;
+  }
+
+  const client = createMercadoPagoClient(accessToken);
+  const [preapproval, invoices] = await Promise.all([
+    client.getPreapproval(local.provider_subscription_id),
+    client.searchAuthorizedPayments(local.provider_subscription_id),
+  ]);
+  const linked = await findLocalSubscription(preapproval);
+
+  if (!linked || linked.id !== local.id || linked.organization_id !== organizationId) {
+    throw new Error("La suscripcion Mercado Pago no coincide con la cuenta activa.");
+  }
+
+  await reconcilePreapproval(preapproval);
+
+  if (mapMercadoPagoSubscriptionStatus(preapproval.status) !== "active") {
+    return true;
+  }
+  const orderedInvoices = [...(invoices.results ?? [])].sort((left, right) => {
+    const leftDate = new Date(
+      left.debit_date ?? left.date_created ?? left.last_modified ?? 0
+    ).getTime();
+    const rightDate = new Date(
+      right.debit_date ?? right.date_created ?? right.last_modified ?? 0
+    ).getTime();
+    return rightDate - leftDate;
+  });
+  let enrichedPaymentId: string | null = null;
+
+  for (const invoice of orderedInvoices) {
+    if (!invoice.payment?.id) {
+      continue;
+    }
+
+    const paymentId = String(invoice.payment.id);
+    let payment: MercadoPagoPayment | null = null;
+
+    if (
+      options.includePaymentDetails !== false &&
+      !enrichedPaymentId &&
+      (invoice.payment?.status === "approved" || invoice.status === "processed")
+    ) {
+      try {
+        payment = await client.getPayment(paymentId);
+        enrichedPaymentId = paymentId;
+      } catch {
+        // La factura autorizada sigue aportando estado y monto si el detalle no
+        // está disponible temporalmente en Payments API.
+      }
+    }
+
+    const providerStatus =
+      payment?.status ?? invoice.payment?.status ?? invoice.status ?? "pending";
+
+    await reconcilePayment({
+      paymentId,
+      providerOrderId: String(invoice.id),
+      providerStatus,
+      amount: payment?.transaction_amount ?? invoice.transaction_amount,
+      currency: payment?.currency_id ?? invoice.currency_id,
+      paidAt:
+        payment?.date_approved ??
+        payment?.date_created ??
+        invoice.debit_date ??
+        invoice.date_created,
+      providerResponse: {
+        authorized_payment_id: String(invoice.id),
+        payment_id: paymentId,
+        status: providerStatus,
+        status_detail:
+          payment?.status_detail ?? invoice.payment?.status_detail ?? null,
+        external_reference:
+          payment?.external_reference ??
+          invoice.external_reference ??
+          preapproval.external_reference ??
+          null,
+        transaction_details: payment?.transaction_details ?? null,
+      },
+      preapproval,
+    });
+  }
+
+  return true;
 }

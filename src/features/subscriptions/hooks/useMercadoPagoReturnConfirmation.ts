@@ -9,6 +9,7 @@ import {
   MERCADOPAGO_RETURN_QUERY_VALUE,
 } from "@/features/subscriptions/constants/mercadopago-return";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
+import { fetchSubscriptionSummary } from "@/features/subscriptions/services/subscription-summary-client.service";
 import {
   isPaidSubscriptionActivated,
   resolveSubscriptionPlanLabel,
@@ -70,6 +71,16 @@ export function useMercadoPagoReturnConfirmation() {
     };
 
     const poll = async () => {
+      if (cancelled) {
+        return;
+      }
+
+      if (attempts === 0) {
+        // La lectura del resumen consulta Mercado Pago y recupera la factura
+        // incluso cuando el webhook no llegó al servidor.
+        await fetchSubscriptionSummary();
+      }
+
       if (cancelled) {
         return;
       }

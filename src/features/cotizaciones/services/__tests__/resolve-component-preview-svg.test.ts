@@ -4,8 +4,20 @@ import {
   resolveComponentPreviewSvg,
   shouldRenderComponentPreview,
 } from "@/features/cotizaciones/services/resolve-component-preview-svg";
+import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
+import { setQuickPaneDecoration } from "@/features/cotizaciones/visual-composer/services/quick-composition-adjustment.service";
 
 describe("resolveComponentPreviewSvg", () => {
+  it("propaga el ajuste rapido por el renderer comercial compartido", () => {
+    const adjustment = setQuickPaneDecoration(createEmptyQuickCompositionAdjustment(), 0, "vertical");
+    const svg = resolveComponentPreviewSvg({
+      type: "Ventana", system: "Corredera", sheetScheme: "2 hojas", sheetVariant: "2 móviles",
+      width: 1200, height: 1500, colorHex: "#a8a8a8", quickCompositionAdjustment: adjustment,
+    });
+    expect(svg).toContain("data-quick-palillo=\"vertical\"");
+    expect(svg).toContain("data-window-handle=\"recessed\"");
+  });
+
   it("genera SVG para los tipos guiados del catalogo", () => {
     const guidedTypes = COMPONENT_TYPE_GROUPS.filter(
       (group) => group.title !== "Proyecto libre y Mantencion"

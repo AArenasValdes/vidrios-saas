@@ -4,6 +4,8 @@ import {
   ensureGuidedVisualConfig,
   type GuidedVisualConfig,
 } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import type { QuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
+import { hasQuickCompositionChanges } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import {
   generateComponentSVG,
   isThreeLeafCenterFixedSlidingWindowPresentation,
@@ -31,6 +33,8 @@ type ResolveItemDrawingSvgInput = {
   colorHex: string;
   material?: string | null;
   guidedVisualConfig?: GuidedVisualConfig | null;
+  quickCompositionAdjustment?: QuickCompositionAdjustment | null;
+  quickSelectedPaneIndex?: number | null;
   palilloEnabled?: boolean;
   palilloType?: string | null;
   mirrorFormat?: "single" | "divided";
@@ -71,6 +75,8 @@ export function resolveCotizacionItemDrawingSvg(
     variant,
     palilloEnabled: input.palilloEnabled,
     palilloType: input.palilloType || undefined,
+    quickCompositionAdjustment: input.quickCompositionAdjustment,
+    quickSelectedPaneIndex: input.quickSelectedPaneIndex,
     mirrorFormat: input.mirrorFormat,
     mirrorPaneCount: input.mirrorPaneCount ?? undefined,
     mirrorPaneDirection: input.mirrorPaneDirection,
@@ -98,10 +104,17 @@ export function resolveCotizacionItemDrawingSvg(
     : componentSvgParams;
 
   try {
+    // Un ajuste rápido confirmado representa la composición visual elegida
+    // explícitamente en Guiada, incluso si el item conserva un árbol guiado
+    // histórico. Sin marca qca, se mantiene intacta la prioridad histórica.
+    if (hasQuickCompositionChanges(input.quickCompositionAdjustment)) return generateComponentSVG(componentSvgParams);
     // Esta variante necesita conservar el dibujo de 3 paños también en PDF.
     // La configuración guiada puede existir, pero su renderer no representa
     // la distribución comercial 25/50/25 de esta presentación.
-    if (isNamedThreeLeafCenterFixedPdf || isThreeLeafCenterFixedSlidingWindowPresentation(targetSvgParams)) {
+    if (
+      (isNamedThreeLeafCenterFixedPdf || isThreeLeafCenterFixedSlidingWindowPresentation(targetSvgParams)) &&
+      !input.guidedVisualConfig?.quickAdjustment
+    ) {
       return generateComponentSVG(targetSvgParams);
     }
 

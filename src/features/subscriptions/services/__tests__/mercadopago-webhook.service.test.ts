@@ -1,6 +1,8 @@
 const getPreapproval = jest.fn();
 const getAuthorizedPayment = jest.fn();
 const getPayment = jest.fn();
+const searchAuthorizedPayments = jest.fn();
+const getOpenMercadoPagoByOrganizationId = jest.fn();
 const getByProviderSubscriptionId = jest.fn();
 const getByExternalReference = jest.fn();
 const reconcileMercadoPagoSubscription = jest.fn();
@@ -16,6 +18,7 @@ jest.mock(
       getPreapproval,
       getAuthorizedPayment,
       getPayment,
+      searchAuthorizedPayments,
     }),
   })
 );
@@ -23,6 +26,7 @@ jest.mock(
   "@/features/subscriptions/repositories/organization-subscription.repository",
   () => ({
     createOrganizationSubscriptionRepository: () => ({
+      getOpenMercadoPagoByOrganizationId,
       getByProviderSubscriptionId,
       getByExternalReference,
       reconcileMercadoPagoSubscription,
@@ -31,7 +35,10 @@ jest.mock(
   })
 );
 
-import { processMercadoPagoWebhook } from "../mercadopago-webhook.service";
+import {
+  processMercadoPagoWebhook,
+  synchronizeMercadoPagoSubscriptionForOrganization,
+} from "../mercadopago-webhook.service";
 
 const local = {
   id: 81,
@@ -67,8 +74,10 @@ describe("Mercado Pago webhook reconciliation", () => {
     jest.clearAllMocks();
     getByProviderSubscriptionId.mockResolvedValue(local);
     getByExternalReference.mockResolvedValue(local);
+    getOpenMercadoPagoByOrganizationId.mockResolvedValue(local);
     getPreapproval.mockResolvedValue(preapproval);
     getPayment.mockResolvedValue(undefined);
+    searchAuthorizedPayments.mockResolvedValue({ results: [] });
     reconcileMercadoPagoSubscription.mockResolvedValue(81);
     reconcileMercadoPagoPayment.mockResolvedValue(901);
   });
@@ -243,16 +252,56 @@ describe("Mercado Pago webhook reconciliation", () => {
     expect(reconcileMercadoPagoSubscription).toHaveBeenCalled();
   });
 
-  it("no muta si el recurso real no pertenece a una suscripcion Ventora", async () => {
+  it("no descarta una preapproval Ventora que aun no esta vinculada", async () => {
     getByProviderSubscriptionId.mockResolvedValue(null);
     getByExternalReference.mockResolvedValue(null);
 
-    const processed = await processMercadoPagoWebhook({
-      topic: "subscription_preapproval",
-      resourceId: "unknown",
+    await expect(
+      processMercadoPagoWebhook({
+        topic: "subscription_preapproval",
+        resourceId: "unknown",
+      })
+    ).rejects.toThrow("aun no esta vinculada en Ventora");
+    expect(reconcileMercadoPagoSubscription).not.toHaveBeenCalled();
+  });
+
+  it("recupera el pago autorizado desde Mercado Pago para la organización", async () => {
+    searchAuthorizedPayments.mockResolvedValue({
+      results: [
+        {
+          id: 703,
+          preapproval_id: "preapproval-1",
+          transaction_amount: 8_990,
+          currency_id: "CLP",
+          debit_date: "2026-08-12T12:00:00.000Z",
+          status: "processed",
+          payment: { id: 901, status: "approved", status_detail: "accredited" },
+        },
+      ],
+    });
+    getPayment.mockResolvedValue({
+      id: 901,
+      status: "approved",
+      status_detail: "accredited",
+      transaction_amount: 8_990,
+      currency_id: "CLP",
+      date_approved: "2026-08-12T12:00:00.000Z",
     });
 
-    expect(processed).toBe(false);
-    expect(reconcileMercadoPagoSubscription).not.toHaveBeenCalled();
+    await expect(
+      synchronizeMercadoPagoSubscriptionForOrganization(7)
+    ).resolves.toBe(true);
+
+    expect(getOpenMercadoPagoByOrganizationId).toHaveBeenCalledWith(7);
+    expect(searchAuthorizedPayments).toHaveBeenCalledWith("preapproval-1");
+    expect(reconcileMercadoPagoPayment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subscriptionId: 81,
+        providerPaymentId: "901",
+        status: "aprobado",
+        amount: 8_990,
+        currencyCode: "CLP",
+      })
+    );
   });
 });

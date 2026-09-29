@@ -44,6 +44,8 @@ import {
   updateModuleType,
 } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
+import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
+import { setQuickPaneDecoration } from "@/features/cotizaciones/visual-composer/services/quick-composition-adjustment.service";
 
 function createLinePricingForm(
   overrides: Partial<ComponentFormState> = {}
@@ -107,6 +109,23 @@ function createBaseItem() {
 }
 
 describe("workflow-ui paso 2", () => {
+  it("guarda e hidrata el ajuste visual sin cambiar precio ni identidad comercial", () => {
+    const adjustment = setQuickPaneDecoration(createEmptyQuickCompositionAdjustment(), 0, "vertical");
+    const form = createLinePricingForm({ quickCompositionAdjustment: adjustment });
+    const item = buildItemFromForm(form, [], null);
+    const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+    const hydrated = mapItemToForm(item);
+
+    expect(meta.quickCompositionAdjustment).toEqual(adjustment);
+    expect(hydrated.quickCompositionAdjustment).toEqual(adjustment);
+    expect(item.tipo).toBe(form.tipo);
+    expect(item.lineaComercial).toBe(form.referencia);
+    expect(item.ancho).toBe(Number(form.ancho));
+    expect(item.alto).toBe(Number(form.alto));
+    expect(item.costoProveedorUnitario).toBe(Number(form.costoProveedorUnitario));
+    expect(meta.guidedVisualConfig).toBeNull();
+  });
+
   it("debe incluir DVH / Termopaneles en orden comercial", () => {
     const dvhGroup = GLASS_OPTIONS.find((group) => group.grupo === "DVH / Termopaneles");
 

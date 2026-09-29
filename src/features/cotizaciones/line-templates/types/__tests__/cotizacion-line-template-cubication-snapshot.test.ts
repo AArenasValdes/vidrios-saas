@@ -25,6 +25,18 @@ const SAMPLE_METADATA = {
 } as const;
 
 describe("cotizacion line template cubication snapshot", () => {
+  it("does not reuse or regenerate a snapshot for structurally adjusted compositions", () => {
+    expect(resolveCubicationSnapshotForSave({
+      lineTemplateId: "tpl-1",
+      widthMm: 1200,
+      heightMm: 1000,
+      quantity: 1,
+      catalogMetadata: SAMPLE_METADATA,
+      draftSnapshot: null,
+      quickCompositionAdjusted: true,
+    })).toBeNull();
+  });
+
   it("lee snapshots legacy [cub:] desde observaciones", () => {
     const snapshot = buildCubicationSnapshotFromCatalogMetadata({
       lineTemplateId: "tpl-ventana-s60",

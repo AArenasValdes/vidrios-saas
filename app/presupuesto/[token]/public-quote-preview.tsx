@@ -336,6 +336,7 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
         customSchemeDescription,
         isCustomScheme,
         guidedVisualConfig,
+        quickCompositionAdjustment,
       } = decodeCotizacionItemPresentationMeta(item.observaciones);
       const colorName = getColorName(colorHex);
       const surface = formatSurface(item.ancho, item.alto, item.cantidad);
@@ -414,6 +415,7 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
           colorHex,
           material,
           guidedVisualConfig,
+          quickCompositionAdjustment,
           maxW: 470,
           maxH: 260,
           variant: "pdf",
@@ -693,6 +695,7 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                             colorHex,
                             material,
                             guidedVisualConfig: itemMeta.guidedVisualConfig,
+                            quickCompositionAdjustment: itemMeta.quickCompositionAdjustment,
                             maxW: 470,
                             maxH: 260,
                             variant: "pdf",
