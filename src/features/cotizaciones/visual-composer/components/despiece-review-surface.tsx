@@ -465,11 +465,16 @@ export function DespieceReviewSurface({
           template,
         });
         if (!snapshot) return null;
+        const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
         return {
+          itemId: item.id,
           codigo: item.codigo,
           lineaComercial: item.lineaComercial || template?.nombre || null,
           nombre: item.nombre,
           snapshot,
+          colorHex: presentation.colorHex,
+          catalogLineKey: presentation.catalogLineKey,
+          fabricacionSnapshot: item.fabricacionSnapshot ?? resolution?.formal ?? null,
         };
       })
       .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));

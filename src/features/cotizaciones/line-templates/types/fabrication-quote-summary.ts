@@ -13,6 +13,7 @@ import { resolveCutProfileCode } from "@/features/cotizaciones/line-templates/se
 import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
 import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
+import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
@@ -35,6 +36,7 @@ export type FabricationSummaryItem = {
   glassM2: number;
   accessoryUnits: number;
   barCount: number;
+  fabricacionSnapshot: FabricacionCotizacionSnapshot | null;
 };
 
 export type FabricationQuoteSummary = {
@@ -50,6 +52,7 @@ export type FabricationQuoteSummary = {
   totalGlassM2: number;
   totalAccessoryUnits: number;
   totalBars: number;
+  trabajoSnapshot: FabricacionTrabajoSnapshot | null;
 };
 
 type QuoteItemLike = {
@@ -77,6 +80,7 @@ function resolveDisplaySnapshot(
   options?: {
     recipes?: FabricationRecipeRecord[];
     organizationId?: number | null;
+    trabajoSnapshot?: FabricacionTrabajoSnapshot | null;
   }
 ): CotizacionItemCubicationSnapshot | null {
   if (
@@ -134,6 +138,7 @@ export function buildFabricationQuoteSummary(
   options?: {
     recipes?: FabricationRecipeRecord[];
     organizationId?: number | null;
+    trabajoSnapshot?: FabricacionTrabajoSnapshot | null;
   }
 ): FabricationQuoteSummary {
   const rows: FabricationSummaryItem[] = [];
@@ -180,6 +185,7 @@ export function buildFabricationQuoteSummary(
       glassM2: snapshot.glass?.totalM2 ?? 0,
       accessoryUnits: snapshot.accessoryUnits,
       barCount: snapshot.bars.length,
+      fabricacionSnapshot: item.fabricacionSnapshot ?? null,
     });
   }
 
@@ -190,6 +196,7 @@ export function buildFabricationQuoteSummary(
     totalProfilesMl: rows.reduce((sum, row) => sum + row.profilesMl, 0),
     totalGlassM2: rows.reduce((sum, row) => sum + row.glassM2, 0),
     totalAccessoryUnits: rows.reduce((sum, row) => sum + row.accessoryUnits, 0),
-    totalBars: rows.reduce((sum, row) => sum + row.barCount, 0),
+    totalBars: options?.trabajoSnapshot?.totalBars ?? rows.reduce((sum, row) => sum + row.barCount, 0),
+    trabajoSnapshot: options?.trabajoSnapshot ?? null,
   };
 }

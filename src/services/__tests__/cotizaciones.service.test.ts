@@ -626,6 +626,37 @@ describe("cotizaciones.service", () => {
             precioAjustadoManual: false,
             origenPrecio: "plantilla",
             observaciones: "Cierre comercial",
+            fabricacionSnapshot: {
+              pautaBarras: {
+                calculable: true,
+                barras: [
+                  {
+                    materialKey: "base-7400-riel",
+                    codigoPerfil: "7401",
+                    nombrePerfil: "Riel inferior",
+                    indice: 1,
+                    largoComercialMm: 5800,
+                    despunteInicialMm: 10,
+                    usadoMm: 2810,
+                    perdidaCortesMm: 0,
+                    sobranteMm: 2990,
+                    sobranteAprovechable: true,
+                    cortes: [
+                      {
+                        componenteId: "riel-inferior",
+                        codigoPerfil: "7401",
+                        funcion: "Riel inferior",
+                        largoMm: 2800,
+                      },
+                    ],
+                  },
+                ],
+                advertencias: [],
+                totalUsadoMm: 2810,
+                totalPerdidaCortesMm: 0,
+                totalSobranteMm: 2990,
+              },
+            } as never,
           },
         ],
       },
@@ -651,6 +682,16 @@ describe("cotizaciones.service", () => {
             observaciones: expect.stringContaining("Cierre comercial"),
           }),
         ],
+        fabricacionTrabajoSnapshot: expect.objectContaining({
+          tipo: "fabricacion_trabajo_snapshot",
+          totalBars: 1,
+          bars: [
+            expect.objectContaining({
+              materialKey: "base-7400-riel",
+              cortes: [expect.objectContaining({ codigoItem: "V1", largoMm: 2800 })],
+            }),
+          ],
+        }),
       })
     );
     expect(record.codigo).toBe("COT-210326-001");

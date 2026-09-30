@@ -3,6 +3,7 @@ import type { CotizacionItem, CrearCotizacionItemInput } from "./cotizacion-item
 import type { QuotePricingMode } from "./quote-pricing-mode";
 import type { QuoteCreationSurface } from "./quote-creation-surface";
 import type { QuoteRegionSnapshot } from "@/features/organization-region/types/quote-region-snapshot";
+import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
 
 export type EstadoCotizacion =
   | "borrador"
@@ -55,6 +56,7 @@ export type Cotizacion = {
   clienteRespuestaCanal: string | null;
   pdfDescargadoEn: string | null;
   regionalSnapshot?: QuoteRegionSnapshot | null;
+  fabricacionTrabajoSnapshot?: FabricacionTrabajoSnapshot | null;
   creadoEn: string | null;
   actualizadoEn: string | null;
   eliminadoEn: string | null;
@@ -104,6 +106,7 @@ export type CrearCotizacionInput = {
   clienteRespuestaCanal?: string | null;
   pdfDescargadoEn?: string | null;
   regionalSnapshot?: QuoteRegionSnapshot | null;
+  fabricacionTrabajoSnapshot?: FabricacionTrabajoSnapshot | null;
   items: CrearCotizacionItemInput[];
   total: number;
 };

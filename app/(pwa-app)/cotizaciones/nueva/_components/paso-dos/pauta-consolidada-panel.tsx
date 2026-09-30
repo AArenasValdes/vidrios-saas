@@ -54,6 +54,11 @@ export function PautaConsolidadaPanel({ items }: Props) {
             })}{" "}
             m² vidrio
           </p>
+          <p>
+            {pauta.trabajoSnapshot
+              ? `${pauta.trabajoSnapshot.totalBars} barras sugeridas para el trabajo completo.`
+              : `${pauta.totalBars} barras según los snapshots disponibles.`}
+          </p>
         </div>
         <button type="button" className={d.consolidatedPautaCopy} onClick={handleCopy}>
           {copied ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
@@ -85,6 +90,21 @@ export function PautaConsolidadaPanel({ items }: Props) {
           </div>
         ))}
       </div>
+      {pauta.trabajoSnapshot ? (
+        <details className={d.consolidatedPautaDistribution}>
+          <summary>Ver cortes distribuidos por barra</summary>
+          <ol>
+            {pauta.trabajoSnapshot.bars.map((bar) => (
+              <li key={`${bar.materialKey}-${bar.acabadoKey}-${bar.largoComercialMm}-${bar.indice}`}>
+                <strong>{bar.codigoPerfil} · Barra {bar.indice} · {formatMm(bar.largoComercialMm)}</strong>
+                <span>
+                  {bar.cortes.map((cut) => `${cut.codigoItem}: ${cut.funcion} ${formatMm(cut.largoMm)}`).join(" · ")}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </details>
+      ) : null}
     </section>
   );
 }

@@ -619,6 +619,21 @@ export function FabricacionResumenView({
           </div>
         </section>
 
+        {summary.trabajoSnapshot ? (
+          <section className={s.consolidatedJobBars} aria-label="Pauta conjunta guardada">
+            <h2>Distribución sugerida del trabajo completo</h2>
+            <p>{summary.trabajoSnapshot.totalBars} barras · distribución referencial compartida entre partidas.</p>
+            <ul>
+              {summary.trabajoSnapshot.bars.map((bar) => (
+                <li key={`${bar.materialKey}-${bar.acabadoKey}-${bar.largoComercialMm}-${bar.indice}`}>
+                  <strong>{bar.codigoPerfil} · Barra {bar.indice} · {formatMm(bar.largoComercialMm)}</strong>
+                  <span>{bar.cortes.map((cut) => `${cut.codigoItem}: ${cut.funcion} ${formatMm(cut.largoMm)}`).join(" · ")}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
         {summary.compositionsPendingRecipe.length > 0 ? (
           <section className={s.compositionReviewNotice} aria-label="Composiciones pendientes de receta">
             <strong>Composición por revisar</strong>

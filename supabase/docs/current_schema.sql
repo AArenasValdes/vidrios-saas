@@ -973,12 +973,14 @@ CREATE TABLE IF NOT EXISTS "public"."cotizaciones" (
     "iva_pct" numeric(7,4),
     "financial_snapshot_version" integer,
     "financial_snapshot_calculado_en" timestamp with time zone,
+    "fabricacion_trabajo_snapshot" "jsonb",
     "cost_basis_status" "text",
     "regional_snapshot" "jsonb",
     CONSTRAINT "cotizaciones_cost_basis_status_check" CHECK ((("cost_basis_status" IS NULL) OR ("cost_basis_status" = ANY (ARRAY['sin_costos'::"text", 'estimado'::"text", 'manual'::"text"])))),
     CONSTRAINT "cotizaciones_financial_costs_nonnegative" CHECK (((("costo_materiales_total" IS NULL) OR ("costo_materiales_total" >= (0)::numeric)) AND (("costo_mano_obra_total" IS NULL) OR ("costo_mano_obra_total" >= (0)::numeric)) AND (("costo_traslado_total" IS NULL) OR ("costo_traslado_total" >= (0)::numeric)) AND (("costo_otros_total" IS NULL) OR ("costo_otros_total" >= (0)::numeric)) AND (("merma_pct" IS NULL) OR ("merma_pct" >= (0)::numeric)) AND (("merma_total" IS NULL) OR ("merma_total" >= (0)::numeric)) AND (("margen_objetivo_pct" IS NULL) OR (("margen_objetivo_pct" >= (0)::numeric) AND ("margen_objetivo_pct" < (100)::numeric))) AND (("precio_recomendado_neto" IS NULL) OR ("precio_recomendado_neto" >= (0)::numeric)) AND (("iva_pct" IS NULL) OR ("iva_pct" >= (0)::numeric)) AND (("financial_snapshot_version" IS NULL) OR ("financial_snapshot_version" > 0)))),
     CONSTRAINT "cotizaciones_pricing_mode_check" CHECK (("pricing_mode" = ANY (ARRAY['por_item'::"text", 'total_global'::"text"]))),
-    CONSTRAINT "cotizaciones_regional_snapshot_object_check" CHECK ((("regional_snapshot" IS NULL) OR ("jsonb_typeof"("regional_snapshot") = 'object'::"text")))
+    CONSTRAINT "cotizaciones_regional_snapshot_object_check" CHECK ((("regional_snapshot" IS NULL) OR ("jsonb_typeof"("regional_snapshot") = 'object'::"text"))),
+    CONSTRAINT "cotizaciones_fabricacion_trabajo_snapshot_object_chk" CHECK (("fabricacion_trabajo_snapshot" IS NULL) OR ("jsonb_typeof"("fabricacion_trabajo_snapshot") = 'object'::"text"))
 );
 
 
@@ -994,6 +996,8 @@ COMMENT ON COLUMN "public"."cotizaciones"."pdf_descargado_en" IS 'Marca silencio
 
 
 COMMENT ON COLUMN "public"."cotizaciones"."costo_materiales_total" IS 'Snapshot Quote Studio: costo neto de materiales usado para calcular margen.';
+
+COMMENT ON COLUMN "public"."cotizaciones"."fabricacion_trabajo_snapshot" IS 'Snapshot inmutable de la pauta sugerida conjunta de la cotización. Conserva cortes y atribución por ítem; no recalcula históricos ni contiene precios/SKUs.';
 
 
 

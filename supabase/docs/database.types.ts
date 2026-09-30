@@ -442,6 +442,7 @@ export type Database = {
           estado_comercial: string | null
           financial_snapshot_calculado_en: string | null
           financial_snapshot_version: number | null
+          fabricacion_trabajo_snapshot: Json | null
           flete: number | null
           id: number
           iva: number | null
@@ -482,6 +483,7 @@ export type Database = {
           estado_comercial?: string | null
           financial_snapshot_calculado_en?: string | null
           financial_snapshot_version?: number | null
+          fabricacion_trabajo_snapshot?: Json | null
           flete?: number | null
           id?: never
           iva?: number | null
@@ -522,6 +524,7 @@ export type Database = {
           estado_comercial?: string | null
           financial_snapshot_calculado_en?: string | null
           financial_snapshot_version?: number | null
+          fabricacion_trabajo_snapshot?: Json | null
           flete?: number | null
           id?: never
           iva?: number | null

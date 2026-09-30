@@ -152,6 +152,7 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 | `iva_pct` | numeric(7,4) | Snapshot Quote Studio: porcentaje de IVA como capa tributaria |
 | `financial_snapshot_version` | integer | Version del algoritmo de snapshot financiero |
 | `financial_snapshot_calculado_en` | timestamptz | Fecha de calculo del snapshot financiero |
+| `fabricacion_trabajo_snapshot` | jsonb | Snapshot inmutable de pauta conjunta sugerida; cortes atribuibles a ítems, sin precios ni SKUs |
 | `cost_basis_status` | text | Estado de base de costo: `sin_costos`, `estimado` o `manual` |
 | `descuento_pct` | numeric | |
 | `flete` | numeric | |

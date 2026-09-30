@@ -78,8 +78,9 @@ export default function CotizacionFabricacionPrintPage() {
       buildFabricationQuoteSummary(cotizacion?.items ?? [], {
         recipes: recipesReady ? recipes : undefined,
         organizationId,
+        trabajoSnapshot: cotizacion?.fabricacionTrabajoSnapshot ?? null,
       }),
-    [cotizacion?.items, recipes, recipesReady, organizationId]
+    [cotizacion?.items, cotizacion?.fabricacionTrabajoSnapshot, recipes, recipesReady, organizationId]
   );
 
   const expandedInitializedForQuote = useRef<string | null>(null);

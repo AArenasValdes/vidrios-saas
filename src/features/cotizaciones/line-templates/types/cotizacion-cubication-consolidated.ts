@@ -12,6 +12,8 @@ import {
   resolveCutProfileCode,
   resolveCutProfileDisplayCode,
 } from "@/features/cotizaciones/line-templates/services/cut-profile-display.service";
+import { construirFabricacionTrabajoSnapshot } from "@/features/fabricacion/services/fabricacion-trabajo-snapshot.service";
+import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
 
 export type ConsolidatedCubicationRow = {
   key: string;
@@ -39,6 +41,8 @@ export type ConsolidatedCubicationPauta = {
   dominantBarLengthMm: number | null;
   lineGroups: ConsolidatedCubicationLineGroup[];
   glassRows: ConsolidatedGlassRow[];
+  /** Pauta global calculada solo desde snapshots formales del borrador actual. */
+  trabajoSnapshot?: FabricacionTrabajoSnapshot | null;
 };
 
 export type ConsolidatedGlassRow = {
@@ -67,6 +71,10 @@ type SnapshotCarrier = {
   lineaComercial?: string | null;
   nombre?: string | null;
   snapshot: CotizacionItemCubicationSnapshot;
+  itemId?: string;
+  colorHex?: string | null;
+  catalogLineKey?: string | null;
+  fabricacionSnapshot?: import("@/features/fabricacion/types/fabricacion-snapshot").FabricacionCotizacionSnapshot | null;
 };
 
 function accumulateFromSnapshot(
@@ -279,6 +287,7 @@ function finalizePauta(
     glassRows: Array.from(glassMap.values()).sort(
       (a, b) => b.totalM2 - a.totalM2 || b.quantity - a.quantity
     ),
+    trabajoSnapshot: null,
   };
 }
 
@@ -320,10 +329,14 @@ export function buildConsolidatedCubicationPauta(
 
     accumulateFromSnapshot(
       {
+        itemId: item.id,
         codigo: item.codigo,
         lineaComercial: item.lineaComercial,
         nombre: item.nombre,
+        colorHex: presentation.colorHex,
+        catalogLineKey: presentation.catalogLineKey,
         snapshot,
+        fabricacionSnapshot: item.fabricacionSnapshot,
       },
       rowMap,
       glassMap,
@@ -333,12 +346,36 @@ export function buildConsolidatedCubicationPauta(
     );
   });
 
-  return finalizePauta(rowMap, glassMap, lineMeta, barLengthCounts, totals);
+  const consolidated = finalizePauta(rowMap, glassMap, lineMeta, barLengthCounts, totals);
+  const trabajoSnapshot = construirFabricacionTrabajoSnapshot({
+    items: items.map((item) => {
+      const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
+      return {
+        id: item.id,
+        codigo: item.codigo,
+        nombre: item.nombre,
+        lineaComercial: item.lineaComercial,
+        colorHex: presentation.colorHex,
+        catalogLineKey: presentation.catalogLineKey,
+        snapshot: item.fabricacionSnapshot ?? null,
+      };
+    }),
+  });
+
+  return trabajoSnapshot
+    ? {
+        ...consolidated,
+        totalBars: trabajoSnapshot.totalBars,
+        totalWasteMm: trabajoSnapshot.totalWasteMm,
+        trabajoSnapshot,
+      }
+    : consolidated;
 }
 
 /** Consolida snapshots ya resueltos (p. ej. receta viva en Revisión de fabricación). */
 export function buildConsolidatedCubicationPautaFromSnapshots(
-  carriers: readonly SnapshotCarrier[]
+  carriers: readonly SnapshotCarrier[],
+  storedTrabajoSnapshot?: FabricacionTrabajoSnapshot | null
 ): ConsolidatedCubicationPauta {
   const rowMap = new Map<string, ConsolidatedCubicationRow>();
   const glassMap = new Map<string, ConsolidatedGlassRow>();
@@ -373,7 +410,28 @@ export function buildConsolidatedCubicationPautaFromSnapshots(
     );
   });
 
-  return finalizePauta(rowMap, glassMap, lineMeta, barLengthCounts, totals);
+  const consolidated = finalizePauta(rowMap, glassMap, lineMeta, barLengthCounts, totals);
+  const derivedTrabajoSnapshot = storedTrabajoSnapshot ? null : construirFabricacionTrabajoSnapshot({
+    items: carriers.map((carrier, index) => ({
+      id: carrier.itemId ?? `${carrier.codigo}-${index}`,
+      codigo: carrier.codigo,
+      nombre: carrier.nombre ?? carrier.codigo,
+      lineaComercial: carrier.lineaComercial ?? carrier.codigo,
+      colorHex: carrier.colorHex,
+      catalogLineKey: carrier.catalogLineKey,
+      snapshot: carrier.fabricacionSnapshot ?? null,
+    })),
+  });
+
+  const trabajoSnapshot = storedTrabajoSnapshot ?? derivedTrabajoSnapshot;
+  return trabajoSnapshot
+    ? {
+        ...consolidated,
+        totalBars: trabajoSnapshot.totalBars,
+        totalWasteMm: trabajoSnapshot.totalWasteMm,
+        trabajoSnapshot,
+      }
+    : consolidated;
 }
 
 export function formatConsolidatedPautaPlainText(pauta: ConsolidatedCubicationPauta) {
@@ -406,6 +464,16 @@ export function formatConsolidatedPautaPlainText(pauta: ConsolidatedCubicationPa
       ].join(" | ")
     );
   });
+
+  if (pauta.trabajoSnapshot) {
+    lines.push("", `Barras sugeridas compartidas: ${pauta.trabajoSnapshot.totalBars}`);
+    pauta.trabajoSnapshot.bars.forEach((bar) => {
+      lines.push(
+        `${bar.codigoPerfil} · Barra ${bar.indice} (${bar.largoComercialMm} mm): ` +
+          bar.cortes.map((cut) => `${cut.codigoItem} ${cut.funcion} ${cut.largoMm} mm`).join(", ")
+      );
+    });
+  }
 
   return lines.join("\n");
 }

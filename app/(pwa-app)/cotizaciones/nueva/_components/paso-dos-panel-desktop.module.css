@@ -2696,3 +2696,26 @@
     display: none;
   }
 }
+.consolidatedPautaDistribution {
+  margin-top: 0.75rem;
+  border-top: 1px solid #e3eaf2;
+  padding-top: 0.65rem;
+  color: #34445a;
+  font-size: 0.8rem;
+}
+
+.consolidatedPautaDistribution summary {
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.consolidatedPautaDistribution ol {
+  display: grid;
+  gap: 0.5rem;
+  padding-left: 1.4rem;
+}
+
+.consolidatedPautaDistribution li {
+  display: grid;
+  gap: 0.15rem;
+}

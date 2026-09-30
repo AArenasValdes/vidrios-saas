@@ -2,6 +2,7 @@ import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-prici
 import type { QuoteCreationSurface } from "@/features/cotizaciones/types/quote-creation-surface";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import type { QuoteRegionSnapshot } from "@/features/organization-region/types/quote-region-snapshot";
+import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
 
 export type EstadoCotizacionWorkflow =
   | "borrador"
@@ -97,6 +98,7 @@ export type CotizacionWorkflowRecord = {
   clienteRespuestaCanal: string | null;
   pdfDescargadoEn: string | null;
   regionalSnapshot?: QuoteRegionSnapshot | null;
+  fabricacionTrabajoSnapshot?: FabricacionTrabajoSnapshot | null;
   createdAt: string;
   updatedAt: string;
   items: CotizacionWorkflowItem[];

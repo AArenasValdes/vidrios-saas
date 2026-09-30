@@ -49,6 +49,7 @@ import {
 } from "@/features/organization-profile/repositories/organization-profile.repository";
 import { createQuoteRegionSnapshot } from "@/features/organization-region/services/quote-region-snapshot.service";
 import { resolveQuotePricingSettings } from "@/features/organization-region/services/quote-region-display.service";
+import { construirFabricacionTrabajoSnapshot } from "@/features/fabricacion/services/fabricacion-trabajo-snapshot.service";
 
 type CotizacionesAppServiceDeps = {
   clientesRepository?: ClientesRepository;
@@ -373,6 +374,7 @@ function mapCotizacionToWorkflowRecord(input: {
     clienteRespuestaCanal: input.cotizacion.clienteRespuestaCanal,
     pdfDescargadoEn: input.cotizacion.pdfDescargadoEn,
     regionalSnapshot: input.cotizacion.regionalSnapshot ?? null,
+    fabricacionTrabajoSnapshot: input.cotizacion.fabricacionTrabajoSnapshot ?? null,
     createdAt: input.cotizacion.creadoEn ?? new Date().toISOString(),
     updatedAt:
       input.cotizacion.actualizadoEn ??
@@ -1211,6 +1213,21 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
       const margenPct = financialSummary.margenRealPct;
       const ivaPct = totals.neto > 0 ? round((totals.iva / totals.neto) * 100, 4) : 0;
       const financialSnapshotCalculatedAt = new Date().toISOString();
+      const fabricacionTrabajoSnapshot = construirFabricacionTrabajoSnapshot({
+        capturedAt: financialSnapshotCalculatedAt,
+        items: normalizedItems.map((item) => {
+          const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
+          return {
+            id: item.id,
+            codigo: item.codigo,
+            nombre: item.nombre,
+            lineaComercial: item.lineaComercial,
+            colorHex: presentation.colorHex,
+            catalogLineKey: presentation.catalogLineKey,
+            snapshot: item.fabricacionSnapshot ?? null,
+          };
+        }),
+      });
       const codigo =
         (typeof reservedCode === "string" && reservedCode.trim()
           ? reservedCode.trim()
@@ -1254,6 +1271,7 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
         clienteRespondioEn: existingCotizacion?.clienteRespondioEn ?? null,
         clienteRespuestaCanal: existingCotizacion?.clienteRespuestaCanal ?? null,
         regionalSnapshot,
+        fabricacionTrabajoSnapshot,
         iva: totals.iva,
         flete: quotePricingMode === "total_global" ? 0 : totals.flete,
         total: totals.total,

@@ -366,9 +366,10 @@ function ConsolidadoView({ summary }: { summary: FabricationQuoteSummary }) {
           lineaComercial: row.lineName,
           nombre: row.nombre,
           snapshot: row.snapshot,
-        }))
+        })),
+        summary.trabajoSnapshot
       ),
-    [summary.items]
+    [summary.items, summary.trabajoSnapshot]
   );
 
   if (consolidated.lineGroups.length === 0) {
@@ -416,6 +417,17 @@ function ConsolidadoView({ summary }: { summary: FabricationQuoteSummary }) {
           </ul>
         </section>
       ))}
+      {summary.trabajoSnapshot ? (
+        <section className={s.mGroup} aria-label="Barras compartidas del trabajo">
+          <h3>Distribución conjunta guardada</h3>
+          {summary.trabajoSnapshot.bars.map((bar) => (
+            <p key={`${bar.materialKey}-${bar.acabadoKey}-${bar.largoComercialMm}-${bar.indice}`}>
+              <strong>{bar.codigoPerfil} · {formatMm(bar.largoComercialMm)}:</strong>{" "}
+              {bar.cortes.map((cut) => `${cut.codigoItem} ${cut.funcion} ${formatMm(cut.largoMm)}`).join(" · ")}
+            </p>
+          ))}
+        </section>
+      ) : null}
 
       {consolidated.glassRows.length > 0 ? (
         <section className={s.mGroup} aria-label="Vidrio consolidado">
