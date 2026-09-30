@@ -367,7 +367,8 @@ function ConsolidadoView({ summary }: { summary: FabricationQuoteSummary }) {
           nombre: row.nombre,
           snapshot: row.snapshot,
         })),
-        summary.trabajoSnapshot
+        summary.trabajoSnapshot,
+        { deriveTrabajoSnapshot: false }
       ),
     [summary.items, summary.trabajoSnapshot]
   );

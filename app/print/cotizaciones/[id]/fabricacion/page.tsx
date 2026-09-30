@@ -10,7 +10,6 @@ import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templat
 import { buildFabricationQuoteSummary } from "@/features/cotizaciones/line-templates/types/fabrication-quote-summary";
 import { normalizeQuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import { DespieceReviewSurface } from "@/features/cotizaciones/visual-composer/components/despiece-review-surface";
-import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import { sanitizeFileNamePart } from "@/utils/sanitize-file-name";
 
 import { FabricacionResumenMovil } from "./fabricacion-resumen-movil";
@@ -28,12 +27,6 @@ export default function CotizacionFabricacionPrintPage() {
   });
   const cotizacion = getCotizacionById(params.id);
   const { templates: lineTemplates } = useCotizacionLineTemplates({ activeOnly: true });
-  const {
-    organizationId,
-    recipes,
-    isLoading: isLoadingRecipes,
-  } = useFabricationRecipes({ enabled: Boolean(cotizacion) });
-  const recipesReady = !isLoadingRecipes && organizationId != null;
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -76,11 +69,9 @@ export default function CotizacionFabricacionPrintPage() {
   const summary = useMemo(
     () =>
       buildFabricationQuoteSummary(cotizacion?.items ?? [], {
-        recipes: recipesReady ? recipes : undefined,
-        organizationId,
         trabajoSnapshot: cotizacion?.fabricacionTrabajoSnapshot ?? null,
       }),
-    [cotizacion?.items, cotizacion?.fabricacionTrabajoSnapshot, recipes, recipesReady, organizationId]
+    [cotizacion?.items, cotizacion?.fabricacionTrabajoSnapshot]
   );
 
   const expandedInitializedForQuote = useRef<string | null>(null);
@@ -173,6 +164,11 @@ export default function CotizacionFabricacionPrintPage() {
 
   return (
     <main ref={printRootRef} className={s.printRoot} data-fabricacion-print="1">
+      {!summary.trabajoSnapshot && summary.items.length === 0 ? (
+        <p role="status" data-testid="fabricacion-historica-ausente">
+          Esta cotización no conserva una pauta técnica histórica.
+        </p>
+      ) : null}
       <div className={s.workspace}>
         <div className={s.desktopFabricacion} data-testid="fabricacion-desktop">
           <FabricacionResumenView
@@ -220,6 +216,8 @@ export default function CotizacionFabricacionPrintPage() {
         onActiveItemChange={setDespieceItemId}
         onUpdateItem={() => undefined}
         onClose={handleCloseDespiece}
+        recipes={[]}
+        organizationId={null}
       />
     </main>
   );

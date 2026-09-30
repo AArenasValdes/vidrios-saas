@@ -375,7 +375,8 @@ export function buildConsolidatedCubicationPauta(
 /** Consolida snapshots ya resueltos (p. ej. receta viva en Revisión de fabricación). */
 export function buildConsolidatedCubicationPautaFromSnapshots(
   carriers: readonly SnapshotCarrier[],
-  storedTrabajoSnapshot?: FabricacionTrabajoSnapshot | null
+  storedTrabajoSnapshot?: FabricacionTrabajoSnapshot | null,
+  options: { deriveTrabajoSnapshot?: boolean } = {}
 ): ConsolidatedCubicationPauta {
   const rowMap = new Map<string, ConsolidatedCubicationRow>();
   const glassMap = new Map<string, ConsolidatedGlassRow>();
@@ -411,17 +412,20 @@ export function buildConsolidatedCubicationPautaFromSnapshots(
   });
 
   const consolidated = finalizePauta(rowMap, glassMap, lineMeta, barLengthCounts, totals);
-  const derivedTrabajoSnapshot = storedTrabajoSnapshot ? null : construirFabricacionTrabajoSnapshot({
-    items: carriers.map((carrier, index) => ({
-      id: carrier.itemId ?? `${carrier.codigo}-${index}`,
-      codigo: carrier.codigo,
-      nombre: carrier.nombre ?? carrier.codigo,
-      lineaComercial: carrier.lineaComercial ?? carrier.codigo,
-      colorHex: carrier.colorHex,
-      catalogLineKey: carrier.catalogLineKey,
-      snapshot: carrier.fabricacionSnapshot ?? null,
-    })),
-  });
+  const derivedTrabajoSnapshot =
+    storedTrabajoSnapshot || options.deriveTrabajoSnapshot === false
+      ? null
+      : construirFabricacionTrabajoSnapshot({
+          items: carriers.map((carrier, index) => ({
+            id: carrier.itemId ?? `${carrier.codigo}-${index}`,
+            codigo: carrier.codigo,
+            nombre: carrier.nombre ?? carrier.codigo,
+            lineaComercial: carrier.lineaComercial ?? carrier.codigo,
+            colorHex: carrier.colorHex,
+            catalogLineKey: carrier.catalogLineKey,
+            snapshot: carrier.fabricacionSnapshot ?? null,
+          })),
+      });
 
   const trabajoSnapshot = storedTrabajoSnapshot ?? derivedTrabajoSnapshot;
   return trabajoSnapshot

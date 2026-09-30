@@ -44,6 +44,25 @@ function snapshot(
 }
 
 describe("fabrication quote summary", () => {
+  it("no materializa pauta con recetas actuales cuando la cotización guardada no tiene snapshots", () => {
+    const summary = buildFabricationQuoteSummary([
+      {
+        id: "historical-item",
+        codigo: "V7400",
+        nombre: "Ventana",
+        lineaComercial: "Veratec Sliding 7400",
+        ancho: 1200,
+        alto: 1500,
+        cantidad: 1,
+        observaciones: "",
+      },
+    ]);
+
+    expect(summary.items).toHaveLength(0);
+    expect(summary.trabajoSnapshot).toBeNull();
+    expect(summary.totalBars).toBe(0);
+  });
+
   it("expone línea y material por pieza sin mezclarlas", () => {
     const summary = buildFabricationQuoteSummary([
       {

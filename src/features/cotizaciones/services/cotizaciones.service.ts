@@ -49,7 +49,10 @@ import {
 } from "@/features/organization-profile/repositories/organization-profile.repository";
 import { createQuoteRegionSnapshot } from "@/features/organization-region/services/quote-region-snapshot.service";
 import { resolveQuotePricingSettings } from "@/features/organization-region/services/quote-region-display.service";
-import { construirFabricacionTrabajoSnapshot } from "@/features/fabricacion/services/fabricacion-trabajo-snapshot.service";
+import {
+  resolveFabricacionTrabajoSnapshotForQuoteSave,
+  shouldResolveFabricationRecipesForQuoteSave,
+} from "@/features/cotizaciones/services/fabricacion-trabajo-snapshot-lifecycle.service";
 
 type CotizacionesAppServiceDeps = {
   clientesRepository?: ClientesRepository;
@@ -1073,7 +1076,11 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
       throw new Error("La cotizacion debe tener al menos un componente");
     }
 
-    if (normalizedItems.length > 0 && hasSupabaseBrowserEnv()) {
+    if (
+      shouldResolveFabricationRecipesForQuoteSave(input.existingId) &&
+      normalizedItems.length > 0 &&
+      hasSupabaseBrowserEnv()
+    ) {
       const needsFabricacionSnapshot = normalizedItems.some(
         (item) => !item.fabricacionSnapshot
       );
@@ -1213,7 +1220,9 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
       const margenPct = financialSummary.margenRealPct;
       const ivaPct = totals.neto > 0 ? round((totals.iva / totals.neto) * 100, 4) : 0;
       const financialSnapshotCalculatedAt = new Date().toISOString();
-      const fabricacionTrabajoSnapshot = construirFabricacionTrabajoSnapshot({
+      const fabricacionTrabajoSnapshot = resolveFabricacionTrabajoSnapshotForQuoteSave({
+        existingId: input.existingId,
+        existingSnapshot: existingCotizacion?.fabricacionTrabajoSnapshot,
         capturedAt: financialSnapshotCalculatedAt,
         items: normalizedItems.map((item) => {
           const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
