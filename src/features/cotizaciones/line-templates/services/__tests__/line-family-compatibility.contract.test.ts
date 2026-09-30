@@ -32,16 +32,19 @@ function line(overrides: Partial<CotizacionLineTemplate> = {}): CotizacionLineTe
 }
 
 describe("contrato de familia y compatibilidad", () => {
-  it("agrupa solo claves declaradas y deja cada línea propia aislada por defecto", () => {
+  it("agrupa familias declaradas y reúne líneas propias en un solo bloque sin reordenar", () => {
     const grouped = groupLineTemplatesByFamily([
       line({ id: 1, catalogKey: "ventora:winhouse-new-s75-doble-riel", nombre: "S75 doble" }),
-      line({ id: 2, catalogKey: "ventora:winhouse-new-s75-triple-riel", nombre: "S75 triple" }),
-      line({ id: 3, catalogKey: null, nombre: "S75 triple personalizada" }),
+      line({ id: 3, catalogKey: "ventora:winhouse-new-s75-triple-riel", nombre: "S75 triple" }),
+      line({ id: 2, catalogKey: null, nombre: "Línea propia 1", sortOrder: 2 }),
+      line({ id: 4, catalogKey: null, nombre: "Línea propia 2", sortOrder: 3 }),
     ]);
 
     const family = grouped.find((group) => group.key === "ventora:winhouse-new-s75");
-    expect(family?.templates.map((item) => item.id)).toEqual([1, 2]);
-    expect(grouped.find((group) => group.isOwn)?.templates.map((item) => item.id)).toEqual([3]);
+    expect(family?.templates.map((item) => item.id)).toEqual([1, 3]);
+    expect(grouped.map((group) => group.label)).toEqual(["New S75", "Mis líneas"]);
+    expect(grouped.find((group) => group.isOwn)?.templates.map((item) => item.id)).toEqual([2, 4]);
+    expect(grouped.flatMap((group) => group.templates.map((item) => item.id))).toEqual([1, 3, 2, 4]);
   });
 
   it("evalúa compatibilidad declarada aparte de receta y precio comercial", () => {

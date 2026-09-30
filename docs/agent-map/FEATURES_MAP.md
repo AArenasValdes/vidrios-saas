@@ -53,8 +53,9 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
 
 ## Feature: Trial, Suscripcion y Billing
 
-- **Que hace**: Controla la prueba gratuita de 15 dias para altas nuevas, el contrato recurrente y su ledger. El catalogo V2 ofrece Ventora Cotización ($6.990/$59.990) y Ventora Comercial ($9.990/$89.990) en mensual/anual; la disponibilidad de Mercado Pago exige cuatro IDs server-side y la configuracion de Production ya esta cargada, con smoke final pendiente. Flow y Webpay Plus estan retirados del runtime y solo se conservan como evidencia historica. Una cuenta vencida conserva lectura y bloquea escrituras privadas.
+- **Que hace**: Controla la prueba gratuita de 15 dias para altas nuevas, el contrato recurrente y su ledger. El catalogo V2 ofrece Ventora Cotización ($6.990/$59.990) y Ventora Comercial ($9.990/$89.990) en mensual/anual. Mercado Pago Chile usa `preapproval` + `auto_recurring` para débitos automáticos; webhook firmado primario, sincronización inmediata al retorno/resumen y cron diario de recuperación. Flow y Webpay Plus estan retirados del runtime y solo se conservan como evidencia historica. Una cuenta vencida conserva lectura y bloquea escrituras privadas.
 - **Estado pasarela**: `MERCADOPAGO_BILLING_ENABLED=true` + variables `MERCADOPAGO_CL_*` completas en Vercel. Fuente operativa: `docs/billing/README.md`.
+- **Estado reconciliación**: cron `/api/cron/mercadopago-billing` desplegado y agendado `0 9 * * *` en `vercel.json`; requiere `CRON_SECRET`. No inicia cargos, consulta estados y pagos reales del proveedor. No afirmar entrega del webhook sin evidencia independiente.
 - **Preparacion LATAM Fase 6**: `mercadopago-market.config.ts` separa secretos, plan IDs, bandera y moneda por mercado. Solo Chile tiene precios comerciales definidos; PE/CO/AR/UY/MX permanecen sin precio y apagados. El checkout actual rechaza en servidor organizaciones fuera de Chile para no cobrar CLP por error.
 - **Rutas involucradas**: `/dashboard`, `/cotizaciones`, `/cotizaciones/nueva`, `/clientes`, `/clientes/nuevo`, `/clientes/[id]/editar`, `/solicitudes`, `/solicitudes/canales`, `/configuracion/*`, `/cuenta-vencida`
 - **Archivos principales**:
@@ -66,6 +67,10 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
   - `src/features/subscriptions/providers/mercadopago/*`
   - `src/features/subscriptions/services/mercadopago-checkout.service.ts`
   - `src/features/subscriptions/services/mercadopago-webhook.service.ts`
+  - `src/features/subscriptions/services/subscription-summary.service.ts` (sincroniza desde MP al consultar el resumen)
+  - `src/features/subscriptions/repositories/organization-subscription.repository.ts` (candidatos pendientes/por vencer para cron)
+  - `app/api/cron/mercadopago-billing/route.ts` (respaldo diario con `CRON_SECRET`)
+  - `vercel.json` (agenda del cron)
   - `src/features/billing/types/plans.ts`
   - `src/features/billing/types/payment-provider.ts`
   - `src/features/billing/hooks/useBillingCheckout.ts` (compatibilidad; delega a Mercado Pago)
@@ -90,6 +95,7 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
   - `app/api/subscriptions/webpay/confirmar/route.ts` (retirado; 410)
   - `app/api/subscriptions/mercadopago/create/route.ts`
   - `app/api/subscriptions/mercadopago/webhook/route.ts`
+  - `app/api/cron/mercadopago-billing/route.ts`
   - `app/api/solicitudes/route.ts`
   - `app/api/organization-assets/upload/route.ts`
   - `app/api/public-landing/revalidate/route.ts`
@@ -109,6 +115,7 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
   - Shell privado -> banner / redirect a `/cuenta-vencida` / guard de acciones
   - APIs privadas de escritura -> guard server-side -> `403` si la cuenta esta vencida
   - Mercado Pago Chile: `/cuenta-vencida` -> `useMercadoPagoSubscriptionCheckout()` -> POST `/api/subscriptions/mercadopago/create` -> redirect a Mercado Pago -> webhook firmado -> `pagos_suscripcion` / `suscripciones_organizacion` reconciliados server-side.
+  - Recuperación Mercado Pago: retorno del checkout y GET `/api/subscriptions/summary` buscan `preapproval` y facturas autorizadas, validan la referencia/organización y actualizan por RPC idempotente. El cron diario revisa reservas pendientes recientes (48 h) y suscripciones con próximo cobro dentro de 24 h o vencido; webhook sigue siendo la vía inmediata. El débito lo ejecuta Mercado Pago mientras el `preapproval` autorizado siga vigente.
   - Pasarelas legacy: Flow, Webpay Plus y el checkout provider-agnostic responden `410 Gone`; la unica pasarela activa es Mercado Pago Chile.
 - Mercado Pago Chile: `/cuenta-vencida` -> POST create autenticado -> reserva recurrente unica -> plan/monto validados en API MP -> retorno informativo -> webhook HMAC -> GET de recurso real -> RPC idempotente -> suscripcion + ledger + proyeccion. `/cuenta/suscripcion` muestra periodo/cobro y permite cancelar renovacion solo con configuracion completa; un `past_due` conserva escritura durante una gracia configurable (3 dias por defecto) y un pago aprobado vuelve a `active`.
 - **Estados importantes**: `trial_active`, `trial_expiring`, `trial_expired`, `active`, `past_due`, `cancelled`

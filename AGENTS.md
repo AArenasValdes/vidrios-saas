@@ -1,7 +1,7 @@
 # AGENTS.md - Ventora
 
 Estado: vigente
-Actualizado: 2026-08-31
+Actualizado: 2026-09-29
 Responsable: ingeniería + agentes del repositorio
 
 Lee antes de editar. Ultima consolidacion: 2026-09-04.
@@ -84,9 +84,9 @@ Antes de agregar o ampliar una línea, leer `docs/fabricacion/WORKFLOW_INTEGRAR_
 
 ## Estado actual
 
-Ultima actualizacion operativa: 2026-09-19
+Ultima actualizacion operativa: 2026-09-29
 
-- **Pasarela de pago**: Mercado Pago Chile **configurada en produccion** para suscripciones recurrentes CLP; el smoke final de checkout/webhook sigue siendo la prueba de salida. Runbook: `docs/billing/README.md`.
+- **Pasarela de pago**: Mercado Pago Chile opera en producción para suscripciones recurrentes CLP. Los webhooks firmados son primarios; `GET /api/cron/mercadopago-billing` sincroniza diariamente pagos y renovaciones perdidos usando `CRON_SECRET`. Confirmada la reconciliación de pago recurrente aprobado y deployment `READY`; la entrega de webhook de un nuevo ciclo aún requiere confirmación independiente. Runbook: `docs/billing/README.md`.
 - **Paso actual**: **Fase 4 — Cubicación V1 vendible multi-tipología**. Ver `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`.
 - **Modelo vigente**: `fabrication_recipes` + `fabrication_recipe_tests`; seleccion de receta validada; snapshot formal en `cotizacion_items.fabricacion_snapshot`; `fabricationRecipePack`, `fabricationRecipe` y `[cub:]` quedan como compatibilidad historica.
 - **Plantillas**: L5000/L20/L25 = iniciales sugeridas (wizard Fabricación, no listado de líneas). Bases tipológicas = pendientes.
@@ -105,6 +105,14 @@ Ultima actualizacion operativa: 2026-09-19
 - Webhook firmado en `/api/subscriptions/mercadopago/webhook`; activacion de cuenta solo por webhook, no por retorno del navegador
 - Cambio de plan durante checkout pendiente: reutiliza mismo plan o libera reserva anterior al elegir otro
 - Documentacion operativa centralizada en `docs/billing/README.md`
+
+### Actualizacion 2026-09-29 (reconciliacion y respaldo recurrente)
+
+- El cobro automático lo ejecuta Mercado Pago mediante `preapproval` autorizado y `auto_recurring`; Ventora solo refleja estados y pagos confirmados, nunca inicia cargos desde la sincronización.
+- Webhooks firmados siguen como vía primaria. Retorno del checkout y GET `/api/subscriptions/summary` consultan preaprobación/facturas MP; `/api/cron/mercadopago-billing` consulta reservas MP recientes (48 h) y suscripciones cuyo cobro vence pronto o ya venció.
+- El cron está registrado en `vercel.json` (`0 9 * * *`) y protegido con `CRON_SECRET`. No afirmar entrega real de webhook sin evidencia de MP.
+- La reconciliación se limita a referencias `ventora:cl:` y valida organización, plan/monto y recursos reales mediante RPC idempotentes existentes; no requiere nueva migración.
+- Archivos guía: `app/api/cron/mercadopago-billing/route.ts`, `src/features/subscriptions/services/mercadopago-webhook.service.ts`, `src/features/subscriptions/repositories/organization-subscription.repository.ts`, `docs/billing/README.md`.
 
 ### Ya resuelto en pasada 2026-07-24 (Cubicación V1 vendible)
 

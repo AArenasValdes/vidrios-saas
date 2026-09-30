@@ -2,6 +2,13 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-09-29 - Billing MP: sincronización de pagos y renovaciones
+
+- Se documentan `preapproval` + `auto_recurring` como responsables del débito automático; Ventora registra estados confirmados y no genera cargos al sincronizar.
+- Webhook firmado queda como vía primaria; retorno y resumen consultan preaprobación/facturas y el respaldo diario `/api/cron/mercadopago-billing` recupera renovaciones/checkouts recientes con `CRON_SECRET`.
+- Se registra la ruta en FEATURES_MAP, ROUTES_MAP y `ROUTES_MANIFEST.json`; sin migración nueva. La entrega real del webhook no se da por confirmada sin evidencia independiente de Mercado Pago.
+- Runbook: `docs/billing/README.md`; configuración cron en `vercel.json`.
+
 ## 2026-09-29 - Ubicación del acceso Ajustar en el croquis móvil
 
 - El botón **Ajustar** pasa al encabezado de **Medidas**, fuera del dibujo para no tapar ni competir con el croquis en pantallas angostas.

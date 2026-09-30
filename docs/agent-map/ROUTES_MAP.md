@@ -638,6 +638,7 @@ Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las
 | `/api/subscriptions/webpay/confirmar` | GET/POST | Retirado; Webpay no es una pasarela activa | `app/api/subscriptions/webpay/confirmar/route.ts` |
 | `/api/subscriptions/mercadopago/create` | POST | Reserva y crea suscripcion MP Chile autenticada | `app/api/subscriptions/mercadopago/create/route.ts` |
 | `/api/subscriptions/mercadopago/webhook` | POST | Valida firma, consulta recurso MP y reconcilia idempotente | `app/api/subscriptions/mercadopago/webhook/route.ts` |
+| `/api/cron/mercadopago-billing` | GET | Cron Vercel diario, protegido por `CRON_SECRET`; recupera conciliación de suscripciones MP pendientes o próximas/vencidas | `app/api/cron/mercadopago-billing/route.ts` |
 
 ---
 
@@ -724,6 +725,7 @@ Generado desde app/ y verificado por pnpm docs:check. El detalle funcional de ca
 | `/api/subscriptions/mercadopago/cancel` | api | api | `app/api/subscriptions/mercadopago/cancel/route.ts` |
 | `/api/subscriptions/mercadopago/create` | api | api | `app/api/subscriptions/mercadopago/create/route.ts` |
 | `/api/subscriptions/mercadopago/webhook` | api | api | `app/api/subscriptions/mercadopago/webhook/route.ts` |
+| `/api/cron/mercadopago-billing` | api | api | `app/api/cron/mercadopago-billing/route.ts` |
 | `/api/subscriptions/pagos` | api | api | `app/api/subscriptions/pagos/route.ts` |
 | `/api/subscriptions/summary` | api | api | `app/api/subscriptions/summary/route.ts` |
 | `/api/subscriptions/webpay/confirmar` | api | api | `app/api/subscriptions/webpay/confirmar/route.ts` |

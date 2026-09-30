@@ -1,7 +1,7 @@
 # Documentación Ventora
 
 Estado: vigente
-Actualizado: 2026-09-14
+Actualizado: 2026-09-29
 Responsable: producto + agentes del repositorio
 
 Entrada única para agentes, desarrollo, billing, base de datos y Growth OS.
@@ -42,6 +42,7 @@ Si dos documentos contradicen código o una fuente superior, detenerse, registra
 - Fase 4: cubicación V1 configurable y revisable; recetas L5000/L20/L25 siguen pendientes de validación de taller.
 - Cotización, PDF, WhatsApp, clientes, solicitudes y aprobación pública son núcleo comercial.
 - Mercado Pago Chile opera en producción; otros mercados siguen apagados.
+- Para renovaciones MP, webhook firmado es la vía primaria y `/api/cron/mercadopago-billing` reconcilia diariamente estados/pagos confirmados que no llegaron por webhook. El débito automático lo gestiona el `preapproval` autorizado de Mercado Pago.
 - Growth OS concentra prospección, contenido, conversión, onboarding, cobro y revisión semanal.
 - Pauta de fabricación es interna, referencial, sin precios y separada del PDF cliente.
 - El P0 de consistencia catálogo/Fabricación está protegido en producción: una receta con composición incompleta no puede mostrarse como lista para probar ni generar snapshot técnico.

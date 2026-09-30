@@ -1,8 +1,8 @@
 # Billing Ventora — Estado operativo
 
-**Última actualización:** 2026-08-31
+**Última actualización:** 2026-09-29
 
-Estado: Pricing V2 implementado en código y configurado en Vercel Production; smoke productivo de checkout/webhook pendiente
+Estado: Mercado Pago Chile recurrente y cron de reconciliación desplegados en Vercel Production; falta una confirmación independiente de entrega de webhook de un nuevo ciclo
 Responsable: billing + ingeniería
 
 ## Resumen
@@ -14,7 +14,8 @@ la prueba productiva con un comprador distinto y confirmar el webhook.
 
 | Ámbito | Estado |
 |---|---|
-| Pasarela principal Chile (Mercado Pago) | V2 configurada en Vercel Production; smoke final pendiente |
+| Pasarela principal Chile (Mercado Pago) | V2 recurrente configurada en Production; pago aprobado reconciliado; entrega de webhook de un nuevo ciclo pendiente de confirmación independiente |
+| Respaldo de sincronización | `/api/cron/mercadopago-billing` registrado diario en Vercel (`0 9 * * *`), protegido con `CRON_SECRET` |
 | Cobro automático fuera de Chile | No disponible (WhatsApp / activación manual) |
 | Flow / Webpay Plus legacy | Retirados del runtime; solo se conserva evidencia histórica |
 | Mi plan (`/cuenta/suscripcion`) | Operativo con cancelación de renovación MP |
@@ -80,6 +81,22 @@ día checkouts recientes y suscripciones con cobro próximo o vencido. El cron
 usa `CRON_SECRET`; los webhooks siguen siendo el camino inmediato. La
 sincronización solo registra lo que Mercado Pago confirma y no inicia cobros.
 
+La suscripción de Mercado Pago (`preapproval` autorizada con `auto_recurring`)
+es quien programa y ejecuta el débito automático en la tarjeta del pagador.
+Ventora no vuelve a pedir pago manual mientras la autorización siga activa; si
+Mercado Pago rechaza el cargo o la autorización se cancela, la reconciliación
+refleja el estado confirmado por el proveedor, pero no fuerza otro cobro. La
+frecuencia del cron es diaria, por lo que funciona como recuperación eventual;
+no reemplaza la entrega inmediata del webhook.
+
+El endpoint del cron requiere exactamente `Authorization: Bearer <CRON_SECRET>`;
+sin secreto responde `401`. Revisa hasta 20 reservas recientes pendientes (48 h)
+y hasta 20 suscripciones activas/vencidas con cobro antes de las próximas 24 h,
+en lotes de 10. No recibe una organización desde el cliente: obtiene candidatos
+del repositorio y reconcilia cada referencia `ventora:cl` con la API de MP.
+Si el volumen llega al límite, devuelve `truncated: true` para alertar que quedó
+trabajo fuera de ese ciclo.
+
 Los eventos asociados a referencias `ventora:cl:` que llegan antes de que la
 reserva local quede vinculada fallan de forma recuperable: el endpoint responde
 error para que Mercado Pago reintente. Los pagos ajenos a Ventora siguen siendo
@@ -111,9 +128,14 @@ reconciliar el recurso desde Mercado Pago con su ID original.
 | Provider MP | `src/features/subscriptions/providers/mercadopago/` |
 | Checkout | `src/features/subscriptions/services/mercadopago-checkout.service.ts` |
 | Webhook | `src/features/subscriptions/services/mercadopago-webhook.service.ts` |
+| Sincronización cron | `app/api/cron/mercadopago-billing/route.ts` |
+| Búsqueda MP y reconciliación | `src/features/subscriptions/services/mercadopago-webhook.service.ts` |
+| Selección de suscripciones recientes/vencidas | `src/features/subscriptions/repositories/organization-subscription.repository.ts` |
 | Lifecycle / Mi plan | `src/features/subscriptions/services/mercadopago-lifecycle.service.ts` |
 | API create | `app/api/subscriptions/mercadopago/create/route.ts` |
 | API webhook | `app/api/subscriptions/mercadopago/webhook/route.ts` |
+| API cron diario | `app/api/cron/mercadopago-billing/route.ts` |
+| Agenda cron Vercel | `vercel.json` |
 | UI activación | `app/(subscription-gate)/cuenta-vencida/` |
 | UI Mi plan | `app/(pwa-app)/cuenta/suscripcion/` |
 

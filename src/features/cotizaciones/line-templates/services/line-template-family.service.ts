@@ -56,16 +56,26 @@ export function resolveLineTemplateFamily(template: CotizacionLineTemplate) {
 export function groupLineTemplatesByFamily(
   templates: readonly CotizacionLineTemplate[]
 ): LineTemplateFamilyGroup[] {
-  const groups = new Map<string, LineTemplateFamilyGroup>();
+  const groups: LineTemplateFamilyGroup[] = [];
   for (const template of templates) {
-    const family = resolveLineTemplateFamily(template);
     const isOwn = !template.catalogKey?.startsWith("ventora:");
-    const key = isOwn ? `own:${family.key}` : family.key;
-    const group = groups.get(key);
-    if (group) group.templates.push(template);
-    else groups.set(key, { key, label: family.label, templates: [template], isOwn });
+    const family = resolveLineTemplateFamily(template);
+    const key = isOwn
+      ? `own:${String(template.organizationId)}`
+      : family.key;
+    const previousGroup = groups.at(-1);
+    // Group adjacent entries only: the picker keeps the catalog's established
+    // order while avoiding a repeated "Mis líneas" heading for consecutive private lines.
+    if (previousGroup?.key === key) {
+      previousGroup.templates.push(template);
+    } else {
+      groups.push({
+        key,
+        label: isOwn ? "Mis líneas" : family.label,
+        templates: [template],
+        isOwn,
+      });
+    }
   }
-  return [...groups.values()].sort((left, right) =>
-    left.label.localeCompare(right.label, "es", { sensitivity: "base" })
-  );
+  return groups;
 }

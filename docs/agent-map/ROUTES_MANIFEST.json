@@ -338,6 +338,12 @@
       "source": "app/api/cotizaciones/resumen/route.ts"
     },
     {
+      "path": "/api/cron/mercadopago-billing",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/cron/mercadopago-billing/route.ts"
+    },
+    {
       "path": "/api/dashboard/summary",
       "type": "api",
       "area": "api",
