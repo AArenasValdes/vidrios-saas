@@ -137,19 +137,8 @@ function resolveLeavesCount(
 }
 
 export function inferWinHouseCatalogKey(item: CotizacionWorkflowItem): string | null {
-  const lineName = `${item.lineaComercial ?? ""} ${item.nombre ?? ""}`
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-  if (!lineName.includes("winhouse")) return null;
-  if (lineName.includes("s60")) return "ventora:winhouse-s60";
-  if (lineName.includes("s75") && lineName.includes("triple")) {
-    return "ventora:winhouse-new-s75-triple-riel";
-  }
-  if (lineName.includes("s75") && lineName.includes("doble")) {
-    return "ventora:winhouse-new-s75-doble-riel";
-  }
-  return null;
+  const explicitKey = decodeCotizacionItemPresentationMeta(item.observaciones).catalogLineKey?.trim();
+  return explicitKey?.startsWith("ventora:winhouse-") ? explicitKey : null;
 }
 
 function attachFrozenDespieceFallback(
@@ -285,7 +274,6 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     inferWinHouseCatalogKey(input.item) ||
     resolveEffectiveSodalL25CatalogKey({
       catalogLineKey: presentation.catalogLineKey,
-      nombre: input.item.lineaComercial,
     }) || null;
   const inferredTipologia = inferirTipologiaFabricacionPieza({
     tipo: input.item.tipo,

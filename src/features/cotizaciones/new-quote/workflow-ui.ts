@@ -37,6 +37,7 @@ import {
   type CotizacionLineTemplate,
   type CotizacionLineTemplateCatalogMetadata,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import { evaluateLineCompatibility } from "@/features/cotizaciones/line-templates/services/line-template-compatibility.service";
 import {
   fabricacionSnapshotToLegacyCubicationSnapshot,
 } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
@@ -1141,6 +1142,10 @@ export function filterLineTemplatesForComponent(
     tipo: string;
     material?: string | null;
     catalogCategoria?: string | null;
+    sistema?: string | null;
+    configuracion?: string | null;
+    sheetScheme?: string | null;
+    fabricacionHojas?: number | null;
   }
 ) {
   // Mostrar todas las líneas activas, incluidas las que tienen precio pendiente.
@@ -1154,7 +1159,19 @@ export function filterLineTemplatesForComponent(
   }
 
   const preferredMaterial = input.material === "PVC" ? "PVC" : "Aluminio";
-  const profileTemplates = activeTemplates.filter(isProfileLineTemplate);
+  const sheetCount = input.fabricacionHojas ?? (Number(input.sheetScheme?.match(/\d+/)?.[0]) || null);
+  const profileTemplates = activeTemplates.filter((template) =>
+    isProfileLineTemplate(template) &&
+    evaluateLineCompatibility({
+      line: template,
+      context: {
+        componentType: input.tipo,
+        openingType: input.configuracion?.trim() || input.sistema,
+        leavesCount: Number.isFinite(sheetCount) ? sheetCount : null,
+        material: input.material,
+      },
+    }).commercial === "compatible"
+  );
 
   return [...profileTemplates].sort((left, right) => {
     const leftPreferred = left.material === preferredMaterial ? 0 : 1;

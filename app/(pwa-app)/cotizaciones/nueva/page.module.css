@@ -14207,6 +14207,20 @@ p.stepTwoMobileItemFabCompact {
   gap: 0.55rem;
 }
 
+.stepTwoMobileLineFamily {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.stepTwoMobileLineFamily h3 {
+  margin: 0.35rem 0 0;
+  color: #50627a;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
 .stepTwoMobileLineEmptyState {
   padding: 0.95rem 0.8rem;
   border-radius: 12px;

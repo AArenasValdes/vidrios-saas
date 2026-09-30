@@ -11,6 +11,8 @@ import type {
   CreateCotizacionLineTemplateInput,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { lineTemplateNeedsCommercialPrice } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import { groupLineTemplatesByFamily } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
+import { evaluateLineCompatibility } from "@/features/cotizaciones/line-templates/services/line-template-compatibility.service";
 import { LinePriceEditor } from "@/features/cotizaciones/line-templates/components/line-template-price-editor";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
@@ -398,23 +400,31 @@ export function PasoDosWizardConfiguracionMovil({
 
   const filteredLineTemplates = useMemo(() => {
     const normalizedQuery = lineSelectorQuery.trim().toLowerCase();
+    const leavesCount = Number(draft.fabricacionHojas ?? draft.sheetScheme?.match(/\d+/)?.[0]) || null;
 
-    if (!normalizedQuery) {
-      return availableLineTemplates;
-    }
-
-    return availableLineTemplates.filter((template) =>
-      [
+    return availableLineTemplates.filter((template) => {
+      if (!isGlassProduct && evaluateLineCompatibility({
+        line: template,
+        context: {
+          componentType: draft.subtipo,
+          openingType: draft.configuracion?.trim() || draft.sistema,
+          leavesCount,
+          material: draft.material,
+        },
+      }).commercial === "incompatible") return false;
+      if (!normalizedQuery) return true;
+      return [
         template.nombre,
         formatLineTemplateQuotePickerLabel(template),
         template.material,
         template.proveedor ?? "",
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(normalizedQuery)
-    );
-  }, [availableLineTemplates, lineSelectorQuery]);
+      ].join(" ").toLowerCase().includes(normalizedQuery);
+    });
+  }, [availableLineTemplates, draft.configuracion, draft.fabricacionHojas, draft.material, draft.sheetScheme, draft.subtipo, draft.sistema, isGlassProduct, lineSelectorQuery]);
+  const lineTemplateFamilyGroups = useMemo(
+    () => groupLineTemplatesByFamily(filteredLineTemplates),
+    [filteredLineTemplates]
+  );
 
   const openLineSelector = () => {
     setLineSelectorQuery("");
@@ -1475,13 +1485,18 @@ export function PasoDosWizardConfiguracionMovil({
                         <span className={s.stepTwoMobileLineOptionState}>Actual</span>
                       ) : null}
                     </button>
-                    {filteredLineTemplates.map((template) => (
-                      <button
-                        key={template.id}
-                        className={`${s.stepTwoMobileLineOption} ${draft.lineTemplateId === String(template.id) ? s.stepTwoMobileLineOptionActive : ""}`}
-                        onClick={() => handleSelectSavedLine(template)}
-                        type="button"
-                      >
+                    {lineTemplateFamilyGroups.map((group) => (
+                      <section className={s.stepTwoMobileLineFamily} key={group.key}>
+                        {group.templates.length > 1 || group.isOwn ? (
+                          <h3>{group.isOwn ? "Mis líneas" : group.label}</h3>
+                        ) : null}
+                        {group.templates.map((template) => (
+                          <button
+                            key={template.id}
+                            className={`${s.stepTwoMobileLineOption} ${draft.lineTemplateId === String(template.id) ? s.stepTwoMobileLineOptionActive : ""}`}
+                            onClick={() => handleSelectSavedLine(template)}
+                            type="button"
+                          >
                         <div className={s.stepTwoMobileLineOptionBody}>
                           <div className={s.stepTwoMobileLineOptionTop}>
                             <span>{formatLineTemplateQuotePickerLabel(template)}</span>
@@ -1515,7 +1530,9 @@ export function PasoDosWizardConfiguracionMovil({
                         {draft.lineTemplateId === String(template.id) ? (
                           <span className={s.stepTwoMobileLineOptionState}>Actual</span>
                         ) : null}
-                      </button>
+                          </button>
+                        ))}
+                      </section>
                     ))}
                     {filteredLineTemplates.length === 0 ? (
                       <div className={s.stepTwoMobileLineEmptyState}>

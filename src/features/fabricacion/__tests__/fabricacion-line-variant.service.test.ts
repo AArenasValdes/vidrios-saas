@@ -94,6 +94,7 @@ function quoteItemWithHojas(hojas: number): CotizacionWorkflowItem {
     origenPrecio: "manual",
     observaciones: encodeCotizacionItemPresentationMeta({
       lineTemplateId: "314",
+      catalogLineKey: "ventora:l25",
       sistema: "Corredera",
       sheetScheme: `${hojas} hojas`,
       fabricacionTipologia: "corredera",

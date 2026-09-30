@@ -374,6 +374,21 @@
   gap: 0.42rem;
 }
 
+.familyGroup {
+  display: grid;
+  gap: 0.42rem;
+  min-width: 0;
+}
+
+.familyHeading {
+  margin: 0.45rem 0 0.05rem;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
 .option {
   display: flex;
   gap: 0.55rem;

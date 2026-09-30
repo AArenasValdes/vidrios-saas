@@ -816,7 +816,7 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
     expect(resolved.cubication?.cuts.length).toBeGreaterThan(0);
   });
 
-  it("infiere la clave S60 para un borrador antiguo que no la guardó en observaciones", () => {
+  it("solo usa el fallback S60 de catálogo cuando llega una clave explícita", () => {
     const monoVariant = WINHOUSE_S60_VARIANTS.fijoMonolitico;
     const termopanelVariant = WINHOUSE_S60_VARIANTS.fijoTermopanel1720;
     const recipes = [
@@ -876,8 +876,8 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
       lineCatalogKey: "ventora:winhouse-s60",
     });
 
-    expect(resolvedLegacyDraft.estado).toBe("calculado");
-    expect(resolvedLegacyDraft.recipe?.definition.identidad.variante).toBe(monoVariant);
+    expect(resolvedLegacyDraft.estado).toBe("multiples_recetas");
+    expect(resolvedLegacyDraft.recipe).toBeNull();
     expect(resolvedFromSelectedLine.estado).toBe("calculado");
     expect(resolvedFromSelectedLine.recipe?.definition.identidad.variante).toBe(monoVariant);
     expect(resolvedFromSelectedLine.cubication?.cuts.length).toBeGreaterThan(0);
@@ -913,6 +913,7 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
       vidrio: "DVH 4+10+5",
       observaciones: encodeCotizacionItemPresentationMeta({
         lineTemplateId: "224",
+        catalogLineKey: "ventora:winhouse-new-s75-doble-riel",
         sistema: "Corredera",
         fabricacionTipologia: "corredera",
         fabricacionHojas: 2,

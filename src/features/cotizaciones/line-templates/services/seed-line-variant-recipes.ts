@@ -1,9 +1,5 @@
 import { isVentoraCatalogKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import {
-  WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY,
-  WINHOUSE_NEW_S75_TRIPLE_CATALOG_KEY,
-} from "@/features/fabricacion/fixtures/winhouse-new-s75-recipes";
-import {
   buildSeedPayloadForVariantSlot,
   findRecipeForVariantSlot,
   listMissingVariantSlots,
@@ -29,19 +25,7 @@ export type SeedLineVariantRecipesDeps = {
 
 function resolveVariantSeedCatalogKey(row: LineTemplateVariantSeedRow): string | null {
   if (isVentoraCatalogKey(row.catalog_key)) return row.catalog_key!;
-
-  const name = row.nombre
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-  const provider = (row.proveedor ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-  if (!name.includes("winhouse") || !name.includes("s75")) return null;
-  if (provider && !provider.includes("winhouse")) return null;
-  if (name.includes("triple")) return WINHOUSE_NEW_S75_TRIPLE_CATALOG_KEY;
-  if (name.includes("doble")) return WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY;
+  // No vincular líneas propias por nombre/proveedor; se exige catalog_key explícita.
   return null;
 }
 

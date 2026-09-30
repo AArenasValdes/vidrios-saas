@@ -20,6 +20,7 @@ import {
   formatLineTemplateQuotePickerLabel,
 } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import { CLP } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { groupLineTemplatesByFamily } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
 
 import { LinePriceEditor } from "./line-template-price-editor";
 import styles from "./line-template-picker.module.css";
@@ -253,6 +254,10 @@ export function LineTemplatePicker({
       return haystack.includes(normalizedQuery);
     });
   }, [isGlass, materialFilter, providerFilter, query, quoteTemplates]);
+  const familyGroups = useMemo(
+    () => (isGlass ? [] : groupLineTemplatesByFamily(filteredTemplates)),
+    [filteredTemplates, isGlass]
+  );
 
   useEffect(() => {
     if (!open) {
@@ -469,9 +474,22 @@ export function LineTemplatePicker({
                 </button>
 
                 <div className={styles.optionGrid}>
-                  {filteredTemplates.map((template) =>
-                    renderTemplateOption(template, value, isGlass, selectValue)
-                  )}
+                  {isGlass
+                    ? filteredTemplates.map((template) =>
+                        renderTemplateOption(template, value, isGlass, selectValue)
+                      )
+                    : familyGroups.map((group) => (
+                        <section className={styles.familyGroup} key={group.key}>
+                          {group.templates.length > 1 || group.isOwn ? (
+                            <h3 className={styles.familyHeading}>
+                              {group.isOwn ? "Mis líneas" : group.label}
+                            </h3>
+                          ) : null}
+                          {group.templates.map((template) =>
+                            renderTemplateOption(template, value, isGlass, selectValue)
+                          )}
+                        </section>
+                      ))}
                 </div>
 
                 {filteredTemplates.length === 0 ? (
