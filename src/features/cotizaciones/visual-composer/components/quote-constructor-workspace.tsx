@@ -1203,6 +1203,7 @@ export function QuoteConstructorWorkspace({
                               onUpdateItem(item.id, { lineTemplateId })
                             }
                             mode="profile"
+                            preferredMaterial={mapItemToForm(item).material}
                             className={s.pieceLinePicker}
                             renderTrigger={({ open, toggle, listId }) => (
                               <button
@@ -1586,6 +1587,7 @@ export function QuoteConstructorWorkspace({
                         onUpdateItem(activeItem.id, { lineTemplateId })
                       }
                       mode="profile"
+                      preferredMaterial={activeForm.material}
                       ariaLabel={`Línea de ${activeItem.codigo}`}
                     />
                   </div>

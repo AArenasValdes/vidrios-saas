@@ -19,7 +19,10 @@ import {
   dedupeLineTemplatesForQuotePicker,
   formatLineTemplateQuotePickerLabel,
 } from "@/features/fabricacion/services/sodal-l25-presentation.service";
-import { CLP } from "@/features/cotizaciones/new-quote/workflow-ui";
+import {
+  CLP,
+  prioritizeLineTemplatesByMaterial,
+} from "@/features/cotizaciones/new-quote/workflow-ui";
 import { groupLineTemplatesByFamily } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
 
 import { LinePriceEditor } from "./line-template-price-editor";
@@ -179,7 +182,7 @@ export function LineTemplatePicker({
     }
     setQuery("");
     setProviderFilter("todos");
-    setMaterialFilter(!isGlass && preferredMaterial ? preferredMaterial : "todos");
+    setMaterialFilter("todos");
     setOpen(true);
   };
 
@@ -219,7 +222,7 @@ export function LineTemplatePicker({
   const filteredTemplates = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
-    return quoteTemplates.filter((template) => {
+    const matchingTemplates = quoteTemplates.filter((template) => {
       const templateMaterial =
         template.categoria === "vidrio" ? "Cristal" : template.material;
       if (!isGlass && materialFilter !== "todos" && templateMaterial !== materialFilter) {
@@ -253,7 +256,11 @@ export function LineTemplatePicker({
 
       return haystack.includes(normalizedQuery);
     });
-  }, [isGlass, materialFilter, providerFilter, query, quoteTemplates]);
+    return prioritizeLineTemplatesByMaterial(
+      matchingTemplates,
+      !isGlass && materialFilter === "todos" ? preferredMaterial : null
+    );
+  }, [isGlass, materialFilter, preferredMaterial, providerFilter, query, quoteTemplates]);
   const familyGroups = useMemo(
     () => (isGlass ? [] : groupLineTemplatesByFamily(filteredTemplates)),
     [filteredTemplates, isGlass]
@@ -440,6 +447,9 @@ export function LineTemplatePicker({
                 <span>
                   {filteredTemplates.length}{" "}
                   {filteredTemplates.length === 1 ? "opción" : "opciones"}
+                  {!isGlass && materialFilter === "todos" && preferredMaterial
+                    ? ` · ${preferredMaterial} primero`
+                    : ""}
                 </span>
                 {materialFilter !== "todos" || providerFilter !== "todos" || query.trim() ? (
                   <button

@@ -159,6 +159,9 @@ export function PasoDosFormularioBloqueConfiguracion({
             onChange={onSelectLineTemplate}
             onTemplatePriceUpdated={onTemplatePriceUpdated}
             mode={isGlassCatalogSelection(componentForm) ? "glass" : "profile"}
+            preferredMaterial={
+              isGlassCatalogSelection(componentForm) ? null : componentForm.material
+            }
             ariaLabel="Seleccionar linea comercial"
           />
           <label className={s.field}>

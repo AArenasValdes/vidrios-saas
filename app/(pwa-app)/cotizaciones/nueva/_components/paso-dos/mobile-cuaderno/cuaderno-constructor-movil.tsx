@@ -328,6 +328,7 @@ export function CuadernoConstructorMovil({
                               onUpdateItem(item.id, { lineTemplateId })
                             }
                             mode="profile"
+                            preferredMaterial={form.material}
                             ariaLabel="Elegir línea comercial"
                           />
                         </div>

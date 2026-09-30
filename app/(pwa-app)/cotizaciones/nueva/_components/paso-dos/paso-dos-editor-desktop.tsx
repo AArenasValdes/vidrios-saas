@@ -1167,6 +1167,7 @@ function TabPrecio({
               onChange={onSelectLineTemplate}
               onTemplatePriceUpdated={onTemplatePriceUpdated}
               mode={isGlassCatalogItem ? "glass" : "profile"}
+              preferredMaterial={isGlassCatalogItem ? null : componentForm.material}
               ariaLabel={`Seleccionar ${catalogLabelLower}`}
             />
             <label className={s.field}>

@@ -1188,6 +1188,20 @@ export function filterLineTemplatesForComponent(
   });
 }
 
+/** Prioriza el material de la pieza sin ocultar líneas de otros materiales. */
+export function prioritizeLineTemplatesByMaterial<T extends { material: string }>(
+  templates: readonly T[],
+  preferredMaterial: string | null | undefined
+): T[] {
+  if (!preferredMaterial) return [...templates];
+
+  return [...templates].sort((left, right) => {
+    if (left.material === preferredMaterial) return right.material === preferredMaterial ? 0 : -1;
+    if (right.material === preferredMaterial) return 1;
+    return 0;
+  });
+}
+
 export function getSheetSchemeOptions(input: {
   tipo: string;
   sistema?: string | null;

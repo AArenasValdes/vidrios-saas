@@ -9,6 +9,7 @@ import {
   buildSuggestedComponentForm,
   createEmptyFreeValueItemForm,
   filterLineTemplatesForComponent,
+  prioritizeLineTemplatesByMaterial,
   mapItemToForm,
   mapRecordToDraft,
   reconcileWorkflowItemsPricing,
@@ -109,6 +110,21 @@ function createBaseItem() {
 }
 
 describe("workflow-ui paso 2", () => {
+  it.each([
+    ["Aluminio", ["aluminio-1", "aluminio-2", "pvc-1"]],
+    ["PVC", ["pvc-1", "aluminio-1", "aluminio-2"]],
+  ] as const)("prioriza %s sin esconder las demás líneas", (material, expected) => {
+    const lines = [
+      { id: "pvc-1", material: "PVC" },
+      { id: "aluminio-1", material: "Aluminio" },
+      { id: "aluminio-2", material: "Aluminio" },
+    ];
+
+    expect(prioritizeLineTemplatesByMaterial(lines, material).map((line) => line.id)).toEqual(
+      expected
+    );
+  });
+
   it("guarda e hidrata el ajuste visual sin cambiar precio ni identidad comercial", () => {
     const adjustment = setQuickPaneDecoration(createEmptyQuickCompositionAdjustment(), 0, "vertical");
     const form = createLinePricingForm({ quickCompositionAdjustment: adjustment });

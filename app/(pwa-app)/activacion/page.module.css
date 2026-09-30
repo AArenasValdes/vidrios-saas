@@ -1117,14 +1117,6 @@
   background: transparent;
 }
 
-:global(body[data-activation-route="true"] [data-nextjs-devtools-button]),
-:global(body[data-activation-route="true"] [data-nextjs-dev-tools-button]),
-:global(body[data-activation-route="true"] [aria-label="Next.js Dev Tools"]),
-:global(body[data-activation-route="true"] [aria-label="Open Next.js Dev Tools"]),
-:global(body[data-activation-route="true"] nextjs-portal) {
-  display: none !important;
-}
-
 @media (max-width: 640px) {
   .activationRoot {
     padding:

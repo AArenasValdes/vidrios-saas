@@ -1906,6 +1906,9 @@ export function PasoDosAgregarGrupoSheet({
                           onChange={(templateId) => onSelectLineTemplate?.(templateId)}
                           onTemplatePriceUpdated={onTemplatePriceUpdated}
                           mode={isGlassCatalogItem ? "glass" : "profile"}
+                          preferredMaterial={
+                            requiresProfileMaterial ? draft.material : null
+                          }
                           ariaLabel={catalogAriaLabel}
                         />
                       </div>

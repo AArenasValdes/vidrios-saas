@@ -348,7 +348,7 @@ describe("PasoDosCuadernoMovil", () => {
     );
   });
 
-  it("abre el selector de linea filtrado por el material de la pieza", () => {
+  it("prioriza el material de la pieza sin ocultar las otras líneas", () => {
     render(
       <PasoDosCuadernoMovil
         {...defaultProps}
@@ -370,9 +370,12 @@ describe("PasoDosCuadernoMovil", () => {
     fireEvent.click(screen.getByText("Ventana fija"));
     fireEvent.click(screen.getByRole("button", { name: "Elegir linea de esta pieza" }));
 
-    expect(screen.getByText("PVC primero")).toBeInTheDocument();
+    expect(screen.getByText(/PVC primero/)).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /PVC 25/i })).toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: /Aluminio 32/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /Aluminio 32/i })).toBeInTheDocument();
+    const options = screen.getAllByRole("option");
+    expect(options[1]).toHaveTextContent("PVC 25");
+    expect(options[2]).toHaveTextContent("Aluminio 32");
   });
 
   it("abre composicion desde la edicion rapida sin entrar al constructor completo", () => {

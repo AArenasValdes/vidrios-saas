@@ -203,3 +203,12 @@ a {
   min-height: 100dvh;
   padding-bottom: calc(var(--tabbar-h) + 12px + var(--safe-bottom));
 }
+/* Next.js development controls are noisy on the activation flow and should not
+   overlap its mobile actions. Kept global because the portal is mounted at body. */
+body[data-activation-route="true"] [data-nextjs-devtools-button],
+body[data-activation-route="true"] [data-nextjs-dev-tools-button],
+body[data-activation-route="true"] [aria-label="Next.js Dev Tools"],
+body[data-activation-route="true"] [aria-label="Open Next.js Dev Tools"],
+body[data-activation-route="true"] nextjs-portal {
+  display: none !important;
+}
