@@ -1,7 +1,13 @@
 # Agent Database Notes - Ventora
 
 Reglas y contexto para futuros agentes que trabajen sobre la base de datos.
-Fuente de verdad, en orden: base remota verificada; migraciones registradas en remoto; fuentes recuperadas con `supabase migration fetch --linked`; y, solo como baseline historico, `current_schema.sql`. El dump y `database.types.ts` estan atrasados respecto de migraciones recientes; revisar migraciones y addendums en `database_map.md` y `rls_policies.md`.
+Fuentes y alcance, no intercambiables:
+- Produccion: introspeccion remota de solo lectura y ledger remoto, fechados; esta sesion no los consulto ni modifico.
+- Repositorio: `current_schema.sql` es el dump base del 2026-09-30 09:25 -0300 (commit `7a69e267`); incluye `cotizaciones.fabricacion_trabajo_snapshot`, pero precede a `20260930165551_supplier_catalogs_v1.sql`.
+- QA local: el dump base se cargo en una instancia desechable; luego se ejecutaron directamente las dos migraciones focales. Esa base tiene 43 tablas publicas, todas con RLS, 82 policies y las ocho tablas supplier V1. No tiene un ledger de migraciones, asi que no representa un replay completo ni evidencia de estado remoto.
+- `seed_order.md` describe orden de carga de datos de prueba, no precedencia de esquema ni estado de migraciones.
+
+Para reconstruir estado remoto, consultar ledger y esquema remotos de forma independiente; nunca inferir aplicacion por la presencia de un archivo local o por el dump.
 
 ## Addendum 2026-09-14 - Serie 42 normal y bloqueo de composición incompleta
 
@@ -64,7 +70,7 @@ Un agente NO debe modificar queries, services, hooks, types, functions, migratio
 4. **`supabase/docs/seed_order.md`** — Orden de carga de seed data y dependencias.
 5. **`AGENTS.md`** — Reglas generales del proyecto, convenciones y prioridades de producto.
 
-Si se detecta una diferencia entre el codigo y `current_schema.sql`, verificar primero la base remota y las migraciones registradas. No modificar ni reparar el historial solo para hacer coincidir un dump antiguo.
+Si se detecta una diferencia entre el codigo y `current_schema.sql`, identificar primero el entorno y el corte del dump; contrastar producción con lectura remota y ledger, o QA con introspección local. No inferir que una migración se aplicó solo porque exista el archivo y no modificar el historial para hacer coincidir un snapshot.
 
 ---
 
@@ -427,3 +433,24 @@ Si la respuesta a 1-4 no es sí: detenerse y reportar.
 - Procedencia: ALAR es fuente ejecutable de Línea 15; Arquetipo es identidad primaria de 4000, AM-35, 45 y 12. Alumet/ALAR solo sirven para contrastar familias cuando la pauta no autoriza inferencias.
 - Todas las recetas P2U son `draft` con `source_type` `supplier`/`manufacturer`, datos pendientes explícitos y sin pruebas de taller. No actualizar `validated_at`, `validated_by` ni estado de validación por el solo hecho de persistir una receta.
 - No asignar precios desde Ventora: `precio_m2_sugerido=0` queda como pendiente para configuración de cada organización.
+
+## Addendum 2026-09-30 - Lectura remota de pauta conjunta
+
+- Verificación SQL remota de solo lectura: `20260930115723_cotizacion_trabajo_fabricacion_snapshot` figura en `supabase_migrations.schema_migrations`; `cotizaciones.fabricacion_trabajo_snapshot` existe como `jsonb`, nullable, sin default, con CHECK que admite `NULL` u objeto JSON. No se ejecutaron escrituras ni migraciones.
+- `cotizaciones` mantiene RLS por organización para `authenticated`; `cotizacion_items` usa `organization_id = get_org_id()`. Aunque `anon` hereda grants de tabla/columna, no hay policy anónima en `cotizaciones` y `get_org_id()` resuelve desde `auth.uid()`. La proyección de aprobación pública no selecciona el snapshot global.
+- Conteo puntual al 2026-09-30: 999 cotizaciones, 1 con snapshot global; 3022 ítems y 107 snapshots por ítem. El único global observado pertenece a una cotización con un ítem, por lo que aún no hay smoke remoto de barras compartidas entre varios ítems.
+- El ledger remoto sí contiene `20260914170000_l42_normal_double_junquillo`, corrigiendo la nota anterior que la daba como pendiente. `unidad_medidas_comercial` y `organization_profile_profitability_grants` aparecen en remoto con versiones distintas a los timestamps locales. Las columnas de condiciones comerciales/IVA y las tablas `product_feedback`/`product_announcements` existen, aunque la consulta focal no encontró filas del ledger con los nombres locales esperados. No ejecutar un `db push` global hasta reconciliar versiones y efectos migration por migration.
+- El catálogo remoto tiene etiquetas de proveedor y precios comerciales por línea; no hay catálogo normalizado de SKU/precio de compra por perfil. `familyKey`/`compatibility` no aparecen en `catalog_metadata` de las filas leídas; las líneas continúan bajo el fallback legacy hasta que existan asociaciones declaradas.
+
+## Addendum 2026-09-30 - Catálogos comerciales de proveedor V1 (local, en pruebas)
+
+- Verificacion QA local 2026-09-30: se importo el dump base versionado y se ejecutaron directamente `20260930115723_cotizacion_trabajo_fabricacion_snapshot.sql` y `20260930165551_supplier_catalogs_v1.sql`. La primera columna ya existia en el dump; no hubo backfill. El ledger `supabase_migrations.schema_migrations` no existe en esta instancia porque no se reprodujo la historia completa con CLI. No afirmar por ello estado remoto.
+- PgTAP `supabase/tests/supplier_catalogs_v1_security.test.sql`: 26/26 aserciones pasaron en QA local. Se importo el fixture Veratec; el smoke de costo uso cortes sintéticos, no medidas generadas por una receta. No se completó login visual autenticado en navegador.
+- No hubo escrituras remotas, commit ni deploy. `.env.local` no fue modificado.
+- `supabase/.temp/project-ref` y `.env.local` apuntan al proyecto de producción `yrtrwgkaopfumpidjthk`; no usarlos para QA ni smoke remoto.
+- La base fue creada como instancia QA desechable desde el dump, no con `supabase start` reproduciendo todas las migraciones historicas. No usar este resultado para reconciliar el ledger remoto ni hacer `db push` global.
+- Tablas globales con RLS deny-by-default y sin permisos `anon`/`authenticated`; CRUD exclusivo para `service_role` en rutas server controladas.
+- El insumo técnico se liga por código explícito de receta/snapshot y clave versionada, nunca por sufijo de SKU. Presentación tiene su propio SKU, modo de acabado, unidad y largo; precio vive en una lista independiente. Un mismo insumo puede apuntar a varias presentaciones con distintos acabados/largos y pertenecer a más de una familia.
+- `cotizacion_costos_tecnicos` es separado, parcial y congelado; no reemplaza ningún precio/costo comercial ni reescribe pauta/histórico.
+- Para el piloto Veratec 7400 solo están preparados perfiles y dos refuerzos con evidencia. Accesorios, vidrio y vínculo dudoso `AB01016-E` / `61016VER001` quedan fuera. Confirmar con Xelena si el importe de lista es por barra o por metro antes de usar fuera de QA.
+- Pendiente antes de produccion: reconciliar el estado remoto migration por migration, aplicar el SQL con autorizacion, importar el fixture al destino aprobado, y completar smoke funcional autenticado y rutas cliente/print. El QA local anterior no demuestra esos pasos.

@@ -1,8 +1,10 @@
 import {
   groupLineTemplatesByFamily,
+  groupLineTemplatesByDocumentedFamily,
   resolveLineTemplateFamilyKey,
 } from "@/features/cotizaciones/line-templates/components/line-template-catalog-family";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import { resolveSupplierFamilyKeyForLineTemplate } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
 
 function makeTemplate(
   partial: Partial<CotizacionLineTemplate> & Pick<CotizacionLineTemplate, "nombre">,
@@ -68,5 +70,36 @@ describe("line-template-catalog-family", () => {
 
     expect(groups.map((group) => group.key)).toEqual(["correderas", "fijos"]);
     expect(groups.find((group) => group.key === "fijos")?.templates).toHaveLength(1);
+  });
+
+  it("agrupa Veratec por familia documental aunque la configuración no indique arquetipo", () => {
+    const families = groupLineTemplatesByDocumentedFamily([
+      makeTemplate({ id: "1", proveedor: "VERATEC", nombre: "Elevadora 2 paños", catalogMetadata: { familyKey: "veratec:elevadora", familyLabel: "Elevadora", configurationKey: "elevadora:2" } }),
+      makeTemplate({ id: "2", proveedor: "VERATEC", nombre: "Elevadora 4 paños", catalogMetadata: { familyKey: "veratec:elevadora", familyLabel: "Elevadora", configurationKey: "elevadora:4" } }),
+      makeTemplate({ id: "3", proveedor: "VERATEC", nombre: "EKO 130", catalogMetadata: { familyKey: "veratec:eko-130", familyLabel: "EKO 130" } }),
+    ]);
+    expect(families.map((family) => [family.key, family.label, family.templates.length])).toEqual([
+      ["veratec:eko-130", "EKO 130", 1],
+      ["veratec:elevadora", "Elevadora", 2],
+    ]);
+  });
+
+  it("reconoce una 7400 persistida antes de guardar familyKey sin reescribir la fila", () => {
+    const [family] = groupLineTemplatesByDocumentedFamily([
+      makeTemplate({ id: "7400", proveedor: "VERATEC", catalogKey: "ventora:veratec-7400-corredera", nombre: "Veratec 7400 — Corredera 2 hojas", catalogMetadata: {} }),
+    ]);
+    expect(family).toMatchObject({ key: "veratec:sliding-7400", label: "Sliding 7400" });
+  });
+
+  it("resuelve la familia de proveedor desde la identidad canónica para plantillas antiguas", () => {
+    const template = makeTemplate({
+      id: "7400",
+      proveedor: "VERATEC",
+      catalogKey: "ventora:veratec-7400-corredera",
+      nombre: "Veratec 7400 — Corredera 2 hojas",
+      catalogMetadata: {},
+    });
+
+    expect(resolveSupplierFamilyKeyForLineTemplate(template)).toBe("veratec:sliding-7400");
   });
 });

@@ -37,6 +37,7 @@ import {
   getCompositionSectionLabel,
   getSheetSchemeOptions,
   getSheetVariantOptions,
+  resolveDefaultSheetVariantForLine,
   MARGIN_SELECT_OPTIONS,
   MATERIAL_OPTIONS,
   requiresCustomSheetDescription,
@@ -393,6 +394,11 @@ function TabConfiguracion({
     }
     onComponentChange("sheetScheme", option);
     onComponentChange("isCustomScheme", option === "Personalizado");
+    const defaultVariant = resolveDefaultSheetVariantForLine({
+      catalogLineKey: componentForm.catalogLineKey,
+      sheetScheme: option,
+    });
+    if (defaultVariant) onComponentChange("sheetVariant", defaultVariant);
   };
 
   return (
@@ -1168,6 +1174,12 @@ function TabPrecio({
               onTemplatePriceUpdated={onTemplatePriceUpdated}
               mode={isGlassCatalogItem ? "glass" : "profile"}
               preferredMaterial={isGlassCatalogItem ? null : componentForm.material}
+              compatibilityContext={isGlassCatalogItem ? null : {
+                componentType: componentForm.tipo,
+                openingType: componentForm.configuracion?.trim() || componentForm.sistema,
+                leavesCount: componentForm.fabricacionHojas,
+                material: componentForm.material,
+              }}
               ariaLabel={`Seleccionar ${catalogLabelLower}`}
             />
             <label className={s.field}>

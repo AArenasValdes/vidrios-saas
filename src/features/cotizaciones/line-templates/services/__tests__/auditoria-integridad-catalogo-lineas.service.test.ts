@@ -4,15 +4,15 @@ import { auditarIntegridadCatalogoLineasVentora } from "@/features/cotizaciones/
 
 describe("auditoria integridad catalogo lineas", () => {
 
-  it("clasifica las 31 líneas con categorías primarias mutuamente excluyentes", () => {
+  it("clasifica las 50 líneas con categorías primarias mutuamente excluyentes", () => {
 
     const { lineas, resumen } = auditarIntegridadCatalogoLineasVentora();
 
 
 
-    expect(lineas).toHaveLength(31);
+    expect(lineas).toHaveLength(50);
 
-    expect(resumen.totalLineas).toBe(31);
+    expect(resumen.totalLineas).toBe(50);
 
 
 
@@ -24,7 +24,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
     );
 
-    expect(sumaPrimaria).toBe(31);
+    expect(sumaPrimaria).toBe(50);
 
 
 
@@ -32,11 +32,11 @@ describe("auditoria integridad catalogo lineas", () => {
 
       codigos_documentados_no_validados: 9,
 
-      codigos_referenciales_no_ambiguos: 18,
+      codigos_referenciales_no_ambiguos: 31,
 
       codigos_referenciales_ambiguos: 1,
 
-      sin_codigos_tecnicos_en_fixtures: 3,
+      sin_codigos_tecnicos_en_fixtures: 9,
 
       solo_comercial: 0,
 
@@ -46,7 +46,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
     expect(resumen.nomenclaturaAmbigua).toBe(1);
 
-    expect(resumen.conCodigosReferencialesEnFixtures).toBe(28);
+    expect(resumen.conCodigosReferencialesEnFixtures).toBe(41);
 
     expect(resumen.gateTecnico.listaParaProbar).toBe(17);
 
@@ -136,7 +136,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
 
 
-    expect(sinCodigos).toHaveLength(3);
+    expect(sinCodigos).toHaveLength(9);
 
     expect(sinCodigos.map((line) => line.catalogKey).sort()).toEqual(
 
@@ -148,6 +148,12 @@ describe("auditoria integridad catalogo lineas", () => {
 
 
         "ventora:winhouse-andes-proyectante",
+        "ventora:veratec-elevadora-2h-1fijo-1movil",
+        "ventora:veratec-elevadora-2h-2moviles",
+        "ventora:veratec-elevadora-3h-2fijos-1movil",
+        "ventora:veratec-elevadora-3h-1fijo-2moviles",
+        "ventora:veratec-elevadora-4h-4moviles",
+        "ventora:veratec-elevadora-4h-2fijos-2moviles",
 
       ].sort()
 

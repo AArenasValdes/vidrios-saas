@@ -870,6 +870,31 @@
   font-weight: 780;
 }
 
+.jointBarList {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding-left: 1.15rem;
+}
+
+.jointBarList li {
+  display: grid;
+  gap: 0.16rem;
+  color: #52637d;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.jointBarList li > strong {
+  color: #0b0f17;
+  font-size: 0.8rem;
+}
+
+.jointBarList em {
+  color: #334155;
+  font-style: normal;
+}
+
 .consolidatedTotals {
   display: flex;
   flex-wrap: wrap;
@@ -1116,6 +1141,7 @@
   }
 
   .pieceList {
+    min-width: 0;
     flex: 0 0 auto;
     max-height: none;
     border-right: 0;
@@ -1125,19 +1151,25 @@
   }
 
   .pieceList ul {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(148px, 78%);
+    display: flex;
+    width: 100%;
+    min-width: 0;
     gap: 0.45rem;
     overflow-x: auto;
     padding-bottom: 0.1rem;
     scroll-snap-type: x proximity;
   }
 
+  .pieceList li {
+    flex: 0 0 min(86%, 24rem);
+    min-width: 0;
+  }
+
   .pieceListItem,
   .pieceListItemActive {
+    width: 100%;
     margin-bottom: 0;
-    min-width: 148px;
+    min-width: 0;
     scroll-snap-align: start;
   }
 
@@ -1453,4 +1485,29 @@
   color: #64748b;
   font-size: 0.74rem;
   line-height: 1.45;
+}
+
+/* Fabrication review shares the same calm surfaces and touch targets as quote setup. */
+.surface {
+  border-color: #dce3ec;
+  border-radius: 16px;
+  color: #102038;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", sans-serif;
+}
+
+.header { border-bottom-color: #dce3ec; }
+.header h2, .detailHead h3 { color: #102038; }
+.tabs { gap: 2px; border: 0; border-radius: 10px; background: #eef3f8; }
+.tab, .tabActive { min-height: 44px; border-radius: 8px; }
+.tabActive { color: #173e70; }
+.closeButton { width: 44px; height: 44px; border-radius: 12px; }
+.pieceList, .summaryRail { background: #f7f9fc; }
+.pieceListItem, .pieceListItemActive { min-height: 48px; border: 0; border-radius: 0; border-bottom: 1px solid #dce3ec; background: transparent; box-shadow: none; }
+.pieceListItemActive { border-left: 2px solid #1e88ff; background: #edf4fc; }
+.pieceListItem strong, .pieceListItemActive strong { color: #24364d; }
+.summaryCard, .lineGroup { border-color: #dce3ec; border-radius: 12px; box-shadow: none; }
+.header button:focus-visible, .tabs button:focus-visible, .pieceList button:focus-visible, .closeButton:focus-visible { outline: 3px solid rgb(30 136 255 / 26%); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .surface *, .surface *::before, .surface *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }

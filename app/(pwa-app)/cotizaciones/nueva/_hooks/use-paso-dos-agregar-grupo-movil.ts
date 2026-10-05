@@ -8,6 +8,7 @@ import {
   filterLineTemplatesForComponent,
   getSheetSchemeOptions,
   resolveVitrinaHojasBasePatch,
+  resolveDefaultSheetVariantForLine,
   shouldAutoSelectFirstSheetScheme,
   shouldShowSheetSchemeForComponent,
   type ComponentFormState,
@@ -416,7 +417,10 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
       quickCompositionAdjustment: null,
       cubicationSnapshot: null,
       fabricacionSnapshot: null,
-      sheetVariant: "",
+      sheetVariant: resolveDefaultSheetVariantForLine({
+        catalogLineKey: current.catalogLineKey,
+        sheetScheme,
+      }),
       customSchemeDescription: sheetScheme === "Personalizado" ? current.customSchemeDescription : "",
       isCustomScheme: sheetScheme === "Personalizado",
     }));

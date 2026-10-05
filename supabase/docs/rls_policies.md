@@ -1,20 +1,20 @@
 # RLS Policies - Ventora
 
-Fuente de verdad: base remota verificada y migraciones registradas; `current_schema.sql` es un dump historico pendiente de regeneracion.
-Ultima verificacion remota relevante: 2026-08-13.
+Fuente de verdad por entorno: para produccion, introspeccion remota y ledger consultados de forma fechada; para el repositorio, `current_schema.sql` más migraciones; para esta QA, dump base más las dos migraciones ejecutadas directamente. No mezclar esos estados.
+Ultima revision integral de policies remota registrada en estas notas: 2026-08-20. La lectura remota focal de `cotizaciones.fabricacion_trabajo_snapshot` consta en el addendum 2026-09-30; no fue una auditoria completa del RLS.
 
-**Pendiente remoto 2026-08-14:** `20260814201536_security_hardening_payments_auth.sql` revoca la escritura completa de `authenticated` sobre `organization_profile` y la reemplaza por grants de columnas comerciales; revoca lectura directa de `pagos_suscripcion`; y crea `payment_webhook_events` con RLS deny-by-default y acceso exclusivo `service_role`. La migracion existe localmente, pero no se considera efectiva hasta verificarla en remoto.
+**Resuelto según verificación remota del 2026-08-20:** `20260814201536_security_hardening_payments_auth.sql` revoca la escritura completa de `authenticated` sobre `organization_profile` y la reemplaza por grants de columnas comerciales; revoca lectura directa de `pagos_suscripcion`; y crea `payment_webhook_events` con RLS deny-by-default y acceso exclusivo `service_role`.
 
 ---
 
 ## Resumen
 
-Todas las tablas de `public` tienen RLS habilitado. El event trigger `rls_auto_enable` fuerza ese comportamiento para tablas nuevas. La función principal de aislamiento es `get_org_id()`, que resuelve la organización activa del usuario autenticado desde `public.users`.
+En el dump base y la QA local consultada, todas las tablas públicas tienen RLS habilitado; la QA registra 43. El inventario remoto actual debe confirmarse por introspección fechada. El event trigger `rls_auto_enable` fuerza ese comportamiento para tablas nuevas. La función principal de aislamiento es `get_org_id()`, que resuelve la organización activa del usuario autenticado desde `public.users`.
 
 **Addendum 2026-08-20 — Fase B onboarding:** `growth_onboarding_videos`, `growth_onboarding_assignments` y `growth_onboarding_events` tienen RLS forzado. El founder administra los predeterminados por membresía `growth_workspace_members` con `rol='admin'`; una organización autenticada sólo puede leer asignaciones y eventos donde `organization_id = get_org_id()`. Las asignaciones son override de piloto. Los eventos de primer valor se insertan sólo desde triggers protegidos; la policy heredada `FOR ALL` de asignaciones fue dividida en INSERT/UPDATE/DELETE para no añadir un SELECT permisivo duplicado.
 
-**Total tablas con RLS habilitado:** 26 versionadas por migraciones recientes.
-**Total tablas con policies definidas:** 24+ segun migraciones locales; verificacion remota parcial con CLI el 2026-07-29.
+**Conteo QA local 2026-09-30 (dump base + supplier V1):** 43 tablas públicas con RLS habilitado y 82 policies. No atribuir estos conteos a producción.
+**Conteos remotos anteriores:** 26 tablas con RLS y 24+ con policies en revisiones previas; son cifras históricas, no un inventario remoto actual.
 **Total tablas con RLS habilitado pero sin acceso cliente efectivo:** `formula_variables` tiene deny-all confirmado en remoto; `material_types` debe re-verificarse si vuelve a exponerse.
 **Función de aislamiento principal:** `get_org_id()`
 
@@ -434,3 +434,9 @@ Notas:
 - `product_feedback` habilita RLS, revoca todos los privilegios a `anon` y `authenticated`, y concede a `authenticated` únicamente `INSERT`; `service_role` obtiene CRUD para las rutas server.
 - La policy `product_feedback_insert_own_organization` valida que `auth_user_id = auth.uid()` y `organization_id = get_org_id()`.
 - El cliente no puede leer ni cambiar registros. Las rutas de consulta y actualización usan `service_role` solo después de resolver el allowlist founder (`resolveVentoraAdminRouteContext()`).
+
+## Addendum 2026-09-30 - Catálogo de proveedor V1 (QA local verificada; remoto no verificado)
+
+En el QA local desechable se inspeccionaron las ocho tablas creadas por `20260930165551_supplier_catalogs_v1.sql`: RLS habilitado en todas, ninguna policy cliente, y grants revocados a `PUBLIC`, `anon` y `authenticated`; CRUD concedido solo a `service_role`. PgTAP `supplier_catalogs_v1_security.test.sql` pasó 26/26 en ese entorno.
+
+Ese entorno se creó importando el dump base y aplicando SQL directamente; no tiene ledger completo. Estos resultados no confirman aplicación ni grants remotos. El endpoint de costo añade autenticación, rol admin, organización allowlist y filtro `organization_id` antes de usar el cliente admin; queda pendiente smoke autenticado integral en QA.

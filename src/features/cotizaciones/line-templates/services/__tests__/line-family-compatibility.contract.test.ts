@@ -47,6 +47,26 @@ describe("contrato de familia y compatibilidad", () => {
     expect(grouped.flatMap((group) => group.templates.map((item) => item.id))).toEqual([1, 3, 2, 4]);
   });
 
+  it("mantiene claves únicas cuando un mismo org tiene bloques privados separados por familias", () => {
+    const grouped = groupLineTemplatesByFamily([
+      line({ id: 3, organizationId: 3, catalogKey: null, nombre: "Propia arriba" }),
+      line({ id: 8, catalogKey: "ventora:winhouse-new-s75-doble-riel", nombre: "S75 doble" }),
+      line({ id: 4, organizationId: 3, catalogKey: null, nombre: "Propia abajo" }),
+    ]);
+
+    expect(grouped.map((group) => group.label)).toEqual([
+      "Mis líneas",
+      "New S75",
+      "Mis líneas",
+    ]);
+    expect(new Set(grouped.map((group) => group.key)).size).toBe(grouped.length);
+    expect(grouped.flatMap((group) => group.templates.map((item) => item.id))).toEqual([
+      3,
+      8,
+      4,
+    ]);
+  });
+
   it("evalúa compatibilidad declarada aparte de receta y precio comercial", () => {
     const target = line({
       catalogKey: "ventora:veratec-7400-corredera",

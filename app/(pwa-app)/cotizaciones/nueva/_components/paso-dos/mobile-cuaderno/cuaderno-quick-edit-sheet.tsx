@@ -335,6 +335,12 @@ export function CuadernoQuickEditSheet({
                 onChange={handleLineTemplateChange}
                 mode="profile"
                 preferredMaterial={materialDraft}
+                compatibilityContext={{
+                  componentType: form.tipo,
+                  openingType: form.configuracion?.trim() || form.sistema,
+                  leavesCount: Number(form.fabricacionHojas) || null,
+                  material: materialDraft,
+                }}
                 ariaLabel="Elegir linea de esta pieza"
               />
             </div>

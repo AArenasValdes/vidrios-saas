@@ -155,6 +155,22 @@ function veratecProfileRef(input: {
   };
 }
 
+function veratecBrochureProfileRef(input: {
+  code: string;
+  name: string;
+  role: string;
+}): LineProfileReference {
+  return {
+    code: input.code,
+    name: input.name,
+    role: input.role,
+    description: input.name,
+    provider: "VERATEC",
+    source: "Xelena · Díptico de líneas PVC (2026)",
+    codeStatus: "catalog_reference",
+  };
+}
+
 const VERATEC_7400_PROFILES: LineProfileReference[] = [
   veratecProfileRef({ code: "6306", name: "Junquillo para vidrio 4 mm", role: "Junquillo", section: "35×20" }),
   veratecProfileRef({ code: "6307", name: "Junquillo para vidrio 20 mm", role: "Junquillo", section: "20×20" }),
@@ -171,6 +187,64 @@ const VERATEC_7400_PROFILES: LineProfileReference[] = [
   veratecProfileRef({ code: "7418", name: "Traslapo Hoja Corredera Grande", role: "Hoja", section: "55×52" }),
   veratecProfileRef({ code: "7419", name: "Traslapo Hoja Corredera", role: "Hoja", section: "55×43" }),
   veratecProfileRef({ code: "AB01016-E", name: "Riel Anodizado Nat. p/ Mar…", role: "Marco" }),
+];
+
+const VERATEC_ELEGANS_60_PROFILES: LineProfileReference[] = [
+  veratecBrochureProfileRef({ code: "66311VER", name: "Marco fijo", role: "Marco" }),
+  veratecBrochureProfileRef({ code: "66312VER", name: "Hoja de ventana exterior", role: "Hoja" }),
+  veratecBrochureProfileRef({ code: "66313VER", name: "Barra T", role: "Otro" }),
+  veratecBrochureProfileRef({ code: "66403VER", name: "Hoja de ventana interior", role: "Hoja" }),
+  veratecBrochureProfileRef({ code: "66404VER", name: "Hoja de puerta interior", role: "Puerta" }),
+  veratecBrochureProfileRef({ code: "66048VER", name: "Hoja de puerta exterior", role: "Puerta" }),
+  veratecBrochureProfileRef({ code: "66044VER", name: "Perfil inversor", role: "Otro" }),
+  veratecBrochureProfileRef({ code: "67088VER", name: "Junquillo vidrio 10 mm", role: "Junquillo" }),
+  veratecBrochureProfileRef({ code: "66306VER", name: "Junquillo vidrio 4 mm", role: "Junquillo" }),
+  veratecBrochureProfileRef({ code: "66307VER", name: "Junquillo vidrio 20 mm", role: "Junquillo" }),
+  veratecBrochureProfileRef({ code: "67063VER", name: "Junquillo vidrio 24 mm", role: "Junquillo" }),
+];
+
+const VERATEC_COMPACT_SLIDING_PROFILES: LineProfileReference[] = [
+  veratecBrochureProfileRef({ code: "67460VER", name: "Marco corredera 2 hojas", role: "Marco" }),
+  veratecBrochureProfileRef({ code: "67461VER", name: "Hoja corredera", role: "Hoja" }),
+  veratecBrochureProfileRef({ code: "67463VER", name: "Traslapo hoja corredera", role: "Hoja" }),
+  veratecBrochureProfileRef({ code: "61013VER001", name: "Riel Compact Sliding", role: "Marco" }),
+  veratecBrochureProfileRef({ code: "67062VER", name: "Junquillo vidrio 4 mm", role: "Junquillo" }),
+  veratecBrochureProfileRef({ code: "67464VER", name: "Junquillo vidrio 20 mm", role: "Junquillo" }),
+];
+
+const VERATEC_INOVA_PROFILES: LineProfileReference[] = [
+  veratecBrochureProfileRef({ code: "61471VER", name: "Marco Inova", role: "Marco" }),
+  veratecBrochureProfileRef({ code: "61472VER", name: "Hoja Inova", role: "Hoja" }),
+  veratecBrochureProfileRef({ code: "67636VER", name: "Barra T Inova", role: "Otro" }),
+  veratecBrochureProfileRef({ code: "61473VER", name: "Remate cubre canal Inova", role: "Otro" }),
+  veratecBrochureProfileRef({ code: "61474VER", name: "Tapa traslapo Inova", role: "Otro" }),
+  veratecBrochureProfileRef({ code: "67651VER", name: "Junquillo Inova", role: "Junquillo" }),
+  veratecBrochureProfileRef({ code: "69091STL001", name: "Refuerzo Inova", role: "Refuerzo" }),
+  veratecBrochureProfileRef({ code: "69089STL000", name: "Refuerzo Inova", role: "Refuerzo" }),
+  veratecBrochureProfileRef({ code: "69092STL000", name: "Refuerzo Inova", role: "Refuerzo" }),
+  veratecBrochureProfileRef({ code: "69093STL000", name: "Refuerzo Inova", role: "Refuerzo" }),
+];
+
+const VERATEC_EKO_130_PROFILES: LineProfileReference[] = [
+  veratecBrochureProfileRef({ code: "61109EKO000", name: "Marco Americana PD130", role: "Marco" }),
+  veratecBrochureProfileRef({ code: "61110EKO000", name: "Traslapo móvil PD130", role: "Hoja" }),
+  veratecBrochureProfileRef({ code: "61112EKO000", name: "Hoja móvil lateral PD130", role: "Hoja" }),
+  veratecBrochureProfileRef({ code: "61113EKO000", name: "Marco hoja móvil inferior/superior PD130", role: "Hoja" }),
+  veratecBrochureProfileRef({ code: "61114EKO000", name: "Traslapo fijo EKO130", role: "Hoja" }),
+  veratecBrochureProfileRef({ code: "61115EKO000", name: "Riel EKO130", role: "Marco" }),
+  veratecBrochureProfileRef({ code: "61116EKO000", name: "Junquillo vidrio simple EKO130", role: "Junquillo" }),
+  veratecBrochureProfileRef({ code: "61117EKO000", name: "Junquillo termopanel EKO130", role: "Junquillo" }),
+];
+
+const VERATEC_EKO_82_PROFILES: LineProfileReference[] = [
+  veratecBrochureProfileRef({ code: "61101EKO000", name: "Marco Americana EKO82", role: "Marco" }),
+  veratecBrochureProfileRef({ code: "61102EKO000", name: "Hoja móvil EKO82", role: "Hoja" }),
+  veratecBrochureProfileRef({ code: "61103EKO000", name: "Traslapo móvil EKO82", role: "Hoja" }),
+  veratecBrochureProfileRef({ code: "61104EKO000", name: "Traslapo fijo EKO82", role: "Hoja" }),
+  veratecBrochureProfileRef({ code: "61105EKO000", name: "Riel Americana / antepecho", role: "Marco" }),
+  veratecBrochureProfileRef({ code: "61106EKO000", name: "Junquillo termopanel EKO82", role: "Junquillo" }),
+  veratecBrochureProfileRef({ code: "61107EKO000", name: "Junquillo vidrio simple EKO82", role: "Junquillo" }),
+  veratecBrochureProfileRef({ code: "61108EKO000", name: "Hoja guillotina EKO82", role: "Hoja" }),
 ];
 
 /** Códigos AL-32 proyectante (SODAL). La línea comercial AL-32 usa esta identidad. */
@@ -754,6 +828,19 @@ const CATALOG_KEY_PROFILE_SETS: Record<string, LineProfileReference[]> = {
   "ventora:l25": SERIE_25_PROFILES,
   "ventora:serie-4800-corredera-2h": SERIE_4800_PROFILES,
   "ventora:veratec-7400-corredera": VERATEC_7400_PROFILES,
+  "ventora:veratec-7400-corredera-3h": VERATEC_7400_PROFILES,
+  "ventora:veratec-7400-monorriel": VERATEC_7400_PROFILES,
+  "ventora:veratec-elegans-60-ventana-hoja-exterior": VERATEC_ELEGANS_60_PROFILES,
+  "ventora:veratec-elegans-60-ventana-hoja-interior": VERATEC_ELEGANS_60_PROFILES,
+  "ventora:veratec-elegans-60-puerta-hoja-exterior": VERATEC_ELEGANS_60_PROFILES,
+  "ventora:veratec-elegans-60-puerta-hoja-interior": VERATEC_ELEGANS_60_PROFILES,
+  "ventora:veratec-elegans-60-fijo": VERATEC_ELEGANS_60_PROFILES,
+  "ventora:veratec-compact-sliding-2h": VERATEC_COMPACT_SLIDING_PROFILES,
+  "ventora:veratec-compact-sliding-3h": VERATEC_COMPACT_SLIDING_PROFILES,
+  "ventora:veratec-compact-sliding-4h": VERATEC_COMPACT_SLIDING_PROFILES,
+  "ventora:veratec-inova-corredera-2h": VERATEC_INOVA_PROFILES,
+  "ventora:veratec-eko-130": VERATEC_EKO_130_PROFILES,
+  "ventora:veratec-eko-82": VERATEC_EKO_82_PROFILES,
   "ventora:s33-corredera-2h": SERIE_S33_PROFILES,
   "ventora:s33-rpt-corredera-2h": SERIE_S33_RPT_PROFILES,
   "ventora:serie-42-proyectante-camara": SERIE_42_PROYECTANTE_PROFILES,

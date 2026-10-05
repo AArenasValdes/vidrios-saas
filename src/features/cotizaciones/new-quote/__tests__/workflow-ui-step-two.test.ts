@@ -153,6 +153,7 @@ describe("workflow-ui paso 2", () => {
       "4 + 10 + 5",
       "5 + 10 + 5",
       "4+12+4",
+      "4+16+4",
       "5+12+5",
       "4 Low-E + 12 + 4",
       "4T + 12 + 4T",
@@ -236,6 +237,79 @@ describe("workflow-ui paso 2", () => {
       },
       { lineTemplates: [template] }
     ).precioPorM2).toBe("100000");
+  });
+
+  it("asigna monolítico 4 mm al elegir Veratec 7400 cuando la línea no recomienda vidrio", () => {
+    const veratecTemplate: CotizacionLineTemplate = {
+      id: 1396,
+      nombre: "Veratec 7400 — Corredera 2 hojas",
+      categoria: "pvc",
+      material: "PVC",
+      catalogKey: "ventora:veratec-7400-corredera",
+      catalogMetadata: {},
+      vidrioPrincipalRecomendado: null,
+      precioM2Sugerido: 144000,
+      minimoCobrable: 0,
+      redondeoPrecio: 0,
+    };
+
+    const selected = applyLineTemplateToComponentForm(
+      createLinePricingForm({
+        vidrio: "Incoloro monolitico 5mm",
+        lineTemplateId: "",
+      }),
+      veratecTemplate
+    );
+
+    expect(selected.vidrio).toBe("Incoloro monolítico 4mm");
+  });
+
+  it("corrige la sugerencia genérica antigua de 5 mm al elegir Veratec 7400", () => {
+    const veratecTemplate: CotizacionLineTemplate = {
+      id: 1396,
+      nombre: "Veratec 7400 — Corredera 2 hojas",
+      categoria: "pvc",
+      material: "PVC",
+      catalogKey: "ventora:veratec-7400-corredera",
+      catalogMetadata: {},
+      vidrioPrincipalRecomendado: "Incoloro monolitico 5mm",
+      precioM2Sugerido: 144000,
+      minimoCobrable: 0,
+      redondeoPrecio: 0,
+    };
+
+    const selected = applyLineTemplateToComponentForm(
+      createLinePricingForm({ lineTemplateId: "", vidrio: "Incoloro monolitico 5mm" }),
+      veratecTemplate
+    );
+
+    expect(selected.vidrio).toBe("Incoloro monolítico 4mm");
+  });
+
+  it("elige 2 móviles como variante inicial de Veratec cuando se seleccionan 2 hojas", () => {
+    const template: CotizacionLineTemplate = {
+      id: 1396,
+      nombre: "Veratec 7400 — Corredera 2 hojas",
+      categoria: "pvc",
+      material: "PVC",
+      catalogKey: "ventora:veratec-7400-corredera",
+      catalogMetadata: {},
+      vidrioPrincipalRecomendado: null,
+      precioM2Sugerido: 144000,
+      minimoCobrable: 0,
+      redondeoPrecio: 0,
+    };
+
+    const selected = applyLineTemplateToComponentForm(
+      createLinePricingForm({
+        lineTemplateId: "",
+        sheetScheme: "2 hojas",
+        sheetVariant: "",
+      }),
+      template
+    );
+
+    expect(selected.sheetVariant).toBe("2 móviles");
   });
 
   it("conserva la variante S75 elegida al hidratar de nuevo la línea para cotizar", () => {

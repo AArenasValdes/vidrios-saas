@@ -1,7 +1,9 @@
 # Seed Order - Ventora
 
-Fuente de verdad: `current_schema.sql`.
-Fecha de generación: 2026-05-06.
+Este documento describe orden de carga de datos de prueba; no es la fuente de verdad del esquema ni del ledger de migraciones.
+Fecha del orden base: 2026-05-06 (histórica). Revisión de alcance: 2026-09-30.
+
+El dump `current_schema.sql` es el baseline registrado a las 09:25 -0300 del 2026-09-30 y precede a `20260930165551_supplier_catalogs_v1.sql`. El estado local QA posterior está descrito en `agent_database_notes.md`; no equivale a producción.
 
 ---
 
@@ -161,6 +163,12 @@ formula_variables (independiente)
   7. `cotizaciones`
   8. `cotizacion_items`
   9. `solicitudes_contacto`
+
+## Addendum 2026-09-30 - Catálogos Veratec V1
+
+El fixture se carga mediante el importador de aplicación, que respeta las dependencias. El orden lógico es: `catalogo_proveedores` → `catalogo_fuentes_tecnicas` y `catalogo_listas_precios` → `catalogo_insumos_tecnicos` → `catalogo_insumo_familias` y `catalogo_presentaciones_proveedor` → `catalogo_precios_presentacion`. `cotizacion_costos_tecnicos` depende además de una cotización y organización existentes. No insertar directamente ni deducir asociaciones desde el SKU.
+
+Este addendum describe el orden del fixture, no confirma que la migración ni los datos estén presentes en producción.
 
 ---
 

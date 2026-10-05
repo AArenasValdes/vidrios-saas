@@ -11,8 +11,14 @@ import type {
   CreateCotizacionLineTemplateInput,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { lineTemplateNeedsCommercialPrice } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
-import { groupLineTemplatesByFamily } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
-import { evaluateLineCompatibility } from "@/features/cotizaciones/line-templates/services/line-template-compatibility.service";
+import {
+  filterLineCatalogTemplates,
+  getDefaultLineCatalogTab,
+  groupLineCatalogTemplates,
+  hasEnoughLineCompatibilityContext,
+  buildLineOptionViewModel,
+  type LineCatalogTab,
+} from "@/features/cotizaciones/line-templates/services/line-option-presentation.service";
 import { LinePriceEditor } from "@/features/cotizaciones/line-templates/components/line-template-price-editor";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
@@ -256,6 +262,8 @@ export function PasoDosWizardConfiguracionMovil({
   });
   const [isLineSelectorOpen, setIsLineSelectorOpen] = useState(false);
   const [lineSelectorQuery, setLineSelectorQuery] = useState("");
+  const [lineCatalogTab, setLineCatalogTab] = useState<LineCatalogTab>("all");
+  const [lineMaterialFilter, setLineMaterialFilter] = useState<string | null>(null);
   const [lineSheetView, setLineSheetView] = useState<"list" | "create">("list");
   const [quickLineForm, setQuickLineForm] = useState<QuickLineFormState>(() =>
     createQuickLineFormState()
@@ -400,34 +408,42 @@ export function PasoDosWizardConfiguracionMovil({
 
   const filteredLineTemplates = useMemo(() => {
     const normalizedQuery = lineSelectorQuery.trim().toLowerCase();
+    const candidates = availableLineTemplates.filter((template) => !normalizedQuery || [
+      template.nombre,
+      formatLineTemplateQuotePickerLabel(template),
+      template.material,
+      template.proveedor ?? "",
+    ].join(" ").toLowerCase().includes(normalizedQuery));
     const leavesCount = Number(draft.fabricacionHojas ?? draft.sheetScheme?.match(/\d+/)?.[0]) || null;
-
-    return availableLineTemplates.filter((template) => {
-      if (!isGlassProduct && evaluateLineCompatibility({
-        line: template,
-        context: {
-          componentType: draft.subtipo,
-          openingType: draft.configuracion?.trim() || draft.sistema,
-          leavesCount,
-          material: draft.material,
-        },
-      }).commercial === "incompatible") return false;
-      if (!normalizedQuery) return true;
-      return [
-        template.nombre,
-        formatLineTemplateQuotePickerLabel(template),
-        template.material,
-        template.proveedor ?? "",
-      ].join(" ").toLowerCase().includes(normalizedQuery);
+    return isGlassProduct ? candidates : filterLineCatalogTemplates({
+      templates: candidates,
+      tab: lineCatalogTab,
+      context: {
+        componentType: draft.subtipo,
+        openingType: draft.configuracion?.trim() || draft.sistema,
+        leavesCount,
+        material: draft.material,
+      },
+      material: requiresProfileMaterial ? lineMaterialFilter : null,
     });
-  }, [availableLineTemplates, draft.configuracion, draft.fabricacionHojas, draft.material, draft.sheetScheme, draft.subtipo, draft.sistema, isGlassProduct, lineSelectorQuery]);
+  }, [availableLineTemplates, draft.configuracion, draft.fabricacionHojas, draft.material, draft.sheetScheme, draft.subtipo, draft.sistema, isGlassProduct, lineCatalogTab, lineMaterialFilter, lineSelectorQuery, requiresProfileMaterial]);
   const lineTemplateFamilyGroups = useMemo(
-    () => groupLineTemplatesByFamily(filteredLineTemplates),
+    () => groupLineCatalogTemplates(filteredLineTemplates),
     [filteredLineTemplates]
   );
 
   const openLineSelector = () => {
     setLineSelectorQuery("");
+    const context = {
+      componentType: draft.subtipo,
+      openingType: draft.configuracion?.trim() || draft.sistema,
+      material: draft.material,
+    };
+    setLineCatalogTab(getDefaultLineCatalogTab({
+      hasCompatibilityContext: !isGlassProduct && hasEnoughLineCompatibilityContext(context),
+      hasOwnLines: availableLineTemplates.some((template) => !template.catalogKey?.startsWith("ventora:")),
+    }));
+    setLineMaterialFilter(requiresProfileMaterial ? draft.material : null);
     setLineSheetView("list");
     setQuickLineError(null);
     setIsLineSelectorOpen(true);
@@ -1451,6 +1467,30 @@ export function PasoDosWizardConfiguracionMovil({
                       onChange={(event) => setLineSelectorQuery(event.target.value)}
                     />
                   </div>
+                  {!isGlassProduct ? (
+                    <nav className={s.stepTwoMobileLineTabs} aria-label="Tipo de líneas">
+                      {([
+                        ...(hasEnoughLineCompatibilityContext({ componentType: draft.subtipo, openingType: draft.configuracion?.trim() || draft.sistema, material: draft.material }) ? [["compatible", "Compatibles"] as const] : []),
+                        ...(availableLineTemplates.some((template) => !template.catalogKey?.startsWith("ventora:")) ? [["own", "Mis líneas"] as const] : []),
+                        ["all", "Todas"] as const,
+                      ]).map(([key, label]) => (
+                        <button key={key} type="button" aria-pressed={lineCatalogTab === key} className={lineCatalogTab === key ? s.stepTwoMobileLineTabActive : ""} onClick={() => setLineCatalogTab(key)}>{label}</button>
+                      ))}
+                    </nav>
+                  ) : null}
+                  {!isGlassProduct && lineCatalogTab === "all" && requiresProfileMaterial ? (
+                    <div className={s.stepTwoMobileLineMaterialFilters} role="group" aria-label="Filtrar material">
+                      {([
+                        [draft.material, draft.material],
+                        ["todos", "Todos los materiales"],
+                        [draft.material === "PVC" ? "Aluminio" : "PVC", draft.material === "PVC" ? "Aluminio" : "PVC"],
+                      ] as const).map(([key, label]) => (
+                        <button key={key} type="button" aria-pressed={key === "todos" ? lineMaterialFilter === null : lineMaterialFilter === key} onClick={() => setLineMaterialFilter(key === "todos" ? null : key)}>
+                          {key === "todos" ? label : `Solo ${label}`}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                   {requiresProfileMaterial ? (
                     <div className={s.stepTwoMobileLineFilterBanner}>
                       <span
@@ -1469,69 +1509,48 @@ export function PasoDosWizardConfiguracionMovil({
                     </div>
                   ) : null}
                   <div className={s.stepTwoMobileLineSheetList}>
-                    <button
-                      className={`${s.stepTwoMobileLineOption} ${s.stepTwoMobileLineOptionUtility} ${!draft.lineTemplateId ? s.stepTwoMobileLineOptionActive : ""}`}
-                      onClick={() => {
-                        onSelectLineTemplate("");
-                        closeLineSelector();
-                      }}
-                      type="button"
-                    >
-                      <div className={s.stepTwoMobileLineOptionBody}>
-                        <span>{isGlassProduct ? "Precio manual o sin cristal" : "Precio manual o sin linea"}</span>
-                        <small>{isGlassProduct ? "Ingresa el valor directo sin aplicar un cristal guardado." : "Ingresa el valor directo sin aplicar una linea guardada."}</small>
-                      </div>
-                      {!draft.lineTemplateId ? (
-                        <span className={s.stepTwoMobileLineOptionState}>Actual</span>
-                      ) : null}
-                    </button>
                     {lineTemplateFamilyGroups.map((group) => (
                       <section className={s.stepTwoMobileLineFamily} key={group.key}>
-                        {group.templates.length > 1 || group.isOwn ? (
-                          <h3>{group.isOwn ? "Mis líneas" : group.label}</h3>
+                        {group.origin === "catalogo" || group.origin === "propia" && lineCatalogTab !== "own" ? (
+                          <h3>{group.label}</h3>
                         ) : null}
-                        {group.templates.map((template) => (
-                          <button
+                        {group.templates.map((template) => {
+                          const option = buildLineOptionViewModel({
+                            template,
+                            selected: draft.lineTemplateId === String(template.id),
+                            displayName: formatLineTemplateQuotePickerLabel(template),
+                          });
+                          return <button
                             key={template.id}
-                            className={`${s.stepTwoMobileLineOption} ${draft.lineTemplateId === String(template.id) ? s.stepTwoMobileLineOptionActive : ""}`}
+                            className={`${s.stepTwoMobileLineOption} ${option.selected ? s.stepTwoMobileLineOptionActive : ""}`}
                             onClick={() => handleSelectSavedLine(template)}
                             type="button"
                           >
                         <div className={s.stepTwoMobileLineOptionBody}>
                           <div className={s.stepTwoMobileLineOptionTop}>
-                            <span>{formatLineTemplateQuotePickerLabel(template)}</span>
+                            <span>{option.name}</span>
                             <span
                               className={`${s.stepTwoMobileLineOptionMaterialChip} ${
-                                template.material === "PVC"
+                                option.material === "PVC"
                                   ? s.stepTwoMobileLineOptionMaterialChipPvc
                                   : s.stepTwoMobileLineOptionMaterialChipAluminio
                               }`}
                             >
-                              {template.material}
+                              {option.material}
                             </span>
                           </div>
                           <small>
-                            {lineTemplateNeedsCommercialPrice(template) ? (
-                              <em className={s.stepTwoMobileLinePricePending}>Precio pendiente</em>
-                            ) : (
-                              <>
-                                ${Math.round(template.precioM2Sugerido).toLocaleString("es-CL")}/m2 ·{" "}
-                                {template.minimoCobrable > 0
-                                  ? `Min. $${Math.round(template.minimoCobrable).toLocaleString("es-CL")}`
-                                  : "Sin minimo"}{" "}
-                                ·{" "}
-                                {template.redondeoPrecio > 0
-                                  ? `Redondeo $${Math.round(template.redondeoPrecio).toLocaleString("es-CL")}`
-                                  : "Sin redondeo"}
-                              </>
-                            )}
+                            {lineTemplateNeedsCommercialPrice(template) ? <em className={s.stepTwoMobileLinePricePending}>{option.commercialPriceLabel}</em> : option.commercialPriceLabel}
+                            {option.minimumLabel ? ` · ${option.minimumLabel}` : ""}
+                            {option.roundingLabel ? ` · ${option.roundingLabel}` : ""}
                           </small>
+                          {!isGlassProduct && option.technicalStateLabel ? <small className={s.stepTwoMobileLineTechState}>{option.technicalStateLabel}</small> : null}
                         </div>
-                        {draft.lineTemplateId === String(template.id) ? (
+                        {option.selected ? (
                           <span className={s.stepTwoMobileLineOptionState}>Actual</span>
                         ) : null}
                           </button>
-                        ))}
+                        })}
                       </section>
                     ))}
                     {filteredLineTemplates.length === 0 ? (
@@ -1901,6 +1920,14 @@ export function PasoDosWizardConfiguracionMovil({
             </div>
 
             <div className={s.stepTwoMobileLineSheetFooter}>
+              {lineSheetView === "list" ? (
+                <div className={s.stepTwoMobileLineManualFooter}>
+                  <span>¿No está tu línea?</span>
+                  <button type="button" onClick={() => { onSelectLineTemplate(""); closeLineSelector(); }}>
+                    {!draft.lineTemplateId ? "Precio manual · actual" : isGlassProduct ? "Sin cristal guardado" : "Precio manual"}
+                  </button>
+                </div>
+              ) : null}
               {lineSheetView === "list" ? (
                 <button
                   className={`${s.btnPrimary} ${s.stepTwoMobileLineSheetPrimaryAction}`}

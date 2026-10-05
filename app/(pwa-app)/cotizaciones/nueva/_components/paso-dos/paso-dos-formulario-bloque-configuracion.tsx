@@ -162,6 +162,12 @@ export function PasoDosFormularioBloqueConfiguracion({
             preferredMaterial={
               isGlassCatalogSelection(componentForm) ? null : componentForm.material
             }
+            compatibilityContext={isGlassCatalogSelection(componentForm) ? null : {
+              componentType: componentForm.tipo,
+              openingType: componentForm.configuracion?.trim() || componentForm.sistema,
+              leavesCount: componentForm.fabricacionHojas,
+              material: componentForm.material,
+            }}
             ariaLabel="Seleccionar linea comercial"
           />
           <label className={s.field}>

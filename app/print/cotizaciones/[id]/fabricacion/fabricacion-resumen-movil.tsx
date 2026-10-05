@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import {
   LuArrowLeft,
   LuChevronRight,
@@ -35,6 +36,8 @@ import {
   formatSodalL25ReinforcementLabel,
 } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import type { WorkMaterialsDocument } from "@/features/fabricacion/services/fabrication-work-materials.service";
+import { WorkMaterialsDocumentPanel } from "./work-materials-document-panel";
 
 import {
   buildCubicacionPerfilRows,
@@ -62,6 +65,11 @@ type Props = {
   items: CotizacionWorkflowItem[];
   isExporting: boolean;
   exportError: string | null;
+  materialsDocument: WorkMaterialsDocument;
+  companyName: string;
+  issueDate: string;
+  technicalCostPanel?: ReactNode;
+  onDownloadDocumentPdf: (kind: "materials" | "glass-order", element: HTMLElement) => void;
   onDownload: () => void;
   onPrint: () => void;
 };
@@ -357,7 +365,23 @@ function DetailDespiece({ row }: { row: FabricationSummaryItem }) {
   );
 }
 
-function ConsolidadoView({ summary }: { summary: FabricationQuoteSummary }) {
+function ConsolidadoView({
+  summary,
+  materialsDocument,
+  companyName,
+  codigo,
+  obra,
+  issueDate,
+  onDownloadDocumentPdf,
+}: {
+  summary: FabricationQuoteSummary;
+  materialsDocument: WorkMaterialsDocument;
+  companyName: string;
+  codigo: string;
+  obra: string;
+  issueDate: string;
+  onDownloadDocumentPdf: Props["onDownloadDocumentPdf"];
+}) {
   const consolidated = useMemo(
     () =>
       buildConsolidatedCubicationPautaFromSnapshots(
@@ -373,25 +397,62 @@ function ConsolidadoView({ summary }: { summary: FabricationQuoteSummary }) {
     [summary.items, summary.trabajoSnapshot]
   );
 
-  if (consolidated.lineGroups.length === 0) {
-    return (
-      <p className={s.mEmpty}>
-        Todavía no hay despiece consolidable. Revisa piezas con línea, medidas y cortes.
-      </p>
-    );
-  }
-
   return (
     <div className={s.mStack}>
+      <WorkMaterialsDocumentPanel
+        document={materialsDocument}
+        companyName={companyName}
+        quoteCode={codigo}
+        work={obra}
+        issueDate={issueDate}
+        onDownloadPdf={onDownloadDocumentPdf}
+      />
+
+      <details className={s.secondaryWorkshopDetails}>
+        <summary>Ver pauta, cortes y sobrantes</summary>
+        {consolidated.lineGroups.length === 0 ? (
+          <p className={s.mEmpty}>Todavía no hay despiece consolidable. Revisa piezas con línea, medidas y cortes.</p>
+        ) : (
+          <>
       <section className={s.mGroup} aria-label="Qué fabricar">
         <h3>Qué necesito fabricar</h3>
         <div className={s.mNeedGrid}>
-          <MetricCell label="Perfiles" value={formatMl(summary.totalProfilesMl)} />
-          <MetricCell label="Tiras" value={String(consolidated.totalBars)} />
-          <MetricCell label="Sobrantes" value={formatMm(consolidated.totalWasteMm)} />
+          <MetricCell label="Largo usado en cortes" value={formatMl(summary.totalProfilesMl)} />
+          <MetricCell label="Tiras" value={summary.trabajoSnapshot ? String(summary.trabajoSnapshot.totalBars) : "—"} />
+          <MetricCell label="Largos disponibles según pauta" value={formatMm(consolidated.totalWasteMm)} />
           <MetricCell label="Vidrio" value={formatM2(consolidated.totalGlassM2)} />
         </div>
       </section>
+
+      {summary.trabajoSnapshot ? (
+        <section className={s.mGroup} aria-label="Barras compartidas del trabajo">
+          <h3>Pauta conjunta · trabajo completo</h3>
+          <p className={s.mGroupNote}>{summary.trabajoSnapshot.totalBars} barras compartidas entre partidas.</p>
+          {summary.trabajoSnapshot.missingPresentations?.map((missing) => (
+            <p className={s.mGroupNote} key={`${missing.itemId}-${missing.technicalCode}-${missing.finishKey}`}>
+              Presentación pendiente · {missing.technicalCode}: {missing.reason}
+            </p>
+          ))}
+          <ul className={s.mDespieceList}>
+            {summary.trabajoSnapshot.bars.map((bar) => (
+              <li key={`${bar.materialKey}-${bar.acabadoKey}-${bar.largoComercialMm}-${bar.indice}`}>
+                <strong>{bar.supplierSku ? `${bar.supplierSku} · ${bar.codigoPerfil}` : bar.codigoPerfil} · Barra #{bar.indice} · {formatMm(bar.largoComercialMm)}</strong>
+                <span>Largo usado en cortes {formatMm(bar.usadoMm)} · Largo disponible según pauta {formatMm(bar.sobranteMm)}</span>
+                {bar.cortes.map((cut, index) => (
+                  <em className={s.mBarTrace} key={`${cut.itemId}-${cut.componenteId}-${index}`}>
+                    {cut.codigoItem} · {cut.funcion} · {formatMm(cut.largoMm)}
+                  </em>
+                ))}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : (
+        <section className={s.mGroup} aria-label="Pauta conjunta no guardada">
+          <h3>Pauta conjunta no disponible</h3>
+          <p className={s.mGroupNote}>Esta cotización no conserva una distribución compartida. El histórico no se recalcula; revisa los cortes por componente.</p>
+        </section>
+      )}
 
       {consolidated.lineGroups.map((group) => (
         <section
@@ -399,10 +460,9 @@ function ConsolidadoView({ summary }: { summary: FabricationQuoteSummary }) {
           className={s.mGroup}
           aria-label={group.lineName}
         >
-          <h3>{group.lineName}</h3>
+          <h3>{group.lineName} · cortes por componente</h3>
           <p className={s.mGroupNote}>
-            {formatMl(group.totalLinealMm / 1000)} · {group.bars} tiras · sobra{" "}
-            {formatMm(group.wasteMm)}
+            {formatMl(group.totalLinealMm / 1000)} en total
             {group.accessories > 0 ? ` · ${group.accessories} accesorios` : ""}
           </p>
           <ul className={s.mDespieceList}>
@@ -418,17 +478,6 @@ function ConsolidadoView({ summary }: { summary: FabricationQuoteSummary }) {
           </ul>
         </section>
       ))}
-      {summary.trabajoSnapshot ? (
-        <section className={s.mGroup} aria-label="Barras compartidas del trabajo">
-          <h3>Distribución conjunta guardada</h3>
-          {summary.trabajoSnapshot.bars.map((bar) => (
-            <p key={`${bar.materialKey}-${bar.acabadoKey}-${bar.largoComercialMm}-${bar.indice}`}>
-              <strong>{bar.codigoPerfil} · {formatMm(bar.largoComercialMm)}:</strong>{" "}
-              {bar.cortes.map((cut) => `${cut.codigoItem} ${cut.funcion} ${formatMm(cut.largoMm)}`).join(" · ")}
-            </p>
-          ))}
-        </section>
-      ) : null}
 
       {consolidated.glassRows.length > 0 ? (
         <section className={s.mGroup} aria-label="Vidrio consolidado">
@@ -455,6 +504,9 @@ function ConsolidadoView({ summary }: { summary: FabricationQuoteSummary }) {
           <p className={s.mGroupLead}>{consolidated.totalAccessories} unidades</p>
         </section>
       ) : null}
+          </>
+        )}
+      </details>
     </div>
   );
 }
@@ -469,10 +521,15 @@ export function FabricacionResumenMovil({
   items,
   isExporting,
   exportError,
+  materialsDocument,
+  companyName,
+  issueDate,
+  technicalCostPanel,
+  onDownloadDocumentPdf,
   onDownload,
   onPrint,
 }: Props) {
-  const [homeTab, setHomeTab] = useState<HomeTab>("componentes");
+  const [homeTab, setHomeTab] = useState<HomeTab>("consolidado");
   const [detailItemId, setDetailItemId] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>("resumen");
 
@@ -521,9 +578,9 @@ export function FabricacionResumenMovil({
       {!detailRow ? (
         <>
           <section className={s.mTotals} aria-label="Totales">
-            <MetricCell label="Perfiles" value={formatMl(summary.totalProfilesMl)} />
+            <MetricCell label="Largo usado en cortes" value={formatMl(summary.totalProfilesMl)} />
             <MetricCell label="Vidrio" value={formatM2(summary.totalGlassM2)} />
-            <MetricCell label="Tiras" value={String(summary.totalBars)} />
+            <MetricCell label="Tiras" value={summary.totalBars == null ? "—" : String(summary.totalBars)} />
             <MetricCell label="Con pauta" value={`${summary.items.length}/${summary.totalItems}`} />
           </section>
           <div className={s.mSegmentWrap}>
@@ -531,8 +588,8 @@ export function FabricacionResumenMovil({
               value={homeTab}
               ariaLabel="Vista de fabricación"
               options={[
-                { id: "componentes", label: "Componentes" },
-                { id: "consolidado", label: "Consolidado" },
+                { id: "consolidado", label: "Pauta conjunta" },
+                { id: "componentes", label: "Por componente" },
               ]}
               onChange={setHomeTab}
             />
@@ -552,6 +609,8 @@ export function FabricacionResumenMovil({
           />
         </div>
       )}
+
+      {!detailRow ? technicalCostPanel : null}
 
       {exportError ? <p className={s.mExportNotice}>{exportError}</p> : null}
 
@@ -575,6 +634,16 @@ export function FabricacionResumenMovil({
           ) : (
             <DetailDespiece row={detailRow} />
           )
+        ) : homeTab === "consolidado" ? (
+          <ConsolidadoView
+            summary={summary}
+            materialsDocument={materialsDocument}
+            companyName={companyName}
+            codigo={codigo}
+            obra={obra}
+            issueDate={issueDate}
+            onDownloadDocumentPdf={onDownloadDocumentPdf}
+          />
         ) : summary.items.length === 0 ? (
           <p className={s.mEmpty}>
             {summary.compositionsPendingRecipe.length > 0
@@ -594,9 +663,7 @@ export function FabricacionResumenMovil({
               />
             ))}
           </div>
-        ) : (
-          <ConsolidadoView summary={summary} />
-        )}
+        ) : null}
       </div>
 
       <footer className={s.mActions}>

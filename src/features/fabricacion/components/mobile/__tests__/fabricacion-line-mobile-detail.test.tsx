@@ -137,4 +137,42 @@ describe("FabricacionLineMobileDetail", () => {
     expect(screen.getByRole("button", { name: "Probar con medidas" })).toBeInTheDocument();
     expect(screen.getByText("Borrador")).toBeInTheDocument();
   });
+
+  it("presenta una base operativa con copy breve y sin observaciones largas", () => {
+    const pendingReason = "Base del Excel de un taller; faltan confirmaciones técnicas.";
+
+    render(
+      <FabricacionLineMobileDetail
+        template={template}
+        currentRecipe={null}
+        olderRecipes={[]}
+        error={null}
+        feedback={null}
+        isSaving={false}
+        onConfigure={() => undefined}
+        onEdit={() => undefined}
+        onTest={() => undefined}
+        suggestedRecipes={[
+          {
+            id: "workshop:veratec:compact-2h",
+            sourceType: "workshop",
+            proveedor: "VERATEC",
+            linea: "Compact Sliding",
+            variante: "2 hojas",
+            tipologia: "corredera",
+            estado: "sugerida",
+            motivoPendiente: pendingReason,
+            crearDefinicion: () => recipe("draft").definition,
+          },
+        ]}
+        onUseSuggested={() => undefined}
+      />
+    );
+
+    expect(screen.getByRole("region", { name: "Bases operativas" })).toBeInTheDocument();
+    expect(screen.getByText("Ajustable por tu taller.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Usar base" })).toBeInTheDocument();
+    expect(screen.queryByText(/Excel aportado|certificadas por Veratec/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(pendingReason)).not.toBeInTheDocument();
+  });
 });

@@ -14,6 +14,7 @@ import {
 } from "@/features/cotizaciones/line-templates/services/cut-profile-display.service";
 import { construirFabricacionTrabajoSnapshot } from "@/features/fabricacion/services/fabricacion-trabajo-snapshot.service";
 import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
+import type { FabricacionTrabajoPresentationSelection } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
 
 export type ConsolidatedCubicationRow = {
   key: string;
@@ -292,7 +293,11 @@ function finalizePauta(
 }
 
 export function buildConsolidatedCubicationPauta(
-  items: readonly CotizacionWorkflowItem[]
+  items: readonly CotizacionWorkflowItem[],
+  options: {
+    supplierPresentationSelections?: Readonly<Record<string, FabricacionTrabajoPresentationSelection[]>>;
+    supplierPresentationResolutionEnabled?: boolean;
+  } = {}
 ): ConsolidatedCubicationPauta {
   const rowMap = new Map<string, ConsolidatedCubicationRow>();
   const glassMap = new Map<string, ConsolidatedGlassRow>();
@@ -357,6 +362,9 @@ export function buildConsolidatedCubicationPauta(
         lineaComercial: item.lineaComercial,
         colorHex: presentation.colorHex,
         catalogLineKey: presentation.catalogLineKey,
+        supplierFamilyKey: item.fabricacionSnapshot?.supplierFamilyKey ?? null,
+        supplierPresentationSelections: options.supplierPresentationSelections?.[item.id],
+        requireSupplierPresentation: options.supplierPresentationResolutionEnabled === true && Boolean(item.fabricacionSnapshot?.supplierFamilyKey),
         snapshot: item.fabricacionSnapshot ?? null,
       };
     }),
@@ -376,7 +384,11 @@ export function buildConsolidatedCubicationPauta(
 export function buildConsolidatedCubicationPautaFromSnapshots(
   carriers: readonly SnapshotCarrier[],
   storedTrabajoSnapshot?: FabricacionTrabajoSnapshot | null,
-  options: { deriveTrabajoSnapshot?: boolean } = {}
+  options: {
+    deriveTrabajoSnapshot?: boolean;
+    supplierPresentationSelections?: Readonly<Record<string, FabricacionTrabajoPresentationSelection[]>>;
+    supplierPresentationResolutionEnabled?: boolean;
+  } = {}
 ): ConsolidatedCubicationPauta {
   const rowMap = new Map<string, ConsolidatedCubicationRow>();
   const glassMap = new Map<string, ConsolidatedGlassRow>();
@@ -423,6 +435,9 @@ export function buildConsolidatedCubicationPautaFromSnapshots(
             lineaComercial: carrier.lineaComercial ?? carrier.codigo,
             colorHex: carrier.colorHex,
             catalogLineKey: carrier.catalogLineKey,
+            supplierFamilyKey: carrier.fabricacionSnapshot?.supplierFamilyKey ?? null,
+            supplierPresentationSelections: options.supplierPresentationSelections?.[carrier.itemId ?? `${carrier.codigo}-${index}`],
+            requireSupplierPresentation: options.supplierPresentationResolutionEnabled === true && Boolean(carrier.fabricacionSnapshot?.supplierFamilyKey),
             snapshot: carrier.fabricacionSnapshot ?? null,
           })),
       });

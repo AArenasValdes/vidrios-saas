@@ -10,7 +10,7 @@
   max-width: none;
   margin-left: -16px;
   margin-right: -16px;
-  padding: 0 0 8px;
+  padding: 0 0 calc(var(--tabbar-h, 76px) + 56px);
   overflow-x: clip;
   color: #0b1220;
   background: transparent;
@@ -351,6 +351,11 @@
   animation: tab-underline 170ms ease;
 }
 
+.statusTabs.scopeTabs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 2px;
+}
+
 .successBand,
 .errorBand {
   margin: 0 16px 14px;
@@ -460,11 +465,15 @@
   color: inherit;
   cursor: pointer;
   text-align: left;
-  transition: background var(--motion-duration-fast) var(--motion-spring);
+  text-decoration: none;
+  transition:
+    background var(--motion-duration-fast) var(--motion-spring),
+    transform 80ms var(--motion-snappy);
 }
 
 .familyHeader:active {
   background: #f8fafc;
+  transform: scale(0.98);
 }
 
 .familyHeaderLeading {
@@ -499,10 +508,49 @@
 }
 
 .familyCount {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: #8a96a6;
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
+}
+
+.providerMark {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.catalogList {
+  animation: browse-in 240ms var(--motion-snappy);
+}
+
+.sectionLabel {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 18px 16px 0;
+  color: #3f4e60;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.sectionLabel span {
+  color: #516070;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .familyBody {
@@ -524,6 +572,11 @@
   position: relative;
   width: 100%;
   animation: row-in var(--motion-duration-medium) var(--motion-spring) backwards;
+  transition: transform 80ms var(--motion-snappy);
+}
+
+.lineRow:active {
+  transform: scale(0.98);
 }
 
 .lineRow + .lineRow::before {
@@ -537,7 +590,7 @@
 }
 
 .lineRowInactive {
-  opacity: 0.78;
+  opacity: 1;
 }
 
 .lineRowMain {
@@ -695,15 +748,40 @@
   min-width: 0;
 }
 
-.lineStatusChip {
+.lineListBadge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  color: #64748b;
-  font-size: 13px;
+  gap: 4px;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #eef2f6;
+  color: #3d4c5c;
+  font-size: 12px;
   font-weight: 650;
   line-height: 1;
   white-space: nowrap;
+  animation: badge-in 160ms var(--motion-snappy);
+}
+
+.lineListBadge svg {
+  width: 12px;
+  height: 12px;
+}
+
+.lineListBadge[data-tone="ready"] {
+  background: #e5f6ec;
+  color: #0b6b32;
+}
+
+.lineListBadge[data-tone="draft"] {
+  background: #fff4dc;
+  color: #7a4b00;
+}
+
+.lineListBadge[data-tone="hidden"] {
+  background: #f1f3f5;
+  color: #4b5563;
 }
 
 .lineStatusDot {
@@ -918,6 +996,10 @@
 
 .lineSheetAction:active {
   background: #f8fafc;
+}
+
+.lineSheetActionQuiet {
+  color: #4b5563;
 }
 
 .lineSheetActionDanger {
@@ -1213,6 +1295,30 @@
   }
 }
 
+@keyframes browse-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes badge-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @media (min-width: 1024px) {
   .page {
     display: none;
@@ -1230,6 +1336,8 @@
   .familyBody,
   .familyChevron,
   .lineRowActions,
+  .lineListBadge,
+  .catalogList,
   .statusTabs .tabActive::after,
   .backButton,
   .newButton,

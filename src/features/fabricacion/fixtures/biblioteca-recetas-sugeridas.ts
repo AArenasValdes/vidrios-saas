@@ -18,9 +18,22 @@ import {
   type FabricacionReglaCantidad,
   type FabricacionTipologia,
 } from "@/features/fabricacion/types/fabricacion-domain";
+import {
+  crearRecetaVeratecCompactSliding,
+  crearRecetaVeratec7400Workbook3H,
+  crearRecetaVeratecElegansFijo,
+  VERATEC_COMPACT_SLIDING_VARIANTS,
+  VERATEC_7400_WORKBOOK_3H_VARIANTS,
+  VERATEC_ELEGANS_FIXED_VARIANTS,
+  VERATEC_WORKBOOK_SOURCE_REVISION,
+} from "@/features/fabricacion/fixtures/veratec-workbook-recipes";
 
 export type BibliotecaRecetaSugerida = {
   id: string;
+  catalogKey?: string;
+  sourceType?: "workshop";
+  sourceReference?: string;
+  sourceRevision?: string;
   proveedor: string;
   linea: string;
   variante: string;
@@ -29,6 +42,51 @@ export type BibliotecaRecetaSugerida = {
   motivoPendiente: string | null;
   crearDefinicion: (() => FabricacionReceta) | null;
 };
+
+const VERATEC_WORKSHOP_TEMPLATES: BibliotecaRecetaSugerida[] = [
+  ...VERATEC_COMPACT_SLIDING_VARIANTS.map((variant) => ({
+    id: `workshop:veratec:${variant.slug}`,
+    catalogKey: `ventora:veratec-compact-sliding-${variant.leaves}h`,
+    proveedor: "VERATEC",
+    linea: `Compact Sliding · ${variant.leaves} hojas`,
+    variante: variant.label,
+    tipologia: "corredera",
+    estado: "sugerida" as const,
+    motivoPendiente: "Base del Excel de un taller; vidrio, junquillo, accesorios y parámetros de sierra requieren confirmación del taller. No es receta certificada por Veratec.",
+    sourceType: "workshop" as const,
+    sourceReference: variant.sourceReference,
+    sourceRevision: VERATEC_WORKBOOK_SOURCE_REVISION,
+    crearDefinicion: () => crearRecetaVeratecCompactSliding({ lineName: `Compact Sliding · ${variant.leaves} hojas`, variant: variant.slug }),
+  })),
+  ...VERATEC_7400_WORKBOOK_3H_VARIANTS.map((variant) => ({
+    id: `workshop:veratec:${variant.slug}`,
+    catalogKey: "ventora:veratec-7400-corredera-3h",
+    proveedor: "VERATEC",
+    linea: "Veratec 7400 — Corredera 3 hojas",
+    variante: variant.label,
+    tipologia: "corredera",
+    estado: "sugerida" as const,
+    motivoPendiente: "Base del Excel de un taller; confirmar junquillo, acabado, largos comerciales y accesorios. La variante 4H chica contradictoria no se ofrece.",
+    sourceType: "workshop" as const,
+    sourceReference: variant.sourceReference,
+    sourceRevision: VERATEC_WORKBOOK_SOURCE_REVISION,
+    crearDefinicion: () => crearRecetaVeratec7400Workbook3H({ lineName: "Veratec 7400 — Corredera 3 hojas", variant: variant.slug }),
+  })),
+  ...VERATEC_ELEGANS_FIXED_VARIANTS.map((variant) => ({
+    id: `workshop:veratec:${variant.slug}`,
+    catalogKey: "ventora:veratec-elegans-60-fijo",
+    proveedor: "VERATEC",
+    linea: "Paño fijo",
+    variante: variant.label,
+    tipologia: "pano_fijo",
+    estado: "sugerida" as const,
+    motivoPendiente: "El Excel usa 65201VER y 61011VER999; no hay equivalencia comercial confirmada. Completar perfiles y largos antes de usar como pauta de compra.",
+    sourceType: "workshop" as const,
+    sourceReference: variant.sourceReference,
+    sourceRevision: VERATEC_WORKBOOK_SOURCE_REVISION,
+    crearDefinicion: () => crearRecetaVeratecElegansFijo({ lineName: "Paño fijo", variant: variant.slug }),
+  })),
+];
 
 const BASE_MAP: Record<MeasureBase, FabricacionBaseMedida> = {
   vano_width: "ancho_total",
@@ -177,7 +235,23 @@ const VENTORA_PROYECTANTE_TEMPLATES: BibliotecaRecetaSugerida[] = (
 }));
 
 export const BIBLIOTECA_RECETAS_PRIORIZADAS: BibliotecaRecetaSugerida[] = [
+  ...VERATEC_WORKSHOP_TEMPLATES,
   ...ALAR_TEMPLATES,
   ...VENTORA_PROYECTANTE_TEMPLATES,
   ...RECOGNIZED_WITHOUT_RULES,
 ];
+
+export function getSuggestedRecipesForLine(input: {
+  catalogKey: string | null | undefined;
+  lineName: string | null | undefined;
+  providerName: string | null | undefined;
+}): BibliotecaRecetaSugerida[] {
+  const normalizedLine = input.lineName?.trim().toLocaleLowerCase("es-CL");
+  const normalizedProvider = input.providerName?.trim().toLocaleLowerCase("es-CL");
+  if (!normalizedLine) return [];
+  return BIBLIOTECA_RECETAS_PRIORIZADAS.filter((entry) =>
+    entry.crearDefinicion &&
+    (entry.catalogKey ? entry.catalogKey === input.catalogKey : entry.linea.trim().toLocaleLowerCase("es-CL") === normalizedLine) &&
+    (!normalizedProvider || entry.proveedor.trim().toLocaleLowerCase("es-CL") === normalizedProvider)
+  );
+}

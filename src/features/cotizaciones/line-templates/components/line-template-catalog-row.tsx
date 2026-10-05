@@ -7,6 +7,7 @@ import type { TechnicalCardStatus } from "@/features/cotizaciones/line-templates
 import { isVentoraCatalogKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import {
+  getLineTemplateGlassMetadata,
   getLineTemplateSystemMetadata,
   lineTemplateNeedsCommercialPrice,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
@@ -15,6 +16,7 @@ import {
   LINE_TEMPLATE_CATEGORIA_LABELS,
 } from "@/features/cotizaciones/line-templates/utils/catalog-labels";
 import { shouldOfferLineFabricationWorkspace } from "@/features/cotizaciones/line-templates/utils/line-fabrication-entry";
+import { resolveDocumentedLineIdentity } from "./line-template-catalog-family";
 
 import {
   LineTemplateCardActions,
@@ -47,6 +49,28 @@ function resolveLineCode(template: CotizacionLineTemplate) {
       : "";
 
   return lineSystem || plantillaId || null;
+}
+
+function resolveGlassFacts(template: CotizacionLineTemplate) {
+  const metadata = template.catalogMetadata as Record<string, unknown> | null | undefined;
+  const glass = getLineTemplateGlassMetadata(template.catalogMetadata);
+  const code = [metadata?.codigo, metadata?.code, metadata?.sku]
+    .find((value): value is string => typeof value === "string" && Boolean(value.trim()))
+    ?.trim();
+  return [code, glass.espesor, glass.terminacion].filter(Boolean).join(" · ");
+}
+
+function resolveGlassPurchaseSummary(template: CotizacionLineTemplate, formatMoney: (value: number) => string) {
+  const glass = getLineTemplateGlassMetadata(template.catalogMetadata);
+  return [
+    glass.planchaAnchoMm && glass.planchaAltoMm
+      ? `${glass.planchaAnchoMm} × ${glass.planchaAltoMm} mm`
+      : "Plancha sin medidas",
+    template.costoBase > 0 ? `Compra plancha ${formatMoney(template.costoBase)}` : "Compra pendiente",
+    template.mermaPct > 0 ? `Merma ${template.mermaPct}%` : "",
+    template.minimoCobrable > 0 ? `Mín. ${formatMoney(template.minimoCobrable)}` : "Sin mínimo",
+    template.redondeoPrecio > 0 ? `Redondeo ${formatMoney(template.redondeoPrecio)}` : "Sin redondeo",
+  ].filter(Boolean).join(" · ");
 }
 
 function resolveRowStatus(
@@ -87,6 +111,12 @@ export function LineTemplateCatalogRow({
   const needsPrice = lineTemplateNeedsCommercialPrice(template);
   const lineCode = resolveLineCode(template);
   const providerLabel = template.proveedor?.trim() || (isVentoraCatalogKey(template.catalogKey) ? "Ventora" : null);
+  const documented = resolveDocumentedLineIdentity(template);
+  const documentedFamilyKey = documented.familyKey;
+  const configuredName = documentedFamilyKey?.startsWith("veratec:") &&
+    documented.configurationLabel
+      ? documented.configurationLabel
+      : template.nombre;
   const materialLabel = LINE_TEMPLATE_CATEGORIA_LABELS[template.categoria];
   const rowStatus = resolveRowStatus(template, needsPrice, technicalStatus);
   const fabricationHref = `/configuracion/empresa/lineas-precios/${template.id}/fabricacion`;
@@ -100,8 +130,11 @@ export function LineTemplateCatalogRow({
       data-material={template.material}
     >
       <div className={row.identity}>
-        <strong>{template.nombre}</strong>
+        <strong>{configuredName}</strong>
         {lineCode ? <span className={row.code}>{lineCode}</span> : null}
+        {template.categoria === "vidrio" && resolveGlassFacts(template) ? (
+          <span className={`${row.code} ${row.glassFacts}`}>{resolveGlassFacts(template)}</span>
+        ) : null}
       </div>
 
       <div className={row.badges} aria-label="Material y proveedor">
@@ -119,15 +152,25 @@ export function LineTemplateCatalogRow({
       </div>
 
       <div className={row.priceBlock}>
+        {template.categoria === "vidrio" ? <span className={row.priceMeta}>Precio de venta por m²</span> : null}
         <strong className={row.priceValue}>
           {needsPrice
             ? "Sin precio"
-            : formatLineTemplatePriceLabel(
+            : template.categoria === "vidrio"
+              ? formatLineTemplatePriceLabel(
+                  template.unidadCobro,
+                  template.precioM2Sugerido,
+                  formatMoney
+                )
+              : formatLineTemplatePriceLabel(
                 template.unidadCobro,
                 template.precioM2Sugerido,
                 formatMoney
               )}
         </strong>
+        {template.categoria === "vidrio" ? (
+          <span className={row.priceMeta}>Compra: {resolveGlassPurchaseSummary(template, formatMoney)}</span>
+        ) : null}
         {needsPrice ? (
           <button
             type="button"
@@ -139,7 +182,7 @@ export function LineTemplateCatalogRow({
           >
             Agregar precio
           </button>
-        ) : (
+        ) : template.categoria !== "vidrio" ? (
           <span className={row.priceMeta}>
             {`Mín. ${
               template.minimoCobrable > 0
@@ -147,10 +190,19 @@ export function LineTemplateCatalogRow({
                 : "sin mínimo"
             }`}
           </span>
-        )}
+        ) : null}
       </div>
 
       <div className={row.statusBlock}>
+        {documentedFamilyKey?.startsWith("veratec:") ? (
+          <Link
+            href={`/configuracion/empresa/mis-precios?supplier=veratec&family=${encodeURIComponent(documentedFamilyKey)}&lineTemplateId=${encodeURIComponent(String(template.id))}`}
+            className={row.fabricationLink}
+            onClick={(event) => event.stopPropagation()}
+          >
+            Mis precios
+          </Link>
+        ) : null}
         {needsPrice ? (
           <span className={`${row.statusPill} ${row.statusPill_pending_price}`}>
             <span className={row.statusDot} aria-hidden />
@@ -174,7 +226,7 @@ export function LineTemplateCatalogRow({
             onClick={(event) => event.stopPropagation()}
           >
             <span className={row.fabricationLinkCopy}>
-              <span className={row.fabricationLinkLabel}>Fabricación</span>
+              <span className={row.fabricationLinkLabel}>Configurar fabricación</span>
               <span className={row.fabricationLinkValue}>{technicalStatus.label}</span>
             </span>
             <LuChevronRight className={row.fabricationLinkIcon} aria-hidden />

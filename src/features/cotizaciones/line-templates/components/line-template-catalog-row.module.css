@@ -62,6 +62,13 @@
   white-space: nowrap;
 }
 
+.glassFacts {
+  overflow: visible;
+  color: #66778d;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .badges {
   display: inline-flex;
   align-items: center;
@@ -128,6 +135,11 @@
   font-size: 12px;
   font-weight: 550;
   line-height: 1.2;
+}
+
+.priceBlock .priceMeta {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .priceLink {

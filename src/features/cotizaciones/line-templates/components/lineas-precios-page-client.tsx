@@ -20,8 +20,8 @@ import { buildTechnicalCardStatus } from "@/features/cotizaciones/line-templates
 import {
   buildLineTemplateCuttingPreview,
   getLineTemplateCubicationConfig,
-  getLineTemplateGlassMetadata,
   getLineTemplateCuttingRules,
+  getLineTemplateGlassMetadata,
   getLineTemplateEstimationRules,
   getLineTemplateSystemMetadata,
   mergeLineTemplateCubicationConfig,
@@ -44,6 +44,7 @@ import {
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-calibration";
 import {
   getLineTemplateProviderLabel,
+  groupLineTemplatesByProvider,
   listLineTemplateProviderFilterOptions,
   LINE_TEMPLATE_PROVIDER_FILTER_ALL,
   partitionLineTemplatesByCatalogOrigin,
@@ -61,7 +62,7 @@ import {
   recipePreviewToLegacyCuttingPreview,
 } from "@/features/cotizaciones/line-templates/services/fabrication-recipe.service";
 import { LinePriceEditor } from "./line-template-price-editor";
-import { groupLineTemplatesByFamily } from "./line-template-catalog-family";
+import { groupLineTemplatesByDocumentedFamily } from "./line-template-catalog-family";
 import { LineTemplateCatalogAccordion } from "./line-template-catalog-accordion";
 import s from "./lineas-precios-page-client.module.css";
 import desktop from "./lineas-precios-page-client.desktop.module.css";
@@ -106,6 +107,8 @@ type TechnicalFilterValue =
 type Props = {
   openNewByDefault?: boolean;
   openNewGlassByDefault?: boolean;
+  showPurchasePricesEntry?: boolean;
+  purchasePricesHref?: string;
 };
 
 function parseDecimal(value: string) {
@@ -240,6 +243,8 @@ function draftHasAdvancedDetails(draft: LineTemplateFormDraft) {
 export function LineasPreciosPageClient({
   openNewByDefault = false,
   openNewGlassByDefault = false,
+  showPurchasePricesEntry = false,
+  purchasePricesHref = "/configuracion/empresa/mis-precios",
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -458,6 +463,14 @@ export function LineasPreciosPageClient({
           || (getLineTemplateSystemMetadata(template.catalogMetadata).lineSystem ?? "")
             .toLowerCase()
             .includes(normalizedQuery)
+          || (() => {
+            const glass = getLineTemplateGlassMetadata(template.catalogMetadata);
+            const metadata = template.catalogMetadata as Record<string, unknown> | null | undefined;
+            const code = [metadata?.codigo, metadata?.code, metadata?.sku]
+              .find((value): value is string => typeof value === "string");
+            return [code, glass.espesor, glass.terminacion]
+              .some((value) => value?.toLowerCase().includes(normalizedQuery));
+          })()
         : true;
 
       return (
@@ -513,7 +526,10 @@ export function LineasPreciosPageClient({
     () =>
       catalogSections.map((section) => ({
         ...section,
-        families: groupLineTemplatesByFamily(section.templates),
+        providers: groupLineTemplatesByProvider(section.templates).map((provider) => ({
+          ...provider,
+          families: groupLineTemplatesByDocumentedFamily(provider.templates),
+        })),
       })),
     [catalogSections]
   );
@@ -639,10 +655,10 @@ export function LineasPreciosPageClient({
   const sheetTitle =
     sheetMode === "edit"
       ? isGlassDraft
-        ? "Editar producto de cristal"
+        ? "Editar vidrio"
         : "Editar línea"
       : isGlassDraft
-        ? "Nuevo producto de cristal"
+        ? "Nuevo vidrio"
         : "Nueva línea";
 
   const resetQueryFlag = () => {
@@ -992,7 +1008,7 @@ export function LineasPreciosPageClient({
         await updateTemplate(editingTemplateId, payload);
         setFeedback({
           kind: "success",
-          message: isGlassDraft ? "Producto de cristal actualizado." : "Línea actualizada.",
+          message: isGlassDraft ? "Vidrio actualizado." : "Línea actualizada.",
         });
       } else {
         const created = await createTemplate(payload);
@@ -1005,7 +1021,7 @@ export function LineasPreciosPageClient({
         }
         setFeedback({
           kind: "success",
-          message: isGlassDraft ? "Producto de cristal guardado." : "Línea guardada.",
+          message: isGlassDraft ? "Vidrio guardado." : "Línea guardada.",
         });
       }
 
@@ -1082,6 +1098,8 @@ export function LineasPreciosPageClient({
   return (
     <>
       <LineasPreciosMobileView
+        showPurchasePricesEntry={showPurchasePricesEntry}
+        purchasePricesHref={purchasePricesHref}
         templates={templates}
         filteredTemplates={filteredTemplates}
         activeCount={activeCount}
@@ -1134,6 +1152,11 @@ export function LineasPreciosPageClient({
         </div>
 
         <div className={s.headerActions}>
+          {showPurchasePricesEntry ? (
+            <Link href={purchasePricesHref} className={s.purchasePricesButton}>
+              Precios de compra
+            </Link>
+          ) : null}
           <button
             type="button"
             className={s.glassAddButton}
@@ -1218,7 +1241,7 @@ export function LineasPreciosPageClient({
                 <option value="Todo">Todos</option>
                 <option value="aluminio">Aluminio</option>
                 <option value="pvc">PVC</option>
-                <option value="vidrio">Cristales</option>
+                <option value="vidrio">Vidrios</option>
               </select>
             </label>
 
@@ -1269,7 +1292,7 @@ export function LineasPreciosPageClient({
                     { value: "Todo" as const, label: "Todo" },
                     { value: "aluminio" as const, label: "Aluminio" },
                     { value: "pvc" as const, label: "PVC" },
-                    { value: "vidrio" as const, label: "Cristales" },
+                    { value: "vidrio" as const, label: "Vidrios" },
                   ].map((option) => (
                     <button
                       key={option.value}
@@ -1401,7 +1424,7 @@ export function LineasPreciosPageClient({
               { value: "Todo" as const, label: "Todo" },
               { value: "aluminio" as const, label: "Aluminio" },
               { value: "pvc" as const, label: "PVC" },
-              { value: "vidrio" as const, label: "Cristales" },
+              { value: "vidrio" as const, label: "Vidrios" },
             ].map((option) => (
               <button
                 key={option.value}
@@ -1550,9 +1573,12 @@ export function LineasPreciosPageClient({
               </div>
 
               <div className={desktop.familyAccordionList}>
-                {section.families.map((family, familyIndex) => {
-                  const accordionKey = `${section.id}:${family.key}`;
-                  const defaultExpanded = familyIndex === 0;
+                {section.providers.map((provider) => (
+                  <section className={s.catalogProviderGroup} key={`${section.id}:${provider.provider}`}>
+                    <h2 className={s.catalogProviderTitle}>{provider.provider}</h2>
+                    {provider.families.map((family, familyIndex) => {
+                  const accordionKey = `${section.id}:${provider.provider}:${family.key}`;
+                  const defaultExpanded = provider.provider === "VERATEC" || familyIndex === 0;
                   const isExpanded = isFamilyAccordionExpanded(
                     accordionKey,
                     defaultExpanded
@@ -1561,7 +1587,7 @@ export function LineasPreciosPageClient({
                   return (
                     <LineTemplateCatalogAccordion
                       key={accordionKey}
-                      familyKey={family.key}
+                      familyKey={family.categoryKey}
                       label={family.label}
                       templates={family.templates}
                       isExpanded={isExpanded}
@@ -1589,7 +1615,9 @@ export function LineasPreciosPageClient({
                       onToggleActive={(template) => void handleToggleActive(template)}
                     />
                   );
-                })}
+                    })}
+                  </section>
+                ))}
               </div>
             </section>
           ))}

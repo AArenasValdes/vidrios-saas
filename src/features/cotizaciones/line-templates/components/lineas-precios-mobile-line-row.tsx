@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  getLineTemplateGlassMetadata,
   getLineTemplateSystemMetadata,
   lineTemplateNeedsCommercialPrice,
   type CotizacionLineTemplate,
@@ -11,7 +12,8 @@ import {
 } from "@/features/cotizaciones/line-templates/utils/catalog-labels";
 import { resolveLineFabricationActionLabel } from "@/features/cotizaciones/line-templates/utils/line-fabrication-entry";
 import { getLineVariantSlotsForFabricationTree } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
-import { LuChevronRight } from "react-icons/lu";
+import { LuCheck, LuChevronRight, LuClock, LuEyeOff } from "react-icons/lu";
+import { resolveDocumentedLineIdentity } from "./line-template-catalog-family";
 
 import s from "./lineas-precios-mobile-view.module.css";
 
@@ -32,6 +34,7 @@ type Props = {
   onOpenActions: () => void;
   onEditPrice: () => void;
   rowIndex: number;
+  groupedByProvider?: boolean;
 };
 
 function resolveLineCode(template: CotizacionLineTemplate) {
@@ -69,6 +72,30 @@ function resolveProviderSummary(template: CotizacionLineTemplate) {
   return providers.length > 0
     ? { label: providers.length > 1 ? "Variantes de proveedor" : "Proveedor", providers }
     : null;
+}
+
+function resolveGlassFacts(template: CotizacionLineTemplate) {
+  const metadata = template.catalogMetadata as Record<string, unknown> | null | undefined;
+  const glass = getLineTemplateGlassMetadata(template.catalogMetadata);
+  const code = [metadata?.codigo, metadata?.code, metadata?.sku]
+    .find((value): value is string => typeof value === "string" && Boolean(value.trim()))
+    ?.trim();
+  return [code ? `Código ${code}` : "", glass.espesor ?? "", glass.terminacion ?? ""]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function resolveGlassPurchaseSummary(template: CotizacionLineTemplate, formatMoney: (value: number) => string) {
+  const glass = getLineTemplateGlassMetadata(template.catalogMetadata);
+  return [
+    glass.planchaAnchoMm && glass.planchaAltoMm
+      ? `Plancha ${glass.planchaAnchoMm} × ${glass.planchaAltoMm} mm`
+      : "",
+    template.costoBase > 0 ? `Compra plancha ${formatMoney(template.costoBase)}` : "Sin costo de compra",
+    template.mermaPct > 0 ? `Merma ${template.mermaPct}%` : "",
+    template.minimoCobrable > 0 ? `Mín. venta ${formatMoney(template.minimoCobrable)}` : "Sin mínimo",
+    template.redondeoPrecio > 0 ? `Redondeo ${formatMoney(template.redondeoPrecio)}` : "Sin redondeo",
+  ].filter(Boolean).join(" · ");
 }
 
 export function resolveLineCommercialStatus(
@@ -110,6 +137,22 @@ export function resolveFabricationHint(
   return { label: "Cubicación opcional", tone: "optional" };
 }
 
+export function resolveLineListBadge(
+  template: CotizacionLineTemplate,
+  technicalStatus: TechnicalStatus,
+  needsPrice: boolean
+): { label: string; tone: "ready" | "draft" | "unpriced" | "hidden" } {
+  if (!template.isActive) return { label: "Oculta", tone: "hidden" };
+  if (technicalStatus.tone === "draft" || technicalStatus.tone === "testing") {
+    return { label: "Borrador", tone: "draft" };
+  }
+  if (needsPrice) return { label: "Sin precio", tone: "unpriced" };
+  if (technicalStatus.tone === "quote_only" && template.categoria !== "vidrio") {
+    return { label: "Sin configurar", tone: "draft" };
+  }
+  return { label: "Lista", tone: "ready" };
+}
+
 export function resolveFabricationActionLabel(
   technicalStatus: TechnicalStatus,
   needsPrice: boolean,
@@ -129,14 +172,19 @@ export function LineasPreciosMobileLineRow({
   onOpenActions,
   onEditPrice,
   rowIndex,
+  groupedByProvider = false,
 }: Props) {
   const needsPrice = lineTemplateNeedsCommercialPrice(template);
   const lineCode = resolveLineCode(template);
   const materialLabel = template.material || LINE_TEMPLATE_CATEGORIA_LABELS[template.categoria];
-  const providerSummary = resolveProviderSummary(template);
-  const metaLine = [lineCode, materialLabel].filter(Boolean).join(" · ");
-  const commercialStatus = resolveLineCommercialStatus(template, needsPrice);
-  const fabricationHint = resolveFabricationHint(template, technicalStatus, needsPrice);
+  const providerSummary = groupedByProvider ? null : resolveProviderSummary(template);
+  const documented = resolveDocumentedLineIdentity(template);
+  const displayName = documented.familyKey?.startsWith("veratec:") && documented.configurationLabel
+    ? documented.configurationLabel : template.nombre;
+  const metaLine = template.categoria === "vidrio"
+    ? resolveGlassFacts(template)
+    : [lineCode, materialLabel].filter(Boolean).join(" · ");
+  const listBadge = resolveLineListBadge(template, technicalStatus, needsPrice);
 
   return (
     <article
@@ -157,13 +205,19 @@ export function LineasPreciosMobileLineRow({
         aria-label={`Acciones de ${template.nombre}`}
       >
         <div className={s.lineRowTop}>
-          <strong className={s.lineName}>{template.nombre}</strong>
+          <strong className={s.lineName}>{displayName}</strong>
           <span
             className={`${s.linePrice} ${needsPrice ? s.linePriceMuted : s.linePriceReady}`}
           >
             {needsPrice
               ? "Sin precio"
-              : formatLineTemplatePriceLabel(
+              : template.categoria === "vidrio"
+                ? `Venta ${formatLineTemplatePriceLabel(
+                    template.unidadCobro,
+                    template.precioM2Sugerido,
+                    formatMoney
+                  )}`
+                : formatLineTemplatePriceLabel(
                   template.unidadCobro,
                   template.precioM2Sugerido,
                   formatMoney
@@ -187,6 +241,9 @@ export function LineasPreciosMobileLineRow({
               </span>
             ) : null}
             {metaLine ? <span className={s.lineMetaDetails}>{metaLine}</span> : null}
+            {template.categoria === "vidrio" ? (
+              <span className={`${s.lineMetaDetails} ${s.glassMetaDetails}`}>{resolveGlassPurchaseSummary(template, formatMoney)}</span>
+            ) : null}
           </div>
         ) : null}
 
@@ -202,19 +259,12 @@ export function LineasPreciosMobileLineRow({
             {needsPrice ? "Agregar precio" : "Editar precio"}
           </button>
 
-          <div className={s.lineStatusGroup}>
-            <span className={s.lineStatusChip} data-tone={commercialStatus.tone}>
-              <span className={s.lineStatusDot} aria-hidden />
-              {commercialStatus.label}
-            </span>
-
-            {fabricationHint ? (
-              <span className={s.lineStatusChip} data-tone={fabricationHint.tone}>
-                <span className={s.lineStatusDot} aria-hidden />
-                {fabricationHint.label}
-              </span>
-            ) : null}
-          </div>
+          <span className={s.lineListBadge} data-tone={listBadge.tone}>
+            {listBadge.tone === "ready" ? <LuCheck aria-hidden /> : null}
+            {listBadge.tone === "draft" ? <LuClock aria-hidden /> : null}
+            {listBadge.tone === "hidden" ? <LuEyeOff aria-hidden /> : null}
+            {listBadge.label}
+          </span>
         </div>
       </div>
 

@@ -68,4 +68,24 @@ describe("seedLineVariantRecipesForOrganization", () => {
     expect(result).toEqual({ seeded: 0, skipped: 0 });
     expect(insertVariantRecipe).not.toHaveBeenCalled();
   });
+
+  it("no persiste automáticamente las variantes Veratec del Excel al abrir la app", async () => {
+    const insertVariantRecipe = jest.fn();
+
+    const result = await seedLineVariantRecipesForOrganization("org-test", {
+      listVentoraLineTemplates: async () => [
+        {
+          id: 903,
+          catalog_key: "ventora:veratec-compact-sliding-2h",
+          nombre: "Compact Sliding · 2 hojas",
+          proveedor: "VERATEC",
+        },
+      ],
+      listRecipesForOrganization: async () => [],
+      insertVariantRecipe,
+    });
+
+    expect(result).toEqual({ seeded: 0, skipped: 1 });
+    expect(insertVariantRecipe).not.toHaveBeenCalled();
+  });
 });

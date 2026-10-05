@@ -104,6 +104,7 @@ export const fabricacionComponentePerfilSchema = z
     nombrePerfil: z.string(),
     funcion: z.string().min(1),
     largoComercialMm: integerPositiveSchema.nullable().optional(),
+    largoComercialPendiente: z.boolean().optional(),
     reglaMedida: fabricacionReglaMedidaSchema,
     reglaCantidad: fabricacionReglaCantidadSchema,
     requerido: z.boolean(),
@@ -290,6 +291,7 @@ export const fabricacionRecetaSchema = z
     evidencia: fabricacionEvidenciaSchema.optional(),
     evidenciasExternas: z.array(fabricacionEvidenciaExternaSchema).optional(),
     alcanceCalculo: fabricacionAlcanceCalculoSchema.optional(),
+    permitirCalculoPreliminarConPendientes: z.boolean().optional(),
     datosPendientes: z.array(z.string().min(1)).optional(),
     notasValidacion: z.array(z.string()),
   })

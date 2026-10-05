@@ -2,6 +2,8 @@
 # La documentación interna y tooling de agentes siguen en git, pero no en el deploy.
 
 # --- Build caches y artefactos locales ---
+/.tmp/
+/tmp/
 .codex-*
 .jest-cache/
 .next/

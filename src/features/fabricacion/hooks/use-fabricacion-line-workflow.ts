@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import type { CotizacionLineTemplateMaterial } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import {
-  BIBLIOTECA_RECETAS_PRIORIZADAS,
+  getSuggestedRecipesForLine,
   type BibliotecaRecetaSugerida,
 } from "@/features/fabricacion/fixtures/biblioteca-recetas-sugeridas";
 import {
@@ -21,7 +21,6 @@ import {
 import { resolvePlantillaIdFromCatalogKey, shouldShowFabricationVariantGallery } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import { crearRecetaFabricacionVacia } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
-import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 import { enriquecerCodigosPerfilRecetaFabricacion } from "@/features/fabricacion/services/fabricacion-receta-codigos.service";
 import { enriquecerRecetaDesdeCatalogo } from "@/features/fabricacion/services/enriquecer-receta-desde-catalogo.service";
 import {
@@ -190,17 +189,8 @@ export function useFabricacionLineWorkflow({
     });
   }, [effectiveCatalogKey, lineRecipes, ventoraRecipes]);
   const suggestedRecipesForLine = useMemo(() => {
-    const normalizedLine = template?.nombre.trim().toLocaleLowerCase("es-CL");
-    const normalizedProvider = template?.proveedor?.trim().toLocaleLowerCase("es-CL");
-    if (!normalizedLine) return [];
-    return BIBLIOTECA_RECETAS_PRIORIZADAS.filter(
-      (entry) =>
-        entry.crearDefinicion &&
-        entry.linea.trim().toLocaleLowerCase("es-CL") === normalizedLine &&
-        (!normalizedProvider ||
-          entry.proveedor.trim().toLocaleLowerCase("es-CL") === normalizedProvider)
-    );
-  }, [template?.nombre, template?.proveedor]);
+    return getSuggestedRecipesForLine({ catalogKey: template?.catalogKey, lineName: template?.nombre, providerName: template?.proveedor });
+  }, [template?.catalogKey, template?.nombre, template?.proveedor]);
   const selected = recipes.find((recipe) => recipe.id === selectedId) ?? null;
   const selectedTests = selected ? tests[selected.id] ?? [] : [];
   const l20SiblingLineTemplateId = useMemo(
@@ -604,23 +594,6 @@ export function useFabricacionLineWorkflow({
         return;
       }
 
-      const draftToPersist =
-        view === "edit" &&
-        draft &&
-        selectedId === recipe.id &&
-        selected?.status !== "validated"
-          ? draft
-          : recipe.definition;
-      const recipeToTest = draftToPersist ?? recipe.definition;
-      const probarEvaluacion = evaluarRecetaListaParaProbar(recipeToTest);
-      const recipeSummary = buildFabricationRecipeSummary(recipeToTest);
-      if (!probarEvaluacion.listaParaProbar || !recipeSummary.compositionComplete) {
-        setFeedback(
-          probarEvaluacion.bloqueos[0] ??
-            "Completa la composición técnica antes de probar; no se generará una pauta mientras siga pendiente."
-        );
-        return;
-      }
       const draftToPersistSilent =
         view === "edit" &&
         draft &&
@@ -761,6 +734,12 @@ export function useFabricacionLineWorkflow({
   const handleUseSuggested = useCallback(
     async (entry: BibliotecaRecetaSugerida) => {
       if (!template || !entry.crearDefinicion) return;
+      const existing = entry.sourceReference && recipes.find((recipe) =>
+        recipe.lineTemplateId === lineTemplateId &&
+        recipe.sourceReference === entry.sourceReference &&
+        recipe.status !== "archived"
+      );
+      if (existing) { openEditor(existing); return; }
       const definition = entry.crearDefinicion();
       const created = await createRecipe({
         lineTemplateId,
@@ -770,12 +749,14 @@ export function useFabricacionLineWorkflow({
         leavesCount: definition.identidad.hojas,
         variant: definition.identidad.variante,
         definition,
-        sourceType: "copied",
-        sourceReference: entry.id,
+        sourceType: entry.sourceType ?? "copied",
+        sourceReference: entry.sourceReference ?? entry.id,
+        sourceName: entry.sourceType === "workshop" ? "Excel aportado por taller" : undefined,
+        sourceRevision: entry.sourceRevision,
       });
       openEditor(created);
     },
-    [createRecipe, lineTemplateId, openEditor, template]
+    [createRecipe, lineTemplateId, openEditor, recipes, template]
   );
 
   const handleNewVersion = useCallback(

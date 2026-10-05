@@ -1,9 +1,9 @@
 # Database Map - Ventora
 
-> Verificacion remota: 2026-09-14. Mientras `current_schema.sql` siga marcado como atrasado, la base remota verificada, las migraciones registradas y los addendums de este archivo prevalecen para cambios posteriores al ultimo dump.
+> Corte documental: el dump base `current_schema.sql` está registrado en Git el 2026-09-30 09:25 -0300. Hay una lectura remota focal de snapshots del 2026-09-30, pero no una reconciliación completa del esquema en esta sesión. La migración supplier V1 es posterior y solo está verificada en QA local.
 
-Fuente de verdad: base remota verificada y migraciones registradas; `current_schema.sql` es baseline historico hasta regenerarlo. Referencia complementaria: `database.types.ts`.
-Fecha de generación: 2026-05-30.
+Fuente por entorno: producción requiere introspección remota fechada + ledger remoto; repositorio usa este mapa, el dump base y migraciones; QA usa su esquema introspectado. `database.types.ts` es referencia complementaria, no prueba de migración aplicada.
+Fecha de generación original del mapa: 2026-05-30; addenda fechados por hallazgo.
 
 ## Addendum 2026-09-14 - P0 consistencia de recetas y Serie 42 normal
 
@@ -18,7 +18,7 @@ Fecha de generación: 2026-05-30.
 
 La base de datos soporta un SaaS multi-tenant para captación y cierre de leads en empresas de vidrios y aluminio. El modelo se organiza alrededor de `organizations` como raíz de aislamiento. Cada tabla operativa filtra por `organization_id`. Existe una capa de catálogos técnicos (legado del cotizador) y una capa comercial activa (solicitudes, cotizaciones, clientes). El soft delete está estandarizado con `eliminado_en`. La seguridad se basa en RLS + `get_org_id()`.
 
-**Total de tablas:** 26 versionadas por migraciones recientes. Este mapa tiene secciones completas para el core y addendums para tablas agregadas después del último dump completo.
+**Cobertura documental:** 26 tablas descritas en el mapa base y addenda posteriores. Conteo de la QA local 2026-09-30 después de supplier V1: 43 tablas públicas con RLS; no es un conteo de producción.
 **Total de vistas:** 1
 **Total de funciones documentadas en este mapa:** 5 core, mas funciones agregadas por migraciones posteriores al dump
 **Esquema:** `public` exclusivamente
@@ -1036,3 +1036,13 @@ auth.users (1) ──── (N) users
 - La migración `20260914162442_p2u_traditional_multivendor_lines.sql` agrega cuatro `catalog_key` canónicos y actualiza solo metadata de AM-35 (`ventora:l35`). No crea tablas ni columnas nuevas.
 - La metadata de línea distingue `lineFamilyType=traditional` y `lineSourceModel=multiprovider`; la receta persiste procedencia primaria como `manufacturer` o `supplier` y permanece `draft`, nunca `workshop_validated`.
 - Las inserciones son idempotentes por `organization_id + line_template_id + source_reference`, preservan precios, soft delete, `parent_recipe_id`, historia y `organization_id`. Precio `0` significa pendiente/configurable por el taller.
+
+## Addendum 2026-09-30 - Catálogos de proveedor V1 (QA local)
+
+El dump base `current_schema.sql` está registrado en Git en `7a69e267` (2026-09-30 09:25 -0300). Incluye `cotizaciones.fabricacion_trabajo_snapshot`, pero precede por varias horas a `20260930165551_supplier_catalogs_v1.sql`, por lo que no contiene el catálogo normalizado.
+
+En la base QA desechable se cargó ese dump y se ejecutaron directamente `20260930115723_cotizacion_trabajo_fabricacion_snapshot.sql` y `20260930165551_supplier_catalogs_v1.sql`. La inspección local encontró ocho tablas nuevas con RLS: 43 tablas públicas con RLS habilitado y 82 policies en total. PgTAP pasó 26/26. La instancia se basó en el dump y no tiene `supabase_migrations.schema_migrations`; no equivale a replay de migraciones ni confirma nada sobre producción. No se hicieron escrituras remotas, commits ni deploys.
+
+El contrato SQL contiene siete tablas globales (`catalogo_proveedores`, `catalogo_fuentes_tecnicas`, `catalogo_insumos_tecnicos`, `catalogo_insumo_familias`, `catalogo_presentaciones_proveedor`, `catalogo_listas_precios`, `catalogo_precios_presentacion`) y una tabla con costo técnico congelado por cotización + organización (`cotizacion_costos_tecnicos`). Fuente técnica y lista de precios tienen revisiones separadas; SKU/acabado/unidad/largo pertenecen a presentación; los precios pertenecen a una lista versionada. Las ocho tablas no tienen policies cliente, revocan privilegios a `anon`/`authenticated` y conceden CRUD solo a `service_role`.
+
+El fixture Veratec fue importado en QA local. El smoke de costo usó cortes sintéticos, por lo que no demuestra medidas/despiece de una receta ni habilitación productiva. Antes de producción falta reconciliar el ledger remoto, ejecutar la migración con autorización, importar los datos aprobados y completar smoke autenticado.

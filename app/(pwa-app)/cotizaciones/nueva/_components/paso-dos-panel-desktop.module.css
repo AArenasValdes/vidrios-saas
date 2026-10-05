@@ -2219,6 +2219,34 @@
   font-weight: 650;
 }
 
+.consolidatedPautaBars {
+  display: block;
+  margin-top: 0.45rem;
+  color: #193b68;
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.consolidatedPautaDetails {
+  border-top: 1px solid #edf0f4;
+  padding-top: 0.55rem;
+}
+
+.consolidatedPautaDetails > summary {
+  min-height: 2.4rem;
+  display: flex;
+  align-items: center;
+  color: #516178;
+  font-size: 0.76rem;
+  font-weight: 720;
+  cursor: pointer;
+}
+
+.consolidatedPautaDetails[open] > summary {
+  margin-bottom: 0.5rem;
+}
+
 .consolidatedPautaCopy {
   display: inline-flex;
   gap: 0.35rem;
@@ -2719,3 +2747,17 @@
   display: grid;
   gap: 0.15rem;
 }
+
+.financialCard {
+  border-color: #dce3ec;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.financialStatusChip { border-radius: 6px; color: #53647d; }
+.financialSummaryRow { border-bottom-color: #edf0f4; }
+.financialSummaryValue, .financialSummaryRowPrimary .financialSummaryValue { color: #173e70; }
+.financialRecommendedAction { border-top-color: #dce3ec; background: #f7f9fc; }
+.financialDetailToggleAccent { border-color: #cbd5e1; border-radius: 9px; background: #fff; color: #315982; }
+.financialDetailToggleAccent:hover, .financialDetailToggleAccent:focus-visible { border-color: #1e88ff; background: #f4f8fd; }

@@ -16,7 +16,10 @@ import {
   formatSodalL25ReinforcementLabel,
   formatSodalL25GlazingLabel,
 } from "@/features/fabricacion/services/sodal-l25-presentation.service";
-import { isQuoteItemFabricationReviewEligible } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import {
+  isQuoteItemFabricationReviewEligible,
+  resolveFabricacionDespieceForQuoteItem,
+} from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 function isWorkflowItemCommerciallyIncomplete(item: CotizacionWorkflowItem) {
@@ -131,6 +134,13 @@ export function resolveMobileComponentFabricacionSummary(
     recipes: options?.recipes,
     organizationId: options?.organizationId,
   }).items[0];
+  const liveResolution = options?.recipes && options.organizationId != null
+    ? resolveFabricacionDespieceForQuoteItem({
+        item,
+        recipes: options.recipes,
+        organizationId: options.organizationId,
+      })
+    : null;
 
   const hasSnapshot = Boolean(item.fabricacionSnapshot || quoteRow);
   const glazing =
@@ -181,6 +191,20 @@ export function resolveMobileComponentFabricacionSummary(
         }
       : null,
   ].filter((row): row is { label: string; value: string } => Boolean(row));
+
+  if (showReviewUi && liveResolution?.geometryOnly) {
+    return {
+      status: "preliminary",
+      statusLabel: "Geometría preliminar",
+      showReviewUi,
+      contextualLineLabel,
+      technicalBrief,
+      canOpenPauta: true,
+      canOpenDespiece: true,
+      configRows,
+      materialRows: [],
+    };
+  }
 
   const materialRows: Array<{ label: string; value: string }> = quoteRow
     ? [

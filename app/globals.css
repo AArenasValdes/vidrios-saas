@@ -212,3 +212,6 @@ body[data-activation-route="true"] [aria-label="Open Next.js Dev Tools"],
 body[data-activation-route="true"] nextjs-portal {
   display: none !important;
 }
+body.mis-precios-sheet-open {
+  overflow: hidden;
+}

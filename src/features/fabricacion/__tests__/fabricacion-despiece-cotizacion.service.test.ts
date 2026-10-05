@@ -43,7 +43,19 @@ import {
   crearRecetaWinHouseNewS75,
   WINHOUSE_NEW_S75_VARIANTS,
 } from "@/features/fabricacion/fixtures/winhouse-new-s75-recipes";
+import {
+  crearRecetaVeratec7400Corredera,
+  VERATEC_7400_CATALOG_KEY,
+  VERATEC_7400_SOURCE_REVISION,
+  VERATEC_7400_SOURCE_REFERENCE_MONOLITICO_4MM,
+  VERATEC_7400_SOURCE_REFERENCE_TERMOPANEL_20MM,
+  VERATEC_7400_SOURCE_REFERENCE_TERMOPANEL_24MM,
+  VERATEC_7400_VARIANT_MONOLITICO_4MM,
+  VERATEC_7400_VARIANT_TERMOPANEL_20MM,
+  VERATEC_7400_VARIANT_TERMOPANEL_24MM,
+} from "@/features/fabricacion/fixtures/veratec-7400-corredera-recipe";
 import { resolveMobileComponentFabricacionSummary } from "@/features/fabricacion/services/mobile-component-fabricacion-summary.service";
+import { construirFabricacionTrabajoSnapshot } from "@/features/fabricacion/services/fabricacion-trabajo-snapshot.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 
@@ -91,17 +103,21 @@ function quoteItem(input: {
   lineTemplateId?: string;
   cantidad?: number;
   withLine?: boolean;
+  id?: string;
+  codigo?: string;
+  ancho?: number;
+  alto?: number;
 }): CotizacionWorkflowItem {
   return {
-    id: "item-1",
-    codigo: "V1",
+    id: input.id ?? "item-1",
+    codigo: input.codigo ?? "V1",
     tipo: "Ventana",
     lineaComercial: "L5000",
     vidrio: "4mm",
     nombre: "Ventana corredera",
     descripcion: "2 hojas",
-    ancho: 1200,
-    alto: 1000,
+    ancho: input.ancho ?? 1200,
+    alto: input.alto ?? 1000,
     cantidad: input.cantidad ?? 1,
     unidad: "unidad",
     areaM2: 1.2,
@@ -195,6 +211,567 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
     expect(resolved.formal).toBeNull();
     expect(resolved.cubication).toBeNull();
     expect(resolved.message).toMatch(/no configurada/i);
+  });
+
+  it("resuelve Veratec mono 4 mm por vidrio elegido y congela recipeId explícito", () => {
+    const variants = [
+      [
+        VERATEC_7400_VARIANT_MONOLITICO_4MM,
+        VERATEC_7400_SOURCE_REFERENCE_MONOLITICO_4MM,
+      ],
+      [
+        VERATEC_7400_VARIANT_TERMOPANEL_20MM,
+        VERATEC_7400_SOURCE_REFERENCE_TERMOPANEL_20MM,
+      ],
+      [
+        VERATEC_7400_VARIANT_TERMOPANEL_24MM,
+        VERATEC_7400_SOURCE_REFERENCE_TERMOPANEL_24MM,
+      ],
+    ] as const;
+    let componentSequence = 0;
+    const recipes = variants.map(([variant, sourceReference]) => {
+      const definition = crearRecetaVeratec7400Corredera({
+        lineName: "Veratec 7400",
+        variant,
+        createId: () => `definition-${variant}-${componentSequence++}`,
+      });
+      return recipeRecord({
+        id: `recipe-${variant}`,
+        organizationId: 1,
+        lineTemplateId: 1396,
+        providerName: "VERATEC",
+        lineName: "Veratec 7400",
+        typology: "corredera",
+        leavesCount: 2,
+        variant,
+        status: "draft",
+        definition,
+        sourceType: "manufacturer",
+        sourceName: "VERATEC",
+        sourceReference,
+        sourceRevision: VERATEC_7400_SOURCE_REVISION,
+      });
+    });
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "1396" }),
+      lineaComercial: "Veratec 7400",
+      vidrio: "Incoloro monolítico 4 mm",
+      ancho: 1200,
+      alto: 1500,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "1396",
+        catalogLineKey: VERATEC_7400_CATALOG_KEY,
+        sistema: "Corredera",
+        sheetScheme: "2 hojas",
+        sheetVariant: "2 móviles",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 2,
+        fabricacionModulos: 2,
+      }),
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes,
+      organizationId: 1,
+      supplierFamilyKey: "veratec:sliding-7400",
+    });
+
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.recipe?.id).toBe(`recipe-${VERATEC_7400_VARIANT_MONOLITICO_4MM}`);
+    expect(resolved.formal?.recipeId).toBe(`recipe-${VERATEC_7400_VARIANT_MONOLITICO_4MM}`);
+    expect(resolved.formal?.selectedVariant).toBe(VERATEC_7400_VARIANT_MONOLITICO_4MM);
+    expect(resolved.formal?.result.calculable).toBe(true);
+    expect(resolved.formal?.result.perfiles).toHaveLength(12);
+    expect(resolved.formal?.result.perfiles.find((profile) => profile.codigoPerfil === "6306"))
+      .toMatchObject({ medidaMm: 452, cantidadPiezas: 4 });
+    expect(resolved.formal?.result.vidrios[0]).toMatchObject({
+      anchoMm: 442,
+      altoMm: 1323,
+      cantidadPiezas: 2,
+    });
+    expect(resolved.formal?.pautaBarras?.barras.length).toBeGreaterThan(0);
+    expect(resolved.formal?.recipeStatus).toBe("draft");
+    expect(resolved.formal?.supplierFamilyKey).toBe("veratec:sliding-7400");
+
+    const withoutExplicitGlazing = resolveFabricacionDespieceForQuoteItem({
+      item: { ...item, vidrio: "" },
+      recipes,
+      organizationId: 1,
+    });
+    expect(withoutExplicitGlazing.estado).toBe("multiples_recetas");
+    expect(withoutExplicitGlazing.recipe).toBeNull();
+  });
+
+  it("Veratec 7400 1000×1000: una cantidad 2 y dos partidas separadas terminan en la misma pauta conjunta", () => {
+    const definition = crearRecetaVeratec7400Corredera({
+      lineName: "Veratec 7400",
+      variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+      createId: (() => { let id = 0; return () => `shared-packing-${id++}`; })(),
+    });
+    const recipe = recipeRecord({
+      id: "recipe-veratec-7400-real-1000",
+      organizationId: 1,
+      lineTemplateId: 1396,
+      providerName: "VERATEC",
+      lineName: "Veratec 7400",
+      typology: "corredera",
+      leavesCount: 2,
+      variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+      status: "draft",
+      definition,
+      sourceType: "manufacturer",
+      sourceName: "VERATEC",
+      sourceReference: VERATEC_7400_SOURCE_REFERENCE_MONOLITICO_4MM,
+      sourceRevision: VERATEC_7400_SOURCE_REVISION,
+    });
+    const resolveItem = (input: { id: string; codigo: string; cantidad: number }) => {
+      const item: CotizacionWorkflowItem = {
+        ...quoteItem({ lineTemplateId: "1396", ancho: 1000, alto: 1000, ...input }),
+        lineaComercial: "Veratec 7400",
+        vidrio: "Incoloro monolítico 4 mm",
+        observaciones: encodeCotizacionItemPresentationMeta({
+          lineTemplateId: "1396",
+          catalogLineKey: VERATEC_7400_CATALOG_KEY,
+          colorHex: "#ffffff",
+          sistema: "Corredera",
+          fabricacionTipologia: "corredera",
+          fabricacionHojas: 2,
+          fabricacionModulos: 2,
+        }),
+      };
+      const result = resolveFabricacionDespieceForQuoteItem({ item, recipes: [recipe], organizationId: 1 });
+      expect(result.estado).toBe("calculado");
+      expect(result.formal?.recipeId).toBe(recipe.id);
+      return { item, result };
+    };
+    const asWorkItem = (resolved: ReturnType<typeof resolveItem>) => ({
+      id: resolved.item.id,
+      codigo: resolved.item.codigo,
+      nombre: resolved.item.nombre,
+      lineaComercial: resolved.item.lineaComercial,
+      colorHex: "#ffffff",
+      catalogLineKey: VERATEC_7400_CATALOG_KEY,
+      snapshot: resolved.result.formal,
+    });
+
+    const oneWindow = resolveItem({ id: "item-v1", codigo: "V1", cantidad: 1 });
+    const twoWindowsOneItem = resolveItem({ id: "item-v1", codigo: "V1", cantidad: 2 });
+    const twoSeparateWindows = [
+      oneWindow,
+      resolveItem({ id: "item-v2", codigo: "V2", cantidad: 1 }),
+    ];
+    const perWindowCuts = oneWindow.result.formal!.pautaBarras!.barras.flatMap((bar) => bar.cortes);
+    const quantityTwoGlobal = construirFabricacionTrabajoSnapshot({ items: [asWorkItem(twoWindowsOneItem)] });
+    const separateItemsGlobal = construirFabricacionTrabajoSnapshot({ items: twoSeparateWindows.map(asWorkItem) });
+    const packingSignature = (bars: NonNullable<typeof separateItemsGlobal>["bars"] | undefined) => bars?.map((bar) => ({
+      materialKey: bar.materialKey,
+      presentationKey: bar.presentationKey,
+      codigoPerfil: bar.codigoPerfil,
+      acabadoKey: bar.acabadoKey,
+      largoComercialMm: bar.largoComercialMm,
+      indice: bar.indice,
+      usadoMm: bar.usadoMm,
+      sobranteMm: bar.sobranteMm,
+      cortes: bar.cortes.map((cut) => `${cut.codigoPerfil}:${cut.funcion}:${cut.largoMm}`).sort(),
+    })).sort((left, right) => left.materialKey.localeCompare(right.materialKey) || left.indice - right.indice);
+
+    expect(oneWindow.result.formal?.result.perfiles.reduce((sum, row) => sum + row.cantidadPiezas, 0)).toBe(40);
+    expect(oneWindow.result.formal?.result.totalLinealMm).toBe(28816);
+    expect(oneWindow.result.formal?.pautaBarras?.barras).toHaveLength(7);
+    expect(perWindowCuts).toHaveLength(40);
+    expect(quantityTwoGlobal?.itemCountWithPauta).toBe(1);
+    expect(quantityTwoGlobal).toMatchObject({ totalBars: 13, totalProfilesLinealMm: 57632, totalWasteMm: 17768 });
+    expect(quantityTwoGlobal?.totalBars).toBe(separateItemsGlobal?.totalBars);
+    expect(packingSignature(quantityTwoGlobal?.bars)).toEqual(packingSignature(separateItemsGlobal?.bars));
+    expect(separateItemsGlobal?.bars.some((bar) => {
+      const origins = new Set(bar.cortes.map((cut) => cut.codigoItem));
+      return origins.has("V1") && origins.has("V2");
+    })).toBe(true);
+    expect(separateItemsGlobal?.bars.flatMap((bar) => bar.cortes).map((cut) => cut.itemId)).toEqual(
+      expect.arrayContaining(["item-v1", "item-v2"])
+    );
+  });
+
+  it.each([3, 5, 6, 8, 10, 12])(
+    "mantiene geometría de perfiles para monolítico %s mm y deja vidrio/junquillo/costo pendientes",
+    (thicknessMm) => {
+    const definition = crearRecetaVeratec7400Corredera({
+      lineName: "Veratec 7400",
+      variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+      createId: (() => {
+        let id = 0;
+        return () => `veratec-characterization-${id++}`;
+      })(),
+    });
+    const recipe = recipeRecord({
+      id: "recipe-veratec-characterization",
+      organizationId: 3,
+      lineTemplateId: 1396,
+      providerName: "VERATEC",
+      lineName: "Veratec 7400",
+      typology: "corredera",
+      leavesCount: 2,
+      variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+      status: "draft",
+      definition,
+      sourceType: "manufacturer",
+      sourceName: "VERATEC",
+      sourceReference: VERATEC_7400_SOURCE_REFERENCE_MONOLITICO_4MM,
+      sourceRevision: VERATEC_7400_SOURCE_REVISION,
+    });
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "1396" }),
+      lineaComercial: "Veratec 7400",
+      vidrio: `Monolítico ${thicknessMm} mm`,
+      ancho: 1200,
+      alto: 1500,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "1396",
+        catalogLineKey: VERATEC_7400_CATALOG_KEY,
+        sistema: "Corredera",
+        sheetScheme: "2 hojas",
+        sheetVariant: "2 móviles",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 2,
+        fabricacionModulos: 2,
+      }),
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [recipe],
+      organizationId: 3,
+    });
+
+    expect(resolved.estado).toBe("receta_incompleta");
+    expect(resolved.formal).toBeNull();
+    expect(resolved.recipe).toBeNull();
+    expect(resolved.cubication?.cuts.length).toBeGreaterThan(0);
+    expect(resolved.cubication?.cuts.some((cut) => /junquillo/i.test(cut.functionLabel))).toBe(false);
+    expect(resolved.cubication?.glass).toBeNull();
+    expect(resolved.geometryOnly).toMatchObject({
+      sourceRecipeId: "recipe-veratec-characterization",
+      sourceVariant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+      pendingCommercial: ["glass", "glass_bead", "price"],
+      commercialMaterials: [
+        { role: "glass", label: `Monolítico ${thicknessMm} mm`, status: "unmapped", netPrice: null },
+        { role: "glass_bead", status: "unmapped", netPrice: null },
+        { role: "price", status: "missing", netPrice: null },
+      ],
+    });
+    expect(resolved.geometryOnly?.profiles.length).toBe(resolved.cubication?.cuts.length);
+    expect(resolved.geometryOnly?.bars.barras.length).toBeGreaterThan(0);
+    expect(resolved.message).toMatch(/no crea un snapshot formal/i);
+
+    }
+  );
+
+  it.each([
+    "Termopanel 20 mm",
+    "DVH 24 mm",
+    "DVH 4+12+4",
+    "DVH 4+16+4",
+    "DVH 4+10+5",
+  ])(
+    "calcula solo geometría preliminar para %s sin buscar ni formalizar receta",
+    (glass) => {
+      const definition = crearRecetaVeratec7400Corredera({
+        lineName: "Veratec 7400",
+        variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+        createId: (() => { let id = 0; return () => `veratec-tp-${id++}`; })(),
+      });
+      const recipe = recipeRecord({
+        id: "recipe-veratec-tp-geometry-source",
+        organizationId: 3,
+        lineTemplateId: 1396,
+        providerName: "VERATEC",
+        lineName: "Veratec 7400",
+        typology: "corredera",
+        leavesCount: 2,
+        variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+        status: "draft",
+        definition,
+        sourceType: "manufacturer",
+        sourceName: "VERATEC",
+        sourceReference: VERATEC_7400_SOURCE_REFERENCE_MONOLITICO_4MM,
+        sourceRevision: VERATEC_7400_SOURCE_REVISION,
+      });
+      const item: CotizacionWorkflowItem = {
+        ...quoteItem({ lineTemplateId: "1396", ancho: 1200, alto: 1500 }),
+        lineaComercial: "Veratec 7400",
+        vidrio: glass,
+        observaciones: encodeCotizacionItemPresentationMeta({
+          lineTemplateId: "1396",
+          catalogLineKey: VERATEC_7400_CATALOG_KEY,
+          sistema: "Corredera",
+          sheetScheme: "2 hojas",
+          sheetVariant: "2 móviles",
+          fabricacionTipologia: "corredera",
+          fabricacionHojas: 2,
+          fabricacionModulos: 2,
+        }),
+      };
+
+      const resolved = resolveFabricacionDespieceForQuoteItem({
+        item,
+        recipes: [
+          recipe,
+          recipeRecord({
+            ...recipe,
+            id: "recipe-veratec-tp20-must-not-be-selected",
+            variant: VERATEC_7400_VARIANT_TERMOPANEL_20MM,
+            definition: crearRecetaVeratec7400Corredera({
+              lineName: "Veratec 7400",
+              variant: VERATEC_7400_VARIANT_TERMOPANEL_20MM,
+              createId: () => "veratec-tp20-must-not-be-selected",
+            }),
+            sourceReference: VERATEC_7400_SOURCE_REFERENCE_TERMOPANEL_20MM,
+          }),
+          recipeRecord({
+            ...recipe,
+            id: "recipe-veratec-tp24-must-not-be-selected",
+            variant: VERATEC_7400_VARIANT_TERMOPANEL_24MM,
+            definition: crearRecetaVeratec7400Corredera({
+              lineName: "Veratec 7400",
+              variant: VERATEC_7400_VARIANT_TERMOPANEL_24MM,
+              createId: () => "veratec-tp24-must-not-be-selected",
+            }),
+            sourceReference: VERATEC_7400_SOURCE_REFERENCE_TERMOPANEL_24MM,
+          }),
+        ],
+        organizationId: 3,
+      });
+
+      expect(resolved.estado).toBe("receta_incompleta");
+      expect(resolved.formal).toBeNull();
+      expect(resolved.recipe).toBeNull();
+      expect(resolved.cubication?.cuts.length).toBeGreaterThan(0);
+      expect(resolved.cubication?.cuts.some((cut) => /junquillo/i.test(cut.functionLabel))).toBe(false);
+      expect(resolved.cubication?.glass).toBeNull();
+      expect(resolved.geometryOnly).toMatchObject({
+        sourceRecipeId: recipe.id,
+        sourceVariant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+        pendingCommercial: ["glass", "glass_bead", "price"],
+        commercialMaterials: [
+          { role: "glass", status: "unmapped", netPrice: null },
+          { role: "glass_bead", status: "unmapped", netPrice: null },
+          { role: "price", status: "missing", netPrice: null },
+        ],
+      });
+      expect(resolved.geometryOnly?.bars.barras.length).toBeGreaterThan(0);
+      expect(resolved.message).toMatch(/no crea un snapshot formal/i);
+    }
+  );
+
+  it("resuelve TP20 como geometría preliminar cuando 2 hojas no trae variante explícita", () => {
+    let nextProfileId = 0;
+    const definition = crearRecetaVeratec7400Corredera({
+      lineName: "Veratec 7400",
+      variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+      createId: () => `veratec-tp20-unspecified-variant-source-${nextProfileId++}`,
+    });
+    const recipe = recipeRecord({
+      id: "recipe-veratec-tp20-unspecified-variant-source",
+      organizationId: 3,
+      lineTemplateId: 1396,
+      providerName: "VERATEC",
+      lineName: "Veratec 7400",
+      typology: "corredera",
+      leavesCount: 2,
+      variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+      status: "draft",
+      definition,
+      sourceType: "manufacturer",
+      sourceName: "VERATEC",
+      sourceReference: VERATEC_7400_SOURCE_REFERENCE_MONOLITICO_4MM,
+      sourceRevision: VERATEC_7400_SOURCE_REVISION,
+    });
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "1396", ancho: 1200, alto: 1500 }),
+      lineaComercial: "Veratec 7400",
+      vidrio: "DVH 4+12+4",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "1396",
+        catalogLineKey: VERATEC_7400_CATALOG_KEY,
+        sistema: "Corredera",
+        sheetScheme: "2 hojas",
+        sheetVariant: "",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 2,
+      }),
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [recipe],
+      organizationId: 3,
+    });
+
+    expect(resolved.estado).toBe("receta_incompleta");
+    expect(resolved.geometryOnly).toMatchObject({
+      pendingCommercial: ["glass", "glass_bead", "price"],
+      commercialMaterials: [
+        { role: "glass", status: "unmapped", netPrice: null },
+        { role: "glass_bead", status: "unmapped", netPrice: null },
+        { role: "price", status: "missing", netPrice: null },
+      ],
+    });
+    expect(resolved.cubication?.cuts.length).toBeGreaterThan(0);
+    expect(resolved.formal).toBeNull();
+    expect(resolved.recipe).toBeNull();
+  });
+
+  it("no habilita geometría preliminar Veratec fuera de 2 hojas y 2 módulos", () => {
+    const definition = crearRecetaVeratec7400Corredera({
+      lineName: "Veratec 7400",
+      variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+      createId: () => "veratec-geometry-source",
+    });
+    const recipe = recipeRecord({
+      id: "recipe-veratec-2h-source",
+      organizationId: 3,
+      lineTemplateId: 1396,
+      providerName: "VERATEC",
+      lineName: "Veratec 7400",
+      typology: "corredera",
+      leavesCount: 2,
+      variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+      status: "draft",
+      definition,
+      sourceType: "manufacturer",
+      sourceName: "VERATEC",
+      sourceReference: VERATEC_7400_SOURCE_REFERENCE_MONOLITICO_4MM,
+      sourceRevision: VERATEC_7400_SOURCE_REVISION,
+    });
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "1396" }),
+      lineaComercial: "Veratec 7400",
+      vidrio: "Monolítico 5 mm",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "1396",
+        catalogLineKey: VERATEC_7400_CATALOG_KEY,
+        sistema: "Corredera",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 3,
+        fabricacionModulos: 3,
+      }),
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [recipe],
+      organizationId: 3,
+    });
+
+    expect(resolved.geometryOnly).toBeFalsy();
+    expect(resolved.formal).toBeNull();
+    expect(resolved.cubication).toBeNull();
+  });
+
+  it.each(["1 fija + 1 móvil"])(
+    "no aplica la geometría Veratec 2 móviles cuando se elige una composición distinta (%s)",
+    (sheetVariant) => {
+      const definition = crearRecetaVeratec7400Corredera({
+        lineName: "Veratec 7400",
+        variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+        createId: () => "veratec-geometry-source-explicit-composition",
+      });
+      const recipe = recipeRecord({
+        id: "recipe-veratec-explicit-composition-source",
+        organizationId: 3,
+        lineTemplateId: 1396,
+        providerName: "VERATEC",
+        lineName: "Veratec 7400",
+        typology: "corredera",
+        leavesCount: 2,
+        variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+        status: "draft",
+        definition,
+        sourceType: "manufacturer",
+        sourceName: "VERATEC",
+        sourceReference: VERATEC_7400_SOURCE_REFERENCE_MONOLITICO_4MM,
+        sourceRevision: VERATEC_7400_SOURCE_REVISION,
+      });
+      const item: CotizacionWorkflowItem = {
+        ...quoteItem({ lineTemplateId: "1396" }),
+        lineaComercial: "Veratec 7400",
+        vidrio: "DVH 4+12+4",
+        observaciones: encodeCotizacionItemPresentationMeta({
+          lineTemplateId: "1396",
+          catalogLineKey: VERATEC_7400_CATALOG_KEY,
+          sistema: "Corredera",
+          sheetScheme: "2 hojas",
+          sheetVariant,
+          fabricacionTipologia: "corredera",
+          fabricacionHojas: 2,
+          fabricacionModulos: 2,
+        }),
+      };
+
+      const resolved = resolveFabricacionDespieceForQuoteItem({
+        item,
+        recipes: [recipe],
+        organizationId: 3,
+      });
+
+      expect(resolved.geometryOnly).toBeFalsy();
+      expect(resolved.formal).toBeNull();
+      expect(resolved.cubication).toBeNull();
+    }
+  );
+
+  it("permite abrir y resume la geometría preliminar Veratec sin formalizarla", () => {
+    const definition = crearRecetaVeratec7400Corredera({
+      lineName: "Veratec 7400",
+      variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+      createId: (() => { let id = 0; return () => `veratec-geometry-source-preview-${id++}`; })(),
+    });
+    const recipe = recipeRecord({
+      id: "recipe-veratec-preview-source",
+      organizationId: 3,
+      lineTemplateId: 1396,
+      providerName: "VERATEC",
+      lineName: "Veratec 7400",
+      typology: "corredera",
+      leavesCount: 2,
+      variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+      status: "draft",
+      definition,
+      sourceType: "manufacturer",
+      sourceName: "VERATEC",
+      sourceReference: VERATEC_7400_SOURCE_REFERENCE_MONOLITICO_4MM,
+      sourceRevision: VERATEC_7400_SOURCE_REVISION,
+    });
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "1396" }),
+      lineaComercial: "Veratec 7400",
+      vidrio: "DVH 4+12+4",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "1396",
+        catalogLineKey: VERATEC_7400_CATALOG_KEY,
+        sistema: "Corredera",
+        sheetScheme: "2 hojas",
+        sheetVariant: "2 móviles",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 2,
+        fabricacionModulos: 2,
+      }),
+    };
+    const input = { item, recipes: [recipe], organizationId: 3 };
+
+    expect(canOpenDespiecePreviewForQuoteItem(input)).toBe(true);
+    expect(resolveMobileComponentFabricacionSummary(item, {
+      recipes: [recipe],
+      organizationId: 3,
+    })).toMatchObject({
+      status: "preliminary",
+      statusLabel: "Geometría preliminar",
+      canOpenDespiece: true,
+      canOpenPauta: true,
+    });
+    const resolved = resolveFabricacionDespieceForQuoteItem(input);
+    expect(resolved.formal).toBeNull();
   });
 
   it("does not reuse a compatible line recipe for a structurally changed quick composition", () => {

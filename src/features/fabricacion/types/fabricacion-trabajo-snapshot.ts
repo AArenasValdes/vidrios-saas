@@ -9,7 +9,23 @@ export type FabricacionTrabajoItemInput = {
   lineaComercial: string;
   colorHex?: string | null;
   catalogLineKey?: string | null;
+  supplierFamilyKey?: string | null;
+  /** Resuelta explícitamente desde presentaciones confirmadas del catálogo. */
+  supplierPresentationSelections?: FabricacionTrabajoPresentationSelection[];
+  /** Si el catálogo aplica a esta línea, una resolución ausente nunca usa el largo de receta. */
+  requireSupplierPresentation?: boolean;
   snapshot: FabricacionCotizacionSnapshot | null;
+};
+export type FabricacionTrabajoPresentationSelection = {
+  technicalCode: string;
+  status: "resolved" | "missing" | "ambiguous";
+  presentationId: string | null;
+  providerKey: string | null;
+  supplierSku: string | null;
+  finishCode: string | null;
+  finishName: string | null;
+  commercialLengthMm: number | null;
+  reason?: string;
 };
 export type FabricacionTrabajoCorte = {
   itemId: string;
@@ -20,6 +36,9 @@ export type FabricacionTrabajoCorte = {
   funcion: string;
   corte: string | null;
   largoMm: number;
+  supplierPresentationId?: string | null;
+  supplierProviderKey?: string | null;
+  supplierSku?: string | null;
 };
 
 export type FabricacionTrabajoBarra = {
@@ -30,6 +49,11 @@ export type FabricacionTrabajoBarra = {
   acabadoKey: string;
   lineaIds: Array<number | null>;
   largoComercialMm: number;
+  supplierPresentationId?: string | null;
+  supplierProviderKey?: string | null;
+  supplierSku?: string | null;
+  supplierFinishCode?: string | null;
+  supplierFinishName?: string | null;
   indice: number;
   despunteInicialMm: number;
   perdidaCorteMm: number;
@@ -56,6 +80,33 @@ export type FabricacionTrabajoSnapshot = {
     catalogLineKey: string | null;
     finishKey: string;
     commercialLengthMm: number;
+    supplierPresentationId?: string | null;
+    providerKey?: string | null;
+    supplierSku?: string | null;
+    finishCode?: string | null;
+    finishName?: string | null;
   }>;
+  /** Insumos de catálogo requeridos pero sin presentación/largo inequívocos. */
+  missingPresentations?: Array<{
+    itemId: string;
+    technicalCode: string;
+    finishKey: string;
+    reason: string;
+    supplierSku?: string | null;
+  }>;
+  /** Identidad y procedencia de recetas no validadas habilitadas solo para QA. */
+  qaPreliminary?: {
+    mode: "supplier_catalog_v1_qa_preliminary";
+    items: Array<{
+      itemId: string;
+      recipeId: string;
+      recipeVersion: number;
+      variantKey: string;
+      recipeStatus: "draft";
+      readiness: "lista_para_validar";
+      sourceType: import("@/features/fabricacion/types/fabricacion-persistence").FabricationRecipeSourceType;
+      sourceReference: string | null;
+    }>;
+  };
   bars: FabricacionTrabajoBarra[];
 };

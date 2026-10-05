@@ -9,6 +9,7 @@ import { isFabricacionRecipeReadyForSnapshot } from "@/features/fabricacion/serv
 import { resolveFabricacionHojasForRecipeMatch } from "@/features/fabricacion/services/fabricacion-hojas-resolver.service";
 import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
+import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
 import { resolveFabricationRecipe } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 import { isSodalL25FormulaDerivedRecipe } from "@/features/fabricacion/services/fabricacion-evidence-gate.service";
@@ -24,6 +25,7 @@ import {
 import { resolveEffectiveSodalL25CatalogKey } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import { tieneLargosComercialesPendientes } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
 import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
+import { enriquecerCodigosPerfilRecetaFabricacion } from "@/features/fabricacion/services/fabricacion-receta-codigos.service";
 import {
   resolveWinHouseS60QuoteAperture,
   resolveWinHouseS60QuoteTypology,
@@ -35,6 +37,11 @@ import {
   crearRecetaWinHouseNewS75,
   WINHOUSE_NEW_S75_SOURCE_REVISION,
 } from "@/features/fabricacion/fixtures/winhouse-new-s75-recipes";
+import {
+  VERATEC_7400_CATALOG_KEY,
+  VERATEC_7400_VARIANT_MONOLITICO_4MM,
+  VERATEC_7400_SOURCE_REFERENCE_MONOLITICO_4MM,
+} from "@/features/fabricacion/fixtures/veratec-7400-corredera-recipe";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
@@ -59,6 +66,20 @@ export type FabricacionDespieceCotizacionResult = {
   barsAvailable: boolean;
   preliminary: boolean;
   message: string | null;
+  /** Geometría de perfiles disponible aunque el vidrio/accesorio comercial no tenga mapeo. No es snapshot formal. */
+  geometryOnly?: {
+    sourceRecipeId: string;
+    sourceVariant: string;
+    profiles: FabricacionCotizacionSnapshot["result"]["perfiles"];
+    bars: NonNullable<FabricacionCotizacionSnapshot["pautaBarras"]>;
+    pendingCommercial: Array<"glass" | "glass_bead" | "price">;
+    commercialMaterials: Array<{
+      role: "glass" | "glass_bead" | "price";
+      label: string;
+      status: "unmapped" | "missing";
+      netPrice: null;
+    }>;
+  } | null;
 };
 
 /**
@@ -206,6 +227,8 @@ export function resolveFabricacionDespieceForQuoteItem(input: {
   lineTemplateId?: string | number | null;
   /** Fallback del template seleccionado para drafts que preceden a catalogLineKey. */
   lineCatalogKey?: string | null;
+  /** Familia explícita del catálogo; permite resolver presentaciones del mismo sistema. */
+  supplierFamilyKey?: string | null;
 }): FabricacionDespieceCotizacionResult {
   const presentation = decodeCotizacionItemPresentationMeta(input.item.observaciones);
   if (
@@ -234,6 +257,7 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   organizationId: number | null;
   lineTemplateId?: string | number | null;
   lineCatalogKey?: string | null;
+  supplierFamilyKey?: string | null;
 }): FabricacionDespieceCotizacionResult {
   const presentation = decodeCotizacionItemPresentationMeta(input.item.observaciones);
   const lineTemplateId =
@@ -429,8 +453,40 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     leg: sodalConfig?.leg ?? null,
     reinforcement: sodalConfig?.reinforcement ?? null,
     preferredRecipeId: presentation.fabricationRecipeId || null,
+    glassName: input.item.vidrio || null,
     previewListaParaProbar: true,
   };
+  const veratecDefaultTwoMobileComposition =
+    presentation.sheetScheme.trim().toLowerCase() === "2 hojas" &&
+    (!presentation.sheetVariant.trim() ||
+      presentation.sheetVariant.trim().toLowerCase() === "2 móviles") &&
+    (presentation.fabricacionModulos == null || presentation.fabricacionModulos === 2);
+  const veratecGeometryOnlyGlass =
+    catalogKey === VERATEC_7400_CATALOG_KEY &&
+    tipologia === "corredera" &&
+    hojas === 2 &&
+    veratecDefaultTwoMobileComposition
+      ? resolveVeratecGeometryOnlyGlass(input.item.vidrio)
+      : null;
+
+  // TP20/TP24 tienen contradicciones de receta todavía abiertas. Este flujo entrega
+  // solo geometría estructural; no selecciona recetas ni hereda mappings comerciales.
+  if (veratecGeometryOnlyGlass) {
+    const fallback = buildVeratecGeometryOnlyFallback({
+      recipes: input.recipes,
+      organizationId: input.organizationId,
+      lineTemplateId,
+      item: input.item,
+      ancho,
+      alto,
+      cantidad,
+      presentation,
+      glassLabel: input.item.vidrio?.trim() || "Vidrio por definir",
+      glazingConfiguration: veratecGeometryOnlyGlass,
+    });
+    if (fallback) return fallback;
+  }
+
   const canPreviewWinHouseDraft = (recipe: FabricationRecipeRecord) =>
     (s60Config.handled || s75Config.handled) &&
     recipe.status !== "validated" &&
@@ -443,6 +499,13 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
       modulos: recipe.definition.identidad.modulos,
       variante: recipe.definition.identidad.variante,
     }).calculable;
+  const canPreviewVeratecDraft = (recipe: FabricationRecipeRecord) =>
+    catalogKey === VERATEC_7400_CATALOG_KEY &&
+    recipe.status !== "validated" &&
+    recipe.variant === VERATEC_7400_VARIANT_MONOLITICO_4MM &&
+    evaluarRecetaListaParaProbar(recipe.definition).listaParaProbar;
+  const canPreviewPreliminaryRecipe = (recipe: FabricationRecipeRecord) =>
+    canPreviewWinHouseDraft(recipe) || canPreviewVeratecDraft(recipe);
 
   let recipesForResolution = input.recipes;
   if (s75Config.variant) {
@@ -513,7 +576,7 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     if (
       !preview.listaParaProbar &&
       !bypassRecipeMetadataGate &&
-      !canPreviewWinHouseDraft(recipe)
+      !canPreviewPreliminaryRecipe(recipe)
     ) {
       return {
         estado: "receta_incompleta",
@@ -530,7 +593,7 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   }
 
   const readiness = isFabricacionRecipeReadyForSnapshot(recipe);
-  if (!readiness.ready && !canPreviewWinHouseDraft(recipe)) {
+  if (!readiness.ready && !canPreviewPreliminaryRecipe(recipe)) {
     return {
       estado: "receta_incompleta",
       formal: null,
@@ -546,6 +609,7 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
 
   const formal = construirSnapshotFabricacionCotizacion({
     recipe,
+    supplierFamilyKey: input.supplierFamilyKey,
     entrada: {
       anchoTotalMm: ancho,
       anchoHojaAMm: presentation.fabricacionAnchoHojaAMm,
@@ -582,6 +646,177 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   };
 }
 
+type VeratecGeometryOnlyGlass = {
+  kind: "monolithic_unmapped" | "termopanel_preliminary" | "termopanel_unmapped";
+  thicknessMm: number | null;
+};
+
+const VERATEC_7400_AUTOMATED_GLASS_MATRIX = {
+  monolithic: [4],
+  termopanel: [20, 24],
+} as const;
+
+function resolveVeratecGeometryOnlyGlass(
+  glassName: string | null | undefined
+): VeratecGeometryOnlyGlass | null {
+  const normalized = (glassName ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+  const thicknessText = normalized
+    .match(/(?:^|\D)(\d+(?:[.,]\d+)?)\s*mm(?:\D|$)/)?.[1]
+    ?.replace(",", ".");
+  const compositionMatch = normalized.match(
+    /^(?:dvh|termopanel|doble\s+vidriado)\s*(\d+(?:[.,]\d+)?)\s*\+\s*(\d+(?:[.,]\d+)?)\s*\+\s*(\d+(?:[.,]\d+)?)$/
+  );
+  const compositionThicknessMm = compositionMatch
+    ? compositionMatch
+        .slice(1)
+        .reduce((sum, value) => sum + Number(value.replace(",", ".")), 0)
+    : null;
+  const thicknessMm = thicknessText
+    ? Number(thicknessText)
+    : compositionThicknessMm != null && Number.isFinite(compositionThicknessMm)
+      ? compositionThicknessMm
+      : null;
+
+  if (/\bmonolit(?:ico|ic)?\b/.test(normalized)) {
+    if (thicknessMm === VERATEC_7400_AUTOMATED_GLASS_MATRIX.monolithic[0]) return null;
+    return thicknessMm != null && Number.isFinite(thicknessMm)
+      ? { kind: "monolithic_unmapped", thicknessMm }
+      : null;
+  }
+
+  if (/\b(termopanel|dvh|doble\s+vidriado)\b/.test(normalized)) {
+    const isWhitelistedTermopanel =
+      thicknessMm != null &&
+      VERATEC_7400_AUTOMATED_GLASS_MATRIX.termopanel.some((allowed) => allowed === thicknessMm);
+    return {
+      kind: isWhitelistedTermopanel ? "termopanel_preliminary" : "termopanel_unmapped",
+      thicknessMm: thicknessMm != null && Number.isFinite(thicknessMm) ? thicknessMm : null,
+    };
+  }
+
+  return null;
+}
+
+function buildVeratecGeometryOnlyFallback(input: {
+  recipes: FabricationRecipeRecord[];
+  organizationId: number | null;
+  lineTemplateId: number;
+  item: CotizacionWorkflowItem;
+  ancho: number;
+  alto: number;
+  cantidad: number;
+  presentation: ReturnType<typeof decodeCotizacionItemPresentationMeta>;
+  glassLabel: string;
+  glazingConfiguration: VeratecGeometryOnlyGlass;
+}): FabricacionDespieceCotizacionResult | null {
+  const structuralSources = input.recipes.filter((candidate) =>
+    candidate.organizationId === input.organizationId &&
+    candidate.lineTemplateId === input.lineTemplateId &&
+    !candidate.eliminadoEn &&
+    candidate.status !== "archived" &&
+    candidate.variant === VERATEC_7400_VARIANT_MONOLITICO_4MM &&
+    candidate.sourceReference === VERATEC_7400_SOURCE_REFERENCE_MONOLITICO_4MM &&
+    candidate.definition.identidad.hojas === 2 &&
+    candidate.definition.identidad.modulos === 2
+  );
+  if (structuralSources.length !== 1) return null;
+
+  const source = structuralSources[0];
+  const sourceDefinition = enriquecerCodigosPerfilRecetaFabricacion({
+    receta: source.definition,
+    sourceType: source.sourceType,
+    sourceReference: source.sourceReference,
+    lineName: source.lineName,
+  });
+  // El junquillo cambia con el vidrio. Se excluye junto con el vidrio y los accesorios:
+  // este resultado solo reutiliza las reglas geométricas de los perfiles estructurales.
+  const profileDefinition = {
+    ...sourceDefinition,
+    perfiles: sourceDefinition.perfiles.filter(
+      (profile) => !/junquillo/i.test(profile.funcion)
+    ),
+    vidrios: [],
+    accesorios: [],
+    datosPendientes: [],
+  };
+  const entrada = {
+    anchoTotalMm: input.ancho,
+    altoTotalMm: input.alto,
+    cantidad: input.cantidad,
+    hojas: 2,
+    modulos: 2,
+    variante: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+  };
+  const result = calcularCubicacionYPauta(profileDefinition, entrada);
+  if (!result.calculable || result.perfiles.length === 0) return null;
+  const pautaBarras = construirPautaBarrasFabricacion({
+    receta: profileDefinition,
+    resultado: result,
+  });
+  const displaySnapshot: FabricacionCotizacionSnapshot = {
+    schemaVersion: 1,
+    tipo: "fabricacion_receta_snapshot",
+    recipeId: source.id,
+    recipeDefinitionId: profileDefinition.identidad.recetaId,
+    recipeVersion: source.version,
+    recipeStatus: source.status,
+    recipeScope: source.scope,
+    lineTemplateId: source.lineTemplateId,
+    recipeIdentity: profileDefinition.identidad,
+    input: entrada,
+    selectedVariant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+    result,
+    pauta: result.perfiles,
+    vidrios: [],
+    advertencias: result.advertencias,
+    pautaBarras,
+    calculatedAt: new Date().toISOString(),
+  };
+  const cubication = fabricacionSnapshotToLegacyCubicationSnapshot(displaySnapshot);
+  cubication.estimationKind = "recipe_geometry_only";
+
+  return {
+    estado: "receta_incompleta",
+    formal: null,
+    cubication,
+    recipe: null,
+    barsAvailable: pautaBarras.calculable && pautaBarras.barras.length > 0,
+    preliminary: true,
+    message: `Geometría estructural preliminar de Veratec 7400 2H calculada para ${input.glazingConfiguration.kind === "termopanel_preliminary" ? `termopanel ${input.glazingConfiguration.thicknessMm ?? "sin espesor"} mm` : input.glassLabel}. Vidrio, junquillo y precio quedan sin resolver; este resultado no crea un snapshot formal.`,
+    geometryOnly: {
+      sourceRecipeId: source.id,
+      sourceVariant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+      profiles: result.perfiles,
+      bars: pautaBarras,
+      pendingCommercial: ["glass", "glass_bead", "price"],
+      commercialMaterials: [
+        {
+          role: "glass",
+          label: input.glassLabel,
+          status: "unmapped",
+          netPrice: null,
+        },
+        {
+          role: "glass_bead",
+          label: "Junquillo para el espesor seleccionado · por definir",
+          status: "unmapped",
+          netPrice: null,
+        },
+        {
+          role: "price",
+          label: "Precio de presentación comercial de perfiles · por definir",
+          status: "missing",
+          netPrice: null,
+        },
+      ],
+    },
+  };
+}
+
 /** Pieza con línea + receta de fabricación y despiece calculable (uso interno, no PDF cliente). */
 export function canOpenDespiecePreviewForQuoteItem(input: {
   item: CotizacionWorkflowItem;
@@ -590,6 +825,10 @@ export function canOpenDespiecePreviewForQuoteItem(input: {
 }): boolean {
   if (input.organizationId == null) return false;
   const resolution = resolveFabricacionDespieceForQuoteItem(input);
+  if (resolution.geometryOnly) {
+    return resolution.geometryOnly.profiles.length > 0 &&
+      resolution.geometryOnly.bars.calculable;
+  }
   if (resolution.estado !== "calculado") return false;
   const perfiles = resolution.formal?.result.perfiles ?? [];
   if (perfiles.length === 0) return false;

@@ -159,6 +159,8 @@ export type FabricacionComponentePerfil = {
   nombrePerfil: string;
   funcion: string;
   largoComercialMm?: number | null;
+  /** Impide heredar el largo sugerido cuando la presentación aún no está identificada. */
+  largoComercialPendiente?: boolean;
   reglaMedida: FabricacionReglaMedida;
   reglaCantidad: FabricacionReglaCantidad;
   requerido: boolean;
@@ -284,7 +286,9 @@ export type FabricacionReceta = {
   evidencia?: FabricacionEvidencia;
   evidenciasExternas?: FabricacionEvidenciaExterna[];
   alcanceCalculo?: FabricacionAlcanceCalculo;
-  /** Datos que impiden tratar la receta como pauta completa calculable. */
+  /** Habilita solo cubicación/pauta preliminar; los pendientes siguen visibles y la receta no se valida. */
+  permitirCalculoPreliminarConPendientes?: boolean;
+  /** Datos que impiden tratar la receta como completa o validada. */
   datosPendientes?: string[];
   notasValidacion: string[];
 };

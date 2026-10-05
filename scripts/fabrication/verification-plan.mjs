@@ -7,8 +7,10 @@ export const TEST_ROOTS = [
   "src/features/cotizaciones/line-templates",
   "src/features/cotizaciones/new-quote",
   "src/features/cotizaciones/visual-composer",
+  "src/features/proveedor-catalogos",
   "app/(pwa-app)/cotizaciones/nueva/_components/paso-dos",
   "app/(pwa-app)/cotizaciones/nueva/_hooks",
+  "app/(pwa-app)/configuracion/empresa/mis-precios",
   "app/print/cotizaciones",
 ];
 
@@ -24,6 +26,9 @@ export const REQUIRED_TESTS = [
   "src/features/cotizaciones/visual-composer/components/__tests__/quote-constructor-workspace.test.tsx",
   "app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/__tests__/pauta-cubicacion-receta-formal.test.tsx",
   "app/print/cotizaciones/[id]/fabricacion/__tests__/fabricacion-resumen-view.test.tsx",
+  "src/features/proveedor-catalogos/services/__tests__/precio-compra.service.test.ts",
+  "src/features/proveedor-catalogos/services/__tests__/costo-tecnico-parcial.service.test.ts",
+  "app/(pwa-app)/configuracion/empresa/mis-precios/__tests__/mis-precios-page.test.tsx",
 ];
 
 export function discoverTests(root, roots = TEST_ROOTS, required = REQUIRED_TESTS) {

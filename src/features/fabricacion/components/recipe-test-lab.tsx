@@ -16,6 +16,10 @@ import { FabricacionPerfilTirasVisual } from "@/features/fabricacion/components/
 import { FabricacionTipologiaPreview } from "@/features/fabricacion/components/fabricacion-tipologia-preview";
 import { calcularPautaBarrasMultiMedida } from "@/features/fabricacion/services/fabricacion-pauta-multi-medida.service";
 import {
+  obtenerFeedbackPruebaFabricacion,
+  resolverFeedbackVisiblePruebaFabricacion,
+} from "@/features/fabricacion/services/fabricacion-prueba-preview.service";
+import {
   buildFabricationRecipeSummary,
   formatMetersFromMm,
   resolveTiraEstandarRecetaLabel,
@@ -252,6 +256,10 @@ export function RecipeTestLab({
     tirasSummary[0]?.largoComercialMm ?? tiraEstandar.largoMm;
 
   const hasResults = Boolean(actualPrimary && expected && consolidado);
+  const visibleFeedback = resolverFeedbackVisiblePruebaFabricacion(
+    feedback,
+    consolidado
+  );
   const allMatch =
     actualPrimary != null &&
     expected != null &&
@@ -338,11 +346,7 @@ export function RecipeTestLab({
     setBarPlan(result.pautaBarras);
     setCorrectingIds(new Set());
     setCalculatedFingerprint(recipeFingerprint);
-    setFeedback(
-      result.consolidado.calculable
-        ? null
-        : "No se pudo calcular con estas medidas. Revisa la configuración de fabricación."
-    );
+    setFeedback(obtenerFeedbackPruebaFabricacion(result.consolidado));
   };
 
   const handleActivate = async () => {
@@ -561,7 +565,7 @@ export function RecipeTestLab({
               <Play size={16} />
               {isMobile ? "Calcular prueba" : "Calcular materiales"}
             </button>
-            {feedback ? <span className={s.feedbackText}>{feedback}</span> : null}
+            {visibleFeedback ? <span className={s.feedbackText}>{visibleFeedback}</span> : null}
             {recipeChangedSinceCalc ? (
               <span className={s.feedbackText} role="status">
                 Ajustaste una regla. Vuelve a calcular la prueba para ver el

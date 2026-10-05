@@ -495,12 +495,12 @@ Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las
 - **Tipo**: Privada (autenticada)
 - **Archivo principal**: `app/(pwa-app)/configuracion/empresa/lineas-precios/page.tsx`
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
-- **Proposito**: Entrada única para CRUD del catálogo privado: precios, estado para cotizar y acceso contextual a la receta de fabricación de cada línea.
+- **Proposito**: Entrada única para CRUD del catálogo privado: precios, estado para cotizar y acceso contextual a la receta de fabricación de cada línea. Con Supplier Catalog V1 habilitado, ofrece una entrada separada a precios de compra por proveedor.
 - **Usuario objetivo**: Admin autenticado
 - **Componentes principales**: `LineasPreciosPageClient`, `LineTemplateFormWizard`
 - **Hooks**: `useCotizacionLineTemplates`, `useFabricationRecipes`
 - **Tablas Supabase relacionadas**: `cotizacion_line_templates`, `fabrication_recipes`
-- **Acciones principales**: Crear/editar/duplicar/pausar líneas; filtrar por estado técnico; distinguir Sin configurar / Borrador / Configuración técnica pendiente / Lista para probar / Validada; abrir la receta vinculada. El estado de Fabricación no se confunde con el estado comercial de cotización.
+- **Acciones principales**: Crear/editar/duplicar/pausar líneas; filtrar por estado técnico; distinguir Sin configurar / Borrador / Configuración técnica pendiente / Lista para probar / Validada; abrir la receta vinculada. El enlace QA a precios de compra queda separado del catálogo de venta y se muestra solo con las banderas locales activas.
 - **UX (2026-07-30)**: linea comercial y receta quedan separadas. El wizard no escribe nuevas recetas en `catalog_metadata`; muestra la configuracion antigua como solo lectura y deriva al modulo versionado.
 - **Archivos a tocar**: `lineas-precios-page-client.tsx`, `line-template-form-wizard.tsx`, `fabrication-recipe-editor.tsx`, `fabrication-recipe*.ts`, resto de `line-templates/**`
 - **Riesgos**: Migración catalog extendida requerida. No precios en pauta, no optimizador/nesting/CAD/inventario. No llamar “verificadas” a L5000/L20/L25. No mostrar formulas/JSON al usuario.
@@ -629,6 +629,7 @@ Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las
 | `/api/solicitudes/resumen` | GET | Resumen solicitudes por org (auth) | `app/api/solicitudes/resumen/route.ts` |
 | `/api/cotizaciones/resumen` | GET | Resumen cotizaciones por org (auth) | `app/api/cotizaciones/resumen/route.ts` |
 | `/api/cotizaciones/[id]/pdf-descargado` | POST | Registra descarga silenciosa de PDF (auth) | `app/api/cotizaciones/[id]/pdf-descargado/route.ts` |
+| `/api/cotizaciones/visual-qa/costo-tecnico-parcial` | POST | Ejecución visual QA del panel de costo técnico; usa cotizaciones QA y no forma parte del flujo público | `app/api/cotizaciones/visual-qa/costo-tecnico-parcial/route.ts` |
 | `/api/clientes/resumen` | GET | Resumen clientes por org (auth) | `app/api/clientes/resumen/route.ts` |
 | `/api/dashboard/summary` | GET | Dashboard KPIs por org (auth) | `app/api/dashboard/summary/route.ts` |
 | `/api/pwa/push-subscriptions` | POST/DELETE | Registrar/eliminar suscripcion push | `app/api/pwa/push-subscriptions/route.ts` |
@@ -639,6 +640,7 @@ Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las
 | `/api/subscriptions/mercadopago/create` | POST | Reserva y crea suscripcion MP Chile autenticada | `app/api/subscriptions/mercadopago/create/route.ts` |
 | `/api/subscriptions/mercadopago/webhook` | POST | Valida firma, consulta recurso MP y reconcilia idempotente | `app/api/subscriptions/mercadopago/webhook/route.ts` |
 | `/api/cron/mercadopago-billing` | GET | Cron Vercel diario, protegido por `CRON_SECRET`; recupera conciliación de suscripciones MP pendientes o próximas/vencidas | `app/api/cron/mercadopago-billing/route.ts` |
+| `/qa-precios-compra` | GET | Página interna de QA del catálogo de precios de compra; no equivale a administración productiva del catálogo | `app/(landing-web)/qa-precios-compra/page.tsx` |
 
 ---
 
@@ -768,3 +770,11 @@ Generado desde app/ y verificado por pnpm docs:check. El detalle funcional de ca
 | `/solicitudes/canales` | page | public | `app/(pwa-app)/solicitudes/canales/page.tsx` |
 | `/sugerencias` | page | private | `app/(pwa-app)/sugerencias/page.tsx` |
 | `/terms` | page | private | `app/(landing-web)/terms/page.tsx` |
+| `/api/cotizaciones/[id]/costo-tecnico-parcial` | route | private / QA allowlist | `app/api/cotizaciones/[id]/costo-tecnico-parcial/route.ts` |
+| `/api/cotizaciones/visual-qa/costo-tecnico-parcial` | route | private / QA | `app/api/cotizaciones/visual-qa/costo-tecnico-parcial/route.ts` |
+| `/api/proveedor-catalogos/qa-context` | route | private / Supplier Catalog V1 QA allowlist | `app/api/proveedor-catalogos/qa-context/route.ts` |
+| `/api/proveedor-catalogos/resolve-presentations` | route | private / Supplier Catalog V1 QA allowlist; resuelve asociaciones confirmadas por familia, código técnico y acabado | `app/api/proveedor-catalogos/resolve-presentations/route.ts` |
+| `/api/proveedor-catalogos/taller-presentaciones` | route | private / Supplier Catalog V1 QA allowlist; presentaciones privadas de la organización, sin modificar catálogo oficial | `app/api/proveedor-catalogos/taller-presentaciones/route.ts` |
+| `/api/proveedor-catalogos/mis-precios` | route | private / admin QA allowlist; precios de compra por organización | `app/api/proveedor-catalogos/mis-precios/route.ts` |
+| `/configuracion/empresa/mis-precios` | page | private / admin QA allowlist; configuración de compra | `app/(pwa-app)/configuracion/empresa/mis-precios/page.tsx` |
+| `/qa-precios-compra` | page | private / QA | `app/(landing-web)/qa-precios-compra/page.tsx` |

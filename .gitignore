@@ -30,6 +30,7 @@
 .codex-*
 pdf-ref-shot.png
 tmp-*
+.tmp/arquetipo/
 /tmp/zeta-auth/
 
 # Cursor local state. Las skills del workflow Zeta sí se versionan.
@@ -112,3 +113,4 @@ docs/VENTORA_DESKTOP_TALLER_ROADMAP.md
 /public/audio/
 # Assets locales de Remotion: se conservan en el proyecto, pero no se versionan.
 /public/video-assets/
+.tmp/

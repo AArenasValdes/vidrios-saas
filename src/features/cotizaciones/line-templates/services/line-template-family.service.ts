@@ -1,4 +1,5 @@
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import { resolveDefaultLineSupplierFamilyKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
 export type LineTemplateFamily = {
   key: string;
@@ -30,13 +31,27 @@ function metadataFamilyKey(template: CotizacionLineTemplate): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+/** Usa metadata propia primero y la identidad canónica del catálogo como respaldo para plantillas antiguas. */
+export function resolveSupplierFamilyKeyForLineTemplate(
+  template: CotizacionLineTemplate | null | undefined
+): string | null {
+  if (!template) return null;
+  return metadataFamilyKey(template) ?? resolveDefaultLineSupplierFamilyKey(template.catalogKey);
+}
+
+function metadataFamilyLabel(template: CotizacionLineTemplate): string | null {
+  const value = template.catalogMetadata?.familyLabel;
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
 export function resolveLineTemplateFamily(template: CotizacionLineTemplate) {
   const explicitKey = metadataFamilyKey(template);
   if (explicitKey) {
+    const explicitLabel = metadataFamilyLabel(template);
     return (
       LINE_TEMPLATE_FAMILIES.find((family) => family.key === explicitKey) ?? {
         key: explicitKey,
-        label: template.nombre,
+        label: explicitLabel ?? template.nombre,
         catalogKeys: [],
       }
     );
@@ -57,18 +72,26 @@ export function groupLineTemplatesByFamily(
   templates: readonly CotizacionLineTemplate[]
 ): LineTemplateFamilyGroup[] {
   const groups: LineTemplateFamilyGroup[] = [];
+  const usedKeys = new Set<string>();
+  let previousBaseKey: string | null = null;
   for (const template of templates) {
     const isOwn = !template.catalogKey?.startsWith("ventora:");
     const family = resolveLineTemplateFamily(template);
-    const key = isOwn
+    const baseKey = isOwn
       ? `own:${String(template.organizationId)}`
       : family.key;
     const previousGroup = groups.at(-1);
     // Group adjacent entries only: the picker keeps the catalog's established
     // order while avoiding a repeated "Mis líneas" heading for consecutive private lines.
-    if (previousGroup?.key === key) {
+    if (previousGroup && previousBaseKey === baseKey) {
       previousGroup.templates.push(template);
     } else {
+      let key = baseKey;
+      if (usedKeys.has(key)) {
+        key = `${baseKey}:${String(template.id)}:${groups.length}`;
+        while (usedKeys.has(key)) key = `${key}:next`;
+      }
+      usedKeys.add(key);
       groups.push({
         key,
         label: isOwn ? "Mis líneas" : family.label,
@@ -76,6 +99,7 @@ export function groupLineTemplatesByFamily(
         isOwn,
       });
     }
+    previousBaseKey = baseKey;
   }
   return groups;
 }

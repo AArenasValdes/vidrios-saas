@@ -54,6 +54,8 @@ export type FabricacionCotizacionSnapshot = {
   recipeStatus: FabricationRecipeStatus;
   recipeScope: FabricationRecipeScope;
   lineTemplateId: number | null;
+  /** Familia técnica explícita del catálogo comercial; no se deduce por nombre. */
+  supplierFamilyKey?: string | null;
   recipeIdentity: FabricacionIdentidadReceta;
   input: FabricacionEntradaCalculo;
   selectedVariant: string | null;
@@ -63,6 +65,15 @@ export type FabricacionCotizacionSnapshot = {
   advertencias: FabricacionAdvertencia[];
   pautaBarras?: FabricacionPautaBarras;
   formulaVersion?: string;
+  /** Marca de ejecución exclusiva del piloto QA; no cambia el estado de la receta. */
+  qaPreliminary?: {
+    mode: "supplier_catalog_v1_qa_preliminary";
+    readiness: "lista_para_validar";
+    provenance: {
+      sourceType: import("@/features/fabricacion/types/fabricacion-persistence").FabricationRecipeSourceType;
+      sourceReference: string | null;
+    };
+  };
   calculatedAt: string;
 };
 

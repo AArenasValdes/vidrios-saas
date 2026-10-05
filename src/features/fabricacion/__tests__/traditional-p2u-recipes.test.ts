@@ -1,4 +1,4 @@
-import { calcularCubicacionYPauta } from "@/features/fabricacion";
+import { calcularCubicacionYPauta, construirPautaBarrasFabricacion } from "@/features/fabricacion";
 import {
   crearRecetaP2U,
   crearRecetasP2U,
@@ -6,6 +6,7 @@ import {
 import { LINE_15_FIXTURE_1200X1000 } from "@/features/fabricacion/fixtures/line-15-corredera-recipe";
 import { LINE_4000_FIXTURE_1200X1000 } from "@/features/fabricacion/fixtures/line-4000-corredera-recipe";
 import { SERIE_45_FIXTURE_1200X1000 } from "@/features/fabricacion/fixtures/serie-45-practicable-recipe";
+import { fabricacionRecetaSchema } from "@/features/fabricacion/schemas/fabricacion-schemas";
 
 describe("P2U líneas tradicionales / multiproveedor", () => {
   it("mantiene AM-35 y Línea 12 como recetas documentales incompletas", () => {
@@ -20,6 +21,76 @@ describe("P2U líneas tradicionales / multiproveedor", () => {
     }
 
     expect(crearRecetasP2U({ catalogKey: "ventora:l35", lineName: "AM-35" })).toHaveLength(2);
+  });
+
+  it("calcula las cinco reglas visibles de Shower 12 como pauta preliminar de 6 m", () => {
+    const recipe = crearRecetasP2U({
+      catalogKey: "ventora:serie-12-shower-corredera",
+      lineName: "Línea 12 — Shower Door",
+    })[0]!;
+    const result = calcularCubicacionYPauta(recipe, {
+      anchoTotalMm: 1200,
+      altoTotalMm: 1500,
+      cantidad: 1,
+      hojas: 2,
+      modulos: 1,
+    });
+
+    expect(recipe.estado).toBe("ejemplo_no_validado");
+    expect(recipe.datosPendientes).toHaveLength(3);
+    expect(recipe.configuracionCorte?.largoComercialDefaultMm).toBe(6000);
+    expect(fabricacionRecetaSchema.safeParse(recipe).success).toBe(true);
+    expect(result.calculable).toBe(true);
+    expect(result.perfiles.map(({ codigoPerfil, medidaMm, cantidadPiezas }) => ({
+      codigoPerfil,
+      medidaMm,
+      cantidadPiezas,
+    }))).toEqual([
+      { codigoPerfil: "1203", medidaMm: 1195, cantidadPiezas: 1 },
+      { codigoPerfil: "1201", medidaMm: 1195, cantidadPiezas: 1 },
+      { codigoPerfil: "1202", medidaMm: 1497, cantidadPiezas: 2 },
+      { codigoPerfil: "1204", medidaMm: 605, cantidadPiezas: 4 },
+      { codigoPerfil: "1204", medidaMm: 1435, cantidadPiezas: 1 },
+    ]);
+
+    const plan = construirPautaBarrasFabricacion({ receta: recipe, resultado: result });
+    expect(plan.calculable).toBe(true);
+    expect(plan.barras).toHaveLength(4);
+    expect(plan.barras.reduce((sum, bar) => sum + bar.cortes.length, 0)).toBe(9);
+    expect(plan.advertencias.filter(({ nivel }) => nivel === "error")).toEqual([]);
+
+    const secondGeometry = calcularCubicacionYPauta(recipe, {
+      anchoTotalMm: 1000,
+      altoTotalMm: 1800,
+      cantidad: 1,
+      hojas: 2,
+      modulos: 1,
+    });
+    expect(secondGeometry.calculable).toBe(true);
+    expect(secondGeometry.perfiles.map(({ medidaMm }) => medidaMm)).toEqual([
+      995, 995, 1797, 505, 1735,
+    ]);
+
+    const quantityTwo = calcularCubicacionYPauta(recipe, {
+      anchoTotalMm: 1200,
+      altoTotalMm: 1500,
+      cantidad: 2,
+      hojas: 2,
+      modulos: 1,
+    });
+    expect(quantityTwo.calculable).toBe(true);
+    const combinedPlan = construirPautaBarrasFabricacion({ receta: recipe, resultado: quantityTwo });
+    expect(combinedPlan.barras.reduce((sum, bar) => sum + bar.cortes.length, 0)).toBe(18);
+
+    const invalidGeometry = calcularCubicacionYPauta(recipe, {
+      anchoTotalMm: 0,
+      altoTotalMm: 1500,
+      cantidad: 1,
+      hojas: 2,
+      modulos: 1,
+    });
+    expect(invalidGeometry.calculable).toBe(false);
+    expect(invalidGeometry.perfiles).toEqual([]);
   });
 
   it("expone destajes oficiales de Línea 15 con cuatro variantes", () => {

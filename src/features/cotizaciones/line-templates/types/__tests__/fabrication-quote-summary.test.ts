@@ -60,7 +60,7 @@ describe("fabrication quote summary", () => {
 
     expect(summary.items).toHaveLength(0);
     expect(summary.trabajoSnapshot).toBeNull();
-    expect(summary.totalBars).toBe(0);
+    expect(summary.totalBars).toBeNull();
   });
 
   it("expone línea y material por pieza sin mezclarlas", () => {

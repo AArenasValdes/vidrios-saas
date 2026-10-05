@@ -420,7 +420,7 @@ export function calcularCubicacionYPauta(
     totalVidrioM2,
     calculable:
       !advertencias.some((entry) => entry.nivel === "error") &&
-      (usesDerivedL25Formulas || (receta.datosPendientes?.length ?? 0) === 0) &&
+      (usesDerivedL25Formulas || receta.permitirCalculoPreliminarConPendientes === true || (receta.datosPendientes?.length ?? 0) === 0) &&
       (perfiles.length > 0 || vidrios.length > 0 || accesorios.length > 0),
   };
 }

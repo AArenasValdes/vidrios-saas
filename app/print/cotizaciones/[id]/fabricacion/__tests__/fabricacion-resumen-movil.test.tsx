@@ -1,6 +1,7 @@
 /** @jest-environment jsdom */
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import type { ReactNode } from "react";
 
 import {
   serializeCubicationSnapshot,
@@ -9,6 +10,8 @@ import {
 import { buildFabricationQuoteSummary } from "@/features/cotizaciones/line-templates/types/fabrication-quote-summary";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
+import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
+import { buildWorkMaterialsDocument } from "@/features/fabricacion/services/fabrication-work-materials.service";
 
 import { FabricacionResumenMovil } from "../fabricacion-resumen-movil";
 
@@ -141,8 +144,30 @@ const items = [
   ),
 ];
 
-function ViewHarness({ extraItems = items }: { extraItems?: CotizacionWorkflowItem[] } = {}) {
-  const summary = buildFabricationQuoteSummary(extraItems);
+const sharedWorkSnapshot = {
+  schemaVersion: 1,
+  tipo: "fabricacion_trabajo_snapshot",
+  packing: "first_fit_decreasing_sugerido",
+  capturedAt: "2026-10-02T00:00:00.000Z",
+  itemCountWithPauta: 2,
+  totalBars: 1,
+  totalProfilesLinealMm: 5600,
+  totalWasteMm: 200,
+  sourcePresentations: [],
+  bars: [{
+    materialKey: "perfil:riel-01", presentationKey: "perfil:riel-01|#ffffff|5800",
+    codigoPerfil: "R-01", nombrePerfil: "Riel", acabadoKey: "#ffffff", lineaIds: [7],
+    largoComercialMm: 5800, indice: 1, despunteInicialMm: 0, perdidaCorteMm: 0,
+    usadoMm: 5600, sobranteMm: 200,
+    cortes: [
+      { itemId: "item-v1", codigoItem: "V1", nombreItem: "Ventana corredera", componenteId: "riel", codigoPerfil: "R-01", funcion: "Riel superior", corte: null, largoMm: 2800 },
+      { itemId: "item-v2", codigoItem: "V2", nombreItem: "Ventana corredera", componenteId: "riel", codigoPerfil: "R-01", funcion: "Riel superior", corte: null, largoMm: 2800 },
+    ],
+  }],
+} as FabricacionTrabajoSnapshot;
+
+function ViewHarness({ extraItems = items, trabajoSnapshot, technicalCostPanel }: { extraItems?: CotizacionWorkflowItem[]; trabajoSnapshot?: FabricacionTrabajoSnapshot | null; technicalCostPanel?: ReactNode } = {}) {
+  const summary = buildFabricationQuoteSummary(extraItems, { trabajoSnapshot });
   return (
     <FabricacionResumenMovil
       backHref="/cotizaciones/q1"
@@ -152,6 +177,11 @@ function ViewHarness({ extraItems = items }: { extraItems?: CotizacionWorkflowIt
       obra="Obra norte"
       summary={summary}
       items={extraItems}
+      materialsDocument={buildWorkMaterialsDocument({ summary, items: extraItems })}
+      companyName="Ventora QA"
+      issueDate="4 oct 2026"
+      technicalCostPanel={technicalCostPanel}
+      onDownloadDocumentPdf={jest.fn()}
       isExporting={false}
       exportError={null}
       onDownload={jest.fn()}
@@ -161,12 +191,23 @@ function ViewHarness({ extraItems = items }: { extraItems?: CotizacionWorkflowIt
 }
 
 describe("FabricacionResumenMovil", () => {
-  it("muestra resumen compacto con segmented y cards no expandibles", () => {
+  it("ubica el costo técnico antes de materiales y pauta, sin crear una sección al final", () => {
+    render(<ViewHarness technicalCostPanel={<section data-testid="cost-panel">Costo estimado de materiales</section>} />);
+
+    const costPanel = screen.getByTestId("cost-panel");
+    const materialsHeading = screen.getByRole("heading", { name: "Lista de materiales del trabajo" });
+    const pautaSummary = screen.getByText("Ver pauta, cortes y sobrantes");
+    expect(costPanel.compareDocumentPosition(materialsHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(costPanel.compareDocumentPosition(pautaSummary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("prioriza la pauta conjunta guardada y permite abrir los componentes por separado", () => {
     render(<ViewHarness />);
 
     expect(screen.getByRole("heading", { name: "Resumen de fabricación" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Componentes" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("tab", { name: "Consolidado" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Pauta conjunta" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { name: "Pauta conjunta no disponible" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Por componente" }));
     expect(screen.getByRole("button", { name: "Ver detalle de V1 · Ventana corredera" })).toBeInTheDocument();
     expect(screen.getAllByText("Pauta lista")).toHaveLength(2);
     expect(screen.queryByRole("button", { name: /Mostrar detalle/i })).not.toBeInTheDocument();
@@ -194,6 +235,7 @@ describe("FabricacionResumenMovil", () => {
   it("abre el detalle del componente con Resumen, Cortes y Despiece", () => {
     render(<ViewHarness />);
 
+    fireEvent.click(screen.getByRole("tab", { name: "Por componente" }));
     fireEvent.click(screen.getByRole("button", { name: "Ver detalle de V1 · Ventana corredera" }));
 
     expect(screen.getByRole("heading", { name: "V1 · Ventana corredera" })).toBeInTheDocument();
@@ -214,13 +256,15 @@ describe("FabricacionResumenMovil", () => {
     expect(screen.getByText("2 × 1.500 mm")).toBeInTheDocument();
   });
 
-  it("muestra el consolidado agrupado por línea sin acordeón", () => {
-    render(<ViewHarness />);
-
-    fireEvent.click(screen.getByRole("tab", { name: "Consolidado" }));
+  it("muestra primero las barras compartidas con cortes y sobrante, después el resumen agrupado", () => {
+    render(<ViewHarness trabajoSnapshot={sharedWorkSnapshot} />);
 
     const consolidado = screen.getByLabelText("Qué fabricar");
-    expect(within(consolidado).getByText("Perfiles")).toBeInTheDocument();
+    expect(within(consolidado).getByText("Largo usado en cortes")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pauta conjunta · trabajo completo" })).toBeInTheDocument();
+    expect(screen.getByText("Largo usado en cortes 5.600 mm · Largo disponible según pauta 200 mm")).toBeInTheDocument();
+    expect(screen.getByText("V1 · Riel superior · 2.800 mm")).toBeInTheDocument();
+    expect(screen.getByText("V2 · Riel superior · 2.800 mm")).toBeInTheDocument();
     expect(screen.getByLabelText("L25")).toBeInTheDocument();
     expect(screen.getByLabelText("Vidrio consolidado")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Ocultar detalle/i })).not.toBeInTheDocument();

@@ -35,6 +35,13 @@ const SEARCH_ALIASES: Record<string, string> = {
   sat: "satinado",
 };
 
+function shouldFocusPickerSearch() {
+  if (typeof window === "undefined") return false;
+  const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  const wideEnough = window.matchMedia("(min-width: 768px)").matches;
+  return finePointer && wideEnough;
+}
+
 function normalizeKey(value: string) {
   return value
     .trim()
@@ -123,7 +130,6 @@ export function GlassOptionPicker({
   useEffect(() => {
     if (!open) return;
 
-    const focusTimer = window.setTimeout(() => searchRef.current?.focus(), 0);
     const handlePointer = (event: MouseEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) {
         setOpen(false);
@@ -135,8 +141,11 @@ export function GlassOptionPicker({
 
     window.addEventListener("mousedown", handlePointer);
     window.addEventListener("keydown", handleKey);
+    const focusTimer = shouldFocusPickerSearch()
+      ? window.setTimeout(() => searchRef.current?.focus(), 0)
+      : null;
     return () => {
-      window.clearTimeout(focusTimer);
+      if (focusTimer != null) window.clearTimeout(focusTimer);
       window.removeEventListener("mousedown", handlePointer);
       window.removeEventListener("keydown", handleKey);
     };
@@ -189,6 +198,10 @@ export function GlassOptionPicker({
               className={styles.searchInput}
               type="text"
               inputMode="search"
+              readOnly={!shouldFocusPickerSearch()}
+              onPointerDown={(event) => {
+                event.currentTarget.readOnly = false;
+              }}
               autoComplete="off"
               spellCheck={false}
               data-embedded-search=""

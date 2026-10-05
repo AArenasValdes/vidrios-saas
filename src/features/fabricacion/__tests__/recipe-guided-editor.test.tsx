@@ -60,6 +60,35 @@ describe("RecipeGuidedEditor", () => {
     expect(screen.getByText(/7 de 7 cortes de perfilería configurados/)).toBeInTheDocument();
   });
 
+  it("deja probar una receta preliminar sin exigir confirmación del taller", () => {
+    const onContinueToTest = jest.fn();
+    const recipe = {
+      ...RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO,
+      datosPendientes: ["Confirmar evidencia física completa en taller"],
+    };
+
+    render(
+      <RecipeGuidedEditor
+        recipe={recipe}
+        providerName="Proveedor"
+        lineName="L5000"
+        desktopActiveStep="components"
+        onRecipeChange={jest.fn()}
+        onProviderNameChange={jest.fn()}
+        onLineNameChange={jest.fn()}
+        onContinueToTest={onContinueToTest}
+      />
+    );
+
+    const button = screen.getByRole("button", { name: "Probar medidas" });
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    expect(onContinueToTest).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByText("Puedes probar con estas medidas y ajustar la receta cuando quieras.")
+    ).toBeInTheDocument();
+  });
+
   it("edita una receta con controles guiados sin exponer JSON", () => {
     const onRecipeChange = jest.fn();
 
@@ -312,10 +341,10 @@ describe("RecipeGuidedEditor", () => {
     );
 
     expect(screen.getByText("Así fabricas esta ventana")).toBeInTheDocument();
-    expect(screen.getByText(/Fabricación pendiente ·/)).toBeInTheDocument();
-    expect(screen.queryByText(/Fabricación lista para probar ·/)).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Configuración técnica pendiente" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Fabricación preparada" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Base editable · puedes probarla/)).toBeInTheDocument();
+    expect(screen.queryByText(/Base lista para validar ·/)).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Base editable" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Lista para validar" })).not.toBeInTheDocument();
     expect(screen.getByText("Tira que compras")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "6,00 m" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "5,95 m" })).toBeInTheDocument();
@@ -568,7 +597,7 @@ describe("RecipeGuidedEditor", () => {
     const cards = within(profileList).getAllByRole("listitem");
     expect(cards.length).toBeGreaterThanOrEqual(7);
     expect(screen.getByText("Tira que compras")).toBeInTheDocument();
-    expect(screen.getByText(/Faltan descuentos en \d+ piezas/i)).toBeInTheDocument();
+    expect(screen.getByText(/Hay descuentos pendientes en \d+ piezas.*Puedes probar/i)).toBeInTheDocument();
     fireEvent.click(within(cards[0]!).getByRole("button", { name: /Definir descuento/i }));
     const drawer = screen.getByRole("dialog", { name: /Editar /i });
     expect(within(drawer).getByPlaceholderText("0")).toBeInTheDocument();

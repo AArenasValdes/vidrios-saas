@@ -1212,7 +1212,7 @@ export default function ConfiguracionEmpresaPage() {
               <div className={s.triggerIcon}><LuQrCode aria-hidden /></div>
               <div className={s.triggerCopy}>
                 <span className={s.cardEyebrow}>Catálogo privado</span>
-                <strong>Líneas, costos y precios</strong>
+                <strong>Líneas, vidrios y precios</strong>
                 <p>{isLoadingLineTemplates ? "Cargando líneas..." : `${lineTemplates.length} guardadas · ${activeLineTemplatesCount} activas`}</p>
               </div>
             </div>
@@ -1226,12 +1226,15 @@ export default function ConfiguracionEmpresaPage() {
             <div className={s.accordionInner}>
           <article className={s.catalogSummaryCard}>
             <p className={s.catalogSummaryDescription}>
-              Define tus líneas comerciales, costos base y reglas de cobro propias.
+              Administra líneas de venta, vidrios y precios de compra.
             </p>
 
             <div className={s.catalogSummaryActions}>
               <Link href="/configuracion/empresa/lineas-precios" scroll className={s.secondaryLink}>
-                Administrar
+                Líneas y vidrios
+              </Link>
+              <Link href="/configuracion/empresa/mis-precios" scroll className={s.secondaryLink}>
+                Precios de compra
               </Link>
               <Link
                 href="/configuracion/empresa/lineas-precios/importar"

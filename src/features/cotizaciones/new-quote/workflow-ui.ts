@@ -24,6 +24,7 @@ import {
   WINHOUSE_NEW_S75_TRIPLE_CATALOG_KEY,
   WINHOUSE_NEW_S75_VARIANTS,
 } from "@/features/fabricacion/fixtures/winhouse-new-s75-recipes";
+import { VERATEC_7400_CATALOG_KEY } from "@/features/fabricacion/fixtures/veratec-7400-corredera-recipe";
 import {
   inferSodalL25GlazingFromGlass,
   resolveSodalL25FabricacionSnapshot,
@@ -412,6 +413,7 @@ export const GLASS_OPTIONS = [
       "4 + 10 + 5",
       "5 + 10 + 5",
       "4+12+4",
+      "4+16+4",
       "5+12+5",
       "4 Low-E + 12 + 4",
       "4T + 12 + 4T",
@@ -1287,6 +1289,20 @@ export function getSheetVariantOptions(
   }
 
   return SHEET_VARIANT_OPTIONS[sheetScheme] ?? [];
+}
+
+export function resolveDefaultSheetVariantForLine(input: {
+  catalogLineKey?: string | null;
+  sheetScheme: string;
+  sheetVariant?: string | null;
+}) {
+  const selectedVariant = input.sheetVariant?.trim() ?? "";
+  if (selectedVariant) return selectedVariant;
+
+  return input.catalogLineKey === VERATEC_7400_CATALOG_KEY &&
+    input.sheetScheme.trim().toLowerCase() === "2 hojas"
+    ? "2 móviles"
+    : "";
 }
 
 export function requiresCustomSheetDescription(input: {
@@ -2201,6 +2217,29 @@ export function applyLineTemplateToComponentForm(
     template.catalogKey ??
     "";
   const isSodalL25Line = resolvedCatalogKey === SODAL_L25_CATALOG_KEY;
+  const lineRecommendation = template.vidrioPrincipalRecomendado?.trim() ?? "";
+  const normalizedLineRecommendation = lineRecommendation
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+  const isLegacyVeratecFiveMillimeterDefault =
+    resolvedCatalogKey === VERATEC_7400_CATALOG_KEY &&
+    (normalizedLineRecommendation === "incoloro monolitico 5mm" ||
+      normalizedLineRecommendation === "monolitico 5mm");
+  const recommendedGlass =
+    isLegacyVeratecFiveMillimeterDefault
+      ? "Incoloro monolítico 4mm"
+      : lineRecommendation ||
+    (resolvedCatalogKey === VERATEC_7400_CATALOG_KEY
+      ? "Incoloro monolítico 4mm"
+      : form.vidrio);
+  const selectedSheetVariant = resolveDefaultSheetVariantForLine({
+    catalogLineKey: resolvedCatalogKey,
+    sheetScheme: form.sheetScheme,
+    sheetVariant: form.sheetVariant,
+  });
   const fabricationContext =
     options?.fabricationContext ??
     resolveFabricacionContextForLineAssignment({
@@ -2224,12 +2263,13 @@ export function applyLineTemplateToComponentForm(
       }),
       lineTemplateId: String(template.id),
       catalogLineKey: resolvedCatalogKey,
+      sheetVariant: selectedSheetVariant,
       fabricacionGlazing: isSodalL25Line
           ? inferSodalL25GlazingFromGlass({
               vidrio:
                 template.categoria === "vidrio"
                   ? template.nombre
-                  : template.vidrioPrincipalRecomendado?.trim() || form.vidrio,
+                  : recommendedGlass,
               catalogEspesor: glassMetadata.espesor ?? "",
               catalogTerminacion: glassMetadata.terminacion ?? "",
             })
@@ -2237,7 +2277,7 @@ export function applyLineTemplateToComponentForm(
       vidrio:
         template.categoria === "vidrio"
           ? template.nombre
-          : template.vidrioPrincipalRecomendado?.trim() || form.vidrio,
+          : recommendedGlass,
       vidrioLineTemplateId:
         template.categoria === "vidrio" ? "" : form.vidrioLineTemplateId ?? "",
       pricingMode: "precio_directo",

@@ -42,6 +42,16 @@ type VentoraDefaultLineDefinition = {
   ventoraPlantillaId: string | null;
   lineFamilyType?: "traditional" | "manufacturer_specific";
   lineSourceModel?: "multiprovider" | "manufacturer_specific";
+  familyKey?: string;
+  familyLabel?: string;
+  configurationKey?: string;
+  configurationLabel?: string;
+  compatibility?: {
+    componentTypes?: string[];
+    openingTypes?: string[];
+    leavesCounts?: number[];
+    materials?: string[];
+  };
   identitySource?: string;
   cuttingGuideSource?: string;
 };
@@ -71,6 +81,7 @@ function buildVentoraDefaultLine(
       definition.catalogKey === "ventora:serie-15-corredera-2h" ||
       definition.catalogKey === "ventora:serie-4000-corredera-2h" ||
       definition.catalogKey === "ventora:serie-4800-corredera-2h" ||
+      definition.familyKey === "veratec:sliding-7400" ||
       definition.catalogKey === "ventora:winhouse-s60" ||
       definition.catalogKey === "ventora:winhouse-new-s75-doble-riel" ||
       definition.catalogKey === "ventora:winhouse-new-s75-triple-riel"
@@ -90,6 +101,11 @@ function buildVentoraDefaultLine(
         ? { cuttingGuideSource: definition.cuttingGuideSource }
         : {}),
       lineConfiguration: definition.configuracion,
+      ...(definition.familyKey ? { familyKey: definition.familyKey } : {}),
+      ...(definition.familyLabel ? { familyLabel: definition.familyLabel } : {}),
+      ...(definition.configurationKey ? { configurationKey: definition.configurationKey } : {}),
+      configurationLabel: definition.configurationLabel ?? definition.configuracion,
+      ...(definition.compatibility ? { compatibility: definition.compatibility } : {}),
       structuralArchetypeId: CATALOG_KEY_TO_ARQUETIPO[definition.catalogKey] ?? null,
       ...(definition.lineSystem ? { lineSystem: definition.lineSystem } : {}),
       ...(definition.ventoraPlantillaId
@@ -372,9 +388,218 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     proveedor: "VERATEC",
     lineSystem: "7400",
     ventoraPlantillaId: null,
+    familyKey: "veratec:sliding-7400",
+    familyLabel: "Sliding 7400",
+    configurationKey: "sliding-7400:corredera-2h",
+    configurationLabel: "Corredera · 2 hojas",
+    compatibility: { componentTypes: ["Ventana"], openingTypes: ["Corredera"], leavesCounts: [2], materials: ["PVC"] },
     identitySource: "VERATEC · Catálogo Alumétrica · Línea 7400 PVC",
     cuttingGuideSource:
       "Alumétrica · Veratec 7400 corredera 2 hojas · pauta de corte visible",
+  },
+  {
+    catalogKey: "ventora:veratec-7400-corredera-3h",
+    nombre: "Veratec 7400 — Corredera 3 hojas",
+    material: "PVC",
+    configuracion: "Corredera Sliding 7400 · 3 hojas",
+    proveedor: "VERATEC",
+    lineSystem: "7400",
+    ventoraPlantillaId: null,
+    familyKey: "veratec:sliding-7400",
+    familyLabel: "Sliding 7400",
+    configurationKey: "sliding-7400:corredera-3h",
+    configurationLabel: "Corredera · 3 hojas",
+    compatibility: { componentTypes: ["Ventana"], openingTypes: ["Corredera"], leavesCounts: [3], materials: ["PVC"] },
+    identitySource: "Xelena · Díptico de líneas PVC · Sliding 7400",
+  },
+  {
+    catalogKey: "ventora:veratec-7400-monorriel",
+    nombre: "Veratec 7400 — Corredera monorriel",
+    material: "PVC",
+    configuracion: "Corredera Sliding 7400 · Monorriel",
+    proveedor: "VERATEC",
+    lineSystem: "7400",
+    ventoraPlantillaId: null,
+    familyKey: "veratec:sliding-7400",
+    familyLabel: "Sliding 7400",
+    configurationKey: "sliding-7400:monorriel",
+    configurationLabel: "Corredera · monorriel",
+    compatibility: { componentTypes: ["Ventana"], openingTypes: ["Corredera"], materials: ["PVC"] },
+    identitySource: "Xelena · Díptico y lista de precios junio 2026 · Sliding 7400",
+  },
+  {
+    catalogKey: "ventora:veratec-elegans-60-ventana-hoja-exterior",
+    nombre: "Ventana · hoja exterior",
+    material: "PVC",
+    configuracion: "Elegans 60 · Ventana abatible · hoja exterior",
+    proveedor: "VERATEC",
+    lineSystem: "Elegans 60",
+    ventoraPlantillaId: null,
+    familyKey: "veratec:elegans-60",
+    familyLabel: "Elegans 60",
+    configurationKey: "elegans-60:ventana-hoja-exterior",
+    compatibility: { componentTypes: ["Ventana"], openingTypes: ["Abatible"], materials: ["PVC"] },
+    identitySource: "Xelena · Díptico de líneas PVC · Elegans 60",
+  },
+  {
+    catalogKey: "ventora:veratec-elegans-60-ventana-hoja-interior",
+    nombre: "Ventana · hoja interior",
+    material: "PVC",
+    configuracion: "Elegans 60 · Ventana abatible · hoja interior",
+    proveedor: "VERATEC",
+    lineSystem: "Elegans 60",
+    ventoraPlantillaId: null,
+    familyKey: "veratec:elegans-60",
+    familyLabel: "Elegans 60",
+    configurationKey: "elegans-60:ventana-hoja-interior",
+    compatibility: { componentTypes: ["Ventana"], openingTypes: ["Abatible"], materials: ["PVC"] },
+    identitySource: "Xelena · Díptico de líneas PVC · Elegans 60",
+  },
+  {
+    catalogKey: "ventora:veratec-elegans-60-puerta-hoja-exterior",
+    nombre: "Puerta · hoja exterior",
+    material: "PVC",
+    configuracion: "Elegans 60 · Puerta abatible · hoja exterior",
+    proveedor: "VERATEC",
+    lineSystem: "Elegans 60",
+    ventoraPlantillaId: null,
+    familyKey: "veratec:elegans-60",
+    familyLabel: "Elegans 60",
+    configurationKey: "elegans-60:puerta-hoja-exterior",
+    compatibility: { componentTypes: ["Puerta"], openingTypes: ["Abatible"], materials: ["PVC"] },
+    identitySource: "Xelena · Díptico de líneas PVC · Elegans 60",
+  },
+  {
+    catalogKey: "ventora:veratec-elegans-60-puerta-hoja-interior",
+    nombre: "Puerta · hoja interior",
+    material: "PVC",
+    configuracion: "Elegans 60 · Puerta abatible · hoja interior",
+    proveedor: "VERATEC",
+    lineSystem: "Elegans 60",
+    ventoraPlantillaId: null,
+    familyKey: "veratec:elegans-60",
+    familyLabel: "Elegans 60",
+    configurationKey: "elegans-60:puerta-hoja-interior",
+    compatibility: { componentTypes: ["Puerta"], openingTypes: ["Abatible"], materials: ["PVC"] },
+    identitySource: "Xelena · Díptico de líneas PVC · Elegans 60",
+  },
+  {
+    catalogKey: "ventora:veratec-elegans-60-fijo",
+    nombre: "Paño fijo",
+    material: "PVC",
+    configuracion: "Elegans 60 · Paño fijo",
+    proveedor: "VERATEC",
+    lineSystem: "Elegans 60",
+    ventoraPlantillaId: null,
+    familyKey: "veratec:elegans-60",
+    familyLabel: "Elegans 60",
+    configurationKey: "elegans-60:pano-fijo",
+    compatibility: { componentTypes: ["Ventana"], openingTypes: ["Fijo"], materials: ["PVC"] },
+    identitySource: "Xelena · Díptico de líneas PVC · Elegans 60",
+  },
+  {
+    catalogKey: "ventora:veratec-compact-sliding-2h",
+    nombre: "Compact Sliding · 2 hojas",
+    material: "PVC",
+    configuracion: "Compact Sliding · Corredera · 2 hojas",
+    proveedor: "VERATEC",
+    lineSystem: "Compact Sliding",
+    ventoraPlantillaId: null,
+    familyKey: "veratec:compact-sliding",
+    familyLabel: "Compact Sliding",
+    configurationKey: "compact-sliding:corredera-2h",
+    compatibility: { componentTypes: ["Ventana"], openingTypes: ["Corredera"], leavesCounts: [2], materials: ["PVC"] },
+    identitySource: "Xelena · Díptico de líneas PVC · Compact Sliding",
+  },
+  {
+    catalogKey: "ventora:veratec-compact-sliding-3h",
+    nombre: "Compact Sliding · 3 hojas",
+    material: "PVC",
+    configuracion: "Compact Sliding · Corredera · 3 hojas",
+    proveedor: "VERATEC",
+    lineSystem: "Compact Sliding",
+    ventoraPlantillaId: null,
+    familyKey: "veratec:compact-sliding",
+    familyLabel: "Compact Sliding",
+    configurationKey: "compact-sliding:corredera-3h",
+    compatibility: { componentTypes: ["Ventana"], openingTypes: ["Corredera"], leavesCounts: [3], materials: ["PVC"] },
+    identitySource: "Xelena · Díptico de líneas PVC · Compact Sliding",
+  },
+  {
+    catalogKey: "ventora:veratec-compact-sliding-4h",
+    nombre: "Compact Sliding · 4 hojas",
+    material: "PVC",
+    configuracion: "Compact Sliding · Corredera · 4 hojas",
+    proveedor: "VERATEC",
+    lineSystem: "Compact Sliding",
+    ventoraPlantillaId: null,
+    familyKey: "veratec:compact-sliding",
+    familyLabel: "Compact Sliding",
+    configurationKey: "compact-sliding:corredera-4h",
+    compatibility: { componentTypes: ["Ventana"], openingTypes: ["Corredera"], leavesCounts: [4], materials: ["PVC"] },
+    identitySource: "Xelena · Díptico de líneas PVC · Compact Sliding",
+  },
+  {
+    catalogKey: "ventora:veratec-inova-corredera-2h",
+    nombre: "Inova · Corredera representada",
+    material: "PVC",
+    configuracion: "Inova · Esquema de corredera del díptico",
+    proveedor: "VERATEC",
+    lineSystem: "Inova",
+    ventoraPlantillaId: null,
+    familyKey: "veratec:inova",
+    familyLabel: "Inova",
+    configurationKey: "inova:corredera-representada",
+    configurationLabel: "Corredera · esquema del folleto",
+    compatibility: { componentTypes: ["Ventana"], openingTypes: ["Corredera"], leavesCounts: [2], materials: ["PVC"] },
+    identitySource: "Xelena · Díptico de líneas PVC · Inova",
+  },
+  ...[
+    ["2h-1fijo-1movil", "2 paños · 1 fijo + 1 móvil", 2],
+    ["2h-2moviles", "2 paños · 2 móviles", 2],
+    ["3h-2fijos-1movil", "3 paños · 2 fijos + 1 móvil", 3],
+    ["3h-1fijo-2moviles", "3 paños · 1 fijo + 2 móviles", 3],
+    ["4h-4moviles", "4 paños · 4 móviles", 4],
+    ["4h-2fijos-2moviles", "4 paños · 2 fijos + 2 móviles", 4],
+  ].map(([configurationKey, label, leavesCount]) => ({
+    catalogKey: `ventora:veratec-elevadora-${configurationKey}`,
+    nombre: `Elevadora · ${label}`,
+    material: "PVC" as const,
+    configuracion: `Elevadora · ${label}`,
+    proveedor: "VERATEC",
+    lineSystem: "Elevadora",
+    ventoraPlantillaId: null,
+    familyKey: "veratec:elevadora",
+    familyLabel: "Elevadora",
+    configurationKey: `elevadora:${configurationKey}`,
+    compatibility: { componentTypes: ["Ventana"], openingTypes: ["Corredera"], leavesCounts: [leavesCount as number], materials: ["PVC"] },
+    identitySource: "Xelena · Díptico de líneas PVC · Elevadora",
+  })),
+  {
+    catalogKey: "ventora:veratec-eko-130",
+    nombre: "EKO 130",
+    material: "PVC",
+    configuracion: "Catálogo comercial EKO 130",
+    proveedor: "VERATEC",
+    lineSystem: "EKO 130",
+    ventoraPlantillaId: null,
+    familyKey: "veratec:eko-130",
+    familyLabel: "EKO 130",
+    configurationKey: "eko-130:familia-comercial",
+    identitySource: "Xelena · Díptico de líneas PVC · EKO 130",
+  },
+  {
+    catalogKey: "ventora:veratec-eko-82",
+    nombre: "EKO 82",
+    material: "PVC",
+    configuracion: "Catálogo comercial EKO 82",
+    proveedor: "VERATEC",
+    lineSystem: "EKO 82",
+    ventoraPlantillaId: null,
+    familyKey: "veratec:eko-82",
+    familyLabel: "EKO 82",
+    configurationKey: "eko-82:familia-comercial",
+    identitySource: "Xelena · Díptico de líneas PVC · EKO 82",
   },
   {
     catalogKey: "ventora:optima-s28-corredera-2h",
@@ -543,6 +768,13 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
 export const VENTORA_DEFAULT_LINE_CATALOG: Array<
   Omit<CreateCotizacionLineTemplateInput, "organizationId">
 > = VENTORA_DEFAULT_LINE_DEFINITIONS.map(buildVentoraDefaultLine);
+
+/** Recupera la familia declarada por el catálogo canónico cuando un registro de taller antiguo no la conserva en metadata. */
+export function resolveDefaultLineSupplierFamilyKey(catalogKey: string | null | undefined): string | null {
+  const metadata = VENTORA_DEFAULT_LINE_CATALOG.find((line) => line.catalogKey === catalogKey)?.catalogMetadata;
+  const familyKey = metadata?.familyKey;
+  return typeof familyKey === "string" && familyKey.trim() ? familyKey.trim() : null;
+}
 
 /** Alias explícito: catálogo predeterminado sembrado solo para organizaciones CL. */
 export const CHILE_DEFAULT_LINE_CATALOG = VENTORA_DEFAULT_LINE_CATALOG;

@@ -13,6 +13,10 @@ import { FabricacionPerfilTirasVisual } from "@/features/fabricacion/components/
 import { FabricacionTipologiaPreview } from "@/features/fabricacion/components/fabricacion-tipologia-preview";
 import { calcularPautaBarrasMultiMedida } from "@/features/fabricacion/services/fabricacion-pauta-multi-medida.service";
 import {
+  obtenerFeedbackPruebaFabricacion,
+  resolverFeedbackVisiblePruebaFabricacion,
+} from "@/features/fabricacion/services/fabricacion-prueba-preview.service";
+import {
   buildFabricationRecipeSummary,
   formatMetersFromMm,
   resolveTiraEstandarRecetaLabel,
@@ -245,6 +249,10 @@ export function FabricacionMobileValidateStep({
     ? barrasPorPerfil
     : barrasPorPerfil.slice(0, PAUTA_PREVIEW_COUNT);
   const hiddenPautaCount = Math.max(0, barrasPorPerfil.length - PAUTA_PREVIEW_COUNT);
+  const visibleFeedback = resolverFeedbackVisiblePruebaFabricacion(
+    feedback,
+    consolidado
+  );
 
   const calculate = () => {
     const validMeasures = measures.filter(
@@ -274,11 +282,7 @@ export function FabricacionMobileValidateStep({
     setActiveTab("resumen");
     setShowAllPauta(false);
     setShowOkProfiles(false);
-    setFeedback(
-      result.consolidado.calculable
-        ? null
-        : "No se pudo calcular con estas medidas. Revisa la configuración."
-    );
+    setFeedback(obtenerFeedbackPruebaFabricacion(result.consolidado));
   };
 
   const handleActivate = async () => {
@@ -427,7 +431,7 @@ export function FabricacionMobileValidateStep({
           </section>
         )}
 
-        {feedback ? <div className={s.errorBand}>{feedback}</div> : null}
+        {visibleFeedback ? <div className={s.errorBand}>{visibleFeedback}</div> : null}
         {recipeChangedSinceCalc ? (
           <div className={s.validateRecalcHint} role="status">
             Cambiaste una regla. Vuelve a calcular para ver el resultado actualizado.

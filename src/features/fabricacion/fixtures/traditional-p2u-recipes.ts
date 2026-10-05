@@ -1,6 +1,7 @@
 import {
   FABRICACION_RECIPE_SCHEMA_VERSION,
   type FabricacionComponentePerfil,
+  type FabricacionBaseMedida,
   type FabricacionReceta,
   type FabricacionTipologia,
 } from "@/features/fabricacion/types/fabricacion-domain";
@@ -63,7 +64,7 @@ function profile(
     code: string;
     name: string;
     functionName: string;
-    base: "ancho_total" | "alto_total" | "ancho_por_hoja";
+    base: FabricacionBaseMedida;
     quantity: number;
     required?: boolean;
     adjustmentMm?: number;
@@ -165,7 +166,7 @@ function createLine45(input: RecipeInput): FabricacionReceta {
 
 function createLine12(input: RecipeInput): FabricacionReceta {
   const createId = input.createId ?? fallbackId;
-  return baseRecipe({
+  const recipe = baseRecipe({
     ...input,
     createId,
     code: "ARQUETIPO-SHOWER-12-2H-V1",
@@ -173,19 +174,33 @@ function createLine12(input: RecipeInput): FabricacionReceta {
     typology: "shower",
     leaves: 2,
     profiles: [
-      profile(createId, { code: "1201", name: "Riel inferior", functionName: "Riel inferior de marco", base: "ancho_total", quantity: 1, cut: "90°" }),
-      profile(createId, { code: "1202", name: "Jamba", functionName: "Jamba de marco", base: "alto_total", quantity: 2, cut: "90°" }),
-      profile(createId, { code: "1203", name: "Riel superior", functionName: "Riel superior de marco", base: "ancho_total", quantity: 1, cut: "90°" }),
-      profile(createId, { code: "1204", name: "Bastidor hoja", functionName: "Bastidor de hoja", base: "ancho_por_hoja", quantity: 4, cut: "45°" }),
+      profile(createId, { code: "1203", name: "Riel superior de marco", functionName: "Riel superior de marco", base: "ancho_total", quantity: 1, adjustmentMm: -5, cut: "90°" }),
+      profile(createId, { code: "1201", name: "Riel inferior de marco", functionName: "Riel inferior de marco", base: "ancho_total", quantity: 1, adjustmentMm: -5, cut: "90°" }),
+      profile(createId, { code: "1202", name: "Jamba de marco", functionName: "Jamba de marco", base: "alto_total", quantity: 2, adjustmentMm: -3, cut: "90°" }),
+      profile(createId, { code: "1204", name: "Bastidor de hoja", functionName: "Bastidor de hoja", base: "ancho_por_hoja", quantity: 4, adjustmentMm: 5, cut: "45°" }),
+      profile(createId, { code: "1204", name: "Perfil", functionName: "Perfil · alto de módulo", base: "alto_modulo", quantity: 1, adjustmentMm: -65 }),
     ],
-    pending: ["Faltan ajustes numéricos, composición de receptáculo y pauta completa de corte."],
+    pending: [
+      "La captura del editor aún indica un ajuste obligatorio pendiente; confirmar cuál antes de probar o activar en taller.",
+      "La composición para receptáculo, vidrio y quincallería no está definida en esta captura; no se incluyen en la cubicación.",
+      "El largo de 6.000 mm es el valor predeterminado solicitado por el usuario, no una especificación confirmada por Arquetipo.",
+    ],
     notes: [
-      "Arquetipo documenta Shower Door Línea 12: corredera colgante para tina o receptáculo.",
-      "La fuente documenta marco con cortes a 90° y hojas con cortes a 45°; se conserva solo como metadata de corte.",
+      "Captura del editor de fabricación entregada por el usuario: Línea 12 Shower 2 hojas; 5 reglas y 9 cortes. Descuentos capturados: 1203 −5 mm, 1201 −5 mm, 1202 −3 mm, 1204 +5 mm (4 cortes) y 1204 −65 mm (1 corte).",
+      "La captura muestra cortes 90° en marco y 45° para bastidor de hoja. Se conserva el corte del perfil adicional tal como aparece, sin inferir ángulo.",
+      "El catálogo Arquetipo documenta 1201 riel inferior, 1202 jamba, 1203 riel superior y 1204 bastidor de hoja (pág. 21).",
       "Quincallería documentada: caja/rodamiento Shower S-12, guías interior/exterior, tirador y unión L-12; sus consumos quedan pendientes.",
-      "No se inventan descuentos ni se presenta como receta calculable.",
+      "Las cinco reglas producen un despiece preliminar; no acreditan pauta validada ni fabricación real de taller.",
     ],
   });
+  recipe.configuracionCorte = {
+    perdidaCorteMm: recipe.configuracionCorte?.perdidaCorteMm ?? null,
+    despunteInicialMm: recipe.configuracionCorte?.despunteInicialMm ?? null,
+    sobranteMinimoAprovechableMm: recipe.configuracionCorte?.sobranteMinimoAprovechableMm ?? null,
+    largoComercialDefaultMm: 6000,
+  };
+  recipe.permitirCalculoPreliminarConPendientes = true;
+  return recipe;
 }
 
 export const P2U_RECIPE_FACTORIES = {

@@ -14,16 +14,23 @@ import { LuCheck, LuChevronDown, LuSearch, LuX } from "react-icons/lu";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
-import { getLineTemplateSystemMetadata, lineTemplateNeedsCommercialPrice } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import { lineTemplateNeedsCommercialPrice } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import {
   dedupeLineTemplatesForQuotePicker,
   formatLineTemplateQuotePickerLabel,
 } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import {
   CLP,
-  prioritizeLineTemplatesByMaterial,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
-import { groupLineTemplatesByFamily } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
+import {
+  buildLineOptionViewModel,
+  filterLineCatalogTemplates,
+  getDefaultLineCatalogTab,
+  groupLineCatalogTemplates,
+  hasEnoughLineCompatibilityContext,
+  type LineCatalogTab,
+} from "@/features/cotizaciones/line-templates/services/line-option-presentation.service";
+import type { LineCompatibilityContext } from "@/features/cotizaciones/line-templates/services/line-template-compatibility.service";
 
 import { LinePriceEditor } from "./line-template-price-editor";
 import styles from "./line-template-picker.module.css";
@@ -47,10 +54,18 @@ type LineTemplatePickerProps = {
   organizationId?: string | number | null;
   mode?: "profile" | "glass";
   preferredMaterial?: MaterialFilter | null;
+  compatibilityContext?: LineCompatibilityContext | null;
   ariaLabel?: string;
   className?: string;
   renderTrigger?: (state: LineTemplatePickerTriggerState) => ReactNode;
 };
+
+function shouldFocusPickerSearch() {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+  const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  const wideEnough = window.matchMedia("(min-width: 768px)").matches;
+  return finePointer && wideEnough;
+}
 
 function formatPricePerM2(value: number) {
   return `${CLP(value)}/m²`;
@@ -58,10 +73,6 @@ function formatPricePerM2(value: number) {
 
 function formatMinimum(value: number) {
   return value > 0 ? `Mín. ${CLP(value)}` : "Sin mínimo";
-}
-
-function formatRounding(value: number) {
-  return value > 0 ? `Redondeo ${CLP(value)}` : "Sin redondeo";
 }
 
 function normalizeProvider(value: string | null | undefined) {
@@ -76,11 +87,11 @@ function renderTemplateOption(
   onSelect: (next: string) => void
 ) {
   const selectedOption = String(template.id) === value;
-  const material =
-    template.categoria === "vidrio" ? "Cristal" : isGlass ? "Cristal" : template.material;
-  const provider = normalizeProvider(template.proveedor);
-  const system = getLineTemplateSystemMetadata(template.catalogMetadata).lineSystem;
-  const displayName = formatLineTemplateQuotePickerLabel(template);
+  const model = buildLineOptionViewModel({
+    template,
+    selected: selectedOption,
+    displayName: formatLineTemplateQuotePickerLabel(template),
+  });
 
   return (
     <button
@@ -93,46 +104,27 @@ function renderTemplateOption(
     >
       <span className={styles.optionMain}>
         <span className={styles.optionTitleRow}>
-          <strong>{displayName}</strong>
+            <strong>{model.name}</strong>
           <span
             className={`${styles.materialChip} ${
-              material === "PVC"
+              model.material === "PVC"
                 ? styles.materialChipPvc
-                : material === "Cristal"
+                : model.material === "Cristal"
                   ? styles.materialChipGlass
                   : styles.materialChipAluminio
             }`}
           >
-            {material}
+            {model.material}
           </span>
         </span>
         <span className={styles.optionContext}>
-          {provider ? (
-            <span className={styles.providerLabel}>{provider}</span>
-          ) : (
-            <span className={styles.providerLabelMuted}>Sin proveedor</span>
-          )}
-          {system ? (
-            <>
-              <span aria-hidden>·</span>
-              <span className={styles.systemLabel}>{system}</span>
-            </>
-          ) : null}
+          {model.contextLabel || <span className={styles.providerLabelMuted}>Sin proveedor</span>}
         </span>
         <span className={styles.optionPriceRow}>
-          {lineTemplateNeedsCommercialPrice(template) ? (
-            <em className={styles.pricePending}>Precio pendiente</em>
-          ) : (
-            <>
-              <em>{formatPricePerM2(template.precioM2Sugerido)}</em>
-              <span className={styles.optionSecondary}>
-                {formatMinimum(template.minimoCobrable)}
-                <span aria-hidden> · </span>
-                {formatRounding(template.redondeoPrecio)}
-              </span>
-            </>
-          )}
+          {model.commercialPriceLabel === "Precio pendiente" ? <em className={styles.pricePending}>{model.commercialPriceLabel}</em> : <em>{model.commercialPriceLabel}</em>}
+          {model.minimumLabel || model.roundingLabel ? <span className={styles.optionSecondary}>{[model.minimumLabel, model.roundingLabel].filter(Boolean).join(" · ")}</span> : null}
         </span>
+        {!isGlass && model.technicalStateLabel ? <small className={styles.optionStates}>{model.technicalStateLabel}</small> : null}
       </span>
       {selectedOption ? <LuCheck className={styles.optionCheck} aria-hidden /> : null}
     </button>
@@ -147,6 +139,7 @@ export function LineTemplatePicker({
   organizationId,
   mode = "profile",
   preferredMaterial = null,
+  compatibilityContext = null,
   ariaLabel,
   className,
   renderTrigger,
@@ -161,6 +154,7 @@ export function LineTemplatePicker({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [materialFilter, setMaterialFilter] = useState<MaterialFilter>("todos");
+  const [catalogTab, setCatalogTab] = useState<LineCatalogTab>("all");
   const [providerFilter, setProviderFilter] = useState<ProviderFilter>("todos");
   const [priceEditorTarget, setPriceEditorTarget] = useState<CotizacionLineTemplate | null>(null);
 
@@ -168,6 +162,7 @@ export function LineTemplatePicker({
     setQuery("");
     setMaterialFilter("todos");
     setProviderFilter("todos");
+    setCatalogTab("all");
   }, []);
 
   const closePicker = useCallback(() => {
@@ -182,7 +177,11 @@ export function LineTemplatePicker({
     }
     setQuery("");
     setProviderFilter("todos");
-    setMaterialFilter("todos");
+    setMaterialFilter(preferredMaterial ?? "todos");
+    setCatalogTab(getDefaultLineCatalogTab({
+      hasCompatibilityContext: hasEnoughLineCompatibilityContext(compatibilityContext),
+      hasOwnLines: templates.some((template) => !template.catalogKey?.startsWith("ventora:")),
+    }));
     setOpen(true);
   };
 
@@ -220,49 +219,17 @@ export function LineTemplatePicker({
   }, [templates]);
 
   const filteredTemplates = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-
-    const matchingTemplates = quoteTemplates.filter((template) => {
-      const templateMaterial =
-        template.categoria === "vidrio" ? "Cristal" : template.material;
-      if (!isGlass && materialFilter !== "todos" && templateMaterial !== materialFilter) {
-        return false;
-      }
-
-      const provider = normalizeProvider(template.proveedor);
-      if (providerFilter === "sin_proveedor") {
-        if (provider) return false;
-      } else if (providerFilter !== "todos" && provider !== providerFilter) {
-        return false;
-      }
-
-      if (!normalizedQuery) {
-        return true;
-      }
-
-      const system =
-        getLineTemplateSystemMetadata(template.catalogMetadata).lineSystem ?? "";
-      const haystack = [
-        template.nombre,
-        formatLineTemplateQuotePickerLabel(template),
-        template.material,
-        template.categoria,
-        provider ?? "",
-        system,
-        String(Math.round(template.precioM2Sugerido)),
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      return haystack.includes(normalizedQuery);
+    return filterLineCatalogTemplates({
+      templates: quoteTemplates,
+      tab: isGlass ? "all" : catalogTab,
+      context: compatibilityContext,
+      query,
+      material: materialFilter === "todos" ? null : materialFilter,
+      provider: providerFilter === "todos" ? null : providerFilter,
     });
-    return prioritizeLineTemplatesByMaterial(
-      matchingTemplates,
-      !isGlass && materialFilter === "todos" ? preferredMaterial : null
-    );
-  }, [isGlass, materialFilter, preferredMaterial, providerFilter, query, quoteTemplates]);
+  }, [catalogTab, compatibilityContext, isGlass, materialFilter, providerFilter, query, quoteTemplates]);
   const familyGroups = useMemo(
-    () => (isGlass ? [] : groupLineTemplatesByFamily(filteredTemplates)),
+    () => (isGlass ? [] : groupLineCatalogTemplates(filteredTemplates)),
     [filteredTemplates, isGlass]
   );
 
@@ -281,12 +248,14 @@ export function LineTemplatePicker({
     };
 
     window.addEventListener("keydown", handleKey);
-    const focusTimer = window.setTimeout(() => searchRef.current?.focus(), 0);
+    const focusTimer = shouldFocusPickerSearch()
+      ? window.setTimeout(() => searchRef.current?.focus(), 0)
+      : null;
 
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKey);
-      window.clearTimeout(focusTimer);
+      if (focusTimer != null) window.clearTimeout(focusTimer);
     };
   }, [closePicker, open]);
 
@@ -303,8 +272,8 @@ export function LineTemplatePicker({
   };
 
   const dialogTitle = isGlass ? "Elegir cristal" : "Elegir línea";
-  const activeMaterialLabel =
-    !isGlass && materialFilter !== "todos" ? `${materialFilter} primero` : null;
+  const hasCompatibility = hasEnoughLineCompatibilityContext(compatibilityContext);
+  const ownLineCount = quoteTemplates.filter((template) => !template.catalogKey?.startsWith("ventora:")).length;
 
   const overlay =
     open
@@ -332,7 +301,7 @@ export function LineTemplatePicker({
                   <p>
                     {isGlass
                       ? "Busca por nombre y elige el cristal con precio."
-                      : activeMaterialLabel ?? "Elige una línea del catálogo."}
+                      : [compatibilityContext?.material, compatibilityContext?.openingType, compatibilityContext?.leavesCount ? `${compatibilityContext.leavesCount} hojas` : null].filter(Boolean).join(" · ") || "Elige una línea del catálogo."}
                   </p>
                 </div>
                 <button
@@ -352,6 +321,10 @@ export function LineTemplatePicker({
                     ref={searchRef}
                     className={styles.searchInput}
                     type="search"
+                    readOnly={!shouldFocusPickerSearch()}
+                    onPointerDown={(event) => {
+                      event.currentTarget.readOnly = false;
+                    }}
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder={
@@ -365,6 +338,25 @@ export function LineTemplatePicker({
 
                 {!isGlass ? (
                   <div className={styles.filtersBlock}>
+                    <nav className={styles.catalogTabs} aria-label="Tipo de líneas">
+                      {([
+                        ...(hasCompatibility ? [["compatible", "Compatibles"] as const] : []),
+                        ...(ownLineCount > 0 ? [["own", "Mis líneas"] as const] : []),
+                        ["all", "Todas"] as const,
+                      ]).map(([key, label]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          className={`${styles.catalogTab} ${catalogTab === key ? styles.catalogTabActive : ""}`}
+                          aria-pressed={catalogTab === key}
+                          onClick={() => setCatalogTab(key)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </nav>
+                    {catalogTab === "all" ? (
+                    <>
                     <div className={styles.filterGroup}>
                       <span className={styles.filterLabel}>Material</span>
                       <div className={styles.filterRow} role="group" aria-label="Filtrar por material">
@@ -439,6 +431,8 @@ export function LineTemplatePicker({
                         </div>
                       </div>
                     ) : null}
+                    </>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
@@ -467,22 +461,6 @@ export function LineTemplatePicker({
               </div>
 
               <div className={styles.list} id={listId} role="listbox" aria-label={ariaLabel}>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={!value}
-                  className={`${styles.option} ${styles.optionManual} ${
-                    !value ? styles.optionActive : ""
-                  }`}
-                  onClick={() => selectValue("")}
-                >
-                  <span className={styles.optionMain}>
-                    <strong>{emptyLabel}</strong>
-                    <small>Sin plantilla · precio manual</small>
-                  </span>
-                  {!value ? <LuCheck className={styles.optionCheck} aria-hidden /> : null}
-                </button>
-
                 <div className={styles.optionGrid}>
                   {isGlass
                     ? filteredTemplates.map((template) =>
@@ -490,14 +468,21 @@ export function LineTemplatePicker({
                       )
                     : familyGroups.map((group) => (
                         <section className={styles.familyGroup} key={group.key}>
-                          {group.templates.length > 1 || group.isOwn ? (
-                            <h3 className={styles.familyHeading}>
-                              {group.isOwn ? "Mis líneas" : group.label}
-                            </h3>
+                          {group.origin === "catalogo" || group.origin === "propia" && catalogTab !== "own" ? (
+                            <h3 className={styles.familyHeading}>{group.label}</h3>
                           ) : null}
-                          {group.templates.map((template) =>
-                            renderTemplateOption(template, value, isGlass, selectValue)
-                          )}
+                          {group.origin === "catalogo"
+                            ? group.families.map((family) => (
+                                <section className={styles.familyGroup} key={family.key}>
+                                  <h4 className={styles.familyHeading}>{family.label}</h4>
+                                  {family.templates.map((template) =>
+                                    renderTemplateOption(template, value, isGlass, selectValue)
+                                  )}
+                                </section>
+                              ))
+                            : group.templates.map((template) =>
+                                renderTemplateOption(template, value, isGlass, selectValue)
+                              )}
                         </section>
                       ))}
                 </div>
@@ -512,6 +497,32 @@ export function LineTemplatePicker({
                   </div>
                 ) : null}
               </div>
+              {!isGlass ? (
+                <aside className={styles.inspector} aria-label="Detalle de la selección">
+                  {selected ? (() => {
+                    const model = buildLineOptionViewModel({
+                      template: selected,
+                      selected: true,
+                      displayName: formatLineTemplateQuotePickerLabel(selected),
+                    });
+                    return <>
+                      <span className={styles.inspectorEyebrow}>Línea seleccionada</span>
+                      <h3>{model.name}</h3>
+                      <p>{model.contextLabel}</p>
+                      <strong>{model.commercialPriceLabel}</strong>
+                      {model.minimumLabel ? <small>{model.minimumLabel}</small> : null}
+                      <p className={styles.inspectorStates}>{model.fabricationState} · {model.costState}</p>
+                    </>;
+                  })() : <p>Elige una línea de la lista para ver su precio y estado.</p>}
+                </aside>
+              ) : null}
+              <footer className={styles.manualFooter}>
+                <span>
+                  <strong>¿No está tu línea?</strong>
+                  <small>Usa precio manual sin aplicar una línea guardada.</small>
+                </span>
+                <button type="button" className={styles.manualAction} aria-pressed={!value} onClick={() => selectValue("")}>{!value ? "Actual" : emptyLabel}</button>
+              </footer>
             </div>
           </div>,
           document.body

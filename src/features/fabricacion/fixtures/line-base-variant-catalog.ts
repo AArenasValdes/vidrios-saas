@@ -116,6 +116,8 @@ export type LineVariantSlot = {
   evidenceLevel: LineVariantEvidenceLevel;
   /** Tiene perfiles con ajusteMm documentado y composición calculable. */
   complete: boolean;
+  /** Evita persistir recetas por el solo hecho de abrir una sesión local/remota. */
+  autoSeed?: boolean;
   pendingFields: readonly string[];
   sourceReference: string;
   buildDefinition: (input: { lineName: string; plantillaId?: PlantillaVentoraCorrederaId }) => FabricacionReceta;

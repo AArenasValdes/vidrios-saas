@@ -74,6 +74,7 @@ export function fabricacionSnapshotMatchesCalculatedOutput(
 export function construirSnapshotFabricacionCotizacion(input: {
   recipe: FabricationRecipeRecord;
   entrada: FabricacionEntradaCalculo;
+  supplierFamilyKey?: string | null;
   calculatedAt?: string;
 }): FabricacionCotizacionSnapshot {
   const definition = enriquecerCodigosPerfilRecetaFabricacion({
@@ -97,6 +98,7 @@ export function construirSnapshotFabricacionCotizacion(input: {
     recipeStatus: input.recipe.status,
     recipeScope: input.recipe.scope,
     lineTemplateId: input.recipe.lineTemplateId,
+    ...(input.supplierFamilyKey ? { supplierFamilyKey: input.supplierFamilyKey } : {}),
     recipeIdentity: definition.identidad,
     input: {
       ...input.entrada,

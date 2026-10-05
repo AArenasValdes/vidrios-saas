@@ -326,6 +326,12 @@
       "source": "app/api/clientes/resumen/route.ts"
     },
     {
+      "path": "/api/cotizaciones/[id]/costo-tecnico-parcial",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/cotizaciones/[id]/costo-tecnico-parcial/route.ts"
+    },
+    {
       "path": "/api/cotizaciones/[id]/pdf-descargado",
       "type": "api",
       "area": "api",
@@ -336,6 +342,12 @@
       "type": "api",
       "area": "api",
       "source": "app/api/cotizaciones/resumen/route.ts"
+    },
+    {
+      "path": "/api/cotizaciones/visual-qa/costo-tecnico-parcial",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/cotizaciones/visual-qa/costo-tecnico-parcial/route.ts"
     },
     {
       "path": "/api/cron/mercadopago-billing",
@@ -378,6 +390,30 @@
       "type": "api",
       "area": "api",
       "source": "app/api/organization-assets/upload/route.ts"
+    },
+    {
+      "path": "/api/proveedor-catalogos/mis-precios",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/proveedor-catalogos/mis-precios/route.ts"
+    },
+    {
+      "path": "/api/proveedor-catalogos/qa-context",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/proveedor-catalogos/qa-context/route.ts"
+    },
+    {
+      "path": "/api/proveedor-catalogos/resolve-presentations",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/proveedor-catalogos/resolve-presentations/route.ts"
+    },
+    {
+      "path": "/api/proveedor-catalogos/taller-presentaciones",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/proveedor-catalogos/taller-presentaciones/route.ts"
     },
     {
       "path": "/api/public-landing/revalidate",
@@ -542,6 +578,12 @@
       "source": "app/(pwa-app)/configuracion/empresa/lineas-precios/importar/page.tsx"
     },
     {
+      "path": "/configuracion/empresa/mis-precios",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/configuracion/empresa/mis-precios/page.tsx"
+    },
+    {
       "path": "/configuracion/pagina-venta",
       "type": "page",
       "area": "private",
@@ -648,6 +690,12 @@
       "type": "page",
       "area": "public",
       "source": "app/(landing-web)/privacy/page.tsx"
+    },
+    {
+      "path": "/qa-precios-compra",
+      "type": "page",
+      "area": "private",
+      "source": "app/(landing-web)/qa-precios-compra/page.tsx"
     },
     {
       "path": "/registro",

@@ -51,7 +51,8 @@ export type FabricationQuoteSummary = {
   totalProfilesMl: number;
   totalGlassM2: number;
   totalAccessoryUnits: number;
-  totalBars: number;
+  /** Solo existe cuando se guardó la pauta conjunta; nunca sumar barras por pieza como sustituto. */
+  totalBars: number | null;
   trabajoSnapshot: FabricacionTrabajoSnapshot | null;
 };
 
@@ -196,7 +197,7 @@ export function buildFabricationQuoteSummary(
     totalProfilesMl: rows.reduce((sum, row) => sum + row.profilesMl, 0),
     totalGlassM2: rows.reduce((sum, row) => sum + row.glassM2, 0),
     totalAccessoryUnits: rows.reduce((sum, row) => sum + row.accessoryUnits, 0),
-    totalBars: options?.trabajoSnapshot?.totalBars ?? rows.reduce((sum, row) => sum + row.barCount, 0),
+    totalBars: options?.trabajoSnapshot?.totalBars ?? null,
     trabajoSnapshot: options?.trabajoSnapshot ?? null,
   };
 }

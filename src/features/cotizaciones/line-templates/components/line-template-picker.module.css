@@ -570,24 +570,285 @@
   text-align: center;
 }
 
+.catalogTabs {
+  display: flex;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.18rem;
+  border-radius: 12px;
+  background: #f1f4f8;
+}
+
+.catalogTab {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.55rem;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #586579;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 720;
+  cursor: pointer;
+}
+
+.catalogTabActive {
+  background: #fff;
+  color: #173866;
+  box-shadow: 0 1px 3px rgba(15, 34, 58, 0.1);
+}
+
+.optionStates {
+  color: #718096;
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.manualFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid #e8edf3;
+}
+
+.manualFooter > span {
+  display: grid;
+  gap: 0.14rem;
+  min-width: 0;
+}
+
+.manualFooter strong {
+  color: #46566d;
+  font-size: 0.76rem;
+}
+
+.manualFooter small {
+  color: #7a8798;
+  font-size: 0.69rem;
+}
+
+.manualAction {
+  flex: 0 0 auto;
+  min-height: 2.7rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid #d2deec;
+  border-radius: 10px;
+  background: #fff;
+  color: #244879;
+  font-size: 0.76rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.inspector {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .dialog {
+    width: min(920px, calc(100vw - 3rem));
+    grid-template-columns: minmax(0, 1fr) 270px;
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+    column-gap: 1rem;
+  }
+
+  .dialogHeader,
+  .toolbar,
+  .resultMeta,
+  .manualFooter {
+    grid-column: 1 / -1;
+  }
+
+  .list {
+    grid-column: 1;
+    grid-row: 4;
+    padding-right: 0.3rem;
+  }
+
+  .inspector {
+    display: block;
+    grid-column: 2;
+    grid-row: 4;
+    align-self: start;
+    position: sticky;
+    top: 0;
+    padding: 1rem 0.2rem 0.8rem 1rem;
+    border-left: 1px solid #e8edf3;
+  }
+
+  .inspectorEyebrow {
+    color: #78869a;
+    font-size: 0.65rem;
+    font-weight: 780;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  .inspector h3 {
+    margin: 0.45rem 0 0.2rem;
+    color: #152b49;
+    font-size: 1rem;
+  }
+
+  .inspector p,
+  .inspector small {
+    display: block;
+    margin: 0.3rem 0;
+    color: #66758b;
+    font-size: 0.76rem;
+    line-height: 1.45;
+  }
+
+  .inspector > strong {
+    display: block;
+    margin-top: 1.1rem;
+    color: #183f75;
+    font-size: 1.15rem;
+  }
+
+  .inspector .inspectorStates {
+    margin-top: 1rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid #e8edf3;
+  }
+}
+
 @media (max-width: 720px) {
   .overlay {
-    place-items: end center;
+    place-items: stretch;
     padding: 0;
   }
 
   .dialog {
     width: 100%;
-    max-height: min(88dvh, 760px);
-    border-radius: 18px 18px 0 0;
-    padding: 0.78rem 0.78rem 0.82rem;
+    height: 100dvh;
+    max-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+    padding: max(0.8rem, env(safe-area-inset-top)) 0.85rem calc(0.8rem + env(safe-area-inset-bottom));
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+    gap: 0.55rem;
   }
 
   .dialogHeaderCopy p:last-child {
-    display: none;
+    display: block;
   }
 
   .optionGrid {
     grid-template-columns: 1fr;
   }
+
+  .list {
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .option {
+    min-height: 3.65rem;
+    border: 0;
+    border-bottom: 1px solid #edf0f4;
+    border-radius: 0;
+    background: #fff;
+    padding: 0.64rem 0.25rem;
+  }
+
+  .option:hover,
+  .optionActive {
+    border-color: #cfe0f5;
+    border-bottom-color: #cfe0f5;
+    border-radius: 10px;
+    background: #f5f9ff;
+    box-shadow: none;
+  }
+
+  .optionMain strong {
+    white-space: normal;
+  }
+
+  .optionStates {
+    margin-top: 0.08rem;
+  }
+
+  .catalogTabs {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  .manualFooter {
+    padding-bottom: env(safe-area-inset-bottom);
+    background: #fff;
+  }
+}
+
+/* Catalogo compartido de lineas: filas compactas y un solo lenguaje comercial. */
+.dialog {
+  --picker-ink: #102038;
+  --picker-muted: #64748b;
+  --picker-line: #dce3ec;
+  --picker-accent: #1e88ff;
+  color: var(--picker-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", sans-serif;
+}
+
+.dialogHeaderCopy h2,
+.optionMain strong { color: var(--picker-ink); }
+.triggerTitle { white-space: normal; text-overflow: clip; }
+.dialogEyebrow { color: #315982; }
+.dialogHeaderCopy p:last-child,
+.resultMeta { color: var(--picker-muted); }
+.searchInput { min-height: 44px; border-color: #cbd5e1; border-radius: 10px; background: #fff; }
+.searchInput:focus { border-color: var(--picker-accent); outline: 3px solid rgb(30 136 255 / 18%); }
+.catalogTabs { gap: 2px; border-radius: 10px; background: #eef3f8; }
+.catalogTab { min-height: 44px; color: #53647d; }
+.filterChip { min-height: 40px; padding-inline: .7rem; }
+.catalogTabActive { color: #123a70; box-shadow: 0 1px 3px rgb(15 34 58 / 10%); }
+.familyGroup { gap: 0; }
+.familyHeading { margin: 0; padding: 10px 2px 5px; color: #64748b; font-size: .68rem; letter-spacing: .06em; }
+.option { min-height: 56px; gap: 10px; padding: 8px 4px; border: 0; border-bottom: 1px solid #edf0f4; border-radius: 0; background: #fff; }
+.option:hover { border-color: #edf0f4; background: #f8fbff; box-shadow: none; }
+.optionActive { border-color: #edf0f4; border-left: 2px solid var(--picker-accent); padding-left: 8px; border-radius: 0; background: #f4f8fd; box-shadow: none; }
+.optionMain { gap: 2px; }
+.optionTitleRow { gap: 7px; }
+.optionMain strong { font-size: .86rem; font-weight: 750; }
+.optionContext { font-size: .72rem; }
+.optionPriceRow { gap: 8px; margin-top: 1px; }
+.optionPriceRow em { color: #173e70; font-size: .78rem; }
+.optionSecondary { font-size: .69rem; }
+.optionStates { color: #586b83; font-size: .7rem; }
+.materialChip { min-height: 20px; padding: 2px 7px; border: 0; background: #eef3f8; color: #53647d; font-size: .62rem; }
+.materialChipPvc { background: #edf4f4; color: #46636a; }
+.materialChipGlass { background: #edf3fb; color: #315982; }
+.optionCheck { width: 18px; height: 18px; margin-top: 5px; color: #1565c0; }
+.manualFooter { padding-top: 10px; }
+.manualAction { min-height: 44px; border-color: #cbd5e1; color: #315982; }
+.closeButton { width: 44px; height: 44px; border-radius: 12px; }
+.option:focus-visible,
+.catalogTab:focus-visible,
+.filterChip:focus-visible,
+.manualAction:focus-visible,
+.closeButton:focus-visible { outline: 3px solid rgb(30 136 255 / 28%); outline-offset: 2px; }
+
+@media (max-width: 720px) {
+  .dialog { gap: .38rem; padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right)); }
+  .dialogHeader { align-items: center; }
+  .dialogHeaderCopy p:last-child { font-size: .76rem; }
+  .filtersBlock { gap: .38rem; }
+  .catalogTabs { top: 0; }
+  .option { min-height: 60px; padding: 9px 4px; }
+  .optionActive { padding-left: 8px; }
+  .optionMain strong { overflow: visible; white-space: normal; text-overflow: clip; }
+  .optionContext { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .optionPriceRow { align-items: center; }
+  .manualFooter { gap: 10px; }
+  .manualFooter small { line-height: 1.3; }
+  .manualAction { min-width: 44px; max-width: 46%; white-space: normal; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog *, .dialog *::before, .dialog *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }

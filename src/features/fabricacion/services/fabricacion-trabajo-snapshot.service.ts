@@ -28,6 +28,11 @@ type CortePendiente = FabricacionTrabajoCorte & {
   largoComercialMm: number;
   despunteInicialMm: number;
   perdidaCorteMm: number;
+  supplierPresentationId: string | null;
+  supplierProviderKey: string | null;
+  supplierSku: string | null;
+  supplierFinishCode: string | null;
+  supplierFinishName: string | null;
 };
 
 function stableKey(values: readonly (string | number)[]) {
@@ -45,34 +50,105 @@ export function construirFabricacionTrabajoSnapshot(input: {
   const pending: CortePendiente[] = [];
   const itemIds = new Set<string>();
   const sourcePresentations = new Map<string, FabricacionTrabajoSnapshot["sourcePresentations"][number]>();
+  const missingPresentations: NonNullable<FabricacionTrabajoSnapshot["missingPresentations"]> = [];
+  const qaPreliminaryItems: NonNullable<FabricacionTrabajoSnapshot["qaPreliminary"]>["items"] = [];
 
   for (const item of input.items) {
     const pauta = item.snapshot?.pautaBarras;
     if (!pauta?.calculable || pauta.barras.length === 0) continue;
     itemIds.add(item.id);
 
+    const preliminary = item.snapshot?.qaPreliminary;
+    if (
+      preliminary?.mode === "supplier_catalog_v1_qa_preliminary" &&
+      preliminary.readiness === "lista_para_validar" &&
+      item.snapshot?.recipeStatus === "draft" &&
+      item.snapshot.recipeId.trim() &&
+      item.snapshot.recipeVersion > 0 &&
+      item.snapshot.selectedVariant?.trim()
+    ) {
+      qaPreliminaryItems.push({
+        itemId: item.id,
+        recipeId: item.snapshot.recipeId,
+        recipeVersion: item.snapshot.recipeVersion,
+        variantKey: item.snapshot.selectedVariant,
+        recipeStatus: "draft",
+        readiness: preliminary.readiness,
+        sourceType: preliminary.provenance.sourceType,
+        sourceReference: preliminary.provenance.sourceReference,
+      });
+    }
+
     for (const bar of pauta.barras) {
-      const commercialLength = Math.round(bar.largoComercialMm);
-      if (commercialLength <= 0 || bar.cortes.length === 0) continue;
+      if (bar.cortes.length === 0) continue;
       const kerf = Math.round(bar.perdidaCortesMm / bar.cortes.length);
       const materialKey = bar.materialKey?.trim()
         ? bar.materialKey.trim()
         : stableKey([item.snapshot?.lineTemplateId ?? "sin-linea", bar.codigoPerfil]);
       const acabadoKey = (item.colorHex ?? "sin-acabado").trim().toLowerCase();
-      const presentationKey = stableKey([materialKey, acabadoKey, commercialLength]);
-      const sourceKey = presentationKey;
-      sourcePresentations.set(sourceKey, {
-        technicalInputKey: materialKey,
-        presentationKey,
-        lineTemplateId: item.snapshot?.lineTemplateId ?? null,
-        catalogLineKey: item.catalogLineKey?.trim() || null,
-        finishKey: acabadoKey,
-        commercialLengthMm: commercialLength,
-      });
+      const lineTemplateId = item.snapshot?.lineTemplateId ?? null;
+      const catalogLineKey = item.catalogLineKey?.trim() || null;
 
       for (const cut of bar.cortes) {
         const length = Math.round(cut.largoMm);
         if (length <= 0) continue;
+        const selection = item.supplierPresentationSelections?.find(
+          (entry) => entry.technicalCode.trim() === cut.codigoPerfil.trim()
+        );
+        const selectedPresentationIsIncomplete = Boolean(selection && (
+          selection.status !== "resolved" ||
+          selection.commercialLengthMm == null ||
+          selection.commercialLengthMm <= 0
+        ));
+        if ((item.requireSupplierPresentation && !selection) || selectedPresentationIsIncomplete) {
+          missingPresentations.push({
+            itemId: item.id,
+            technicalCode: cut.codigoPerfil,
+            finishKey: acabadoKey,
+            reason: selection?.reason ?? "No hay una presentación comercial confirmada para este perfil y acabado.",
+            supplierSku: selection?.supplierSku ?? null,
+          });
+          continue;
+        }
+        const commercialLength = selection
+          ? Math.round(selection.commercialLengthMm ?? 0)
+          : Math.round(bar.largoComercialMm);
+        if (commercialLength <= 0) {
+          missingPresentations.push({
+            itemId: item.id,
+            technicalCode: cut.codigoPerfil,
+            finishKey: acabadoKey,
+            reason: selection?.reason ?? "La presentación comercial no tiene largo configurado.",
+            supplierSku: selection?.supplierSku ?? null,
+          });
+          continue;
+        }
+        const presentationKey = stableKey([
+          materialKey,
+          acabadoKey,
+          commercialLength,
+          selection?.presentationId ?? selection?.supplierSku ?? "receta",
+        ]);
+        // A physical presentation may be used by several explicit catalog lines.
+        // Keep each source link while still allowing compatible cuts to share bars.
+        const sourceKey = stableKey([
+          presentationKey,
+          lineTemplateId ?? "sin-linea",
+          catalogLineKey ?? "sin-clave-catalogo",
+        ]);
+        sourcePresentations.set(sourceKey, {
+          technicalInputKey: materialKey,
+          presentationKey,
+          lineTemplateId,
+          catalogLineKey,
+          finishKey: acabadoKey,
+          commercialLengthMm: commercialLength,
+          supplierPresentationId: selection?.presentationId ?? null,
+          providerKey: selection?.providerKey ?? null,
+          supplierSku: selection?.supplierSku ?? null,
+          finishCode: selection?.finishCode ?? null,
+          finishName: selection?.finishName ?? null,
+        });
         pending.push({
           itemId: item.id,
           codigoItem: item.codigo,
@@ -90,12 +166,17 @@ export function construirFabricacionTrabajoSnapshot(input: {
           largoComercialMm: commercialLength,
           despunteInicialMm: Math.round(bar.despunteInicialMm),
           perdidaCorteMm: kerf,
+          supplierPresentationId: selection?.presentationId ?? null,
+          supplierProviderKey: selection?.providerKey ?? null,
+          supplierSku: selection?.supplierSku ?? null,
+          supplierFinishCode: selection?.finishCode ?? null,
+          supplierFinishName: selection?.finishName ?? null,
         });
       }
     }
   }
 
-  if (pending.length === 0) return null;
+  if (pending.length === 0 && missingPresentations.length === 0) return null;
 
   const groups = new Map<string, CortePendiente[]>();
   for (const cut of pending) {
@@ -106,6 +187,7 @@ export function construirFabricacionTrabajoSnapshot(input: {
       cut.largoComercialMm,
       cut.despunteInicialMm,
       cut.perdidaCorteMm,
+      cut.supplierPresentationId ?? "sin-sku",
     ]);
     const group = groups.get(key) ?? [];
     group.push(cut);
@@ -145,6 +227,9 @@ export function construirFabricacionTrabajoSnapshot(input: {
         funcion: cut.funcion,
         corte: cut.corte,
         largoMm: cut.largoMm,
+        supplierPresentationId: cut.supplierPresentationId,
+        supplierProviderKey: cut.supplierProviderKey,
+        supplierSku: cut.supplierSku,
       });
       if (!target.lineaIds.includes(cut.lineTemplateId)) target.lineaIds.push(cut.lineTemplateId);
     }
@@ -160,6 +245,15 @@ export function construirFabricacionTrabajoSnapshot(input: {
     totalProfilesLinealMm: pending.reduce((sum, cut) => sum + cut.largoMm, 0),
     totalWasteMm: bars.reduce((sum, bar) => sum + bar.sobranteMm, 0),
     sourcePresentations: [...sourcePresentations.values()],
+    ...(missingPresentations.length > 0 ? { missingPresentations } : {}),
+    ...(qaPreliminaryItems.length > 0
+      ? {
+          qaPreliminary: {
+            mode: "supplier_catalog_v1_qa_preliminary" as const,
+            items: qaPreliminaryItems,
+          },
+        }
+      : {}),
     bars,
   };
 }
@@ -174,6 +268,11 @@ function createBar(cut: CortePendiente, bars: FabricacionTrabajoBarra[]): Fabric
     acabadoKey: cut.acabadoKey,
     lineaIds: [cut.lineTemplateId],
     largoComercialMm: cut.largoComercialMm,
+    supplierPresentationId: cut.supplierPresentationId,
+    supplierProviderKey: cut.supplierProviderKey,
+    supplierSku: cut.supplierSku,
+    supplierFinishCode: cut.supplierFinishCode,
+    supplierFinishName: cut.supplierFinishName,
     indice: bars.filter((bar) => stableKey([bar.materialKey, bar.acabadoKey, bar.largoComercialMm]) === key).length + 1,
     despunteInicialMm: cut.despunteInicialMm,
     perdidaCorteMm: cut.perdidaCorteMm,

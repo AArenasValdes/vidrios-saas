@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
 import {
   LuArrowLeft,
   LuArrowUpRight,
@@ -40,8 +40,10 @@ import type { CotizacionLineTemplateCuttingBar } from "@/features/cotizaciones/l
 import { getQuoteConstructorItemConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import type { WorkMaterialsDocument } from "@/features/fabricacion/services/fabrication-work-materials.service";
 
 import s from "./page.module.css";
+import { WorkMaterialsDocumentPanel } from "./work-materials-document-panel";
 
 export function formatMl(value: number) {
   return `${value.toLocaleString("es-CL", {
@@ -346,6 +348,11 @@ type Props = {
   onOpenDespiece: (itemId: string) => void;
   isExporting: boolean;
   exportError: string | null;
+  materialsDocument: WorkMaterialsDocument;
+  companyName: string;
+  issueDate: string;
+  technicalCostPanel?: ReactNode;
+  onDownloadDocumentPdf: (kind: "materials" | "glass-order", element: HTMLElement) => void;
   documentRef: RefObject<HTMLElement | null>;
   onDownload: () => void;
   onPrint: () => void;
@@ -521,6 +528,11 @@ export function FabricacionResumenView({
   onOpenDespiece,
   isExporting,
   exportError,
+  materialsDocument,
+  companyName,
+  issueDate,
+  technicalCostPanel,
+  onDownloadDocumentPdf,
   documentRef,
   onDownload,
   onPrint,
@@ -589,10 +601,24 @@ export function FabricacionResumenView({
           <p className={`${s.exportNotice} ${s.printHide}`}>{exportError}</p>
         ) : null}
 
+        {technicalCostPanel}
+
+        <WorkMaterialsDocumentPanel
+          document={materialsDocument}
+          companyName={companyName}
+          quoteCode={codigo}
+          work={obra}
+          issueDate={issueDate}
+          onDownloadPdf={onDownloadDocumentPdf}
+        />
+
+        <details className={s.secondaryWorkshopDetails}>
+          <summary>Ver pauta, cubicación y cortes por componente</summary>
+
         <section className={s.totalsStrip} aria-label="Resumen general">
           <div>
             <LuBox aria-hidden />
-            <span>Perfiles totales</span>
+            <span>Largo usado en cortes</span>
             <strong>{formatMl(summary.totalProfilesMl)}</strong>
           </div>
           <div>
@@ -608,7 +634,7 @@ export function FabricacionResumenView({
           <div>
             <LuRuler aria-hidden />
             <span>Tiras necesarias</span>
-            <strong>{summary.totalBars}</strong>
+            <strong>{summary.totalBars ?? "—"}</strong>
           </div>
           <div>
             <LuLayoutGrid aria-hidden />
@@ -621,16 +647,27 @@ export function FabricacionResumenView({
 
         {summary.trabajoSnapshot ? (
           <section className={s.consolidatedJobBars} aria-label="Pauta conjunta guardada">
-            <h2>Distribución sugerida del trabajo completo</h2>
+            <h2>Pauta conjunta · trabajo completo</h2>
             <p>{summary.trabajoSnapshot.totalBars} barras · distribución referencial compartida entre partidas.</p>
+            {summary.trabajoSnapshot.missingPresentations?.map((missing) => (
+              <p key={`${missing.itemId}-${missing.technicalCode}-${missing.finishKey}`}>
+                Presentación pendiente · {missing.technicalCode}: {missing.reason}
+              </p>
+            ))}
             <ul>
               {summary.trabajoSnapshot.bars.map((bar) => (
                 <li key={`${bar.materialKey}-${bar.acabadoKey}-${bar.largoComercialMm}-${bar.indice}`}>
-                  <strong>{bar.codigoPerfil} · Barra {bar.indice} · {formatMm(bar.largoComercialMm)}</strong>
+                  <strong>{bar.supplierSku ? `${bar.supplierSku} · ${bar.codigoPerfil}` : bar.codigoPerfil} · Barra {bar.indice} · {formatMm(bar.largoComercialMm)}</strong>
+                  <span>Largo usado en cortes {formatMm(bar.usadoMm)} · Largo disponible según pauta {formatMm(bar.sobranteMm)}</span>
                   <span>{bar.cortes.map((cut) => `${cut.codigoItem}: ${cut.funcion} ${formatMm(cut.largoMm)}`).join(" · ")}</span>
                 </li>
               ))}
             </ul>
+          </section>
+        ) : summary.items.length > 0 ? (
+          <section className={s.consolidatedJobBars} aria-label="Pauta conjunta no guardada">
+            <h2>Pauta conjunta no disponible</h2>
+            <p>Esta cotización no conserva una distribución compartida. El histórico no se recalcula; revisa los cortes por componente.</p>
           </section>
         ) : null}
 
@@ -771,6 +808,8 @@ export function FabricacionResumenView({
             );
           })
         )}
+
+        </details>
 
         <footer className={s.docFooter}>
           <p>

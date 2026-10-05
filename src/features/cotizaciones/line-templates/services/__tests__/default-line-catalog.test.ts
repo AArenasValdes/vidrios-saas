@@ -103,7 +103,13 @@ describe("seedDefaultLineCatalog", () => {
     expect(keys).toContain("ventora:l20-fijos");
     expect(keys).toContain("ventora:winhouse-andes-monorriel");
     expect(keys).toContain("ventora:veratec-7400-corredera");
-    expect(catalogSize).toBe(31);
+    expect(keys).toContain("ventora:veratec-elegans-60-ventana-hoja-exterior");
+    expect(keys).toContain("ventora:veratec-compact-sliding-4h");
+    expect(keys).toContain("ventora:veratec-7400-corredera-3h");
+    expect(keys).toContain("ventora:veratec-elevadora-4h-4moviles");
+    expect(keys).toContain("ventora:veratec-eko-130");
+    expect(keys).toContain("ventora:veratec-eko-82");
+    expect(catalogSize).toBe(50);
   });
 
   it("registra Veratec como PVC del proveedor VERATEC con sus 15 referencias Alumétrica", () => {
@@ -123,6 +129,29 @@ describe("seedDefaultLineCatalog", () => {
     expect(profiles?.profiles).toHaveLength(15);
     expect(profiles?.profiles?.every((profile) => profile.provider === "VERATEC")).toBe(true);
     expect(profiles?.profiles?.every((profile) => profile.source?.includes("3b5e6093-5b49-4640-b9e5-5db111dc4ffb"))).toBe(true);
+  });
+
+  it("trata Sliding 7400 como familia y limita la receta 2H a su clave heredada", () => {
+    const variants = VENTORA_DEFAULT_LINE_CATALOG.filter((line) => line.catalogMetadata?.familyKey === "veratec:sliding-7400");
+    expect(variants.map((line) => line.catalogKey)).toEqual([
+      "ventora:veratec-7400-corredera",
+      "ventora:veratec-7400-corredera-3h",
+      "ventora:veratec-7400-monorriel",
+    ]);
+    expect(variants.map((line) => line.catalogMetadata?.configurationKey)).toEqual([
+      "sliding-7400:corredera-2h",
+      "sliding-7400:corredera-3h",
+      "sliding-7400:monorriel",
+    ]);
+    expect(variants.every((line) => line.catalogMetadata?.familyLabel === "Sliding 7400")).toBe(true);
+    expect(variants[0].vidrioPrincipalRecomendado).toBe("Incoloro monolítico 4mm");
+  });
+
+  it("incluye las configuraciones de Elevadora sin inventar perfiles ni recetas", () => {
+    const elevator = VENTORA_DEFAULT_LINE_CATALOG.filter((line) => line.catalogMetadata?.familyKey === "veratec:elevadora");
+    expect(elevator).toHaveLength(6);
+    expect(elevator.every((line) => line.catalogMetadata?.workshopProfiles === undefined)).toBe(true);
+    expect(elevator.every((line) => line.catalogMetadata?.structuralArchetypeId === null)).toBe(true);
   });
 
   it("maneja unique violation (23505) sin romper", async () => {

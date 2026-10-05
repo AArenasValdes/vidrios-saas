@@ -9,6 +9,11 @@ import {
   crearRecetaWinHouseNewS75,
   WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY,
 } from "@/features/fabricacion/fixtures/winhouse-new-s75-recipes";
+import {
+  crearRecetaVeratec7400Corredera,
+  VERATEC_7400_CATALOG_KEY,
+  VERATEC_7400_VARIANT_MONOLITICO_4MM,
+} from "@/features/fabricacion/fixtures/veratec-7400-corredera-recipe";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
 const mockUseFabricationRecipes = jest.fn();
@@ -63,7 +68,12 @@ const selectedTemplate = {
 
 describe("PautaCubicacionPanel con recetas persistidas", () => {
   beforeEach(() => {
+    jest.restoreAllMocks();
     mockUseFabricationRecipes.mockReset();
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(global, "fetch");
   });
 
   it("selecciona automaticamente una receta validada unica", async () => {
@@ -99,6 +109,127 @@ describe("PautaCubicacionPanel con recetas persistidas", () => {
       )
     );
     expect(screen.getByText("Validada por tu taller")).toBeInTheDocument();
+  });
+
+  it("solo con autorización QA genera un snapshot preliminar de Veratec draft sin promover la receta", async () => {
+    let id = 0;
+    const definition = crearRecetaVeratec7400Corredera({
+      lineName: "Veratec 7400",
+      variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+      createId: () => `veratec-definition-qa-${++id}`,
+    });
+    const draft: FabricationRecipeRecord = {
+      id: "veratec-recipe-qa",
+      organizationId: 3,
+      lineTemplateId: 1135,
+      scope: "organization",
+      providerName: "VERATEC",
+      lineName: "Veratec 7400",
+      typology: "corredera",
+      leavesCount: 2,
+      variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+      version: 1,
+      status: "draft",
+      definition,
+      sourceType: "manufacturer",
+      sourceReference: "alumetrica:veratec-7400:2h:monolitico-4mm:v1",
+      parentRecipeId: null,
+      validatedAt: null,
+      validatedBy: null,
+      createdAt: "2026-09-21T00:00:00.000Z",
+      updatedAt: "2026-09-21T00:00:00.000Z",
+      eliminadoEn: null,
+    };
+    mockUseFabricationRecipes.mockReturnValue({
+      organizationId: 3,
+      recipes: [draft],
+      isLoading: false,
+    });
+    const fetchMock = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/qa-context")) {
+        return { ok: true, json: async () => ({ enabled: true, allowPreliminaryRecipeSnapshots: true }) };
+      }
+      if (url.includes("/resolve-presentations")) {
+        const body = JSON.parse(String(init?.body)) as {
+          items: Array<{ itemId: string; technicalCodes: string[] }>;
+        };
+        const selections = Object.fromEntries(body.items.map((item) => [item.itemId,
+          item.technicalCodes.map((technicalCode) => ({
+            technicalCode,
+            status: "resolved",
+            presentationId: `presentation-${technicalCode}`,
+            providerKey: "taller:3",
+            supplierSku: `QA-${technicalCode}-6000`,
+            finishCode: null,
+            finishName: "Blanco",
+            commercialLengthMm: 6000,
+          })),
+        ]));
+        return { ok: true, json: async () => ({ enabled: true, selections }) };
+      }
+      return { ok: false, json: async () => ({}) };
+    });
+    Object.defineProperty(global, "fetch", {
+      configurable: true,
+      writable: true,
+      value: fetchMock,
+    });
+    const onFormalSnapshot = jest.fn();
+
+    render(
+      <PautaCubicacionPanel
+        componentForm={{
+          ancho: "1200",
+          alto: "1500",
+          cantidad: "1",
+          lineTemplateId: "1135",
+          catalogLineKey: VERATEC_7400_CATALOG_KEY,
+          colorHex: "#f0eeeb",
+          tipo: "Ventana corredera",
+          sistema: "PVC",
+          fabricacionTipologia: "corredera",
+          fabricacionHojas: 2,
+          fabricacionVariante: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+          vidrio: "Monolítico 4 mm",
+        }}
+        selectedTemplate={{
+          ...selectedTemplate,
+          id: 1135,
+          nombre: "Veratec 7400",
+          catalogKey: VERATEC_7400_CATALOG_KEY,
+          catalogMetadata: { familyKey: "veratec:sliding-7400" },
+        }}
+        onCubicationSnapshotChange={jest.fn()}
+        onFabricacionSnapshotChange={onFormalSnapshot}
+        onFabricationRecipeIdChange={jest.fn()}
+        onFabricacionContextoChange={jest.fn()}
+      />
+    );
+
+    await waitFor(() => expect(onFormalSnapshot).toHaveBeenCalledWith(expect.objectContaining({
+      recipeId: draft.id,
+      recipeStatus: "draft",
+      selectedVariant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+      qaPreliminary: {
+        mode: "supplier_catalog_v1_qa_preliminary",
+        readiness: "lista_para_validar",
+        provenance: {
+          sourceType: "manufacturer",
+          sourceReference: draft.sourceReference,
+        },
+      },
+    })));
+    expect(fetchMock).toHaveBeenCalledWith("/api/proveedor-catalogos/qa-context", { cache: "no-store" });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      "/api/proveedor-catalogos/resolve-presentations",
+      expect.objectContaining({ method: "POST", cache: "no-store" })
+    ));
+    fireEvent.click(screen.getByRole("button", { name: /Ver pauta de cortes/ }));
+    await waitFor(() => expect(document.body.textContent).toContain("6.000 mm"));
+    expect(document.body.textContent).not.toContain("5.800 mm");
+    expect(draft.status).toBe("draft");
+    expect(draft.definition.estado).toBe("lista_para_validar");
   });
 
   it("pide solo variante o herraje y guarda la receta elegida", async () => {

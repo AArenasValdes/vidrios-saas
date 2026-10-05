@@ -37,6 +37,7 @@ export type CotizacionItemCubicationSnapshotSource = "auto" | "manual";
 /** Origen del cálculo de pauta mostrado al maestro. */
 export type CotizacionCubicationEstimationKind =
   | "recipe"
+  | "recipe_geometry_only"
   | "legacy_partida"
   | "geometric_fallback";
 
@@ -73,7 +74,7 @@ export function snapshotUsesFabricationRecipe(
   snapshot: CotizacionItemCubicationSnapshot | null | undefined
 ): boolean {
   if (!snapshot) return false;
-  if (snapshot.estimationKind === "recipe") return true;
+  if (snapshot.estimationKind === "recipe" || snapshot.estimationKind === "recipe_geometry_only") return true;
   return Boolean(snapshot.recipe && snapshot.recipe.components.length > 0);
 }
 

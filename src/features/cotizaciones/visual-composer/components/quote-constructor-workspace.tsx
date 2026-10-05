@@ -29,6 +29,7 @@ import {
 import { DespieceInspectorSummary } from "@/features/cotizaciones/visual-composer/components/despiece-inspector-summary";
 import { LineTemplatePicker } from "@/features/cotizaciones/line-templates/components/line-template-picker";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import { resolveSupplierFamilyKeyForLineTemplate } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
 import { GlassOptionPicker } from "@/features/cotizaciones/visual-composer/components/glass-option-picker";
 import {
   buildPieceDomainView,
@@ -582,6 +583,7 @@ export function QuoteConstructorWorkspace({
       lineTemplateId: activeForm?.lineTemplateId || activeTemplate?.id,
       lineCatalogKey:
         activeTemplate?.catalogKey ?? inferWinHouseCatalogKey(activeItem),
+      supplierFamilyKey: resolveSupplierFamilyKeyForLineTemplate(activeTemplate),
     });
     return result;
   }, [activeForm, activeItem, activeTemplate, fabricationRecipes, organizationId]);
@@ -1025,6 +1027,7 @@ export function QuoteConstructorWorkspace({
       item: activeItem,
       recipes: fabricationRecipes,
       organizationId,
+      supplierFamilyKey: resolveSupplierFamilyKeyForLineTemplate(activeTemplate),
     });
     if (resolution.estado !== "calculado" || !resolution.formal) return;
     onUpdateItem(activeItem.id, {
@@ -1204,6 +1207,12 @@ export function QuoteConstructorWorkspace({
                             }
                             mode="profile"
                             preferredMaterial={mapItemToForm(item).material}
+                            compatibilityContext={{
+                              componentType: mapItemToForm(item).tipo,
+                              openingType: mapItemToForm(item).configuracion?.trim() || mapItemToForm(item).sistema,
+                              leavesCount: Number(mapItemToForm(item).fabricacionHojas) || null,
+                              material: mapItemToForm(item).material,
+                            }}
                             className={s.pieceLinePicker}
                             renderTrigger={({ open, toggle, listId }) => (
                               <button
@@ -1588,6 +1597,12 @@ export function QuoteConstructorWorkspace({
                       }
                       mode="profile"
                       preferredMaterial={activeForm.material}
+                      compatibilityContext={{
+                        componentType: activeForm.tipo,
+                        openingType: activeForm.configuracion?.trim() || activeForm.sistema,
+                        leavesCount: Number(activeForm.fabricacionHojas) || null,
+                        material: activeForm.material,
+                      }}
                       ariaLabel={`Línea de ${activeItem.codigo}`}
                     />
                   </div>

@@ -43,6 +43,8 @@ export function FabricacionLineMobileShell({
     focusRecipe,
     detailRecipe,
     handleCreateMissingVariant,
+    suggestedRecipesForLine,
+    handleUseSuggested,
     lineRecipes,
     pickerRecipes,
     selected,
@@ -196,6 +198,8 @@ export function FabricacionLineMobileShell({
         if (!recipe) return;
         void openTestLab(recipe, "test");
       }}
+      suggestedRecipes={suggestedRecipesForLine.filter((entry) => entry.sourceType === "workshop")}
+      onUseSuggested={(entry) => void handleUseSuggested(entry)}
     />
   );
 }

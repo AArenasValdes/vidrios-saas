@@ -43,6 +43,8 @@ import { buildQuoteStudioFinancialSummary } from "@/features/cotizaciones/servic
 import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
+import { resolveSupplierPresentationsForQuote } from "@/features/proveedor-catalogos/services/supplier-presentations.client";
+import { resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 import {
   organizationProfileRepository,
   type OrganizationProfileRepository,
@@ -160,6 +162,23 @@ function formatValidez(value: string | null) {
   }
 
   return "30 dias";
+}
+
+async function resolveSupplierPresentationsForNewQuote(items: readonly CotizacionWorkflowItem[]) {
+  const requests = items.flatMap((item) => {
+    const snapshot = item.fabricacionSnapshot;
+    const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+    if (!snapshot?.supplierFamilyKey || !meta.catalogLineKey || !snapshot.result.perfiles.length) return [];
+    return [{
+      itemId: item.id,
+      catalogLineKey: meta.catalogLineKey,
+      familyKey: snapshot.supplierFamilyKey,
+      finishName: resolveSupplierFinishName(meta.catalogTerminacion, meta.colorHex),
+      technicalCodes: [...new Set(snapshot.result.perfiles.map((row) => row.codigoPerfil.trim()).filter(Boolean))],
+    }];
+  });
+  // La cotización comercial sigue guardándose aunque el catálogo QA no esté habilitado.
+  return resolveSupplierPresentationsForQuote(requests);
 }
 
 function resolvePersistedTotalGlobalManualAmount(input: {
@@ -1220,20 +1239,38 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
       const margenPct = financialSummary.margenRealPct;
       const ivaPct = totals.neto > 0 ? round((totals.iva / totals.neto) * 100, 4) : 0;
       const financialSnapshotCalculatedAt = new Date().toISOString();
+      const fabricationItems = normalizedItems.map((item) => {
+        const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
+        return {
+          id: item.id,
+          codigo: item.codigo,
+          nombre: item.nombre,
+          lineaComercial: item.lineaComercial,
+          colorHex: presentation.colorHex,
+          catalogLineKey: presentation.catalogLineKey,
+          snapshot: item.fabricacionSnapshot ?? null,
+        };
+      });
+      const supplierPresentationResolution = input.existingId == null
+        ? await resolveSupplierPresentationsForNewQuote(normalizedItems)
+        : null;
       const fabricacionTrabajoSnapshot = resolveFabricacionTrabajoSnapshotForQuoteSave({
         existingId: input.existingId,
         existingSnapshot: existingCotizacion?.fabricacionTrabajoSnapshot,
         capturedAt: financialSnapshotCalculatedAt,
-        items: normalizedItems.map((item) => {
-          const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
+        items: fabricationItems.map((item) => {
+          const resolved = supplierPresentationResolution?.selections[item.id];
+          const requiresCatalogPresentation = Boolean(
+            supplierPresentationResolution?.enabled && item.snapshot?.supplierFamilyKey
+          );
           return {
-            id: item.id,
-            codigo: item.codigo,
-            nombre: item.nombre,
-            lineaComercial: item.lineaComercial,
-            colorHex: presentation.colorHex,
-            catalogLineKey: presentation.catalogLineKey,
-            snapshot: item.fabricacionSnapshot ?? null,
+            ...item,
+            ...(requiresCatalogPresentation
+              ? {
+                  requireSupplierPresentation: true,
+                  supplierPresentationSelections: resolved ?? [],
+                }
+              : {}),
           };
         }),
       });

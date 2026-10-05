@@ -85,7 +85,8 @@ Reglas:
 4. `src/features/fabricacion/components/fabricacion-line-workspace.tsx`
 5. `src/features/fabricacion/services/fabricacion-receta-lista-para-probar.service.ts` (gate **Probar**; vidrio = advertencia)
 6. `src/features/fabricacion/components/recipe-guided-editor.tsx` / `recipe-glass-name-picker.tsx` / `recipe-test-lab.tsx`
-7. Catálogo 31 líneas: `default-line-catalog.ts`, `auditoria-catalogo-lineas-ventora.service.ts`, `auditoria-integridad-catalogo-lineas.service.ts`. Línea 45: `serie-45-practicable-recipe.ts`. Serie 4800: `serie-4800-corredera-recipe.ts`. Veratec 7400: `veratec-7400-corredera-recipe.ts` + evidencia Alumétrica en `docs/fabricacion/alumetrica/2026-09-21-veratec-7400.md`.
+7. Catálogo 50 líneas (incluye siete familias PVC Veratec): `default-line-catalog.ts`, `auditoria-catalogo-lineas-ventora.service.ts`, `auditoria-integridad-catalogo-lineas.service.ts`. La expansión comercial Veratec no crea recetas; ver `docs/catalogos-proveedores/veratec-familias-v1.md`. Línea 45: `serie-45-practicable-recipe.ts`. Serie 4800: `serie-4800-corredera-recipe.ts`. Veratec 7400: `veratec-7400-corredera-recipe.ts` + evidencia Alumétrica en `docs/fabricacion/alumetrica/2026-09-21-veratec-7400.md`.
+   Estado actual: 50 líneas comerciales; la expansión Veratec por siete familias está documentada en `docs/catalogos-proveedores/veratec-familias-v1.md` y no amplía recetas.
 8. Cotización + línea: `fabricacion-linea-cotizacion-context.service.ts`, `workflow-ui.ts` (`hydrateComponentFormFromLineTemplate`)
 9. Print: `app/print/cotizaciones/[id]/fabricacion/`
 

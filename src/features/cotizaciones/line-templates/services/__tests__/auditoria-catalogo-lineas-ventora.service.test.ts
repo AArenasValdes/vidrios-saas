@@ -4,9 +4,9 @@ import {
 } from "@/features/cotizaciones/line-templates/services/auditoria-catalogo-lineas-ventora.service";
 
 describe("auditoria-catalogo-lineas-ventora.service", () => {
-  it("audita las 31 líneas canónicas del catálogo Ventora", () => {
+  it("audita las 50 líneas canónicas del catálogo Ventora", () => {
     const rows = auditarCatalogoLineasVentora();
-    expect(rows).toHaveLength(31);
+    expect(rows).toHaveLength(50);
     expect(rows.every((row) => row.cotizacionComercial)).toBe(true);
   });
 
@@ -29,6 +29,18 @@ describe("auditoria-catalogo-lineas-ventora.service", () => {
     expect(row?.codigosConfigurados).toEqual(
       expect.arrayContaining(["7401", "7414", "7418", "6306", "69014STL001", "69069STL000"])
     );
+  });
+
+  it("mantiene las demás configuraciones Veratec como comerciales y sin receta heredada", () => {
+    const rows = auditarCatalogoLineasVentora().filter((row) =>
+      row.catalogKey.startsWith("ventora:veratec-") && row.catalogKey !== "ventora:veratec-7400-corredera"
+    );
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((row) => row.cotizacionComercial)).toBe(true);
+    expect(rows.every((row) => !row.listaParaProbar)).toBe(true);
+    expect(rows.every((row) => row.validationStatus !== "workshop_validated")).toBe(true);
+    expect(rows.filter((row) => row.codigosConfigurados.length > 0).every((row) => row.fabricacionEstado === "fabricacion_pendiente")).toBe(true);
+    expect(rows.filter((row) => row.catalogKey.includes("elevadora")).every((row) => row.fabricacionEstado === "cotizacion_comercial")).toBe(true);
   });
 
   it("representa AM-35 con variantes documentadas y sin validación de taller", () => {

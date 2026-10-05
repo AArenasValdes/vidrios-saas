@@ -135,6 +135,10 @@
   border: 1px solid #dfe6ee;
 }
 
+.baseUseButton {
+  min-height: 48px;
+}
+
 .primaryButton {
   width: 100%;
   min-height: 56px;
@@ -798,6 +802,9 @@
 .validateFormCard {
   display: grid;
   gap: 10px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   margin-bottom: 12px;
   padding: 14px;
   border: 1px solid #e2e8f0;
@@ -813,12 +820,16 @@
 
 .validateField {
   display: grid;
+  min-width: 0;
   gap: 6px;
   font-size: 13px;
   font-weight: 650;
 }
 
 .validateField input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   min-height: 44px;
   padding: 0 12px;
   border: 1px solid #d8e0ea;
@@ -828,8 +839,14 @@
 
 .validateMeasureGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+
+.validateMeasureGrid > .validateField:last-child {
+  grid-column: 1 / -1;
 }
 
 .validateTiraHint {
@@ -2068,6 +2085,87 @@
 .variantGalleryActionPrimary:disabled,
 .variantGalleryActionSecondary:disabled {
   opacity: 0.55;
+}
+
+.veratecEvidence {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  color: #26384f;
+  background: #fff;
+  border: 1px solid #dfe6ee;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.veratecEvidence h3,
+.veratecEvidence p {
+  margin: 0;
+}
+
+.veratecEvidence h3 {
+  color: #102038;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.veratecEvidence strong {
+  color: #102038;
+  font-size: 12px;
+}
+
+.veratecEvidence ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 19px;
+}
+
+.veratecEvidence details summary {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  color: #1768c4;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.veratecEvidence details ul {
+  padding: 0;
+  list-style: none;
+}
+
+.veratecEvidence details li {
+  display: grid;
+  grid-template-columns: minmax(96px, auto) minmax(0, 1fr);
+  gap: 8px;
+  padding: 7px 0;
+  border-top: 1px solid #eef2f6;
+}
+
+.veratecEvidence details li span:first-child {
+  color: #52657f;
+  font-variant-numeric: tabular-nums;
+}
+
+.veratecCandidateButton {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 12px;
+  color: #1768c4;
+  background: #fff;
+  border: 1px solid #b9d7f7;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.veratecCandidateButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .variantSelectedPanel {

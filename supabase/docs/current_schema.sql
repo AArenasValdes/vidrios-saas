@@ -1,3 +1,7 @@
+-- Baseline export tracked in commit 7a69e267 (2026-09-30 09:25 -0300).
+-- Includes the consolidated quotation fabrication snapshot. It predates
+-- 20260930165551_supplier_catalogs_v1.sql; see agent_database_notes.md for
+-- the separate disposable QA overlay. This file is not a production live check.
 
 
 

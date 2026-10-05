@@ -2303,6 +2303,7 @@ export function PasoDosAgregarGrupoSheet({
                       fabricacionVariante: draft.fabricacionVariante,
                       fabricacionAnchoHojaAMm: draft.fabricacionAnchoHojaAMm,
                       catalogLineKey: draft.catalogLineKey,
+                      colorHex: draft.colorHex,
                       fabricacionGlazing: draft.fabricacionGlazing,
                       fabricacionLeg: draft.fabricacionLeg,
                       fabricacionReinforcement: draft.fabricacionReinforcement,

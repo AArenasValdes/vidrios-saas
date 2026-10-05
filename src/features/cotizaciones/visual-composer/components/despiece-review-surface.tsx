@@ -43,6 +43,7 @@ import {
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { resolveSupplierFamilyKeyForLineTemplate } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
 import { hasQuickCompositionStructuralChanges } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
@@ -55,7 +56,10 @@ import {
   buildConsolidatedGlassSheetOptimizations,
   buildVidrioDespieceForQuoteItem,
 } from "@/features/fabricacion/services/vidrio-plancha-optimizacion.service";
+import { groupMissingPresentations, resolveDespieceReviewSelectionPrompt } from "@/features/cotizaciones/visual-composer/services/despiece-review-presentation.service";
 import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
+import { useSupplierPresentationResolution } from "@/features/proveedor-catalogos/hooks/use-supplier-presentation-resolution";
+import { resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 import {
   isQuoteConstructorCompatibleItem,
   type QuoteConstructorItemPatch,
@@ -73,16 +77,20 @@ type ReviewTab = "pieza" | "consolidado";
 
 type DespieceUiStatus =
   | "calculado_con_receta"
+  | "geometria_parcial"
   | "configuracion_incompleta"
   | "estimacion_geometrica"
   | "composicion_por_revisar"
+  | "requiere_seleccion"
   | "sin_reglas";
 
 const DESPIECE_UI_STATUS_LABELS: Record<DespieceUiStatus, string> = {
   calculado_con_receta: "Despiece calculado",
+  geometria_parcial: "Geometría calculada · material pendiente",
   configuracion_incompleta: "Fabricación no configurada",
   estimacion_geometrica: "Estimación geométrica",
   composicion_por_revisar: "Composición por revisar",
+  requiere_seleccion: "Elegir variante",
   sin_reglas: "Fabricación no configurada",
 };
 
@@ -179,6 +187,7 @@ function despieceStatusToneClass(status: DespieceUiStatus) {
     case "composicion_por_revisar":
     case "configuracion_incompleta":
     case "estimacion_geometrica":
+    case "requiere_seleccion":
       return styles.statusWarn;
     case "sin_reglas":
     default:
@@ -250,6 +259,8 @@ function resolveDespieceUiStatus(input: {
 }): DespieceUiStatus {
   const { snapshot, preview, resolution } = input;
   if (resolution?.estado === "composicion_sin_receta") return "composicion_por_revisar";
+  if (resolution?.estado === "multiples_recetas") return "requiere_seleccion";
+  if (resolution?.geometryOnly) return "geometria_parcial";
   if (resolution?.estado === "calculado" && preview && preview.cuts.length > 0) {
     return "calculado_con_receta";
   }
@@ -374,6 +385,7 @@ export function DespieceReviewSurface({
           organizationId,
           lineTemplateId: lineTemplate?.id,
           lineCatalogKey: lineTemplate?.catalogKey,
+          supplierFamilyKey: resolveSupplierFamilyKeyForLineTemplate(lineTemplate),
         })
       );
     });
@@ -414,6 +426,7 @@ export function DespieceReviewSurface({
     ? getLineTemplateCuttingRules(selectedTemplate.catalogMetadata)
     : null;
   const autoSnapshot = activeResolution?.cubication ?? null;
+  const geometryOnly = activeResolution?.geometryOnly ?? null;
   const adjustmentSummary = useMemo(() => {
     if (
       !selectedTemplate ||
@@ -453,7 +466,7 @@ export function DespieceReviewSurface({
     [visualItems, pieceResolutions, lineTemplates]
   );
 
-  const consolidated = useMemo(() => {
+  const consolidatedCarriers = useMemo(() => {
     const carriers = visualItems
       .map((item) => {
         const form = mapItemToForm(item);
@@ -474,22 +487,48 @@ export function DespieceReviewSurface({
           snapshot,
           colorHex: presentation.colorHex,
           catalogLineKey: presentation.catalogLineKey,
-          fabricacionSnapshot: item.fabricacionSnapshot ?? resolution?.formal ?? null,
+          fabricacionSnapshot: resolution?.formal ?? item.fabricacionSnapshot ?? null,
         };
       })
       .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
-    return buildConsolidatedCubicationPautaFromSnapshots(carriers);
+    return carriers;
   }, [visualItems, lineTemplates, pieceResolutions]);
+  const supplierPresentationRequests = useMemo(() => consolidatedCarriers.flatMap((carrier) => {
+    const fabricacionSnapshot = carrier.fabricacionSnapshot;
+    if (!fabricacionSnapshot?.supplierFamilyKey || !carrier.catalogLineKey || fabricacionSnapshot.result.perfiles.length === 0) return [];
+    return [{
+      itemId: carrier.itemId ?? carrier.codigo,
+      catalogLineKey: carrier.catalogLineKey,
+      familyKey: fabricacionSnapshot.supplierFamilyKey,
+      finishName: resolveSupplierFinishName(null, carrier.colorHex),
+      technicalCodes: [...new Set(fabricacionSnapshot.result.perfiles.map((profile) => profile.codigoPerfil.trim()).filter(Boolean))],
+    }];
+  }), [consolidatedCarriers]);
+  const supplierPresentationResolution = useSupplierPresentationResolution(supplierPresentationRequests);
+  const isResolvingSupplierPresentations = supplierPresentationResolution.isResolving;
+  const consolidated = useMemo(
+    () => buildConsolidatedCubicationPautaFromSnapshots(
+      consolidatedCarriers,
+      null,
+      {
+        supplierPresentationResolutionEnabled: supplierPresentationResolution.result?.enabled === true,
+        supplierPresentationSelections: supplierPresentationResolution.result?.selections ?? {},
+      }
+    ),
+    [consolidatedCarriers, supplierPresentationResolution.result]
+  );
   const consolidatedCutUnits = useMemo(
     () => consolidated.rows.reduce((sum, row) => sum + Math.max(1, row.quantity), 0),
     [consolidated.rows]
   );
   const consolidatedBarsCalculable = useMemo(
     () =>
+      !isResolvingSupplierPresentations &&
+      (consolidated.trabajoSnapshot?.missingPresentations?.length ?? 0) === 0 &&
       consolidated.totalBars > 0 &&
       (Array.from(pieceResolutions.values()).some((entry) => entry.barsAvailable) ||
         visualItems.some((item) => (item.fabricacionSnapshot?.pautaBarras?.barras.length ?? 0) > 0)),
-    [pieceResolutions, consolidated.totalBars, visualItems]
+    [pieceResolutions, consolidated.totalBars, consolidated.trabajoSnapshot?.missingPresentations?.length, visualItems, isResolvingSupplierPresentations]
   );
   const warnings = useMemo(() => {
     return visualItems
@@ -677,6 +716,7 @@ export function DespieceReviewSurface({
       organizationId,
       lineTemplateId: selectedTemplate?.id,
       lineCatalogKey: selectedTemplate?.catalogKey,
+      supplierFamilyKey: resolveSupplierFamilyKeyForLineTemplate(selectedTemplate),
     });
     setHasOfferedAdjustmentChoice(false);
     setIsAdjustmentChoiceOpen(false);
@@ -736,6 +776,11 @@ export function DespieceReviewSurface({
     preview,
     resolution: activeResolution,
   });
+  const selectionPrompt = resolveDespieceReviewSelectionPrompt({
+    resolution: activeResolution,
+    catalogKey: selectedTemplate?.catalogKey,
+    glassName: selectedItem?.vidrio,
+  });
   const barsCalculable = areBarsCalculable(
     preview,
     activeResolution?.barsAvailable
@@ -775,7 +820,7 @@ export function DespieceReviewSurface({
               className={tab === "consolidado" ? styles.tabActive : styles.tab}
               onClick={() => setTab("consolidado")}
             >
-              Consolidado
+              Pauta conjunta
             </button>
           </div>
           <button type="button" className={styles.closeButton} aria-label="Cerrar revisión" onClick={onClose}>
@@ -817,6 +862,11 @@ export function DespieceReviewSurface({
                       preview: itemPreview,
                       resolution,
                     });
+                    const selectionPrompt = resolveDespieceReviewSelectionPrompt({
+                      resolution,
+                      catalogKey: template?.catalogKey,
+                      glassName: item.vidrio,
+                    });
                     const selected = selectedItem?.id === item.id;
                     return (
                       <li key={item.id}>
@@ -829,7 +879,7 @@ export function DespieceReviewSurface({
                             {item.codigo} {item.nombre || "Sin nombre"}
                           </strong>
                           <em className={despieceStatusToneClass(uiStatus)}>
-                            {DESPIECE_UI_STATUS_LABELS[uiStatus]}
+                            {selectionPrompt?.label ?? DESPIECE_UI_STATUS_LABELS[uiStatus]}
                           </em>
                         </button>
                       </li>
@@ -859,7 +909,7 @@ export function DespieceReviewSurface({
                       </p>
                     </div>
                     <em className={despieceStatusToneClass(pieceUiStatus)}>
-                      {DESPIECE_UI_STATUS_LABELS[pieceUiStatus]}
+                      {selectionPrompt?.label ?? DESPIECE_UI_STATUS_LABELS[pieceUiStatus]}
                     </em>
                   </header>
 
@@ -867,6 +917,12 @@ export function DespieceReviewSurface({
                     <p className={styles.compactWarning} role="status">
                       <LuCircleAlert aria-hidden />
                       {BARS_INCOMPLETE_WARNING}
+                    </p>
+                  ) : null}
+                  {geometryOnly ? (
+                    <p className={styles.compactWarning} role="status" data-testid="veratec-geometry-only-warning">
+                      <LuCircleAlert aria-hidden />
+                      {activeResolution?.message}
                     </p>
                   ) : null}
                   {isGeometricFallbackSnapshot(activeSnapshot) ? (
@@ -969,6 +1025,7 @@ export function DespieceReviewSurface({
                           type="button"
                           className={isEditMode ? styles.editModeActive : styles.editModeButton}
                           onClick={() => setIsEditMode((current) => !current)}
+                          disabled={Boolean(geometryOnly)}
                         >
                           <LuPencil aria-hidden />
                           {isEditMode ? "Listo" : "Editar despiece"}
@@ -1002,7 +1059,7 @@ export function DespieceReviewSurface({
                           </>
                         ) : null}
                         {isEditMode ? (
-                          <button type="button" onClick={handleAddCut} disabled={!ensureEditableBase()}>
+                            <button type="button" onClick={handleAddCut} disabled={Boolean(geometryOnly) || !ensureEditableBase()}>
                             Agregar corte
                           </button>
                         ) : null}
@@ -1146,11 +1203,12 @@ export function DespieceReviewSurface({
                       </div>
                     ) : (
                       <div className={styles.emptyTable}>
-                        {activeResolution?.estado !== "calculado" && activeResolution?.message
+                        {selectionPrompt?.message ??
+                        (activeResolution?.estado !== "calculado" && activeResolution?.message
                           ? activeResolution.message
                           : pieceUiStatus === "sin_reglas"
                           ? "Esta pieza no tiene reglas técnicas de cubicación. Puedes cotizar igual; define la pauta cuando el taller la tenga."
-                          : "Aún no hay cortes para esta pieza. Completa línea y medidas, o agrega cortes manualmente."}
+                          : "Aún no hay cortes para esta pieza. Completa línea y medidas, o agrega cortes manualmente.")}
                       </div>
                     )}
                     {activeSnapshot?.source === "manual" ? (
@@ -1251,7 +1309,7 @@ export function DespieceReviewSurface({
           <div className={styles.consolidatedLayout}>
             <header className={styles.consolidatedHead}>
               <div>
-                <h3>Despiece consolidado</h3>
+                <h3>Pauta conjunta · trabajo completo</h3>
                 <p className={styles.consolidatedSubtitle}>
                   Agrupado por línea, código de perfil, función y medida.
                 </p>
@@ -1264,13 +1322,58 @@ export function DespieceReviewSurface({
                   accesorios
                 </p>
               </div>
+              {isResolvingSupplierPresentations ? (
+                <p className={styles.compactWarning} role="status">
+                  Resolviendo la presentación y el largo comercial antes de distribuir las barras…
+                </p>
+              ) : null}
               {!consolidatedBarsCalculable ? (
                 <p className={styles.compactWarning} role="status">
                   <LuCircleAlert aria-hidden />
-                  {BARS_INCOMPLETE_WARNING}
+                  {consolidated.trabajoSnapshot?.missingPresentations?.length
+                    ? "Pauta parcial: los perfiles sin presentación y largo confirmados quedan pendientes."
+                    : BARS_INCOMPLETE_WARNING}
                 </p>
               ) : null}
             </header>
+
+            {consolidated.trabajoSnapshot && !isResolvingSupplierPresentations ? (
+              <section className={styles.lineGroup} aria-label="Distribución física compartida">
+                <header>
+                  <div>
+                    <strong>
+                      {consolidated.trabajoSnapshot.missingPresentations?.length
+                        ? `Pauta parcial · ${consolidated.trabajoSnapshot.totalBars} barras calculadas`
+                        : `${consolidated.trabajoSnapshot.totalBars} barras compartidas`}
+                    </strong>
+                    <span>
+                      {consolidated.trabajoSnapshot.missingPresentations?.length
+                        ? "Incluye solo perfiles con presentación y largo confirmados. Los pendientes se detallan abajo."
+                        : "Los cortes de todas las partidas compatibles se empacan juntos."}
+                    </span>
+                  </div>
+                  <em>{formatMm(consolidated.trabajoSnapshot.totalWasteMm)} sobrante</em>
+                </header>
+                {groupMissingPresentations(consolidated.trabajoSnapshot.missingPresentations).map((missing) => (
+                  <p key={`${missing.technicalCode}-${missing.finishKey}-${missing.reason}`} role="status">
+                    {missing.technicalCode}{missing.cutCount > 1 ? ` · ${missing.cutCount} cortes pendientes` : ""}: {missing.reason}
+                  </p>
+                ))}
+                <ol className={styles.jointBarList}>
+                  {consolidated.trabajoSnapshot.bars.map((bar) => (
+                    <li key={`${bar.materialKey}-${bar.acabadoKey}-${bar.largoComercialMm}-${bar.indice}`}>
+                      <strong>{bar.codigoPerfil} · Barra #{bar.indice} · {formatMm(bar.largoComercialMm)}</strong>
+                      <span>Usado {formatMm(bar.usadoMm)} · Sobrante {formatMm(bar.sobranteMm)}</span>
+                      {bar.cortes.map((cut, index) => (
+                        <em key={`${cut.itemId}-${cut.componenteId}-${index}`}>
+                          {cut.codigoItem} · {cut.funcion} · {formatMm(cut.largoMm)}
+                        </em>
+                      ))}
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            ) : null}
 
             {consolidated.lineGroups.length === 0 ? (
               <div className={styles.emptyTable}>
@@ -1288,11 +1391,8 @@ export function DespieceReviewSurface({
                       <div>
                         <strong>{group.lineName}</strong>
                         <span>
-                          {groupBarsCalculable
-                            ? `${group.bars} tiras · sobra ${formatMm(group.wasteMm)}`
-                            : "Tiras: no calculable"}
-                          {" · "}
-                          {group.accessories} accesorios (preliminar)
+                          {groupBarsCalculable ? `${formatMl(group.totalLinealMm / 1000)} de perfiles` : "Perfiles: no calculables"}
+                          {group.accessories > 0 ? ` · ${group.accessories} accesorios (preliminar)` : ""}
                         </span>
                       </div>
                       <em>{formatMl(group.totalLinealMm / 1000)}</em>

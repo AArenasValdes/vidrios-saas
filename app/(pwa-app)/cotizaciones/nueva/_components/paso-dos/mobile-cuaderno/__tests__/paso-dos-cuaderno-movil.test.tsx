@@ -337,6 +337,7 @@ describe("PasoDosCuadernoMovil", () => {
 
     fireEvent.click(screen.getByText("Ventana fija"));
     fireEvent.click(screen.getByRole("button", { name: "Elegir linea de esta pieza" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Todas" })[0]);
     fireEvent.click(screen.getByRole("button", { name: "Cristal" }));
     fireEvent.click(screen.getByRole("option", { name: /Cristal monolitico 5mm/i }));
 
@@ -348,7 +349,7 @@ describe("PasoDosCuadernoMovil", () => {
     );
   });
 
-  it("prioriza el material de la pieza sin ocultar las otras líneas", () => {
+  it("mantiene el material actual en Compatibles y permite explorar otros en Todas", () => {
     render(
       <PasoDosCuadernoMovil
         {...defaultProps}
@@ -370,12 +371,13 @@ describe("PasoDosCuadernoMovil", () => {
     fireEvent.click(screen.getByText("Ventana fija"));
     fireEvent.click(screen.getByRole("button", { name: "Elegir linea de esta pieza" }));
 
-    expect(screen.getByText(/PVC primero/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Compatibles" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("option", { name: /PVC 25/i })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /Aluminio 32/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "Todas" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "Todas" }).at(-1)!);
     expect(screen.getByRole("option", { name: /Aluminio 32/i })).toBeInTheDocument();
-    const options = screen.getAllByRole("option");
-    expect(options[1]).toHaveTextContent("PVC 25");
-    expect(options[2]).toHaveTextContent("Aluminio 32");
+    expect(screen.getByRole("option", { name: /PVC 25/i })).toBeInTheDocument();
   });
 
   it("abre composicion desde la edicion rapida sin entrar al constructor completo", () => {

@@ -1982,8 +1982,8 @@ export function RecipeGuidedEditor({
           <h2>Así fabricas esta {fabricationProductLabel(recipe.identidad.tipologia)}</h2>
           <p className={s.fabPrepGlobalStatus}>
             {fabricacionPreparada
-              ? "Fabricación lista para probar"
-              : "Fabricación pendiente"}
+              ? "Base lista para validar"
+              : "Base editable · puedes probarla"}
             {" · "}
             {fabricacionPreparada
               ? `${configuredActiveProfilePieces} de ${activeProfilePieces} cortes de perfilería configurados`
@@ -1992,7 +1992,7 @@ export function RecipeGuidedEditor({
           <p>
             {fabricacionPreparada
               ? "Ventora ya preparó las medidas y piezas habituales. Revisa solo si en tu taller lo haces distinto."
-              : "La receta conserva información persistida, pero su composición aún está pendiente. No se puede probar ni generar una pauta confiable hasta completarla."}
+              : "Puedes probar con estas medidas y ajustar la receta cuando quieras."}
           </p>
         </header>
 
@@ -2003,8 +2003,8 @@ export function RecipeGuidedEditor({
           <div className={s.fabPrepHeroMain}>
             <h3>
               {fabricacionPreparada && recipeSummary.compositionComplete
-                ? "Fabricación preparada"
-                : "Configuración técnica pendiente"}
+                ? "Lista para validar"
+                : "Base editable"}
             </h3>
             <ul className={s.fabPrepStats} aria-label="Resumen de fabricación">
               <li>
@@ -2038,18 +2038,13 @@ export function RecipeGuidedEditor({
             size="sm"
             className={s.fabSheetPreview}
           />
-          {!readOnly && onContinueToTest && activeProfileRules.length > 0 ? (
+          {!readOnly && onContinueToTest ? (
             <button
               type="button"
               className={`${s.primaryButton} ${s.fabPrimaryCta} ${s.fabPreparedCta}`}
               onClick={onContinueToTest}
-              disabled={!fabricacionPreparada}
-              title={
-                listaParaProbarEvaluacion.bloqueos[0] ??
-                "Completa la receta antes de probar."
-              }
             >
-              Probar con una medida real
+              Probar medidas
               <ChevronRight size={16} aria-hidden="true" />
             </button>
           ) : null}
@@ -2149,14 +2144,10 @@ export function RecipeGuidedEditor({
             <AlertTriangle size={16} aria-hidden="true" />
             <p>
               {pendingDiscountCount > 0
-                ? `Faltan descuentos en ${pendingDiscountCount} ${
+                ? `Hay descuentos pendientes en ${pendingDiscountCount} ${
                     pendingDiscountCount === 1 ? "pieza" : "piezas"
-                  } para completar la pauta de corte.`
-                : `Completa ${listaParaProbarEvaluacion.bloqueos.length} ${
-                    listaParaProbarEvaluacion.bloqueos.length === 1
-                      ? "ajuste pendiente"
-                      : "ajustes pendientes"
-                  } en perfiles obligatorios para probar.`}
+                  }. Puedes probar y ajustarlos cuando quieras.`
+                : "Hay ajustes pendientes. Puedes probar y corregirlos cuando quieras."}
             </p>
             <button
               type="button"

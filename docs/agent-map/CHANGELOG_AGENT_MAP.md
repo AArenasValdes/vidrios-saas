@@ -2,6 +2,26 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-10-04 - Límite de privacidad para la pauta Veratec de un taller
+
+- Las fórmulas derivadas del Excel de un cliente dejan de figurar como variantes Supplier/Veratec comunes. Permanecen como evidencia de taller y pruebas, no como receta sugerida para otras organizaciones.
+- El catálogo común conserva las familias/perfiles documentados oficialmente y los precios solo de `Lista Junio 2026.pdf`; los valores del Excel de cliente no participan.
+- Regresión en `veratec-workbook-recipes.test.ts` comprueba que esas claves no exponen slots globales.
+
+## 2026-10-04 - Base técnica Veratec desde pauta Excel
+
+- Inventario de 45 pestañas y estados por familia en `docs/fabricacion/veratec/base-tecnica-veratec-2026-10-04.md`.
+- Riel Compact Excel `61013ver` enlazado explícitamente al SKU técnico `61013VER001`; `61013VER000` queda documentado como tope, no riel. El piloto 7400 mantiene `AB01016-E` y suma alias funcional Excel `61016ver` para el SKU oficial `61016VER001`.
+- Fixture de familias agrega refuerzos documentados 69083/69041/69071/69060 y precios netos junio 2026. Lote familiar: 52 insumos, 55 relaciones y 113 presentaciones; no es un preflight remoto.
+- Compact 2/3/4H y 7400 3H tienen pruebas numéricas contra ejemplos de la hoja. Largos desconocidos no heredan 6 m; la pauta 7400 3H es parcial hasta resolver 67401 por acabado.
+- No se cambió estado/receta 7400 2H ni hubo escritura remota, migración, commit o despliegue. Falta la captura per-work de datos desde despiece y conectar selección de presentación/acabado con el packing.
+
+## 2026-09-30 - Asociaciones explícitas en pauta conjunta
+
+- El snapshot de pauta mantiene cada asociación de origen por línea de catálogo cuando varias recetas usan el mismo insumo físico; las barras aún se comparten si coinciden material, acabado, largo y regla de corte.
+- Acabado y largo comercial permanecen como dimensiones independientes de la presentación; no se agregan SKUs ni listas de precios.
+- Regresión: `fabricacion-trabajo-snapshot.service.test.ts`.
+
 ## 2026-09-29 - Billing MP: sincronización de pagos y renovaciones
 
 - Se documentan `preapproval` + `auto_recurring` como responsables del débito automático; Ventora registra estados confirmados y no genera cargos al sincronizar.
@@ -2620,3 +2640,47 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
 - El despiece S75 agrega un borrador oficial determinista cuando falta el registro persistido de la combinación exacta; prevalece la receta de organización si ya existe. La prueba de servicio cubre 2H asimétrica sin seed y verifica pauta/cortes preliminares.
 - 2026-09-29 — Editor móvil de composición: elegir una posición agrega de inmediato el fijo inicial editable y marca la zona activa; el croquis queda contenido en su tarjeta para evitar que el marco se recorte junto al encabezado.
 - 2026-09-29 — Ajuste de composición Guiada móvil: selector por hoja con **Según sistema**, **Fija**, **Corredera**, **Abatible** y **Proyectante**, también sobre croquis genéricos; tipo de hoja invalida snapshot estructural. Palillos dibujados como perfiles de aluminio con cuerpo, contorno y faceta; los croquis históricos sin ajuste conservan su representación.
+- 2026-09-30 — Se prepara localmente Catálogos de proveedor V1 para Veratec 7400: contrato versionado, presentaciones explícitas por SKU/acabado/largo, costo técnico parcial solo QA y pruebas de permisos. La migración no se aplicó ni se desplegó.
+
+# 2026-10-02 · Precios de compra por organización (local, sin deploy)
+
+- Nueva migración local para ajuste de proveedor y override por presentación con RLS tenant-scoped.
+- Resolver genérico de precedencia; snapshot técnico nuevo conserva precio referencial/efectivo y fuente sin tocar históricos ni venta.
+- Configuración privada mobile-first `/configuracion/empresa/mis-precios` y API admin QA; panel interno resume origen/pendientes.
+- Importador genérico con preflight de conflictos; Veratec mantiene la cobertura piloto y gate QA.
+- Cierre V1: resolución de lista por proveedor (selección explícita → preferencia vigente por proveedor → revisión vigente más reciente), sin variables globales para elegir un único proveedor/revisión.
+- La cotización admite líneas de distintos proveedores y congela proveedor/lista/revisión de la presentación elegida por el motor existente.
+- Mis precios agrupa proveedores en la vista existente y aplica ajuste por proveedor u override por presentación; regresión cubre dos proveedores en una cotización.
+
+# 2026-10-04 · Pauta Veratec desde Excel (local)
+
+- Se transcriben siete configuraciones con identidad/fórmulas claras: Compact Sliding 2/3/4H, Sliding 7400 3H grande/chica (dos rieles) y Elegans 60 paño fijo normal/rebajado.
+- Se conserva sin cambios la receta Sliding 7400 2H; junquillos `todos`, vínculos SKU dudosos, accesorios, composición de vidrio y largos no demostrados permanecen pendientes.
+- `largoComercialPendiente` evita heredar el preset Ventora cuando no hay tira identificada; los slots de Excel no se siembran automáticamente.
+- Evidencia y cobertura restante: `docs/fabricacion/veratec/pauta-excel-integracion-parcial-2026-10-04.md`.
+
+# 2026-10-04 · Cruce de hallazgos Veratec (local)
+
+- Se contrastan los hallazgos externos con lista junio 2026, díptico, pendón y celdas del XLSX; referencias y límites quedan en `docs/fabricacion/veratec/auditoria-cruce-hallazgos-2026-10-04.md`.
+- Se agregan asociaciones funcionales explícitas para consumos `7401`/`67401VER` y `6306`/`66306VER` con alcance derivado/documentado; los SKUs y largos continúan explícitos, no inferidos por sufijo.
+- Se agregan regresiones para las seis presentaciones de `67401VER`, largos/precios, 4H chica bloqueada, 5 mm fuera de la matriz y ausencia de consumos `todos`/cero en candidatas.
+- Se confirma gap: packing/costo parcial conoce el largo de SKU, pero el snapshot físico conjunto aún parte de recetas por ítem y no consume la presentación Supplier Catalog; 7400 2H mantiene el largo fijo existente. No se recalculan ni reescriben recetas/snapshots históricos.
+
+# 2026-10-04 · Catálogo de compra Veratec por familias (local)
+
+- Se añadieron siete perfiles/refuerzos que nombran explícitamente su familia en Lista Junio 2026: cuatro refuerzos Elegans y refuerzo marco 3 rieles 7400 (p. 12), cuarta hoja Compact Sliding y zapata Sliding 7400 (p. 9), cada uno con SKU, largo y precio neto.
+- La matriz de esta pasada quedó en 59 insumos técnicos y 120 presentaciones del lote familiar, además del piloto 7400; las presentaciones nuevas mantienen asociación documental sin inferir por sufijos ni añadir consumos a recetas.
+- Los auxiliares sin familia explícita quedan fuera de esas familias. No se copiaron precios ni fórmulas del Excel del taller y no se importó nada en Supabase.
+
+## 2026-10-04 - Flujo privado del taller para Veratec (local)
+
+- Proveedor/familia/configuración en móvil y desktop; siete bases de fórmulas de taller opt-in, presentaciones privadas por organización con migración preparada sin aplicar y resolución de costo acotada por configuración.
+- Se añade Cuarta hoja Sliding documentada en pendón p. 1 y lista p. 9. El lote familiar queda en 60 insumos técnicos, 63 relaciones y 121 presentaciones. Ver `docs/fabricacion/veratec/flujo-taller-2026-10-04.md`.
+
+## 2026-10-05 - Reglas preliminares Arquetipo Línea 12 (local)
+
+- Se capturan 5 reglas/9 cortes de la pantalla de taller, incluido el segundo uso de código 1204; el ejemplo 1200×1500 mm produce cubicación/pauta preliminar con barra 6000 mm solicitada por el usuario.
+- La receta mantiene pendientes y `ejemplo_no_validado`. Suite de fabricación aprobada (163 suites/1.252 pruebas); sin migración, carga de precios ni escritura remota.
+- Cotización 27811 sigue preparada en CSV privado local, solo líneas 20/25/32/42/5000; no es precio global. Expediente: `docs/fabricacion/Arquetipo/INTEGRACION_ARQUETIPO.md`.
+- Lectura remota confirmó presentes las tablas de catálogos/precios privados; no se leyeron filas ni hubo escritura. La ruta de taller permanece limitada a QA/Veratec y no está desplegado soporte Arquetipo.
+- `pnpm fabrication:verify` pasó; `pnpm fabrication:verify --build` se detuvo por otro `next build` activo. Sin smoke navegador, snapshot remoto ni validación física.

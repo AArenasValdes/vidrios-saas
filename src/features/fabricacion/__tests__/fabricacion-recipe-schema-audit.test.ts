@@ -9,6 +9,14 @@ import { crearRecetasLine4000Corredera } from "@/features/fabricacion/fixtures/l
 import { crearRecetaSerie45Practicable } from "@/features/fabricacion/fixtures/serie-45-practicable-recipe";
 import { crearRecetasSerie4800Corredera } from "@/features/fabricacion/fixtures/serie-4800-corredera-recipe";
 import {
+  crearRecetaVeratec7400Workbook3H,
+  crearRecetaVeratecCompactSliding,
+  crearRecetaVeratecElegansFijo,
+  VERATEC_7400_WORKBOOK_3H_VARIANTS,
+  VERATEC_COMPACT_SLIDING_VARIANTS,
+  VERATEC_ELEGANS_FIXED_VARIANTS,
+} from "@/features/fabricacion/fixtures/veratec-workbook-recipes";
+import {
   buildAllSodalL25Recipes,
   resetSodalL25RecipeCacheForTests,
 } from "@/features/fabricacion/fixtures/sodal-l25-zeta-recipes";
@@ -61,6 +69,39 @@ describe("auditoría schema fabricacionRecetaSchema", () => {
         plantillaId,
         crearRecetaPlantillaVentoraCorredera2H(plantillaId, {
           createId: () => `${plantillaId}-schema-audit`,
+        })
+      );
+    }
+  });
+
+  it("acepta recetas Veratec de planilla con largo comercial pendiente explícito", () => {
+    for (const variant of VERATEC_COMPACT_SLIDING_VARIANTS) {
+      assertRecipeParses(
+        variant.slug,
+        crearRecetaVeratecCompactSliding({
+          lineName: "Compact Sliding",
+          variant: variant.slug,
+          createId: () => `${variant.slug}-schema`,
+        })
+      );
+    }
+    for (const variant of VERATEC_7400_WORKBOOK_3H_VARIANTS) {
+      assertRecipeParses(
+        variant.slug,
+        crearRecetaVeratec7400Workbook3H({
+          lineName: "Sliding 7400",
+          variant: variant.slug,
+          createId: () => `${variant.slug}-schema`,
+        })
+      );
+    }
+    for (const variant of VERATEC_ELEGANS_FIXED_VARIANTS) {
+      assertRecipeParses(
+        variant.slug,
+        crearRecetaVeratecElegansFijo({
+          lineName: "Elegans 60",
+          variant: variant.slug,
+          createId: () => `${variant.slug}-schema`,
         })
       );
     }

@@ -55,12 +55,18 @@ export function evaluateLineCompatibility(input: {
 }): LineCompatibilityResult {
   const { line, context } = input;
   const declared = declaration(line);
+  const isExplicitFamilyConfiguration = typeof line.catalogMetadata?.configurationKey === "string";
+  const leavesCompatible = context.leavesCount == null
+    ? true
+    : declared?.leavesCounts?.length
+      ? declared.leavesCounts.includes(context.leavesCount)
+      : !isExplicitFamilyConfiguration;
   const compatible = declared
     ? matchesText(declared.componentTypes, context.componentType) &&
       matchesText(declared.openingTypes, context.openingType) &&
-      (!declared.leavesCounts?.length || context.leavesCount == null || declared.leavesCounts.includes(context.leavesCount)) &&
+      leavesCompatible &&
       matchesText(declared.materials, context.material)
-    : true;
+    : !isExplicitFamilyConfiguration;
 
   return {
     commercial: compatible ? "compatible" : "incompatible",

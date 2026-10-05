@@ -100,6 +100,25 @@ describe("fabricacion-regla-humana.service", () => {
     ).toBe(VENTORA_LARGO_COMERCIAL_PRESET_MM);
   });
 
+  it("no hereda la tira sugerida cuando el perfil declara su largo pendiente", () => {
+    const receta = {
+      configuracionCorte: { largoComercialDefaultMm: 5800 },
+    } as FabricacionReceta;
+
+    expect(
+      resolveLargoComercialMm(
+        profile({ largoComercialMm: null, largoComercialPendiente: true }),
+        receta
+      )
+    ).toBe(0);
+    expect(
+      resolveLargoComercialMm(
+        profile({ largoComercialMm: 6000, largoComercialPendiente: true }),
+        receta
+      )
+    ).toBe(6000);
+  });
+
   it("no marca medida pendiente por confirmar código o largo", () => {
     const sheet = describePerfilSheetMeasure(
       profile({

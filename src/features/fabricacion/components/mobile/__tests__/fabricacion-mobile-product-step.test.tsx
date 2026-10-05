@@ -115,4 +115,74 @@ describe("FabricacionMobileProductStep", () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Abatible" })).not.toBeInTheDocument();
   });
+
+  it("muestra perfiles oficiales de Compact Sliding sin ofrecer la fórmula de un taller como base común", () => {
+    const selected = recipe(2, "compact-empty");
+    selected.lineName = "Compact Sliding · 2 hojas";
+    selected.providerName = "VERATEC";
+    selected.definition.perfiles = [];
+    render(
+      <FabricacionMobileProductStep
+        templateName="Compact Sliding · 2 hojas"
+        catalogKey="ventora:veratec-compact-sliding-2h"
+        selected={selected}
+        draft={selected.definition}
+        recipes={[]}
+        readOnly={false}
+        onDraftChange={() => undefined}
+      />
+    );
+
+    expect(screen.getByText("Referencias de perfil documentadas")).toBeInTheDocument();
+    expect(screen.getByText(/67460VER/)).toBeInTheDocument();
+    expect(screen.getByText(/no sustituyen la receta/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Base documental disponible/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Preparar borrador/i })).not.toBeInTheDocument();
+  });
+
+  it("muestra perfiles referenciales de EKO sin presentarlos como receta", () => {
+    const selected = recipe(2, "eko-empty");
+    selected.lineName = "EKO 130";
+    selected.definition.perfiles = [];
+
+    render(
+      <FabricacionMobileProductStep
+        templateName="EKO 130"
+        catalogKey="ventora:veratec-eko-130"
+        selected={selected}
+        draft={selected.definition}
+        recipes={[]}
+        readOnly={false}
+        onDraftChange={() => undefined}
+      />
+    );
+
+    expect(screen.getByText("Referencias de perfil documentadas"))
+      .toBeInTheDocument();
+    expect(screen.getByText(/61109EKO000/)).toBeInTheDocument();
+    expect(screen.getByText(/no sustituyen la receta/i)).toBeInTheDocument();
+  });
+
+  it("explica que Elevadora requiere que el taller identifique perfiles antes de definir cortes", () => {
+    const selected = recipe(2, "elevadora-empty");
+    selected.lineName = "Elevadora · 2 paños · 2 móviles";
+    selected.definition.perfiles = [];
+
+    render(
+      <FabricacionMobileProductStep
+        templateName="Elevadora · 2 paños · 2 móviles"
+        catalogKey="ventora:veratec-elevadora-2h-2moviles"
+        selected={selected}
+        draft={selected.definition}
+        recipes={[]}
+        readOnly={false}
+        onDraftChange={() => undefined}
+      />
+    );
+
+    expect(screen.getByText(/no identifica perfiles suficientes/i))
+      .toBeInTheDocument();
+    expect(screen.getByText(/agrega los códigos y nombres que usa tu taller/i))
+      .toBeInTheDocument();
+  });
 });

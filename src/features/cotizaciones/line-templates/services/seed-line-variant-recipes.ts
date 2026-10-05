@@ -64,7 +64,7 @@ export async function seedLineVariantRecipesForOrganization(
     const missingSlots = listMissingVariantSlots({
       catalogKey: line.catalog_key,
       recipes: lineRecipes,
-    });
+    }).filter((slot) => slot.autoSeed !== false);
 
     if (missingSlots.length === 0) {
       skipped += 1;

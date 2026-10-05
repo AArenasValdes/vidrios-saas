@@ -150,8 +150,12 @@ function classifyFabricacionEstado(input: {
   listaParaProbar: boolean;
   workshopCodes: string[];
 }): LineaFabricacionEstadoCatalogo {
-  if (!input.recipe) {
+  if (!input.recipe && input.workshopCodes.length === 0) {
     return "cotizacion_comercial";
+  }
+
+  if (!input.recipe) {
+    return "fabricacion_pendiente";
   }
 
   if (input.listaParaProbar) {

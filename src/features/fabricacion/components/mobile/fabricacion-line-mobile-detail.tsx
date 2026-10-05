@@ -19,6 +19,7 @@ import {
 } from "@/features/fabricacion/services/line-variant-picker.service";
 import { resolveLineFabricationDisplayIdentity } from "@/features/fabricacion/services/resolve-line-fabrication-display-identity.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
+import type { BibliotecaRecetaSugerida } from "@/features/fabricacion/fixtures/biblioteca-recetas-sugeridas";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 import s from "./fabricacion-mobile.module.css";
@@ -34,6 +35,8 @@ type Props = {
   onConfigure: () => void;
   onEdit: () => void;
   onTest: () => void;
+  suggestedRecipes?: BibliotecaRecetaSugerida[];
+  onUseSuggested?: (entry: BibliotecaRecetaSugerida) => void;
 };
 
 function resolvePrimaryCta(input: {
@@ -67,6 +70,8 @@ export function FabricacionLineMobileDetail({
   onConfigure,
   onEdit,
   onTest,
+  suggestedRecipes = [],
+  onUseSuggested,
 }: Props) {
   const identity = resolveLineFabricationDisplayIdentity({
     template,
@@ -161,6 +166,20 @@ export function FabricacionLineMobileDetail({
             : "sin definir"}
         </small>
       </section>
+
+      {suggestedRecipes.length > 0 && onUseSuggested ? (
+        <section className={s.card} aria-label="Bases operativas">
+          <div className={s.cardHeading}><div><h2>Base operativa</h2><p>Ajustable por tu taller.</p></div></div>
+          {suggestedRecipes.map((entry) => (
+            <div key={entry.id} style={{ display: "grid", gap: 8, marginTop: 12 }}>
+              <strong>{entry.variante}</strong>
+              <button type="button" className={`${s.secondaryButton} ${s.baseUseButton}`} disabled={isSaving} onClick={() => onUseSuggested(entry)}>
+                Usar base
+              </button>
+            </div>
+          ))}
+        </section>
+      ) : null}
 
       <section className={s.card} aria-labelledby="fabrication-title">
         <div className={s.cardHeading}>

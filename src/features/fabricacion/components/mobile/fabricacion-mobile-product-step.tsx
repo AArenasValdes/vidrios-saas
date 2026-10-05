@@ -28,10 +28,12 @@ import {
 } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import type { LineVariantSlot } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
 import { getLineVariantSlotsForFabricationTree } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
+import { getVentoraProfileReferencesForCatalogKey } from "@/features/cotizaciones/line-templates/fixtures/ventora-profile-references";
 import {
   buildLineVariantPickerModel,
   resolveLineVariantPick,
 } from "@/features/fabricacion/services/line-variant-picker.service";
+import { findRecipeForVariantSlot } from "@/features/fabricacion/services/fabricacion-line-variant.service";
 import type { FabricacionReceta, FabricacionTipologia } from "@/features/fabricacion/types/fabricacion-domain";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
@@ -376,6 +378,82 @@ function LineVariantProductPicker({
   );
 }
 
+function VeratecWorkshopEvidence({
+  catalogKey,
+  slot,
+}: {
+  catalogKey: string | null;
+  slot?: LineVariantSlot | null;
+}) {
+  if (!catalogKey?.startsWith("ventora:veratec-")) return null;
+
+  const profiles = getVentoraProfileReferencesForCatalogKey(catalogKey)?.profiles ?? [];
+  const codedProfiles = profiles.filter((profile) => profile.code?.trim());
+
+  return (
+    <section className={s.veratecEvidence} aria-label="Información técnica disponible">
+      {slot ? (
+        <>
+          <h3>Base documental disponible</h3>
+          <p>
+            Se guardará como borrador del taller. Completa y prueba sus datos antes de
+            habilitar el cálculo; este paso no valida la fabricación.
+          </p>
+          {slot.pendingFields.length > 0 ? (
+            <>
+              <strong>Falta completar o confirmar</strong>
+              <ul>
+                {slot.pendingFields.map((field) => <li key={field}>{field}</li>)}
+              </ul>
+            </>
+          ) : null}
+        </>
+      ) : profiles.length > 0 ? (
+        <>
+          <h3>Referencias de perfil documentadas</h3>
+          <p>
+            Estas referencias ayudan a identificar perfiles. Por sí solas no sustituyen
+            la receta ni confirman su uso en esta configuración.
+          </p>
+          <details>
+            <summary>{codedProfiles.length} códigos referenciales</summary>
+            <ul>
+              {profiles.map((profile, index) => (
+                <li key={`${profile.code ?? profile.name}:${index}`}>
+                  <span>{profile.code ?? "Código pendiente"}</span>
+                  <span>{profile.name}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+          <strong>Para completar la fabricación con tu taller</strong>
+          <ul>
+            <li>Identifica qué perfiles usa esta configuración y su función.</li>
+            <li>Completa cantidad y medida/descuento de cada corte.</li>
+            <li>Confirma vidrio, junquillo y accesorios compatibles.</li>
+            <li>Registra largo comercial, pérdida de corte y despunte reales.</li>
+          </ul>
+        </>
+      ) : (
+        <>
+          <h3>Configuración técnica pendiente</h3>
+          <p>
+            La documentación disponible confirma la familia comercial, pero no identifica
+            perfiles suficientes para calcular cortes.
+          </p>
+          <strong>Para avanzar</strong>
+          <ul>
+            <li>Agrega los códigos y nombres que usa tu taller.</li>
+            <li>Define función, cantidad y medida de cada corte.</li>
+            <li>Confirma vidrio, junquillo, accesorios y largos comerciales.</li>
+            <li>Prueba una unidad real antes de usar la pauta.</li>
+          </ul>
+        </>
+      )}
+    </section>
+  );
+}
+
 export function FabricacionMobileProductStep({
   templateName,
   catalogKey = null,
@@ -401,6 +479,15 @@ export function FabricacionMobileProductStep({
     recipes,
     recipe: draft,
   });
+  const veratecSlots = getLineVariantSlotsForFabricationTree(catalogKey);
+  const soleVeratecSlot = veratecSlots.length === 1 ? veratecSlots[0] : null;
+  const singleDocumentedSlot =
+    catalogKey?.startsWith("ventora:veratec-") &&
+    !variantPicker &&
+    soleVeratecSlot?.sourceName &&
+    !findRecipeForVariantSlot(recipes, soleVeratecSlot)
+      ? soleVeratecSlot
+      : null;
   const hasSupplierChoices = Boolean(
     variantPicker?.axes.some((axis) => axis.id === "construccion" && axis.label === "Proveedor y variante")
   );
@@ -497,6 +584,22 @@ export function FabricacionMobileProductStep({
             onCreateMissingSlot={onCreateMissingSlot}
           />
         </section>
+      ) : singleDocumentedSlot ? (
+        <section className={s.configSection} aria-labelledby="product-config-title">
+          <h2 id="product-config-title">Construcción documentada</h2>
+          <p className={s.configHint}>
+            Esta configuración tiene una base técnica incompleta. Puedes abrirla como
+            borrador y completarla con los datos de tu taller.
+          </p>
+          <button
+            type="button"
+            className={s.veratecCandidateButton}
+            disabled={readOnly || !onCreateMissingSlot}
+            onClick={() => onCreateMissingSlot?.(singleDocumentedSlot)}
+          >
+            Preparar borrador · {singleDocumentedSlot.variantLabel}
+          </button>
+        </section>
       ) : (
         <>
           {readOnly ? (
@@ -551,6 +654,23 @@ export function FabricacionMobileProductStep({
           ) : null}
         </>
       )}
+
+      {catalogKey?.startsWith("ventora:veratec-") &&
+      (!selected || selected.definition.perfiles.length === 0 || singleDocumentedSlot)
+        ? (
+          <VeratecWorkshopEvidence
+            catalogKey={catalogKey}
+            slot={
+              singleDocumentedSlot ??
+              (variantPicker?.matchingSlot?.pendingFields.some(
+                (field) => !field.toLowerCase().startsWith("probar una fabricación real")
+              )
+                ? variantPicker.matchingSlot
+                : null)
+            }
+          />
+        )
+        : null}
 
       {!usesVariantPicker && !canEditIdentity && !readOnly ? (
         <p className={s.hint}>Versión {selected.version}</p>

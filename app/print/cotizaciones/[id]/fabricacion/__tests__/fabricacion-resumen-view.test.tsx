@@ -2,6 +2,7 @@
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { useRef, useState } from "react";
+import type { ReactNode } from "react";
 
 import {
   serializeCubicationSnapshot,
@@ -16,6 +17,7 @@ import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services
 import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
+import { buildWorkMaterialsDocument } from "@/features/fabricacion/services/fabrication-work-materials.service";
 
 import {
   FabricacionResumenView,
@@ -191,6 +193,7 @@ function ViewHarness(props: {
   expandedItemId?: string | null;
   onOpenDespiece?: (itemId: string) => void;
   extraItems?: CotizacionWorkflowItem[];
+  technicalCostPanel?: ReactNode;
 }) {
   const documentRef = useRef<HTMLElement | null>(null);
   const items = props.extraItems ?? sourceItems;
@@ -208,6 +211,11 @@ function ViewHarness(props: {
       obra="Trabajo de Alessandro"
       summary={viewSummary}
       items={items}
+      materialsDocument={buildWorkMaterialsDocument({ summary: viewSummary, items })}
+      companyName="Ventora QA"
+      issueDate="4 oct 2026"
+      technicalCostPanel={props.technicalCostPanel}
+      onDownloadDocumentPdf={jest.fn()}
       expandedItemId={expandedItemId}
       onToggleItem={(itemId) => setExpandedItemId((current) => (current === itemId ? null : itemId))}
       onOpenDespiece={props.onOpenDespiece ?? jest.fn()}
@@ -221,6 +229,16 @@ function ViewHarness(props: {
 }
 
 describe("FabricacionResumenView", () => {
+  it("muestra el costo técnico al inicio del documento, antes de materiales y pauta secundaria", () => {
+    render(<ViewHarness technicalCostPanel={<section data-testid="cost-panel">Costo estimado de materiales</section>} />);
+
+    const costPanel = screen.getByTestId("cost-panel");
+    const materialsHeading = screen.getByRole("heading", { name: "Lista de materiales del trabajo" });
+    const pautaSummary = screen.getByText("Ver pauta, cubicación y cortes por componente");
+    expect(costPanel.compareDocumentPosition(materialsHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(costPanel.compareDocumentPosition(pautaSummary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("muestra tiras por perfil en cubicación sin mezclar pauta ni despiece", () => {
     const cubication = buildL5000Snapshot();
     const item = workflowItem(
@@ -413,8 +431,8 @@ describe("FabricacionResumenView", () => {
 
     render(<ViewHarness extraItems={[item]} />);
 
-    expect(screen.getByRole("columnheader", { name: "Código" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Función" })).toBeInTheDocument();
+    expect(screen.getAllByRole("columnheader", { name: "Código" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("columnheader", { name: "Función" }).length).toBeGreaterThan(0);
     expect(screen.getByText("RS01")).toBeInTheDocument();
     expect(screen.getByText("Riel superior propio")).toBeInTheDocument();
     expect(screen.getAllByText("Por asignar").length).toBeGreaterThan(0);

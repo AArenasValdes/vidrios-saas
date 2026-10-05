@@ -50,8 +50,10 @@ export function resolveLargoComercialMm(
   receta: FabricacionReceta,
   organization?: FabricacionOrganizationLargoDefaults | null
 ): number {
+  const perfilLargo = normalizeLargoComercialMm(profile.largoComercialMm);
+  if (perfilLargo != null) return perfilLargo;
+  if (profile.largoComercialPendiente) return 0;
   return (
-    normalizeLargoComercialMm(profile.largoComercialMm) ??
     resolveRecetaLargoComercialDefaultMm(receta, organization)
   );
 }

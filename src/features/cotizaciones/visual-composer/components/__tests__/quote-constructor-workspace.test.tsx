@@ -326,6 +326,8 @@ describe("QuoteConstructorWorkspace", () => {
     });
 
     fireEvent.click(screen.getByLabelText("Línea de VEN-02"));
+    fireEvent.click(screen.getAllByRole("button", { name: "Todas" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "Todas" }).at(-1)!);
     fireEvent.click(screen.getByRole("option", { name: /L25/i }));
 
     expect(props.onUpdateItem).toHaveBeenCalledTimes(1);
@@ -366,6 +368,8 @@ describe("QuoteConstructorWorkspace", () => {
 
     fireEvent.click(screen.getByLabelText("Cambiar línea de VEN-02"));
     expect(onActiveItemChange).toHaveBeenCalledWith("b");
+    fireEvent.click(screen.getAllByRole("button", { name: "Todas" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "Todas" }).at(-1)!);
     fireEvent.click(screen.getByRole("option", { name: /L25/i }));
 
     expect(props.onUpdateItem).toHaveBeenCalledTimes(1);

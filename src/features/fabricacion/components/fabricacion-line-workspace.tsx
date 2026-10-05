@@ -24,7 +24,7 @@ import { isRecipeReadyToActivate } from "@/features/fabricacion/components/recip
 import { FabricacionTipologiaPreview } from "@/features/fabricacion/components/fabricacion-tipologia-preview";
 import { RecipeTestLab } from "@/features/fabricacion/components/recipe-test-lab";
 import {
-  BIBLIOTECA_RECETAS_PRIORIZADAS,
+  getSuggestedRecipesForLine,
   type BibliotecaRecetaSugerida,
 } from "@/features/fabricacion/fixtures/biblioteca-recetas-sugeridas";
 import {
@@ -387,8 +387,8 @@ function RecipeSummaryPanel({
           {canContinue
             ? "Lista para probar"
             : summary.compositionComplete
-              ? "Revisa ajustes"
-              : "Configuración técnica pendiente"}
+              ? "Puedes probar · ajustes pendientes"
+              : "Puedes probar y completar después"}
         </span>
         <button
           type="button"
@@ -545,17 +545,11 @@ export function FabricacionLineWorkspace({
     [lineTemplateId, recipes, template?.nombre]
   );
   const suggestedRecipesForLine = useMemo(() => {
-    const normalizedLine = template?.nombre.trim().toLocaleLowerCase("es-CL");
-    const normalizedProvider = template?.proveedor?.trim().toLocaleLowerCase("es-CL");
-    if (!normalizedLine) return [];
-    return BIBLIOTECA_RECETAS_PRIORIZADAS.filter(
-      (entry) =>
-        entry.crearDefinicion &&
-        entry.linea.trim().toLocaleLowerCase("es-CL") === normalizedLine &&
-        (!normalizedProvider ||
-          entry.proveedor.trim().toLocaleLowerCase("es-CL") === normalizedProvider)
-    );
-  }, [template?.nombre, template?.proveedor]);
+    return getSuggestedRecipesForLine({ catalogKey: template?.catalogKey, lineName: template?.nombre, providerName: template?.proveedor });
+  }, [template?.catalogKey, template?.nombre, template?.proveedor]);
+  const hasWorkshopBaseSuggestions = suggestedRecipesForLine.some(
+    (entry) => entry.sourceType === "workshop"
+  );
   const selected =
     recipes.find((recipe) => recipe.id === selectedId) ?? null;
   const selectedTests = selected ? tests[selected.id] ?? [] : [];
@@ -901,23 +895,6 @@ export function FabricacionLineWorkspace({
     }
 
     // test / plan / validation viven en el laboratorio del paso 3.
-    const draftToPersist =
-      view === "edit" &&
-      draft &&
-      selectedId === recipe.id &&
-      selected?.status !== "validated"
-        ? draft
-        : recipe.definition;
-    const recipeToTest = draftToPersist ?? recipe.definition;
-    const probarEvaluacion = evaluarRecetaListaParaProbar(recipeToTest);
-    const recipeSummary = buildFabricationRecipeSummary(recipeToTest);
-    if (!probarEvaluacion.listaParaProbar || !recipeSummary.compositionComplete) {
-      setFeedback(
-        probarEvaluacion.bloqueos[0] ??
-          "Completa la composición técnica antes de probar; no se generará una pauta mientras siga pendiente."
-      );
-      return;
-    }
     const draftToPersistSilent =
       view === "edit" &&
       draft &&
@@ -998,6 +975,12 @@ export function FabricacionLineWorkspace({
 
   const handleUseSuggested = useCallback(async (entry: BibliotecaRecetaSugerida) => {
     if (!template || !entry.crearDefinicion) return;
+    const existing = entry.sourceReference && recipes.find((recipe) =>
+      recipe.lineTemplateId === lineTemplateId &&
+      recipe.sourceReference === entry.sourceReference &&
+      recipe.status !== "archived"
+    );
+    if (existing) { openEditor(existing); return; }
     const definition = entry.crearDefinicion();
     const created = await createRecipe({
       lineTemplateId,
@@ -1007,11 +990,13 @@ export function FabricacionLineWorkspace({
       leavesCount: definition.identidad.hojas,
       variant: definition.identidad.variante,
       definition,
-      sourceType: "copied",
-      sourceReference: entry.id,
+      sourceType: entry.sourceType ?? "copied",
+      sourceReference: entry.sourceReference ?? entry.id,
+      sourceName: entry.sourceType === "workshop" ? "Excel aportado por taller" : undefined,
+      sourceRevision: entry.sourceRevision,
     });
     openEditor(created);
-  }, [createRecipe, lineTemplateId, openEditor, template]);
+  }, [createRecipe, lineTemplateId, openEditor, recipes, template]);
 
   useEffect(() => {
     if (
@@ -1754,13 +1739,26 @@ export function FabricacionLineWorkspace({
       <section className={s.recipeSection}>
           <div className={s.sectionHeading}>
             <div>
-              <span>Biblioteca técnica</span>
-              <h2>Plantillas sugeridas para esta línea</h2>
+              <span>{hasWorkshopBaseSuggestions ? "Fabricación" : "Biblioteca técnica"}</span>
+              <h2>{hasWorkshopBaseSuggestions ? "Base operativa" : "Plantillas sugeridas para esta línea"}</h2>
             </div>
-            <p>Solo aparecen plantillas documentadas que coinciden con esta línea.</p>
+            <p>{hasWorkshopBaseSuggestions ? "Ajustable por tu taller." : "Solo aparecen plantillas documentadas que coinciden con esta línea."}</p>
         </div>
         <div className={s.catalogGrid}>
-          {suggestedRecipesForLine.map((entry) => (
+          {suggestedRecipesForLine.map((entry) => entry.sourceType === "workshop" ? (
+            <article key={entry.id} className={s.catalogItem}>
+              <strong>{entry.variante}</strong>
+              <button
+                type="button"
+                className={s.secondaryButton}
+                disabled={isSaving}
+                onClick={() => void handleUseSuggested(entry)}
+              >
+                <Copy size={15} />
+                Usar base
+              </button>
+            </article>
+          ) : (
             <article key={entry.id} className={s.catalogItem}>
               <div>
                 <span className={s.statusPill} data-tone={entry.estado === "sugerida" ? "testing" : "draft"}>
@@ -1768,6 +1766,7 @@ export function FabricacionLineWorkspace({
                 </span>
                 <strong>{entry.proveedor} {entry.linea}</strong>
                 <small>{entry.variante} · {entry.tipologia.replaceAll("_", " ")}</small>
+                {entry.motivoPendiente ? <small>{entry.motivoPendiente}</small> : null}
               </div>
               {entry.crearDefinicion ? (
                 <button

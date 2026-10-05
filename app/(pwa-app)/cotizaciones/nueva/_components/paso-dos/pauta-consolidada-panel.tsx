@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { LuCopy, LuCheck } from "react-icons/lu";
 
 import {
@@ -8,6 +9,10 @@ import {
   formatConsolidatedPautaPlainText,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-cubication-consolidated";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { resolveSupplierPresentationsForQuote } from "@/features/proveedor-catalogos/services/supplier-presentations.client";
+import { resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
+import type { FabricacionTrabajoPresentationSelection } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
 
 import d from "../paso-dos-panel-desktop.module.css";
 
@@ -20,8 +25,53 @@ function formatMm(value: number) {
 }
 
 export function PautaConsolidadaPanel({ items }: Props) {
-  const pauta = useMemo(() => buildConsolidatedCubicationPauta(items), [items]);
+  const resolutionRequests = useMemo(() => items.flatMap((item) => {
+    const snapshot = item.fabricacionSnapshot;
+    const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+    if (!snapshot?.supplierFamilyKey || !meta.catalogLineKey || snapshot.result.perfiles.length === 0) return [];
+    return [{
+      itemId: String(item.id),
+      catalogLineKey: meta.catalogLineKey,
+      familyKey: snapshot.supplierFamilyKey,
+      finishName: resolveSupplierFinishName(meta.catalogTerminacion, meta.colorHex),
+      technicalCodes: [...new Set(snapshot.result.perfiles.map((row) => row.codigoPerfil.trim()).filter(Boolean))],
+    }];
+  }), [items]);
+  const resolutionKey = useMemo(() => JSON.stringify(resolutionRequests), [resolutionRequests]);
+  const [resolution, setResolution] = useState<{
+    key: string;
+    enabled: boolean;
+    selections: Record<string, FabricacionTrabajoPresentationSelection[]>;
+  } | null>(null);
+
+  useEffect(() => {
+    if (resolutionRequests.length === 0) {
+      setResolution(null);
+      return;
+    }
+    let active = true;
+    void resolveSupplierPresentationsForQuote(resolutionRequests).then((result) => {
+      if (!active) return;
+      setResolution({
+        key: resolutionKey,
+        enabled: result?.enabled === true,
+        selections: result?.selections ?? {},
+      });
+    });
+    return () => { active = false; };
+  }, [resolutionKey, resolutionRequests]);
+
+  const currentResolution = resolution?.key === resolutionKey ? resolution : null;
+  const pauta = useMemo(() => buildConsolidatedCubicationPauta(items, {
+    supplierPresentationResolutionEnabled: currentResolution?.enabled,
+    supplierPresentationSelections: currentResolution?.selections,
+  }), [currentResolution, items]);
   const [copied, setCopied] = useState(false);
+  const resolvingPresentation = resolutionRequests.length > 0 && currentResolution === null;
+  const missingItem = pauta.trabajoSnapshot?.missingPresentations?.[0];
+  const missingQuoteItem = missingItem ? items.find((item) => String(item.id) === missingItem.itemId) : null;
+  const missingLineMeta = missingQuoteItem ? decodeCotizacionItemPresentationMeta(missingQuoteItem.observaciones) : null;
+  const missingFamilyKey = missingQuoteItem?.fabricacionSnapshot?.supplierFamilyKey;
 
   if (pauta.rows.length === 0) {
     return null;
@@ -42,23 +92,12 @@ export function PautaConsolidadaPanel({ items }: Props) {
     <section className={d.consolidatedPauta} aria-label="Pauta consolidada">
       <header className={d.consolidatedPautaHeader}>
         <div>
-          <p className={d.consolidatedPautaEyebrow}>Cubicación</p>
-          <h3>Pauta consolidada</h3>
-          <p>
-            {pauta.itemCountWithPauta}{" "}
-            {pauta.itemCountWithPauta === 1 ? "pieza" : "piezas"} ·{" "}
-            {(pauta.totalProfilesLinealMm / 1000).toFixed(2)} ml perfiles ·{" "}
-            {pauta.totalGlassM2.toLocaleString("es-CL", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}{" "}
-            m² vidrio
-          </p>
-          <p>
-            {pauta.trabajoSnapshot
-              ? `${pauta.trabajoSnapshot.totalBars} barras sugeridas para el trabajo completo.`
-              : `${pauta.totalBars} barras según los snapshots disponibles.`}
-          </p>
+          <p className={d.consolidatedPautaEyebrow}>Fabricación</p>
+          <h3>Pauta del trabajo</h3>
+          <p>{pauta.itemCountWithPauta} {pauta.itemCountWithPauta === 1 ? "pieza" : "piezas"} con despiece</p>
+          <strong className={d.consolidatedPautaBars}>
+            {resolvingPresentation ? "Resolviendo presentaciones…" : `${pauta.trabajoSnapshot?.totalBars ?? pauta.totalBars} barras sugeridas`}
+          </strong>
         </div>
         <button type="button" className={d.consolidatedPautaCopy} onClick={handleCopy}>
           {copied ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
@@ -66,7 +105,9 @@ export function PautaConsolidadaPanel({ items }: Props) {
         </button>
       </header>
 
-      <div className={d.consolidatedPautaTable} role="table" aria-label="Cortes consolidados">
+      <details className={d.consolidatedPautaDetails}>
+        <summary>Ver perfiles y medidas</summary>
+      <div className={d.consolidatedPautaTable} role="table" aria-label="Perfiles y medidas consolidados">
         <div className={d.consolidatedPautaHead} role="row">
           <span role="columnheader">Perfil</span>
           <span role="columnheader">Función</span>
@@ -90,9 +131,22 @@ export function PautaConsolidadaPanel({ items }: Props) {
           </div>
         ))}
       </div>
+      </details>
       {pauta.trabajoSnapshot ? (
         <details className={d.consolidatedPautaDistribution}>
-          <summary>Ver cortes distribuidos por barra</summary>
+          <summary>{pauta.trabajoSnapshot.missingPresentations?.length ? "Ver pauta y faltantes de presentación" : "Ver cortes distribuidos por barra"}</summary>
+          {pauta.trabajoSnapshot.missingPresentations?.map((missing) => (
+            <p key={`${missing.itemId}-${missing.technicalCode}-${missing.finishKey}`} role="status">
+              {missing.technicalCode}: {missing.reason}
+            </p>
+          ))}
+          {missingLineMeta?.lineTemplateId && missingFamilyKey?.startsWith("veratec:") ? (
+            <p>
+              <Link href={`/configuracion/empresa/mis-precios?supplier=veratec&family=${encodeURIComponent(missingFamilyKey)}&lineTemplateId=${encodeURIComponent(missingLineMeta.lineTemplateId)}`} target="_blank" rel="noopener noreferrer">Completar presentación o costo</Link>
+              {" · "}
+              <Link href={`/configuracion/empresa/lineas-precios/${encodeURIComponent(missingLineMeta.lineTemplateId)}/fabricacion`} target="_blank" rel="noopener noreferrer">Configurar fabricación</Link>
+            </p>
+          ) : null}
           <ol>
             {pauta.trabajoSnapshot.bars.map((bar) => (
               <li key={`${bar.materialKey}-${bar.acabadoKey}-${bar.largoComercialMm}-${bar.indice}`}>

@@ -24,6 +24,10 @@ import {
   isObservedZetaMeasure,
   isZetaConfirmedRecipe,
 } from "@/features/fabricacion/services/fabricacion-evidence-gate.service";
+import {
+  VERATEC_7400_CATALOG_KEY,
+  VERATEC_7400_VARIANT_MONOLITICO_4MM,
+} from "@/features/fabricacion/fixtures/veratec-7400-corredera-recipe";
 
 export { SODAL_L25_CATALOG_KEY, SODAL_4800_CATALOG_KEY };
 
@@ -39,6 +43,8 @@ export type FabricacionRecetaResolucionInput = {
   topology?: string | null;
   hardwareMode?: string | null;
   preferredRecipeId?: string | null;
+  /** Vidrio elegido en la cotización; solo restringe variantes con matriz explícita. */
+  glassName?: string | null;
   /** Solo se conserva para compatibilidad de entrada; la resolución pública lo ignora. */
   allowPreliminaryNonValidated?: boolean;
   anchoTotalMm?: number | null;
@@ -130,7 +136,19 @@ export function resolveFabricationRecipe(
   recipes: FabricationRecipeRecord[],
   input: ResolveFabricationRecipeInput
 ): FabricacionRecetaResolucion {
-  const filtered = filterRecipesForCatalogResolution(recipes, input.catalogKey);
+  const catalogFiltered = filterRecipesForCatalogResolution(recipes, input.catalogKey);
+  const veratecGlassVariant =
+    input.catalogKey === VERATEC_7400_CATALOG_KEY && input.glassName
+      ? resolveVeratec7400VariantForSelectedGlass(input.glassName)
+      : null;
+  const filtered =
+    input.catalogKey === VERATEC_7400_CATALOG_KEY && input.glassName?.trim()
+      ? catalogFiltered.filter(
+          (recipe) =>
+            veratecGlassVariant !== null &&
+            (recipe.variant ?? recipe.definition.identidad.variante) === veratecGlassVariant
+        )
+      : catalogFiltered;
   let variante = input.variante;
 
   if (
@@ -193,6 +211,24 @@ export function resolveFabricationRecipe(
     // El despiece interno de cotización puede previsualizar lista_para_probar.
     allowPreliminaryNonValidated: Boolean(input.previewListaParaProbar),
   }, controlledPreviewRecipeId);
+}
+
+/**
+ * La ficha actual solo permite probar la variante monolítica de 4 mm.
+ * Las entradas TP siguen bloqueadas mientras se resuelven sus contradicciones de origen.
+ */
+function resolveVeratec7400VariantForSelectedGlass(glassName: string): string | null {
+  const normalized = glassName
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+  const isMonolithic = /\bmonolit(?:ico|ic)?\b/.test(normalized);
+  const isFourMillimeters = /(?:^|\D)4\s*mm(?:\D|$)/.test(normalized);
+  return isMonolithic && isFourMillimeters
+    ? VERATEC_7400_VARIANT_MONOLITICO_4MM
+    : null;
 }
 
 export type FabricacionRecetaDescartada = {

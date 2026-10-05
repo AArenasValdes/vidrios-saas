@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   LuArrowLeft,
-  LuChevronDown,
+  LuChevronLeft,
   LuChevronRight,
   LuDoorOpen,
   LuGem,
@@ -23,13 +23,23 @@ import {
 import type { IconType } from "react-icons";
 
 import {
+  getLineTemplateGlassMetadata,
+  getLineTemplateSystemMetadata,
   lineTemplateNeedsCommercialPrice,
   type CotizacionLineTemplate,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
-import { partitionLineTemplatesByCatalogOrigin } from "@/features/cotizaciones/line-templates/services/line-template-group.service";
+import { isVentoraCatalogKey, VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
+import {
+  getLineTemplateProviderLabel,
+  groupLineTemplatesByProvider,
+} from "@/features/cotizaciones/line-templates/services/line-template-group.service";
 
 import {
+  groupLineTemplatesByDocumentedFamily,
   groupLineTemplatesByFamily,
+  LINE_TEMPLATE_FAMILY_LABELS,
+  LINE_TEMPLATE_FAMILY_ORDER,
+  resolveLineTemplateFamilyKey,
   type LineTemplateFamilyKey,
 } from "./line-template-catalog-family";
 import type { LineTemplateActionKind } from "./line-template-card-actions";
@@ -60,7 +70,11 @@ type TechnicalStatus = {
   filter: Exclude<MobileTechnicalFilter, "todas">;
 };
 
+type BrowseScope = "mine" | "providers";
+
 type Props = {
+  showPurchasePricesEntry?: boolean;
+  purchasePricesHref?: string;
   templates: CotizacionLineTemplate[];
   filteredTemplates: CotizacionLineTemplate[];
   activeCount: number;
@@ -103,7 +117,7 @@ const MATERIAL_OPTIONS: Array<{ value: MobileCategoryFilter; label: string }> = 
   { value: "Todo", label: "Todos" },
   { value: "aluminio", label: "Aluminio" },
   { value: "pvc", label: "PVC" },
-  { value: "vidrio", label: "Cristales" },
+  { value: "vidrio", label: "Vidrios" },
 ];
 
 const TECHNICAL_OPTIONS: Array<{ value: MobileTechnicalFilter; label: string }> = [
@@ -126,11 +140,102 @@ const FAMILY_ICONS: Record<LineTemplateFamilyKey | "propias", IconType> = {
   otras: LuLayers,
 };
 
+function familyDisplayLabel(key: LineTemplateFamilyKey, label: string) {
+  return key === "cristales" ? "Vidrios" : label || LINE_TEMPLATE_FAMILY_LABELS[key];
+}
+
+function providerMonogram(name: string) {
+  const trimmed = name.trim();
+  if (!trimmed || trimmed === "Sin proveedor") return "□";
+  return trimmed.charAt(0).toLocaleUpperCase("es-CL");
+}
+
+const GLASS_KIND_ORDER = ["Monolíticos", "Laminados", "DVH", "Espejos"] as const;
+
+function glassKindLabel(template: CotizacionLineTemplate) {
+  const glass = getLineTemplateGlassMetadata(template.catalogMetadata);
+  const text = `${template.nombre} ${glass.terminacion ?? ""}`.toLowerCase();
+  if (text.includes("espejo")) return "Espejos";
+  if (text.includes("laminado") || /\d+\s*\+\s*\d+/.test(text)) return "Laminados";
+  if (text.includes("dvh") || text.includes("termopanel") || text.includes("cámara") || text.includes("camara")) {
+    return "DVH";
+  }
+  if (text.includes("monol") || text.includes("incoloro")) return "Monolíticos";
+  return null;
+}
+
+function groupGlassByKind(templates: CotizacionLineTemplate[]) {
+  const labels = templates.map(glassKindLabel);
+  if (labels.some((label) => label == null)) return null;
+  const present = new Set(labels);
+  if (present.size < 2) return null;
+  return GLASS_KIND_ORDER.filter((label) => present.has(label)).map((label) => ({
+    key: label,
+    label,
+    templates: templates.filter((template) => glassKindLabel(template) === label),
+  }));
+}
+
+function explicitCatalogTypology(template: CotizacionLineTemplate): LineTemplateFamilyKey | null {
+  const stored = template.catalogMetadata as {
+    compatibility?: { openingTypes?: unknown; componentTypes?: unknown };
+  } | null;
+  const canonical = VENTORA_DEFAULT_LINE_CATALOG.find((entry) => entry.catalogKey === template.catalogKey);
+  const canonicalCompatibility = canonical?.catalogMetadata?.compatibility;
+  const compatibility = stored?.compatibility ?? (
+    canonicalCompatibility && typeof canonicalCompatibility === "object"
+      ? canonicalCompatibility as { openingTypes?: unknown; componentTypes?: unknown }
+      : null
+  );
+  const openings = Array.isArray(compatibility?.openingTypes)
+    ? compatibility.openingTypes.filter((value): value is string => typeof value === "string")
+    : [];
+  const components = Array.isArray(compatibility?.componentTypes)
+    ? compatibility.componentTypes.filter((value): value is string => typeof value === "string")
+    : [];
+  const opening = openings.join(" ").toLowerCase();
+  const component = components.join(" ").toLowerCase();
+  if (!opening && !component) return null;
+  if (opening.includes("corredera")) return "correderas";
+  if (opening.includes("proyectante")) return "proyectantes";
+  if (component.includes("puerta")) return "puertas";
+  if (opening.includes("abatible")) return "puertas";
+  if (opening.includes("fijo")) return "fijos";
+  return null;
+}
+
+function documentedFamilyTypology(
+  family: { templates: CotizacionLineTemplate[] }
+): LineTemplateFamilyKey | "mixta" {
+  const explicit = family.templates
+    .map(explicitCatalogTypology)
+    .filter((key): key is LineTemplateFamilyKey => key != null);
+  const keys = new Set(
+    explicit.length > 0
+      ? explicit
+      : family.templates.map((template) => resolveLineTemplateFamilyKey(template))
+  );
+  if (keys.size === 1) {
+    const [only] = keys;
+    return only;
+  }
+  return "mixta";
+}
+
+function matchesStatus(
+  template: CotizacionLineTemplate,
+  status: "todas" | "activas" | "inactivas"
+) {
+  if (status === "activas") return template.isActive;
+  if (status === "inactivas") return !template.isActive;
+  return true;
+}
+
 export function LineasPreciosMobileView({
+  showPurchasePricesEntry = false,
+  purchasePricesHref = "/configuracion/empresa/mis-precios",
   templates,
   filteredTemplates,
-  activeCount,
-  inactiveCount,
   query,
   onQueryChange,
   statusFilter,
@@ -161,7 +266,10 @@ export function LineasPreciosMobileView({
   isChileCatalog = false,
 }: Props) {
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [expandedFamilies, setExpandedFamilies] = useState<Record<string, boolean>>({});
+  const [scope, setScope] = useState<BrowseScope>("mine");
+  const [mineDrill, setMineDrill] = useState<string | null>(null);
+  const [providerName, setProviderName] = useState<string | null>(null);
+  const [providerFamilyKey, setProviderFamilyKey] = useState<string | null>(null);
   const [selectedLine, setSelectedLine] = useState<CotizacionLineTemplate | null>(null);
 
   const selectedLineContext = useMemo(() => {
@@ -184,7 +292,7 @@ export function LineasPreciosMobileView({
           formatMoney
         );
 
-    const subtitleParts = [priceLabel, selectedLine.isActive ? "Activa" : "Pausada"];
+    const subtitleParts = [priceLabel, selectedLine.isActive ? "Activa" : "Oculta"];
 
     return {
       needsPrice,
@@ -205,57 +313,128 @@ export function LineasPreciosMobileView({
     providerFilter !== providerFilterAll,
   ].filter(Boolean).length;
 
-  const catalogGroups = useMemo(() => {
-    const { ventora, propias } = partitionLineTemplatesByCatalogOrigin(filteredTemplates);
-    const groups: Array<{
-      key: string;
-      label: string;
-      iconKey: LineTemplateFamilyKey | "propias";
-      templates: CotizacionLineTemplate[];
-    }> = [];
+  const browsePool = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return templates.filter((template) => {
+      if (categoryFilter !== "Todo" && template.categoria !== categoryFilter) return false;
+      if (
+        technicalFilter !== "todas" &&
+        technicalStatuses.get(String(template.id))?.filter !== technicalFilter
+      ) {
+        return false;
+      }
+      if (
+        providerFilter !== providerFilterAll &&
+        getLineTemplateProviderLabel(template.proveedor) !== providerFilter
+      ) {
+        return false;
+      }
+      if (!normalizedQuery) return true;
+      const glass = getLineTemplateGlassMetadata(template.catalogMetadata);
+      const metadata = template.catalogMetadata as Record<string, unknown> | null | undefined;
+      const code = [metadata?.codigo, metadata?.code, metadata?.sku]
+        .find((value): value is string => typeof value === "string");
+      return (
+        template.nombre.toLowerCase().includes(normalizedQuery) ||
+        (template.proveedor ?? "").toLowerCase().includes(normalizedQuery) ||
+        (getLineTemplateSystemMetadata(template.catalogMetadata).lineSystem ?? "")
+          .toLowerCase()
+          .includes(normalizedQuery) ||
+        [code, glass.espesor, glass.terminacion].some((value) =>
+          value?.toLowerCase().includes(normalizedQuery)
+        )
+      );
+    });
+  }, [categoryFilter, providerFilter, providerFilterAll, query, technicalFilter, technicalStatuses, templates]);
 
-    if (propias.length > 0) {
-      groups.push({
-        key: "propias",
-        label: "Tus líneas",
-        iconKey: "propias",
-        templates: propias,
+  const workshopPool = useMemo(
+    () => browsePool.filter((template) => !isVentoraCatalogKey(template.catalogKey)),
+    [browsePool]
+  );
+  const catalogPool = useMemo(
+    () => browsePool.filter((template) => isVentoraCatalogKey(template.catalogKey)),
+    [browsePool]
+  );
+  const workshopVisible = useMemo(
+    () => workshopPool.filter((template) => matchesStatus(template, statusFilter)),
+    [statusFilter, workshopPool]
+  );
+  const workshopLines = useMemo(
+    () => workshopVisible.filter((template) => template.categoria !== "vidrio"),
+    [workshopVisible]
+  );
+  const workshopGlass = useMemo(
+    () => workshopVisible.filter((template) => template.categoria === "vidrio"),
+    [workshopVisible]
+  );
+
+  const statusCounts = useMemo(() => {
+    const pool = categoryFilter === "vidrio"
+      ? workshopPool.filter((template) => template.categoria === "vidrio")
+      : categoryFilter === "Todo"
+        ? workshopPool
+        : workshopPool.filter((template) => template.categoria !== "vidrio");
+    return {
+      todas: pool.length,
+      activas: pool.filter((template) => template.isActive).length,
+      ocultas: pool.filter((template) => !template.isActive).length,
+    };
+  }, [categoryFilter, workshopPool]);
+
+  const mineCategories = useMemo(
+    () => groupLineTemplatesByFamily(workshopLines, { fallbackToName: true }).filter((family) => family.key !== "cristales"),
+    [workshopLines]
+  );
+
+  const providerGroups = useMemo(() => {
+    const source = categoryFilter === "vidrio"
+      ? workshopPool.filter((template) => template.categoria === "vidrio")
+      : catalogPool;
+    return groupLineTemplatesByProvider(source).map((group) => {
+      const documented = groupLineTemplatesByDocumentedFamily(group.templates);
+      const categoryOrder = [...LINE_TEMPLATE_FAMILY_ORDER, "mixta" as const];
+      const categories = categoryOrder.flatMap((key) => {
+        const families = documented.filter((family) => documentedFamilyTypology(family) === key);
+        if (!families.length || key === "cristales") return [];
+        return [{
+          key,
+          label: key === "mixta" ? "Varias tipologías" : familyDisplayLabel(key, LINE_TEMPLATE_FAMILY_LABELS[key]),
+          families,
+        }];
       });
-    }
+      return {
+        key: group.provider,
+        label: group.provider,
+        templates: group.templates,
+        families: documented,
+        categories,
+        glassGroups: categoryFilter === "vidrio" ? groupGlassByKind(group.templates) : null,
+      };
+    });
+  }, [catalogPool, categoryFilter, workshopPool]);
 
-    for (const family of groupLineTemplatesByFamily(ventora)) {
-      groups.push({
-        key: `ventora:${family.key}`,
-        label: family.label,
-        iconKey: family.key,
-        templates: family.templates,
-      });
-    }
+  const openMineCategory = mineDrill && mineDrill !== "glass"
+    ? mineCategories.find((group) => group.key === mineDrill) ?? null
+    : null;
+  const openProviderGroup = providerName
+    ? providerGroups.find((group) => group.key === providerName) ?? null
+    : null;
+  const openProviderFamily = openProviderGroup && providerFamilyKey
+    ? openProviderGroup.families.find((family) => family.key === providerFamilyKey) ?? null
+    : null;
 
-    return groups;
-  }, [filteredTemplates]);
+  const resetNavigation = () => {
+    setMineDrill(null);
+    setProviderName(null);
+    setProviderFamilyKey(null);
+  };
 
   const clearSecondaryFilters = () => {
     onCategoryFilterChange("Todo");
     onTechnicalFilterChange("todas");
     onProviderFilterChange(providerFilterAll);
+    resetNavigation();
   };
-
-  const isFamilyExpanded = useCallback(
-    (familyKey: string, defaultExpanded: boolean) =>
-      expandedFamilies[familyKey] ?? defaultExpanded,
-    [expandedFamilies]
-  );
-
-  const toggleFamily = useCallback(
-    (familyKey: string, currentlyExpanded: boolean) => {
-      setExpandedFamilies((current) => ({
-        ...current,
-        [familyKey]: !currentlyExpanded,
-      }));
-    },
-    []
-  );
 
   return (
     <main className={s.page}>
@@ -275,7 +454,7 @@ export function LineasPreciosMobileView({
           <h1>Líneas y precios</h1>
           <p className={s.headerCount}>
             {templates.length}{" "}
-            {templates.length === 1 ? "línea guardada" : "líneas guardadas"}
+            {templates.length === 1 ? "referencia disponible" : "referencias disponibles"}
           </p>
         </div>
 
@@ -303,7 +482,15 @@ export function LineasPreciosMobileView({
             <input
               value={query}
               onChange={(event) => onQueryChange(event.target.value)}
-              placeholder="Buscar línea o proveedor"
+              placeholder={
+                categoryFilter === "vidrio"
+                  ? scope === "mine"
+                    ? "Buscar vidrio"
+                    : "Buscar proveedor o vidrio"
+                  : scope === "mine"
+                    ? "Buscar línea"
+                    : "Buscar proveedor o línea"
+              }
               aria-label="Buscar líneas"
             />
           </label>
@@ -324,7 +511,10 @@ export function LineasPreciosMobileView({
               key={option.value}
               type="button"
               className={categoryFilter === option.value ? s.materialQuickFilterActive : ""}
-              onClick={() => onCategoryFilterChange(option.value)}
+              onClick={() => {
+                onCategoryFilterChange(option.value);
+                resetNavigation();
+              }}
               aria-pressed={categoryFilter === option.value}
             >
               {option.label}
@@ -332,23 +522,39 @@ export function LineasPreciosMobileView({
           ))}
         </div>
 
-        {categoryFilter === "vidrio" ? (
-          <aside className={s.materialInfoBanner} role="note" aria-label="Productos de cristal">
-            <LuSparkles aria-hidden />
-            <div>
-              <strong>Vidrios, espejos y más</strong>
-              <span>
-                Aquí puedes administrar los productos de cristal que ofreces y dejarlos listos para cotizar.
-              </span>
-            </div>
-          </aside>
-        ) : null}
+        <div className={`${s.statusTabs} ${s.scopeTabs}`} role="tablist" aria-label="Qué quieres ver">
+          <button
+            type="button"
+            role="tab"
+            className={scope === "mine" ? s.tabActive : ""}
+            aria-selected={scope === "mine"}
+            onClick={() => {
+              setScope("mine");
+              resetNavigation();
+            }}
+          >
+            {categoryFilter === "vidrio" ? "Mis vidrios" : "Mis líneas"}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            className={scope === "providers" ? s.tabActive : ""}
+            aria-selected={scope === "providers"}
+            onClick={() => {
+              setScope("providers");
+              resetNavigation();
+            }}
+          >
+            Proveedores
+          </button>
+        </div>
 
+        {scope === "mine" ? (
         <div className={s.statusTabs} aria-label="Estado de las líneas">
           {([
-            { value: "todas" as const, label: "Todas", count: templates.length },
-            { value: "activas" as const, label: "Activas", count: activeCount },
-            { value: "inactivas" as const, label: "Inactivas", count: inactiveCount },
+            { value: "todas" as const, label: "Todas", count: statusCounts.todas },
+            { value: "activas" as const, label: "Activas", count: statusCounts.activas },
+            { value: "inactivas" as const, label: categoryFilter === "vidrio" ? "Ocultos" : "Ocultas", count: statusCounts.ocultas },
           ]).map((option) => (
             <button
               key={option.value}
@@ -362,6 +568,7 @@ export function LineasPreciosMobileView({
             </button>
           ))}
         </div>
+        ) : null}
       </section>
 
       {feedback ? (
@@ -408,9 +615,11 @@ export function LineasPreciosMobileView({
         </section>
       ) : null}
 
-      {!isLoading && templates.length > 0 && filteredTemplates.length === 0 ? (
+      {!isLoading && templates.length > 0 && scope === "mine" && !mineDrill && (
+        categoryFilter === "vidrio" ? workshopGlass.length === 0 : mineCategories.length === 0 && workshopGlass.length === 0
+      ) ? (
         <section className={s.emptyState}>
-          <strong>No encontramos líneas</strong>
+          <strong>{categoryFilter === "vidrio" ? "No encontramos vidrios" : "No encontramos líneas"}</strong>
           <p>Prueba otra búsqueda o limpia los filtros.</p>
           <button type="button" onClick={clearSecondaryFilters}>
             <LuRotateCcw aria-hidden />
@@ -419,62 +628,310 @@ export function LineasPreciosMobileView({
         </section>
       ) : null}
 
-      {catalogGroups.length > 0 ? (
-        <section className={s.list} aria-label="Líneas guardadas">
-          {catalogGroups.map((group, groupIndex) => {
-            const defaultExpanded = groupIndex === 0;
-            const isExpanded = isFamilyExpanded(group.key, defaultExpanded);
-            const GroupIcon = FAMILY_ICONS[group.iconKey];
-
+      {scope === "mine" && categoryFilter === "vidrio" && workshopGlass.length > 0 ? (
+        <section className={s.catalogList} aria-label="Mis vidrios">
+          <p className={s.sectionLabel}>
+            {workshopGlass.length} {workshopGlass.length === 1 ? "producto" : "productos"}
+          </p>
+          {workshopGlass.map((template, rowIndex) => {
+            const technicalStatus = technicalStatuses.get(String(template.id));
+            if (!technicalStatus) return null;
             return (
-              <section
-                key={group.key}
-                className={s.familyPanel}
-                data-expanded={isExpanded ? "true" : "false"}
-              >
-                <button
-                  type="button"
-                  className={s.familyHeader}
-                  onClick={() => toggleFamily(group.key, isExpanded)}
-                  aria-expanded={isExpanded}
-                >
-                  <span className={s.familyHeaderLeading}>
-                    <LuChevronDown className={s.familyChevron} aria-hidden />
-                    <GroupIcon className={s.familyIcon} aria-hidden />
-                    <span className={s.familyName}>{group.label}</span>
-                  </span>
-                  <span className={s.familyCount}>
-                    {group.templates.length}{" "}
-                    {group.templates.length === 1 ? "línea" : "líneas"}
-                  </span>
-                </button>
-
-                <div className={`${s.familyBody} ${isExpanded ? s.familyBodyOpen : ""}`}>
-                  <div className={s.familyBodyInner}>
-                    {group.templates.map((template, rowIndex) => {
-                      const technicalStatus = technicalStatuses.get(String(template.id));
-                      if (!technicalStatus) return null;
-
-                      return (
-                        <LineasPreciosMobileLineRow
-                          key={template.id}
-                          template={template}
-                          technicalStatus={technicalStatus}
-                          formatMoney={formatMoney}
-                          onOpenActions={() => setSelectedLine(template)}
-                          onEditPrice={() => onEditPrice(template)}
-                          rowIndex={rowIndex}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              </section>
+              <LineasPreciosMobileLineRow
+                key={template.id}
+                template={template}
+                technicalStatus={technicalStatus}
+                formatMoney={formatMoney}
+                onOpenActions={() => setSelectedLine(template)}
+                onEditPrice={() => onEditPrice(template)}
+                rowIndex={rowIndex}
+              />
             );
           })}
         </section>
       ) : null}
 
+      {scope === "mine" && categoryFilter !== "vidrio" && mineDrill === "glass" ? (
+        <section className={s.catalogList} key="tus-vidrios" aria-label="Tus vidrios">
+          <button type="button" className={s.familyHeader} onClick={() => setMineDrill(null)}>
+            <span className={s.familyHeaderLeading}>
+              <LuChevronLeft className={s.familyIcon} aria-hidden />
+              <span className={s.familyName}>Tus vidrios</span>
+            </span>
+            <span className={s.familyCount}>
+              {workshopGlass.length} {workshopGlass.length === 1 ? "producto" : "productos"}
+            </span>
+          </button>
+          {workshopGlass.map((template, rowIndex) => {
+            const technicalStatus = technicalStatuses.get(String(template.id));
+            if (!technicalStatus) return null;
+            return (
+              <LineasPreciosMobileLineRow
+                key={template.id}
+                template={template}
+                technicalStatus={technicalStatus}
+                formatMoney={formatMoney}
+                onOpenActions={() => setSelectedLine(template)}
+                onEditPrice={() => onEditPrice(template)}
+                rowIndex={rowIndex}
+              />
+            );
+          })}
+        </section>
+      ) : null}
+
+      {scope === "mine" && categoryFilter !== "vidrio" && openMineCategory ? (
+        <section className={s.catalogList} key={openMineCategory.key} aria-label={openMineCategory.label}>
+          <button type="button" className={s.familyHeader} onClick={() => setMineDrill(null)}>
+            <span className={s.familyHeaderLeading}>
+              <LuChevronLeft className={s.familyIcon} aria-hidden />
+              <span className={s.familyName}>{familyDisplayLabel(openMineCategory.key, openMineCategory.label)}</span>
+            </span>
+            <span className={s.familyCount}>
+              {openMineCategory.templates.length} {openMineCategory.templates.length === 1 ? "línea" : "líneas"}
+            </span>
+          </button>
+          {openMineCategory.templates.map((template, rowIndex) => {
+            const technicalStatus = technicalStatuses.get(String(template.id));
+            if (!technicalStatus) return null;
+            return (
+              <LineasPreciosMobileLineRow
+                key={template.id}
+                template={template}
+                technicalStatus={technicalStatus}
+                formatMoney={formatMoney}
+                onOpenActions={() => setSelectedLine(template)}
+                onEditPrice={() => onEditPrice(template)}
+                rowIndex={rowIndex}
+              />
+            );
+          })}
+        </section>
+      ) : null}
+
+      {scope === "mine" && categoryFilter !== "vidrio" && !mineDrill && (mineCategories.length > 0 || workshopGlass.length > 0) ? (
+        <section className={s.catalogList} key="mine-home" aria-label="Líneas del taller">
+          {mineCategories.length > 0 ? (
+            <p className={s.sectionLabel}>
+              Tus líneas
+              <span>
+                {workshopLines.length} {workshopLines.length === 1 ? "línea" : "líneas"}
+              </span>
+            </p>
+          ) : null}
+          {mineCategories.map((group) => {
+            const GroupIcon = FAMILY_ICONS[group.key];
+            return (
+              <button
+                key={group.key}
+                type="button"
+                className={s.familyHeader}
+                onClick={() => setMineDrill(group.key)}
+              >
+                <span className={s.familyHeaderLeading}>
+                  <GroupIcon className={s.familyIcon} aria-hidden />
+                  <span className={s.familyName}>{familyDisplayLabel(group.key, group.label)}</span>
+                </span>
+                <span className={s.familyCount}>
+                  {group.templates.length} {group.templates.length === 1 ? "línea" : "líneas"}
+                  <LuChevronRight className={s.familyIcon} aria-hidden />
+                </span>
+              </button>
+            );
+          })}
+          {categoryFilter === "Todo" && workshopGlass.length > 0 ? (
+            <>
+              <p className={s.sectionLabel}>
+                Tus vidrios
+                <span>{workshopGlass.length} {workshopGlass.length === 1 ? "producto" : "productos"}</span>
+              </p>
+              <button type="button" className={s.familyHeader} onClick={() => setMineDrill("glass")}>
+                <span className={s.familyHeaderLeading}>
+                  <LuSparkles className={s.familyIcon} aria-hidden />
+                  <span className={s.familyName}>Ver productos</span>
+                </span>
+                <LuChevronRight className={s.familyIcon} aria-hidden />
+              </button>
+            </>
+          ) : null}
+        </section>
+      ) : null}
+
+      {scope === "providers" && providerGroups.length === 0 && !showPurchasePricesEntry ? (
+        <section className={s.emptyState}>
+          <strong>
+            {categoryFilter === "vidrio" ? "No hay vidrios de proveedores" : "No hay líneas de proveedores"}
+          </strong>
+          <p>
+            {categoryFilter === "vidrio"
+              ? "Los vidrios de tu taller están en Mis vidrios."
+              : "Prueba otro material o limpia los filtros."}
+          </p>
+        </section>
+      ) : null}
+
+      {scope === "providers" && (openProviderGroup || providerGroups.length > 0 || showPurchasePricesEntry) ? (
+        <section
+          className={s.catalogList}
+          key={openProviderFamily?.key ?? openProviderGroup?.key ?? "providers"}
+          aria-label="Proveedores"
+        >
+          {openProviderGroup && (openProviderFamily || openProviderGroup.glassGroups?.some((group) => group.key === providerFamilyKey)) ? (
+            <>
+              <button type="button" className={s.familyHeader} onClick={() => setProviderFamilyKey(null)}>
+                <span className={s.familyHeaderLeading}>
+                  <LuChevronLeft className={s.familyIcon} aria-hidden />
+                  <span className={s.familyName}>
+                    {openProviderFamily?.label ?? providerFamilyKey}
+                  </span>
+                </span>
+              </button>
+              {(openProviderFamily?.templates
+                ?? openProviderGroup.glassGroups?.find((group) => group.key === providerFamilyKey)?.templates
+                ?? []).map((template, rowIndex) => {
+                const technicalStatus = technicalStatuses.get(String(template.id));
+                if (!technicalStatus) return null;
+                return (
+                  <LineasPreciosMobileLineRow
+                    key={template.id}
+                    template={template}
+                    technicalStatus={technicalStatus}
+                    formatMoney={formatMoney}
+                    onOpenActions={() => setSelectedLine(template)}
+                    onEditPrice={() => onEditPrice(template)}
+                    rowIndex={rowIndex}
+                  />
+                );
+              })}
+            </>
+          ) : openProviderGroup ? (
+            <>
+              <button type="button" className={s.familyHeader} onClick={() => {
+                setProviderName(null);
+                setProviderFamilyKey(null);
+              }}>
+                <span className={s.familyHeaderLeading}>
+                  <LuChevronLeft className={s.familyIcon} aria-hidden />
+                  <span className={s.familyName}>{openProviderGroup.label}</span>
+                </span>
+              </button>
+              {categoryFilter === "vidrio" && openProviderGroup.glassGroups ? (
+                openProviderGroup.glassGroups.map((group) => (
+                  <button
+                    key={group.key}
+                    type="button"
+                    className={s.familyHeader}
+                    onClick={() => setProviderFamilyKey(group.key)}
+                  >
+                    <span className={s.familyName}>{group.label}</span>
+                    <span className={s.familyCount}>
+                      {group.templates.length} {group.templates.length === 1 ? "producto" : "productos"}
+                      <LuChevronRight className={s.familyIcon} aria-hidden />
+                    </span>
+                  </button>
+                ))
+              ) : categoryFilter === "vidrio" ? (
+                openProviderGroup.templates.map((template, rowIndex) => {
+                  const technicalStatus = technicalStatuses.get(String(template.id));
+                  if (!technicalStatus) return null;
+                  return (
+                    <LineasPreciosMobileLineRow
+                      key={template.id}
+                      template={template}
+                      technicalStatus={technicalStatus}
+                      formatMoney={formatMoney}
+                      onOpenActions={() => setSelectedLine(template)}
+                      onEditPrice={() => onEditPrice(template)}
+                      rowIndex={rowIndex}
+                    />
+                  );
+                })
+              ) : (
+                openProviderGroup.categories.map((category) => {
+                  const named = category.families.filter((family) => !family.key.startsWith("category:"));
+                  const fallback = category.families.filter((family) => family.key.startsWith("category:"));
+                  if (named.length === 0) {
+                    const count = fallback.reduce((total, family) => total + family.templates.length, 0);
+                    return (
+                      <button
+                        key={category.key}
+                        type="button"
+                        className={s.familyHeader}
+                        onClick={() => fallback[0] && setProviderFamilyKey(fallback[0].key)}
+                      >
+                        <span className={s.familyName}>{category.label}</span>
+                        <span className={s.familyCount}>
+                          {count} {count === 1 ? "línea" : "líneas"}
+                          <LuChevronRight className={s.familyIcon} aria-hidden />
+                        </span>
+                      </button>
+                    );
+                  }
+                  return (
+                    <div key={category.key}>
+                      <p className={s.sectionLabel}>{category.label}</p>
+                      {named.map((family) => (
+                        <button
+                          key={family.key}
+                          type="button"
+                          className={s.familyHeader}
+                          onClick={() => setProviderFamilyKey(family.key)}
+                        >
+                          <span className={s.familyName}>{family.label}</span>
+                          <span className={s.familyCount}>
+                            {family.templates.length} {family.templates.length === 1 ? "configuración" : "configuraciones"}
+                            <LuChevronRight className={s.familyIcon} aria-hidden />
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })
+              )}
+            </>
+          ) : (
+            <>
+              {providerGroups.map((provider) => {
+                const namedCount = provider.families.filter((family) => !family.key.startsWith("category:")).length;
+                const glassCount = provider.glassGroups?.length ?? 0;
+                const countLabel = categoryFilter === "vidrio"
+                  ? provider.glassGroups
+                    ? `${glassCount} ${glassCount === 1 ? "familia" : "familias"}`
+                    : `${provider.templates.length} ${provider.templates.length === 1 ? "producto" : "productos"}`
+                  : `${namedCount || provider.categories.length} ${(namedCount || provider.categories.length) === 1 ? "familia" : "familias"}`;
+                return (
+                  <button
+                    key={provider.key}
+                    type="button"
+                    className={s.familyHeader}
+                    onClick={() => {
+                      setProviderName(provider.key);
+                      setProviderFamilyKey(null);
+                    }}
+                  >
+                    <span className={s.familyHeaderLeading}>
+                      <span className={s.providerMark} aria-hidden>{providerMonogram(provider.label)}</span>
+                      <span className={s.familyName}>{provider.label}</span>
+                    </span>
+                    <span className={s.familyCount}>
+                      {countLabel}
+                      <LuChevronRight className={s.familyIcon} aria-hidden />
+                    </span>
+                  </button>
+                );
+              })}
+              {showPurchasePricesEntry && categoryFilter !== "vidrio" ? (
+                <Link href={purchasePricesHref} className={s.familyHeader}>
+                  <span className={s.familyHeaderLeading}>
+                    <span className={s.familyName}>Precios de compra</span>
+                  </span>
+                  <LuChevronRight className={s.familyIcon} aria-hidden />
+                </Link>
+              ) : null}
+            </>
+          )}
+        </section>
+      ) : null}
       {filtersOpen ? (
         <div className={s.sheetBackdrop} role="presentation" onClick={() => setFiltersOpen(false)}>
           <section
@@ -515,7 +972,10 @@ export function LineasPreciosMobileView({
                       key={option.value}
                       type="button"
                       className={categoryFilter === option.value ? s.filterSelected : ""}
-                      onClick={() => onCategoryFilterChange(option.value)}
+                      onClick={() => {
+                onCategoryFilterChange(option.value);
+                resetNavigation();
+              }}
                     >
                       {option.label}
                     </button>
@@ -618,14 +1078,14 @@ export function LineasPreciosMobileView({
               ) : null}
               <button
                 type="button"
-                className={s.lineSheetAction}
+                className={`${s.lineSheetAction} ${s.lineSheetActionQuiet}`}
                 onClick={() => {
                   const template = selectedLine;
                   setSelectedLine(null);
                   onToggleActive(template);
                 }}
               >
-                {selectedLine.isActive ? "Desactivar" : "Activar"}
+                {selectedLine.isActive ? "Ocultar del cotizador" : "Mostrar en el cotizador"}
               </button>
               <button
                 type="button"

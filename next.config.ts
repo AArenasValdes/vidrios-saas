@@ -60,7 +60,7 @@ const nextPolyfillModuleJs = path.join(
 );
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["192.168.0.12"],
+  allowedDevOrigins: ["localhost", "127.0.0.1", "192.168.0.12"],
   images: {
     remotePatterns: [
       {

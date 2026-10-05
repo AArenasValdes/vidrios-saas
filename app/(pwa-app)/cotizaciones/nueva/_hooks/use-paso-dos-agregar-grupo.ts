@@ -15,6 +15,7 @@ import {
   getComponentTypeLabelForBatch,
   normalizeCurrencyInput,
   resolveVitrinaHojasBasePatch,
+  resolveDefaultSheetVariantForLine,
   MATERIAL_OPTIONS,
   PVC_COLOR_OPTIONS,
   MIRROR_GLASS_THICKNESS_OPTIONS,
@@ -1574,7 +1575,10 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
       return {
         ...current,
         sheetScheme,
-        sheetVariant: "",
+        sheetVariant: resolveDefaultSheetVariantForLine({
+          catalogLineKey: current.catalogLineKey,
+          sheetScheme,
+        }),
         customSchemeDescription:
           sheetScheme === "Personalizado" ? current.customSchemeDescription : "",
         isCustomScheme: sheetScheme === "Personalizado",
