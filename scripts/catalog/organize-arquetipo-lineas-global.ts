@@ -17,13 +17,13 @@ const expectedProjectRef = "yrtrwgkaopfumpidjthk";
 const applyRequested = process.argv.includes("--apply");
 const lineSpecs: LineSpec[] = [
   { catalogKey: "ventora:l5000", nombre: "Serie 5000", proveedor: "Arquetipo", configuracion: "Corredera 2 hojas", lineSystem: "L5000", familyKey: "arquetipo:l5000", familyLabel: "Arquetipo · Línea 5000", identitySource: "Arquetipo · Catálogo de perfiles Línea 5000" },
-  { catalogKey: "ventora:l20", nombre: "Serie 20", proveedor: "Alumétrica", configuracion: "Corredera 2 hojas", lineSystem: "L20", identitySource: "Alumétrica · Línea 20" },
-  { catalogKey: "ventora:l20-fijos", nombre: "Serie 20 — Fijos", proveedor: "Alumétrica", configuracion: "Fijos 2 hojas", lineSystem: "L20", identitySource: "Alumétrica · Línea 20 · paños fijos" },
+  { catalogKey: "ventora:l20", nombre: "Serie 20", proveedor: null, configuracion: "Corredera 2 hojas", lineSystem: "L20", identitySource: "Alumétrica · Línea 20" },
+  { catalogKey: "ventora:l20-fijos", nombre: "Serie 20 — Fijos", proveedor: null, configuracion: "Fijos 2 hojas", lineSystem: "L20", identitySource: "Alumétrica · Línea 20 · paños fijos" },
   { catalogKey: "ventora:l25", nombre: "Serie 25", proveedor: "SODAL", configuracion: "Corredera 2 hojas", lineSystem: "L25", identitySource: "SODAL · Línea 25" },
   { catalogKey: "ventora:l32", nombre: "AL-32", proveedor: "SODAL", configuracion: "Proyectante", lineSystem: "AL-32", identitySource: "SODAL · AL-32 proyectante" },
   { catalogKey: "ventora:l35", nombre: "AM-35 · Puerta abatible y vaivén", proveedor: "Arquetipo", configuracion: "Puerta abatible y vaivén", lineSystem: "AM-35", familyKey: "arquetipo:l35", familyLabel: "Arquetipo · Línea 35", identitySource: "Arquetipo · Catálogo de perfiles Línea 35" },
   { catalogKey: "ventora:serie-15-corredera-2h", nombre: "Línea 15 — Corredera 2 hojas", proveedor: null, configuracion: "Corredera 2 hojas", lineSystem: "Línea 15", identitySource: "Línea 15 corredera · identidad de receta Ventora no asociada al catálogo de compra Arquetipo", cuttingGuideSource: "Despiece oficial Línea AL-15 corredera 2 hojas" },
-  { catalogKey: "ventora:serie-4000-corredera-2h", nombre: "Línea 4000 — Corredera 2 hojas", proveedor: "Columbia", configuracion: "Corredera 2 hojas", lineSystem: "Línea 4000", identitySource: "Columbia · Línea 4000 corredera 2 hojas", cuttingGuideSource: "Despiece oficial Línea 4000 Columbia corredera 2 hojas" },
+  { catalogKey: "ventora:serie-4000-corredera-2h", nombre: "Línea 4000 — Corredera 2 hojas", proveedor: null, configuracion: "Corredera 2 hojas", lineSystem: "Línea 4000", identitySource: "Columbia · Línea 4000 corredera 2 hojas", cuttingGuideSource: "Despiece oficial Línea 4000 Columbia corredera 2 hojas" },
   { catalogKey: "ventora:serie-45-puerta", nombre: "Línea 45 — Puerta", proveedor: "Sodal / Indalum", configuracion: "Puerta abatible 1 hoja", lineSystem: "Línea 45", identitySource: "Sodal / Indalum · Serie 45 practicable", cuttingGuideSource: "Matrices de extrusión Serie 45 practicable" },
   { catalogKey: "ventora:serie-12-shower-corredera", nombre: "Línea 12 — Shower Door", proveedor: "Arquetipo", configuracion: "Shower Door · Corredera 2 hojas", lineSystem: "Línea 12", familyKey: "arquetipo:l12", familyLabel: "Arquetipo · Línea 12", identitySource: "Arquetipo · Catálogo Línea 12" },
   { catalogKey: "ventora:l42", nombre: "AL-42", proveedor: "SODAL", configuracion: "AL-42 normal · Proyectante / paño fijo", lineSystem: "AL-42", identitySource: "SODAL · AL-42 proyectante" },
@@ -190,7 +190,7 @@ async function main() {
     canonicalRowsToUpdate: updates.length,
     arquetipoEntriesToInsert: inserts.length,
     customProvidersPreserved: preservedCustomProviders,
-    entriesBySupplier: { arquetipoNew: inserts.length, SODALAndColumbiaCorrected: updates.filter((item) => ["SODAL", "Columbia", "Sodal / Indalum"].includes(item.provider ?? "")).length },
+    entriesBySupplier: { arquetipoNew: inserts.length, identifiedAluminumSuppliers: updates.filter((item) => ["SODAL", "Sodal / Indalum"].includes(item.provider ?? "")).length },
   }, null, 2));
   if (!applyRequested) return;
 

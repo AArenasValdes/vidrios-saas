@@ -4,8 +4,8 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ## 2026-10-05 - Separación de líneas Arquetipo por proveedor
 
-- Catálogo Arquetipo conserva familia técnica propia (`arquetipo:lXX`) para que series homónimas no compartan asociación con SODAL, Columbia, Alumétrica o Sodal/Indalum.
-- El catálogo canónico identifica proveedores respaldados por evidencia y agrega siete entradas Arquetipo separadas para L15, L20, L25, L32, L4000, L45 y L42; las L5000, L35 y L12 ya usan familia Arquetipo.
+- Catálogo Arquetipo conserva familia técnica propia (`arquetipo:lXX`) para que series homónimas no compartan asociación con otros proveedores.
+- El catálogo canónico agrega siete entradas Arquetipo separadas para L15, L20, L25, L32, L4000, L45 y L42; las L5000, L35 y L12 ya usan familia Arquetipo. L20 y L4000 quedan sin proveedor comercial; Alumétrica y Columbia no se muestran como proveedores.
 - La sincronización global actualiza metadatos de líneas base y agrega entradas Arquetipo para organizaciones CL sin sobrescribir proveedores personalizados. Importador global de perfiles elimina asociaciones de familia Arquetipo que apuntaban a claves genéricas anteriores.
 - El costo de fabricación requiere coincidencia con `supplierFamilyKey` del snapshot; no crea ni valida recetas. El smoke visual queda a cargo del usuario.
 
