@@ -92,10 +92,28 @@ async function main() {
   }
   const technicalIds = new Map(technicalRows.map((row) => [String(row.clave_tecnica), String(row.id)]));
   const families = technicalIds.size ? await readRows(client, "catalogo_insumo_familias", (query) => query.select("*").in("insumo_tecnico_id", [...technicalIds.values()])) : [];
+  const expectedFamilyKeysByTechnicalId = new Map<string, Set<string>>();
   for (const input of fixture.technicalInputs) for (const familyKey of input.familyKeys) {
     const id = technicalIds.get(input.technicalKey);
+    if (id) {
+      const expectedKeys = expectedFamilyKeysByTechnicalId.get(id) ?? new Set<string>();
+      expectedKeys.add(familyKey);
+      expectedFamilyKeysByTechnicalId.set(id, expectedKeys);
+    }
     const existing = families.find((row) => row.insumo_tecnico_id === id && row.family_key === familyKey);
     classify("catalogo_insumo_familias", `${input.technicalKey}/${familyKey}`, existing, { insumo_tecnico_id: id, family_key: familyKey }, actions);
+  }
+  const staleFamilyRows = families.filter((row) => {
+    const technicalId = String(row.insumo_tecnico_id);
+    return expectedFamilyKeysByTechnicalId.has(technicalId) &&
+      !expectedFamilyKeysByTechnicalId.get(technicalId)?.has(String(row.family_key));
+  });
+  for (const row of staleFamilyRows) {
+    actions.push({
+      table: "catalogo_insumo_familias",
+      key: `${String(row.insumo_tecnico_id)}/${String(row.family_key)}`,
+      action: "DELETE",
+    });
   }
   const presentations = sourceId ? await readRows(client, "catalogo_presentaciones_proveedor", (query) => query.select("*").eq("fuente_tecnica_id", sourceId).eq("proveedor_key", fixture.supplierKey)) : [];
   const presentationBySku = new Map(presentations.map((row) => [String(row.sku_proveedor), row]));
@@ -126,7 +144,7 @@ async function main() {
     }, actions);
   }
 
-  const counts = Object.fromEntries(["INSERT", "EXISTENTE", "METADATA", "CONFLICTO"].map((action) => [action, actions.filter((row) => row.action === action).length]));
+  const counts = Object.fromEntries(["INSERT", "EXISTENTE", "METADATA", "DELETE", "CONFLICTO"].map((action) => [action, actions.filter((row) => row.action === action).length]));
   const conflicts = actions.filter((row) => row.action === "CONFLICTO");
   console.log(JSON.stringify({ phase: "preflight-catalogo-global", projectRef: expectedProjectRef, familias: 10, insumosTecnicos: fixture.technicalInputs.length, presentaciones: fixture.presentations.length, precios: pricedPresentations.length, totalCLP: pricedPresentations.reduce((sum, row) => sum + (row.netPrice ?? 0), 0), largoPredeterminadoMm: 6000, largoConfirmadoPorCotizacion: false, counts, conflicts }, null, 2));
   assert(conflicts.length === 0, "Hay conflictos con datos globales existentes; no se escribió nada.");
@@ -160,15 +178,23 @@ async function main() {
   const finalTechnicalIds = new Map(finalTechnicalRows.map((row) => [String(row.clave_tecnica), String(row.id)]));
   for (const input of fixture.technicalInputs) {
     const existing = technicalByKey.get(input.technicalKey);
-    if (existing && stable(existing.evidencia) !== stable(input.evidence)) {
+    const expectedEvidence = technicalEvidence(input);
+    if (existing && stable(existing.evidencia) !== stable(expectedEvidence)) {
       const id = finalTechnicalIds.get(input.technicalKey);
-      const { error } = await client.from("catalogo_insumos_tecnicos").update({ evidencia: input.evidence }).eq("id", id as string).eq("fuente_tecnica_id", finalSource.id);
+      const { error } = await client.from("catalogo_insumos_tecnicos").update({ evidencia: expectedEvidence }).eq("id", id as string).eq("fuente_tecnica_id", finalSource.id);
       if (error) throw new Error(`Evidencia técnica ${input.sourceCode}: ${error.message}`);
     }
   }
   const familyPayload = fixture.technicalInputs.flatMap((input) => input.familyKeys.map((familyKey) => ({ insumo_tecnico_id: finalTechnicalIds.get(input.technicalKey) as string, family_key: familyKey })));
   const { error: familyWriteError } = await client.from("catalogo_insumo_familias").upsert(familyPayload, { onConflict: "insumo_tecnico_id,family_key", ignoreDuplicates: true });
   if (familyWriteError) throw new Error(`Familias: ${familyWriteError.message}`);
+  for (const row of staleFamilyRows) {
+    const { error } = await client.from("catalogo_insumo_familias")
+      .delete()
+      .eq("insumo_tecnico_id", String(row.insumo_tecnico_id))
+      .eq("family_key", String(row.family_key));
+    if (error) throw new Error(`Retirar familia cruzada ${String(row.family_key)}: ${error.message}`);
+  }
   const presentationPayload = fixture.presentations.map((input) => ({
     proveedor_key: fixture.supplierKey, fuente_tecnica_id: finalSource.id, insumo_tecnico_id: finalTechnicalIds.get(input.technicalKey) as string,
     sku_proveedor: input.sku, descripcion: input.description, modo_acabado: input.finishResolution === "finish_independent" ? "independiente" : "especifico",
@@ -239,7 +265,14 @@ async function main() {
     row.modo_acabado === "independiente" && row.acabado_codigo == null && row.acabado_nombre == null
   );
   assert(allPricesAreFinishIndependent, "No todas las presentaciones con precio quedaron disponibles para cualquier acabado.");
-  console.log(JSON.stringify({ phase: "publicado-global", projectRef: expectedProjectRef, revision: fixture.catalogRevision, lista: fixture.priceListRevision, familias: 10, insumosTecnicos: technicalCount, presentaciones: presentationCount, precios: priceCount, totalCLPVerificado: actualTotal, preciosAplicablesATodosLosAcabados: allPricesAreFinishIndependent, confirmacion: "registros, suma y acabado independiente verificados en producción" }, null, 2));
+  const verifiedFamilyRows = await readRows(client, "catalogo_insumo_familias", (query) => query.select("insumo_tecnico_id, family_key").in("insumo_tecnico_id", [...finalTechnicalIds.values()]));
+  const familiesMatchFixture = fixture.technicalInputs.every((input) => {
+    const id = finalTechnicalIds.get(input.technicalKey);
+    const actual = verifiedFamilyRows.filter((row) => String(row.insumo_tecnico_id) === id).map((row) => String(row.family_key)).sort();
+    return stable(actual) === stable([...input.familyKeys].sort());
+  });
+  assert(familiesMatchFixture, "Las familias finales no coinciden exactamente con las familias Arquetipo aprobadas.");
+  console.log(JSON.stringify({ phase: "publicado-global", projectRef: expectedProjectRef, revision: fixture.catalogRevision, lista: fixture.priceListRevision, familias: 10, familiasCruzadasRetiradas: staleFamilyRows.length, familiasFinalesVerificadas: familiesMatchFixture, insumosTecnicos: technicalCount, presentaciones: presentationCount, precios: priceCount, totalCLPVerificado: actualTotal, preciosAplicablesATodosLosAcabados: allPricesAreFinishIndependent, confirmacion: "familias, registros, suma y acabado independiente verificados en producción" }, null, 2));
 }
 
 main().catch((error: unknown) => {

@@ -5,12 +5,20 @@ Copiar este archivo a la carpeta de evidencia correspondiente y completar antes 
 ## Identidad y alcance
 
 - Proveedor: Distribuidora Arquetipo. Fabricante de cada perfil: no declarado de forma uniforme en estas fuentes.
-- Familias: líneas 15, 20, 25, 4000, 5000, 35, 45, 12, 32 y 42. El catálogo de Ventora ya tiene identidades para las diez; esta integración agrega referencias de proveedor y compra, no duplica líneas comerciales.
+- Familias: líneas 15, 20, 25, 4000, 5000, 35, 45, 12, 32 y 42. Las series con identidad coincidente de otro proveedor tienen una entrada comercial Arquetipo independiente; compartir número o tipología no vincula recetas ni precios entre proveedores.
 - Fuentes: `Arquetipo_Catalogo_Aluminios.pdf` (págs. 3–25), cotización 27811 (01-10-2026, págs. 1–2). La cotización registra precios netos por presentación `TIRA`, acabado LEGNO, para 29 códigos de las líneas 20, 25, 32, 42 y 5000. Es una cotización de una compra, sujeta a stock y mercado; no es lista general publicada.
 - `MOD Catalogo_SISTEMA_SUPERIOR QT.pdf` revisado. Se excluye del alcance solicitado: documenta sistemas SUPERIOR distintos, sin precios en la cotización y sin equivalencia exacta con las diez líneas; no se mezclarán por tipología visual.
 - Estado al importar (2026-10-05): publicación directa e idempotente en las tablas globales del catálogo compartido de producción, autorizada por el usuario para todas las organizaciones. No se duplicaron líneas comerciales ni se tocaron recetas/snapshots históricos.
 - Salida: 84 perfiles/presentaciones de referencia para las 10 familias y 29 precios netos en CLP, cotizados para acabado LEGNO desde cotización 27811 (total CLP 513.984). Por instrucción del usuario, el precio LEGNO —el acabado de mayor costo— se usa como referencia conservadora para cualquier acabado seleccionado; esto no afirma que Arquetipo cobre lo mismo por todos los colores. Son precios por presentación TIRA para referencia de compra; no son precio de venta por m² ni una lista general del proveedor. Vigencia no indicada.
 - Largo comercial: 6.000 mm aplicado como predeterminado global por instrucción del usuario. La cotización no lo confirma; no convertir los precios por tira a precio por metro. Mantener visible esta procedencia asumida.
+
+### Separación por proveedor (2026-10-05)
+
+El catálogo por organización conserva las líneas técnicas preexistentes y agrega siete entradas identificadas explícitamente como Arquetipo: Línea 15, 20, 25, 32, 4000, 45 y 42. Las entradas 5000, 35 y 12 ya tienen una identidad Arquetipo compatible. Las líneas homónimas de otros proveedores permanecen separadas: L20 Alumétrica, L25/AL-32/AL-42 SODAL, L4000 Columbia y L45 Sodal/Indalum. Sus perfiles/precios Arquetipo no se cruzan con esas claves.
+
+Las entradas Arquetipo nuevas exponen los 84 perfiles/presentaciones técnicos y los precios globales que constan en la cotización. Solo una receta compatible y configurada puede producir despiece/cubicación; este cambio de identidad no crea fórmulas para las entradas nuevas ni declara recetas de taller validadas. El snapshot de fabricación conserva su familia de proveedor y el costo técnico exige coincidencia exacta cuando está presente.
+
+La sincronización global de líneas por organización queda en `scripts/catalog/organize-arquetipo-lineas-global.ts`; primero simula los cambios y solo escribe con `--apply`. Las filas con proveedor personalizado se conservan.
 
 ## Fuentes y asociación con Ventora
 

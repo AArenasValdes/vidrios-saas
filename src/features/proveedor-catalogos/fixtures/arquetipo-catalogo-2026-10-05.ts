@@ -12,6 +12,9 @@ const families: readonly Family[] = [
   { key: "ventora:l35", catalogFamilyKey: "arquetipo:l35", page: 18, profiles: [["3501", "Bastidor"], ["3502", "Marco"], ["3503", "Junquillo 45°"], ["3506", "Tapa lisa"], ["3507", "Tapa portafelpa"], ["3508", "Bastidor liviano"], ["3509", "Traslapo"]] },
   { key: "ventora:serie-45-puerta", catalogFamilyKey: "arquetipo:l45", page: 20, recipeExcludedCodes: ["4502", "4504", "4511"], profiles: [["4502", "Marco"], ["4504", "Junquillo"], ["4511", "Marco redondeado"]] },
   { key: "ventora:serie-12-shower-corredera", catalogFamilyKey: "arquetipo:l12", page: 21, profiles: [["1201", "Riel inferior"], ["1202", "Jamba"], ["1203", "Riel superior"], ["1204", "Bastidor hoja"]] },
+  // Same-numbered systems from different suppliers remain separate. No Arquetipo
+  // presentation is linked to Ventora's generic family; line identity must opt in
+  // through its supplier-specific family key.
   { key: "ventora:l32", catalogFamilyKey: "arquetipo:l32", page: 22, recipeExcludedCodes: ["3204"], profiles: [["3201", "Marco"], ["3202", "Hoja"], ["3204", "Palillo"], ["3205", "Marco cámara de agua"], ["3208", "Junquillo"]] },
   { key: "ventora:l42", catalogFamilyKey: "arquetipo:l42", page: 24, recipeExcludedCodes: ["4204"], profiles: [["4202", "Hoja"], ["4204", "Palillo"], ["4206", "Junquillo termopanel"], ["4209", "Marco paño fijo"], ["4229", "Junquillo monolítico"], ["4231", "Marco cámara de agua"]] },
 ];
@@ -36,7 +39,7 @@ const technicalInputs: SupplierCatalogImport["technicalInputs"] = families.flatM
   name,
   material: "Aluminio",
   sectionMm: null,
-    familyKeys: family.recipeExcludedCodes?.includes(code) ? [family.catalogFamilyKey] : [family.catalogFamilyKey, family.key],
+    familyKeys: [family.catalogFamilyKey],
     ...(family.recipeExcludedCodes?.includes(code) ? { excludedRecipeFamilyKeys: [family.key] } : {}),
   evidence: {
     sourceReference: "arquetipo:catalogo-perfiles-aluminio:v1",

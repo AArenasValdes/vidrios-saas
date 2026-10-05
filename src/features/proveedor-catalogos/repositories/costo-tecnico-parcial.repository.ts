@@ -177,6 +177,11 @@ export async function readQuoteForTechnicalCost(input: {
       catalogLineKey: decodeCotizacionItemPresentationMeta(item.observaciones).catalogLineKey,
       configurationKey: VENTORA_DEFAULT_LINE_CATALOG.find((line) => line.catalogKey === decodeCotizacionItemPresentationMeta(item.observaciones).catalogLineKey)?.catalogMetadata?.configurationKey as string | undefined,
       fabricacionSnapshot: item.fabricacion_snapshot,
+      supplierFamilyKey: item.fabricacion_snapshot && typeof item.fabricacion_snapshot === "object" && !Array.isArray(item.fabricacion_snapshot)
+        ? typeof (item.fabricacion_snapshot as Record<string, unknown>).supplierFamilyKey === "string"
+          ? String((item.fabricacion_snapshot as Record<string, unknown>).supplierFamilyKey)
+          : null
+        : null,
       recipeAccessories: getRecipeAccessoriesFromItemSnapshot(item.fabricacion_snapshot, String(item.codigo ?? "").trim()),
     })),
   };

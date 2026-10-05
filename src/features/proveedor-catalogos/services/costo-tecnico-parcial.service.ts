@@ -34,6 +34,7 @@ export type SupplierQuoteItemColor = {
   colorHex?: string | null;
   finishName?: string | null;
   catalogLineKey?: string | null;
+  supplierFamilyKey?: string | null;
   configurationKey?: string | null;
   glassDescription?: string | null;
   recipeAccessories?: SupplierRecipeAccessoryConsumption[];
@@ -141,8 +142,14 @@ function matchesRecipeComponent(entry: CatalogPresentationPrice, recipeCode: str
   return entry.technicalCode === recipeCode || entry.recipeComponentCodes?.includes(recipeCode) === true;
 }
 
-function matchesCatalogFamily(entry: CatalogPresentationPrice, catalogLineKey: string | null | undefined) {
+function matchesCatalogFamily(
+  entry: CatalogPresentationPrice,
+  catalogLineKey: string | null | undefined,
+  supplierFamilyKey?: string | null
+) {
   if (!entry.familyKeys?.length) return true;
+  const resolvedFamily = supplierFamilyKey?.trim();
+  if (resolvedFamily) return entry.familyKeys.includes(resolvedFamily);
   return Boolean(catalogLineKey && entry.familyKeys.includes(catalogLineKey));
 }
 
@@ -225,7 +232,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
       const finishName = quoteItem?.finishName?.trim() || canonicalFinishLabel(color, quoteItem?.colorHex);
       const independentCandidates = input.availablePrices.filter((entry) =>
         (!entry.configurationKey || entry.configurationKey === quoteItem?.configurationKey) &&
-        matchesCatalogFamily(entry, quoteItem?.catalogLineKey) &&
+        matchesCatalogFamily(entry, quoteItem?.catalogLineKey, quoteItem?.supplierFamilyKey) &&
         matchesRecipeComponent(entry, cut.codigoPerfil) && entry.finishResolution === "finish_independent" && resolvedPrice(entry, input.organizationPricing) != null
       );
       if (!finishName && independentCandidates.length === 0) {
@@ -240,7 +247,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
 
       const matchingPresentations = input.availablePrices.filter((entry) =>
         (!entry.configurationKey || entry.configurationKey === quoteItem?.configurationKey) &&
-        matchesCatalogFamily(entry, quoteItem?.catalogLineKey) &&
+        matchesCatalogFamily(entry, quoteItem?.catalogLineKey, quoteItem?.supplierFamilyKey) &&
         matchesRecipeComponent(entry, cut.codigoPerfil) &&
         (!bar.supplierPresentationId || entry.presentationId === bar.supplierPresentationId) &&
         (!bar.supplierPresentationId || entry.commercialLengthMm === bar.largoComercialMm) && (
@@ -270,7 +277,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
       const finishKey = candidates.every((entry) => entry.finishResolution === "finish_independent")
         ? "independent"
         : finishName ?? "independent";
-      const groupKey = [cut.codigoPerfil, finishKey, quoteItem?.catalogLineKey ?? "", quoteItem?.configurationKey ?? "", bar.despunteInicialMm, kerfMm, bar.supplierPresentationId ?? "legacy"].join("|");
+      const groupKey = [cut.codigoPerfil, finishKey, quoteItem?.catalogLineKey ?? "", quoteItem?.supplierFamilyKey ?? "", quoteItem?.configurationKey ?? "", bar.despunteInicialMm, kerfMm, bar.supplierPresentationId ?? "legacy"].join("|");
       const group = cutsByGroup.get(groupKey) ?? [];
       group.push({
         technicalCode: cut.codigoPerfil,
@@ -293,7 +300,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
   for (const group of cutsByGroup.values()) {
     const candidates = input.availablePrices.filter((entry) =>
       (!entry.configurationKey || entry.configurationKey === group[0].configurationKey) &&
-      matchesCatalogFamily(entry, group[0].catalogLineKey) &&
+        matchesCatalogFamily(entry, group[0].catalogLineKey, itemColors.get(group[0].itemCode)?.supplierFamilyKey) &&
       matchesRecipeComponent(entry, group[0].technicalCode) &&
       (!group[0].selectedPresentationId || entry.presentationId === group[0].selectedPresentationId) &&
       (group[0].finishKey === "independent"
