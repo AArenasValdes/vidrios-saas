@@ -7,6 +7,7 @@ jest.mock("@/features/auth/hooks/useAuth", () => ({
 }));
 
 import { createEmptyComponentForm } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
 import { PasoDosWizardMovil, type WizardActions } from "../paso-dos-wizard-movil-shell";
 
@@ -442,6 +443,22 @@ describe("PasoDosWizardMovil", () => {
 
     fireEvent.click(screen.getByText("Agregar componente"));
     expect(wizard.onConfirm).toHaveBeenCalled();
+  });
+
+  it("monta el selector de líneas sobre el documento para cubrir toda la pantalla", () => {
+    const wizard = createWizard({
+      paso: 3,
+      visibleLineTemplates: [
+        { ...VENTORA_DEFAULT_LINE_CATALOG[0], id: 991, organizationId: 3 },
+      ],
+    });
+    render(<PasoDosWizardMovil {...baseProps} wizard={wizard} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Ver lineas" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Elegir línea comercial" });
+    expect(dialog.parentElement?.parentElement).toBe(document.body);
+    expect(screen.getByPlaceholderText("Buscar lineas...")).toBeInTheDocument();
   });
 
   it("debe permitir agregar un componente dentro de cotizacion por total sin precio final", () => {

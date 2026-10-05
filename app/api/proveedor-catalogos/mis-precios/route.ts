@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AuthRouteAccessError, resolveAuthenticatedRouteContext } from "@/features/auth/services/auth-route-access.service";
-import { getSupplierCatalogQaConfig, isSupplierCatalogQaEnabledForIdentity } from "@/features/proveedor-catalogos/services/proveedor-catalogo-qa.service";
+import { canManageSupplierCatalog, canReadSupplierCatalog } from "@/features/proveedor-catalogos/services/supplier-catalog-access.service";
 import { resolvePurchasePrice } from "@/features/proveedor-catalogos/services/precio-compra.service";
 import { readOrganizationPurchasePricing, readSupplierNames, readSupplierPresentationPrices } from "@/features/proveedor-catalogos/repositories/costo-tecnico-parcial.repository";
 import { clearPresentationOverride, savePresentationOverride, saveSupplierAdjustment } from "@/features/proveedor-catalogos/repositories/precios-compra-organizacion.repository";
@@ -15,16 +15,9 @@ const changeSchema = z.discriminatedUnion("kind", [
 ]);
 
 async function context() {
-  if (process.env.SUPPLIER_CATALOG_ORG_PRICES_ENABLED !== "true") return null;
   const auth = await resolveAuthenticatedRouteContext();
-  const config = getSupplierCatalogQaConfig();
-  if (!isSupplierCatalogQaEnabledForIdentity({
-    organizationId: auth.profile.organizationId,
-    role: auth.profile.rol,
-    userEmail: auth.user.email,
-    config,
-  })) return null;
-  return { organizationId: Number(auth.profile.organizationId) };
+  if (!canReadSupplierCatalog(auth.profile.organizationId)) return null;
+  return { organizationId: Number(auth.profile.organizationId), role: auth.profile.rol };
 }
 
 function failure(error: unknown) {
@@ -83,6 +76,7 @@ export async function PUT(request: Request) {
   try {
     const access = await context();
     if (!access) return NextResponse.json({ error: "No disponible." }, { status: 404 });
+    if (!canManageSupplierCatalog(access.role)) return NextResponse.json({ error: "Solo administradores y maestros pueden cambiar precios de compra." }, { status: 403 });
     const parsed = changeSchema.safeParse(await request.json());
     if (!parsed.success) return NextResponse.json({ error: "Revisa el proveedor, porcentaje o precio ingresado." }, { status: 400 });
     const change = parsed.data;

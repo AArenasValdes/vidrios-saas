@@ -187,8 +187,11 @@ export function LineasPreciosImportClient() {
 
     try {
       const [priceExtraction, technicalResult] = await Promise.all([
-        extractPdfCatalogImportData(nextBuffer),
-        extractTechnicalPdfCatalog(nextBuffer),
+        // PDF.js may transfer its input buffer to a worker. Give each extractor
+        // its own copy so the first worker cannot detach the buffer used by the
+        // other extractor.
+        extractPdfCatalogImportData(nextBuffer.slice(0)),
+        extractTechnicalPdfCatalog(nextBuffer.slice(0)),
       ]);
 
       const resolvedMode =

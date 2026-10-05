@@ -81,7 +81,7 @@ export function CostoTecnicoParcialPanel({ quoteId, onSnapshotChange }: { quoteI
         <div>
           <h2>Costo estimado de materiales</h2>
         </div>
-        {canCalculate ? <button type="button" className={styles.action} onClick={() => void calculate()} disabled={busy}>{busy ? "Calculando…" : "Calcular costo QA"}</button> : null}
+        {canCalculate ? <button type="button" className={styles.action} onClick={() => void calculate()} disabled={busy}>{busy ? "Calculando…" : "Calcular costo"}</button> : null}
       </header>
       {message ? <p className={styles.error} role="alert">{message}</p> : null}
       {!snapshot ? (

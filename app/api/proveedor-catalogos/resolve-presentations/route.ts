@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AuthRouteAccessError, resolveAuthenticatedRouteContext } from "@/features/auth/services/auth-route-access.service";
 import { readConfirmedSupplierPresentations } from "@/features/proveedor-catalogos/repositories/costo-tecnico-parcial.repository";
-import { getSupplierCatalogQaConfig, isSupplierCatalogQaEnabledForIdentity } from "@/features/proveedor-catalogos/services/proveedor-catalogo-qa.service";
+import { getSupplierCatalogQaConfig } from "@/features/proveedor-catalogos/services/proveedor-catalogo-qa.service";
 import { resolveSupplierPresentationsForQuoteItem } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
@@ -22,13 +22,6 @@ export async function POST(request: Request) {
   try {
     const auth = await resolveAuthenticatedRouteContext();
     const config = getSupplierCatalogQaConfig();
-    if (!isSupplierCatalogQaEnabledForIdentity({
-      organizationId: auth.profile.organizationId,
-      role: auth.profile.rol,
-      userEmail: auth.user.email,
-      config,
-    })) return NextResponse.json({ enabled: false }, { status: 404 });
-
     const parsed = requestSchema.safeParse(await request.json());
     if (!parsed.success) return NextResponse.json({ error: "La solicitud de presentaciones no es válida." }, { status: 400 });
     const familyByCatalogLineKey = new Map(VENTORA_DEFAULT_LINE_CATALOG.flatMap((line) => {

@@ -16,7 +16,7 @@ import {
   type CatalogPresentationPrice,
   type TechnicalCostSnapshot,
 } from "../services/costo-tecnico-parcial.service";
-import type { ConfirmedSupplierPresentation } from "../services/supplier-presentation-resolution.service";
+import { resolveSupplierPresentationFamilyKeys, type ConfirmedSupplierPresentation } from "../services/supplier-presentation-resolution.service";
 import { listWorkshopPresentations, WorkshopPresentationsSchemaMissingError } from "./workshop-presentations.repository";
 import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
@@ -79,7 +79,7 @@ export async function readConfirmedSupplierPresentations(organizationId?: number
       supplierSku: String(row.sku_proveedor),
       technicalCode: String(technical.codigo_fuente),
       recipeComponentCodes,
-      familyKeys: familiesByInput.get(String(row.insumo_tecnico_id)) ?? [],
+      familyKeys: resolveSupplierPresentationFamilyKeys({ familyKeys: familiesByInput.get(String(row.insumo_tecnico_id)) ?? [], technicalEvidence: evidence }),
       finishCode: row.acabado_codigo == null ? null : String(row.acabado_codigo),
       finishName: row.acabado_nombre == null ? null : String(row.acabado_nombre),
       finishResolution: row.modo_acabado === "independiente" ? "finish_independent" as const : "specific" as const,
@@ -263,7 +263,7 @@ export async function readSupplierPresentationPrices(input: {
     return [{
       presentationId: String(presentation.id),
       providerKey,
-      familyKeys: familyKeysByInputId.get(String(presentation.insumo_tecnico_id)) ?? [],
+      familyKeys: resolveSupplierPresentationFamilyKeys({ familyKeys: familyKeysByInputId.get(String(presentation.insumo_tecnico_id)) ?? [], technicalEvidence: evidence }),
       technicalCode: String(technicalInput.codigo_fuente),
       recipeComponentCodes,
       recipeAccessoryNames,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { LuChevronLeft, LuPencil, LuSearch, LuX } from "react-icons/lu";
 
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
@@ -1409,7 +1410,7 @@ export function PasoDosWizardConfiguracionMovil({
         ) : null}
       </div>
 
-      {isLineSelectorOpen ? (
+      {isLineSelectorOpen && typeof document !== "undefined" ? createPortal((
         <div className={s.stepTwoMobileLineSheetOverlay}>
           <button
             className={s.stepTwoMobileLineSheetBackdrop}
@@ -1421,6 +1422,9 @@ export function PasoDosWizardConfiguracionMovil({
             className={`${s.stepTwoMobileLineSheet} ${
               isIphoneViewport ? s.stepTwoMobileLineSheetIphone : ""
             }`}
+            role="dialog"
+            aria-modal="true"
+            aria-label={isGlassProduct ? "Elegir cristal" : "Elegir línea comercial"}
           >
             <div className={s.stepTwoMobileLineSheetHandle} />
             <div className={s.stepTwoMobileLineSheetHeader}>
@@ -1961,7 +1965,7 @@ export function PasoDosWizardConfiguracionMovil({
             </div>
           </div>
         </div>
-      ) : null}
+      ), document.body) : null}
 
       {requiresProfileMaterial ? (
         <div className={s.stepTwoMobileBlockSecundario}>

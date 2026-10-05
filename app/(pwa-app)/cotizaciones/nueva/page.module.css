@@ -14923,7 +14923,10 @@ p.stepTwoMobileItemFabCompact {
   }
 
   .stepTwoMobileLineSheetBody {
+    max-height: none;
+    min-height: 0;
     overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     scrollbar-gutter: stable;
   }
 }

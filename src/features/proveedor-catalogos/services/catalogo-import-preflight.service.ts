@@ -25,10 +25,11 @@ export function classifyImportRow(table: string, key: string, existing: Record<s
 }
 
 export function technicalEvidence(input: SupplierCatalogImport["technicalInputs"][number]) {
-  return input.recipeComponentCodes?.length || input.recipeAccessoryNames?.length
+  return input.recipeComponentCodes?.length || input.recipeAccessoryNames?.length || input.excludedRecipeFamilyKeys?.length
     ? { ...input.evidence,
         ...(input.recipeComponentCodes?.length ? { recipeComponentCodes: input.recipeComponentCodes } : {}),
         ...(input.recipeAccessoryNames?.length ? { recipeAccessoryNames: input.recipeAccessoryNames } : {}),
+        ...(input.excludedRecipeFamilyKeys?.length ? { excludedRecipeFamilyKeys: input.excludedRecipeFamilyKeys } : {}),
       }
     : input.evidence;
 }

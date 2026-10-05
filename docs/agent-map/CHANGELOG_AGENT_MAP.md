@@ -2684,3 +2684,16 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
 - Cotización 27811 sigue preparada en CSV privado local, solo líneas 20/25/32/42/5000; no es precio global. Expediente: `docs/fabricacion/Arquetipo/INTEGRACION_ARQUETIPO.md`.
 - Lectura remota confirmó presentes las tablas de catálogos/precios privados; no se leyeron filas ni hubo escritura. La ruta de taller permanece limitada a QA/Veratec y no está desplegado soporte Arquetipo.
 - `pnpm fabrication:verify` pasó; `pnpm fabrication:verify --build` se detuvo por otro `next build` activo. Sin smoke navegador, snapshot remoto ni validación física.
+
+## 2026-10-05 - Catálogo y costos de compra disponibles para clientes
+
+- Se quitó el allowlist QA de lectura del catálogo, la resolución de presentaciones y el acceso a Mis precios; todos los usuarios autenticados de una organización pueden consultar los precios oficiales compartidos.
+- Administradores y maestros pueden mantener ajustes, precios propios y presentaciones privadas aisladas por `organization_id`.
+- El costo técnico puede calcularse en cualquier organización para recetas `validated`; recetas `draft` y marcas preliminares siguen bajo el gate QA original.
+- Se verificó previamente la existencia de las tablas relacionadas en Supabase producción mediante consultas de solo lectura. No hubo escrituras remotas ni cambios de esquema.
+## 2026-10-05 - Catálogo Arquetipo publicado globalmente
+
+- Importador idempotente y fixture versionado para 10 líneas existentes: 84 códigos/presentaciones y 29 precios LEGNO por TIRA desde cotización 27811 (CLP 513.984); no se duplican líneas ni se crean precios faltantes.
+- Aplicado en producción con cero conflictos. Largo TIRA 6.000 mm registrado como supuesto solicitado por el usuario, no dato del proveedor; vigencia de la cotización no indicada.
+- Se agregan claves `arquetipo:*` y metadata `excludedRecipeFamilyKeys` para 17 códigos con roles/códigos incompatibles; se conservan enlaces previos en producción sin borrarlos. El filtro de resolución está en código local y requiere despliegue de aplicación para regir en producción.
+- Las reglas de cubicación/despiece/pauta existentes no se alteraron ni se marcaron validadas; el catálogo Arquetipo no entrega fórmulas completas para todas las líneas.

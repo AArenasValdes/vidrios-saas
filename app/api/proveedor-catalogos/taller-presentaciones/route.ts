@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SupplierCatalogDatabase } from "@/features/proveedor-catalogos/repositories/supplier-catalog-database.types";
 import { AuthRouteAccessError, resolveAuthenticatedRouteContext } from "@/features/auth/services/auth-route-access.service";
 import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
-import { getSupplierCatalogQaConfig, isSupplierCatalogQaEnabledForIdentity } from "@/features/proveedor-catalogos/services/proveedor-catalogo-qa.service";
+import { canManageSupplierCatalog } from "@/features/proveedor-catalogos/services/supplier-catalog-access.service";
 import { createWorkshopPresentation, listOfficialTechnicalInputsForFamily, listWorkshopPresentations, updateWorkshopPresentationPurchase, WorkshopPresentationsSchemaMissingError } from "@/features/proveedor-catalogos/repositories/workshop-presentations.repository";
 
 export const dynamic = "force-dynamic";
@@ -45,8 +45,9 @@ const updateSchema = z.object({
 
 async function authorize(lineTemplateId: number) {
   const auth = await resolveAuthenticatedRouteContext();
-  const config = getSupplierCatalogQaConfig();
-  if (!isSupplierCatalogQaEnabledForIdentity({ organizationId: auth.profile.organizationId, role: auth.profile.rol, userEmail: auth.user.email, config })) return null;
+  if (!canManageSupplierCatalog(auth.profile.rol)) {
+    throw new AuthRouteAccessError(403, "Solo administradores y maestros pueden configurar perfiles y precios.");
+  }
   const organizationId = Number(auth.profile.organizationId);
   const admin = createAdminClient() as unknown as SupabaseClient<SupplierCatalogDatabase>;
   const { data: line, error } = await admin.from("cotizacion_line_templates")

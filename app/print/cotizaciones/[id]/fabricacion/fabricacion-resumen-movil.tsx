@@ -674,7 +674,7 @@ export function FabricacionResumenMovil({
           disabled={isExporting}
         >
           <LuDownload aria-hidden />
-          {isExporting ? "Generando..." : "Descargar resumen"}
+          {isExporting ? "Generando..." : "Descargar lista de materiales"}
         </button>
         <Link href={pdfHref} className={s.mActionGhost}>
           <LuFileText aria-hidden />

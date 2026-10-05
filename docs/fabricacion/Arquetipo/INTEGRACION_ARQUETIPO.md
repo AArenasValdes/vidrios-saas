@@ -8,8 +8,9 @@ Copiar este archivo a la carpeta de evidencia correspondiente y completar antes 
 - Familias: líneas 15, 20, 25, 4000, 5000, 35, 45, 12, 32 y 42. El catálogo de Ventora ya tiene identidades para las diez; esta integración agrega referencias de proveedor y compra, no duplica líneas comerciales.
 - Fuentes: `Arquetipo_Catalogo_Aluminios.pdf` (págs. 3–25), cotización 27811 (01-10-2026, págs. 1–2). La cotización registra precios netos por presentación `TIRA`, acabado LEGNO, para 29 códigos de las líneas 20, 25, 32, 42 y 5000. Es una cotización de una compra, sujeta a stock y mercado; no es lista general publicada.
 - `MOD Catalogo_SISTEMA_SUPERIOR QT.pdf` revisado. Se excluye del alcance solicitado: documenta sistemas SUPERIOR distintos, sin precios en la cotización y sin equivalencia exacta con las diez líneas; no se mezclarán por tipología visual.
-- Estado inicial: árbol con cambios locales previos en catálogo, proveedor y fabricación. Preservar todos. No ejecutar escrituras remotas desde `.env.local` ni tocar recetas/snapshots históricos.
-- Salida: catálogo de proveedor Arquetipo + precio privado de compra por organización. No es precio de venta por m². Largo de tira no indicado en la cotización, así que esos importes no habilitan costo por metro ni costo técnico de corte.
+- Estado al importar (2026-10-05): publicación directa e idempotente en las tablas globales del catálogo compartido de producción, autorizada por el usuario para todas las organizaciones. No se duplicaron líneas comerciales ni se tocaron recetas/snapshots históricos.
+- Salida: 84 perfiles/presentaciones de referencia para las 10 familias y 29 precios netos en CLP, acabado LEGNO, desde cotización 27811 (total CLP 513.984). Son precios por presentación TIRA para referencia de compra; no son precio de venta por m² ni una lista general de Arquetipo. Vigencia no indicada.
+- Largo comercial: 6.000 mm aplicado como predeterminado global por instrucción del usuario. La cotización no lo confirma; no convertir los precios por tira a precio por metro. Mantener visible esta procedencia asumida.
 
 ## Fuentes y asociación con Ventora
 
@@ -29,14 +30,14 @@ Copiar este archivo a la carpeta de evidencia correspondiente y completar antes 
 ### Datos de compra capturados
 
 - Moneda CLP; importe neto por tira; cantidad cotizada 1 por SKU; acabado LEGNO.
-- La revisión de precio debe ser privada de la organización dueña de la cotización. No insertar esos importes como referencia global para otros talleres.
-- No convertir `TIRA` a metro lineal: la cotización no informa el largo comercial. Conservar precio editable en **Mis precios** y bloquear cálculo técnico hasta verificar largo.
+- Los importes quedaron deliberadamente en la lista global compartida por instrucción expresa del usuario; cada taller puede ajustar la referencia con sus preferencias/override privado.
+- No convertir `TIRA` a metro lineal: el largo de 6.000 mm proviene de la instrucción del usuario, no de la cotización. La fuente del precio conserva esa salvedad.
 - El catálogo técnico Arquetipo no presenta una lista general de precios. No crear ceros para perfiles ausentes de la cotización.
 - No persistir nombre, RUT, teléfono ni dirección del cliente de la cotización dentro de fixtures, pruebas o documentación.
 
-Se dejó un CSV local de preparación, sin datos del cliente, en `../../../.tmp/arquetipo/compra-privada-cot-27811.csv` (29 perfiles, 5 líneas: 20, 25, 32, 42 y 5000). La suma neta transcrita es CLP 513.984. El archivo conserva SKU, código técnico, acabado, unidad TIRA, precio neto, página y estado de asociación. Es insumo para carga privada; **no** es fixture de catálogo global ni confirma que los datos estén guardados en Ventora.
+El CSV local de preparación, sin datos del cliente, fue reemplazado como fuente de ejecución por el fixture versionado `src/features/proveedor-catalogos/fixtures/arquetipo-catalogo-2026-10-05.ts` y el importador `scripts/catalog/import-arquetipo-global.ts`. El lote se aplicó con `--apply` al proyecto Supabase de producción `yrtrwgkaopfumpidjthk`; el preflight encontró 284 inserciones y cero conflictos. Verificación posterior: 10 familias, 84 insumos técnicos, 84 presentaciones, 29 precios y suma CLP 513.984. No se cargó información personal de la cotización.
 
-La cotización no contiene perfiles ni precios de las líneas 15, 4000, 35, 45 o 12. El catálogo técnico sí identifica sus perfiles, pero no informa precio; no se generaron precios para ellas. La línea 15, 4000 y 45 además conservan las incompatibilidades de código descritas en la tabla anterior.
+La cotización no contiene precios para las líneas 15, 4000, 35, 45 o 12; quedaron sus códigos/presentaciones técnicas visibles sin precio, sin valores cero. La línea 15, 4000 y 45 conservan las incompatibilidades de receta descritas arriba. La publicación del catálogo no crea fórmulas para esas líneas ni las declara validadas. Las reglas de Línea 12 capturadas desde la pantalla siguen preliminares y el largo de 6.000 mm sigue siendo supuesto del usuario.
 
 ## Matriz de reglas y ejemplos independientes
 
@@ -97,14 +98,20 @@ Para declarar toda la línea integrada, recorrer todas las configuraciones nueva
 - Escrituras realizadas en cuenta QA; base remota, migraciones y despliegue si los hubo:
 - Archivos y documentación actualizados; riesgos reales y siguiente paso:
 
-### Estado de esta pasada (2026-10-05)
+### Hallazgos de integración (2026-10-05)
 
 - Revisión documental de las 10 líneas y cruce nominal con las identidades Ventora existentes; no se duplicaron líneas comerciales. La receta base local de Línea 12 sí se amplió; no se escribió sobre recetas persistidas.
 - Captura local de las 29 filas con precio de la cotización 27811; se omitieron identificadores del cliente.
 - La captura de Línea 12 se incorporó como cinco reglas preliminares (9 cortes). Para 1.200 × 1.500 mm / 2 hojas: 1203=1.195 mm ×1; 1201=1.195 mm ×1; 1202=1.497 mm ×2; 1204=605 mm ×4; 1204=1.435 mm ×1. Pauta a 6.000 mm: 4 barras en el motor; el ajuste pendiente y vidrio/herrajes no incluidos siguen visibles. La receta queda `ejemplo_no_validado`.
 - Suite dirigida `traditional-p2u-recipes.test.ts`: aprobada (5 pruebas). `pnpm fabrication:verify`: aprobado; 163 suites, 1.252 pruebas, TypeScript y `docs:check`.
-- Lectura de solo esquema en Supabase de producción confirmó presentes las 10 tablas de catálogos/precios privados; no se leyeron filas ni se escribió nada. El CLI Supabase no está disponible en este entorno.
-- Sin escritura de base ni migración. Hay cambios de aplicación locales, pero no desplegados. La ruta actual de presentaciones privadas exige el piloto QA Veratec y no admite las familias Arquetipo; falta una ruta segura habilitada para el taller/organización que aplique estos precios privados. La interfaz local `:3002` no respondió para identificar sesión/organización.
+- Al iniciar esa integración, una lectura de esquema confirmó presentes las tablas de catálogo/precios; todavía no se habían leído filas ni escrito datos. La autorización posterior del usuario cambió el destino a la lista global compartida.
 - `pnpm fabrication:verify --build`: suites, tipos y docs pasaron; el build terminó con `Another next build process is already running`. No se detuvo ese proceso ni se reintentó para no interferir con otro build.
-- No se cargaron importes en las tablas globales de referencia. El CSV con importes se mantiene ignorado por Git en `.tmp/arquetipo/`.
-- Smoke de navegador y validación física de taller: no ejecutados. Los documentos de Arquetipo no aportan los descuentos de las otras líneas ni completan las reglas/códigos que tienen conflictos documentados.
+- No se ejecutó QA de navegador. La validación física de taller sigue pendiente. Los documentos de Arquetipo no aportan descuentos completos de las otras líneas ni resuelven las diferencias de identidad descritas en este expediente.
+
+### Publicación global (2026-10-05)
+
+- Importador ejecutado por código contra producción, con preflight y escritura global autorizada por el usuario; sin flujo QA ni smoke de navegador.
+- Reejecución idempotente para corregir páginas/notas de 43 evidencias: 0 filas nuevas, 241 ya exactas, 43 metadatos corregidos, 0 conflictos. Conteos finales: 84 insumos, 84 presentaciones, 29 precios; suma leída de producción CLP 513.984.
+- Ajuste no destructivo posterior: 84 relaciones a claves `arquetipo:*` y 17 marcadores `excludedRecipeFamilyKeys` para discrepancias que no deben resolver contra recetas Ventora. Las relaciones previas se conservaron; el resolutor actualizado las filtra, y requiere que el código de aplicación se publique para surtir efecto en producción.
+- El valor predeterminado TIRA=6.000 mm queda etiquetado como supuesto solicitado; la cotización no declara el largo ni su vigencia.
+- Las fórmulas disponibles de Ventora permanecen independientes de esta carga. El catálogo Arquetipo no acredita cortes para las diez líneas ni validación de taller.

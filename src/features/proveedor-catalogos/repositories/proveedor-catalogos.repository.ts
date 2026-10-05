@@ -84,7 +84,7 @@ export async function importSupplierCatalogBatch(input: SupplierCatalogImport, c
       nombre: technicalInput.name,
       material: technicalInput.material,
       seccion_mm: technicalInput.sectionMm,
-      evidencia: technicalEvidence(technicalInput),
+    evidencia: technicalEvidence(technicalInput),
     }, { onConflict: "fuente_tecnica_id,clave_tecnica", ignoreDuplicates: true });
     throwIfError(insertError);
 
@@ -139,15 +139,17 @@ export async function importSupplierCatalogBatch(input: SupplierCatalogImport, c
     throwIfError(error);
     if (!data?.id) throw new Error(`No se pudo resolver la presentación ${presentation.sku}.`);
 
-    const { error: priceError } = await client.from("catalogo_precios_presentacion").upsert({
-      lista_precio_id: priceListId,
-      presentacion_id: data.id,
-      proveedor_key: input.supplierKey,
-      precio_neto: presentation.netPrice,
-      moneda: presentation.currency,
-      evidencia_precio: presentation.priceEvidence,
-    }, { onConflict: "lista_precio_id,presentacion_id", ignoreDuplicates: true });
-    throwIfError(priceError);
+    if (presentation.netPrice !== null && presentation.priceEvidence !== null) {
+      const { error: priceError } = await client.from("catalogo_precios_presentacion").upsert({
+        lista_precio_id: priceListId,
+        presentacion_id: data.id,
+        proveedor_key: input.supplierKey,
+        precio_neto: presentation.netPrice,
+        moneda: presentation.currency,
+        evidencia_precio: presentation.priceEvidence,
+      }, { onConflict: "lista_precio_id,presentacion_id", ignoreDuplicates: true });
+      throwIfError(priceError);
+    }
   }
 
   return {
@@ -239,7 +241,7 @@ export async function preflightSupplierCatalogBatch(input: SupplierCatalogImport
 
   const priceRows = list.data ? await client.from("catalogo_precios_presentacion").select("*").eq("lista_precio_id", list.data.id) : null;
   if (priceRows) throwIfError(priceRows.error);
-  for (const row of input.presentations) {
+  for (const row of input.presentations.filter((presentation) => presentation.netPrice !== null && presentation.priceEvidence !== null)) {
     const presentation = presentationsBySku.get(row.sku);
     const existing = (priceRows?.data ?? []).find((entry) => entry.presentacion_id === presentation?.id);
     actions.push(classifyImportRow("catalogo_precios_presentacion", `${input.priceListRevision}/${row.sku}`, existing, {

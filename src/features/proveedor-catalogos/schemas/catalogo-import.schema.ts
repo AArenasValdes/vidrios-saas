@@ -19,6 +19,8 @@ const technicalInputSchema = z.object({
   recipeComponentCodes: z.array(z.string().trim().min(1)).optional(),
   /** Exact recipe accessory names mapped with documentary evidence. */
   recipeAccessoryNames: z.array(z.string().trim().min(1)).optional(),
+  /** Family keys that must be omitted when resolving this source code into a Ventora recipe. */
+  excludedRecipeFamilyKeys: z.array(z.string().trim().min(1)).optional(),
   evidence: evidenceSchema,
 });
 
@@ -31,10 +33,11 @@ const presentationSchema = z.object({
   finishName: z.string().trim().min(1).nullable(),
   purchaseUnit: z.string().trim().min(1),
   commercialLengthMm: z.number().int().positive().nullable(),
-  netPrice: z.number().positive(),
+  /** A supplier may publish a technical presentation without a quoted price. */
+  netPrice: z.number().positive().nullable(),
   currency: z.string().regex(/^[A-Z]{3}$/),
   associationEvidence: evidenceSchema,
-  priceEvidence: evidenceSchema,
+  priceEvidence: evidenceSchema.nullable(),
 });
 
 export const supplierCatalogImportSchema = z.object({
@@ -103,6 +106,13 @@ export const supplierCatalogImportSchema = z.object({
         code: "custom",
         path: ["presentations", index, "finishResolution"],
         message: "El modo acabado específico requiere código y nombre; el modo independiente debe dejarlos vacíos.",
+      });
+    }
+    if ((presentation.netPrice === null) !== (presentation.priceEvidence === null)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["presentations", index, "priceEvidence"],
+        message: "Una presentación sin precio no lleva evidencia de precio; todo precio debe conservar su fuente.",
       });
     }
   }

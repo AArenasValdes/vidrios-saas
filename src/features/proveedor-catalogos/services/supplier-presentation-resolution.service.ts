@@ -31,6 +31,19 @@ function normalizeCode(value: string) {
   return value.trim().toLocaleUpperCase("en-US");
 }
 
+export function resolveSupplierPresentationFamilyKeys(input: {
+  familyKeys: readonly string[];
+  technicalEvidence: unknown;
+}): string[] {
+  const evidence = input.technicalEvidence && typeof input.technicalEvidence === "object" && !Array.isArray(input.technicalEvidence)
+    ? input.technicalEvidence as Record<string, unknown>
+    : {};
+  const excluded = new Set(Array.isArray(evidence.excludedRecipeFamilyKeys)
+    ? evidence.excludedRecipeFamilyKeys.filter((key): key is string => typeof key === "string")
+    : []);
+  return input.familyKeys.filter((familyKey) => !excluded.has(familyKey));
+}
+
 export function resolveSupplierFinishName(value: string | null | undefined, colorHex?: string | null) {
   const normalized = normalize(value);
   const labels: Record<string, string> = {

@@ -2,6 +2,7 @@ import type { WorkMaterialsDocument } from "../fabrication-work-materials.servic
 import { createWorkMaterialsPdf } from "../work-materials-pdf-export.service";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import sharp from "sharp";
 
 function sampleDocument(): WorkMaterialsDocument {
   const profiles = [
@@ -115,7 +116,7 @@ describe("work-materials-pdf-export.service", () => {
     expect(output).toContain("13 pendientes de precio");
   });
 
-  it("mantiene legibles los códigos, el logo y las tablas completas en una paginación compacta", () => {
+  it("mantiene legibles los códigos, el logo oficial y las tablas completas en una paginación compacta", async () => {
     const document = sampleDocument();
     document.accessories = Array.from({ length: 13 }, (_, index) => ({
       key: `acc-${index + 1}`,
@@ -136,7 +137,12 @@ describe("work-materials-pdf-export.service", () => {
       pendingMaterialCount: 13,
       calculatedAt: "2026-10-05T10:01:00.000Z",
     };
-    const logo = readFileSync(path.join(process.cwd(), "public", "nuevos Iconos Definitivos", "Logo-Sin-Subtitulo.png"));
+    const logoSvg = readFileSync(path.join(process.cwd(), "public", "brand", "ventora-logo-boot.svg"), "utf8");
+    const logoSizedSvg = logoSvg.replace(/<svg\b([^>]*)>/, (_tag, attributes: string) => {
+      const withoutDimensions = attributes.replace(/\swidth="[^"]*"/, "").replace(/\sheight="[^"]*"/, "");
+      return `<svg${withoutDimensions} width="1000" height="212">`;
+    });
+    const logo = await sharp(Buffer.from(logoSizedSvg)).png().toBuffer();
     const logoDataUrl = `data:image/png;base64,${logo.toString("base64")}`;
     const pdf = createWorkMaterialsPdf(document, {
       companyName: "Vidrios Gonzalez",

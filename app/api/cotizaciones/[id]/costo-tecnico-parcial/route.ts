@@ -14,8 +14,8 @@ import {
   getSupplierCatalogQaConfig,
   matchesConfiguredPilotQuoteItems,
   isQuoteEligibleForFirstSupplierCostSnapshot,
-  isSupplierCatalogQaEnabledForIdentity,
 } from "@/features/proveedor-catalogos/services/proveedor-catalogo-qa.service";
+import { canManageSupplierCatalog } from "@/features/proveedor-catalogos/services/supplier-catalog-access.service";
 import { validateQaPreliminaryQuoteSnapshots } from "@/features/proveedor-catalogos/services/qa-preliminary-snapshot.service";
 import {
   getExistingTechnicalCostSnapshot,
@@ -41,6 +41,19 @@ const explicitPriceListSelectionSchema = z.object({
 function parseQuoteId(value: string) {
   const id = Number(value);
   return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+function isValidatedRecipeSnapshot(snapshot: unknown) {
+  return Boolean(
+    snapshot &&
+    typeof snapshot === "object" &&
+    !Array.isArray(snapshot) &&
+    (snapshot as Record<string, unknown>).recipeStatus === "validated"
+  );
+}
+
+function hasOnlyValidatedRecipes(quote: NonNullable<Awaited<ReturnType<typeof readQuoteForTechnicalCost>>>) {
+  return quote.items.length > 0 && quote.items.every((item) => isValidatedRecipeSnapshot(item.fabricacionSnapshot));
 }
 
 function validateQuoteRecipeSnapshots(
@@ -71,20 +84,9 @@ function validateQuoteRecipeSnapshots(
   });
 }
 
-async function authorize(organizationId: string | number | null | undefined) {
+async function authorize() {
   const context = await resolveAuthenticatedRouteContext();
   const config = getSupplierCatalogQaConfig();
-  if (!isSupplierCatalogQaEnabledForIdentity({
-    organizationId: context.profile.organizationId,
-    role: context.profile.rol,
-    userEmail: context.user.email,
-    config,
-  })) {
-    return { response: NextResponse.json({ enabled: false }, { status: 404 }) };
-  }
-  if (organizationId != null && String(context.profile.organizationId) !== String(organizationId)) {
-    return { response: NextResponse.json({ error: "No encontramos esta cotización." }, { status: 404 }) };
-  }
   return {
     organizationId: Number(context.profile.organizationId),
     config,
@@ -99,7 +101,7 @@ export async function GET(_request: Request, route: RouteContext) {
 
   let access: Awaited<ReturnType<typeof authorize>>;
   try {
-    access = await authorize(undefined);
+    access = await authorize();
   } catch (error) {
     if (error instanceof AuthRouteAccessError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
@@ -107,8 +109,6 @@ export async function GET(_request: Request, route: RouteContext) {
     console.error("[API] costo técnico parcial auth", error);
     return NextResponse.json({ error: "No pudimos validar la organización activa." }, { status: 500 });
   }
-  if ("response" in access) return access.response;
-
   try {
     const quote = await readQuoteForTechnicalCost({ quoteId, organizationId: access.organizationId });
     if (!quote) return NextResponse.json({ error: "No encontramos esta cotización." }, { status: 404 });
@@ -121,14 +121,12 @@ export async function GET(_request: Request, route: RouteContext) {
       return NextResponse.json({ error: snapshotCheck.reason }, { status: 409 });
     }
     const existing = await getExistingTechnicalCostSnapshot({ quoteId, organizationId: access.organizationId });
+    const allRecipesValidated = hasOnlyValidatedRecipes(quote);
     return NextResponse.json({
       enabled: true,
-      canConfigure: process.env.SUPPLIER_CATALOG_ORG_PRICES_ENABLED === "true",
+      canConfigure: canManageSupplierCatalog(access.role),
       snapshot: existing?.snapshot ?? null,
-      canCalculate: !existing && isQuoteEligibleForFirstSupplierCostSnapshot({
-        quoteCreatedAt: quote.createdAt,
-        config: access.config,
-      }),
+      canCalculate: !existing && (allRecipesValidated || isQuoteEligibleForFirstSupplierCostSnapshot({ quoteCreatedAt: quote.createdAt, config: access.config })),
     });
   } catch (error) {
     console.error("[API] costo técnico parcial read", error);
@@ -142,7 +140,7 @@ export async function POST(request: Request, route: RouteContext) {
 
   let access: Awaited<ReturnType<typeof authorize>>;
   try {
-    access = await authorize(undefined);
+    access = await authorize();
   } catch (error) {
     if (error instanceof AuthRouteAccessError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
@@ -150,8 +148,6 @@ export async function POST(request: Request, route: RouteContext) {
     console.error("[API] costo técnico parcial auth", error);
     return NextResponse.json({ error: "No pudimos validar la organización activa." }, { status: 500 });
   }
-  if ("response" in access) return access.response;
-
   try {
     const quote = await readQuoteForTechnicalCost({ quoteId, organizationId: access.organizationId });
     if (!quote) return NextResponse.json({ error: "No encontramos esta cotización." }, { status: 404 });
@@ -170,7 +166,8 @@ export async function POST(request: Request, route: RouteContext) {
 
     const existing = await getExistingTechnicalCostSnapshot({ quoteId, organizationId: access.organizationId });
     if (existing) return NextResponse.json({ snapshot: existing.snapshot, persisted: true });
-    if (!isQuoteEligibleForFirstSupplierCostSnapshot({ quoteCreatedAt: quote.createdAt, config: access.config })) {
+    const allRecipesValidated = hasOnlyValidatedRecipes(quote);
+    if (!allRecipesValidated && !isQuoteEligibleForFirstSupplierCostSnapshot({ quoteCreatedAt: quote.createdAt, config: access.config })) {
       return NextResponse.json({ error: "El cálculo inicial está limitado a cotizaciones nuevas del piloto QA." }, { status: 409 });
     }
 
@@ -189,13 +186,11 @@ export async function POST(request: Request, route: RouteContext) {
       readWorkshopPresentationPrices(access.organizationId),
     ]);
     const prices = [...supplierPrices, ...workshopPrices];
-    const organizationPricing = process.env.SUPPLIER_CATALOG_ORG_PRICES_ENABLED === "true"
-      ? await readOrganizationPurchasePricing({
-          organizationId: access.organizationId,
-          providerKeys: [...new Set(prices.map((price) => price.providerKey).filter((providerKey): providerKey is string => Boolean(providerKey)))],
-          presentationIds: prices.flatMap((price) => price.presentationId ? [price.presentationId] : []),
-        })
-      : undefined;
+    const organizationPricing = await readOrganizationPurchasePricing({
+      organizationId: access.organizationId,
+      providerKeys: [...new Set(prices.map((price) => price.providerKey).filter((providerKey): providerKey is string => Boolean(providerKey)))],
+      presentationIds: prices.flatMap((price) => price.presentationId ? [price.presentationId] : []),
+    });
     const snapshot = buildPartialTechnicalCostSnapshot({
       workSnapshot,
       quoteItems: quote.items,

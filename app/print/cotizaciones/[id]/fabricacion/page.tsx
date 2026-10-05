@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { toast } from "sonner";
 
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
@@ -22,68 +21,26 @@ import { CostoTecnicoParcialPanel } from "./costo-tecnico-parcial-panel";
 import s from "./page.module.css";
 
 async function loadVentoraPdfLogo() {
+  let objectUrl: string | null = null;
   try {
-    const response = await fetch("/nuevos%20Iconos%20Definitivos/Logo-Sin-Subtitulo.png");
+    const response = await fetch("/brand/ventora-logo-boot.svg");
     if (!response.ok) return null;
-    const bitmap = await createImageBitmap(await response.blob());
-    const sourceCanvas = document.createElement("canvas");
-    sourceCanvas.width = bitmap.width;
-    sourceCanvas.height = bitmap.height;
-    const sourceContext = sourceCanvas.getContext("2d", { willReadFrequently: true });
-    if (!sourceContext) return null;
-    sourceContext.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height);
-    bitmap.close();
-
-    // The source artwork has a large white canvas around the actual horizontal logo.
-    // Crop by visible ink so the mark and wordmark remain legible in the compact PDF header.
-    const { data, width, height } = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
-    let left = width;
-    let top = height;
-    let right = 0;
-    let bottom = 0;
-    for (let y = 0; y < height; y += 1) {
-      for (let x = 0; x < width; x += 1) {
-        const offset = (y * width + x) * 4;
-        const red = data[offset] ?? 255;
-        const green = data[offset + 1] ?? 255;
-        const blue = data[offset + 2] ?? 255;
-        const chroma = Math.max(red, green, blue) - Math.min(red, green, blue);
-        if (chroma < 22 && Math.min(red, green, blue) > 220) continue;
-        left = Math.min(left, x);
-        top = Math.min(top, y);
-        right = Math.max(right, x + 1);
-        bottom = Math.max(bottom, y + 1);
-      }
-    }
-    if (right <= left || bottom <= top) return null;
-    const padX = Math.round((right - left) * 0.035);
-    const padY = Math.round((bottom - top) * 0.12);
-    left = Math.max(0, left - padX);
-    top = Math.max(0, top - padY);
-    right = Math.min(width, right + padX);
-    bottom = Math.min(height, bottom + padY);
-
+    const svg = await response.text();
+    const image = new window.Image();
+    objectUrl = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+    image.src = objectUrl;
+    await image.decode();
     const canvas = document.createElement("canvas");
-    canvas.width = right - left;
-    canvas.height = bottom - top;
+    canvas.width = 1000;
+    canvas.height = 212;
     const context = canvas.getContext("2d");
     if (!context) return null;
-    context.drawImage(sourceCanvas, left, top, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
-    const cropped = context.getImageData(0, 0, canvas.width, canvas.height);
-    for (let offset = 0; offset < cropped.data.length; offset += 4) {
-      const red = cropped.data[offset] ?? 255;
-      const green = cropped.data[offset + 1] ?? 255;
-      const blue = cropped.data[offset + 2] ?? 255;
-      if (Math.max(red, green, blue) - Math.min(red, green, blue) < 22 && Math.min(red, green, blue) > 215) {
-        cropped.data[offset] = 255;
-        cropped.data[offset + 1] = 255;
-        cropped.data[offset + 2] = 255;
-      }
-    }
-    context.putImageData(cropped, 0, 0);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
     return canvas.toDataURL("image/png");
   } catch {
     return null;
+  } finally {
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
   }
 }
 
@@ -189,8 +146,6 @@ export default function CotizacionFabricacionPrintPage() {
     expandedInitializedForQuote.current = params.id;
   }, [params.id, summary.items]);
 
-  const fileName = `fabricacion-${sanitizeFileNamePart(cotizacion?.codigo || "cotizacion", 36)}.pdf`;
-
   const handleToggleItem = useCallback((itemId: string) => {
     setExpandedItemId((current) => (current === itemId ? null : itemId));
   }, []);
@@ -208,42 +163,6 @@ export default function CotizacionFabricacionPrintPage() {
   const handlePrint = useCallback(() => {
     window.print();
   }, []);
-
-  const handleDownload = useCallback(async () => {
-    if (!documentRef.current) return;
-    setIsExporting(true);
-    setExportError(null);
-    documentRef.current.classList.add(s.exporting);
-    printRootRef.current?.classList.add(s.exportingRoot);
-    try {
-      await new Promise<void>((resolve) => {
-        window.requestAnimationFrame(() => {
-          window.requestAnimationFrame(() => resolve());
-        });
-      });
-      const { downloadPdfBlob, exportCotizacionElementToPdf } =
-        await import("@/utils/cotizacion-pdf");
-      const { blob } = await exportCotizacionElementToPdf({
-        element: documentRef.current,
-        fileName,
-        format: "a4",
-        protectedSelectors: [`.${s.itemCard}`, `.${s.totalsStrip}`],
-      });
-      const result = await downloadPdfBlob(blob, fileName);
-      if (result === "failed") {
-        setExportError("No pudimos descargar el resumen. Intenta imprimir y guardar como PDF.");
-        return;
-      }
-      toast("Resumen descargado");
-    } catch (error) {
-      const { formatCotizacionPdfError } = await import("@/utils/cotizacion-pdf");
-      setExportError(formatCotizacionPdfError(error));
-    } finally {
-      documentRef.current?.classList.remove(s.exporting);
-      printRootRef.current?.classList.remove(s.exportingRoot);
-      setIsExporting(false);
-    }
-  }, [fileName]);
 
   const handleDownloadDocumentPdf = useCallback(
     async (kind: "materials" | "glass-order", element: HTMLElement) => {
@@ -296,6 +215,21 @@ export default function CotizacionFabricacionPrintPage() {
     },
     [cotizacion, issueDate, materialsDocument, organizationProfile]
   );
+
+  const handleDownload = useCallback(() => {
+    const materialsElements = printRootRef.current?.querySelectorAll<HTMLElement>(
+      '[data-work-document="materials"]'
+    );
+    const materialsElement = materialsElements
+      ? Array.from(materialsElements).find((element) => element.getClientRects().length > 0) ??
+        materialsElements.item(window.matchMedia("(max-width: 719px)").matches ? 1 : 0)
+      : null;
+    if (!materialsElement) {
+      setExportError("No encontramos la lista de materiales para descargar.");
+      return;
+    }
+    void handleDownloadDocumentPdf("materials", materialsElement);
+  }, [handleDownloadDocumentPdf]);
 
   if (!isReady && !cotizacion) {
     return <p className={s.loadingState}>Cargando resumen de fabricación…</p>;

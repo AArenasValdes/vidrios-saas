@@ -571,7 +571,7 @@ export function FabricacionResumenView({
             disabled={isExporting}
           >
             <LuDownload aria-hidden />
-            <span>{isExporting ? "Generando..." : "Descargar resumen"}</span>
+            <span>{isExporting ? "Generando..." : "Descargar lista de materiales"}</span>
           </button>
           <button type="button" className={s.secondaryButton} onClick={onPrint}>
             <LuPrinter aria-hidden />

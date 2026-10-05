@@ -35,7 +35,7 @@ function Header({ title, companyName, quoteCode, work, issueDate }: Omit<Props, 
       <div className={s.materialDocHeading}>
         <Image
           className={s.materialDocLogo}
-          src="/nuevos%20Iconos%20Definitivos/Logo-Sin-Subtitulo.png"
+          src="/brand/ventora-logo-boot.svg"
           alt="Ventora"
           width={132}
           height={42}

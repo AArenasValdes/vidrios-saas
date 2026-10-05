@@ -212,8 +212,13 @@ describe("FabricacionResumenMovil", () => {
     expect(screen.getAllByText("Pauta lista")).toHaveLength(2);
     expect(screen.queryByRole("button", { name: /Mostrar detalle/i })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /PDF cliente/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Descargar resumen/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Descargar lista de materiales/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Imprimir/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Pauta conjunta" }));
+    expect(screen.getAllByAltText("Ventora")).toHaveLength(2);
+    for (const logo of screen.getAllByAltText("Ventora")) {
+      expect(logo).toHaveAttribute("src", "/brand/ventora-logo-boot.svg");
+    }
   });
 
   it("muestra en móvil los componentes cuya pauta quedó pendiente por estructura", () => {
