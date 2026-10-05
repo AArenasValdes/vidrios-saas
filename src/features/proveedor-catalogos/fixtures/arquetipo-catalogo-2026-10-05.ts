@@ -24,8 +24,9 @@ const quoteRows = [
   ["4209", "30894209", "Marco fijo", 15140, 2], ["4202", "30894202", "Hoja", 24375, 2], ["4204", "30894204", "Pilar / Palillo (revisar nombre)", 29447, 2], ["4229", "30894229", "Junquillo monolítico", 6510, 2],
 ] as const;
 
+type PriceQuote = { sku: string; quoteName: string; price: number; page: number };
 const quotedCodes = new Set(quoteRows.map(([code]) => code));
-const pricedByCode = new Map(quoteRows.map(([code, sku, quoteName, price, page]) => [code, { sku, quoteName, price, page }]));
+const pricedByCode = new Map<string, PriceQuote>(quoteRows.map(([code, sku, quoteName, price, page]) => [code, { sku, quoteName, price, page }]));
 
 const technicalInputs: SupplierCatalogImport["technicalInputs"] = families.flatMap((family) => family.profiles.map(([code, name, pageOverride]) => {
   const page = pageOverride ?? family.page;
