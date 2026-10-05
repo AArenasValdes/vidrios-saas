@@ -443,7 +443,7 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
   - `src/features/cotizaciones/line-templates/services/cotizacion-line-templates.service.ts`
   - `src/features/cotizaciones/line-templates/repositories/cotizacion-line-templates.repository.ts`
   - `src/features/cotizaciones/line-templates/types/cotizacion-line-template.ts`
-  - `src/features/cotizaciones/line-templates/services/default-line-catalog.ts` (catálogo Ventora **50 líneas** canónicas + `seedDefaultLineCatalog` idempotente por `catalog_key`)
+  - `src/features/cotizaciones/line-templates/services/default-line-catalog.ts` (catálogo Ventora **57 líneas** canónicas al 2026-10-05 + `seedDefaultLineCatalog` idempotente por `catalog_key`)
   - `src/features/cotizaciones/line-templates/services/auditoria-catalogo-lineas-ventora.service.ts` (auditoría fabricación por línea del catálogo base)
   - `src/features/cotizaciones/line-templates/services/auditoria-integridad-catalogo-lineas.service.ts` (clasificación primaria de integridad de códigos; suma 30)
   - `src/features/cotizaciones/line-templates/constants/line-template-habitual-glass.ts` (opciones de vidrio habitual en editor de precio)

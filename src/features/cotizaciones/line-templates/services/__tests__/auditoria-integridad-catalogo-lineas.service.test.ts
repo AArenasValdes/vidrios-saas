@@ -4,15 +4,15 @@ import { auditarIntegridadCatalogoLineasVentora } from "@/features/cotizaciones/
 
 describe("auditoria integridad catalogo lineas", () => {
 
-  it("clasifica las 50 líneas con categorías primarias mutuamente excluyentes", () => {
+  it("clasifica las 57 líneas con categorías primarias mutuamente excluyentes", () => {
 
     const { lineas, resumen } = auditarIntegridadCatalogoLineasVentora();
 
 
 
-    expect(lineas).toHaveLength(50);
+    expect(lineas).toHaveLength(57);
 
-    expect(resumen.totalLineas).toBe(50);
+    expect(resumen.totalLineas).toBe(57);
 
 
 
@@ -24,7 +24,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
     );
 
-    expect(sumaPrimaria).toBe(50);
+    expect(sumaPrimaria).toBe(57);
 
 
 
@@ -36,7 +36,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
       codigos_referenciales_ambiguos: 1,
 
-      sin_codigos_tecnicos_en_fixtures: 9,
+      sin_codigos_tecnicos_en_fixtures: 16,
 
       solo_comercial: 0,
 
@@ -136,11 +136,26 @@ describe("auditoria integridad catalogo lineas", () => {
 
 
 
-    expect(sinCodigos).toHaveLength(9);
+    expect(sinCodigos).toHaveLength(16);
 
     expect(sinCodigos.map((line) => line.catalogKey).sort()).toEqual(
 
       [
+
+        "ventora:arquetipo-l15-corredera-2h",
+
+        "ventora:arquetipo-l20-corredera-2h",
+
+        "ventora:arquetipo-l25-corredera-2h",
+
+        "ventora:arquetipo-l32-proyectante",
+
+        "ventora:arquetipo-l42-proyectante",
+
+        "ventora:arquetipo-l4000-corredera-2h",
+
+        "ventora:arquetipo-l45-puerta",
+
 
         "ventora:optima-s28-corredera-2h",
 

@@ -4,9 +4,9 @@ import {
 } from "@/features/cotizaciones/line-templates/services/auditoria-catalogo-lineas-ventora.service";
 
 describe("auditoria-catalogo-lineas-ventora.service", () => {
-  it("audita las 50 líneas canónicas del catálogo Ventora", () => {
+  it("audita las 57 líneas canónicas del catálogo Ventora", () => {
     const rows = auditarCatalogoLineasVentora();
-    expect(rows).toHaveLength(50);
+    expect(rows).toHaveLength(57);
     expect(rows.every((row) => row.cotizacionComercial)).toBe(true);
   });
 

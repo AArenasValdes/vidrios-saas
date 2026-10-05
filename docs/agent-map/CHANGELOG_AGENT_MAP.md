@@ -2,6 +2,12 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-10-05 - Evidencia de cortes Arquetipo y alcance de recetas
+
+- Revisión visual y extracción de páginas técnicas L15–L42 del catálogo: se registran perfiles/secciones y las instrucciones de corte explícitas disponibles; el PDF no trae descuentos ni fórmulas de corte completas para nueve líneas.
+- Línea 12 usa los cinco descuentos capturados por el usuario y el catálogo confirma marco 90°/hojas 45°; se completa el ángulo del perfil 1204. Sigue preliminar por composición/vidrio/quincallería y largo de barra sin confirmar.
+- Las pruebas de catálogo reflejan 57 entradas tras las siete familias Arquetipo separadas. La presencia comercial sigue sin implicar receta.
+
 ## 2026-10-05 - Separación de líneas Arquetipo por proveedor
 
 - Catálogo Arquetipo conserva familia técnica propia (`arquetipo:lXX`) para que series homónimas no compartan asociación con otros proveedores.

@@ -37,7 +37,8 @@ describe("P2U líneas tradicionales / multiproveedor", () => {
     });
 
     expect(recipe.estado).toBe("ejemplo_no_validado");
-    expect(recipe.datosPendientes).toHaveLength(3);
+    expect(recipe.datosPendientes).toHaveLength(2);
+    expect(recipe.perfiles.filter(({ codigoPerfil }) => codigoPerfil === "1204").every(({ corte }) => corte === "45°")).toBe(true);
     expect(recipe.configuracionCorte?.largoComercialDefaultMm).toBe(6000);
     expect(fabricacionRecetaSchema.safeParse(recipe).success).toBe(true);
     expect(result.calculable).toBe(true);

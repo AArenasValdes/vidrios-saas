@@ -50,7 +50,9 @@ Si la tarea toca dashboard Fase 5 o su contrato de datos, leer tambien `docs/des
 - Fuera de alcance: optimizador real, nesting, CAD, inventario, fabricación automática, marketing de “más comunes” antes de validación piloto.
 - No reinventar 2B ni Quote Studio sin bug concreto. CRM/Kanban fuera.
 
-**Actualización 2026-10-03 — catálogo PVC Veratec:** se agregan 19 configuraciones de siete familias al catálogo comercial (total 50). No se amplían recetas: solo la configuración existente Sliding 7400 2H mono 4 mm conserva la receta/estado actual. Ver `docs/catalogos-proveedores/veratec-familias-v1.md`.
+**Actualización 2026-10-05 — catálogo Arquetipo:** siete entradas separadas por proveedor elevan el catálogo canónico a 57 líneas. Los perfiles/códigos y precios se cargan por familia Arquetipo; no se heredan recetas de líneas homónimas. El PDF oficial no contiene descuentos/fórmulas para nueve de las diez líneas. Línea 12 conserva cinco reglas preliminares de la captura del usuario y ahora toma el ángulo 45° de hoja de la p. 21 del catálogo; sigue sin validación física. Ver `docs/fabricacion/Arquetipo/INTEGRACION_ARQUETIPO.md`.
+
+**Actualización 2026-10-03 — catálogo PVC Veratec:** se agregan 19 configuraciones de siete familias al catálogo comercial (total 50 antes de Arquetipo). No se amplían recetas: solo la configuración existente Sliding 7400 2H mono 4 mm conserva la receta/estado actual. Ver `docs/catalogos-proveedores/veratec-familias-v1.md`.
 
 ## Advertencia critica
 

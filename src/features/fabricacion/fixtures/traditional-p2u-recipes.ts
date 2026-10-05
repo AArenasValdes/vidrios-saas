@@ -178,16 +178,15 @@ function createLine12(input: RecipeInput): FabricacionReceta {
       profile(createId, { code: "1201", name: "Riel inferior de marco", functionName: "Riel inferior de marco", base: "ancho_total", quantity: 1, adjustmentMm: -5, cut: "90°" }),
       profile(createId, { code: "1202", name: "Jamba de marco", functionName: "Jamba de marco", base: "alto_total", quantity: 2, adjustmentMm: -3, cut: "90°" }),
       profile(createId, { code: "1204", name: "Bastidor de hoja", functionName: "Bastidor de hoja", base: "ancho_por_hoja", quantity: 4, adjustmentMm: 5, cut: "45°" }),
-      profile(createId, { code: "1204", name: "Perfil", functionName: "Perfil · alto de módulo", base: "alto_modulo", quantity: 1, adjustmentMm: -65 }),
+      profile(createId, { code: "1204", name: "Bastidor de hoja · alto de módulo", functionName: "Perfil · alto de módulo", base: "alto_modulo", quantity: 1, adjustmentMm: -65, cut: "45°" }),
     ],
     pending: [
-      "La captura del editor aún indica un ajuste obligatorio pendiente; confirmar cuál antes de probar o activar en taller.",
       "La composición para receptáculo, vidrio y quincallería no está definida en esta captura; no se incluyen en la cubicación.",
       "El largo de 6.000 mm es el valor predeterminado solicitado por el usuario, no una especificación confirmada por Arquetipo.",
     ],
     notes: [
       "Captura del editor de fabricación entregada por el usuario: Línea 12 Shower 2 hojas; 5 reglas y 9 cortes. Descuentos capturados: 1203 −5 mm, 1201 −5 mm, 1202 −3 mm, 1204 +5 mm (4 cortes) y 1204 −65 mm (1 corte).",
-      "La captura muestra cortes 90° en marco y 45° para bastidor de hoja. Se conserva el corte del perfil adicional tal como aparece, sin inferir ángulo.",
+      "La captura muestra cortes 90° en marco y 45° para bastidor de hoja. El catálogo Arquetipo, pág. 21, confirma expresamente marco a 90° y hojas a 45°; se aplica 45° también al corte vertical de 1204.",
       "El catálogo Arquetipo documenta 1201 riel inferior, 1202 jamba, 1203 riel superior y 1204 bastidor de hoja (pág. 21).",
       "Quincallería documentada: caja/rodamiento Shower S-12, guías interior/exterior, tirador y unión L-12; sus consumos quedan pendientes.",
       "Las cinco reglas producen un despiece preliminar; no acreditan pauta validada ni fabricación real de taller.",
