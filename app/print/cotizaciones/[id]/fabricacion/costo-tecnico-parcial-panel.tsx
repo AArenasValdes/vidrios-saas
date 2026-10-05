@@ -85,7 +85,7 @@ export function CostoTecnicoParcialPanel({ quoteId, onSnapshotChange }: { quoteI
       </header>
       {message ? <p className={styles.error} role="alert">{message}</p> : null}
       {!snapshot ? (
-        <p className={styles.empty}>El costo aparecerá cuando la cotización tenga una pauta calculable. Las cotizaciones históricas no se recalculan.</p>
+        <p className={styles.empty}>El cálculo usa los cortes ya guardados en esta cotización. Los perfiles sin presentación o precio compatible quedan pendientes.</p>
       ) : (
         <>
           <div className={styles.summary}>

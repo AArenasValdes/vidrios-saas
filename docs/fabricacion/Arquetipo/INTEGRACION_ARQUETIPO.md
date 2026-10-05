@@ -9,7 +9,7 @@ Copiar este archivo a la carpeta de evidencia correspondiente y completar antes 
 - Fuentes: `Arquetipo_Catalogo_Aluminios.pdf` (págs. 3–25), cotización 27811 (01-10-2026, págs. 1–2). La cotización registra precios netos por presentación `TIRA`, acabado LEGNO, para 29 códigos de las líneas 20, 25, 32, 42 y 5000. Es una cotización de una compra, sujeta a stock y mercado; no es lista general publicada.
 - `MOD Catalogo_SISTEMA_SUPERIOR QT.pdf` revisado. Se excluye del alcance solicitado: documenta sistemas SUPERIOR distintos, sin precios en la cotización y sin equivalencia exacta con las diez líneas; no se mezclarán por tipología visual.
 - Estado al importar (2026-10-05): publicación directa e idempotente en las tablas globales del catálogo compartido de producción, autorizada por el usuario para todas las organizaciones. No se duplicaron líneas comerciales ni se tocaron recetas/snapshots históricos.
-- Salida: 84 perfiles/presentaciones de referencia para las 10 familias y 29 precios netos en CLP, acabado LEGNO, desde cotización 27811 (total CLP 513.984). Son precios por presentación TIRA para referencia de compra; no son precio de venta por m² ni una lista general de Arquetipo. Vigencia no indicada.
+- Salida: 84 perfiles/presentaciones de referencia para las 10 familias y 29 precios netos en CLP, cotizados para acabado LEGNO desde cotización 27811 (total CLP 513.984). Por instrucción del usuario, el precio LEGNO —el acabado de mayor costo— se usa como referencia conservadora para cualquier acabado seleccionado; esto no afirma que Arquetipo cobre lo mismo por todos los colores. Son precios por presentación TIRA para referencia de compra; no son precio de venta por m² ni una lista general del proveedor. Vigencia no indicada.
 - Largo comercial: 6.000 mm aplicado como predeterminado global por instrucción del usuario. La cotización no lo confirma; no convertir los precios por tira a precio por metro. Mantener visible esta procedencia asumida.
 
 ## Fuentes y asociación con Ventora
@@ -20,7 +20,7 @@ Copiar este archivo a la carpeta de evidencia correspondiente y completar antes 
 | 20 corredera | `ventora:l20` | Familia y códigos de los productos cotizados coinciden con los perfiles documentados. | Guardar código/nombre de proveedor. No derivar largo de barra desde la sección. |
 | 25 corredera | `ventora:l25` | Coincidencia de línea y códigos cotizados con el catálogo SODAL L25. | No cambiar sus 18 recetas ni estado por incorporar precios de compra. Largo de tira de la cotización no confirmado. |
 | 4000 corredera | `ventora:serie-4000-corredera-2h` | Nombre similar; los códigos de perfil están desplazados frente a la receta Ventora Columbia (Arquetipo pág. 14 no documenta 4009). | No asociar a la receta Columbia ni corregir códigos usando semejanza de nombre. Sin precio en cotización 27811. |
-| 5000 corredera | `ventora:l5000` | Línea y códigos 5001–5007 coinciden con la plantilla inicial. | Mantener plantilla sugerida; no elevarla a fórmula del fabricante ni validada por taller. Los precios solo aplican a acabado LEGNO de la cotización. |
+| 5000 corredera | `ventora:l5000` | Línea y códigos 5001–5007 coinciden con la plantilla inicial. | Mantener plantilla sugerida; no elevarla a fórmula del fabricante ni validada por taller. El precio LEGNO se aplica como referencia conservadora a cualquier acabado por instrucción del usuario. |
 | 35 puerta | `ventora:l35` | Nombre de línea compatible. | El catálogo aporta perfiles, no una pauta de cortes completa. Sin precio en cotización 27811. |
 | 45 puerta | `ventora:serie-45-puerta` | Nombre similar. | No asociar a la receta SODAL/Indalum: Arquetipo pág. 20 muestra 4502/4511/4504; la receta Ventora usa 4522/4531/4534. Sin precio en cotización 27811. |
 | 12 shower | `ventora:serie-12-shower-corredera` | Nombre, códigos 1201–1204 y uso coinciden. La captura del editor aporta 5 reglas y 9 cortes para shower 2H. | Descuentos capturados: 1203 ancho total −5; 1201 ancho total −5; 1202 alto total −3 ×2; 1204 ancho por hoja +5 ×4 (45°); 1204 alto de módulo −65 ×1 (ángulo sin dato). La captura deja 1 ajuste pendiente. Tira 6.000 mm es el predeterminado solicitado por el usuario, no una medida confirmada por Arquetipo. No hay precio Línea 12 en la cotización 27811. |
@@ -29,9 +29,10 @@ Copiar este archivo a la carpeta de evidencia correspondiente y completar antes 
 
 ### Datos de compra capturados
 
-- Moneda CLP; importe neto por tira; cantidad cotizada 1 por SKU; acabado LEGNO.
+- Moneda CLP; importe neto por tira; cantidad cotizada 1 por SKU; acabado cotizado LEGNO. La aplicación a otros acabados es una política referencial solicitada por el usuario, no una equivalencia comercial afirmada por Arquetipo.
 - Los importes quedaron deliberadamente en la lista global compartida por instrucción expresa del usuario; cada taller puede ajustar la referencia con sus preferencias/override privado.
 - No convertir `TIRA` a metro lineal: el largo de 6.000 mm proviene de la instrucción del usuario, no de la cotización. La fuente del precio conserva esa salvedad.
+- El resumen de fabricación puede usar el precio de referencia sin exigir que el acabado del componente sea LEGNO. La salida de costo sigue identificada como referencial y solo valora cortes que ya están guardados.
 - El catálogo técnico Arquetipo no presenta una lista general de precios. No crear ceros para perfiles ausentes de la cotización.
 - No persistir nombre, RUT, teléfono ni dirección del cliente de la cotización dentro de fixtures, pruebas o documentación.
 

@@ -108,6 +108,7 @@ type PendingCut = {
   trimMm: number;
   kerfMm: number;
   selectedPresentationId: string | null;
+  catalogLineKey: string | null;
   configurationKey: string | null;
 };
 
@@ -138,6 +139,11 @@ export function getRecipeAccessoriesFromItemSnapshot(snapshot: unknown, itemCode
 
 function matchesRecipeComponent(entry: CatalogPresentationPrice, recipeCode: string) {
   return entry.technicalCode === recipeCode || entry.recipeComponentCodes?.includes(recipeCode) === true;
+}
+
+function matchesCatalogFamily(entry: CatalogPresentationPrice, catalogLineKey: string | null | undefined) {
+  if (!entry.familyKeys?.length) return true;
+  return Boolean(catalogLineKey && entry.familyKeys.includes(catalogLineKey));
 }
 
 function normalizeFinish(value: string | null | undefined) {
@@ -219,6 +225,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
       const finishName = quoteItem?.finishName?.trim() || canonicalFinishLabel(color, quoteItem?.colorHex);
       const independentCandidates = input.availablePrices.filter((entry) =>
         (!entry.configurationKey || entry.configurationKey === quoteItem?.configurationKey) &&
+        matchesCatalogFamily(entry, quoteItem?.catalogLineKey) &&
         matchesRecipeComponent(entry, cut.codigoPerfil) && entry.finishResolution === "finish_independent" && resolvedPrice(entry, input.organizationPricing) != null
       );
       if (!finishName && independentCandidates.length === 0) {
@@ -233,6 +240,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
 
       const matchingPresentations = input.availablePrices.filter((entry) =>
         (!entry.configurationKey || entry.configurationKey === quoteItem?.configurationKey) &&
+        matchesCatalogFamily(entry, quoteItem?.catalogLineKey) &&
         matchesRecipeComponent(entry, cut.codigoPerfil) &&
         (!bar.supplierPresentationId || entry.presentationId === bar.supplierPresentationId) &&
         (!bar.supplierPresentationId || entry.commercialLengthMm === bar.largoComercialMm) && (
@@ -262,7 +270,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
       const finishKey = candidates.every((entry) => entry.finishResolution === "finish_independent")
         ? "independent"
         : finishName ?? "independent";
-      const groupKey = [cut.codigoPerfil, finishKey, quoteItem?.configurationKey ?? "", bar.despunteInicialMm, kerfMm, bar.supplierPresentationId ?? "legacy"].join("|");
+      const groupKey = [cut.codigoPerfil, finishKey, quoteItem?.catalogLineKey ?? "", quoteItem?.configurationKey ?? "", bar.despunteInicialMm, kerfMm, bar.supplierPresentationId ?? "legacy"].join("|");
       const group = cutsByGroup.get(groupKey) ?? [];
       group.push({
         technicalCode: cut.codigoPerfil,
@@ -274,6 +282,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
         trimMm: Math.round(bar.despunteInicialMm),
         kerfMm,
         selectedPresentationId: bar.supplierPresentationId ?? null,
+        catalogLineKey: quoteItem?.catalogLineKey ?? null,
         configurationKey: quoteItem?.configurationKey ?? null,
       });
       cutsByGroup.set(groupKey, group);
@@ -284,6 +293,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
   for (const group of cutsByGroup.values()) {
     const candidates = input.availablePrices.filter((entry) =>
       (!entry.configurationKey || entry.configurationKey === group[0].configurationKey) &&
+      matchesCatalogFamily(entry, group[0].catalogLineKey) &&
       matchesRecipeComponent(entry, group[0].technicalCode) &&
       (!group[0].selectedPresentationId || entry.presentationId === group[0].selectedPresentationId) &&
       (group[0].finishKey === "independent"

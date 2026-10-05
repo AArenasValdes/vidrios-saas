@@ -10,13 +10,7 @@ import {
   buildPartialTechnicalCostSnapshot,
   type TechnicalCostSnapshot,
 } from "@/features/proveedor-catalogos/services/costo-tecnico-parcial.service";
-import {
-  getSupplierCatalogQaConfig,
-  matchesConfiguredPilotQuoteItems,
-  isQuoteEligibleForFirstSupplierCostSnapshot,
-} from "@/features/proveedor-catalogos/services/proveedor-catalogo-qa.service";
 import { canManageSupplierCatalog } from "@/features/proveedor-catalogos/services/supplier-catalog-access.service";
-import { validateQaPreliminaryQuoteSnapshots } from "@/features/proveedor-catalogos/services/qa-preliminary-snapshot.service";
 import {
   getExistingTechnicalCostSnapshot,
   persistTechnicalCostSnapshot,
@@ -43,55 +37,11 @@ function parseQuoteId(value: string) {
   return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
-function isValidatedRecipeSnapshot(snapshot: unknown) {
-  return Boolean(
-    snapshot &&
-    typeof snapshot === "object" &&
-    !Array.isArray(snapshot) &&
-    (snapshot as Record<string, unknown>).recipeStatus === "validated"
-  );
-}
-
-function hasOnlyValidatedRecipes(quote: NonNullable<Awaited<ReturnType<typeof readQuoteForTechnicalCost>>>) {
-  return quote.items.length > 0 && quote.items.every((item) => isValidatedRecipeSnapshot(item.fabricacionSnapshot));
-}
-
-function validateQuoteRecipeSnapshots(
-  quote: Awaited<ReturnType<typeof readQuoteForTechnicalCost>>,
-  workSnapshot: ReturnType<typeof parseFabricacionTrabajoSnapshot>,
-  access: Extract<Awaited<ReturnType<typeof authorize>>, { organizationId: number }>
-) {
-  if (!quote) return { allowed: false as const, reason: "No encontramos esta cotización." };
-  return validateQaPreliminaryQuoteSnapshots({
-    workSnapshot,
-    organizationId: access.organizationId,
-    role: access.role,
-    userEmail: access.userEmail,
-    config: access.config,
-    items: quote.items.map((item) => {
-      const raw = item.fabricacionSnapshot;
-      const snapshot = raw && typeof raw === "object" && !Array.isArray(raw)
-        ? raw as {
-            recipeId?: string | null;
-            recipeVersion?: number | null;
-            recipeStatus?: string | null;
-            selectedVariant?: string | null;
-            qaPreliminary?: unknown;
-          }
-        : null;
-      return { itemId: item.id, snapshot };
-    }),
-  });
-}
-
 async function authorize() {
   const context = await resolveAuthenticatedRouteContext();
-  const config = getSupplierCatalogQaConfig();
   return {
     organizationId: Number(context.profile.organizationId),
-    config,
     role: context.profile.rol,
-    userEmail: context.user.email,
   };
 }
 
@@ -112,25 +62,20 @@ export async function GET(_request: Request, route: RouteContext) {
   try {
     const quote = await readQuoteForTechnicalCost({ quoteId, organizationId: access.organizationId });
     if (!quote) return NextResponse.json({ error: "No encontramos esta cotización." }, { status: 404 });
-    if (!matchesConfiguredPilotQuoteItems(quote.items, access.config)) {
-      return NextResponse.json({ enabled: false }, { status: 404 });
-    }
     const workSnapshot = parseFabricacionTrabajoSnapshot(quote.workSnapshot);
-    const snapshotCheck = validateQuoteRecipeSnapshots(quote, workSnapshot, access);
-    if (!snapshotCheck.allowed) {
-      return NextResponse.json({ error: snapshotCheck.reason }, { status: 409 });
-    }
     const existing = await getExistingTechnicalCostSnapshot({ quoteId, organizationId: access.organizationId });
-    const allRecipesValidated = hasOnlyValidatedRecipes(quote);
+    const hasSavedMaterialData = Boolean(workSnapshot && (
+      workSnapshot.bars.length > 0 || (workSnapshot.missingPresentations?.length ?? 0) > 0
+    ));
     return NextResponse.json({
       enabled: true,
       canConfigure: canManageSupplierCatalog(access.role),
       snapshot: existing?.snapshot ?? null,
-      canCalculate: !existing && (allRecipesValidated || isQuoteEligibleForFirstSupplierCostSnapshot({ quoteCreatedAt: quote.createdAt, config: access.config })),
+      canCalculate: !existing && hasSavedMaterialData,
     });
   } catch (error) {
     console.error("[API] costo técnico parcial read", error);
-    return NextResponse.json({ error: "No pudimos cargar el costo técnico de QA." }, { status: 500 });
+    return NextResponse.json({ error: "No pudimos cargar el costo estimado de materiales." }, { status: 500 });
   }
 }
 
@@ -151,25 +96,13 @@ export async function POST(request: Request, route: RouteContext) {
   try {
     const quote = await readQuoteForTechnicalCost({ quoteId, organizationId: access.organizationId });
     if (!quote) return NextResponse.json({ error: "No encontramos esta cotización." }, { status: 404 });
-    if (!matchesConfiguredPilotQuoteItems(quote.items, access.config)) {
-      return NextResponse.json({ error: "El costo técnico no está habilitado para esta línea." }, { status: 404 });
-    }
 
     const workSnapshot = parseFabricacionTrabajoSnapshot(quote.workSnapshot);
     if (!workSnapshot) {
       return NextResponse.json({ error: "Esta cotización no tiene una pauta conjunta histórica para valorar." }, { status: 422 });
     }
-    const snapshotCheck = validateQuoteRecipeSnapshots(quote, workSnapshot, access);
-    if (!snapshotCheck.allowed) {
-      return NextResponse.json({ error: snapshotCheck.reason }, { status: 409 });
-    }
-
     const existing = await getExistingTechnicalCostSnapshot({ quoteId, organizationId: access.organizationId });
     if (existing) return NextResponse.json({ snapshot: existing.snapshot, persisted: true });
-    const allRecipesValidated = hasOnlyValidatedRecipes(quote);
-    if (!allRecipesValidated && !isQuoteEligibleForFirstSupplierCostSnapshot({ quoteCreatedAt: quote.createdAt, config: access.config })) {
-      return NextResponse.json({ error: "El cálculo inicial está limitado a cotizaciones nuevas del piloto QA." }, { status: 409 });
-    }
 
     const bodyText = await request.text();
     let selectedPriceLists: z.infer<typeof explicitPriceListSelectionSchema>["selectedPriceLists"] | undefined;

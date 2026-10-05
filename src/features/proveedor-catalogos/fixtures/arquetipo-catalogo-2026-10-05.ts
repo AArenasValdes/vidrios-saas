@@ -57,9 +57,11 @@ const presentations: SupplierCatalogImport["presentations"] = families.flatMap((
     sku: quoted?.sku ?? code,
     description,
     technicalKey: `arquetipo:${family.key}:${code}`,
-    finishResolution: quoted ? "specific" : "finish_independent",
-    finishCode: quoted ? "LEGNO" : null,
-    finishName: quoted ? "LEGNO" : null,
+    // The user intentionally chose the highest Arquetipo finish as a conservative
+    // reference price for every finish, so it must not block on the quote item's color.
+    finishResolution: "finish_independent",
+    finishCode: null,
+    finishName: null,
     purchaseUnit: "TIRA",
     // The user requested a 6 m default. The quote itself does not state this length.
     commercialLengthMm: 6000,
@@ -73,7 +75,7 @@ const presentations: SupplierCatalogImport["presentations"] = families.flatMap((
       note: ambiguous
         ? `La cotización y el catálogo Arquetipo presentan descripciones distintas para el código ${code} (“${quoted?.quoteName ?? "sin precio"}” / “${name}”). Se conserva la asociación por código y se mantiene visible la discrepancia; no se mapea a otro rol de receta.`
         : quoted
-          ? `Cruce explícito por código ${code} entre el catálogo de perfiles de la línea y SKU ${quoted.sku} de la cotización Arquetipo 27811; coincidencia por código, sin derivar por nombre.`
+          ? `Cruce explícito por código ${code} entre el catálogo de perfiles de la línea y SKU ${quoted.sku} de la cotización Arquetipo 27811; coincidencia por código, sin derivar por nombre. El precio LEGNO se usa como referencia conservadora para todos los acabados por instrucción del usuario.`
           : `Presentación técnica de referencia creada a partir del perfil ${code} del catálogo. Sin precio cotizado para este código; disponibilidad por acabado pendiente. El largo 6000 mm es el valor predeterminado solicitado por el usuario, no una medida confirmada por esta fuente.`,
     },
     priceEvidence: quoted ? {
@@ -81,7 +83,7 @@ const presentations: SupplierCatalogImport["presentations"] = families.flatMap((
       page: quoted.page,
       observedAs: "observed",
       confidence: "high",
-      note: `Precio neto CLP ${quoted.price} por presentación TIRA, acabado LEGNO, transcrito de la cotización Arquetipo 27811 del 2026-10-01. Vigencia no indicada; cotización de compra referencial, no lista general. El largo de 6000 mm es predeterminado solicitado por el usuario y no está indicado en la cotización.`,
+      note: `Precio neto CLP ${quoted.price} por presentación TIRA, cotizado para acabado LEGNO en Arquetipo 27811 del 2026-10-01 y adoptado como referencia conservadora para cualquier acabado por instrucción del usuario. Vigencia no indicada; es referencia de compra, no tarifa general del proveedor. El largo de 6000 mm es predeterminado solicitado por el usuario y no está indicado en la cotización.`,
     } : null,
   };
 }));

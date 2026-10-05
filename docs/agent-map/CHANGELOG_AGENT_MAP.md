@@ -2,6 +2,13 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-10-05 - Costo global de cortes guardados y referencia Arquetipo conservadora
+
+- Los 29 precios de compra cotizados para LEGNO quedan disponibles como referencia conservadora para cualquier acabado, con evidencia que distingue la cotización original de la política del usuario. El importador actualiza solo las asociaciones de acabado y su evidencia; precios y SKUs no cambian.
+- El costo técnico puede calcularse en cualquier organización desde cortes ya persistidos, sin el gate QA por línea/fecha. Esto no escribe recetas, crea cortes ni valida pautas; los snapshots de costo existentes permanecen inmutables.
+- Precio aplicado a perfiles por código y familia Ventora exacta. Acabado independiente se refleja en impresión sin exigir que el nombre del acabado coincida con LEGNO.
+- Smoke visual queda a cargo del usuario; falta que una publicación de aplicación incorpore el código y que el importador actualice la asociación global en Supabase.
+
 ## 2026-10-04 - Límite de privacidad para la pauta Veratec de un taller
 
 - Las fórmulas derivadas del Excel de un cliente dejan de figurar como variantes Supplier/Veratec comunes. Permanecen como evidencia de taller y pruebas, no como receta sugerida para otras organizaciones.

@@ -194,7 +194,7 @@ function materialPrice(input: {
   const candidates = input.lines.filter((line) => {
     const codeMatch = Boolean(input.code && [line.technicalCode, line.supplierTechnicalCode].includes(input.code));
     const descriptionMatch = normalizeMatch(line.technicalName) === normalizeMatch(input.description);
-    const finishMatch = !input.finish || normalizeMatch(line.finishName) === normalizeMatch(input.finish);
+    const finishMatch = !input.finish || normalizeMatch(line.finishName) === "sin acabado especifico" || normalizeMatch(line.finishName) === normalizeMatch(input.finish);
     const lengthMatch = input.commercialLengthMm == null || line.commercialLengthMm === input.commercialLengthMm;
     const quantityMatch = input.quantity == null || line.bars === input.quantity;
     return (codeMatch || descriptionMatch) && finishMatch && lengthMatch && quantityMatch;

@@ -37,7 +37,7 @@ function classify(table: string, key: string, current: Row | undefined, expected
     return;
   }
   const mismatches = Object.entries(expected).filter(([field, value]) => stable(current[field]) !== stable(value)).map(([field]) => field);
-  const metadataFields = new Set(["evidencia", "evidencia_asociacion"]);
+  const metadataFields = new Set(["evidencia", "evidencia_asociacion", "evidencia_precio", "modo_acabado", "acabado_codigo", "acabado_nombre"]);
   const metadataOnly = mismatches.length > 0 && mismatches.every((field) => metadataFields.has(field));
   actions.push({ table, key, action: metadataOnly ? "METADATA" : mismatches.length ? "CONFLICTO" : "EXISTENTE", ...(mismatches.length ? { fields: mismatches } : {}) });
 }
@@ -181,10 +181,23 @@ async function main() {
   const finalPresentationIds = new Map(finalPresentations.map((row) => [String(row.sku_proveedor), String(row.id)]));
   for (const input of fixture.presentations) {
     const existing = presentationBySku.get(input.sku);
-    if (existing && stable(existing.evidencia_asociacion) !== stable(input.associationEvidence)) {
+    const expectedAssociation: Row = {
+      evidencia_asociacion: input.associationEvidence,
+      modo_acabado: input.finishResolution === "finish_independent" ? "independiente" : "especifico",
+      acabado_codigo: input.finishCode,
+      acabado_nombre: input.finishName,
+    };
+    if (existing && [
+      "evidencia_asociacion", "modo_acabado", "acabado_codigo", "acabado_nombre",
+    ].some((field) => stable(existing[field]) !== stable(expectedAssociation[field]))) {
       const id = finalPresentationIds.get(input.sku);
-      const { error } = await client.from("catalogo_presentaciones_proveedor").update({ evidencia_asociacion: input.associationEvidence }).eq("id", id as string).eq("fuente_tecnica_id", finalSource.id).eq("proveedor_key", fixture.supplierKey);
-      if (error) throw new Error(`Evidencia de presentación ${input.sku}: ${error.message}`);
+      const { error } = await client.from("catalogo_presentaciones_proveedor").update({
+        evidencia_asociacion: input.associationEvidence,
+        modo_acabado: input.finishResolution === "finish_independent" ? "independiente" : "especifico",
+        acabado_codigo: input.finishCode,
+        acabado_nombre: input.finishName,
+      }).eq("id", id as string).eq("fuente_tecnica_id", finalSource.id).eq("proveedor_key", fixture.supplierKey);
+      if (error) throw new Error(`Presentación ${input.sku}: ${error.message}`);
     }
   }
   const pricePayload = pricedPresentations.map((input) => ({
@@ -194,6 +207,19 @@ async function main() {
   }));
   const { error: priceWriteError } = await client.from("catalogo_precios_presentacion").upsert(pricePayload, { onConflict: "lista_precio_id,presentacion_id", ignoreDuplicates: true });
   if (priceWriteError) throw new Error(`Precios: ${priceWriteError.message}`);
+  const finalPriceRows = await readRows(client, "catalogo_precios_presentacion", (query) => query.select("id, presentacion_id, evidencia_precio").eq("lista_precio_id", finalList.id));
+  for (const input of pricedPresentations) {
+    const presentationId = finalPresentationIds.get(input.sku);
+    const existing = finalPriceRows.find((row) => String(row.presentacion_id) === presentationId);
+    if (existing && stable(existing.evidencia_precio) !== stable(input.priceEvidence)) {
+      const { error } = await client.from("catalogo_precios_presentacion")
+        .update({ evidencia_precio: input.priceEvidence })
+        .eq("id", String(existing.id))
+        .eq("lista_precio_id", finalList.id)
+        .eq("presentacion_id", presentationId as string);
+      if (error) throw new Error(`Evidencia de precio ${input.sku}: ${error.message}`);
+    }
+  }
 
   const [{ count: technicalCount, error: verifyTechnicalError }, { count: presentationCount, error: verifyPresentationError }, { count: priceCount, error: verifyPriceError }] = await Promise.all([
     client.from("catalogo_insumos_tecnicos").select("id", { count: "exact", head: true }).eq("fuente_tecnica_id", finalSource.id),
@@ -204,7 +230,16 @@ async function main() {
   const actualPrices = await readRows(client, "catalogo_precios_presentacion", (query) => query.select("precio_neto").eq("lista_precio_id", finalList.id));
   const actualTotal = actualPrices.reduce((sum, row) => sum + Number(row.precio_neto), 0);
   assert(technicalCount === 84 && presentationCount === 84 && priceCount === 29 && actualPrices.length === 29 && actualTotal === 513984, "Los conteos o la suma publicada no coinciden con el lote esperado.");
-  console.log(JSON.stringify({ phase: "publicado-global", projectRef: expectedProjectRef, revision: fixture.catalogRevision, lista: fixture.priceListRevision, familias: 10, insumosTecnicos: technicalCount, presentaciones: presentationCount, precios: priceCount, totalCLPVerificado: actualTotal, confirmacion: "registros y suma global verificados en producción" }, null, 2));
+  const universalFinishPresentations = await readRows(client, "catalogo_presentaciones_proveedor", (query) => query
+    .select("sku_proveedor, modo_acabado, acabado_codigo, acabado_nombre")
+    .eq("fuente_tecnica_id", finalSource.id)
+    .eq("proveedor_key", fixture.supplierKey)
+    .in("sku_proveedor", pricedPresentations.map((row) => row.sku)));
+  const allPricesAreFinishIndependent = universalFinishPresentations.length === 29 && universalFinishPresentations.every((row) =>
+    row.modo_acabado === "independiente" && row.acabado_codigo == null && row.acabado_nombre == null
+  );
+  assert(allPricesAreFinishIndependent, "No todas las presentaciones con precio quedaron disponibles para cualquier acabado.");
+  console.log(JSON.stringify({ phase: "publicado-global", projectRef: expectedProjectRef, revision: fixture.catalogRevision, lista: fixture.priceListRevision, familias: 10, insumosTecnicos: technicalCount, presentaciones: presentationCount, precios: priceCount, totalCLPVerificado: actualTotal, preciosAplicablesATodosLosAcabados: allPricesAreFinishIndependent, confirmacion: "registros, suma y acabado independiente verificados en producción" }, null, 2));
 }
 
 main().catch((error: unknown) => {
