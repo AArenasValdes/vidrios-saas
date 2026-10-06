@@ -41,11 +41,8 @@ function formatMoney(value: number, currency: string) {
   return new Intl.NumberFormat("es-CL", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
 }
 
-function priceSourceDetails(price: NonNullable<WorkMaterialsDocument["profiles"][number]["price"]>) {
-  const date = price.pricedAt
-    ? new Intl.DateTimeFormat("es-CL", { dateStyle: "medium" }).format(new Date(price.pricedAt))
-    : "fecha no registrada";
-  return `${price.sourceLabel} · ${price.sourceRevision} · ${date}`;
+function priceDescription(price: NonNullable<WorkMaterialsDocument["profiles"][number]["price"]>) {
+  return price.isWorkshopCode ? price.sourceLabel : "Precio referencial";
 }
 
 function drawCellText(
@@ -303,7 +300,7 @@ export function createWorkMaterialsPdf(
 
   const profileColumns: Column[] = [
     { title: "Código / SKU", width: 40 },
-    { title: "Perfil y procedencia", width: 52 },
+    { title: "Perfil y precio", width: 52 },
     { title: "Acabado", width: 21 },
     { title: "Compra", width: 25, align: "center" },
     { title: "Unitario", width: 22, align: "right" },
@@ -312,7 +309,7 @@ export function createWorkMaterialsPdf(
   const profileRows = document.profiles.map((profile) => ({
     cells: [
       `${clean(profile.code)}${profile.price ? `\n${profile.price.sku}` : ""}`,
-      `${clean(profile.description)}\n${clean(profile.line)}${profile.price ? `\n${profile.price.isWorkshopCode ? "Código del taller" : "Lista referencial"} · ${priceSourceDetails(profile.price)}` : ""}`,
+      `${clean(profile.description)}\n${clean(profile.line)}${profile.price ? `\n${priceDescription(profile.price)}` : ""}`,
       clean(profile.configuredFinish, "Acabado sin definir"),
       `${profile.bars} ${profile.bars === 1 ? "barra" : "barras"}\n${formatLength(profile.commercialLengthMm)} c/u`,
       profile.price ? `${formatMoney(profile.price.unitPrice, profile.price.currency)}\n${profile.price.basis}` : "Pendiente",
@@ -325,7 +322,7 @@ export function createWorkMaterialsPdf(
 
   const accessoryColumns: Column[] = [
     { title: "Código / SKU", width: 36 },
-    { title: "Descripción, acabado y procedencia", width: 69 },
+    { title: "Descripción y acabado", width: 69 },
     { title: "Cantidad · unidad", width: 25, align: "right" },
     { title: "Unitario", width: 26, align: "right" },
     { title: "Subtotal", width: 26, align: "right" },
@@ -333,7 +330,7 @@ export function createWorkMaterialsPdf(
   const accessoryRows = document.accessories.map((accessory) => ({
     cells: [
       `${clean(accessory.code)}${accessory.price ? `\n${accessory.price.sku}` : ""}`,
-      `${accessory.code ? clean(accessory.description) : `Por especificar: ${clean(accessory.description)}`}${accessory.configuredFinish ? `\nAcabado: ${accessory.configuredFinish}` : ""}${accessory.price ? `\n${accessory.price.isWorkshopCode ? "Código del taller" : "Lista referencial"} · ${priceSourceDetails(accessory.price)}` : ""}`,
+      `${accessory.code ? clean(accessory.description) : `Por especificar: ${clean(accessory.description)}`}${accessory.configuredFinish ? `\nAcabado: ${accessory.configuredFinish}` : ""}${accessory.price ? `\n${priceDescription(accessory.price)}` : ""}`,
       `${new Intl.NumberFormat("es-CL", { maximumFractionDigits: 2 }).format(accessory.quantity)} ${clean(accessory.unit)}`,
       accessory.price ? `${formatMoney(accessory.price.unitPrice, accessory.price.currency)}\n${accessory.price.basis}` : "Pendiente",
       accessory.price ? formatMoney(accessory.price.subtotal, accessory.price.currency) : "Pendiente",

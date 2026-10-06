@@ -215,7 +215,6 @@ function ViewHarness(props: {
       companyName="Ventora QA"
       issueDate="4 oct 2026"
       technicalCostPanel={props.technicalCostPanel}
-      onDownloadDocumentPdf={jest.fn()}
       expandedItemId={expandedItemId}
       onToggleItem={(itemId) => setExpandedItemId((current) => (current === itemId ? null : itemId))}
       onOpenDespiece={props.onOpenDespiece ?? jest.fn()}

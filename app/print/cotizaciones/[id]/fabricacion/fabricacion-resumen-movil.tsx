@@ -69,7 +69,6 @@ type Props = {
   companyName: string;
   issueDate: string;
   technicalCostPanel?: ReactNode;
-  onDownloadDocumentPdf: (kind: "materials" | "glass-order", element: HTMLElement) => void;
   onDownload: () => void;
   onPrint: () => void;
 };
@@ -372,7 +371,6 @@ function ConsolidadoView({
   codigo,
   obra,
   issueDate,
-  onDownloadDocumentPdf,
 }: {
   summary: FabricationQuoteSummary;
   materialsDocument: WorkMaterialsDocument;
@@ -380,7 +378,6 @@ function ConsolidadoView({
   codigo: string;
   obra: string;
   issueDate: string;
-  onDownloadDocumentPdf: Props["onDownloadDocumentPdf"];
 }) {
   const consolidated = useMemo(
     () =>
@@ -405,7 +402,6 @@ function ConsolidadoView({
         quoteCode={codigo}
         work={obra}
         issueDate={issueDate}
-        onDownloadPdf={onDownloadDocumentPdf}
       />
 
       <details className={s.secondaryWorkshopDetails}>
@@ -525,7 +521,6 @@ export function FabricacionResumenMovil({
   companyName,
   issueDate,
   technicalCostPanel,
-  onDownloadDocumentPdf,
   onDownload,
   onPrint,
 }: Props) {
@@ -642,7 +637,6 @@ export function FabricacionResumenMovil({
             codigo={codigo}
             obra={obra}
             issueDate={issueDate}
-            onDownloadDocumentPdf={onDownloadDocumentPdf}
           />
         ) : summary.items.length === 0 ? (
           <p className={s.mEmpty}>
@@ -674,7 +668,7 @@ export function FabricacionResumenMovil({
           disabled={isExporting}
         >
           <LuDownload aria-hidden />
-          {isExporting ? "Generando..." : "Descargar lista de materiales"}
+          {isExporting ? "Generando..." : "Descargar orden de fabricación y materiales"}
         </button>
         <Link href={pdfHref} className={s.mActionGhost}>
           <LuFileText aria-hidden />

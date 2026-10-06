@@ -352,7 +352,6 @@ type Props = {
   companyName: string;
   issueDate: string;
   technicalCostPanel?: ReactNode;
-  onDownloadDocumentPdf: (kind: "materials" | "glass-order", element: HTMLElement) => void;
   documentRef: RefObject<HTMLElement | null>;
   onDownload: () => void;
   onPrint: () => void;
@@ -532,7 +531,6 @@ export function FabricacionResumenView({
   companyName,
   issueDate,
   technicalCostPanel,
-  onDownloadDocumentPdf,
   documentRef,
   onDownload,
   onPrint,
@@ -571,7 +569,7 @@ export function FabricacionResumenView({
             disabled={isExporting}
           >
             <LuDownload aria-hidden />
-            <span>{isExporting ? "Generando..." : "Descargar lista de materiales"}</span>
+            <span>{isExporting ? "Generando..." : "Descargar orden de fabricación y materiales"}</span>
           </button>
           <button type="button" className={s.secondaryButton} onClick={onPrint}>
             <LuPrinter aria-hidden />
@@ -609,7 +607,6 @@ export function FabricacionResumenView({
           quoteCode={codigo}
           work={obra}
           issueDate={issueDate}
-          onDownloadPdf={onDownloadDocumentPdf}
         />
 
         <details className={s.secondaryWorkshopDetails}>

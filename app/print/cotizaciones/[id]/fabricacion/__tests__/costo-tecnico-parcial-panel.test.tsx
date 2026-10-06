@@ -83,6 +83,31 @@ describe("CostoTecnicoParcialPanel", () => {
     expect(screen.getAllByText("$2.152")).toHaveLength(2);
   });
 
+  it("permite calcular el costo desde los cortes guardados cuando aún no existe snapshot de precios", async () => {
+    const fetchMock = jest.spyOn(global, "fetch")
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ enabled: true, canCalculate: true, snapshot: null }) } as Response)
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({
+        snapshot: {
+          schemaVersion: 2,
+          status: "complete",
+          priceOrigin: "reference",
+          calculatedAt: "2026-10-06T12:00:00.000Z",
+          currency: "CLP",
+          knownNetTotal: 13477,
+          lines: [],
+          missing: [],
+          assumptions: [],
+          sourcePautaCapturedAt: "2026-10-06T11:00:00.000Z",
+        },
+      }) } as Response);
+
+    render(<CostoTecnicoParcialPanel quoteId="qa-4" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Calcular costo" }));
+
+    await waitFor(() => expect(screen.getByText("$13.477")).toBeInTheDocument());
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/cotizaciones/qa-4/costo-tecnico-parcial", { method: "POST" });
+  });
+
   it("presenta sin datos cuando ninguna presentación tiene precio, sin mostrar cero", async () => {
     jest.spyOn(global, "fetch").mockResolvedValue({ ok: true, status: 200, json: async () => ({
       enabled: true, canCalculate: false,

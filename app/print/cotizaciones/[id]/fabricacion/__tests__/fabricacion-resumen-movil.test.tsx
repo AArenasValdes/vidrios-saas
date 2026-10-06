@@ -181,7 +181,6 @@ function ViewHarness({ extraItems = items, trabajoSnapshot, technicalCostPanel }
       companyName="Ventora QA"
       issueDate="4 oct 2026"
       technicalCostPanel={technicalCostPanel}
-      onDownloadDocumentPdf={jest.fn()}
       isExporting={false}
       exportError={null}
       onDownload={jest.fn()}
@@ -212,7 +211,7 @@ describe("FabricacionResumenMovil", () => {
     expect(screen.getAllByText("Pauta lista")).toHaveLength(2);
     expect(screen.queryByRole("button", { name: /Mostrar detalle/i })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /PDF cliente/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Descargar lista de materiales/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Descargar orden de fabricación y materiales/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Imprimir/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "Pauta conjunta" }));
     expect(screen.getAllByAltText("Ventora")).toHaveLength(2);

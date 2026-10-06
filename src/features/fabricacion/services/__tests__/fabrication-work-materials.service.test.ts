@@ -1,6 +1,7 @@
 import type { FabricationQuoteSummary } from "@/features/cotizaciones/line-templates/types/fabrication-quote-summary";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
+import type { TechnicalCostSnapshot } from "@/features/proveedor-catalogos/services/costo-tecnico-parcial.service";
 import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 import { buildWorkMaterialsDocument } from "../fabrication-work-materials.service";
@@ -154,6 +155,22 @@ function glassSnapshot(glassId: string, name: string, width: number, height: num
 }
 
 describe("fabrication-work-materials.service", () => {
+  it("vincula el precio guardado de un accesorio por cantidad de unidades", () => {
+    const accessory = item({ id: "1", code: "V1", glass: "Monolítico", snapshot: glassSnapshot("p1", "Paño", 900, 1400, 1) });
+    const cost = {
+      schemaVersion: 2, status: "complete", calculatedAt: "2026-10-06T10:00:00.000Z", currency: "CLP",
+      knownNetTotal: 750, sourcePautaCapturedAt: null, assumptions: [], missing: [],
+      lines: [{
+        technicalCode: "ACC-1", technicalName: "Cierre central", supplierSku: "SKU-ACC-1", finishCode: "blanco", finishName: "Blanco",
+        commercialLengthMm: null, purchaseUnit: "unidad", bars: 0, quantity: 1,
+        netPricePerPresentation: 750, sourcePrice: 750, effectivePriceSource: "reference", priceBasis: "commercial_presentation",
+        lineNet: 750, currency: "CLP", priceListId: "lista", priceListRevision: "revision", cuts: [],
+      }],
+    } as TechnicalCostSnapshot;
+    const materials = buildWorkMaterialsDocument({ summary: summary(null), items: [accessory], technicalCostSnapshot: cost });
+    expect(materials.accessories[0]?.price).toMatchObject({ sku: "SKU-ACC-1", unitPrice: 750, subtotal: 750 });
+  });
+
   it("usa barras de la pauta conjunta y separa acabado, largo y línea", () => {
     const materials = buildWorkMaterialsDocument({
       summary: summary(jobSnapshot()),

@@ -2729,3 +2729,9 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
 - Aplicado en producción con cero conflictos. Largo TIRA 6.000 mm registrado como supuesto solicitado por el usuario, no dato del proveedor; vigencia de la cotización no indicada.
 - Se agregan claves `arquetipo:*` y metadata `excludedRecipeFamilyKeys` para 17 códigos con roles/códigos incompatibles; se conservan enlaces previos en producción sin borrarlos. El filtro de resolución está en código local y requiere despliegue de aplicación para regir en producción.
 - Las reglas de cubicación/despiece/pauta existentes no se alteraron ni se marcaron validadas; el catálogo Arquetipo no entrega fórmulas completas para todas las líneas.
+
+## 2026-10-06 — Orden de fabricación y materiales
+
+- `/print/cotizaciones/[id]/fabricacion` ofrece una descarga PDF interna única con compra valorizada, pauta de corte, vidrios y pendientes. Lee la pauta conjunta, snapshots por pieza y costo técnico guardados; los históricos sin pauta conjunta conservan cortes por pieza sin inventar barras ni remanentes.
+- Cada barra física muestra todos sus cortes juntos y un solo remanente teórico, contrastado con el valor guardado. El PDF incorpora el logo oficial Ventora y fuerza espaciado tipográfico normal.
+- La paginación mide filas, repite encabezados y permite compartir página entre secciones. El PDF cliente permanece separado; las tablas y Excel internos siguen disponibles. Fuentes de precio por tipo sin nombres de proveedor, archivos ni revisiones.

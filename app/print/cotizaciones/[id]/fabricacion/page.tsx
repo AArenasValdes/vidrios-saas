@@ -9,6 +9,7 @@ import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacio
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import { buildFabricationQuoteSummary } from "@/features/cotizaciones/line-templates/types/fabrication-quote-summary";
 import { buildWorkMaterialsDocument } from "@/features/fabricacion/services/fabrication-work-materials.service";
+import { buildFabricationWorkOrder } from "@/features/fabricacion/services/fabrication-work-order.service";
 import type { TechnicalCostSnapshot } from "@/features/proveedor-catalogos/services/costo-tecnico-parcial.service";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { normalizeQuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
@@ -122,6 +123,10 @@ export default function CotizacionFabricacionPrintPage() {
     }),
     [summary, cotizacion?.items, lineTemplates, technicalCostSnapshot]
   );
+  const workOrder = useMemo(
+    () => buildFabricationWorkOrder({ summary, materials: materialsDocument, technicalCostSnapshot }),
+    [summary, materialsDocument, technicalCostSnapshot]
+  );
   const issueDate = (() => {
     if (!cotizacion?.createdAt) return "—";
     const date = new Date(cotizacion.createdAt);
@@ -164,72 +169,31 @@ export default function CotizacionFabricacionPrintPage() {
     window.print();
   }, []);
 
-  const handleDownloadDocumentPdf = useCallback(
-    async (kind: "materials" | "glass-order", element: HTMLElement) => {
-      setIsExporting(true);
-      setExportError(null);
-      let exportHost: HTMLDivElement | null = null;
-      try {
-        const prefix = kind === "materials" ? "materiales" : "orden-vidrios";
-        const documentFileName = `${prefix}-${sanitizeFileNamePart(cotizacion?.codigo || "cotizacion", 36)}.pdf`;
-        const { downloadPdfBlob } = await import("@/utils/cotizacion-pdf");
-        let blob: Blob;
-        if (kind === "materials") {
-          const { createWorkMaterialsPdf } = await import("@/features/fabricacion/services/work-materials-pdf-export.service");
-          const logoDataUrl = await loadVentoraPdfLogo();
-          blob = createWorkMaterialsPdf(materialsDocument, {
-            companyName: organizationProfile?.empresaNombre ?? "",
-            quoteCode: cotizacion?.codigo ?? "",
-            workName: cotizacion?.obra ?? "",
-            issueDate,
-          }, logoDataUrl).output("blob");
-        } else {
-          exportHost = window.document.createElement("div");
-          const exportElement = element.cloneNode(true) as HTMLElement;
-          exportHost.setAttribute("aria-hidden", "true");
-          exportHost.style.cssText = "position:fixed;left:-12000px;top:0;width:794px;pointer-events:none;z-index:-1;";
-          exportElement.classList.add(s.pdfDocumentExport);
-          exportElement.querySelectorAll<HTMLElement>(`.${s.printHide}`).forEach((node) => node.remove());
-          exportHost.appendChild(exportElement);
-          window.document.body.appendChild(exportHost);
-          await new Promise<void>((resolve) => {
-            window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
-          });
-          const { exportCotizacionElementToPdf } = await import("@/utils/cotizacion-pdf");
-          ({ blob } = await exportCotizacionElementToPdf({
-            element: exportElement,
-            fileName: documentFileName,
-            format: "a4",
-            protectedSelectors: [`.${s.materialDocHeader}`, `.${s.materialTableSection} h3`, `.${s.materialTableScroll} thead tr`, `.${s.materialTableScroll} tbody tr`],
-          }));
-        }
-        const result = await downloadPdfBlob(blob, documentFileName);
-        if (result === "failed") setExportError("No pudimos descargar el documento. Intenta imprimir y guardar como PDF.");
-      } catch (error) {
-        const { formatCotizacionPdfError } = await import("@/utils/cotizacion-pdf");
-        setExportError(formatCotizacionPdfError(error));
-      } finally {
-        exportHost?.remove();
-        setIsExporting(false);
-      }
-    },
-    [cotizacion, issueDate, materialsDocument, organizationProfile]
-  );
-
-  const handleDownload = useCallback(() => {
-    const materialsElements = printRootRef.current?.querySelectorAll<HTMLElement>(
-      '[data-work-document="materials"]'
-    );
-    const materialsElement = materialsElements
-      ? Array.from(materialsElements).find((element) => element.getClientRects().length > 0) ??
-        materialsElements.item(window.matchMedia("(max-width: 719px)").matches ? 1 : 0)
-      : null;
-    if (!materialsElement) {
-      setExportError("No encontramos la lista de materiales para descargar.");
-      return;
+  const handleDownload = useCallback(async () => {
+    setIsExporting(true);
+    setExportError(null);
+    try {
+      const documentFileName = `orden-fabricacion-materiales-${sanitizeFileNamePart(cotizacion?.codigo || "cotizacion", 36)}.pdf`;
+      const [{ createFabricationWorkOrderPdf }, { downloadPdfBlob }] = await Promise.all([
+        import("@/features/fabricacion/services/fabrication-work-order-pdf.service"),
+        import("@/utils/cotizacion-pdf"),
+      ]);
+      const logoDataUrl = await loadVentoraPdfLogo();
+      const blob = createFabricationWorkOrderPdf(workOrder, {
+        companyName: organizationProfile?.empresaNombre ?? "",
+        quoteCode: cotizacion?.codigo ?? "",
+        workName: cotizacion?.obra ?? "",
+        issueDate,
+      }, logoDataUrl).output("blob");
+      const result = await downloadPdfBlob(blob, documentFileName);
+      if (result === "failed") setExportError("No pudimos descargar la orden. Intenta nuevamente.");
+    } catch (error) {
+      const { formatCotizacionPdfError } = await import("@/utils/cotizacion-pdf");
+      setExportError(formatCotizacionPdfError(error));
+    } finally {
+      setIsExporting(false);
     }
-    void handleDownloadDocumentPdf("materials", materialsElement);
-  }, [handleDownloadDocumentPdf]);
+  }, [cotizacion, issueDate, organizationProfile, workOrder]);
 
   if (!isReady && !cotizacion) {
     return <p className={s.loadingState}>Cargando resumen de fabricación…</p>;
@@ -273,8 +237,7 @@ export default function CotizacionFabricacionPrintPage() {
             materialsDocument={materialsDocument}
             companyName={organizationProfile?.empresaNombre ?? ""}
             issueDate={issueDate}
-            technicalCostPanel={isMobileViewport ? technicalCostPanel : null}
-            onDownloadDocumentPdf={(kind, element) => void handleDownloadDocumentPdf(kind, element)}
+            technicalCostPanel={isMobileViewport === false ? technicalCostPanel : null}
             expandedItemId={expandedItemId}
             onToggleItem={handleToggleItem}
             onOpenDespiece={handleOpenDespiece}
@@ -297,8 +260,7 @@ export default function CotizacionFabricacionPrintPage() {
             materialsDocument={materialsDocument}
             companyName={organizationProfile?.empresaNombre ?? ""}
             issueDate={issueDate}
-            technicalCostPanel={isMobileViewport === false ? technicalCostPanel : null}
-            onDownloadDocumentPdf={(kind, element) => void handleDownloadDocumentPdf(kind, element)}
+            technicalCostPanel={isMobileViewport ? technicalCostPanel : null}
             isExporting={isExporting}
             exportError={exportError}
             onDownload={() => void handleDownload()}

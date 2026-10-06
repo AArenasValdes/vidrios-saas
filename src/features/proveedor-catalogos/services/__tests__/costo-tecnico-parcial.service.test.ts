@@ -1,4 +1,5 @@
 import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
+import { ARQUETIPO_CATALOGO_2026_10_05 } from "../../fixtures/arquetipo-catalogo-2026-10-05";
 import { VERATEC_7400_JUNIO_2026_IMPORT } from "../../fixtures/veratec-7400-junio-2026";
 import {
   buildPartialTechnicalCostSnapshot,
@@ -60,7 +61,54 @@ function price(input: Partial<CatalogPresentationPrice> & Pick<CatalogPresentati
   };
 }
 
+const arquetipoTechnicalInputs = new Map(
+  ARQUETIPO_CATALOGO_2026_10_05.technicalInputs.map((input) => [input.technicalKey, input])
+);
+const pricedArquetipoProfiles = ARQUETIPO_CATALOGO_2026_10_05.presentations.flatMap((presentation) => {
+  if (presentation.netPrice == null) return [];
+  const technicalInput = arquetipoTechnicalInputs.get(presentation.technicalKey);
+  const familyKey = technicalInput?.familyKeys?.[0];
+  if (!technicalInput || !familyKey) return [];
+  const recipeCode = technicalInput.recipeComponentCodes?.[0] ?? technicalInput.sourceCode;
+  return [[presentation.sku, presentation, technicalInput, recipeCode, familyKey] as const];
+});
+
 describe("buildPartialTechnicalCostSnapshot", () => {
+  it.each(pricedArquetipoProfiles)("valora el perfil Arquetipo %s desde el código de receta y la familia universal", (_sku, presentation, technicalInput, recipeCode, familyKey) => {
+    const result = buildPartialTechnicalCostSnapshot({
+      workSnapshot: pauta([{ code: recipeCode, item: "A", length: 1000 }]),
+      quoteItems: [{ code: "A", color: "Madera", catalogLineKey: familyKey, supplierFamilyKey: familyKey }],
+      availablePrices: [price({
+        presentationId: presentation.sku,
+        providerKey: "arquetipo",
+        preferred: true,
+        familyKeys: technicalInput.familyKeys,
+        technicalCode: technicalInput.sourceCode,
+        recipeComponentCodes: technicalInput.recipeComponentCodes,
+        technicalName: technicalInput.name,
+        supplierSku: presentation.sku,
+        finishCode: "",
+        finishName: null,
+        finishResolution: "finish_independent",
+        purchaseUnit: "TIRA",
+        commercialLengthMm: presentation.commercialLengthMm,
+        netPrice: presentation.netPrice,
+      })],
+    });
+
+    expect(result?.lines).toHaveLength(1);
+    expect(result?.lines[0]).toMatchObject({
+      providerKey: "arquetipo",
+      technicalCode: recipeCode,
+      supplierSku: presentation.sku,
+      commercialLengthMm: 6000,
+      bars: 1,
+      netPricePerPresentation: presentation.netPrice,
+      lineNet: presentation.netPrice,
+      currency: "CLP",
+    });
+  });
+
   it("prioriza el precio Arquetipo LEGNO como referencia de una línea universal aunque otro proveedor sea más barato", () => {
     const result = buildPartialTechnicalCostSnapshot({
       workSnapshot: pauta([{ code: "2001", item: "A", length: 1200 }]),

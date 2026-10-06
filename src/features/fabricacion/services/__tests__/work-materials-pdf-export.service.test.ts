@@ -79,7 +79,7 @@ describe("work-materials-pdf-export.service", () => {
     expect(output).not.toContain("#a8a8a8");
   });
 
-  it("incluye precio, base, revisión y fecha del snapshot técnico sin recargar el catálogo", () => {
+  it("incluye precio y base sin exponer la revisión interna del snapshot", () => {
     const document = sampleDocument();
     document.profiles[0]!.price = {
       sku: "QA-ORG3-7401-BLANCO-6000-20261005",
@@ -108,10 +108,9 @@ describe("work-materials-pdf-export.service", () => {
     }));
 
     expect(compactPdfText(output)).toContain("QA-ORG3-7401-BLANCO-6000-20261005");
-    expect(output).toContain("Código del taller");
     expect(output).toContain("por barra");
-    expect(output).toContain("taller-v2");
     expect(output).toContain("Precio propio del taller");
+    expect(output).not.toContain("taller-v2");
     expect(output).toContain("Costo valorizado parcial: $60.000");
     expect(output).toContain("13 pendientes de precio");
   });

@@ -10,6 +10,8 @@ import { resolveComponentColorName } from "@/constants/component-colors";
 export type WorkProfileMaterialRow = {
   key: string;
   code: string;
+  /** SKU guardado en la pauta conjunta, incluso si todavía no tiene precio. */
+  supplierSku?: string | null;
   description: string;
   line: string;
   finish: string;
@@ -36,6 +38,7 @@ export type WorkAccessoryMaterialRow = {
 export type WorkMaterialPrice = {
   sku: string;
   isWorkshopCode: boolean;
+  sourceKind?: "reference" | "own" | "adjusted";
   sourceLabel: string;
   sourceRevision: string;
   pricedAt: string | null;
@@ -67,6 +70,9 @@ export type WorkGlassOrderRow = {
   paneReference: string;
   description: string;
   thickness: string;
+  /** Valores conservados en la pieza; el PDF no toma el catálogo editable actual. */
+  glassType?: string | null;
+  snapshotThickness?: string | null;
   finish: string;
   composition: string;
   widthMm: number | null;
@@ -196,7 +202,7 @@ function materialPrice(input: {
     const descriptionMatch = normalizeMatch(line.technicalName) === normalizeMatch(input.description);
     const finishMatch = !input.finish || normalizeMatch(line.finishName) === "sin acabado especifico" || normalizeMatch(line.finishName) === normalizeMatch(input.finish);
     const lengthMatch = input.commercialLengthMm == null || line.commercialLengthMm === input.commercialLengthMm;
-    const quantityMatch = input.quantity == null || line.bars === input.quantity;
+    const quantityMatch = input.quantity == null || (line.quantity ?? line.bars) === input.quantity;
     return (codeMatch || descriptionMatch) && finishMatch && lengthMatch && quantityMatch;
   });
   if (candidates.length !== 1) return null;
@@ -205,6 +211,7 @@ function materialPrice(input: {
   return {
     sku: line.supplierSku,
     isWorkshopCode,
+    sourceKind: isWorkshopCode ? "own" : line.effectivePriceSource === "provider_adjustment" || line.effectivePriceSource === "organization_override" ? "adjusted" : "reference",
     sourceLabel: isWorkshopCode ? "Precio propio del taller" : `Lista referencial · ${line.providerKey ?? "Proveedor"}`,
     sourceRevision: line.priceListRevision,
     pricedAt: line.pricedAt ?? null,
@@ -241,6 +248,7 @@ function buildProfileRows(summary: FabricationQuoteSummary, cost: TechnicalCostS
     groups.set(key, {
       key,
       code: bar.codigoPerfil || "—",
+      supplierSku: bar.supplierSku?.trim() || null,
       description: bar.nombrePerfil || bar.codigoPerfil || "Perfil sin descripción",
       line,
       finish: commercialFinish(bar.acabadoKey),
@@ -377,6 +385,8 @@ function buildGlassOrderRows(items: readonly WorkItem[], templates: readonly Cot
         paneReference: `${item.codigo || "Componente"} · Paño 1`,
         description: fullGlassDescription(item, thickness, finish, composition),
         thickness,
+        glassType: item.vidrio?.trim() || null,
+        snapshotThickness: presentation.catalogEspesor.trim() || null,
         finish,
         composition,
         widthMm: null,
@@ -401,6 +411,8 @@ function buildGlassOrderRows(items: readonly WorkItem[], templates: readonly Cot
         paneReference: glass.reference || `${item.codigo || "Componente"} · Paño ${index + 1}`,
         description: fullGlassDescription(item, thickness, finish, composition || glass.name),
         thickness,
+        glassType: item.vidrio?.trim() || null,
+        snapshotThickness: presentation.catalogEspesor.trim() || null,
         finish,
         composition,
         widthMm: hasMeasures ? glass.width : null,

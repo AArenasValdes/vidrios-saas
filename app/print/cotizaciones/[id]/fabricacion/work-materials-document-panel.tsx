@@ -2,8 +2,8 @@
 
 import { Fragment, useState } from "react";
 import Image from "next/image";
-import { LuDownload, LuFileSpreadsheet, LuFileText } from "react-icons/lu";
-import type { MouseEvent, ReactNode } from "react";
+import { LuDownload, LuFileSpreadsheet } from "react-icons/lu";
+import type { ReactNode } from "react";
 
 import type { WorkMaterialsDocument } from "@/features/fabricacion/services/fabrication-work-materials.service";
 import { sanitizeFileNamePart } from "@/utils/sanitize-file-name";
@@ -18,7 +18,6 @@ type Props = {
   quoteCode: string;
   work: string;
   issueDate: string;
-  onDownloadPdf: (kind: DocumentKind, element: HTMLElement) => void;
 };
 
 function formatMm(value: number | null) {
@@ -29,7 +28,7 @@ function formatM2(value: number | null) {
   return value == null ? "—" : `${value.toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 4 })} m²`;
 }
 
-function Header({ title, companyName, quoteCode, work, issueDate }: Omit<Props, "document" | "onDownloadPdf"> & { title: string }) {
+function Header({ title, companyName, quoteCode, work, issueDate }: Omit<Props, "document"> & { title: string }) {
   return (
     <header className={s.materialDocHeader}>
       <div className={s.materialDocHeading}>
@@ -65,7 +64,6 @@ function ExportActions({
   quoteCode,
   work,
   issueDate,
-  onDownloadPdf,
   onError,
 }: {
   kind: DocumentKind;
@@ -75,7 +73,6 @@ function ExportActions({
   quoteCode: string;
   work: string;
   issueDate: string;
-  onDownloadPdf: Props["onDownloadPdf"];
   onError: (message: string | null) => void;
 }) {
   const [isExporting, setIsExporting] = useState(false);
@@ -109,16 +106,8 @@ function ExportActions({
     }
   };
 
-  const elementForPdf = (event: MouseEvent<HTMLButtonElement>) => {
-    const section = event.currentTarget.closest<HTMLElement>("[data-work-document]");
-    if (section) onDownloadPdf(kind, section);
-  };
-
   return (
     <div className={`${s.materialDocActions} ${s.printHide}`}>
-      <button type="button" onClick={elementForPdf}>
-        <LuFileText aria-hidden /> PDF
-      </button>
       <button type="button" onClick={() => void exportExcel()} disabled={isExporting}>
         {isExporting ? <LuDownload aria-hidden /> : <LuFileSpreadsheet aria-hidden />}
         {isExporting ? "Generando…" : "Excel"}
@@ -135,20 +124,20 @@ export function WorkMaterialsDocumentPanel(props: Props) {
     <div className={s.workDocuments}>
       <section className={s.workDocument} data-work-document="materials" aria-label="Lista consolidada de materiales">
         <Header {...props} title="Lista de materiales del trabajo" />
-        <ExportActions kind="materials" fileBase={fileBase} document={props.document} companyName={props.companyName} quoteCode={props.quoteCode} work={props.work} issueDate={props.issueDate} onDownloadPdf={props.onDownloadPdf} onError={setExportError} />
+        <ExportActions kind="materials" fileBase={fileBase} document={props.document} companyName={props.companyName} quoteCode={props.quoteCode} work={props.work} issueDate={props.issueDate} onError={setExportError} />
         {exportError ? <p role="alert" className={s.exportNotice}>{exportError}</p> : null}
 
         <MaterialTable title="Perfiles totales" empty="No hay barras en una pauta conjunta guardada." hasRows={props.document.profiles.length > 0}>
           <table className={s.profileMaterialsTable}>
             <thead><tr><th>Código / SKU</th><th>Perfil, línea y precio</th><th>Acabado</th><th>Largo</th><th>Barras</th><th>Precio unitario</th><th>Subtotal</th></tr></thead>
-            <tbody>{props.document.profiles.map((row) => <tr key={row.key}><td>{row.code}<small>{row.price ? `${row.price.isWorkshopCode ? "Código del taller" : "SKU proveedor"}: ${row.price.sku}` : "Precio pendiente"}</small></td><td><strong>{row.description}</strong><small>{row.line}</small>{row.price ? <small>{row.price.basis} · {row.price.sourceLabel} · {row.price.sourceRevision}</small> : null}</td><td>{row.finish}</td><td>{formatMm(row.commercialLengthMm)}</td><td><strong>{row.bars}</strong></td><td>{row.price ? formatMoney(row.price.unitPrice, row.price.currency) : "Pendiente"}</td><td>{row.price ? formatMoney(row.price.subtotal, row.price.currency) : "Pendiente"}</td></tr>)}</tbody>
+            <tbody>{props.document.profiles.map((row) => <tr key={row.key}><td>{row.code}<small>{row.price ? `${row.price.isWorkshopCode ? "Código del taller" : "SKU proveedor"}: ${row.price.sku}` : "Precio pendiente"}</small></td><td><strong>{row.description}</strong><small>{row.line}</small>{row.price ? <small>{row.price.basis}{row.price.isWorkshopCode ? ` · ${row.price.sourceLabel}` : " · Precio referencial"}</small> : null}</td><td>{row.finish}</td><td>{formatMm(row.commercialLengthMm)}</td><td><strong>{row.bars}</strong></td><td>{row.price ? formatMoney(row.price.unitPrice, row.price.currency) : "Pendiente"}</td><td>{row.price ? formatMoney(row.price.subtotal, row.price.currency) : "Pendiente"}</td></tr>)}</tbody>
           </table>
           <ul className={s.profileMaterialsMobile} aria-label="Perfiles y cantidades para comprar">
             {props.document.profiles.map((row) => <li key={row.key}>
               <div className={s.profileMobileHeading}><strong>{row.code}</strong><span>{row.description}</span></div>
               <dl><div><dt>Acabado</dt><dd>{row.finish}</dd></div><div><dt>Largo de barra</dt><dd>{formatMm(row.commercialLengthMm)}</dd></div><div className={s.profileMobileBars}><dt>Barras a comprar</dt><dd>{row.bars}</dd></div></dl>
               <small>{row.line}</small>
-              {row.price ? <div className={s.materialPriceDetails}><strong>{row.price.isWorkshopCode ? "Código del taller" : "SKU proveedor"}: {row.price.sku}</strong><span>{row.price.basis} · {row.price.sourceLabel} · {row.price.sourceRevision}</span><span>Unitario {formatMoney(row.price.unitPrice, row.price.currency)} · subtotal {formatMoney(row.price.subtotal, row.price.currency)}</span><small>{row.price.pricedAt ? `Consultado ${new Intl.DateTimeFormat("es-CL", { dateStyle: "medium" }).format(new Date(row.price.pricedAt))}` : "Fecha no registrada"}</small></div> : <small>Precio pendiente</small>}
+              {row.price ? <div className={s.materialPriceDetails}><strong>{row.price.isWorkshopCode ? "Código del taller" : "SKU proveedor"}: {row.price.sku}</strong><span>{row.price.basis}{row.price.isWorkshopCode ? ` · ${row.price.sourceLabel}` : " · Precio referencial"}</span><span>Unitario {formatMoney(row.price.unitPrice, row.price.currency)} · subtotal {formatMoney(row.price.subtotal, row.price.currency)}</span></div> : <small>Precio pendiente</small>}
             </li>)}
           </ul>
           {!props.document.hasJointCuttingPlan ? <p className={s.documentNote}>Este histórico no conserva pauta conjunta. No se recalcularon barras.</p> : null}
@@ -157,14 +146,14 @@ export function WorkMaterialsDocumentPanel(props: Props) {
         <MaterialTable title="Accesorios" empty="Sin accesorios registrados en los snapshots." hasRows={props.document.accessories.length > 0}>
           <table className={s.accessoryMaterialsTable}>
             <thead><tr><th>Código / SKU</th><th>Descripción y precio</th><th>Cantidad</th><th>Unidad</th><th>Acabado</th><th>Precio unitario</th><th>Subtotal</th></tr></thead>
-            <tbody>{props.document.accessories.map((row) => <tr key={row.key}><td>{row.code ?? "—"}<small>{row.price ? `${row.price.isWorkshopCode ? "Código del taller" : "SKU proveedor"}: ${row.price.sku}` : "Precio pendiente"}</small></td><td>{row.description}{row.price ? <small>{row.price.basis} · {row.price.sourceLabel} · {row.price.sourceRevision}{row.price.pricedAt ? ` · ${new Intl.DateTimeFormat("es-CL", { dateStyle: "medium" }).format(new Date(row.price.pricedAt))}` : ""}</small> : null}</td><td>{row.quantity}</td><td>{row.unit}</td><td>{row.finish}</td><td>{row.price ? formatMoney(row.price.unitPrice, row.price.currency) : "Pendiente"}</td><td>{row.price ? formatMoney(row.price.subtotal, row.price.currency) : "Pendiente"}</td></tr>)}</tbody>
+            <tbody>{props.document.accessories.map((row) => <tr key={row.key}><td>{row.code ?? "—"}<small>{row.price ? `${row.price.isWorkshopCode ? "Código del taller" : "SKU proveedor"}: ${row.price.sku}` : "Precio pendiente"}</small></td><td>{row.description}{row.price ? <small>{row.price.basis}{row.price.isWorkshopCode ? ` · ${row.price.sourceLabel}` : " · Precio referencial"}</small> : null}</td><td>{row.quantity}</td><td>{row.unit}</td><td>{row.finish}</td><td>{row.price ? formatMoney(row.price.unitPrice, row.price.currency) : "Pendiente"}</td><td>{row.price ? formatMoney(row.price.subtotal, row.price.currency) : "Pendiente"}</td></tr>)}</tbody>
           </table>
           <ul className={s.accessoryMaterialsMobile} aria-label="Accesorios, cantidades y precios">
             {props.document.accessories.map((row) => <li key={row.key}>
               <strong>{row.description}</strong>
               <span>{row.quantity} {row.unit} · {row.finish}</span>
               <small>{row.code ? `Código ${row.code}` : "Por especificar"}{row.price ? ` · ${row.price.isWorkshopCode ? "Código del taller" : "SKU proveedor"} ${row.price.sku}` : " · Precio pendiente"}</small>
-              {row.price ? <small>{row.price.basis} · {row.price.sourceLabel} · {row.price.sourceRevision}{row.price.pricedAt ? ` · ${new Intl.DateTimeFormat("es-CL", { dateStyle: "medium" }).format(new Date(row.price.pricedAt))}` : ""}</small> : null}
+              {row.price ? <small>{row.price.basis}{row.price.isWorkshopCode ? ` · ${row.price.sourceLabel}` : " · Precio referencial"}</small> : null}
               <b>{row.price ? `${formatMoney(row.price.unitPrice, row.price.currency)} c/u · ${formatMoney(row.price.subtotal, row.price.currency)} subtotal` : "Sin precio valorizado"}</b>
             </li>)}
           </ul>
@@ -188,7 +177,7 @@ export function WorkMaterialsDocumentPanel(props: Props) {
 
       <section className={s.workDocument} data-work-document="glass-order" aria-label="Orden de vidrios">
         <Header {...props} title="Orden de vidrios" />
-        <ExportActions kind="glass-order" fileBase={`vidrios-${sanitizeFileNamePart(props.quoteCode || "cotizacion", 32)}`} document={props.document} companyName={props.companyName} quoteCode={props.quoteCode} work={props.work} issueDate={props.issueDate} onDownloadPdf={props.onDownloadPdf} onError={setExportError} />
+        <ExportActions kind="glass-order" fileBase={`vidrios-${sanitizeFileNamePart(props.quoteCode || "cotizacion", 32)}`} document={props.document} companyName={props.companyName} quoteCode={props.quoteCode} work={props.work} issueDate={props.issueDate} onError={setExportError} />
         <MaterialTable title="Paños por fabricar" empty="No hay vidrio ni composición registrada para ordenar." hasRows={props.document.glassOrder.length > 0}>
           <ul className={s.glassOrderMobile} aria-label="Orden de corte de vidrios">
             {props.document.glassOrder.map((row) => <li key={row.key}>
