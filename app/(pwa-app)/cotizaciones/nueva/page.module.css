@@ -1,4 +1,5 @@
-.root {
+.root,
+.stepTwoMobileLineSheetOverlay {
   --flow-bg: #f3f6fb;
   --flow-surface-card: rgba(255, 255, 255, 0.94);
   --flow-surface-soft: #eef3f8;
@@ -24,6 +25,9 @@
   --color-text-danger: var(--flow-danger);
   --color-border-danger: rgba(217, 92, 92, 0.26);
   --color-background-danger: rgba(217, 92, 92, 0.08);
+}
+
+.root {
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -14309,6 +14313,12 @@ p.stepTwoMobileItemFabCompact {
   border-radius: 14px;
 }
 
+.stepTwoMobileLineSheetPrimaryAction {
+  background: linear-gradient(180deg, #304e8f 0%, #243b6b 100%);
+  color: #fff;
+  border-color: rgba(36, 59, 107, 0.92);
+}
+
 .stepTwoMobileQuickLineForm {
   display: grid;
   gap: 0.72rem;
@@ -14910,9 +14920,9 @@ p.stepTwoMobileItemFabCompact {
   .stepTwoMobileLineSheet {
     position: fixed;
     inset: 0;
-    width: 100%;
-    height: 100dvh;
-    max-height: 100dvh;
+    width: auto;
+    height: auto;
+    max-height: none;
     border: 0;
     border-radius: 0;
     padding: max(0.8rem, env(safe-area-inset-top)) 0.82rem calc(0.65rem + env(safe-area-inset-bottom));
@@ -14922,24 +14932,29 @@ p.stepTwoMobileItemFabCompact {
     box-shadow: none;
   }
 
-  .stepTwoMobileLineSheetBody {
+  .stepTwoMobileLineSheetBody,
+  .stepTwoMobileLineSheetIphone .stepTwoMobileLineSheetBody {
     max-height: none;
     min-height: 0;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     scrollbar-gutter: stable;
   }
-}
 
-@media (max-width: 720px) {
   .stepTwoMobileLineSheet.stepTwoMobileLineSheetIphone {
     inset: 0;
-    width: 100%;
-    height: 100dvh;
-    max-height: 100dvh;
+    width: auto;
+    height: auto;
+    max-height: none;
     border-radius: 0;
+    box-shadow: none;
     padding-top: max(0.8rem, env(safe-area-inset-top));
     grid-template-rows: auto auto minmax(0, 1fr) auto;
+  }
+
+  .stepTwoMobileLineSheet.stepTwoMobileLineSheetIphone .stepTwoMobileLineSheetBody {
+    max-height: none;
+    min-height: 0;
   }
 }
 
@@ -17651,7 +17666,14 @@ p.stepTwoMobileItemFabCompact {
 .stepTwoMobileBlockLabel { color: #53647d; letter-spacing: .06em; }
 .stepTwoMobileMaterialButtonActive { border-color: #1e88ff; box-shadow: 0 0 0 2px rgb(30 136 255 / 12%); }
 .stepTwoMobileFinalPriceInput { min-height: 3.6rem; border-color: #aebfd2; color: #102038; font-size: 1.35rem; }
-.stepTwoMobileLineSheet { border-color: #dce3ec; border-radius: 18px 18px 14px 14px; background: #fff; box-shadow: 0 18px 44px rgb(16 32 56 / 18%); }
+.stepTwoMobileLineSheet { border-color: #dce3ec; background: #fff; }
+
+@media (min-width: 721px) {
+  .stepTwoMobileLineSheet {
+    border-radius: 18px 18px 14px 14px;
+    box-shadow: 0 18px 44px rgb(16 32 56 / 18%);
+  }
+}
 .stepTwoMobileLineSheetClose { width: 44px; height: 44px; }
 .stepTwoMobileLineSheetPrimaryAction, .stepTwoMobileLineSheetSecondaryAction { min-height: 48px; }
 
