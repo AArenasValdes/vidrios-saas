@@ -109,7 +109,7 @@ describe("seedDefaultLineCatalog", () => {
     expect(keys).toContain("ventora:veratec-elevadora-4h-4moviles");
     expect(keys).toContain("ventora:veratec-eko-130");
     expect(keys).toContain("ventora:veratec-eko-82");
-    expect(catalogSize).toBe(57);
+    expect(catalogSize).toBe(50);
   });
 
   it("registra Veratec como PVC del proveedor VERATEC con sus 15 referencias Alumétrica", () => {

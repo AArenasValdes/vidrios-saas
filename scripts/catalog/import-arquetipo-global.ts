@@ -31,6 +31,11 @@ function stable(value: unknown): string {
   return JSON.stringify(value);
 }
 
+function normalizeUniversalFamilyKey(value: string): string {
+  const legacy = /^arquetipo:l(12|15|20|25|32|35|42|45|4000|5000)$/.exec(value);
+  return legacy ? `universal:aluminio:l${legacy[1]}` : value;
+}
+
 function classify(table: string, key: string, current: Row | undefined, expected: Row, actions: Array<{ table: string; key: string; action: string; fields?: string[] }>) {
   if (!current) {
     actions.push({ table, key, action: "INSERT" });
@@ -103,18 +108,10 @@ async function main() {
     const existing = families.find((row) => row.insumo_tecnico_id === id && row.family_key === familyKey);
     classify("catalogo_insumo_familias", `${input.technicalKey}/${familyKey}`, existing, { insumo_tecnico_id: id, family_key: familyKey }, actions);
   }
-  const staleFamilyRows = families.filter((row) => {
+  const legacyFamilyRows = families.filter((row) => {
     const technicalId = String(row.insumo_tecnico_id);
-    return expectedFamilyKeysByTechnicalId.has(technicalId) &&
-      !expectedFamilyKeysByTechnicalId.get(technicalId)?.has(String(row.family_key));
+    return expectedFamilyKeysByTechnicalId.has(technicalId) && /^arquetipo:l/.test(String(row.family_key));
   });
-  for (const row of staleFamilyRows) {
-    actions.push({
-      table: "catalogo_insumo_familias",
-      key: `${String(row.insumo_tecnico_id)}/${String(row.family_key)}`,
-      action: "DELETE",
-    });
-  }
   const presentations = sourceId ? await readRows(client, "catalogo_presentaciones_proveedor", (query) => query.select("*").eq("fuente_tecnica_id", sourceId).eq("proveedor_key", fixture.supplierKey)) : [];
   const presentationBySku = new Map(presentations.map((row) => [String(row.sku_proveedor), row]));
   const pricedPresentations = fixture.presentations.filter((row) => row.netPrice !== null && row.priceEvidence !== null);
@@ -188,13 +185,6 @@ async function main() {
   const familyPayload = fixture.technicalInputs.flatMap((input) => input.familyKeys.map((familyKey) => ({ insumo_tecnico_id: finalTechnicalIds.get(input.technicalKey) as string, family_key: familyKey })));
   const { error: familyWriteError } = await client.from("catalogo_insumo_familias").upsert(familyPayload, { onConflict: "insumo_tecnico_id,family_key", ignoreDuplicates: true });
   if (familyWriteError) throw new Error(`Familias: ${familyWriteError.message}`);
-  for (const row of staleFamilyRows) {
-    const { error } = await client.from("catalogo_insumo_familias")
-      .delete()
-      .eq("insumo_tecnico_id", String(row.insumo_tecnico_id))
-      .eq("family_key", String(row.family_key));
-    if (error) throw new Error(`Retirar familia cruzada ${String(row.family_key)}: ${error.message}`);
-  }
   const presentationPayload = fixture.presentations.map((input) => ({
     proveedor_key: fixture.supplierKey, fuente_tecnica_id: finalSource.id, insumo_tecnico_id: finalTechnicalIds.get(input.technicalKey) as string,
     sku_proveedor: input.sku, descripcion: input.description, modo_acabado: input.finishResolution === "finish_independent" ? "independiente" : "especifico",
@@ -268,11 +258,13 @@ async function main() {
   const verifiedFamilyRows = await readRows(client, "catalogo_insumo_familias", (query) => query.select("insumo_tecnico_id, family_key").in("insumo_tecnico_id", [...finalTechnicalIds.values()]));
   const familiesMatchFixture = fixture.technicalInputs.every((input) => {
     const id = finalTechnicalIds.get(input.technicalKey);
-    const actual = verifiedFamilyRows.filter((row) => String(row.insumo_tecnico_id) === id).map((row) => String(row.family_key)).sort();
+    const actual = [...new Set(verifiedFamilyRows
+      .filter((row) => String(row.insumo_tecnico_id) === id)
+      .map((row) => normalizeUniversalFamilyKey(String(row.family_key))))].sort();
     return stable(actual) === stable([...input.familyKeys].sort());
   });
-  assert(familiesMatchFixture, "Las familias finales no coinciden exactamente con las familias Arquetipo aprobadas.");
-  console.log(JSON.stringify({ phase: "publicado-global", projectRef: expectedProjectRef, revision: fixture.catalogRevision, lista: fixture.priceListRevision, familias: 10, familiasCruzadasRetiradas: staleFamilyRows.length, familiasFinalesVerificadas: familiesMatchFixture, insumosTecnicos: technicalCount, presentaciones: presentationCount, precios: priceCount, totalCLPVerificado: actualTotal, preciosAplicablesATodosLosAcabados: allPricesAreFinishIndependent, confirmacion: "familias, registros, suma y acabado independiente verificados en producción" }, null, 2));
+  assert(familiesMatchFixture, "Las familias existentes y nuevas no resuelven a la identidad universal declarada.");
+  console.log(JSON.stringify({ phase: "publicado-global", projectRef: expectedProjectRef, revision: fixture.catalogRevision, lista: fixture.priceListRevision, familias: 10, asociacionesLegadasConservadas: legacyFamilyRows.length, familiasFinalesVerificadas: familiesMatchFixture, insumosTecnicos: technicalCount, presentaciones: presentationCount, precios: priceCount, totalCLPVerificado: actualTotal, preciosAplicablesATodosLosAcabados: allPricesAreFinishIndependent, confirmacion: "familias, registros, suma y acabado independiente verificados en producción" }, null, 2));
 }
 
 main().catch((error: unknown) => {

@@ -4,15 +4,15 @@ import { auditarIntegridadCatalogoLineasVentora } from "@/features/cotizaciones/
 
 describe("auditoria integridad catalogo lineas", () => {
 
-  it("clasifica las 57 líneas con categorías primarias mutuamente excluyentes", () => {
+  it("clasifica las 50 líneas con categorías primarias mutuamente excluyentes", () => {
 
     const { lineas, resumen } = auditarIntegridadCatalogoLineasVentora();
 
 
 
-    expect(lineas).toHaveLength(57);
+    expect(lineas).toHaveLength(50);
 
-    expect(resumen.totalLineas).toBe(57);
+    expect(resumen.totalLineas).toBe(50);
 
 
 
@@ -24,19 +24,19 @@ describe("auditoria integridad catalogo lineas", () => {
 
     );
 
-    expect(sumaPrimaria).toBe(57);
+    expect(sumaPrimaria).toBe(50);
 
 
 
     expect(resumen.clasificacionPrimaria).toEqual({
 
-      codigos_documentados_no_validados: 9,
+      codigos_documentados_no_validados: 11,
 
-      codigos_referenciales_no_ambiguos: 31,
+      codigos_referenciales_no_ambiguos: 29,
 
       codigos_referenciales_ambiguos: 1,
 
-      sin_codigos_tecnicos_en_fixtures: 16,
+      sin_codigos_tecnicos_en_fixtures: 9,
 
       solo_comercial: 0,
 
@@ -64,7 +64,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
     expect(al32?.tipologiaComercial).toContain("Proyectante");
 
-    expect(al32?.clasificacionPrimaria).toBe("codigos_referenciales_no_ambiguos");
+    expect(al32?.clasificacionPrimaria).toBe("codigos_documentados_no_validados");
 
     expect(al32?.nomenclaturaAmbigua).toBe(false);
 
@@ -78,7 +78,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
     expect(al42?.tipologiaComercial).toContain("Proyectante");
 
-    expect(al42?.clasificacionPrimaria).toBe("codigos_referenciales_no_ambiguos");
+    expect(al42?.clasificacionPrimaria).toBe("codigos_documentados_no_validados");
 
     expect(al42?.nomenclaturaAmbigua).toBe(false);
 
@@ -136,25 +136,18 @@ describe("auditoria integridad catalogo lineas", () => {
 
 
 
-    expect(sinCodigos).toHaveLength(16);
+    expect(sinCodigos).toHaveLength(9);
 
     expect(sinCodigos.map((line) => line.catalogKey).sort()).toEqual(
 
       [
 
-        "ventora:arquetipo-l15-corredera-2h",
 
-        "ventora:arquetipo-l20-corredera-2h",
 
-        "ventora:arquetipo-l25-corredera-2h",
 
-        "ventora:arquetipo-l32-proyectante",
 
-        "ventora:arquetipo-l42-proyectante",
 
-        "ventora:arquetipo-l4000-corredera-2h",
 
-        "ventora:arquetipo-l45-puerta",
 
 
         "ventora:optima-s28-corredera-2h",

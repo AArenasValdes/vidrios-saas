@@ -16,33 +16,30 @@ type LineSpec = {
 const expectedProjectRef = "yrtrwgkaopfumpidjthk";
 const applyRequested = process.argv.includes("--apply");
 const lineSpecs: LineSpec[] = [
-  { catalogKey: "ventora:l5000", nombre: "Serie 5000", proveedor: "Arquetipo", configuracion: "Corredera 2 hojas", lineSystem: "L5000", familyKey: "arquetipo:l5000", familyLabel: "Arquetipo · Línea 5000", identitySource: "Arquetipo · Catálogo de perfiles Línea 5000" },
-  { catalogKey: "ventora:l20", nombre: "Serie 20", proveedor: null, configuracion: "Corredera 2 hojas", lineSystem: "L20", identitySource: "Alumétrica · Línea 20" },
-  { catalogKey: "ventora:l20-fijos", nombre: "Serie 20 — Fijos", proveedor: null, configuracion: "Fijos 2 hojas", lineSystem: "L20", identitySource: "Alumétrica · Línea 20 · paños fijos" },
-  { catalogKey: "ventora:l25", nombre: "Serie 25", proveedor: "SODAL", configuracion: "Corredera 2 hojas", lineSystem: "L25", identitySource: "SODAL · Línea 25" },
-  { catalogKey: "ventora:l32", nombre: "AL-32", proveedor: "SODAL", configuracion: "Proyectante", lineSystem: "AL-32", identitySource: "SODAL · AL-32 proyectante" },
-  { catalogKey: "ventora:l35", nombre: "AM-35 · Puerta abatible y vaivén", proveedor: "Arquetipo", configuracion: "Puerta abatible y vaivén", lineSystem: "AM-35", familyKey: "arquetipo:l35", familyLabel: "Arquetipo · Línea 35", identitySource: "Arquetipo · Catálogo de perfiles Línea 35" },
-  { catalogKey: "ventora:serie-15-corredera-2h", nombre: "Línea 15 — Corredera 2 hojas", proveedor: null, configuracion: "Corredera 2 hojas", lineSystem: "Línea 15", identitySource: "Línea 15 corredera · identidad de receta Ventora no asociada al catálogo de compra Arquetipo", cuttingGuideSource: "Despiece oficial Línea AL-15 corredera 2 hojas" },
-  { catalogKey: "ventora:serie-4000-corredera-2h", nombre: "Línea 4000 — Corredera 2 hojas", proveedor: null, configuracion: "Corredera 2 hojas", lineSystem: "Línea 4000", identitySource: "Columbia · Línea 4000 corredera 2 hojas", cuttingGuideSource: "Despiece oficial Línea 4000 Columbia corredera 2 hojas" },
-  { catalogKey: "ventora:serie-45-puerta", nombre: "Línea 45 — Puerta", proveedor: "Sodal / Indalum", configuracion: "Puerta abatible 1 hoja", lineSystem: "Línea 45", identitySource: "Sodal / Indalum · Serie 45 practicable", cuttingGuideSource: "Matrices de extrusión Serie 45 practicable" },
-  { catalogKey: "ventora:serie-12-shower-corredera", nombre: "Línea 12 — Shower Door", proveedor: "Arquetipo", configuracion: "Shower Door · Corredera 2 hojas", lineSystem: "Línea 12", familyKey: "arquetipo:l12", familyLabel: "Arquetipo · Línea 12", identitySource: "Arquetipo · Catálogo Línea 12" },
-  { catalogKey: "ventora:l42", nombre: "AL-42", proveedor: "SODAL", configuracion: "AL-42 normal · Proyectante / paño fijo", lineSystem: "AL-42", identitySource: "SODAL · AL-42 proyectante" },
-  { catalogKey: "ventora:arquetipo-l15-corredera-2h", nombre: "Arquetipo · Línea 15 — Corredera 2 hojas", proveedor: "Arquetipo", configuracion: "Corredera 2 hojas", lineSystem: "Línea 15", familyKey: "arquetipo:l15", familyLabel: "Arquetipo · Línea 15" },
-  { catalogKey: "ventora:arquetipo-l20-corredera-2h", nombre: "Arquetipo · Línea 20 — Corredera 2 hojas", proveedor: "Arquetipo", configuracion: "Corredera 2 hojas", lineSystem: "Línea 20", familyKey: "arquetipo:l20", familyLabel: "Arquetipo · Línea 20" },
-  { catalogKey: "ventora:arquetipo-l25-corredera-2h", nombre: "Arquetipo · Línea 25 — Corredera 2 hojas", proveedor: "Arquetipo", configuracion: "Corredera 2 hojas", lineSystem: "Línea 25", familyKey: "arquetipo:l25", familyLabel: "Arquetipo · Línea 25" },
-  { catalogKey: "ventora:arquetipo-l32-proyectante", nombre: "Arquetipo · Línea 32 — Proyectante y paño fijo", proveedor: "Arquetipo", configuracion: "Proyectante / paño fijo", lineSystem: "Línea 32", familyKey: "arquetipo:l32", familyLabel: "Arquetipo · Línea 32" },
-  { catalogKey: "ventora:arquetipo-l4000-corredera-2h", nombre: "Arquetipo · Línea 4000 — Corredera 2 hojas", proveedor: "Arquetipo", configuracion: "Corredera 2 hojas", lineSystem: "Línea 4000", familyKey: "arquetipo:l4000", familyLabel: "Arquetipo · Línea 4000" },
-  { catalogKey: "ventora:arquetipo-l45-puerta", nombre: "Arquetipo · Línea 45 — Puerta abatible", proveedor: "Arquetipo", configuracion: "Puerta abatible 1 hoja", lineSystem: "Línea 45", familyKey: "arquetipo:l45", familyLabel: "Arquetipo · Línea 45" },
-  { catalogKey: "ventora:arquetipo-l42-proyectante", nombre: "Arquetipo · Línea 42 — Proyectante y paño fijo", proveedor: "Arquetipo", configuracion: "Proyectante / paño fijo", lineSystem: "Línea 42", familyKey: "arquetipo:l42", familyLabel: "Arquetipo · Línea 42" },
+  { catalogKey: "ventora:l5000", nombre: "Serie 5000", proveedor: null, configuracion: "Corredera 2 hojas", lineSystem: "L5000", familyKey: "universal:aluminio:l5000", familyLabel: "Línea 5000 · Aluminio universal", identitySource: "Línea 5000 · identidad universal confirmada por el taller" },
+  { catalogKey: "ventora:l20", nombre: "Serie 20", proveedor: null, configuracion: "Corredera 2 hojas", lineSystem: "L20", familyKey: "universal:aluminio:l20", familyLabel: "Línea 20 · Aluminio universal", identitySource: "Línea 20 · identidad universal confirmada por el taller" },
+  { catalogKey: "ventora:l20-fijos", nombre: "Serie 20 — Fijos", proveedor: null, configuracion: "Fijos 2 hojas", lineSystem: "L20", familyKey: "universal:aluminio:l20", familyLabel: "Línea 20 · Aluminio universal", identitySource: "Línea 20 · identidad universal confirmada por el taller" },
+  { catalogKey: "ventora:l25", nombre: "Serie 25", proveedor: null, configuracion: "Corredera 2 hojas", lineSystem: "L25", familyKey: "universal:aluminio:l25", familyLabel: "Línea 25 · Aluminio universal", identitySource: "Línea 25 · identidad universal confirmada por el taller" },
+  { catalogKey: "ventora:l32", nombre: "Línea 32", proveedor: null, configuracion: "Proyectante / paño fijo", lineSystem: "AL-32", familyKey: "universal:aluminio:l32", familyLabel: "Línea 32 · Aluminio universal", identitySource: "Línea 32 · identidad universal confirmada por el taller" },
+  { catalogKey: "ventora:l35", nombre: "Línea 35 · Puerta abatible y vaivén", proveedor: null, configuracion: "Puerta abatible y vaivén", lineSystem: "AM-35", familyKey: "universal:aluminio:l35", familyLabel: "Línea 35 · Aluminio universal", identitySource: "Línea 35 · identidad universal confirmada por el taller" },
+  { catalogKey: "ventora:serie-15-corredera-2h", nombre: "Línea 15 — Corredera 2 hojas", proveedor: null, configuracion: "Corredera 2 hojas", lineSystem: "Línea 15", familyKey: "universal:aluminio:l15", familyLabel: "Línea 15 · Aluminio universal", identitySource: "Línea 15 · identidad universal confirmada por el taller", cuttingGuideSource: "Despiece oficial Línea AL-15 corredera 2 hojas" },
+  { catalogKey: "ventora:serie-4000-corredera-2h", nombre: "Línea 4000 — Corredera 2 hojas", proveedor: null, configuracion: "Corredera 2 hojas", lineSystem: "Línea 4000", familyKey: "universal:aluminio:l4000", familyLabel: "Línea 4000 · Aluminio universal", identitySource: "Línea 4000 · identidad universal confirmada por el taller", cuttingGuideSource: "Despiece oficial Línea 4000" },
+  { catalogKey: "ventora:serie-45-puerta", nombre: "Línea 45 — Puerta", proveedor: null, configuracion: "Puerta abatible 1 hoja", lineSystem: "Línea 45", familyKey: "universal:aluminio:l45", familyLabel: "Línea 45 · Aluminio universal", identitySource: "Línea 45 · identidad universal confirmada por el taller", cuttingGuideSource: "Matriz Serie 45 practicable" },
+  { catalogKey: "ventora:serie-12-shower-corredera", nombre: "Línea 12 — Shower Door", proveedor: null, configuracion: "Shower Door · Corredera 2 hojas", lineSystem: "Línea 12", familyKey: "universal:aluminio:l12", familyLabel: "Línea 12 · Aluminio universal", identitySource: "Línea 12 · identidad universal confirmada por el taller" },
+  { catalogKey: "ventora:l42", nombre: "Línea 42", proveedor: null, configuracion: "Proyectante / paño fijo", lineSystem: "AL-42", familyKey: "universal:aluminio:l42", familyLabel: "Línea 42 · Aluminio universal", identitySource: "Línea 42 · identidad universal confirmada por el taller" },
 ];
 const managedKeys = lineSpecs.map((line) => line.catalogKey);
 const canonicalByKey = new Map(lineSpecs.map((line) => [line.catalogKey, line]));
-const newKeys = new Set([
-  "ventora:arquetipo-l15-corredera-2h", "ventora:arquetipo-l20-corredera-2h",
-  "ventora:arquetipo-l25-corredera-2h", "ventora:arquetipo-l32-proyectante",
-  "ventora:arquetipo-l4000-corredera-2h", "ventora:arquetipo-l45-puerta",
-  "ventora:arquetipo-l42-proyectante",
+const duplicateToCanonical = new Map([
+  ["ventora:arquetipo-l15-corredera-2h", "ventora:serie-15-corredera-2h"],
+  ["ventora:arquetipo-l20-corredera-2h", "ventora:l20"],
+  ["ventora:arquetipo-l25-corredera-2h", "ventora:l25"],
+  ["ventora:arquetipo-l32-proyectante", "ventora:l32"],
+  ["ventora:arquetipo-l4000-corredera-2h", "ventora:serie-4000-corredera-2h"],
+  ["ventora:arquetipo-l45-puerta", "ventora:serie-45-puerta"],
+  ["ventora:arquetipo-l42-proyectante", "ventora:l42"],
 ]);
+const allManagedKeys = [...managedKeys, ...duplicateToCanonical.keys()];
 
 for (const line of readFileSync(".env.local", "utf8").split(/\r?\n/)) {
   const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
@@ -102,21 +99,30 @@ async function main() {
   for (let offset = 0; offset < uniqueOrganizationIds.length; offset += 100) {
     const ids = uniqueOrganizationIds.slice(offset, offset + 100);
     const { data, error } = await client.from("cotizacion_line_templates")
-      .select("id, organization_id, catalog_key, proveedor, catalog_metadata, sort_order, eliminado_en")
+      .select("id, organization_id, catalog_key, proveedor, catalog_metadata, sort_order, is_active, eliminado_en")
       .in("organization_id", ids)
-      .in("catalog_key", managedKeys);
+      .in("catalog_key", allManagedKeys);
     if (error) throw new Error(`Líneas existentes: ${error.message}`);
     existingRows.push(...(data ?? []) as Row[]);
   }
 
   const activeRows = existingRows.filter((row) => row.eliminado_en == null);
-  const activeByOrgKey = new Map(activeRows.map((row) => [`${String(row.organization_id)}|${String(row.catalog_key)}`, row]));
-  const updates: Array<{ row: Row; provider: string | null; metadata: Row }> = [];
-  const inserts: Array<{ organizationId: string; catalogKey: string; payload: Row }> = [];
+  const updates: Array<{ row: Row; provider: string | null; metadata: Row; active?: boolean }> = [];
   const preservedCustomRowIds = new Set<string>();
   let preservedCustomProviders = 0;
   for (const row of activeRows) {
     const key = String(row.catalog_key);
+    const canonicalAlias = duplicateToCanonical.get(key);
+    if (canonicalAlias) {
+      const metadata = {
+        ...(row.catalog_metadata && typeof row.catalog_metadata === "object" ? row.catalog_metadata as Row : {}),
+        universalCatalogAlias: true,
+        universalCatalogKey: canonicalAlias,
+        familyKey: `universal:aluminio:l${canonicalAlias.includes("4000") ? "4000" : canonicalAlias.match(/l(\d+)|serie-(\d+)/)?.[1] ?? canonicalAlias.match(/serie-(\d+)/)?.[1] ?? ""}`,
+      };
+      updates.push({ row, provider: null, metadata, active: false });
+      continue;
+    }
     const canonical = canonicalByKey.get(key);
     if (!canonical) continue;
     const desiredProvider = canonical.proveedor ?? null;
@@ -133,95 +139,40 @@ async function main() {
     }
   }
 
-  for (const organizationId of uniqueOrganizationIds) {
-    for (const catalogKey of newKeys) {
-      const active = activeByOrgKey.has(`${organizationId}|${catalogKey}`);
-      const historical = existingRows.some((row) => String(row.organization_id) === organizationId && String(row.catalog_key) === catalogKey);
-      if (active || historical) continue;
-      const canonical = canonicalByKey.get(catalogKey);
-      if (!canonical) continue;
-      const orgRows = activeRows.filter((row) => String(row.organization_id) === organizationId);
-      const maxSortOrder = orgRows.reduce((max, row) => Math.max(max, Number(row.sort_order) || 0), 0);
-      const catalogMetadata = {
-        needsCommercialPrice: true,
-        cubicationStatus: "pending",
-        lineFamilyType: "traditional",
-        lineSourceModel: "multiprovider",
-        lineConfiguration: canonical.configuracion,
-        ...(canonical.familyKey ? { familyKey: canonical.familyKey } : {}),
-        ...(canonical.familyLabel ? { familyLabel: canonical.familyLabel } : {}),
-        configurationLabel: canonical.configuracion,
-        structuralArchetypeId: null,
-        lineSystem: canonical.lineSystem,
-        ...(canonical.identitySource ? { identitySource: canonical.identitySource } : {}),
-      };
-      inserts.push({
-        organizationId,
-        catalogKey,
-        payload: {
-          organization_id: organizationId,
-          nombre: canonical.nombre,
-          categoria: "aluminio",
-          unidad_cobro: "m2",
-          material: "Aluminio",
-          catalog_key: canonical.catalogKey,
-          vidrio_principal_recomendado: null,
-          costo_base: 0,
-          precio_m2_sugerido: 0,
-          minimo_cobrable: 0,
-          redondeo_precio: 1000,
-          merma_pct: 0,
-          margen_objetivo_pct: null,
-          proveedor: canonical.proveedor ?? null,
-          vigencia_desde: null,
-          vigencia_hasta: null,
-          catalog_metadata: catalogMetadata,
-          is_active: true,
-          sort_order: maxSortOrder + inserts.filter((item) => item.organizationId === organizationId).length + 1,
-        },
-      });
-    }
-  }
-
   console.log(JSON.stringify({
     phase: applyRequested ? "preflight-apply" : "preflight-simulation",
     projectRef: expectedProjectRef,
     chileOrganizations: uniqueOrganizationIds.length,
     canonicalRowsToUpdate: updates.length,
-    arquetipoEntriesToInsert: inserts.length,
+    duplicateEntriesToArchive: updates.filter((item) => item.active === false).length,
     customProvidersPreserved: preservedCustomProviders,
-    entriesBySupplier: { arquetipoNew: inserts.length, identifiedAluminumSuppliers: updates.filter((item) => ["SODAL", "Sodal / Indalum"].includes(item.provider ?? "")).length },
+    entriesBySupplier: { universal: true, identifiedAluminumSuppliers: 0 },
   }, null, 2));
   if (!applyRequested) return;
 
-  for (const { row, provider, metadata } of updates) {
+  for (const { row, provider, metadata, active } of updates) {
     const { error } = await client.from("cotizacion_line_templates")
-      .update({ proveedor: provider, catalog_metadata: metadata })
+      .update({ proveedor: provider, catalog_metadata: metadata, ...(active === undefined ? {} : { is_active: active }) })
       .eq("id", String(row.id))
       .eq("organization_id", String(row.organization_id))
       .eq("catalog_key", String(row.catalog_key))
       .is("eliminado_en", null);
     if (error) throw new Error(`Actualizar línea ${String(row.catalog_key)}: ${error.message}`);
   }
-  for (let offset = 0; offset < inserts.length; offset += 100) {
-    const batch = inserts.slice(offset, offset + 100).map((item) => item.payload);
-    const { error } = await client.from("cotizacion_line_templates").insert(batch);
-    if (error) throw new Error(`Insertar familias Arquetipo: ${error.message}`);
-  }
-
   const { data: verified, error: verifyError } = await client.from("cotizacion_line_templates")
-    .select("id, organization_id, catalog_key, proveedor, catalog_metadata")
+    .select("id, organization_id, catalog_key, proveedor, catalog_metadata, is_active")
     .in("organization_id", uniqueOrganizationIds)
-    .in("catalog_key", managedKeys)
+    .in("catalog_key", allManagedKeys)
     .is("eliminado_en", null);
   if (verifyError) throw new Error(`Verificación final del catálogo: ${verifyError.message}`);
   const verificationRows = (verified ?? []) as Row[];
   const wrongProviderCount = verificationRows.filter((row) => {
+    const alias = duplicateToCanonical.has(String(row.catalog_key));
     const expected = canonicalByKey.get(String(row.catalog_key))?.proveedor ?? null;
-    return !preservedCustomRowIds.has(String(row.id)) && row.proveedor !== expected;
+    return !preservedCustomRowIds.has(String(row.id)) && (row.proveedor !== expected || alias && row.is_active !== false);
   }).length;
   assert(wrongProviderCount === 0, "La verificación encontró proveedores canónicos pendientes de sincronizar.");
-  console.log(JSON.stringify({ phase: "catalogo-global-verificado", lineasActivasLeidas: verificationRows.length, lineasActualizadas: updates.length, entradasArquetipoCreadas: inserts.length, proveedoresCanonicosPendientes: wrongProviderCount }, null, 2));
+  console.log(JSON.stringify({ phase: "catalogo-global-verificado", lineasLeidas: verificationRows.length, lineasActualizadas: updates.length, entradasDuplicadasArchivadas: updates.filter((item) => item.active === false).length, proveedoresCanonicosPendientes: wrongProviderCount }, null, 2));
 }
 
 main().catch((error: unknown) => {

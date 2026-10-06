@@ -1,10 +1,15 @@
 import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
 import { resolvePurchasePrice, summarizePriceSources, type OrganizationPurchasePricing, type PriceSource } from "./precio-compra.service";
 import { resolveSupplierFinishName } from "./supplier-presentation-resolution.service";
+import {
+  normalizeUniversalAluminumFamilyKey,
+  resolveUniversalAluminumLineKey,
+} from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
 export type CatalogPresentationPrice = {
   presentationId?: string;
   providerKey?: string;
+  preferred?: boolean;
   familyKeys?: string[];
   configurationKey?: string | null;
   origin?: "workshop";
@@ -148,9 +153,12 @@ function matchesCatalogFamily(
   supplierFamilyKey?: string | null
 ) {
   if (!entry.familyKeys?.length) return true;
-  const resolvedFamily = supplierFamilyKey?.trim();
-  if (resolvedFamily) return entry.familyKeys.includes(resolvedFamily);
-  return Boolean(catalogLineKey && entry.familyKeys.includes(catalogLineKey));
+  const families = entry.familyKeys.map((key) => normalizeUniversalAluminumFamilyKey(key) ?? key);
+  const resolvedFamily = normalizeUniversalAluminumFamilyKey(supplierFamilyKey) ?? supplierFamilyKey?.trim();
+  if (resolvedFamily) return families.includes(resolvedFamily);
+  const universalLineFamily = resolveUniversalAluminumLineKey(catalogLineKey);
+  if (universalLineFamily) return families.includes(universalLineFamily);
+  return Boolean(catalogLineKey && families.includes(catalogLineKey));
 }
 
 function normalizeFinish(value: string | null | undefined) {
@@ -274,10 +282,13 @@ export function buildPartialTechnicalCostSnapshot(input: {
         continue;
       }
       const kerfMm = Math.round(bar.perdidaCorteMm);
-      const finishKey = candidates.every((entry) => entry.finishResolution === "finish_independent")
-        ? "independent"
-        : finishName ?? "independent";
-      const groupKey = [cut.codigoPerfil, finishKey, quoteItem?.catalogLineKey ?? "", quoteItem?.supplierFamilyKey ?? "", quoteItem?.configurationKey ?? "", bar.despunteInicialMm, kerfMm, bar.supplierPresentationId ?? "legacy"].join("|");
+      // Finish-independent prices may price every color, but bars of different
+      // colors must remain separate physical stock in the cutting plan.
+      const finishKey = finishName ?? "independent";
+      const lineFamily = resolveUniversalAluminumLineKey(quoteItem?.supplierFamilyKey) ??
+        resolveUniversalAluminumLineKey(quoteItem?.catalogLineKey) ??
+        quoteItem?.supplierFamilyKey ?? quoteItem?.catalogLineKey ?? "";
+      const groupKey = [cut.codigoPerfil, finishKey, lineFamily, quoteItem?.configurationKey ?? "", bar.despunteInicialMm, kerfMm, bar.supplierPresentationId ?? "legacy"].join("|");
       const group = cutsByGroup.get(groupKey) ?? [];
       group.push({
         technicalCode: cut.codigoPerfil,
@@ -314,8 +325,12 @@ export function buildPartialTechnicalCostSnapshot(input: {
       const price = resolvedPrice(candidate, input.organizationPricing);
       if (!price || candidateLength == null || group.some((cut) => cut.cutLengthMm + cut.trimMm + cut.kerfMm > candidateLength)) return [];
       const exactPresentation = Boolean(group[0].selectedPresentationId);
+      const selectedItemCodes = new Set(group.map((cut) => cut.itemCode));
       const selectedWorkBars = exactPresentation
-        ? snapshot.bars.filter((bar) => bar.supplierPresentationId === group[0].selectedPresentationId)
+        ? snapshot.bars.filter((bar) =>
+            bar.supplierPresentationId === group[0].selectedPresentationId &&
+            bar.cortes.some((cut) => selectedItemCodes.has(cut.codigoItem) && cut.codigoPerfil === group[0].technicalCode)
+          )
         : [];
       if (exactPresentation && (
         selectedWorkBars.length === 0 ||
@@ -323,7 +338,10 @@ export function buildPartialTechnicalCostSnapshot(input: {
       )) return [];
       const count = exactPresentation ? selectedWorkBars.length : barsNeeded(group, candidateLength);
       return [{ candidate, price, count, total: price.unitNetPrice * count }];
-    }).sort((left, right) => left.total - right.total || (left.candidate.commercialLengthMm ?? 0) - (right.candidate.commercialLengthMm ?? 0) || left.candidate.supplierSku.localeCompare(right.candidate.supplierSku));
+    }).sort((left, right) => Number(Boolean(right.candidate.preferred)) - Number(Boolean(left.candidate.preferred)) ||
+      left.total - right.total ||
+      (left.candidate.commercialLengthMm ?? 0) - (right.candidate.commercialLengthMm ?? 0) ||
+      left.candidate.supplierSku.localeCompare(right.candidate.supplierSku));
     if (fittingCandidates.length === 0) {
       const first = group[0];
       missing.set(`${first.technicalCode}|${first.presentation.finishName}|length`, {
@@ -337,7 +355,11 @@ export function buildPartialTechnicalCostSnapshot(input: {
     for (const cut of group) cut.presentation = selected;
     const exactPresentation = Boolean(group[0].selectedPresentationId);
     if (exactPresentation) {
-      const selectedBars = snapshot.bars.filter((bar) => bar.supplierPresentationId === group[0].selectedPresentationId);
+      const selectedItemCodes = new Set(group.map((cut) => cut.itemCode));
+      const selectedBars = snapshot.bars.filter((bar) =>
+        bar.supplierPresentationId === group[0].selectedPresentationId &&
+        bar.cortes.some((cut) => selectedItemCodes.has(cut.codigoItem) && cut.codigoPerfil === group[0].technicalCode)
+      );
       const resolved = resolvedPrice(selected, input.organizationPricing);
       if (!resolved || selectedBars.length === 0) continue;
       const unitPrice = resolved.unitNetPrice;

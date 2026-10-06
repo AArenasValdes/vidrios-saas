@@ -1,5 +1,8 @@
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
-import { resolveDefaultLineSupplierFamilyKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
+import {
+  normalizeUniversalAluminumFamilyKey,
+  resolveDefaultLineSupplierFamilyKey,
+} from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
 export type LineTemplateFamily = {
   key: string;
@@ -36,7 +39,8 @@ export function resolveSupplierFamilyKeyForLineTemplate(
   template: CotizacionLineTemplate | null | undefined
 ): string | null {
   if (!template) return null;
-  return metadataFamilyKey(template) ?? resolveDefaultLineSupplierFamilyKey(template.catalogKey);
+  return normalizeUniversalAluminumFamilyKey(metadataFamilyKey(template)) ??
+    resolveDefaultLineSupplierFamilyKey(template.catalogKey);
 }
 
 function metadataFamilyLabel(template: CotizacionLineTemplate): string | null {
@@ -45,7 +49,7 @@ function metadataFamilyLabel(template: CotizacionLineTemplate): string | null {
 }
 
 export function resolveLineTemplateFamily(template: CotizacionLineTemplate) {
-  const explicitKey = metadataFamilyKey(template);
+  const explicitKey = normalizeUniversalAluminumFamilyKey(metadataFamilyKey(template)) ?? metadataFamilyKey(template);
   if (explicitKey) {
     const explicitLabel = metadataFamilyLabel(template);
     return (

@@ -2,13 +2,23 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-10-06 - Líneas universales de aluminio
+
+- Las diez familias 15, 20, 25, 4000, 5000, 35, 45, 12, 32 y 42 usan claves compartidas `universal:aluminio:lNN`; los precios globales LEGNO siguen ligados a perfiles Arquetipo y valen como referencia para cualquier color.
+- En el costo parcial de fabricación, las presentaciones Arquetipo se priorizan como referencia universal aunque otro proveedor tenga menor precio; la separación de barras sigue respetando cada acabado físico.
+- El selector vuelve a las 50 líneas base. La migración global archiva siete entradas comerciales duplicadas preservando filas, recetas y snapshots.
+- Se vinculan códigos Arquetipo ↔ receta explícitamente para Línea 15, 4000 y 45. Quedan fuera los códigos de rol ambiguo. Línea 35 conserva el pendiente de descuentos/composición; no se inventan.
+- El cálculo de costo separa consumos de acabados distintos aunque el precio sea independiente del color; conserva agrupación de cortes y descuenta presentaciones seleccionadas por los cortes del grupo.
+
 ## 2026-10-05 - Evidencia de cortes Arquetipo y alcance de recetas
 
 - Revisión visual y extracción de páginas técnicas L15–L42 del catálogo: se registran perfiles/secciones y las instrucciones de corte explícitas disponibles; el PDF no trae descuentos ni fórmulas de corte completas para nueve líneas.
 - Línea 12 usa los cinco descuentos capturados por el usuario y el catálogo confirma marco 90°/hojas 45°; se completa el ángulo del perfil 1204. Sigue preliminar por composición/vidrio/quincallería y largo de barra sin confirmar.
-- Las pruebas de catálogo reflejan 57 entradas tras las siete familias Arquetipo separadas. La presencia comercial sigue sin implicar receta.
+- Las pruebas de catálogo reflejan 50 entradas tras las siete familias Arquetipo separadas. La presencia comercial sigue sin implicar receta.
 
 ## 2026-10-05 - Separación de líneas Arquetipo por proveedor
+
+> Estado histórico, supersedido el 2026-10-06 por la identidad universal descrita arriba.
 
 - Catálogo Arquetipo conserva familia técnica propia (`arquetipo:lXX`) para que series homónimas no compartan asociación con otros proveedores.
 - El catálogo canónico agrega siete entradas Arquetipo separadas para L15, L20, L25, L32, L4000, L45 y L42; las L5000, L35 y L12 ya usan familia Arquetipo. L20 y L4000 quedan sin proveedor comercial; Alumétrica y Columbia no se muestran como proveedores.
@@ -16,6 +26,8 @@ Historial de cambios en la documentacion del mapa tecnico.
 - El costo de fabricación requiere coincidencia con `supplierFamilyKey` del snapshot; no crea ni valida recetas. El smoke visual queda a cargo del usuario.
 
 ## 2026-10-05 - Costo global de cortes guardados y referencia Arquetipo conservadora
+
+> Estado histórico: el requisito de familia exacta fue reemplazado por normalización a la identidad universal el 2026-10-06.
 
 - Los 29 precios de compra cotizados para LEGNO quedan disponibles como referencia conservadora para cualquier acabado, con evidencia que distingue la cotización original de la política del usuario. El importador actualiza solo las asociaciones de acabado y su evidencia; precios y SKUs no cambian.
 - El costo técnico puede calcularse en cualquier organización desde cortes ya persistidos, sin el gate QA por línea/fecha. Esto no escribe recetas, crea cortes ni valida pautas; los snapshots de costo existentes permanecen inmutables.

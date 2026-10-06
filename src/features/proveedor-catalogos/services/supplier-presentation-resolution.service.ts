@@ -1,4 +1,5 @@
 import type { FabricacionTrabajoPresentationSelection } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
+import { normalizeUniversalAluminumFamilyKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
 export type ConfirmedSupplierPresentation = {
   presentationId: string;
@@ -39,9 +40,14 @@ export function resolveSupplierPresentationFamilyKeys(input: {
     ? input.technicalEvidence as Record<string, unknown>
     : {};
   const excluded = new Set(Array.isArray(evidence.excludedRecipeFamilyKeys)
-    ? evidence.excludedRecipeFamilyKeys.filter((key): key is string => typeof key === "string")
+    ? evidence.excludedRecipeFamilyKeys
+        .filter((key): key is string => typeof key === "string")
+        .map((key) => normalizeUniversalAluminumFamilyKey(key) ?? key)
     : []);
-  return input.familyKeys.filter((familyKey) => !excluded.has(familyKey));
+  const normalized = input.familyKeys
+    .map((familyKey) => normalizeUniversalAluminumFamilyKey(familyKey) ?? familyKey)
+    .filter((familyKey) => !excluded.has(familyKey));
+  return [...new Set(normalized)];
 }
 
 export function resolveSupplierFinishName(value: string | null | undefined, colorHex?: string | null) {
@@ -78,7 +84,10 @@ export function resolveSupplierPresentationsForQuoteItem(input: {
   const { request } = input;
   return [...new Set(request.technicalCodes.map(normalizeCode).filter(Boolean))].map((technicalCode) => {
     const candidates = input.presentations.filter((entry) =>
-      entry.familyKeys.includes(request.familyKey) &&
+      entry.familyKeys.some((familyKey) =>
+        (normalizeUniversalAluminumFamilyKey(familyKey) ?? familyKey) ===
+        (normalizeUniversalAluminumFamilyKey(request.familyKey) ?? request.familyKey)
+      ) &&
       (!entry.configurationKey || entry.configurationKey === request.configurationKey) &&
       (normalizeCode(entry.technicalCode) === technicalCode ||
         entry.recipeComponentCodes.some((code) => normalizeCode(code) === technicalCode)) &&

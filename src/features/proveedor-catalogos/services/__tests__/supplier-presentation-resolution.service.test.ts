@@ -1,4 +1,4 @@
-import { resolveSupplierFinishName, resolveSupplierPresentationsForQuoteItem, type ConfirmedSupplierPresentation } from "../supplier-presentation-resolution.service";
+import { resolveSupplierFinishName, resolveSupplierPresentationsForQuoteItem, resolveSupplierPresentationFamilyKeys, type ConfirmedSupplierPresentation } from "../supplier-presentation-resolution.service";
 
 const variants: Array<[string, string, string, number]> = [
   ["67401VER000", "000", "Blanco", 5800],
@@ -23,6 +23,17 @@ const presentations: ConfirmedSupplierPresentation[] = variants.map(([sku, finis
 }));
 
 describe("resolver explícito de presentación para pauta", () => {
+  it("normaliza las familias y exclusiones legacy a la identidad universal", () => {
+    expect(resolveSupplierPresentationFamilyKeys({
+      familyKeys: ["arquetipo:l15"],
+      technicalEvidence: { excludedRecipeFamilyKeys: ["ventora:serie-15-corredera-2h"] },
+    })).toEqual([]);
+    expect(resolveSupplierPresentationFamilyKeys({
+      familyKeys: ["arquetipo:l20", "universal:aluminio:l20"],
+      technicalEvidence: {},
+    })).toEqual(["universal:aluminio:l20"]);
+  });
+
   it("resuelve el acabado desde la etiqueta configurada o el hex exacto del catálogo", () => {
     expect(resolveSupplierFinishName("Negro Mate", "#ffffff")).toBe("Negro Mate");
     expect(resolveSupplierFinishName("Ventana", "#2a2a2a")).toBe("Negro");

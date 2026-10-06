@@ -186,8 +186,8 @@ function createLine12(input: RecipeInput): FabricacionReceta {
     ],
     notes: [
       "Captura del editor de fabricación entregada por el usuario: Línea 12 Shower 2 hojas; 5 reglas y 9 cortes. Descuentos capturados: 1203 −5 mm, 1201 −5 mm, 1202 −3 mm, 1204 +5 mm (4 cortes) y 1204 −65 mm (1 corte).",
-      "La captura muestra cortes 90° en marco y 45° para bastidor de hoja. El catálogo Arquetipo, pág. 21, confirma expresamente marco a 90° y hojas a 45°; se aplica 45° también al corte vertical de 1204.",
-      "El catálogo Arquetipo documenta 1201 riel inferior, 1202 jamba, 1203 riel superior y 1204 bastidor de hoja (pág. 21).",
+      "La captura muestra cortes 90° en marco y 45° para bastidor de hoja. El catálogo Arquetipo, ficha técnica de Línea 12 (PDF p. 5), confirma marco a 90° y hojas a 45°; se aplica 45° también al corte vertical de 1204.",
+      "El catálogo Arquetipo documenta 1201 riel inferior, 1202 jamba, 1203 riel superior y 1204 bastidor de hoja (Línea 12, PDF p. 21).",
       "Quincallería documentada: caja/rodamiento Shower S-12, guías interior/exterior, tirador y unión L-12; sus consumos quedan pendientes.",
       "Las cinco reglas producen un despiece preliminar; no acreditan pauta validada ni fabricación real de taller.",
     ],

@@ -61,6 +61,26 @@ function price(input: Partial<CatalogPresentationPrice> & Pick<CatalogPresentati
 }
 
 describe("buildPartialTechnicalCostSnapshot", () => {
+  it("prioriza el precio Arquetipo LEGNO como referencia de una línea universal aunque otro proveedor sea más barato", () => {
+    const result = buildPartialTechnicalCostSnapshot({
+      workSnapshot: pauta([{ code: "2001", item: "A", length: 1200 }]),
+      quoteItems: [{ code: "A", color: "Blanco", catalogLineKey: "ventora:l20", supplierFamilyKey: "universal:aluminio:l20" }],
+      availablePrices: [
+        price({
+          providerKey: "sodal", technicalCode: "2001", supplierSku: "SODAL-2001", finishCode: "", finishName: null,
+          finishResolution: "finish_independent", familyKeys: ["universal:aluminio:l20"], commercialLengthMm: 6000, netPrice: 1000,
+        }),
+        price({
+          providerKey: "arquetipo", preferred: true, technicalCode: "2001", supplierSku: "ARQ-2001-LEGNO", finishCode: "LEGNO", finishName: "Legno",
+          finishResolution: "finish_independent", familyKeys: ["universal:aluminio:l20"], commercialLengthMm: 6000, netPrice: 70000,
+        }),
+      ],
+    });
+
+    expect(result?.lines).toHaveLength(1);
+    expect(result?.lines[0]).toMatchObject({ providerKey: "arquetipo", supplierSku: "ARQ-2001-LEGNO", bars: 1, lineNet: 70000 });
+  });
+
   it("usa costo y largo privados sin llamarlos referencia oficial y deja lo desconocido pendiente", () => {
     const workshop = price({
       presentationId: "own-1", providerKey: "taller:3", origin: "workshop",
@@ -166,7 +186,7 @@ describe("buildPartialTechnicalCostSnapshot", () => {
     expect(result?.assumptions).toEqual([]);
   });
 
-  it("resuelve el riel por mapping funcional explícito y aplica la presentación independiente del acabado", () => {
+  it("resuelve el riel por mapping funcional y no mezcla barras físicas de acabados distintos", () => {
     const result = buildPartialTechnicalCostSnapshot({
       workSnapshot: pauta([
         { code: "AB01016-E", item: "A", length: 1088 },
@@ -186,18 +206,26 @@ describe("buildPartialTechnicalCostSnapshot", () => {
       })],
     });
 
-    expect(result?.lines[0]).toMatchObject({
-      technicalCode: "AB01016-E",
-      supplierTechnicalCode: "61016VER001",
-      supplierSku: "61016VER001",
-      commercialLengthMm: 5800,
-      bars: 1,
-      lineNet: 10940,
-    });
-    expect(result?.lines).toHaveLength(1);
-    expect(result?.lines[0].cuts).toEqual(expect.arrayContaining([
-      { itemCode: "A", cutLengthMm: 1088 },
-      { itemCode: "B", cutLengthMm: 1088 },
+    expect(result?.lines).toHaveLength(2);
+    expect(result?.lines).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        technicalCode: "AB01016-E",
+        supplierTechnicalCode: "61016VER001",
+        supplierSku: "61016VER001",
+        commercialLengthMm: 5800,
+        bars: 1,
+        lineNet: 10940,
+        cuts: [{ itemCode: "A", cutLengthMm: 1088 }],
+      }),
+      expect.objectContaining({
+        technicalCode: "AB01016-E",
+        supplierTechnicalCode: "61016VER001",
+        supplierSku: "61016VER001",
+        commercialLengthMm: 5800,
+        bars: 1,
+        lineNet: 10940,
+        cuts: [{ itemCode: "B", cutLengthMm: 1088 }],
+      }),
     ]));
   });
 

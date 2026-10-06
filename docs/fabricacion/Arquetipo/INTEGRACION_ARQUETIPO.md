@@ -5,10 +5,10 @@ Copiar este archivo a la carpeta de evidencia correspondiente y completar antes 
 ## Identidad y alcance
 
 - Proveedor: Distribuidora Arquetipo. Fabricante de cada perfil: no declarado de forma uniforme en estas fuentes.
-- Familias: líneas 15, 20, 25, 4000, 5000, 35, 45, 12, 32 y 42. Las series con identidad coincidente de otro proveedor tienen una entrada comercial Arquetipo independiente; compartir número o tipología no vincula recetas ni precios entre proveedores.
+- Familias: líneas 15, 20, 25, 4000, 5000, 35, 45, 12, 32 y 42. El catálogo Arquetipo aporta perfiles/códigos y una cotización de referencia; la línea Ventora se identifica como universal por número y el proveedor se mantiene en sus presentaciones de compra.
 - Fuentes: `Arquetipo_Catalogo_Aluminios.pdf` (págs. 3–25), cotización 27811 (01-10-2026, págs. 1–2). La cotización registra precios netos por presentación `TIRA`, acabado LEGNO, para 29 códigos de las líneas 20, 25, 32, 42 y 5000. Es una cotización de una compra, sujeta a stock y mercado; no es lista general publicada.
 - `MOD Catalogo_SISTEMA_SUPERIOR QT.pdf` revisado. Se excluye del alcance solicitado: documenta sistemas SUPERIOR distintos, sin precios en la cotización y sin equivalencia exacta con las diez líneas; no se mezclarán por tipología visual.
-- Estado al importar (2026-10-05): publicación directa e idempotente en las tablas globales del catálogo compartido de producción, autorizada por el usuario para todas las organizaciones. No se duplicaron líneas comerciales ni se tocaron recetas/snapshots históricos.
+- Estado al importar (2026-10-05): publicación directa e idempotente en las tablas globales del catálogo compartido de producción, autorizada por el usuario para todas las organizaciones. El 2026-10-06 se aprobó el criterio universal por número de línea y la sincronización global archiva siete duplicados de catálogo por proveedor; conserva recetas/snapshots históricos.
 - Salida: 84 perfiles/presentaciones de referencia para las 10 familias y 29 precios netos en CLP, cotizados para acabado LEGNO desde cotización 27811 (total CLP 513.984). Por instrucción del usuario, el precio LEGNO —el acabado de mayor costo— se usa como referencia conservadora para cualquier acabado seleccionado; esto no afirma que Arquetipo cobre lo mismo por todos los colores. Son precios por presentación TIRA para referencia de compra; no son precio de venta por m² ni una lista general del proveedor. Vigencia no indicada.
 - Largo comercial: 6.000 mm aplicado como predeterminado global por instrucción del usuario. La cotización no lo confirma; no convertir los precios por tira a precio por metro. Mantener visible esta procedencia asumida.
 
@@ -16,11 +16,21 @@ Copiar este archivo a la carpeta de evidencia correspondiente y completar antes 
 
 El PDF contiene fichas comerciales, dibujos de secciones de perfiles, códigos y algunas dimensiones de sección. Sus páginas técnicas para las diez líneas son: L15 pp. 6–7, L20 pp. 8–9, L25 pp. 10–13, L4000 pp. 14–15, L5000 pp. 16–17, L35 pp. 18–19, L45 p. 20, L12 p. 21, L32 pp. 22–23 y L42 pp. 24–25. Estas láminas no contienen una tabla de descuentos ni fórmulas de largo para despiece/cubicación. L25 sí declara largos comerciales de 6,0 y 4,85 m para algunos perfiles; no son fórmulas de corte.
 
-La instrucción explícita de corte que sí aporta el catálogo está en L12 p. 21: marco a 90° y hojas a 45°. Combinada con la captura del editor del usuario, completa el ángulo de los dos grupos de cortes del perfil 1204; no aporta por sí sola descuentos ni define composición, vidrio o consumos de quincallería. Para las otras nueve líneas hacen falta pautas de fabricación con reglas de medida y cantidad; las secciones dibujadas no permiten deducir esos datos.
+La instrucción explícita de corte que sí aporta el catálogo está en la ficha técnica de Línea 12 (página impresa 5; página 21 del PDF): marco a 90° y hojas a 45°. Combinada con la captura del editor del usuario, completa el ángulo de los dos grupos de cortes del perfil 1204; no aporta por sí sola descuentos ni define composición, vidrio o consumos de quincallería. Para las otras nueve líneas hacen falta pautas de fabricación con reglas de medida y cantidad; las secciones dibujadas no permiten deducir esos datos.
 
-### Separación por proveedor (2026-10-05)
+### Criterio universal confirmado por el taller (2026-10-06)
 
-El catálogo por organización conserva las líneas técnicas preexistentes y agrega siete entradas identificadas explícitamente como Arquetipo: Línea 15, 20, 25, 32, 4000, 45 y 42. Las entradas 5000, 35 y 12 ya tienen una identidad Arquetipo compatible. Las líneas homónimas permanecen separadas: L20 y L4000 no tienen proveedor comercial asignado; L25/AL-32/AL-42 se identifican como SODAL y L45 como Sodal/Indalum. Alumétrica y Columbia pueden figurar como procedencia documental de recetas, pero no se usan como proveedores en el catálogo. Los perfiles/precios Arquetipo no se cruzan con esas claves.
+El padre del usuario confirmó que cada familia tradicional de aluminio comparte despiece, descuentos, cubicación y pauta entre vendedores. Se usa una identidad por número de línea: `universal:aluminio:l15`, `l20`, `l25`, `l4000`, `l5000`, `l35`, `l45`, `l12`, `l32` y `l42`. Proveedor deja de formar parte de la identidad comercial; las listas/precios de cada vendedor permanecen en sus presentaciones. Los precios Arquetipo LEGNO existentes sirven de referencia conservadora para cualquier color, por decisión del usuario.
+
+El resolver conserva fórmulas por familia y variante. Cuando el código Arquetipo difiere del código Ventora, fixture declara un `recipeComponentCodes` explícito: Línea 15 (1508→1507), Línea 4000 (mapeo por rol de marco/hoja) y Línea 45 (4502→4522, 4504→4534). Los códigos con rol distinto o ambiguo se mantienen excluidos. No se modifican fórmulas/descuentos de recetas existentes ni se marcan validadas.
+
+Línea 35 conserva solo perfiles candidatos; faltan composición seleccionada, cantidades y descuentos necesarios para una pauta completa. El acuerdo universal confirma equivalencia entre proveedores, pero no aporta esos valores por sí solo.
+
+La línea 12 conserva cinco reglas de la captura y tira 6.000 mm predeterminada. La referencia de ángulos es la ficha técnica de Línea 12 (página impresa 5 / página 21 del PDF); los dibujos y códigos están en las páginas impresas 20–21.
+
+### Estado anterior por proveedor (2026-10-05; supersedido)
+
+El criterio anterior mantuvo siete entradas separadas por vendedor y no conectó recetas homónimas. Quedó reemplazado el 2026-10-06 por las claves universales descritas arriba; esta sección se conserva solo como registro histórico.
 
 Las entradas Arquetipo nuevas exponen los 84 perfiles/presentaciones técnicos y los precios globales que constan en la cotización. Solo una receta compatible y configurada puede producir despiece/cubicación; este cambio de identidad no crea fórmulas para las entradas nuevas ni declara recetas de taller validadas. El snapshot de fabricación conserva su familia de proveedor y el costo técnico exige coincidencia exacta cuando está presente.
 
@@ -30,16 +40,16 @@ La sincronización global de líneas por organización queda en `scripts/catalog
 
 | Línea Arquetipo | Clave Ventora relacionada | Coincidencia observada | Límite aplicado |
 |---|---|---|---|
-| 15 corredera | `ventora:serie-15-corredera-2h` | Nombre y varios códigos coinciden. | No enlazar a la receta existente: el catálogo Arquetipo pág. 6 identifica 1507 como pierna y 1508 como traslapo; la receta Ventora actual usa 1506/1507 para pierna/traslapo. Revisar perfil y proveedor antes de asociar costos técnicos. |
-| 20 corredera | `ventora:l20` | Familia y códigos de los productos cotizados coinciden con los perfiles documentados. | Guardar código/nombre de proveedor. No derivar largo de barra desde la sección. |
-| 25 corredera | `ventora:l25` | Coincidencia de línea y códigos cotizados con el catálogo SODAL L25. | No cambiar sus 18 recetas ni estado por incorporar precios de compra. Largo de tira de la cotización no confirmado. |
-| 4000 corredera | `ventora:serie-4000-corredera-2h` | Nombre similar; los códigos de perfil están desplazados frente a la receta existente (Arquetipo pág. 14 no documenta 4009). | No asociar a la receta existente ni corregir códigos usando semejanza de nombre. Sin proveedor comercial asignado; sin precio en cotización 27811. |
+| 15 corredera | `ventora:serie-15-corredera-2h` | Identidad universal por número. Fixture vincula explícitamente 1508→1507 por rol. | 1507 Arquetipo conserva rol distinto/ambiguo respecto de la receta y queda excluido; no se infiere compatibilidad solo por código. |
+| 20 corredera | `ventora:l20` | Identidad universal; códigos Arquetipo asociados a la familia en fixture. | El proveedor se conserva en las presentaciones de compra. No derivar largo de barra desde la sección. |
+| 25 corredera | `ventora:l25` | Identidad universal; códigos Arquetipo asociados a la familia en fixture. | No cambiar sus 18 recetas ni estado por incorporar precios de compra. Largo de tira de la cotización no confirmado; 6.000 mm es el predeterminado pedido por el usuario. |
+| 4000 corredera | `ventora:serie-4000-corredera-2h` | Identidad universal y equivalencias fixture explícitas por rol para perfiles desplazados entre catálogos. | El catálogo no documenta el código Ventora 4009; equivalencias se limitan a los códigos declarados en fixture. Sin precio en cotización 27811. |
 | 5000 corredera | `ventora:l5000` | Línea y códigos 5001–5007 coinciden con la plantilla inicial. | Mantener plantilla sugerida; no elevarla a fórmula del fabricante ni validada por taller. El precio LEGNO se aplica como referencia conservadora a cualquier acabado por instrucción del usuario. |
 | 35 puerta | `ventora:l35` | Nombre de línea compatible. | El catálogo aporta perfiles, no una pauta de cortes completa. Sin precio en cotización 27811. |
-| 45 puerta | `ventora:serie-45-puerta` | Nombre similar. | No asociar a la receta SODAL/Indalum: Arquetipo pág. 20 muestra 4502/4511/4504; la receta Ventora usa 4522/4531/4534. Sin precio en cotización 27811. |
-| 12 shower | `ventora:serie-12-shower-corredera` | Nombre, códigos 1201–1204 y uso coinciden. La captura del editor aporta 5 reglas y 9 cortes para shower 2H. El catálogo p. 21 confirma marco a 90° y hojas a 45°. | Descuentos capturados: 1203 ancho total −5; 1201 ancho total −5; 1202 alto total −3 ×2; 1204 ancho por hoja +5 ×4 (45°); 1204 alto de módulo −65 ×1 (45° por regla explícita de hojas). Sin captura/fuente para composición de vidrio y consumos de quincallería. Tira 6.000 mm es el predeterminado solicitado por el usuario, no una medida confirmada por Arquetipo. No hay precio Línea 12 en la cotización 27811. |
-| 32 proyectante/paño fijo | `ventora:l32` | Códigos 3201/3202/3208 coinciden; código 3204 aparece en factura como “PILAR” y en catálogo como “PALILLO”. | Mantener la discrepancia de nombre; asociar precio por SKU/código, no por descripción aproximada. No altera receta. |
-| 42 proyectante/paño fijo | `ventora:l42` | 4209/4202/4229 coinciden con la variante SODAL sin cámara documentada. | 4204 aparece como “PILAR” en factura y el catálogo separa 4204/4231 entre palillo y marco cámara; dejar relación de receta pendiente. No cambia variante ni validación. |
+| 45 puerta | `ventora:serie-45-puerta` | Identidad universal y equivalencias fixture explícitas por rol (4502→4522, 4504→4534). | Solo se enlazan equivalencias declaradas; no se infieren roles para otros códigos. Sin precio en cotización 27811. |
+| 12 shower | `ventora:serie-12-shower-corredera` | Identidad universal; códigos 1201–1204 y uso coinciden. La captura del editor aporta 5 reglas y 9 cortes para shower 2H. La ficha técnica (página impresa 5 / PDF p. 21) confirma marco a 90° y hojas a 45°. | Descuentos capturados: 1203 ancho total −5; 1201 ancho total −5; 1202 alto total −3 ×2; 1204 ancho por hoja +5 ×4 (45°); 1204 alto de módulo −65 ×1 (45° por regla explícita de hojas). Sin captura/fuente para composición de vidrio y consumos de quincallería. Tira 6.000 mm es el predeterminado solicitado por el usuario, no una medida confirmada por Arquetipo. No hay precio Línea 12 en la cotización 27811. |
+| 32 proyectante/paño fijo | `ventora:l32` | Identidad universal; códigos asociados por SKU/código. Se conserva la diferencia textual “PILAR”/“PALILLO” entre cotización y catálogo. | No se vincula por semejanza de descripción ni se altera fórmula existente. |
+| 42 proyectante/paño fijo | `ventora:l42` | Identidad universal; códigos asociados por SKU/código, conservando la variante sin cámara documentada. | Las diferencias textuales/roles de 4204 y 4231 se mantienen explícitas en fixture; no cambia variante ni validación. |
 
 ### Datos de compra capturados
 
@@ -117,7 +127,7 @@ Para declarar toda la línea integrada, recorrer todas las configuraciones nueva
 
 - Revisión documental de las 10 líneas y cruce nominal con las identidades Ventora existentes; no se duplicaron líneas comerciales. La receta base local de Línea 12 sí se amplió; no se escribió sobre recetas persistidas.
 - Captura local de las 29 filas con precio de la cotización 27811; se omitieron identificadores del cliente.
-- La captura de Línea 12 se incorporó como cinco reglas preliminares (9 cortes). Para 1.200 × 1.500 mm / 2 hojas: 1203=1.195 mm ×1; 1201=1.195 mm ×1; 1202=1.497 mm ×2; 1204=605 mm ×4; 1204=1.435 mm ×1. El ángulo antes pendiente de 1204 se completa a 45° con la instrucción expresa del catálogo p. 21. Pauta a 6.000 mm: 4 barras en el motor; composición de vidrio/herrajes y largo comercial siguen pendientes. La receta queda `ejemplo_no_validado`.
+- La captura de Línea 12 se incorporó como cinco reglas preliminares (9 cortes). Para 1.200 × 1.500 mm / 2 hojas: 1203=1.195 mm ×1; 1201=1.195 mm ×1; 1202=1.497 mm ×2; 1204=605 mm ×4; 1204=1.435 mm ×1. El ángulo antes pendiente de 1204 se completa a 45° con la instrucción expresa de la ficha técnica del catálogo (PDF p. 5). Pauta a 6.000 mm: 4 barras en el motor; composición de vidrio/herrajes y largo comercial siguen pendientes. La receta queda `ejemplo_no_validado`.
 - Suite dirigida `traditional-p2u-recipes.test.ts`: aprobada (5 pruebas). `pnpm fabrication:verify`: aprobado; 163 suites, 1.252 pruebas, TypeScript y `docs:check`.
 - Al iniciar esa integración, una lectura de esquema confirmó presentes las tablas de catálogo/precios; todavía no se habían leído filas ni escrito datos. La autorización posterior del usuario cambió el destino a la lista global compartida.
 - `pnpm fabrication:verify --build`: suites, tipos y docs pasaron; el build terminó con `Another next build process is already running`. No se detuvo ese proceso ni se reintentó para no interferir con otro build.
@@ -125,8 +135,10 @@ Para declarar toda la línea integrada, recorrer todas las configuraciones nueva
 
 ### Publicación global (2026-10-05)
 
+> Registro histórico de la primera importación; el modelo de asociación por proveedor descrito aquí fue actualizado el 2026-10-06.
+
 - Importador ejecutado por código contra producción, con preflight y escritura global autorizada por el usuario; sin flujo QA ni smoke de navegador.
 - Reejecución idempotente para corregir páginas/notas de 43 evidencias: 0 filas nuevas, 241 ya exactas, 43 metadatos corregidos, 0 conflictos. Conteos finales: 84 insumos, 84 presentaciones, 29 precios; suma leída de producción CLP 513.984.
-- Ajuste no destructivo posterior: 84 relaciones a claves `arquetipo:*` y 17 marcadores `excludedRecipeFamilyKeys` para discrepancias que no deben resolver contra recetas Ventora. Las relaciones previas se conservaron; el resolutor actualizado las filtra, y requiere que el código de aplicación se publique para surtir efecto en producción.
+- Ajuste no destructivo posterior al 2026-10-05: se agregaron relaciones a claves `arquetipo:*` y exclusiones para discrepancias. El 2026-10-06 se añadieron asociaciones a claves universales y se conservaron aquellas relaciones legacy por seguridad referencial; el código de aplicación debe desplegarse para normalizarlas al resolver.
 - El valor predeterminado TIRA=6.000 mm queda etiquetado como supuesto solicitado; la cotización no declara el largo ni su vigencia.
 - Las fórmulas disponibles de Ventora permanecen independientes de esta carga. El catálogo Arquetipo no acredita cortes para las diez líneas ni validación de taller.

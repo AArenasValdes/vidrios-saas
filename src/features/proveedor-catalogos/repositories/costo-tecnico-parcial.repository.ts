@@ -77,6 +77,9 @@ export async function readConfirmedSupplierPresentations(organizationId?: number
       presentationId: String(row.id),
       providerKey: String(row.proveedor_key),
       supplierSku: String(row.sku_proveedor),
+      // Arquetipo LEGNO is the authorized reference price for universal
+      // aluminum families; other sellers share the recipe, not this default.
+      preferred: String(row.proveedor_key) === "arquetipo",
       technicalCode: String(technical.codigo_fuente),
       recipeComponentCodes,
       familyKeys: resolveSupplierPresentationFamilyKeys({ familyKeys: familiesByInput.get(String(row.insumo_tecnico_id)) ?? [], technicalEvidence: evidence }),
@@ -268,6 +271,8 @@ export async function readSupplierPresentationPrices(input: {
     return [{
       presentationId: String(presentation.id),
       providerKey,
+      // LEGNO from Arquetipo is the approved default cost reference for universal aluminum.
+      preferred: providerKey === "arquetipo",
       familyKeys: resolveSupplierPresentationFamilyKeys({ familyKeys: familyKeysByInputId.get(String(presentation.insumo_tecnico_id)) ?? [], technicalEvidence: evidence }),
       technicalCode: String(technicalInput.codigo_fuente),
       recipeComponentCodes,
