@@ -625,6 +625,31 @@
   color: #52637d;
 }
 
+.recipeSelection {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #d0dceb;
+  border-radius: 11px;
+  background: #fff;
+  color: #243b6b;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.recipeSelection select {
+  width: 100%;
+  min-height: 2.7rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #1f2937;
+  font: inherit;
+  font-weight: 600;
+}
+
 .manualNote,
 .compactWarning,
 .glassNote {

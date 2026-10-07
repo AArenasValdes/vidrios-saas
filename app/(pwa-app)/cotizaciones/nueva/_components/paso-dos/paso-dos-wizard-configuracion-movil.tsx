@@ -21,6 +21,13 @@ import {
   type LineCatalogTab,
 } from "@/features/cotizaciones/line-templates/services/line-option-presentation.service";
 import { LinePriceEditor } from "@/features/cotizaciones/line-templates/components/line-template-price-editor";
+import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
+import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
+import { resolveFabricationRecipe } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
+import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
+import { formatVariantDisplayLabel } from "@/features/fabricacion/services/fabricacion-line-variant.service";
+import { getLineVariantSlots } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
+import { isSodalL25CatalogKey } from "@/features/fabricacion/services/sodal-l25-context.service";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
   FIELD_LIMITS,
@@ -33,6 +40,7 @@ import {
   shouldRequireProfileMaterialForComponent,
   shouldShowSystemSelectionForComponent,
   shouldShowSheetSchemeForComponent,
+  resolveComponentFabricacionHojas,
   type ComponentFormLinePricingSummary,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import { buildCotizacionMirrorPaneMeasure } from "@/utils/cotizacion-item-presentation";
@@ -181,6 +189,11 @@ type Props = {
     fabricacionReinforcement: string;
     fabricacionVariante: string;
   }) => void;
+  onSelectFabricationRecipe?: (
+    recipeId: string,
+    recipe?: FabricationRecipeRecord,
+    legacyVariant?: string
+  ) => void;
 };
 
 export function PasoDosWizardConfiguracionMovil({
@@ -249,6 +262,7 @@ export function PasoDosWizardConfiguracionMovil({
   onSetVidSearch,
   onCreateCustomGlass,
   onFabricacionL25ConfigChange,
+  onSelectFabricationRecipe,
 }: Props) {
   const measureUnit = useOrganizationMeasureUnit();
   const { organizacionId } = useAuth();
@@ -375,6 +389,86 @@ export function PasoDosWizardConfiguracionMovil({
   const selectedLineNeedsPrice = Boolean(
     selectedLineTemplate && lineTemplateNeedsCommercialPrice(selectedLineTemplate)
   );
+  const selectedCatalogLineKey = selectedLineTemplate?.catalogKey ?? draft.catalogLineKey;
+  const selectedLineIsSodalL25 = isSodalL25CatalogKey(selectedCatalogLineKey);
+  const selectedRecipeLineTemplateId = Number(selectedLineTemplate?.id);
+  const canLoadInlineRecipeVariants = Boolean(
+    selectedLineTemplate &&
+    !selectedLineIsSodalL25 &&
+    Number.isInteger(selectedRecipeLineTemplateId) &&
+    selectedRecipeLineTemplateId > 0
+  );
+  const {
+    organizationId: recipeOrganizationId,
+    recipes: selectedLineRecipes,
+    isLoading: isLoadingSelectedLineRecipes,
+  } = useFabricationRecipes({
+    enabled: canLoadInlineRecipeVariants,
+    lineTemplateId: canLoadInlineRecipeVariants ? selectedRecipeLineTemplateId : undefined,
+    skipStructuralSeed: true,
+  });
+  const selectedRecipeTypology = inferirTipologiaFabricacionPieza({
+    tipo: draft.subtipo,
+    sistema: draft.sistema,
+    configuracion: draft.configuracion,
+    nombre: draft.nombre,
+    descripcion: draft.descripcion,
+  });
+  const selectedRecipeLeaves = resolveComponentFabricacionHojas({
+    sheetScheme: draft.sheetScheme,
+    fabricacionHojas: draft.fabricacionHojas,
+    fabricacionVariante: "",
+    referencia: draft.referencia,
+    catalogLineKey: selectedCatalogLineKey,
+    hojasBase: draft.hojasBase,
+    guidedVisualConfig: draft.guidedVisualConfig,
+  });
+  const inlineRecipeResolution = useMemo(() => {
+    if (
+      !canLoadInlineRecipeVariants ||
+      isLoadingSelectedLineRecipes ||
+      !selectedRecipeTypology
+    ) {
+      return null;
+    }
+
+    return resolveFabricationRecipe(selectedLineRecipes, {
+      organizationId: recipeOrganizationId,
+      lineTemplateId: selectedRecipeLineTemplateId,
+      catalogKey: selectedCatalogLineKey,
+      tipologia: selectedRecipeTypology,
+      hojas: selectedRecipeLeaves,
+      variante: null,
+      preferredRecipeId: null,
+      previewListaParaProbar: true,
+    });
+  }, [
+    canLoadInlineRecipeVariants,
+    isLoadingSelectedLineRecipes,
+    recipeOrganizationId,
+    selectedCatalogLineKey,
+    selectedLineRecipes,
+    selectedRecipeLeaves,
+    selectedRecipeLineTemplateId,
+    selectedRecipeTypology,
+  ]);
+  const inlineRecipeCandidates = inlineRecipeResolution?.candidatas ?? [];
+  const l20VariantSlots = useMemo(() => {
+    if (selectedCatalogLineKey !== "ventora:l20" && selectedCatalogLineKey !== "ventora:l20-fijos") {
+      return [];
+    }
+    return getLineVariantSlots(selectedCatalogLineKey).filter(
+      (slot) =>
+        slot.typology === selectedRecipeTypology &&
+        slot.leavesCount === selectedRecipeLeaves
+    );
+  }, [selectedCatalogLineKey, selectedRecipeLeaves, selectedRecipeTypology]);
+  const isL20Line =
+    selectedCatalogLineKey === "ventora:l20" ||
+    selectedCatalogLineKey === "ventora:l20-fijos";
+  const showInlineRecipeVariants =
+    (isL20Line && (inlineRecipeCandidates.length > 0 || l20VariantSlots.length > 0)) ||
+    inlineRecipeCandidates.length > 1;
   const lineSummaryLabel = useMemo(() => {
     return (
       resolveCotizacionItemSodalL25LineDisplayLabel({
@@ -1427,6 +1521,77 @@ export function PasoDosWizardConfiguracionMovil({
             </strong>
           </div>
         ) : null}
+        {showInlineRecipeVariants ? (
+          <fieldset className={s.stepTwoMobileRecipeSelection}>
+            <legend>Variante de fabricación</legend>
+            <div className={s.stepTwoMobileRecipeOptions}>
+              {inlineRecipeCandidates.length > 0 && (isL20Line || inlineRecipeCandidates.length > 1)
+                ? inlineRecipeCandidates.map((recipe) => (
+                <button
+                  key={recipe.id}
+                  type="button"
+                  className={`${s.stepTwoMobileRecipeOption} ${
+                    draft.fabricationRecipeId === recipe.id ? s.stepTwoMobileRecipeOptionActive : ""
+                  }`}
+                  aria-pressed={draft.fabricationRecipeId === recipe.id}
+                  onClick={() => onSelectFabricationRecipe?.(recipe.id, recipe)}
+                >
+                  <span>{formatVariantDisplayLabel(recipe)}</span>
+                  <small>{recipe.definition.identidad.hojas} hojas</small>
+                </button>
+              ))
+                : null}
+              {inlineRecipeCandidates.length === 0 && l20VariantSlots.length > 0
+                ? l20VariantSlots.map((slot) => (
+                    <button
+                      key={slot.variantSlug}
+                      type="button"
+                      className={`${s.stepTwoMobileRecipeOption} ${
+                        (draft.fabricacionVariante || l20VariantSlots[0]?.variantSlug) === slot.variantSlug
+                          ? s.stepTwoMobileRecipeOptionActive
+                          : ""
+                      }`}
+                      aria-pressed={
+                        (draft.fabricacionVariante || l20VariantSlots[0]?.variantSlug) === slot.variantSlug
+                      }
+                      onClick={() =>
+                        onSelectFabricationRecipe?.(
+                          `variant:${selectedCatalogLineKey}:${slot.variantSlug}`,
+                          undefined,
+                          slot.variantSlug
+                        )
+                      }
+                    >
+                      <span>{slot.variantLabel}</span>
+                      <small>{slot.leavesCount} hojas</small>
+                    </button>
+                  ))
+                : null}
+            </div>
+          </fieldset>
+        ) : null}
+        {selectedLineIsSodalL25 && requiresProfileMaterial ? (
+          <div className={s.stepTwoMobileBlockSecundario}>
+            <SodalL25QuoteConfigPanel
+              compact
+              componentForm={{
+                lineTemplateId: draft.lineTemplateId,
+                catalogLineKey: draft.catalogLineKey,
+                fabricacionGlazing: draft.fabricacionGlazing,
+                fabricacionLeg: draft.fabricacionLeg,
+                fabricacionReinforcement: draft.fabricacionReinforcement,
+                fabricacionVariante: draft.fabricacionVariante,
+                fabricacionHojas: draft.fabricacionHojas,
+                sheetScheme: draft.sheetScheme,
+                hojasBase: draft.hojasBase,
+                guidedVisualConfig: draft.guidedVisualConfig,
+                vidrio: draft.vidrio,
+              }}
+              selectedTemplate={selectedLineTemplate}
+              onFabricacionL25ConfigChange={onFabricacionL25ConfigChange}
+            />
+          </div>
+        ) : null}
       </div>
 
       {isLineSelectorOpen && typeof document !== "undefined" ? createPortal((
@@ -2018,29 +2183,6 @@ export function PasoDosWizardConfiguracionMovil({
               </button>
             ))}
           </div>
-        </div>
-      ) : null}
-
-      {requiresProfileMaterial && draft.lineTemplateId ? (
-        <div className={s.stepTwoMobileBlockSecundario}>
-          <SodalL25QuoteConfigPanel
-            compact
-            componentForm={{
-              lineTemplateId: draft.lineTemplateId,
-              catalogLineKey: draft.catalogLineKey,
-              fabricacionGlazing: draft.fabricacionGlazing,
-              fabricacionLeg: draft.fabricacionLeg,
-              fabricacionReinforcement: draft.fabricacionReinforcement,
-              fabricacionVariante: draft.fabricacionVariante,
-              fabricacionHojas: draft.fabricacionHojas,
-              sheetScheme: draft.sheetScheme,
-              hojasBase: draft.hojasBase,
-              guidedVisualConfig: draft.guidedVisualConfig,
-              vidrio: draft.vidrio,
-            }}
-            selectedTemplate={selectedLineTemplate}
-            onFabricacionL25ConfigChange={onFabricacionL25ConfigChange}
-          />
         </div>
       ) : null}
 

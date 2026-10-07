@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { LuX } from "react-icons/lu";
 
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import type { QuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
@@ -146,6 +147,11 @@ export type WizardActions = {
     fabricacionReinforcement: string;
     fabricacionVariante: string;
   }) => void;
+  onSelectFabricationRecipe?: (
+    recipeId: string,
+    recipe?: FabricationRecipeRecord,
+    legacyVariant?: string
+  ) => void;
 };
 
 type Props = {
@@ -825,6 +831,7 @@ export function PasoDosWizardMovil({
                   onSetVidSearch={setVidSearch}
                   onCreateCustomGlass={wizard.onCreateCustomGlass}
                   onFabricacionL25ConfigChange={wizard.onFabricacionL25ConfigChange}
+                  onSelectFabricationRecipe={wizard.onSelectFabricationRecipe}
                 />
               ) : null}
 

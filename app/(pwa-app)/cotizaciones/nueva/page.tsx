@@ -3381,6 +3381,7 @@ function goNextFromStep1() {
               onUpdateAlcanceDetalle: pasoDosAgregarGrupoMovil.updateAlcanceDetalle,
               onRemoveAlcanceDetalle: pasoDosAgregarGrupoMovil.removeAlcanceDetalle,
               onFabricacionL25ConfigChange: pasoDosAgregarGrupoMovil.updateFabricacionL25Config,
+              onSelectFabricationRecipe: pasoDosAgregarGrupoMovil.selectFabricationRecipe,
             },
           }}
           stepThreeProps={{ ...flujo.propsPasoTres, saveIntent: pasoTresGuardado.saveIntent }}

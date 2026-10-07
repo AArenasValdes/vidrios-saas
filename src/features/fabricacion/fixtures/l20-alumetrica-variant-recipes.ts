@@ -340,6 +340,7 @@ export function crearRecetaL20AlumetricaVariant(input: {
       sobranteMinimoAprovechableMm: null,
       largoComercialDefaultMm: VENTORA_LARGO_COMERCIAL_PRESET_MM,
     },
+    permitirCalculoPreliminarConPendientes: true,
     datosPendientes:
       input.variant === "pierna_cerrada_jamba_2009"
         ? ["Confirmar evidencia física completa en taller"]

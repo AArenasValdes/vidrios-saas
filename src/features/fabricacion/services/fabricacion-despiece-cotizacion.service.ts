@@ -524,10 +524,39 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
       modulos: recipe.definition.identidad.modulos,
       variante: recipe.definition.identidad.variante,
     }).calculable;
+  const l20PreliminaryRecipe = (recipe: FabricationRecipeRecord) =>
+    isL20CatalogKey(catalogKey) && recipe.status !== "validated"
+      ? {
+          ...recipe,
+          // El permiso es solo para esta vista previa; no se persiste en la receta.
+          definition: {
+            ...recipe.definition,
+            permitirCalculoPreliminarConPendientes: true,
+          },
+        }
+      : recipe;
+  const canPreviewCalculatedL20Recipe = (recipe: FabricationRecipeRecord) => {
+    const previewRecipe = l20PreliminaryRecipe(recipe);
+    if (previewRecipe === recipe) return false;
+    if (buildFabricationRecipeSummary(previewRecipe.definition).activeRuleCount === 0) {
+      return false;
+    }
+    const preview = calcularCubicacionYPauta(previewRecipe.definition, {
+      anchoTotalMm: ancho,
+      altoTotalMm: alto,
+      cantidad,
+      anchoHojaAMm: presentation.fabricacionAnchoHojaAMm,
+      hojas: previewRecipe.definition.identidad.hojas,
+      modulos: previewRecipe.definition.identidad.modulos,
+      variante: previewRecipe.definition.identidad.variante,
+    });
+    return preview.calculable && preview.perfiles.length > 0;
+  };
   const canPreviewPreliminaryRecipe = (recipe: FabricationRecipeRecord) =>
     canPreviewWinHouseDraft(recipe) ||
     canPreviewVeratecDraft(recipe) ||
-    canPreviewRecipeWithDeclaredPendingData(recipe);
+    canPreviewRecipeWithDeclaredPendingData(recipe) ||
+    canPreviewCalculatedL20Recipe(recipe);
 
   let recipesForResolution = input.recipes;
   if (s75Config.variant) {
@@ -664,7 +693,9 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   }
 
   const formal = construirSnapshotFabricacionCotizacion({
-    recipe,
+    recipe: canPreviewCalculatedL20Recipe(recipe)
+      ? l20PreliminaryRecipe(recipe)
+      : recipe,
     supplierFamilyKey: input.supplierFamilyKey,
     entrada: {
       anchoTotalMm: ancho,

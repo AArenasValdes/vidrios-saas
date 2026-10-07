@@ -17,6 +17,7 @@ import {
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
+import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import { hasQuickCompositionStructuralChanges } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
@@ -623,6 +624,38 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     setDraft((current) => ({ ...current, fabricationRecipeId }));
   };
 
+  const selectFabricationRecipe = (
+    recipeId: string,
+    recipe?: FabricationRecipeRecord,
+    legacyVariant?: string
+  ) => {
+    setDraft((current) => {
+      if (!recipe) {
+        return {
+          ...current,
+          fabricationRecipeId: legacyVariant ? "" : recipeId,
+          fabricacionVariante: legacyVariant ?? current.fabricacionVariante,
+          cubicationSnapshot: null,
+          fabricacionSnapshot: null,
+        };
+      }
+
+      const identity = recipe.definition.identidad;
+      return {
+        ...current,
+        fabricationRecipeId: recipe.id,
+        fabricacionTipologia: identity.tipologia,
+        fabricacionHojas: identity.hojas,
+        fabricacionModulos: identity.modulos,
+        fabricacionApertura: identity.apertura ?? current.fabricacionApertura,
+        fabricacionHerraje: identity.herraje ?? "",
+        fabricacionVariante: identity.variante,
+        cubicationSnapshot: null,
+        fabricacionSnapshot: null,
+      };
+    });
+  };
+
   const updateFabricacionSnapshot = (
     fabricacionSnapshot: FabricacionCotizacionSnapshot | null
   ) => {
@@ -746,6 +779,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     updateFabricacionL25Config,
     updateCubicationSnapshot,
     updateFabricationRecipeId,
+    selectFabricationRecipe,
     updateFabricacionSnapshot,
     updateFabricacionContexto,
     goBack,

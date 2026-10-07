@@ -1809,7 +1809,29 @@ export function hydrateComponentFormFromLineTemplate(
     form,
   });
 
-  const withFabricacion = mergeFabricacionLineaContextIntoForm(form, fabricationContext);
+  const sameSelectedLine = form.lineTemplateId === String(template.id);
+  const withFabricacionContext = mergeFabricacionLineaContextIntoForm(form, fabricationContext);
+  const hasExplicitRecipeSelection =
+    sameSelectedLine && Boolean(form.fabricationRecipeId?.trim());
+  const hasExplicitVariantSelection =
+    sameSelectedLine && Boolean(form.fabricacionVariante?.trim());
+  const withFabricacion = hasExplicitRecipeSelection
+    ? {
+        ...withFabricacionContext,
+        fabricationRecipeId: form.fabricationRecipeId,
+        fabricacionTipologia: form.fabricacionTipologia,
+        fabricacionHojas: form.fabricacionHojas,
+        fabricacionModulos: form.fabricacionModulos,
+        fabricacionApertura: form.fabricacionApertura,
+        fabricacionHerraje: form.fabricacionHerraje,
+        fabricacionVariante: form.fabricacionVariante,
+      }
+    : hasExplicitVariantSelection
+      ? {
+          ...withFabricacionContext,
+          fabricacionVariante: form.fabricacionVariante,
+        }
+      : withFabricacionContext;
   const selectedWinHouseS75Variant = WINHOUSE_NEW_S75_VARIANTS.find(
     (variant) => variant.slug === form.fabricacionVariante
   );

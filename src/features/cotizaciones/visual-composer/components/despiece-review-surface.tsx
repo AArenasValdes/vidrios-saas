@@ -58,6 +58,7 @@ import {
 } from "@/features/fabricacion/services/vidrio-plancha-optimizacion.service";
 import { groupMissingPresentations, resolveDespieceReviewSelectionPrompt } from "@/features/cotizaciones/visual-composer/services/despiece-review-presentation.service";
 import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
+import { formatVariantDisplayLabel } from "@/features/fabricacion/services/fabricacion-line-variant.service";
 import { useSupplierPresentationResolution } from "@/features/proveedor-catalogos/hooks/use-supplier-presentation-resolution";
 import { resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 import {
@@ -414,6 +415,23 @@ export function DespieceReviewSurface({
   const activeResolution = selectedItem
     ? pieceResolutions.get(selectedItem.id) ?? null
     : null;
+  const handleSelectFabricationRecipe = (recipeId: string) => {
+    if (!selectedItem || !activeResolution) return;
+    const recipe = activeResolution.candidateRecipes?.find((candidate) => candidate.id === recipeId);
+    if (!recipe) return;
+    const identity = recipe.definition.identidad;
+    onUpdateItem(selectedItem.id, {
+      fabricationRecipeId: recipe.id,
+      fabricacionTipologia: identity.tipologia,
+      fabricacionVariante: identity.variante,
+      fabricacionApertura: identity.apertura ?? "",
+      fabricacionHerraje: identity.herraje ?? "",
+      fabricacionHojas: identity.hojas,
+      fabricacionModulos: identity.modulos,
+      fabricacionSnapshot: null,
+      cubicationSnapshot: null,
+    });
+  };
   const activeSnapshot = selectedItem
     ? resolveItemReviewCubication({
         item: selectedItem,
@@ -1202,14 +1220,34 @@ export function DespieceReviewSurface({
                         </div>
                       </div>
                     ) : (
-                      <div className={styles.emptyTable}>
-                        {selectionPrompt?.message ??
-                        (activeResolution?.estado !== "calculado" && activeResolution?.message
-                          ? activeResolution.message
-                          : pieceUiStatus === "sin_reglas"
-                          ? "Esta pieza no tiene reglas técnicas de cubicación. Puedes cotizar igual; define la pauta cuando el taller la tenga."
-                          : "Aún no hay cortes para esta pieza. Completa línea y medidas, o agrega cortes manualmente.")}
-                      </div>
+                      <>
+                        <div className={styles.emptyTable}>
+                          {selectionPrompt?.message ??
+                          (activeResolution?.estado !== "calculado" && activeResolution?.message
+                            ? activeResolution.message
+                            : pieceUiStatus === "sin_reglas"
+                            ? "Esta pieza no tiene reglas técnicas de cubicación. Puedes cotizar igual; define la pauta cuando el taller la tenga."
+                            : "Aún no hay cortes para esta pieza. Completa línea y medidas, o agrega cortes manualmente.")}
+                        </div>
+                        {activeResolution?.estado === "multiples_recetas" &&
+                        (activeResolution.candidateRecipes?.length ?? 0) > 1 ? (
+                          <label className={styles.recipeSelection}>
+                            <span>Variante de fabricación</span>
+                            <select
+                              aria-label="Variante de fabricación"
+                              value={selectedForm?.fabricationRecipeId ?? ""}
+                              onChange={(event) => handleSelectFabricationRecipe(event.currentTarget.value)}
+                            >
+                              <option value="">Elige una variante</option>
+                              {activeResolution.candidateRecipes?.map((candidate) => (
+                                <option key={candidate.id} value={candidate.id}>
+                                  {formatVariantDisplayLabel(candidate)} · {candidate.definition.identidad.hojas} hojas
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ) : null}
+                      </>
                     )}
                     {activeSnapshot?.source === "manual" ? (
                       <p className={styles.manualNote}>

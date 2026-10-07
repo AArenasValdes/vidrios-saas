@@ -48,7 +48,8 @@ type LineTemplatePickerTriggerState = {
 type LineTemplatePickerProps = {
   templates: readonly CotizacionLineTemplate[];
   value: string;
-  onChange: (templateId: string) => void;
+  onChange: (templateId: string, template?: CotizacionLineTemplate | null) => void;
+  onTemplateChange?: (template: CotizacionLineTemplate | null) => void;
   /** Called when a template's price is saved from the inline editor. */
   onTemplatePriceUpdated?: (updated: CotizacionLineTemplate) => void;
   organizationId?: string | number | null;
@@ -135,6 +136,7 @@ export function LineTemplatePicker({
   templates,
   value,
   onChange,
+  onTemplateChange,
   onTemplatePriceUpdated,
   organizationId,
   mode = "profile",
@@ -260,6 +262,7 @@ export function LineTemplatePicker({
   }, [closePicker, open]);
 
   const selectValue = (next: string) => {
+    const nextTemplate = quoteTemplates.find((template) => String(template.id) === next) ?? null;
     if (next && resolvedOrgId) {
       const target = templates.find((t) => String(t.id) === next);
       if (target && lineTemplateNeedsCommercialPrice(target)) {
@@ -267,7 +270,8 @@ export function LineTemplatePicker({
         return;
       }
     }
-    onChange(next);
+    onChange(next, nextTemplate);
+    onTemplateChange?.(nextTemplate);
     closePicker();
   };
 
@@ -613,6 +617,7 @@ export function LineTemplatePicker({
           organizationId={resolvedOrgId}
           onSaved={(updated) => {
             setPriceEditorTarget(null);
+            onTemplateChange?.(updated);
             if (onTemplatePriceUpdated) {
               onTemplatePriceUpdated(updated);
             } else {
