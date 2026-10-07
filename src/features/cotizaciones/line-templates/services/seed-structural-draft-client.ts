@@ -14,7 +14,7 @@ import { isChileOrganizationCountry } from "@/features/cotizaciones/line-templat
 
 const structuralSeedRuns = new Map<string, Promise<boolean>>();
 const projectingRepairRuns = new Map<string, Promise<number>>();
-const CATALOG_DRAFT_REPAIR_REVISION = "2026-09-20-l4800-v1";
+const CATALOG_DRAFT_REPAIR_REVISION = "2026-10-07-l12-shower-v1";
 
 /** Comparte la reparación entre catálogo y editor, sin crear líneas ni recetas. */
 export function ensureCatalogDraftsClient(organizationId: string | number): Promise<number> {

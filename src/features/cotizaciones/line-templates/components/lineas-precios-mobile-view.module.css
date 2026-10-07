@@ -536,6 +536,31 @@
   animation: browse-in 240ms var(--motion-snappy);
 }
 
+.providerIntro {
+  margin: 0;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid #e6eaf0;
+  background: #f8fafc;
+  color: #516070;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.hiddenReferencesToggle {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 0;
+  border-top: 1px solid #e6eaf0;
+  background: #f8fafc;
+  color: #526277;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
 .sectionLabel {
   display: flex;
   align-items: baseline;

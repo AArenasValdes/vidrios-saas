@@ -27,6 +27,7 @@ import {
 } from "react-icons/lu";
 
 import { DespieceInspectorSummary } from "@/features/cotizaciones/visual-composer/components/despiece-inspector-summary";
+import { SodalL25QuoteConfigPanel } from "@/features/fabricacion/components/sodal-l25-quote-config-panel";
 import { LineTemplatePicker } from "@/features/cotizaciones/line-templates/components/line-template-picker";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { resolveSupplierFamilyKeyForLineTemplate } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
@@ -104,6 +105,7 @@ type Props = {
     lineTemplateId?: string
   ) => string | null | void;
   onUpdateItem: (itemId: string, patch: QuoteConstructorItemPatch) => void;
+  onTemplatePriceUpdated?: (itemId: string, template: CotizacionLineTemplate) => void;
   onDuplicateItem: (item: CotizacionWorkflowItem) => void;
   onRemoveItem: (itemId: string) => void;
   onMoveItem: (itemId: string, direction: -1 | 1) => void;
@@ -534,6 +536,7 @@ export function QuoteConstructorWorkspace({
   onActiveItemChange,
   onAddPreset,
   onUpdateItem,
+  onTemplatePriceUpdated,
   onDuplicateItem,
   onRemoveItem,
   onMoveItem,
@@ -587,6 +590,7 @@ export function QuoteConstructorWorkspace({
     });
     return result;
   }, [activeForm, activeItem, activeTemplate, fabricationRecipes, organizationId]);
+  const activeRecipeCandidates = activeFabricationResolution?.candidateRecipes ?? [];
   const activeView = activeItem
     ? buildPieceDomainView(
         activeFabricationResolution?.estado === "calculado" &&
@@ -1205,6 +1209,9 @@ export function QuoteConstructorWorkspace({
                             onChange={(lineTemplateId) =>
                               onUpdateItem(item.id, { lineTemplateId })
                             }
+                            onTemplatePriceUpdated={(template) =>
+                              onTemplatePriceUpdated?.(item.id, template)
+                            }
                             mode="profile"
                             preferredMaterial={mapItemToForm(item).material}
                             compatibilityContext={{
@@ -1595,6 +1602,9 @@ export function QuoteConstructorWorkspace({
                       onChange={(lineTemplateId) =>
                         onUpdateItem(activeItem.id, { lineTemplateId })
                       }
+                      onTemplatePriceUpdated={(template) =>
+                        onTemplatePriceUpdated?.(activeItem.id, template)
+                      }
                       mode="profile"
                       preferredMaterial={activeForm.material}
                       compatibilityContext={{
@@ -1817,6 +1827,71 @@ export function QuoteConstructorWorkspace({
                           });
                         }}
                       />
+                    </label>
+                  ) : null}
+                  {activeItem && activeForm ? (
+                    <SodalL25QuoteConfigPanel
+                      componentForm={activeForm}
+                      selectedTemplate={activeTemplate}
+                      showSectionLabel={false}
+                      compact
+                      onFabricacionL25ConfigChange={(value) =>
+                        onUpdateItem(activeItem.id, {
+                          catalogLineKey: value.catalogLineKey,
+                          fabricacionGlazing: value.fabricacionGlazing,
+                          fabricacionLeg: value.fabricacionLeg,
+                          fabricacionReinforcement: value.fabricacionReinforcement,
+                          fabricacionVariante: value.fabricacionVariante,
+                          fabricationRecipeId: "",
+                          fabricacionSnapshot: null,
+                          cubicationSnapshot: null,
+                        })
+                      }
+                    />
+                  ) : null}
+                  {activeFabricationResolution?.estado === "multiples_recetas" &&
+                  activeRecipeCandidates.length > 1 &&
+                  activeItem ? (
+                    <label className={s.inspectorField}>
+                      <span>Variante de fabricación</span>
+                      <select
+                        aria-label="Variante de fabricación"
+                        value={activeForm?.fabricationRecipeId ?? ""}
+                        onChange={(event) => {
+                          const recipe = activeRecipeCandidates.find(
+                            (candidate) => candidate.id === event.target.value
+                          );
+                          if (!recipe) return;
+                          const identity = recipe.definition.identidad;
+                          onUpdateItem(activeItem.id, {
+                            fabricationRecipeId: recipe.id,
+                            fabricacionTipologia: identity.tipologia,
+                            fabricacionVariante: identity.variante,
+                            fabricacionApertura: identity.apertura ?? "",
+                            fabricacionHerraje: identity.herraje ?? "",
+                            fabricacionHojas: identity.hojas,
+                            fabricacionModulos: identity.modulos,
+                            fabricacionSnapshot: null,
+                            cubicationSnapshot: null,
+                          });
+                        }}
+                      >
+                        <option value="">Elige variante o herraje</option>
+                        {activeRecipeCandidates.map((recipe) => {
+                          const identity = recipe.definition.identidad;
+                          const details = [
+                            identity.nombre || identity.codigo,
+                            identity.apertura,
+                            identity.herraje,
+                            `${identity.hojas} hojas`,
+                          ].filter(Boolean);
+                          return (
+                            <option key={recipe.id} value={recipe.id}>
+                              {details.join(" · ")}
+                            </option>
+                          );
+                        })}
+                      </select>
                     </label>
                   ) : null}
                   <DespieceInspectorSummary

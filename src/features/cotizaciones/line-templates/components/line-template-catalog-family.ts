@@ -187,10 +187,19 @@ export function resolveDocumentedLineIdentity(template: CotizacionLineTemplate) 
   const canonical = VENTORA_DEFAULT_LINE_CATALOG.find((entry) => entry.catalogKey === template.catalogKey);
   const stored = template.catalogMetadata;
   const fallback = canonical?.catalogMetadata;
+  const universalFamilyKey = template.categoria === "aluminio" &&
+    typeof fallback?.familyKey === "string" &&
+    fallback.familyKey.startsWith("universal:aluminio:")
+    ? fallback.familyKey
+    : null;
   return {
-    familyKey: typeof stored?.familyKey === "string" && stored.familyKey.trim()
+    familyKey: universalFamilyKey
+      ? universalFamilyKey
+      : typeof stored?.familyKey === "string" && stored.familyKey.trim()
       ? stored.familyKey : typeof fallback?.familyKey === "string" ? fallback.familyKey : null,
-    familyLabel: typeof stored?.familyLabel === "string" && stored.familyLabel.trim()
+    familyLabel: universalFamilyKey
+      ? typeof fallback?.familyLabel === "string" ? fallback.familyLabel : null
+      : typeof stored?.familyLabel === "string" && stored.familyLabel.trim()
       ? stored.familyLabel : typeof fallback?.familyLabel === "string" ? fallback.familyLabel : null,
     configurationLabel: typeof stored?.configurationLabel === "string" && stored.configurationLabel.trim()
       ? stored.configurationLabel : typeof fallback?.configurationLabel === "string" ? fallback.configurationLabel : null,

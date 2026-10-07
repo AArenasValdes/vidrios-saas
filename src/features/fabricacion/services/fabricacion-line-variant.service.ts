@@ -599,9 +599,21 @@ export function isFabricacionRecipeReadyForSnapshot(
     }
   );
 
+  const profileRuleCount = buildFabricationRecipeSummary(
+    recipe.definition
+  ).activeRuleCount;
+  if (recipe.definition.permitirCalculoPreliminarConPendientes === true && profileRuleCount === 0) {
+    return {
+      ready: false,
+      pendingFields,
+      message: "Completa la composición de perfiles antes de guardar una pauta preliminar.",
+    };
+  }
+
   if (
     (recipe.definition.datosPendientes?.length ?? 0) > 0 &&
-    !isSodalL25FormulaDerivedRecipe(recipe)
+    !isSodalL25FormulaDerivedRecipe(recipe) &&
+    recipe.definition.permitirCalculoPreliminarConPendientes !== true
   ) {
     return {
       ready: false,
@@ -627,5 +639,14 @@ export function isFabricacionRecipeReadyForSnapshot(
     };
   }
 
-  return { ready: true, pendingFields: [], message: null };
+  const hasPreliminaryPendingData =
+    recipe.definition.permitirCalculoPreliminarConPendientes === true &&
+    pendingFields.length > 0;
+  return {
+    ready: true,
+    pendingFields: hasPreliminaryPendingData ? pendingFields : [],
+    message: hasPreliminaryPendingData
+      ? "Cálculo preliminar: revisa los datos pendientes de la receta."
+      : null,
+  };
 }

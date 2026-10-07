@@ -395,10 +395,6 @@ function VeratecWorkshopEvidence({
       {slot ? (
         <>
           <h3>Base documental disponible</h3>
-          <p>
-            Se guardará como borrador del taller. Completa y prueba sus datos antes de
-            habilitar el cálculo; este paso no valida la fabricación.
-          </p>
           {slot.pendingFields.length > 0 ? (
             <>
               <strong>Falta completar o confirmar</strong>
@@ -586,10 +582,9 @@ export function FabricacionMobileProductStep({
         </section>
       ) : singleDocumentedSlot ? (
         <section className={s.configSection} aria-labelledby="product-config-title">
-          <h2 id="product-config-title">Construcción documentada</h2>
+          <h2 id="product-config-title">Base de fabricación</h2>
           <p className={s.configHint}>
-            Esta configuración tiene una base técnica incompleta. Puedes abrirla como
-            borrador y completarla con los datos de tu taller.
+            Fórmula de Veratec disponible. Puedes probarla y ajustar los datos de tu taller.
           </p>
           <button
             type="button"
@@ -597,7 +592,7 @@ export function FabricacionMobileProductStep({
             disabled={readOnly || !onCreateMissingSlot}
             onClick={() => onCreateMissingSlot?.(singleDocumentedSlot)}
           >
-            Preparar borrador · {singleDocumentedSlot.variantLabel}
+            Usar base · {singleDocumentedSlot.variantLabel}
           </button>
         </section>
       ) : (

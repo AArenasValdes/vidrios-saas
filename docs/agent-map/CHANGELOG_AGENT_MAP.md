@@ -2,6 +2,33 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-10-07 - Reparación del borrador visible de Línea 12
+
+- La precarga L12 con sus cuatro perfiles iniciales sin ajustes ahora recibe los cinco cortes confirmados: 1203 −5, 1201 −5, 1202 −3 ×2, y 1204 +5 ×4 / −65 ×1.
+- La reparación conserva vidrio, accesorios y configuración de barra; solo opera en borradores sin pruebas/validación y con la firma exacta de la precarga incompleta. Recetas editadas fuera de esa firma quedan intactas.
+- El cliente invalida el resultado de reparación anterior para volver a revisar el borrador L12 al cargar el editor.
+- Prueba específica: `reparar-borrador-linea-12.service.test.ts`.
+
+## 2026-10-07 - Corredera universal L20 y referencias con precio Arquetipo
+
+- L20 universal deja de tomar el valor `estandar` de la variante Alumétrica como apertura fija; tanto la asignación desde cotización como el despiece lo resuelven como corredera.
+- Si la organización no tiene receta guardada, L20/L32/L42/L5000 calculan con sus fixtures de referencia existentes, solo cuando tipología/variante y medidas son compatibles. Siguen marcadas como preliminares y conservan su fuente; la receta de empresa, si existe, tiene prioridad. L25 usa su receta SODAL guardada.
+- L25 requiere una combinación explícita de vidrio, pierna y refuerzo. No se elige una configuración automáticamente; su extractor documental server-only no se incluye en el bundle de navegador.
+- Verificado con pruebas de resolución, catálogo y costo Arquetipo; las cotizaciones históricas no se reconstruyen.
+
+## 2026-10-07 - Selector de variantes en Constructor y costo parcial
+
+- Constructor cotización expone selección explícita entre recetas compatibles; al elegir una actualiza identidad de receta y descarta snapshots de cálculo anteriores para esa pieza. L25 reutiliza el selector real de pierna/refuerzo. No se elige variante automáticamente ni se editan snapshots históricos.
+- El resolver entrega las recetas candidatas ya filtradas por organización, línea y contexto para la selección; L20/L25 pueden producir pauta y costo de perfil cuando su receta queda resuelta. Perfiles sin presentación con precio siguen como pendientes y el subtotal continúa marcado parcial.
+- Verificación local: `pnpm fabrication:verify --build` pasó 166 suites, 1.310 pruebas, TypeScript, chequeo documental y build. Servidor local reabierto en `http://127.0.0.1:3000`; sin commit, push, deploy ni escritura de cotizaciones.
+
+## 2026-10-07 - Recetas preliminares calculables y precios en cotizaciones nuevas
+
+- La resolución al guardar una cotización nueva admite recetas activas no validadas, pero solo conserva snapshot cuando la receta es elegible y calcula con las dimensiones del ítem. Se mantienen estado preliminar y pendientes; no se modifica ni reconstruye ningún snapshot histórico.
+- El panel de cubicación puede mostrar la pauta preliminar de líneas universales con reglas activas y cálculo comprobable. Línea 12 conserva sus cinco reglas capturadas y faltantes visibles; no se crean fórmulas para líneas incompletas.
+- La resolución de presentaciones de compra incorpora las diez claves universales con precios disponibles y conserva el ámbito de organización. Sin commit, push, despliegue ni escritura remota durante esta pasada.
+- Verificación local: `pnpm fabrication:verify --build` pasó 166 suites, 1.310 pruebas, TypeScript, chequeo documental y build de producción.
+
 ## 2026-10-06 - Líneas universales de aluminio
 
 - Las diez familias 15, 20, 25, 4000, 5000, 35, 45, 12, 32 y 42 usan claves compartidas `universal:aluminio:lNN`; los precios globales LEGNO siguen ligados a perfiles Arquetipo y valen como referencia para cualquier color.
@@ -2729,6 +2756,13 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
 - Aplicado en producción con cero conflictos. Largo TIRA 6.000 mm registrado como supuesto solicitado por el usuario, no dato del proveedor; vigencia de la cotización no indicada.
 - Se agregan claves `arquetipo:*` y metadata `excludedRecipeFamilyKeys` para 17 códigos con roles/códigos incompatibles; se conservan enlaces previos en producción sin borrarlos. El filtro de resolución está en código local y requiere despliegue de aplicación para regir en producción.
 - Las reglas de cubicación/despiece/pauta existentes no se alteraron ni se marcaron validadas; el catálogo Arquetipo no entrega fórmulas completas para todas las líneas.
+
+## 2026-10-07 — Bases documentales preliminares Veratec (local)
+
+- El usuario confirmó que `pauta de corte veratec.xlsx` fue entregado por Veratec. Se ofrecen bases comunes preliminares para Elegans 60, Compact Sliding 2/3/4H y Sliding 7400 3H grande/chica y monorriel grande/chica, con fuente y variante explícitas.
+- La receta productiva Sliding 7400 2H monolítico 4 mm permanece sin cambios; recetas de organización prevalecen solo dentro de su propia organización. No se aplican migraciones, escrituras remotas ni validación física.
+- Los pendientes de SKU, largo, vidrio, junquillo, accesorios, sierra y geometrías contradictorias siguen visibles; el cálculo parcial no confirma compra completa.
+- Cobertura y fuentes: `docs/fabricacion/veratec/base-tecnica-veratec-2026-10-04.md` y `docs/catalogos-proveedores/veratec-familias-v1.md`.
 
 ## 2026-10-06 — Orden de fabricación y materiales
 

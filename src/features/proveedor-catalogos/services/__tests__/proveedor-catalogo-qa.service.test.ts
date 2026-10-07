@@ -1,4 +1,4 @@
-import { getSupplierCatalogQaConfig, isQuoteEligibleForFirstSupplierCostSnapshot, isSupplierCatalogQaEnabledForOrganization, matchesConfiguredPilotQuoteItems } from "../proveedor-catalogo-qa.service";
+import { getSupplierCatalogQaConfig, getSupplierCatalogQuoteLineKeys, isQuoteEligibleForFirstSupplierCostSnapshot, isSupplierCatalogQaEnabledForOrganization, matchesConfiguredPilotQuoteItems } from "../proveedor-catalogo-qa.service";
 
 describe("supplier catalog QA gate", () => {
   it("permanece apagado si no hay configuración explícita", () => {
@@ -41,4 +41,11 @@ it("cambia las líneas piloto por configuración explícita sin lógica de preci
   expect(matchesConfiguredPilotQuoteItems([{ catalogLineKey: "ejemplo:otra-linea" }], config)).toBe(true);
   expect(matchesConfiguredPilotQuoteItems([{ catalogLineKey: "otra" }], config)).toBe(false);
   expect(matchesConfiguredPilotQuoteItems([], config)).toBe(false);
+});
+
+it("resuelve presentaciones de todas las familias universales, sin allowlist de QA", () => {
+  const keys = getSupplierCatalogQuoteLineKeys();
+  for (const number of ["12", "15", "20", "25", "32", "35", "42", "45", "4000", "5000"]) {
+    expect([...keys].some((key) => key.includes(`l${number}`) || key.includes(`serie-${number}`))).toBe(true);
+  }
 });

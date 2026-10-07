@@ -10,9 +10,31 @@
 | `Lista Junio 2026.pdf` | Revisión `2026-06`, págs. 1–12 | SKU, acabado, unidad, largo y precio neto de cada fila. CLP/base por presentación completa están confirmados por el administrador del catálogo. No es una lista “vigente” sin fecha. |
 | Expediente actual 7400 | `docs/fabricacion/veratec/` + fixture Supplier Catalog V1 | Conserva la receta 2H monolítico 4 mm y su estado; el piloto Alumétrica y la evidencia comercial Xelena se mantienen como revisiones separadas. |
 
-## Resultado de implementación local
+## Actualización 2026-10-07: procedencia y uso operacional
 
-El libro `pauta de corte veratec.xlsx` fue entregado por un taller específico. Sus fórmulas pueden describir su método de trabajo, pero no se tratan como reglas universales de fabricante ni como recetas comunes para todos los talleres. Las funciones de transcripción y sus pruebas permanecen como evidencia local; no se registran como variantes en el catálogo común ni se auto-siembra ninguna receta. La receta existente `ventora:veratec-7400-corredera` 2H monolítico 4 mm no se modificó.
+El usuario confirma que `pauta de corte veratec.xlsx` fue entregado por Veratec. Se corrige la conclusión anterior que lo describía como un archivo exclusivo de un taller. El archivo aporta fórmulas para más configuraciones; su procedencia permite ofrecerlas como **bases documentales preliminares**, pero no las vuelve recetas físicamente validadas ni completa SKU, largos, vidrio, junquillo, accesorios o parámetros de sierra ausentes.
+
+La base común de Ventora ahora ofrece cálculo preliminar editable para Compact Sliding 2/3/4H, Elegans 60 ventanas interior/exterior, puertas interior/exterior y fijo normal/rebajado, además de Sliding 7400 3H grande/chica y monorriel grande/chica. No se persiste automáticamente una receta por organización. Si el taller guarda su receta, esa receta privada toma precedencia; queda aislada por organización. Todas las bases conservan estado de prueba y fuente de hoja, nunca `validated`.
+
+La receta productiva Sliding 7400 2H monolítico 4 mm y sus variantes TP no se modificaron. Las variantes de 7400 que el nombre comercial no distingue (3H grande/chica, monorriel grande/chico y fijo normal/rebajado) se ofrecen como elecciones explícitas; no se elige una geometría por defecto.
+
+### Cobertura operacional incorporada
+
+| Familia/configuración | Fuente del Excel | Resultado que ya puede calcularse | Pendiente que limita pauta completa |
+|---|---|---|---|
+| Compact Sliding 2H/3H/4H | pestañas `compact sliding 2/3/4 hojas`, celdas de medidas y cortes filas 9–24 | perfiles y medidas de vidrio según las fórmulas; la presentación con largo conocido participa en pauta | `todos` para junquillo, accesorios, vidrio final/espesor y parámetros de sierra; los perfiles sin presentación/largo quedan pendientes |
+| Elegans 60, ventana interior | `ABATIR INT Y OB`, filas 4–22 | marco, refuerzos, hojas y dimensiones de vidrio calculables | códigos de refuerzo del Excel sin asociación comercial; junquillo `todos`, accesorios y largo/precio pendientes |
+| Elegans 60, ventana exterior | `ABATIR EXT Y PROY`, filas 3–21 | marco, refuerzos, hojas y dimensiones de vidrio calculables | la pestaña combina abatir y proyectante; la clave comercial habilitada es ventana abatible. La variante proyectante no se deduce de esa equivalencia |
+| Elegans 60, puertas interior/exterior | `pta int paso libre`, `pta ext paso libre`, filas 4–22 | cortes de marco, hoja y refuerzos | la tabla de vidrio y el bloque de cortes discrepan; vidrio pendiente. Varios códigos del Excel esperan asociación |
+| Elegans 60, fijo normal/rebajado | `FIJO`, `fijo con marco rebajado`, filas 5–18 | perfiles principales y dimensión de vidrio según cada hoja | código `61011VER999` y largo sin equivalencia confirmada; junquillo `todos`, accesorios/vidrio final/sierra pendientes |
+| Sliding 7400 3H grande/chica, 2 rieles | `corred2riel3hojas2mismoriel`, `corred2rieles3hojas2mismoriel`, filas 9–24 | marco, hojas correctas (67414 grande / 67415 chica), refuerzos, traslapo, riel y vidrio medible | `67401` requiere largo de la presentación elegida por acabado; junquillo `todos` sin cotas; accesorios/espesor/kerf/despunte pendientes |
+| Sliding 7400 monorriel grande/chica | `sliding mono riel hoja grande`, `sliding mono riel hoja chica`, filas 9–34 y 7–32 | perfiles con reglas explícitas y paño móvil + fijo calculables | junquillos `todos`, remate/perfiles sin largo/precio asociado, accesorios/espesores/sierra pendientes |
+
+El fallback de cotización se usa solo cuando la organización no tiene receta guardada para esa línea; si la selección no define grande/chica o normal/rebajado, devuelve opciones en vez de escoger. La pauta de barras queda parcial si falta presentación/largo y el costo no se presenta como total. Consultar pruebas deterministas en `src/features/fabricacion/__tests__/veratec-workbook-recipes.test.ts` y `fabricacion-despiece-cotizacion.service.test.ts`.
+
+## Estado inicial auditado el 2026-10-04 (superado por la actualización del 2026-10-07)
+
+La siguiente tabla conserva el inventario y las brechas encontrados en la auditoría inicial. Su conclusión de que las fórmulas no se publicarían como bases comunes quedó reemplazada por la decisión del usuario y la implementación documentada arriba. La receta existente `ventora:veratec-7400-corredera` 2H monolítico 4 mm no se modificó.
 
 ### Cálculo candidato
 

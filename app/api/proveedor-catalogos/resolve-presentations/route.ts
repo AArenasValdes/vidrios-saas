@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AuthRouteAccessError, resolveAuthenticatedRouteContext } from "@/features/auth/services/auth-route-access.service";
 import { readConfirmedSupplierPresentations } from "@/features/proveedor-catalogos/repositories/costo-tecnico-parcial.repository";
-import { getSupplierCatalogQaConfig } from "@/features/proveedor-catalogos/services/proveedor-catalogo-qa.service";
+import { getSupplierCatalogQuoteLineKeys } from "@/features/proveedor-catalogos/services/proveedor-catalogo-qa.service";
 import { resolveSupplierPresentationsForQuoteItem } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
@@ -21,7 +21,7 @@ const requestSchema = z.object({
 export async function POST(request: Request) {
   try {
     const auth = await resolveAuthenticatedRouteContext();
-    const config = getSupplierCatalogQaConfig();
+    const supportedCatalogLineKeys = getSupplierCatalogQuoteLineKeys();
     const parsed = requestSchema.safeParse(await request.json());
     if (!parsed.success) return NextResponse.json({ error: "La solicitud de presentaciones no es válida." }, { status: 400 });
     const familyByCatalogLineKey = new Map(VENTORA_DEFAULT_LINE_CATALOG.flatMap((line) => {
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       return line.catalogKey && typeof familyKey === "string" ? [[line.catalogKey, familyKey] as const] : [];
     }));
     if (parsed.data.items.some((item) =>
-      !config.catalogLineKeys.has(item.catalogLineKey) ||
+      !supportedCatalogLineKeys.has(item.catalogLineKey) ||
       familyByCatalogLineKey.get(item.catalogLineKey) !== item.familyKey
     )) {
       return NextResponse.json({ enabled: false }, { status: 404 });

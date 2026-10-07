@@ -79,6 +79,7 @@ type PasoDosSeccionProps = {
     lineTemplateId?: string
   ) => string | null;
   onUpdateConstructorItem: (itemId: string, patch: QuoteConstructorItemPatch) => void;
+  onTemplatePriceUpdated?: (itemId: string, template: CotizacionLineTemplate) => void;
   onMoveConstructorItem: (itemId: string, direction: -1 | 1) => void;
   onGlobalTotalClienteChange: (value: string) => void;
   onClosePieceEditors?: () => void;
@@ -108,6 +109,7 @@ export function PasoDosSeccion({
   formatCurrencyInput,
   onAddConstructorPreset,
   onUpdateConstructorItem,
+  onTemplatePriceUpdated,
   onMoveConstructorItem,
   onGlobalTotalClienteChange,
   onClosePieceEditors,
@@ -538,6 +540,7 @@ export function PasoDosSeccion({
         return itemId;
       }}
       onUpdateItem={onUpdateConstructorItem}
+      onTemplatePriceUpdated={onTemplatePriceUpdated}
       onDuplicateItem={(item) => {
         panel.onDuplicateItem(item);
       }}

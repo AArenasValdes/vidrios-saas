@@ -46,6 +46,7 @@ type Props = {
   formatCurrencyInput: (value: string) => string;
   onClose: () => void;
   onSave: (patch: QuoteConstructorItemPatch) => void;
+  onTemplatePriceUpdated?: (itemId: string, template: CotizacionLineTemplate) => void;
   onOpenConstructor: () => void;
   onDuplicate: () => void;
   onRemove: () => void;
@@ -58,6 +59,7 @@ export function CuadernoQuickEditSheet({
   formatCurrencyInput,
   onClose,
   onSave,
+  onTemplatePriceUpdated,
   onOpenConstructor,
   onDuplicate,
   onRemove,
@@ -333,6 +335,9 @@ export function CuadernoQuickEditSheet({
                 templates={lineTemplates}
                 value={lineTemplateId}
                 onChange={handleLineTemplateChange}
+                onTemplatePriceUpdated={(template) =>
+                  onTemplatePriceUpdated?.(item.id, template)
+                }
                 mode="profile"
                 preferredMaterial={materialDraft}
                 compatibilityContext={{

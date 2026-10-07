@@ -11,6 +11,7 @@ import {
 } from "@/features/cotizaciones/line-templates/constants/line-template-habitual-glass";
 
 import { cotizacionLineTemplatesService } from "@/features/cotizaciones/line-templates/services/cotizacion-line-templates.service";
+import { invalidateLineTemplateCache } from "@/features/cotizaciones/line-templates/services/line-template-cache";
 import {
   lineTemplateNeedsCommercialPrice,
   getLineTemplateSystemMetadata,
@@ -112,6 +113,7 @@ export function LinePriceEditor({
               : habitualGlass,
         }
       );
+      invalidateLineTemplateCache(organizationId);
       toast.success("Precio guardado");
       onSaved(updated);
     } catch (err) {

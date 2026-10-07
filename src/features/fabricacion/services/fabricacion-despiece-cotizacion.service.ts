@@ -6,11 +6,14 @@
 
 import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
 import { isFabricacionRecipeReadyForSnapshot } from "@/features/fabricacion/services/fabricacion-line-variant.service";
+import { buildFabricationRecipeSummary } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import { resolveFabricacionHojasForRecipeMatch } from "@/features/fabricacion/services/fabricacion-hojas-resolver.service";
 import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
 import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
 import { resolveFabricationRecipe } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
+import { resolveUniversalPricedLineFallback } from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
+import { resolveVeratecWorkbookFallback } from "@/features/fabricacion/services/fabricacion-receta-veratec-fallback.service";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 import { isSodalL25FormulaDerivedRecipe } from "@/features/fabricacion/services/fabricacion-evidence-gate.service";
 import {
@@ -66,6 +69,8 @@ export type FabricacionDespieceCotizacionResult = {
   barsAvailable: boolean;
   preliminary: boolean;
   message: string | null;
+  /** Opciones compatibles visibles para que el usuario resuelva una ambigüedad. */
+  candidateRecipes?: FabricationRecipeRecord[];
   /** Geometría de perfiles disponible aunque el vidrio/accesorio comercial no tenga mapeo. No es snapshot formal. */
   geometryOnly?: {
     sourceRecipeId: string;
@@ -359,7 +364,9 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
       : null) ||
     aperturaFromPresentation ||
     (isL20CatalogKey(catalogKey)
-      ? resolveL20AperturaForCatalogKey(catalogKey, presentation.fabricacionVariante)
+      ? catalogKey === "ventora:l20"
+        ? "corredera"
+        : resolveL20AperturaForCatalogKey(catalogKey, presentation.fabricacionVariante)
       : null);
   const s75Config = resolveWinHouseNewS75QuoteVariant({
     catalogKey,
@@ -504,8 +511,23 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     recipe.status !== "validated" &&
     recipe.variant === VERATEC_7400_VARIANT_MONOLITICO_4MM &&
     evaluarRecetaListaParaProbar(recipe.definition).listaParaProbar;
+  const canPreviewRecipeWithDeclaredPendingData = (recipe: FabricationRecipeRecord) =>
+    recipe.status !== "validated" &&
+    recipe.definition.permitirCalculoPreliminarConPendientes === true &&
+    buildFabricationRecipeSummary(recipe.definition).activeRuleCount > 0 &&
+    calcularCubicacionYPauta(recipe.definition, {
+      anchoTotalMm: ancho,
+      altoTotalMm: alto,
+      cantidad,
+      anchoHojaAMm: presentation.fabricacionAnchoHojaAMm,
+      hojas: recipe.definition.identidad.hojas,
+      modulos: recipe.definition.identidad.modulos,
+      variante: recipe.definition.identidad.variante,
+    }).calculable;
   const canPreviewPreliminaryRecipe = (recipe: FabricationRecipeRecord) =>
-    canPreviewWinHouseDraft(recipe) || canPreviewVeratecDraft(recipe);
+    canPreviewWinHouseDraft(recipe) ||
+    canPreviewVeratecDraft(recipe) ||
+    canPreviewRecipeWithDeclaredPendingData(recipe);
 
   let recipesForResolution = input.recipes;
   if (s75Config.variant) {
@@ -540,7 +562,40 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
       ];
     }
   }
-  const resolution = resolveFabricationRecipe(recipesForResolution, recipeResolutionInput);
+  let resolution = resolveFabricationRecipe(recipesForResolution, recipeResolutionInput);
+
+  if (resolution.estado === "sin_receta" && catalogKey) {
+    const veratecFallbacks = resolveVeratecWorkbookFallback({
+      catalogKey,
+      lineTemplateId,
+      organizationId: input.organizationId,
+      lineName: input.item.lineaComercial || catalogKey,
+      variant: recipeResolutionInput.variante,
+      recipes: input.recipes,
+    });
+    if (veratecFallbacks.length > 0) {
+      resolution = resolveFabricationRecipe(
+        [...recipesForResolution, ...veratecFallbacks],
+        recipeResolutionInput,
+      );
+    }
+    if (resolution.estado === "sin_receta") {
+      const fallback = resolveUniversalPricedLineFallback({
+        catalogKey,
+        lineTemplateId,
+        organizationId: input.organizationId,
+        lineName: input.item.lineaComercial || catalogKey,
+        variant: recipeResolutionInput.variante,
+        recipes: input.recipes,
+      });
+      if (fallback) {
+        resolution = resolveFabricationRecipe(
+          [...recipesForResolution, fallback],
+          recipeResolutionInput,
+        );
+      }
+    }
+  }
 
   if (resolution.estado === "multiples_recetas") {
     return {
@@ -551,6 +606,7 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
       barsAvailable: false,
       preliminary: false,
       message: "Hay varias recetas compatibles; elige variante o herraje.",
+      candidateRecipes: resolution.candidatas,
     };
   }
 

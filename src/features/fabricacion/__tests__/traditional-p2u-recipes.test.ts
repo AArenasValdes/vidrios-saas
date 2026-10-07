@@ -7,6 +7,8 @@ import { LINE_15_FIXTURE_1200X1000 } from "@/features/fabricacion/fixtures/line-
 import { LINE_4000_FIXTURE_1200X1000 } from "@/features/fabricacion/fixtures/line-4000-corredera-recipe";
 import { SERIE_45_FIXTURE_1200X1000 } from "@/features/fabricacion/fixtures/serie-45-practicable-recipe";
 import { fabricacionRecetaSchema } from "@/features/fabricacion/schemas/fabricacion-schemas";
+import { isFabricacionRecipeReadyForSnapshot } from "@/features/fabricacion/services/fabricacion-line-variant.service";
+import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
 describe("P2U líneas tradicionales / multiproveedor", () => {
   it("mantiene AM-35 y Línea 12 como recetas documentales incompletas", () => {
@@ -92,6 +94,39 @@ describe("P2U líneas tradicionales / multiproveedor", () => {
     });
     expect(invalidGeometry.calculable).toBe(false);
     expect(invalidGeometry.perfiles).toEqual([]);
+  });
+
+  it("permite congelar Línea 12 como preliminar cuando sus pendientes están declarados y los perfiles calculan", () => {
+    const definition = crearRecetaP2U({
+      catalogKey: "ventora:serie-12-shower-corredera",
+      lineName: "Línea 12 — Shower Door",
+    });
+    const record: FabricationRecipeRecord = {
+      id: "line-12-preliminary",
+      organizationId: 1,
+      lineTemplateId: 12,
+      scope: "organization",
+      providerName: "Ventora",
+      lineName: "Línea 12",
+      typology: "corredera",
+      leavesCount: 2,
+      variant: definition.identidad.variante,
+      version: 1,
+      status: "draft",
+      definition,
+      sourceType: "manual",
+      sourceReference: "captura-linea-12",
+      sourceName: null,
+      sourceRevision: null,
+      parentRecipeId: null,
+      validatedAt: null,
+      validatedBy: null,
+      createdAt: "2026-10-06T00:00:00.000Z",
+      updatedAt: "2026-10-06T00:00:00.000Z",
+      eliminadoEn: null,
+    };
+
+    expect(isFabricacionRecipeReadyForSnapshot(record)).toMatchObject({ ready: true });
   });
 
   it("expone destajes oficiales de Línea 15 con cuatro variantes", () => {

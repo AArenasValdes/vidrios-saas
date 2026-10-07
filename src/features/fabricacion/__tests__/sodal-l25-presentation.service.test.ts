@@ -11,7 +11,6 @@ import {
   resolveCotizacionItemSodalL25LineDisplayLabel,
   resolveEffectiveSodalL25CatalogKey,
   resolveSodalL25CommercialLineDisplayName,
-  SODAL_L25_COMMERCIAL_BASE_NAME,
 } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 
@@ -50,7 +49,7 @@ describe("sodal-l25-presentation.service", () => {
         catalogKey: "ventora:l25",
         nombre: "Serie 25",
       })
-    ).toBe("L25");
+    ).toBe("Serie 25 — Corredera 2 hojas");
   });
 
   it("presenta nombres contextuales por cantidad de hojas", () => {
@@ -120,6 +119,6 @@ describe("sodal-l25-presentation.service", () => {
     expect(deduped).toHaveLength(2);
     expect(deduped.filter((row) => row.catalogKey === "ventora:l25")).toHaveLength(1);
     expect(deduped.find((row) => row.catalogKey === "ventora:l25")?.id).toBe(2);
-    expect(formatLineTemplateQuotePickerLabel(deduped[0]!)).toBe(SODAL_L25_COMMERCIAL_BASE_NAME);
+    expect(formatLineTemplateQuotePickerLabel(deduped[0]!)).toBe("Serie 25 — Corredera 2 hojas");
   });
 });

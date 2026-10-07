@@ -45,6 +45,7 @@ import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabri
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import { resolveSupplierPresentationsForQuote } from "@/features/proveedor-catalogos/services/supplier-presentations.client";
 import { resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
+import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import {
   organizationProfileRepository,
   type OrganizationProfileRepository,
@@ -507,22 +508,36 @@ function buildFabricacionSnapshotForItem(input: {
   if (input.item.tipoItem === "item_libre_con_valor") return null;
   if (!input.item.ancho || !input.item.alto || input.item.cantidad <= 0) return null;
 
+  const presentation = decodeCotizacionItemPresentationMeta(input.item.observaciones);
+  const catalogLine = VENTORA_DEFAULT_LINE_CATALOG.find(
+    (line) => line.catalogKey === presentation.catalogLineKey
+  );
+  const supplierFamilyKey =
+    typeof catalogLine?.catalogMetadata?.familyKey === "string"
+      ? catalogLine.catalogMetadata.familyKey
+      : null;
+
   const resolution = resolveFabricacionDespieceForQuoteItem({
     item: input.item,
     recipes: input.recipes,
     organizationId: input.organizationId,
+    lineTemplateId: presentation.lineTemplateId,
+    lineCatalogKey: presentation.catalogLineKey,
+    supplierFamilyKey,
   });
 
-  // Las variantes WinHouse pueden previsualizarse como preliminares en el
-  // despiece, pero solo una receta validada se congela en la cotización.
+  // Congela en cotizaciones nuevas las recetas validadas y las preliminares
+  // que el resolver pudo calcular. Las recetas incompatibles/incompletas siguen
+  // sin snapshot; las cotizaciones existentes nunca pasan por este flujo.
   if (
     resolution.estado !== "calculado" ||
-    resolution.recipe?.status !== "validated" ||
-    !resolution.formal
+    !resolution.formal?.result.calculable
   ) {
     return null;
   }
-  return resolution.formal;
+  return supplierFamilyKey
+    ? { ...resolution.formal, supplierFamilyKey }
+    : resolution.formal;
 }
 
 type FabricationRecipeQuoteRow = {
@@ -591,7 +606,7 @@ function mapFabricationRecipeQuoteRow(
   };
 }
 
-async function listValidatedFabricationRecipesForQuote(input: {
+async function listFabricationRecipeCandidatesForQuote(input: {
   organizationId: number | null;
 }) {
   const supabase = createClient();
@@ -600,7 +615,7 @@ async function listValidatedFabricationRecipesForQuote(input: {
     .select(
       "id, organization_id, line_template_id, scope, provider_name, line_name, typology, leaves_count, variant, version, status, definition, source_type, source_reference, parent_recipe_id, validated_at, created_at, updated_at, eliminado_en"
     )
-    .eq("status", "validated")
+    .in("status", ["draft", "testing", "validated", "review_required"])
     .is("eliminado_en", null);
 
   query =
@@ -1110,7 +1125,7 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
         );
 
         try {
-          const recipes = await listValidatedFabricationRecipesForQuote({
+          const recipes = await listFabricationRecipeCandidatesForQuote({
             organizationId: organizationIdForFabricacion,
           });
           normalizedItems = normalizedItems.map((item) => ({

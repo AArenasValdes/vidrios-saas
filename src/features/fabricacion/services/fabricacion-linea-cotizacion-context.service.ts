@@ -314,10 +314,12 @@ export function resolveFabricacionContextForLineAssignment(input: {
         })
       : null;
     const l20Apertura = isL20CatalogKey(input.template.catalogKey)
-      ? resolveL20AperturaForCatalogKey(
-          input.template.catalogKey,
-          input.form.fabricacionVariante,
-        )
+      ? input.template.catalogKey === "ventora:l20"
+        ? "corredera"
+        : resolveL20AperturaForCatalogKey(
+            input.template.catalogKey,
+            input.form.fabricacionVariante,
+          )
       : null;
     const l20Variante = input.form.fabricacionVariante?.trim() || null;
 

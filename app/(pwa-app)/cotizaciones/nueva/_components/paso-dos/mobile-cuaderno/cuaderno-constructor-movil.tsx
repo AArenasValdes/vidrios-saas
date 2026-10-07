@@ -49,6 +49,7 @@ type Props = {
   glassOptions: readonly string[];
   formatCurrencyInput: (value: string) => string;
   onUpdateItem: (itemId: string, patch: QuoteConstructorItemPatch) => void;
+  onTemplatePriceUpdated?: (itemId: string, template: CotizacionLineTemplate) => void;
   onClose: () => void;
   onSaved: () => void;
   onDuplicate: () => void;
@@ -110,6 +111,7 @@ export function CuadernoConstructorMovil({
   glassOptions,
   formatCurrencyInput,
   onUpdateItem,
+  onTemplatePriceUpdated,
   onClose,
   onSaved,
   onDuplicate,
@@ -326,6 +328,9 @@ export function CuadernoConstructorMovil({
                             value={form.lineTemplateId}
                             onChange={(lineTemplateId) =>
                               onUpdateItem(item.id, { lineTemplateId })
+                            }
+                            onTemplatePriceUpdated={(template) =>
+                              onTemplatePriceUpdated?.(item.id, template)
                             }
                             mode="profile"
                             preferredMaterial={form.material}

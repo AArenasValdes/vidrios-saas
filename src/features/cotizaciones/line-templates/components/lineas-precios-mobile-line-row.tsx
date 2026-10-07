@@ -6,6 +6,7 @@ import {
   lineTemplateNeedsCommercialPrice,
   type CotizacionLineTemplate,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import { normalizeUniversalAluminumFamilyKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import {
   formatLineTemplatePriceLabel,
   LINE_TEMPLATE_CATEGORIA_LABELS,
@@ -46,6 +47,23 @@ function resolveLineCode(template: CotizacionLineTemplate) {
       : "";
 
   return lineSystem || plantillaId || null;
+}
+
+export function resolveLineTemplateDisplayName(template: CotizacionLineTemplate) {
+  const documented = resolveDocumentedLineIdentity(template);
+  if (documented.familyKey?.startsWith("veratec:") && documented.configurationLabel) {
+    return documented.configurationLabel;
+  }
+  const universalFamilyKey = normalizeUniversalAluminumFamilyKey(documented.familyKey);
+  const lineNumber = universalFamilyKey?.match(/^universal:aluminio:l(.+)$/)?.[1];
+  if (lineNumber && documented.configurationLabel) {
+    const configuration = documented.configurationLabel
+      .replace(/\s*[·—-]\s*/g, " ")
+      .replace(/^fijos?(?:\s+\d+\s+hojas)?$/i, "Paño fijo")
+      .trim();
+    return `Línea ${lineNumber} — ${configuration}`;
+  }
+  return template.nombre.replace(/^Arquetipo\s*[·—-]\s*/i, "");
 }
 
 function resolveProviderSummary(template: CotizacionLineTemplate) {
@@ -178,9 +196,7 @@ export function LineasPreciosMobileLineRow({
   const lineCode = resolveLineCode(template);
   const materialLabel = template.material || LINE_TEMPLATE_CATEGORIA_LABELS[template.categoria];
   const providerSummary = groupedByProvider ? null : resolveProviderSummary(template);
-  const documented = resolveDocumentedLineIdentity(template);
-  const displayName = documented.familyKey?.startsWith("veratec:") && documented.configurationLabel
-    ? documented.configurationLabel : template.nombre;
+  const displayName = resolveLineTemplateDisplayName(template);
   const metaLine = template.categoria === "vidrio"
     ? resolveGlassFacts(template)
     : [lineCode, materialLabel].filter(Boolean).join(" · ");
@@ -202,7 +218,7 @@ export function LineasPreciosMobileLineRow({
           event.preventDefault();
           onOpenActions();
         }}
-        aria-label={`Acciones de ${template.nombre}`}
+        aria-label={`Acciones de ${displayName}`}
       >
         <div className={s.lineRowTop}>
           <strong className={s.lineName}>{displayName}</strong>

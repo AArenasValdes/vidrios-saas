@@ -2,6 +2,10 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 
 import { useCotizacionLineTemplates } from "../useCotizacionLineTemplates";
+import {
+  fetchLineTemplates,
+  invalidateLineTemplateCache,
+} from "@/features/cotizaciones/line-templates/services/line-template-cache";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 
 const mockGetTemplates = jest.fn();
@@ -117,5 +121,22 @@ describe("carga optimizada del catálogo de líneas", () => {
     await waitFor(() => expect(second.result.current.templates).toHaveLength(1));
 
     expect(mockGetTemplates).toHaveBeenCalledTimes(1);
+  });
+
+  it("recarga el precio actualizado después de invalidar la caché", async () => {
+    mockGetTemplates
+      .mockResolvedValueOnce([buildTemplate(3)])
+      .mockResolvedValueOnce([{ ...buildTemplate(3), precioM2Sugerido: 65000 }]);
+
+    const first = await fetchLineTemplates(mockOrganizationId, true);
+    expect(first[0].precioM2Sugerido).toBe(10000);
+    expect(mockGetTemplates).toHaveBeenCalledTimes(1);
+
+    invalidateLineTemplateCache(mockOrganizationId);
+
+    const refreshed = await fetchLineTemplates(mockOrganizationId, true);
+    expect(refreshed[0].id).toBe(3);
+    expect(refreshed[0].precioM2Sugerido).toBe(65000);
+    expect(mockGetTemplates).toHaveBeenCalledTimes(2);
   });
 });

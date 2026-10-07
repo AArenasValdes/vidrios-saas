@@ -163,6 +163,67 @@ function isStaleSerie4800VentoraDraft(
   return recipe.identidad.tipologia === "corredera" && (codes.length === 0 || recipe.perfiles.length <= 7);
 }
 
+/** Precarga incompleta de L12 que aparece en el editor: cuatro perfiles codificados,
+ * pero sin los ajustes ni el segundo corte del 1204 confirmados por el taller. */
+function isIncompleteLine12Draft(
+  catalogKey: string,
+  recipe: FabricacionReceta
+): boolean {
+  if (catalogKey !== "ventora:serie-12-shower-corredera") return false;
+  if (recipe.identidad.tipologia !== "shower" || recipe.identidad.hojas !== 2) return false;
+  if (recipe.perfiles.length !== 4) return false;
+
+  const expected = [
+    { code: "1203", base: "ancho_total", quantity: 1 },
+    { code: "1201", base: "ancho_total", quantity: 1 },
+    { code: "1202", base: "alto_total", quantity: 2 },
+    { code: "1204", base: "ancho_por_hoja", quantity: 4 },
+  ];
+
+  return expected.every((profile, index) => {
+    const current = recipe.perfiles[index];
+    return current?.codigoPerfil?.trim() === profile.code &&
+      current.reglaMedida.base === profile.base &&
+      (current.reglaMedida.ajusteMm ?? 0) === 0 &&
+      current.reglaCantidad.tipo === "fija" &&
+      current.reglaCantidad.cantidad === profile.quantity;
+  });
+}
+
+function buildLine12Replacement(
+  catalogKey: string,
+  row: BorradorProyectanteRow,
+  current: FabricacionReceta
+): FabricacionReceta | null {
+  const replacement = buildCatalogReplacement(catalogKey, row, current.identidad.recetaId);
+  if (!replacement) return null;
+  const defaultCutConfig = replacement.configuracionCorte ?? {
+    perdidaCorteMm: null,
+    despunteInicialMm: null,
+    sobranteMinimoAprovechableMm: null,
+    largoComercialDefaultMm: 6000,
+  };
+  const currentCutConfig = current.configuracionCorte ?? defaultCutConfig;
+
+  return {
+    ...replacement,
+    // La reparación cubre exclusivamente la receta de perfiles. Preserva vidrio,
+    // accesorios y parámetros de barra que la empresa pudiera haber completado.
+    vidrios: current.vidrios,
+    accesorios: current.accesorios,
+    configuracionCorte: {
+      ...currentCutConfig,
+      largoComercialDefaultMm:
+        currentCutConfig.largoComercialDefaultMm ??
+        defaultCutConfig.largoComercialDefaultMm ?? 6000,
+    },
+    notasValidacion: Array.from(new Set([
+      ...(replacement.notasValidacion ?? []),
+      ...(current.notasValidacion ?? []),
+    ])),
+  };
+}
+
 function buildSerie4800Replacement(
   row: BorradorProyectanteRow,
   recetaId: string,
@@ -225,6 +286,9 @@ export function prepararReparacionBorradorCatalogo(
     sourceReference === "ventora-proyectante:catalogo-2026-09-13";
   const parsed = fabricacionRecetaSchema.safeParse(row.definition);
   if (!parsed.success) return null;
+  if (isIncompleteLine12Draft(catalogKey ?? "", parsed.data)) {
+    return buildLine12Replacement(catalogKey!, row, parsed.data);
+  }
   if (isStaleSerie45VentoraDraft(catalogKey ?? "", sourceReference, parsed.data)) {
     return buildCatalogReplacement(catalogKey, row, parsed.data.identidad.recetaId);
   }

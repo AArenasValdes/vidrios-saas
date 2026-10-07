@@ -154,6 +154,11 @@ export function FabricacionMobileValidateStep({
     typeof calcularPautaBarrasMultiMedida
   >["pautaBarras"] | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [saveMessage, setSaveMessage] = useState<{
+    tone: "error" | "success";
+    text: string;
+  } | null>(null);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
   const [calculatedFingerprint, setCalculatedFingerprint] = useState<string | null>(
     null
@@ -302,6 +307,26 @@ export function FabricacionMobileValidateStep({
       await onActivate();
     } finally {
       setIsActivating(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!onSaveDraft || isSavingDraft || isSaving) return;
+    setIsSavingDraft(true);
+    setSaveMessage(null);
+    try {
+      await onSaveDraft();
+      setSaveMessage({
+        tone: "success",
+        text: "Cambios guardados en la receta de esta línea.",
+      });
+    } catch {
+      setSaveMessage({
+        tone: "error",
+        text: "No se pudieron guardar los cambios. Inténtalo nuevamente.",
+      });
+    } finally {
+      setIsSavingDraft(false);
     }
   };
 
@@ -712,48 +737,37 @@ export function FabricacionMobileValidateStep({
       </div>
 
       <footer className={s.validateFooter}>
-        {!hasResults || formExpanded ? (
-          <button
-            type="button"
-            className={s.primaryButton}
-            onClick={calculate}
-            disabled={isSaving}
+        {saveMessage ? (
+          <div
+            className={saveMessage.tone === "error" ? s.errorBand : s.successBand}
+            role={saveMessage.tone === "error" ? "alert" : "status"}
+            style={{ gridColumn: "1 / -1", marginBottom: 0 }}
           >
-            <Play size={16} aria-hidden />
-            Calcular prueba
-          </button>
-        ) : allMatch && onActivate ? (
-          <>
+            {saveMessage.text}
+          </div>
+        ) : null}
+        <div className={s.validateFooterActions}>
+          {!hasResults || formExpanded ? (
             <button
               type="button"
               className={s.secondaryButton}
-              disabled={isSaving}
-              onClick={() => void onSaveDraft?.()}
+              onClick={calculate}
+              disabled={isSaving || isSavingDraft}
             >
-              Guardar borrador
+              <Play size={16} aria-hidden />
+              Calcular prueba
             </button>
+          ) : allMatch && onActivate ? (
             <button
               type="button"
-              className={s.primaryButton}
-              disabled={!readyToActivate || isSaving || isActivating}
+              className={s.secondaryButton}
+              disabled={!readyToActivate || isSaving || isActivating || isSavingDraft}
               onClick={() => void handleActivate()}
             >
               <CheckCircle2 size={16} aria-hidden />
               {isActivating ? "Guardando…" : "Guardar y activar"}
             </button>
-          </>
-        ) : (
-          <>
-            {onSaveDraft ? (
-              <button
-                type="button"
-                className={s.primaryButton}
-                disabled={isSaving}
-                onClick={() => void onSaveDraft()}
-              >
-                Guardar borrador
-              </button>
-            ) : null}
+          ) : (
             <button
               type="button"
               className={s.secondaryButton}
@@ -764,8 +778,18 @@ export function FabricacionMobileValidateStep({
             >
               Revisar diferencias
             </button>
-          </>
-        )}
+          )}
+          {onSaveDraft ? (
+            <button
+              type="button"
+              className={s.primaryButton}
+              disabled={isSaving || isSavingDraft}
+              onClick={() => void handleSaveDraft()}
+            >
+              {isSaving || isSavingDraft ? "Guardando…" : "Guardar cambios"}
+            </button>
+          ) : null}
+        </div>
       </footer>
     </div>
   );

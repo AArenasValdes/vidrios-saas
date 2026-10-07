@@ -2217,7 +2217,8 @@ function NuevaCotizacionPageContent() {
 
   const handleUpdateConstructorItem = (
     itemId: string,
-    patch: QuoteConstructorItemPatch
+    patch: QuoteConstructorItemPatch,
+    templateOverride?: CotizacionLineTemplate
   ) => {
     setDraft((current) => {
       const item = current.items.find((candidate) => candidate.id === itemId);
@@ -2226,9 +2227,12 @@ function NuevaCotizacionPageContent() {
       let form = mapItemToForm(item);
       const { markPriceManual, ...formPatch } = patch;
       if (patch.lineTemplateId !== undefined) {
-        const template = activeLineTemplates.find(
-          (candidate) => String(candidate.id) === patch.lineTemplateId
-        );
+        const template =
+          templateOverride && String(templateOverride.id) === patch.lineTemplateId
+            ? templateOverride
+            : activeLineTemplates.find(
+                (candidate) => String(candidate.id) === patch.lineTemplateId
+              );
         form = template
           ? applyLineTemplateToComponentForm(
               {
@@ -2306,6 +2310,14 @@ function NuevaCotizacionPageContent() {
         ),
       };
     });
+  };
+
+  const handleApplyPricedLineTemplateToConstructorItem = (
+    itemId: string,
+    template: CotizacionLineTemplate
+  ) => {
+    void reloadLineTemplates();
+    handleUpdateConstructorItem(itemId, { lineTemplateId: String(template.id) }, template);
   };
 
   const handleApplyConstructorLineToItems = (lineTemplateId: string) => {
@@ -3284,6 +3296,7 @@ function goNextFromStep1() {
               contextObra: draft.obra,
               onAddPreset: handleAddConstructorPreset,
               onUpdateItem: handleUpdateConstructorItem,
+              onTemplatePriceUpdated: handleApplyPricedLineTemplateToConstructorItem,
               onApplyLineToItems: handleApplyConstructorLineToItems,
               onDuplicateItem: (item) => {
                 setQuoteModeChosen(true);
@@ -3433,6 +3446,7 @@ function goNextFromStep1() {
             formatCurrencyInput: regionalCurrencyInput,
             onAddConstructorPreset: handleAddConstructorPreset,
             onUpdateConstructorItem: handleUpdateConstructorItem,
+            onTemplatePriceUpdated: handleApplyPricedLineTemplateToConstructorItem,
             onMoveConstructorItem: handleMoveConstructorItem,
             onGlobalTotalClienteChange: handleGlobalTotalClienteChange,
             onClosePieceEditors: () => {

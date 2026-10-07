@@ -69,6 +69,7 @@ export function FabricacionLineMobileShell({
     updateRecipe,
     openEditor,
     openTestLab,
+    handleNewVersion,
   } = workflow;
 
   const editorOpen = mobileView === "wizard";
@@ -147,17 +148,13 @@ export function FabricacionLineMobileShell({
         onContinueToRecipe={handleContinueToRecipe}
         onPersistRecipe={async (recipe) => {
           setDraft(recipe);
-          try {
-            await handleSave(recipe, { silent: true });
-          } catch (error) {
-            throw error instanceof Error
-              ? error
-              : new Error("No se pudo guardar la receta.");
-          }
+          const saved = await handleSave(recipe);
+          if (!saved) throw new Error("No se encontró la receta que intentas guardar.");
         }}
         onSaveDraft={async (recipe) => {
           setDraft(recipe);
-          await handleSave(recipe, { silent: true });
+          const saved = await handleSave(recipe);
+          if (!saved) throw new Error("No se encontró la receta que intentas guardar.");
         }}
         onSaveTest={async (input) => {
           await createRecipeTest({
@@ -197,6 +194,10 @@ export function FabricacionLineMobileShell({
         const recipe = detailRecipe ?? focusRecipe;
         if (!recipe) return;
         void openTestLab(recipe, "test");
+      }}
+      onCreateVersion={() => {
+        const recipe = detailRecipe ?? focusRecipe;
+        if (recipe?.status === "validated") void handleNewVersion(recipe);
       }}
       suggestedRecipes={suggestedRecipesForLine.filter((entry) => entry.sourceType === "workshop")}
       onUseSuggested={(entry) => void handleUseSuggested(entry)}

@@ -83,6 +83,7 @@ import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import { useSupplierPresentationResolution } from "@/features/proveedor-catalogos/hooks/use-supplier-presentation-resolution";
 import { resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
+import { resolveUniversalAluminumLineKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
 import editor from "./pauta-cubicacion-panel.module.css";
 
@@ -604,65 +605,55 @@ export function PautaCubicacionPanel({
       selectedPersistedRecipe.status !== "draft" ||
       selectedPersistedRecipe.definition.estado !== "lista_para_validar" ||
       selectedPersistedRecipe.definition.identidad.variante !== VERATEC_7400_VARIANT_MONOLITICO_4MM ||
-      (componentForm.fabricationRecipeId != null &&
-        componentForm.fabricationRecipeId !== selectedPersistedRecipe.id) ||
+      (componentForm.fabricationRecipeId != null && componentForm.fabricationRecipeId !== selectedPersistedRecipe.id) ||
       formalResolution?.receta?.id !== selectedPersistedRecipe.id ||
-      widthMm <= 0 ||
-      heightMm <= 0 ||
-      quantity <= 0
-    ) {
-      return false;
-    }
-
-    const compositionComplete = buildFabricationRecipeSummary(
-      selectedPersistedRecipe.definition
-    ).compositionComplete;
-    if (!compositionComplete) return false;
-    return calcularCubicacionYPauta(selectedPersistedRecipe.definition, {
-      anchoTotalMm: widthMm,
-      altoTotalMm: heightMm,
-      cantidad: quantity,
-      hojas: selectedPersistedRecipe.definition.identidad.hojas,
-      modulos: selectedPersistedRecipe.definition.identidad.modulos,
-      variante: selectedPersistedRecipe.definition.identidad.variante,
-    }).calculable;
-  }, [
-    catalogKey,
-    componentForm.fabricationRecipeId,
-    formalResolution?.receta?.id,
-    heightMm,
-    quantity,
-    selectedPersistedRecipe,
-    widthMm,
-  ]);
+      widthMm <= 0 || heightMm <= 0 || quantity <= 0
+    ) return false;
+    return buildFabricationRecipeSummary(selectedPersistedRecipe.definition).compositionComplete &&
+      calcularCubicacionYPauta(selectedPersistedRecipe.definition, {
+        anchoTotalMm: widthMm,
+        altoTotalMm: heightMm,
+        cantidad: quantity,
+        hojas: selectedPersistedRecipe.definition.identidad.hojas,
+        modulos: selectedPersistedRecipe.definition.identidad.modulos,
+        variante: selectedPersistedRecipe.definition.identidad.variante,
+      }).calculable;
+  }, [catalogKey, componentForm.fabricationRecipeId, formalResolution?.receta?.id, heightMm, quantity, selectedPersistedRecipe, widthMm]);
+  const universalAluminumPreliminaryCandidate = useMemo(() => {
+    if (
+      !selectedPersistedRecipe ||
+      selectedPersistedRecipe.status === "validated" ||
+      !resolveUniversalAluminumLineKey(catalogKey) ||
+      buildFabricationRecipeSummary(selectedPersistedRecipe.definition).activeRuleCount === 0 ||
+      widthMm <= 0 || heightMm <= 0 || quantity <= 0
+    ) return false;
+    return isFabricacionRecipeReadyForSnapshot(selectedPersistedRecipe).ready &&
+      calcularCubicacionYPauta(selectedPersistedRecipe.definition, {
+        anchoTotalMm: widthMm,
+        altoTotalMm: heightMm,
+        cantidad: quantity,
+        hojas: selectedPersistedRecipe.definition.identidad.hojas,
+        modulos: selectedPersistedRecipe.definition.identidad.modulos,
+        variante: selectedPersistedRecipe.definition.identidad.variante,
+      }).calculable;
+  }, [catalogKey, heightMm, quantity, selectedPersistedRecipe, widthMm]);
 
   useEffect(() => {
     let cancelled = false;
     setQaPreliminaryAuthorized(false);
     if (!qaPreliminaryCandidate || organizationId == null || String(organizationId) !== "3") {
-      return () => {
-        cancelled = true;
-      };
+      return () => { cancelled = true; };
     }
-
     void fetch("/api/proveedor-catalogos/qa-context", { cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) return false;
         const payload = (await response.json()) as { allowPreliminaryRecipeSnapshots?: boolean };
         return payload.allowPreliminaryRecipeSnapshots === true;
       })
-      .then((authorized) => {
-        if (!cancelled) setQaPreliminaryAuthorized(authorized);
-      })
-      .catch(() => {
-        if (!cancelled) setQaPreliminaryAuthorized(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
+      .then((authorized) => { if (!cancelled) setQaPreliminaryAuthorized(authorized); })
+      .catch(() => { if (!cancelled) setQaPreliminaryAuthorized(false); });
+    return () => { cancelled = true; };
   }, [organizationId, qaPreliminaryCandidate]);
-
   const selectedPersistedRecipeReady = useMemo(() => {
     if (!selectedPersistedRecipe) return false;
     const compositionComplete = buildFabricationRecipeSummary(
@@ -678,10 +669,15 @@ export function PautaCubicacionPanel({
       heightMm,
       quantity,
     });
+    const calculablePreliminaryRecipe =
+      selectedPersistedRecipe.status !== "validated" &&
+      isFabricacionRecipeReadyForSnapshot(selectedPersistedRecipe).ready;
     // Las recetas Ventora WinHouse se muestran como pauta preliminar cuando
     // sus fórmulas sí calculan, aunque el taller aún deba completar códigos,
     // largos comerciales u otros datos de validación.
     return (compositionComplete && technicalGate) || calculableWinHouseDraft ||
+      (compositionComplete && calculablePreliminaryRecipe) ||
+      universalAluminumPreliminaryCandidate ||
       (qaPreliminaryAuthorized && qaPreliminaryCandidate);
   }, [
     catalogKey,
@@ -690,6 +686,7 @@ export function PautaCubicacionPanel({
     qaPreliminaryAuthorized,
     qaPreliminaryCandidate,
     selectedPersistedRecipe,
+    universalAluminumPreliminaryCandidate,
     widthMm,
   ]);
   const formalSnapshot = useMemo(() => {

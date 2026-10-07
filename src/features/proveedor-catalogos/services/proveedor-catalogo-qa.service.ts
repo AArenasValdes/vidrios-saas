@@ -25,6 +25,17 @@ export function getSupplierCatalogQaConfig(env: NodeJS.ProcessEnv = process.env)
   return { enabled, allowedOrganizationIds, newQuotesAfter, catalogLineKeys };
 }
 
+/** Líneas comerciales cuya familia ya tiene identidad canónica en el catálogo Ventora. */
+export function getSupplierCatalogQuoteLineKeys(): ReadonlySet<string> {
+  return new Set(
+    VENTORA_DEFAULT_LINE_CATALOG.flatMap((line) =>
+      line.catalogKey && typeof line.catalogMetadata?.familyKey === "string"
+        ? [line.catalogKey]
+        : []
+    )
+  );
+}
+
 export function matchesConfiguredPilotQuoteItems(items: readonly { catalogLineKey?: string | null }[], config: SupplierCatalogQaConfig) {
   return items.length > 0 && items.every((item) => config.catalogLineKeys.has(item.catalogLineKey?.trim() ?? ""));
 }

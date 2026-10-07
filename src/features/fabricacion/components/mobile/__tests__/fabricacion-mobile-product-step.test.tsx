@@ -116,11 +116,12 @@ describe("FabricacionMobileProductStep", () => {
     expect(screen.queryByRole("button", { name: "Abatible" })).not.toBeInTheDocument();
   });
 
-  it("muestra perfiles oficiales de Compact Sliding sin ofrecer la fórmula de un taller como base común", () => {
+  it("permite usar la base documentada de Compact Sliding y señala sus datos pendientes", () => {
     const selected = recipe(2, "compact-empty");
     selected.lineName = "Compact Sliding · 2 hojas";
     selected.providerName = "VERATEC";
     selected.definition.perfiles = [];
+    const onCreateMissingSlot = jest.fn();
     render(
       <FabricacionMobileProductStep
         templateName="Compact Sliding · 2 hojas"
@@ -130,14 +131,21 @@ describe("FabricacionMobileProductStep", () => {
         recipes={[]}
         readOnly={false}
         onDraftChange={() => undefined}
+        onCreateMissingSlot={onCreateMissingSlot}
       />
     );
 
-    expect(screen.getByText("Referencias de perfil documentadas")).toBeInTheDocument();
-    expect(screen.getByText(/67460VER/)).toBeInTheDocument();
-    expect(screen.getByText(/no sustituyen la receta/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Base documental disponible/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Preparar borrador/i })).not.toBeInTheDocument();
+    expect(screen.getByText("Base de fabricación")).toBeInTheDocument();
+    expect(screen.getByText(/fórmula de Veratec disponible/i)).toBeInTheDocument();
+    expect(screen.getByText(/el Excel indica ‘todos’/i)).toBeInTheDocument();
+    const useBaseButton = screen.getByRole("button", { name: /Usar base · 2 hojas/i });
+    expect(useBaseButton).toBeEnabled();
+    fireEvent.click(useBaseButton);
+    expect(onCreateMissingSlot).toHaveBeenCalledWith(expect.objectContaining({
+      variantSlug: "compact_sliding_2h",
+      sourceName: "Veratec · pauta de corte facilitada",
+      autoSeed: false,
+    }));
   });
 
   it("muestra perfiles referenciales de EKO sin presentarlos como receta", () => {

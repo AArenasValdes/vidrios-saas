@@ -3,6 +3,7 @@ import {
   resolveFabricacionContextFromLineCatalog,
 } from "@/features/fabricacion/services/fabricacion-linea-cotizacion-context.service";
 import { WINHOUSE_S60_VARIANTS } from "@/features/fabricacion/fixtures/winhouse-s60-recipes";
+import { crearRecetaPlantillaVentoraCorredera2H } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
 import { resolveWinHouseS60QuoteTypology } from "@/features/fabricacion/services/winhouse-s60-quote-config.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
@@ -92,6 +93,43 @@ describe("fabricacion-linea-cotizacion-context.service", () => {
     expect(context?.fabricacionTipologia).toBe("proyectante");
     expect(context?.fabricacionHojas).toBe(1);
     expect(context?.fabricationRecipeId).toBe("rec-proyectante");
+  });
+
+  it("resuelve L20 universal como corredera sin heredar la variante Alumétrica fija", () => {
+    const definition = crearRecetaPlantillaVentoraCorredera2H("L20");
+    const context = resolveFabricacionContextForLineAssignment({
+      template: {
+        id: 20,
+        catalogKey: "ventora:l20",
+        catalogMetadata: { lineConfiguration: "Corredera 2 hojas" },
+      },
+      recipes: [{
+        ...buildRecipe({
+          id: "l20-universal",
+          lineTemplateId: 20,
+          tipologia: "corredera",
+          hojas: 2,
+          status: "validated",
+        }),
+        variant: definition.identidad.variante,
+        definition,
+      }],
+      organizationId: 1,
+      form: {
+        tipo: "Ventana",
+        nombre: "Ventana corredera",
+        descripcion: "",
+        sistema: "Corredera",
+        configuracion: "Corredera 2 hojas",
+        fabricacionHojas: 2,
+        fabricacionTipologia: "corredera",
+        fabricacionVariante: "estandar",
+      },
+    });
+
+    expect(context?.fabricacionTipologia).toBe("corredera");
+    expect(context?.fabricacionApertura).toBe("corredera");
+    expect(context?.fabricationRecipeId).toBe("l20-universal");
   });
 
   it("descarta una receta histórica corredera para AL-32", () => {

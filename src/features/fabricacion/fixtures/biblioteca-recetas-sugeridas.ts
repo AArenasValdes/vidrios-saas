@@ -21,9 +21,13 @@ import {
 import {
   crearRecetaVeratecCompactSliding,
   crearRecetaVeratec7400Workbook3H,
+  crearRecetaVeratec7400Monorriel,
+  crearRecetaVeratecElegansBatiente,
   crearRecetaVeratecElegansFijo,
+  VERATEC_7400_MONORAIL_VARIANTS,
   VERATEC_COMPACT_SLIDING_VARIANTS,
   VERATEC_7400_WORKBOOK_3H_VARIANTS,
+  VERATEC_ELEGANS_BATIENTE_VARIANTS,
   VERATEC_ELEGANS_FIXED_VARIANTS,
   VERATEC_WORKBOOK_SOURCE_REVISION,
 } from "@/features/fabricacion/fixtures/veratec-workbook-recipes";
@@ -31,7 +35,8 @@ import {
 export type BibliotecaRecetaSugerida = {
   id: string;
   catalogKey?: string;
-  sourceType?: "workshop";
+  sourceType?: "workshop" | "supplier";
+  sourceName?: string;
   sourceReference?: string;
   sourceRevision?: string;
   proveedor: string;
@@ -43,45 +48,78 @@ export type BibliotecaRecetaSugerida = {
   crearDefinicion: (() => FabricacionReceta) | null;
 };
 
-const VERATEC_WORKSHOP_TEMPLATES: BibliotecaRecetaSugerida[] = [
+const VERATEC_DOCUMENTED_TEMPLATES: BibliotecaRecetaSugerida[] = [
   ...VERATEC_COMPACT_SLIDING_VARIANTS.map((variant) => ({
-    id: `workshop:veratec:${variant.slug}`,
+    id: `supplier:veratec:${variant.slug}`,
     catalogKey: `ventora:veratec-compact-sliding-${variant.leaves}h`,
     proveedor: "VERATEC",
     linea: `Compact Sliding · ${variant.leaves} hojas`,
     variante: variant.label,
     tipologia: "corredera",
     estado: "sugerida" as const,
-    motivoPendiente: "Base del Excel de un taller; vidrio, junquillo, accesorios y parámetros de sierra requieren confirmación del taller. No es receta certificada por Veratec.",
-    sourceType: "workshop" as const,
+    motivoPendiente: "Base de la pauta facilitada por Veratec. Falta elegir junquillo según vidrio, configurar accesorios y parámetros de sierra del taller.",
+    sourceType: "supplier" as const,
+    sourceName: "Veratec · pauta de corte facilitada",
     sourceReference: variant.sourceReference,
     sourceRevision: VERATEC_WORKBOOK_SOURCE_REVISION,
     crearDefinicion: () => crearRecetaVeratecCompactSliding({ lineName: `Compact Sliding · ${variant.leaves} hojas`, variant: variant.slug }),
   })),
   ...VERATEC_7400_WORKBOOK_3H_VARIANTS.map((variant) => ({
-    id: `workshop:veratec:${variant.slug}`,
+    id: `supplier:veratec:${variant.slug}`,
     catalogKey: "ventora:veratec-7400-corredera-3h",
     proveedor: "VERATEC",
     linea: "Veratec 7400 — Corredera 3 hojas",
     variante: variant.label,
     tipologia: "corredera",
     estado: "sugerida" as const,
-    motivoPendiente: "Base del Excel de un taller; confirmar junquillo, acabado, largos comerciales y accesorios. La variante 4H chica contradictoria no se ofrece.",
-    sourceType: "workshop" as const,
+    motivoPendiente: "Base de la pauta facilitada por Veratec. Faltan junquillo, largo por acabado y accesorios; no es una pauta de compra completa.",
+    sourceType: "supplier" as const,
+    sourceName: "Veratec · pauta de corte facilitada",
     sourceReference: variant.sourceReference,
     sourceRevision: VERATEC_WORKBOOK_SOURCE_REVISION,
     crearDefinicion: () => crearRecetaVeratec7400Workbook3H({ lineName: "Veratec 7400 — Corredera 3 hojas", variant: variant.slug }),
   })),
+  ...VERATEC_7400_MONORAIL_VARIANTS.map((variant) => ({
+    id: `supplier:veratec:${variant.slug}`,
+    catalogKey: "ventora:veratec-7400-monorriel",
+    proveedor: "VERATEC",
+    linea: "Sliding 7400 · Monorriel",
+    variante: variant.label,
+    tipologia: "corredera",
+    estado: "sugerida" as const,
+    motivoPendiente: "Base documental calculable. Junquillos, largos comerciales, accesorios y vidrio por definir; la pauta de barras será parcial.",
+    sourceType: "supplier" as const,
+    sourceName: "Veratec · pauta de corte facilitada",
+    sourceReference: variant.sourceReference,
+    sourceRevision: VERATEC_WORKBOOK_SOURCE_REVISION,
+    crearDefinicion: () => crearRecetaVeratec7400Monorriel({ lineName: "Sliding 7400 · Monorriel", variant: variant.slug }),
+  })),
+  ...VERATEC_ELEGANS_BATIENTE_VARIANTS.map((variant) => ({
+    id: `supplier:veratec:${variant.slug}`,
+    catalogKey: variant.catalogKey,
+    proveedor: "VERATEC",
+    linea: `Elegans 60 · ${variant.label}`,
+    variante: variant.label,
+    tipologia: variant.typology,
+    estado: "sugerida" as const,
+    motivoPendiente: "Base documental calculable. Completa largos, costos, junquillo, accesorios y parámetros de sierra de tu taller.",
+    sourceType: "supplier" as const,
+    sourceName: "Veratec · pauta de corte facilitada",
+    sourceReference: variant.sourceReference,
+    sourceRevision: VERATEC_WORKBOOK_SOURCE_REVISION,
+    crearDefinicion: () => crearRecetaVeratecElegansBatiente({ lineName: `Elegans 60 · ${variant.label}`, variant: variant.slug }),
+  })),
   ...VERATEC_ELEGANS_FIXED_VARIANTS.map((variant) => ({
-    id: `workshop:veratec:${variant.slug}`,
+    id: `supplier:veratec:${variant.slug}`,
     catalogKey: "ventora:veratec-elegans-60-fijo",
     proveedor: "VERATEC",
     linea: "Paño fijo",
     variante: variant.label,
     tipologia: "pano_fijo",
     estado: "sugerida" as const,
-    motivoPendiente: "El Excel usa 65201VER y 61011VER999; no hay equivalencia comercial confirmada. Completar perfiles y largos antes de usar como pauta de compra.",
-    sourceType: "workshop" as const,
+    motivoPendiente: "Base documental calculable. Confirma códigos, presentación/largo y costos; completa junquillo y parámetros de sierra para la pauta de compra.",
+    sourceType: "supplier" as const,
+    sourceName: "Veratec · pauta de corte facilitada",
     sourceReference: variant.sourceReference,
     sourceRevision: VERATEC_WORKBOOK_SOURCE_REVISION,
     crearDefinicion: () => crearRecetaVeratecElegansFijo({ lineName: "Paño fijo", variant: variant.slug }),
@@ -235,7 +273,7 @@ const VENTORA_PROYECTANTE_TEMPLATES: BibliotecaRecetaSugerida[] = (
 }));
 
 export const BIBLIOTECA_RECETAS_PRIORIZADAS: BibliotecaRecetaSugerida[] = [
-  ...VERATEC_WORKSHOP_TEMPLATES,
+  ...VERATEC_DOCUMENTED_TEMPLATES,
   ...ALAR_TEMPLATES,
   ...VENTORA_PROYECTANTE_TEMPLATES,
   ...RECOGNIZED_WITHOUT_RULES,

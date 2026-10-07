@@ -1,12 +1,16 @@
 import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
 import {
+  crearRecetaVeratecElegansBatiente,
+  crearRecetaVeratec7400Monorriel,
   crearRecetaVeratecCompactSliding,
   crearRecetaVeratec7400Workbook3H,
   crearRecetaVeratecElegansFijo,
   VERATEC_7400_WORKBOOK_3H_VARIANTS,
   VERATEC_COMPACT_SLIDING_VARIANTS,
   VERATEC_ELEGANS_FIXED_VARIANTS,
+  VERATEC_ELEGANS_BATIENTE_VARIANTS,
+  VERATEC_7400_MONORAIL_VARIANTS,
   VERATEC_WORKBOOK_SOURCE_REVISION,
 } from "@/features/fabricacion/fixtures/veratec-workbook-recipes";
 import {
@@ -18,7 +22,7 @@ import {
   VERATEC_7400_VARIANT_MONOLITICO_4MM,
 } from "@/features/fabricacion/fixtures/veratec-7400-corredera-recipe";
 
-describe("recetas preliminares Veratec transcritas desde la pauta de taller", () => {
+describe("recetas preliminares Veratec transcritas desde la pauta facilitada", () => {
   it.each([
     {
       name: "Compact Sliding 2H · hoja `compact sliding 2 hojas`",
@@ -146,17 +150,23 @@ describe("recetas preliminares Veratec transcritas desde la pauta de taller", ()
     expect(recipe.notasValidacion.some((note) => /junquillo/i.test(note))).toBe(true);
   });
 
-  it("conserva las fórmulas del Excel como evidencia del taller, no como catálogo común de recetas", () => {
+  it("expone las bases calculables en cada configuración comercial sin marcarlas completas", () => {
     const workshopOnlyCatalogKeys = [
       "ventora:veratec-7400-corredera-3h",
       "ventora:veratec-compact-sliding-2h",
       "ventora:veratec-compact-sliding-3h",
       "ventora:veratec-compact-sliding-4h",
       "ventora:veratec-elegans-60-fijo",
+      "ventora:veratec-elegans-60-ventana-hoja-interior",
+      "ventora:veratec-elegans-60-ventana-hoja-exterior",
+      "ventora:veratec-elegans-60-puerta-hoja-interior",
+      "ventora:veratec-elegans-60-puerta-hoja-exterior",
+      "ventora:veratec-7400-monorriel",
     ];
 
     for (const catalogKey of workshopOnlyCatalogKeys) {
-      expect(getLineVariantSlots(catalogKey)).toEqual([]);
+      expect(getLineVariantSlots(catalogKey).length).toBeGreaterThan(0);
+      expect(getLineVariantSlots(catalogKey).every((slot) => slot.complete === false)).toBe(true);
     }
     expect(VERATEC_WORKBOOK_SOURCE_REVISION).toContain("sha256:");
   });
@@ -164,17 +174,17 @@ describe("recetas preliminares Veratec transcritas desde la pauta de taller", ()
   it("ofrece solo bases opt-in por configuración y conserva procedencia privada", () => {
     const compact = getSuggestedRecipesForLine({ catalogKey: "ventora:veratec-compact-sliding-2h", lineName: "Compact Sliding · 2 hojas", providerName: "VERATEC" });
     expect(compact).toHaveLength(1);
-    expect(compact[0]).toMatchObject({ sourceType: "workshop", sourceReference: "pauta-de-corte-veratec.xlsx#compact-sliding-2-hojas" });
+    expect(compact[0]).toMatchObject({ sourceType: "supplier", sourceName: "Veratec · pauta de corte facilitada", sourceReference: "pauta-de-corte-veratec.xlsx#compact-sliding-2-hojas" });
     expect(compact[0].sourceRevision).toContain("sha256:");
     expect(compact[0].crearDefinicion?.().estado).toBe("lista_para_validar");
     expect(getSuggestedRecipesForLine({ catalogKey: "ventora:veratec-elevadora-2h-2moviles", lineName: "Elevadora", providerName: "VERATEC" })).toEqual([]);
-    expect(getSuggestedRecipesForLine({ catalogKey: "ventora:veratec-7400-monorriel", lineName: "Veratec 7400", providerName: "VERATEC" })).toEqual([]);
+    expect(getSuggestedRecipesForLine({ catalogKey: "ventora:veratec-7400-monorriel", lineName: "Veratec 7400", providerName: "VERATEC" })).toHaveLength(2);
   });
 
   it("no publica la variante 4H chica contradictoria ni el resto de fórmulas de taller como slots comunes", () => {
     const slots = getLineVariantSlots("ventora:veratec-7400-corredera-3h");
     expect(VERATEC_7400_WORKBOOK_3H_VARIANTS.some((variant) => /4h.*chica/i.test(variant.slug))).toBe(false);
-    expect(slots).toEqual([]);
+    expect(slots).toHaveLength(2);
   });
 
   it("no convierte celdas `todos` ni cortes cero del libro en componentes confirmados", () => {
@@ -194,7 +204,7 @@ describe("recetas preliminares Veratec transcritas desde la pauta de taller", ()
 
     expect(recipe.perfiles.some((profile) => /junquillo/i.test(profile.funcion))).toBe(false);
     expect(result.perfiles.every((profile) => profile.medidaMm > 0 && profile.cantidadPiezas > 0)).toBe(true);
-    expect(blockedMonorailSlots).toEqual([]);
+    expect(blockedMonorailSlots).toHaveLength(2);
   });
 
   it("mantiene 5 mm fuera de la matriz documentada del 7400 y conserva 4 mm explícito", () => {
@@ -242,7 +252,7 @@ describe("recetas preliminares Veratec transcritas desde la pauta de taller", ()
     });
     expect(recipe.perfiles.every((profile) => profile.largoComercialPendiente)).toBe(true);
     expect(recipe.estado).toBe("lista_para_validar");
-    expect(getLineVariantSlots("ventora:veratec-elegans-60-fijo")).toEqual([]);
+    expect(getLineVariantSlots("ventora:veratec-elegans-60-fijo")).toHaveLength(2);
   });
 
   it.each([
@@ -341,5 +351,61 @@ describe("recetas preliminares Veratec transcritas desde la pauta de taller", ()
     expect(result.calculable).toBe(true);
     expect(result.perfiles.map((profile) => profile.medidaMm)).toEqual(sample.expected);
     expect(recipe.notasValidacion.some((note) => note.includes(sample.source))).toBe(true);
+  });
+
+  it.each([
+    { slug: "elegans_ventana_hoja_interior", typology: "abatible", expectedGlass: [1017, 1317] },
+    { slug: "elegans_ventana_hoja_exterior", typology: "abatible", expectedGlass: [956, 1256] },
+    { slug: "elegans_puerta_hoja_interior", typology: "puerta_abatible", expectedGlass: null },
+    { slug: "elegans_puerta_hoja_exterior", typology: "puerta_abatible", expectedGlass: null },
+  ])("calcula perfiles documentados de $slug y deja el vidrio pendiente si hay conflicto", (sample) => {
+    const variant = VERATEC_ELEGANS_BATIENTE_VARIANTS.find((entry) => entry.slug === sample.slug)!;
+    const recipe = crearRecetaVeratecElegansBatiente({
+      lineName: "Elegans 60",
+      variant: variant.slug,
+      createId: (() => { let i = 0; return () => `batiente-${sample.slug}-${++i}`; })(),
+    });
+    const result = calcularCubicacionYPauta(recipe, {
+      anchoTotalMm: 1200,
+      altoTotalMm: 1500,
+      cantidad: 1,
+      hojas: 1,
+      modulos: 1,
+    });
+    expect(result.calculable).toBe(true);
+    expect(result.perfiles.length).toBe(8);
+    expect(recipe.identidad.tipologia).toBe(sample.typology);
+    expect(recipe.perfiles.every((profile) => profile.largoComercialPendiente)).toBe(true);
+    if (sample.expectedGlass) {
+      expect(result.vidrios[0]).toMatchObject({ anchoMm: sample.expectedGlass[0], altoMm: sample.expectedGlass[1] });
+    } else {
+      expect(result.vidrios).toEqual([]);
+      expect(recipe.datosPendientes?.some((pending) => pending.includes("dimensiones de vidrio"))).toBe(true);
+    }
+    expect(recipe.permitirCalculoPreliminarConPendientes).toBe(true);
+  });
+
+  it.each([
+    { slug: "7400_monorriel_hoja_grande", width: 1000, height: 1000, glass: [[354, 750], [405, 880]] },
+    { slug: "7400_monorriel_hoja_chica", width: 2030, height: 700, glass: [[886, 486], [929, 580]] },
+  ])("calcula perfiles y paños de la configuración $slug", (sample) => {
+    const variant = VERATEC_7400_MONORAIL_VARIANTS.find((entry) => entry.slug === sample.slug)!;
+    const recipe = crearRecetaVeratec7400Monorriel({
+      lineName: "Sliding 7400 · Monorriel",
+      variant: variant.slug,
+      createId: (() => { let i = 0; return () => `mono-${sample.slug}-${++i}`; })(),
+    });
+    const result = calcularCubicacionYPauta(recipe, {
+      anchoTotalMm: sample.width,
+      altoTotalMm: sample.height,
+      cantidad: 1,
+      hojas: 2,
+      modulos: 2,
+    });
+    expect(result.calculable).toBe(true);
+    expect(result.perfiles).toHaveLength(14);
+    expect(result.vidrios.map((glass) => [glass.anchoMm, glass.altoMm])).toEqual(sample.glass);
+    expect(recipe.perfiles.filter((profile) => profile.largoComercialPendiente)).toHaveLength(14);
+    expect(recipe.perfiles.some((profile) => profile.funcion === "Junquillo")).toBe(false);
   });
 });

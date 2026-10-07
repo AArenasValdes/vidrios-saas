@@ -63,7 +63,7 @@ type Props = {
     isRequired: boolean;
   }) => Promise<void>;
   onActivate: () => Promise<void>;
-  onSaveDraft: (recipe: FabricacionReceta) => Promise<void>;
+  onSaveDraft?: (recipe: FabricacionReceta) => Promise<void>;
 };
 
 const stepVariants = {
@@ -261,7 +261,11 @@ export function FabricacionMobileWizard({
                 canActivateFromSaved={canValidate}
                 onBackToRecipe={() => goTo("profiles")}
                 onCorrectProfile={(profileId) => openSheet({ type: "profile", id: profileId })}
-                onSaveDraft={() => void onSaveDraft(draft)}
+                onSaveDraft={
+                  readOnly || !onSaveDraft
+                    ? undefined
+                    : () => onSaveDraft(draft)
+                }
                 onActivate={
                   workingRecipe.status === "validated" ? undefined : () => void onActivate()
                 }

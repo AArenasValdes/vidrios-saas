@@ -39,6 +39,7 @@ import {
   groupLineTemplatesByFamily,
   LINE_TEMPLATE_FAMILY_LABELS,
   LINE_TEMPLATE_FAMILY_ORDER,
+  resolveDocumentedLineIdentity,
   resolveLineTemplateFamilyKey,
   type LineTemplateFamilyKey,
 } from "./line-template-catalog-family";
@@ -46,6 +47,7 @@ import type { LineTemplateActionKind } from "./line-template-card-actions";
 import {
   LineasPreciosMobileLineRow,
   resolveFabricationActionLabel,
+  resolveLineTemplateDisplayName,
 } from "./lineas-precios-mobile-line-row";
 import {
   formatLineTemplatePriceLabel,
@@ -142,6 +144,14 @@ const FAMILY_ICONS: Record<LineTemplateFamilyKey | "propias", IconType> = {
 
 function familyDisplayLabel(key: LineTemplateFamilyKey, label: string) {
   return key === "cristales" ? "Vidrios" : label || LINE_TEMPLATE_FAMILY_LABELS[key];
+}
+
+function universalAluminumFamilyLabel(familyKey: string, fallback: string) {
+  const lineNumber = familyKey.match(/^universal:aluminio:l(.+)$/)?.[1];
+  if (lineNumber) return `Línea ${lineNumber}`;
+  return fallback
+    .replace(/^Arquetipo\s*[·—-]\s*/i, "")
+    .replace(/\s*[·—-]\s*Aluminio universal$/i, "");
 }
 
 function providerMonogram(name: string) {
@@ -270,6 +280,7 @@ export function LineasPreciosMobileView({
   const [mineDrill, setMineDrill] = useState<string | null>(null);
   const [providerName, setProviderName] = useState<string | null>(null);
   const [providerFamilyKey, setProviderFamilyKey] = useState<string | null>(null);
+  const [showHiddenUniversalReferences, setShowHiddenUniversalReferences] = useState(false);
   const [selectedLine, setSelectedLine] = useState<CotizacionLineTemplate | null>(null);
 
   const selectedLineContext = useMemo(() => {
@@ -409,6 +420,8 @@ export function LineasPreciosMobileView({
         families: documented,
         categories,
         glassGroups: categoryFilter === "vidrio" ? groupGlassByKind(group.templates) : null,
+        universalAluminum: group.provider === "Sin proveedor" && group.templates.length > 0 &&
+          group.templates.every((template) => template.categoria === "aluminio"),
       };
     });
   }, [catalogPool, categoryFilter, workshopPool]);
@@ -422,11 +435,31 @@ export function LineasPreciosMobileView({
   const openProviderFamily = openProviderGroup && providerFamilyKey
     ? openProviderGroup.families.find((family) => family.key === providerFamilyKey) ?? null
     : null;
+  const openProviderFamilyTemplates = openProviderFamily?.templates
+    ?? openProviderGroup?.glassGroups?.find((group) => group.key === providerFamilyKey)?.templates
+    ?? [];
+  const activeUniversalReferences = openProviderGroup?.universalAluminum
+    ? openProviderFamilyTemplates.filter((template) => template.isActive)
+    : [];
+  const hiddenUniversalReferences = openProviderGroup?.universalAluminum && activeUniversalReferences.length > 0
+    ? openProviderFamilyTemplates.filter((template) => !template.isActive)
+    : [];
+  const visibleProviderFamilyTemplates = openProviderGroup?.universalAluminum && activeUniversalReferences.length > 0
+    ? showHiddenUniversalReferences
+      ? [...activeUniversalReferences, ...hiddenUniversalReferences]
+      : activeUniversalReferences
+    : openProviderFamilyTemplates;
 
   const resetNavigation = () => {
     setMineDrill(null);
     setProviderName(null);
     setProviderFamilyKey(null);
+    setShowHiddenUniversalReferences(false);
+  };
+
+  const openProviderFamilyByKey = (key: string) => {
+    setShowHiddenUniversalReferences(false);
+    setProviderFamilyKey(key);
   };
 
   const clearSecondaryFilters = () => {
@@ -778,17 +811,20 @@ export function LineasPreciosMobileView({
         >
           {openProviderGroup && (openProviderFamily || openProviderGroup.glassGroups?.some((group) => group.key === providerFamilyKey)) ? (
             <>
-              <button type="button" className={s.familyHeader} onClick={() => setProviderFamilyKey(null)}>
+              <button type="button" className={s.familyHeader} onClick={() => {
+                setProviderFamilyKey(null);
+                setShowHiddenUniversalReferences(false);
+              }}>
                 <span className={s.familyHeaderLeading}>
                   <LuChevronLeft className={s.familyIcon} aria-hidden />
                   <span className={s.familyName}>
-                    {openProviderFamily?.label ?? providerFamilyKey}
+                    {openProviderGroup.universalAluminum && openProviderFamily
+                      ? universalAluminumFamilyLabel(openProviderFamily.key, openProviderFamily.label)
+                      : openProviderFamily?.label ?? providerFamilyKey}
                   </span>
                 </span>
               </button>
-              {(openProviderFamily?.templates
-                ?? openProviderGroup.glassGroups?.find((group) => group.key === providerFamilyKey)?.templates
-                ?? []).map((template, rowIndex) => {
+              {visibleProviderFamilyTemplates.map((template, rowIndex) => {
                 const technicalStatus = technicalStatuses.get(String(template.id));
                 if (!technicalStatus) return null;
                 return (
@@ -803,6 +839,16 @@ export function LineasPreciosMobileView({
                   />
                 );
               })}
+              {hiddenUniversalReferences.length > 0 ? (
+                <button
+                  type="button"
+                  className={s.hiddenReferencesToggle}
+                  aria-expanded={showHiddenUniversalReferences}
+                  onClick={() => setShowHiddenUniversalReferences((visible) => !visible)}
+                >
+                  {showHiddenUniversalReferences ? "Ocultar" : `Ver ${hiddenUniversalReferences.length} referencia${hiddenUniversalReferences.length === 1 ? "" : "s"} oculta${hiddenUniversalReferences.length === 1 ? "" : "s"}`}
+                </button>
+              ) : null}
             </>
           ) : openProviderGroup ? (
             <>
@@ -812,7 +858,11 @@ export function LineasPreciosMobileView({
               }}>
                 <span className={s.familyHeaderLeading}>
                   <LuChevronLeft className={s.familyIcon} aria-hidden />
-                  <span className={s.familyName}>{openProviderGroup.label}</span>
+                  <span className={s.familyName}>
+                    {openProviderGroup.universalAluminum
+                      ? "Líneas universales de aluminio"
+                      : openProviderGroup.label}
+                  </span>
                 </span>
               </button>
               {categoryFilter === "vidrio" && openProviderGroup.glassGroups ? (
@@ -821,7 +871,7 @@ export function LineasPreciosMobileView({
                     key={group.key}
                     type="button"
                     className={s.familyHeader}
-                    onClick={() => setProviderFamilyKey(group.key)}
+                    onClick={() => openProviderFamilyByKey(group.key)}
                   >
                     <span className={s.familyName}>{group.label}</span>
                     <span className={s.familyCount}>
@@ -847,7 +897,39 @@ export function LineasPreciosMobileView({
                   );
                 })
               ) : (
-                openProviderGroup.categories.map((category) => {
+                openProviderGroup.universalAluminum ? (
+                  <>
+                    <p className={s.providerIntro}>
+                      La serie identifica el sistema. El proveedor solo cambia los perfiles y sus precios.
+                    </p>
+                    {openProviderGroup.families
+                      .filter((family) => !family.key.startsWith("category:"))
+                      .map((family) => {
+                        const label = universalAluminumFamilyLabel(family.key, family.label);
+                        return (
+                          <button
+                            key={family.key}
+                            type="button"
+                            className={s.familyHeader}
+                            onClick={() => openProviderFamilyByKey(family.key)}
+                          >
+                            <span className={s.familyName}>{label}</span>
+                            <span className={s.familyCount}>
+                              {(() => {
+                                const activeCount = family.templates.filter((template) => template.isActive).length;
+                                const hiddenCount = family.templates.length - activeCount;
+                                const activeLabel = `${activeCount} ${activeCount === 1 ? "activa" : "activas"}`;
+                                return hiddenCount > 0
+                                  ? `${activeLabel} · ${hiddenCount} oculta${hiddenCount === 1 ? "" : "s"}`
+                                  : `${family.templates.length} ${family.templates.length === 1 ? "opción" : "opciones"}`;
+                              })()}
+                              <LuChevronRight className={s.familyIcon} aria-hidden />
+                            </span>
+                          </button>
+                        );
+                      })}
+                  </>
+                ) : openProviderGroup.categories.map((category) => {
                   const named = category.families.filter((family) => !family.key.startsWith("category:"));
                   const fallback = category.families.filter((family) => family.key.startsWith("category:"));
                   if (named.length === 0) {
@@ -857,7 +939,7 @@ export function LineasPreciosMobileView({
                         key={category.key}
                         type="button"
                         className={s.familyHeader}
-                        onClick={() => fallback[0] && setProviderFamilyKey(fallback[0].key)}
+                        onClick={() => fallback[0] && openProviderFamilyByKey(fallback[0].key)}
                       >
                         <span className={s.familyName}>{category.label}</span>
                         <span className={s.familyCount}>
@@ -875,7 +957,7 @@ export function LineasPreciosMobileView({
                           key={family.key}
                           type="button"
                           className={s.familyHeader}
-                          onClick={() => setProviderFamilyKey(family.key)}
+                          onClick={() => openProviderFamilyByKey(family.key)}
                         >
                           <span className={s.familyName}>{family.label}</span>
                           <span className={s.familyCount}>
@@ -898,20 +980,26 @@ export function LineasPreciosMobileView({
                   ? provider.glassGroups
                     ? `${glassCount} ${glassCount === 1 ? "familia" : "familias"}`
                     : `${provider.templates.length} ${provider.templates.length === 1 ? "producto" : "productos"}`
-                  : `${namedCount || provider.categories.length} ${(namedCount || provider.categories.length) === 1 ? "familia" : "familias"}`;
+                  : provider.universalAluminum
+                    ? `${namedCount} ${namedCount === 1 ? "línea" : "líneas"}`
+                    : `${namedCount || provider.categories.length} ${(namedCount || provider.categories.length) === 1 ? "familia" : "familias"}`;
+                const providerLabel = provider.universalAluminum
+                  ? "Líneas universales de aluminio"
+                  : provider.label;
                 return (
                   <button
                     key={provider.key}
                     type="button"
                     className={s.familyHeader}
                     onClick={() => {
+                    setShowHiddenUniversalReferences(false);
                       setProviderName(provider.key);
                       setProviderFamilyKey(null);
                     }}
                   >
                     <span className={s.familyHeaderLeading}>
-                      <span className={s.providerMark} aria-hidden>{providerMonogram(provider.label)}</span>
-                      <span className={s.familyName}>{provider.label}</span>
+                      <span className={s.providerMark} aria-hidden>{provider.universalAluminum ? "Al" : providerMonogram(provider.label)}</span>
+                      <span className={s.familyName}>{providerLabel}</span>
                     </span>
                     <span className={s.familyCount}>
                       {countLabel}
@@ -1029,7 +1117,9 @@ export function LineasPreciosMobileView({
           >
             <header>
               <div className={s.lineSheetHeaderCopy}>
-                <h2 id="mobile-line-actions-title">{selectedLine.nombre}</h2>
+                <h2 id="mobile-line-actions-title">
+                  {resolveLineTemplateDisplayName(selectedLine)}
+                </h2>
                 <p>{selectedLineContext?.subtitle}</p>
               </div>
               <button

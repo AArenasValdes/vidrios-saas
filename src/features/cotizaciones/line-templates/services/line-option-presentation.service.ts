@@ -78,7 +78,9 @@ export function buildLineOptionViewModel(input: {
 
   return {
     id: String(template.id),
-    name: configuredName || input.displayName?.trim() || family.label || template.nombre,
+    // El selector puede aportar un nombre comercial más claro y específico que
+    // la etiqueta genérica de configuración guardada en líneas canónicas.
+    name: input.displayName?.trim() || configuredName || family.label || template.nombre,
     provider: template.proveedor?.trim() || null,
     material: template.categoria === "vidrio" ? "Cristal" : template.material,
     contextLabel: [template.proveedor?.trim(), template.material, system].filter(Boolean).join(" · "),

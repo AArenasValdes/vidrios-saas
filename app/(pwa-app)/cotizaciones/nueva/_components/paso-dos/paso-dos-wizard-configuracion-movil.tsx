@@ -272,6 +272,7 @@ export function PasoDosWizardConfiguracionMovil({
   const [isQuickOptionsOpen, setIsQuickOptionsOpen] = useState(false);
   const [quickLineError, setQuickLineError] = useState<string | null>(null);
   const [priceEditorTarget, setPriceEditorTarget] = useState<CotizacionLineTemplate | null>(null);
+  const [savedPriceTemplate, setSavedPriceTemplate] = useState<CotizacionLineTemplate | null>(null);
   const [isInternalObservationOpen, setIsInternalObservationOpen] = useState(
     Boolean(internalObservation.trim())
   );
@@ -358,11 +359,18 @@ export function PasoDosWizardConfiguracionMovil({
   const primaryColorOptions = useMemo(() => colorOptions.slice(0, 4), [colorOptions]);
   const visibleColorOptions = showAllColors ? colorOptions : primaryColorOptions;
   const selectedLineTemplate = useMemo(
-    () =>
-      lineTemplateOptions.find((template) => String(template.id) === draft.lineTemplateId) ??
-      availableLineTemplates.find((template) => String(template.id) === draft.lineTemplateId) ??
-      null,
-    [availableLineTemplates, draft.lineTemplateId, lineTemplateOptions]
+    () => {
+      if (savedPriceTemplate && String(savedPriceTemplate.id) === draft.lineTemplateId) {
+        return savedPriceTemplate;
+      }
+
+      return (
+        lineTemplateOptions.find((template) => String(template.id) === draft.lineTemplateId) ??
+        availableLineTemplates.find((template) => String(template.id) === draft.lineTemplateId) ??
+        null
+      );
+    },
+    [availableLineTemplates, draft.lineTemplateId, lineTemplateOptions, savedPriceTemplate]
   );
   const selectedLineNeedsPrice = Boolean(
     selectedLineTemplate && lineTemplateNeedsCommercialPrice(selectedLineTemplate)
@@ -1380,7 +1388,18 @@ export function PasoDosWizardConfiguracionMovil({
           onClick={openLineSelector}
           type="button"
         >
-          <span className={s.stepTwoMobileLineTriggerLabel}>{selectedLineLabel}</span>
+          <span className={s.stepTwoMobileLineTriggerCopy}>
+            <span className={s.stepTwoMobileLineTriggerLabel}>{selectedLineLabel}</span>
+            {selectedLineTemplate && !selectedLineNeedsPrice ? (
+              <span className={s.stepTwoMobileLineTriggerPrice}>
+                {new Intl.NumberFormat("es-CL", {
+                  style: "currency",
+                  currency: "CLP",
+                  maximumFractionDigits: 0,
+                }).format(selectedLineTemplate.precioM2Sugerido)}/m²
+              </span>
+            ) : null}
+          </span>
           <span className={s.stepTwoMobileLineTriggerIcon} aria-hidden>
             +
           </span>
@@ -2178,6 +2197,7 @@ export function PasoDosWizardConfiguracionMovil({
           template={priceEditorTarget}
           organizationId={organizacionId}
           onSaved={(updated) => {
+            setSavedPriceTemplate(updated);
             setPriceEditorTarget(null);
             onApplyCreatedLineTemplate(updated);
             closeLineSelector();

@@ -275,6 +275,24 @@ export function dedupeLineTemplatesForQuotePicker(
 export function formatLineTemplateQuotePickerLabel(
   template: Pick<CotizacionLineTemplate, "nombre" | "catalogKey">
 ): string {
+  const universalAluminumLabels: Record<string, string> = {
+    "ventora:l5000": "Serie 5000 — Corredera 2 hojas",
+    "ventora:l20": "Serie 20 — Corredera 2 hojas",
+    "ventora:l20-fijos": "Serie 20 — Paño fijo",
+    "ventora:l25": "Serie 25 — Corredera 2 hojas",
+    "ventora:l32": "Serie 32 — Proyectante / paño fijo",
+    "ventora:l35": "Serie 35 — Puerta abatible y vaivén",
+    "ventora:serie-15-corredera-2h": "Serie 15 — Corredera 2 hojas",
+    "ventora:serie-4000-corredera-2h": "Serie 4000 — Corredera 2 hojas",
+    "ventora:serie-45-puerta": "Serie 45 — Puerta abatible 1 hoja",
+    "ventora:serie-12-shower-corredera": "Serie 12 — Shower Door corredera 2 hojas",
+    "ventora:l42": "Serie 42 — Proyectante / paño fijo",
+  };
+  const universalLabel = template.catalogKey
+    ? universalAluminumLabels[template.catalogKey]
+    : undefined;
+  if (universalLabel) return universalLabel;
+
   return resolveSodalL25CommercialLineDisplayName(template);
 }
 

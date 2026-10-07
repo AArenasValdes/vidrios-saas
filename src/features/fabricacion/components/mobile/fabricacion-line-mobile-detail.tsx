@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle2, ChevronLeft, Pencil } from "lucide-react";
+import { CheckCircle2, ChevronLeft, Pencil, RotateCcw } from "lucide-react";
 
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { formatLineTemplatePriceLabel } from "@/features/cotizaciones/line-templates/utils/catalog-labels";
@@ -35,6 +35,7 @@ type Props = {
   onConfigure: () => void;
   onEdit: () => void;
   onTest: () => void;
+  onCreateVersion?: () => void;
   suggestedRecipes?: BibliotecaRecetaSugerida[];
   onUseSuggested?: (entry: BibliotecaRecetaSugerida) => void;
 };
@@ -70,6 +71,7 @@ export function FabricacionLineMobileDetail({
   onConfigure,
   onEdit,
   onTest,
+  onCreateVersion,
   suggestedRecipes = [],
   onUseSuggested,
 }: Props) {
@@ -226,6 +228,19 @@ export function FabricacionLineMobileDetail({
                 onClick={onTest}
               >
                 Probar con medidas
+              </button>
+            ) : null}
+
+            {currentRecipe.status === "validated" && onCreateVersion ? (
+              <button
+                type="button"
+                className={s.secondaryButton}
+                style={{ width: "100%", marginBottom: 14 }}
+                disabled={isSaving}
+                onClick={onCreateVersion}
+              >
+                <RotateCcw size={16} aria-hidden />
+                Crear versión para editar
               </button>
             ) : null}
 

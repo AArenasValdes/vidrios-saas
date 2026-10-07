@@ -12871,6 +12871,20 @@ p.stepTwoMobileItemFabCompact {
   font-weight: 700;
 }
 
+.stepTwoMobileLineTriggerCopy {
+  display: grid;
+  gap: 0.16rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.stepTwoMobileLineTriggerPrice {
+  color: #667a96;
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
 .stepTwoMobileLineTriggerIcon {
   flex: 0 0 auto;
   width: 1.45rem;

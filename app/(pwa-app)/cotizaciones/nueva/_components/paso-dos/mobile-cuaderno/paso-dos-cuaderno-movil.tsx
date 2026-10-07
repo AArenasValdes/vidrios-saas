@@ -50,6 +50,7 @@ export type PasoDosCuadernoMovilProps = {
   contextObra?: string;
   onAddPreset: (preset: QuoteConstructorPresetId, lineTemplateId?: string) => string | null | void;
   onUpdateItem: (itemId: string, patch: QuoteConstructorItemPatch) => void;
+  onTemplatePriceUpdated?: (itemId: string, template: CotizacionLineTemplate) => void;
   onApplyLineToItems: (lineTemplateId: string) => void;
   onDuplicateItem: (item: CotizacionWorkflowItem) => void;
   onRemoveItem: (itemId: string) => void;
@@ -128,6 +129,7 @@ export function PasoDosCuadernoMovil({
   contextObra = "",
   onAddPreset,
   onUpdateItem,
+  onTemplatePriceUpdated,
   onApplyLineToItems,
   onDuplicateItem,
   onRemoveItem,
@@ -663,6 +665,7 @@ export function PasoDosCuadernoMovil({
             onUpdateItem(quickEditItem.id, patch);
             setQuickEditItemId(null);
           }}
+          onTemplatePriceUpdated={onTemplatePriceUpdated}
           onOpenConstructor={() => {
             setReturnToQuickEditAfterConstructor(false);
             setCompositionItemId(quickEditItem.id);
@@ -687,6 +690,7 @@ export function PasoDosCuadernoMovil({
           glassOptions={glassOptions}
           formatCurrencyInput={formatCurrencyInput}
           onUpdateItem={onUpdateItem}
+          onTemplatePriceUpdated={onTemplatePriceUpdated}
           onClose={closeConstructor}
           onSaved={() => setActiveItemId(constructorItem.id)}
           onDuplicate={() => onDuplicateItem(constructorItem)}

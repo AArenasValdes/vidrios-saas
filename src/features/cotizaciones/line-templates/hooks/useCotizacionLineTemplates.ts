@@ -7,6 +7,11 @@ import { cotizacionLineTemplatesService } from "@/features/cotizaciones/line-tem
 import { ensureDefaultLineCatalogClient } from "@/features/cotizaciones/line-templates/services/seed-line-catalog-client";
 import { ensureStructuralDraftsClient } from "@/features/cotizaciones/line-templates/services/seed-structural-draft-client";
 import { ensureProfileReferencesClient } from "@/features/cotizaciones/line-templates/services/seed-profile-references-client";
+import {
+  fetchLineTemplates,
+  invalidateLineTemplateCache,
+  readFreshLineTemplateCache,
+} from "@/features/cotizaciones/line-templates/services/line-template-cache";
 import type {
   CotizacionLineTemplate,
   CreateCotizacionLineTemplateInput,
@@ -18,77 +23,6 @@ import type {
 type LoadTemplatesOptions = {
   force?: boolean;
 };
-
-type TemplateCacheEntry = {
-  items?: CotizacionLineTemplate[];
-  fetchedAt: number;
-  request?: Promise<CotizacionLineTemplate[]>;
-};
-
-const TEMPLATE_CACHE_TTL_MS = 30_000;
-const templateCache = new Map<string, TemplateCacheEntry>();
-
-function getTemplateCacheKey(organizationId: string | number, activeOnly?: boolean) {
-  return `${organizationId}:${activeOnly === true ? "active" : "all"}`;
-}
-
-function readFreshTemplateCache(
-  organizationId: string | number,
-  activeOnly: boolean | undefined
-) {
-  const entry = templateCache.get(getTemplateCacheKey(organizationId, activeOnly));
-  if (!entry?.items || Date.now() - entry.fetchedAt >= TEMPLATE_CACHE_TTL_MS) {
-    return null;
-  }
-
-  return entry.items;
-}
-
-function fetchTemplates(
-  organizationId: string | number,
-  activeOnly: boolean | undefined,
-  force = false
-) {
-  const key = getTemplateCacheKey(organizationId, activeOnly);
-  const current = templateCache.get(key);
-
-  if (!force && current?.request) {
-    return current.request;
-  }
-
-  if (!force && current?.items && Date.now() - current.fetchedAt < TEMPLATE_CACHE_TTL_MS) {
-    return Promise.resolve(current.items);
-  }
-
-  const request = cotizacionLineTemplatesService
-    .getTemplatesByOrganizationId(organizationId, { activeOnly })
-    .then((items) => {
-      templateCache.set(key, { items, fetchedAt: Date.now() });
-      return items;
-    })
-    .finally(() => {
-      const entry = templateCache.get(key);
-      if (entry?.request === request) {
-        templateCache.set(key, {
-          items: entry.items,
-          fetchedAt: entry.fetchedAt,
-        });
-      }
-    });
-
-  templateCache.set(key, {
-    items: current?.items,
-    fetchedAt: current?.fetchedAt ?? 0,
-    request,
-  });
-
-  return request;
-}
-
-function invalidateTemplateCache(organizationId: string | number) {
-  templateCache.delete(getTemplateCacheKey(organizationId, false));
-  templateCache.delete(getTemplateCacheKey(organizationId, true));
-}
 
 export function useCotizacionLineTemplates(options?: {
   activeOnly?: boolean;
@@ -117,13 +51,13 @@ export function useCotizacionLineTemplates(options?: {
     try {
       const cachedItems = loadOptions.force
         ? null
-        : readFreshTemplateCache(organizacionId, activeOnly);
+        : readFreshLineTemplateCache(organizacionId, activeOnly);
       if (cachedItems) {
         setTemplates(cachedItems);
         setIsLoading(false);
       }
       const items = cachedItems ??
-        (await fetchTemplates(organizacionId, activeOnly, loadOptions.force));
+        (await fetchLineTemplates(organizacionId, activeOnly, loadOptions.force));
 
       if (loadId !== activeLoadIdRef.current) {
         return;
@@ -149,7 +83,7 @@ export function useCotizacionLineTemplates(options?: {
       );
 
       if (didSeed && loadId === activeLoadIdRef.current) {
-        const refreshedItems = await fetchTemplates(organizacionId, activeOnly, true);
+        const refreshedItems = await fetchLineTemplates(organizacionId, activeOnly, true);
         if (loadId === activeLoadIdRef.current) {
           setTemplates(refreshedItems);
         }
@@ -212,7 +146,7 @@ export function useCotizacionLineTemplates(options?: {
           organizacionId,
           input
         );
-        invalidateTemplateCache(organizacionId);
+        invalidateLineTemplateCache(organizacionId);
         setTemplates((current) =>
           [...current, created].sort((left, right) => left.sortOrder - right.sortOrder)
         );
@@ -242,7 +176,7 @@ export function useCotizacionLineTemplates(options?: {
           organizacionId,
           input
         );
-        invalidateTemplateCache(organizacionId);
+        invalidateLineTemplateCache(organizacionId);
         setTemplates((current) =>
           current
             .map((item) => (item.id === updated.id ? updated : item))
@@ -273,7 +207,7 @@ export function useCotizacionLineTemplates(options?: {
           id,
           organizacionId
         );
-        invalidateTemplateCache(organizacionId);
+        invalidateLineTemplateCache(organizacionId);
         setTemplates((current) =>
           [...current, duplicated].sort((left, right) => left.sortOrder - right.sortOrder)
         );
@@ -299,7 +233,7 @@ export function useCotizacionLineTemplates(options?: {
 
       try {
         await cotizacionLineTemplatesService.deleteTemplate(id, organizacionId);
-        invalidateTemplateCache(organizacionId);
+        invalidateLineTemplateCache(organizacionId);
         setTemplates((current) => current.filter((item) => item.id !== id));
       } catch (err) {
         setError(err instanceof Error ? err.message : "No se pudo eliminar la linea.");

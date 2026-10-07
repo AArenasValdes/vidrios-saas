@@ -11,6 +11,7 @@ import {
   type PlantillaVentoraCorrederaId,
 } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
 import { crearRecetaPlantillaVentoraProyectante } from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
+import { crearRecetaP2U } from "@/features/fabricacion/fixtures/traditional-p2u-recipes";
 import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import {
   anyQuoteItemCanOpenDespiecePreview,
@@ -144,6 +145,130 @@ function quoteItem(input: {
 }
 
 describe("despiece cotización ← motor fabricación (fuente única)", () => {
+  it.each([
+    {
+      catalogKey: "ventora:veratec-compact-sliding-3h",
+      lineTemplateId: "9001",
+      typology: "corredera",
+      leaves: 3,
+      variant: "",
+      expectedProfileCount: 10,
+    },
+    {
+      catalogKey: "ventora:veratec-elegans-60-ventana-hoja-interior",
+      lineTemplateId: "9002",
+      typology: "abatible",
+      leaves: 1,
+      variant: "",
+      expectedProfileCount: 8,
+    },
+    {
+      catalogKey: "ventora:veratec-7400-corredera-3h",
+      lineTemplateId: "9003",
+      typology: "corredera",
+      leaves: 3,
+      variant: "7400_3h_chica_2rieles",
+      expectedProfileCount: 10,
+    },
+    {
+      catalogKey: "ventora:veratec-7400-monorriel",
+      lineTemplateId: "9004",
+      typology: "corredera",
+      leaves: 2,
+      variant: "7400_monorriel_hoja_grande",
+      expectedProfileCount: 14,
+    },
+  ])("calcula $catalogKey como base documental preliminar en cotización", (testCase) => {
+    const item = {
+      ...quoteItem({ lineTemplateId: testCase.lineTemplateId, ancho: 1200, alto: 1500 }),
+      lineaComercial: testCase.catalogKey,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: testCase.lineTemplateId,
+        catalogLineKey: testCase.catalogKey,
+        sistema: testCase.typology === "corredera" ? "Corredera" : "Abatible",
+        fabricacionTipologia: testCase.typology,
+        fabricacionApertura: testCase.typology,
+        fabricacionHojas: testCase.leaves,
+        fabricacionModulos: testCase.leaves,
+        fabricacionVariante: testCase.variant,
+      }),
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [],
+      organizationId: 3,
+    });
+
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.preliminary).toBe(true);
+    expect(resolved.recipe).toMatchObject({
+      scope: "ventora",
+      status: "testing",
+      sourceType: "supplier",
+      sourceName: "Veratec · pauta de corte facilitada",
+    });
+    expect(resolved.formal?.recipeStatus).toBe("testing");
+    expect(resolved.formal?.pauta.length).toBe(testCase.expectedProfileCount);
+    expect(resolved.formal?.validationStatus).not.toBe("validated");
+  });
+
+  it("congela Línea 12 con sus cortes guardados como cálculo preliminar", () => {
+    let profileId = 0;
+    const definition = crearRecetaP2U({
+      catalogKey: "ventora:serie-12-shower-corredera",
+      lineName: "Línea 12",
+      createId: () => `line-12-definition-${profileId++}`,
+    });
+    const showerRecipe = recipeRecord({
+      id: "line-12-recipe",
+      lineTemplateId: 12,
+      lineName: "Línea 12",
+      typology: "shower",
+      leavesCount: 2,
+      variant: definition.identidad.variante,
+      status: "draft",
+      definition,
+    });
+    const item = {
+      ...quoteItem({ lineTemplateId: "12", ancho: 1200, alto: 1500 }),
+      tipo: "Shower Door",
+      lineaComercial: "Línea 12",
+      nombre: "Shower 2 hojas",
+      descripcion: "2 hojas",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "12",
+        catalogLineKey: "ventora:serie-12-shower-corredera",
+        sistema: "Shower Door",
+        fabricacionTipologia: "shower",
+        fabricacionApertura: "shower",
+        fabricacionHojas: 2,
+        fabricacionModulos: 1,
+      }),
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [showerRecipe],
+      organizationId: 1,
+    });
+
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.preliminary).toBe(true);
+    expect(resolved.formal?.recipeStatus).toBe("draft");
+    expect(resolved.formal?.pauta.map(({ codigoPerfil, medidaMm, cantidadPiezas }) => ({
+      codigoPerfil,
+      medidaMm,
+      cantidadPiezas,
+    }))).toEqual([
+      { codigoPerfil: "1203", medidaMm: 1195, cantidadPiezas: 1 },
+      { codigoPerfil: "1201", medidaMm: 1195, cantidadPiezas: 1 },
+      { codigoPerfil: "1202", medidaMm: 1497, cantidadPiezas: 2 },
+      { codigoPerfil: "1204", medidaMm: 605, cantidadPiezas: 4 },
+      { codigoPerfil: "1204", medidaMm: 1435, cantidadPiezas: 1 },
+    ]);
+  });
+
   it("CASO 1: L5000 1200×1000 ×1 → 10.714 mm y 12 cortes", () => {
     const resolved = resolveFabricacionDespieceForQuoteItem({
       item: quoteItem({}),
@@ -1455,6 +1580,7 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
 
     expect(resolvedLegacyDraft.estado).toBe("multiples_recetas");
     expect(resolvedLegacyDraft.recipe).toBeNull();
+    expect(resolvedLegacyDraft.candidateRecipes).toHaveLength(2);
     expect(resolvedFromSelectedLine.estado).toBe("calculado");
     expect(resolvedFromSelectedLine.recipe?.definition.identidad.variante).toBe(monoVariant);
     expect(resolvedFromSelectedLine.cubication?.cuts.length).toBeGreaterThan(0);

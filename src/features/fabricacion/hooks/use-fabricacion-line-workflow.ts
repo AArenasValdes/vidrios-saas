@@ -751,7 +751,7 @@ export function useFabricacionLineWorkflow({
         definition,
         sourceType: entry.sourceType ?? "copied",
         sourceReference: entry.sourceReference ?? entry.id,
-        sourceName: entry.sourceType === "workshop" ? "Excel aportado por taller" : undefined,
+        sourceName: entry.sourceName ?? (entry.sourceType === "workshop" ? "Excel aportado por taller" : undefined),
         sourceRevision: entry.sourceRevision,
       });
       openEditor(created);
