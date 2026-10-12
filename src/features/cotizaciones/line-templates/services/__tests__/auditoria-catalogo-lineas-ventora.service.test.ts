@@ -4,9 +4,9 @@ import {
 } from "@/features/cotizaciones/line-templates/services/auditoria-catalogo-lineas-ventora.service";
 
 describe("auditoria-catalogo-lineas-ventora.service", () => {
-  it("audita las 50 líneas canónicas del catálogo Ventora", () => {
+  it("audita las 69 líneas canónicas del catálogo Ventora", () => {
     const rows = auditarCatalogoLineasVentora();
-    expect(rows).toHaveLength(50);
+    expect(rows).toHaveLength(69);
     expect(rows.every((row) => row.cotizacionComercial)).toBe(true);
   });
 
@@ -33,7 +33,9 @@ describe("auditoria-catalogo-lineas-ventora.service", () => {
 
   it("mantiene las demás configuraciones Veratec como comerciales y sin receta heredada", () => {
     const rows = auditarCatalogoLineasVentora().filter((row) =>
-      row.catalogKey.startsWith("ventora:veratec-") && row.catalogKey !== "ventora:veratec-7400-corredera"
+      row.catalogKey.startsWith("ventora:veratec-") &&
+      row.catalogKey !== "ventora:veratec-7400-corredera" &&
+      !row.catalogKey.startsWith("ventora:veratec-bahar-5200")
     );
     expect(rows.length).toBeGreaterThan(0);
     expect(rows.every((row) => row.cotizacionComercial)).toBe(true);
@@ -41,6 +43,14 @@ describe("auditoria-catalogo-lineas-ventora.service", () => {
     expect(rows.every((row) => row.validationStatus !== "workshop_validated")).toBe(true);
     expect(rows.filter((row) => row.codigosConfigurados.length > 0).every((row) => row.fabricacionEstado === "fabricacion_pendiente")).toBe(true);
     expect(rows.filter((row) => row.catalogKey.includes("elevadora")).every((row) => row.fabricacionEstado === "cotizacion_comercial")).toBe(true);
+  });
+
+  it("muestra siete configuraciones Bahar y pauta exterior aplicable a dos aperturas", () => {
+    const rows = auditarCatalogoLineasVentora().filter((row) => row.catalogKey.startsWith("ventora:veratec-bahar-5200"));
+    expect(rows).toHaveLength(7);
+    expect(rows.every((row) => row.codigosConfigurados.length > 0 && row.perfilesTotales > 0)).toBe(true);
+    expect(rows.every((row) => row.validationStatus === "documented")).toBe(true);
+    expect(rows.every((row) => row.fabricacionEstado === "fabricacion_pendiente" && !row.listaParaProbar)).toBe(true);
   });
 
   it("representa AM-35 con variantes documentadas y sin validación de taller", () => {

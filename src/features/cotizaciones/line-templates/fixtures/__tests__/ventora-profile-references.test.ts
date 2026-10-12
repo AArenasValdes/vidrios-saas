@@ -25,6 +25,22 @@ describe("ventora profile references", () => {
     ]);
   });
 
+  it("expone en Bahar 5200 los diez perfiles de su hoja de precios", () => {
+    for (const key of [
+      "ventora:veratec-bahar-5200-fijo",
+      "ventora:veratec-bahar-5200-ventana-interior",
+      "ventora:veratec-bahar-5200-ventana-exterior",
+    ]) {
+      const profiles = getVentoraProfileReferencesForCatalogKey(key)?.profiles;
+      expect(profiles?.map((profile) => profile.code)).toEqual([
+        "65201VER", "65212VER", "65209VER", "65203VER", "65210VER",
+        "65204VER", "65207VER", "67088VER", "67063VER", "67464VER",
+      ]);
+      expect(profiles?.every((profile) => profile.provider === "VERATEC" && profile.codeStatus === "catalog_reference")).toBe(true);
+      expect(profiles?.every((profile) => profile.source === "MATERIALES PRECIO VERATEC.xlsx · BAHAR")).toBe(true);
+    }
+  });
+
   it("deja Óptima S-28 pendiente y mantiene S75 como referencia documental", () => {
     const optima = getVentoraProfileReferencesForCatalogKey(
       "ventora:optima-s28-corredera-2h"

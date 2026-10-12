@@ -458,14 +458,14 @@ export function FabricationRecipeEditor({
       </div>
       <div className={s.recipePreviewBarsMeta}>
         <em className={barsStatusToneClass(preview.barsStatus)}>
-          Barras · {barsStatusLabel(preview.barsStatus)}
+          Tiras · {barsStatusLabel(preview.barsStatus)}
         </em>
         {preview.profileBarPlans.length > 0 ? (
           <span>
             {preview.profileBarPlans
               .filter((plan) => plan.calculable)
               .reduce((sum, plan) => sum + plan.barsNeeded, 0)}{" "}
-            barras ref.
+            tiras ref.
           </span>
         ) : null}
       </div>
@@ -810,7 +810,7 @@ export function FabricationRecipeEditor({
         </section>
 
         {identityOpen ? (
-          <section className={s.recipeSetupCard} aria-label="Tipología y barras">
+          <section className={s.recipeSetupCard} aria-label="Tipología y tiras">
             <div className={s.cubicationSetupGrid}>
               <label className={s.fieldBlock}>
                 <span className={s.fieldLabel}>Tipo de fabricación</span>
@@ -934,7 +934,7 @@ export function FabricationRecipeEditor({
                 />
               </label>
               <label className={s.fieldBlock}>
-                <span className={s.fieldLabel}>Largo barra (mm)</span>
+                <span className={s.fieldLabel}>Largo de tira (mm)</span>
                 <input
                   className={s.textInput}
                   inputMode="numeric"
@@ -1414,7 +1414,7 @@ export function FabricationRecipeEditor({
             </div>
             {preview.profileBarPlans.length > 0 ? (
               <p className={s.fieldHint}>
-                Barras: {barsStatusLabel(preview.barsStatus)}. Referencial, no optimiza
+                Tiras: {barsStatusLabel(preview.barsStatus)}. Referencial, no optimiza
                 desperdicio.
               </p>
             ) : null}

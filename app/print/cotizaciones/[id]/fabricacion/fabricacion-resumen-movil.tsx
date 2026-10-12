@@ -421,18 +421,18 @@ function ConsolidadoView({
       </section>
 
       {summary.trabajoSnapshot ? (
-        <section className={s.mGroup} aria-label="Barras compartidas del trabajo">
+        <section className={s.mGroup} aria-label="Tiras compartidas del trabajo">
           <h3>Pauta conjunta · trabajo completo</h3>
-          <p className={s.mGroupNote}>{summary.trabajoSnapshot.totalBars} barras compartidas entre partidas.</p>
-          {summary.trabajoSnapshot.missingPresentations?.map((missing) => (
-            <p className={s.mGroupNote} key={`${missing.itemId}-${missing.technicalCode}-${missing.finishKey}`}>
+          <p className={s.mGroupNote}>{summary.trabajoSnapshot.totalBars} tiras compartidas entre partidas.</p>
+          {summary.trabajoSnapshot.missingPresentations?.map((missing, index) => (
+            <p className={s.mGroupNote} key={`${missing.itemId}-${missing.technicalCode}-${missing.finishKey}-${index}`}>
               Presentación pendiente · {missing.technicalCode}: {missing.reason}
             </p>
           ))}
           <ul className={s.mDespieceList}>
             {summary.trabajoSnapshot.bars.map((bar) => (
               <li key={`${bar.materialKey}-${bar.acabadoKey}-${bar.largoComercialMm}-${bar.indice}`}>
-                <strong>{bar.supplierSku ? `${bar.supplierSku} · ${bar.codigoPerfil}` : bar.codigoPerfil} · Barra #{bar.indice} · {formatMm(bar.largoComercialMm)}</strong>
+                <strong>{bar.supplierSku ? `${bar.supplierSku} · ${bar.codigoPerfil}` : bar.codigoPerfil} · Tira #{bar.indice} · {formatMm(bar.largoComercialMm)}</strong>
                 <span>Largo usado en cortes {formatMm(bar.usadoMm)} · Largo disponible según pauta {formatMm(bar.sobranteMm)}</span>
                 {bar.cortes.map((cut, index) => (
                   <em className={s.mBarTrace} key={`${cut.itemId}-${cut.componenteId}-${index}`}>

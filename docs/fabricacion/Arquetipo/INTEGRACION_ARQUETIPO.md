@@ -142,3 +142,88 @@ Para declarar toda la línea integrada, recorrer todas las configuraciones nueva
 - Ajuste no destructivo posterior al 2026-10-05: se agregaron relaciones a claves `arquetipo:*` y exclusiones para discrepancias. El 2026-10-06 se añadieron asociaciones a claves universales y se conservaron aquellas relaciones legacy por seguridad referencial; el código de aplicación debe desplegarse para normalizarlas al resolver.
 - El valor predeterminado TIRA=6.000 mm queda etiquetado como supuesto solicitado; la cotización no declara el largo ni su vigencia.
 - Las fórmulas disponibles de Ventora permanecen independientes de esta carga. El catálogo Arquetipo no acredita cortes para las diez líneas ni validación de taller.
+
+### Smoke inicial de cotización mobile (2026-10-07; hallazgos reemplazados abajo)
+
+Prueba histórica en navegador sobre una cotización nueva sin guardar. Los importes son **precios de venta** visibles en Ventora, no precios de compra Arquetipo. Esta tabla registra lo observado antes de las correcciones documentadas abajo. Un despiece calculado indica que Ventora resolvió y calculó las reglas configuradas; la validación física del taller se mantiene como dato aparte.
+
+| Familia probada | Configuración / medidas | Precio mostrado | Resultado de fabricación en la cotización | Variantes observadas |
+|---|---|---:|---|---|
+| 15 | Corredera 2 hojas, 1.200 × 1.500 mm | $135.000/m²; sugerido $243.000 | Despiece calculado: 7 perfiles, 12 cortes, 7 tiras de referencia; vidrio 616 × 1.420 mm ×2 | El catálogo de variantes contempla 2 hojas, 3 hojas/3 rieles, 4 hojas/2 rieles y 4 hojas/4 rieles. Se probó 2 hojas. |
+| 20 corredera | Corredera 2 hojas, 1.200 × 1.500 mm | $60.000/m²; sugerido $108.000 | Al elegir “Pierna abierta · Jamba 2009”, calculó 7 perfiles, 12 cortes y 7 tiras de referencia | La revisión ofreció “Pierna abierta · Jamba 2009” y “Estándar”. La selección desapareció tras elegir; falta permitir cambiarla por cotización. |
+| 20 paño fijo (fila retirada) | No aplica | No aplica | No corresponde a una configuración de Línea 20 y se excluyó de nuevas selecciones | La clave se conserva para leer registros históricos, sin borrar cotizaciones guardadas. |
+| 25 | Corredera 2 hojas, 1.200 × 1.500 mm | $80.000/m²; sugerido $144.000 | Despiece calculado en la prueba guiada actual: 7 perfiles, 12 cortes y 7 barras de referencia | Pierna abierta + Normal; 13.580 mm de perfil. La conclusión anterior de “configuración pendiente” era incorrecta. |
+| 4000 | Corredera 2 hojas, 1.200 × 1.500 mm | $80.000/m²; sugerido $144.000 | Despiece calculado | El catálogo de variantes contempla 2 hojas, 3 hojas/3 rieles, 4 hojas/2 rieles y 4 hojas/4 rieles. Se probó 2 hojas. |
+| 5000 | Corredera 2 hojas, 1.200 × 1.500 mm | $80.000/m²; sugerido $144.000 | Despiece calculado | Corredera 2 hojas; se probó esa configuración. |
+| 35 | Puerta abatible 1 hoja, 900 × 2.100 mm | $140.000/m²; sugerido $265.000 | Sin fabricación | El flujo no mostró variante. La pauta sigue incompleta: faltan composición, cantidades y descuentos. |
+| 45 | Puerta abatible 1 hoja, 900 × 2.100 mm | $120.000/m²; sugerido $227.000 | Despiece calculado | Puerta abatible de 1 hoja; se probó esa configuración. |
+| 12 | Shower corredera frontal, 2 hojas, 1.200 × 2.000 mm | $75.000/m²; sugerido $180.000 | La pauta de 5 reglas/9 cortes ahora tiene fallback universal en código; smoke UI pendiente | La cotización anterior no llegó a resolver la variante; el smoke debe repetirse en una cotización nueva. |
+| 32 | Proyectante, 1 hoja, 1.200 × 1.500 mm | $60.000/m²; sugerido $108.000 | Despiece calculado | Normal, 1 hoja; se probó esa configuración. |
+| 42 | Proyectante, 1 hoja, 1.200 × 1.500 mm | $80.000/m²; sugerido $144.000 | Despiece calculado con Normal | La UI mostró varias variantes; hay que aclarar etiquetas repetidas para poder distinguirlas. |
+
+#### Hallazgo histórico corregido
+
+- La cotización anterior no resolvió L12 porque faltaba fallback universal para cuentas sin receta propia. El código ahora lo incorpora con las reglas del usuario; falta repetir el smoke de navegador en una cotización nueva.
+- La primera prueba etiquetó L25 como “configuración pendiente” porque no reprodujo la selección guiada correcta. La prueba actual sí genera 12 cortes y 7 barras de referencia; reemplaza esa conclusión anterior.
+- L20 fijo no corresponde a la Serie 20 y ya no se ofrece para cotizaciones nuevas. La interfaz aún debe mantener visible el selector para cambiar variantes de L20 corredera.
+- Fallbacks para L12, L15, L4000, L45 y S-33/S-33 RPT pasan contratos automáticos. No hubo escritura de cotizaciones, commit, push ni deploy.
+
+### Correcciones del smoke mobile (2026-10-09; local)
+
+- L12 ya acepta el nombre comercial “Shower Door · Corredera frontal” cuando la pieza es `shower` de 2 hojas. La apertura comercial se normaliza a `shower` para resolver la única pauta confirmada; no cambian descuentos ni cortes.
+- El selector ya no antepone “Arquetipo” al nombre de líneas importadas. Las presentaciones de compra y su fuente conservan sus datos.
+- Se hicieron únicas las claves React para faltantes repetidos de presentación en el resumen desktop, mobile y pauta conjunta.
+- L35 sigue sin despiece: la evidencia disponible no define la composición activa, cantidades ni descuentos. “Completo” en la tarjeta indica que los datos comerciales del componente están completos; no certifica una receta.
+- El navegador local sí cargó el resumen guardado de la cotización 1079: aparecen pautas listas para V1/L15, V3/L25, V4/L4000, V5/L5000, P2/L45 y V6/L32 (6/10). La vista “Por componente” solo lista los seis con pauta; el detalle de la cotización redirigió al dashboard, así que no se pudieron identificar los otros cuatro desde esa ruta. Los snapshots históricos no se recalcularon. Las opciones repetidas de variante no se fusionan sin comparar sus reglas.
+- Pruebas dirigidas: `fabricacion-despiece-universal-precios.test.ts` y `sodal-l25-presentation.service.test.ts`, 24 pruebas aprobadas. Esto verifica servicios/etiquetas, no sustituye smoke de navegador con los datos de la cuenta.
+
+### Auditoría corregida de aluminio en cotización (2026-10-07)
+
+La primera pasada no incluyó S-33 y confundió “no se probó” con “no calcula”. La corrección se basa en el selector completo de Aluminio, una prueba guiada reproducible de L25 y contratos de cálculo del resolver. La captura tenía 25 referencias globales, incluida la fila antigua “Serie 20 — Paño fijo”; el código nuevo la deja fuera de los selectores y mantiene la referencia histórica, por lo que se esperan 24 globales seleccionables más cinco líneas propias. No se guardó la cotización. El estado de receta (`testing`/sin validación física) se conserva separado de la disponibilidad del despiece.
+
+| Referencia en el selector | Precio de venta observado | Configuración / estado de pauta | Evidencia en esta revisión |
+|---|---:|---|---|
+| Serie 5000 — Corredera 2 hojas | $80.000/m² | Despiece validado por el taller; variante Caracol 2H | La resolución universal usa descuentos confirmados por el titular. |
+| Serie 20 — Corredera 2 hojas | $60.000/m² | Despiece validado por el taller; variante Pierna abierta · Jamba 2009 | L20 solo es corredera. La clave fija antigua permanece fuera del catálogo de nuevas selecciones. |
+| Serie 20 — Paño fijo (fila antigua) | $70.000/m² | **No existe como configuración de Serie 20.** Se excluyó del catálogo nuevo y de los selectores; se conserva la clave solo para históricos. | La regresión automática comprueba que no se ofrece para piezas nuevas. |
+| Serie 25 — Corredera 2 hojas | $80.000/m² | **Despiece disponible** con Pierna abierta + Normal: 7 perfiles, 12 cortes, 7 barras de referencia; 13.580 mm de perfil. | Reproducido ahora en “Cotizar por ítems” → Guiada con 1.200 × 1.500 mm, 1 unidad y vidrio monolítico 5 mm. Resultado de venta sugerido: $144.000. |
+| Serie 32 — Proyectante / paño fijo | $60.000/m² | Proyectante Normal 1H: despiece validado por el taller | La confirmación cubre la variante Normal. Paño fijo no está cubierto por esta pauta. |
+| Serie 35 — Puerta abatible y vaivén | $140.000/m² | Sin pauta completa; hay perfiles candidatos, pero faltan composición y descuentos | No mostrar como despiece disponible hasta completar la receta. |
+| Serie 15 — Corredera 2 hojas | $135.000/m² | Despiece 2H y variantes de hojas documentadas | Smoke anterior: 7 grupos de perfil, 12 cortes, 7 barras de referencia. |
+| Serie 4000 — Corredera 2 hojas | $80.000/m² | Despiece 2H y variantes documentadas | Smoke anterior de cotización; calculó. |
+| Serie 45 — Puerta abatible 1 hoja | $120.000/m² | Despiece calculable | Smoke anterior de cotización. |
+| Serie 12 — Shower Door corredera 2 hojas | $75.000/m² | Despiece de perfiles validado por el taller: 5 reglas y 9 cortes | Confirmación del titular basada en la pauta revisada con su padre. Vidrio y quincallería se gestionan aparte. |
+| AL-42 — Proyectante / paño fijo | $80.000/m² | Proyectante Normal 1H: despiece validado por el taller | No extender a las variantes separadas con/sin cámara ni a paño fijo. |
+| Serie 4800 — Corredera 2 hojas | $65.000/m² | Existen recetas SODAL en código; no se probó en esta cuenta durante esta revisión | Precio observado; cálculo de esta fila no confirmado en navegador. |
+| Óptima S-28 — Corredera 2 hojas | $65.000/m² | Receta de esta referencia no confirmada en esta revisión | Precio observado; cálculo no confirmado. |
+| Óptima S-28 — Corredera 3 hojas | Sin precio | Receta de esta referencia no confirmada en esta revisión | Sin precio observado. |
+| S-33 — Corredera 2 hojas | $65.000/m² | Se habilitó fallback universal desde la pauta SODAL de 2H | Contrato automático de resolver aprobado; falta smoke de navegador tras recargar el servidor. |
+| S-33 RPT — Corredera 2 hojas | $65.000/m² | Se habilitó fallback universal desde su pauta SODAL RPT separada | Contrato automático de resolver aprobado; falta smoke de navegador tras recargar el servidor. |
+| Serie 42 — Proyectante con cámara | Sin precio | Receta específica no confirmada en esta revisión | Sin precio observado. |
+| Serie 42 — Proyectante sin cámara | Sin precio | Receta específica no confirmada en esta revisión | Sin precio observado. |
+| S-38 — Proyectante | Sin precio | Sin configuración completa confirmada | Sin precio observado. |
+| S-38 RPT — Proyectante | Sin precio | Sin configuración completa confirmada | Sin precio observado. |
+| MultiSlide S-83 — 4 hojas | Sin precio | Receta SODAL existe; esta cuenta no se probó | Sin precio observado; cálculo no confirmado. |
+| MultiSlide S-83 — 8 hojas | Sin precio | Receta SODAL existe; esta cuenta no se probó | Sin precio observado; cálculo no confirmado. |
+| Serie 3200 — Puerta abatible 1 hoja | Sin precio | Recetas SODAL tienen alternativas de bastidor; no se debe elegir una silenciosamente | Sin precio observado; selección de variante y cálculo no confirmados en navegador. |
+| Serie 4600 — Puerta vaivén | Sin precio | Recetas SODAL tienen alternativas de quicio; requiere variante explícita | Sin precio observado; selección de variante y cálculo no confirmados en navegador. |
+| Arquetipo · Línea 32 — Proyectante y paño fijo | Sin precio | Referencia duplicada; no se debe confundir con precio de perfil o asumir cobertura de paño fijo | Precio pendiente observado; la clave Arquetipo comparte fórmula L32 solo cuando su variante/tipología coincide. |
+
+La confirmación de taller cubre únicamente las variantes enumeradas: L5000 Caracol 2H, L20 corredera 2H, L12 Shower 2H, L32 proyectante Normal 1H y L42 proyectante Normal 1H. L25 mantiene las 18 variantes canónicas SODAL/Zeta validadas; esta integración no toca sus fórmulas ni estados. Las demás variantes y familias se auditan después, por separado.
+
+**Mis líneas** también mostró cinco referencias separadas (dos Serie 32, una S-38 copia, y dos Corredera 2 hojas propias, una sin precio). No son referencias del catálogo global; su pauta depende de cada receta de empresa y requiere inspección individual. La captura anterior al filtro reportó 30 líneas en total; tras ocultar la referencia L20 fija legado, se esperan 29.
+
+#### Corrección de estado y lenguaje
+
+- Cuando el motor genera snapshot de perfiles y cortes con una receta seleccionada, la cotización muestra **Despiece disponible** (o **Fabricación lista** si la receta está validada por el taller). “No validada físicamente” se conserva como estado separado en Fabricación; no bloquea la presentación del cálculo.
+- Una fórmula incompleta, variante no elegida, dato geométrico faltante o ausencia real de receta conserva **Configuración pendiente** / **Sin fabricación**. No convertir esos estados en cortes inventados.
+- La columna de precio en el selector es precio comercial de venta por m²; los precios de compra de perfiles siguen siendo una fuente aparte.
+- El smoke UI de L12 y S-33/S-33 RPT de esta revisión está pendiente. Sus pruebas automáticas no sustituyen esa comprobación de navegador.
+
+### Corrección de Serie 42 y sincronización de revisión (2026-10-11; local)
+
+- La variante ALAR `marco fijo 4201` cargada como opción heredada podía quedar seleccionada al cotizar y bloquear la receta universal Normal confirmada por el taller. En cotizaciones nuevas, esa referencia ALAR se normaliza a la variante universal `normal` para `ventora:l42`; el borrador de proveedor y las recetas personalizadas del taller no se sobrescriben.
+- Smoke en navegador local: Serie 42 proyectante 1H, 1.500 × 1.600 mm, generó 12 cortes (4201, 4202 y 4229) y vidrio 1.407 × 1.507 mm. La cotización no se guardó.
+- Línea 35 sigue sin despiece. Los manuales solo identifican perfiles candidatos: faltan composición activa, cantidades y descuentos. No habilitar cortes hasta contar con esa pauta.
+- La sincronización automática de snapshots usa una clave semántica estable y excluye UUID internos recreados en render; así evita repetir `setDraft` ante una misma salida técnica.
+- Pruebas dirigidas: 29 pruebas aprobadas entre resolución universal y sincronización del snapshot. Consola del smoke local sin errores tras recargar.

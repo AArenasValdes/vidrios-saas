@@ -22,7 +22,7 @@ Ventora es **software comercial para maestros, talleres y empresas de vidrio/alu
 | Partidas genéricas Marco/Hoja como si fueran tipologías | **Recetas de componentes reales** (riel, jamba, cabezal…) |
 | Ampliar tipologías en el catálogo | Tipología de venta/composición en **constructor**; receta en **línea** |
 | Una sola fórmula “oficial” por línea | Pack de **variantes** (herraje/cierre) por línea |
-| Prometer fabricaciones universales | **Plantillas iniciales sugeridas** + bases pendientes; validar con piloto |
+| Prometer cobertura ilimitada | Despiece de variantes enumeradas validado por el titular + variantes no cubiertas pendientes |
 | Técnico mezclado en PDF cliente | PDF comercial limpio; **resumen fabricación** interno aparte |
 
 ---
@@ -61,11 +61,13 @@ modificar el contrato actual.
 
 | Tipo | Contenido | Copy de producto |
 |---|---|---|
-| Plantillas iniciales sugeridas | L5000, L20, L25 corredera caracol | “Plantilla inicial sugerida por Ventora. Revísala y valídala…” |
+| Recetas de despiece validadas por el taller | L5000 corredera 2H, L20 corredera 2H, L12 Shower 2H, L32 proyectante Normal 1H, L42 proyectante Normal 1H; L25 SODAL/Zeta con 18 variantes | “Despiece validado” dentro de las variantes cubiertas; conservar pendientes separados de vidrio/accesorios cuando correspondan. |
 | Bases tipológicas | Paño fijo, abatible, proyectante, puerta abatible, puerta corredera | “Base pendiente de validación del taller” |
 | Propia | Estructura editable | El taller arma desde cero |
 
-Las plantillas **no** son líneas del listado del catálogo: se eligen en el wizard de la línea, paso **Fabricación → origen**.
+Pautas documentales universales añadidas desde el Catálogo SODAL 2026: Óptima S-28 2H/3H, S-38 RPT proyectante/fijo, Serie 3200 puerta abatible, Serie 4600 vaivén hidráulica y MultiSlide S-83 4H/8H. Producen cálculo cuando variante y vidrio son compatibles; siguen diferenciadas de una validación física del taller. S-33, S-33 RPT, 4800 y L20/L25 existentes se conservan. Ver matriz y límites en `docs/fabricacion/Sodal/INTEGRACION_SODAL_2026.md`.
+
+Las recetas anteriores se resuelven de forma universal por código para cotizaciones nuevas. La confirmación de taller fue entregada por el titular; aplica solo a las tipologías y variantes enumeradas. L20 es solo corredera: no ofrecer paño fijo. L25 se mantiene como catálogo técnico SODAL/Zeta validado en sus 18 variantes, sin editar sus fórmulas.
 
 ### Wizard (Configuración → Líneas)
 
@@ -106,12 +108,12 @@ docs/manuales/MANUAL_LINEAS_CUBICACION_PAUTA.md
 
 ## 5. Madurez / go-to-market (orden cerrado)
 
-1. Implementar motor multi-tipología + bases configurables ← **hecho**  
-2. Probar las 3 correderas (L5000/L20/L25) con medidas reales de taller  
-3. Obtener fórmulas reales para al menos paño fijo, abatible y puerta  
+1. Implementar motor multi-tipología + bases configurables ← **hecho**
+2. Ampliar pruebas de otras variantes de L5000/L20 y calibrar líneas todavía sin cobertura
+3. Obtener fórmulas reales para al menos paño fijo, abatible y puerta
 4. Recién entonces promocionar “las fabricaciones más comunes”
 
-Hasta (2)+(3): marketing y demos deben decir **plantillas iniciales / bases pendientes**, nunca “verificadas” ni “listas para cualquier taller”.
+La confirmación de taller para L5000, L20, L12, L32 y L42 aplica solo a las tipologías y variantes indicadas en esta guía; L25 mantiene su validación SODAL/Zeta completa. No generalizar estas validaciones a otras variantes ni a otras líneas.
 
 ### Catálogo prioritario desde investigación documental (2026-08-01)
 

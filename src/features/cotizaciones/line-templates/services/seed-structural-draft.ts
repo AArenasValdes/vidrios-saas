@@ -4,6 +4,10 @@ import {
 } from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
 import { isVentoraCatalogKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import { enriquecerRecetaDesdeCatalogo } from "@/features/fabricacion/services/enriquecer-receta-desde-catalogo.service";
+import {
+  isSodalCatalogo2026UniversalFallbackKey,
+  SODAL_CATALOGO_2026_SOURCE_PREFIX,
+} from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
 
 export type LineTemplateSeedRow = {
   id: number | string;
@@ -87,6 +91,8 @@ export async function seedStructuralDraftsForOrganization(
       continue;
     }
 
+    const sodalDocumented = isSodalCatalogo2026UniversalFallbackKey(line.catalog_key ?? null);
+
     try {
       await deps.insertStructuralRecipe({
         organization_id: organizationId,
@@ -100,8 +106,10 @@ export async function seedStructuralDraftsForOrganization(
         version: 1,
         status: "draft",
         definition,
-        source_type: "manual",
-        source_reference: `ventora-arquetipo:${archetypeId}`,
+        source_type: sodalDocumented ? "manufacturer" : "manual",
+        source_reference: sodalDocumented
+          ? `${SODAL_CATALOGO_2026_SOURCE_PREFIX}${line.catalog_key?.replace("ventora:", "")}`
+          : `ventora-arquetipo:${archetypeId}`,
       });
       seeded += 1;
     } catch (error) {

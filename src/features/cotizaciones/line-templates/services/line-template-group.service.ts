@@ -4,6 +4,7 @@
 
 import {
   isVentoraCatalogKey,
+  resolveDefaultLineCatalogProvider,
   VENTORA_DEFAULT_LINE_CATALOG,
 } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
@@ -76,12 +77,15 @@ export function compareLineTemplateGroups(
 
 /** Agrupa líneas por proveedor, ordenadas A–Z (Sin proveedor al final). */
 export function groupLineTemplatesByProvider<
-  T extends { proveedor?: string | null; nombre: string }
+  T extends { proveedor?: string | null; nombre: string; catalogKey?: string | null }
 >(templates: readonly T[]): LineTemplateProviderGroup<T>[] {
   const buckets = new Map<string, T[]>();
 
   for (const template of templates) {
-    const provider = getLineTemplateProviderLabel(template.proveedor);
+    const canonicalProvider = isVentoraCatalogKey(template.catalogKey)
+      ? resolveDefaultLineCatalogProvider(template.catalogKey)
+      : null;
+    const provider = getLineTemplateProviderLabel(template.proveedor?.trim() || canonicalProvider);
     const current = buckets.get(provider);
     if (current) {
       current.push(template);

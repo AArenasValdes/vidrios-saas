@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import { FabricacionLineMobileDetail } from "@/features/fabricacion/components/mobile/fabricacion-line-mobile-detail";
 import { crearBaseTipologicaVentora } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
@@ -52,6 +52,29 @@ function recipe(status: FabricationRecipeRecord["status"]): FabricationRecipeRec
 }
 
 describe("FabricacionLineMobileDetail", () => {
+  it("delega el botón volver a la navegación contextual del catálogo", () => {
+    const onBack = jest.fn();
+
+    render(
+      <FabricacionLineMobileDetail
+        template={template}
+        currentRecipe={null}
+        olderRecipes={[]}
+        error={null}
+        feedback={null}
+        isSaving={false}
+        onBack={onBack}
+        onConfigure={() => undefined}
+        onEdit={() => undefined}
+        onTest={() => undefined}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Volver a líneas y precios" }));
+
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
   it("pide configurar cuando no hay receta y no ofrece probar", () => {
     render(
       <FabricacionLineMobileDetail

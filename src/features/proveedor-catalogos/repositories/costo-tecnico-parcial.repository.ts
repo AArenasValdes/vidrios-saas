@@ -151,20 +151,21 @@ export async function readQuoteForTechnicalCost(input: {
   organizationId: number;
 }) {
   const admin = getClient();
-  const { data, error } = await admin.from("cotizaciones")
-    .select("id, organization_id, creado_en, fabricacion_trabajo_snapshot")
-    .eq("id", input.quoteId)
-    .eq("organization_id", input.organizationId)
-    .is("eliminado_en", null)
-    .maybeSingle();
+  const [{ data, error }, { data: items, error: itemError }] = await Promise.all([
+    admin.from("cotizaciones")
+      .select("id, organization_id, creado_en, fabricacion_trabajo_snapshot")
+      .eq("id", input.quoteId)
+      .eq("organization_id", input.organizationId)
+      .is("eliminado_en", null)
+      .maybeSingle(),
+    admin.from("cotizacion_items")
+      .select("id, codigo, color, vidrio, observaciones, fabricacion_snapshot")
+      .eq("cotizacion_id", input.quoteId)
+      .eq("organization_id", input.organizationId)
+      .is("eliminado_en", null),
+  ]);
   if (error) throw new Error(error.message);
   if (!data) return null;
-
-  const { data: items, error: itemError } = await admin.from("cotizacion_items")
-    .select("id, codigo, color, vidrio, observaciones, fabricacion_snapshot")
-    .eq("cotizacion_id", input.quoteId)
-    .eq("organization_id", input.organizationId)
-    .is("eliminado_en", null);
   if (itemError) throw new Error(itemError.message);
 
   return {
@@ -217,32 +218,36 @@ export async function readSupplierPresentationPrices(input: {
   const providerKeys = [...selectedLists.keys()];
   if (selectedListIds.length === 0 || providerKeys.length === 0) return [];
 
-  const { data: prices, error: pricesError } = await admin.from("catalogo_precios_presentacion")
-    .select("lista_precio_id, presentacion_id, precio_neto, moneda")
-    .in("lista_precio_id", selectedListIds);
+  const [{ data: prices, error: pricesError }, { data: presentations, error: presentationError }] = await Promise.all([
+    admin.from("catalogo_precios_presentacion")
+      .select("lista_precio_id, presentacion_id, precio_neto, moneda")
+      .in("lista_precio_id", selectedListIds),
+    admin.from("catalogo_presentaciones_proveedor")
+      .select("id, proveedor_key, sku_proveedor, descripcion, modo_acabado, acabado_codigo, acabado_nombre, unidad_compra, largo_comercial_mm, insumo_tecnico_id")
+      .in("proveedor_key", providerKeys)
+      .eq("estado_asociacion", "confirmada"),
+  ]);
   if (pricesError) throw new Error(pricesError.message);
+  if (presentationError) throw new Error(presentationError.message);
   const providerByListId = new Map((lists ?? []).map((list) => [String(list.id), String(list.proveedor_key)]));
   const priceByPresentation = new Map((prices ?? []).map((price) => [
     `${String(price.presentacion_id)}|${providerByListId.get(String(price.lista_precio_id)) ?? ""}`,
     price,
   ]));
-  const { data: presentations, error: presentationError } = await admin.from("catalogo_presentaciones_proveedor")
-    .select("id, proveedor_key, sku_proveedor, descripcion, modo_acabado, acabado_codigo, acabado_nombre, unidad_compra, largo_comercial_mm, insumo_tecnico_id")
-    .in("proveedor_key", providerKeys)
-    .eq("estado_asociacion", "confirmada");
-  if (presentationError) throw new Error(presentationError.message);
   const technicalInputIds = [...new Set((presentations ?? []).map((row) => row.insumo_tecnico_id).filter(Boolean).map(String))];
   if (technicalInputIds.length === 0) return [];
 
-  const { data: technicalInputs, error: technicalInputError } = await admin.from("catalogo_insumos_tecnicos")
-    .select("id, codigo_fuente, nombre, evidencia")
-    .in("id", technicalInputIds);
+  const [{ data: technicalInputs, error: technicalInputError }, { data: inputFamilies, error: familyError }] = await Promise.all([
+    admin.from("catalogo_insumos_tecnicos")
+      .select("id, codigo_fuente, nombre, evidencia")
+      .in("id", technicalInputIds),
+    admin.from("catalogo_insumo_familias")
+      .select("insumo_tecnico_id, family_key")
+      .in("insumo_tecnico_id", technicalInputIds),
+  ]);
   if (technicalInputError) throw new Error(technicalInputError.message);
-  const inputById = new Map((technicalInputs ?? []).map((row) => [String(row.id), row]));
-  const { data: inputFamilies, error: familyError } = await admin.from("catalogo_insumo_familias")
-    .select("insumo_tecnico_id, family_key")
-    .in("insumo_tecnico_id", technicalInputIds);
   if (familyError) throw new Error(familyError.message);
+  const inputById = new Map((technicalInputs ?? []).map((row) => [String(row.id), row]));
   const familyKeysByInputId = new Map<string, string[]>();
   for (const row of inputFamilies ?? []) {
     const key = String(row.insumo_tecnico_id);
@@ -311,23 +316,25 @@ export async function readOrganizationPurchasePricing(input: {
 }): Promise<OrganizationPurchasePricing> {
   if (input.providerKeys.length === 0) return { adjustments: [], overrides: [] };
   const admin = getClient();
-  const { data: adjustments, error: adjustmentError } = await admin.from("organizacion_ajustes_proveedor")
+  const adjustmentsQuery = admin.from("organizacion_ajustes_proveedor")
     .select("proveedor_key, ajuste_porcentaje, activo")
     .eq("organization_id", input.organizationId)
     .in("proveedor_key", [...input.providerKeys]);
+  const overridesQuery = input.presentationIds.length === 0
+    ? null
+    : admin.from("organizacion_precios_presentacion")
+      .select("presentacion_id, precio_neto, moneda")
+      .eq("organization_id", input.organizationId)
+      .in("presentacion_id", [...input.presentationIds]);
+  const [{ data: adjustments, error: adjustmentError }, overridesResult] = await Promise.all([
+    adjustmentsQuery,
+    overridesQuery ?? Promise.resolve({ data: [], error: null }),
+  ]);
   if (adjustmentError) throw new Error(adjustmentError.message);
-  if (input.presentationIds.length === 0) return {
-    adjustments: (adjustments ?? []).map((row) => ({ providerKey: row.proveedor_key, percentage: Number(row.ajuste_porcentaje), active: row.activo })),
-    overrides: [],
-  };
-  const { data: overrides, error: overrideError } = await admin.from("organizacion_precios_presentacion")
-    .select("presentacion_id, precio_neto, moneda")
-    .eq("organization_id", input.organizationId)
-    .in("presentacion_id", [...input.presentationIds]);
-  if (overrideError) throw new Error(overrideError.message);
+  if (overridesResult.error) throw new Error(overridesResult.error.message);
   return {
     adjustments: (adjustments ?? []).map((row) => ({ providerKey: row.proveedor_key, percentage: Number(row.ajuste_porcentaje), active: row.activo })),
-    overrides: (overrides ?? []).map((row) => ({ presentationId: row.presentacion_id, netPrice: Number(row.precio_neto), currency: row.moneda })),
+    overrides: (overridesResult.data ?? []).map((row) => ({ presentationId: row.presentacion_id, netPrice: Number(row.precio_neto), currency: row.moneda })),
   };
 }
 
@@ -335,16 +342,52 @@ export async function persistTechnicalCostSnapshot(input: {
   quoteId: number;
   organizationId: number;
   snapshot: TechnicalCostSnapshot;
+  refreshExisting?: boolean;
 }) {
-  const { data, error } = await getClient().from("cotizacion_costos_tecnicos").insert({
-    cotizacion_id: input.quoteId,
-    organization_id: input.organizationId,
+  const client = getClient();
+  const values = {
     estado: technicalCostStatusToDatabase(input.snapshot.status),
     snapshot: input.snapshot,
+    calculado_en: input.snapshot.calculatedAt,
+  };
+
+  if (input.refreshExisting) {
+    const { data: updated, error: updateError } = await client.from("cotizacion_costos_tecnicos")
+      .update(values)
+      .eq("cotizacion_id", input.quoteId)
+      .eq("organization_id", input.organizationId)
+      .select("snapshot, estado, calculado_en")
+      .maybeSingle();
+    if (updateError) throw new Error(updateError.message);
+    if (updated) return {
+      snapshot: updated.snapshot as TechnicalCostSnapshot,
+      status: technicalCostStatusFromDatabase(String(updated.estado)) ?? input.snapshot.status,
+      calculatedAt: updated.calculado_en as string,
+    };
+  }
+
+  const { data, error } = await client.from("cotizacion_costos_tecnicos").insert({
+    cotizacion_id: input.quoteId,
+    organization_id: input.organizationId,
+    ...values,
   }).select("snapshot, estado, calculado_en").single();
   if (error) {
-    // A concurrent first calculation wins. Its frozen values are the source of truth.
+    // A concurrent first calculation wins; an explicit refresh takes ownership of the row.
     if (error.code === "23505") {
+      if (input.refreshExisting) {
+        const { data: updated, error: updateError } = await client.from("cotizacion_costos_tecnicos")
+          .update(values)
+          .eq("cotizacion_id", input.quoteId)
+          .eq("organization_id", input.organizationId)
+          .select("snapshot, estado, calculado_en")
+          .maybeSingle();
+        if (updateError) throw new Error(updateError.message);
+        if (updated) return {
+          snapshot: updated.snapshot as TechnicalCostSnapshot,
+          status: technicalCostStatusFromDatabase(String(updated.estado)) ?? input.snapshot.status,
+          calculatedAt: updated.calculado_en as string,
+        };
+      }
       const existing = await getExistingTechnicalCostSnapshot(input);
       if (existing) return existing;
     }

@@ -38,7 +38,7 @@ describe("recetas P2A documentadas por SODAL", () => {
     const s83Eight = crearRecetasSodalP2A({ catalogKey: "ventora:multislide-s83-8h", lineName });
     expect(s83[0]?.identidad.hojas).toBe(4);
     expect(s83Eight[0]?.identidad.hojas).toBe(8);
-    expect(s83[0]?.perfiles.find((profile) => profile.codigoPerfil === "S834")?.reglaMedida.ajusteMm).toBe(-11);
+    expect(s83[0]?.perfiles.find((profile) => profile.codigoPerfil === "S834")?.reglaMedida.ajusteMm).toBe(-9);
     expect(s83Eight[0]?.perfiles.find((profile) => profile.codigoPerfil === "S834")?.reglaMedida.ajusteMm).toBe(-7);
 
     const s33 = crearRecetaSodalP2A({ catalogKey: "ventora:s33-corredera-2h", lineName });

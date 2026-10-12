@@ -49,6 +49,14 @@ describe("line option presentation contract", () => {
     expect(filterLineCatalogTemplates({ templates: [compatible, incompatible, own], tab: "own", context }).map((entry) => entry.id)).toEqual([4]);
   });
 
+  it("does not offer the retired fixed-pane entry for Serie 20", () => {
+    const result = filterLineCatalogTemplates({
+      templates: [line({ id: 20, catalogKey: "ventora:l20-fijos", nombre: "Serie 20 — Paño fijo" })],
+      tab: "all",
+    });
+    expect(result).toEqual([]);
+  });
+
   it("consolidates interleaved private lines into one group without matching by names", () => {
     const items = [
       line({ id: 1, nombre: "Propia A" }),
@@ -75,7 +83,7 @@ describe("line option presentation contract", () => {
     expect(groups[0].label).toBe("VERATEC");
     expect(groups[0].families).toHaveLength(1);
     expect(groups[0].families[0]).toMatchObject({ key: "veratec:sliding-7400", label: "Sliding 7400" });
-    expect(groups[0].families[0].templates).toHaveLength(3);
+    expect(groups[0].families[0].templates).toHaveLength(4);
     expect(groups[0].families[0].templates.map((template) => template.catalogKey)).toContain("ventora:veratec-7400-corredera");
   });
 

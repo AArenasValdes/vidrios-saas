@@ -71,6 +71,52 @@ export function fabricacionSnapshotMatchesCalculatedOutput(
   return JSON.stringify(project(current)) === JSON.stringify(project(next));
 }
 
+/** Stable key for syncing calculations when fallback recipes recreate UUIDs. */
+export function buildFabricacionSnapshotSyncKey(
+  itemId: string,
+  snapshot: FabricacionCotizacionSnapshot
+) {
+  return JSON.stringify({
+    itemId,
+    recipeId: snapshot.recipeId,
+    recipeVersion: snapshot.recipeVersion,
+    input: snapshot.input,
+    selectedVariant: snapshot.selectedVariant,
+    supplierFamilyKey: snapshot.supplierFamilyKey ?? null,
+    recipeIdentity: {
+      codigo: snapshot.recipeIdentity.codigo,
+      nombre: snapshot.recipeIdentity.nombre,
+      tipologia: snapshot.recipeIdentity.tipologia,
+      hojas: snapshot.recipeIdentity.hojas,
+      modulos: snapshot.recipeIdentity.modulos,
+      apertura: snapshot.recipeIdentity.apertura,
+      herraje: snapshot.recipeIdentity.herraje,
+      variante: snapshot.recipeIdentity.variante,
+    },
+    profiles: snapshot.result.perfiles.map((profile) => ({
+      code: profile.codigoPerfil,
+      name: profile.nombrePerfil,
+      function: profile.funcion,
+      cut: profile.corte ?? null,
+      lengthMm: profile.medidaMm,
+      quantity: profile.cantidadPiezas,
+      totalMm: profile.totalLinealMm,
+    })),
+    bars: snapshot.pautaBarras?.barras.map((bar) => ({
+      materialKey: bar.materialKey ?? null,
+      code: bar.codigoPerfil,
+      name: bar.nombrePerfil,
+      lengthMm: bar.largoComercialMm,
+      cuts: bar.cortes.map((cut) => ({
+        code: cut.codigoPerfil,
+        function: cut.funcion,
+        cut: cut.corte ?? null,
+        lengthMm: cut.largoMm,
+      })),
+    })) ?? null,
+  });
+}
+
 export function construirSnapshotFabricacionCotizacion(input: {
   recipe: FabricationRecipeRecord;
   entrada: FabricacionEntradaCalculo;

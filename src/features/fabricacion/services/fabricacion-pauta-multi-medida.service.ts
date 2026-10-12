@@ -62,7 +62,7 @@ function mergeAccessoryRows(
 ): FabricacionAccesorioResultado[] {
   const map = new Map<string, FabricacionAccesorioResultado>();
   for (const row of rows) {
-    const key = row.accesorioId;
+    const key = `${row.accesorioId}::${row.unidad ?? "unidad"}`;
     const existing = map.get(key);
     if (!existing) {
       map.set(key, { ...row, trazabilidad: [...row.trazabilidad] });

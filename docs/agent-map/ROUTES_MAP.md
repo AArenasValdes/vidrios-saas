@@ -625,6 +625,7 @@ Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las
 
 | Ruta | Metodo | Proposito | Archivo |
 |---|---|---|---|
+| `/api/cotizaciones/[id]/costo-tecnico-parcial` | GET/POST | Lee/guarda el costo neto interno; POST idempotente por defecto y `{ refresh: true }` recalcula explícitamente con precios vigentes solo para admin/tecnico y la organización de la cotización | `app/api/cotizaciones/[id]/costo-tecnico-parcial/route.ts` |
 | `/api/solicitud/[empresa]` | POST | Crear solicitud publica (rate limited) | `app/api/solicitud/[empresa]/route.ts` |
 | `/api/solicitudes/resumen` | GET | Resumen solicitudes por org (auth) | `app/api/solicitudes/resumen/route.ts` |
 | `/api/cotizaciones/resumen` | GET | Resumen cotizaciones por org (auth) | `app/api/cotizaciones/resumen/route.ts` |

@@ -4300,6 +4300,8 @@ const UNIFIED_FRAMED_DOOR_CONFIGS = new Set([
   "2_hojas_plegables",
   "3_hojas_plegables",
   "4_hojas_plegables",
+  "6_hojas_plegables",
+  "7_hojas_plegables",
   "acordeon",
   "1_hoja_vaiven",
   "2_hojas_vaiven",
@@ -4671,22 +4673,30 @@ function drawUnifiedDoorPanel(
     handleSide?: "left" | "right";
     palilloType?: string;
     detail?: "pivot" | "fold" | "vaiven" | "hanging" | "automatic";
+    foldDirection?: "left" | "right";
+    leafIndex?: number;
   } = {}
 ): string {
   const glassInset = 4;
   const handleX = options.handleSide === "left" ? x + 7 : x + w - 7;
   const panelType = options.fixed ? "fixed" : "active";
   return [
-    `<g data-door-unified-panel="${panelType}">`,
+    `<g data-door-unified-panel="${panelType}"${options.leafIndex === undefined ? "" : ` data-door-leaf-index="${options.leafIndex + 1}"`}>`,
     drawDoorGlassPanel(x + glassInset, y + glassInset, w - glassInset * 2, h - glassInset * 2),
     options.palilloType ? pdPalillo(x + glassInset, y + glassInset, w - glassInset * 2, h - glassInset * 2, options.palilloType, frameColor) : "",
     drawDoorLeafFrame(x, y, w, h, frameColor, options.fixed ? "fixed" : "swing"),
     options.detail === "pivot" ? pdPivotDot(x + w * 0.36, y + h * 0.5, frameColor) : "",
-    options.detail === "fold" ? `<line data-door-fold-line="true" x1="${px(x + w * 0.5)}" y1="${px(y + 3)}" x2="${px(x + 3)}" y2="${px(y + h - 3)}" stroke="${frameColor}" stroke-width="0.8" stroke-dasharray="4 3" opacity="0.55"/>` : "",
+    options.detail === "fold"
+      ? `<line data-door-fold-line="true" x1="${px(x + (options.foldDirection === "right" ? 3 : w - 3))}" y1="${px(y + 3)}" x2="${px(x + (options.foldDirection === "right" ? w - 3 : 3))}" y2="${px(y + h - 3)}" stroke="${frameColor}" stroke-width="0.8" stroke-dasharray="4 3" opacity="0.42"/>`
+      : "",
     options.detail === "vaiven" ? drawOpeningArrow(x + w * 0.5, y + h, Math.min(w * 0.34, h * 0.26), "right", 0.55) : "",
     options.handleSide && !options.fixed ? drawDoorHandle(handleX, y + h * 0.5, options.handleSide, Math.min(0.72, Math.max(0.52, w / 88))) : "",
     `</g>`,
   ].join("\n");
+}
+
+function drawDoorFoldJoint(x: number, y: number, h: number, radius: number, color: string, index: number): string {
+  return `<g data-door-fold-joint="${index}"><circle cx="${px(x)}" cy="${px(y + 4)}" r="${px(radius)}" fill="${color}" opacity="0.72"/><circle cx="${px(x)}" cy="${px(y + h - 4)}" r="${px(radius)}" fill="${color}" opacity="0.72"/></g>`;
 }
 
 function composeUnifiedFramedDoorSystem(
@@ -4727,12 +4737,22 @@ function composeUnifiedFramedDoorSystem(
     for (let i = 0; i < count; i++) {
       const leafX = panelX + (leafW + gap) * i;
       const handleSide = i % 2 === 0 ? "right" : "left";
+      const isFolding = detail === "fold";
       base.push(drawUnifiedDoorPanel(leafX, panelY, leafW, panelH, frameColor, {
         fixed: fixedIndexes.has(i),
-        handleSide,
+        handleSide: isFolding ? (i === count - 1 ? "right" : undefined) : handleSide,
         palilloType,
         detail,
+        foldDirection: i % 2 === 0 ? "left" : "right",
+        leafIndex: i,
       }));
+    }
+    if (detail === "fold") {
+      for (let i = 0; i < count - 1; i++) {
+        const jointX = panelX + leafW * (i + 1) + gap * (i + 0.5);
+        const jointRadius = Math.min(1.7, Math.max(1, leafW * 0.06));
+        base.push(drawDoorFoldJoint(jointX, panelY, panelH, jointRadius, frameColor, i + 1));
+      }
     }
   };
 
@@ -4750,9 +4770,9 @@ function composeUnifiedFramedDoorSystem(
     addPanels(2, new Set(), "pivot");
   } else if (isPivotante || config === "con_quicio_pivote") {
     addPanels(1, new Set(), "pivot");
-  } else if (config === "3_hojas_plegables") {
-    addPanels(3, new Set(), "fold");
-  } else if (config === "4_hojas_plegables" || config === "acordeon") {
+  } else if (/^[2-7]_hojas_plegables$/.test(config)) {
+    addPanels(Number.parseInt(config, 10), new Set(), "fold");
+  } else if (config === "acordeon") {
     addPanels(4, new Set(), "fold");
   } else if (isPlegable) {
     addPanels(2, new Set(), "fold");
@@ -5045,6 +5065,8 @@ const CONFIG_MAP: Record<string, string> = {
   "2 hojas plegables": "2_hojas_plegables",
   "3 hojas plegables": "3_hojas_plegables",
   "4 hojas plegables": "4_hojas_plegables",
+  "6 hojas plegables": "6_hojas_plegables",
+  "7 hojas plegables": "7_hojas_plegables",
   "4 hojas / 2 + 2": "4_hojas_plegables",
   "Acordeon": "acordeon",
   "1 hoja vaiven": "1_hoja_vaiven",

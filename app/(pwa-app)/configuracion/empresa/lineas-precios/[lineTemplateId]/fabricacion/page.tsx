@@ -4,12 +4,12 @@ import { FabricacionLinePageClient } from "@/features/fabricacion/components/fab
 
 type PageProps = {
   params: Promise<{ lineTemplateId: string }>;
-  searchParams: Promise<{ plantilla?: string }>;
+  searchParams: Promise<{ plantilla?: string; desdeCatalogo?: string }>;
 };
 
 export default async function FabricacionLineaPage({ params, searchParams }: PageProps) {
   const { lineTemplateId } = await params;
-  const { plantilla } = await searchParams;
+  const { plantilla, desdeCatalogo } = await searchParams;
   const parsedId = Number(lineTemplateId);
 
   if (!Number.isInteger(parsedId) || parsedId <= 0) notFound();
@@ -18,6 +18,7 @@ export default async function FabricacionLineaPage({ params, searchParams }: Pag
     <FabricacionLinePageClient
       lineTemplateId={parsedId}
       initialSuggestedRecipeId={plantilla ?? null}
+      returnToCatalog={desdeCatalogo === "1"}
     />
   );
 }

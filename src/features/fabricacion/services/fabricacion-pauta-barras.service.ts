@@ -74,7 +74,7 @@ export function construirPautaBarrasFabricacion(input: {
       advertencias.push({
         codigo: "PERFIL_SIN_DATOS_DE_BARRA",
         nivel: "advertencia",
-        mensaje: `${fila.funcion}: agrega el largo comercial para calcular barras.`,
+        mensaje: `${fila.funcion}: agrega el largo comercial para calcular tiras.`,
         componenteId: fila.componenteId,
       });
       return;
@@ -110,7 +110,7 @@ export function construirPautaBarrasFabricacion(input: {
       advertencias.push({
         codigo: "CORTE_SUPERA_BARRA_COMERCIAL",
         nivel: "error",
-        mensaje: `${corte.funcion}: ${corte.largoMm} mm supera la barra comercial de ${corte.largoComercialMm} mm.`,
+        mensaje: `${corte.funcion}: ${corte.largoMm} mm supera el largo comercial de la tira (${corte.largoComercialMm} mm).`,
         componenteId: corte.componenteId,
       });
       return;

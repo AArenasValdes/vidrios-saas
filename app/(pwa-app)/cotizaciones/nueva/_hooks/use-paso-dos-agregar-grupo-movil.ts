@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   normalizeCurrencyInput,
   buildComponentFormLinePricingSummary,
-  filterLineTemplatesForComponent,
   getSheetSchemeOptions,
   resolveVitrinaHojasBasePatch,
   resolveDefaultSheetVariantForLine,
@@ -102,13 +101,10 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     [draft.subtipo, params.customGlassOptions]
   );
   const visibleLineTemplates = useMemo(
-    () =>
-      filterLineTemplatesForComponent(activeLineTemplates, {
-        tipo: draft.subtipo,
-        material: draft.material,
-        catalogCategoria: draft.catalogCategoria,
-      }),
-    [activeLineTemplates, draft.catalogCategoria, draft.material, draft.subtipo]
+    // El selector móvil aplica sus pestañas sobre el catálogo completo. Si
+    // prefiltramos aquí, "Todas" solo puede volver a mostrar las compatibles.
+    () => activeLineTemplates,
+    [activeLineTemplates]
   );
   const linePricingSummary = useMemo(
     () =>

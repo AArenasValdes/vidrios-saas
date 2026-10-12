@@ -19,6 +19,7 @@ El usuario confirma que `docs/fabricacion/veratec/pauta de corte veratec.xlsx` f
 | Elevadora | Seis esquemas: 2 paños 1 fijo/1 móvil; 2 móviles; 3 paños 2 fijos/1 móvil; 3 paños 1 fijo/2 móviles; 4 móviles; 4 paños 2 fijos/2 móviles. | El folleto no muestra códigos de perfiles suficientes; no se crea ningún insumo técnico. | Sin presentaciones/precios asociados. | Sin receta. |
 | EKO 130 | Identidad comercial de familia; el folleto presenta perfiles, no una composición completa de ventana. | Ocho códigos de perfil de la pág. 7. | Sin filas de precios asociables en la lista revisada. | Sin receta. |
 | EKO 82 | Identidad comercial de familia; el folleto presenta perfiles, no una composición completa de ventana. | Ocho códigos de perfil de la pág. 7. | Sin filas de precios asociables en la lista revisada. | Sin receta. |
+| Bahar 5200 | Línea identificada como sistema de PVC 52 mm en la hoja `BAHAR` del libro de precios. | 65201 marco; 65212 hoja ventana interior; 65209 hoja ventana exterior; 65203 barra T; 65210/65204 hojas de puerta; 65207 batiente; junquillos 67088/67063/67464. | Fixture separado: 10 perfiles, cinco acabados y 50 presentaciones de 5.800 mm; precios netos CLP transcritos de la columna E, revisión de origen 2022-07. | Paño fijo, ventanas interior/exterior y las cuatro composiciones plegables del libro (3/3/0, 4/3/1, 6/5/1, 7/4/3) tienen pautas preliminares calculables. La hoja de puerta plegable identifica 65204. Vidrio, junquillo, accesorios y parámetros de taller pendientes. |
 
 ### Reutilización entre familias
 
@@ -50,3 +51,10 @@ La extensión de siete filas usa exclusivamente descripciones/SKU de Lista Junio
 ## Verificación
 
 `supplierCatalogImportSchema` requiere correspondencias técnicas explícitas por `technicalKey`, evita códigos técnicos duplicados en el mismo lote y admite que un insumo declare varias familias. No acepta filas de presentación sin referencia a un insumo del lote. Los precios desconocidos no se convierten en cero.
+
+### Fixture Bahar 5200 (2026-10-11)
+
+- Fuente: `docs/fabricacion/veratec/MATERIALES PRECIO VERATEC.xlsx#BAHAR!A1:I62` y `docs/fabricacion/veratec/pauta de corte veratec.xlsx` (`FIJO`, `ABATIR INT Y OB`, `ABATIR EXT Y PROY`, `Plegable 3-3-0`, `Plegable 4-3-1`, `Plegable 6-5-1`, `Plegable 7-4-3`).
+- Recetas: `src/features/fabricacion/fixtures/veratec-bahar-5200-recipes.ts`; catálogo de compra: `src/features/proveedor-catalogos/fixtures/veratec-bahar-5200-price-list.ts`.
+- Los códigos de marco y hojas coinciden literalmente entre ambas fuentes. Los refuerzos 61011VER999/990 no tienen fila asociable en la lista. La columna E contiene precios netos CLP por presentación; no se usan columnas calculadas de recargo/descuento.
+- Las cuatro hojas plegables usan perfiles 65201/65204 y permiten costear solo marco/hojas; vidrio, junquillo y accesorios no quedan cotizados hasta asociar insumos y consumos. Los datos se prepararon y validaron localmente. No se afirma importación remota ni vigencia del precio histórico.

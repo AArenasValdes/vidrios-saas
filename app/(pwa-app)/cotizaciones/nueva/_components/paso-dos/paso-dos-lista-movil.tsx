@@ -17,6 +17,7 @@ import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabri
 import {
   anyQuoteItemHasFabricationReview,
   buildQuoteFabricationReviewEligibility,
+  isVeratec7400FourMobileQuoteItem,
 } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import { resolveMobileComponentFabricacionSummary } from "@/features/fabricacion/services/mobile-component-fabricacion-summary.service";
 import { resolveWorkflowItemDisplayName } from "@/features/cotizaciones/new-quote/workflow-ui";
@@ -230,6 +231,7 @@ export function PasoDosListaMovil({
               const isAdjusted = Boolean(adjustedFromBaseCode);
               const showFabricationReview =
                 fabricationReviewEligibilityByItemId.get(item.id) === true;
+              const veratecFourMobileReview = isVeratec7400FourMobileQuoteItem(item);
               const previewInput = buildComponentPreviewInputFromWorkflowItem(item, {
                 maxW: 72,
                 maxH: 56,
@@ -368,7 +370,9 @@ export function PasoDosListaMovil({
                           {repairBrokenText(item.vidrio)}
                         </p>
                       ) : null}
-                      {!isFreeValueItem && showFabricationReview && fabSummary.showReviewUi ? (
+                      {!isFreeValueItem &&
+                      (showFabricationReview || veratecFourMobileReview) &&
+                      (fabSummary.showReviewUi || veratecFourMobileReview) ? (
                         onOpenDespieceReview ? (
                           <button
                             type="button"
@@ -382,7 +386,9 @@ export function PasoDosListaMovil({
                             {fabSummary.status === "ready" ? (
                               <LuCheck size={14} aria-hidden />
                             ) : null}
-                            {fabSummary.statusLabel}
+                            {veratecFourMobileReview && !showFabricationReview
+                              ? "Revisar despiece"
+                              : fabSummary.statusLabel}
                           </button>
                         ) : (
                           <p

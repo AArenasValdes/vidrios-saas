@@ -50,6 +50,7 @@ type Props = {
   onEdit: (template: CotizacionLineTemplate) => void;
   onEditPrice: (template: CotizacionLineTemplate) => void;
   onToggleActive: (template: CotizacionLineTemplate) => void;
+  onBeforeFabricationNavigate: () => void;
 };
 
 export function LineTemplateCatalogAccordion({
@@ -70,6 +71,7 @@ export function LineTemplateCatalogAccordion({
   onEdit,
   onEditPrice,
   onToggleActive,
+  onBeforeFabricationNavigate,
 }: Props) {
   const FamilyIcon = FAMILY_ICONS[familyKey];
   const lineCountLabel = `${templates.length} ${
@@ -124,6 +126,7 @@ export function LineTemplateCatalogAccordion({
                 onEdit={() => onEdit(template)}
                 onEditPrice={() => onEditPrice(template)}
                 onToggleActive={() => onToggleActive(template)}
+                onBeforeFabricationNavigate={onBeforeFabricationNavigate}
               />
             );
           })}

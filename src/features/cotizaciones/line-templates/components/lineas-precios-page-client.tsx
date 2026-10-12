@@ -70,6 +70,13 @@ import {
   LineasPreciosMobileView,
 } from "./lineas-precios-mobile-view";
 import {
+  consumeLineasPreciosNavigationState,
+  LINEAS_PRECIOS_RESTORE_QUERY,
+  saveLineasPreciosNavigationState,
+  type LineasPreciosNavigationState,
+  type LineasPreciosMobileNavigationState,
+} from "./lineas-precios-navigation-state";
+import {
   LineTemplateDeleteDialog,
   type LineTemplateActionKind,
 } from "./line-template-card-actions";
@@ -309,10 +316,52 @@ export function LineasPreciosPageClient({
   );
   const openedEditQueryRef = useRef<string | null>(null);
   const openedNewQueryRef = useRef<string | null>(null);
+  const catalogRestoreInitializedRef = useRef(false);
+  const catalogRestoreStateRef = useRef<LineasPreciosNavigationState | null | undefined>(
+    undefined
+  );
+  const [mobileNavigationRestore, setMobileNavigationRestore] =
+    useState<LineasPreciosMobileNavigationState | null>(null);
+  const [catalogScrollRestoreTarget, setCatalogScrollRestoreTarget] =
+    useState<number | null>(null);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "auto" });
-  }, []);
+    if (catalogRestoreInitializedRef.current) return;
+
+    if (searchParams.get(LINEAS_PRECIOS_RESTORE_QUERY) !== "1") {
+      catalogRestoreInitializedRef.current = true;
+      window.scrollTo({ top: 0, behavior: "auto" });
+      return;
+    }
+
+    if (catalogRestoreStateRef.current === undefined) {
+      catalogRestoreStateRef.current = consumeLineasPreciosNavigationState(
+        window.sessionStorage
+      );
+    }
+    const restored = catalogRestoreStateRef.current;
+    if (!restored) {
+      catalogRestoreInitializedRef.current = true;
+      window.scrollTo({ top: 0, behavior: "auto" });
+      router.replace(pathname, { scroll: false });
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      catalogRestoreInitializedRef.current = true;
+      setQuery(restored.query);
+      setCategoryFilter(restored.categoryFilter as CategoryFilterValue);
+      setStatusFilter(restored.statusFilter as StatusFilterValue);
+      setTechnicalFilter(restored.technicalFilter as TechnicalFilterValue);
+      setProviderFilter(restored.providerFilter);
+      setExpandedFamilyAccordions(restored.expandedFamilyAccordions);
+      setMobileNavigationRestore(restored.mobile);
+      setCatalogScrollRestoreTarget(restored.scrollY);
+      router.replace(pathname, { scroll: false });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [pathname, router, searchParams]);
 
   useEffect(() => {
     if (!feedback) return;
@@ -534,6 +583,24 @@ export function LineasPreciosPageClient({
     [catalogSections]
   );
 
+  useEffect(() => {
+    const scrollY = catalogScrollRestoreTarget;
+    if (scrollY === null || isLoading) return;
+
+    let secondFrame = 0;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        window.scrollTo({ top: scrollY, behavior: "auto" });
+        setCatalogScrollRestoreTarget(null);
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+    };
+  }, [catalogScrollRestoreTarget, catalogSectionsWithFamilies.length, isLoading]);
+
   const isFamilyAccordionExpanded = useCallback(
     (accordionKey: string, defaultExpanded: boolean) =>
       expandedFamilyAccordions[accordionKey] ?? defaultExpanded,
@@ -548,6 +615,22 @@ export function LineasPreciosPageClient({
       }));
     },
     []
+  );
+
+  const prepareFabricationReturn = useCallback(
+    (mobile: LineasPreciosMobileNavigationState) => {
+      saveLineasPreciosNavigationState(window.sessionStorage, {
+        query,
+        categoryFilter,
+        statusFilter,
+        technicalFilter,
+        providerFilter: effectiveProviderFilter,
+        expandedFamilyAccordions,
+        scrollY: window.scrollY,
+        mobile,
+      });
+    },
+    [categoryFilter, effectiveProviderFilter, expandedFamilyAccordions, query, statusFilter, technicalFilter]
   );
 
   const pricePerM2 = parseMoney(draft.precioM2Sugerido);
@@ -1133,6 +1216,9 @@ export function LineasPreciosPageClient({
         formatMoney={formatMoney}
         isChileCatalog={isChileCatalog}
         organizationName={profile?.empresaNombre}
+        onPrepareFabricationNavigation={prepareFabricationReturn}
+        navigationRestore={mobileNavigationRestore}
+        onNavigationRestoreConsumed={() => setMobileNavigationRestore(null)}
       />
 
       <div className={`${s.page} ${s.desktopCatalog} ${desktop.page}`}>
@@ -1613,6 +1699,16 @@ export function LineasPreciosPageClient({
                       onEdit={openEditSheet}
                       onEditPrice={setPriceEditorTemplate}
                       onToggleActive={(template) => void handleToggleActive(template)}
+                      onBeforeFabricationNavigate={() =>
+                        prepareFabricationReturn({
+                          scope: "mine",
+                          mineDrill: null,
+                          providerName: null,
+                          providerFamilyKey: null,
+                          showHiddenUniversalReferences: false,
+                          selectedLineId: null,
+                        })
+                      }
                     />
                   );
                     })}

@@ -33,6 +33,7 @@ type Props = {
   feedback: string | null;
   isSaving: boolean;
   onConfigure: () => void;
+  onBack?: () => void;
   onEdit: () => void;
   onTest: () => void;
   onCreateVersion?: () => void;
@@ -69,6 +70,7 @@ export function FabricacionLineMobileDetail({
   feedback,
   isSaving,
   onConfigure,
+  onBack,
   onEdit,
   onTest,
   onCreateVersion,
@@ -106,7 +108,7 @@ export function FabricacionLineMobileDetail({
     onConfigure,
     onEdit,
   });
-  const showTestCta = Boolean(currentRecipe);
+  const showTestCta = Boolean(currentRecipe && currentRecipe.scope === "organization");
   const variantTitle = isL25
     ? "Corredera L25 lista para cotizar"
     : `${identity.lineTitle} lista para cotizar`;
@@ -124,13 +126,14 @@ export function FabricacionLineMobileDetail({
   return (
     <main className={`${s.shell} ${s.page}`}>
       <header className={s.header}>
-        <Link
-          href="/configuracion/empresa/lineas-precios"
+        <button
+          type="button"
           className={s.backButton}
           aria-label="Volver a líneas y precios"
+          onClick={onBack}
         >
           <ChevronLeft aria-hidden />
-        </Link>
+        </button>
         <div className={s.headerCopy}>
           <h1>{identity.lineTitle}</h1>
           <p>{template.isActive ? "Línea comercial activa" : "Línea comercial en pausa"}</p>

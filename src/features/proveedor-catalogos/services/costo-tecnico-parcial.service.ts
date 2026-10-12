@@ -114,6 +114,11 @@ type PendingCut = {
   trimMm: number;
   kerfMm: number;
   selectedPresentationId: string | null;
+  selectedProviderKey: string | null;
+  selectedSupplierSku: string | null;
+  selectedFinishCode: string | null;
+  selectedFinishName: string | null;
+  selectedCommercialLengthMm: number | null;
   catalogLineKey: string | null;
   configurationKey: string | null;
 };
@@ -139,12 +144,82 @@ export function getRecipeAccessoriesFromItemSnapshot(snapshot: unknown, itemCode
     const description = typeof row.nombre === "string" ? row.nombre.trim() : "";
     if (!description || !Number.isFinite(quantity) || quantity <= 0) return [];
     const recipeAccessoryCode = typeof row.codigo === "string" && row.codigo.trim() ? row.codigo.trim() : null;
-    return [{ itemCode, recipeAccessoryCode, description, quantity, unit: "unidad" }];
+    const unit = typeof row.unidad === "string" && row.unidad.trim() ? row.unidad.trim() : "unidad";
+    return [{ itemCode, recipeAccessoryCode, description, quantity, unit }];
   });
 }
 
 function matchesRecipeComponent(entry: CatalogPresentationPrice, recipeCode: string) {
   return entry.technicalCode === recipeCode || entry.recipeComponentCodes?.includes(recipeCode) === true;
+}
+
+/**
+ * Prefer the persisted presentation UUID, then recover old quote snapshots by
+ * the provider's stable SKU and its physical finish/length identity. Supplier
+ * catalog re-imports can replace a UUID while leaving the purchased product
+ * unchanged; in that case code alone is not enough to safely match a price.
+ */
+function matchesSelectedPresentation(
+  candidate: {
+    presentationId?: string | null;
+    providerKey?: string | null;
+    supplierSku?: string | null;
+    finishCode?: string | null;
+    finishName?: string | null;
+    commercialLengthMm?: number | null;
+  },
+  selection: {
+    presentationId?: string | null;
+    providerKey?: string | null;
+    supplierSku?: string | null;
+    finishCode?: string | null;
+    finishName?: string | null;
+    commercialLengthMm?: number | null;
+  }
+) {
+  // Legacy recipes without a supplier selection keep the previous family +
+  // finish resolution behavior; their bar length is a calculation output,
+  // not evidence of a selected supplier presentation.
+  if (!selection.presentationId && !selection.supplierSku) return true;
+  if (
+    candidate.commercialLengthMm != null && selection.commercialLengthMm != null &&
+    candidate.commercialLengthMm !== selection.commercialLengthMm
+  ) return false;
+  if (selection.presentationId && candidate.presentationId === selection.presentationId) return true;
+  if (!selection.supplierSku || candidate.supplierSku !== selection.supplierSku) return false;
+  if (selection.providerKey && candidate.providerKey !== selection.providerKey) return false;
+  if (selection.finishCode && candidate.finishCode && candidate.finishCode !== selection.finishCode) return false;
+  if (
+    selection.finishName && candidate.finishName &&
+    normalizeFinish(candidate.finishName) !== normalizeFinish(selection.finishName)
+  ) return false;
+  return true;
+}
+
+function selectedPresentationForBar(bar: FabricacionTrabajoSnapshot["bars"][number]) {
+  return {
+    presentationId: bar.supplierPresentationId ?? null,
+    providerKey: bar.supplierProviderKey ?? null,
+    supplierSku: bar.supplierSku ?? null,
+    finishCode: bar.supplierFinishCode ?? null,
+    finishName: bar.supplierFinishName ?? null,
+    commercialLengthMm: bar.largoComercialMm,
+  };
+}
+
+function selectedPresentationForCut(cut: PendingCut) {
+  return {
+    presentationId: cut.selectedPresentationId,
+    providerKey: cut.selectedProviderKey,
+    supplierSku: cut.selectedSupplierSku,
+    finishCode: cut.selectedFinishCode,
+    finishName: cut.selectedFinishName,
+    commercialLengthMm: cut.selectedCommercialLengthMm,
+  };
+}
+
+function matchesSelectedWorkBar(bar: FabricacionTrabajoSnapshot["bars"][number], selection: PendingCut) {
+  return matchesSelectedPresentation(selectedPresentationForBar(bar), selectedPresentationForCut(selection));
 }
 
 function matchesCatalogFamily(
@@ -257,8 +332,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
         (!entry.configurationKey || entry.configurationKey === quoteItem?.configurationKey) &&
         matchesCatalogFamily(entry, quoteItem?.catalogLineKey, quoteItem?.supplierFamilyKey) &&
         matchesRecipeComponent(entry, cut.codigoPerfil) &&
-        (!bar.supplierPresentationId || entry.presentationId === bar.supplierPresentationId) &&
-        (!bar.supplierPresentationId || entry.commercialLengthMm === bar.largoComercialMm) && (
+        matchesSelectedPresentation(entry, selectedPresentationForBar(bar)) && (
           entry.finishResolution === "finish_independent" ||
           entry.finishResolution === "specific" && normalizeFinish(entry.finishName) === normalizeFinish(finishName)
         )
@@ -288,7 +362,8 @@ export function buildPartialTechnicalCostSnapshot(input: {
       const lineFamily = resolveUniversalAluminumLineKey(quoteItem?.supplierFamilyKey) ??
         resolveUniversalAluminumLineKey(quoteItem?.catalogLineKey) ??
         quoteItem?.supplierFamilyKey ?? quoteItem?.catalogLineKey ?? "";
-      const groupKey = [cut.codigoPerfil, finishKey, lineFamily, quoteItem?.configurationKey ?? "", bar.despunteInicialMm, kerfMm, bar.supplierPresentationId ?? "legacy"].join("|");
+      const selectedPresentation = selectedPresentationForBar(bar);
+      const groupKey = [cut.codigoPerfil, finishKey, lineFamily, quoteItem?.configurationKey ?? "", bar.despunteInicialMm, kerfMm, bar.supplierPresentationId ?? `${bar.supplierProviderKey ?? ""}:${bar.supplierSku ?? "legacy"}`].join("|");
       const group = cutsByGroup.get(groupKey) ?? [];
       group.push({
         technicalCode: cut.codigoPerfil,
@@ -299,7 +374,12 @@ export function buildPartialTechnicalCostSnapshot(input: {
         cutLengthMm: Math.round(cut.largoMm),
         trimMm: Math.round(bar.despunteInicialMm),
         kerfMm,
-        selectedPresentationId: bar.supplierPresentationId ?? null,
+        selectedPresentationId: selectedPresentation.presentationId,
+        selectedProviderKey: selectedPresentation.providerKey,
+        selectedSupplierSku: selectedPresentation.supplierSku,
+        selectedFinishCode: selectedPresentation.finishCode,
+        selectedFinishName: selectedPresentation.finishName,
+        selectedCommercialLengthMm: selectedPresentation.commercialLengthMm,
         catalogLineKey: quoteItem?.catalogLineKey ?? null,
         configurationKey: quoteItem?.configurationKey ?? null,
       });
@@ -313,7 +393,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
       (!entry.configurationKey || entry.configurationKey === group[0].configurationKey) &&
         matchesCatalogFamily(entry, group[0].catalogLineKey, itemColors.get(group[0].itemCode)?.supplierFamilyKey) &&
       matchesRecipeComponent(entry, group[0].technicalCode) &&
-      (!group[0].selectedPresentationId || entry.presentationId === group[0].selectedPresentationId) &&
+      matchesSelectedPresentation(entry, selectedPresentationForCut(group[0])) &&
       (group[0].finishKey === "independent"
         ? entry.finishResolution === "finish_independent"
         : entry.finishResolution === "finish_independent" ||
@@ -324,11 +404,11 @@ export function buildPartialTechnicalCostSnapshot(input: {
       const candidateLength = candidate.commercialLengthMm;
       const price = resolvedPrice(candidate, input.organizationPricing);
       if (!price || candidateLength == null || group.some((cut) => cut.cutLengthMm + cut.trimMm + cut.kerfMm > candidateLength)) return [];
-      const exactPresentation = Boolean(group[0].selectedPresentationId);
+      const exactPresentation = Boolean(group[0].selectedPresentationId || group[0].selectedSupplierSku);
       const selectedItemCodes = new Set(group.map((cut) => cut.itemCode));
       const selectedWorkBars = exactPresentation
         ? snapshot.bars.filter((bar) =>
-            bar.supplierPresentationId === group[0].selectedPresentationId &&
+            matchesSelectedWorkBar(bar, group[0]) &&
             bar.cortes.some((cut) => selectedItemCodes.has(cut.codigoItem) && cut.codigoPerfil === group[0].technicalCode)
           )
         : [];
@@ -353,11 +433,11 @@ export function buildPartialTechnicalCostSnapshot(input: {
     }
     const selected = fittingCandidates[0].candidate;
     for (const cut of group) cut.presentation = selected;
-    const exactPresentation = Boolean(group[0].selectedPresentationId);
+    const exactPresentation = Boolean(group[0].selectedPresentationId || group[0].selectedSupplierSku);
     if (exactPresentation) {
       const selectedItemCodes = new Set(group.map((cut) => cut.itemCode));
       const selectedBars = snapshot.bars.filter((bar) =>
-        bar.supplierPresentationId === group[0].selectedPresentationId &&
+        matchesSelectedWorkBar(bar, group[0]) &&
         bar.cortes.some((cut) => selectedItemCodes.has(cut.codigoItem) && cut.codigoPerfil === group[0].technicalCode)
       );
       const resolved = resolvedPrice(selected, input.organizationPricing);

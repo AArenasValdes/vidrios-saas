@@ -9,6 +9,7 @@ import { FabricationVariantSelector } from "@/features/fabricacion/components/fa
 import { SODAL_L25_CATALOG_KEY } from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import {
+  mergeSodalL25WorkspaceRecipes,
   inferSodalL25GlazingFromGlass,
   isSodalL25CatalogKey,
   resolveSodalL25QuoteConfig,
@@ -72,11 +73,31 @@ export function SodalL25QuoteConfigPanel({
     isLoading: isLoadingPersistedRecipes,
   } = useFabricationRecipes({
     enabled: isSodalL25Line && Number.isInteger(numericLineTemplateId) && numericLineTemplateId > 0,
-    lineTemplateId:
-      Number.isInteger(numericLineTemplateId) && numericLineTemplateId > 0
-        ? numericLineTemplateId
-        : undefined,
+    // Las variantes SODAL compartidas pueden tener line_template_id NULL o
+    // estar asociadas a la línea canónica, así que se filtran por organización
+    // y se resuelven por identidad igual que en el workspace de fabricación.
+    skipStructuralSeed: true,
   });
+  const sodalLineRecipes = useMemo(() => {
+    const normalizedLineName = selectedTemplate?.nombre.trim().toLocaleLowerCase("es-CL") ?? "";
+    const organizationRecipes = persistedRecipes.filter(
+      (recipe) =>
+        recipe.scope === "organization" &&
+        recipe.lineTemplateId === numericLineTemplateId
+    );
+    const ventoraRecipes = persistedRecipes.filter(
+      (recipe) =>
+        recipe.scope === "ventora" &&
+        (recipe.lineTemplateId === numericLineTemplateId ||
+          recipe.lineTemplateId === null ||
+          recipe.lineName.trim().toLocaleLowerCase("es-CL") === normalizedLineName)
+    );
+
+    return mergeSodalL25WorkspaceRecipes({
+      organization: organizationRecipes,
+      ventora: ventoraRecipes,
+    });
+  }, [numericLineTemplateId, persistedRecipes, selectedTemplate?.nombre]);
 
   const inferredGlazing = inferSodalL25GlazingFromGlass({
     vidrio: componentForm.vidrio,
@@ -168,7 +189,7 @@ export function SodalL25QuoteConfigPanel({
         </p>
       ) : null}
       <FabricationVariantSelector
-        recipes={persistedRecipes}
+        recipes={sodalLineRecipes}
         glazing={sodalConfig.glazing}
         hojas={effectiveFabricacionHojas}
         chrome={compact ? "plain" : "card"}

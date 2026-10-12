@@ -115,9 +115,8 @@ export type QaPreliminaryQuoteSnapshotCheck = {
 };
 
 /**
- * Prevents a cost snapshot from being saved against draft fabrication data unless
- * the item and joint-work snapshots carry the same QA provenance and the current
- * authenticated identity is still allowed to run the pilot.
+ * Draft recipes remain behind the QA gate. Saved workshop snapshots in other
+ * lifecycle states can still be costed from their frozen cuts.
  */
 export function validateQaPreliminaryQuoteSnapshots(input: {
   workSnapshot: FabricacionTrabajoSnapshot | null;
@@ -128,15 +127,8 @@ export function validateQaPreliminaryQuoteSnapshots(input: {
   config: SupplierCatalogQaConfig;
 }): { allowed: true } | { allowed: false; reason: string } {
   const draftItems = input.items.filter((item) => item.snapshot?.recipeStatus === "draft");
-  const unsupportedPreliminaryItems = input.items.filter((item) =>
-    item.snapshot?.recipeStatus != null && item.snapshot.recipeStatus !== "validated" && item.snapshot.recipeStatus !== "draft"
-  );
   const workMarker = input.workSnapshot?.qaPreliminary;
   const itemMarkers = input.items.filter((item) => item.snapshot?.qaPreliminary != null);
-
-  if (unsupportedPreliminaryItems.length > 0) {
-    return { allowed: false, reason: "Solo se admite en QA una receta draft lista para validar; las demás recetas deben estar validadas." };
-  }
   if (draftItems.length === 0 && !workMarker && itemMarkers.length === 0) return { allowed: true };
 
   if (!input.workSnapshot || !workMarker) {

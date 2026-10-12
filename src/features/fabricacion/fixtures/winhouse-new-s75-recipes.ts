@@ -317,7 +317,7 @@ export function crearRecetaWinHouseNewS75(input: {
     notasValidacion: [
       "Fuente primaria: pauta de corte Sliding S75 publicada por WinHouse y fichas técnicas oficiales consultadas el 2026-09-26.",
       "La pauta permite fórmulas de corte; códigos físicos de marco/hoja/riel/refuerzo dependen del perfil y color que configure cada taller.",
-      "Barras comerciales de 6000 mm según WinHouse. No se importan merma, optimización, despunte ni kerf del calculador de terceros.",
+      "Tiras comerciales de 6000 mm según WinHouse. No se importan merma, optimización, despunte ni kerf del calculador de terceros.",
       ...(geometry.leaves === 2 && geometry.arrangement === "asimetrica"
         ? ["Al cotizar, ingresar ancho A; el ancho B se calcula como ancho exterior menos A, igual que la pauta WinHouse."]
         : geometry.arrangement === "asimetrica_centro_ancho"

@@ -311,7 +311,7 @@ export function createWorkMaterialsPdf(
       `${clean(profile.code)}${profile.price ? `\n${profile.price.sku}` : ""}`,
       `${clean(profile.description)}\n${clean(profile.line)}${profile.price ? `\n${priceDescription(profile.price)}` : ""}`,
       clean(profile.configuredFinish, "Acabado sin definir"),
-      `${profile.bars} ${profile.bars === 1 ? "barra" : "barras"}\n${formatLength(profile.commercialLengthMm)} c/u`,
+      `${profile.bars} ${profile.bars === 1 ? "tira" : "tiras"}\n${formatLength(profile.commercialLengthMm)} c/u`,
       profile.price ? `${formatMoney(profile.price.unitPrice, profile.price.currency)}\n${profile.price.basis}` : "Pendiente",
       profile.price ? formatMoney(profile.price.subtotal, profile.price.currency) : "Pendiente",
     ],

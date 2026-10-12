@@ -705,5 +705,6 @@ describe("PasoDosWizardConfiguracionMovil", () => {
     fireEvent.click(screen.getByRole("button", { name: /L25/i }));
     expect(onSelectLineTemplate).not.toHaveBeenCalled();
     expect(screen.getByRole("heading", { name: "Agregar precio de la línea" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Elegir línea" })).not.toBeInTheDocument();
   });
 });

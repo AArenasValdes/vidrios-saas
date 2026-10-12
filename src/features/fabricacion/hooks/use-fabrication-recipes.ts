@@ -19,6 +19,8 @@ import type {
 type UseFabricationRecipesOptions = {
   enabled?: boolean;
   lineTemplateId?: number;
+  /** Lee recetas sin crear drafts estructurales; úsalo en vistas históricas. */
+  readOnly?: boolean;
   /**
    * Cotización / despiece: listar recetas sin esperar seed estructural.
    * El seed sigue lanzándose en background para no retrasar el botón.
@@ -180,11 +182,15 @@ export function useFabricationRecipes(options: UseFabricationRecipesOptions = {}
           lineTemplateId: options.lineTemplateId,
         });
 
-      const structuralSeed = ensureStructuralDraftsClient(
-        organizationId,
-        options.seedContextKey
-      );
-      if (options.skipStructuralSeed) {
+      if (options.readOnly) {
+        const data = await listRecipes();
+        if (loadId === loadIdRef.current) setRecipes(data);
+        return;
+      } else if (options.skipStructuralSeed) {
+        const structuralSeed = ensureStructuralDraftsClient(
+          organizationId,
+          options.seedContextKey
+        );
         void structuralSeed
           .then(async () => {
             if (loadId !== loadIdRef.current) return;
@@ -198,6 +204,10 @@ export function useFabricationRecipes(options: UseFabricationRecipesOptions = {}
             }
           });
       } else {
+        const structuralSeed = ensureStructuralDraftsClient(
+          organizationId,
+          options.seedContextKey
+        );
         await structuralSeed;
       }
       const data = await listRecipes();
@@ -212,6 +222,7 @@ export function useFabricationRecipes(options: UseFabricationRecipesOptions = {}
   }, [
     options.enabled,
     options.lineTemplateId,
+    options.readOnly,
     options.seedContextKey,
     options.skipStructuralSeed,
     organizationId,

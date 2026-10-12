@@ -56,7 +56,7 @@ describe("work-materials-pdf-export.service", () => {
     expect(output).toContain("COT-041026-002");
     expect(output).toContain("Por especificar:");
     expect(output).toContain("1,49 m²");
-    expect(output).toContain("1 barra");
+    expect(output).toContain("1 tira");
     expect(output).toContain("6.000 mm");
     for (const code of ["5001", "5002", "5003", "5004", "5005", "5006", "5007"]) {
       expect(output).toContain(code);
@@ -87,7 +87,7 @@ describe("work-materials-pdf-export.service", () => {
       sourceLabel: "Precio propio del taller",
       sourceRevision: "taller-v2",
       pricedAt: "2026-10-05T10:01:00.000Z",
-      basis: "por barra",
+      basis: "por tira",
       unitPrice: 60000,
       subtotal: 60000,
       currency: "CLP",
@@ -108,7 +108,7 @@ describe("work-materials-pdf-export.service", () => {
     }));
 
     expect(compactPdfText(output)).toContain("QA-ORG3-7401-BLANCO-6000-20261005");
-    expect(output).toContain("por barra");
+    expect(output).toContain("por tira");
     expect(output).toContain("Precio propio del taller");
     expect(output).not.toContain("taller-v2");
     expect(output).toContain("Costo valorizado parcial: $60.000");

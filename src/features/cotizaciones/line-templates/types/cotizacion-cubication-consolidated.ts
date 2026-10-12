@@ -485,10 +485,10 @@ export function formatConsolidatedPautaPlainText(pauta: ConsolidatedCubicationPa
   });
 
   if (pauta.trabajoSnapshot) {
-    lines.push("", `Barras sugeridas compartidas: ${pauta.trabajoSnapshot.totalBars}`);
+    lines.push("", `Tiras sugeridas compartidas: ${pauta.trabajoSnapshot.totalBars}`);
     pauta.trabajoSnapshot.bars.forEach((bar) => {
       lines.push(
-        `${bar.codigoPerfil} · Barra ${bar.indice} (${bar.largoComercialMm} mm): ` +
+        `${bar.codigoPerfil} · Tira ${bar.indice} (${bar.largoComercialMm} mm): ` +
           bar.cortes.map((cut) => `${cut.codigoItem} ${cut.funcion} ${cut.largoMm} mm`).join(", ")
       );
     });

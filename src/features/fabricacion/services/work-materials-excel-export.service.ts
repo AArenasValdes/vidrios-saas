@@ -91,7 +91,7 @@ export function buildWorkMaterialsWorkbook(XLSX: typeof XLSXModule, input: Build
       XLSX,
       input,
       "Perfiles totales",
-      ["Código", "Perfil", "Línea", "Acabado comercial", "Largo de barra (mm)", "Barras a comprar", "Partidas"],
+      ["Código", "Perfil", "Línea", "Acabado comercial", "Largo de tira (mm)", "Tiras a comprar", "Partidas"],
       input.document.profiles.map((row) => [row.code, row.description, row.line, row.finish, row.commercialLengthMm, row.bars, row.itemCodes.join(", ")]),
       [15, 34, 24, 24, 20, 20, 22],
       { 4: "#,##0 \"mm\"", 5: "#,##0" }

@@ -214,19 +214,21 @@ export function FabricacionMobileWizard({
             ) : null}
 
             {step === "profiles" ? (
-              <FabricacionProfileList
-                recipe={draft}
-                readOnly={readOnly}
-                onSelectProfile={(id) => openSheet({ type: "profile", id })}
-                onAddProfile={() => {
-                  const id = crypto.randomUUID();
-                  onDraftChange({
-                    ...draft,
-                    perfiles: [...draft.perfiles, crearPerfilFabricacionVacio(id)],
-                  });
-                  openSheet({ type: "profile", id });
-                }}
-              />
+              <div className={s.stack}>
+                <FabricacionProfileList
+                  recipe={draft}
+                  readOnly={readOnly}
+                  onSelectProfile={(id) => openSheet({ type: "profile", id })}
+                  onAddProfile={() => {
+                    const id = crypto.randomUUID();
+                    onDraftChange({
+                      ...draft,
+                      perfiles: [...draft.perfiles, crearPerfilFabricacionVacio(id)],
+                    });
+                    openSheet({ type: "profile", id });
+                  }}
+                />
+              </div>
             ) : null}
 
             {step === "glass" ? (

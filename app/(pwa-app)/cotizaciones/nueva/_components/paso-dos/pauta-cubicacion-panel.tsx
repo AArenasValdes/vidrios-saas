@@ -48,6 +48,8 @@ import {
 } from "@/features/fabricacion/services/fabricacion-line-variant.service";
 import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import { resolveAperturaForRecipeMatch } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import { resolveVeratecWorkbookFallback } from "@/features/fabricacion/services/fabricacion-receta-veratec-fallback.service";
+import { isVeratec7400FourMobileComposition } from "@/features/fabricacion/services/veratec-quote-composition.service";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 import { buildFabricationRecipeSummary } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
@@ -64,6 +66,10 @@ import {
   resolveSodalL25QuoteConfig,
 } from "@/features/fabricacion/services/sodal-l25-context.service";
 import { resolveFabricationRecipe } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
+import {
+  dedupeConstructorRecipeCandidates,
+  getRecipeTechnicalHint,
+} from "@/features/fabricacion/services/constructor-recipe-selection.service";
 import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
 import { construirFabricacionTrabajoSnapshot } from "@/features/fabricacion/services/fabricacion-trabajo-snapshot.service";
 import {
@@ -101,6 +107,7 @@ export type PautaCubicacionFormSlice = {
   fabricacionHojas?: number | null;
   fabricacionModulos?: number | null;
   sheetScheme?: string;
+  sheetVariant?: string;
   hojasBase?: number | null;
   guidedVisualConfig?: GuidedVisualConfig | null;
   quickCompositionAdjustment?: QuickCompositionAdjustment | null;
@@ -218,7 +225,12 @@ function resolveActiveCubicationSnapshotInternal(input: {
   if (
     input.componentForm.guidedVisualConfig?.quickCompositionStructural ||
     hasQuickCompositionStructuralChanges(input.componentForm.quickCompositionAdjustment)
-  ) return null;
+  ) {
+    if (!isVeratec7400FourMobileComposition(
+      input.componentForm,
+      input.componentForm.catalogLineKey || input.selectedTemplate?.catalogKey || null
+    )) return null;
+  }
   const widthMm = parsePositiveIntegerInput(input.componentForm.ancho);
   const heightMm = parsePositiveIntegerInput(input.componentForm.alto);
   const quantity = parsePositiveIntegerInput(input.componentForm.cantidad, 1);
@@ -371,10 +383,6 @@ export function PautaCubicacionPanel({
   const widthMm = parsePositiveIntegerInput(componentForm.ancho);
   const heightMm = parsePositiveIntegerInput(componentForm.alto);
   const quantity = parsePositiveIntegerInput(componentForm.cantidad, 1);
-  const compositionNeedsRecipeReview = Boolean(
-    componentForm.guidedVisualConfig?.quickCompositionStructural ||
-    hasQuickCompositionStructuralChanges(componentForm.quickCompositionAdjustment)
-  );
   const lineTemplateId = selectedTemplate
     ? String(selectedTemplate.id)
     : componentForm.lineTemplateId;
@@ -415,6 +423,11 @@ export function PautaCubicacionPanel({
     componentForm.catalogLineKey ||
     selectedTemplate?.catalogKey ||
     null;
+  const compositionNeedsRecipeReview = Boolean(
+    (componentForm.guidedVisualConfig?.quickCompositionStructural ||
+      hasQuickCompositionStructuralChanges(componentForm.quickCompositionAdjustment)) &&
+    !isVeratec7400FourMobileComposition(componentForm, catalogKey)
+  );
   const isSodalL25Line = isSodalL25CatalogKey(catalogKey);
   const selectedS75Variant = WINHOUSE_NEW_S75_VARIANTS.find(
     (variant) => variant.slug === componentForm.fabricacionVariante
@@ -514,7 +527,7 @@ export function PautaCubicacionPanel({
       };
     }
 
-    return resolveFabricationRecipe(persistedRecipes, {
+    const recipeInput = {
       organizationId,
       lineTemplateId: numericLineTemplateId,
       catalogKey,
@@ -536,7 +549,48 @@ export function PautaCubicacionPanel({
       preferredRecipeId: componentForm.fabricationRecipeId || null,
       glassName: componentForm.vidrio || null,
       previewListaParaProbar: true,
-    });
+    };
+    let resolution = resolveFabricationRecipe(persistedRecipes, recipeInput);
+    if (resolution.estado === "sin_receta" && catalogKey?.startsWith("ventora:veratec-")) {
+      const fallbacks = resolveVeratecWorkbookFallback({
+        catalogKey,
+        lineTemplateId: numericLineTemplateId,
+        organizationId,
+        lineName: selectedTemplate?.nombre || catalogKey,
+        variant: componentForm.fabricacionVariante || null,
+        recipes: persistedRecipes,
+      });
+      if (fallbacks.length > 0) {
+        const fallbackVariant = fallbacks.length === 1 ? fallbacks[0]?.variant : null;
+        resolution = resolveFabricationRecipe(
+          [...persistedRecipes, ...fallbacks],
+          {
+            ...recipeInput,
+            variante:
+              fallbackVariant &&
+              (!componentForm.fabricacionVariante ||
+                ["estandar", "default", "normal"].includes(
+                  componentForm.fabricacionVariante.trim().toLowerCase()
+                ))
+                ? fallbackVariant
+                : recipeInput.variante,
+          }
+        );
+      }
+    }
+    const candidates = dedupeConstructorRecipeCandidates(
+      resolution.candidatas,
+      componentForm.fabricationRecipeId
+    );
+    if (resolution.estado === "multiples_recetas" && candidates.length === 1) {
+      return {
+        ...resolution,
+        estado: "receta_unica" as const,
+        receta: candidates[0] ?? null,
+        candidatas: candidates,
+      };
+    }
+    return { ...resolution, candidatas: candidates };
   }, [
     catalogKey,
     compositionNeedsRecipeReview,
@@ -546,6 +600,8 @@ export function PautaCubicacionPanel({
     componentForm.fabricacionModulos,
     componentForm.fabricacionVariante,
     componentForm.fabricationRecipeId,
+    componentForm.quickCompositionAdjustment,
+    componentForm.sheetVariant,
     componentForm.vidrio,
     componentForm.guidedVisualConfig,
     componentForm.hojasBase,
@@ -592,7 +648,7 @@ export function PautaCubicacionPanel({
     selectedTemplate?.nombre,
     sodalConfig,
   ]);
-  const useFormalDomain = persistedRecipes.length > 0;
+  const useFormalDomain = persistedRecipes.length > 0 || Boolean(formalResolution?.receta);
   const selectedPersistedRecipe =
     formalResolution?.estado === "receta_unica" ||
     formalResolution?.estado === "receta_no_validada"
@@ -637,6 +693,33 @@ export function PautaCubicacionPanel({
         variante: selectedPersistedRecipe.definition.identidad.variante,
       }).calculable;
   }, [catalogKey, heightMm, quantity, selectedPersistedRecipe, widthMm]);
+  const calculatedVeratecPreliminaryRecipe = useMemo(() => {
+    if (
+      !selectedPersistedRecipe ||
+      !catalogKey?.startsWith("ventora:veratec-") ||
+      selectedPersistedRecipe.status !== "testing" ||
+      selectedPersistedRecipe.definition.permitirCalculoPreliminarConPendientes !== true ||
+      buildFabricationRecipeSummary(selectedPersistedRecipe.definition).activeRuleCount === 0 ||
+      widthMm <= 0 || heightMm <= 0 || quantity <= 0
+    ) return false;
+    const result = calcularCubicacionYPauta(selectedPersistedRecipe.definition, {
+      anchoTotalMm: widthMm,
+      altoTotalMm: heightMm,
+      cantidad: quantity,
+      anchoHojaAMm: componentForm.fabricacionAnchoHojaAMm,
+      hojas: selectedPersistedRecipe.definition.identidad.hojas,
+      modulos: selectedPersistedRecipe.definition.identidad.modulos,
+      variante: selectedPersistedRecipe.definition.identidad.variante,
+    });
+    return result.calculable && result.perfiles.length > 0;
+  }, [
+    catalogKey,
+    componentForm.fabricacionAnchoHojaAMm,
+    heightMm,
+    quantity,
+    selectedPersistedRecipe,
+    widthMm,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -677,6 +760,7 @@ export function PautaCubicacionPanel({
     // largos comerciales u otros datos de validación.
     return (compositionComplete && technicalGate) || calculableWinHouseDraft ||
       (compositionComplete && calculablePreliminaryRecipe) ||
+      calculatedVeratecPreliminaryRecipe ||
       universalAluminumPreliminaryCandidate ||
       (qaPreliminaryAuthorized && qaPreliminaryCandidate);
   }, [
@@ -686,6 +770,7 @@ export function PautaCubicacionPanel({
     qaPreliminaryAuthorized,
     qaPreliminaryCandidate,
     selectedPersistedRecipe,
+    calculatedVeratecPreliminaryRecipe,
     universalAluminumPreliminaryCandidate,
     widthMm,
   ]);
@@ -1481,6 +1566,11 @@ export function PautaCubicacionPanel({
               ? formalResolution.candidatas.map((candidate) => (
                   <option key={candidate.id} value={candidate.id}>
                     {formatVariantDisplayLabel(candidate)}
+                    {formalResolution.candidatas.filter(
+                      (other) => formatVariantDisplayLabel(other) === formatVariantDisplayLabel(candidate)
+                    ).length > 1 && getRecipeTechnicalHint(candidate)
+                      ? ` · ${getRecipeTechnicalHint(candidate)}`
+                      : ""}
                     {` · ${candidate.definition.identidad.hojas} hojas · v${candidate.version}`}
                   </option>
                 ))
@@ -1829,11 +1919,11 @@ export function PautaCubicacionPanel({
                 <span>Resolviendo el largo de las presentaciones comerciales…</span>
               ) : previewBars.slice(0, 3).map((bar) => (
                 <span key={bar.key}>
-                  {bar.codigoPerfil} · Barra {bar.indice} · {bar.largoComercialMm == null ? "largo sin dato" : formatMm(bar.largoComercialMm)} · usado {formatMm(bar.usadoMm)} · sobrante {formatMm(bar.sobranteMm)}
+                  {bar.codigoPerfil} · Tira {bar.indice} · {bar.largoComercialMm == null ? "largo sin dato" : formatMm(bar.largoComercialMm)} · usado {formatMm(bar.usadoMm)} · sobrante {formatMm(bar.sobranteMm)}
                 </span>
               ))}
               {previewBars.length > 3 ? (
-                <span>+ {previewBars.length - 3} barras más</span>
+                <span>+ {previewBars.length - 3} tiras más</span>
               ) : null}
             </div>
           ) : null}

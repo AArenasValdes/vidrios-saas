@@ -1,4 +1,5 @@
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
+import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
 import {
   getLineVariantSlots,
 } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
@@ -18,6 +19,27 @@ function makeId() {
 }
 
 describe("VERATEC 7400 corredera 2 hojas", () => {
+  it("conserva los 40 cortes y comprueba el packing conjunto en 1200 × 1500 mm", () => {
+    const recipe = crearRecetaVeratec7400Corredera({
+      lineName: "Veratec 7400",
+      variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+      createId: makeId(),
+    });
+    const result = calcularCubicacionYPauta(recipe, {
+      anchoTotalMm: 1200,
+      altoTotalMm: 1500,
+      cantidad: 1,
+      hojas: 2,
+      modulos: 2,
+      variante: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+    });
+    const jointPlan = construirPautaBarrasFabricacion({ receta: recipe, resultado: result });
+
+    expect(result.perfiles.reduce((total, profile) => total + profile.cantidadPiezas, 0)).toBe(40);
+    expect(jointPlan.barras).toHaveLength(11);
+    expect(recipe.estado).toBe("lista_para_validar");
+  });
+
   it("calcula destajes, vidrio, herrajes y barra documentados para monolítico 4 mm", () => {
     const recipe = crearRecetaVeratec7400Corredera({
       lineName: "Veratec 7400",
@@ -66,7 +88,7 @@ describe("VERATEC 7400 corredera 2 hojas", () => {
     expect(evaluarRecetaListaParaProbar(recipe).listaParaProbar).toBe(true);
   });
 
-  it("mantiene las contradicciones de ficha visibles y bloqueadas", () => {
+  it("mantiene visibles las contradicciones TP y permite una pauta preliminar editable", () => {
     const termopanel20 = crearRecetaVeratec7400Corredera({
       lineName: "Veratec 7400",
       variant: VERATEC_7400_VARIANT_TERMOPANEL_20MM,
@@ -80,12 +102,12 @@ describe("VERATEC 7400 corredera 2 hojas", () => {
 
     expect(termopanel20.datosPendientes?.[0]).toMatch(/Monolítico 20 mm.*termopanel/i);
     expect(termopanel24.datosPendientes?.[0]).toMatch(/7063.*6307/);
-    expect(termopanel24.perfiles.filter((profile) => profile.codigoPerfil === "6307")).toHaveLength(2);
+    expect(termopanel24.perfiles.filter((profile) => profile.funcion === "Junquillo" && !profile.codigoPerfil)).toHaveLength(2);
     expect(evaluarRecetaListaParaProbar(termopanel20).listaParaProbar).toBe(false);
     expect(evaluarRecetaListaParaProbar(termopanel24).listaParaProbar).toBe(false);
     for (const [variant, recipe, expectedJunquillo] of [
       [VERATEC_7400_VARIANT_TERMOPANEL_20MM, termopanel20, "6307"],
-      [VERATEC_7400_VARIANT_TERMOPANEL_24MM, termopanel24, "6307"],
+      [VERATEC_7400_VARIANT_TERMOPANEL_24MM, termopanel24, ""],
     ] as const) {
       const result = calcularCubicacionYPauta(recipe, {
         anchoTotalMm: 1200,
@@ -96,7 +118,8 @@ describe("VERATEC 7400 corredera 2 hojas", () => {
         variante: variant,
       });
 
-      expect(result.calculable).toBe(false);
+      expect(result.calculable).toBe(true);
+      expect(result.advertencias.some((warning) => warning.codigo === "RECETA_DATOS_PENDIENTES")).toBe(true);
       expect(result.perfiles.map((profile) => [
         profile.codigoPerfil,
         profile.medidaMm,

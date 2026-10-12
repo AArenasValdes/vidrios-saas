@@ -260,7 +260,7 @@ describe("FabricacionResumenMovil", () => {
     expect(screen.getByText("2 × 1.500 mm")).toBeInTheDocument();
   });
 
-  it("muestra primero las barras compartidas con cortes y sobrante, después el resumen agrupado", () => {
+  it("muestra primero las tiras compartidas con cortes y sobrante, después el resumen agrupado", () => {
     render(<ViewHarness trabajoSnapshot={sharedWorkSnapshot} />);
 
     const consolidado = screen.getByLabelText("Qué fabricar");

@@ -2,15 +2,34 @@ import {
   crearRecetaVeratecCompactSliding,
   crearRecetaVeratec7400Workbook3H,
   crearRecetaVeratec7400Monorriel,
-  crearRecetaVeratecElegansBatiente,
-  crearRecetaVeratecElegansFijo,
   VERATEC_COMPACT_SLIDING_VARIANTS,
-  VERATEC_7400_WORKBOOK_3H_VARIANTS,
-  VERATEC_7400_MONORAIL_VARIANTS,
   VERATEC_ELEGANS_BATIENTE_VARIANTS,
   VERATEC_ELEGANS_FIXED_VARIANTS,
+  VERATEC_7400_WORKBOOK_3H_VARIANTS,
+  VERATEC_7400_MONORAIL_VARIANTS,
   VERATEC_WORKBOOK_SOURCE_REVISION,
+  crearRecetaVeratecElegansBatiente,
+  crearRecetaVeratecElegansFijo,
 } from "@/features/fabricacion/fixtures/veratec-workbook-recipes";
+import {
+  crearRecetaVeratec7400CuatroHojasChicas,
+  crearRecetaVeratecElevadora,
+  crearRecetaVeratecInova,
+  VERATEC_7400_4H_CATALOG_KEY,
+  VERATEC_7400_4H_VARIANTS,
+  VERATEC_ELEVADORA_VARIANTS,
+  VERATEC_INOVA_VARIANTS,
+} from "@/features/fabricacion/fixtures/veratec-preliminary-recipes";
+import {
+  crearRecetaVeratec7400Corredera,
+  VERATEC_7400_CATALOG_KEY,
+  VERATEC_7400_SOURCE_VARIANTS,
+} from "@/features/fabricacion/fixtures/veratec-7400-corredera-recipe";
+import {
+  crearRecetaVeratecBahar5200,
+  VERATEC_BAHAR_5200_WINDOW_VARIANTS,
+  VERATEC_BAHAR_5200_PLEGABLE_VARIANTS,
+} from "@/features/fabricacion/fixtures/veratec-bahar-5200-recipes";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
 function createRecord(input: {
@@ -19,6 +38,8 @@ function createRecord(input: {
   lineName: string;
   definition: FabricationRecipeRecord["definition"];
   sourceReference: string;
+  sourceType?: FabricationRecipeRecord["sourceType"];
+  sourceName?: string;
 }): FabricationRecipeRecord {
   const now = new Date().toISOString();
   return {
@@ -34,9 +55,9 @@ function createRecord(input: {
     version: input.definition.version,
     status: "testing",
     definition: input.definition,
-    sourceType: "supplier",
+    sourceType: input.sourceType ?? "supplier",
     sourceReference: input.sourceReference,
-    sourceName: "Veratec · pauta de corte facilitada",
+    sourceName: input.sourceName ?? "Veratec · pauta de corte facilitada",
     sourceRevision: VERATEC_WORKBOOK_SOURCE_REVISION,
     parentRecipeId: null,
     validatedAt: null,
@@ -58,21 +79,81 @@ export function resolveVeratecWorkbookFallback(input: {
   organizationId: number | null;
   lineName: string;
   variant: string | null;
+  typology?: string | null;
   recipes: readonly FabricationRecipeRecord[];
 }): FabricationRecipeRecord[] {
   if (!input.catalogKey) return [];
-  if (input.recipes.some((recipe) =>
+  const hasOrganizationVariant = (variant: string) => input.recipes.some((recipe) =>
     recipe.scope === "organization" &&
     recipe.organizationId === input.organizationId &&
     recipe.lineTemplateId === input.lineTemplateId &&
     !recipe.eliminadoEn &&
-    recipe.status !== "archived"
-  )) return [];
+    recipe.status !== "archived" &&
+    (recipe.variant ?? recipe.definition.identidad.variante) === variant
+  );
+  const normalizedRequestedVariant = input.variant?.trim().toLowerCase() ?? "";
+  const hasSpecificRequestedVariant = Boolean(
+    normalizedRequestedVariant &&
+      !["estandar", "default", "normal"].includes(normalizedRequestedVariant),
+  );
+  const requestedVariant = (variant: string) =>
+    (!hasSpecificRequestedVariant || input.variant === variant) && !hasOrganizationVariant(variant);
+
+  const baharCandidates = [
+    ...VERATEC_BAHAR_5200_WINDOW_VARIANTS,
+    ...VERATEC_BAHAR_5200_PLEGABLE_VARIANTS,
+  ];
+  const normalizedTypology = input.typology?.trim().toLowerCase() ?? "";
+  const bahar =
+    baharCandidates.find(
+      (candidate) =>
+        candidate.catalogKey === input.catalogKey &&
+        candidate.slug === normalizedRequestedVariant
+    ) ??
+    baharCandidates.find(
+      (candidate) =>
+        candidate.catalogKey === input.catalogKey &&
+        "typology" in candidate &&
+        candidate.typology === normalizedTypology
+    ) ?? baharCandidates.find((candidate) => candidate.catalogKey === input.catalogKey);
+  if (bahar) {
+    if (!requestedVariant(bahar.slug)) return [];
+    const definition = crearRecetaVeratecBahar5200({ lineName: input.lineName, variant: bahar.slug });
+    return [createRecord({
+      lineTemplateId: input.lineTemplateId,
+      organizationId: input.organizationId,
+      lineName: input.lineName,
+      definition,
+      sourceReference: `${bahar.sourceReference}; MATERIALES PRECIO VERATEC.xlsx#BAHAR`,
+      sourceType: "supplier",
+      sourceName: "Veratec · Bahar 52 mm",
+    })];
+  }
+
+  if (input.catalogKey === VERATEC_7400_CATALOG_KEY) {
+    return VERATEC_7400_SOURCE_VARIANTS
+      .filter((variant) => requestedVariant(variant.slug))
+      .map((variant) => {
+        const definition = crearRecetaVeratec7400Corredera({
+          lineName: input.lineName,
+          variant: variant.slug,
+        });
+        return createRecord({
+          lineTemplateId: input.lineTemplateId,
+          organizationId: input.organizationId,
+          lineName: input.lineName,
+          definition,
+          sourceReference: variant.sourceReference,
+          sourceType: "manufacturer",
+        });
+      });
+  }
 
   const compact = VERATEC_COMPACT_SLIDING_VARIANTS.find((candidate) =>
     input.catalogKey === `ventora:veratec-compact-sliding-${candidate.leaves}h`
   );
   if (compact) {
+    if (!requestedVariant(compact.slug)) return [];
     const definition = crearRecetaVeratecCompactSliding({ lineName: input.lineName, variant: compact.slug });
     return [createRecord({
       lineTemplateId: input.lineTemplateId,
@@ -83,39 +164,46 @@ export function resolveVeratecWorkbookFallback(input: {
     })];
   }
 
-  const elegans = VERATEC_ELEGANS_BATIENTE_VARIANTS.find(
+  const elegansBatiente = VERATEC_ELEGANS_BATIENTE_VARIANTS.find(
     (candidate) => candidate.catalogKey === input.catalogKey,
   );
-  if (elegans) {
-    const definition = crearRecetaVeratecElegansBatiente({ lineName: input.lineName, variant: elegans.slug });
+  if (elegansBatiente) {
+    if (!requestedVariant(elegansBatiente.slug)) return [];
+    const definition = crearRecetaVeratecElegansBatiente({
+      lineName: input.lineName,
+      variant: elegansBatiente.slug,
+    });
     return [createRecord({
       lineTemplateId: input.lineTemplateId,
       organizationId: input.organizationId,
       lineName: input.lineName,
       definition,
-      sourceReference: elegans.sourceReference,
+      sourceReference: elegansBatiente.sourceReference,
     })];
   }
 
   if (input.catalogKey === "ventora:veratec-elegans-60-fijo") {
-    const variants = VERATEC_ELEGANS_FIXED_VARIANTS.filter((candidate) =>
-      !input.variant || candidate.slug === input.variant
+    const requestedFixedVariant = VERATEC_ELEGANS_FIXED_VARIANTS.find(
+      (candidate) => candidate.slug === normalizedRequestedVariant,
     );
-    return variants.map((fixed) => {
-      const definition = crearRecetaVeratecElegansFijo({ lineName: input.lineName, variant: fixed.slug });
-      return createRecord({
-        lineTemplateId: input.lineTemplateId,
-        organizationId: input.organizationId,
-        lineName: input.lineName,
-        definition,
-        sourceReference: fixed.sourceReference,
-      });
+    const fixedVariant = requestedFixedVariant ?? VERATEC_ELEGANS_FIXED_VARIANTS[0];
+    if (!fixedVariant || !requestedVariant(fixedVariant.slug)) return [];
+    const definition = crearRecetaVeratecElegansFijo({
+      lineName: input.lineName,
+      variant: fixedVariant.slug,
     });
+    return [createRecord({
+      lineTemplateId: input.lineTemplateId,
+      organizationId: input.organizationId,
+      lineName: input.lineName,
+      definition,
+      sourceReference: fixedVariant.sourceReference,
+    })];
   }
 
   if (input.catalogKey === "ventora:veratec-7400-corredera-3h") {
     const variants = VERATEC_7400_WORKBOOK_3H_VARIANTS.filter((candidate) =>
-      !input.variant || candidate.slug === input.variant
+      requestedVariant(candidate.slug)
     );
     return variants.map((variant) => {
       const definition = crearRecetaVeratec7400Workbook3H({ lineName: input.lineName, variant: variant.slug });
@@ -131,7 +219,7 @@ export function resolveVeratecWorkbookFallback(input: {
 
   if (input.catalogKey === "ventora:veratec-7400-monorriel") {
     const variants = VERATEC_7400_MONORAIL_VARIANTS.filter((candidate) =>
-      !input.variant || candidate.slug === input.variant
+      requestedVariant(candidate.slug)
     );
     return variants.map((variant) => {
       const definition = crearRecetaVeratec7400Monorriel({ lineName: input.lineName, variant: variant.slug });
@@ -143,6 +231,58 @@ export function resolveVeratecWorkbookFallback(input: {
         sourceReference: variant.sourceReference,
       });
     });
+  }
+
+  if (input.catalogKey === VERATEC_7400_4H_CATALOG_KEY) {
+    const variants = VERATEC_7400_4H_VARIANTS.filter((candidate) =>
+      requestedVariant(candidate.slug)
+    );
+    return variants.map((variant) => {
+      let nextProfileId = 0;
+      const definition = crearRecetaVeratec7400CuatroHojasChicas({
+        lineName: input.lineName,
+        variant: variant.slug,
+        // This fallback is recalculated during render. Stable IDs keep an
+        // unchanged recipe snapshot equal across renders and prevent a
+        // useEffect -> setState loop in the quote review surface.
+        createId: () =>
+          `veratec:workbook:${input.lineTemplateId}:${variant.slug}:${nextProfileId++}`,
+      });
+      return createRecord({
+        lineTemplateId: input.lineTemplateId,
+        organizationId: input.organizationId,
+        lineName: input.lineName,
+        definition,
+        sourceReference: variant.sourceReference,
+      });
+    });
+  }
+
+  if (input.catalogKey === "ventora:veratec-inova-corredera-2h") {
+    const variant = VERATEC_INOVA_VARIANTS[0];
+    if (!requestedVariant(variant.slug)) return [];
+    const definition = crearRecetaVeratecInova({ lineName: input.lineName, variant: variant.slug });
+    return [createRecord({
+      lineTemplateId: input.lineTemplateId,
+      organizationId: input.organizationId,
+      lineName: input.lineName,
+      definition,
+      sourceReference: variant.sourceReference,
+      sourceType: "workshop",
+    })];
+  }
+
+  const elevadora = VERATEC_ELEVADORA_VARIANTS.find((candidate) => candidate.catalogKey === input.catalogKey);
+  if (elevadora) {
+    if (!requestedVariant(elevadora.slug)) return [];
+    const definition = crearRecetaVeratecElevadora({ lineName: input.lineName, variant: elevadora.slug });
+    return [createRecord({
+      lineTemplateId: input.lineTemplateId,
+      organizationId: input.organizationId,
+      lineName: input.lineName,
+      definition,
+      sourceReference: elevadora.sourceReference,
+    })];
   }
 
   return [];

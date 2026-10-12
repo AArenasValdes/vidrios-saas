@@ -32,6 +32,7 @@ import {
 } from "@/features/fabricacion/services/sodal-l25-context.service";
 import { resolveSodalL25CommercialLineDisplayName, resolveEffectiveSodalL25CatalogKey } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import { resolveCommercialFabricacionHojas } from "@/features/fabricacion/services/fabricacion-line-variant.service";
+import { isVeratec7400FourMobileComposition } from "@/features/fabricacion/services/veratec-quote-composition.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import {
   getLineTemplateGlassMetadata,
@@ -1153,7 +1154,9 @@ export function filterLineTemplatesForComponent(
   // Mostrar todas las líneas activas, incluidas las que tienen precio pendiente.
   // El usuario puede ingresar el precio al seleccionar la línea.
   const activeTemplates = templates.filter(
-    (template) => template.isActive !== false
+    (template) =>
+      template.isActive !== false &&
+      template.catalogKey !== "ventora:l20-fijos"
   );
 
   if (isGlassOnlyComponentType(input.tipo) || isGlassCatalogSelection(input)) {
@@ -1161,14 +1164,15 @@ export function filterLineTemplatesForComponent(
   }
 
   const preferredMaterial = input.material === "PVC" ? "PVC" : "Aluminio";
-  const sheetCount = input.fabricacionHojas ?? (Number(input.sheetScheme?.match(/\d+/)?.[0]) || null);
+  const configuredLeaves = Number(input.configuracion?.match(/(\d+)\s*hojas?/i)?.[1]) || null;
+  const sheetCount = input.fabricacionHojas ?? configuredLeaves ?? (Number(input.sheetScheme?.match(/\d+/)?.[0]) || null);
   const profileTemplates = activeTemplates.filter((template) =>
     isProfileLineTemplate(template) &&
     evaluateLineCompatibility({
       line: template,
       context: {
         componentType: input.tipo,
-        openingType: input.configuracion?.trim() || input.sistema,
+        openingType: input.sistema?.trim() || input.configuracion,
         leavesCount: Number.isFinite(sheetCount) ? sheetCount : null,
         material: input.material,
       },
@@ -2238,6 +2242,13 @@ export function applyLineTemplateToComponentForm(
     }) ??
     template.catalogKey ??
     "";
+  const baharFoldingMatch = resolvedCatalogKey.match(
+    /^ventora:veratec-bahar-5200-plegable-(\d+)-(\d+)-(\d+)$/
+  );
+  const baharFoldingLeaves = baharFoldingMatch ? Number(baharFoldingMatch[1]) : null;
+  const baharFoldingVariant = baharFoldingMatch
+    ? `bahar_5200_plegable_${baharFoldingMatch.slice(1).join("_")}`
+    : null;
   const isSodalL25Line = resolvedCatalogKey === SODAL_L25_CATALOG_KEY;
   const lineRecommendation = template.vidrioPrincipalRecomendado?.trim() ?? "";
   const normalizedLineRecommendation = lineRecommendation
@@ -2270,6 +2281,18 @@ export function applyLineTemplateToComponentForm(
       organizationId: options?.organizationId ?? null,
       form,
     });
+  const effectiveFabricationContext: FabricacionLineaCotizacionContext | null = baharFoldingLeaves
+    ? {
+        ...(fabricationContext ?? {}),
+        fabricacionTipologia: "puerta_abatible",
+        fabricacionHojas: baharFoldingLeaves,
+        fabricacionModulos: 1,
+        fabricationRecipeId: "",
+        fabricacionApertura: "plegable",
+        fabricacionHerraje: "",
+        fabricacionVariante: baharFoldingVariant ?? "",
+      }
+    : fabricationContext;
 
   return syncTemplatePricingInComponentForm(
     mergeFabricacionLineaContextIntoForm(
@@ -2312,7 +2335,7 @@ export function applyLineTemplateToComponentForm(
       cubicationSnapshot: form.lineTemplateId === String(template.id) ? form.cubicationSnapshot ?? null : null,
       fabricacionSnapshot: form.lineTemplateId === String(template.id) ? form.fabricacionSnapshot ?? null : null,
     },
-      fabricationContext
+      effectiveFabricationContext
     ),
     { forceSuggestedPrice: !preserveManualPrice }
   );
@@ -2866,6 +2889,22 @@ export function buildItemFromForm(
     configuracion,
     isCustomScheme,
   });
+  const structuralCompositionChanged = Boolean(
+    syncedForm.guidedVisualConfig?.quickCompositionStructural ||
+      hasQuickCompositionStructuralChanges(syncedForm.quickCompositionAdjustment)
+  );
+  const supportedVeratec7400FourMobileBase = isVeratec7400FourMobileComposition({
+    catalogLineKey: syncedForm.catalogLineKey,
+    fabricacionTipologia: syncedForm.fabricacionTipologia,
+    fabricacionHojas: syncedForm.fabricacionHojas,
+    fabricacionModulos: syncedForm.fabricacionModulos,
+    sheetScheme,
+    sheetVariant,
+    guidedVisualConfig: syncedForm.guidedVisualConfig,
+    quickCompositionAdjustment: syncedForm.quickCompositionAdjustment,
+  });
+  const quickCompositionAdjusted =
+    structuralCompositionChanged && !supportedVeratec7400FourMobileBase;
   const cubicationSnapshot = resolveCubicationSnapshotForSave({
     lineTemplateId: syncedForm.lineTemplateId,
     widthMm: syncedForm.ancho ? Number(syncedForm.ancho) : null,
@@ -2875,7 +2914,7 @@ export function buildItemFromForm(
     draftSnapshot: syncedForm.cubicationSnapshot ?? null,
     previousSnapshot: previousPresentation?.cubicationSnapshot ?? null,
     personalizadoAssistMode,
-    quickCompositionAdjusted: Boolean(syncedForm.guidedVisualConfig?.quickCompositionStructural) || hasQuickCompositionStructuralChanges(syncedForm.quickCompositionAdjustment),
+    quickCompositionAdjusted,
   });
   const resolvedFabricacionHojas = resolveComponentFabricacionHojas({
     sheetScheme,
@@ -2913,7 +2952,7 @@ export function buildItemFromForm(
     fabricacionHojas: resolvedFabricacionHojas,
   });
   const autoSodalSnapshot =
-    syncedForm.guidedVisualConfig?.quickCompositionStructural || hasQuickCompositionStructuralChanges(syncedForm.quickCompositionAdjustment)
+    quickCompositionAdjusted
       ? null
       :
     sodalConfig?.complete &&
@@ -2933,7 +2972,7 @@ export function buildItemFromForm(
           tipologia: syncedForm.fabricacionTipologia,
         }).snapshot
       : null;
-  const formalFabricationSnapshot = syncedForm.guidedVisualConfig?.quickCompositionStructural || hasQuickCompositionStructuralChanges(syncedForm.quickCompositionAdjustment)
+  const formalFabricationSnapshot = quickCompositionAdjusted
     ? null
     :
     syncedForm.fabricacionSnapshot &&

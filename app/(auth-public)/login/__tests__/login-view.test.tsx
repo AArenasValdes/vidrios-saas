@@ -139,6 +139,9 @@ describe("LoginView", () => {
     expect(
       await screen.findByText(/usas las mismas cuentas que en ventorap.cl/i)
     ).toBeInTheDocument();
+    expect(screen.getByRole("note")).toHaveTextContent(
+      `${window.location.origin}/auth/callback`
+    );
   });
 
   it("muestra un mensaje mas preciso cuando las credenciales no coinciden", async () => {

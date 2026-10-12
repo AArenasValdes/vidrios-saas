@@ -5,7 +5,7 @@ import { evaluateLineCompatibility, type LineCompatibilityContext } from "./line
 import { resolveLineTemplateFamily } from "./line-template-family.service";
 
 export type LineCatalogTab = "compatible" | "own" | "all";
-export type LineFabricationState = "Sin despiece" | "Despiece disponible" | "Despiece preliminar";
+export type LineFabricationState = "Sin despiece" | "Con receta de fabricación" | "Despiece disponible";
 export type LineCostState = "Sin costos" | "Costo parcial" | "Costo disponible";
 
 /** Datos listos para presentar; mantiene recetas, snapshots e IDs internos fuera del componente. */
@@ -68,12 +68,12 @@ export function buildLineOptionViewModel(input: {
     ? "Sin despiece"
     : recipe.status === "validada"
       ? "Despiece disponible"
-      : "Despiece preliminar";
+      : "Con receta de fabricación";
   const costState = input.costState ?? "Sin costos";
   const technicalStateLabel = recipe?.status === "validada"
     ? "Despiece disponible · Validada por taller"
     : recipe
-      ? costState === "Sin costos" ? "Despiece preliminar" : `Despiece preliminar · ${costState}`
+      ? costState === "Sin costos" ? "Con receta de fabricación" : `Con receta · ${costState}`
       : costState === "Sin costos" ? null : `Sin despiece · ${costState}`;
 
   return {
@@ -112,6 +112,9 @@ export function filterLineCatalogTemplates(input: {
 }): CotizacionLineTemplate[] {
   const query = input.query?.trim().toLocaleLowerCase("es-CL") ?? "";
   return input.templates.filter((template) => {
+    // La clave se conserva para leer recetas/snapshots antiguos, pero L20 es
+    // solo corredera y la entrada histórica de paño fijo no se ofrece al cotizar.
+    if (template.catalogKey === "ventora:l20-fijos") return false;
     const own = isOwnLineTemplate(template);
     if (input.tab === "own" && !own) return false;
     if (input.tab === "compatible") {

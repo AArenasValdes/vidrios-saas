@@ -11,11 +11,10 @@ import { crearRecetasSerie4800Corredera } from "@/features/fabricacion/fixtures/
 import {
   crearRecetaVeratec7400Workbook3H,
   crearRecetaVeratecCompactSliding,
-  crearRecetaVeratecElegansFijo,
   VERATEC_7400_WORKBOOK_3H_VARIANTS,
   VERATEC_COMPACT_SLIDING_VARIANTS,
-  VERATEC_ELEGANS_FIXED_VARIANTS,
 } from "@/features/fabricacion/fixtures/veratec-workbook-recipes";
+import { crearRecetaVeratecBahar5200, VERATEC_BAHAR_5200_VARIANTS } from "@/features/fabricacion/fixtures/veratec-bahar-5200-recipes";
 import {
   buildAllSodalL25Recipes,
   resetSodalL25RecipeCacheForTests,
@@ -95,11 +94,11 @@ describe("auditoría schema fabricacionRecetaSchema", () => {
         })
       );
     }
-    for (const variant of VERATEC_ELEGANS_FIXED_VARIANTS) {
+    for (const variant of VERATEC_BAHAR_5200_VARIANTS) {
       assertRecipeParses(
         variant.slug,
-        crearRecetaVeratecElegansFijo({
-          lineName: "Elegans 60",
+        crearRecetaVeratecBahar5200({
+          lineName: "Bahar 5200",
           variant: variant.slug,
           createId: () => `${variant.slug}-schema`,
         })

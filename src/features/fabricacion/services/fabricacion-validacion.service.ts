@@ -93,7 +93,7 @@ export function validarRecetaFabricacion(value: unknown): FabricacionValidacionR
       advertencias.push({
         codigo: "PERFIL_SIN_LARGO_COMERCIAL",
         nivel: "advertencia",
-        mensaje: `${perfil.funcion || "Perfil"}: agrega el largo comercial para calcular barras.`,
+        mensaje: `${perfil.funcion || "Perfil"}: agrega el largo comercial para calcular tiras.`,
         componenteId: perfil.id,
       });
     }

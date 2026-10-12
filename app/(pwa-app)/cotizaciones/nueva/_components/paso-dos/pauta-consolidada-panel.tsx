@@ -96,7 +96,7 @@ export function PautaConsolidadaPanel({ items }: Props) {
           <h3>Pauta del trabajo</h3>
           <p>{pauta.itemCountWithPauta} {pauta.itemCountWithPauta === 1 ? "pieza" : "piezas"} con despiece</p>
           <strong className={d.consolidatedPautaBars}>
-            {resolvingPresentation ? "Resolviendo presentaciones…" : `${pauta.trabajoSnapshot?.totalBars ?? pauta.totalBars} barras sugeridas`}
+            {resolvingPresentation ? "Resolviendo presentaciones…" : `${pauta.trabajoSnapshot?.totalBars ?? pauta.totalBars} tiras sugeridas`}
           </strong>
         </div>
         <button type="button" className={d.consolidatedPautaCopy} onClick={handleCopy}>
@@ -134,9 +134,9 @@ export function PautaConsolidadaPanel({ items }: Props) {
       </details>
       {pauta.trabajoSnapshot ? (
         <details className={d.consolidatedPautaDistribution}>
-          <summary>{pauta.trabajoSnapshot.missingPresentations?.length ? "Ver pauta y faltantes de presentación" : "Ver cortes distribuidos por barra"}</summary>
-          {pauta.trabajoSnapshot.missingPresentations?.map((missing) => (
-            <p key={`${missing.itemId}-${missing.technicalCode}-${missing.finishKey}`} role="status">
+          <summary>{pauta.trabajoSnapshot.missingPresentations?.length ? "Ver pauta y faltantes de presentación" : "Ver cortes por tira"}</summary>
+          {pauta.trabajoSnapshot.missingPresentations?.map((missing, index) => (
+            <p key={`${missing.itemId}-${missing.technicalCode}-${missing.finishKey}-${index}`} role="status">
               {missing.technicalCode}: {missing.reason}
             </p>
           ))}
@@ -150,7 +150,7 @@ export function PautaConsolidadaPanel({ items }: Props) {
           <ol>
             {pauta.trabajoSnapshot.bars.map((bar) => (
               <li key={`${bar.materialKey}-${bar.acabadoKey}-${bar.largoComercialMm}-${bar.indice}`}>
-                <strong>{bar.codigoPerfil} · Barra {bar.indice} · {formatMm(bar.largoComercialMm)}</strong>
+                <strong>{bar.codigoPerfil} · Tira {bar.indice} · {formatMm(bar.largoComercialMm)}</strong>
                 <span>
                   {bar.cortes.map((cut) => `${cut.codigoItem}: ${cut.funcion} ${formatMm(cut.largoMm)}`).join(" · ")}
                 </span>

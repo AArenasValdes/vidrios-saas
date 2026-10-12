@@ -47,6 +47,7 @@ import {
 import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import { setQuickPaneDecoration } from "@/features/cotizaciones/visual-composer/services/quick-composition-adjustment.service";
+import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 
 function createLinePricingForm(
   overrides: Partial<ComponentFormState> = {}
@@ -310,6 +311,58 @@ describe("workflow-ui paso 2", () => {
     );
 
     expect(selected.sheetVariant).toBe("2 móviles");
+  });
+
+  it("asigna la composición técnica Bahar plegable al seleccionar su línea en cotización", () => {
+    const template: CotizacionLineTemplate = {
+      id: 9520,
+      nombre: "Bahar 5200 · Plegable 3/3/0",
+      categoria: "pvc",
+      material: "PVC",
+      catalogKey: "ventora:veratec-bahar-5200-plegable-3-3-0",
+      catalogMetadata: {},
+      vidrioPrincipalRecomendado: "Incoloro monolítico 6mm",
+      precioM2Sugerido: 65000,
+      minimoCobrable: 35000,
+      redondeoPrecio: 1000,
+    };
+
+    const selected = applyLineTemplateToComponentForm(
+      createLinePricingForm({
+        tipo: "Puerta",
+        sistema: "Plegable",
+        configuracion: "3 hojas plegables",
+        lineTemplateId: "",
+      }),
+      template
+    );
+
+    expect(selected.catalogLineKey).toBe(template.catalogKey);
+    expect(selected.fabricacionTipologia).toBe("puerta_abatible");
+    expect(selected.fabricacionHojas).toBe(3);
+    expect(selected.fabricacionModulos).toBe(1);
+    expect(selected.fabricacionApertura).toBe("plegable");
+    expect(selected.fabricacionVariante).toBe("bahar_5200_plegable_3_3_0");
+
+    const item = buildItemFromForm(
+      {
+        ...selected,
+        ancho: "2600",
+        alto: "2015",
+        cantidad: "1",
+      },
+      [],
+      null
+    );
+    const despiece = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [],
+      organizationId: 3,
+    });
+
+    expect(despiece.estado).toBe("calculado");
+    expect(despiece.formal?.result.perfiles.length).toBeGreaterThan(0);
+    expect(despiece.formal?.pauta.length).toBeGreaterThan(0);
   });
 
   it("conserva la variante S75 elegida al hidratar de nuevo la línea para cotizar", () => {
@@ -1470,6 +1523,91 @@ describe("workflow-ui paso 2", () => {
         material: "Aluminio",
       }).map((template) => template.nombre)
     ).toEqual(["Serie con precio", "Serie tecnica sin precio"]);
+  });
+
+  it("filtra Bahar por sistema y extrae hojas de la configuración de puerta plegable", () => {
+    const templates = [
+      {
+        id: "bahar-plegable-3",
+        catalogKey: "ventora:veratec-bahar-5200-plegable-3-3-0",
+        nombre: "Bahar 5200 · Plegable 3/3/0",
+        material: "PVC",
+        categoria: "pvc",
+        precioM2Sugerido: 65000,
+        sortOrder: 1,
+        catalogMetadata: {},
+      },
+    ] as unknown as readonly CotizacionLineTemplate[];
+
+    expect(filterLineTemplatesForComponent(templates, {
+      tipo: "Puerta",
+      material: "PVC",
+      sistema: "Plegable",
+      configuracion: "3 hojas plegables",
+    }).map((template) => template.catalogKey)).toEqual([
+      "ventora:veratec-bahar-5200-plegable-3-3-0",
+    ]);
+    expect(filterLineTemplatesForComponent(templates, {
+      tipo: "Puerta",
+      material: "PVC",
+      sistema: "Corredera",
+      configuracion: "3 hojas plegables",
+    })).toEqual([]);
+  });
+
+  it("ofrece Bahar paño fijo al seleccionar una pieza fija en PVC", () => {
+    const templates = [
+      {
+        id: "bahar-fijo",
+        catalogKey: "ventora:veratec-bahar-5200-fijo",
+        nombre: "Bahar 5200 · Paño fijo",
+        material: "PVC",
+        categoria: "pvc",
+        precioM2Sugerido: 65000,
+        sortOrder: 1,
+        catalogMetadata: {},
+      },
+    ] as unknown as readonly CotizacionLineTemplate[];
+
+    expect(filterLineTemplatesForComponent(templates, {
+      tipo: "Paño fijo",
+      material: "PVC",
+      sistema: "Fijo",
+      configuracion: "Con perfilería",
+      fabricacionHojas: 1,
+    }).map((template) => template.catalogKey)).toEqual([
+      "ventora:veratec-bahar-5200-fijo",
+    ]);
+  });
+
+  it("no ofrece Serie 20 paño fijo en selectores de cotización", () => {
+    const templates = [
+      {
+        id: "l20-fixed-legacy",
+        catalogKey: "ventora:l20-fijos",
+        nombre: "Serie 20 — Paño fijo",
+        material: "Aluminio",
+        categoria: "aluminio",
+        precioM2Sugerido: 70000,
+      },
+      {
+        id: "l20-sliding",
+        catalogKey: "ventora:l20",
+        nombre: "Serie 20 — Corredera 2 hojas",
+        material: "Aluminio",
+        categoria: "aluminio",
+        precioM2Sugerido: 60000,
+      },
+    ] as unknown as readonly CotizacionLineTemplate[];
+
+    expect(
+      filterLineTemplatesForComponent(templates, {
+        tipo: "Ventana",
+        material: "Aluminio",
+        configuracion: "Corredera",
+        fabricacionHojas: 2,
+      }).map((template) => template.catalogKey)
+    ).toEqual(["ventora:l20"]);
   });
 
   it("debe mostrar lineas PVC y Aluminio al cotizar ventana, priorizando el material actual", () => {

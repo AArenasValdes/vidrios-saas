@@ -1,6 +1,19 @@
 # Handoff - Flujo movil de cotizacion por items / Constructor
 
-Ultima consolidacion: 2026-09-28.
+Ultima consolidacion: 2026-10-09.
+
+## Recetas del Constructor, variantes y snapshots (2026-10-09)
+
+- El editor rápido del Constructor reutiliza `SodalL25QuoteConfigPanel` para L25 y pasa las hojas efectivas de la pieza. La variante se define por vidrio, pierna y refuerzo según recetas disponibles; al guardar se persisten esos discriminadores y se invalidan solo los snapshots de esa pieza.
+- El panel obtiene recetas L25 con scope de organización y variantes SODAL compartidas (`line_template_id` nulo o línea canónica) desde el listado aislado por organización; las combina por identidad y deja ganar los ajustes de esa organización.
+- Causa de los faltantes en Constructor: al cambiar de línea, el selector quedaba vacío y al guardar borraba tipología/hojas/variante. Además, el selector solo consultaba recetas guardadas por organización; no incluía las recetas universales que el resolver sí usa al guardar la cotización. Esto podía dejar ítems sin `fabricacion_snapshot` aunque Guiada y el resolver tuvieran una receta calculable.
+- Los selectores de Guiada, Constructor y revisión de fabricación consolidan recetas que comparten reglas técnicas. Una alternativa única se resuelve sin pedir elección; varias fórmulas distintas siguen requiriendo elección explícita. Al consolidar, se conserva la receta que el maestro ya tenía elegida.
+- El selector rápido del Constructor combina las recetas guardadas con el mismo fallback universal que la cotización. Los perfiles/códigos y ajustes distintos siguen visibles; cuando el rótulo se repite, la UI añade una referencia técnica para distinguirlo.
+- Opciones que repiten exactamente identidad técnica y reglas se consolidan. Diferencias de códigos de perfil o descuentos permanecen como opciones distintas; cuando el rótulo se repite, se añaden los códigos técnicos para distinguirlas.
+- Si no se elige entre varias alternativas, el Constructor conserva el contexto inferido de tipología/hojas; no lo convierte en una receta elegida ni genera snapshot ambiguo.
+- La tipología `shower` se resuelve antes de reglas genéricas de puerta/corredera. Constructor y Guiada comparten la resolución final; snapshots ya guardados no se recalculan.
+- Variantes solo se consideran cubiertas si la receta compatible entrega cortes y pauta calculables. Un nombre visible en el selector no demuestra cobertura.
+- La consolidación compara identidad dimensional y definición de cálculo, no la procedencia del manual. En el smoke local, L20 Corredera 2H todavía muestra seis recetas técnicas distintas; no deben presentarse todas como validadas sin cotejarlas con su fuente.
 
 ## Proposito
 

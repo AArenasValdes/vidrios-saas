@@ -1,4 +1,5 @@
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import { getDefaultLineCatalogMetadata } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
 export type LineCompatibilityContext = {
   componentType?: string | null;
@@ -34,14 +35,74 @@ function normalize(value: string | null | undefined) {
 }
 
 function declaration(template: CotizacionLineTemplate): CompatibilityDeclaration | null {
-  const value = template.catalogMetadata?.compatibility;
+  const storedValue = template.catalogMetadata?.compatibility;
+  const defaultValue = getDefaultLineCatalogMetadata(template.catalogKey)?.compatibility;
+  const storedDeclaration =
+    storedValue && typeof storedValue === "object" && !Array.isArray(storedValue)
+      ? (storedValue as CompatibilityDeclaration)
+      : null;
+  const defaultDeclaration =
+    defaultValue && typeof defaultValue === "object" && !Array.isArray(defaultValue)
+      ? (defaultValue as CompatibilityDeclaration)
+      : null;
+  const isBahar5200Line = template.catalogKey?.startsWith("ventora:veratec-bahar-5200-") === true;
+  const isElegansFixedLine = template.catalogKey === "ventora:veratec-elegans-60-fijo";
+  const value =
+    (isBahar5200Line || isElegansFixedLine) &&
+    storedDeclaration &&
+    defaultDeclaration
+      ? {
+          ...defaultDeclaration,
+          ...storedDeclaration,
+          componentTypes: Array.from(new Set([
+            ...(storedDeclaration.componentTypes ?? []),
+            ...(defaultDeclaration.componentTypes ?? []),
+          ])),
+          openingTypes: Array.from(new Set([
+            ...(storedDeclaration.openingTypes ?? []),
+            ...(defaultDeclaration.openingTypes ?? []),
+          ])),
+          leavesCounts: Array.from(new Set([
+            ...(storedDeclaration.leavesCounts ?? []),
+            ...(defaultDeclaration.leavesCounts ?? []),
+          ])),
+          materials: Array.from(new Set([
+            ...(storedDeclaration.materials ?? []),
+            ...(defaultDeclaration.materials ?? []),
+          ])),
+        }
+      : storedDeclaration && defaultDeclaration
+        ? {
+            componentTypes: storedDeclaration.componentTypes ?? defaultDeclaration.componentTypes,
+            openingTypes: storedDeclaration.openingTypes ?? defaultDeclaration.openingTypes,
+            leavesCounts: storedDeclaration.leavesCounts ?? defaultDeclaration.leavesCounts,
+            materials: storedDeclaration.materials ?? defaultDeclaration.materials,
+          }
+        : storedDeclaration ?? defaultDeclaration;
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  return value as CompatibilityDeclaration;
+  return value;
 }
 
 function matchesText(values: string[] | undefined, input: string | null | undefined) {
   if (!values?.length || !input?.trim()) return true;
   return values.some((value) => normalize(value) === normalize(input));
+}
+
+function normalizeOpeningType(value: string | null | undefined) {
+  const normalized = normalize(value);
+  if (normalized.includes("plegable")) return "plegable";
+  if (normalized.includes("corredera")) return "corredera";
+  if (normalized.includes("proyectante")) return "proyectante";
+  if (normalized.includes("abatible") || normalized.includes("abatir") || normalized.includes("abrir")) return "abatible";
+  if (normalized.includes("pivotante")) return "pivotante";
+  if (normalized.includes("vaiven")) return "vaiven";
+  if (normalized.includes("fijo")) return "fijo";
+  return normalized;
+}
+
+function matchesOpeningType(values: string[] | undefined, input: string | null | undefined) {
+  if (!values?.length || !input?.trim()) return true;
+  return values.some((value) => normalizeOpeningType(value) === normalizeOpeningType(input));
 }
 
 /**
@@ -55,7 +116,9 @@ export function evaluateLineCompatibility(input: {
 }): LineCompatibilityResult {
   const { line, context } = input;
   const declared = declaration(line);
-  const isExplicitFamilyConfiguration = typeof line.catalogMetadata?.configurationKey === "string";
+  const isExplicitFamilyConfiguration =
+    typeof (line.catalogMetadata?.configurationKey ?? getDefaultLineCatalogMetadata(line.catalogKey)?.configurationKey) ===
+    "string";
   const leavesCompatible = context.leavesCount == null
     ? true
     : declared?.leavesCounts?.length
@@ -63,7 +126,7 @@ export function evaluateLineCompatibility(input: {
       : !isExplicitFamilyConfiguration;
   const compatible = declared
     ? matchesText(declared.componentTypes, context.componentType) &&
-      matchesText(declared.openingTypes, context.openingType) &&
+      matchesOpeningType(declared.openingTypes, context.openingType) &&
       leavesCompatible &&
       matchesText(declared.materials, context.material)
     : !isExplicitFamilyConfiguration;

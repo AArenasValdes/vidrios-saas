@@ -1,6 +1,7 @@
 import { normalizePricingMode, type PricingMode } from "@/types/pricing-mode";
 import {
   parseCubicationSnapshot,
+  serializeCubicationSnapshot,
   type CotizacionItemCubicationSnapshot,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import {
@@ -461,6 +462,19 @@ export function encodeCotizacionItemPresentationMeta(input: {
     `[cub:${cubicationSnapshot}]`;
 
   return raw ? `${meta} ${raw}` : meta;
+}
+
+/** Persists an explicit quote-only cut adjustment; normal presentation writes keep the legacy bridge empty. */
+export function encodeCotizacionItemCubicationOverride(
+  observaciones: string | null | undefined,
+  snapshot: CotizacionItemCubicationSnapshot | null
+) {
+  const decoded = decodeCotizacionItemPresentationMeta(observaciones);
+  const encoded = encodeCotizacionItemPresentationMeta({ ...decoded, cubicationSnapshot: null });
+  return encoded.replace(
+    "[cub:]",
+    `[cub:${snapshot ? serializeCubicationSnapshot(snapshot) : ""}]`
+  );
 }
 
 /**

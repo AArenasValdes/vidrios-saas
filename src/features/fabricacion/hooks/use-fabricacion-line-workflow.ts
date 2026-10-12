@@ -44,6 +44,12 @@ import {
 } from "@/features/fabricacion/services/sodal-l25-context.service";
 import { resolveEffectiveSodalL25CatalogKey } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import {
+  buildSodalEditorRecipeChoices,
+  buildSodalEditorRecipeDefaults,
+  isSodalEditorRecipe,
+  mergeSodalEditorRecipeDefaults,
+} from "@/features/fabricacion/services/sodal-editor-recipes.service";
+import {
   mergeL20OrganizationRecipes,
   resolveDefaultDetailRecipeForLine,
   resolveL20SiblingLineTemplateId,
@@ -52,6 +58,7 @@ import {
   type FabricacionVariantTreeItem,
 } from "@/features/fabricacion/services/fabricacion-line-variant.service";
 import {
+  buildWorkshopCustomizedSource,
   buildProcedenciaPersistence,
   resolveProcedenciaFromSource,
 } from "@/features/fabricacion/types/fabricacion-receta-procedencia";
@@ -107,7 +114,7 @@ export function useFabricacionLineWorkflow({
     createRecipeTest,
     runRecipeTest,
     validateRecipe,
-  } = useFabricationRecipes({ lineTemplateId });
+  } = useFabricationRecipes({ lineTemplateId, skipStructuralSeed: true });
 
   const [view, setView] = useState<FabricacionWorkspaceView>("list");
   const [mobileView, setMobileView] = useState<FabricacionMobileView>("detail");
@@ -159,6 +166,29 @@ export function useFabricacionLineWorkflow({
         ),
     [lineTemplateId, recipes]
   );
+  const sodalEditorDefaults = useMemo(
+    () => buildSodalEditorRecipeDefaults({
+      catalogKey: template?.catalogKey,
+      lineTemplateId,
+      lineName: template?.nombre ?? "",
+      providerName: template?.proveedor,
+    }),
+    [lineTemplateId, template?.catalogKey, template?.nombre]
+  );
+  const sodalLineRecipes = useMemo(
+    () => mergeSodalEditorRecipeDefaults({
+      organization: lineRecipes,
+      defaults: sodalEditorDefaults,
+    }),
+    [lineRecipes, sodalEditorDefaults]
+  );
+  const sodalSystemRecipes = useMemo(
+    () => buildSodalEditorRecipeChoices({
+      organization: lineRecipes,
+      defaults: sodalEditorDefaults,
+    }).system,
+    [lineRecipes, sodalEditorDefaults]
+  );
   const ventoraRecipes = useMemo(
     () =>
       recipes.filter(
@@ -181,17 +211,17 @@ export function useFabricacionLineWorkflow({
   );
   const fabricacionLineRecipes = useMemo(() => {
     if (!isSodalL25CatalogKey(effectiveCatalogKey)) {
-      return lineRecipes;
+      return sodalEditorDefaults.length > 0 ? sodalLineRecipes : lineRecipes;
     }
     return mergeSodalL25WorkspaceRecipes({
       organization: lineRecipes,
       ventora: ventoraRecipes,
     });
-  }, [effectiveCatalogKey, lineRecipes, ventoraRecipes]);
+  }, [effectiveCatalogKey, lineRecipes, sodalEditorDefaults.length, sodalLineRecipes, ventoraRecipes]);
   const suggestedRecipesForLine = useMemo(() => {
     return getSuggestedRecipesForLine({ catalogKey: template?.catalogKey, lineName: template?.nombre, providerName: template?.proveedor });
   }, [template?.catalogKey, template?.nombre, template?.proveedor]);
-  const selected = recipes.find((recipe) => recipe.id === selectedId) ?? null;
+  const selected = [...recipes, ...sodalEditorDefaults].find((recipe) => recipe.id === selectedId) ?? null;
   const selectedTests = selected ? tests[selected.id] ?? [] : [];
   const l20SiblingLineTemplateId = useMemo(
     () => resolveL20SiblingLineTemplateId(templates, template?.catalogKey),
@@ -199,13 +229,15 @@ export function useFabricacionLineWorkflow({
   );
   const variantTreeRecipes = useMemo(
     () =>
-      mergeL20OrganizationRecipes({
-        catalogKey: template?.catalogKey,
-        lineTemplateId,
-        siblingLineTemplateId: l20SiblingLineTemplateId,
-        recipes,
-      }),
-    [l20SiblingLineTemplateId, lineTemplateId, recipes, template?.catalogKey]
+      sodalEditorDefaults.length > 0
+        ? sodalLineRecipes
+        : mergeL20OrganizationRecipes({
+            catalogKey: template?.catalogKey,
+            lineTemplateId,
+            siblingLineTemplateId: l20SiblingLineTemplateId,
+            recipes,
+          }),
+    [l20SiblingLineTemplateId, lineTemplateId, recipes, sodalEditorDefaults.length, sodalLineRecipes, template?.catalogKey]
   );
   const showVariantGallery = useMemo(
     () =>
@@ -214,13 +246,17 @@ export function useFabricacionLineWorkflow({
     [effectiveCatalogKey, template?.catalogKey]
   );
   const defaultDetailRecipe = useMemo(
-    () =>
-      resolveDefaultDetailRecipeForLine({
+    () => {
+      if (sodalEditorDefaults.length > 0) {
+        return sodalSystemRecipes[0] ?? sodalEditorDefaults[0] ?? null;
+      }
+      return resolveDefaultDetailRecipeForLine({
         catalogKey: template?.catalogKey,
         lineTemplateId,
         recipes: variantTreeRecipes,
-      }),
-    [lineTemplateId, template?.catalogKey, variantTreeRecipes]
+      });
+    },
+    [lineTemplateId, sodalEditorDefaults, sodalSystemRecipes, template?.catalogKey, variantTreeRecipes]
   );
   const focusRecipe = defaultDetailRecipe;
   const detailRecipe = useMemo(() => {
@@ -519,8 +555,25 @@ export function useFabricacionLineWorkflow({
       });
       const isL25ValidatedEdit =
         selected.status === "validated" && isSodalL25CatalogKey(catalogKey);
+      const workshopSource = buildWorkshopCustomizedSource({
+        sourceReference: selected.sourceReference,
+        sourceRevision: selected.sourceRevision,
+      });
 
-      const updated = isL25ValidatedEdit
+      const updated = isSodalEditorRecipe(selected)
+        ? await createRecipe({
+            lineTemplateId,
+            providerName: template?.proveedor ?? selected.providerName,
+            lineName,
+            typology: recipeToSave.identidad.tipologia,
+            leavesCount: recipeToSave.identidad.hojas,
+            variant: recipeToSave.identidad.variante,
+            definition: recipeToSave,
+            status: "testing",
+            ...workshopSource,
+            sourceRevision: selected.sourceRevision ?? "2026",
+          })
+        : isL25ValidatedEdit
         ? await createRecipeVersion(
             selected.id,
             {
@@ -538,7 +591,7 @@ export function useFabricacionLineWorkflow({
               leavesCount: recipeToSave.identidad.hojas,
               variant: recipeToSave.identidad.variante,
               definition: recipeToSave,
-              ...startModeMeta,
+              ...(isL25ValidatedEdit ? startModeMeta : workshopSource),
             },
             { quiet: silent }
           );
@@ -563,12 +616,14 @@ export function useFabricacionLineWorkflow({
     },
     [
       createRecipeVersion,
+      createRecipe,
       draft,
       lineMaterial,
       lineName,
       providerName,
       resolveStartModePersistence,
       selected,
+      lineTemplateId,
       template,
       updateRecipe,
       updateTemplate,
@@ -931,6 +986,7 @@ export function useFabricacionLineWorkflow({
     focusProgress,
     archivedRecipeCount,
     selected,
+    sodalEditorDefaults,
     selectedTests,
     selectedId,
     draft,

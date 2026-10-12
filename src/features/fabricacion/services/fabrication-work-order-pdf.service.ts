@@ -247,7 +247,7 @@ export function createFabricationWorkOrderPdf(
     return { cells: [
       code,
       `${clean(row.description)}\n${clean(row.line, "Línea pendiente")}\n${clean(row.finish, "Acabado pendiente")}`,
-      `${row.bars} ${row.bars === 1 ? "barra" : "barras"}\n${mm(row.commercialLengthMm)}`,
+      `${row.bars} ${row.bars === 1 ? "tira" : "tiras"}\n${mm(row.commercialLengthMm)}`,
       row.price ? `${money(row.price.unitPrice, row.price.currency)}\n${row.price.basis}` : "Pendiente",
       row.price ? money(row.price.subtotal, row.price.currency) : "Pendiente",
       row.price ? workOrderPriceSource(row.price) : "Sin precio",
@@ -257,7 +257,7 @@ export function createFabricationWorkOrderPdf(
     { title: "Códigos", width: 43 }, { title: "Perfil / acabado", width: 44 },
     { title: "Compra", width: 28 }, { title: "Unitario", width: 22, align: "right" },
     { title: "Subtotal", width: 22, align: "right" }, { title: "Fuente", width: 23 },
-  ], profiles, y, "Sin barras en la pauta conjunta guardada");
+  ], profiles, y, "Sin tiras en la pauta conjunta guardada");
 
   const accessories = order.materials.accessories.map((row): Row => ({ cells: [
     `${row.code ? `Técnico: ${row.code}` : "Código técnico pendiente"}${row.price?.isWorkshopCode ? `\nInterno taller: ${row.price.sku}` : row.price?.sku ? `\nSKU proveedor: ${row.price.sku}` : ""}`,
@@ -274,17 +274,17 @@ export function createFabricationWorkOrderPdf(
   ], accessories, y, "Sin accesorios registrados");
 
   const cuts = order.cutGroups.map((group): Row => ({ cells: [
-    `${group.technicalCode} · ${group.profileName}\n${group.barIndex == null ? "Distribución por barra pendiente" : `Barra ${group.barIndex} · ${mm(group.commercialLengthMm)}`}`,
+    `${group.technicalCode} · ${group.profileName}\n${group.barIndex == null ? "Distribución por tira pendiente" : `Tira ${group.barIndex} · ${mm(group.commercialLengthMm)}`}`,
     group.cuts.length
-      ? group.cuts.map((cut) => `${cut.itemCode} · ${cut.component} · ${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n")
+      ? group.cuts.map((cut) => `${cut.itemCode} · ${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n")
       : "Sin cortes guardados",
     group.barIndex == null ? "Pendiente" : mm(group.theoreticalRemnantMm),
   ] }));
   y = drawTable(pdf, "2. Pauta de corte", [
-    { title: "Barra / perfil", width: 47 }, { title: "Cortes agrupados", width: 100 },
+    { title: "Tira / perfil", width: 47 }, { title: "Cortes agrupados", width: 100 },
     { title: "Remanente teórico", width: 35, align: "right" },
   ], cuts, y, "Pauta de corte pendiente");
-  y = drawNote(pdf, "En cada barra se agrupan partida, componente, función, cantidad y largo. El remanente teórico corresponde al conjunto completo; confirmar kerf y despunte antes de decidir si puede aprovecharse.", y);
+  y = drawNote(pdf, "En cada tira se agrupan partida, componente, función, cantidad y largo. El remanente teórico corresponde al conjunto completo; confirmar kerf y despunte antes de decidir si puede aprovecharse.", y);
 
   const glass = order.glass.map((row): Row => ({ cells: [
     `${clean(row.itemCode, "Partida pendiente")}\n${row.paneReference}`,

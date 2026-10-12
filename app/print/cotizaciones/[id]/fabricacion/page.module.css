@@ -1934,7 +1934,7 @@
 .mSegmentedActive { color: #173e70; box-shadow: 0 1px 3px rgb(15 34 58 / 10%); }
 .mGroup { padding: 12px 0; border-bottom: 1px solid var(--fab-line); border-radius: 0; background: transparent; }
 .mGroup h3 { margin-bottom: 8px; color: #53647d; font-size: 10px; letter-spacing: .07em; }
-.mGroup[aria-label="Barras compartidas del trabajo"] h3 { color: var(--fab-ink); font-size: 14px; letter-spacing: 0; text-transform: none; }
+.mGroup[aria-label="Tiras compartidas del trabajo"] h3 { color: var(--fab-ink); font-size: 14px; letter-spacing: 0; text-transform: none; }
 .mGroupLead { color: var(--fab-ink); font-size: 18px; }
 .mGroupNote { margin-top: -3px; color: var(--fab-muted); font-size: 12px; }
 .mDespieceList { margin-top: 6px; }

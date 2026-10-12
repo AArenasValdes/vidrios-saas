@@ -20,6 +20,7 @@ import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-prici
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
 import { hasQuickCompositionStructuralChanges } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
+import { isVeratec7400FourMobileComposition } from "@/features/fabricacion/services/veratec-quote-composition.service";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 /** Modos de trabajo desktop (Paso 2). Misma pieza; distinta presentación. */
@@ -148,10 +149,11 @@ export function getPiecePresentationMeta(item: CotizacionWorkflowItem) {
 
 function hasUnmappedStructuralComposition(item: CotizacionWorkflowItem) {
   const meta = getPiecePresentationMeta(item);
-  return Boolean(
+  const structurallyChanged = Boolean(
     meta.guidedVisualConfig?.quickCompositionStructural ||
     hasQuickCompositionStructuralChanges(meta.quickCompositionAdjustment)
   );
+  return structurallyChanged && !isVeratec7400FourMobileComposition(meta);
 }
 
 /**
@@ -372,7 +374,7 @@ export function formatPieceTechnicalSummaryLines(summary: PieceTechnicalSummary)
     lines.push(
       `Perfiles: ${summary.mlPerfiles.toLocaleString("es-CL", { maximumFractionDigits: 2 })} ml`
     );
-    lines.push(`Barras: ${summary.barras}`);
+    lines.push(`Tiras: ${summary.barras}`);
     lines.push(`Cortes: ${summary.cortes}`);
     lines.push(`Accesorios: ${summary.accesorios}`);
     if (summary.sobranteMm > 0) {

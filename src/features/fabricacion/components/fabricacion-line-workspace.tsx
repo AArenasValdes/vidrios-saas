@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
   ArrowLeft,
@@ -19,7 +19,6 @@ import {
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import type { CotizacionLineTemplateMaterial } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { RecipeGuidedEditor } from "@/features/fabricacion/components/recipe-guided-editor";
-import { FabricacionLineMobileShell } from "@/features/fabricacion/components/mobile/fabricacion-line-mobile-shell";
 import { isRecipeReadyToActivate } from "@/features/fabricacion/components/recipe-activate-panel";
 import { FabricacionTipologiaPreview } from "@/features/fabricacion/components/fabricacion-tipologia-preview";
 import { RecipeTestLab } from "@/features/fabricacion/components/recipe-test-lab";
@@ -33,6 +32,7 @@ import {
   resolverBaseEstructuralVentora,
 } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
 import {
+  buildWorkshopCustomizedSource,
   buildProcedenciaPersistence,
   resolveProcedenciaFromSource,
 } from "@/features/fabricacion/types/fabricacion-receta-procedencia";
@@ -62,6 +62,11 @@ import { resolveInitialFabricationStepForTemplate } from "@/features/fabricacion
 import {
   resolveFabricacionRecipeHistory,
 } from "@/features/fabricacion/services/fabricacion-line-workflow.utils";
+import {
+  buildSodalEditorRecipeChoices,
+  buildSodalEditorRecipeDefaults,
+  isSodalEditorRecipe,
+} from "@/features/fabricacion/services/sodal-editor-recipes.service";
 import type {
   FabricacionEntradaCalculo,
   FabricacionReceta,
@@ -441,9 +446,11 @@ function LineSetupSidebar({
 export function FabricacionLineWorkspace({
   lineTemplateId,
   initialSuggestedRecipeId = null,
+  catalogBackHref = "/configuracion/empresa/lineas-precios",
 }: {
   lineTemplateId: number;
   initialSuggestedRecipeId?: string | null;
+  catalogBackHref?: string;
 }) {
   const {
     templates,
@@ -468,7 +475,7 @@ export function FabricacionLineWorkspace({
     createRecipeTest,
     runRecipeTest,
     validateRecipe,
-  } = useFabricationRecipes({ lineTemplateId });
+  } = useFabricationRecipes({ lineTemplateId, skipStructuralSeed: true });
 
   const [view, setView] = useState<WorkspaceView>("list");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -532,6 +539,22 @@ export function FabricacionLineWorkspace({
       ),
     [lineTemplateId, recipes]
   );
+  const sodalEditorDefaults = useMemo(
+    () => buildSodalEditorRecipeDefaults({
+      catalogKey: template?.catalogKey,
+      lineTemplateId,
+      lineName: template?.nombre ?? "",
+      providerName: template?.proveedor,
+    }),
+    [lineTemplateId, template?.catalogKey, template?.nombre]
+  );
+  const sodalSystemRecipes = useMemo(
+    () => buildSodalEditorRecipeChoices({
+      organization: lineRecipes,
+      defaults: sodalEditorDefaults,
+    }).system,
+    [lineRecipes, sodalEditorDefaults]
+  );
   const ventoraRecipes = useMemo(
     () =>
       recipes.filter(
@@ -551,9 +574,9 @@ export function FabricacionLineWorkspace({
     (entry) => entry.sourceType === "workshop"
   );
   const selected =
-    recipes.find((recipe) => recipe.id === selectedId) ?? null;
+    [...recipes, ...sodalEditorDefaults].find((recipe) => recipe.id === selectedId) ?? null;
   const selectedTests = selected ? tests[selected.id] ?? [] : [];
-  const focusRecipe = lineRecipes[0] ?? null;
+  const focusRecipe = sodalSystemRecipes[0] ?? lineRecipes[0] ?? sodalEditorDefaults[0] ?? null;
   const focusTests = focusRecipe ? tests[focusRecipe.id] ?? [] : [];
   const focusProgress = focusRecipe
     ? getRecipeStage(focusRecipe, focusTests)
@@ -568,7 +591,7 @@ export function FabricacionLineWorkspace({
   const archivedRecipeCount = recipeHistory.length;
 
   useEffect(() => {
-    if (view !== "list" || !focusRecipe || tests[focusRecipe.id]) return;
+    if (view !== "list" || !focusRecipe || isSodalEditorRecipe(focusRecipe) || tests[focusRecipe.id]) return;
     void loadTests(focusRecipe.id).catch(() => undefined);
   }, [focusRecipe, loadTests, tests, view]);
 
@@ -846,27 +869,47 @@ export function FabricacionLineWorkspace({
     if (!selected || !recipeToSave) return null;
     const silent = options?.silent === true;
     const startModeMeta = resolveStartModePersistence(recipeToSave);
-    const updated = await updateRecipe(
-      selected.id,
-      {
-        providerName,
-        lineName,
-        typology: recipeToSave.identidad.tipologia,
-        leavesCount: recipeToSave.identidad.hojas,
-        variant: recipeToSave.identidad.variante,
-        definition: recipeToSave,
-        ...startModeMeta,
-      },
-      { quiet: silent }
-    );
+    const workshopSource = buildWorkshopCustomizedSource({
+      sourceReference: selected.sourceReference,
+      sourceRevision: selected.sourceRevision,
+    });
+    const updated = isSodalEditorRecipe(selected)
+      ? await createRecipe({
+          lineTemplateId,
+          providerName: template?.proveedor ?? selected.providerName,
+          lineName,
+          typology: recipeToSave.identidad.tipologia,
+          leavesCount: recipeToSave.identidad.hojas,
+          variant: recipeToSave.identidad.variante,
+          definition: recipeToSave,
+          status: "testing",
+          ...workshopSource,
+          sourceRevision: selected.sourceRevision ?? "2026",
+        })
+      : await updateRecipe(
+          selected.id,
+          {
+            providerName,
+            lineName,
+            typology: recipeToSave.identidad.tipologia,
+            leavesCount: recipeToSave.identidad.hojas,
+            variant: recipeToSave.identidad.variante,
+            definition: recipeToSave,
+            ...(selected.status === "validated" ? startModeMeta : workshopSource),
+          },
+          { quiet: silent }
+        );
     if (template && template.material !== lineMaterial) {
       await updateTemplate(template.id, { material: lineMaterial });
     }
     // En guardado silencioso (cambio de paso) no pisamos el draft local:
     // evita un segundo render/parpadeo mientras el usuario ya avanzó.
     if (!silent) {
+      setSelectedId(updated.id);
       setDraft(cloneRecipe(updated.definition));
       setFeedback("Borrador guardado.");
+    } else if (isSodalEditorRecipe(selected)) {
+      setSelectedId(updated.id);
     }
     setHasChangedRecipeStartMode(false);
     setLineSetupError(null);
@@ -1060,7 +1103,7 @@ export function FabricacionLineWorkspace({
     return (
       <div className={s.loadingState}>
         No se encontro la linea comercial solicitada.
-        <Link href="/configuracion/empresa/lineas-precios">Volver a lineas</Link>
+        <Link href={catalogBackHref}>Volver a lineas</Link>
       </div>
     );
   }
@@ -1076,17 +1119,6 @@ export function FabricacionLineWorkspace({
 
   if (!hasResolvedWorkspaceViewport) {
     return <div className={s.loadingState}>Cargando fabricación...</div>;
-  }
-
-  if (hasResolvedWorkspaceViewport && !isDesktopWorkspace) {
-    return (
-      <Suspense fallback={<div className={s.loadingState}>Cargando fabricación...</div>}>
-        <FabricacionLineMobileShell
-          lineTemplateId={lineTemplateId}
-          initialSuggestedRecipeId={initialSuggestedRecipeId}
-        />
-      </Suspense>
-    );
   }
 
   if (view === "edit" && selected && draft) {
@@ -1131,13 +1163,13 @@ export function FabricacionLineWorkspace({
                 <nav aria-label="Ubicación actual">
                   <span>Empresa</span>
                   <i aria-hidden="true">/</i>
-                  <Link href="/configuracion/empresa/lineas-precios">Líneas</Link>
+                  <Link href={catalogBackHref}>Líneas</Link>
                   <i aria-hidden="true">/</i>
                   <strong>{lineName || template.nombre}</strong>
                 </nav>
               </div>
               <Link
-                href="/configuracion/empresa/lineas-precios"
+                href={catalogBackHref}
                 className={s.lineSetupBackLink}
                 onClick={() => {
                 }}
@@ -1151,7 +1183,7 @@ export function FabricacionLineWorkspace({
         <header className={`${s.workspaceHeader} ${s.recipeWorkspaceHeader}`}>
           <div className={s.recipeHeaderLead}>
             <Link
-              href="/configuracion/empresa/lineas-precios"
+              href={catalogBackHref}
               className={s.lineSetupBackLink}
             >
               <ArrowLeft size={16} aria-hidden />
@@ -1160,7 +1192,7 @@ export function FabricacionLineWorkspace({
             <nav className={s.recipeBreadcrumb} aria-label="Ubicación actual">
               <span>Empresa</span>
               <i aria-hidden="true">/</i>
-              <Link href="/configuracion/empresa/lineas-precios">Líneas</Link>
+              <Link href={catalogBackHref}>Líneas</Link>
               <i aria-hidden="true">/</i>
               <strong>{lineName || template.nombre}</strong>
             </nav>
@@ -1267,7 +1299,7 @@ export function FabricacionLineWorkspace({
         <div className={s.lineSetupActionBar}>
           <div>
             <Link
-              href="/configuracion/empresa/lineas-precios"
+              href={catalogBackHref}
               className={s.secondaryButton}
             >
               <ArrowLeft size={16} aria-hidden />
@@ -1323,6 +1355,8 @@ export function FabricacionLineWorkspace({
               workshopRecipes={recipes
                 .filter((entry) => entry.scope === "organization")
                 .map((entry) => entry.definition)}
+              sodalSystemRecipes={sodalSystemRecipes}
+              onSelectSodalSystemRecipe={(entry) => openEditor(entry, "components")}
               onRecipeChange={setDraft}
               onProviderNameChange={setProviderName}
               onLineNameChange={setLineName}
@@ -1449,7 +1483,7 @@ export function FabricacionLineWorkspace({
         <header className={`${s.workspaceHeader} ${s.recipeWorkspaceHeader}`}>
           <div className={s.recipeHeaderLead}>
             <Link
-              href="/configuracion/empresa/lineas-precios"
+              href={catalogBackHref}
               className={s.lineSetupBackLink}
             >
               <ArrowLeft size={16} aria-hidden />
@@ -1458,7 +1492,7 @@ export function FabricacionLineWorkspace({
             <nav className={s.recipeBreadcrumb} aria-label="Ubicación actual">
               <span>Empresa</span>
               <i aria-hidden="true">/</i>
-              <Link href="/configuracion/empresa/lineas-precios">Líneas</Link>
+              <Link href={catalogBackHref}>Líneas</Link>
               <i aria-hidden="true">/</i>
               <strong>{workingSelected.lineName || template.nombre}</strong>
             </nav>
@@ -1525,7 +1559,7 @@ export function FabricacionLineWorkspace({
     <>
       <main className={`${s.workspace} ${s.desktopListView}`}>
       <header className={s.workspaceHeader}>
-        <Link href="/configuracion/empresa/lineas-precios" className={s.backButton}>
+        <Link href={catalogBackHref} className={s.backButton}>
           <ArrowLeft size={17} />
           Catálogo privado
         </Link>

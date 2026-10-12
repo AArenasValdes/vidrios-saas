@@ -22,6 +22,11 @@ import {
   VERATEC_7400_CATALOG_KEY,
   VERATEC_7400_VARIANT_MONOLITICO_4MM,
 } from "@/features/fabricacion/fixtures/veratec-7400-corredera-recipe";
+import {
+  crearRecetaVeratecBahar5200,
+  VERATEC_BAHAR_5200_VARIANTS,
+  VERATEC_BAHAR_5200_PLEGABLE_VARIANTS,
+} from "@/features/fabricacion/fixtures/veratec-bahar-5200-recipes";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 import { deriveLineOperationalStatus } from "@/features/fabricacion/services/line-operational-status.service";
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
@@ -106,6 +111,14 @@ function resolveReferenceRecipe(
       lineName: line.nombre,
       variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
     });
+  }
+
+  const baharVariant = [
+    ...VERATEC_BAHAR_5200_VARIANTS,
+    ...VERATEC_BAHAR_5200_PLEGABLE_VARIANTS,
+  ].find((variant) => variant.catalogKey === line.catalogKey);
+  if (baharVariant) {
+    return crearRecetaVeratecBahar5200({ lineName: line.nombre, variant: baharVariant.slug });
   }
 
   const plantillaCorredera = PLANTILLAS_CORREDERA.find(

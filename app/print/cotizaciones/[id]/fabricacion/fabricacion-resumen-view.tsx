@@ -645,16 +645,16 @@ export function FabricacionResumenView({
         {summary.trabajoSnapshot ? (
           <section className={s.consolidatedJobBars} aria-label="Pauta conjunta guardada">
             <h2>Pauta conjunta · trabajo completo</h2>
-            <p>{summary.trabajoSnapshot.totalBars} barras · distribución referencial compartida entre partidas.</p>
-            {summary.trabajoSnapshot.missingPresentations?.map((missing) => (
-              <p key={`${missing.itemId}-${missing.technicalCode}-${missing.finishKey}`}>
+            <p>{summary.trabajoSnapshot.totalBars} tiras · distribución referencial compartida entre partidas.</p>
+            {summary.trabajoSnapshot.missingPresentations?.map((missing, index) => (
+              <p key={`${missing.itemId}-${missing.technicalCode}-${missing.finishKey}-${index}`}>
                 Presentación pendiente · {missing.technicalCode}: {missing.reason}
               </p>
             ))}
             <ul>
               {summary.trabajoSnapshot.bars.map((bar) => (
                 <li key={`${bar.materialKey}-${bar.acabadoKey}-${bar.largoComercialMm}-${bar.indice}`}>
-                  <strong>{bar.supplierSku ? `${bar.supplierSku} · ${bar.codigoPerfil}` : bar.codigoPerfil} · Barra {bar.indice} · {formatMm(bar.largoComercialMm)}</strong>
+                  <strong>{bar.supplierSku ? `${bar.supplierSku} · ${bar.codigoPerfil}` : bar.codigoPerfil} · Tira {bar.indice} · {formatMm(bar.largoComercialMm)}</strong>
                   <span>Largo usado en cortes {formatMm(bar.usadoMm)} · Largo disponible según pauta {formatMm(bar.sobranteMm)}</span>
                   <span>{bar.cortes.map((cut) => `${cut.codigoItem}: ${cut.funcion} ${formatMm(cut.largoMm)}`).join(" · ")}</span>
                 </li>

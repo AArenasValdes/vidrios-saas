@@ -53,6 +53,9 @@ import {
 import { createQuoteRegionSnapshot } from "@/features/organization-region/services/quote-region-snapshot.service";
 import { resolveQuotePricingSettings } from "@/features/organization-region/services/quote-region-display.service";
 import {
+  getFabricationRecipeLineTemplateIdsForSnapshotResolution,
+  prepareFabricacionSnapshotsForQuoteSave,
+  resolveFabricacionSnapshotsIndependently,
   resolveFabricacionTrabajoSnapshotForQuoteSave,
   shouldResolveFabricationRecipesForQuoteSave,
 } from "@/features/cotizaciones/services/fabricacion-trabajo-snapshot-lifecycle.service";
@@ -608,13 +611,17 @@ function mapFabricationRecipeQuoteRow(
 
 async function listFabricationRecipeCandidatesForQuote(input: {
   organizationId: number | null;
+  lineTemplateIds: readonly number[];
 }) {
+  if (input.lineTemplateIds.length === 0) return [];
+
   const supabase = createClient();
   let query = supabase
     .from("fabrication_recipes")
     .select(
       "id, organization_id, line_template_id, scope, provider_name, line_name, typology, leaves_count, variant, version, status, definition, source_type, source_reference, parent_recipe_id, validated_at, created_at, updated_at, eliminado_en"
     )
+    .in("line_template_id", [...new Set(input.lineTemplateIds)])
     .in("status", ["draft", "testing", "validated", "review_required"])
     .is("eliminado_en", null);
 
@@ -1095,6 +1102,18 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
       input.draft.items,
       quotePricingMode
     );
+    const finalizingDraft = shouldResolveFabricationRecipesForQuoteSave({
+      existingId: input.existingId,
+      existingStatus: existingCotizacion?.estado ?? null,
+      nextStatus: input.estado,
+    }) && input.existingId != null;
+    const snapshotPreparation = prepareFabricacionSnapshotsForQuoteSave({
+      existingId: input.existingId,
+      finalizingDraft,
+      existingItems: existingCotizacion?.items?.map(mapDatabaseItemToWorkflowItem),
+      items: normalizedItems,
+    });
+    normalizedItems = snapshotPreparation.items;
     const hasTotalGlobalManualTotal =
       quotePricingMode === "total_global" &&
       input.draft.totalClienteManual !== null &&
@@ -1111,40 +1130,44 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
     }
 
     if (
-      shouldResolveFabricationRecipesForQuoteSave(input.existingId) &&
+      snapshotPreparation.itemIdsToResolve.size > 0 &&
       normalizedItems.length > 0 &&
       hasSupabaseBrowserEnv()
     ) {
-      const needsFabricacionSnapshot = normalizedItems.some(
-        (item) => !item.fabricacionSnapshot
+      const organizationIdForFabricacion = normalizeOrganizationIdForFabricacion(
+        input.organizationId
       );
-
-      if (needsFabricacionSnapshot) {
-        const organizationIdForFabricacion = normalizeOrganizationIdForFabricacion(
-          input.organizationId
+      const recipeLineTemplateIds = getFabricationRecipeLineTemplateIdsForSnapshotResolution({
+        items: normalizedItems,
+        itemIdsToResolve: snapshotPreparation.itemIdsToResolve,
+      });
+      let recipes: FabricationRecipeRecord[] = [];
+      try {
+        recipes = await listFabricationRecipeCandidatesForQuote({
+          organizationId: organizationIdForFabricacion,
+          lineTemplateIds: recipeLineTemplateIds,
+        });
+      } catch (recipeError) {
+        console.error(
+          "No se pudieron cargar recetas del taller; se probarán las pautas universales disponibles.",
+          recipeError
         );
-
-        try {
-          const recipes = await listFabricationRecipeCandidatesForQuote({
-            organizationId: organizationIdForFabricacion,
-          });
-          normalizedItems = normalizedItems.map((item) => ({
-            ...item,
-            fabricacionSnapshot:
-              item.fabricacionSnapshot ??
-              buildFabricacionSnapshotForItem({
-                item,
-                recipes,
-                organizationId: organizationIdForFabricacion,
-              }),
-          }));
-        } catch (recipeError) {
-          console.error(
-            "No se pudo calcular snapshot tecnico de fabricacion; se guarda la cotizacion sin bloquear.",
-            recipeError
-          );
-        }
       }
+      normalizedItems = resolveFabricacionSnapshotsIndependently({
+        items: normalizedItems,
+        itemIdsToResolve: snapshotPreparation.itemIdsToResolve,
+        resolveSnapshot: (item) => buildFabricacionSnapshotForItem({
+          item,
+          recipes,
+          organizationId: organizationIdForFabricacion,
+        }),
+        onItemError: (item, itemError) => {
+          console.error(
+            `No se pudo calcular el snapshot de fabricación del componente ${item.id}; se conserva pendiente sin afectar los demás.`,
+            itemError
+          );
+        },
+      });
     }
 
     const isAnonymousClient =
@@ -1272,6 +1295,8 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
       const fabricacionTrabajoSnapshot = resolveFabricacionTrabajoSnapshotForQuoteSave({
         existingId: input.existingId,
         existingSnapshot: existingCotizacion?.fabricacionTrabajoSnapshot,
+        forceRebuild:
+          finalizingDraft || snapshotPreparation.itemIdsToResolve.size > 0,
         capturedAt: financialSnapshotCalculatedAt,
         items: fabricationItems.map((item) => {
           const resolved = supplierPresentationResolution?.selections[item.id];

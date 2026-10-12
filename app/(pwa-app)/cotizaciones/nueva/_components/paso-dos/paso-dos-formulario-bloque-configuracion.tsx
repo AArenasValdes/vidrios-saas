@@ -154,7 +154,7 @@ export function PasoDosFormularioBloqueConfiguracion({
         <span className={s.label}>Linea comercial</span>
         <div className={s.formGrid2}>
           <LineTemplatePicker
-            templates={visibleLineTemplates}
+            templates={isGlassCatalogItem ? visibleLineTemplates : activeLineTemplates}
             value={componentForm.lineTemplateId}
             onChange={onSelectLineTemplate}
             onTemplatePriceUpdated={onTemplatePriceUpdated}

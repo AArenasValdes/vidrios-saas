@@ -44,10 +44,17 @@ import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-prici
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { resolveSupplierFamilyKeyForLineTemplate } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
+import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import { hasQuickCompositionStructuralChanges } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
+import { isVeratec7400FourMobileComposition } from "@/features/fabricacion/services/veratec-quote-composition.service";
+import { isVeratec7400FourMobileQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
-import { fabricacionSnapshotMatchesCalculatedOutput } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
+import type { FabricacionTrabajoBarra } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
+import {
+  buildFabricacionSnapshotSyncKey,
+  fabricacionSnapshotMatchesCalculatedOutput,
+} from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import {
   resolveFabricacionDespieceForQuoteItem,
   type FabricacionDespieceCotizacionResult,
@@ -104,6 +111,34 @@ const GLASS_PRELIMINARY_WARNING =
 const ACCESSORIES_PRELIMINARY_WARNING =
   "Accesorios preliminares. Confirma cantidades y códigos en taller.";
 
+function groupJointBars(bars: FabricacionTrabajoBarra[]) {
+  const groups = new Map<string, { key: string; profile: string; name: string; lengthMm: number; bars: FabricacionTrabajoBarra[] }>();
+  for (const bar of bars) {
+    const key = [bar.presentationKey, bar.codigoPerfil, bar.nombrePerfil, bar.acabadoKey, bar.largoComercialMm].join("|");
+    const group = groups.get(key);
+    if (group) group.bars.push(bar);
+    else groups.set(key, {
+      key,
+      profile: bar.supplierSku ? `${bar.codigoPerfil} · ${bar.supplierSku}` : bar.codigoPerfil,
+      name: bar.nombrePerfil,
+      lengthMm: bar.largoComercialMm,
+      bars: [bar],
+    });
+  }
+  return [...groups.values()];
+}
+
+function groupJointCuts(bar: FabricacionTrabajoBarra) {
+  const cuts = new Map<string, { code: string; functionLabel: string; lengthMm: number; quantity: number }>();
+  for (const cut of bar.cortes) {
+    const key = [cut.codigoItem, cut.funcion, cut.largoMm].join("|");
+    const current = cuts.get(key);
+    if (current) current.quantity += 1;
+    else cuts.set(key, { code: cut.codigoItem, functionLabel: cut.funcion, lengthMm: cut.largoMm, quantity: 1 });
+  }
+  return [...cuts.values()];
+}
+
 type Props = {
   open: boolean;
   items: CotizacionWorkflowItem[];
@@ -118,6 +153,8 @@ type Props = {
     itemId?: string;
     snapshot?: CotizacionItemCubicationSnapshot | null;
   }) => Promise<void> | void;
+  onSaveQuoteItem?: (itemId: string, snapshot: CotizacionItemCubicationSnapshot) => Promise<void> | void;
+  isSavingQuoteItem?: boolean;
   isSavingCubicationLineAdjustment?: boolean;
   /** Si el padre ya cargó recetas, evita un segundo fetch al abrir el modal. */
   recipes?: FabricationRecipeRecord[];
@@ -150,6 +187,26 @@ function resolveLineTemplate(
 ) {
   if (!lineTemplateId) return null;
   return lineTemplates.find((template) => String(template.id) === lineTemplateId) ?? null;
+}
+
+function resolveEffectiveCatalogKey(template: CotizacionLineTemplate | null) {
+  const explicitKey = template?.catalogKey?.trim();
+  if (explicitKey) return explicitKey;
+  if (!template) return null;
+
+  const configurationKey = template.catalogMetadata?.configurationKey;
+  const normalize = (value: string | null | undefined) =>
+    (value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+  const familyKey = template.catalogMetadata?.familyKey;
+  const matches = VENTORA_DEFAULT_LINE_CATALOG.filter((line) => {
+    if (normalize(line.proveedor) !== normalize(template.proveedor)) return false;
+    if (typeof configurationKey === "string" && configurationKey.trim()) {
+      return line.catalogMetadata?.configurationKey === configurationKey;
+    }
+    return normalize(line.nombre) === normalize(template.nombre) &&
+      (typeof familyKey !== "string" || !familyKey.trim() || line.catalogMetadata?.familyKey === familyKey);
+  });
+  return matches.length === 1 ? matches[0]?.catalogKey ?? null : null;
 }
 
 function resolveLineTemplateForItem(
@@ -198,10 +255,11 @@ function despieceStatusToneClass(status: DespieceUiStatus) {
 
 function hasUnmappedStructuralComposition(item: CotizacionWorkflowItem) {
   const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
-  return Boolean(
+  const structurallyChanged = Boolean(
     meta.guidedVisualConfig?.quickCompositionStructural ||
     hasQuickCompositionStructuralChanges(meta.quickCompositionAdjustment)
   );
+  return structurallyChanged && !isVeratec7400FourMobileComposition(meta);
 }
 
 function isMissingProfileLabel(cut: CotizacionLineTemplateCut) {
@@ -329,6 +387,8 @@ export function DespieceReviewSurface({
   onClose,
   onContinueToSummary,
   onSaveCubicationLineAdjustment,
+  onSaveQuoteItem,
+  isSavingQuoteItem,
   isSavingCubicationLineAdjustment,
   recipes: recipesFromParent,
   organizationId: organizationIdFromParent,
@@ -341,9 +401,11 @@ export function DespieceReviewSurface({
   const [showCalculationDetail, setShowCalculationDetail] = useState(false);
   const [isAdjustmentChoiceOpen, setIsAdjustmentChoiceOpen] = useState(false);
   const [hasOfferedAdjustmentChoice, setHasOfferedAdjustmentChoice] = useState(false);
+  const [quoteItemSaveError, setQuoteItemSaveError] = useState<string | null>(null);
   const [pendingAdjustmentSnapshot, setPendingAdjustmentSnapshot] =
     useState<CotizacionItemCubicationSnapshot | null>(null);
   const scrollRestoreRef = useRef(0);
+  const lastSyncedCalculationRef = useRef<string | null>(null);
   const visualItems = useMemo(
     () => items.filter(isQuoteConstructorCompatibleItem),
     [items]
@@ -385,7 +447,7 @@ export function DespieceReviewSurface({
           recipes: persistedRecipes,
           organizationId,
           lineTemplateId: lineTemplate?.id,
-          lineCatalogKey: lineTemplate?.catalogKey,
+          lineCatalogKey: resolveEffectiveCatalogKey(lineTemplate),
           supplierFamilyKey: resolveSupplierFamilyKeyForLineTemplate(lineTemplate),
         })
       );
@@ -591,6 +653,14 @@ export function DespieceReviewSurface({
     ) {
       return;
     }
+    // Fallback recipes may receive fresh internal UUIDs per render. Sync by
+    // stable recipe/input/output values so UUID changes cannot loop setDraft.
+    const calculationKey = buildFabricacionSnapshotSyncKey(
+      selectedItem.id,
+      resolution.formal
+    );
+    if (lastSyncedCalculationRef.current === calculationKey) return;
+    lastSyncedCalculationRef.current = calculationKey;
     onUpdateItem(selectedItem.id, {
       fabricacionSnapshot: resolution.formal,
       cubicationSnapshot: resolution.cubication,
@@ -625,6 +695,7 @@ export function DespieceReviewSurface({
     setPendingAdjustmentSnapshot(null);
     setIsEditMode(false);
     setShowCalculationDetail(false);
+    setQuoteItemSaveError(null);
   }, [selectedItem?.id, selectedForm?.lineTemplateId]);
 
   useEffect(() => {
@@ -685,6 +756,7 @@ export function DespieceReviewSurface({
 
     if (
       field === "lengthMm" &&
+      !geometryOnly &&
       !personalizadoAssistMode &&
       onSaveCubicationLineAdjustment &&
       !hasOfferedAdjustmentChoice
@@ -733,13 +805,21 @@ export function DespieceReviewSurface({
       recipes: persistedRecipes,
       organizationId,
       lineTemplateId: selectedTemplate?.id,
-      lineCatalogKey: selectedTemplate?.catalogKey,
+      lineCatalogKey: resolveEffectiveCatalogKey(selectedTemplate),
       supplierFamilyKey: resolveSupplierFamilyKeyForLineTemplate(selectedTemplate),
     });
     setHasOfferedAdjustmentChoice(false);
     setIsAdjustmentChoiceOpen(false);
     setPendingAdjustmentSnapshot(null);
-    if (resolution.estado !== "calculado" || !resolution.formal) return;
+    if (resolution.estado !== "calculado") return;
+    if (resolution.geometryOnly) {
+      onUpdateItem(selectedItem.id, {
+        fabricacionSnapshot: null,
+        cubicationSnapshot: resolution.cubication,
+      });
+      return;
+    }
+    if (!resolution.formal) return;
     onUpdateItem(selectedItem.id, {
       fabricacionSnapshot: resolution.formal,
       cubicationSnapshot: resolution.cubication,
@@ -756,6 +836,16 @@ export function DespieceReviewSurface({
     }
     setPendingAdjustmentSnapshot(activeSnapshot);
     setIsAdjustmentChoiceOpen(true);
+  };
+
+  const handleSaveQuoteItem = async () => {
+    if (!selectedItem || !activeSnapshot || activeSnapshot.source !== "manual" || !onSaveQuoteItem) return;
+    setQuoteItemSaveError(null);
+    try {
+      await onSaveQuoteItem(selectedItem.id, activeSnapshot);
+    } catch {
+      setQuoteItemSaveError("No pudimos guardar esta pauta. Intenta nuevamente.");
+    }
   };
 
   const handleKeepQuoteOnly = () => {
@@ -940,8 +1030,37 @@ export function DespieceReviewSurface({
                   {geometryOnly ? (
                     <p className={styles.compactWarning} role="status" data-testid="veratec-geometry-only-warning">
                       <LuCircleAlert aria-hidden />
-                      {activeResolution?.message}
+                      {activeResolution?.message} Puedes ajustar este despiece solo para esta cotización.
                     </p>
+                  ) : null}
+                  {activeResolution?.preliminary &&
+                  (activeResolution.recipe?.definition.datosPendientes?.length ?? 0) > 0 ? (
+                    <div
+                      className={styles.compactWarning}
+                      role="note"
+                      data-testid="preliminary-recipe-pending-note"
+                    >
+                      <LuCircleAlert aria-hidden />
+                      <div>
+                        <strong>Revisa antes de fabricar</strong>
+                        {isVeratec7400FourMobileQuoteItem(selectedItem) ? (
+                          <ul>
+                            <li>Confirma perfiles y descuentos según el armado de tu taller.</li>
+                            <li>Define el junquillo y confirma el espesor del vidrio (base: 4 mm).</li>
+                            <li>Completa códigos y precios de los accesorios.</li>
+                          </ul>
+                        ) : (
+                          <ul>
+                            {activeResolution.recipe?.definition.datosPendientes?.map((pending) => (
+                              <li key={pending}>{pending}</li>
+                            ))}
+                          </ul>
+                        )}
+                        <span>
+                          Ajusta cortes y cantidades en “Editar despiece”.
+                        </span>
+                      </div>
+                    </div>
                   ) : null}
                   {isGeometricFallbackSnapshot(activeSnapshot) ? (
                     <p className={styles.compactWarning} role="status">
@@ -1043,7 +1162,6 @@ export function DespieceReviewSurface({
                           type="button"
                           className={isEditMode ? styles.editModeActive : styles.editModeButton}
                           onClick={() => setIsEditMode((current) => !current)}
-                          disabled={Boolean(geometryOnly)}
                         >
                           <LuPencil aria-hidden />
                           {isEditMode ? "Listo" : "Editar despiece"}
@@ -1060,7 +1178,7 @@ export function DespieceReviewSurface({
                             >
                               Restaurar cálculo
                             </button>
-                            {onSaveCubicationLineAdjustment ? (
+                            {onSaveCubicationLineAdjustment && !geometryOnly ? (
                               <button
                                 type="button"
                                 onClick={handleGuardarAjusteLinea}
@@ -1074,15 +1192,25 @@ export function DespieceReviewSurface({
                                   : "Guardar ajuste para esta línea"}
                               </button>
                             ) : null}
+                            {onSaveQuoteItem && activeSnapshot?.source === "manual" ? (
+                              <button
+                                type="button"
+                                onClick={() => void handleSaveQuoteItem()}
+                                disabled={Boolean(isSavingQuoteItem)}
+                              >
+                                {isSavingQuoteItem ? "Guardando…" : "Guardar pauta en cotización"}
+                              </button>
+                            ) : null}
                           </>
                         ) : null}
                         {isEditMode ? (
-                            <button type="button" onClick={handleAddCut} disabled={Boolean(geometryOnly) || !ensureEditableBase()}>
+                            <button type="button" onClick={handleAddCut} disabled={!ensureEditableBase()}>
                             Agregar corte
                           </button>
                         ) : null}
                       </div>
                     </div>
+                    {quoteItemSaveError ? <p role="alert">{quoteItemSaveError}</p> : null}
 
                     {preview && preview.cuts.length > 0 ? (
                       <div
@@ -1347,72 +1475,82 @@ export function DespieceReviewSurface({
           <div className={styles.consolidatedLayout}>
             <header className={styles.consolidatedHead}>
               <div>
-                <h3>Pauta conjunta · trabajo completo</h3>
+                <h3>Pauta conjunta</h3>
                 <p className={styles.consolidatedSubtitle}>
-                  Agrupado por línea, código de perfil, función y medida.
+                  Cortes agrupados para preparar este trabajo.
                 </p>
                 <p>
-                  {consolidated.itemCountWithPauta}{" "}
-                  {consolidated.itemCountWithPauta === 1 ? "pieza" : "piezas"} ·{" "}
-                  {consolidatedCutUnits} cortes ·{" "}
-                  {formatMl(consolidated.totalProfilesLinealMm / 1000)} perfiles ·{" "}
-                  {formatM2(consolidated.totalGlassM2)} vidrio · {consolidated.totalAccessories}{" "}
-                  accesorios
+                  {consolidated.trabajoSnapshot?.totalBars ?? 0} tiras · {consolidatedCutUnits} cortes ·{" "}
+                  {formatMl(consolidated.totalProfilesLinealMm / 1000)} de perfil
                 </p>
               </div>
               {isResolvingSupplierPresentations ? (
                 <p className={styles.compactWarning} role="status">
-                  Resolviendo la presentación y el largo comercial antes de distribuir las barras…
+                  Cargando tiras disponibles…
                 </p>
               ) : null}
-              {!consolidatedBarsCalculable ? (
+              {!consolidatedBarsCalculable && !consolidated.trabajoSnapshot?.missingPresentations?.length ? (
                 <p className={styles.compactWarning} role="status">
                   <LuCircleAlert aria-hidden />
-                  {consolidated.trabajoSnapshot?.missingPresentations?.length
-                    ? "Pauta parcial: los perfiles sin presentación y largo confirmados quedan pendientes."
-                    : BARS_INCOMPLETE_WARNING}
+                  {BARS_INCOMPLETE_WARNING}
                 </p>
               ) : null}
             </header>
 
             {consolidated.trabajoSnapshot && !isResolvingSupplierPresentations ? (
-              <section className={styles.lineGroup} aria-label="Distribución física compartida">
+              <section className={styles.lineGroup} aria-label="Tiras compartidas del trabajo">
                 <header>
                   <div>
-                    <strong>
-                      {consolidated.trabajoSnapshot.missingPresentations?.length
-                        ? `Pauta parcial · ${consolidated.trabajoSnapshot.totalBars} barras calculadas`
-                        : `${consolidated.trabajoSnapshot.totalBars} barras compartidas`}
-                    </strong>
+                    <strong>{consolidated.trabajoSnapshot.totalBars} tiras para el trabajo</strong>
                     <span>
                       {consolidated.trabajoSnapshot.missingPresentations?.length
-                        ? "Incluye solo perfiles con presentación y largo confirmados. Los pendientes se detallan abajo."
-                        : "Los cortes de todas las partidas compatibles se empacan juntos."}
+                        ? "Distribución referencial · faltan perfiles por asociar."
+                        : "Distribución referencial entre las partidas compatibles."}
                     </span>
                   </div>
                   <em>{formatMm(consolidated.trabajoSnapshot.totalWasteMm)} sobrante</em>
                 </header>
-                {groupMissingPresentations(consolidated.trabajoSnapshot.missingPresentations).map((missing) => (
-                  <p key={`${missing.technicalCode}-${missing.finishKey}-${missing.reason}`} role="status">
-                    {missing.technicalCode}{missing.cutCount > 1 ? ` · ${missing.cutCount} cortes pendientes` : ""}: {missing.reason}
-                  </p>
-                ))}
+                {consolidated.trabajoSnapshot.missingPresentations?.length ? (
+                  <details className={styles.jointPendingDetails}>
+                    <summary>Ver perfiles pendientes</summary>
+                    {groupMissingPresentations(consolidated.trabajoSnapshot.missingPresentations).map((missing) => (
+                      <p key={`${missing.technicalCode}-${missing.finishKey}-${missing.reason}`} role="status">
+                        <strong>{missing.technicalCode}{missing.cutCount > 1 ? ` · ${missing.cutCount} cortes` : ""}</strong>
+                        <span>{missing.reason}</span>
+                      </p>
+                    ))}
+                  </details>
+                ) : null}
                 <ol className={styles.jointBarList}>
-                  {consolidated.trabajoSnapshot.bars.map((bar) => (
-                    <li key={`${bar.materialKey}-${bar.acabadoKey}-${bar.largoComercialMm}-${bar.indice}`}>
-                      <strong>{bar.codigoPerfil} · Barra #{bar.indice} · {formatMm(bar.largoComercialMm)}</strong>
-                      <span>Usado {formatMm(bar.usadoMm)} · Sobrante {formatMm(bar.sobranteMm)}</span>
-                      {bar.cortes.map((cut, index) => (
-                        <em key={`${cut.itemId}-${cut.componenteId}-${index}`}>
-                          {cut.codigoItem} · {cut.funcion} · {formatMm(cut.largoMm)}
-                        </em>
-                      ))}
+                  {groupJointBars(consolidated.trabajoSnapshot.bars).map((group) => (
+                    <li key={group.key}>
+                      <strong>{group.profile}{group.name ? ` · ${group.name}` : ""} · {group.bars.length} {group.bars.length === 1 ? "tira" : "tiras"} · {formatMm(group.lengthMm)}</strong>
+                      <ol>
+                        {group.bars.map((bar) => (
+                          <li key={`${bar.materialKey}-${bar.acabadoKey}-${bar.largoComercialMm}-${bar.indice}`}>
+                            <details>
+                              <summary>
+                                Tira {bar.indice} · {formatMm(bar.usadoMm)} usados · {formatMm(bar.sobranteMm)} sobrantes · {bar.cortes.length} cortes
+                              </summary>
+                              <ul>
+                                {groupJointCuts(bar).map((cut) => (
+                                  <li key={`${cut.code}-${cut.functionLabel}-${cut.lengthMm}`}>
+                                    {cut.code} · {cut.functionLabel} · {formatMm(cut.lengthMm)}{cut.quantity > 1 ? ` × ${cut.quantity}` : ""}
+                                  </li>
+                                ))}
+                              </ul>
+                            </details>
+                          </li>
+                        ))}
+                      </ol>
                     </li>
                   ))}
                 </ol>
               </section>
             ) : null}
 
+            <details className={styles.jointMoreDetails}>
+              <summary>Ver detalle por componente y materiales</summary>
             {consolidated.lineGroups.length === 0 ? (
               <div className={styles.emptyTable}>
                 Todavía no hay despiece consolidable. Revisa piezas con línea, medidas y cortes.
@@ -1567,6 +1705,7 @@ export function DespieceReviewSurface({
                 <strong>{formatMl(consolidated.totalProfilesLinealMm / 1000)}</strong>
               </span>
             </div>
+            </details>
           </div>
         ) : null}
         </div>

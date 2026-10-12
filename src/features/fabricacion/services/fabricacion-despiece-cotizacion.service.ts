@@ -12,8 +12,19 @@ import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/s
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
 import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
 import { resolveFabricationRecipe } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
-import { resolveUniversalPricedLineFallback } from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
+import {
+  isSodalCatalogo2026UniversalFallbackKey,
+  isReplaceableUniversalStructuralRecipe,
+  resolveConfirmedUniversalFallbackVariant,
+  resolveUniversalPricedLineFallbacks,
+  SODAL_CATALOGO_2026_SOURCE_PREFIX,
+  USER_CONFIRMED_UNIVERSAL_WORKSHOP_LINE_KEYS,
+} from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
 import { resolveVeratecWorkbookFallback } from "@/features/fabricacion/services/fabricacion-receta-veratec-fallback.service";
+import {
+  isVeratec7400FourMobileComposition,
+  type VeratecQuoteComposition,
+} from "@/features/fabricacion/services/veratec-quote-composition.service";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 import { isSodalL25FormulaDerivedRecipe } from "@/features/fabricacion/services/fabricacion-evidence-gate.service";
 import {
@@ -40,6 +51,13 @@ import {
   crearRecetaWinHouseNewS75,
   WINHOUSE_NEW_S75_SOURCE_REVISION,
 } from "@/features/fabricacion/fixtures/winhouse-new-s75-recipes";
+import {
+  VERATEC_7400_4H_CATALOG_KEY,
+} from "@/features/fabricacion/fixtures/veratec-preliminary-recipes";
+import {
+  VERATEC_BAHAR_5200_CATALOG_KEY_PREFIX,
+  VERATEC_BAHAR_5200_PLEGABLE_VARIANTS,
+} from "@/features/fabricacion/fixtures/veratec-bahar-5200-recipes";
 import {
   VERATEC_7400_CATALOG_KEY,
   VERATEC_7400_VARIANT_MONOLITICO_4MM,
@@ -235,10 +253,17 @@ export function resolveFabricacionDespieceForQuoteItem(input: {
   /** Familia explícita del catálogo; permite resolver presentaciones del mismo sistema. */
   supplierFamilyKey?: string | null;
 }): FabricacionDespieceCotizacionResult {
-  const presentation = decodeCotizacionItemPresentationMeta(input.item.observaciones);
+  const presentation = resolveQuotePresentationForFabrication(input.item);
+  const compositionCatalogKey =
+    input.lineCatalogKey?.trim() || presentation.catalogLineKey?.trim() || null;
+  const veratec7400FourMobileBaseSelected = isVeratec7400FourMobileComposition(
+    presentation,
+    compositionCatalogKey
+  );
   if (
-    presentation.guidedVisualConfig?.quickCompositionStructural ||
-    hasQuickCompositionStructuralChanges(presentation.quickCompositionAdjustment)
+    (presentation.guidedVisualConfig?.quickCompositionStructural ||
+      hasQuickCompositionStructuralChanges(presentation.quickCompositionAdjustment)) &&
+    !veratec7400FourMobileBaseSelected
   ) {
     return {
       estado: "composicion_sin_receta",
@@ -256,6 +281,171 @@ export function resolveFabricacionDespieceForQuoteItem(input: {
   );
 }
 
+/**
+ * Recover the exact Veratec 7400 4H identity from the selected commercial line
+ * and the visible four-mobile configuration when legacy/edit flows omitted
+ * catalog metadata. Explicitly conflicting metadata always takes precedence.
+ */
+function resolveQuotePresentationForFabrication(item: CotizacionWorkflowItem) {
+  const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
+  const normalizedLine = (item.lineaComercial ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+  const normalizedComposition = `${item.nombre ?? ""} ${item.descripcion ?? ""}`
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+  const normalizedSheetVariant = presentation.sheetVariant
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+  const selectedVeratec4HLine =
+    normalizedLine.includes("veratec 7400") && normalizedLine.includes("4 hojas chicas");
+  const explicitlyFourMobile =
+    /^4\s+moviles$/.test(normalizedSheetVariant) ||
+    /4\s+hojas[^.]*4\s+moviles/.test(normalizedComposition);
+
+  const existingCatalogKey = presentation.catalogLineKey.trim();
+  const existingKeyBelongsToVeratec7400 =
+    !existingCatalogKey ||
+    existingCatalogKey === VERATEC_7400_CATALOG_KEY ||
+    existingCatalogKey === VERATEC_7400_4H_CATALOG_KEY;
+  if (selectedVeratec4HLine && explicitlyFourMobile && existingKeyBelongsToVeratec7400) {
+    return {
+      ...presentation,
+      catalogLineKey: VERATEC_7400_4H_CATALOG_KEY,
+      fabricacionTipologia: "corredera",
+      fabricacionHojas: 4,
+      fabricacionModulos: 4,
+      sheetScheme: "4 hojas",
+      sheetVariant: "4 móviles",
+    } satisfies typeof presentation;
+  }
+
+  const baharFoldingVariant = inferVeratecBahar5200FoldingVariant(item, presentation);
+  if (!baharFoldingVariant) return presentation;
+
+  return {
+    ...presentation,
+    catalogLineKey: baharFoldingVariant.catalogKey,
+    sistema: "Plegable",
+    configuracion: `${baharFoldingVariant.leaves} hojas plegables`,
+    fabricacionTipologia: "puerta_abatible",
+    fabricacionHojas: baharFoldingVariant.leaves,
+    fabricacionModulos: 1,
+    fabricacionApertura: "plegable",
+    fabricacionVariante: baharFoldingVariant.slug,
+  } satisfies typeof presentation;
+}
+
+/** Recover the documented Bahar folding identity from the selected commercial line. */
+function inferVeratecBahar5200FoldingVariant(
+  item: CotizacionWorkflowItem,
+  presentation: ReturnType<typeof decodeCotizacionItemPresentationMeta>
+): (typeof VERATEC_BAHAR_5200_PLEGABLE_VARIANTS)[number] | null {
+  const lineName = (item.lineaComercial ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  if (item.tipo.toLowerCase() !== "puerta" || !lineName.includes("bahar 5200")) return null;
+  const selectedSystem = (presentation.sistema ?? "").trim().toLowerCase();
+  const itemComposition = `${item.nombre ?? ""} ${item.descripcion ?? ""}`.toLowerCase();
+  if (
+    (selectedSystem.includes("corredera") && !selectedSystem.includes("plegable")) ||
+    (itemComposition.includes("corredera") && !itemComposition.includes("plegable"))
+  ) {
+    return null;
+  }
+
+  const composition = lineName.match(/plegable\s+(\d+)\s*[/-]\s*(\d+)\s*[/-]\s*(\d+)/);
+  if (composition) {
+    const key = `${VERATEC_BAHAR_5200_CATALOG_KEY_PREFIX}-plegable-${composition[1]}-${composition[2]}-${composition[3]}`;
+    return VERATEC_BAHAR_5200_PLEGABLE_VARIANTS.find((variant) => variant.catalogKey === key) ?? null;
+  }
+
+  const explicitVariant = VERATEC_BAHAR_5200_PLEGABLE_VARIANTS.find(
+    (variant) => variant.slug === presentation.fabricacionVariante
+  );
+  if (explicitVariant) return explicitVariant;
+
+  const configuredLeaves = `${presentation.configuracion} ${item.nombre ?? ""} ${item.descripcion ?? ""}`
+    .match(/(\d+)\s*hojas?/i)?.[1];
+  const selectedLeafCount = Number(configuredLeaves) || presentation.fabricacionHojas;
+  const isFolding = /plegable/i.test(`${presentation.sistema} ${presentation.configuracion}`);
+  if (!isFolding || selectedLeafCount == null) return null;
+  return VERATEC_BAHAR_5200_PLEGABLE_VARIANTS.find(
+    (variant) => variant.leaves === selectedLeafCount
+  ) ?? null;
+}
+
+function baharRecipeCalculationSignature(recipe: FabricationRecipeRecord) {
+  return JSON.stringify(recipe.definition, (key, value: unknown) =>
+    key === "id" || key === "recetaId" ? undefined : value
+  );
+}
+
+/**
+ * Older catalog setup can leave exact duplicate recipes for one Bahar variant.
+ * Collapse only records with identical calculation definitions; distinct
+ * formulas remain selectable so the quote never silently picks between them.
+ */
+function collapseEquivalentBaharRecipeDuplicates(input: {
+  recipes: FabricationRecipeRecord[];
+  lineTemplateId: number;
+  organizationId: number | null;
+  variant: string;
+}): FabricationRecipeRecord[] {
+  if (input.organizationId == null) return input.recipes;
+  const matching = input.recipes.filter((recipe) =>
+    recipe.scope === "organization" &&
+    recipe.organizationId === input.organizationId &&
+    recipe.lineTemplateId === input.lineTemplateId &&
+    !recipe.eliminadoEn &&
+    recipe.status !== "archived" &&
+    (recipe.variant ?? recipe.definition.identidad.variante) === input.variant
+  );
+  if (matching.length < 2) return input.recipes;
+  const signatures = new Set(matching.map(baharRecipeCalculationSignature));
+  if (signatures.size !== 1) return input.recipes;
+
+  const statusRank: Record<FabricationRecipeRecord["status"], number> = {
+    validated: 3,
+    review_required: 2,
+    testing: 2,
+    draft: 1,
+    archived: 0,
+  };
+  const preferred = [...matching].sort((left, right) =>
+    statusRank[right.status] - statusRank[left.status] ||
+    right.version - left.version ||
+    right.updatedAt.localeCompare(left.updatedAt)
+  )[0];
+  const duplicateIds = new Set(matching.map((recipe) => recipe.id));
+  const collapsed: FabricationRecipeRecord[] = [];
+  let insertedPreferred = false;
+  input.recipes.forEach((recipe) => {
+    if (duplicateIds.has(recipe.id)) {
+      if (!insertedPreferred) {
+        collapsed.push(preferred);
+        insertedPreferred = true;
+      }
+      return;
+    }
+    collapsed.push(recipe);
+  });
+  return collapsed;
+}
+
+/** True only for the exact selected 7400 4H commercial line and 4-mobile item. */
+export function isVeratec7400FourMobileQuoteItem(item: CotizacionWorkflowItem): boolean {
+  const presentation = resolveQuotePresentationForFabrication(item);
+  return isVeratec7400FourMobileComposition(presentation as VeratecQuoteComposition);
+}
+
 function resolveLiveFabricacionDespieceForQuoteItem(input: {
   item: CotizacionWorkflowItem;
   recipes: FabricationRecipeRecord[];
@@ -264,7 +454,8 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   lineCatalogKey?: string | null;
   supplierFamilyKey?: string | null;
 }): FabricacionDespieceCotizacionResult {
-  const presentation = decodeCotizacionItemPresentationMeta(input.item.observaciones);
+  const presentation = resolveQuotePresentationForFabrication(input.item);
+  const baharFoldingVariant = inferVeratecBahar5200FoldingVariant(input.item, presentation);
   const lineTemplateId =
     normalizeLineTemplateId(input.lineTemplateId) ??
     normalizeLineTemplateId(presentation.lineTemplateId) ??
@@ -298,6 +489,7 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   }
 
   const catalogKey =
+    baharFoldingVariant?.catalogKey ||
     input.lineCatalogKey?.trim() ||
     presentation.catalogLineKey?.trim() ||
     inferWinHouseCatalogKey(input.item) ||
@@ -310,8 +502,11 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     descripcion: input.item.descripcion,
     sistema: presentation.sistema,
   });
+  const isBaharExteriorLine = catalogKey === `${VERATEC_BAHAR_5200_CATALOG_KEY_PREFIX}-ventana-exterior`;
   const tipologia =
-    (catalogKey === WINHOUSE_S60_CATALOG_KEY
+    (isBaharExteriorLine
+      ? inferredTipologia || presentation.fabricacionTipologia
+      : catalogKey === WINHOUSE_S60_CATALOG_KEY
       ? resolveWinHouseS60QuoteTypology({
           selectedTypology: presentation.fabricacionTipologia,
           componentType: input.item.tipo,
@@ -358,16 +553,17 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     hojas,
     vidrio: input.item.vidrio,
   });
-  const apertura =
-    (s60Config.handled
+  const apertura = catalogKey === "ventora:serie-12-shower-corredera"
+    ? "shower"
+    : (s60Config.handled
       ? resolveWinHouseS60QuoteAperture(s60Config.variant)
       : null) ||
-    aperturaFromPresentation ||
-    (isL20CatalogKey(catalogKey)
-      ? catalogKey === "ventora:l20"
-        ? "corredera"
-        : resolveL20AperturaForCatalogKey(catalogKey, presentation.fabricacionVariante)
-      : null);
+      aperturaFromPresentation ||
+      (isL20CatalogKey(catalogKey)
+        ? catalogKey === "ventora:l20"
+          ? "corredera"
+          : resolveL20AperturaForCatalogKey(catalogKey, presentation.fabricacionVariante)
+        : null);
   const s75Config = resolveWinHouseNewS75QuoteVariant({
     catalogKey,
     tipologia,
@@ -451,6 +647,7 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     apertura,
     herraje: presentation.fabricacionHerraje || null,
     variante:
+      baharFoldingVariant?.slug ||
       sodalConfig?.variantSlug ||
       s75Config.variant?.slug ||
       (s60Config.handled
@@ -468,6 +665,16 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     (!presentation.sheetVariant.trim() ||
       presentation.sheetVariant.trim().toLowerCase() === "2 móviles") &&
     (presentation.fabricacionModulos == null || presentation.fabricacionModulos === 2);
+  const explicitVeratecCompositionMismatch =
+    (catalogKey === VERATEC_7400_CATALOG_KEY &&
+      ((presentation.fabricacionHojas != null && presentation.fabricacionHojas !== 2) ||
+        (presentation.fabricacionModulos != null && presentation.fabricacionModulos !== 2) ||
+        (Boolean(presentation.sheetScheme.trim()) &&
+          !/^2\s+hojas(?:\s+correderas)?$/i.test(presentation.sheetScheme.trim())) ||
+        (Boolean(presentation.sheetVariant.trim()) &&
+          !/^2\s+m[oó]viles$/i.test(presentation.sheetVariant.trim())))) ||
+    (catalogKey === VERATEC_7400_4H_CATALOG_KEY &&
+      !isVeratec7400FourMobileComposition(presentation, catalogKey));
   const veratecGeometryOnlyGlass =
     catalogKey === VERATEC_7400_CATALOG_KEY &&
     tipologia === "corredera" &&
@@ -476,9 +683,14 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
       ? resolveVeratecGeometryOnlyGlass(input.item.vidrio)
       : null;
 
-  // TP20/TP24 tienen contradicciones de receta todavía abiertas. Este flujo entrega
-  // solo geometría estructural; no selecciona recetas ni hereda mappings comerciales.
-  if (veratecGeometryOnlyGlass) {
+  // Si el espesor coincide con una variante documental 7400 (20/24 mm), deja
+  // que el resolver seleccione su receta preliminar y que el taller edite sus
+  // cortes en el resumen. Los vidrios fuera de esas variantes conservan el
+  // fallback geométrico sin receta ni mapping comercial.
+  const hasDocumentedVeratecTpThickness =
+    veratecGeometryOnlyGlass?.thicknessMm === 20 ||
+    veratecGeometryOnlyGlass?.thicknessMm === 24;
+  if (veratecGeometryOnlyGlass && !hasDocumentedVeratecTpThickness) {
     const fallback = buildVeratecGeometryOnlyFallback({
       recipes: input.recipes,
       organizationId: input.organizationId,
@@ -552,13 +764,44 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     });
     return preview.calculable && preview.perfiles.length > 0;
   };
+  // La validación física del taller no bloquea una fórmula SODAL completa.
+  // Sí exigimos perfiles, códigos, medidas, descuentos, cantidades y largos
+  // completos, además de que el motor produzca cortes para esta geometría.
+  const canCalculateCompleteSodalRecipe = (recipe: FabricationRecipeRecord) => {
+    if (!recipe.sourceReference?.startsWith(SODAL_CATALOGO_2026_SOURCE_PREFIX)) {
+      return false;
+    }
+    if (!evaluarRecetaListaParaProbar(recipe.definition).listaParaProbar) {
+      return false;
+    }
+    if (buildFabricationRecipeSummary(recipe.definition).activeRuleCount === 0) {
+      return false;
+    }
+    const result = calcularCubicacionYPauta(recipe.definition, {
+      anchoTotalMm: ancho,
+      altoTotalMm: alto,
+      cantidad,
+      anchoHojaAMm: presentation.fabricacionAnchoHojaAMm,
+      hojas: recipe.definition.identidad.hojas,
+      modulos: recipe.definition.identidad.modulos,
+      variante: recipe.definition.identidad.variante,
+    });
+    return result.calculable && result.perfiles.length > 0;
+  };
   const canPreviewPreliminaryRecipe = (recipe: FabricationRecipeRecord) =>
     canPreviewWinHouseDraft(recipe) ||
     canPreviewVeratecDraft(recipe) ||
     canPreviewRecipeWithDeclaredPendingData(recipe) ||
     canPreviewCalculatedL20Recipe(recipe);
 
-  let recipesForResolution = input.recipes;
+  let recipesForResolution = baharFoldingVariant
+    ? collapseEquivalentBaharRecipeDuplicates({
+        recipes: input.recipes,
+        lineTemplateId,
+        organizationId: input.organizationId,
+        variant: baharFoldingVariant.slug,
+      })
+    : input.recipes;
   if (s75Config.variant) {
     const exactS75Recipes = input.recipes.filter(
       (recipe) =>
@@ -593,37 +836,146 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   }
   let resolution = resolveFabricationRecipe(recipesForResolution, recipeResolutionInput);
 
-  if (resolution.estado === "sin_receta" && catalogKey) {
+  const userConfirmedUniversalLine = Boolean(
+    catalogKey && USER_CONFIRMED_UNIVERSAL_WORKSHOP_LINE_KEYS.has(catalogKey),
+  );
+  const isBahar5200Line = catalogKey?.startsWith(`${VERATEC_BAHAR_5200_CATALOG_KEY_PREFIX}-`) === true;
+  const shouldResolveBaharFallback = (state: string) =>
+    state === "sin_receta" ||
+    (isBahar5200Line && state === "multiples_recetas") ||
+    (isBahar5200Line &&
+      state === "receta_no_validada" &&
+      Boolean(resolution.receta) &&
+      !canPreviewPreliminaryRecipe(resolution.receta!));
+  const sodalCatalogo2026UniversalLine = isSodalCatalogo2026UniversalFallbackKey(catalogKey);
+  const shouldResolveUniversalFallback = (state: string) =>
+    state === "sin_receta" ||
+    (userConfirmedUniversalLine &&
+      (state === "receta_no_validada" || state === "multiples_recetas")) ||
+    (sodalCatalogo2026UniversalLine &&
+      (state === "receta_no_validada" || state === "multiples_recetas"));
+  const selectedRecipeIsReplaceableConfirmedStructure = () =>
+    userConfirmedUniversalLine &&
+    resolution.receta != null &&
+    isReplaceableUniversalStructuralRecipe(resolution.receta);
+  if (
+    catalogKey &&
+    (shouldResolveUniversalFallback(resolution.estado) ||
+      shouldResolveBaharFallback(resolution.estado) ||
+      selectedRecipeIsReplaceableConfirmedStructure())
+  ) {
+    const baharVariantForOpening = isBaharExteriorLine
+      ? tipologia === "proyectante"
+        ? "bahar_5200_ventana_proyectante"
+        : tipologia === "abatible"
+          ? "bahar_5200_ventana_exterior"
+          : null
+      : null;
+    const veratecResolutionInput = {
+      ...recipeResolutionInput,
+      variante: baharVariantForOpening || recipeResolutionInput.variante,
+    };
     const veratecFallbacks = resolveVeratecWorkbookFallback({
       catalogKey,
       lineTemplateId,
       organizationId: input.organizationId,
       lineName: input.item.lineaComercial || catalogKey,
-      variant: recipeResolutionInput.variante,
+      variant: veratecResolutionInput.variante,
+      typology: recipeResolutionInput.tipologia,
       recipes: input.recipes,
     });
     if (veratecFallbacks.length > 0) {
+      const recipesWithoutIncompleteBaharDraft = isBahar5200Line && resolution.receta &&
+        !canPreviewPreliminaryRecipe(resolution.receta)
+        ? recipesForResolution.filter((recipe) => recipe.id !== resolution.receta?.id)
+        : recipesForResolution;
       resolution = resolveFabricationRecipe(
-        [...recipesForResolution, ...veratecFallbacks],
-        recipeResolutionInput,
+        [...recipesWithoutIncompleteBaharDraft, ...veratecFallbacks],
+        {
+          ...veratecResolutionInput,
+          variante:
+            veratecFallbacks.length === 1 &&
+            (!veratecResolutionInput.variante ||
+              ["estandar", "default", "normal"].includes(veratecResolutionInput.variante.trim().toLowerCase()))
+              ? veratecFallbacks[0]?.variant ?? veratecResolutionInput.variante
+              : veratecResolutionInput.variante,
+        },
       );
     }
-    if (resolution.estado === "sin_receta") {
-      const fallback = resolveUniversalPricedLineFallback({
+    if (
+      shouldResolveUniversalFallback(resolution.estado) ||
+      selectedRecipeIsReplaceableConfirmedStructure()
+    ) {
+      const fallbacks = resolveUniversalPricedLineFallbacks({
         catalogKey,
         lineTemplateId,
         organizationId: input.organizationId,
         lineName: input.item.lineaComercial || catalogKey,
-        variant: recipeResolutionInput.variante,
+        variant: resolveConfirmedUniversalFallbackVariant({
+          catalogKey,
+          variant: recipeResolutionInput.variante,
+          selectedRecipe: resolution.receta,
+        }),
+        leavesCount: recipeResolutionInput.hojas,
+        typology: recipeResolutionInput.tipologia,
+        glassName: recipeResolutionInput.glassName,
         recipes: input.recipes,
       });
-      if (fallback) {
+      if (fallbacks.length > 0) {
+        const isSodalDocumentedFallback = fallbacks.some((recipe) =>
+          recipe.sourceReference?.startsWith("sodal:catalogo-sodal-2026:"),
+        );
+        const recipesForFallback = isSodalDocumentedFallback
+          ? recipesForResolution.filter(
+              (recipe) =>
+                recipe.lineTemplateId !== lineTemplateId ||
+                recipe.status === "validated" ||
+                !(recipe.sourceReference?.startsWith("base-ventora:") ||
+                  recipe.sourceReference?.startsWith("ventora-arquetipo:")),
+            )
+          : userConfirmedUniversalLine
+            ? recipesForResolution.filter(
+                (recipe) =>
+                  recipe.lineTemplateId !== lineTemplateId ||
+                  (recipe.status === "validated" &&
+                    !isReplaceableUniversalStructuralRecipe(recipe)),
+              )
+            : recipesForResolution;
         resolution = resolveFabricationRecipe(
-          [...recipesForResolution, fallback],
-          recipeResolutionInput,
+          [...recipesForFallback, ...fallbacks],
+          {
+            ...recipeResolutionInput,
+            variante:
+              fallbacks.length === 1 &&
+              fallbacks[0]?.variant === "normal" &&
+              (resolveConfirmedUniversalFallbackVariant({
+                catalogKey,
+                variant: recipeResolutionInput.variante,
+                selectedRecipe: resolution.receta,
+              }) === "normal" ||
+                ["estandar", "estándar", "default", "al-42 normal"].includes(
+                  (recipeResolutionInput.variante ?? "").trim().toLocaleLowerCase("es-CL")
+                ))
+                ? "normal"
+                : recipeResolutionInput.variante,
+          },
         );
       }
     }
+  }
+
+  // La receta 7400 2H solo cubre dos móviles; la base 4H solo cubre cuatro
+  // móviles. No reutilizarlas para composiciones mixtas o croquis distintos.
+  if (explicitVeratecCompositionMismatch) {
+    return {
+      estado: "composicion_sin_receta",
+      formal: null,
+      cubication: null,
+      recipe: null,
+      barsAvailable: false,
+      preliminary: false,
+      message: "La base disponible de Sliding 7400 cubre 2 hojas móviles o 4 hojas móviles, según la configuración. Para esta composición mixta aún falta una receta compatible.",
+    };
   }
 
   if (resolution.estado === "multiples_recetas") {
@@ -658,9 +1010,11 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   if (resolution.estado === "receta_no_validada") {
     const preview = evaluarRecetaListaParaProbar(recipe.definition);
     const bypassRecipeMetadataGate = isSodalL25FormulaDerivedRecipe(recipe);
+    const completeDocumentedSodalRecipe = canCalculateCompleteSodalRecipe(recipe);
     if (
       !preview.listaParaProbar &&
       !bypassRecipeMetadataGate &&
+      !completeDocumentedSodalRecipe &&
       !canPreviewPreliminaryRecipe(recipe)
     ) {
       return {
@@ -678,7 +1032,11 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   }
 
   const readiness = isFabricacionRecipeReadyForSnapshot(recipe);
-  if (!readiness.ready && !canPreviewPreliminaryRecipe(recipe)) {
+  if (
+    !readiness.ready &&
+    !canCalculateCompleteSodalRecipe(recipe) &&
+    !canPreviewPreliminaryRecipe(recipe)
+  ) {
     return {
       estado: "receta_incompleta",
       formal: null,
@@ -710,11 +1068,24 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   const barsAvailable = Boolean(
     formal.pautaBarras?.calculable && (formal.pautaBarras.barras?.length ?? 0) > 0
   );
+  const isReadySharedOrWorkshopRecipe =
+    recipe.id.startsWith("ventora:universal:") ||
+    recipe.sourceReference?.startsWith("taller:personalizada:") === true;
   const preliminary =
-    resolution.estado === "receta_no_validada" ||
-    (recipe.status !== "validated" && !isSodalL25CatalogKey(catalogKey));
+    resolution.estado === "receta_no_validada" &&
+    !isSodalL25CatalogKey(catalogKey) &&
+    // El catálogo compartido y la receta propia del taller son bases listas
+    // para usar en nuevas cotizaciones. WinHouse/S75 y otras recetas locales
+    // de prueba conservan su estado interno de revisión aunque calculen cortes.
+    !isReadySharedOrWorkshopRecipe;
 
   const cubication = fabricacionSnapshotToLegacyCubicationSnapshot(formal);
+
+  const compositionRequiresManualReview = Boolean(
+    (presentation.guidedVisualConfig?.quickCompositionStructural ||
+      hasQuickCompositionStructuralChanges(presentation.quickCompositionAdjustment)) &&
+    isVeratec7400FourMobileComposition(presentation, catalogKey)
+  );
 
   return {
     estado: "calculado",
@@ -723,9 +1094,11 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     recipe,
     barsAvailable,
     preliminary,
-    message: barsAvailable
+    message: compositionRequiresManualReview
+      ? "Despiece base Veratec 7400 de 4 hojas móviles. La composición visual tiene ajustes; revisa y corrige los cortes antes de confirmar la pauta."
+      : barsAvailable
       ? preliminary
-        ? "Cálculo preliminar: la receta aún no está validada."
+        ? "Despiece disponible. La receta aún requiere validación del taller."
         : null
       : tieneLargosComercialesPendientes(recipe.definition)
         ? "Agrega largos comerciales para calcular tiras."

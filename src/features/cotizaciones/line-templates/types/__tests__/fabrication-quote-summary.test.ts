@@ -3,12 +3,34 @@ import {
   type CotizacionItemCubicationSnapshot,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
-import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import {
+  encodeCotizacionItemCubicationOverride,
+  encodeCotizacionItemPresentationMeta,
+} from "@/utils/cotizacion-item-presentation";
+import { VERATEC_7400_4H_CATALOG_KEY } from "@/features/fabricacion/fixtures/veratec-preliminary-recipes";
+import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import {
+  crearRecetaVeratec7400Corredera,
+  VERATEC_7400_CATALOG_KEY,
+  VERATEC_7400_SOURCE_REFERENCE_MONOLITICO_4MM,
+  VERATEC_7400_SOURCE_REVISION,
+  VERATEC_7400_VARIANT_MONOLITICO_4MM,
+} from "@/features/fabricacion/fixtures/veratec-7400-corredera-recipe";
 
 import {
   buildFabricationQuoteSummary,
   formatFabricationItemLineCaption,
 } from "../fabrication-quote-summary";
+
+jest.mock("@/features/fabricacion/services/fabricacion-despiece-cotizacion.service", () => {
+  const actual = jest.requireActual<typeof import("@/features/fabricacion/services/fabricacion-despiece-cotizacion.service")>(
+    "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service"
+  );
+  return {
+    ...actual,
+    resolveFabricacionDespieceForQuoteItem: jest.fn(actual.resolveFabricacionDespieceForQuoteItem),
+  };
+});
 
 function snapshot(
   overrides: Partial<CotizacionItemCubicationSnapshot> = {}
@@ -161,5 +183,141 @@ describe("fabrication quote summary", () => {
       { itemId: "edited-1", codigo: "V1", nombre: "Ventana ajustada", lineName: "L5000" },
     ]);
     expect(summary.totalProfilesMl).toBe(0);
+  });
+
+  it("incluye el despiece base 7400 4H para cuatro hojas móviles en el resumen", () => {
+    const adjustment = {
+      ...createEmptyQuickCompositionAdjustment(),
+      paneTypes: {
+        "leaf-1": "sliding" as const,
+        "leaf-2": "sliding" as const,
+        "leaf-3": "sliding" as const,
+        "leaf-4": "sliding" as const,
+      },
+    };
+    const summary = buildFabricationQuoteSummary([
+      {
+        id: "veratec-4h",
+        codigo: "V1",
+        tipo: "Ventana",
+        nombre: "Ventana corredera 4 hojas",
+        lineaComercial: "Veratec 7400 — Corredera 4 hojas chicas",
+        vidrio: "Incoloro monolítico 4 mm",
+        ancho: 1222,
+        alto: 1222,
+        cantidad: 1,
+        observaciones: encodeCotizacionItemPresentationMeta({
+          lineTemplateId: "1523",
+          catalogLineKey: VERATEC_7400_4H_CATALOG_KEY,
+          sistema: "Corredera",
+          sheetScheme: "4 hojas",
+          sheetVariant: "4 móviles",
+          fabricacionTipologia: "corredera",
+          fabricacionHojas: 4,
+          fabricacionModulos: 4,
+          fabricacionVariante: "estandar",
+          quickCompositionAdjustment: adjustment,
+        }),
+      },
+    ], { recipes: [], organizationId: 10 });
+
+    expect(summary.items).toHaveLength(1);
+    expect(summary.items[0]?.snapshot.cuts.length).toBeGreaterThan(0);
+    expect(summary.compositionsPendingRecipe).toHaveLength(0);
+  });
+
+  it("integra el adelanto geométrico 7400 en la pauta por componente con estado revisable", () => {
+    const resolveDespieceMock = jest.mocked(resolveFabricacionDespieceForQuoteItem);
+    resolveDespieceMock.mockClear();
+    const definition = crearRecetaVeratec7400Corredera({
+      lineName: "Veratec 7400",
+      variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+      createId: (() => { let id = 0; return () => `geometry-${id++}`; })(),
+    });
+    const recipe = {
+      id: "veratec-7400-2h-structural",
+      organizationId: 10,
+      lineTemplateId: 1396,
+      scope: "ventora" as const,
+      providerName: "VERATEC",
+      lineName: "Veratec 7400",
+      typology: "corredera",
+      leavesCount: 2,
+      variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+      version: 1,
+      status: "draft" as const,
+      definition,
+      sourceType: "manufacturer" as const,
+      sourceReference: VERATEC_7400_SOURCE_REFERENCE_MONOLITICO_4MM,
+      sourceRevision: VERATEC_7400_SOURCE_REVISION,
+      parentRecipeId: null,
+      validatedAt: null,
+      validatedBy: null,
+      createdAt: "2026-09-21T00:00:00.000Z",
+      updatedAt: "2026-09-21T00:00:00.000Z",
+      eliminadoEn: null,
+    };
+    const summary = buildFabricationQuoteSummary([{
+      id: "7400-preliminary",
+      codigo: "V7400",
+      tipo: "Ventana",
+      nombre: "Ventana corredera 2 hojas",
+      lineaComercial: "Veratec 7400 — Corredera 2 hojas",
+      vidrio: "Incoloro monolítico 5 mm",
+      ancho: 1200,
+      alto: 1500,
+      cantidad: 1,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "1396",
+        catalogLineKey: VERATEC_7400_CATALOG_KEY,
+        sistema: "Corredera",
+        sheetScheme: "2 hojas",
+        sheetVariant: "2 móviles",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 2,
+        fabricacionModulos: 2,
+      }),
+    }], {
+      recipes: [recipe],
+      organizationId: 10,
+      allowLiveFormal: false,
+    });
+
+    expect(summary.items).toHaveLength(1);
+    expect(summary.items[0]).toMatchObject({
+      itemId: "7400-preliminary",
+      statusLabel: "Preliminar · revisar en taller",
+      snapshot: { estimationKind: "recipe_geometry_only" },
+    });
+    expect(summary.totalItems).toBe(1);
+    expect(resolveDespieceMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("mantiene en la pauta el corte manual guardado para esa cotización", () => {
+    const manual = snapshot({
+      source: "manual",
+      cuts: [{
+        label: "7401",
+        profileCode: "7401",
+        profileName: "Marco corredera",
+        functionLabel: "Marco",
+        quantity: 2,
+        lengthMm: 1498,
+        totalLinealMm: 2996,
+      }],
+    });
+    const summary = buildFabricationQuoteSummary([{
+      id: "item-manual",
+      codigo: "V1",
+      nombre: "Ventana",
+      lineaComercial: "Veratec 7400",
+      observaciones: encodeCotizacionItemCubicationOverride(encodeCotizacionItemPresentationMeta({
+        colorHex: "#a8a8a8",
+        material: "Aluminio",
+      }), manual),
+    }]);
+
+    expect(summary.items[0]?.snapshot.cuts[0]).toMatchObject({ profileCode: "7401", lengthMm: 1498 });
+    expect(summary.items[0]?.statusLabel).toBe("Ajustada para esta cotización");
   });
 });

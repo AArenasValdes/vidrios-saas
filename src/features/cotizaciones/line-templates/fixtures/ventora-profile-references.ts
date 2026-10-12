@@ -148,7 +148,7 @@ function veratecProfileRef(input: {
     code: input.code,
     name: input.name,
     role: input.role,
-    description: `${input.section ? `Sección ${input.section} mm` : "Sección no indicada"} · barra 5.800 mm`,
+    description: `${input.section ? `Sección ${input.section} mm` : "Sección no indicada"} · tira 5.800 mm`,
     provider: "VERATEC",
     source: PROFILE_REFERENCE_SOURCES.ALUMETRICA_CATALOG,
     codeStatus: "catalog_reference",
@@ -201,6 +201,19 @@ const VERATEC_ELEGANS_60_PROFILES: LineProfileReference[] = [
   veratecBrochureProfileRef({ code: "66306VER", name: "Junquillo vidrio 4 mm", role: "Junquillo" }),
   veratecBrochureProfileRef({ code: "66307VER", name: "Junquillo vidrio 20 mm", role: "Junquillo" }),
   veratecBrochureProfileRef({ code: "67063VER", name: "Junquillo vidrio 24 mm", role: "Junquillo" }),
+];
+
+const VERATEC_BAHAR_5200_PROFILES: LineProfileReference[] = [
+  catalogRef({ code: "65201VER", name: "Marco fijo Bahar", role: "Marco", provider: "VERATEC", source: "MATERIALES PRECIO VERATEC.xlsx · BAHAR" }),
+  catalogRef({ code: "65212VER", name: "Hoja ventana interior Bahar", role: "Hoja", provider: "VERATEC", source: "MATERIALES PRECIO VERATEC.xlsx · BAHAR" }),
+  catalogRef({ code: "65209VER", name: "Hoja ventana exterior Bahar", role: "Hoja", provider: "VERATEC", source: "MATERIALES PRECIO VERATEC.xlsx · BAHAR" }),
+  catalogRef({ code: "65203VER", name: "Barra T Bahar", role: "Otro", provider: "VERATEC", source: "MATERIALES PRECIO VERATEC.xlsx · BAHAR" }),
+  catalogRef({ code: "65210VER", name: "Hoja puerta exterior Bahar", role: "Puerta", provider: "VERATEC", source: "MATERIALES PRECIO VERATEC.xlsx · BAHAR" }),
+  catalogRef({ code: "65204VER", name: "Hoja puerta interior Bahar", role: "Puerta", provider: "VERATEC", source: "MATERIALES PRECIO VERATEC.xlsx · BAHAR" }),
+  catalogRef({ code: "65207VER", name: "Batiente Bahar", role: "Otro", provider: "VERATEC", source: "MATERIALES PRECIO VERATEC.xlsx · BAHAR" }),
+  catalogRef({ code: "67088VER", name: "Junquillo Bahar · vidrio 4 mm", role: "Junquillo", provider: "VERATEC", source: "MATERIALES PRECIO VERATEC.xlsx · BAHAR" }),
+  catalogRef({ code: "67063VER", name: "Junquillo Bahar · vidrio 18 mm", role: "Junquillo", provider: "VERATEC", source: "MATERIALES PRECIO VERATEC.xlsx · BAHAR" }),
+  catalogRef({ code: "67464VER", name: "Junquillo Bahar · vidrio 24 mm", role: "Junquillo", provider: "VERATEC", source: "MATERIALES PRECIO VERATEC.xlsx · BAHAR" }),
 ];
 
 const VERATEC_COMPACT_SLIDING_PROFILES: LineProfileReference[] = [
@@ -835,6 +848,15 @@ const CATALOG_KEY_PROFILE_SETS: Record<string, LineProfileReference[]> = {
   "ventora:veratec-elegans-60-puerta-hoja-exterior": VERATEC_ELEGANS_60_PROFILES,
   "ventora:veratec-elegans-60-puerta-hoja-interior": VERATEC_ELEGANS_60_PROFILES,
   "ventora:veratec-elegans-60-fijo": VERATEC_ELEGANS_60_PROFILES,
+  ...Object.fromEntries([
+    "fijo",
+    "ventana-interior",
+    "ventana-exterior",
+    "plegable-3-3-0",
+    "plegable-4-3-1",
+    "plegable-6-5-1",
+    "plegable-7-4-3",
+  ].map((variant) => [`ventora:veratec-bahar-5200-${variant}`, VERATEC_BAHAR_5200_PROFILES])),
   "ventora:veratec-compact-sliding-2h": VERATEC_COMPACT_SLIDING_PROFILES,
   "ventora:veratec-compact-sliding-3h": VERATEC_COMPACT_SLIDING_PROFILES,
   "ventora:veratec-compact-sliding-4h": VERATEC_COMPACT_SLIDING_PROFILES,

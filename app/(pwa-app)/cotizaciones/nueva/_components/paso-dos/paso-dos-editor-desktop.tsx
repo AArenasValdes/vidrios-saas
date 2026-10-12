@@ -1168,7 +1168,7 @@ function TabPrecio({
           <span className={s.label}>{catalogLabel}</span>
           <div className={s.formGrid2}>
             <LineTemplatePicker
-              templates={visibleLineTemplates}
+              templates={isGlassCatalogItem ? visibleLineTemplates : activeLineTemplates}
               value={componentForm.lineTemplateId}
               onChange={onSelectLineTemplate}
               onTemplatePriceUpdated={onTemplatePriceUpdated}

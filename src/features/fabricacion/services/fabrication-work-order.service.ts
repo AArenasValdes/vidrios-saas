@@ -152,7 +152,7 @@ export function buildFabricationWorkOrder(input: {
     if (row.finish === "Acabado sin definir") addPending(`finish:${row.key}`, `Perfil ${code}: acabado`, "Definir el acabado antes de comprar.");
     if (!row.supplierSku && (!row.price || !row.price.isWorkshopCode) && !row.price?.sku) addPending(`sku:${row.key}`, `Perfil ${code}: SKU proveedor`, "Seleccionar una presentación con SKU.");
     if (!row.price) addPending(`price:${row.key}`, `Perfil ${code}: precio`, "Configurar el precio de compra por presentación.");
-    if (!(row.commercialLengthMm > 0)) addPending(`length:${row.key}`, `Perfil ${code}: largo`, "Definir el largo comercial de la barra.");
+    if (!(row.commercialLengthMm > 0)) addPending(`length:${row.key}`, `Perfil ${code}: largo`, "Definir el largo comercial de la tira.");
   }
   for (const row of materials.accessories) {
     if (!row.code && !row.price?.sku) addPending(`accessory-code:${row.key}`, `${row.description}: código`, "Completar código del accesorio.");
@@ -175,7 +175,7 @@ export function buildFabricationWorkOrder(input: {
 
   const hasJointBars = Boolean(summary.trabajoSnapshot?.bars.length);
   const cutGroups = hasJointBars ? buildJointCutGroups(summary, addPending) : buildHistoricCutGroups(summary);
-  if (!hasJointBars && cutGroups.length > 0) addPending("bar-distribution", "Distribución por barra", "Revisar pauta conjunta pendiente; estos cortes pertenecen a snapshots por pieza.");
+  if (!hasJointBars && cutGroups.length > 0) addPending("bar-distribution", "Distribución por tira", "Revisar pauta conjunta pendiente; estos cortes pertenecen a snapshots por pieza.");
   if (cutGroups.length === 0) addPending("cut-plan", "Pauta de corte", "Guardar una pauta técnica para este trabajo.");
 
   const glass = materials.glassOrder.map((row): WorkOrderGlass => {

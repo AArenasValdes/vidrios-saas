@@ -11,6 +11,11 @@ import {
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { VERATEC_7400_JUNIO_2026_IMPORT } from "../../fixtures/veratec-7400-junio-2026";
+import { VERATEC_BAHAR_5200_PRICE_LIST_IMPORT } from "../../fixtures/veratec-bahar-5200-price-list";
+import {
+  VERATEC_BAHAR_5200_VARIANTS,
+  VERATEC_BAHAR_5200_PLEGABLE_VARIANTS,
+} from "@/features/fabricacion/fixtures/veratec-bahar-5200-recipes";
 import {
   buildPartialTechnicalCostSnapshot,
   getRecipeAccessoriesFromItemSnapshot,
@@ -113,6 +118,35 @@ const prices: CatalogPresentationPrice[] = VERATEC_7400_JUNIO_2026_IMPORT.presen
     currency: entry.currency,
     priceListId: "fixture-veratec-2026-06",
     priceListRevision: VERATEC_7400_JUNIO_2026_IMPORT.priceListRevision,
+  };
+});
+
+const baharTechnicalInputs = new Map(
+  VERATEC_BAHAR_5200_PRICE_LIST_IMPORT.technicalInputs.map((entry) => [entry.technicalKey, entry])
+);
+const baharPrices: CatalogPresentationPrice[] = VERATEC_BAHAR_5200_PRICE_LIST_IMPORT.presentations.map((entry) => {
+  const technical = baharTechnicalInputs.get(entry.technicalKey);
+  if (!technical) throw new Error(`Insumo Bahar ausente: ${entry.technicalKey}`);
+  return {
+    presentationId: entry.sku,
+    providerKey: VERATEC_BAHAR_5200_PRICE_LIST_IMPORT.supplierKey,
+    familyKeys: technical.familyKeys,
+    technicalCode: technical.sourceCode,
+    recipeComponentCodes: technical.recipeComponentCodes,
+    recipeAccessoryNames: technical.recipeAccessoryNames,
+    technicalName: technical.name,
+    supplierSku: entry.sku,
+    presentationDescription: entry.description,
+    finishCode: entry.finishCode ?? "",
+    finishName: entry.finishName,
+    finishResolution: entry.finishResolution,
+    purchaseUnit: entry.purchaseUnit,
+    commercialLengthMm: entry.commercialLengthMm,
+    netPrice: entry.netPrice,
+    priceBasis: VERATEC_BAHAR_5200_PRICE_LIST_IMPORT.priceListPriceBasis,
+    currency: entry.currency,
+    priceListId: "fixture-veratec-bahar-5200",
+    priceListRevision: VERATEC_BAHAR_5200_PRICE_LIST_IMPORT.priceListRevision,
   };
 });
 
@@ -237,5 +271,128 @@ describe("Veratec 7400: receta real → pauta conjunta → costo parcial", () =>
     expect(original.lines.find((line) => line.supplierSku === "61016VER001"))
       .toMatchObject({ netPricePerPresentation: 10940, effectivePriceSource: "reference" });
     expect(original.missing).toEqual(discounted.missing);
+  });
+});
+
+describe("Veratec Bahar 5200: pauta documentada → costo por acabado", () => {
+  it("resuelve despiece y precios netos de marco y hoja; mantiene refuerzos pendientes", () => {
+    const variant = VERATEC_BAHAR_5200_VARIANTS.find((candidate) => candidate.slug === "bahar_5200_ventana_interior")!;
+    const item = quoteItem("Bahar-01");
+    item.lineaComercial = "Veratec Bahar 5200 · Ventana interior";
+    item.nombre = "Ventana abatible Bahar";
+    item.tipo = "Ventana";
+    item.vidrio = "Incoloro monolítico 4 mm";
+    item.observaciones = encodeCotizacionItemPresentationMeta({
+      lineTemplateId: "52001",
+      catalogLineKey: variant.catalogKey,
+      sistema: "Abatible",
+      fabricacionTipologia: "abatible",
+      fabricacionHojas: 1,
+      fabricacionModulos: 1,
+    });
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 3 });
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.formal?.pautaBarras?.calculable).toBe(true);
+    expect(resolved.formal?.result.perfiles.map((profile) => profile.codigoPerfil)).toContain("65212VER");
+
+    const workSnapshot = construirFabricacionTrabajoSnapshot({
+      capturedAt,
+      items: [{
+        id: item.id,
+        codigo: item.codigo,
+        nombre: item.nombre,
+        lineaComercial: item.lineaComercial,
+        colorHex: "#ffffff",
+        catalogLineKey: variant.catalogKey,
+        snapshot: resolved.formal!,
+      }],
+    });
+    const cost = buildPartialTechnicalCostSnapshot({
+      workSnapshot,
+      quoteItems: [{
+        code: item.codigo,
+        color: "Blanco",
+        catalogLineKey: variant.catalogKey,
+        supplierFamilyKey: VERATEC_BAHAR_5200_PRICE_LIST_IMPORT.familyKey,
+        glassDescription: item.vidrio,
+        recipeAccessories: getRecipeAccessoriesFromItemSnapshot(resolved.formal, item.codigo),
+      }],
+      availablePrices: baharPrices,
+      calculatedAt: capturedAt,
+    });
+
+    expect(cost?.currency).toBe("CLP");
+    expect(cost?.status).toBe("partial");
+    expect(cost?.lines).toEqual(expect.arrayContaining([
+      expect.objectContaining({ supplierSku: "65201VER000", netPricePerPresentation: 21790, commercialLengthMm: 5800 }),
+      expect.objectContaining({ supplierSku: "65212VER000", netPricePerPresentation: 27493, commercialLengthMm: 5800 }),
+    ]));
+    expect(cost?.missing.some((entry) => entry.technicalCode === "61011VER999")).toBe(true);
+    expect(cost?.missing.some((entry) => entry.description === item.vidrio)).toBe(true);
+    expect(item.precioUnitario).toBe(100000);
+  });
+
+  it.each(VERATEC_BAHAR_5200_PLEGABLE_VARIANTS)("resuelve $label en cotización y valoriza perfiles de puerta", (variant) => {
+    const item = quoteItem(`Bahar-${variant.slug}`);
+    item.tipo = "Puerta";
+    item.lineaComercial = `Veratec Bahar 5200 · ${variant.label}`;
+    item.nombre = `Puerta plegable Bahar 5200 ${variant.label}`;
+    item.descripcion = `${variant.nominalSample.width} × ${variant.nominalSample.height} mm`;
+    item.ancho = variant.nominalSample.width;
+    item.alto = variant.nominalSample.height;
+    item.areaM2 = item.ancho * item.alto / 1_000_000;
+    item.observaciones = encodeCotizacionItemPresentationMeta({
+      lineTemplateId: "52002",
+      catalogLineKey: variant.catalogKey,
+      sistema: "Plegable",
+      fabricacionTipologia: "puerta_abatible",
+      fabricacionApertura: "plegable",
+      fabricacionHojas: variant.leaves,
+      fabricacionModulos: 1,
+      fabricacionVariante: variant.slug,
+    });
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 3 });
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.formal?.recipeIdentity.variante).toBe(variant.slug);
+    expect(resolved.formal?.pautaBarras?.calculable).toBe(true);
+    expect(resolved.formal?.result.perfiles.map((profile) => profile.codigoPerfil).filter((code) => code === "65204VER").length).toBeGreaterThan(0);
+
+    const workSnapshot = construirFabricacionTrabajoSnapshot({
+      capturedAt,
+      items: [{
+        id: item.id,
+        codigo: item.codigo,
+        nombre: item.nombre,
+        lineaComercial: item.lineaComercial,
+        colorHex: "#ffffff",
+        catalogLineKey: variant.catalogKey,
+        snapshot: resolved.formal!,
+      }],
+    });
+    const cost = buildPartialTechnicalCostSnapshot({
+      workSnapshot,
+      quoteItems: [{
+        code: item.codigo,
+        color: "Blanco",
+        catalogLineKey: variant.catalogKey,
+        supplierFamilyKey: VERATEC_BAHAR_5200_PRICE_LIST_IMPORT.familyKey,
+        glassDescription: item.vidrio,
+        recipeAccessories: getRecipeAccessoriesFromItemSnapshot(resolved.formal, item.codigo),
+      }],
+      availablePrices: baharPrices,
+      calculatedAt: capturedAt,
+    });
+
+    expect(cost?.currency).toBe("CLP");
+    expect(cost?.status).toBe("partial");
+    expect(cost?.knownNetTotal).toBeGreaterThan(0);
+    expect(cost?.lines).toEqual(expect.arrayContaining([
+      expect.objectContaining({ supplierSku: "65201VER000", netPricePerPresentation: 21790, commercialLengthMm: 5800 }),
+      expect.objectContaining({ supplierSku: "65204VER000", netPricePerPresentation: 35469, commercialLengthMm: 5800 }),
+    ]));
+    expect(cost?.missing.some((entry) => entry.description === item.vidrio)).toBe(true);
+    expect(item.precioUnitario).toBe(100000);
   });
 });

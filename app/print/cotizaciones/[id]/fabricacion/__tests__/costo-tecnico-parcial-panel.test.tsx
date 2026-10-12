@@ -83,7 +83,7 @@ describe("CostoTecnicoParcialPanel", () => {
     expect(screen.getAllByText("$2.152")).toHaveLength(2);
   });
 
-  it("permite calcular el costo desde los cortes guardados cuando aún no existe snapshot de precios", async () => {
+  it("calcula automáticamente una vez el costo cuando hay pauta guardada y no existe snapshot", async () => {
     const fetchMock = jest.spyOn(global, "fetch")
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ enabled: true, canCalculate: true, snapshot: null }) } as Response)
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({
@@ -102,9 +102,8 @@ describe("CostoTecnicoParcialPanel", () => {
       }) } as Response);
 
     render(<CostoTecnicoParcialPanel quoteId="qa-4" />);
-    fireEvent.click(await screen.findByRole("button", { name: "Calcular costo" }));
-
     await waitFor(() => expect(screen.getByText("$13.477")).toBeInTheDocument());
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/cotizaciones/qa-4/costo-tecnico-parcial", { method: "POST" });
   });
 
@@ -117,6 +116,59 @@ describe("CostoTecnicoParcialPanel", () => {
     expect(await screen.findByText("Sin monto calculable")).toBeInTheDocument();
     expect(screen.getByText("Sin precios · Sin datos")).toBeInTheDocument();
     expect(screen.queryByText("$0")).not.toBeInTheDocument();
+  });
+
+  it("guarda un precio propio y actualiza el costo congelado de esta cotización", async () => {
+    const fetchMock = jest.spyOn(global, "fetch")
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({
+        enabled: true, canConfigure: true, canCalculate: false,
+        canRefresh: true,
+        snapshot: { schemaVersion: 2, status: "partial", priceOrigin: "reference", currency: "CLP", knownNetTotal: 90000, lines: [], missing: [{ technicalCode: "67401VER", description: "Marco corredera", reason: "Sin precio" }], assumptions: [], calculatedAt: "2026-10-02T12:00:00Z", sourcePautaCapturedAt: "2026-10-02T11:00:00Z" },
+      }) } as Response)
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ providers: [{
+        providerKey: "veratec", providerName: "Veratec", revision: "2026-06", percentage: 0,
+        presentations: [{ presentationId: "f14599eb-5ec8-480d-a919-779329ab8590", technicalCodes: [], sku: "67401VER000", name: "Marco corredera 2 hojas", finish: "Blanco", purchaseUnit: "M", commercialLengthMm: 5800, referenceNetPrice: null, currency: "CLP", ownNetPrice: null, effective: null }],
+      }] }) } as Response)
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true }) } as Response);
+    fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({
+      snapshot: { schemaVersion: 2, status: "partial", priceOrigin: "own", currency: "CLP", knownNetTotal: 121500, lines: [], missing: [], assumptions: [], calculatedAt: "2026-10-12T12:00:00Z", sourcePautaCapturedAt: "2026-10-02T11:00:00Z" },
+    }) } as Response);
+
+    render(<CostoTecnicoParcialPanel quoteId="qa-price" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Ver materiales" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Agregar mi precio" }));
+    const priceInput = await screen.findByLabelText("Precio neto por presentación (CLP)");
+    fireEvent.change(priceInput, { target: { value: "31500" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar y actualizar esta cotización" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenNthCalledWith(3,
+      "/api/proveedor-catalogos/mis-precios",
+      expect.objectContaining({ method: "PUT", body: JSON.stringify({ kind: "override", providerKey: "veratec", presentationId: "f14599eb-5ec8-480d-a919-779329ab8590", netPrice: 31500, currency: "CLP" }) }),
+    ));
+    await waitFor(() => expect(fetchMock).toHaveBeenNthCalledWith(4,
+      "/api/cotizaciones/qa-price/costo-tecnico-parcial",
+      expect.objectContaining({ method: "POST", body: JSON.stringify({ refresh: true }) }),
+    ));
+    expect(await screen.findByText("Precio guardado y costo actualizado para esta cotización. El precio de venta no cambia.")).toBeInTheDocument();
+    expect(screen.getByText("$121.500")).toBeInTheDocument();
+  });
+
+  it("permite refrescar explícitamente costos guardados con el precio vigente", async () => {
+    const fetchMock = jest.spyOn(global, "fetch")
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({
+        enabled: true, canCalculate: false, canRefresh: true,
+        snapshot: { schemaVersion: 2, status: "partial", priceOrigin: "reference", currency: "CLP", knownNetTotal: 90000, lines: [], missing: [], assumptions: [], calculatedAt: "2026-10-02T12:00:00Z", sourcePautaCapturedAt: "2026-10-02T11:00:00Z" },
+      }) } as Response)
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({
+        snapshot: { schemaVersion: 2, status: "complete", priceOrigin: "reference", currency: "CLP", knownNetTotal: 105000, lines: [], missing: [], assumptions: [], calculatedAt: "2026-10-12T12:00:00Z", sourcePautaCapturedAt: "2026-10-02T11:00:00Z" },
+      }) } as Response);
+    render(<CostoTecnicoParcialPanel quoteId="qa-refresh" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Actualizar costos" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenNthCalledWith(2,
+      "/api/cotizaciones/qa-refresh/costo-tecnico-parcial",
+      expect.objectContaining({ method: "POST", body: JSON.stringify({ refresh: true }) }),
+    ));
+    expect(await screen.findByText("$105.000")).toBeInTheDocument();
   });
 });
 /** @jest-environment jsdom */

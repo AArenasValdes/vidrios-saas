@@ -1,6 +1,7 @@
 import {
   buildQaPreliminaryRecipeMarker,
   isQaPreliminarySnapshotAuthorizedForCost,
+  validateQaPreliminaryQuoteSnapshots,
 } from "../qa-preliminary-snapshot.service";
 import {
   getSupplierCatalogQaConfig,
@@ -104,5 +105,21 @@ describe("snapshot preliminar Supplier Catalog V1 QA", () => {
     expect(isQaPreliminarySnapshotAuthorizedForCost({
       snapshot, organizationId: 3, userEmail: "admin@test.com", role: "admin", config: getSupplierCatalogQaConfig({} as NodeJS.ProcessEnv),
     })).toBe(false);
+  });
+
+  it("permite valorizar cortes guardados de una receta en prueba sin tratarlos como validados", () => {
+    const result = validateQaPreliminaryQuoteSnapshots({
+      workSnapshot: {} as FabricacionTrabajoSnapshot,
+      items: [{
+        itemId: "7400-2h",
+        snapshot: { recipeStatus: "testing" },
+      }],
+      organizationId: 3,
+      role: "admin",
+      userEmail: "admin@test.com",
+      config: enabledConfig,
+    });
+
+    expect(result).toEqual({ allowed: true });
   });
 });

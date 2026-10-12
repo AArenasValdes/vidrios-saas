@@ -206,6 +206,32 @@ export function resolveMobileComponentFabricacionSummary(
     };
   }
 
+  if (
+    liveResolution?.estado === "calculado" &&
+    liveResolution.preliminary &&
+    liveResolution.formal
+  ) {
+    const result = liveResolution.formal.result;
+    const preliminaryRows = [
+      { label: "Perfiles", value: `${(result.totalLinealMm / 1000).toLocaleString("es-CL")} ml` },
+      { label: "Tiras", value: `${liveResolution.formal.pautaBarras?.barras.length ?? 0} referenciales` },
+      ...(result.totalVidrioM2 > 0
+        ? [{ label: "Vidrio", value: `${result.totalVidrioM2.toLocaleString("es-CL", { maximumFractionDigits: 2 })} m²` }]
+        : []),
+    ];
+    return {
+      status: "preliminary",
+      statusLabel: "Despiece disponible",
+      showReviewUi: true,
+      contextualLineLabel,
+      technicalBrief,
+      canOpenPauta: true,
+      canOpenDespiece: true,
+      configRows,
+      materialRows: preliminaryRows,
+    };
+  }
+
   const materialRows: Array<{ label: string; value: string }> = quoteRow
     ? [
         { label: "Vidrio", value: `${quoteRow.glassM2.toLocaleString("es-CL")} m²` },
@@ -215,8 +241,8 @@ export function resolveMobileComponentFabricacionSummary(
           value: `${quoteRow.accessoryUnits.toLocaleString("es-CL")} u`,
         },
         {
-          label: "Barras",
-          value: `${quoteRow.barCount} ${quoteRow.barCount === 1 ? "barra" : "barras"}`,
+          label: "Tiras",
+          value: `${quoteRow.barCount} ${quoteRow.barCount === 1 ? "tira" : "tiras"}`,
         },
       ]
     : [];
@@ -241,7 +267,7 @@ export function resolveMobileComponentFabricacionSummary(
       : quoteRow.recipe?.status === "validada";
     return {
       status: recipeValidated ? "ready" : "preliminary",
-      statusLabel: recipeValidated ? "Fabricación lista" : "Despiece preliminar",
+      statusLabel: recipeValidated ? "Fabricación lista" : "Despiece disponible",
       showReviewUi,
       contextualLineLabel,
       technicalBrief,

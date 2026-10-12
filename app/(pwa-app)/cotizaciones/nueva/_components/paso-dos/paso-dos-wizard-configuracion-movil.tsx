@@ -23,6 +23,10 @@ import {
 import { LinePriceEditor } from "@/features/cotizaciones/line-templates/components/line-template-price-editor";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
+import {
+  dedupeConstructorRecipeCandidates,
+  getRecipeTechnicalHint,
+} from "@/features/fabricacion/services/constructor-recipe-selection.service";
 import { resolveFabricationRecipe } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
 import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
 import { formatVariantDisplayLabel } from "@/features/fabricacion/services/fabricacion-line-variant.service";
@@ -95,6 +99,22 @@ type QuickLineFormState = {
   redondeoPrecio: string;
   isActive: boolean;
 };
+
+function formatRecipeSelectionLabel(
+  recipe: FabricationRecipeRecord,
+  candidates: readonly FabricationRecipeRecord[]
+): string {
+  const label = formatVariantDisplayLabel(recipe);
+  const sameLabel = candidates.filter(
+    (candidate) => formatVariantDisplayLabel(candidate) === label
+  );
+  if (sameLabel.length < 2) return label;
+
+  const technicalHint = getRecipeTechnicalHint(recipe);
+  return technicalHint
+    ? `${label} · ${technicalHint}`
+    : `${label} · ${recipe.definition.identidad.codigo || recipe.id}`;
+}
 
 function createQuickLineFormState(
   initialGlass = ""
@@ -452,7 +472,14 @@ export function PasoDosWizardConfiguracionMovil({
     selectedRecipeLineTemplateId,
     selectedRecipeTypology,
   ]);
-  const inlineRecipeCandidates = inlineRecipeResolution?.candidatas ?? [];
+  const inlineRecipeCandidates = useMemo(
+    () =>
+      dedupeConstructorRecipeCandidates(
+        inlineRecipeResolution?.candidatas ?? [],
+        draft.fabricationRecipeId
+      ),
+    [draft.fabricationRecipeId, inlineRecipeResolution?.candidatas]
+  );
   const l20VariantSlots = useMemo(() => {
     if (selectedCatalogLineKey !== "ventora:l20" && selectedCatalogLineKey !== "ventora:l20-fijos") {
       return [];
@@ -463,12 +490,9 @@ export function PasoDosWizardConfiguracionMovil({
         slot.leavesCount === selectedRecipeLeaves
     );
   }, [selectedCatalogLineKey, selectedRecipeLeaves, selectedRecipeTypology]);
-  const isL20Line =
-    selectedCatalogLineKey === "ventora:l20" ||
-    selectedCatalogLineKey === "ventora:l20-fijos";
   const showInlineRecipeVariants =
-    (isL20Line && (inlineRecipeCandidates.length > 0 || l20VariantSlots.length > 0)) ||
-    inlineRecipeCandidates.length > 1;
+    inlineRecipeCandidates.length > 1 ||
+    (inlineRecipeCandidates.length === 0 && l20VariantSlots.length > 0);
   const lineSummaryLabel = useMemo(() => {
     return (
       resolveCotizacionItemSodalL25LineDisplayLabel({
@@ -511,19 +535,32 @@ export function PasoDosWizardConfiguracionMovil({
 
   const filteredLineTemplates = useMemo(() => {
     const normalizedQuery = lineSelectorQuery.trim().toLowerCase();
-    const candidates = availableLineTemplates.filter((template) => !normalizedQuery || [
-      template.nombre,
-      formatLineTemplateQuotePickerLabel(template),
-      template.material,
-      template.proveedor ?? "",
-    ].join(" ").toLowerCase().includes(normalizedQuery));
-    const leavesCount = Number(draft.fabricacionHojas ?? draft.sheetScheme?.match(/\d+/)?.[0]) || null;
+    const candidates = availableLineTemplates.filter((template) => {
+      const matchesProductKind = isGlassProduct
+        ? template.material === "Cristal" || template.categoria === "vidrio"
+        : template.material === "Aluminio" || template.material === "PVC";
+      return (
+        matchesProductKind &&
+        (!normalizedQuery ||
+          [
+            template.nombre,
+            formatLineTemplateQuotePickerLabel(template),
+            template.material,
+            template.proveedor ?? "",
+          ]
+            .join(" ")
+            .toLowerCase()
+            .includes(normalizedQuery))
+      );
+    });
+    const configuredLeaves = Number(draft.configuracion?.match(/(\d+)\s*hojas?/i)?.[1]) || null;
+    const leavesCount = Number(draft.fabricacionHojas ?? configuredLeaves ?? draft.sheetScheme?.match(/\d+/)?.[0]) || null;
     return isGlassProduct ? candidates : filterLineCatalogTemplates({
       templates: candidates,
       tab: lineCatalogTab,
       context: {
         componentType: draft.subtipo,
-        openingType: draft.configuracion?.trim() || draft.sistema,
+        openingType: draft.sistema?.trim() || draft.configuracion,
         leavesCount,
         material: draft.material,
       },
@@ -539,7 +576,7 @@ export function PasoDosWizardConfiguracionMovil({
     setLineSelectorQuery("");
     const context = {
       componentType: draft.subtipo,
-      openingType: draft.configuracion?.trim() || draft.sistema,
+      openingType: draft.sistema?.trim() || draft.configuracion,
       material: draft.material,
     };
     setLineCatalogTab(getDefaultLineCatalogTab({
@@ -565,6 +602,8 @@ export function PasoDosWizardConfiguracionMovil({
   const handleSelectSavedLine = (template: CotizacionLineTemplate) => {
     if (lineTemplateNeedsCommercialPrice(template)) {
       setPriceEditorTarget(template);
+      // Reemplazar el sheet por el editor evita que el selector móvil lo cubra.
+      setIsLineSelectorOpen(false);
       return;
     }
 
@@ -1525,7 +1564,7 @@ export function PasoDosWizardConfiguracionMovil({
           <fieldset className={s.stepTwoMobileRecipeSelection}>
             <legend>Variante de fabricación</legend>
             <div className={s.stepTwoMobileRecipeOptions}>
-              {inlineRecipeCandidates.length > 0 && (isL20Line || inlineRecipeCandidates.length > 1)
+              {inlineRecipeCandidates.length > 1
                 ? inlineRecipeCandidates.map((recipe) => (
                 <button
                   key={recipe.id}
@@ -1536,7 +1575,7 @@ export function PasoDosWizardConfiguracionMovil({
                   aria-pressed={draft.fabricationRecipeId === recipe.id}
                   onClick={() => onSelectFabricationRecipe?.(recipe.id, recipe)}
                 >
-                  <span>{formatVariantDisplayLabel(recipe)}</span>
+                  <span>{formatRecipeSelectionLabel(recipe, inlineRecipeCandidates)}</span>
                   <small>{recipe.definition.identidad.hojas} hojas</small>
                 </button>
               ))
@@ -1658,7 +1697,7 @@ export function PasoDosWizardConfiguracionMovil({
                   {!isGlassProduct ? (
                     <nav className={s.stepTwoMobileLineTabs} aria-label="Tipo de líneas">
                       {([
-                        ...(hasEnoughLineCompatibilityContext({ componentType: draft.subtipo, openingType: draft.configuracion?.trim() || draft.sistema, material: draft.material }) ? [["compatible", "Compatibles"] as const] : []),
+                        ...(hasEnoughLineCompatibilityContext({ componentType: draft.subtipo, openingType: draft.sistema?.trim() || draft.configuracion, material: draft.material }) ? [["compatible", "Compatibles"] as const] : []),
                         ...(availableLineTemplates.some((template) => !template.catalogKey?.startsWith("ventora:")) ? [["own", "Mis líneas"] as const] : []),
                         ["all", "Todas"] as const,
                       ]).map(([key, label]) => (
@@ -2335,17 +2374,37 @@ export function PasoDosWizardConfiguracionMovil({
       )}
 
       {priceEditorTarget && organizacionId ? (
-        <LinePriceEditor
-          template={priceEditorTarget}
-          organizationId={organizacionId}
-          onSaved={(updated) => {
-            setSavedPriceTemplate(updated);
-            setPriceEditorTarget(null);
-            onApplyCreatedLineTemplate(updated);
-            closeLineSelector();
-          }}
-          onClose={() => setPriceEditorTarget(null)}
-        />
+        createPortal(
+          <div className={s.stepTwoMobilePriceEditorOverlay} role="presentation">
+            <button
+              type="button"
+              className={s.stepTwoMobilePriceEditorBackdrop}
+              aria-label="Cerrar editor de precio"
+              onClick={() => {
+                setPriceEditorTarget(null);
+                setIsLineSelectorOpen(true);
+              }}
+            />
+            <div className={s.stepTwoMobilePriceEditorSurface}>
+              <LinePriceEditor
+                template={priceEditorTarget}
+                organizationId={organizacionId}
+                overlay={false}
+                onSaved={(updated) => {
+                  setSavedPriceTemplate(updated);
+                  setPriceEditorTarget(null);
+                  onApplyCreatedLineTemplate(updated);
+                  closeLineSelector();
+                }}
+                onClose={() => {
+                  setPriceEditorTarget(null);
+                  setIsLineSelectorOpen(true);
+                }}
+              />
+            </div>
+          </div>,
+          document.body
+        )
       ) : null}
       {isQuickCompositionOpen && quickAdjustmentEnabled ? (
         <AjusteComposicionMovil

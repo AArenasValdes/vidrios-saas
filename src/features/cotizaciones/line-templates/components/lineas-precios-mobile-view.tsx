@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   LuArrowLeft,
   LuChevronLeft,
@@ -35,11 +35,11 @@ import {
 } from "@/features/cotizaciones/line-templates/services/line-template-group.service";
 
 import {
+  getSingleFamilyTemplate,
   groupLineTemplatesByDocumentedFamily,
   groupLineTemplatesByFamily,
   LINE_TEMPLATE_FAMILY_LABELS,
   LINE_TEMPLATE_FAMILY_ORDER,
-  resolveDocumentedLineIdentity,
   resolveLineTemplateFamilyKey,
   type LineTemplateFamilyKey,
 } from "./line-template-catalog-family";
@@ -53,6 +53,10 @@ import {
   formatLineTemplatePriceLabel,
 } from "@/features/cotizaciones/line-templates/utils/catalog-labels";
 import { shouldOfferLineFabricationWorkspace } from "@/features/cotizaciones/line-templates/utils/line-fabrication-entry";
+import {
+  FABRICATION_CATALOG_ORIGIN_QUERY,
+  type LineasPreciosMobileNavigationState,
+} from "./lineas-precios-navigation-state";
 import s from "./lineas-precios-mobile-view.module.css";
 
 export type MobileStatusFilter = "todas" | "activas" | "inactivas";
@@ -113,6 +117,9 @@ type Props = {
   formatMoney: (value: number) => string;
   isChileCatalog?: boolean;
   organizationName?: string;
+  onPrepareFabricationNavigation: (state: LineasPreciosMobileNavigationState) => void;
+  navigationRestore: LineasPreciosMobileNavigationState | null;
+  onNavigationRestoreConsumed: () => void;
 };
 
 const MATERIAL_OPTIONS: Array<{ value: MobileCategoryFilter; label: string }> = [
@@ -161,6 +168,17 @@ function providerMonogram(name: string) {
 }
 
 const GLASS_KIND_ORDER = ["Monolíticos", "Laminados", "DVH", "Espejos"] as const;
+const FEATURED_VERATEC_LINE_FAMILY_ORDER = [
+  "veratec:bahar-5200",
+  "veratec:elegans-60",
+  "veratec:sliding-7400",
+  "veratec:compact-sliding",
+  "veratec:elevadora",
+] as const;
+const FEATURED_VERATEC_LINE_FAMILY_KEYS = new Set<string>(FEATURED_VERATEC_LINE_FAMILY_ORDER);
+const FEATURED_VERATEC_LINE_FAMILY_RANK = new Map<string, number>(
+  FEATURED_VERATEC_LINE_FAMILY_ORDER.map((familyKey, index) => [familyKey, index])
+);
 
 function glassKindLabel(template: CotizacionLineTemplate) {
   const glass = getLineTemplateGlassMetadata(template.catalogMetadata);
@@ -274,6 +292,9 @@ export function LineasPreciosMobileView({
   pendingLineAction = null,
   formatMoney,
   isChileCatalog = false,
+  onPrepareFabricationNavigation,
+  navigationRestore,
+  onNavigationRestoreConsumed,
 }: Props) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [scope, setScope] = useState<BrowseScope>("mine");
@@ -282,6 +303,26 @@ export function LineasPreciosMobileView({
   const [providerFamilyKey, setProviderFamilyKey] = useState<string | null>(null);
   const [showHiddenUniversalReferences, setShowHiddenUniversalReferences] = useState(false);
   const [selectedLine, setSelectedLine] = useState<CotizacionLineTemplate | null>(null);
+  const navigationRestoreAppliedRef = useRef(false);
+
+  useEffect(() => {
+    if (!navigationRestore || isLoading || navigationRestoreAppliedRef.current) return;
+
+    setScope(navigationRestore.scope);
+    setMineDrill(navigationRestore.mineDrill);
+    setProviderName(navigationRestore.providerName);
+    setProviderFamilyKey(navigationRestore.providerFamilyKey);
+    setShowHiddenUniversalReferences(navigationRestore.showHiddenUniversalReferences);
+    setSelectedLine(
+      navigationRestore.selectedLineId === null
+        ? null
+        : templates.find(
+            (template) => String(template.id) === String(navigationRestore.selectedLineId)
+          ) ?? null
+    );
+    navigationRestoreAppliedRef.current = true;
+    onNavigationRestoreConsumed();
+  }, [isLoading, navigationRestore, onNavigationRestoreConsumed, templates]);
 
   const selectedLineContext = useMemo(() => {
     if (!selectedLine) return null;
@@ -403,16 +444,33 @@ export function LineasPreciosMobileView({
       : catalogPool;
     return groupLineTemplatesByProvider(source).map((group) => {
       const documented = groupLineTemplatesByDocumentedFamily(group.templates);
+      const isVeratec = group.provider.trim().toLocaleLowerCase("es-CL") === "veratec";
+      const featuredFamilies = isVeratec
+        ? documented
+          .filter((family) => FEATURED_VERATEC_LINE_FAMILY_KEYS.has(family.key))
+          .sort((left, right) =>
+            (FEATURED_VERATEC_LINE_FAMILY_RANK.get(left.key) ?? Number.MAX_SAFE_INTEGER) -
+            (FEATURED_VERATEC_LINE_FAMILY_RANK.get(right.key) ?? Number.MAX_SAFE_INTEGER)
+          )
+        : [];
+      const featuredFamilyKeys = new Set(featuredFamilies.map((family) => family.key));
       const categoryOrder = [...LINE_TEMPLATE_FAMILY_ORDER, "mixta" as const];
-      const categories = categoryOrder.flatMap((key) => {
-        const families = documented.filter((family) => documentedFamilyTypology(family) === key);
-        if (!families.length || key === "cristales") return [];
-        return [{
-          key,
-          label: key === "mixta" ? "Varias tipologías" : familyDisplayLabel(key, LINE_TEMPLATE_FAMILY_LABELS[key]),
-          families,
-        }];
-      });
+      const categories = [
+        ...(featuredFamilies.length > 0
+          ? [{ key: "destacadas", label: "Líneas destacadas", families: featuredFamilies }]
+          : []),
+        ...categoryOrder.flatMap((key) => {
+          const families = documented.filter((family) =>
+            documentedFamilyTypology(family) === key && !featuredFamilyKeys.has(family.key)
+          );
+          if (!families.length || key === "cristales") return [];
+          return [{
+            key,
+            label: key === "mixta" ? "Varias tipologías" : familyDisplayLabel(key, LINE_TEMPLATE_FAMILY_LABELS[key]),
+            families,
+          }];
+        }),
+      ];
       return {
         key: group.provider,
         label: group.provider,
@@ -459,7 +517,16 @@ export function LineasPreciosMobileView({
 
   const openProviderFamilyByKey = (key: string) => {
     setShowHiddenUniversalReferences(false);
+    const family = openProviderGroup?.families.find((candidate) => candidate.key === key);
+    const singleTemplate = family ? getSingleFamilyTemplate(family.templates) : null;
+    if (singleTemplate) {
+      setProviderFamilyKey(null);
+      setSelectedLine(singleTemplate);
+      return;
+    }
+
     setProviderFamilyKey(key);
+    setSelectedLine(null);
   };
 
   const clearSecondaryFilters = () => {
@@ -1159,9 +1226,19 @@ export function LineasPreciosMobileView({
               </button>
               {selectedLineContext?.showFabricationAction ? (
                 <Link
-                  href={`/configuracion/empresa/lineas-precios/${selectedLine.id}/fabricacion`}
+                  href={`/configuracion/empresa/lineas-precios/${selectedLine.id}/fabricacion?${FABRICATION_CATALOG_ORIGIN_QUERY}=1`}
                   className={s.lineSheetAction}
-                  onClick={() => setSelectedLine(null)}
+                  onClick={() => {
+                    onPrepareFabricationNavigation({
+                      scope,
+                      mineDrill,
+                      providerName,
+                      providerFamilyKey,
+                      showHiddenUniversalReferences,
+                      selectedLineId: selectedLine.id,
+                    });
+                    setSelectedLine(null);
+                  }}
                 >
                   {selectedLineContext.fabricationActionLabel}
                 </Link>

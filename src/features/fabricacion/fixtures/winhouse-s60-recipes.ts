@@ -38,7 +38,7 @@ type S60Variant = {
 const COMMON_PENDING = [
   "Cruzar aliases MARCOS60/HVIS60/HVES60 con el perfil físico WinHouse y el código usado por el taller",
   "Confirmar perfiles y ubicación de los refuerzos; la ficha no los cruza inequívocamente con los códigos principales",
-  "Confirmar largos comerciales por perfil antes de generar pauta por barra",
+  "Confirmar largos comerciales por perfil antes de generar pauta por tira",
   "Definir kerf y despunte del taller",
   "Confirmar cortes a inglete, cortes a tope y mecanizados por encuentro",
   "Completar herrajes y accesorios específicos de la apertura",

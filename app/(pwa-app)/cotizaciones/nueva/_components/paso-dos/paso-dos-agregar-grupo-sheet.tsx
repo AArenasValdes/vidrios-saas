@@ -2208,12 +2208,11 @@ export function PasoDosAgregarGrupoSheet({
                   <span className={d.areaResultHint}>Calculada segun ancho × alto</span>
                 </div>
                 {measuresBarUsage ? (
-                  <div className={d.measuresBarsRail} aria-label="Uso de barras">
+                  <div className={d.measuresBarsRail} aria-label="Uso de tiras">
                     <div className={d.measuresBarsRailHead}>
-                      <span className={d.areaResultLabel}>Uso de barras</span>
+                      <span className={d.areaResultLabel}>Uso de tiras</span>
                       <strong>
-                        {measuresBarUsage.bars.length} barra
-                        {measuresBarUsage.bars.length === 1 ? "" : "s"} · sobra{" "}
+                        {measuresBarUsage.bars.length} {measuresBarUsage.bars.length === 1 ? "tira" : "tiras"} · sobra{" "}
                         {formatCubicationMm(measuresBarUsage.totalWasteMm)}
                       </strong>
                     </div>
@@ -2227,7 +2226,7 @@ export function PasoDosAgregarGrupoSheet({
                         return (
                           <li key={bar.index} className={d.measuresBarsRailItem}>
                             <div className={d.measuresBarsRailItemMeta}>
-                              <span>Barra {bar.index}</span>
+                              <span>Tira {bar.index}</span>
                               <span>
                                 {formatCubicationMm(bar.usedMm)} · sobra{" "}
                                 {formatCubicationMm(bar.wasteMm)}
@@ -2248,7 +2247,7 @@ export function PasoDosAgregarGrupoSheet({
                     </ul>
                     {measuresBarUsage.bars.length > 4 ? (
                       <p className={d.measuresBarsRailMore}>
-                        + {measuresBarUsage.bars.length - 4} barras más en la pauta
+                        + {measuresBarUsage.bars.length - 4} tiras más en la pauta
                       </p>
                     ) : (
                       <p className={d.measuresBarsRailHint}>
@@ -2271,7 +2270,7 @@ export function PasoDosAgregarGrupoSheet({
                     <div>
                       <strong>Revisión de fabricación</strong>
                       <p>
-                        Revisa cortes, barras y sobrantes por componente o en consolidado.
+                        Revisa cortes, tiras y sobrantes por componente o en la pauta conjunta.
                         Los ajustes manuales solo afectan esta cotización.
                       </p>
                     </div>

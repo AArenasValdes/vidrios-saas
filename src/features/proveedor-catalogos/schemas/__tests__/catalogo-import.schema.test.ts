@@ -1,8 +1,29 @@
 import { VERATEC_7400_JUNIO_2026_IMPORT } from "../../fixtures/veratec-7400-junio-2026";
 import { VERATEC_FAMILIES_JUNIO_2026_IMPORT } from "../../fixtures/veratec-familias-junio-2026";
+import { VERATEC_BAHAR_5200_PRICE_LIST_IMPORT } from "../../fixtures/veratec-bahar-5200-price-list";
 import { supplierCatalogImportSchema } from "../catalogo-import.schema";
 
 describe("supplierCatalogImportSchema / Veratec 7400", () => {
+  it("valida perfiles y precios netos Bahar con presentaciones de 5.800 mm", () => {
+    const parsed = supplierCatalogImportSchema.parse(VERATEC_BAHAR_5200_PRICE_LIST_IMPORT);
+    expect(parsed.supplierKey).toBe("xelena");
+    expect(parsed.supplierName).toBe("Xelena");
+    expect(parsed.familyKey).toBe("veratec:bahar-5200");
+    expect(parsed.priceListRevision).toBe("2026-06");
+    expect(parsed.priceListSourceReference).toBe("xelena:lista-precios:2026-06");
+    expect(parsed.technicalInputs).toHaveLength(10);
+    expect(parsed.presentations).toHaveLength(50);
+    expect(parsed.presentations.reduce((sum, entry) => sum + (entry.netPrice ?? 0), 0)).toBe(1_787_688);
+    expect(parsed.presentations.find((entry) => entry.sku === "65201VER000")).toMatchObject({
+      commercialLengthMm: 5800,
+      netPrice: 21790,
+      currency: "CLP",
+      purchaseUnit: "M",
+    });
+    expect(parsed.presentations.find((entry) => entry.sku === "67464VER200")?.netPrice).toBe(11525);
+    expect(parsed.presentations.every((entry) => entry.priceEvidence?.sourceReference.includes("#BAHAR"))).toBe(true);
+  });
+
   it("valida el lote y conserva lista y fuente técnica como revisiones independientes", () => {
     const parsed = supplierCatalogImportSchema.parse(VERATEC_7400_JUNIO_2026_IMPORT);
     expect(parsed.technicalSourcePublisher).toBe("Alumétrica");

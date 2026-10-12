@@ -58,6 +58,30 @@ describe("/api/proveedor-catalogos/mis-precios", () => {
     });
   });
 
+  it("expone los códigos técnicos asociados para abrir el precio correcto desde un material pendiente", async () => {
+    (readSupplierPresentationPrices as jest.Mock).mockResolvedValue([{
+      presentationId: "f14599eb-5ec8-480d-a919-779329ab8590",
+      providerKey: "veratec",
+      supplierSku: "67401VER000",
+      technicalCode: "7401",
+      recipeComponentCodes: ["67401VER"],
+      familyKeys: ["veratec:sliding-7400"],
+      presentationDescription: "Marco corredera 2 hojas",
+      finishName: "Blanco",
+      purchaseUnit: "M",
+      commercialLengthMm: 5800,
+      netPrice: null,
+      priceBasis: "commercial_presentation",
+      currency: "CLP",
+      priceListRevision: "2026-06",
+    }]);
+    (readSupplierNames as jest.Mock).mockResolvedValue(new Map([["veratec", "Veratec"]]));
+
+    const response = await GET();
+    const body = await response.json();
+    expect(body.providers[0].presentations[0].technicalCodes).toEqual(["7401", "67401VER", "67401VER000"]);
+  });
+
   it("permite guardar el precio propio del taller técnico dentro de su organización", async () => {
     const response = await PUT(new Request("http://localhost/api/proveedor-catalogos/mis-precios", {
       method: "PUT",

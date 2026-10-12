@@ -2,6 +2,7 @@ import { buildFabricationQuoteSummary } from "@/features/cotizaciones/line-templ
 import { serializeCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import { RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO } from "@/features/fabricacion/fixtures/receta-corredera-dos-hojas.fixture";
 import {
+  buildFabricacionSnapshotSyncKey,
   construirSnapshotFabricacionCotizacion,
   fabricacionSnapshotMatchesCalculatedOutput,
 } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
@@ -199,6 +200,33 @@ describe("integracion receta fabricacion -> cotizacion", () => {
     expect(snapshot.recipeIdentity.nombre).toBe("Corredera 2 hojas ejemplo no validado");
     expect(snapshot.pauta.find((row) => row.funcion === "Riel superior")?.cantidadPiezas).toBe(2);
     expect(snapshot.result.totalLinealMm).toBeGreaterThan(0);
+  });
+
+  it("mantiene la clave de sincronización pese a UUID internos nuevos", () => {
+    const snapshot = construirSnapshotFabricacionCotizacion({
+      recipe: recipeRecord(),
+      entrada: {
+        anchoTotalMm: 1200,
+        altoTotalMm: 1000,
+        cantidad: 1,
+        hojas: 2,
+        modulos: 2,
+        variante: "estandar",
+      },
+    });
+    const regenerated = structuredClone(snapshot);
+    regenerated.recipeIdentity.recetaId = "uuid-regenerado";
+    regenerated.result.perfiles = regenerated.result.perfiles.map((profile) => ({
+      ...profile,
+      componenteId: `uuid-${profile.componenteId}`,
+    }));
+
+    expect(buildFabricacionSnapshotSyncKey("item-1", snapshot)).toBe(
+      buildFabricacionSnapshotSyncKey("item-1", regenerated)
+    );
+    expect(buildFabricacionSnapshotSyncKey("item-2", snapshot)).not.toBe(
+      buildFabricacionSnapshotSyncKey("item-1", regenerated)
+    );
   });
 
   it("el resumen interno prefiere snapshot formal y mantiene fallback legacy", () => {

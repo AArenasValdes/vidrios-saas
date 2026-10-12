@@ -2,6 +2,78 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-10-12 - Precios Veratec en resumen de fabricación
+
+- La cotización conserva el costo interno congelado hasta que admin/tecnico actualiza explícitamente los costos o guarda un precio desde el resumen; el precio de venta y la pauta histórica se mantienen separados.
+- Cuando aún no hay snapshot y sí hay pauta, el panel calcula el costo automáticamente al abrir el resumen; los cálculos de lectura y precios se agrupan en consultas paralelas donde no dependen entre sí.
+- El panel muestra primero el total, el estado y los pendientes con una acción principal accesible; la actualización de un snapshot existente sigue siendo explícita.
+- Presentaciones antiguas se vuelven a resolver por proveedor, SKU, acabado y largo si el UUID cambió tras reimportar el catálogo.
+- Prueba local recorre las presentaciones Veratec con precio en las listas 7400, familias, Bahar 5200; se agregan pruebas de ruta y panel. Sin importación ni escritura en Supabase remota.
+
+## 2026-10-11 - Integración preliminar VERATEC Bahar 5200
+
+- Se agregan siete configuraciones cotizables con fallback de despiece preliminar: paño fijo, ventanas abatibles interior/exterior y plegables 3/3/0, 4/3/1, 6/5/1 y 7/4/3.
+- Se asocian las pestañas `FIJO`, `ABATIR INT Y OB` y `ABATIR EXT Y PROY` a Bahar 52 mm por coincidencia literal de SKU con la hoja `BAHAR` del libro de precios. Las fórmulas ya no aparecen como bases Elegans.
+- Se extraen las cuatro hojas finales de `pauta de corte veratec.xlsx`; sus composiciones identifican 65201 para marco y 65204 para hoja de puerta. En cotización calculan perfiles/vidrios y permiten costo CLP parcial por los perfiles con precio respaldado.
+- Se prepara fixture de diez perfiles, cinco acabados y 50 precios netos CLP por presentación de 5.800 mm, procedencia histórica 2022-07. No se importó en Supabase.
+- Para ventanas siguen pendientes los refuerzos 61011VER999/990; en plegables el workbook no define junquillo, espesor de vidrio ni accesorios. Kerf/despunte son del taller. El costo técnico sigue parcial.
+- Pruebas dirigidas cubren resolución por catálogo, medidas, asociación de precios y costo parcial. Sin smoke visual ni validación física.
+- Evidencia: `docs/fabricacion/veratec/bahar-5200/INTEGRACION_LINEA.md`; catálogo: 69 líneas.
+
+## 2026-10-11 - Sistemas comerciales desde catálogo VERATEC 236
+
+- Se reconocen doce sistemas que faltaban en el catálogo canónico; las entradas se siembran por `catalog_key` para cotizar y asignar precio por taller.
+- Se conservan páginas, anchos nominales, cámaras y rangos de vidrio publicados como procedencia. Los nuevos sistemas quedan sin receta ni precio sugerido.
+- Se separan Inova 76 de Inova nueva generación, Corredera Lineal 74 de Sliding 7400 y Corredera Lineal Compacta 60 de Compact Sliding.
+- Los diagramas de apertura no tienen leyenda suficiente para afirmar todas las composiciones; no se infieren cortes ni recetas.
+- Evidencia: `docs/catalogos-proveedores/veratec-productos-236.md`; catálogo canónico inicial: 62 líneas (65 tras agregar Bahar 5200).
+
+## 2026-10-11 - Despiece cotizable Veratec 7400 4H
+
+- Se conecta la base común preliminar 4H al panel de cubicación cuando no hay receta guardada por empresa.
+- Se admite el despiece si la selección y el croquis representan cuatro hojas correderas móviles; otras composiciones estructurales siguen bloqueadas.
+- El resumen mantiene la pauta calculada y avisa revisar/corregir cortes si el croquis tiene ajustes. Estado `testing`; accesorios y costo quedan pendientes según SKU/precio del taller.
+- Cobertura local: servicio de despiece, panel, resumen de fabricación y composición estructural incompatible.
+
+## 2026-10-09 - Paridad de variantes y despiece en Constructor móvil
+
+- El editor rápido del Constructor muestra el selector técnico de L25 y guarda sus discriminadores con el componente; sus 18 variantes SODAL/Zeta permanecen intactas.
+- El panel incluye recetas L25 compartidas cuyo `line_template_id` es nulo o canónico, combinadas por identidad con las recetas propias de la organización.
+- El editor rápido consulta recetas universales de líneas confirmadas además de las recetas guardadas por organización; al guardar una selección única conserva su identidad para que el snapshot nuevo resuelva la misma pauta que Guiada.
+- Las variantes técnicamente idénticas se agrupan. Diferencias de perfil o descuento siguen separadas y se distinguen con códigos cuando comparten rótulo.
+- Al guardar sin elegir entre varias recetas, se conserva el contexto de tipología y hojas sin inventar variante ni snapshot.
+- No se recalculan snapshots históricos. Verificación local: 173 suites / 1.380 tests, TypeScript, docs y build; smoke móvil confirmó opciones L25 habilitadas, selección Pierna abierta · Normal y persistencia visible en la pieza de prueba.
+
+## 2026-10-08 - Recetas editadas por el taller y carga rápida de fabricación
+
+- El guardado desde el editor marca la receta como propia del taller; los fallbacks universales/documentales ya no la sustituyen al cotizar.
+- La cotización nueva utiliza los descuentos editados; snapshots ya guardados conservan sus resultados originales.
+- La ruta de fabricación divide los bundles móvil/escritorio y deja que la lista aparezca antes de terminar el seed estructural.
+- Pruebas dirigidas: `fabricacion-despiece-universal-precios.test.ts`, `fabricacion-receta-procedencia.test.ts`, `sodal-p2a-recipes.test.ts` y auditorías de catálogo.
+- `pnpm fabrication:verify` sigue con regresiones existentes WinHouse/S75; detalles en `test-results/fabrication/verification.json`.
+
+## 2026-10-08 - Variantes SODAL sin elección redundante
+
+- Cuando una línea tiene una sola receta de sistema compatible y el catálogo no tiene otro eje de variantes, se prioriza esa receta y el editor entra directamente a Perfiles.
+- El selector del sistema aparece solo si existen varias recetas oficiales para esa línea. Las recetas adicionales del taller siguen disponibles en una sección propia, separadas de las variantes SODAL.
+- Una receta del taller sustituye la opción del sistema solo cuando coincide en tipología, hojas y variante; no se cambian fórmulas ni snapshots.
+
+## 2026-10-08 - Recetas SODAL precargadas en configuración de hojas
+
+- Las variantes SODAL con fixtures compartidos aparecen precargadas en Configuración del sistema, junto a la composición de hojas, en móvil y escritorio.
+- Código, función, base de medida y ajuste quedan visibles en la variante seleccionada. No existe botón para cargar la base.
+- Abrir la configuración no escribe en Supabase; guardar cambios crea o actualiza solo la receta del taller. No se alteran fórmulas ni snapshots.
+- Navegador local: en Óptima S-28 se comprobaron opciones de variante y seis reglas con descuentos en Paso 1, junto a la configuración del producto; no se guardaron cambios.
+- Verificado con `pnpm exec tsc --noEmit --pretty false`; no se ejecutó build ni pruebas.
+
+## 2026-10-07 - Pautas SODAL universales documentadas
+
+- Se conectan al resolver de cotizaciones para todas las organizaciones las pautas completas del Catálogo SODAL 2026 para S-28 2H/3H, S-38 RPT proyectante/fijo, Serie 3200 puerta abatible, Serie 4600 vaivén hidráulica MAB y MultiSlide S-83 4H/8H.
+- Las variantes de vidrio/bastidor/junquillo que cambian la fórmula requieren coincidencia explícita. Las precargas estructurales `base-ventora:` se sustituyen solo en cálculo de cotizaciones; recetas propias/validadas prevalecen.
+- Se corrigen los descuentos de S-83 contra la ficha 2026. L20, L25 y demás fórmulas ya listas no se reemplazan; históricos permanecen intactos.
+- No se afirma validación física. SKU de taller y largos comerciales de proveedor quedan pendientes donde el catálogo no los publica; S-38 no RPT se excluye por ambigüedad.
+- Evidencia y páginas: `docs/fabricacion/Sodal/INTEGRACION_SODAL_2026.md`. No se hicieron escrituras remotas ni se ejecutaron pruebas/build en esta pasada.
+
 ## 2026-10-07 - Reparación del borrador visible de Línea 12
 
 - La precarga L12 con sus cuatro perfiles iniciales sin ajustes ahora recibe los cinco cortes confirmados: 1203 −5, 1201 −5, 1202 −3 ×2, y 1204 +5 ×4 / −65 ×1.
@@ -2769,3 +2841,69 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
 - `/print/cotizaciones/[id]/fabricacion` ofrece una descarga PDF interna única con compra valorizada, pauta de corte, vidrios y pendientes. Lee la pauta conjunta, snapshots por pieza y costo técnico guardados; los históricos sin pauta conjunta conservan cortes por pieza sin inventar barras ni remanentes.
 - Cada barra física muestra todos sus cortes juntos y un solo remanente teórico, contrastado con el valor guardado. El PDF incorpora el logo oficial Ventora y fuerza espaciado tipográfico normal.
 - La paginación mide filas, repite encabezados y permite compartir página entre secciones. El PDF cliente permanece separado; las tablas y Excel internos siguen disponibles. Fuentes de precio por tipo sin nombres de proveedor, archivos ni revisiones.
+
+## 2026-10-07 — Smoke de líneas universales de aluminio (local)
+
+- Se probó una cotización mobile sin guardar para las familias 15, 20, 25, 4000, 5000, 35, 45, 12, 32 y 42; se registraron precio de venta mostrado, variantes y estado de fabricación en `docs/fabricacion/Arquetipo/INTEGRACION_ARQUETIPO.md`.
+- L15/L4000/L5000/L45/L32/L42 calcularon; L20 corredera requirió seleccionar variante; L20 fijo/L25/L35/L12 no calcularon en la cuenta probada. La fixture L12 conserva los datos entregados por el usuario, pero el fallback universal no incluye esa clave.
+- El selector de variante de L20 se oculta después de elegir; la UI de L42 mostró tres opciones repetidas con la etiqueta “ALAR Marco 4201”. Se registran como hallazgos para corregir; esta pasada no cambió lógica, snapshots ni datos remotos.
+
+## 2026-10-07 — Corrección de cobertura y etiquetas de fabricación (local)
+
+- L25 se reprodujo en Cotizar por ítems → Guiada: 1.200 × 1.500 mm, Pierna abierta + Normal genera snapshot con 12 cortes y siete barras de referencia. Se corrige la conclusión inicial de “sin fabricación”.
+- Se retiró `ventora:l20-fijos` del catálogo nuevo y de los selectores; la clave histórica se conserva para no alterar cotizaciones anteriores. La Línea 20 nueva queda como corredera.
+- La etiqueta de cotización pasa a **Despiece disponible** cuando ya se generó un snapshot calculable; “Validada por taller” permanece separada. La UI no llama preliminar a un despiece ya calculado.
+- El fallback de cotización incorpora las reglas disponibles para L12 y S-33/S-33 RPT; también se habilitan referencias P2U de L15, L4000 y L45 en líneas canónicas/Arquetipo. Suites numéricas prueban las resoluciones de esas pautas.
+- Se actualizan `docs/fabricacion/WORKFLOW_INTEGRAR_NUEVA_LINEA.md`, la matriz Arquetipo y el mapa de funcionalidades con el lenguaje y los límites corregidos. Smoke de navegador L12/S-33 tras recargar sigue pendiente; sin escritura de cotización ni cambios remotos.
+
+## 2026-10-07 — Validación universal de despiece confirmada por el titular (local)
+
+- Se registran como `validated` para cotizaciones nuevas en todas las organizaciones: L5000 Caracol 2H, L20 corredera 2H, L12 Shower 2H, L32 proyectante Normal 1H y L42 proyectante Normal 1H. Base: confirmación directa del titular de que las reglas fueron revisadas con su padre.
+- El resolver reemplaza borradores no validados de esas variantes con la regla universal confirmada; una receta propia ya validada conserva prioridad. L20 paño fijo sigue excluida.
+- L25 no se edita: conserva las 18 variantes de Sistema Zeta y su validación vigente.
+- Las restantes variantes/familias quedan separadas para la siguiente fase. Las pruebas automáticas comprueban cortes calculables, estados validados y reemplazo de borradores; el smoke de navegador todavía debe repetirse.
+
+## 2026-10-09 — Resolver L12 y errores de resumen (local)
+
+- L12 Shower 2H ahora resuelve la variante comercial “Corredera frontal”: se alinea la apertura a `shower` y se conservan las cinco reglas/9 cortes confirmados. No se alteran snapshots históricos.
+- Se evitan claves React repetidas en faltantes de presentación y se omite el prefijo de fuente “Arquetipo” en nombres de líneas del selector.
+- AM-35/L35 permanece sin pauta porque faltan composición, cantidades y descuentos. El resumen local de la cotización 1079 mostró 6/10 pautas; la lista de “Por componente” confirma seis listas y el detalle de cotización redirigió al dashboard, de modo que no se identificaron allí los cuatro faltantes. No se recalcularon snapshots históricos.
+- Suites dirigidas de líneas universales y presentación aprobaron: 24 pruebas. Sin escritura remota, commit, push ni deploy.
+
+## 2026-10-09 — Paridad de recetas en Constructor móvil (local)
+
+- Guiada, Constructor y revisión de fabricación consolidan copias con las mismas reglas técnicas y preservan la receta ya elegida. Al cambiar de línea, el selector rápido del Constructor usa también los fallbacks universales de snapshot.
+- Varias fórmulas distintas siguen requiriendo elección explícita. Los códigos de perfil y ajustes distinguen rótulos repetidos con diferencias reales; el precio de compra sigue viniendo de la plantilla/proveedor elegido.
+- La inferencia prioriza Shower sobre puerta/corredera genéricas para resolver Shower frontal/corredera igual que Guiada.
+- Verificación `pnpm fabrication:verify --build`: 173 suites y 1.379 pruebas aprobadas, TypeScript, documentación y build de producción completos.
+- Smoke local sin guardar: Guiada y Constructor rápido, Serie 20 Corredera 2H a 1.200 × 1.000 mm resolvieron 1/1 piezas, 12 cortes, 7 barras y 4 accesorios. El borrador temporal no se guardó.
+- En Guiada, Serie 20 aún muestra seis recetas guardadas porque sus definiciones técnicas no son idénticas. Este cambio no las declara validadas contra manuales; esa auditoría de procedencia sigue pendiente.
+- La cotización 1081 mantiene su snapshot histórico (2/5); el navegador mostró despiece disponible en las 5 piezas con el resolver actual, pero no se pudo verificar su documento guardado ni completar un smoke en viewport mobile. Sin cambios de producción, commit, push o deploy; las pruebas tampoco acreditan validación física de taller.
+
+## 2026-10-11 — Persistencia de snapshots al guardar cotizaciones (local)
+
+- Se corrige el ciclo que podía mostrar despiece en Guiada/Constructor y omitirlo del resumen guardado: las cotizaciones nuevas, borradores al finalizar, piezas agregadas y piezas con cambios técnicos resuelven snapshot al guardar.
+- Los cambios solo comerciales preservan el estado técnico. Los snapshots históricos existentes no se recalculan y los históricos sin snapshot no se completan silenciosamente.
+- La pauta global se recompone al finalizar un borrador o al agregar/modificar técnicamente una pieza. Se añadieron pruebas del ciclo y del paso hasta el resumen de fabricación.
+- Pendiente: `pnpm fabrication:verify --build` y smoke en navegador. La cotización 1092 no se modificó durante esta reparación.
+
+## 2026-10-11 — Fallback Serie 42 ALAR y ciclo de sincronización (local)
+
+- La referencia heredada ALAR 4201 ahora se normaliza a AL-42 Normal universal confirmada al resolver cotizaciones nuevas; recetas personalizadas del taller mantienen prioridad y los registros fuente no se modifican.
+- La sincronización del snapshot de revisión usa una clave estable basada en contenido calculado, evitando el bucle de actualización cuando los fallbacks recrean UUID internos.
+- Smoke en navegador: Serie 42 1H, 1.500 × 1.600 mm calculó 12 cortes y vidrio 1.407 × 1.507 mm; consola sin errores tras recargar. Línea 35 sigue pendiente por falta de composición, cantidades y descuentos documentados.
+- Verificación dirigida: 29 pruebas aprobadas. `pnpm fabrication:verify` completo pendiente en esta pasada.
+
+## 2026-10-11 — Aislamiento de pautas por componente al guardar (local)
+
+- El guardado resuelve cada snapshot de fabricación de forma independiente. Una pieza sin pauta o con datos incompatibles queda pendiente sin cancelar los cálculos de las demás.
+- Si falla la lectura de recetas del taller, el guardado intenta igualmente las reglas universales disponibles; cada error queda asociado al componente en los logs.
+- La cotización 1093 conserva su snapshot histórico 2/5. No se completan pautas históricas con recetas actuales sin una acción explícita.
+- `pnpm fabrication:verify`: 175 suites y 1.421 pruebas aprobadas; TypeScript y `docs:check` aprobados. `pnpm fabrication:verify --build` llegó al build pero falló con `EPERM` al crear `.next/server/app/api/solicitud/[empresa]`; no se pudo cerrar el smoke nuevo porque el puerto 3002 ya está ocupado por la instancia visible en el navegador.
+
+## 2026-10-11 — Candidatos de variante y lectura acotada de recetas (local)
+
+- El Constructor combina recetas guardadas del taller y fallbacks universales en vez de reemplazar una fuente por la otra. Solo colapsa reglas técnicamente idénticas; si coinciden, la receta validada del taller conserva prioridad.
+- Al guardar, la lectura de `fabrication_recipes` ahora se limita a los `line_template_id` únicos de las piezas que requieren resolver snapshot y mantiene los filtros de estado, borrado lógico y organización.
+- Se agregaron regresiones para conservar ambas fuentes de variantes, elegir una receta propia equivalente y acotar la lectura a las líneas pertinentes.
+- `pnpm fabrication:verify`: 175 suites y 1.422 pruebas aprobadas; TypeScript y `docs:check` aprobados. Build y smoke visual no ejecutados: la instancia local visible en el navegador puede compartir `.next`; no se modificaron snapshots históricos ni datos remotos.

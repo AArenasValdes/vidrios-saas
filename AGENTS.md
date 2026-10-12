@@ -33,7 +33,8 @@ Si dos documentos se contradicen, manda este orden:
 - La cotizacion es el nucleo comercial; la pagina publica de solicitudes es complementaria
 - No reintroducir cotizador tecnico universal, ERP, logistica ni motor de compatibilidades
 - Desktop: escritorio de cotizacion + catalogo privado + constructor + cubicacion revisable; **no** CRM generico
-- Plantillas L5000/L20/L25 = **iniciales sugeridas** (no verificadas). Bases tipologicas = pendientes de taller
+- Recetas de despiece confirmadas por el titular del taller: L5000 corredera 2H, L20 corredera 2H, L12 Shower 2H, L32 proyectante Normal 1H y L42 proyectante Normal 1H. L25 SODAL/Zeta conserva sus 18 variantes validadas y no se modifica en esta integración. L20 no tiene paño fijo.
+- Las demás variantes de esas familias y las otras líneas mantienen su estado propio; no extender validación por parecido de nombre.
 - PDF cliente sin tecnico; resumen de fabricacion y pauta de corte revisable en `/print/cotizaciones/[id]/fabricacion`
 - Para marketing/growth: `AGENTS_MARKETING.md`
 - Mensaje comercial vigente: "Cotiza desde el celular, envia un PDF profesional y deja de llegar a casa a hacer presupuestos."
@@ -89,11 +90,11 @@ Ultima actualizacion operativa: 2026-09-29
 - **Pasarela de pago**: Mercado Pago Chile opera en producción para suscripciones recurrentes CLP. Los webhooks firmados son primarios; `GET /api/cron/mercadopago-billing` sincroniza diariamente pagos y renovaciones perdidos usando `CRON_SECRET`. Confirmada la reconciliación de pago recurrente aprobado y deployment `READY`; la entrega de webhook de un nuevo ciclo aún requiere confirmación independiente. Runbook: `docs/billing/README.md`.
 - **Paso actual**: **Fase 4 — Cubicación V1 vendible multi-tipología**. Ver `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`.
 - **Modelo vigente**: `fabrication_recipes` + `fabrication_recipe_tests`; seleccion de receta validada; snapshot formal en `cotizacion_items.fabricacion_snapshot`; `fabricationRecipePack`, `fabricationRecipe` y `[cub:]` quedan como compatibilidad historica.
-- **Plantillas**: L5000/L20/L25 = iniciales sugeridas (wizard Fabricación, no listado de líneas). Bases tipológicas = pendientes.
+- **Despiece validado por taller**: L5000 corredera 2H, L20 corredera 2H, L12 Shower 2H, L32 proyectante Normal 1H y L42 proyectante Normal 1H, con confirmación explícita del titular basada en las reglas revisadas con su padre. L25 SODAL/Zeta conserva sus 18 variantes validadas y no se altera. L20 paño fijo no existe. Otras variantes y líneas conservan su estado independiente.
 - **Cotizar**: filtra por tipología de pieza; pide herraje solo si hay varias activas.
 - **Handoffs**: `CUBICACION_PAUTA_HANDOFF.md` + `CONSTRUCTOR_DESKTOP_HANDOFF.md`.
 - **Cómo seguir**:
- 1. Calibrar L5000/L20/L25 con fabricaciones reales (piloto);
+ 1. Mantener validadas las variantes confirmadas de L5000/L20 y L25; completar las variantes y líneas que aún no tienen pauta;
  2. Fórmulas reales paño fijo / abatible / puerta antes de marketing de cobertura amplia;
  3. Constructor/PDF: rasterizar PDF real con Poppler si se toca croquis;
  4. no reabrir 2B, CRM/Kanban ni inventar tipologías en el catálogo.

@@ -460,7 +460,7 @@ export function CuadernoConstructorMovil({
                               </dd>
                             </div>
                             <div>
-                              <dt>Barras</dt>
+                              <dt>Tiras</dt>
                               <dd>
                                 {cubicacionDomain.technicalSummary.barras > 0
                                   ? cubicacionDomain.technicalSummary.barras

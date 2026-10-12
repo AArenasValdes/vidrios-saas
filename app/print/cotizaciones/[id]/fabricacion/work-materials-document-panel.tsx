@@ -127,20 +127,20 @@ export function WorkMaterialsDocumentPanel(props: Props) {
         <ExportActions kind="materials" fileBase={fileBase} document={props.document} companyName={props.companyName} quoteCode={props.quoteCode} work={props.work} issueDate={props.issueDate} onError={setExportError} />
         {exportError ? <p role="alert" className={s.exportNotice}>{exportError}</p> : null}
 
-        <MaterialTable title="Perfiles totales" empty="No hay barras en una pauta conjunta guardada." hasRows={props.document.profiles.length > 0}>
+        <MaterialTable title="Perfiles totales" empty="No hay tiras en una pauta conjunta guardada." hasRows={props.document.profiles.length > 0}>
           <table className={s.profileMaterialsTable}>
-            <thead><tr><th>Código / SKU</th><th>Perfil, línea y precio</th><th>Acabado</th><th>Largo</th><th>Barras</th><th>Precio unitario</th><th>Subtotal</th></tr></thead>
+            <thead><tr><th>Código / SKU</th><th>Perfil, línea y precio</th><th>Acabado</th><th>Largo</th><th>Tiras</th><th>Precio unitario</th><th>Subtotal</th></tr></thead>
             <tbody>{props.document.profiles.map((row) => <tr key={row.key}><td>{row.code}<small>{row.price ? `${row.price.isWorkshopCode ? "Código del taller" : "SKU proveedor"}: ${row.price.sku}` : "Precio pendiente"}</small></td><td><strong>{row.description}</strong><small>{row.line}</small>{row.price ? <small>{row.price.basis}{row.price.isWorkshopCode ? ` · ${row.price.sourceLabel}` : " · Precio referencial"}</small> : null}</td><td>{row.finish}</td><td>{formatMm(row.commercialLengthMm)}</td><td><strong>{row.bars}</strong></td><td>{row.price ? formatMoney(row.price.unitPrice, row.price.currency) : "Pendiente"}</td><td>{row.price ? formatMoney(row.price.subtotal, row.price.currency) : "Pendiente"}</td></tr>)}</tbody>
           </table>
           <ul className={s.profileMaterialsMobile} aria-label="Perfiles y cantidades para comprar">
             {props.document.profiles.map((row) => <li key={row.key}>
               <div className={s.profileMobileHeading}><strong>{row.code}</strong><span>{row.description}</span></div>
-              <dl><div><dt>Acabado</dt><dd>{row.finish}</dd></div><div><dt>Largo de barra</dt><dd>{formatMm(row.commercialLengthMm)}</dd></div><div className={s.profileMobileBars}><dt>Barras a comprar</dt><dd>{row.bars}</dd></div></dl>
+              <dl><div><dt>Acabado</dt><dd>{row.finish}</dd></div><div><dt>Largo de tira</dt><dd>{formatMm(row.commercialLengthMm)}</dd></div><div className={s.profileMobileBars}><dt>Tiras a comprar</dt><dd>{row.bars}</dd></div></dl>
               <small>{row.line}</small>
               {row.price ? <div className={s.materialPriceDetails}><strong>{row.price.isWorkshopCode ? "Código del taller" : "SKU proveedor"}: {row.price.sku}</strong><span>{row.price.basis}{row.price.isWorkshopCode ? ` · ${row.price.sourceLabel}` : " · Precio referencial"}</span><span>Unitario {formatMoney(row.price.unitPrice, row.price.currency)} · subtotal {formatMoney(row.price.subtotal, row.price.currency)}</span></div> : <small>Precio pendiente</small>}
             </li>)}
           </ul>
-          {!props.document.hasJointCuttingPlan ? <p className={s.documentNote}>Este histórico no conserva pauta conjunta. No se recalcularon barras.</p> : null}
+          {!props.document.hasJointCuttingPlan ? <p className={s.documentNote}>Este histórico no conserva pauta conjunta. No se recalcularon tiras.</p> : null}
         </MaterialTable>
 
         <MaterialTable title="Accesorios" empty="Sin accesorios registrados en los snapshots." hasRows={props.document.accessories.length > 0}>

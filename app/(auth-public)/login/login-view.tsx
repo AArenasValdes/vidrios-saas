@@ -2,7 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type FormEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Eye, EyeOff, Lock, Mail, PlayCircle, RefreshCcw, X } from "lucide-react";
 
@@ -48,8 +54,9 @@ const copy = {
   signupAction: "Solicitar cuenta",
   oauthError:
     "No pudimos completar el acceso social. Intenta con tu correo y contrasena.",
-  localHint:
-    "En este computador usas las mismas cuentas que en ventorap.cl. Si Google no vuelve, agrega http://localhost:3000/auth/callback en Supabase Auth.",
+  localHintPrefix:
+    "En este computador usas las mismas cuentas que en ventorap.cl. Si Google no vuelve, agrega",
+  localHintSuffix: "en Supabase Auth.",
   oauthNoEmailError:
     "Tu cuenta social no compartio un correo. Usa otra cuenta o entra con correo y contrasena.",
   identityConflictError:
@@ -85,6 +92,23 @@ const LOGIN_TIMEOUT_MS = 12000;
 const LOGIN_COOKIE_READY_TIMEOUT_MS = 4000;
 const LOGIN_COOKIE_POLL_INTERVAL_MS = 120;
 type InstallVideoKey = "android" | "iphone";
+
+const subscribeToLocalOrigin = () => () => undefined;
+
+function getLocalOriginSnapshot() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  const hostname = window.location.hostname;
+  return hostname === "localhost" || hostname === "127.0.0.1"
+    ? window.location.origin
+    : "";
+}
+
+function getServerLocalOriginSnapshot() {
+  return "";
+}
 
 const INSTALL_VIDEOS: Record<
   InstallVideoKey,
@@ -226,16 +250,19 @@ export default function LoginView({
   const [isRecoveringApp, setIsRecoveringApp] = useState(false);
   const [rateLimitUntil, setRateLimitUntil] = useState<number | null>(null);
   const [rateLimitRemainingMs, setRateLimitRemainingMs] = useState(0);
-  const [showLocalHint, setShowLocalHint] = useState(false);
   const [activeInstallVideo, setActiveInstallVideo] = useState<InstallVideoKey | null>(null);
   const submitLockRef = useRef(false);
   const installVideoTriggerRef = useRef<HTMLButtonElement | null>(null);
   const installVideoCloseRef = useRef<HTMLButtonElement | null>(null);
-
-  useEffect(() => {
-    const hostname = window.location.hostname;
-    setShowLocalHint(hostname === "localhost" || hostname === "127.0.0.1");
-  }, []);
+  const localOrigin = useSyncExternalStore(
+    subscribeToLocalOrigin,
+    getLocalOriginSnapshot,
+    getServerLocalOriginSnapshot
+  );
+  const showLocalHint = Boolean(localOrigin);
+  const localAuthCallbackUrl = localOrigin
+    ? new URL("/auth/callback", localOrigin).href
+    : "";
 
   useEffect(() => {
     return scheduleLoginPrefetch(() => {
@@ -518,7 +545,7 @@ export default function LoginView({
               <p className={s.formSubtitle}>{copy.subtitle}</p>
               {showLocalHint ? (
                 <p className={s.localHint} role="note">
-                  {copy.localHint}
+                  {copy.localHintPrefix} {localAuthCallbackUrl} {copy.localHintSuffix}
                 </p>
               ) : null}
             </header>

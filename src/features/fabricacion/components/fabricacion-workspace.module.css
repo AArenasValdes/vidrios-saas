@@ -6532,6 +6532,16 @@
   background: #f5f9ff;
 }
 
+.sodalRecipeRuleList {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0 0 0 18px;
+  color: #40516a;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .fabStructuralBanner {
   display: flex;
   flex-wrap: wrap;

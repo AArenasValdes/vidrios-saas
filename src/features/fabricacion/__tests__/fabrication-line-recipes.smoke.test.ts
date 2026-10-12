@@ -17,6 +17,7 @@ import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/s
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import { getLineVariantSlots } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
 import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import { buildFabricationQuoteSummary } from "@/features/cotizaciones/line-templates/types/fabrication-quote-summary";
 import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 
@@ -131,6 +132,11 @@ describe("smoke de recetas WinHouse para cubicación, despiece y pauta", () => {
       expect(resolved.preliminary).toBe(true);
       expect(resolved.formal?.result.perfiles.length).toBeGreaterThan(0);
       expect(resolved.cubication?.cuts.length).toBeGreaterThan(0);
+      const summary = buildFabricationQuoteSummary([
+        { ...item, fabricacionSnapshot: resolved.formal! },
+      ]);
+      expect(summary.items).toHaveLength(1);
+      expect(summary.items[0]?.snapshot.cuts.length).toBeGreaterThan(0);
     }
   });
 

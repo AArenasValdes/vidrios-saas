@@ -1908,7 +1908,7 @@ export function QuoteConstructorWorkspace({
                     barsHint={
                       activeFabricationResolution?.estado === "calculado" &&
                       !activeFabricationResolution.barsAvailable
-                        ? "Agrega largos comerciales para calcular barras."
+                        ? "Agrega largos comerciales para calcular tiras."
                         : null
                     }
                   />

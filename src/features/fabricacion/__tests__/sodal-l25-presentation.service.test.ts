@@ -52,6 +52,22 @@ describe("sodal-l25-presentation.service", () => {
     ).toBe("Serie 25 — Corredera 2 hojas");
   });
 
+  it("no expone Arquetipo como parte del nombre universal de una línea", () => {
+    expect(
+      formatLineTemplateQuotePickerLabel({
+        catalogKey: "ventora:arquetipo-l32-proyectante",
+        nombre: "Arquetipo · Línea 32 — Proyectante y paño fijo",
+      })
+    ).toBe("Línea 32 — Proyectante y paño fijo");
+  });
+
+  it("identifica Elegans 60 en el selector en vez de mostrar solo hoja interior/exterior", () => {
+    expect(formatLineTemplateQuotePickerLabel({
+      catalogKey: "ventora:veratec-elegans-60-ventana-hoja-interior",
+      nombre: "Ventana · hoja interior",
+    })).toBe("Elegans 60 — Ventana abatible · hoja interior");
+  });
+
   it("presenta nombres contextuales por cantidad de hojas", () => {
     expect(formatSodalL25ContextualLineName(2)).toBe("L25 Corredera · 2 hojas");
     expect(formatSodalL25ContextualLineName(3)).toBe("L25 Corredera · 3 hojas");

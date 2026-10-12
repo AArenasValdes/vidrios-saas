@@ -7,13 +7,23 @@
 
 ### Actualización catálogo y gate 2026-09-04 (vigente)
 
-- Catálogo comercial canónico: **31 líneas** Ventora (`default-line-catalog.ts`). **Veratec 7400 PVC** (`ventora:veratec-7400-corredera`) viene de la ficha Alumétrica indicada en `docs/fabricacion/alumetrica/2026-09-21-veratec-7400.md`: 12 destajes y vidrio `X/2−158` / `Y−177`; barra 5.800 mm. Monolítico 4 mm queda `lista_para_validar`; TP 20 mm y 24 mm permanecen pendientes por contradicciones del origen. Sus recetas siguen en `draft` hasta probar y validar en taller. AM-35 y las líneas 15, 4000 y 12 son tradicionales/multiproveedor con identidad documentada, receta incompleta y sin validación automática. **Línea 45** (`ventora:serie-45-puerta`) usa destajes Serie 45 practicable (vidrio `X−170`/`Y−183`, marco 4522, bastidor 4531, junquillo 4534). Estado `lista_para_validar`; no es validación de taller. No usar destajes Alumétrica 4581/4584. **Serie 4800** (`ventora:serie-4800-corredera-2h`) usa destajes SODAL Diamond corredera 2H: vidrio `X/2−44` / `Y−93` (solo monolítico), rieles `X−16`, jamba `Y`, zócalo/cabezal `X/2−15`, traslapo/pierna `Y−32`. Variantes **normal** (4806/4808) y **reforzada** (4810/4811). Estado `lista_para_validar`. Zeta 1:1 queda solo para 2H 1800×1500 y 3H 3000×1500.
+- Catálogo comercial canónico actual: **69 líneas** Ventora (`default-line-catalog.ts`). **Veratec 7400 PVC** (`ventora:veratec-7400-corredera`) viene de la ficha Alumétrica indicada en `docs/fabricacion/alumetrica/2026-09-21-veratec-7400.md`: 12 destajes y vidrio `X/2−158` / `Y−177`; barra 5.800 mm. Monolítico 4 mm queda `lista_para_validar`; TP 20 mm y 24 mm permanecen pendientes por contradicciones del origen. Sus recetas siguen en `draft` hasta probar y validar en taller. AM-35 y las líneas 15, 4000 y 12 son tradicionales/multiproveedor con identidad documentada, receta incompleta y sin validación automática. **Línea 45** (`ventora:serie-45-puerta`) usa destajes Serie 45 practicable (vidrio `X−170`/`Y−183`, marco 4522, bastidor 4531, junquillo 4534). Estado `lista_para_validar`; no es validación de taller. No usar destajes Alumétrica 4581/4584. **Serie 4800** (`ventora:serie-4800-corredera-2h`) usa destajes SODAL Diamond corredera 2H: vidrio `X/2−44` / `Y−93` (solo monolítico), rieles `X−16`, jamba `Y`, zócalo/cabezal `X/2−15`, traslapo/pierna `Y−32`. Variantes **normal** (4806/4808) y **reforzada** (4810/4811). Estado `lista_para_validar`. Zeta 1:1 queda solo para 2H 1800×1500 y 3H 3000×1500.
+- **VERATEC Bahar 5200**: las láminas identifican abatible, oscilobatiente, pivotante, proyectante, plegable y composiciones mixtas; no se infiere una pauta para cada dibujo. La pauta documenta paño fijo, ventanas abatibles interior/exterior/proyectante y cuatro plegables (3/3/0, 4/3/1, 6/5/1 y 7/4/3). Usa perfiles 65201/65204 y 5.800 mm; vidrio, junquillo y accesorios siguen pendientes. `lista_para_validar`; sin prueba física ni importación remota. Expediente: `docs/fabricacion/veratec/bahar-5200/INTEGRACION_LINEA.md`.
 - **AL-32 / AL-42** (`ventora:l32` / `ventora:l42`) son **proyectantes**. La Serie 42 conserva la receta anterior y ofrece variantes separadas `ALAR` y `SODAL`: ALAR 4201/4202 queda incompleta por medida de junquillo y vidrio; SODAL 4209/4202/4229 es documental sin cámara monolítica y no está validada en taller. Las mermas SODAL quedan documentadas, no alteran cortes ni barras. El bootstrap agrega solo variantes ausentes; no reemplaza recetas personalizadas ni snapshots. Detalle: `docs/fabricacion/2026-09-21-serie-42-proveedores.md`.
 - Al asignar línea en cotización, propagar tipología/hojas/receta desde catálogo; no reutilizar receta validada si su tipología no coincide con la línea elegida.
 - **Vidrio base en receta = opcional.** El gate **Probar fabricación** bloquea solo perfiles/accesorios obligatorios incompletos; sin vidrio base aparece advertencia, no bloqueo (el maestro puede definir vidrio al cotizar cada pieza).
 - Editor de receta: selector de vidrio con catálogo Ventora completo + vidrio propio del taller (`RecipeGlassNamePicker`).
 - UX editor: chips de tira comercial (6,00 / 5,95 / 5,90 m) aplican a todas las piezas al elegir; botón “Aplicar a todas las piezas” solo con medida custom.
 - Auditorías internas: `auditoria-catalogo-lineas-ventora` (fabricación por línea) y `auditoria-integridad-catalogo-lineas` (integridad de códigos; categorías mutuamente excluyentes que suman 30).
+
+### Pautas universales SODAL 2026 (2026-10-07)
+
+- Fallback global para cotizaciones nuevas: Óptima S-28 2H/3H (TP 20 mm), S-38 RPT proyectante y fijo (selección S383/S387 en fijo), Serie 3200 1H (selección de bastidor 3221/3225), Serie 4600 vaivén con quicio hidráulico MAB y MultiSlide S-83 4H/8H.
+- No reemplazar recetas propias ni validadas. Solo se permite sustituir precargas genéricas `base-ventora:` o `ventora-arquetipo:` cuando no hay receta propia compatible; las nuevas precargas guardan la fuente SODAL 2026.
+- Las fórmulas fuente pueden calcular despiece aunque la receta no tenga validación física. No mostrar “preliminar” solo por estado `testing`; mostrarlo solo si la receta declara cálculo con pendientes. No llamar `validated` a las pautas documentales nuevas.
+- S-28 se bloquea si el vidrio explícito no es TP 20 mm; S-38 RPT se bloquea para vidrio monolítico. El Catálogo 2026 no trae SKU del taller ni confirma largo comercial; el preset 6.000 mm sigue siendo Ventora.
+- S-33/S-33 RPT y 4800 conservan la resolución existente. L20/L25 y demás recetas listas quedan intactas. S-38 sin RPT queda fuera por ambigüedad.
+- Expediente con páginas fuente: `docs/fabricacion/Sodal/INTEGRACION_SODAL_2026.md`.
 
 ### Actualización variantes multi-hoja 2026-09-17 (vigente)
 
@@ -22,6 +32,7 @@
 - **Cinco bases genéricas:** L5000, L20, L25, AL-32, AL-42. Catálogo de slots: `line-base-variant-catalog.ts`; seed idempotente al abrir Fabricación.
 - **L25 SODAL canónico (2026-09-18):** 18 recetas `validated` por org desde evidencia Zeta (`sodal-l25-zeta-recipes.ts`, gate 22 tests @ 0 mm). Seed/backfill idempotente `seed-sodal-l25-recipes.ts`; legacy L25 sin `zeta:confirmed:` se archiva. Resolver `resolveFabricationRecipe()` con identidad glazing × pierna × refuerzo; UI solo pierna/refuerzo (`FabricationVariantSelector`). Sin mensajes de “validación pendiente” ni editor de fórmulas para L25. Precio m² comercial independiente de receta técnica.
 - **L25 legacy caracol (pre-Zeta):** ignorada/archivada cuando existen recetas SODAL validated; snapshots históricos intactos.
+- **Confirmación de taller 2026-10-07:** L5000 corredera 2H, L20 corredera 2H, L12 Shower 2H, L32 proyectante Normal 1H y L42 proyectante Normal 1H quedan validadas por confirmación explícita del titular, basada en los descuentos revisados con su padre. L20 no tiene paño fijo. La validación aplica solo a esas configuraciones. L25 conserva sus 18 variantes Zeta validadas y sus fórmulas intactas.
 - **Snapshots:** `cotizacion_items.fabricacion_snapshot` inmutable; versionar recetas validadas, no sobrescribir.
 
 ### Actualización UX 2026-08-11 (vigente)
@@ -50,7 +61,7 @@ Reglas:
 3. No propongas nesting, CAD libre, optimizador de barras, inventario, fabricación automática ni CRM/Kanban.
 4. No propongas ampliar el selector de “partida” con tipologías (bow, abatible ventana, proyectante, etc.).
 5. Distingue siempre: **precio (línea)** ≠ **estimación (partida)** ≠ **tipología (constructor)**.
-6. L5000 / L20 = **“Plantillas iniciales sugeridas”**, no “verificadas”, hasta probar fabricaciones reales. **L25** = catálogo técnico SODAL canónico (18 recetas Zeta `validated` por org); no requiere validación de taller del cliente.
+6. **L5000/L20/L12/L32/L42**: despiece validado por el titular solo en las configuraciones enumeradas arriba. **L25**: catálogo técnico SODAL canónico, 18 variantes Zeta `validated` por organización; no modificar ni pedir validación adicional al cliente.
 7. Abatible / proyectante / puertas / paño fijo como base = **“Base pendiente de validación del taller”** — no vender como cubicación lista sin fórmulas validadas.
 8. En cotización: filtrar por tipología ya elegida en la pieza; pedir solo herraje/variante si hay varias recetas activas.
 9. El reporte `C:\Users\aless\OneDrive\Escritorio\deep-research-report.md` solo define catálogo reconocido y prioridad de integración; no autoriza fórmulas, descuentos ni cortes.
@@ -89,7 +100,7 @@ El modelo de cubicación pasa a **recetas de componentes reales** (riel, jamba, 
 - Pack `fabricationRecipePack` en metadata (variantes por línea); `fabricationRecipe` espeja la activa/default.
 - Identidad: material + línea + tipología + hojas + módulos + `aperturaTipo` + `herrajeTipo` (+ `herrajeLabel` si otro) + variante.
 - Wizard: Usar plantilla sugerida | Partir de base tipológica | Configurar propia.
-- Plantillas L5000/L20/L25 = iniciales sugeridas (corredera caracol), no verificadas.
+- L5000 corredera 2H y L20 corredera 2H tienen despiece universal validado por el titular; L25 SODAL/Zeta mantiene 18 variantes validadas. No ofrecer L20 paño fijo ni extrapolar validación a otras variantes.
 - Bases tipológicas (paño fijo, abatible, proyectante, puertas) = pendientes, sin mm inventados.
 - Cotización: no re-pide tipología; pide herraje/variante solo si hay varias activas compatibles.
 - Versionado: bump solo en el **primer** cambio post-`validada`; snapshot protege cotizaciones.
@@ -153,7 +164,7 @@ A) Catálogo privado (configuración)
    1. Crear línea: nombre, precio, mínimo, redondeo (esto alcanza para cotizar)
    2. Uso: Solo cotizar | Estimación | Cubicación y pauta
    3. Fabricación — primero ORIGEN (arriba en UI):
-      - Plantilla inicial sugerida (L5000 / L20 / L25 corredera caracol) — NO verificada
+      - Despiece validado: L5000 2H, L20 corredera 2H, L12 Shower 2H, L32/42 proyectante Normal 1H; L25 conserva 18 variantes Zeta validadas. Otras configuraciones deben auditarse por separado.
       - Base tipológica (paño fijo, abatible, proyectante, puertas) — pendiente de taller
       - Configurar propia
    4. Tipología + herraje + hojas → perfiles (códigos reales) → barras referenciales

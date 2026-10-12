@@ -1,6 +1,7 @@
 export type MyPresentationPrice = {
   presentationId: string;
   familyKeys?: string[];
+  technicalCodes?: string[];
   sku: string;
   name: string;
   finish: string | null;

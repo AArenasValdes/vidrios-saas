@@ -4,6 +4,7 @@ import {
   resolveComponentPreviewSvg,
   shouldRenderComponentPreview,
 } from "@/features/cotizaciones/services/resolve-component-preview-svg";
+import { resolveCotizacionItemDrawingSvg } from "@/features/cotizaciones/visual-composer/services/resolve-item-drawing-svg";
 import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import { setQuickPaneDecoration } from "@/features/cotizaciones/visual-composer/services/quick-composition-adjustment.service";
 
@@ -62,6 +63,45 @@ describe("resolveComponentPreviewSvg", () => {
       expect(svg.trim().startsWith("<svg")).toBe(true);
     });
   });
+
+  it.each([
+    [6, "6 hojas plegables"],
+    [7, "7 hojas plegables"],
+  ] as const)(
+    "representa cada una de las %i hojas plegables en el croquis",
+    (leafCount, configuration) => {
+      const svg = resolveComponentPreviewSvg({
+        type: "Puerta",
+        system: "Plegable",
+        configuration,
+        width: 2600,
+        height: 2015,
+        colorHex: "#a8a8a8",
+        maxW: 300,
+        maxH: 150,
+      });
+
+      expect([...svg.matchAll(/data-door-unified-panel="active"/g)]).toHaveLength(leafCount);
+      expect([...svg.matchAll(/data-door-fold-line="true"/g)]).toHaveLength(leafCount);
+      expect([...svg.matchAll(/data-door-fold-joint="/g)]).toHaveLength(leafCount - 1);
+      expect([...svg.matchAll(/data-door-handle="true"/g)]).toHaveLength(1);
+      expect(svg).toContain(`data-door-config="${leafCount}_hojas_plegables"`);
+
+      const pdfSvg = resolveCotizacionItemDrawingSvg({
+        tipo: "Puerta",
+        sistema: "Plegable",
+        configuracion: configuration,
+        ancho: 2600,
+        alto: 2015,
+        colorHex: "#a8a8a8",
+        maxW: 300,
+        maxH: 150,
+        variant: "pdf",
+      });
+
+      expect([...pdfSvg.matchAll(/data-door-unified-panel="active"/g)]).toHaveLength(leafCount);
+    }
+  );
 
   it("actualiza el preview al cambiar medidas y color", () => {
     const base = resolveComponentPreviewSvg({

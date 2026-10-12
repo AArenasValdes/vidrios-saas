@@ -18,6 +18,7 @@ import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabri
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { hasQuickCompositionStructuralChanges } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
+import { isVeratec7400FourMobileComposition } from "@/features/fabricacion/services/veratec-quote-composition.service";
 
 export type FabricationSummaryItem = {
   itemId: string;
@@ -82,28 +83,45 @@ function resolveDisplaySnapshot(
     recipes?: FabricationRecipeRecord[];
     organizationId?: number | null;
     trabajoSnapshot?: FabricacionTrabajoSnapshot | null;
-  }
+    /** Evita recalcular snapshots formales en una cotización histórica. */
+    allowLiveFormal?: boolean;
+  },
+  resolvedLive?: ReturnType<typeof resolveFabricacionDespieceForQuoteItem> | null
 ): CotizacionItemCubicationSnapshot | null {
   if (
     meta.guidedVisualConfig?.quickCompositionStructural ||
     hasQuickCompositionStructuralChanges(meta.quickCompositionAdjustment)
-  ) return null;
+  ) {
+    if (!isVeratec7400FourMobileComposition(meta)) return null;
+  }
   const frozen = item.fabricacionSnapshot
     ? fabricacionSnapshotToLegacyCubicationSnapshot(item.fabricacionSnapshot)
     : meta.cubicationSnapshot;
+
+  // Un corte ajustado explícitamente por el taller para esta cotización
+  // prevalece sobre el snapshot formal del catálogo.
+  if (meta.cubicationSnapshot?.source === "manual") {
+    return meta.cubicationSnapshot;
+  }
 
   if (!options?.recipes || options.organizationId == null) {
     return frozen ?? null;
   }
 
-  const workflowItem = item as CotizacionWorkflowItem;
-  const live = resolveFabricacionDespieceForQuoteItem({
-    item: workflowItem,
-    recipes: options.recipes,
-    organizationId: options.organizationId,
-  });
+  const live = resolvedLive === undefined
+    ? resolveFabricacionDespieceForQuoteItem({
+        item: item as CotizacionWorkflowItem,
+        recipes: options.recipes,
+        organizationId: options.organizationId,
+      })
+    : resolvedLive;
+  if (!live) return frozen ?? null;
 
-  if (live.estado !== "calculado" || !live.cubication) {
+  if (live.geometryOnly && live.cubication) {
+    return frozen ?? live.cubication;
+  }
+
+  if (options.allowLiveFormal === false || live.estado !== "calculado" || !live.cubication) {
     return frozen ?? null;
   }
 
@@ -140,6 +158,7 @@ export function buildFabricationQuoteSummary(
     recipes?: FabricationRecipeRecord[];
     organizationId?: number | null;
     trabajoSnapshot?: FabricacionTrabajoSnapshot | null;
+    allowLiveFormal?: boolean;
   }
 ): FabricationQuoteSummary {
   const rows: FabricationSummaryItem[] = [];
@@ -150,7 +169,7 @@ export function buildFabricationQuoteSummary(
     const structuralCompositionChanged = Boolean(
       meta.guidedVisualConfig?.quickCompositionStructural ||
       hasQuickCompositionStructuralChanges(meta.quickCompositionAdjustment)
-    );
+    ) && !isVeratec7400FourMobileComposition(meta);
     if (structuralCompositionChanged) {
       compositionsPendingRecipe.push({
         itemId: String(item.id),
@@ -159,13 +178,27 @@ export function buildFabricationQuoteSummary(
         lineName: (item.lineaComercial ?? "").trim() || meta.referencia.trim(),
       });
     }
-    const snapshot = resolveDisplaySnapshot(item, meta, options);
+    const hasManualSnapshot = meta.cubicationSnapshot?.source === "manual";
+    const liveResolution = !structuralCompositionChanged && !hasManualSnapshot && options?.recipes && options.organizationId != null
+      ? resolveFabricacionDespieceForQuoteItem({
+          item: item as CotizacionWorkflowItem,
+          recipes: options.recipes,
+          organizationId: options.organizationId,
+        })
+      : null;
+    const snapshot = resolveDisplaySnapshot(
+      item,
+      meta,
+      options,
+      structuralCompositionChanged || hasManualSnapshot ? null : liveResolution
+    );
     if (!snapshot || snapshot.cuts.length === 0) continue;
 
     const recipe = snapshot.recipe ?? null;
     const status = item.fabricacionSnapshot
       ? item.fabricacionSnapshot.recipeStatus
       : ((recipe?.status ?? snapshot.status) as RecipeStatus | string);
+    const geometryOnly = Boolean(liveResolution?.geometryOnly) && !meta.cubicationSnapshot;
 
     rows.push({
       itemId: String(item.id),
@@ -181,7 +214,11 @@ export function buildFabricationQuoteSummary(
       herrajeLabel: recipe
         ? herrajeDisplayLabel(recipe.herrajeTipo, recipe.herrajeLabel)
         : (item.fabricacionSnapshot?.recipeIdentity.herraje ?? "-"),
-      statusLabel: formatStatusLabel(status),
+      statusLabel: snapshot.source === "manual"
+        ? "Ajustada para esta cotización"
+        : geometryOnly
+          ? "Preliminar · revisar en taller"
+          : formatStatusLabel(status),
       profilesMl: snapshot.totalProfilesLinealMm / 1000,
       glassM2: snapshot.glass?.totalM2 ?? 0,
       accessoryUnits: snapshot.accessoryUnits,

@@ -596,6 +596,13 @@ export function applyLineTemplateToGrupoDraft(
     catalogKey: catalogLineKey,
     catalogMetadata: template.catalogMetadata,
   });
+  const baharFoldingMatch = catalogLineKey.match(
+    /^ventora:veratec-bahar-5200-plegable-(\d+)-(\d+)-(\d+)$/
+  );
+  const baharFoldingLeaves = baharFoldingMatch ? Number(baharFoldingMatch[1]) : null;
+  const baharFoldingVariant = baharFoldingMatch
+    ? `bahar_5200_plegable_${baharFoldingMatch.slice(1).join("_")}`
+    : null;
 
   return syncDraftTemplatePricing({
     ...draft,
@@ -603,15 +610,23 @@ export function applyLineTemplateToGrupoDraft(
     catalogCategoria: template.categoria === "vidrio" ? "vidrio" : template.categoria === "pvc" ? "pvc" : "aluminio",
     catalogEspesor: glassMetadata.espesor ?? "",
     catalogTerminacion: glassMetadata.terminacion ?? "",
+    ...(baharFoldingLeaves
+      ? {
+          sistema: "Plegable",
+          configuracion: `${baharFoldingLeaves} hojas plegables`,
+          sheetScheme: `${baharFoldingLeaves} hojas`,
+          sheetVariant: "",
+        }
+      : {}),
     lineTemplateId: String(template.id),
     cubicationSnapshot: null,
     fabricationRecipeId: fabricationContext?.fabricationRecipeId ?? "",
-    fabricacionTipologia: fabricationContext?.fabricacionTipologia ?? "",
-    fabricacionHojas: fabricationContext?.fabricacionHojas ?? null,
-    fabricacionModulos: fabricationContext?.fabricacionModulos ?? null,
-    fabricacionApertura: fabricationContext?.fabricacionApertura ?? "",
+    fabricacionTipologia: baharFoldingLeaves ? "puerta_abatible" : fabricationContext?.fabricacionTipologia ?? "",
+    fabricacionHojas: baharFoldingLeaves ?? fabricationContext?.fabricacionHojas ?? null,
+    fabricacionModulos: baharFoldingLeaves ? 1 : fabricationContext?.fabricacionModulos ?? null,
+    fabricacionApertura: baharFoldingLeaves ? "plegable" : fabricationContext?.fabricacionApertura ?? "",
     fabricacionHerraje: fabricationContext?.fabricacionHerraje ?? "",
-    fabricacionVariante: fabricationContext?.fabricacionVariante ?? "",
+    fabricacionVariante: baharFoldingVariant ?? fabricationContext?.fabricacionVariante ?? "",
     fabricacionAnchoHojaAMm: null,
     catalogLineKey,
     fabricacionGlazing: "",

@@ -106,6 +106,37 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
     expect(s75.vidrio).toBe("DVH 4+10+5");
   });
 
+  it("enruta una variante plegable Bahar al sistema y cantidad de hojas correctos", () => {
+    const selected = applyLineTemplateToGrupoDraft(
+      createDraft({
+        subtipo: "Puerta",
+        sistema: "Corredera",
+        configuracion: "3 hojas",
+        material: "PVC",
+      }),
+      {
+        id: 9520,
+        nombre: "Bahar 5200 · Plegable 3/3/0",
+        categoria: "pvc",
+        material: "PVC",
+        catalogKey: "ventora:veratec-bahar-5200-plegable-3-3-0",
+        catalogMetadata: {},
+        vidrioPrincipalRecomendado: "Incoloro monolítico 6mm",
+        precioM2Sugerido: 65000,
+        minimoCobrable: 0,
+        redondeoPrecio: 1000,
+      }
+    );
+
+    expect(selected.sistema).toBe("Plegable");
+    expect(selected.configuracion).toBe("3 hojas plegables");
+    expect(selected.sheetScheme).toBe("3 hojas");
+    expect(selected.fabricacionTipologia).toBe("puerta_abatible");
+    expect(selected.fabricacionHojas).toBe(3);
+    expect(selected.fabricacionApertura).toBe("plegable");
+    expect(selected.fabricacionVariante).toBe("bahar_5200_plegable_3_3_0");
+  });
+
   it("debe sembrar el flujo desde el formulario actual cuando ya existe contexto", () => {
     const draft = createInitialPasoDosGrupoDraft({
       items: [],

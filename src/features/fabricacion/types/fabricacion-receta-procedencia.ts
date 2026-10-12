@@ -119,6 +119,23 @@ export function buildProcedenciaPersistence(
   }
 }
 
+/**
+ * Marca una copia guardada por el taller como receta propia. Esto evita que
+ * un fallback documental vuelva a sustituir sus reglas en cotizaciones nuevas.
+ */
+export function buildWorkshopCustomizedSource(input: {
+  sourceReference?: string | null;
+  sourceRevision?: string | null;
+}): FabricacionProcedenciaPersistence {
+  const originalReference = input.sourceReference?.trim() || "sin-fuente";
+  return {
+    sourceType: "manual",
+    sourceReference: `taller:personalizada:${encodeURIComponent(originalReference)}`,
+    sourceName: "Receta propia del taller",
+    sourceRevision: input.sourceRevision?.trim() || null,
+  };
+}
+
 export function resolveProcedenciaFromSource(input: {
   sourceType: FabricationRecipeSourceType;
   sourceReference?: string | null;

@@ -21,11 +21,13 @@ import s from "./fabricacion-mobile.module.css";
 type Props = {
   lineTemplateId: number;
   initialSuggestedRecipeId?: string | null;
+  catalogBackHref?: string;
 };
 
 export function FabricacionLineMobileShell({
   lineTemplateId,
   initialSuggestedRecipeId = null,
+  catalogBackHref = "/configuracion/empresa/lineas-precios",
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -188,6 +190,7 @@ export function FabricacionLineMobileShell({
       error={error}
       feedback={feedback}
       isSaving={isSaving}
+      onBack={() => router.replace(catalogBackHref, { scroll: false })}
       onConfigure={() => void openMobileFabrication()}
       onEdit={() => void openMobileFabrication(detailRecipe ?? focusRecipe)}
       onTest={() => {

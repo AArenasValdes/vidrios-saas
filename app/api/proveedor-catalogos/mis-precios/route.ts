@@ -38,6 +38,7 @@ export async function GET() {
       presentationIds: presentations.flatMap((row) => row.presentationId ? [row.presentationId] : []),
     });
     const providerNames = await readSupplierNames(providerKeys);
+    const catalogPresentationsById = new Map(presentations.map((presentation) => [presentation.presentationId, presentation]));
     const providers = providerKeys.map((providerKey) => {
       const rows = presentations.filter((row) => row.providerKey === providerKey);
       return {
@@ -45,27 +46,35 @@ export async function GET() {
         providerName: providerNames.get(providerKey) ?? providerKey,
         revision: rows[0]?.priceListRevision ?? "",
         percentage: pricing.adjustments.find((row) => row.providerKey === providerKey && row.active)?.percentage ?? 0,
-        presentations: rows.map((row) => ({
-          presentationId: row.presentationId,
-          familyKeys: row.familyKeys ?? [],
-          sku: row.supplierSku,
-          name: row.presentationDescription,
-          finish: row.finishName,
-          purchaseUnit: row.purchaseUnit,
-          commercialLengthMm: row.commercialLengthMm,
-          referenceNetPrice: row.netPrice,
-          currency: row.currency,
-          ownNetPrice: pricing.overrides.find((entry) => entry.presentationId === row.presentationId)?.netPrice ?? null,
-          effective: resolvePurchasePrice({
-            providerKey,
-            presentationId: row.presentationId ?? row.supplierSku,
-            referenceNetPrice: row.netPrice,
-            referenceBasis: row.priceBasis,
-            referenceCurrency: row.currency,
+        presentations: rows.map((row) => {
+          const catalogRow = catalogPresentationsById.get(row.presentationId);
+          return ({
+            presentationId: row.presentationId,
+            familyKeys: row.familyKeys ?? [],
+            technicalCodes: [...new Set([
+              catalogRow?.technicalCode,
+              ...(catalogRow?.recipeComponentCodes ?? []),
+              row.supplierSku,
+            ].filter((code): code is string => Boolean(code?.trim())))],
+            sku: row.supplierSku,
+            name: row.presentationDescription,
+            finish: row.finishName,
+            purchaseUnit: row.purchaseUnit,
             commercialLengthMm: row.commercialLengthMm,
-            organizationPricing: pricing,
-          }),
-        })),
+            referenceNetPrice: row.netPrice,
+            currency: row.currency,
+            ownNetPrice: pricing.overrides.find((entry) => entry.presentationId === row.presentationId)?.netPrice ?? null,
+            effective: resolvePurchasePrice({
+              providerKey,
+              presentationId: row.presentationId ?? row.supplierSku,
+              referenceNetPrice: row.netPrice,
+              referenceBasis: row.priceBasis,
+              referenceCurrency: row.currency,
+              commercialLengthMm: row.commercialLengthMm,
+              organizationPricing: pricing,
+            }),
+          });
+        }),
       };
     });
     return NextResponse.json({ providers });

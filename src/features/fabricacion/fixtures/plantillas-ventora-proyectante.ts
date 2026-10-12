@@ -394,7 +394,7 @@ export function crearRecetaSerie32ProyectanteNormal(input?: {
       "Marco 3201: 2 × W y 2 × H. Hoja 3202: W/hoja − 23 y H/hoja − 23.",
       "Junquillo 3208: W/hoja − 85 y H/hoja − 85.",
       "Vidrio monolítico: W/hoja − 94 y H/hoja − 94. No admite termopanel.",
-      "La tira comercial solo modifica barras, sobrantes y pauta; no modifica estas medidas.",
+      "La tira comercial solo modifica cantidad de tiras, sobrantes y pauta; no modifica estas medidas.",
     ],
   };
 }

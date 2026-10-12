@@ -38,6 +38,24 @@
   margin: 0;
 }
 
+.retryButton {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 16px;
+  border: 0;
+  border-radius: 10px;
+  background: #23477a;
+  color: #fff;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.retryButton:focus-visible {
+  outline: 3px solid rgba(30, 136, 255, .36);
+  outline-offset: 2px;
+}
+
 .loadingState {
   display: flex;
   align-items: center;

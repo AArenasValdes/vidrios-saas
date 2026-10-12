@@ -20,9 +20,9 @@ function savedWork(): FabricacionTrabajoSnapshot {
       largoComercialMm: 6000, supplierSku: "SKU-5001", indice: 1,
       despunteInicialMm: 0, perdidaCorteMm: 9, usadoMm: 2609, sobranteMm: 3391,
       cortes: [
-        { itemId: "v1", codigoItem: "V1", nombreItem: "Ventana 1", componenteId: "rail", codigoPerfil: "5001", funcion: "Riel superior", corte: null, largoMm: 1000 },
-        { itemId: "v1", codigoItem: "V1", nombreItem: "Ventana 1", componenteId: "rail", codigoPerfil: "5001", funcion: "Riel superior", corte: null, largoMm: 1000 },
-        { itemId: "v2", codigoItem: "V2", nombreItem: "Ventana 2", componenteId: "rail", codigoPerfil: "5001", funcion: "Riel superior", corte: null, largoMm: 600 },
+        { itemId: "v1", codigoItem: "V1", nombreItem: "Ventana corredera 2 hojas", componenteId: "rail", codigoPerfil: "5001", funcion: "Riel superior", corte: null, largoMm: 1000 },
+        { itemId: "v1", codigoItem: "V1", nombreItem: "Ventana corredera 2 hojas", componenteId: "rail", codigoPerfil: "5001", funcion: "Riel superior", corte: null, largoMm: 1000 },
+        { itemId: "v2", codigoItem: "V2", nombreItem: "Ventana corredera 2 hojas", componenteId: "rail", codigoPerfil: "5001", funcion: "Riel superior", corte: null, largoMm: 600 },
       ],
     }],
   };
@@ -45,7 +45,7 @@ function materials(): WorkMaterialsDocument {
       price: {
         sku: "SKU-5001", isWorkshopCode: false, sourceKind: "reference", sourceLabel: "Lista referencial · proveedor",
         sourceRevision: "archivo-interno-privado", pricedAt: "2026-10-06T10:00:00.000Z",
-        basis: "por barra", unitPrice: 10000, subtotal: 10000, currency: "CLP",
+        basis: "por tira", unitPrice: 10000, subtotal: 10000, currency: "CLP",
       },
     }],
     accessories: [
@@ -174,9 +174,11 @@ describe("orden de fabricación y materiales", () => {
     }, logoDataUrl);
     const text = pdfText(pdf);
     expect(pdf.getNumberOfPages()).toBeGreaterThanOrEqual(1);
-    for (const value of ["Orden de fabricación", "Resumen de compra", "Pauta de corte", "Orden de vidrios", "Pendientes para el maestro", "SKU-5001", "5001", "V1", "V2", "2 × 1.000 mm", "1 × 600 mm", "6.000 mm", "3.391 mm", "11.500", "1,20 m²", "Remanente teórico", "Ajustado por el taller"]) {
+    for (const value of ["Orden de fabricación", "Resumen de compra", "Pauta de corte", "Orden de vidrios", "Pendientes para el maestro", "SKU-5001", "5001", "V1 · Riel superior", "V2 · Riel superior", "2 × 1.000 mm", "1 × 600 mm", "6.000 mm", "3.391 mm", "11.500", "1,20 m²", "Remanente teórico", "Ajustado por el taller"]) {
       expect(text).toContain(value);
     }
+    expect(text).not.toContain("V1 · Ventana corredera 2 hojas · Riel superior");
+    expect(text).not.toContain("V2 · Ventana corredera 2 hojas · Riel superior");
     expect((text.match(/3\.391 mm/g) ?? [])).toHaveLength(1);
     if (logoDataUrl) expect(pdf.internal.pages[1]?.join(" ")).toContain("Do");
     expect(pdf.getNumberOfPages()).toBe(1);

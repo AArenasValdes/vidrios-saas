@@ -127,20 +127,61 @@ describe("POST /api/cotizaciones/[id]/costo-tecnico-parcial", () => {
     (persistTechnicalCostSnapshot as jest.Mock).mockResolvedValue({ snapshot: costSnapshot });
   });
 
-  it("permite guardar solo si los snapshots del ítem y la pauta comparten la marca QA autorizada", async () => {
+  it("calcula y guarda el costo desde snapshots de pauta ya guardados", async () => {
     const response = await POST(new Request("http://localhost/api/cotizaciones/1046/costo-tecnico-parcial", { method: "POST" }), route);
     expect(response.status).toBe(200);
     expect(persistTechnicalCostSnapshot).toHaveBeenCalledWith(expect.objectContaining({ organizationId: 3, quoteId: 1046 }));
   });
 
-  it("no permite a otra cuenta generar costos con una receta draft marcada para QA", async () => {
+  it("recalcula y reemplaza el costo congelado solo cuando el taller pide actualizar precios", async () => {
+    const previousSnapshot = { ...costSnapshot, knownNetTotal: 8000 };
+    (getExistingTechnicalCostSnapshot as jest.Mock).mockResolvedValue({ snapshot: previousSnapshot, status: "partial" });
+    const response = await POST(new Request("http://localhost/api/cotizaciones/1046/costo-tecnico-parcial", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh: true }),
+    }), route);
+
+    expect(response.status).toBe(200);
+    expect(buildPartialTechnicalCostSnapshot).toHaveBeenCalled();
+    expect(persistTechnicalCostSnapshot).toHaveBeenCalledWith(expect.objectContaining({
+      organizationId: 3,
+      quoteId: 1046,
+      refreshExisting: true,
+    }));
+  });
+
+  it("rechaza actualizar costos si el usuario no administra precios", async () => {
+    (getExistingTechnicalCostSnapshot as jest.Mock).mockResolvedValue({ snapshot: costSnapshot, status: "partial" });
+    (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue(quote({
+      workSnapshot: { ...workSnapshot, qaPreliminary: undefined },
+      items: [{ ...quote().items[0], fabricacionSnapshot: { ...itemSnapshot, recipeStatus: "validated", qaPreliminary: undefined } }],
+    }));
     (resolveAuthenticatedRouteContext as jest.Mock).mockResolvedValue({
-      user: { id: "other", email: "other@example.com" },
-      profile: { organizationId: 3, rol: "admin" },
+      user: { id: "viewer", email: "viewer@example.com" },
+      profile: { organizationId: 3, rol: "vendedor" },
     });
-    const response = await POST(new Request("http://localhost/api/cotizaciones/1046/costo-tecnico-parcial", { method: "POST" }), route);
-    expect(response.status).toBe(409);
+    const response = await POST(new Request("http://localhost/api/cotizaciones/1046/costo-tecnico-parcial", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh: true }),
+    }), route);
+
+    expect(response.status).toBe(403);
+    expect(buildPartialTechnicalCostSnapshot).not.toHaveBeenCalled();
     expect(persistTechnicalCostSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("calcula el costo desde cortes guardados aunque la receta draft no tenga marca de piloto QA", async () => {
+    (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue(quote({
+      workSnapshot: { ...workSnapshot, qaPreliminary: undefined },
+      items: [{ ...quote().items[0], fabricacionSnapshot: { ...itemSnapshot, qaPreliminary: undefined } }],
+    }));
+    const response = await POST(new Request("http://localhost/api/cotizaciones/1046/costo-tecnico-parcial", { method: "POST" }), route);
+
+    expect(response.status).toBe(200);
+    expect(buildPartialTechnicalCostSnapshot).toHaveBeenCalled();
+    expect(persistTechnicalCostSnapshot).toHaveBeenCalled();
   });
 
   it("permite a cualquier organización calcular el costo de una receta validada sin variables QA", async () => {
@@ -167,25 +208,4 @@ describe("POST /api/cotizaciones/[id]/costo-tecnico-parcial", () => {
     expect(readOrganizationPurchasePricing).toHaveBeenCalledWith(expect.objectContaining({ organizationId: 941 }));
   });
 
-  it("bloquea antes de leer o devolver un costo existente si falta la marca en los snapshots", async () => {
-    (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue(quote({
-      workSnapshot: { ...workSnapshot, qaPreliminary: undefined },
-      items: [{ ...quote().items[0], fabricacionSnapshot: { ...itemSnapshot, qaPreliminary: undefined } }],
-    }));
-    const response = await POST(new Request("http://localhost/api/cotizaciones/1046/costo-tecnico-parcial", { method: "POST" }), route);
-    const payload = await response.json();
-    expect(response.status).toBe(409);
-    expect(payload.error).toMatch(/marca QA preliminar/i);
-    expect(getExistingTechnicalCostSnapshot).not.toHaveBeenCalled();
-    expect(persistTechnicalCostSnapshot).not.toHaveBeenCalled();
-  });
-
-  it("bloquea si la variante persistida no coincide con la procedencia conjunta", async () => {
-    (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue(quote({
-      items: [{ ...quote().items[0], fabricacionSnapshot: { ...itemSnapshot, selectedVariant: "otra_variante" } }],
-    }));
-    const response = await POST(new Request("http://localhost/api/cotizaciones/1046/costo-tecnico-parcial", { method: "POST" }), route);
-    expect(response.status).toBe(409);
-    expect(persistTechnicalCostSnapshot).not.toHaveBeenCalled();
-  });
 });

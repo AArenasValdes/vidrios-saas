@@ -42,11 +42,17 @@ function buildProfiles(
   variant: Veratec7400Variant
 ): FabricacionComponentePerfil[] {
   const junquilloCode =
-    variant === VERATEC_7400_VARIANT_MONOLITICO_4MM ? "6306" : "6307";
+    variant === VERATEC_7400_VARIANT_MONOLITICO_4MM
+      ? "6306"
+      : variant === VERATEC_7400_VARIANT_TERMOPANEL_24MM
+        ? ""
+        : "6307";
   const junquilloName =
     variant === VERATEC_7400_VARIANT_MONOLITICO_4MM
       ? "Junquillo para vidrio 4 mm"
-      : "Junquillo para vidrio 20 mm";
+      : variant === VERATEC_7400_VARIANT_TERMOPANEL_24MM
+        ? "Junquillo 24 mm · código pendiente de confirmar"
+        : "Junquillo para vidrio 20 mm";
   const rules: ProfileRule[] = [
     { code: "7401", name: "Marco corredera 2 hojas", role: "Marco", base: "ancho_total", adjustmentMm: 6, quantity: 2, cut: "45° / 45°" },
     { code: "7401", name: "Marco corredera 2 hojas", role: "Marco", base: "alto_total", adjustmentMm: 6, quantity: 2, cut: "45° / 45°" },
@@ -72,7 +78,9 @@ function buildProfiles(
     reglaCantidad: { tipo: "fija", cantidad: rule.quantity },
     requerido: true,
     corte: rule.cut,
-    observaciones: "Fórmula visible en la ficha Alumétrica Veratec 7400.",
+    observaciones: variant === VERATEC_7400_VARIANT_TERMOPANEL_24MM && rule.role === "Junquillo"
+      ? "Medida preliminar visible en la ficha Alumétrica Veratec 7400; código 6307 no se usa para costear el junquillo de 24 mm porque la identidad sigue en conflicto."
+      : "Fórmula visible en la ficha Alumétrica Veratec 7400.",
   }));
 }
 
@@ -186,6 +194,10 @@ export function crearRecetaVeratec7400Corredera(input: {
       sobranteMinimoAprovechableMm: null,
       largoComercialDefaultMm: 5800,
     },
+    // Las fichas TP tienen conflictos documentales explícitos, pero sus reglas
+    // geométricas visibles permiten generar una pauta preliminar que el taller
+    // puede ajustar en la cotización. El estado no se promueve a validado.
+    permitirCalculoPreliminarConPendientes: isTermopanel20 || isTermopanel24,
     datosPendientes: pending,
     notasValidacion: [
       "Fuente: Alumétrica, ficha VERATEC 7400 Corredera. X = ancho total; Y = alto total; 2 hojas.",

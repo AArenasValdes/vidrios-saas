@@ -13,6 +13,7 @@ import {
  */
 export const VERATEC_WORKBOOK_SOURCE_REVISION =
   "pauta-de-corte-veratec.xlsx@sha256:30e4dc94d47aa698c48f82a89b330c601fb2794d06aed11783ac4c2c1f16de9c";
+export const VERATEC_7400_INTERNAL_NODE_HEIGHT_ADJUSTMENT_MM = -88;
 
 export const VERATEC_COMPACT_SLIDING_VARIANTS = [
   {
@@ -264,7 +265,7 @@ function buildProfiles(
       ? {}
       : {
           datosPendientes: [
-            "Confirmar asociación técnica y largo comercial antes de emitir barras de compra.",
+            "Confirmar asociación técnica y largo comercial antes de emitir tiras de compra.",
           ],
         }),
     observaciones: `Fórmula transcrita de ${variant.sourceReference}.`,
@@ -329,7 +330,49 @@ export function crearRecetaVeratecCompactSliding(input: {
     },
     perfiles: buildProfiles(variant, createId),
     vidrios: [buildGlass(variant, createId)],
-    accesorios: [],
+    accesorios: [
+      {
+        id: createId(),
+        codigo: "",
+        nombre: "Rodamiento de alta carga · consumo provisional",
+        reglaCantidad: { tipo: "por_hoja", cantidad: 2 },
+        requerido: false,
+        unidad: "unidad",
+        observaciones: "Consumo inicial propuesto para la base editable; falta referencia exacta y confirmación del taller.",
+        datosPendientes: ["Código, proveedor, costo y cantidad real por hoja pendiente de confirmar."],
+      },
+      {
+        id: createId(),
+        codigo: "",
+        nombre: "Kit de cierre central · consumo provisional",
+        reglaCantidad: { tipo: "fija", cantidad: 1 },
+        requerido: false,
+        unidad: "kit",
+        observaciones: "Un kit por ventana como referencia editable, según el criterio operativo solicitado.",
+        datosPendientes: ["Código, proveedor, costo y compatibilidad de la variante pendientes."],
+      },
+      {
+        id: createId(),
+        codigo: "",
+        nombre: "Felpa perimetral de hojas · consumo provisional",
+        reglaCantidad: { tipo: "fija", cantidad: 1 },
+        formulaCantidad: "perimetro_perfiles_hoja_m",
+        requerido: false,
+        unidad: "m",
+        observaciones: "Suma las medidas de los perfiles de función Hoja generados por esta receta; no incluye una holgura adicional.",
+        datosPendientes: ["Verificar canales, sentido y metraje real instalado en el taller."],
+      },
+      {
+        id: createId(),
+        codigo: "",
+        nombre: "Kit de tapas de desagüe y topes de goma · consumo provisional",
+        reglaCantidad: { tipo: "fija", cantidad: 1 },
+        requerido: false,
+        unidad: "kit",
+        observaciones: "Un kit por ventana como referencia editable, según el criterio operativo solicitado.",
+        datosPendientes: ["Composición, cantidad por kit, código, proveedor y costo pendientes de confirmar."],
+      },
+    ],
     configuracionCorte: {
       perdidaCorteMm: null,
       despunteInicialMm: null,
@@ -339,6 +382,7 @@ export function crearRecetaVeratecCompactSliding(input: {
     notasValidacion: [
       `Fuente: ${variant.sourceReference}; revisión ${VERATEC_WORKBOOK_SOURCE_REVISION}.`,
       "Receta preliminar de la planilla aportada; no equivale a validación de fabricante ni de taller.",
+      "Los consumos provisionales de rodamientos, cierre, felpa y tapas/topes son una base operativa editable, no consumos publicados por Veratec.",
       "El Excel indica ‘todos’ para el junquillo; el código debe elegirse por espesor (4 mm: 67062VER; 20 mm: 67464VER). No se incluye hasta que la selección del paño aporte el espesor explícito.",
       "Los largos comerciales solo se fijan cuando coinciden con presentaciones explícitas del catálogo local.",
       ...variant.pendingFields,
@@ -371,13 +415,13 @@ export function crearRecetaVeratec7400Workbook3H(input: {
     codigoPerfil: values.code,
     nombrePerfil: values.name,
     funcion: values.role,
-    largoComercialMm:
-      values.code === "67401VER"
-        ? null
-        : ["69014STL001", "67414VER", "67415VER", "69069STL000", "69071STL000", "67418VER", "61016ver"].includes(values.code)
-          ? 5800
-          : null,
-    largoComercialPendiente: values.code === "67401VER",
+    // Es una base editable. El SKU/acabado resuelto en pauta conjunta prevalece.
+    largoComercialMm: values.code === "67401VER"
+      ? 6000
+      : ["69014STL001", "67414VER", "67415VER", "69069STL000", "69071STL000", "67418VER", "61016ver"].includes(values.code)
+        ? 5800
+        : 6000,
+    largoComercialPendiente: false,
     reglaMedida: {
       ...measure(values.base, values.adjustmentMm),
       ...(values.multiplier === undefined ? {} : { multiplicador: values.multiplier }),
@@ -389,7 +433,7 @@ export function crearRecetaVeratec7400Workbook3H(input: {
     ...(values.code === "67401VER"
       ? {
           datosPendientes: [
-            "El largo de marco depende del acabado en la lista junio 2026: 5,8 m en varios acabados y 6,8 m en Negro/Negro Mate. Falta resolver el largo de presentación por acabado antes de consolidar barras.",
+            "6.000 mm es referencia editable. La lista junio 2026 publica 5.800 mm para acabados 000/153/043/199 y 6.800 mm para 200/079; prevalece el largo del SKU/acabado exacto seleccionado.",
           ],
         }
       : {}),
@@ -428,7 +472,7 @@ export function crearRecetaVeratec7400Workbook3H(input: {
       profile({ code: "69014STL001", name: "Refuerzo de marco", role: "Refuerzo de marco", base: "ancho_total", adjustmentMm: -70, quantity: 2, cut: "90° / 90°" }),
       profile({ code: "69014STL001", name: "Refuerzo de marco", role: "Refuerzo de marco", base: "alto_total", adjustmentMm: -70, quantity: 2, cut: "90° / 90°" }),
       profile({ code: variant.leafCode, name: variant.leafName, role: "Hoja", base: "ancho_por_hoja", adjustmentMm: variant.sashWidthAdjustmentMm, quantity: leafPieces, cut: "45° / 45°" }),
-      profile({ code: variant.leafCode, name: variant.leafName, role: "Hoja", base: "alto_total", adjustmentMm: -88, quantity: leafPieces, cut: "45° / 45°" }),
+      profile({ code: variant.leafCode, name: variant.leafName, role: "Hoja", base: "alto_total", adjustmentMm: VERATEC_7400_INTERNAL_NODE_HEIGHT_ADJUSTMENT_MM, quantity: leafPieces, cut: "45° / 45°" }),
       profile({ code: variant.reinforcementCode, name: "Refuerzo de hoja", role: "Refuerzo de hoja", base: "ancho_por_hoja", adjustmentMm: variant.reinforcementWidthAdjustmentMm, quantity: leafPieces, cut: "90° / 90°" }),
       profile({ code: variant.reinforcementCode, name: "Refuerzo de hoja", role: "Refuerzo de hoja", base: "alto_total", adjustmentMm: -254, quantity: leafPieces, cut: "90° / 90°" }),
       profile({ code: "67418VER", name: "Traslapo Sliding 7400", role: "Traslapo", base: "alto_total", adjustmentMm: -94, quantity: 2, cut: "90° / 90°" }),
@@ -440,7 +484,7 @@ export function crearRecetaVeratec7400Workbook3H(input: {
       perdidaCorteMm: null,
       despunteInicialMm: null,
       sobranteMinimoAprovechableMm: null,
-      largoComercialDefaultMm: null,
+      largoComercialDefaultMm: 6000,
     },
     notasValidacion: [
       `Fuente: ${variant.sourceReference}; revisión ${VERATEC_WORKBOOK_SOURCE_REVISION}.`,
@@ -477,8 +521,8 @@ export function crearRecetaVeratecElegansFijo(input: {
     codigoPerfil: values.code,
     nombrePerfil: values.name,
     funcion: values.role,
-    largoComercialMm: null,
-    largoComercialPendiente: true,
+    largoComercialMm: 6000,
+    largoComercialPendiente: false,
     reglaMedida: measure(values.base, values.adjustmentMm),
     reglaCantidad: { tipo: "fija", cantidad: 2 },
     requerido: true,
@@ -527,7 +571,7 @@ export function crearRecetaVeratecElegansFijo(input: {
       perdidaCorteMm: null,
       despunteInicialMm: null,
       sobranteMinimoAprovechableMm: null,
-      largoComercialDefaultMm: null,
+      largoComercialDefaultMm: 6000,
     },
     notasValidacion: [
       `Fuente: ${variant.sourceReference}; revisión ${VERATEC_WORKBOOK_SOURCE_REVISION}.`,
@@ -561,14 +605,14 @@ export function crearRecetaVeratecElegansBatiente(input: {
     codigoPerfil: values.code,
     nombrePerfil: values.name,
     funcion: values.role,
-    largoComercialMm: null,
-    largoComercialPendiente: true,
+    largoComercialMm: 6000,
+    largoComercialPendiente: false,
     reglaMedida: measure(values.base, values.adjustmentMm),
     reglaCantidad: { tipo: "fija", cantidad: values.quantity },
     requerido: true,
     corte: values.role === "Marco" || values.role === "Hoja" ? "45° / 45°" : "90° / 90°",
     datosPendientes: [
-      "Largo de barra y precio se resuelven por la presentación exacta; si no existe, se completan en Mis precios.",
+      "Largo de tira y precio se resuelven por la presentación exacta; si no existe, se completan en Mis precios.",
       ...(values.code.includes("999") || values.code.includes("990")
         ? ["Código transcrito del Excel; confirmar su equivalencia con el perfil comercial del taller."]
         : []),
@@ -589,7 +633,18 @@ export function crearRecetaVeratecElegansBatiente(input: {
     profile({ code: variant.reinforcementCode, name: variant.reinforcementName, role: "Refuerzo de hoja", base: "alto_total", adjustmentMm: variant.reinforcementHeightAdjustmentMm, quantity: 2 }),
   ];
   const glass = variant.glassWidthAdjustmentMm === null || variant.glassHeightAdjustmentMm === null
-    ? []
+    ? isDoor
+      ? [{
+          id: createId(),
+          nombre: "Vidrio puerta · regla preliminar (hoja menos 110 mm)",
+          reglaAncho: measure("ancho_total", variant.sashWidthAdjustmentMm - 110),
+          reglaAlto: measure("alto_total", variant.sashHeightAdjustmentMm - 110),
+          reglaCantidad: { tipo: "fija" as const, cantidad: 1 },
+          requerido: false,
+          observaciones: "Regla de la base editable propuesta por el usuario/taller; no está respaldada por Veratec en el Excel consultado.",
+          datosPendientes: ["Confirmar la regla con el taller y completar espesor/composición del vidrio."],
+        }]
+      : []
     : [{
         id: createId(),
         nombre: "Vidrio (espesor/composición pendiente)",
@@ -624,13 +679,13 @@ export function crearRecetaVeratecElegansBatiente(input: {
       perdidaCorteMm: null,
       despunteInicialMm: null,
       sobranteMinimoAprovechableMm: null,
-      largoComercialDefaultMm: null,
+      largoComercialDefaultMm: 6000,
     },
     datosPendientes: [
       "Junquillo indicado como ‘todos’: falta elegir el código compatible con el vidrio.",
       "Accesorios no calculados en esta base.",
       ...(!glass.length ? ["Las dimensiones de vidrio de la hoja no coinciden con la fórmula de cubicación; quedan pendientes."] : []),
-      "La pauta de barras queda parcial hasta asociar los códigos a presentaciones con largo configurado.",
+      "La pauta de tiras queda parcial hasta asociar los códigos a presentaciones con largo configurado.",
       "Kerf y despunte inicial son datos del taller; no están definidos por esta plantilla.",
     ],
     notasValidacion: [
@@ -665,8 +720,8 @@ export function crearRecetaVeratec7400Monorriel(input: {
     codigoPerfil: values.code,
     nombrePerfil: values.name,
     funcion: values.role,
-    largoComercialMm: null,
-    largoComercialPendiente: true,
+    largoComercialMm: 6000,
+    largoComercialPendiente: false,
     reglaMedida: {
       ...measure(values.base, values.adjustmentMm),
       ...(values.multiplier === undefined ? {} : { multiplicador: values.multiplier }),
@@ -675,7 +730,7 @@ export function crearRecetaVeratec7400Monorriel(input: {
     requerido: true,
     corte: values.cut,
     datosPendientes: [
-      "Confirmar presentación y largo comercial antes de calcular barras de compra.",
+      "6.000 mm es una referencia editable; la presentación/SKU exacta seleccionada prevalece antes del packing.",
       ...(values.code === "61016ver" ? ["Código de origen normalizado al riel 61016VER001 según la asociación documentada."] : []),
     ],
     observaciones: `Fórmula transcrita de ${variant.sourceReference}.`,
@@ -694,7 +749,7 @@ export function crearRecetaVeratec7400Monorriel(input: {
     profile({ code: "69060STL001", name: "Refuerzo de marco", role: "Refuerzo de marco", base: "ancho_total", adjustmentMm: -90, quantity: 2, cut: "90° / 90°" }),
     profile({ code: "69060STL001", name: "Refuerzo de marco", role: "Refuerzo de marco", base: "alto_total", adjustmentMm: -90, quantity: 2, cut: "90° / 90°" }),
     profile({ code: variant.leafCode, name: variant.leafName, role: "Hoja", base: "ancho_total", adjustmentMm: variant.sashWidthBaseAdjustmentMm, multiplier: 0.5, quantity: 2, cut: "45° / 45°" }),
-    profile({ code: variant.leafCode, name: variant.leafName, role: "Hoja", base: "alto_total", adjustmentMm: -88, quantity: 2, cut: "45° / 45°" }),
+    profile({ code: variant.leafCode, name: variant.leafName, role: "Hoja", base: "alto_total", adjustmentMm: VERATEC_7400_INTERNAL_NODE_HEIGHT_ADJUSTMENT_MM, quantity: 2, cut: "45° / 45°" }),
     profile({ code: large ? "69069STL000" : "69071STL000", name: "Refuerzo de hoja", role: "Refuerzo de hoja", base: "ancho_total", adjustmentMm: variant.reinforcementWidthAdjustmentMm, multiplier: 0.5, quantity: 2, cut: "90° / 90°" }),
     profile({ code: large ? "69069STL000" : "69071STL000", name: "Refuerzo de hoja", role: "Refuerzo de hoja", base: "alto_total", adjustmentMm: large ? -270 : -234, quantity: 2, cut: "90° / 90°" }),
     profile({ code: variant.leafCode, name: "Traslapo de hoja fija", role: "Traslapo", base: "alto_total", adjustmentMm: -96, quantity: 1, cut: "90° / 90°" }),
@@ -751,12 +806,12 @@ export function crearRecetaVeratec7400Monorriel(input: {
       perdidaCorteMm: null,
       despunteInicialMm: null,
       sobranteMinimoAprovechableMm: null,
-      largoComercialDefaultMm: null,
+      largoComercialDefaultMm: 6000,
     },
     datosPendientes: [
       "El Excel deja ‘todos’ en junquillos de hoja y paño fijo; se omiten hasta elegir SKU por vidrio.",
       "No se informan accesorios, espesor/composición del vidrio, kerf ni despunte.",
-      "Completar largos y costos en la presentación del taller para obtener barras y costo técnico.",
+      "Completar largos y costos en la presentación del taller para obtener tiras y costo técnico.",
     ],
     notasValidacion: [
       `Fuente: ${variant.sourceReference}; revisión ${VERATEC_WORKBOOK_SOURCE_REVISION}.`,

@@ -1,4 +1,5 @@
 import {
+  getSingleFamilyTemplate,
   groupLineTemplatesByFamily,
   groupLineTemplatesByDocumentedFamily,
   resolveLineTemplateFamilyKey,
@@ -32,6 +33,19 @@ function makeTemplate(
 }
 
 describe("line-template-catalog-family", () => {
+  it("abre directamente la única configuración de una familia", () => {
+    const template = makeTemplate({ id: "single", nombre: "Corredera Lineal 70" });
+
+    expect(getSingleFamilyTemplate([template])).toBe(template);
+    expect(getSingleFamilyTemplate([])).toBeNull();
+    expect(
+      getSingleFamilyTemplate([
+        template,
+        makeTemplate({ id: "second", nombre: "Corredera Lineal 70 reforzada" }),
+      ])
+    ).toBeNull();
+  });
+
   it("clasifica Serie 20 corredera y fijos en familias distintas", () => {
     const corredera = makeTemplate({
       nombre: "Serie 20",

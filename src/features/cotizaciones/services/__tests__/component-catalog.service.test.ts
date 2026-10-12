@@ -129,6 +129,12 @@ describe("component-catalog service", () => {
     ]);
   });
 
+  it("debe ofrecer composiciones plegables de 6 y 7 hojas para puertas", () => {
+    expect(getConfigurationOptionsForComponentSistema("Puerta", "Plegable")).toEqual(
+      expect.arrayContaining(["6 hojas plegables", "7 hojas plegables"])
+    );
+  });
+
   it("debe leer referencias antiguas sin romper el nuevo modelo", () => {
     expect(resolveComponentCategory("Cierre (Logia/Balcon)")).toBe(
       "Cierres y exteriores"

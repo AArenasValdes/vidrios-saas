@@ -98,6 +98,8 @@ export const COMPONENT_CATALOG = [
             "2 hojas plegables",
             "3 hojas plegables",
             "4 hojas plegables",
+            "6 hojas plegables",
+            "7 hojas plegables",
             "4 hojas / 2 + 2",
             "Acordeon",
             "Personalizado",

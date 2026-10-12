@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { FabricacionTipologiaPreview } from "@/features/fabricacion/components/fabricacion-tipologia-preview";
 import {
   BASES_TIPOLOGICAS_VENTORA,
@@ -34,6 +36,10 @@ import {
   resolveLineVariantPick,
 } from "@/features/fabricacion/services/line-variant-picker.service";
 import { findRecipeForVariantSlot } from "@/features/fabricacion/services/fabricacion-line-variant.service";
+import {
+  buildSodalEditorRecipeDefaults,
+  buildSodalEditorRecipeChoices,
+} from "@/features/fabricacion/services/sodal-editor-recipes.service";
 import type { FabricacionReceta, FabricacionTipologia } from "@/features/fabricacion/types/fabricacion-domain";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
@@ -67,6 +73,25 @@ function formatVariantFact(variante: string | null | undefined): string {
   const raw = variante?.trim() ?? "";
   if (!raw || raw === "estandar") return "Estándar";
   return raw.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatSodalProfileRule(profile: FabricacionReceta["perfiles"][number]): string {
+  const bases: Record<string, string> = {
+    ancho_total: "ancho",
+    alto_total: "alto",
+    ancho_por_hoja: "ancho por hoja",
+    alto_por_hoja: "alto por hoja",
+    ancho_modulo: "ancho de módulo",
+    alto_modulo: "alto de módulo",
+    fijo_mm: "medida fija",
+  };
+  const adjustment = profile.reglaMedida.ajusteMm;
+  const adjustmentLabel = adjustment == null
+    ? "ajuste pendiente"
+    : adjustment === 0
+      ? "sin descuento"
+      : `${adjustment > 0 ? "+" : ""}${adjustment} mm`;
+  return `${profile.codigoPerfil || profile.nombrePerfil} · ${profile.funcion}: ${bases[profile.reglaMedida.base] ?? profile.reglaMedida.base}, ${adjustmentLabel}`;
 }
 
 type SummaryFact = { label: string; value: string };
@@ -476,6 +501,24 @@ export function FabricacionMobileProductStep({
     recipe: draft,
   });
   const veratecSlots = getLineVariantSlotsForFabricationTree(catalogKey);
+  const sodalRecipeChoices = useMemo(() => {
+    const defaults = buildSodalEditorRecipeDefaults({
+      catalogKey,
+      lineTemplateId: recipes.find((recipe) => recipe.lineTemplateId != null)?.lineTemplateId ??
+        selected.lineTemplateId ?? 0,
+      lineName: templateName,
+      providerName: selected.providerName,
+    });
+    return buildSodalEditorRecipeChoices({ organization: recipes, defaults });
+  }, [catalogKey, recipes, selected.lineTemplateId, selected.providerName, templateName]);
+  const sodalVariants = sodalRecipeChoices.system;
+  const workshopSodalRecipes = sodalRecipeChoices.workshop;
+  const activeSodalVariant = sodalVariants.find((recipe) =>
+    recipe.id === selected.id ||
+    (recipe.definition.identidad.tipologia === draft.identidad.tipologia &&
+      recipe.definition.identidad.hojas === draft.identidad.hojas &&
+      recipe.definition.identidad.variante === draft.identidad.variante)
+  ) ?? null;
   const soleVeratecSlot = veratecSlots.length === 1 ? veratecSlots[0] : null;
   const singleDocumentedSlot =
     catalogKey?.startsWith("ventora:veratec-") &&
@@ -487,7 +530,7 @@ export function FabricacionMobileProductStep({
   const hasSupplierChoices = Boolean(
     variantPicker?.axes.some((axis) => axis.id === "construccion" && axis.label === "Proveedor y variante")
   );
-  const usesVariantPicker = isL25 || Boolean(variantPicker && variantPicker.axes.length > 0);
+  const usesVariantPicker = isL25 || sodalVariants.length > 1 || Boolean(variantPicker && variantPicker.axes.length > 0);
   const canEditIdentity = !readOnly && !usesVariantPicker;
   const showHojasPicker =
     canEditIdentity &&
@@ -499,8 +542,17 @@ export function FabricacionMobileProductStep({
       ?.label ??
     draft.identidad.tipologia.replaceAll("_", " ");
   const variantLabel = formatVariantFact(draft.identidad.variante);
-  const hojasLabel =
-    draft.identidad.hojas === 1 ? "1 hoja" : `${draft.identidad.hojas} hojas`;
+  // Antes de usar una base documentada, el borrador puede conservar la hoja
+  // inicial por defecto. El resumen debe describir la variante elegida en el
+  // catálogo sin cambiar todavía la receta del taller.
+  const displayedLeavesCount = singleDocumentedSlot?.leavesCount ?? draft.identidad.hojas;
+  const hojasLabel = displayedLeavesCount === 1 ? "1 hoja" : `${displayedLeavesCount} hojas`;
+  const summaryDraft = displayedLeavesCount === draft.identidad.hojas
+    ? draft
+    : {
+        ...draft,
+        identidad: { ...draft.identidad, hojas: displayedLeavesCount },
+      };
 
   const updateIdentity = (patch: Partial<FabricacionReceta["identidad"]>) => {
     onDraftChange({
@@ -528,7 +580,7 @@ export function FabricacionMobileProductStep({
     <div className={s.stack}>
       <ProductSummaryCard
         templateName={templateName}
-        draft={draft}
+        draft={summaryDraft}
         isL25={isL25}
         typologyLabel={typologyLabel}
         hojasLabel={hojasLabel}
@@ -564,6 +616,63 @@ export function FabricacionMobileProductStep({
             onSelectRecipe={onSelectRecipe}
           />
         </section>
+      ) : sodalVariants.length > 0 && !(variantPicker && variantPicker.axes.length > 0) ? (
+        <>
+          {sodalVariants.length > 1 && onSelectRecipe ? (
+            <section className={s.configSection} aria-labelledby="product-config-title">
+              <h2 id="product-config-title">Configuración del sistema</h2>
+              <p className={s.configHint}>
+                Elige entre las variantes disponibles para esta línea.
+              </p>
+              <fieldset className={s.choiceSet}>
+                <legend>Variante de fabricación</legend>
+                <div className={s.choiceGrid}>
+                  {sodalVariants.map((recipe) => (
+                    <button
+                      key={recipe.id}
+                      type="button"
+                      className={s.choiceChip}
+                      data-active={activeSodalVariant?.id === recipe.id ? "true" : "false"}
+                      aria-pressed={activeSodalVariant?.id === recipe.id}
+                      onClick={() => onSelectRecipe(recipe)}
+                    >
+                      {recipe.variant ?? recipe.definition.identidad.variante}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+              {activeSodalVariant ? (
+                <ul className={s.sodalVariantRules} aria-label="Perfiles y descuentos de la variante">
+                  {activeSodalVariant.definition.perfiles.map((profile) => (
+                    <li key={profile.id}>{formatSodalProfileRule(profile)}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </section>
+          ) : null}
+          {workshopSodalRecipes.length > 0 ? (
+            <details className={s.workshopRecipeDisclosure}>
+              <summary>Recetas propias del taller</summary>
+              <p>Configuraciones guardadas por este taller, separadas de la pauta del sistema.</p>
+              {onSelectRecipe ? (
+                <div className={s.choiceGrid}>
+                  {workshopSodalRecipes.map((recipe) => (
+                    <button
+                      key={recipe.id}
+                      type="button"
+                      className={s.choiceChip}
+                      data-active={selected.id === recipe.id ? "true" : "false"}
+                      aria-pressed={selected.id === recipe.id}
+                      onClick={() => onSelectRecipe(recipe)}
+                    >
+                      {formatVariantFact(recipe.variant ?? recipe.definition.identidad.variante) || "Receta propia"}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </details>
+          ) : null}
+        </>
       ) : variantPicker && (onSelectRecipe || onCreateMissingSlot) ? (
         <section className={s.configSection} aria-labelledby="product-config-title">
           <h2 id="product-config-title">Configuración</h2>

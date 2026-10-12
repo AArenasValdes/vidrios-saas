@@ -20,6 +20,7 @@ import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fa
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
 import { isSodalL25ZetaValidatedRecipe } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
 import { isSodalL25FormulaDerivedRecipe } from "@/features/fabricacion/services/fabricacion-evidence-gate.service";
+import { USER_CONFIRMED_UNIVERSAL_WORKSHOP_SOURCE_PREFIX } from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
 import { formatSodalL25FullRecipeNameFromRecipe } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
@@ -580,6 +581,32 @@ export function isFabricacionRecipeReadyForSnapshot(
     if (probe.calculable) {
       return { ready: true, pendingFields: [], message: null };
     }
+  }
+
+  if (
+    recipe.status === "validated" &&
+    recipe.sourceType === "workshop" &&
+    recipe.sourceReference?.startsWith(USER_CONFIRMED_UNIVERSAL_WORKSHOP_SOURCE_PREFIX)
+  ) {
+    const hasProfileRules = buildFabricationRecipeSummary(recipe.definition).activeRuleCount > 0;
+    const probe = hasProfileRules
+      ? calcularCubicacionYPauta(recipe.definition, {
+          anchoTotalMm: 1200,
+          altoTotalMm: 1000,
+          cantidad: 1,
+          hojas: recipe.definition.identidad.hojas,
+          modulos: recipe.definition.identidad.modulos,
+          variante: recipe.definition.identidad.variante,
+        })
+      : null;
+    if (probe?.calculable && probe.perfiles.length > 0) {
+      return { ready: true, pendingFields: [], message: null };
+    }
+    return {
+      ready: false,
+      pendingFields: [],
+      message: "No se pudo calcular la receta de perfiles validada para esta variante.",
+    };
   }
 
   const slot = findVariantSlotForRecipe(recipe);

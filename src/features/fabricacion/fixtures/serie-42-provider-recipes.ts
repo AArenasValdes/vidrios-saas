@@ -276,7 +276,7 @@ export function crearRecetaSerie42Sodal(input: ProviderRecipeInput): Fabricacion
     notes: [
       `Fuente primaria consultada el 2026-09-21: ${SODAL_SERIE_4200_URL}`,
       "La receta se limita a Fijo/Proyectante sin Cámara, monolítico y 1 hoja. No incorpora las variantes con cámara, termopanel, abatible ni sus herrajes.",
-      "La ficha declara cubicación ((X+Y)×2/100) × 1.00 + merma: 4202 +8%, 4209 +5%, 4229 +8%. Ventora calcula largos exactos de corte y distribución de barras; estos porcentajes quedan documentados, pero no se aplican como alargue de piezas ni como tiras adicionales.",
+      "La ficha declara cubicación ((X+Y)×2/100) × 1.00 + merma: 4202 +8%, 4209 +5%, 4229 +8%. Ventora calcula largos exactos de corte y distribución de tiras; estos porcentajes quedan documentados, pero no se aplican como alargue de piezas ni como tiras adicionales.",
       "Receta documentada, no validada en taller.",
     ],
   });

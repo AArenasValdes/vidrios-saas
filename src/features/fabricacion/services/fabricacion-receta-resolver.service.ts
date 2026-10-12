@@ -27,6 +27,8 @@ import {
 import {
   VERATEC_7400_CATALOG_KEY,
   VERATEC_7400_VARIANT_MONOLITICO_4MM,
+  VERATEC_7400_VARIANT_TERMOPANEL_20MM,
+  VERATEC_7400_VARIANT_TERMOPANEL_24MM,
 } from "@/features/fabricacion/fixtures/veratec-7400-corredera-recipe";
 
 export { SODAL_L25_CATALOG_KEY, SODAL_4800_CATALOG_KEY };
@@ -224,11 +226,26 @@ function resolveVeratec7400VariantForSelectedGlass(glassName: string): string | 
     .trim()
     .toLowerCase()
     .replace(/\s+/g, " ");
-  const isMonolithic = /\bmonolit(?:ico|ic)?\b/.test(normalized);
-  const isFourMillimeters = /(?:^|\D)4\s*mm(?:\D|$)/.test(normalized);
-  return isMonolithic && isFourMillimeters
-    ? VERATEC_7400_VARIANT_MONOLITICO_4MM
-    : null;
+  const thicknessText = normalized.match(/(?:^|\D)(\d+(?:[.,]\d+)?)\s*mm(?:\D|$)/)?.[1];
+  const composition = normalized.match(
+    /^(?:dvh|termopanel|doble\s+vidriado)\s*(\d+(?:[.,]\d+)?)\s*\+\s*(\d+(?:[.,]\d+)?)\s*\+\s*(\d+(?:[.,]\d+)?)$/
+  );
+  const thicknessMm = thicknessText
+    ? Number(thicknessText.replace(",", "."))
+    : composition
+      ? composition.slice(1).reduce((sum, value) => sum + Number(value.replace(",", ".")), 0)
+      : null;
+  if (!Number.isFinite(thicknessMm)) return null;
+
+  // La identidad de la ficha 20 mm es contradictoria (el nombre dice
+  // monolítico y la clasificación dice termopanel). Seleccionamos la base por
+  // espesor y mantenemos el conflicto visible para revisión del taller.
+  if (thicknessMm === 4 && /\bmonolit(?:ico|ic)?\b/.test(normalized)) {
+    return VERATEC_7400_VARIANT_MONOLITICO_4MM;
+  }
+  if (thicknessMm === 20) return VERATEC_7400_VARIANT_TERMOPANEL_20MM;
+  if (thicknessMm === 24) return VERATEC_7400_VARIANT_TERMOPANEL_24MM;
+  return null;
 }
 
 export type FabricacionRecetaDescartada = {

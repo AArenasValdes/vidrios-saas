@@ -41,8 +41,9 @@ const technicalInputs: SupplierCatalogImport["technicalInputs"] = [
     evidence: source(
       "alumetrica:veratec-7400:2h:monolitico-4mm:v1",
       null,
-      "El expediente registra el insumo 7414; el catálogo Xelena describe la hoja grande y muestra la sección 52×93."
+      "El expediente registra el insumo 7414. El catálogo Xelena p. 4 y la lista de junio p. 5 identifican el perfil/SKU 67414 como Hoja corredera grande; cruce explícito por el código 67414VER que usa la receta. No se extiende a códigos distintos."
     ),
+    recipeComponentCodes: ["67414VER"],
   },
   {
     technicalKey: "veratec-7400:traslapo-grande",
@@ -54,8 +55,9 @@ const technicalInputs: SupplierCatalogImport["technicalInputs"] = [
     evidence: source(
       "alumetrica:veratec-7400:2h:monolitico-4mm:v1",
       null,
-      "El expediente registra el insumo 7418; el catálogo Xelena muestra el traslapo grande de la familia 7400."
+      "El expediente registra el insumo 7418. El catálogo Xelena p. 6 y la lista de junio p. 6 identifican el perfil/SKU 67418 como Traslapo corredera grande; cruce explícito por el código 67418VER que usa la receta. No se extiende a códigos distintos."
     ),
+    recipeComponentCodes: ["67418VER"],
   },
   {
     technicalKey: "veratec:junquillo-4mm",

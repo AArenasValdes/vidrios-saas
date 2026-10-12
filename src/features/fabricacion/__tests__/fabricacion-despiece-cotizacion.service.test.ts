@@ -21,6 +21,7 @@ import {
   canOpenDespiecePreviewForQuoteItem,
   findFirstQuoteItemWithDespiecePreview,
   isQuoteItemFabricationReviewEligible,
+  isVeratec7400FourMobileQuoteItem,
   resolveAperturaForRecipeMatch,
   resolveFabricacionDespieceForQuoteItem,
 } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
@@ -55,6 +56,11 @@ import {
   VERATEC_7400_VARIANT_TERMOPANEL_20MM,
   VERATEC_7400_VARIANT_TERMOPANEL_24MM,
 } from "@/features/fabricacion/fixtures/veratec-7400-corredera-recipe";
+import { VERATEC_7400_4H_CATALOG_KEY } from "@/features/fabricacion/fixtures/veratec-preliminary-recipes";
+import {
+  crearRecetaVeratecBahar5200,
+  VERATEC_BAHAR_5200_PLEGABLE_VARIANTS,
+} from "@/features/fabricacion/fixtures/veratec-bahar-5200-recipes";
 import { resolveMobileComponentFabricacionSummary } from "@/features/fabricacion/services/mobile-component-fabricacion-summary.service";
 import { construirFabricacionTrabajoSnapshot } from "@/features/fabricacion/services/fabricacion-trabajo-snapshot.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
@@ -153,14 +159,34 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
       leaves: 3,
       variant: "",
       expectedProfileCount: 10,
+      sourceName: "Veratec · pauta de corte facilitada",
+    },
+    {
+      catalogKey: "ventora:veratec-compact-sliding-4h",
+      lineTemplateId: "9006",
+      typology: "corredera",
+      leaves: 4,
+      variant: "",
+      expectedProfileCount: 10,
+      sourceName: "Veratec · pauta de corte facilitada",
     },
     {
       catalogKey: "ventora:veratec-elegans-60-ventana-hoja-interior",
+      lineTemplateId: "9007",
+      typology: "abatible",
+      leaves: 1,
+      variant: "",
+      expectedProfileCount: 8,
+      sourceName: "Veratec · pauta de corte facilitada",
+    },
+    {
+      catalogKey: "ventora:veratec-bahar-5200-ventana-interior",
       lineTemplateId: "9002",
       typology: "abatible",
       leaves: 1,
       variant: "",
       expectedProfileCount: 8,
+      sourceName: "Veratec · Bahar 52 mm",
     },
     {
       catalogKey: "ventora:veratec-7400-corredera-3h",
@@ -169,6 +195,7 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
       leaves: 3,
       variant: "7400_3h_chica_2rieles",
       expectedProfileCount: 10,
+      sourceName: "Veratec · pauta de corte facilitada",
     },
     {
       catalogKey: "ventora:veratec-7400-monorriel",
@@ -177,6 +204,7 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
       leaves: 2,
       variant: "7400_monorriel_hoja_grande",
       expectedProfileCount: 14,
+      sourceName: "Veratec · pauta de corte facilitada",
     },
   ])("calcula $catalogKey como base documental preliminar en cotización", (testCase) => {
     const item = {
@@ -206,14 +234,340 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
       scope: "ventora",
       status: "testing",
       sourceType: "supplier",
-      sourceName: "Veratec · pauta de corte facilitada",
+      sourceName: testCase.sourceName,
     });
     expect(resolved.formal?.recipeStatus).toBe("testing");
     expect(resolved.formal?.pauta.length).toBe(testCase.expectedProfileCount);
     expect(resolved.formal?.validationStatus).not.toBe("validated");
   });
 
-  it("congela Línea 12 con sus cortes guardados como cálculo preliminar", () => {
+  it.each([
+    {
+      name: "paño fijo",
+      catalogKey: "ventora:veratec-bahar-5200-fijo",
+      tipo: "Paño fijo",
+      itemName: "Paño fijo",
+      system: "Fijo",
+      leaves: 1,
+      variant: "bahar_5200_fijo",
+      profileCode: "65201VER",
+      width: 1200,
+      height: 1500,
+    },
+    {
+      name: "ventana abatible exterior",
+      catalogKey: "ventora:veratec-bahar-5200-ventana-exterior",
+      tipo: "Ventana",
+      itemName: "Ventana abatible 1 hoja",
+      system: "Abatible",
+      leaves: 1,
+      variant: "bahar_5200_ventana_exterior",
+      profileCode: "65209VER",
+      width: 1200,
+      height: 1500,
+    },
+    {
+      name: "ventana proyectante exterior",
+      catalogKey: "ventora:veratec-bahar-5200-ventana-exterior",
+      tipo: "Ventana",
+      itemName: "Ventana proyectante 1 hoja",
+      system: "Proyectante",
+      leaves: 1,
+      variant: "bahar_5200_ventana_proyectante",
+      profileCode: "65209VER",
+      width: 1200,
+      height: 1500,
+    },
+    ...[
+      { key: "plegable-3-3-0", label: "3/3/0", leaves: 3, variant: "bahar_5200_plegable_3_3_0", width: 2600, height: 2015 },
+      { key: "plegable-4-3-1", label: "4/3/1", leaves: 4, variant: "bahar_5200_plegable_4_3_1", width: 2885, height: 2225 },
+      { key: "plegable-6-5-1", label: "6/5/1", leaves: 6, variant: "bahar_5200_plegable_6_5_1", width: 4955, height: 2210 },
+      { key: "plegable-7-4-3", label: "7/4/3", leaves: 7, variant: "bahar_5200_plegable_7_4_3", width: 5410, height: 2277 },
+    ].map((folding) => ({
+      name: `puerta plegable ${folding.label}`,
+      catalogKey: `ventora:veratec-bahar-5200-${folding.key}`,
+      tipo: "Puerta",
+      itemName: `Puerta plegable ${folding.leaves} hojas`,
+      system: "Plegable",
+      leaves: folding.leaves,
+      variant: folding.variant,
+      profileCode: "65204VER",
+      width: folding.width,
+      height: folding.height,
+    })),
+  ])("resuelve el despiece Bahar desde el sistema elegido: $name", (testCase) => {
+    const lineTemplateId = "9520";
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId, ancho: testCase.width, alto: testCase.height }),
+      tipo: testCase.tipo,
+      lineaComercial: `Bahar 5200 · ${testCase.name}`,
+      nombre: testCase.itemName,
+      descripcion: testCase.itemName,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: String(lineTemplateId),
+        catalogLineKey: testCase.catalogKey,
+        sistema: testCase.system,
+        fabricacionHojas: testCase.leaves,
+      }),
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [],
+      organizationId: 3,
+    });
+
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.preliminary).toBe(true);
+    expect(resolved.recipe?.variant).toBe(testCase.variant);
+    expect(resolved.formal?.result.perfiles.some((profile) => profile.codigoPerfil === testCase.profileCode)).toBe(true);
+    expect(resolved.formal?.pauta.length).toBeGreaterThan(0);
+    expect(resolved.cubication?.cuts.length).toBeGreaterThan(0);
+  });
+
+  it("usa la pauta proyectante Bahar si una receta guardada trae tipología abatible incompleta", () => {
+    const lineTemplateId = 9520;
+    const incompleteDefinition = crearRecetaVeratecBahar5200({
+      lineName: "Bahar 5200 · Ventana hoja exterior",
+      variant: "bahar_5200_ventana_exterior",
+    });
+    incompleteDefinition.perfiles = [];
+    const incompleteDraft = recipeRecord({
+      id: "bahar-exterior-incomplete",
+      organizationId: 3,
+      lineTemplateId,
+      providerName: "VERATEC",
+      lineName: "Bahar 5200 · Ventana hoja exterior",
+      typology: "abatible",
+      leavesCount: 1,
+      variant: "bahar_5200_ventana_exterior",
+      status: "draft",
+      definition: incompleteDefinition,
+    });
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: String(lineTemplateId), ancho: 1200, alto: 1500 }),
+      tipo: "Ventana",
+      lineaComercial: "Bahar 5200 · Ventana hoja exterior",
+      nombre: "Ventana proyectante 1 hoja",
+      descripcion: "Ventana proyectante 1 hoja",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: String(lineTemplateId),
+        catalogLineKey: "ventora:veratec-bahar-5200-ventana-exterior",
+        sistema: "Proyectante",
+        fabricacionTipologia: "abatible",
+        fabricacionVariante: "bahar_5200_ventana_exterior",
+        fabricacionHojas: 1,
+      }),
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [incompleteDraft],
+      organizationId: 3,
+    });
+
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.recipe?.variant).toBe("bahar_5200_ventana_proyectante");
+    expect(resolved.formal?.result.perfiles.length).toBeGreaterThan(0);
+  });
+
+  it("no aplica un plegable Bahar a una puerta configurada como corredera", () => {
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "9520", ancho: 2600, alto: 2015 }),
+      tipo: "Puerta",
+      lineaComercial: "Bahar 5200 · Plegable 3/3/0",
+      nombre: "Puerta corredera 3 hojas",
+      descripcion: "Puerta corredera 3 hojas",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "9520",
+        catalogLineKey: "ventora:veratec-bahar-5200-plegable-3-3-0",
+        sistema: "Corredera",
+        fabricacionHojas: 3,
+      }),
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [],
+      organizationId: 3,
+    });
+
+    expect(resolved.estado).toBe("sin_receta");
+    expect(resolved.formal).toBeNull();
+    expect(resolved.cubication).toBeNull();
+  });
+
+  it("recupera el despiece plegable Bahar desde la línea aunque la apertura guardada sea antigua", () => {
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "9520", ancho: 2600, alto: 2015 }),
+      tipo: "Puerta",
+      lineaComercial: "Bahar 5200 · Plegable 3/3/0",
+      nombre: "Puerta plegable 3 hojas plegables",
+      descripcion: "Puerta plegable 3 hojas plegables",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "9520",
+        catalogLineKey: "ventora:veratec-bahar-5200",
+        sistema: "Abatible",
+        configuracion: "3 hojas plegables",
+        fabricacionTipologia: "puerta_abatible",
+        fabricacionHojas: 2,
+        fabricacionModulos: 3,
+        fabricacionApertura: "plegable",
+        fabricacionVariante: "estandar",
+      }),
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [],
+      organizationId: 3,
+    });
+    const mobileSummary = resolveMobileComponentFabricacionSummary(item, {
+      recipes: [],
+      organizationId: 3,
+    });
+
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.recipe?.variant).toBe("bahar_5200_plegable_3_3_0");
+    expect(resolved.formal?.result.perfiles.length).toBeGreaterThan(0);
+    expect(resolved.formal?.pauta.length).toBeGreaterThan(0);
+    expect(resolved.cubication?.cuts.length).toBeGreaterThan(0);
+    expect(mobileSummary.statusLabel).toBe("Despiece disponible");
+    expect(mobileSummary.canOpenDespiece).toBe(true);
+  });
+
+  it("resuelve automáticamente recetas Bahar duplicadas cuando sus fórmulas son idénticas", () => {
+    const variant = "bahar_5200_plegable_3_3_0";
+    const definition = crearRecetaVeratecBahar5200({
+      lineName: "Bahar 5200 · Plegable 3/3/0",
+      variant,
+      createId: (() => {
+        let id = 0;
+        return () => `bahar-a-${id++}`;
+      })(),
+    });
+    const duplicateDefinition = crearRecetaVeratecBahar5200({
+      lineName: "Bahar 5200 · Plegable 3/3/0",
+      variant,
+      createId: (() => {
+        let id = 0;
+        return () => `bahar-b-${id++}`;
+      })(),
+    });
+    const recipes = [
+      recipeRecord({
+        id: "bahar-duplicate-a",
+        definition,
+        lineTemplateId: 9520,
+        organizationId: 3,
+        variant,
+        status: "draft",
+      }),
+      recipeRecord({
+        id: "bahar-duplicate-b",
+        definition: duplicateDefinition,
+        lineTemplateId: 9520,
+        organizationId: 3,
+        variant,
+        status: "draft",
+        version: 2,
+      }),
+    ];
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "9520", ancho: 2600, alto: 2015 }),
+      tipo: "Puerta",
+      lineaComercial: "Bahar 5200 · Plegable 3/3/0",
+      nombre: "Puerta plegable 3 hojas plegables",
+      descripcion: "Puerta plegable 3 hojas plegables",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "9520",
+        catalogLineKey: "ventora:veratec-bahar-5200",
+        sistema: "Abatible",
+        configuracion: "3 hojas plegables",
+        fabricacionTipologia: "puerta_abatible",
+        fabricacionHojas: 3,
+        fabricacionModulos: 3,
+        fabricacionApertura: "abatible",
+        fabricacionVariante: "estandar",
+      }),
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes,
+      organizationId: 3,
+    });
+
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.recipe?.variant).toBe(variant);
+    expect(resolved.formal?.result.perfiles.length).toBeGreaterThan(0);
+    expect(resolved.cubication?.cuts.length).toBeGreaterThan(0);
+  });
+
+  it.each(VERATEC_BAHAR_5200_PLEGABLE_VARIANTS)(
+    "genera despiece desde la composición comercial Bahar $label",
+    (variant) => {
+      const item: CotizacionWorkflowItem = {
+        ...quoteItem({
+          lineTemplateId: "9520",
+          ancho: variant.nominalSample.width,
+          alto: variant.nominalSample.height,
+        }),
+        tipo: "Puerta",
+        lineaComercial: `Bahar 5200 · Plegable ${variant.label.replace("Plegable · ", "")}`,
+        nombre: `Puerta plegable ${variant.leaves} hojas plegables`,
+        descripcion: `Puerta plegable ${variant.leaves} hojas plegables`,
+        observaciones: encodeCotizacionItemPresentationMeta({
+          lineTemplateId: "9520",
+          catalogLineKey: "ventora:veratec-bahar-5200",
+          sistema: "Abatible",
+          configuracion: `${variant.leaves} hojas plegables`,
+          fabricacionTipologia: "puerta_abatible",
+          fabricacionHojas: 2,
+          fabricacionModulos: 3,
+          fabricacionApertura: "abatible",
+          fabricacionVariante: "estandar",
+        }),
+      };
+
+      const resolved = resolveFabricacionDespieceForQuoteItem({
+        item,
+        recipes: [],
+        organizationId: 3,
+      });
+
+      expect(resolved.estado).toBe("calculado");
+      expect(resolved.recipe?.variant).toBe(variant.slug);
+      expect(resolved.formal?.result.perfiles.length).toBeGreaterThan(0);
+      expect(resolved.cubication?.cuts.length).toBeGreaterThan(0);
+    }
+  );
+
+  it("resuelve la ventana exterior Elegans 60 con la fórmula documental de su propia línea", () => {
+    const catalogKey = "ventora:veratec-elegans-60-ventana-hoja-exterior";
+    const item = {
+      ...quoteItem({ lineTemplateId: "9008", ancho: 1200, alto: 1500 }),
+      lineaComercial: "Elegans 60 · Ventana hoja exterior",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "9008",
+        catalogLineKey: catalogKey,
+        sistema: "Abatible",
+        fabricacionTipologia: "abatible",
+        fabricacionApertura: "abatible",
+        fabricacionHojas: 1,
+        fabricacionModulos: 1,
+      }),
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 3 });
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.preliminary).toBe(true);
+    expect(resolved.recipe?.sourceReference).toContain("ABATIR-EXT-Y-PROY");
+    expect(resolved.formal?.pauta.length).toBe(8);
+    expect(resolved.formal?.validationStatus).not.toBe("validated");
+  });
+
+  it("resuelve Línea 12 como despiece validado aunque exista un borrador antiguo", () => {
     let profileId = 0;
     const definition = crearRecetaP2U({
       catalogKey: "ventora:serie-12-shower-corredera",
@@ -254,8 +608,10 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
     });
 
     expect(resolved.estado).toBe("calculado");
-    expect(resolved.preliminary).toBe(true);
-    expect(resolved.formal?.recipeStatus).toBe("draft");
+    expect(resolved.preliminary).toBe(false);
+    expect(resolved.recipe?.status).toBe("validated");
+    expect(resolved.recipe?.definition.estado).toBe("validada");
+    expect(resolved.formal?.recipeStatus).toBe("validated");
     expect(resolved.formal?.pauta.map(({ codigoPerfil, medidaMm, cantidadPiezas }) => ({
       codigoPerfil,
       medidaMm,
@@ -599,7 +955,7 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
     "DVH 4+16+4",
     "DVH 4+10+5",
   ])(
-    "calcula solo geometría preliminar para %s sin buscar ni formalizar receta",
+    "usa la variante Veratec documentada y deja el punto pendiente editable para %s",
     (glass) => {
       const definition = crearRecetaVeratec7400Corredera({
         lineName: "Veratec 7400",
@@ -649,7 +1005,7 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
             definition: crearRecetaVeratec7400Corredera({
               lineName: "Veratec 7400",
               variant: VERATEC_7400_VARIANT_TERMOPANEL_20MM,
-              createId: () => "veratec-tp20-must-not-be-selected",
+              createId: (() => { let id = 0; return () => `veratec-tp20-candidate-${id++}`; })(),
             }),
             sourceReference: VERATEC_7400_SOURCE_REFERENCE_TERMOPANEL_20MM,
           }),
@@ -660,7 +1016,7 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
             definition: crearRecetaVeratec7400Corredera({
               lineName: "Veratec 7400",
               variant: VERATEC_7400_VARIANT_TERMOPANEL_24MM,
-              createId: () => "veratec-tp24-must-not-be-selected",
+              createId: (() => { let id = 0; return () => `veratec-tp24-candidate-${id++}`; })(),
             }),
             sourceReference: VERATEC_7400_SOURCE_REFERENCE_TERMOPANEL_24MM,
           }),
@@ -668,28 +1024,32 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
         organizationId: 3,
       });
 
-      expect(resolved.estado).toBe("receta_incompleta");
-      expect(resolved.formal).toBeNull();
-      expect(resolved.recipe).toBeNull();
-      expect(resolved.cubication?.cuts.length).toBeGreaterThan(0);
-      expect(resolved.cubication?.cuts.some((cut) => /junquillo/i.test(cut.functionLabel))).toBe(false);
-      expect(resolved.cubication?.glass).toBeNull();
-      expect(resolved.geometryOnly).toMatchObject({
-        sourceRecipeId: recipe.id,
-        sourceVariant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
-        pendingCommercial: ["glass", "glass_bead", "price"],
-        commercialMaterials: [
-          { role: "glass", status: "unmapped", netPrice: null },
-          { role: "glass_bead", status: "unmapped", netPrice: null },
-          { role: "price", status: "missing", netPrice: null },
-        ],
-      });
-      expect(resolved.geometryOnly?.bars.barras.length).toBeGreaterThan(0);
-      expect(resolved.message).toMatch(/no crea un snapshot formal/i);
+      const thickness = glass.includes("20") || glass.includes("4+12+4") ? 20
+        : glass.includes("24") || glass.includes("4+16+4") ? 24
+          : null;
+      if (thickness != null) {
+        const expectedVariant = thickness === 20
+          ? VERATEC_7400_VARIANT_TERMOPANEL_20MM
+          : VERATEC_7400_VARIANT_TERMOPANEL_24MM;
+        expect(resolved.estado).toBe("calculado");
+        expect(resolved.formal?.selectedVariant).toBe(expectedVariant);
+        expect(resolved.formal?.result.calculable).toBe(true);
+        expect(resolved.formal?.pauta.length).toBeGreaterThan(0);
+        expect(resolved.formal?.pautaBarras?.barras.length).toBeGreaterThan(0);
+        expect(resolved.formal?.advertencias.some((warning) => warning.codigo === "RECETA_DATOS_PENDIENTES")).toBe(true);
+        expect(resolved.recipe?.definition.datosPendientes?.length).toBeGreaterThan(0);
+        expect(resolved.preliminary).toBe(true);
+      } else {
+        expect(resolved.estado).toBe("receta_incompleta");
+        expect(resolved.formal).toBeNull();
+        expect(resolved.recipe).toBeNull();
+        expect(resolved.cubication?.cuts.length).toBeGreaterThan(0);
+        expect(resolved.geometryOnly?.bars.barras.length).toBeGreaterThan(0);
+      }
     }
   );
 
-  it("resuelve TP20 como geometría preliminar cuando 2 hojas no trae variante explícita", () => {
+  it("resuelve TP20 desde el vidrio seleccionado aunque la cotización no traiga variante explícita", () => {
     let nextProfileId = 0;
     const definition = crearRecetaVeratec7400Corredera({
       lineName: "Veratec 7400",
@@ -729,22 +1089,29 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
 
     const resolved = resolveFabricacionDespieceForQuoteItem({
       item,
-      recipes: [recipe],
+      recipes: [
+        recipe,
+        recipeRecord({
+          ...recipe,
+          id: "recipe-veratec-tp20-unspecified-variant",
+          variant: VERATEC_7400_VARIANT_TERMOPANEL_20MM,
+          definition: crearRecetaVeratec7400Corredera({
+            lineName: "Veratec 7400",
+            variant: VERATEC_7400_VARIANT_TERMOPANEL_20MM,
+            createId: () => `veratec-tp20-unspecified-${nextProfileId++}`,
+          }),
+          sourceReference: VERATEC_7400_SOURCE_REFERENCE_TERMOPANEL_20MM,
+        }),
+      ],
       organizationId: 3,
     });
 
-    expect(resolved.estado).toBe("receta_incompleta");
-    expect(resolved.geometryOnly).toMatchObject({
-      pendingCommercial: ["glass", "glass_bead", "price"],
-      commercialMaterials: [
-        { role: "glass", status: "unmapped", netPrice: null },
-        { role: "glass_bead", status: "unmapped", netPrice: null },
-        { role: "price", status: "missing", netPrice: null },
-      ],
-    });
-    expect(resolved.cubication?.cuts.length).toBeGreaterThan(0);
-    expect(resolved.formal).toBeNull();
-    expect(resolved.recipe).toBeNull();
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.formal?.selectedVariant).toBe(VERATEC_7400_VARIANT_TERMOPANEL_20MM);
+    expect(resolved.formal?.pauta.length).toBeGreaterThan(0);
+    expect(resolved.formal?.pautaBarras?.barras.length).toBeGreaterThan(0);
+    expect(resolved.formal?.advertencias.some((warning) => warning.codigo === "RECETA_DATOS_PENDIENTES")).toBe(true);
+    expect(resolved.preliminary).toBe(true);
   });
 
   it("no habilita geometría preliminar Veratec fuera de 2 hojas y 2 módulos", () => {
@@ -846,7 +1213,7 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
     }
   );
 
-  it("permite abrir y resume la geometría preliminar Veratec sin formalizarla", () => {
+  it("permite abrir y resume la pauta preliminar editable Veratec TP20", () => {
     const definition = crearRecetaVeratec7400Corredera({
       lineName: "Veratec 7400",
       variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
@@ -883,19 +1250,233 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
         fabricacionModulos: 2,
       }),
     };
-    const input = { item, recipes: [recipe], organizationId: 3 };
+    const tp20 = recipeRecord({
+      ...recipe,
+      id: "recipe-veratec-preview-tp20",
+      variant: VERATEC_7400_VARIANT_TERMOPANEL_20MM,
+      definition: crearRecetaVeratec7400Corredera({
+        lineName: "Veratec 7400",
+        variant: VERATEC_7400_VARIANT_TERMOPANEL_20MM,
+        createId: (() => { let id = 0; return () => `veratec-preview-tp20-${id++}`; })(),
+      }),
+      sourceReference: VERATEC_7400_SOURCE_REFERENCE_TERMOPANEL_20MM,
+    });
+    const input = { item, recipes: [recipe, tp20], organizationId: 3 };
 
     expect(canOpenDespiecePreviewForQuoteItem(input)).toBe(true);
     expect(resolveMobileComponentFabricacionSummary(item, {
-      recipes: [recipe],
+      recipes: [recipe, tp20],
       organizationId: 3,
     })).toMatchObject({
       status: "preliminary",
-      statusLabel: "Geometría preliminar",
+      statusLabel: "Despiece disponible",
       canOpenDespiece: true,
       canOpenPauta: true,
     });
     const resolved = resolveFabricacionDespieceForQuoteItem(input);
+    expect(resolved.formal?.selectedVariant).toBe(VERATEC_7400_VARIANT_TERMOPANEL_20MM);
+    expect(resolved.formal?.result.calculable).toBe(true);
+  });
+
+  it("genera despiece preliminar 7400 4H solo para cuatro hojas móviles", () => {
+      const item: CotizacionWorkflowItem = {
+        ...quoteItem({ lineTemplateId: "1400", ancho: 1500, alto: 1222 }),
+        lineaComercial: "Veratec 7400 — Corredera 4 hojas chicas",
+        vidrio: "Incoloro monolítico 4 mm",
+        observaciones: encodeCotizacionItemPresentationMeta({
+          lineTemplateId: "1400",
+          catalogLineKey: VERATEC_7400_4H_CATALOG_KEY,
+          sistema: "Corredera",
+          sheetScheme: "4 hojas",
+          sheetVariant: "4 móviles",
+          fabricacionTipologia: "corredera",
+          fabricacionHojas: 4,
+          fabricacionModulos: 4,
+          fabricacionVariante: "estandar",
+        }),
+      };
+      const resolved = resolveFabricacionDespieceForQuoteItem({
+        item,
+        recipes: [],
+        organizationId: 3,
+      });
+
+      expect(resolved.estado).toBe("calculado");
+      expect(resolved.preliminary).toBe(true);
+      expect(resolved.formal?.result.perfiles.length).toBeGreaterThan(0);
+      expect(resolved.formal?.pautaBarras?.barras.length).toBeGreaterThan(0);
+  });
+
+  it("no aplica la receta 7400 4H de cuatro móviles a una composición de 2 móviles + 2 fijas", () => {
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "1400", ancho: 1500, alto: 1222 }),
+      lineaComercial: "Veratec 7400 — Corredera 4 hojas chicas",
+      vidrio: "Incoloro monolítico 4 mm",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "1400",
+        catalogLineKey: VERATEC_7400_4H_CATALOG_KEY,
+        sistema: "Corredera",
+        sheetScheme: "4 hojas",
+        sheetVariant: "2 móviles + 2 fijas",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 4,
+        fabricacionModulos: 4,
+        fabricacionVariante: "estandar",
+      }),
+    };
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [],
+      organizationId: 3,
+    });
+
+    expect(resolved).toMatchObject({
+      estado: "composicion_sin_receta",
+      formal: null,
+      cubication: null,
+      recipe: null,
+      barsAvailable: false,
+      preliminary: false,
+    });
+    expect(resolved.message).toMatch(/composición mixta.*falta una receta compatible/i);
+  });
+
+  it("no muestra despiece para Elevadora 4 paños · 4 móviles sin receta con perfiles y fórmulas", () => {
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "1500", ancho: 2600, alto: 2015 }),
+      lineaComercial: "Elevadora · 4 paños · 4 móviles",
+      vidrio: "Incoloro monolítico 5 mm",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "1500",
+        catalogLineKey: "ventora:veratec-elevadora-4h-4moviles",
+        sistema: "Elevadora",
+        configuracion: "Elevadora · 4 paños · 4 móviles",
+        sheetScheme: "4 hojas",
+        sheetVariant: "4 móviles",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 4,
+        fabricacionModulos: 4,
+      }),
+    };
+    const input = { item, recipes: [], organizationId: 3 };
+    const resolved = resolveFabricacionDespieceForQuoteItem(input);
+    const summary = resolveMobileComponentFabricacionSummary(item, {
+      recipes: [],
+      organizationId: 3,
+    });
+
+    expect(resolved.estado).toBe("sin_receta");
+    expect(resolved.formal).toBeNull();
+    expect(isQuoteItemFabricationReviewEligible(input)).toBe(false);
+    expect(summary).toMatchObject({
+      status: "no_recipe",
+      statusLabel: "Sin fabricación",
+      showReviewUi: false,
+      canOpenDespiece: false,
+    });
+  });
+
+  it("mantiene el despiece base 7400 4H cuando el croquis conserva cuatro hojas móviles", () => {
+    const quickCompositionAdjustment = {
+      ...createEmptyQuickCompositionAdjustment(),
+      paneTypes: {
+        "leaf-1": "sliding" as const,
+        "leaf-2": "sliding" as const,
+        "leaf-3": "sliding" as const,
+        "leaf-4": "sliding" as const,
+      },
+    };
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "1400", ancho: 1222, alto: 1222 }),
+      lineaComercial: "Veratec 7400 — Corredera 4 hojas chicas",
+      vidrio: "Incoloro monolítico 4 mm",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "1400",
+        catalogLineKey: VERATEC_7400_4H_CATALOG_KEY,
+        sistema: "Corredera",
+        sheetScheme: "4 hojas",
+        sheetVariant: "4 móviles",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 4,
+        fabricacionModulos: 4,
+        fabricacionVariante: "estandar",
+        quickCompositionAdjustment,
+      }),
+    };
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [],
+      organizationId: 10,
+    });
+
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.formal?.result.perfiles.length).toBeGreaterThan(0);
+    expect(resolved.formal?.result.calculable).toBe(true);
+    expect(resolved.message).toMatch(/revisa y corrige los cortes/i);
+  });
+
+  it.each([undefined, VERATEC_7400_CATALOG_KEY])(
+    "expone el despiece 7400 4H aunque la clave de catálogo editada sea %s",
+    (catalogLineKey) => {
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "1400", ancho: 1222, alto: 1222 }),
+      lineaComercial: "Veratec 7400 — Corredera 4 hojas chicas",
+      nombre: "Ventana corredera 4 hojas, 4 móviles",
+      vidrio: "Incoloro monolítico 4mm",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "1400",
+        catalogLineKey,
+        sistema: "Corredera",
+        sheetScheme: "4 hojas",
+        sheetVariant: "4 móviles",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 4,
+        fabricacionModulos: 4,
+        fabricacionVariante: "estandar",
+      }),
+    };
+    expect(isVeratec7400FourMobileQuoteItem(item)).toBe(true);
+    expect(isQuoteItemFabricationReviewEligible({
+      item,
+      recipes: [],
+      organizationId: 10,
+    })).toBe(true);
+    const summary = resolveMobileComponentFabricacionSummary(item, {
+      recipes: [],
+      organizationId: 10,
+    });
+    expect(summary.showReviewUi).toBe(true);
+    expect(summary.canOpenDespiece).toBe(true);
+    }
+  );
+
+  it("no aplica la base 7400 4H si el croquis cambió una hoja a fija", () => {
+    const quickCompositionAdjustment = {
+      ...createEmptyQuickCompositionAdjustment(),
+      paneTypes: { "leaf-4": "fixed" as const },
+    };
+    const item: CotizacionWorkflowItem = {
+      ...quoteItem({ lineTemplateId: "1400", ancho: 1222, alto: 1222 }),
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "1400",
+        catalogLineKey: VERATEC_7400_4H_CATALOG_KEY,
+        sistema: "Corredera",
+        sheetScheme: "4 hojas",
+        sheetVariant: "4 móviles",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 4,
+        fabricacionModulos: 4,
+        fabricacionVariante: "estandar",
+        quickCompositionAdjustment,
+      }),
+    };
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [],
+      organizationId: 10,
+    });
+
+    expect(resolved.estado).toBe("composicion_sin_receta");
     expect(resolved.formal).toBeNull();
   });
 
@@ -1660,7 +2241,7 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
       organizationId: 3,
     });
     expect(mobileSummary.status).toBe("preliminary");
-    expect(mobileSummary.statusLabel).toBe("Despiece preliminar");
+    expect(mobileSummary.statusLabel).toBe("Despiece disponible");
     expect(mobileSummary.canOpenDespiece).toBe(true);
   });
 

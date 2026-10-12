@@ -96,7 +96,10 @@ import {
   getPiezaNombreFromObservaciones,
   GRUPO_PIEZA_ESTRUCTURAL_LABELS,
 } from "@/features/fabricacion/fixtures/arquetipos-estructurales-lineas";
-import type { FabricationRecipeSourceType } from "@/features/fabricacion/types/fabricacion-persistence";
+import type {
+  FabricationRecipeRecord,
+  FabricationRecipeSourceType,
+} from "@/features/fabricacion/types/fabricacion-persistence";
 import {
   FABRICACION_BASES_MEDIDA,
   FABRICACION_REGLAS_CANTIDAD,
@@ -380,6 +383,8 @@ type Props = {
   providerOptions?: string[];
   /** Otras recetas del taller para reutilizar perfiles y largos frecuentes. */
   workshopRecipes?: FabricacionReceta[];
+  sodalSystemRecipes?: FabricationRecipeRecord[];
+  onSelectSodalSystemRecipe?: (recipe: FabricationRecipeRecord) => void;
   sourceType?: FabricationRecipeSourceType;
   sourceReference?: string | null;
   startMode?: "ventora" | "ai" | "blank";
@@ -405,6 +410,7 @@ export function RecipeGuidedEditor({
   material = "Aluminio",
   providerOptions = [],
   workshopRecipes = [],
+  sodalSystemRecipes = [],
   sourceType = "manual",
   sourceReference = null,
   startMode,
@@ -418,6 +424,7 @@ export function RecipeGuidedEditor({
   onStartModeChange,
   onBaseApplied,
   onPersistRecipe,
+  onSelectSodalSystemRecipe,
   onContinueToTest,
 }: Props) {
   const isGuidedDesktop = desktopActiveStep != null;
@@ -1322,7 +1329,7 @@ export function RecipeGuidedEditor({
                   ? "Indica cómo se mide y cuántas piezas genera cada componente."
                   : desktopActiveStep === "plan"
                     ? "Confirma los parámetros de corte y revisa la distribución referencial."
-                    : "Primero define qué materiales usa esta línea. La pauta de barras viene después."}
+                  : "Primero define qué materiales usa esta línea. La pauta de tiras viene después."}
           </strong>
         </div>
         {!isGuidedDesktop ? <p>Esto no cambia el precio ni el PDF del cliente.</p> : null}
@@ -1829,7 +1836,7 @@ export function RecipeGuidedEditor({
             <span>Pauta</span>
             <h2>Parámetros de corte del taller</h2>
           </div>
-          <p>Estos datos ajustan la distribución referencial de barras.</p>
+          <p>Estos datos ajustan la distribución referencial de tiras.</p>
         </div>
         <div className={s.formGrid}>
           <label>
@@ -1911,7 +1918,7 @@ export function RecipeGuidedEditor({
                 <span>
                   {pautaInput
                     ? `Prueba de ${pautaInput.anchoTotalMm} × ${pautaInput.altoTotalMm} mm`
-                    : "Guarda una prueba real para visualizar las barras."}
+                    : "Guarda una prueba para ver las tiras."}
                 </span>
               </div>
             </div>
@@ -1923,10 +1930,10 @@ export function RecipeGuidedEditor({
                     key={`${bar.materialKey ?? bar.codigoPerfil}-${bar.indice}`}
                   >
                     <div className={s.barLabel}>
-                      <strong>Barra {bar.indice} · {bar.codigoPerfil || "Por asignar"}</strong>
+                      <strong>Tira {bar.indice} · {bar.codigoPerfil || "Por asignar"}</strong>
                       <span>{bar.largoComercialMm.toLocaleString("es-CL")} mm</span>
                     </div>
-                    <div className={s.barTrack} aria-label={`Cortes de barra ${bar.indice}`}>
+                    <div className={s.barTrack} aria-label={`Cortes de tira ${bar.indice}`}>
                       {bar.cortes.map((cut, index) => (
                         <span
                           key={`${cut.componenteId}-${index}`}
@@ -1996,6 +2003,41 @@ export function RecipeGuidedEditor({
           </p>
         </header>
 
+        {desktopActiveStep === "components" && sodalSystemRecipes.length > 0 ? (
+          <section className={s.fabHojasPicker} aria-label="Configuración del sistema SODAL">
+            <h3>Configuración del sistema</h3>
+            <div className={s.fabHojasPickerOptions} role="radiogroup" aria-label="Variante de fabricación">
+              {sodalSystemRecipes.map((entry) => {
+                const active = entry.definition.identidad.tipologia === recipe.identidad.tipologia &&
+                  entry.definition.identidad.hojas === recipe.identidad.hojas &&
+                  entry.definition.identidad.variante === recipe.identidad.variante;
+                return (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    data-selected={active ? "true" : "false"}
+                    disabled={readOnly || !onSelectSodalSystemRecipe}
+                    onClick={() => onSelectSodalSystemRecipe?.(entry)}
+                  >
+                    {entry.variant || entry.definition.identidad.variante}
+                  </button>
+                );
+              })}
+            </div>
+            <ul className={s.sodalRecipeRuleList}>
+              {recipe.perfiles.map((profile) => (
+                <li key={profile.id}>
+                  <strong>{profile.codigoPerfil || profile.nombrePerfil}</strong> · {profile.funcion}: {profile.reglaMedida.base}
+                  {profile.reglaMedida.ajusteMm != null
+                    ? `, ajuste ${profile.reglaMedida.ajusteMm > 0 ? "+" : ""}${profile.reglaMedida.ajusteMm} mm`
+                    : ", sin descuento"}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
         <section
           className={s.fabPrepHero}
           aria-label="Estado de fabricación"
@@ -2124,7 +2166,7 @@ export function RecipeGuidedEditor({
           ) : null}
           <p className={s.fabTiraFoot}>
             <Info size={14} aria-hidden="true" />
-            Esto cambia barras, sobrantes y pauta. No cambia las medidas de las
+            Esto cambia tiras, sobrantes y pauta. No cambia las medidas de las
             piezas.
           </p>
           </div>

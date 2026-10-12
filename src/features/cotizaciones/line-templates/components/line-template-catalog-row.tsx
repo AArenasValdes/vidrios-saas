@@ -16,6 +16,7 @@ import {
   LINE_TEMPLATE_CATEGORIA_LABELS,
 } from "@/features/cotizaciones/line-templates/utils/catalog-labels";
 import { shouldOfferLineFabricationWorkspace } from "@/features/cotizaciones/line-templates/utils/line-fabrication-entry";
+import { FABRICATION_CATALOG_ORIGIN_QUERY } from "./lineas-precios-navigation-state";
 import { resolveDocumentedLineIdentity } from "./line-template-catalog-family";
 
 import {
@@ -38,6 +39,7 @@ type Props = {
   onEdit: () => void;
   onEditPrice: () => void;
   onToggleActive: () => void;
+  onBeforeFabricationNavigate: () => void;
 };
 
 function resolveLineCode(template: CotizacionLineTemplate) {
@@ -107,6 +109,7 @@ export function LineTemplateCatalogRow({
   onEdit,
   onEditPrice,
   onToggleActive,
+  onBeforeFabricationNavigate,
 }: Props) {
   const needsPrice = lineTemplateNeedsCommercialPrice(template);
   const lineCode = resolveLineCode(template);
@@ -119,7 +122,7 @@ export function LineTemplateCatalogRow({
       : template.nombre;
   const materialLabel = LINE_TEMPLATE_CATEGORIA_LABELS[template.categoria];
   const rowStatus = resolveRowStatus(template, needsPrice, technicalStatus);
-  const fabricationHref = `/configuracion/empresa/lineas-precios/${template.id}/fabricacion`;
+  const fabricationHref = `/configuracion/empresa/lineas-precios/${template.id}/fabricacion?${FABRICATION_CATALOG_ORIGIN_QUERY}=1`;
   const showFabricationEntry = shouldOfferLineFabricationWorkspace(template);
 
   return (
@@ -198,7 +201,10 @@ export function LineTemplateCatalogRow({
           <Link
             href={`/configuracion/empresa/mis-precios?supplier=veratec&family=${encodeURIComponent(documentedFamilyKey)}&lineTemplateId=${encodeURIComponent(String(template.id))}`}
             className={row.fabricationLink}
-            onClick={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              onBeforeFabricationNavigate();
+            }}
           >
             Mis precios
           </Link>
@@ -223,7 +229,10 @@ export function LineTemplateCatalogRow({
             className={row.fabricationLink}
             data-tech-status={technicalStatus.tone}
             aria-label={`Fabricación: ${technicalStatus.label}`}
-            onClick={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              onBeforeFabricationNavigate();
+            }}
           >
             <span className={row.fabricationLinkCopy}>
               <span className={row.fabricationLinkLabel}>Configurar fabricación</span>

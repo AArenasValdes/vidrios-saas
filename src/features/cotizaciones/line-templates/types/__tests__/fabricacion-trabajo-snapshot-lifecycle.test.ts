@@ -1,7 +1,12 @@
 import {
+  getFabricationRecipeLineTemplateIdsForSnapshotResolution,
+  prepareFabricacionSnapshotsForQuoteSave,
+  resolveFabricacionSnapshotsIndependently,
   resolveFabricacionTrabajoSnapshotForQuoteSave,
   shouldResolveFabricationRecipesForQuoteSave,
 } from "@/features/cotizaciones/services/fabricacion-trabajo-snapshot-lifecycle.service";
+import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import { construirFabricacionTrabajoSnapshot } from "@/features/fabricacion/services/fabricacion-trabajo-snapshot.service";
 import { buildConsolidatedCubicationPautaFromSnapshots } from "@/features/cotizaciones/line-templates/types/cotizacion-cubication-consolidated";
@@ -65,11 +70,78 @@ const carrier = {
   snapshot: itemSnapshot,
 };
 
+function workflowItem(overrides: Partial<CotizacionWorkflowItem> = {}): CotizacionWorkflowItem {
+  return {
+    id: "item-1",
+    codigo: "V1",
+    tipo: "Ventana",
+    lineaComercial: "Línea 20",
+    vidrio: "Vidrio monolítico 5 mm",
+    nombre: "Ventana corredera 2 hojas",
+    descripcion: "2 hojas móviles",
+    ancho: 1500,
+    alto: 1600,
+    cantidad: 1,
+    unidad: "unidad",
+    areaM2: 2.4,
+    costoProveedorUnitario: 0,
+    costoProveedorTotal: 0,
+    margenPct: 0,
+    precioUnitario: 144000,
+    precioTotal: 144000,
+    precioPorM2: 60000,
+    minimoCobrable: null,
+    redondeoPrecio: null,
+    precioPlantillaSugerido: 144000,
+    precioAjustadoManual: false,
+    origenPrecio: "plantilla",
+    observaciones: encodeCotizacionItemPresentationMeta({
+      lineTemplateId: "220",
+      catalogLineKey: "ventora:l20",
+      sistema: "Corredera",
+      fabricacionTipologia: "corredera",
+      fabricacionHojas: 2,
+      fabricacionModulos: 2,
+      sheetScheme: "2 hojas",
+      sheetVariant: "2 móviles",
+    }),
+    fabricacionSnapshot: null,
+    ...overrides,
+  };
+}
+
 describe("fabricacion-trabajo-snapshot lifecycle", () => {
+  it("limita la lectura de recetas a líneas únicas de piezas que se resolverán", () => {
+    const items = [
+      workflowItem({ id: "linea-20" }),
+      workflowItem({
+        id: "linea-20-duplicada",
+        observaciones: encodeCotizacionItemPresentationMeta({
+          lineTemplateId: "220",
+          catalogLineKey: "ventora:l20",
+        }),
+      }),
+      workflowItem({
+        id: "linea-sin-id",
+        observaciones: encodeCotizacionItemPresentationMeta({ catalogLineKey: "ventora:l35" }),
+      }),
+      workflowItem({ id: "ya-resuelta", observaciones: "" }),
+    ];
+
+    expect(getFabricationRecipeLineTemplateIdsForSnapshotResolution({
+      items,
+      itemIdsToResolve: new Set(["linea-20", "linea-20-duplicada", "linea-sin-id"]),
+    })).toEqual([220]);
+  });
+
   it("cotización histórica sin snapshots + editar notas conserva NULL y no resuelve recetas", () => {
     const existingId = "cotizacion-historica";
 
-    expect(shouldResolveFabricationRecipesForQuoteSave(existingId)).toBe(false);
+    expect(shouldResolveFabricationRecipesForQuoteSave({
+      existingId,
+      existingStatus: "creada",
+      nextStatus: "creada",
+    })).toBe(false);
     expect(
       resolveFabricacionTrabajoSnapshotForQuoteSave({
         existingId,
@@ -82,7 +154,11 @@ describe("fabricacion-trabajo-snapshot lifecycle", () => {
 
   it("abrir el resumen interno de una cotización histórica no consulta recetas actuales", () => {
     // El resumen de una cotización persistida solo recibe snapshots congelados; no se habilita el resolver vivo.
-    expect(shouldResolveFabricationRecipesForQuoteSave("cotizacion-historica")).toBe(false);
+    expect(shouldResolveFabricationRecipesForQuoteSave({
+      existingId: "cotizacion-historica",
+      existingStatus: "creada",
+      nextStatus: "creada",
+    })).toBe(false);
   });
 
   it("histórica con snapshot por ítem y global NULL no crea un snapshot global al guardar", () => {
@@ -105,6 +181,78 @@ describe("fabricacion-trabajo-snapshot lifecycle", () => {
     expect(result).not.toBeNull();
     expect(result?.bars).toHaveLength(1);
     expect(result?.bars[0].cortes[0]?.codigoItem).toBe("V1");
+  });
+
+  it("calcula piezas nuevas agregadas al editar una cotización existente", () => {
+    const savedItem = workflowItem({ id: "db-item-1", fabricacionSnapshot: itemSnapshot });
+    const newlyAdded = workflowItem({ id: "draft-item-2", codigo: "V2" });
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({
+      existingId: "quote-1",
+      existingItems: [savedItem],
+      items: [savedItem, newlyAdded],
+    });
+
+    expect(prepared.itemIdsToResolve).toEqual(new Set(["draft-item-2"]));
+    expect(prepared.items[0]?.fabricacionSnapshot).toBe(itemSnapshot);
+  });
+
+  it("al finalizar un borrador resuelve piezas sin snapshot", () => {
+    const draftItem = workflowItem({ id: "draft-item" });
+    expect(shouldResolveFabricationRecipesForQuoteSave({
+      existingId: "quote-draft",
+      existingStatus: "borrador",
+      nextStatus: "creada",
+    })).toBe(true);
+
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({
+      existingId: "quote-draft",
+      finalizingDraft: true,
+      existingItems: [draftItem],
+      items: [draftItem],
+    });
+    expect(prepared.itemIdsToResolve).toEqual(new Set(["draft-item"]));
+  });
+
+  it("recalcula una pieza modificada y limpia su snapshot anterior", () => {
+    const oldItem = workflowItem({ fabricacionSnapshot: itemSnapshot });
+    const editedItem = workflowItem({
+      vidrio: "Termopanel 4+12+4 de 20 mm",
+      fabricacionSnapshot: itemSnapshot,
+    });
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({
+      existingId: "quote-1",
+      existingItems: [oldItem],
+      items: [editedItem],
+    });
+
+    expect(prepared.itemIdsToResolve).toEqual(new Set(["item-1"]));
+    expect(prepared.items[0]?.fabricacionSnapshot).toBeNull();
+  });
+
+  it("no completa una pauta histórica ausente al guardar cambios comerciales", () => {
+    const oldItem = workflowItem();
+    const unchangedTechnicalInput = workflowItem({ precioUnitario: 160000, precioTotal: 160000 });
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({
+      existingId: "quote-1",
+      existingItems: [oldItem],
+      items: [unchangedTechnicalInput],
+    });
+
+    expect(prepared.itemIdsToResolve.size).toBe(0);
+    expect(prepared.items[0]?.fabricacionSnapshot).toBeNull();
+  });
+
+  it("preserva snapshot técnico previo aunque el formulario lo haya omitido", () => {
+    const oldItem = workflowItem({ fabricacionSnapshot: itemSnapshot });
+    const currentItem = workflowItem();
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({
+      existingId: "quote-1",
+      existingItems: [oldItem],
+      items: [currentItem],
+    });
+
+    expect(prepared.itemIdsToResolve.size).toBe(0);
+    expect(prepared.items[0]?.fabricacionSnapshot).toBe(itemSnapshot);
   });
 
   it("cotización nueva empaqueta antes con el SKU/largo comercial explícito", () => {
@@ -211,6 +359,45 @@ describe("fabricacion-trabajo-snapshot lifecycle", () => {
     });
 
     expect(reopened).toBe(existingGlobalSnapshot);
+  });
+
+  it("finalizar un borrador vuelve a consolidar la pauta desde snapshots por componente", () => {
+    const result = resolveFabricacionTrabajoSnapshotForQuoteSave({
+      existingId: "quote-draft",
+      existingSnapshot: null,
+      forceRebuild: true,
+      capturedAt: "2026-10-11T12:00:00.000Z",
+      items: [carrier],
+    });
+
+    expect(result?.itemCountWithPauta).toBe(1);
+    expect(result?.bars.length).toBeGreaterThan(0);
+  });
+
+  it("una pieza sin pauta o con error no bloquea los snapshots de las demás", () => {
+    const items = [
+      workflowItem({ id: "linea-35" }),
+      workflowItem({ id: "linea-20" }),
+      workflowItem({ id: "linea-42" }),
+    ];
+    const errors: string[] = [];
+    const resolved = resolveFabricacionSnapshotsIndependently({
+      items,
+      itemIdsToResolve: new Set(items.map((item) => item.id)),
+      resolveSnapshot: (item) => {
+        if (item.id === "linea-35") return null;
+        if (item.id === "linea-20") throw new Error("receta incompatible");
+        return itemSnapshot;
+      },
+      onItemError: (item) => errors.push(item.id),
+    });
+
+    expect(resolved.map((item) => item.fabricacionSnapshot ?? null)).toEqual([
+      null,
+      null,
+      itemSnapshot,
+    ]);
+    expect(errors).toEqual(["linea-20"]);
   });
 
   it("una cotización sin fabricación sigue siendo guardable sin snapshot", () => {

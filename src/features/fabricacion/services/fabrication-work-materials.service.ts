@@ -42,7 +42,7 @@ export type WorkMaterialPrice = {
   sourceLabel: string;
   sourceRevision: string;
   pricedAt: string | null;
-  basis: "por metro" | "por barra" | "por unidad";
+  basis: "por metro" | "por tira" | "por unidad";
   unitPrice: number;
   subtotal: number;
   currency: string;
@@ -215,7 +215,7 @@ function materialPrice(input: {
     sourceLabel: isWorkshopCode ? "Precio propio del taller" : `Lista referencial · ${line.providerKey ?? "Proveedor"}`,
     sourceRevision: line.priceListRevision,
     pricedAt: line.pricedAt ?? null,
-    basis: line.priceBasis === "per_meter" ? "por metro" : line.quantity != null ? "por unidad" : "por barra",
+    basis: line.priceBasis === "per_meter" ? "por metro" : line.quantity != null ? "por unidad" : "por tira",
     unitPrice: line.netPricePerPresentation,
     subtotal: line.lineNet,
     currency: line.currency,
@@ -277,7 +277,7 @@ function buildAccessoryRows(items: readonly WorkItem[], cost: TechnicalCostSnaps
     for (const accessory of accessories) {
       const code = accessory.codigo.trim() || null;
       const description = accessory.nombre.trim() || "Accesorio";
-      const unit = "unidad";
+      const unit = accessory.unidad?.trim() || "unidad";
       const presentation = presentationFor(item);
       const line = item.lineaComercial.trim() || `Línea ${item.fabricacionSnapshot?.lineTemplateId ?? "sin identificar"}`;
       const finish = commercialFinish(presentation.colorHex);

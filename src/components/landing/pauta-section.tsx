@@ -9,7 +9,7 @@ const desktopPoints = [
   "Configura tus propias líneas y reglas.",
   "Calcula perfiles, vidrios, accesorios y cantidades.",
   "Convierte metros requeridos en tiras comerciales.",
-  "Revisa cortes, barras y sobrantes antes de fabricar.",
+  "Revisa cortes, tiras y sobrantes antes de fabricar.",
 ] as const;
 
 const mobilePoints = [

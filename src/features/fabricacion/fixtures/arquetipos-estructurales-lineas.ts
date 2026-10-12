@@ -14,8 +14,13 @@ import {
 } from "@/features/fabricacion/fixtures/plantillas-ventora-s33";
 import {
   crearRecetaSodalP2A,
+  crearRecetasSodalP2A,
   type SodalP2ACatalogKey,
 } from "@/features/fabricacion/fixtures/sodal-p2a-recipes";
+import {
+  crearRecetasSodalCatalogo2026,
+  type SodalCatalogo2026RecipeKey,
+} from "@/features/fabricacion/fixtures/sodal-catalogo-2026-recipes";
 import {
   SERIE_4800_VARIANT_NORMAL,
   crearRecetaSerie4800Corredera,
@@ -871,6 +876,17 @@ export function crearRecetaEstructuralParaLineaComercial(input: {
   lineName: string;
   createId?: () => string;
 }): FabricacionReceta | null {
+  if (
+    input.catalogKey === "ventora:optima-s28-corredera-2h" ||
+    input.catalogKey === "ventora:optima-s28-corredera-3h" ||
+    input.catalogKey === "ventora:s38-rpt-proyectante"
+  ) {
+    return crearRecetasSodalCatalogo2026({
+      catalogKey: input.catalogKey as SodalCatalogo2026RecipeKey,
+      lineName: input.lineName,
+      createId: input.createId,
+    })[0] ?? null;
+  }
   if (input.catalogKey && input.catalogKey in P2U_CATALOG_KEYS) {
     return crearRecetaP2U({
       catalogKey: input.catalogKey as P2UCatalogKey,
@@ -886,6 +902,13 @@ export function crearRecetaEstructuralParaLineaComercial(input: {
     });
   }
   if (input.catalogKey && input.catalogKey in SODAL_P2A_CATALOG_KEYS) {
+    if (input.catalogKey === "ventora:serie-4600-puerta-vaiven") {
+      return crearRecetasSodalP2A({
+        catalogKey: input.catalogKey as SodalP2ACatalogKey,
+        lineName: input.lineName,
+        createId: input.createId,
+      }).find((recipe) => recipe.identidad.variante.includes("hidráulico MAB")) ?? null;
+    }
     return crearRecetaSodalP2A({
       catalogKey: input.catalogKey as SodalP2ACatalogKey,
       lineName: input.lineName,

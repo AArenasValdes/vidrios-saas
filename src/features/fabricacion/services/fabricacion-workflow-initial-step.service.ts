@@ -2,6 +2,10 @@ import { isVentoraCatalogKey } from "@/features/cotizaciones/line-templates/serv
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import { lineUsesVariantProductPicker } from "@/features/fabricacion/services/line-variant-picker.service";
+import { buildSodalEditorRecipeDefaults } from "@/features/fabricacion/services/sodal-editor-recipes.service";
+
+type FabricationTemplateContext = Pick<CotizacionLineTemplate, "catalogKey"> &
+  Partial<Pick<CotizacionLineTemplate, "nombre" | "proveedor">>;
 
 export type FabricacionWorkflowStepId =
   | "base"
@@ -16,9 +20,22 @@ export type FabricacionWorkflowStepId =
  * al entrar a fabricación conviene abrir en Componentes, no en Base.
  */
 export function resolveInitialFabricationStepForTemplate(
-  template: Pick<CotizacionLineTemplate, "catalogKey"> | null,
+  template: FabricationTemplateContext | null,
   recipe: FabricationRecipeRecord
 ): FabricacionWorkflowStepId {
+  const sodalDefaults = template
+    ? buildSodalEditorRecipeDefaults({
+        catalogKey: template.catalogKey,
+        lineTemplateId: recipe.lineTemplateId ?? 0,
+        lineName: template.nombre ?? recipe.lineName,
+        providerName: template.proveedor ?? recipe.providerName,
+      })
+    : [];
+
+  if (sodalDefaults.length > 1) {
+    return "base";
+  }
+
   if (lineUsesVariantProductPicker(template?.catalogKey ?? null)) {
     return "base";
   }

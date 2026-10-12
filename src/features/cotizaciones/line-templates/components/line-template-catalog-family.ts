@@ -182,6 +182,11 @@ export type DocumentedLineFamilyGroup<T extends CotizacionLineTemplate> = {
   templates: T[];
 };
 
+/** Devuelve la única configuración de una familia, o null si requiere selector. */
+export function getSingleFamilyTemplate<T>(templates: readonly T[]): T | null {
+  return templates.length === 1 ? templates[0] : null;
+}
+
 /** La identidad canónica completa metadata antigua de catálogo sin reescribir precios ni filas privadas. */
 export function resolveDocumentedLineIdentity(template: CotizacionLineTemplate) {
   const canonical = VENTORA_DEFAULT_LINE_CATALOG.find((entry) => entry.catalogKey === template.catalogKey);

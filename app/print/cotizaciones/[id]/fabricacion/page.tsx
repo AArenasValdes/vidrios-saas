@@ -6,20 +6,29 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
+import { mapRecordToDraft } from "@/features/cotizaciones/new-quote/workflow-ui";
+import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { QuoteConstructorItemPatch } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import { buildFabricationQuoteSummary } from "@/features/cotizaciones/line-templates/types/fabrication-quote-summary";
 import { buildWorkMaterialsDocument } from "@/features/fabricacion/services/fabrication-work-materials.service";
 import { buildFabricationWorkOrder } from "@/features/fabricacion/services/fabrication-work-order.service";
 import type { TechnicalCostSnapshot } from "@/features/proveedor-catalogos/services/costo-tecnico-parcial.service";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
+import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import { normalizeQuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import { DespieceReviewSurface } from "@/features/cotizaciones/visual-composer/components/despiece-review-surface";
 import { sanitizeFileNamePart } from "@/utils/sanitize-file-name";
+import {
+  encodeCotizacionItemCubicationOverride,
+} from "@/utils/cotizacion-item-presentation";
 
 import { FabricacionResumenMovil } from "./fabricacion-resumen-movil";
 import { FabricacionResumenView } from "./fabricacion-resumen-view";
 import { CostoTecnicoParcialPanel } from "./costo-tecnico-parcial-panel";
 import s from "./page.module.css";
+
+const EMPTY_QUOTE_ITEMS: CotizacionWorkflowItem[] = [];
 
 async function loadVentoraPdfLogo() {
   let objectUrl: string | null = null;
@@ -51,12 +60,20 @@ async function loadVentoraPdfLogo() {
  */
 export default function CotizacionFabricacionPrintPage() {
   const params = useParams<{ id: string }>();
-  const { getCotizacionById, loadCotizacionById, isReady } = useCotizacionesStore({
+  const { getCotizacionById, loadCotizacionById, isReady, saveWorkflow, isSaving } = useCotizacionesStore({
     autoLoadSummary: false,
   });
   const cotizacion = getCotizacionById(params.id);
+  const [editedItems, setEditedItems] = useState<CotizacionWorkflowItem[] | null>(null);
+  const editedItemsRef = useRef<CotizacionWorkflowItem[] | null>(null);
+  useEffect(() => {
+    editedItemsRef.current = null;
+    setEditedItems(null);
+  }, [cotizacion?.id, cotizacion?.updatedAt]);
+  const items = editedItems ?? cotizacion?.items ?? EMPTY_QUOTE_ITEMS;
   const { templates: lineTemplates } = useCotizacionLineTemplates({ activeOnly: true });
   const { profile: organizationProfile } = useOrganizationProfile();
+  const { recipes, organizationId: fabricationOrganizationId } = useFabricationRecipes({ readOnly: true });
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -108,20 +125,23 @@ export default function CotizacionFabricacionPrintPage() {
 
   const summary = useMemo(
     () =>
-      buildFabricationQuoteSummary(cotizacion?.items ?? [], {
+      buildFabricationQuoteSummary(items, {
+        recipes,
+        organizationId: fabricationOrganizationId,
+        allowLiveFormal: false,
         trabajoSnapshot: cotizacion?.fabricacionTrabajoSnapshot ?? null,
       }),
-    [cotizacion?.items, cotizacion?.fabricacionTrabajoSnapshot]
+    [items, cotizacion?.fabricacionTrabajoSnapshot, recipes, fabricationOrganizationId]
   );
 
   const materialsDocument = useMemo(
     () => buildWorkMaterialsDocument({
       summary,
-      items: cotizacion?.items ?? [],
+      items,
       lineTemplates,
       technicalCostSnapshot,
     }),
-    [summary, cotizacion?.items, lineTemplates, technicalCostSnapshot]
+    [summary, items, lineTemplates, technicalCostSnapshot]
   );
   const workOrder = useMemo(
     () => buildFabricationWorkOrder({ summary, materials: materialsDocument, technicalCostSnapshot }),
@@ -164,6 +184,55 @@ export default function CotizacionFabricacionPrintPage() {
   const handleCloseDespiece = useCallback(() => {
     setDespieceOpen(false);
   }, []);
+
+  const handleUpdateFabricationItem = useCallback((itemId: string, patch: QuoteConstructorItemPatch) => {
+    const currentItems = editedItemsRef.current ?? cotizacion?.items ?? [];
+    const nextItems = currentItems.map((item) => {
+      if (item.id !== itemId) return item;
+      const observaciones = patch.cubicationSnapshot === undefined
+        ? item.observaciones
+        : encodeCotizacionItemCubicationOverride(item.observaciones, patch.cubicationSnapshot);
+      return {
+        ...item,
+        observaciones,
+        ...(patch.fabricacionSnapshot !== undefined
+          ? { fabricacionSnapshot: patch.fabricacionSnapshot }
+          : {}),
+      };
+    });
+    editedItemsRef.current = nextItems;
+    setEditedItems(nextItems);
+  }, [cotizacion?.items]);
+
+  const handleSaveFabricationItem = useCallback(async (
+    itemId: string,
+    snapshot: NonNullable<QuoteConstructorItemPatch["cubicationSnapshot"]>
+  ) => {
+    if (!cotizacion) return;
+    const currentItems = editedItemsRef.current ?? cotizacion.items;
+    const nextItems = currentItems.map((item) => item.id === itemId
+      ? {
+          ...item,
+          observaciones: encodeCotizacionItemCubicationOverride(item.observaciones, snapshot),
+        }
+      : item);
+    editedItemsRef.current = nextItems;
+    setEditedItems(nextItems);
+    const draft = mapRecordToDraft(cotizacion);
+    // mapRecordToDraft reconciles commercial prices; replace those items with
+    // the same saved quote items so an explicit manual cut override is retained.
+    draft.items = nextItems;
+    const record = await saveWorkflow({
+      draft,
+      estado: cotizacion.estado,
+      existingId: cotizacion.id,
+      existingCode: cotizacion.codigo,
+      existingClientId: cotizacion.clientId,
+      existingProjectId: cotizacion.projectId,
+    });
+    editedItemsRef.current = record.items;
+    setEditedItems(record.items);
+  }, [cotizacion, saveWorkflow]);
 
   const handlePrint = useCallback(() => {
     window.print();
@@ -233,7 +302,7 @@ export default function CotizacionFabricacionPrintPage() {
             clienteNombre={cotizacion.clienteNombre}
             obra={cotizacion.obra}
             summary={summary}
-            items={cotizacion.items}
+            items={items}
             materialsDocument={materialsDocument}
             companyName={organizationProfile?.empresaNombre ?? ""}
             issueDate={issueDate}
@@ -256,7 +325,7 @@ export default function CotizacionFabricacionPrintPage() {
             clienteNombre={cotizacion.clienteNombre}
             obra={cotizacion.obra}
             summary={summary}
-            items={cotizacion.items}
+            items={items}
             materialsDocument={materialsDocument}
             companyName={organizationProfile?.empresaNombre ?? ""}
             issueDate={issueDate}
@@ -271,15 +340,17 @@ export default function CotizacionFabricacionPrintPage() {
       <DespieceReviewSurface
         key={despieceSession}
         open={despieceOpen}
-        items={cotizacion.items}
+        items={items}
         lineTemplates={lineTemplates}
         quotePricingMode={normalizeQuotePricingMode(cotizacion.quotePricingMode)}
         activeItemId={despieceItemId}
         onActiveItemChange={setDespieceItemId}
-        onUpdateItem={() => undefined}
+        onUpdateItem={handleUpdateFabricationItem}
+        onSaveQuoteItem={handleSaveFabricationItem}
+        isSavingQuoteItem={isSaving}
         onClose={handleCloseDespiece}
-        recipes={[]}
-        organizationId={null}
+        recipes={recipes}
+        organizationId={fabricationOrganizationId}
       />
     </main>
   );

@@ -148,6 +148,35 @@ describe("FabricacionMobileProductStep", () => {
     }));
   });
 
+  it("muestra las 4 hojas de la base 7400 chica antes de aplicarla al borrador", () => {
+    const selected = recipe(2, "7400-4h-empty");
+    selected.lineName = "Veratec 7400 · Corredera 4 hojas chicas";
+    selected.providerName = "VERATEC";
+    selected.definition.identidad.hojas = 1;
+    selected.definition.identidad.modulos = 1;
+    selected.definition.perfiles = [];
+    const onCreateMissingSlot = jest.fn();
+
+    render(
+      <FabricacionMobileProductStep
+        templateName={selected.lineName}
+        catalogKey="ventora:veratec-7400-corredera-4h-chica"
+        selected={selected}
+        draft={selected.definition}
+        recipes={[]}
+        readOnly={false}
+        onDraftChange={() => undefined}
+        onCreateMissingSlot={onCreateMissingSlot}
+      />
+    );
+
+    expect(screen.getByLabelText("Resumen del producto")).toHaveTextContent("4 hojas");
+    expect(screen.queryByText("1 hoja")).not.toBeInTheDocument();
+    expect(onCreateMissingSlot).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /Usar base · 4 hojas chicas · hoja 67415/i }))
+      .toBeInTheDocument();
+  });
+
   it("muestra perfiles referenciales de EKO sin presentarlos como receta", () => {
     const selected = recipe(2, "eko-empty");
     selected.lineName = "EKO 130";

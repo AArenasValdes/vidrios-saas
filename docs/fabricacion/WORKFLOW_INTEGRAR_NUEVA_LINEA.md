@@ -41,8 +41,17 @@ Separar explícitamente estas capas:
 - **Línea cotizable:** nombre/precio comercial; puede no tener receta.
 - **Receta candidata:** reglas ejecutables con evidencia identificada; puede seguir `draft` o `requiere_revision`.
 - **Prueba de motor:** entradas/salidas reproducibles; no acredita una fabricación real.
-- **Validación de taller:** casos reales aprobados y versión persistida como `validated`.
+- **Validación de taller:** casos reales aprobados y versión persistida como `validated`; también se puede registrar una confirmación explícita del titular del taller cuando identifica las fórmulas y variantes concretas que ya validó con su maestro.
 - **Pauta de barras:** distribución referencial según largos y política configurados; no es optimización ni pauta de máquina.
+
+La confirmación no se generaliza a variantes no nombradas. Registrar titular, fecha, líneas, tipologías y variantes cubiertas. Una validación puede ser universal por código cuando las reglas son compartidas; no requiere sembrar ni editar una receta por cada organización.
+
+### Etiquetas visibles en cotización
+
+- Si la geometría, variante y fórmulas permitieron generar el snapshot de perfiles/cortes, la cotización dice **Despiece disponible**. La palabra “preliminar” no se usa para rebajar un cálculo disponible solo porque la receta siga sin validación física.
+- **Validada por taller** se reserva para el estado persistido `validated`; es un dato separado y no es requisito para mostrar un despiece que ya calculó.
+- Si faltan fórmulas, variante o datos geométricos, la línea sigue como **Configuración pendiente** o **Sin fabricación**. No se crea un resultado parcial como si fuera un despiece completo.
+- Las etiquetas de pendientes de vidrio, accesorios, códigos/SKU o largos comerciales se mantienen en sus propias filas; no bloquean cortes de perfiles calculables ni se ocultan por mostrar el despiece.
 
 ## 3. Implementar receta de forma acotada
 
@@ -54,7 +63,7 @@ Separar explícitamente estas capas:
 6. Registrar slots en `line-base-variant-catalog.ts` cuando corresponda. El seed es idempotente y comparte solo ejecuciones concurrentes: debe volver a consultar líneas y slots en nuevas cargas, para que un catálogo/variante agregado después no quede invisible por una respuesta cacheada en la sesión. Si una línea heredada carece de `catalog_key`, solo inferirlo con una identidad fuerte (por ejemplo, proveedor WinHouse + nombre de línea y riel explícitos); agregar una regresión y consultar también esas filas. Nunca ejecutar escrituras remotas durante una tarea local sin autorización.
 7. Crear/actualizar el resolutor de cotización: debe unir `catalog_key + tipología + hojas + vidrio + variante` y devolver **sin receta** para combinaciones que no estén cubiertas. No elegir la receta por una coincidencia parcial o por el vidrio recomendado si contradice la selección final del maestro. Para New S75, una combinación documentada puede usar un borrador preliminar determinista de Ventora si no hay receta persistida estructuralmente lista para calcular; una receta local incompleta no debe ocultar esa base. Nunca marcar el fallback como validado ni ocultar el seed que habilita editar la línea en Fabricación.
 8. Si una fórmula requiere una entrada adicional (por ejemplo ancho de hoja A), llevarla desde el formulario hasta `FabricacionEntradaCalculo`, snapshot inmutable, metadata privada del ítem y resolución del despiece. Invalidar snapshots al cambiar esa medida y bloquear entradas imposibles.
-9. Las recetas WinHouse sugeridas por Ventora pueden mostrar cubicación, despiece y pauta preliminar cuando el motor confirma que calculan con las medidas ingresadas, aunque queden datos de taller pendientes (por ejemplo códigos o largos comerciales). Mantener visible el aviso: **Configuración sugerida por Ventora. Revísala y ajústala según cómo trabaja tu taller. Esta pauta aún no ha sido validada por tu taller.** No cambiar estado a probada/validada; bloquear salida si el motor no puede calcular o falta una entrada geométrica requerida.
+9. Las recetas WinHouse sugeridas por Ventora pueden mostrar cubicación, despiece y pauta cuando el motor confirma que calculan con las medidas ingresadas, aunque queden datos de taller pendientes (por ejemplo códigos o largos comerciales). Mantener visible el aviso: **Configuración sugerida por Ventora. Revísala y ajústala según cómo trabaja tu taller. Esta pauta aún no ha sido validada por tu taller.** No cambiar estado a probada/validada; bloquear salida si el motor no puede calcular o falta una entrada geométrica requerida.
 
 ## 4. Pruebas obligatorias por línea
 
@@ -65,9 +74,10 @@ Crear una suite por línea en `src/features/fabricacion/__tests__/<linea>-numeri
 - Probar entradas válidas en medidas pequeñas, nominales y altas según la evidencia; probar cero/negativos, límites de condición y valores que excedan límites documentados.
 - Probar datos adicionales y split de hojas: falta de entrada, valores fuera de rango, derivación de anchos, resultado de perfil y vidrio, persistencia en snapshot y cambio que invalida el snapshot.
 - Probar resolución desde la cotización con vidrio y configuración final. Ensayar al menos una combinación no soportada y confirmar que retorna incompleta/sin receta sin generar un snapshot fabricado.
-- Para WinHouse, comprobar por separado las variantes calculables como pauta preliminar y las que se bloquean por falta de geometría/datos; cálculo preliminar no equivale a `Lista para probar` ni a validación de taller.
-- Probar el gate: una fórmula ausente o geometría inválida no produce una salida completa. Los pendientes de códigos/ajustes del taller se distinguen de los bloqueos de cálculo; las bases preliminares autorizadas pueden mostrar despiece y snapshot sin activar ni validar la receta.
-- Probar precedencia: una receta propia calculable conserva sus ajustes; recetas de otra organización/línea, archivadas o eliminadas no desplazan ni ocultan la base compatible. El seed no sobrescribe ajustes del taller y el cálculo no muta la receta de entrada.
+- Para WinHouse, comprobar por separado las variantes que generan despiece y las que se bloquean por falta de geometría/datos; que calcule no equivale a `Lista para probar` ni a validación de taller.
+- Probar el gate: una fórmula ausente o geometría inválida no produce una salida completa. Los pendientes de códigos/ajustes del taller se distinguen de los bloqueos de cálculo; las bases documentadas autorizadas pueden mostrar despiece y snapshot sin marcar validada la receta.
+- Probar precedencia: una receta propia calculable conserva sus ajustes; al guardarla desde el editor queda identificada con `taller:personalizada:` para que los fallbacks globales no sustituyan los cambios en cotizaciones nuevas. Recetas de otra organización/línea, archivadas o eliminadas no desplazan ni ocultan la base compatible. El seed no sobrescribe ajustes del taller y el cálculo no muta la receta de entrada.
+- Confirmar que actualizar la receta afecta solo cotizaciones nuevas o piezas sin snapshot vigente. Un snapshot ya guardado permanece histórico y no se recalcula por cambiar la receta del taller.
 - Probar pauta con largo configurado: perfiles no se mezclan por código/nombre, ningún corte supera la barra, y errores/faltantes salen como advertencias concretas.
 - Si una línea tiene cobertura parcial, declarar en pruebas cuáles calculan y cuáles se bloquean. No afirmar cobertura completa a partir de una receta.
 
@@ -101,7 +111,7 @@ Hacerlo en desarrollo o en una organización local/QA:
 4. En una cotización QA, elegir línea, tipología/hojas, vidrio final y medidas; abrir la revisión interna y contrastar el resultado con el test determinista.
 5. Guardar snapshot solo en QA, reabrirlo y verificar que mantiene receta, versión, vidrio y entradas. El PDF cliente no debe recibir datos técnicos.
 
-El wizard puede guardar borradores al avanzar. Usar la cuenta QA autorizada por el usuario; esa autorización persiste y no se debe volver a pedir en cada paso. No activar una receta en nombre del taller. Registrar la ruta, variante, medidas, estado observado y si los datos fueron persistidos. Si la UI no permite completar el paso, investigar el bloqueo y adjuntar la evidencia; los tests unitarios no lo reemplazan. Recorrer todas las configuraciones nuevas antes de afirmar cobertura completa de UI; si se muestrea, explicitar las no recorridas.
+El wizard puede guardar borradores al avanzar. Usar la cuenta QA autorizada por el usuario; esa autorización persiste y no se debe volver a pedir en cada paso. No activar una receta en nombre del taller sin confirmación explícita; una confirmación directa del titular cubre solo las líneas/variantes que enumeró. Registrar la ruta, variante, medidas, estado observado y si los datos fueron persistidos. Si la UI no permite completar el paso, investigar el bloqueo y adjuntar la evidencia; los tests unitarios no la reemplazan. Recorrer todas las configuraciones nuevas antes de afirmar cobertura completa de UI; si se muestrea, explicitar las no recorridas.
 
 ## 6. Cierre y documentación
 

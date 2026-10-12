@@ -122,7 +122,12 @@ function calcularMedida(
   const base = baseMedidaMm(regla, entrada);
   const multiplicador = regla.multiplicador ?? 1;
   const ajuste = regla.ajusteMm ?? 0;
-  const valor = Math.round(base * multiplicador + ajuste);
+  const medidaSinRedondear = base * multiplicador + ajuste;
+  // Neutraliza la representación binaria de resultados exactos en .5 (p. ej. 794.5)
+  // para que el redondeo al milímetro entero sea consistente con la fórmula fuente.
+  const valor = Math.round(
+    medidaSinRedondear + Number.EPSILON * Math.max(1, Math.abs(medidaSinRedondear))
+  );
   const traza: FabricacionTrazabilidadRegla = {
     reglaId: `${componenteId}:medida`,
     componenteId,
@@ -363,6 +368,70 @@ export function calcularCubicacionYPauta(
   const accesorios = receta.accesorios.flatMap((accesorio) => {
     if (!accesorioCumpleCondicion(accesorio, entradaNormalizada)) return [];
     if (accesorio.formulaCantidad) {
+      if (accesorio.formulaCantidad === "perimetro_perfiles_hoja_m") {
+        const totalPerimetroMm = perfiles
+          .filter((perfil) => perfil.funcion.trim().toLocaleLowerCase("es-CL") === "hoja")
+          .reduce((total, perfil) => total + perfil.totalLinealMm, 0);
+        if (totalPerimetroMm <= 0) {
+          advertencias.push({
+            codigo: "FORMULA_ACCESORIO_PENDIENTE",
+            nivel: "advertencia",
+            mensaje: `${accesorio.nombre}: falta calcular las medidas de las hojas para obtener su consumo lineal.`,
+            componenteId: accesorio.id,
+          });
+          return [];
+        }
+        const metros = Math.round((totalPerimetroMm / 1000) * 1000) / 1000;
+        const traza: FabricacionTrazabilidadRegla = {
+          reglaId: `${accesorio.id}:cantidad`,
+          componenteId: accesorio.id,
+          base: "fija",
+          formula: "suma(cortes de perfil funcion Hoja) ÷ 1000",
+          entrada: { totalPerimetroMm },
+          resultado: metros,
+        };
+        return [{
+          accesorioId: accesorio.id,
+          codigo: accesorio.codigo,
+          nombre: accesorio.nombre,
+          cantidadUnidades: metros,
+          unidad: accesorio.unidad ?? "m",
+          trazabilidad: [traza],
+        }];
+      }
+      if (accesorio.formulaCantidad === "perimetro_vidrios_m") {
+        const totalPerimetroMm = vidrios.reduce(
+          (total, vidrio) =>
+            total + 2 * (vidrio.anchoMm + vidrio.altoMm) * vidrio.cantidadPiezas,
+          0
+        );
+        if (totalPerimetroMm <= 0) {
+          advertencias.push({
+            codigo: "FORMULA_ACCESORIO_PENDIENTE",
+            nivel: "advertencia",
+            mensaje: `${accesorio.nombre}: falta calcular las medidas del vidrio para obtener su consumo lineal.`,
+            componenteId: accesorio.id,
+          });
+          return [];
+        }
+        const metros = Math.round((totalPerimetroMm / 1000) * 1000) / 1000;
+        const traza: FabricacionTrazabilidadRegla = {
+          reglaId: `${accesorio.id}:cantidad`,
+          componenteId: accesorio.id,
+          base: "fija",
+          formula: "suma(2 x (ancho + alto) x cantidad de paños de vidrio) ÷ 1000",
+          entrada: { totalPerimetroMm },
+          resultado: metros,
+        };
+        return [{
+          accesorioId: accesorio.id,
+          codigo: accesorio.codigo,
+          nombre: accesorio.nombre,
+          cantidadUnidades: metros,
+          unidad: accesorio.unidad ?? "m",
+          trazabilidad: [traza],
+        }];
+      }
       advertencias.push({
         codigo: "FORMULA_ACCESORIO_PENDIENTE",
         nivel: "advertencia",
@@ -378,6 +447,7 @@ export function calcularCubicacionYPauta(
         codigo: accesorio.codigo,
         nombre: accesorio.nombre,
         cantidadUnidades: cantidad.valor,
+        unidad: accesorio.unidad ?? "unidad",
         trazabilidad: [cantidad.traza],
       },
     ];

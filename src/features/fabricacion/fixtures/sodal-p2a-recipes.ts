@@ -246,9 +246,9 @@ function createS83(input: RecipeInput, leaves: 4 | 8): FabricacionReceta {
       profile(createId, { code: "S831", name: "Riel inferior 4L", functionName: "Riel inferior", base: "ancho_total", adjustmentMm: -26, quantity: 1, cut: "—" }),
       profile(createId, { code: "S832", name: "Riel superior", functionName: "Riel superior", base: "ancho_total", adjustmentMm: -26, quantity: 1, cut: "—" }),
       profile(createId, { code: "S833", name: "Jamba 4L", functionName: "Jamba", base: "alto_total", adjustmentMm: 0, quantity: 2, cut: "—" }),
-      profile(createId, { code: "S834", name: "Zócalo", functionName: "Zócalo de hoja", base: "ancho_por_hoja", adjustmentMm: isFour ? -11 : -7, quantity: leaves, cut: "—" }),
+      profile(createId, { code: "S834", name: "Zócalo", functionName: "Zócalo de hoja", base: "ancho_por_hoja", adjustmentMm: isFour ? -9 : -7, quantity: leaves, cut: "—" }),
     ],
-    glasses: [glass(createId, { name: "Vidrio de hoja S-83", widthBase: "ancho_por_hoja", widthAdjustmentMm: isFour ? -11 : -8, heightBase: "alto_total", heightAdjustmentMm: -86, quantity: leaves })],
+    glasses: [glass(createId, { name: "Vidrio de hoja S-83", widthBase: "ancho_por_hoja", widthAdjustmentMm: isFour ? -10 : -8, heightBase: "alto_total", heightAdjustmentMm: -86, quantity: leaves })],
     accessories: [
       accessory(createId, { name: "Carro doble S83", quantity: isFour ? 8 : 16, unit: "Pz" }),
       accessory(createId, { name: "Tapa zócalo", quantity: isFour ? 8 : 16, unit: "Pz" }),
@@ -259,7 +259,7 @@ function createS83(input: RecipeInput, leaves: 4 | 8): FabricacionReceta {
       accessory(createId, { name: "Burlete traslapo", quantity: isFour ? 6 : 12, unit: "Tr" }),
     ],
     notes: [
-      `Fuente primaria SODAL: Catálogo General 2018, p. 45, Multi Slide S-83, pauta para ${leaves === 4 ? "cuatro" : "ocho"} hojas.`,
+      `Fuente primaria SODAL: Catálogo SODAL 2026, p. 31, Multi Slide S-83, pauta para ${leaves === 4 ? "cuatro" : "ocho"} hojas.`,
       "4H y 8H son recetas independientes: cambia el divisor y los descuentos del zócalo/vidrio, además de accesorios.",
       "Pendiente: composición del vidrio y prueba física de taller.",
     ],
@@ -295,7 +295,7 @@ function create3200(input: RecipeInput, bastidor: "3221" | "3225"): FabricacionR
       accessory(createId, { name: "Cerradura ISEO (E.25 o E.35)", quantity: 1, unit: "Pz" }),
     ],
     notes: [
-      "Fuente primaria SODAL: Catálogo General 2018, p. 21, Serie 3200, pauta para puerta abatir una hoja.",
+      "Fuente primaria SODAL: Catálogo SODAL 2026, p. 7, Serie 3200, pauta para puerta abatir una hoja.",
       `La pauta publica el bastidor ${bastidor} y su medida de vidrio; se mantiene separado del otro bastidor.`,
       "La fuente comercial actual publica L/Liviana, ST/Standard y TP/TermoPanel, pero no entrega en la ficha consultada un mapeo inequívoco de esas etiquetas a 3221/3225.",
       "Advertencia conservada: la lámina de perfiles muestra también 3227 mientras la tabla de pauta dice 3225; no se corrige por intuición.",
@@ -327,11 +327,16 @@ function create4600(input: RecipeInput, hydraulic: boolean): FabricacionReceta {
     glasses: [glass(createId, hydraulic
       ? { name: "Vidrio puerta vaivén hidráulica", widthBase: "ancho_total", widthAdjustmentMm: -102, heightBase: "alto_total", heightAdjustmentMm: -192, quantity: 1 }
       : { name: "Vidrio puerta vaivén mecánica", widthBase: "ancho_total", widthAdjustmentMm: -102, heightBase: "alto_total", heightAdjustmentMm: -195, quantity: 1 })],
-    accessories: [
-      accessory(createId, { name: hydraulic ? "Quicio hidráulico MAB" : "Quicio mecánico Scanavini", quantity: 1, unit: "Pz" }),
-    ],
+    accessories: hydraulic
+      ? []
+      : [accessory(createId, { name: "Quicio mecánico Scanavini", quantity: 1, unit: "Pz" })],
     notes: [
-      "Fuente primaria SODAL: Catálogo General 2018, p. 23, Serie 4600; ficha actual SODAL confirma opciones de quicio mecánico e hidráulico.",
+      hydraulic
+        ? "Fuente primaria SODAL: Catálogo SODAL 2026, p. 9, Serie 4600, pauta para puerta vaivén con quicio hidráulico MAB."
+        : "Referencia mecánica histórica SODAL; no incluida en el fallback universal del Catálogo SODAL 2026.",
+      ...(hydraulic
+        ? ["La ficha identifica el quicio hidráulico MAB pero no publica cantidad ni SKU de quincallería; queda pendiente y no se inventa una unidad."]
+        : []),
       "Las variantes mecánica e hidráulica tienen perfiles y descuentos de vidrio separados; nunca se combinan.",
       "Tipología canónica: puerta_vaiven; no es corredera.",
       "Pendiente: prueba física de taller.",

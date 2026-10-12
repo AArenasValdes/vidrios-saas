@@ -156,10 +156,12 @@ describe("buildPartialTechnicalCostSnapshot", () => {
     expect(getRecipeAccessoriesFromItemSnapshot(null, "historic")).toEqual([]);
     expect(getRecipeAccessoriesFromItemSnapshot({ result: { accesorios: [
       { codigo: "SA01005", nombre: "Cepillo / Felpa", cantidadUnidades: 1 },
+      { codigo: "", nombre: "Felpa perimetral", cantidadUnidades: 2.45, unidad: "m" },
       { codigo: "", nombre: "", cantidadUnidades: 3 },
       { codigo: "x", nombre: "Inválido", cantidadUnidades: 0 },
     ] } }, "A")).toEqual([
       { itemCode: "A", recipeAccessoryCode: "SA01005", description: "Cepillo / Felpa", quantity: 1, unit: "unidad" },
+      { itemCode: "A", recipeAccessoryCode: null, description: "Felpa perimetral", quantity: 2.45, unit: "m" },
     ]);
   });
 
@@ -596,6 +598,53 @@ describe("buildPartialTechnicalCostSnapshot", () => {
     });
 
     expect(result?.lines[0]).toMatchObject({ commercialLengthMm: 6000, bars: 1, netPricePerPresentation: 60000, lineNet: 60000, priceBasis: "per_meter" });
+  });
+
+  it("valora bastidores 67415 con precio de lista y deja quincallería como parcial sin inventar costos", () => {
+    const recipeResult = {
+      accesorios: [
+        { codigo: "", nombre: "Rodamiento corredera Serie 7400", cantidadUnidades: 8, unidad: "unidad" },
+        { codigo: "", nombre: "Cierre embutido / multipunto para hoja extrema", cantidadUnidades: 2, unidad: "unidad" },
+        { codigo: "", nombre: "Juego de cierre central / kit de encuentro 7400", cantidadUnidades: 1, unidad: "juego" },
+        { codigo: "", nombre: "Felpa de hermeticidad para hojas 67415", cantidadUnidades: 18.64, unidad: "m" },
+      ],
+    };
+    const accessorySnapshot = { result: recipeResult };
+    const result = buildPartialTechnicalCostSnapshot({
+      workSnapshot: pauta([{ code: "67415VER", item: "V1", length: 418 }]),
+      quoteItems: [{
+        code: "V1",
+        color: "Blanco",
+        catalogLineKey: "veratec:sliding-7400",
+        glassDescription: "Vidrio monolítico 4 mm",
+        recipeAccessories: getRecipeAccessoriesFromItemSnapshot(accessorySnapshot, "V1"),
+      }],
+      availablePrices: [price({
+        technicalCode: "67415VER",
+        recipeComponentCodes: ["67415VER"],
+        supplierSku: "67415VER000",
+        providerKey: "xelena",
+        familyKeys: ["veratec:sliding-7400"],
+        finishCode: "000",
+        finishName: "Blanco",
+        commercialLengthMm: 5800,
+        netPrice: 32119,
+      })],
+    });
+
+    expect(result).toMatchObject({ status: "partial", currency: "CLP", knownNetTotal: 32119 });
+    expect(result?.lines).toEqual(expect.arrayContaining([
+      expect.objectContaining({ technicalCode: "67415VER", supplierSku: "67415VER000", commercialLengthMm: 5800, lineNet: 32119 }),
+    ]));
+    expect(result?.missing.map((entry) => entry.description)).toEqual(expect.arrayContaining([
+      "Vidrio monolítico 4 mm",
+      "Rodamiento corredera Serie 7400",
+      "Cierre embutido / multipunto para hoja extrema",
+      "Juego de cierre central / kit de encuentro 7400",
+      "Felpa de hermeticidad para hojas 67415",
+    ]));
+    expect(result?.knownNetTotal).not.toBeNull();
+    expect(result?.lines.every((line) => line.supplierSku && Number.isFinite(line.lineNet))).toBe(true);
   });
 
   it("congela fuente, referencia, precio propio y revisión sin mutar el snapshot anterior", () => {

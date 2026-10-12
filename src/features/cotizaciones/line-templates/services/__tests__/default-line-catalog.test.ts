@@ -100,16 +100,79 @@ describe("seedDefaultLineCatalog", () => {
   it("incluye las líneas nuevas del catálogo chileno", () => {
     const keys = VENTORA_DEFAULT_LINE_CATALOG.map((line) => line.catalogKey);
     expect(keys).toContain("ventora:l35");
-    expect(keys).toContain("ventora:l20-fijos");
+    expect(keys).not.toContain("ventora:l20-fijos");
     expect(keys).toContain("ventora:winhouse-andes-monorriel");
     expect(keys).toContain("ventora:veratec-7400-corredera");
     expect(keys).toContain("ventora:veratec-elegans-60-ventana-hoja-exterior");
     expect(keys).toContain("ventora:veratec-compact-sliding-4h");
     expect(keys).toContain("ventora:veratec-7400-corredera-3h");
+    expect(keys).toContain("ventora:veratec-7400-corredera-4h-chica");
+    expect(keys).toEqual(expect.arrayContaining([
+      "ventora:veratec-bahar-5200-fijo",
+      "ventora:veratec-bahar-5200-ventana-interior",
+      "ventora:veratec-bahar-5200-ventana-exterior",
+      "ventora:veratec-bahar-5200-plegable-3-3-0",
+      "ventora:veratec-bahar-5200-plegable-4-3-1",
+      "ventora:veratec-bahar-5200-plegable-6-5-1",
+      "ventora:veratec-bahar-5200-plegable-7-4-3",
+    ]));
     expect(keys).toContain("ventora:veratec-elevadora-4h-4moviles");
     expect(keys).toContain("ventora:veratec-eko-130");
     expect(keys).toContain("ventora:veratec-eko-82");
-    expect(catalogSize).toBe(50);
+    expect(keys).toEqual(expect.arrayContaining([
+      "ventora:veratec-inova-76-junta-central",
+      "ventora:veratec-inova-76",
+      "ventora:veratec-inova-nueva-generacion",
+      "ventora:veratec-maxi-royal-70",
+      "ventora:veratec-elegans-70",
+      "ventora:veratec-maxi-riviera",
+      "ventora:veratec-maxi-majestic",
+      "ventora:veratec-maxi-empire",
+      "ventora:veratec-diamond-60",
+      "ventora:veratec-lineal-sliding-74",
+      "ventora:veratec-lineal-sliding-70",
+      "ventora:veratec-compact-lineal-sliding-60",
+    ]));
+    expect(catalogSize).toBe(69);
+  });
+
+  it("reconoce sistemas del catálogo VERATEC sin asignarles precio ni receta inventada", () => {
+    const line = VENTORA_DEFAULT_LINE_CATALOG.find(
+      (candidate) => candidate.catalogKey === "ventora:veratec-maxi-riviera"
+    );
+
+    expect(line).toMatchObject({
+      material: "PVC",
+      proveedor: "VERATEC",
+      precioM2Sugerido: 0,
+      catalogMetadata: {
+        cubicationStatus: "pending",
+        productCatalogEvidence: {
+          document: "VERATEC_Catálogo_de_productos-236.pdf",
+          printedPages: "20–21",
+          profileWidthMm: "70, 105, 125, 145 o 165",
+        },
+      },
+    });
+    expect(line?.catalogMetadata).not.toHaveProperty("workshopProfiles");
+    expect(line?.catalogMetadata).not.toHaveProperty("fabricationRecipe");
+  });
+
+  it("mantiene una sola línea comercial exterior compatible con abatible y proyectante", () => {
+    const line = VENTORA_DEFAULT_LINE_CATALOG.find(
+      (candidate) => candidate.catalogKey === "ventora:veratec-bahar-5200-ventana-exterior"
+    );
+
+    expect(line?.catalogMetadata).toMatchObject({
+      compatibility: {
+        componentTypes: ["Ventana"],
+        openingTypes: ["Abatible", "Proyectante"],
+        leavesCounts: [1],
+      },
+    });
+    expect(VENTORA_DEFAULT_LINE_CATALOG.some(
+      (candidate) => candidate.catalogKey === "ventora:veratec-bahar-5200-ventana-proyectante"
+    )).toBe(false);
   });
 
   it("registra Veratec como PVC del proveedor VERATEC con sus 15 referencias Alumétrica", () => {
@@ -136,11 +199,13 @@ describe("seedDefaultLineCatalog", () => {
     expect(variants.map((line) => line.catalogKey)).toEqual([
       "ventora:veratec-7400-corredera",
       "ventora:veratec-7400-corredera-3h",
+      "ventora:veratec-7400-corredera-4h-chica",
       "ventora:veratec-7400-monorriel",
     ]);
     expect(variants.map((line) => line.catalogMetadata?.configurationKey)).toEqual([
       "sliding-7400:corredera-2h",
       "sliding-7400:corredera-3h",
+      "sliding-7400:corredera-4h-chica",
       "sliding-7400:monorriel",
     ]);
     expect(variants.every((line) => line.catalogMetadata?.familyLabel === "Sliding 7400")).toBe(true);

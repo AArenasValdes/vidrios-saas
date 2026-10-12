@@ -343,6 +343,8 @@ export type FabricacionAccesorioResultado = {
   codigo: string;
   nombre: string;
   cantidadUnidades: number;
+  /** Unidad de consumo guardada en el snapshot (unidad, par, m, etc.). */
+  unidad?: string;
   trazabilidad: FabricacionTrazabilidadRegla[];
 };
 

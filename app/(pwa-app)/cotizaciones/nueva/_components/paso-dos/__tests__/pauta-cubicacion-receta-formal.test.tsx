@@ -14,6 +14,10 @@ import {
   VERATEC_7400_CATALOG_KEY,
   VERATEC_7400_VARIANT_MONOLITICO_4MM,
 } from "@/features/fabricacion/fixtures/veratec-7400-corredera-recipe";
+import {
+  VERATEC_7400_4H_CATALOG_KEY,
+  VERATEC_7400_4H_VARIANTS,
+} from "@/features/fabricacion/fixtures/veratec-preliminary-recipes";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
 const mockUseFabricationRecipes = jest.fn();
@@ -456,5 +460,63 @@ describe("PautaCubicacionPanel con recetas persistidas", () => {
       })
     );
     expect(onRecipeIdChange).toHaveBeenCalledWith("");
+  });
+
+  it("genera el despiece preliminar Veratec 7400 4H desde la base común sin receta persistida", async () => {
+    const variant = VERATEC_7400_4H_VARIANTS[0];
+    mockUseFabricationRecipes.mockReturnValue({
+      organizationId: 10,
+      recipes: [],
+      isLoading: false,
+    });
+    Object.defineProperty(global, "fetch", {
+      configurable: true,
+      writable: true,
+      value: jest.fn(async () => ({ ok: false, json: async () => ({}) })),
+    });
+    const onFormalSnapshot = jest.fn();
+
+    render(
+      <PautaCubicacionPanel
+        componentForm={{
+          ancho: "1222",
+          alto: "1222",
+          cantidad: "1",
+          lineTemplateId: "1523",
+          catalogLineKey: VERATEC_7400_4H_CATALOG_KEY,
+          tipo: "Ventana",
+          sistema: "Corredera",
+          vidrio: "Incoloro monolítico 4 mm",
+          fabricacionTipologia: "corredera",
+          fabricacionHojas: 4,
+          fabricacionModulos: 4,
+          fabricacionVariante: "estandar",
+          sheetScheme: "4 hojas",
+          sheetVariant: "4 móviles",
+        }}
+        selectedTemplate={{
+          ...selectedTemplate,
+          id: 1523,
+          nombre: "Veratec 7400 — Corredera 4 hojas chicas",
+          catalogKey: VERATEC_7400_4H_CATALOG_KEY,
+          catalogMetadata: { familyKey: "veratec:sliding-7400" },
+        }}
+        onCubicationSnapshotChange={jest.fn()}
+        onFabricacionSnapshotChange={onFormalSnapshot}
+        onFabricationRecipeIdChange={jest.fn()}
+        onFabricacionContextoChange={jest.fn()}
+      />
+    );
+
+    await waitFor(() =>
+      expect(onFormalSnapshot).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recipeId: `veratec:workbook:${variant.slug}`,
+          recipeStatus: "testing",
+          selectedVariant: variant.slug,
+        })
+      )
+    );
+    expect(onFormalSnapshot.mock.calls[0]?.[0]).not.toHaveProperty("qaPreliminary");
   });
 });

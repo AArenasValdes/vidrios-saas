@@ -372,7 +372,8 @@ export const fabricacionResultadoCubicacionSchema = z
           accesorioId: z.string().min(1),
           codigo: z.string(),
           nombre: z.string().min(1),
-          cantidadUnidades: integerPositiveSchema,
+          cantidadUnidades: z.number().finite().positive(),
+          unidad: z.string().min(1).optional(),
           trazabilidad: z.array(fabricacionTrazabilidadReglaSchema),
         })
         .strict()

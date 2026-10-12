@@ -1,4 +1,5 @@
 import {
+  buildWorkshopCustomizedSource,
   buildProcedenciaPersistence,
   buildPlantillaVentoraSourceReference,
   buildPlantillaVerificadaSourceReference,
@@ -7,6 +8,20 @@ import {
 } from "@/features/fabricacion/types/fabricacion-receta-procedencia";
 
 describe("procedencia de receta de fabricación", () => {
+  it("marca como propia del taller una receta guardada desde una plantilla", () => {
+    expect(
+      buildWorkshopCustomizedSource({
+        sourceReference: "base-ventora:corredera:2",
+        sourceRevision: "v1",
+      })
+    ).toEqual({
+      sourceType: "manual",
+      sourceReference: "taller:personalizada:base-ventora%3Acorredera%3A2",
+      sourceName: "Receta propia del taller",
+      sourceRevision: "v1",
+    });
+  });
+
   it("persiste Base Ventora, plantilla Ventora, taller, IA y plantilla verificada sin mezclar validación técnica", () => {
     expect(
       buildProcedenciaPersistence("base_ventora", {
@@ -63,6 +78,13 @@ describe("procedencia de receta de fabricación", () => {
         sourceReference: "base-tipologica:abatible",
       }).procedencia
     ).toBe("base_ventora");
+
+    expect(
+      resolveProcedenciaFromSource({
+        sourceType: "manual",
+        sourceReference: "taller:personalizada:base-ventora%3Acorredera%3A2",
+      }).procedencia
+    ).toBe("receta_taller");
 
     expect(
       resolveProcedenciaFromSource({

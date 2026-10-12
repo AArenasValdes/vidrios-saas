@@ -287,11 +287,21 @@ export function formatLineTemplateQuotePickerLabel(
     "ventora:serie-45-puerta": "Serie 45 — Puerta abatible 1 hoja",
     "ventora:serie-12-shower-corredera": "Serie 12 — Shower Door corredera 2 hojas",
     "ventora:l42": "Serie 42 — Proyectante / paño fijo",
+    "ventora:veratec-elegans-60-ventana-hoja-interior": "Elegans 60 — Ventana abatible · hoja interior",
+    "ventora:veratec-elegans-60-ventana-hoja-exterior": "Elegans 60 — Ventana abatible · hoja exterior",
+    "ventora:veratec-elegans-60-puerta-hoja-interior": "Elegans 60 — Puerta abatible · hoja interior",
+    "ventora:veratec-elegans-60-puerta-hoja-exterior": "Elegans 60 — Puerta abatible · hoja exterior",
+    "ventora:veratec-elegans-60-fijo": "Elegans 60 — Paño fijo",
   };
   const universalLabel = template.catalogKey
     ? universalAluminumLabels[template.catalogKey]
     : undefined;
   if (universalLabel) return universalLabel;
+
+  // Arquetipo fue la fuente de carga de estas familias, no la identidad de la
+  // línea que el maestro cotiza. El proveedor se conserva en compra/precios.
+  const sourceNeutralName = template.nombre.replace(/^Arquetipo\s*[·•—-]\s*/i, "").trim();
+  if (sourceNeutralName !== template.nombre.trim()) return sourceNeutralName;
 
   return resolveSodalL25CommercialLineDisplayName(template);
 }

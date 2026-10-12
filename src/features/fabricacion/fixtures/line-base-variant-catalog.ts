@@ -61,18 +61,29 @@ import {
   VERATEC_7400_SOURCE_VARIANTS,
 } from "@/features/fabricacion/fixtures/veratec-7400-corredera-recipe";
 import {
+  crearRecetaVeratecBahar5200,
+  VERATEC_BAHAR_5200_VARIANTS,
+  VERATEC_BAHAR_5200_WINDOW_VARIANTS,
+  VERATEC_BAHAR_5200_PLEGABLE_VARIANTS,
+} from "@/features/fabricacion/fixtures/veratec-bahar-5200-recipes";
+import {
   crearRecetaVeratecCompactSliding,
   crearRecetaVeratec7400Workbook3H,
   crearRecetaVeratec7400Monorriel,
-  crearRecetaVeratecElegansBatiente,
-  crearRecetaVeratecElegansFijo,
   VERATEC_COMPACT_SLIDING_VARIANTS,
   VERATEC_7400_WORKBOOK_3H_VARIANTS,
   VERATEC_7400_MONORAIL_VARIANTS,
-  VERATEC_ELEGANS_BATIENTE_VARIANTS,
-  VERATEC_ELEGANS_FIXED_VARIANTS,
   VERATEC_WORKBOOK_SOURCE_REVISION,
 } from "@/features/fabricacion/fixtures/veratec-workbook-recipes";
+import {
+  crearRecetaVeratec7400CuatroHojasChicas,
+  crearRecetaVeratecElevadora,
+  crearRecetaVeratecInova,
+  VERATEC_7400_4H_CATALOG_KEY,
+  VERATEC_7400_4H_VARIANTS,
+  VERATEC_ELEVADORA_VARIANTS,
+  VERATEC_INOVA_VARIANTS,
+} from "@/features/fabricacion/fixtures/veratec-preliminary-recipes";
 import {
   crearRecetaWinHouseS60Candidata,
   WINHOUSE_S60_CANDIDATE_VARIANTS,
@@ -98,8 +109,14 @@ export const BASE_LINE_CATALOG_KEYS = [
   "ventora:l32",
   "ventora:l42",
   VERATEC_7400_CATALOG_KEY,
+  VERATEC_7400_4H_CATALOG_KEY,
   "ventora:veratec-7400-corredera-3h",
   "ventora:veratec-7400-monorriel",
+  ...VERATEC_BAHAR_5200_VARIANTS.map((variant) => variant.catalogKey),
+  ...VERATEC_BAHAR_5200_PLEGABLE_VARIANTS.map((variant) => variant.catalogKey),
+  "ventora:veratec-inova-corredera-2h",
+  "ventora:veratec-elevadora-2h-1fijo-1movil",
+  "ventora:veratec-elevadora-4h-2fijos-2moviles",
   "ventora:veratec-elegans-60-ventana-hoja-exterior",
   "ventora:veratec-elegans-60-ventana-hoja-interior",
   "ventora:veratec-elegans-60-puerta-hoja-exterior",
@@ -424,6 +441,51 @@ export const LINE_BASE_VARIANT_CATALOG: Partial<Record<BaseLineCatalogKey, LineV
       buildDefinition: ({ lineName }) => crearRecetaSerie42Sodal({ lineName }),
     },
   ],
+  ...Object.fromEntries(
+    VERATEC_BAHAR_5200_WINDOW_VARIANTS.reduce((byCatalogKey, variant) => {
+      const slots = byCatalogKey.get(variant.catalogKey) ?? [];
+      slots.push({
+        typology: variant.typology,
+        leavesCount: 1,
+        modulesCount: 1,
+        variantSlug: variant.slug,
+        variantLabel: variant.label,
+        sourceType: "supplier",
+        sourceName: "VERATEC · pauta de corte facilitada",
+        sourceRevision: "pauta-de-corte-veratec.xlsx + MATERIALES PRECIO VERATEC.xlsx#BAHAR",
+        evidenceLevel: "documented",
+        complete: true,
+        pendingFields: [
+          "Seleccionar junquillo según espesor del vidrio.",
+          "Asociar y completar precio de los refuerzos citados por la pauta.",
+          "Configurar kerf y despunte del taller.",
+        ],
+        sourceReference: variant.sourceReference,
+        buildDefinition: ({ lineName }) => crearRecetaVeratecBahar5200({ lineName, variant: variant.slug }),
+      });
+      byCatalogKey.set(variant.catalogKey, slots);
+      return byCatalogKey;
+    }, new Map<string, LineVariantSlot[]>())
+  ) as Partial<Record<BaseLineCatalogKey, LineVariantSlot[]>>,
+  ...Object.fromEntries(VERATEC_BAHAR_5200_PLEGABLE_VARIANTS.map((variant) => [variant.catalogKey, [{
+    typology: "puerta_abatible" as const,
+    leavesCount: variant.leaves,
+    modulesCount: 1,
+    variantSlug: variant.slug,
+    variantLabel: variant.label,
+    sourceType: "supplier" as const,
+    sourceName: "VERATEC · pauta de corte facilitada",
+    sourceRevision: "pauta-de-corte-veratec.xlsx + MATERIALES PRECIO VERATEC.xlsx#BAHAR",
+    evidenceLevel: "documented" as const,
+    complete: true,
+    pendingFields: [
+      "Elegir espesor de vidrio y junquillo compatible.",
+      "Completar accesorios de la puerta plegable si corresponden al taller.",
+      "Configurar kerf y despunte del taller.",
+    ],
+    sourceReference: variant.sourceReference,
+    buildDefinition: ({ lineName }) => crearRecetaVeratecBahar5200({ lineName, variant: variant.slug }),
+  }]])) as Partial<Record<BaseLineCatalogKey, LineVariantSlot[]>>,
   [VERATEC_7400_CATALOG_KEY]: VERATEC_7400_SOURCE_VARIANTS.map((variant) => {
     const isMonolithic = variant.slug === "monolitico_4mm";
     const isTwentyFour = variant.slug === "termopanel_24mm";
@@ -457,6 +519,27 @@ export const LINE_BASE_VARIANT_CATALOG: Partial<Record<BaseLineCatalogKey, LineV
         }),
     };
   }),
+  [VERATEC_7400_4H_CATALOG_KEY]: VERATEC_7400_4H_VARIANTS.map((variant) => ({
+    typology: "corredera" as const,
+    leavesCount: 4,
+    modulesCount: 4,
+    variantSlug: variant.slug,
+    variantLabel: variant.label,
+    apertura: "corredera",
+    sourceType: "supplier" as const,
+    sourceName: "Veratec · pauta de corte + configuración operacional del taller",
+    sourceRevision: VERATEC_WORKBOOK_SOURCE_REVISION,
+    evidenceLevel: "documented" as const,
+    complete: false,
+    autoSeed: false,
+    pendingFields: [
+      "El vidrio calculado usa monolítico 4 mm; no se habilita 5 mm hasta confirmar compatibilidad.",
+      "Rodamientos, cierres, felpa y goma tienen consumo sugerido, pero faltan SKU/precios de compra del taller.",
+      "Completar kerf, despunte y criterio de sobrante del taller antes de emitir compra confirmada.",
+    ],
+    sourceReference: variant.sourceReference,
+    buildDefinition: ({ lineName }: { lineName: string }) => crearRecetaVeratec7400CuatroHojasChicas({ lineName, variant: variant.slug }),
+  })),
   "ventora:veratec-7400-corredera-3h": VERATEC_7400_WORKBOOK_3H_VARIANTS.map((variant) => ({
     typology: "corredera",
     leavesCount: 3,
@@ -470,7 +553,7 @@ export const LINE_BASE_VARIANT_CATALOG: Partial<Record<BaseLineCatalogKey, LineV
     complete: false,
     autoSeed: false,
     pendingFields: [
-      "Asociar los perfiles a sus presentaciones y largos por acabado para calcular barras.",
+      "Asociar los perfiles a sus presentaciones y largos por acabado para calcular tiras.",
       "Elegir junquillo según vidrio; el Excel dice ‘todos’ y no indica sus cortes.",
       "Completar accesorios, espesor del vidrio, kerf y despunte del taller.",
       "Base calculable para revisar; no validada físicamente por el taller.",
@@ -491,7 +574,7 @@ export const LINE_BASE_VARIANT_CATALOG: Partial<Record<BaseLineCatalogKey, LineV
     complete: false,
     autoSeed: false,
     pendingFields: [
-      "Asociar largos y costos de las presentaciones para calcular barras.",
+      "Asociar largos y costos de las presentaciones para calcular tiras.",
       "El junquillo figura como ‘todos’ para hoja y fijo; falta elegirlo según el vidrio.",
       "Completar accesorios, espesores del vidrio, kerf y despunte.",
       "Base calculable para revisar; no validada físicamente por el taller.",
@@ -499,50 +582,41 @@ export const LINE_BASE_VARIANT_CATALOG: Partial<Record<BaseLineCatalogKey, LineV
     sourceReference: variant.sourceReference,
     buildDefinition: ({ lineName }) => crearRecetaVeratec7400Monorriel({ lineName, variant: variant.slug }),
   })),
-  ...VERATEC_ELEGANS_BATIENTE_VARIANTS.map((variant) => ({
-    [variant.catalogKey]: [{
-      typology: variant.typology,
-      leavesCount: 1,
-      modulesCount: 1,
-      variantSlug: variant.slug,
-      variantLabel: variant.label,
-      apertura: "abatible",
-      sourceType: "supplier" as const,
-      sourceName: "Veratec · pauta de corte facilitada",
-      sourceRevision: VERATEC_WORKBOOK_SOURCE_REVISION,
-      evidenceLevel: "documented" as const,
-      complete: false,
-      autoSeed: false,
-      pendingFields: [
-        "Confirmar código y largo de presentación de cada perfil.",
-        "Elegir junquillo según el vidrio y completar accesorios.",
-        "El espesor/composición del vidrio, kerf y despunte quedan pendientes del taller.",
-      ],
-      sourceReference: variant.sourceReference,
-      buildDefinition: ({ lineName }: { lineName: string }) => crearRecetaVeratecElegansBatiente({ lineName, variant: variant.slug }),
-    }],
-  })).reduce((catalog, entry) => Object.assign(catalog, entry), {} as Record<string, LineVariantSlot[]>),
-  "ventora:veratec-elegans-60-fijo": VERATEC_ELEGANS_FIXED_VARIANTS.map((variant) => ({
-    typology: "pano_fijo",
-    leavesCount: 1,
-    modulesCount: 1,
+  ["ventora:veratec-inova-corredera-2h"]: VERATEC_INOVA_VARIANTS.map((variant) => ({
+    typology: "corredera" as const,
+    leavesCount: 2,
+    modulesCount: 2,
     variantSlug: variant.slug,
     variantLabel: variant.label,
-    apertura: "fijo",
-    sourceType: "supplier",
-    sourceName: "Veratec · pauta de corte facilitada",
-    sourceRevision: VERATEC_WORKBOOK_SOURCE_REVISION,
-    evidenceLevel: "documented",
+    apertura: "corredera",
+    evidenceLevel: "structural_only" as const,
     complete: false,
     autoSeed: false,
     pendingFields: [
-      "Confirmar código y largo de presentación de cada perfil.",
-      "Elegir junquillo según el vidrio y completar accesorios.",
-      "El espesor/composición del vidrio, kerf y despunte quedan pendientes del taller.",
+      "La fórmula de marco y ancho de hoja es preliminar; falta validación del taller.",
+      "Faltan códigos, altura de hoja, vidrio, junquillo, accesorios y parámetros de sierra.",
     ],
     sourceReference: variant.sourceReference,
-    buildDefinition: ({ lineName }) => crearRecetaVeratecElegansFijo({ lineName, variant: variant.slug }),
+    buildDefinition: ({ lineName }: { lineName: string }) => crearRecetaVeratecInova({ lineName, variant: variant.slug }),
   })),
+  ...VERATEC_ELEVADORA_VARIANTS.map((variant) => ({
+    [variant.catalogKey]: [{
+      typology: "corredera" as const,
+      leavesCount: variant.leaves,
+      modulesCount: variant.leaves,
+      variantSlug: variant.slug,
+      variantLabel: variant.label,
+      apertura: "corredera",
+      sourceType: "supplier" as const,
+      sourceName: "Xelena · Díptico de líneas PVC · Elevadora",
+      evidenceLevel: "structural_only" as const,
+      complete: false,
+      autoSeed: false,
+      pendingFields: ["El díptico identifica el esquema; el taller debe agregar perfiles y reglas de corte."],
+      sourceReference: variant.sourceReference,
+      buildDefinition: ({ lineName }: { lineName: string }) => crearRecetaVeratecElevadora({ lineName, variant: variant.slug }),
+    }],
+  })).reduce((catalog, entry) => Object.assign(catalog, entry), {} as Record<string, LineVariantSlot[]>),
   ...VERATEC_COMPACT_SLIDING_VARIANTS.map((variant) => ({
     [`ventora:veratec-compact-sliding-${variant.leaves}h`]: [{
       typology: "corredera",
@@ -560,7 +634,7 @@ export const LINE_BASE_VARIANT_CATALOG: Partial<Record<BaseLineCatalogKey, LineV
       pendingFields: [
         "Elegir junquillo por espesor de vidrio; el Excel indica ‘todos’.",
         "Completar accesorios, espesor/composición del vidrio y parámetros de sierra.",
-        "Revisar largo de las presentaciones por acabado antes de emitir barras.",
+        "Revisar largo de las presentaciones por acabado antes de emitir tiras.",
       ],
       sourceReference: variant.sourceReference,
       buildDefinition: ({ lineName }: { lineName: string }) => crearRecetaVeratecCompactSliding({ lineName, variant: variant.slug }),
@@ -588,7 +662,7 @@ export const LINE_BASE_VARIANT_CATALOG: Partial<Record<BaseLineCatalogKey, LineV
           ]
         : [
             "Confirmar identidad del perfil físico y cruzarlo con el catálogo de taller",
-            "Confirmar largo comercial, kerf y despunte antes de pauta por barra",
+            "Confirmar largo comercial, kerf y despunte antes de la pauta por tira",
             "Completar herrajes/accesorios y probar con una fabricación real",
           ]),
     ],

@@ -4,15 +4,15 @@ import { auditarIntegridadCatalogoLineasVentora } from "@/features/cotizaciones/
 
 describe("auditoria integridad catalogo lineas", () => {
 
-  it("clasifica las 50 líneas con categorías primarias mutuamente excluyentes", () => {
+  it("clasifica las 69 líneas con categorías primarias mutuamente excluyentes", () => {
 
     const { lineas, resumen } = auditarIntegridadCatalogoLineasVentora();
 
 
 
-    expect(lineas).toHaveLength(50);
+    expect(lineas).toHaveLength(69);
 
-    expect(resumen.totalLineas).toBe(50);
+    expect(resumen.totalLineas).toBe(69);
 
 
 
@@ -24,19 +24,19 @@ describe("auditoria integridad catalogo lineas", () => {
 
     );
 
-    expect(sumaPrimaria).toBe(50);
+    expect(sumaPrimaria).toBe(69);
 
 
 
     expect(resumen.clasificacionPrimaria).toEqual({
 
-      codigos_documentados_no_validados: 11,
+      codigos_documentados_no_validados: 10,
 
-      codigos_referenciales_no_ambiguos: 29,
+      codigos_referenciales_no_ambiguos: 36,
 
       codigos_referenciales_ambiguos: 1,
 
-      sin_codigos_tecnicos_en_fixtures: 9,
+      sin_codigos_tecnicos_en_fixtures: 22,
 
       solo_comercial: 0,
 
@@ -46,9 +46,9 @@ describe("auditoria integridad catalogo lineas", () => {
 
     expect(resumen.nomenclaturaAmbigua).toBe(1);
 
-    expect(resumen.conCodigosReferencialesEnFixtures).toBe(41);
+    expect(resumen.conCodigosReferencialesEnFixtures).toBe(47);
 
-    expect(resumen.gateTecnico.listaParaProbar).toBe(17);
+    expect(resumen.gateTecnico.listaParaProbar).toBe(19);
 
   });
 
@@ -136,7 +136,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
 
 
-    expect(sinCodigos).toHaveLength(9);
+    expect(sinCodigos).toHaveLength(22);
 
     expect(sinCodigos.map((line) => line.catalogKey).sort()).toEqual(
 
@@ -155,6 +155,7 @@ describe("auditoria integridad catalogo lineas", () => {
         "ventora:optima-s28-corredera-3h",
 
 
+        "ventora:veratec-7400-corredera-4h-chica",
         "ventora:winhouse-andes-proyectante",
         "ventora:veratec-elevadora-2h-1fijo-1movil",
         "ventora:veratec-elevadora-2h-2moviles",
@@ -162,6 +163,18 @@ describe("auditoria integridad catalogo lineas", () => {
         "ventora:veratec-elevadora-3h-1fijo-2moviles",
         "ventora:veratec-elevadora-4h-4moviles",
         "ventora:veratec-elevadora-4h-2fijos-2moviles",
+        "ventora:veratec-inova-76-junta-central",
+        "ventora:veratec-inova-76",
+        "ventora:veratec-inova-nueva-generacion",
+        "ventora:veratec-maxi-royal-70",
+        "ventora:veratec-elegans-70",
+        "ventora:veratec-maxi-riviera",
+        "ventora:veratec-maxi-majestic",
+        "ventora:veratec-maxi-empire",
+        "ventora:veratec-diamond-60",
+        "ventora:veratec-lineal-sliding-74",
+        "ventora:veratec-lineal-sliding-70",
+        "ventora:veratec-compact-lineal-sliding-60",
 
       ].sort()
 

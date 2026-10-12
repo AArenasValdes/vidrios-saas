@@ -45,6 +45,7 @@ export default function CotizacionDetallePage() {
   const [isPreparingPdf, setIsPreparingPdf] = useState(false);
   const [isLoadingItems, setIsLoadingItems] = useState(() => !cotizacion);
   const [hasResolvedInitialLoad, setHasResolvedInitialLoad] = useState(() => Boolean(cotizacion));
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [isUpdatingResponse, setIsUpdatingResponse] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -80,6 +81,7 @@ export default function CotizacionDetallePage() {
 
   useEffect(() => {
     loadedItemsForIdRef.current = null;
+    setLoadError(null);
     setHasResolvedInitialLoad(false);
     setIsLoadingItems(Boolean(params.id));
   }, [params.id]);
@@ -104,6 +106,16 @@ export default function CotizacionDetallePage() {
       };
     }
 
+    // Avoid starting a detail query before the active organization is ready.
+    // The store returns null while auth is still resolving, which used to leave
+    // this page in its loading state without a useful recovery path.
+    if (!isReady) {
+      setIsLoadingItems(true);
+      return () => {
+        cancelled = true;
+      };
+    }
+
     if (loadedItemsForIdRef.current === params.id) {
       setIsLoadingItems(false);
       setHasResolvedInitialLoad(true);
@@ -115,9 +127,14 @@ export default function CotizacionDetallePage() {
     setIsLoadingItems(true);
 
     void loadCotizacionById(params.id)
-      .then(() => {
+      .then((record) => {
         if (!cancelled) {
-          setLoadError(null);
+          if (record) {
+            loadedItemsForIdRef.current = params.id;
+            setLoadError(null);
+          } else {
+            setLoadError("Puede que la cotización no exista o que la carga haya tardado demasiado.");
+          }
         }
       })
       .catch((error) => {
@@ -127,7 +144,6 @@ export default function CotizacionDetallePage() {
       })
       .finally(() => {
         if (!cancelled) {
-          loadedItemsForIdRef.current = params.id;
           setIsLoadingItems(false);
           setHasResolvedInitialLoad(true);
         }
@@ -136,7 +152,15 @@ export default function CotizacionDetallePage() {
     return () => {
       cancelled = true;
     };
-  }, [cotizacion?.items.length, loadCotizacionById, params.id]);
+  }, [cotizacion?.items.length, isReady, loadAttempt, loadCotizacionById, params.id]);
+
+  const handleRetryLoad = () => {
+    loadedItemsForIdRef.current = null;
+    setLoadError(null);
+    setIsLoadingItems(true);
+    setHasResolvedInitialLoad(false);
+    setLoadAttempt((attempt) => attempt + 1);
+  };
 
   useEffect(() => {
     router.prefetch(printUrl);
@@ -299,7 +323,7 @@ export default function CotizacionDetallePage() {
     }
   };
 
-  if (isReady && hasResolvedInitialLoad && !cotizacion) {
+  if (hasResolvedInitialLoad && !cotizacion) {
     return (
       <div className={`${s.stateRoot}${isDesktopViewport ? ` ${s.stateRootDesktop}` : ""}`}>
         <div className={`${s.stateCard}${isDesktopViewport ? ` ${s.stateCardDesktop}` : ""}`}>
@@ -307,10 +331,11 @@ export default function CotizacionDetallePage() {
             <LuArrowLeft aria-hidden />
             Cotizaciones
           </Link>
-          <h1 className={s.stateTitle}>Cotizacion no encontrada</h1>
+          <h1 className={s.stateTitle}>{loadError ? "No pudimos abrir la cotización" : "Cotización no encontrada"}</h1>
           <p className={s.stateText}>
-            {loadError || "No existe una cotizacion guardada con ese identificador."}
+            {loadError || "No existe una cotización guardada con ese identificador."}
           </p>
+          {loadError ? <button type="button" className={s.retryButton} onClick={handleRetryLoad}>Reintentar carga</button> : null}
         </div>
       </div>
     );
