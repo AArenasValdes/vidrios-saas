@@ -7,6 +7,8 @@ Este procedimiento es obligatorio para agregar o ampliar líneas con salida téc
 
 Copiar la [plantilla de integración](PLANTILLA_INTEGRACION_LINEA.md) a la carpeta de evidencia de la línea. Ese expediente conserva decisiones, fórmulas, pruebas y pendientes para que otro agente continúe sin reconstruir la investigación.
 
+Para la unificación transversal pendiente, consultar [Base común de líneas, sistemas y composiciones](BASE_COMUN_LINEAS_SISTEMAS_COMPOSICIONES.md). Documenta las brechas actuales, la identidad propuesta y criterios de aceptación; no describe una funcionalidad ya desplegada.
+
 ## 1. Antes de editar
 
 Leer, en este orden:
@@ -46,6 +48,31 @@ Separar explícitamente estas capas:
 
 La confirmación no se generaliza a variantes no nombradas. Registrar titular, fecha, líneas, tipologías y variantes cubiertas. Una validación puede ser universal por código cuando las reglas son compartidas; no requiere sembrar ni editar una receta por cada organización.
 
+### Contrato de enrutamiento comercial, técnico y de precios
+
+Antes de dar una línea por integrada, comprobar cada tramo con una identidad concreta y un caso negativo. El expediente debe conservar `catalog_key`, `familyKey` y, si la composición está respaldada, `configurationKey`/variante. No agrupar sistemas por parecido de nombre o código de perfil. Cuando un catálogo publica varios tipos de apertura pero no hojas ni cortes, registrar compatibilidad comercial sin afirmar una receta por variante.
+
+### Paso 1 móvil y edición de descuentos
+
+- La línea y el sistema elegidos en el catálogo se muestran como contexto; no se vuelven a pedir al maestro.
+- Declarar pares exactos componente + apertura/configuración bajo `catalogMetadata.compatibility.configurations`. El Paso 1 móvil solo ofrece esos pares. No combinar `componentTypes × openingTypes` porque crea cruces que el fabricante no publicó.
+- Mostrar hojas, rieles o subvariantes solo si la fuente los identifica; si falta el dato, indicarlo y dejar la composición pendiente.
+- La acción principal del Paso 1 dice **Perfiles y descuentos** y lleva al perfil que se edita. El descuento en mm queda junto a la base y cantidad de ese perfil, con unidad explícita y estado claro cuando no hay regla.
+- En **Perfiles y descuentos**, exponer perfiles/códigos de `workshopProfiles` o fixture canónico con la fuente por documento/página. Cuando el fabricante identifica la aplicación, guardar `applicationGroup` (por ejemplo, ventanas correderas o puertas correderas) y agrupar esas referencias en la UI. Dejar las no clasificadas en **Otros perfiles del catálogo**; no inferir su uso por coincidencias de nombre. Agregar una referencia crea una regla incompleta visible, no una fórmula: mantener el pendiente de base, descuento y cantidad hasta leer el Plan de armado.
+- Cualquier perfil de cualquier sistema puede eliminarse desde su edición. Confirmar antes de quitarlo y persistir la receta sin ese ID; probar que se elimina de la lista y no reaparece al reabrir.
+- Toda nueva línea con fabricación sigue este contrato común; agregar pruebas para opciones permitidas, cruces inválidos, selección móvil y conteos documentados.
+
+| Tramo | Clave que debe viajar | Regla de cierre |
+|---|---|---|
+| Catálogo → Guiada/Constructor | `line_template_id`, `catalog_key`, material, sistema y composición final | La línea compatible aparece solo para el componente/apertura documentados. Las líneas propias conservan su identidad. |
+| Selección → receta | `line_template_id + tipología + hojas + variante + vidrio final` y entradas geométricas | Coincidencia exacta o `sin_receta`. No reutilizar una receta de otra línea, organización, configuración o vidrio. |
+| Receta → snapshot | ID y versión de receta, entradas, perfiles, cantidades, cortes y vidrio | El cálculo completo produce snapshot; al cambiar línea, sistema, composición, hojas, vidrio o medida se invalida el cálculo vivo. El snapshot guardado permanece histórico. |
+| Perfil → precio de compra | `familyKey + código técnico + acabado + presentación`, más `configurationKey` cuando exista | Cruce explícito. Un código repetido entre familias no comparte SKU, largo ni precio. Sin presentación/precio confirmado, costo pendiente. |
+| Línea → precio de venta | `organization_id + line_template_id` | El taller edita precio por m², mínimo y redondeo. El seed solo inserta claves ausentes; nunca reemplaza precio propio. |
+| Edición del taller → cotización nueva | Receta propia y presentación privada versionadas por organización | Descuentos en mm, perfiles y largos propios prevalecen sobre una base sugerida compatible; los históricos no se reescriben. |
+
+Ruta funcional esperada: `page → hook → service → repository → Supabase`. El expediente debe citar el archivo real de cada tramo y probar los cruces en Guiada y Constructor. `pnpm fabrication:verify --build` automatiza regresiones locales, tipos, rutas y compilación; el smoke QA comprueba interfaz y persistencia. Ninguno sustituye el Plan de armado, los precios del proveedor ni la validación del taller. Si solo existen catálogos de secciones, se puede cerrar la **base comercial**, con referencias de perfiles y precios editables, dejando el despiece explícitamente pendiente.
+
 ### Etiquetas visibles en cotización
 
 - Si la geometría, variante y fórmulas permitieron generar el snapshot de perfiles/cortes, la cotización dice **Despiece disponible**. La palabra “preliminar” no se usa para rebajar un cálculo disponible solo porque la receta siga sin validación física.
@@ -59,7 +86,7 @@ La confirmación no se generaliza a variantes no nombradas. Registrar titular, f
 2. Incorporar solo perfiles/vidrios cuyo rol, fórmula, cantidad y orientación tengan soporte. Conservar `sourceReference`, `sourceName`, `sourceRevision`, observaciones y notas.
 3. Si un código físico, medida, cantidad o compatibilidad no está confirmado, dejarlo sin equivalencia o con `datosPendientes`; no inventar un código para desbloquear el gate.
 4. No activar códigos tentativos como obligatorios “para que calcule”. El cálculo documental y la elegibilidad **Lista para probar** son decisiones distintas.
-5. Para largos de barra desconocidos, dejar explícita la procedencia. El preset Ventora de 6000 mm es solo referencial; no presentarlo como dato confirmado del proveedor/taller. No trasladar kerf, merma ni optimización de otra hoja/software.
+5. Si el largo comercial no está indicado, calcular la pauta con el predeterminado Ventora de **6.000 mm (6,00 m)**. El maestro puede reemplazarlo por perfil cuando su presentación comercial sea distinta. Etiquetar el valor como predeterminado Ventora, no como dato confirmado del proveedor. No trasladar kerf, merma ni optimización de otra hoja/software.
 6. Registrar slots en `line-base-variant-catalog.ts` cuando corresponda. El seed es idempotente y comparte solo ejecuciones concurrentes: debe volver a consultar líneas y slots en nuevas cargas, para que un catálogo/variante agregado después no quede invisible por una respuesta cacheada en la sesión. Si una línea heredada carece de `catalog_key`, solo inferirlo con una identidad fuerte (por ejemplo, proveedor WinHouse + nombre de línea y riel explícitos); agregar una regresión y consultar también esas filas. Nunca ejecutar escrituras remotas durante una tarea local sin autorización.
 7. Crear/actualizar el resolutor de cotización: debe unir `catalog_key + tipología + hojas + vidrio + variante` y devolver **sin receta** para combinaciones que no estén cubiertas. No elegir la receta por una coincidencia parcial o por el vidrio recomendado si contradice la selección final del maestro. Para New S75, una combinación documentada puede usar un borrador preliminar determinista de Ventora si no hay receta persistida estructuralmente lista para calcular; una receta local incompleta no debe ocultar esa base. Nunca marcar el fallback como validado ni ocultar el seed que habilita editar la línea en Fabricación.
 8. Si una fórmula requiere una entrada adicional (por ejemplo ancho de hoja A), llevarla desde el formulario hasta `FabricacionEntradaCalculo`, snapshot inmutable, metadata privada del ítem y resolución del despiece. Invalidar snapshots al cambiar esa medida y bloquear entradas imposibles.
@@ -108,8 +135,9 @@ Hacerlo en desarrollo o en una organización local/QA:
 1. Abrir Configuración → Empresa → Línea → Fabricación y comprobar identidad y variantes que aparecen.
 2. Entrar a **Probar con medidas** y revisar Producto → Perfiles → Vidrio y accesorios → Validar.
 3. Confirmar cortes/componentes, vidrio, advertencias y pauta con dos tamaños controlados; corregir una dimensión y comprobar que los resultados cambian en el eje que corresponde.
-4. En una cotización QA, elegir línea, tipología/hojas, vidrio final y medidas; abrir la revisión interna y contrastar el resultado con el test determinista.
-5. Guardar snapshot solo en QA, reabrirlo y verificar que mantiene receta, versión, vidrio y entradas. El PDF cliente no debe recibir datos técnicos.
+4. Comprobar que el aviso de Validar coincida con el resultado vigente: solo mostrar **No se generaron tiras** cuando el plan contiene cero cortes agrupados. Si hay tiras y cortes, mostrar sus advertencias reales y no reutilizar mensajes de cálculos anteriores.
+5. En una cotización QA, elegir línea, tipología/hojas, vidrio final y medidas; abrir la revisión interna y contrastar el resultado con el test determinista.
+6. Guardar snapshot solo en QA, reabrirlo y verificar que mantiene receta, versión, vidrio y entradas. El PDF cliente no debe recibir datos técnicos.
 
 El wizard puede guardar borradores al avanzar. Usar la cuenta QA autorizada por el usuario; esa autorización persiste y no se debe volver a pedir en cada paso. No activar una receta en nombre del taller sin confirmación explícita; una confirmación directa del titular cubre solo las líneas/variantes que enumeró. Registrar la ruta, variante, medidas, estado observado y si los datos fueron persistidos. Si la UI no permite completar el paso, investigar el bloqueo y adjuntar la evidencia; los tests unitarios no la reemplazan. Recorrer todas las configuraciones nuevas antes de afirmar cobertura completa de UI; si se muestrea, explicitar las no recorridas.
 

@@ -26,6 +26,7 @@ import type {
   FabricacionComponentePerfil,
   FabricacionReceta,
 } from "@/features/fabricacion/types/fabricacion-domain";
+import type { LineProfileReference } from "@/features/cotizaciones/line-templates/types/line-profile-references";
 import type { FabricationRecipeSourceType } from "@/features/fabricacion/types/fabricacion-persistence";
 
 import s from "./fabricacion-mobile.module.css";
@@ -39,6 +40,7 @@ type Props = {
   sourceReference: string | null;
   lineName: string;
   workshopRecipes: FabricacionReceta[];
+  catalogProfiles?: LineProfileReference[];
   readOnly?: boolean;
   onClose: () => void;
   onSelectProfile: (profileId: string) => void;
@@ -49,12 +51,10 @@ type Props = {
 function ProfilePreviewHero({
   preview,
   profile,
-  recipe,
   tiraEstandarLabel,
 }: {
   preview: ReturnType<typeof describePerfilCardDisplay>;
   profile: FabricacionComponentePerfil;
-  recipe: FabricacionReceta;
   tiraEstandarLabel: string;
 }) {
   const perfilCode = preview.codigo !== "Pendiente de validar" ? preview.codigo : "";
@@ -88,7 +88,9 @@ function ProfilePreviewHero({
         </div>
       </dl>
       <p className={s.profilePreviewHint}>
-        Ajusta el descuento solo si tu taller corta distinto a la pauta Ventora.
+        {(profile.datosPendientes ?? []).length > 0
+          ? "Completa base, descuento y cantidad con la pauta o la regla confirmada por tu taller."
+          : "Ajusta el descuento si tu taller corta distinto a la pauta de esta receta."}
       </p>
     </article>
   );
@@ -102,6 +104,7 @@ export function FabricacionProfileEditSheet({
   sourceReference,
   lineName,
   workshopRecipes,
+  catalogProfiles = [],
   readOnly = false,
   onClose,
   onSelectProfile,
@@ -112,6 +115,7 @@ export function FabricacionProfileEditSheet({
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveFlash, setSaveFlash] = useState(false);
+  const [confirmingRemoval, setConfirmingRemoval] = useState(false);
   const orderedProfiles = useMemo(() => recipe.perfiles, [recipe.perfiles]);
   const index = orderedProfiles.findIndex((profile) => profile.id === profileId);
   const profile = index >= 0 ? orderedProfiles[index] : null;
@@ -141,6 +145,16 @@ export function FabricacionProfileEditSheet({
   const frequentLargos = useMemo(
     () => collectFrequentLargosMm(workshopRecipes),
     [workshopRecipes]
+  );
+  const availableCatalogProfiles = useMemo(
+    () => catalogProfiles.filter((reference) => {
+      const code = reference.code?.trim();
+      if (!code) return false;
+      return !recipe.perfiles.some(
+        (entry) => entry.id !== profileId && entry.codigoPerfil.trim() === code
+      );
+    }),
+    [catalogProfiles, profileId, recipe.perfiles]
   );
   const tiraEstandarLabel =
     formatLargoComercialCorto(resolveRecetaLargoComercialDefaultMm(recipe)) ??
@@ -200,6 +214,30 @@ export function FabricacionProfileEditSheet({
     flashAnd(onClose);
   };
 
+  const handleRemoveProfile = async () => {
+    const nextRecipe = {
+      ...recipe,
+      perfiles: recipe.perfiles.filter((entry) => entry.id !== profileId),
+    };
+    if (nextRecipe.perfiles.length === recipe.perfiles.length) return;
+
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await onPersist(nextRecipe);
+      onRecipeChange(nextRecipe);
+      onClose();
+    } catch (error) {
+      setSaveError(
+        error instanceof Error
+          ? error.message
+          : "No se pudo eliminar el perfil. Intenta de nuevo."
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const progressPct =
     profileIds.length > 0
       ? Math.round(((activeIndex >= 0 ? activeIndex + 1 : index + 1) / profileIds.length) * 100)
@@ -255,7 +293,6 @@ export function FabricacionProfileEditSheet({
           <ProfilePreviewHero
             preview={preview}
             profile={profile}
-            recipe={recipe}
             tiraEstandarLabel={tiraEstandarLabel}
           />
 
@@ -281,6 +318,7 @@ export function FabricacionProfileEditSheet({
             frequentLargos={frequentLargos}
             tallerPerfilCatalog={tallerPerfilCatalog}
             plantillaSuggestedProfiles={plantillaSuggestedProfiles}
+            catalogProfiles={availableCatalogProfiles}
             onPatch={patchProfile}
             onSetManufacturerCode={(targetId, value) =>
               patchProfile(targetId, (entry) => {
@@ -301,7 +339,30 @@ export function FabricacionProfileEditSheet({
                 })
               )
             }
+            onRemove={() => setConfirmingRemoval(true)}
           />
+
+          {confirmingRemoval ? (
+            <div className={s.profileDeleteConfirm} role="group" aria-label="Confirmar eliminación de perfil">
+              <p>Se quitará este perfil de la receta de esta línea.</p>
+              <div>
+                <button
+                  type="button"
+                  disabled={isSaving}
+                  onClick={() => setConfirmingRemoval(false)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={isSaving}
+                  onClick={() => void handleRemoveProfile()}
+                >
+                  {isSaving ? "Eliminando…" : "Quitar perfil"}
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <footer className={s.profileSheetFooter}>

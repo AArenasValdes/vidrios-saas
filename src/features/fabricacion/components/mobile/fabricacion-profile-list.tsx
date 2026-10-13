@@ -20,6 +20,7 @@ import s from "./fabricacion-mobile.module.css";
 type Props = {
   recipe: FabricacionReceta;
   readOnly?: boolean;
+  catalogProfileCount?: number;
   onSelectProfile: (profileId: string) => void;
   onAddProfile?: () => void;
 };
@@ -27,6 +28,7 @@ type Props = {
 export function FabricacionProfileList({
   recipe,
   readOnly = false,
+  catalogProfileCount = 0,
   onSelectProfile,
   onAddProfile,
 }: Props) {
@@ -49,6 +51,12 @@ export function FabricacionProfileList({
           </button>
         ) : null}
       </header>
+
+      {catalogProfileCount > 0 ? (
+        <p className={s.emptyCopy}>
+          Los códigos de esta línea se asignan al editar cada perfil; sus medidas y descuentos se completan con la pauta.
+        </p>
+      ) : null}
 
       {groups.length === 0 ? (
         <p className={s.emptyCopy}>
@@ -74,6 +82,7 @@ export function FabricacionProfileList({
           </section>
         ))
       )}
+
     </div>
   );
 }
@@ -92,7 +101,14 @@ function ProfileRow({
   const card = describePerfilCardDisplay(profile, recipe);
   const hasSpecialLargo = profileTieneOverrideLargoComercial(profile);
   const perfilSecondary = buildPerfilSecondary(card.codigo, card.nombre);
-  const metaParts = [`Base ${card.base}`, `Ajuste ${card.ajuste}`, `×${card.cantidad}`];
+  const metaParts = [
+    card.base === "Por definir" ? "Base por definir" : `Base ${card.base}`,
+    card.ajuste === "Por definir" ? "Descuento por definir" : `Descuento ${card.ajuste}`,
+    card.cantidad === "Por definir" ? "Cantidad por definir" : `×${card.cantidad}`,
+  ];
+  if (profile.datosPendientes?.length) {
+    metaParts.push("Reglas pendientes");
+  }
   if (hasSpecialLargo) {
     metaParts.push(`Tira ${card.largoComercial}`);
   }

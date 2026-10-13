@@ -69,6 +69,8 @@ export type CotizacionItemPresentationMeta = {
   fabricacionApertura: string;
   fabricacionHerraje: string;
   fabricacionVariante: string;
+  fabricacionConfiguracionId: string;
+  fabricacionComposicionId: string;
   fabricacionAnchoHojaAMm: number | null;
   catalogLineKey: string;
   fabricacionGlazing: string;
@@ -286,6 +288,8 @@ export function encodeCotizacionItemPresentationMeta(input: {
   fabricacionApertura?: string | null;
   fabricacionHerraje?: string | null;
   fabricacionVariante?: string | null;
+  fabricacionConfiguracionId?: string | null;
+  fabricacionComposicionId?: string | null;
   fabricacionAnchoHojaAMm?: number | null;
   catalogLineKey?: string | null;
   fabricacionGlazing?: string | null;
@@ -387,6 +391,14 @@ export function encodeCotizacionItemPresentationMeta(input: {
   const fabricacionVariante = (input.fabricacionVariante ?? "")
     .trim()
     .replace(/\]/g, "");
+  const fabricacionConfiguracionId = (input.fabricacionConfiguracionId ?? "")
+    .trim()
+    .replace(/\]/g, "")
+    .slice(0, 160);
+  const fabricacionComposicionId = (input.fabricacionComposicionId ?? "")
+    .trim()
+    .replace(/\]/g, "")
+    .slice(0, 160);
   const fabricacionAnchoHojaAMm =
     input.fabricacionAnchoHojaAMm != null && input.fabricacionAnchoHojaAMm > 0
       ? String(Math.round(input.fabricacionAnchoHojaAMm))
@@ -453,6 +465,8 @@ export function encodeCotizacionItemPresentationMeta(input: {
     `[fap:${fabricacionApertura}]` +
     `[fhe:${fabricacionHerraje}]` +
     `[fv:${fabricacionVariante}]` +
+    `[fcid:${fabricacionConfiguracionId}]` +
+    `[fcmp:${fabricacionComposicionId}]` +
     `[fwa:${fabricacionAnchoHojaAMm}]` +
     `[lck:${catalogLineKey}]` +
     `[fgl:${fabricacionGlazing}]` +
@@ -570,6 +584,10 @@ export function decodeCotizacionItemPresentationMeta(
     source.match(/\[fhe:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const fabricacionVariante =
     source.match(/\[fv:([^\]]*)\]/)?.[1]?.trim() ?? "";
+  const fabricacionConfiguracionId =
+    source.match(/\[fcid:([^\]]*)\]/)?.[1]?.trim() ?? "";
+  const fabricacionComposicionId =
+    source.match(/\[fcmp:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const fabricacionAnchoHojaAMm = parseOptionalNumber(
     source.match(/\[fwa:([^\]]*)\]/)?.[1]
   );
@@ -634,6 +652,8 @@ export function decodeCotizacionItemPresentationMeta(
     .replace(/\[fap:[^\]]*\]/g, "")
     .replace(/\[fhe:[^\]]*\]/g, "")
     .replace(/\[fv:[^\]]*\]/g, "")
+    .replace(/\[fcid:[^\]]*\]/g, "")
+    .replace(/\[fcmp:[^\]]*\]/g, "")
     .replace(/\[fwa:[^\]]*\]/g, "")
     .replace(/\[lck:[^\]]*\]/g, "")
     .replace(/\[fgl:[^\]]*\]/g, "")
@@ -688,6 +708,8 @@ export function decodeCotizacionItemPresentationMeta(
     fabricacionApertura,
     fabricacionHerraje,
     fabricacionVariante,
+    fabricacionConfiguracionId,
+    fabricacionComposicionId,
     fabricacionAnchoHojaAMm,
     catalogLineKey,
     fabricacionGlazing,

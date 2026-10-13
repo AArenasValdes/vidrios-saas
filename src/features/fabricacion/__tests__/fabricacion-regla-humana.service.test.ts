@@ -100,7 +100,7 @@ describe("fabricacion-regla-humana.service", () => {
     ).toBe(VENTORA_LARGO_COMERCIAL_PRESET_MM);
   });
 
-  it("no hereda la tira sugerida cuando el perfil declara su largo pendiente", () => {
+  it("usa el largo de receta predeterminado aunque el perfil siga marcado pendiente", () => {
     const receta = {
       configuracionCorte: { largoComercialDefaultMm: 5800 },
     } as FabricacionReceta;
@@ -110,7 +110,7 @@ describe("fabricacion-regla-humana.service", () => {
         profile({ largoComercialMm: null, largoComercialPendiente: true }),
         receta
       )
-    ).toBe(0);
+    ).toBe(5800);
     expect(
       resolveLargoComercialMm(
         profile({ largoComercialMm: 6000, largoComercialPendiente: true }),

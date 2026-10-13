@@ -4,7 +4,6 @@ import {
   FABRICACION_BASES_MEDIDA,
   FABRICACION_ENGINE_VERSION,
   FABRICACION_EVIDENCIA_ORIGENES,
-  FABRICACION_FUENTES_EVIDENCIA,
   FABRICACION_NIVELES_CONFIANZA,
   FABRICACION_ESTADOS_VALIDACION,
   FABRICACION_RECIPE_SCHEMA_VERSION,
@@ -93,6 +92,9 @@ export const fabricacionIdentidadRecetaSchema = z
     variante: z.string().min(1),
     topology: z.string().min(1).nullable().optional(),
     hardwareMode: z.string().min(1).nullable().optional(),
+    configurationId: z.string().min(1).nullable().optional(),
+    compositionId: z.string().min(1).nullable().optional(),
+    configurationRevision: integerPositiveSchema.nullable().optional(),
   })
   .strict();
 

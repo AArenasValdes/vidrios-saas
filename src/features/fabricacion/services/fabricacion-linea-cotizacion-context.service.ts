@@ -1,4 +1,5 @@
 import type { ComponentFormState } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { getCatalogProductConfigurations } from "@/features/cotizaciones/line-templates/services/line-template-compatibility.service";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import {
   ARQUETIPOS_ESTRUCTURALES,
@@ -35,6 +36,8 @@ export type FabricacionLineaCotizacionContext = {
   fabricacionApertura: string;
   fabricacionHerraje: string;
   fabricacionVariante: string;
+  fabricacionConfiguracionId?: string;
+  fabricacionComposicionId?: string;
 };
 
 const WINHOUSE_CATALOG_KEYS = new Set([
@@ -64,6 +67,8 @@ function contextFromRecipe(
     fabricacionApertura: identidad.apertura ?? "",
     fabricacionHerraje: identidad.herraje ?? "",
     fabricacionVariante: identidad.variante ?? "",
+    fabricacionConfiguracionId: identidad.configurationId ?? "",
+    fabricacionComposicionId: identidad.compositionId ?? "",
   };
 }
 
@@ -208,6 +213,9 @@ export function resolveFabricacionContextForLineAssignment(input: {
     | "fabricacionLeg"
     | "fabricacionReinforcement"
     | "fabricacionVariante"
+    | "fabricacionConfiguracionId"
+    | "fabricacionComposicionId"
+    | "fabricationRecipeId"
     | "vidrio"
     | "catalogEspesor"
     | "catalogTerminacion"
@@ -222,6 +230,91 @@ export function resolveFabricacionContextForLineAssignment(input: {
   const lineRecipes = input.recipes.filter(
     (recipe) => recipe.lineTemplateId === lineTemplateId && !recipe.eliminadoEn
   );
+
+  const selectedWorkshopRecipe = lineRecipes.find(
+    (recipe) => recipe.id === input.form.fabricationRecipeId &&
+      recipe.definition.identidad.configurationId?.startsWith("workshop:")
+  );
+  if (selectedWorkshopRecipe) return contextFromRecipe(selectedWorkshopRecipe);
+  const workshopLineConfigurations = lineRecipes.filter((recipe) =>
+    recipe.definition.identidad.configurationId?.startsWith("workshop:")
+  );
+  if (workshopLineConfigurations.length > 0) {
+    const opening = normalizeConfigurationOpening(input.form.sistema || input.form.configuracion);
+    const component = normalizeText(input.form.tipo);
+    const workshopMatches = workshopLineConfigurations.filter((recipe) => {
+      const identity = recipe.definition.identidad;
+      const expectedComponent = identity.tipologia.includes("puerta") ? "puerta" : identity.tipologia === "pano_fijo" ? "paño fijo" : "ventana";
+      return (!input.form.fabricacionConfiguracionId || identity.configurationId === input.form.fabricacionConfiguracionId) &&
+        (!opening || normalizeConfigurationOpening(identity.apertura) === opening) &&
+        (!component || component.startsWith(normalizeText(expectedComponent))) &&
+        (!input.form.fabricacionVariante || identity.variante === input.form.fabricacionVariante) &&
+        (!input.form.fabricacionHojas || identity.hojas === input.form.fabricacionHojas);
+    });
+    const matchingConfigurationIds = Array.from(new Set(workshopMatches.map((recipe) => recipe.definition.identidad.configurationId)));
+    if (matchingConfigurationIds.length === 1) {
+      const configurationId = matchingConfigurationIds[0] ?? "";
+      const compositionMatches = input.form.fabricacionComposicionId
+        ? workshopMatches.filter((recipe) => recipe.definition.identidad.compositionId === input.form.fabricacionComposicionId)
+        : workshopMatches;
+      const selectedComposition = compositionMatches.length === 1 ? compositionMatches[0] : null;
+      return {
+        fabricacionTipologia: selectedComposition?.definition.identidad.tipologia ?? workshopMatches[0].definition.identidad.tipologia,
+          fabricacionHojas: input.form.fabricacionHojas ?? (new Set(workshopMatches.map((recipe) => recipe.definition.identidad.hojas)).size === 1 ? workshopMatches[0].definition.identidad.hojas : null),
+          fabricacionModulos: input.form.fabricacionHojas ?? (new Set(workshopMatches.map((recipe) => recipe.definition.identidad.modulos)).size === 1 ? workshopMatches[0].definition.identidad.modulos : null),
+        fabricationRecipeId: selectedComposition?.status === "validated" ? selectedComposition.id : "",
+        fabricacionApertura: selectedComposition?.definition.identidad.apertura ?? workshopMatches[0].definition.identidad.apertura ?? "",
+        fabricacionHerraje: selectedComposition?.definition.identidad.herraje ?? "",
+        fabricacionVariante: selectedComposition?.definition.identidad.variante ?? input.form.fabricacionVariante ?? "",
+        fabricacionConfiguracionId: configurationId,
+        fabricacionComposicionId: selectedComposition?.definition.identidad.compositionId ?? input.form.fabricacionComposicionId ?? "",
+      };
+    }
+  }
+
+  const declaredConfigurations = getCatalogProductConfigurations(input.template.catalogKey);
+  if (declaredConfigurations.length > 0) {
+    const requestedOpening = normalizeConfigurationOpening(
+      input.form.sistema || input.form.configuracion
+    );
+    const requestedComponent = normalizeText(input.form.tipo);
+    const matchingConfigurations = declaredConfigurations.filter((configuration) => {
+      const componentMatches = !requestedComponent ||
+        requestedComponent === normalizeText(configuration.componentType) ||
+        requestedComponent.startsWith(normalizeText(configuration.componentType));
+      const openingMatches = !requestedOpening ||
+        normalizeConfigurationOpening(configuration.openingType) === requestedOpening;
+      const idMatches = !input.form.fabricacionConfiguracionId ||
+        configuration.id === input.form.fabricacionConfiguracionId;
+      return componentMatches && openingMatches && idMatches;
+    });
+    if (matchingConfigurations.length === 1) {
+      const configuration = matchingConfigurations[0];
+      const matchingRecipes = lineRecipes
+        .filter((recipe) =>
+          (recipe.definition.identidad.configurationId === configuration.id ||
+            (!recipe.definition.identidad.configurationId &&
+              recipe.definition.identidad.variante === configuration.variant &&
+              recipe.definition.identidad.tipologia === configuration.typology)) &&
+          (!input.form.fabricacionComposicionId || recipe.definition.identidad.compositionId === input.form.fabricacionComposicionId)
+        )
+        .sort((left, right) => Number(right.status === "validated") - Number(left.status === "validated"));
+      const matchingRecipe = matchingRecipes.length === 1 ? matchingRecipes[0] : null;
+      const identity = matchingRecipe?.definition.identidad;
+      return {
+        fabricacionTipologia: configuration.typology,
+        fabricacionHojas: identity?.hojas ?? (configuration.leavesCounts?.length === 1 ? configuration.leavesCounts[0] : null),
+        fabricacionModulos: identity?.modulos ?? (configuration.leavesCounts?.length === 1 ? configuration.leavesCounts[0] : null),
+        fabricationRecipeId: matchingRecipe?.status === "validated" ? matchingRecipe.id : "",
+        fabricacionApertura: configuration.openingType,
+        fabricacionHerraje: identity?.herraje ?? "",
+        fabricacionVariante: identity?.variante ?? configuration.variant,
+        fabricacionConfiguracionId: configuration.id,
+        fabricacionComposicionId: identity?.compositionId ?? input.form.fabricacionComposicionId ?? "",
+      };
+    }
+    if (requestedOpening || input.form.fabricacionConfiguracionId) return catalogContext;
+  }
 
   const inferredTipologia = inferirTipologiaFabricacionPieza({
       tipo: input.form.tipo,
@@ -448,7 +541,17 @@ export function resolveFabricacionContextForLineAssignment(input: {
 }
 
 function normalizeText(value: string | null | undefined) {
-  return (value ?? "").trim().toLowerCase();
+  return (value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+}
+
+function normalizeConfigurationOpening(value: string | null | undefined) {
+  const normalized = normalizeText(value);
+  if (normalized.includes("corredera")) return "corredera";
+  if (normalized.includes("proyectante")) return "proyectante";
+  if (normalized.includes("abatible") || normalized.includes("abatir")) return "abatible";
+  if (normalized.includes("vaiven")) return "vaiven";
+  if (normalized.includes("fijo")) return "fijo";
+  return normalized;
 }
 
 export function mergeFabricacionLineaContextIntoForm(
@@ -466,5 +569,7 @@ export function mergeFabricacionLineaContextIntoForm(
     fabricacionApertura: context.fabricacionApertura,
     fabricacionHerraje: context.fabricacionHerraje,
     fabricacionVariante: context.fabricacionVariante,
+    fabricacionConfiguracionId: context.fabricacionConfiguracionId,
+    fabricacionComposicionId: context.fabricacionComposicionId,
   };
 }

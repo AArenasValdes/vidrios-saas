@@ -44,6 +44,8 @@ export type FabricacionRecetaResolucionInput = {
   variante?: string | null;
   topology?: string | null;
   hardwareMode?: string | null;
+  configurationId?: string | null;
+  compositionId?: string | null;
   preferredRecipeId?: string | null;
   /** Vidrio elegido en la cotización; solo restringe variantes con matriz explícita. */
   glassName?: string | null;
@@ -357,6 +359,25 @@ function resolverRecetaFabricacionCompatibleInternal(
     if (normalizeText(identidad.tipologia) !== normalizeText(input.tipologia)) {
       descartadas.push(discard(recipe, "La tipologia no coincide."));
       return false;
+    }
+    if (identidad.configurationId != null || input.configurationId != null) {
+      if (
+        !identidad.configurationId ||
+        !input.configurationId ||
+        normalizeText(identidad.configurationId) !== normalizeText(input.configurationId)
+      ) {
+        descartadas.push(discard(recipe, "La configuración no coincide o no está identificada."));
+        return false;
+      }
+    }
+    if (input.compositionId != null) {
+      if (
+        !identidad.compositionId ||
+        normalizeText(identidad.compositionId) !== normalizeText(input.compositionId)
+      ) {
+        descartadas.push(discard(recipe, "La composición no coincide o no está identificada."));
+        return false;
+      }
     }
     if (input.hojas != null && identidad.hojas !== input.hojas) {
       descartadas.push(discard(recipe, "La cantidad de hojas no coincide."));

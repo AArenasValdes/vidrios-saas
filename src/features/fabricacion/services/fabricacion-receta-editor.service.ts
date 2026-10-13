@@ -10,6 +10,7 @@ import {
   type FabricacionReceta,
   type FabricacionVidrio,
 } from "@/features/fabricacion/types/fabricacion-domain";
+import type { LineProfileReference } from "@/features/cotizaciones/line-templates/types/line-profile-references";
 
 export function crearRecetaFabricacionVacia(input: {
   recipeIdentityId: string;
@@ -60,6 +61,36 @@ export function crearPerfilFabricacionVacio(id: string): FabricacionComponentePe
       multiplicador: 1,
     },
     requerido: true,
+  };
+}
+
+/**
+ * Crea una regla editable desde una referencia del catálogo, sin inventar una
+ * pauta: el pendiente mantiene bloqueado el cálculo hasta confirmar base,
+ * descuento y cantidad con el Plan de armado.
+ */
+export function crearPerfilDesdeReferenciaCatalogo(
+  id: string,
+  reference: LineProfileReference
+): FabricacionComponentePerfil {
+  const profile = crearPerfilFabricacionVacio(id);
+  const source = reference.source?.trim();
+  return {
+    ...profile,
+    codigoPerfil: reference.code?.trim() ?? "",
+    nombrePerfil: reference.name.trim(),
+    funcion: reference.role.trim() || "Perfil",
+    observaciones: [
+      `Referencia de catálogo: ${reference.code?.trim() || "sin código"} · ${reference.name.trim()}.`,
+      source ? `Fuente: ${source}.` : "Fuente pendiente de documentar.",
+      "No define fórmula de corte.",
+    ].join(" "),
+    datosPendientes: [
+      "Elegir base de medida para este perfil.",
+      "Definir descuento en mm para este perfil.",
+      "Indicar cantidad por ventana para este perfil.",
+    ],
+    reglaMedida: { ...profile.reglaMedida, ajusteMm: undefined },
   };
 }
 

@@ -1,7 +1,7 @@
 # Data Model Map - Ventora
 
 Estado: vigente
-Actualizado: 2026-08-20
+Actualizado: 2026-10-13
 Responsable: ingeniería + Supabase
 
 Fuente de verdad, en orden: base remota verificada, migraciones registradas, `supabase/docs/database_map.md` y `supabase/docs/rls_policies.md`; `supabase/docs/current_schema.sql` es baseline historico hasta regenerarlo.
@@ -116,6 +116,19 @@ Clasificación: tablas activas core, tablas activas growth, tablas legacy/dormid
 - **Usada por**: `/cotizaciones/nueva`, `/configuracion/empresa`, `/configuracion/empresa/lineas-precios`, `/configuracion/empresa/lineas-precios/importar`
 - **Archivos donde aparece**: `src/features/cotizaciones/line-templates/`, `src/features/cotizaciones/new-quote/workflow-ui.ts`, `app/(pwa-app)/configuracion/empresa/page.tsx`
 - **Riesgos**: No crear FK viva desde `cotizacion_items`; la cotizacion debe guardar snapshot textual en `cotizacion_items.linea` y metadata codificada en `observaciones` para que cotizaciones antiguas no cambien. Multi-tenant estricto y soft delete obligatorio. Migración remota aplicada 2026-07-09 (`extend_cotizacion_line_templates_catalog`) y migración aditiva 2026-07-13 expande `material` a `Cristal`.
+
+---
+
+### Tabla: organization_quote_provider_visibility
+
+- **Estado**: Activa. Migración `20261013024746_organization_quote_provider_visibility.sql`, aplicada y registrada en producción el 2026-10-13.
+- **Propósito**: Preferencia privada por organización para ocultar un proveedor de los selectores de líneas de cotización; no elimina ni modifica líneas, referencias, precios ni recetas.
+- **Campos**: `organization_id` (bigint FK a `organizations`, `ON DELETE CASCADE`), `provider_key` (text normalizado, hasta 80 caracteres) y `created_at` (timestamptz, default `now()`). PK compuesta `(organization_id, provider_key)`; constraint de formato para `provider_key`.
+- **RLS y privilegios**: RLS habilitada; policies de `SELECT`, `INSERT` y `DELETE` verifican `organization_id = public.get_org_id()`. `authenticated` recibe solo esos tres privilegios; `anon`/`public` no reciben acceso y no hay `UPDATE`.
+- **Regla de producto**: una fila presente significa oculto; borrar la fila vuelve a mostrar el proveedor. La preferencia se aplica a la organización activa.
+- **Usada por**: pantalla móvil `Líneas y precios` para alternar **Ocultar/Mostrar en cotizaciones** y `/cotizaciones/nueva` para filtrar líneas de proveedores ocultos.
+- **Archivos donde aparece**: `src/features/cotizaciones/line-templates/hooks/useQuoteProviderVisibility.ts`, `services/quote-provider-visibility.service.ts`, `repositories/quote-provider-visibility.repository.ts`, `components/lineas-precios-mobile-view.tsx`, `app/(pwa-app)/cotizaciones/nueva/page.tsx`.
+- **Límite de fuente**: `supabase/docs/current_schema.sql` es anterior a esta migración; el estado aplicado se sustenta en el ledger e introspección remota fechados en `supabase/docs/database_map.md`.
 
 ---
 

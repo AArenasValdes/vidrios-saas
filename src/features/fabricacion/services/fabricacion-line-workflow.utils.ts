@@ -194,7 +194,7 @@ export const FABRICACION_PRIMARY_WORKFLOW_STEPS = [
 
 export const MOBILE_WIZARD_STEPS = [
   { id: "product" as const, label: "Producto" },
-  { id: "profiles" as const, label: "Perfiles" },
+  { id: "profiles" as const, label: "Perfiles y descuentos" },
   { id: "glass" as const, label: "Vidrio y accesorios" },
   { id: "validate" as const, label: "Validar" },
 ];

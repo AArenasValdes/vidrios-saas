@@ -48,6 +48,7 @@ import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visu
 import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import { setQuickPaneDecoration } from "@/features/cotizaciones/visual-composer/services/quick-composition-adjustment.service";
 import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
 function createLinePricingForm(
   overrides: Partial<ComponentFormState> = {}
@@ -111,6 +112,37 @@ function createBaseItem() {
 }
 
 describe("workflow-ui paso 2", () => {
+  it.each([
+    ["ventora:kompen-prime-line-700", "Abatible", "1 hoja"],
+    ["ventora:kompen-form-line-800", "Corredera", "3 hojas"],
+    ["ventora:kompen-star-line-500", "Fijo", "Paño fijo"],
+    ["ventora:thermowin-americana-s70", "Guillotina", "Guillotina doble"],
+  ])("mantiene sistema y composición al elegir %s", (catalogKey, sistema, sheetScheme) => {
+    const definition = VENTORA_DEFAULT_LINE_CATALOG.find((entry) => entry.catalogKey === catalogKey);
+    expect(definition).toBeDefined();
+    if (!definition) return;
+    const selected = applyLineTemplateToComponentForm(
+      createLinePricingForm({ lineTemplateId: "", sistema, sheetScheme, fabricacionTipologia: "" }),
+      {
+        id: 500,
+        nombre: definition.nombre,
+        categoria: "pvc",
+        material: definition.material,
+        catalogKey: definition.catalogKey ?? null,
+        catalogMetadata: definition.catalogMetadata ?? {},
+        vidrioPrincipalRecomendado: null,
+        precioM2Sugerido: 0,
+        minimoCobrable: 0,
+        redondeoPrecio: 1000,
+      }
+    );
+    expect(selected.catalogLineKey).toBe(catalogKey);
+    expect(selected.lineTemplateId).toBe("500");
+    expect(selected.sistema).toBe(sistema);
+    expect(selected.sheetScheme).toBe(sheetScheme);
+    expect(selected.fabricationRecipeId).toBeFalsy();
+  });
+
   it.each([
     ["Aluminio", ["aluminio-1", "aluminio-2", "pvc-1"]],
     ["PVC", ["pvc-1", "aluminio-1", "aluminio-2"]],

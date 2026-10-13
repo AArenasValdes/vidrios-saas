@@ -295,8 +295,9 @@ export function FabricacionTipologiaPreview({
   className,
   size = "md",
 }: Props) {
+  const isPuertaCorredera = tipologia === "puerta_corredera";
   const isCorredera =
-    (tipologia === "corredera" || tipologia === "pvc_monorriel") && hojas >= 2;
+    (tipologia === "corredera" || tipologia === "pvc_monorriel" || isPuertaCorredera) && hojas >= 2;
   const isFijo = tipologia === "pano_fijo" && !isCorredera;
   const isPuerta = tipologia === "puerta_abatible" || tipologia === "puerta_vaiven";
   const isAbatible = tipologia === "abatible";
@@ -321,6 +322,17 @@ export function FabricacionTipologiaPreview({
               showArrows={showSlidingHint}
               active={active}
             />
+            {isPuertaCorredera ? (
+              <g aria-hidden="true">
+                <path
+                  className={s.fabPreviewHint}
+                  d="M126 52 v10 M18 101 H142"
+                  fill="none"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </g>
+            ) : null}
           </FrameShell>
         ) : isFijo ? (
           <FrameShell active={active}>

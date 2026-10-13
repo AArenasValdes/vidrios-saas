@@ -103,6 +103,11 @@ export type FabricacionIdentidadReceta = {
   variante: string;
   topology?: string | null;
   hardwareMode?: string | null;
+  /** Identidad del catálogo; recetas históricas lo mantienen ausente. */
+  configurationId?: string | null;
+  /** Disposición física de paños/hojas dentro de una configuración. */
+  compositionId?: string | null;
+  configurationRevision?: number | null;
 };
 
 export type FabricacionCondicion = {

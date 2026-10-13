@@ -1,5 +1,6 @@
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { getDefaultLineCatalogMetadata } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
+import type { FabricacionTipologia } from "@/features/fabricacion/types/fabricacion-domain";
 
 export type LineCompatibilityContext = {
   componentType?: string | null;
@@ -23,12 +24,102 @@ export type LineCompatibilityResult = {
   reason: string | null;
 };
 
+export type CatalogProductConfiguration = {
+  id: string;
+  componentType: string;
+  openingType: string;
+  label: string;
+  typology: FabricacionTipologia;
+  variant: string;
+  leavesCounts?: number[];
+  /** Sin composición declarada, el editor debe pedir una elección del taller. */
+  compositionPending?: boolean;
+  /** Procedencia de identidad. Las composiciones privadas usan "workshop". */
+  source?: "catalog" | "workshop";
+};
+
 type CompatibilityDeclaration = {
   componentTypes?: string[];
   openingTypes?: string[];
   leavesCounts?: number[];
   materials?: string[];
+  configurations?: CatalogProductConfiguration[];
 };
+
+const FABRICATION_TYPOLOGIES = new Set<FabricacionTipologia>([
+  "pano_fijo", "corredera", "abatible", "proyectante", "puerta_abatible",
+  "puerta_vaiven", "puerta_corredera", "pvc_monorriel", "shower", "personalizada",
+]);
+
+/** Pares exactos publicados por el catálogo; las hojas se agregan solo con fuente que las declare. */
+export function getCatalogProductConfigurations(
+  catalogKey: string | null | undefined
+): CatalogProductConfiguration[] {
+  const metadata = getDefaultLineCatalogMetadata(catalogKey);
+  const raw = metadata?.compatibility;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
+  const values = (raw as { configurations?: unknown }).configurations;
+  if (Array.isArray(values)) {
+    return values.filter((value): value is CatalogProductConfiguration =>
+    typeof value === "object" && value !== null &&
+    typeof (value as CatalogProductConfiguration).id === "string" &&
+    typeof (value as CatalogProductConfiguration).componentType === "string" &&
+    typeof (value as CatalogProductConfiguration).openingType === "string" &&
+    typeof (value as CatalogProductConfiguration).label === "string" &&
+    typeof (value as CatalogProductConfiguration).variant === "string" &&
+    FABRICATION_TYPOLOGIES.has((value as CatalogProductConfiguration).typology) &&
+    (!("leavesCounts" in (value as object)) ||
+      (Array.isArray((value as CatalogProductConfiguration).leavesCounts) &&
+        (value as CatalogProductConfiguration).leavesCounts?.every((count) => Number.isInteger(count) && count > 0) === true))
+    ).map((configuration) => ({
+    ...configuration,
+    source: "catalog" as const,
+      compositionPending: configuration.compositionPending ?? true,
+    ...(Array.isArray(configuration.leavesCounts) ? { leavesCounts: [...configuration.leavesCounts] } : {}),
+    }));
+  }
+
+  // The legacy declaration represents one exact pair only when each axis has
+  // one value. Multiple independent arrays do not identify valid pairings.
+  const declaration = raw as CompatibilityDeclaration;
+  const componentType = declaration.componentTypes?.length === 1 ? declaration.componentTypes[0] : null;
+  const openingType = declaration.openingTypes?.length === 1 ? declaration.openingTypes[0] : null;
+  if (!catalogKey || !componentType || !openingType) return [];
+  const typology = resolveConfigurationTypology(componentType, openingType);
+  if (!typology) return [];
+  const configurationId = `${catalogKey}:configuration:${typology}:${normalizeOpeningType(openingType)}`
+    .replaceAll(/[^a-z0-9:_-]+/g, "-");
+  return [{
+    id: configurationId,
+    componentType,
+    openingType,
+    label: `${componentType} ${openingType.toLocaleLowerCase("es-CL")}`,
+    typology,
+    variant: configurationId,
+    ...(declaration.leavesCounts?.length ? { leavesCounts: [...declaration.leavesCounts] } : {}),
+    source: "catalog",
+  }];
+}
+
+function resolveConfigurationTypology(
+  componentType: string,
+  openingType: string
+): FabricacionTipologia | null {
+  const component = normalize(componentType);
+  const opening = normalizeOpeningType(openingType);
+  if (opening === "fijo") return "pano_fijo";
+  if (opening === "corredera") {
+    if (component.includes("puerta")) return "puerta_corredera";
+    return "corredera";
+  }
+  if (opening === "abatible" || opening === "proyectante") {
+    if (component.includes("puerta")) return "puerta_abatible";
+    return opening;
+  }
+  if (opening === "vaiven" && component.includes("puerta")) return "puerta_vaiven";
+  if (opening === "shower") return "shower";
+  return null;
+}
 
 function normalize(value: string | null | undefined) {
   return (value ?? "").trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -77,6 +168,7 @@ function declaration(template: CotizacionLineTemplate): CompatibilityDeclaration
             openingTypes: storedDeclaration.openingTypes ?? defaultDeclaration.openingTypes,
             leavesCounts: storedDeclaration.leavesCounts ?? defaultDeclaration.leavesCounts,
             materials: storedDeclaration.materials ?? defaultDeclaration.materials,
+            configurations: storedDeclaration.configurations ?? defaultDeclaration.configurations,
           }
         : storedDeclaration ?? defaultDeclaration;
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -116,20 +208,25 @@ export function evaluateLineCompatibility(input: {
 }): LineCompatibilityResult {
   const { line, context } = input;
   const declared = declaration(line);
-  const isExplicitFamilyConfiguration =
-    typeof (line.catalogMetadata?.configurationKey ?? getDefaultLineCatalogMetadata(line.catalogKey)?.configurationKey) ===
-    "string";
   const leavesCompatible = context.leavesCount == null
     ? true
     : declared?.leavesCounts?.length
       ? declared.leavesCounts.includes(context.leavesCount)
-      : !isExplicitFamilyConfiguration;
+      : true;
   const compatible = declared
-    ? matchesText(declared.componentTypes, context.componentType) &&
-      matchesOpeningType(declared.openingTypes, context.openingType) &&
+    ? (declared.configurations?.length
+        ? declared.configurations.some((configuration) =>
+            matchesText([configuration.componentType], context.componentType) &&
+            matchesOpeningType([configuration.openingType], context.openingType) &&
+            (context.leavesCount == null || !configuration.leavesCounts?.length || configuration.leavesCounts.includes(context.leavesCount))
+          )
+        : matchesText(declared.componentTypes, context.componentType) &&
+          matchesOpeningType(declared.openingTypes, context.openingType)) &&
       leavesCompatible &&
       matchesText(declared.materials, context.material)
-    : !isExplicitFamilyConfiguration;
+    : line.catalogKey
+      ? normalize(line.material) === normalize(context.material)
+      : true;
 
   return {
     commercial: compatible ? "compatible" : "incompatible",

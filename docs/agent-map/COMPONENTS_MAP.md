@@ -481,22 +481,24 @@ Los archivos descritos aquí deben seguir siendo reutilizables y coherentes con 
 ### Componente: FabricacionMobileWizard
 
 - **Archivo**: `src/features/fabricacion/components/mobile/fabricacion-mobile-wizard.tsx`
-- **Proposito**: Wizard mobile-first de 4 pasos para configurar receta de una linea: Producto, Perfiles, Vidrio y accesorios, Validar.
+- **Proposito**: Wizard mobile-first de 4 pasos para configurar receta de una linea: Producto, Perfiles y descuentos, Vidrio y accesorios, Validar. Producto usa configuraciones exactas del catálogo y no ofrece hojas sin evidencia.
 - **Usado en**: `fabricacion-line-mobile-shell.tsx` en `/configuracion/empresa/lineas-precios/[lineTemplateId]/fabricacion`
 - **Dependencias**: pasos `FabricacionMobileProductStep`, `FabricacionProfileList`, `FabricacionMobileMaterialsStep`, `FabricacionMobileValidateStep`, `FabricacionProfileEditSheet`
+- **Validación y pauta**: la tarjeta de estado deriva sus mensajes del resultado actual y de las advertencias actuales; solo declara que no se generaron tiras cuando hay cero cortes agrupados. Si existen cortes en barras, no conserva un mensaje viejo de ausencia de tiras.
 - **Riesgos**: No reintroducir stepper horizontal con scroll. Validar usa el mismo motor que cotizacion (`calcularCubicacionYPauta` via laboratorio).
 
 ### Componente: FabricacionProfileEditSheet
 
 - **Archivo**: `src/features/fabricacion/components/mobile/fabricacion-profile-edit-sheet.tsx`
-- **Proposito**: Bottom sheet para editar una regla de perfil (base, ajuste, cantidad, largo comercial). **Guardar y siguiente** avanza al siguiente perfil sin cerrar el wizard.
+- **Proposito**: Bottom sheet para editar una regla de perfil (base, ajuste, cantidad, largo comercial), con eliminación confirmada y persistida. **Guardar y siguiente** avanza al siguiente perfil sin cerrar el wizard.
 - **Usado en**: `FabricacionMobileWizard`
 - **Riesgos**: Mutaciones deben usar `use-fabrication-recipes` con `{ quiet: true, replaceRecipe }` para evitar desmontaje del wizard.
 
 ### Componente: FabricacionProfileList
 
 - **Archivo**: `src/features/fabricacion/components/mobile/fabricacion-profile-list.tsx`
-- **Proposito**: Lista agrupada Marco / Hojas / Otros con labels humanos (`describePerfilTallerResumen`); tap abre sheet de edicion.
+- Agrupa referencias del catálogo por `applicationGroup` explícito; las referencias sin aplicación documentada quedan en “Otros perfiles del catálogo”.
+- **Proposito**: Lista agrupada Marco / Hojas / Otros con labels humanos; además presenta referencias/códigos del catálogo con fuente y permite agregarlos como reglas pendientes, sin inferir fórmulas.
 - **Riesgos**: Nunca interpolar objetos de perfil directamente en JSX (evitar `[object Object]`).
 
 ### Servicio: elegibilidad revision fabricacion en cotizacion

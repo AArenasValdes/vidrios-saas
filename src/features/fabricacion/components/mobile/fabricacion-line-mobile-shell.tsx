@@ -10,6 +10,11 @@ import { setFabricacionEditorOpen } from "@/features/fabricacion/services/fabric
 import { resolveFabricacionRecipeHistory } from "@/features/fabricacion/services/fabricacion-line-workflow.utils";
 import { buildVariantTreeItem } from "@/features/fabricacion/services/fabricacion-line-variant.service";
 import {
+  getLineTemplateWorkshopProfiles,
+  mergeCanonicalProfileApplicationGroups,
+} from "@/features/cotizaciones/line-templates/types/line-profile-references";
+import { getVentoraProfileReferencesForCatalogKey } from "@/features/cotizaciones/line-templates/fixtures/ventora-profile-references";
+import {
   isSodalL25CatalogKey,
   resolveEffectiveSodalL25CatalogKey,
   resolveSodalL25CommercialLineDisplayName,
@@ -45,6 +50,7 @@ export function FabricacionLineMobileShell({
     focusRecipe,
     detailRecipe,
     handleCreateMissingVariant,
+    handleCreateCatalogConfiguration,
     suggestedRecipesForLine,
     handleUseSuggested,
     lineRecipes,
@@ -122,6 +128,13 @@ export function FabricacionLineMobileShell({
       nombre: template.nombre,
     })
   );
+  const canonicalProfiles =
+    getVentoraProfileReferencesForCatalogKey(template.catalogKey)?.profiles ?? [];
+  const storedProfiles =
+    getLineTemplateWorkshopProfiles(template.catalogMetadata)?.profiles ?? null;
+  const catalogProfiles = storedProfiles
+    ? mergeCanonicalProfileApplicationGroups(storedProfiles, canonicalProfiles)
+    : canonicalProfiles;
 
   if (editorOpen && selected && draft) {
     const readOnly = selected.status === "validated" && !isL25;
@@ -132,6 +145,7 @@ export function FabricacionLineMobileShell({
           catalogKey: template.catalogKey,
         })}
         catalogKey={template.catalogKey}
+        catalogProfiles={catalogProfiles}
         selected={selected}
         lineRecipes={pickerRecipes}
         draft={draft}
@@ -146,6 +160,9 @@ export function FabricacionLineMobileShell({
         onSelectRecipe={(recipe) => openEditor(recipe, "base")}
         onCreateMissingSlot={(slot) =>
           void handleCreateMissingVariant(buildVariantTreeItem(slot, null))
+        }
+        onCreateCatalogConfiguration={(configuration, leavesCount, compositionId) =>
+          void handleCreateCatalogConfiguration(configuration, leavesCount, compositionId)
         }
         onContinueToRecipe={handleContinueToRecipe}
         onPersistRecipe={async (recipe) => {

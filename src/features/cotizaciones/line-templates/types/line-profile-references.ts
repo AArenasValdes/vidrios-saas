@@ -30,6 +30,8 @@ export type LineProfileReference = {
   provider: string | null;
   source: string | null;
   codeStatus: LineProfileReferenceCodeStatus;
+  /** Aplicación publicada por la fuente, para agrupar referencias sin inferir compatibilidades. */
+  applicationGroup?: string;
 };
 
 export type LineTemplateWorkshopProfiles = {
@@ -54,7 +56,8 @@ function isLineProfileReference(value: unknown): value is LineProfileReference {
     (value.code === null || typeof value.code === "string") &&
     (value.codeStatus === "catalog_reference" ||
       value.codeStatus === "pending_validation" ||
-      value.codeStatus === "visual_reference")
+      value.codeStatus === "visual_reference") &&
+    (value.applicationGroup === undefined || typeof value.applicationGroup === "string")
   );
 }
 
@@ -81,6 +84,26 @@ export function getLineTemplateWorkshopProfiles(
   metadata: CotizacionLineTemplateCatalogMetadata | null | undefined
 ): LineTemplateWorkshopProfiles | null {
   return parseLineTemplateWorkshopProfiles(metadata?.workshopProfiles);
+}
+
+/** Enriquece grupos de aplicación con el fixture canónico sin reescribir metadata del taller. */
+export function mergeCanonicalProfileApplicationGroups(
+  profiles: LineProfileReference[],
+  canonicalProfiles: LineProfileReference[]
+): LineProfileReference[] {
+  const canonicalByCode = new Map(
+    canonicalProfiles
+      .filter((profile) => profile.code?.trim() && profile.applicationGroup?.trim())
+      .map((profile) => [profile.code!.trim(), profile.applicationGroup!.trim()])
+  );
+
+  return profiles.map((profile) => {
+    if (profile.applicationGroup?.trim()) return profile;
+    const applicationGroup = profile.code
+      ? canonicalByCode.get(profile.code.trim())
+      : undefined;
+    return applicationGroup ? { ...profile, applicationGroup } : profile;
+  });
 }
 
 export function formatLineProfileReferenceCode(

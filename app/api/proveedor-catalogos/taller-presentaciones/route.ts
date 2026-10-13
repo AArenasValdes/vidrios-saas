@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SupplierCatalogDatabase } from "@/features/proveedor-catalogos/repositories/supplier-catalog-database.types";
 import { AuthRouteAccessError, resolveAuthenticatedRouteContext } from "@/features/auth/services/auth-route-access.service";
 import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
+import { getVentoraProfileReferencesForCatalogKey } from "@/features/cotizaciones/line-templates/fixtures/ventora-profile-references";
 import { canManageSupplierCatalog } from "@/features/proveedor-catalogos/services/supplier-catalog-access.service";
 import { createWorkshopPresentation, listOfficialTechnicalInputsForFamily, listWorkshopPresentations, updateWorkshopPresentationPurchase, WorkshopPresentationsSchemaMissingError } from "@/features/proveedor-catalogos/repositories/workshop-presentations.repository";
 
@@ -57,8 +58,9 @@ async function authorize(lineTemplateId: number) {
   const definition = VENTORA_DEFAULT_LINE_CATALOG.find((entry) => entry.catalogKey === line?.catalog_key);
   const familyKey = definition?.catalogMetadata?.familyKey;
   const configurationKey = definition?.catalogMetadata?.configurationKey;
-  if (!line || !definition || typeof familyKey !== "string" || !familyKey.startsWith("veratec:")) return null;
-  return { organizationId, familyKey, configurationKey: typeof configurationKey === "string" ? configurationKey : null, userId: auth.user.id };
+  if (!line || !definition || typeof familyKey !== "string" ||
+    (!familyKey.startsWith("veratec:") && !familyKey.startsWith("thermowin:"))) return null;
+  return { organizationId, familyKey, catalogKey: definition.catalogKey, configurationKey: typeof configurationKey === "string" ? configurationKey : null, userId: auth.user.id };
 }
 
 function errorResponse(error: unknown) {
@@ -78,7 +80,12 @@ export async function GET(request: Request) {
       listOfficialTechnicalInputsForFamily(access.familyKey),
       listWorkshopPresentations(access.organizationId, access.familyKey),
     ]);
-    return NextResponse.json({ familyKey: access.familyKey, officialInputs, ownPresentations }, { headers: { "Cache-Control": "no-store" } });
+    const catalogProfiles = access.familyKey.startsWith("thermowin:")
+      ? getVentoraProfileReferencesForCatalogKey(access.catalogKey)?.profiles
+          .filter((profile) => profile.code && profile.codeStatus === "catalog_reference")
+          .map((profile) => ({ code: profile.code, name: profile.name, role: profile.role })) ?? []
+      : [];
+    return NextResponse.json({ familyKey: access.familyKey, officialInputs, catalogProfiles, ownPresentations }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return errorResponse(error); }
 }
 

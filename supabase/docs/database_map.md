@@ -1,5 +1,15 @@
 # Database Map - Ventora
 
+## Addendum 2026-10-13 - Visibilidad de proveedores en cotizaciones
+
+- La migración `20261013024746_organization_quote_provider_visibility.sql` agrega `organization_quote_provider_visibility`: una fila por empresa y proveedor significa que ese proveedor se oculta de los selectores de cotización.
+- Esquema: `organization_id` (FK a `organizations`, parte de PK y `ON DELETE CASCADE`), `provider_key` (texto normalizado, parte de PK, patrón `[a-z0-9][a-z0-9-]{0,79}`) y `created_at` (`timestamptz`, default `now()`). La clave primaria `(organization_id, provider_key)` hace idempotente la preferencia.
+- La tabla conserva las referencias, precios y líneas existentes; borrar la preferencia vuelve a mostrar el proveedor.
+- RLS limita lectura, inserción y eliminación a `public.get_org_id()`. `authenticated` tiene `SELECT`, `INSERT` y `DELETE`, sin `UPDATE`; `anon` y `public` no tienen privilegios.
+- Migración `20261013024746_organization_quote_provider_visibility.sql` aplicada en producción el 2026-10-13 al proyecto Ventora; se registró como aplicada en el ledger remoto.
+- Verificación posterior: RLS activa, tres policies por organización, permisos `SELECT`/`INSERT`/`DELETE` para `authenticated` y sin permiso `UPDATE`.
+- El dump `current_schema.sql` sigue siendo anterior y no debe interpretarse como prueba de aplicación.
+
 > Corte documental: el dump base `current_schema.sql` está registrado en Git el 2026-09-30 09:25 -0300. Hay una lectura remota focal de snapshots del 2026-09-30, pero no una reconciliación completa del esquema en esta sesión. La migración supplier V1 es posterior y solo está verificada en QA local.
 
 Fuente por entorno: producción requiere introspección remota fechada + ledger remoto; repositorio usa este mapa, el dump base y migraciones; QA usa su esquema introspectado. `database.types.ts` es referencia complementaria, no prueba de migración aplicada.

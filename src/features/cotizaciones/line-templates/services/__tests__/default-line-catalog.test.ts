@@ -133,7 +133,13 @@ describe("seedDefaultLineCatalog", () => {
       "ventora:veratec-lineal-sliding-70",
       "ventora:veratec-compact-lineal-sliding-60",
     ]));
-    expect(catalogSize).toBe(69);
+    expect(keys).toEqual(expect.arrayContaining([
+      "ventora:kompen-prime-line-700",
+      "ventora:kompen-form-line-800",
+      "ventora:kompen-star-line-500",
+      "ventora:thermowin-americana-s70",
+    ]));
+    expect(catalogSize).toBe(73);
   });
 
   it("reconoce sistemas del catálogo VERATEC sin asignarles precio ni receta inventada", () => {

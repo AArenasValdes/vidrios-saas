@@ -157,6 +157,7 @@ export function MisPreciosContent({ catalog, error, busy, save, refresh }: Retur
   const [search, setSearch] = useState("");
   const [familyKey, setFamilyKey] = useState("all");
   const [contextLineTemplateId, setContextLineTemplateId] = useState<number | null>(null);
+  const [thermowinFamilyKey, setThermowinFamilyKey] = useState<string | null>(null);
   const [productFilter, setProductFilter] = useState<ProductFilter>("all");
   const [sheet, setSheet] = useState<SheetState>(null);
   const [closing, setClosing] = useState(false);
@@ -173,6 +174,15 @@ export function MisPreciosContent({ catalog, error, busy, save, refresh }: Retur
   const timersRef = useRef<number[]>([]);
   const dismissRef = useRef<() => void>(() => undefined);
   const providers = useMemo(() => catalog?.providers ?? [], [catalog?.providers]);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const family = params.get("family");
+    const lineTemplateId = Number(params.get("lineTemplateId"));
+    if (params.get("supplier") !== "thermowin" || !family?.startsWith("thermowin:") ||
+      !Number.isSafeInteger(lineTemplateId) || lineTemplateId <= 0) return;
+    setThermowinFamilyKey(family);
+    setContextLineTemplateId(lineTemplateId);
+  }, []);
   useEffect(() => {
     if (selectedKey || providers.length === 0) return;
     const params = new URLSearchParams(window.location.search);
@@ -450,17 +460,19 @@ export function MisPreciosContent({ catalog, error, busy, save, refresh }: Retur
   return (
     <main className={s.page} aria-hidden={sheet ? true : undefined}>
       <div className={s.topline}>
-        <Link className={s.back} href={selectedProvider ? "#" : "/configuracion/empresa"} onClick={selectedProvider ? (event) => { event.preventDefault(); setSelectedKey(null); setSearch(""); setFamilyKey("all"); setProductFilter("all"); } : undefined} aria-label={selectedProvider ? "Volver a Mis precios" : "Volver a Empresa"}>
+        <Link className={s.back} href={thermowinFamilyKey ? "/configuracion/empresa/lineas-precios" : selectedProvider ? "#" : "/configuracion/empresa"} onClick={selectedProvider && !thermowinFamilyKey ? (event) => { event.preventDefault(); setSelectedKey(null); setSearch(""); setFamilyKey("all"); setProductFilter("all"); } : undefined} aria-label={thermowinFamilyKey ? "Volver a Mis líneas" : selectedProvider ? "Volver a Mis precios" : "Volver a Empresa"}>
           <ChevronBack />
-          <span>{selectedProvider ? "Mis precios" : "Empresa"}</span>
+          <span>{thermowinFamilyKey ? "Mis líneas" : selectedProvider ? "Mis precios" : "Empresa"}</span>
         </Link>
       </div>
       <header className={`${s.header} ${selectedProvider ? s.headerDetail : ""}`}>
-        <h1>Mis precios</h1>
-        <p>Precios de compra que Ventora usará para estimar tus costos.</p>
+        <h1>{thermowinFamilyKey ? "Perfiles y costos del taller" : "Mis precios"}</h1>
+        <p>{thermowinFamilyKey ? "Elige referencias del sistema y completa tus presentaciones de compra." : "Precios de compra que Ventora usará para estimar tus costos."}</p>
       </header>
       {error && !sheet ? <div className={s.error} role="alert"><span>{error}</span><button type="button" onClick={() => void refresh()}>Reintentar</button></div> : null}
-      {!catalog && !error ? <section className={s.loading} aria-label="Cargando proveedores"><i /><i /><i /></section> : catalog ? (
+      {thermowinFamilyKey && contextLineTemplateId ? (
+        <TallerPresentaciones lineTemplateId={contextLineTemplateId} familyKey={thermowinFamilyKey} />
+      ) : !catalog && !error ? <section className={s.loading} aria-label="Cargando proveedores"><i /><i /><i /></section> : catalog ? (
         <div className={`${s.workspace} ${!selectedProvider ? s.noSelection : ""}`}>
           <aside className={`${s.providerPane} ${selectedProvider ? s.mobileHidden : ""}`}>
             <h2>Proveedores</h2>

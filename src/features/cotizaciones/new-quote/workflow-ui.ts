@@ -181,6 +181,8 @@ export type ComponentFormState = {
   fabricacionApertura?: string;
   fabricacionHerraje?: string;
   fabricacionVariante?: string;
+  fabricacionConfiguracionId?: string;
+  fabricacionComposicionId?: string;
   fabricacionAnchoHojaAMm?: number | null;
   catalogLineKey?: string;
   fabricacionGlazing?: string;
@@ -1829,13 +1831,23 @@ export function hydrateComponentFormFromLineTemplate(
         fabricacionApertura: form.fabricacionApertura,
         fabricacionHerraje: form.fabricacionHerraje,
         fabricacionVariante: form.fabricacionVariante,
+        fabricacionConfiguracionId: form.fabricacionConfiguracionId,
+        fabricacionComposicionId: form.fabricacionComposicionId,
       }
     : hasExplicitVariantSelection
       ? {
           ...withFabricacionContext,
           fabricacionVariante: form.fabricacionVariante,
+          fabricacionConfiguracionId: form.fabricacionConfiguracionId,
+          fabricacionComposicionId: form.fabricacionComposicionId,
         }
-      : withFabricacionContext;
+      : sameSelectedLine
+        ? withFabricacionContext
+          : {
+              ...withFabricacionContext,
+              fabricacionConfiguracionId: "",
+              fabricacionComposicionId: "",
+            };
   const selectedWinHouseS75Variant = WINHOUSE_NEW_S75_VARIANTS.find(
     (variant) => variant.slug === form.fabricacionVariante
   );
@@ -2454,6 +2466,8 @@ export function buildSuggestedComponentForm(
     fabricacionApertura: current.fabricacionApertura ?? "",
     fabricacionHerraje: current.fabricacionHerraje ?? "",
     fabricacionVariante: current.fabricacionVariante ?? "",
+    fabricacionConfiguracionId: current.fabricacionConfiguracionId ?? "",
+    fabricacionComposicionId: current.fabricacionComposicionId ?? "",
     fabricacionAnchoHojaAMm: current.fabricacionAnchoHojaAMm ?? null,
     fabricacionSnapshot: current.fabricacionSnapshot ?? null,
   };
@@ -3066,6 +3080,7 @@ export function buildItemFromForm(
       fabricacionApertura: syncedForm.fabricacionApertura,
       fabricacionHerraje: syncedForm.fabricacionHerraje,
       fabricacionVariante: sodalConfig?.variantSlug || syncedForm.fabricacionVariante,
+      fabricacionConfiguracionId: syncedForm.fabricacionConfiguracionId,
       fabricacionAnchoHojaAMm: syncedForm.fabricacionAnchoHojaAMm ?? null,
       catalogLineKey: resolvedCatalogLineKey,
       fabricacionGlazing: sodalConfig?.glazing || syncedForm.fabricacionGlazing,
@@ -3128,6 +3143,8 @@ export function applyQuotePricingToItems(
       fabricacionApertura,
       fabricacionHerraje,
       fabricacionVariante,
+      fabricacionConfiguracionId,
+      fabricacionComposicionId,
       fabricacionAnchoHojaAMm,
       fabricationRecipeId,
     } = decodeCotizacionItemPresentationMeta(item.observaciones);
@@ -3194,6 +3211,8 @@ export function applyQuotePricingToItems(
         fabricacionApertura,
         fabricacionHerraje,
         fabricacionVariante,
+        fabricacionConfiguracionId,
+        fabricacionComposicionId,
         fabricacionAnchoHojaAMm,
         fabricationRecipeId,
         cubicationSnapshot: null,

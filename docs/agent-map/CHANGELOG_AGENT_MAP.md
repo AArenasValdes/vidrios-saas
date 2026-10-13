@@ -2,6 +2,47 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-10-13 - Visibilidad de proveedores en cotizaciones
+
+- La lista móvil de proveedores en `Líneas y precios` permite ocultar o volver a mostrar cada proveedor para la organización activa.
+- `/cotizaciones/nueva` filtra las líneas de proveedores ocultos; la preferencia no altera el catálogo, precios, recetas ni cotizaciones guardadas.
+- Persistencia: tabla `organization_quote_provider_visibility`, clave `(organization_id, provider_key)` y RLS tenant-scoped de lectura/inserción/eliminación; no se concede `UPDATE`.
+- Migración `20261013024746_organization_quote_provider_visibility.sql` aplicada y registrada en producción el 2026-10-13. El mapa `current_schema.sql` todavía no incluye esta tabla.
+- Documentación: `supabase/docs/database_map.md`, `DATA_MODEL_MAP.md` y sección Cotizaciones de `FEATURES_MAP.md`.
+- Validación móvil de fabricación: se derivan mensajes de las advertencias/resultados actuales. El mensaje de ausencia de tiras solo se muestra con cero cortes agrupados; se evita texto residual que contradiga las tiras visibles. Aplica globalmente a las líneas del wizard.
+
+## 2026-10-12 - Contrato común de configuraciones (avance local)
+
+- El Paso 1 muestra un aviso técnico de una línea; las referencias accionables quedan en Perfiles y descuentos. El encabezado guía cada uno de los cuatro pasos con una instrucción breve.
+- El editor móvil usa configuraciones de catálogo o una declaración explícita del taller, crea recetas independientes y conserva la identidad de configuración/composición en la ruta de cotización y despiece. No se modifica base de datos.
+- En una línea sin sistema declarado, la configuración del taller queda siempre visible; elegir composición solo la marca y el botón inferior crea la configuración pendiente y continúa a Perfiles y descuentos.
+- El resumen de Producto sigue las selecciones actuales de componente, apertura y composición; el croquis reconoce visualmente la tipología de puerta corredera.
+- Los perfiles añadidos desde referencias muestran base, descuento y cantidad pendientes hasta que el maestro complete esos datos. La cobertura de configuraciones aún es parcial.
+- Se detallan avances y pendientes de cobertura, pruebas y smoke en `docs/fabricacion/BASE_COMUN_LINEAS_SISTEMAS_COMPOSICIONES.md`.
+- Inventario local de 73 entradas en `MATRIZ_BASE_CONFIGURACIONES_2026-10-12.md`: cuatro con pares explícitos, 39 con compatibilidad anterior y 30 sin ese objeto. La ausencia de slots no se interpreta como ausencia de receta.
+- EKO 130 se contrastó visualmente con página 7 del díptico: ocho perfiles referenciales; la página no enumera composiciones completas ni descuentos. Se conserva esa diferencia en el contrato propuesto.
+
+## 2026-10-12 - Agrupación de perfiles por aplicación
+
+- `LineProfileReference.applicationGroup` permite agrupar referencias solo cuando el catálogo identifica su uso. Form Line 800 separa **Ventanas correderas** y **Puertas correderas**; los perfiles genéricos quedan aparte para confirmar.
+- Las referencias ya persistidas reciben el grupo canónico al mostrarse, sin reescribir `catalog_metadata` del taller. No se infieren reglas de corte ni grupos desde el nombre.
+- `FabricacionProfileList` muestra los grupos y mantiene una única área desplazable en móvil; prueba de separación agregada al contrato Kompen y al test del componente.
+
+## 2026-10-12 - Perfiles referenciales y eliminación universal en móvil
+
+- **Perfiles y descuentos** usa referencias de `workshopProfiles`/fixture canónico; muestra código, nombre y página, permite agregar reglas sin fórmula y conserva el gate pendiente hasta recibir el Plan de armado.
+- La edición móvil confirma y persiste la eliminación de cualquier perfil de cualquier línea; el perfil quitado no queda en la receta reabierta.
+- Pruebas nuevas: `fabricacion-profile-list.test.tsx`, `fabricacion-profile-edit-sheet.test.tsx` y contrato del perfil desde catálogo en `fabricacion-receta-editor.service.test.ts`.
+
+## 2026-10-12 - Base comercial Thermowin Kompen y contrato de rutas
+
+- Cuatro sistemas PVC con identidad canónica, compatibilidad de apertura y referencias de perfiles por página. Precio comercial y presentaciones de compra quedan editables por organización; no se importaron precios.
+- El Paso 1 móvil toma pares exactos componente/apertura desde `catalogMetadata.compatibility.configurations`, oculta hojas sin fuente y lleva a **Perfiles y descuentos**. Este contrato aplica a futuras líneas.
+- El enlace **Perfiles y costos** abre presentaciones privadas por familia Thermowin; la API valida rol, `organization_id` y línea canónica. Las referencias documentales rellenan código/nombre, sin convertirlas en insumos oficiales ni en recetas. Contrato de ruta incluido en el gate: `src/features/fabricacion/__tests__/kompen-thermowin-presentations-route.test.ts`.
+- El contrato de integración exige trazar catálogo, composición, receta, perfil/precio, snapshot e impresión con claves exactas y casos negativos. Los catálogos no contienen reglas de despiece; no se publican recetas Kompen.
+- Evidencia y pendientes: `docs/fabricacion/Kompen Thermowin/INTEGRACION_KOMPEN_THERMOWIN.md`; suite local: `kompen-thermowin-integration.contract.test.ts`.
+- `pnpm fabrication:verify --build` final aprobó 178 suites, 1.500 pruebas, TypeScript, documentación y build. Navegador QA y taller siguen pendientes.
+
 ## 2026-10-12 - Precios Veratec en resumen de fabricación
 
 - La cotización conserva el costo interno congelado hasta que admin/tecnico actualiza explícitamente los costos o guarda un precio desde el resumen; el precio de venta y la pauta histórica se mantienen separados.
@@ -2907,3 +2948,18 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
 - Al guardar, la lectura de `fabrication_recipes` ahora se limita a los `line_template_id` únicos de las piezas que requieren resolver snapshot y mantiene los filtros de estado, borrado lógico y organización.
 - Se agregaron regresiones para conservar ambas fuentes de variantes, elegir una receta propia equivalente y acotar la lectura a las líneas pertinentes.
 - `pnpm fabrication:verify`: 175 suites y 1.422 pruebas aprobadas; TypeScript y `docs:check` aprobados. Build y smoke visual no ejecutados: la instancia local visible en el navegador puede compartir `.next`; no se modificaron snapshots históricos ni datos remotos.
+# 2026-10-12 — Base estructural y referencias de perfiles en editor móvil
+
+- Las configuraciones de línea creadas desde la selección de producto ahora inician con la base tipológica estructural correspondiente cuando existe. La base queda sin validar y conserva ajustes y descuentos pendientes.
+- Los códigos documentados de una línea se asignan dentro de cada perfil; se retiró el acordeón que los presentaba como piezas adicionales separadas de rieles, jambas y hojas.
+- Al agregar un perfil vacío, Ventora guarda la nueva fila antes de abrir su editor. Los campos de medida y descuento siguen sujetos a la pauta del taller.
+- Una receta ya guardada con perfiles, vidrios o accesorios permite avanzar para revisarla sin volver a declarar su configuración; si la línea solo tiene una configuración de catálogo, el resumen la reconoce al navegar una receta existente.
+- Una línea con variantes explícitas de fabricación puede abrir su paso de perfiles aunque la composición de catálogo no se haya marcado de nuevo; esta navegación conserva la receta y no crea una composición distinta.
+- No se asignan códigos ni fórmulas automáticamente por parecido de rol. TypeScript y ESLint dirigidos pasan; pruebas y smoke visual quedan pendientes en esta pasada.
+- En Validar, el resumen ya no compara el cálculo consigo mismo para presentarlo como coincidencia. Si no se forman barras/cortes, muestra la advertencia de la pauta, las medidas calculadas y el acceso para completar perfiles; no permite activar esa prueba sin cortes.
+- El Resumen muestra las piezas calculadas aun cuando los largos comerciales estén pendientes, y distingue ese total de los cortes agrupados en tiras comerciales.
+- Se corrige el resumen de material: muestra metros geométricos de cortes y no “0 utilizados” si faltan barras; el sobrante queda como no disponible hasta generar tiras. Si falta largo comercial en algún perfil, la pantalla expone las advertencias y no considera completa la pauta.
+- Las recetas que permiten cálculo preliminar ahora agrupan piezas pendientes con la tira estándar configurada y marcan barras/sobrantes como estimación; los perfiles que necesitan confirmación generan un aviso único por material y siguen bloqueando la activación hasta que el maestro confirme sus largos.
+- El largo preliminar se muestra como información azul en una sola nota, no como error rojo repetido. Elegir un largo comercial específico o confirmar la tira estándar limpia la marca pendiente de ese perfil y sus avisos heredados.
+- En el Paso 1 del editor móvil, cambiar el componente del catálogo deja una sola opción marcada. Elegir una composición solo la selecciona; el avance y la creación de la configuración quedan para el botón **Perfiles y descuentos**.
+- Si el perfil no tiene una longitud propia, la pauta usa 6.000 mm como predeterminado Ventora incluso si el dato heredado estaba marcado pendiente. El maestro puede guardar otro largo por perfil; la ausencia de ese override ya no bloquea tiras ni activa el aviso “Completa los largos comerciales”.

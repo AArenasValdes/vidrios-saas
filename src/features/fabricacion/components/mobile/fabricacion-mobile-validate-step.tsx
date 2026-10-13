@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
-  Check,
   CheckCircle2,
   Pencil,
   Play,
@@ -12,10 +11,7 @@ import {
 import { FabricacionPerfilTirasVisual } from "@/features/fabricacion/components/fabricacion-barra-corte";
 import { FabricacionTipologiaPreview } from "@/features/fabricacion/components/fabricacion-tipologia-preview";
 import { calcularPautaBarrasMultiMedida } from "@/features/fabricacion/services/fabricacion-pauta-multi-medida.service";
-import {
-  obtenerFeedbackPruebaFabricacion,
-  resolverFeedbackVisiblePruebaFabricacion,
-} from "@/features/fabricacion/services/fabricacion-prueba-preview.service";
+import { obtenerFeedbackPruebaFabricacion } from "@/features/fabricacion/services/fabricacion-prueba-preview.service";
 import {
   buildFabricationRecipeSummary,
   formatMetersFromMm,
@@ -102,21 +98,6 @@ function createMeasureRow(partial?: Partial<MeasureRow>): MeasureRow {
   };
 }
 
-function profilesAllMatch(
-  actual: FabricacionResultadoCubicacion,
-  expected: FabricacionResultadoCubicacion
-) {
-  if (actual.perfiles.length !== expected.perfiles.length) return false;
-  return actual.perfiles.every((row, index) => {
-    const expectedRow = expected.perfiles[index];
-    return (
-      expectedRow &&
-      row.medidaMm === expectedRow.medidaMm &&
-      row.cantidadPiezas === expectedRow.cantidadPiezas
-    );
-  });
-}
-
 function formatTypologyLabel(tipologia: string) {
   return tipologia
     .replaceAll("_", " ")
@@ -184,6 +165,14 @@ export function FabricacionMobileValidateStep({
   const totalTiras = tirasSummary.reduce((sum, group) => sum + group.tiras, 0);
   const totalCortes =
     barPlan?.barras.reduce((sum, bar) => sum + bar.cortes.length, 0) ?? 0;
+  const totalPiezasCalculadas = consolidado
+    ? consolidado.perfiles.reduce((sum, row) => sum + row.cantidadPiezas, 0)
+    : 0;
+  const hasPreliminaryCommercialLength = Boolean(
+    barPlan?.advertencias.some(
+      (warning) => warning.codigo === "PERFIL_LARGO_COMERCIAL_PRELIMINAR"
+    )
+  );
   const dominantLengthMm =
     tirasSummary[0]?.largoComercialMm ?? tiraEstandar.largoMm;
   const accessoryTotal = consolidado
@@ -222,11 +211,17 @@ export function FabricacionMobileValidateStep({
   );
 
   const hasResults = Boolean(actualPrimary && expected && consolidado);
-  const allMatch =
+  const hasUsableCutPlan =
     actualPrimary != null &&
-    expected != null &&
     actualPrimary.calculable &&
-    profilesAllMatch(actualPrimary, expected);
+    actualPrimary.perfiles.length > 0 &&
+    barPlan?.calculable === true &&
+    !barPlan.advertencias.some(
+      (warning) =>
+        warning.codigo === "PERFIL_SIN_DATOS_DE_BARRA" ||
+        warning.codigo === "PERFIL_LARGO_COMERCIAL_PRELIMINAR"
+    ) &&
+    totalCortes > 0;
 
   const profileRows = useMemo(() => {
     if (!actualPrimary || !expected) return [];
@@ -239,11 +234,8 @@ export function FabricacionMobileValidateStep({
     });
   }, [actualPrimary, expected]);
 
-  const mismatchCount = profileRows.filter((entry) => !entry.matches).length;
   const readyToActivate =
-    (allMatch && Boolean(actualPrimary)) ||
-    (canActivateFromSaved && !hasResults) ||
-    (canActivateFromSaved && allMatch);
+    hasUsableCutPlan || (canActivateFromSaved && !hasResults);
 
   const recipeChangedSinceCalc =
     hasResults &&
@@ -254,10 +246,19 @@ export function FabricacionMobileValidateStep({
     ? barrasPorPerfil
     : barrasPorPerfil.slice(0, PAUTA_PREVIEW_COUNT);
   const hiddenPautaCount = Math.max(0, barrasPorPerfil.length - PAUTA_PREVIEW_COUNT);
-  const visibleFeedback = resolverFeedbackVisiblePruebaFabricacion(
-    feedback,
-    consolidado
-  );
+  const pautaFeedback = barPlan?.advertencias
+    .map((warning) => warning.mensaje.trim())
+    .filter(Boolean)
+    .join(" ");
+  // El estado de texto solo conserva errores de entrada. Los mensajes del
+  // cálculo se derivan de los resultados actuales para que un aviso anterior
+  // no contradiga una pauta que ya agrupó cortes en tiras.
+  const visibleFeedback = hasResults
+    ? pautaFeedback || (consolidado ? obtenerFeedbackPruebaFabricacion(consolidado) : null)
+    : feedback;
+  const preliminaryFeedback = hasPreliminaryCommercialLength
+    ? `La pauta usa la tira estándar de ${formatMetersFromMm(tiraEstandar.largoMm)} como estimación; confirma el largo real de los perfiles en tu taller.`
+    : null;
 
   const calculate = () => {
     const validMeasures = measures.filter(
@@ -287,14 +288,14 @@ export function FabricacionMobileValidateStep({
     setActiveTab("resumen");
     setShowAllPauta(false);
     setShowOkProfiles(false);
-    setFeedback(obtenerFeedbackPruebaFabricacion(result.consolidado));
+    setFeedback(null);
   };
 
   const handleActivate = async () => {
     if (!onActivate || !readyToActivate) return;
     setIsActivating(true);
     try {
-      if (actualPrimary && expected && allMatch) {
+      if (actualPrimary && expected && hasUsableCutPlan) {
         await onSaveTest({
           name:
             name.trim() ||
@@ -456,7 +457,17 @@ export function FabricacionMobileValidateStep({
           </section>
         )}
 
-        {visibleFeedback ? <div className={s.errorBand}>{visibleFeedback}</div> : null}
+        {hasPreliminaryCommercialLength ? (
+          activeTab !== "resumen" ? (
+            <div className={s.validateRecalcHint} data-tone="info" role="status">
+              {preliminaryFeedback}
+            </div>
+          ) : null
+        ) : visibleFeedback ? (
+          <div className={s.errorBand} role="alert">
+            {visibleFeedback}
+          </div>
+        ) : null}
         {recipeChangedSinceCalc ? (
           <div className={s.validateRecalcHint} role="status">
             Cambiaste una regla. Vuelve a calcular para ver el resultado actualizado.
@@ -495,14 +506,28 @@ export function FabricacionMobileValidateStep({
               <section className={s.validatePanel} role="tabpanel">
                 <div
                   className={s.validateStatusCard}
-                  data-tone={allMatch ? "ok" : mismatchCount > 0 ? "warn" : "neutral"}
+                  data-tone={
+                    hasUsableCutPlan
+                      ? "ok"
+                      : hasPreliminaryCommercialLength
+                        ? "info"
+                        : "warn"
+                  }
                 >
-                  {allMatch ? (
+                  {hasUsableCutPlan || hasPreliminaryCommercialLength ? (
                     <>
                       <CheckCircle2 size={22} aria-hidden />
                       <div>
-                        <strong>Todo coincide con tu fabricación</strong>
-                        <p>Listo para guardar y activar.</p>
+                        <strong>
+                          {hasPreliminaryCommercialLength
+                            ? `Tiras estimadas · ${formatMetersFromMm(tiraEstandar.largoMm)}`
+                            : "Pauta de corte calculada"}
+                        </strong>
+                        <p>
+                          {hasPreliminaryCommercialLength
+                            ? "No es un error de cálculo: se usó el largo estándar como referencia. Confirma que corresponda a los perfiles de tu taller."
+                            : "Revisa medidas y cortes con la pauta de tu taller antes de activar."}
+                        </p>
                       </div>
                     </>
                   ) : (
@@ -510,10 +535,20 @@ export function FabricacionMobileValidateStep({
                       <AlertTriangle size={22} aria-hidden />
                       <div>
                         <strong>
-                          Hay {mismatchCount}{" "}
-                          {mismatchCount === 1 ? "perfil por corregir" : "perfiles por corregir"}
+                          {hasPreliminaryCommercialLength && totalCortes > 0
+                            ? "Pauta preliminar calculada"
+                            : totalCortes === 0
+                              ? "No se generaron tiras de corte"
+                              : "Revisa la pauta calculada"}
                         </strong>
-                        <p>Revisa Verificación o ajusta descuentos en Perfiles.</p>
+                        <p>
+                          {hasPreliminaryCommercialLength && totalCortes > 0
+                            ? "Se usó la tira estándar como referencia. Confirma los largos comerciales en Perfiles antes de activar."
+                            : visibleFeedback ??
+                              (totalCortes > 0
+                                ? `Se agruparon ${totalCortes} cortes en ${totalTiras} tiras. Revisa las advertencias antes de activar.`
+                                : "No se generaron tiras. Revisa los perfiles y la composición, y vuelve a calcular.")}
+                        </p>
                       </div>
                     </>
                   )}
@@ -523,29 +558,53 @@ export function FabricacionMobileValidateStep({
                   <span>Material principal</span>
                   <strong>
                     {totalTiras > 0
-                      ? `Necesitas ${totalTiras} ${totalTiras === 1 ? "tira" : "tiras"} de ${formatMetersFromMm(dominantLengthMm)}`
+                      ? `${hasPreliminaryCommercialLength ? "Estimación" : "Necesitas"}: ${totalTiras} ${totalTiras === 1 ? "tira" : "tiras"} de ${formatMetersFromMm(dominantLengthMm)}`
                       : "Sin tiras calculadas"}
                   </strong>
                 </div>
 
+                {consolidado?.perfiles.length ? (
+                  <div className={s.validateMaterialsBody}>
+                    <h4>Cortes calculados · {totalPiezasCalculadas} piezas</h4>
+                    <ul className={s.validateCheckList}>
+                      {consolidado.perfiles.map((row) => (
+                        <li key={`${row.componenteId}:${row.medidaMm}`}>
+                          <div>
+                            <strong>{row.funcion}</strong>
+                            <span>
+                              {row.medidaMm.toLocaleString("es-CL")} mm × {row.cantidadPiezas}
+                            </span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
                 <dl className={s.validateStatsGrid}>
                   <div>
-                    <dt>Utilizados</dt>
-                    <dd>
-                      {formatMetersFromMm(barPlan?.totalUsadoMm ?? consolidado.totalLinealMm)}
-                    </dd>
+                    <dt>Metros de cortes</dt>
+                    <dd>{formatMetersFromMm(consolidado.totalLinealMm)}</dd>
                   </div>
                   <div>
-                    <dt>Sobrantes</dt>
-                    <dd>{formatMetersFromMm(barPlan?.totalSobranteMm ?? 0)}</dd>
+                    <dt>Sobrante estimado</dt>
+                    <dd>
+                      {barPlan?.barras.length
+                        ? formatMetersFromMm(barPlan.totalSobranteMm)
+                        : "—"}
+                    </dd>
                   </div>
                   <div>
                     <dt>Reglas</dt>
                     <dd>{tirasSummary.length || consolidado.perfiles.length}</dd>
                   </div>
                   <div>
-                    <dt>Cortes</dt>
+                    <dt>Cortes en tiras</dt>
                     <dd>{totalCortes}</dd>
+                  </div>
+                  <div>
+                    <dt>Piezas calculadas</dt>
+                    <dd>{totalPiezasCalculadas}</dd>
                   </div>
                   <div>
                     <dt>Accesorios</dt>
@@ -625,9 +684,25 @@ export function FabricacionMobileValidateStep({
                     ))}
                   </div>
                 ) : (
-                  <p className={s.emptyCopy}>
-                    No hay pauta calculada. Revisa largos comerciales en Perfiles.
-                  </p>
+                  <div>
+                    <p className={s.emptyCopy}>
+                      No se pudieron agrupar los cortes en tiras. Revisa los largos comerciales en Perfiles.
+                    </p>
+                    {actualPrimary?.perfiles.length ? (
+                      <ul className={s.validateCheckList}>
+                        {actualPrimary.perfiles.map((row) => (
+                          <li key={row.componenteId}>
+                            <div>
+                              <strong>{row.funcion}</strong>
+                              <span>
+                                {row.medidaMm.toLocaleString("es-CL")} mm × {row.cantidadPiezas} · calculado
+                              </span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
                 )}
                 {!showAllPauta && hiddenPautaCount > 0 ? (
                   <button
@@ -643,13 +718,13 @@ export function FabricacionMobileValidateStep({
 
             {activeTab === "verificacion" ? (
               <section className={s.validatePanel} role="tabpanel">
-                {allMatch ? (
+                {hasUsableCutPlan ? (
                   <>
                     <div className={s.validateStatusCard} data-tone="ok">
                       <CheckCircle2 size={22} aria-hidden />
                       <div>
-                        <strong>Todo coincide con tu fabricación</strong>
-                        <p>No hay diferencias con la pauta Ventora.</p>
+                        <strong>Cálculo generado</strong>
+                        <p>Compara estas medidas con la pauta o con un corte real de tu taller.</p>
                       </div>
                     </div>
                     {!showOkProfiles ? (
@@ -670,10 +745,7 @@ export function FabricacionMobileValidateStep({
                                 {row.medidaMm.toLocaleString("es-CL")} mm × {row.cantidadPiezas}
                               </span>
                             </div>
-                            <span className={s.validateMatchBadge} data-match="true">
-                              <Check size={14} aria-hidden />
-                              OK
-                            </span>
+                            <span className={s.validateMatchBadge} data-match="true">Calculado</span>
                           </li>
                         ))}
                       </ul>
@@ -681,53 +753,36 @@ export function FabricacionMobileValidateStep({
                   </>
                 ) : (
                   <>
+                    {profileRows.length === 0 ? (
+                      <div className={s.validateStatusCard} data-tone="warn">
+                        <AlertTriangle size={22} aria-hidden />
+                        <div>
+                          <strong>No hay cortes calculados</strong>
+                          <p>{feedback ?? "Revisa las reglas de la receta e intenta nuevamente."}</p>
+                        </div>
+                      </div>
+                    ) : null}
                     <ul className={s.validateCheckList}>
-                      {profileRows
-                        .filter((entry) => !entry.matches)
-                        .map(({ row }) => (
+                      {profileRows.map(({ row }) => (
                           <li key={row.componenteId} data-match="false">
                             <div>
                               <strong>{row.funcion}</strong>
                               <span>
-                                {row.medidaMm.toLocaleString("es-CL")} mm × {row.cantidadPiezas}
+                                {row.medidaMm.toLocaleString("es-CL")} mm × {row.cantidadPiezas} · calculado
                               </span>
                             </div>
-                            <button
-                              type="button"
-                              className={s.validateCorrectButton}
-                              onClick={() => onCorrectProfile?.(row.componenteId)}
-                            >
-                              Corregir
-                            </button>
+                            {totalCortes === 0 ? (
+                              <button
+                                type="button"
+                                className={s.validateCorrectButton}
+                                onClick={() => onCorrectProfile?.(row.componenteId)}
+                              >
+                                Revisar
+                              </button>
+                            ) : null}
                           </li>
-                        ))}
+                      ))}
                     </ul>
-                    {profileRows.some((entry) => entry.matches) ? (
-                      <details className={s.validateOkCollapse}>
-                        <summary>
-                          Perfiles correctos ({profileRows.filter((e) => e.matches).length})
-                        </summary>
-                        <ul className={s.validateCheckList}>
-                          {profileRows
-                            .filter((entry) => entry.matches)
-                            .map(({ row }) => (
-                              <li key={row.componenteId} data-match="true">
-                                <div>
-                                  <strong>{row.funcion}</strong>
-                                  <span>
-                                    {row.medidaMm.toLocaleString("es-CL")} mm ×{" "}
-                                    {row.cantidadPiezas}
-                                  </span>
-                                </div>
-                                <span className={s.validateMatchBadge} data-match="true">
-                                  <Check size={14} aria-hidden />
-                                  OK
-                                </span>
-                              </li>
-                            ))}
-                        </ul>
-                      </details>
-                    ) : null}
                   </>
                 )}
               </section>
@@ -757,7 +812,7 @@ export function FabricacionMobileValidateStep({
               <Play size={16} aria-hidden />
               Calcular prueba
             </button>
-          ) : allMatch && onActivate ? (
+          ) : hasUsableCutPlan && onActivate ? (
             <button
               type="button"
               className={s.secondaryButton}
@@ -772,11 +827,19 @@ export function FabricacionMobileValidateStep({
               type="button"
               className={s.secondaryButton}
               onClick={() => {
+                if (totalCortes === 0 || hasPreliminaryCommercialLength) {
+                  onBackToRecipe?.();
+                  return;
+                }
                 setActiveTab("verificacion");
                 setFormExpanded(false);
               }}
             >
-              Revisar diferencias
+              {totalCortes === 0 || hasPreliminaryCommercialLength
+                ? hasPreliminaryCommercialLength
+                  ? "Confirmar largos"
+                  : "Completar perfiles"
+                : "Revisar cálculo"}
             </button>
           )}
           {onSaveDraft ? (

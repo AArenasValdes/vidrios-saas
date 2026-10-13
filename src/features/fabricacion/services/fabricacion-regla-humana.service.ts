@@ -15,7 +15,7 @@ import type {
   FabricacionVidrio,
 } from "@/features/fabricacion/types/fabricacion-domain";
 
-/** Preset sugerido por Ventora en UI. Nunca es “largo de empresa” fijo. */
+/** Largo comercial predeterminado de Ventora; el taller puede reemplazarlo por perfil. */
 export const VENTORA_LARGO_COMERCIAL_PRESET_MM = 6000;
 
 /** Reservado para default a nivel organización/taller (futuro). */
@@ -52,7 +52,6 @@ export function resolveLargoComercialMm(
 ): number {
   const perfilLargo = normalizeLargoComercialMm(profile.largoComercialMm);
   if (perfilLargo != null) return perfilLargo;
-  if (profile.largoComercialPendiente) return 0;
   return (
     resolveRecetaLargoComercialDefaultMm(receta, organization)
   );
@@ -604,9 +603,16 @@ export function describePerfilCardDisplay(
   const nombre = displayLabel(profile.nombrePerfil);
   const perfilParts = [codigo, nombre].filter(Boolean);
   const perfil = perfilParts.length > 0 ? perfilParts.join(" + ") : "Pendiente de validar";
-  const base = labelBaseMedida(profile.reglaMedida.base, "human");
-  const ajuste = formatAjusteMm(profile.reglaMedida.ajusteMm);
-  const cantidad = String(Math.max(1, Math.round(profile.reglaCantidad.cantidad)));
+  const pending = profile.datosPendientes ?? [];
+  const base = pending.some((detail) => /base de medida/i.test(detail))
+    ? "Por definir"
+    : labelBaseMedida(profile.reglaMedida.base, "human");
+  const ajuste = pending.some((detail) => /descuento/i.test(detail))
+    ? "Por definir"
+    : formatAjusteMm(profile.reglaMedida.ajusteMm);
+  const cantidad = pending.some((detail) => /cantidad por ventana/i.test(detail))
+    ? "Por definir"
+    : String(Math.max(1, Math.round(profile.reglaCantidad.cantidad)));
   const largoMm = receta
     ? resolveLargoComercialMm(profile, receta)
     : profile.largoComercialMm ?? VENTORA_LARGO_COMERCIAL_PRESET_MM;

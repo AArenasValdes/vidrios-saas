@@ -62,6 +62,7 @@ export function construirPautaBarrasFabricacion(input: {
 
   const advertencias: FabricacionAdvertencia[] = [];
   const cortes: CorteExpandido[] = [];
+  const perfilesConAviso = new Set<string>();
 
   input.resultado.perfiles.forEach((fila) => {
     const perfil = input.receta.perfiles.find(
@@ -70,13 +71,21 @@ export function construirPautaBarrasFabricacion(input: {
     const largoComercialMm = perfil
       ? resolveLargoComercialMm(perfil, input.receta)
       : 0;
+    const keyAviso = perfil
+      ? `${resolvePerfilMaterialKey(perfil)}::${perfil.codigoPerfil.trim()}::${fila.funcion}`
+      : fila.componenteId;
     if (!perfil || largoComercialMm <= 0) {
-      advertencias.push({
-        codigo: "PERFIL_SIN_DATOS_DE_BARRA",
-        nivel: "advertencia",
-        mensaje: `${fila.funcion}: agrega el largo comercial para calcular tiras.`,
-        componenteId: fila.componenteId,
-      });
+      if (!perfilesConAviso.has(keyAviso)) {
+        perfilesConAviso.add(keyAviso);
+        advertencias.push({
+          codigo: "PERFIL_SIN_DATOS_DE_BARRA",
+          nivel: "advertencia",
+          mensaje: perfil
+            ? `${fila.funcion}: no se pudo resolver el perfil asociado para calcular sus tiras.`
+            : `${fila.funcion}: no se encontró el perfil asociado para calcular sus tiras.`,
+          componenteId: fila.componenteId,
+        });
+      }
       return;
     }
 

@@ -18,6 +18,10 @@ Una fila por variante y rol. Expresar todas las medidas de prueba en mm. No obte
 |---|---|---|---|---|---|---|---|
 | Completar | Completar | Completar | Completar | Completar | Completar | Completar | Completar |
 
+Declarar pares exactos componente + sistema/apertura para el Paso 1 móvil en `catalogMetadata.compatibility.configurations`. No cruzar listas generales de componentes y aperturas. Las hojas se publican como opción solo cuando una fuente las especifica; los descuentos quedan editables junto a cada perfil en **Perfiles y descuentos**.
+
+Registrar perfiles/códigos referenciales en `workshopProfiles` con documento y página. Si la fuente diferencia su aplicación, asignar `applicationGroup` y agruparlos en móvil por esa aplicación; dejar los demás en **Otros perfiles del catálogo** sin deducir compatibilidades. En móvil deben poder agregarse a la regla de la receta, pero sin Plan de armado se conserva pendiente de base, descuento y cantidad y se bloquea el cálculo. Todo perfil agregado debe poder eliminarse con confirmación y la eliminación debe persistir al reabrir cualquier línea.
+
 Registrar redondeo, largos de barra, kerf, umbrales y unidades con su propia procedencia. Una fórmula derivada debe declararse como tal. Para cada rama condicional, incluir un caso antes, en y después del umbral.
 
 ## Recorrido de integración
@@ -45,6 +49,8 @@ Registrar redondeo, largos de barra, kerf, umbrales y unidades con su propia pro
 - [ ] Snapshot histórico permanece congelado; recálculo nuevo solo por la acción prevista.
 - [ ] Barras conservan piezas y no mezclan perfiles incompatibles; largos imposibles se advierten.
 - [ ] Estado preliminar y aviso visible; pasar tests no cambia validación de taller.
+- [ ] Referencias del catálogo muestran código, nombre y página fuente; las aplicaciones documentadas se agrupan y las demás quedan aparte; agregarlas no crea una fórmula no documentada.
+- [ ] Perfil eliminado desaparece tras guardar y reabrir; disponible para línea propia y canónica.
 - [ ] `pnpm fabrication:verify` aprobado; si hay fallos, describirlos y no cerrar como aprobado.
 - [ ] Build cuando se cambia aplicación; smoke de navegador según recorrido inferior.
 

@@ -20,6 +20,7 @@ type RefInput = {
   provider?: string | null;
   source?: string | null;
   codeStatus?: LineProfileReference["codeStatus"];
+  applicationGroup?: string;
 };
 
 function catalogRef(input: RefInput): LineProfileReference {
@@ -31,6 +32,7 @@ function catalogRef(input: RefInput): LineProfileReference {
     provider: input.provider ?? "SODAL",
     source: input.source ?? PROFILE_REFERENCE_SOURCES.SODAL_CATALOG,
     codeStatus: input.codeStatus ?? "catalog_reference",
+    ...(input.applicationGroup ? { applicationGroup: input.applicationGroup } : {}),
   };
 }
 
@@ -834,7 +836,104 @@ const LINE_12_PROFILES: LineProfileReference[] = [
   catalogRef({ code: "1204", name: "Bastidor hoja", role: "Hoja", provider: "Arquetipo", source: PROFILE_REFERENCE_SOURCES.ARQUETIPO_CATALOG }),
 ];
 
+function kompenRef(
+  code: string,
+  name: string,
+  role: string,
+  document: string,
+  page: number,
+  applicationGroup?: string
+): LineProfileReference {
+  return catalogRef({
+    code,
+    name,
+    role,
+    provider: "Thermowin Kompen",
+    source: `docs/fabricacion/Kompen Thermowin/${document} · p. ${page}`,
+    applicationGroup,
+  });
+}
+
+const KOMPEN_PRIME_700_DOCUMENT = "NUEVA PRIME LINE 700 2025 (2).pdf";
+const KOMPEN_FORM_800_DOCUMENT = "NUEVO FORM LINE 800 2025 (1).pdf";
+const KOMPEN_STAR_500_DOCUMENT = "NUEVA STAR LINE 500 2025.pdf";
+const THERMOWIN_AMERICANA_S70_DOCUMENT = "NUEVO CATALOGO LINEA AMERICANA S-70 TW 2022.pdf";
+
+// Referencias comerciales, sin cantidades, medidas de corte ni precio del proveedor.
+const KOMPEN_PRIME_700_PROFILES: LineProfileReference[] = [
+  kompenRef("KOM 701", "Marco fijo", "Marco", KOMPEN_PRIME_700_DOCUMENT, 2),
+  kompenRef("KOM 702", "Hoja ventana interior", "Hoja", KOMPEN_PRIME_700_DOCUMENT, 3),
+  kompenRef("KOM 703", "Pilar / poste", "Poste", KOMPEN_PRIME_700_DOCUMENT, 4),
+  kompenRef("KOM 706", "Hoja puerta interior", "Hoja", KOMPEN_PRIME_700_DOCUMENT, 5),
+  kompenRef("KOM 707", "Hoja puerta exterior", "Hoja", KOMPEN_PRIME_700_DOCUMENT, 6),
+  kompenRef("KOM 709", "Hoja ventana exterior", "Hoja", KOMPEN_PRIME_700_DOCUMENT, 7),
+  kompenRef("KOM 604", "Poste inversor / traslapo falso", "Poste", KOMPEN_PRIME_700_DOCUMENT, 10),
+  kompenRef("KOM 608", "Junquillo TP 23–24 mm", "Junquillo", KOMPEN_PRIME_700_DOCUMENT, 15),
+  kompenRef("KOM 607", "Junquillo TP 18–21 mm", "Junquillo", KOMPEN_PRIME_700_DOCUMENT, 15),
+  kompenRef("KOM 617", "Junquillo monolítico 4–6 mm", "Junquillo", KOMPEN_PRIME_700_DOCUMENT, 15),
+  kompenRef("KOM 506", "Junquillo TP 31–33 mm", "Junquillo", KOMPEN_PRIME_700_DOCUMENT, 16),
+  kompenRef("KOM 512", "Junquillo TP 34–36 mm", "Junquillo", KOMPEN_PRIME_700_DOCUMENT, 16),
+  kompenRef("R701", "Refuerzo de marco / pilar", "Refuerzo", KOMPEN_PRIME_700_DOCUMENT, 2),
+  kompenRef("R702", "Refuerzo de hoja ventana", "Refuerzo", KOMPEN_PRIME_700_DOCUMENT, 3),
+  kompenRef("R706", "Refuerzo de hoja puerta", "Refuerzo", KOMPEN_PRIME_700_DOCUMENT, 5),
+  kompenRef("R709", "Refuerzo de hoja ventana exterior", "Refuerzo", KOMPEN_PRIME_700_DOCUMENT, 7),
+  kompenRef("R700B", "Refuerzo de bisagras", "Refuerzo", KOMPEN_PRIME_700_DOCUMENT, 3),
+];
+
+const KOMPEN_FORM_800_PROFILES: LineProfileReference[] = [
+  kompenRef("KOM 801", "Marco doble riel", "Marco", KOMPEN_FORM_800_DOCUMENT, 2),
+  kompenRef("KOM 802", "Marco monorriel", "Marco", KOMPEN_FORM_800_DOCUMENT, 3),
+  kompenRef("KOM 804", "Hoja ventana corredera", "Hoja", KOMPEN_FORM_800_DOCUMENT, 4, "Ventanas correderas"),
+  kompenRef("KOM 815", "Hoja puerta corredera", "Hoja", KOMPEN_FORM_800_DOCUMENT, 5, "Puertas correderas"),
+  kompenRef("KOM 822", "Traslapo fijo monorriel", "Traslapo", KOMPEN_FORM_800_DOCUMENT, 6),
+  kompenRef("KOM 824", "Marco triple riel", "Marco", KOMPEN_FORM_800_DOCUMENT, 7),
+  kompenRef("KOM 826", "Cubre cristal monorriel para felpa", "Otro", KOMPEN_FORM_800_DOCUMENT, 7),
+  kompenRef("KOM 505", "Junquillo 4–6 mm", "Junquillo", KOMPEN_FORM_800_DOCUMENT, 8),
+  kompenRef("KOM 506", "Junquillo TP 18–20 mm", "Junquillo", KOMPEN_FORM_800_DOCUMENT, 8),
+  kompenRef("KOM 608", "Junquillo 8–10 mm", "Junquillo", KOMPEN_FORM_800_DOCUMENT, 8),
+  kompenRef("KOM 512", "Junquillo TP 22–24 mm", "Junquillo", KOMPEN_FORM_800_DOCUMENT, 8),
+  kompenRef("KOM 817", "Traslapo ventana corredera", "Traslapo", KOMPEN_FORM_800_DOCUMENT, 9, "Ventanas correderas"),
+  kompenRef("KOM 819", "Cubre cristal monorriel", "Otro", KOMPEN_FORM_800_DOCUMENT, 9),
+  kompenRef("KOM 820", "Traslapo puerta corredera", "Traslapo", KOMPEN_FORM_800_DOCUMENT, 9, "Puertas correderas"),
+  kompenRef("KOM 910", "Conector de marcos doble corredera", "Otro", KOMPEN_FORM_800_DOCUMENT, 10),
+  kompenRef("R801T", "Refuerzo tubular marco doble/triple riel", "Refuerzo", KOMPEN_FORM_800_DOCUMENT, 2),
+  kompenRef("R801", "Refuerzo U marco doble riel", "Refuerzo", KOMPEN_FORM_800_DOCUMENT, 2),
+  kompenRef("R802T", "Refuerzo marco monorriel", "Refuerzo", KOMPEN_FORM_800_DOCUMENT, 3),
+  kompenRef("R804", "Refuerzo hoja ventana", "Refuerzo", KOMPEN_FORM_800_DOCUMENT, 4, "Ventanas correderas"),
+  kompenRef("R815", "Refuerzo hoja puerta", "Refuerzo", KOMPEN_FORM_800_DOCUMENT, 5, "Puertas correderas"),
+  kompenRef("R822", "Refuerzo traslapo fijo", "Refuerzo", KOMPEN_FORM_800_DOCUMENT, 6),
+];
+
+const KOMPEN_STAR_500_PROFILES: LineProfileReference[] = [
+  kompenRef("KOM 501", "Marco fijo", "Marco", KOMPEN_STAR_500_DOCUMENT, 2),
+  kompenRef("KOM 503", "Pilar y hoja", "Pilar / hoja", KOMPEN_STAR_500_DOCUMENT, 2),
+  kompenRef("KOM 505", "Junquillo simple 4–6 mm", "Junquillo", KOMPEN_STAR_500_DOCUMENT, 3),
+  kompenRef("KOM 506", "Junquillo TP 18–20 mm", "Junquillo", KOMPEN_STAR_500_DOCUMENT, 3),
+  kompenRef("KOM 512", "Junquillo TP 22–24 mm", "Junquillo", KOMPEN_STAR_500_DOCUMENT, 3),
+  kompenRef("KOM 608", "Junquillo simple 8–10 mm", "Junquillo", KOMPEN_STAR_500_DOCUMENT, 3),
+  kompenRef("R501", "Refuerzo marco", "Refuerzo", KOMPEN_STAR_500_DOCUMENT, 2),
+];
+
+const THERMOWIN_AMERICANA_S70_PROFILES: LineProfileReference[] = [
+  kompenRef("70-001", "Marco fijo", "Marco", THERMOWIN_AMERICANA_S70_DOCUMENT, 2),
+  kompenRef("70-002", "Mullion", "Poste", THERMOWIN_AMERICANA_S70_DOCUMENT, 2),
+  kompenRef("70-003", "Traslapo fijo", "Traslapo", THERMOWIN_AMERICANA_S70_DOCUMENT, 2),
+  kompenRef("70-004", "Traslapo móvil", "Traslapo", THERMOWIN_AMERICANA_S70_DOCUMENT, 3),
+  kompenRef("70-005", "Hoja móvil", "Hoja", THERMOWIN_AMERICANA_S70_DOCUMENT, 3),
+  kompenRef("70-006", "Riel guía", "Marco", THERMOWIN_AMERICANA_S70_DOCUMENT, 3),
+  kompenRef("70-007", "Junquillo vidrio simple", "Junquillo", THERMOWIN_AMERICANA_S70_DOCUMENT, 4),
+  kompenRef("70-008", "Hoja guillotina", "Hoja", THERMOWIN_AMERICANA_S70_DOCUMENT, 4),
+  kompenRef("70-009", "Junquillo DVH", "Junquillo", THERMOWIN_AMERICANA_S70_DOCUMENT, 4),
+  kompenRef("70-010", "Esquinero redondo 90°", "Otro", THERMOWIN_AMERICANA_S70_DOCUMENT, 5),
+  kompenRef("R70-003", "Refuerzo traslapo fijo", "Refuerzo", THERMOWIN_AMERICANA_S70_DOCUMENT, 5),
+  kompenRef("R70-004", "Refuerzo traslapo móvil", "Refuerzo", THERMOWIN_AMERICANA_S70_DOCUMENT, 5),
+];
+
 const CATALOG_KEY_PROFILE_SETS: Record<string, LineProfileReference[]> = {
+  "ventora:kompen-prime-line-700": KOMPEN_PRIME_700_PROFILES,
+  "ventora:kompen-form-line-800": KOMPEN_FORM_800_PROFILES,
+  "ventora:kompen-star-line-500": KOMPEN_STAR_500_PROFILES,
+  "ventora:thermowin-americana-s70": THERMOWIN_AMERICANA_S70_PROFILES,
   "ventora:l5000": SERIE_5000_PROFILES,
   "ventora:l20": SERIE_20_PROFILES,
   "ventora:l20-fijos": SERIE_20_PROFILES,

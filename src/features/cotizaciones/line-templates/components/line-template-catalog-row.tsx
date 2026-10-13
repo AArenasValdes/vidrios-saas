@@ -209,6 +209,18 @@ export function LineTemplateCatalogRow({
             Mis precios
           </Link>
         ) : null}
+        {documentedFamilyKey?.startsWith("thermowin:") ? (
+          <Link
+            href={`/configuracion/empresa/mis-precios?supplier=thermowin&family=${encodeURIComponent(documentedFamilyKey)}&lineTemplateId=${encodeURIComponent(String(template.id))}`}
+            className={row.fabricationLink}
+            onClick={(event) => {
+              event.stopPropagation();
+              onBeforeFabricationNavigate();
+            }}
+          >
+            Perfiles y costos
+          </Link>
+        ) : null}
         {needsPrice ? (
           <span className={`${row.statusPill} ${row.statusPill_pending_price}`}>
             <span className={row.statusDot} aria-hidden />

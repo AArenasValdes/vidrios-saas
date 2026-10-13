@@ -302,6 +302,13 @@
   text-align: center;
 }
 
+.wizardStepHint {
+  margin: 3px 0 0;
+  color: #52657f;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
 .stepMeta {
   margin: 0 0 2px;
   color: #4a5d78;
@@ -401,6 +408,13 @@
   cursor: pointer;
 }
 
+.workshopRecipeDisclosure h2 {
+  margin: 0;
+  color: #31445f;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
 .workshopRecipeDisclosure p {
   margin: 0;
   color: #64748b;
@@ -412,6 +426,52 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.catalogConfigurationChoices {
+  display: grid;
+  gap: 10px;
+}
+
+.catalogConfigurationChoice {
+  display: grid;
+  min-height: 56px;
+  gap: 3px;
+  align-content: center;
+  justify-items: start;
+  padding: 10px 14px;
+  color: #263b58;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #d7e0eb;
+  border-radius: 12px;
+  touch-action: manipulation;
+}
+
+.catalogConfigurationChoice span {
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.catalogConfigurationChoice small {
+  color: #52647d;
+  font-size: 0.82rem;
+}
+
+.catalogConfigurationChoice[data-active="true"] {
+  color: #0a3d7a;
+  background: #eef6ff;
+  border-color: #1677e8;
+  box-shadow: inset 0 0 0 1px #1677e8;
+}
+
+.catalogConfigurationChoice:disabled {
+  opacity: 0.6;
+}
+
+.catalogConfigurationChoice:focus-visible {
+  outline: 3px solid rgba(22, 119, 232, 0.35);
+  outline-offset: 2px;
 }
 
 .choiceChip {
@@ -456,6 +516,10 @@
   padding: 14px;
   background: #fff;
   border-radius: 16px;
+}
+
+.productSummaryCard[data-no-preview="true"] {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .productSummaryBody strong {
@@ -927,6 +991,11 @@
   font-size: 13px;
 }
 
+.validateRecalcHint[data-tone="info"] {
+  background: #eff6ff;
+  color: #1e40af;
+}
+
 .validateSegmented {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -983,6 +1052,12 @@
   border: 1px solid #fed7aa;
   background: #fff7ed;
   color: #9a3412;
+}
+
+.validateStatusCard[data-tone="info"] {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1e40af;
 }
 
 .validateStatusCard strong {
@@ -1853,13 +1928,21 @@
   color: #4a5d78;
 }
 
-.profileEditorField input {
+.profileEditorField input,
+.profileEditorField select {
   min-height: 44px;
   padding: 0 12px;
   border: 1px solid #d8e0ea;
   border-radius: 12px;
   font-size: 16px;
   color: #102038;
+}
+
+.profileEditorField small {
+  color: #718096;
+  font-size: 12px;
+  font-weight: 450;
+  line-height: 1.4;
 }
 
 .profileEditorDestructiveAction {
@@ -1871,6 +1954,51 @@
   font-size: 15px;
   font-weight: 650;
   text-align: left;
+}
+
+.profileDeleteConfirm {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  background: #fff7f6;
+  border: 1px solid #f2c4c0;
+  border-radius: 12px;
+}
+
+.profileDeleteConfirm p {
+  margin: 0;
+  color: #7a271a;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.profileDeleteConfirm > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.profileDeleteConfirm button {
+  min-height: 44px;
+  padding: 0 10px;
+  color: #475569;
+  background: #fff;
+  border: 1px solid #d8e0ea;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 650;
+  touch-action: manipulation;
+}
+
+.profileDeleteConfirm button:last-child {
+  color: #fff;
+  background: #b42318;
+  border-color: #b42318;
+}
+
+.profileDeleteConfirm button:disabled {
+  opacity: 0.6;
 }
 
 .profileSheetFooter {
@@ -2008,6 +2136,7 @@
 .profileEditorSelect:focus-visible + .profileEditorPickerDisplay,
 .profileStepperButton:focus-visible,
 .profileEditorDisclosureSummary:focus-visible,
+.profileDeleteConfirm button:focus-visible,
 .profileEditorTextAction:focus-visible,
 .profileSheetSecondaryAction:focus-visible,
 .quietAction:focus-visible,
@@ -2126,66 +2255,73 @@
   opacity: 0.55;
 }
 
+.productTechnicalHint {
+  margin: 0;
+  padding: 0 2px;
+  color: #52657f;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .veratecEvidence {
   display: grid;
   gap: 8px;
-  padding: 14px;
-  color: #26384f;
-  background: #fff;
-  border: 1px solid #dfe6ee;
+  padding: 12px;
+  border: 1px solid #d8e4f2;
   border-radius: 14px;
-  font-size: 13px;
-  line-height: 1.45;
+  background: #f8fbff;
+  color: #263a55;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
-.veratecEvidence h3,
+.veratecEvidence > strong {
+  color: #102d52;
+  font-size: 14px;
+}
+
 .veratecEvidence p {
   margin: 0;
 }
 
-.veratecEvidence h3 {
-  color: #102038;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.veratecEvidence strong {
-  color: #102038;
-  font-size: 12px;
+.veratecEvidence > span {
+  color: #1768c4;
+  font-weight: 650;
 }
 
 .veratecEvidence ul {
   display: grid;
-  gap: 5px;
+  gap: 6px;
+  max-height: 210px;
   margin: 0;
-  padding-left: 19px;
-}
-
-.veratecEvidence details summary {
-  min-height: 40px;
-  display: flex;
-  align-items: center;
-  color: #1768c4;
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.veratecEvidence details ul {
   padding: 0;
+  overflow: auto;
   list-style: none;
 }
 
-.veratecEvidence details li {
+.veratecEvidence li {
   display: grid;
-  grid-template-columns: minmax(96px, auto) minmax(0, 1fr);
-  gap: 8px;
-  padding: 7px 0;
-  border-top: 1px solid #eef2f6;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1px 8px;
+  padding: 7px 8px;
+  border: 1px solid #e2eaf4;
+  border-radius: 10px;
+  background: #fff;
 }
 
-.veratecEvidence details li span:first-child {
-  color: #52657f;
-  font-variant-numeric: tabular-nums;
+.veratecEvidence li strong {
+  color: #102d52;
+}
+
+.veratecEvidence li span {
+  grid-column: 1;
+}
+
+.veratecEvidence li small {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  color: #64748b;
 }
 
 .veratecCandidateButton {

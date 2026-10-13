@@ -4,13 +4,14 @@ import { useEffect, useState } from "react";
 import s from "./taller-presentaciones.module.css";
 
 type OfficialInput = { id: string; codigo_fuente: string; nombre: string };
+type CatalogProfile = { code: string; name: string; role: string };
 type WorkshopRow = {
   id: string; revision: number; codigo_tecnico: string; nombre_perfil: string; sku_taller: string;
   acabado_nombre: string | null; largo_comercial_mm: number | null;
   precio_neto: number | null; moneda: string | null; unidad_compra: string;
   preferida: boolean;
 };
-type Payload = { familyKey: string; officialInputs: OfficialInput[]; ownPresentations: WorkshopRow[] };
+type Payload = { familyKey: string; officialInputs: OfficialInput[]; catalogProfiles: CatalogProfile[]; ownPresentations: WorkshopRow[] };
 
 export function TallerPresentaciones({ lineTemplateId, familyKey }: { lineTemplateId: number; familyKey: string }) {
   const [payload, setPayload] = useState<Payload | null>(null);
@@ -97,6 +98,16 @@ export function TallerPresentaciones({ lineTemplateId, familyKey }: { lineTempla
     </div>)}</div> : <p className={s.empty}>Aún no hay presentaciones privadas para esta familia.</p>}
     {open ? <form className={s.form} onSubmit={(event) => void save(event)}>
       {!editingRow ? <><label>Perfil <select value={officialInputId} onChange={(event) => setOfficialInputId(event.target.value)}><option value="">Nuevo perfil del taller</option>{payload.officialInputs.map((input) => <option key={input.id} value={input.id}>{input.codigo_fuente} · {input.nombre}</option>)}</select></label>
+      {payload.catalogProfiles.length ? <label>Referencia del catálogo
+        <select value="" onChange={(event) => {
+          const profile = payload.catalogProfiles[Number(event.target.value)];
+          if (!profile) return;
+          setOfficialInputId(""); setTechnicalCode(profile.code); setProfileName(profile.name);
+        }}>
+          <option value="">Elegir para completar código y nombre</option>
+          {payload.catalogProfiles.map((profile, index) => <option key={`${profile.code}-${index}`} value={index}>{profile.code} · {profile.name}</option>)}
+        </select>
+      </label> : null}
       {!officialInputId ? <div className={s.pair}><label>Código privado<input value={technicalCode} onChange={(event) => setTechnicalCode(event.target.value)} required maxLength={100} /></label><label>Nombre del perfil<input value={profileName} onChange={(event) => setProfileName(event.target.value)} required maxLength={160} /></label></div> : null}
       <label>Código en tu receta, si es diferente<input value={recipeCode} onChange={(event) => setRecipeCode(event.target.value)} maxLength={100} placeholder="Solo con asociación comprobada por tu taller" /></label>
       <div className={s.pair}><label>SKU o código de compra privado<input value={sku} onChange={(event) => setSku(event.target.value)} required maxLength={100} /></label><label>Descripción de compra<input value={description} onChange={(event) => setDescription(event.target.value)} required maxLength={240} /></label></div>

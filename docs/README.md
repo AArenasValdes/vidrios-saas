@@ -1,7 +1,7 @@
 # Documentación Ventora
 
 Estado: vigente
-Actualizado: 2026-09-29
+Actualizado: 2026-10-13
 Responsable: producto + agentes del repositorio
 
 Entrada única para agentes, desarrollo, billing, base de datos y Growth OS.
@@ -24,6 +24,7 @@ Entrada única para agentes, desarrollo, billing, base de datos y Growth OS.
 | Handoff técnico | `docs/agent-map/` | Constructor, móvil, cubicación y onboarding |
 | Integrar/validar líneas de fabricación | `docs/fabricacion/WORKFLOW_INTEGRAR_NUEVA_LINEA.md` | Gate `pnpm fabrication:verify`, evidencia, recetas y smoke seguro |
 | Expediente de una línea nueva | `docs/fabricacion/PLANTILLA_INTEGRACION_LINEA.md` | Matriz, recorrido, pruebas numéricas y entrega reproducible |
+| Base común de sistemas y composiciones | `docs/fabricacion/BASE_COMUN_LINEAS_SISTEMAS_COMPOSICIONES.md` | Diagnóstico y propuesta pendiente de implementación; inventario de 73 entradas y recorrido catálogo → receta → cotización |
 
 ## Jerarquía documental
 

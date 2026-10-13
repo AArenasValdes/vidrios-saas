@@ -16,6 +16,7 @@ import {
   profileTieneOverrideLargoComercial,
 } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import type { TallerPerfilRef } from "@/features/fabricacion/services/taller-perfiles.service";
+import type { LineProfileReference } from "@/features/cotizaciones/line-templates/types/line-profile-references";
 
 import s from "./fabricacion-mobile.module.css";
 
@@ -32,6 +33,7 @@ type Props = {
   };
   tallerPerfilCatalog: TallerPerfilRef[];
   plantillaSuggestedProfiles: TallerPerfilRef[];
+  catalogProfiles: LineProfileReference[];
   onPatch: (
     profileId: string,
     updater: (profile: FabricacionComponentePerfil) => FabricacionComponentePerfil
@@ -88,13 +90,31 @@ export function FabricacionProfileFields({
   frequentLargos,
   tallerPerfilCatalog,
   plantillaSuggestedProfiles,
+  catalogProfiles,
   onPatch,
   onSetManufacturerCode,
   onAssignTallerPerfil,
   onRemove,
 }: Props) {
   const pieceName = profile.funcion.trim() || `Perfil ${index + 1}`;
-  const baseLabel = labelBaseMedida(profile.reglaMedida.base, "human");
+  const hasPendingBase = (profile.datosPendientes ?? []).some((detail) => /base de medida/i.test(detail));
+  const hasPendingDiscount = (profile.datosPendientes ?? []).some((detail) => /descuento/i.test(detail));
+  const hasPendingQuantity = (profile.datosPendientes ?? []).some((detail) => /cantidad por ventana/i.test(detail));
+  const clearPending = (entry: FabricacionComponentePerfil, pattern: RegExp) => ({
+    ...entry,
+    datosPendientes: (entry.datosPendientes ?? []).filter((detail) => !pattern.test(detail)),
+  });
+  const clearPendingCommercialLength = (entry: FabricacionComponentePerfil) => {
+    const datosPendientes = (entry.datosPendientes ?? []).filter(
+      (detail) => !/largo comercial/i.test(detail)
+    );
+    return {
+      ...entry,
+      largoComercialPendiente: false,
+      datosPendientes: datosPendientes.length ? datosPendientes : undefined,
+    };
+  };
+  const baseLabel = hasPendingBase ? "Por definir" : labelBaseMedida(profile.reglaMedida.base, "human");
   const largoLabel =
     formatLargoComercialCorto(profile.largoComercialMm) ??
     `Estándar (${tiraEstandarLabel})`;
@@ -113,11 +133,11 @@ export function FabricacionProfileFields({
                 <select
                   id={`profile-base-${profile.id}`}
                   className={s.profileEditorSelect}
-                  value={profile.reglaMedida.base}
+                  value={hasPendingBase ? "" : profile.reglaMedida.base}
                   disabled={readOnly}
                   onChange={(event) =>
                     onPatch(profile.id, (entry) => ({
-                      ...entry,
+                      ...clearPending(entry, /base de medida/i),
                       reglaMedida: {
                         ...entry.reglaMedida,
                         base: event.target.value as FabricacionBaseMedida,
@@ -125,6 +145,7 @@ export function FabricacionProfileFields({
                     }))
                   }
                 >
+                  {hasPendingBase ? <option value="" disabled>Elige una base</option> : null}
                   {FABRICACION_BASES_MEDIDA.map((base) => (
                     <option key={base} value={base}>
                       {labelBaseMedida(base, "human")}
@@ -152,16 +173,16 @@ export function FabricacionProfileFields({
                   inputMode="numeric"
                   className={s.profileEditorNumberInput}
                   value={profile.reglaMedida.ajusteMm == null ? "" : profile.reglaMedida.ajusteMm}
-                  placeholder="0"
+                  placeholder={hasPendingDiscount ? "Indica mm" : "0"}
                   disabled={readOnly}
                   onChange={(event) =>
                     onPatch(profile.id, (entry) => ({
-                      ...entry,
+                      ...clearPending(entry, event.target.value.trim() ? /descuento/i : /$^/),
                       reglaMedida: {
                         ...entry.reglaMedida,
                         ajusteMm:
                           event.target.value.trim() === ""
-                            ? 0
+                            ? undefined
                             : Number.parseInt(event.target.value, 10),
                       },
                     }))
@@ -178,19 +199,24 @@ export function FabricacionProfileFields({
           <li className={s.profileEditorListItem} data-last="true">
             <div className={s.profileEditorInputRow}>
               <span className={s.profileEditorRowLabel}>Cantidad</span>
-              <ProfileQuantityStepper
-                value={profile.reglaCantidad.cantidad}
-                readOnly={readOnly}
-                onChange={(next) =>
-                  onPatch(profile.id, (entry) => ({
+              {hasPendingQuantity ? (
+                <button type="button" className={s.profileStepperButton} disabled={readOnly}
+                  onClick={() => onPatch(profile.id, (entry) => ({
+                    ...clearPending(entry, /cantidad por ventana/i),
+                    reglaCantidad: { ...entry.reglaCantidad, cantidad: 1 },
+                  }))}>
+                  Definir cantidad
+                </button>
+              ) : (
+                <ProfileQuantityStepper
+                  value={profile.reglaCantidad.cantidad}
+                  readOnly={readOnly}
+                  onChange={(next) => onPatch(profile.id, (entry) => ({
                     ...entry,
-                    reglaCantidad: {
-                      ...entry.reglaCantidad,
-                      cantidad: next,
-                    },
-                  }))
-                }
-              />
+                    reglaCantidad: { ...entry.reglaCantidad, cantidad: next },
+                  }))}
+                />
+              )}
             </div>
             <p className={s.profileEditorRowHint}>Piezas que genera este perfil por ventana.</p>
           </li>
@@ -217,10 +243,12 @@ export function FabricacionProfileFields({
                   emptyLabel="Ej. 5,80 m"
                   showUnitSuffix={false}
                   onChange={(nextValue) =>
-                    onPatch(profile.id, (entry) => ({
-                      ...entry,
-                      largoComercialMm: nextValue,
-                    }))
+                    onPatch(profile.id, (entry) => {
+                      const next = { ...entry, largoComercialMm: nextValue };
+                      return nextValue == null
+                        ? next
+                        : clearPendingCommercialLength(next);
+                    })
                   }
                 />
                 <ChevronRight size={18} aria-hidden className={s.profileEditorChevron} />
@@ -234,10 +262,12 @@ export function FabricacionProfileFields({
                 type="button"
                 className={s.profileEditorTextAction}
                 onClick={() =>
-                  onPatch(profile.id, (entry) => ({
-                    ...entry,
-                    largoComercialMm: null,
-                  }))
+                  onPatch(profile.id, (entry) =>
+                    clearPendingCommercialLength({
+                      ...entry,
+                      largoComercialMm: null,
+                    })
+                  )
                 }
               >
                 Usar tira estándar
@@ -268,6 +298,40 @@ export function FabricacionProfileFields({
                   }))
                 }
               />
+            </label>
+            <label className={s.profileEditorField}>
+              <span>Referencia de esta línea</span>
+              <select
+                value={profile.codigoPerfil}
+                disabled={readOnly || catalogProfiles.length === 0}
+                onChange={(event) => {
+                  const reference = catalogProfiles.find(
+                    (entry) => entry.code?.trim() === event.target.value
+                  );
+                  if (!reference) return;
+                  onPatch(profile.id, (entry) => ({
+                    ...entry,
+                    codigoPerfil: reference.code?.trim() ?? "",
+                    nombrePerfil: reference.name,
+                    datosPendientes: (entry.datosPendientes ?? []).filter(
+                      (detail) => !/confirmar codigo/i.test(detail)
+                    ),
+                  }));
+                }}
+              >
+                <option value="">
+                  {catalogProfiles.length > 0 ? "Elegir código del catálogo" : "Sin referencias documentadas"}
+                </option>
+                {catalogProfiles.map((reference, referenceIndex) => (
+                  <option
+                    key={`${reference.code}-${reference.name}-${referenceIndex}`}
+                    value={reference.code?.trim() ?? ""}
+                  >
+                    {reference.role} · {reference.code?.trim()} · {reference.name}
+                  </option>
+                ))}
+              </select>
+              <small>Identifica la pieza. La medida y el descuento se completan con la pauta.</small>
             </label>
             <label className={s.profileEditorField}>
               <span>Nombre usado en taller</span>

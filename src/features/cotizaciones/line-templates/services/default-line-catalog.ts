@@ -87,6 +87,15 @@ type VentoraDefaultLineDefinition = {
     openingTypes?: string[];
     leavesCounts?: number[];
     materials?: string[];
+    configurations?: Array<{
+      id: string;
+      componentType: string;
+      openingType: string;
+      label: string;
+      typology: string;
+      variant: string;
+      leavesCounts?: number[];
+    }>;
   };
   identitySource?: string;
   cuttingGuideSource?: string;
@@ -584,7 +593,7 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     familyLabel: "Sliding 7400",
     configurationKey: "sliding-7400:monorriel",
     configurationLabel: "Corredera · monorriel",
-    compatibility: { componentTypes: ["Ventana"], openingTypes: ["Corredera"], materials: ["PVC"] },
+    compatibility: { componentTypes: ["Ventana"], openingTypes: ["Corredera"], leavesCounts: [2], materials: ["PVC"] },
     identitySource: "Xelena · Díptico y lista de precios junio 2026 · Sliding 7400",
   },
   {
@@ -1167,6 +1176,110 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     familyLabel: "Serie 4600",
     configurationKey: "4600:puerta-vaiven",
     identitySource: "Catálogo SODAL 2026 · Serie 4600",
+  },
+  {
+    catalogKey: "ventora:kompen-prime-line-700",
+    nombre: "Prime Line KOM 700",
+    material: "PVC",
+    configuracion: "Sistema de ventanas y puertas",
+    proveedor: "Thermowin Kompen",
+    lineSystem: "Prime Line 700",
+    ventoraPlantillaId: null,
+    familyKey: "thermowin:kom-700",
+    familyLabel: "Prime Line 700",
+    identitySource: "NUEVA PRIME LINE 700 2025 (2).pdf · p. 1",
+    productCatalogEvidence: {
+      document: "NUEVA PRIME LINE 700 2025 (2).pdf",
+      printedPages: "1–20",
+    },
+    compatibility: {
+      componentTypes: ["Ventana", "Puerta", "Paño fijo"],
+      openingTypes: ["Fijo", "Abatible"],
+      materials: ["PVC"],
+      configurations: [
+        { id: "ventana-abatible", componentType: "Ventana", openingType: "Abatible", label: "Ventana abatible", typology: "abatible", variant: "ventana-abatible" },
+        { id: "puerta-abatible", componentType: "Puerta", openingType: "Abatible", label: "Puerta abatible", typology: "puerta_abatible", variant: "puerta-abatible" },
+        { id: "pano-fijo", componentType: "Paño fijo", openingType: "Fijo", label: "Paño fijo", typology: "pano_fijo", variant: "pano-fijo" },
+      ],
+    },
+  },
+  {
+    catalogKey: "ventora:kompen-form-line-800",
+    nombre: "Form Line KOM 800",
+    material: "PVC",
+    configuracion: "Sistema de ventanas y puertas",
+    proveedor: "Thermowin Kompen",
+    lineSystem: "Form Line 800",
+    ventoraPlantillaId: null,
+    familyKey: "thermowin:kom-800",
+    familyLabel: "Form Line 800",
+    identitySource: "NUEVO FORM LINE 800 2025 (1).pdf · p. 1",
+    productCatalogEvidence: {
+      document: "NUEVO FORM LINE 800 2025 (1).pdf",
+      printedPages: "1–13",
+    },
+    compatibility: {
+      componentTypes: ["Ventana", "Puerta"],
+      openingTypes: ["Corredera"],
+      materials: ["PVC"],
+      configurations: [
+        { id: "ventana-corredera", componentType: "Ventana", openingType: "Corredera", label: "Ventana corredera", typology: "corredera", variant: "ventana-corredera" },
+        { id: "puerta-corredera", componentType: "Puerta", openingType: "Corredera", label: "Puerta corredera", typology: "puerta_corredera", variant: "puerta-corredera" },
+      ],
+    },
+  },
+  {
+    catalogKey: "ventora:kompen-star-line-500",
+    nombre: "Star Line KOM 500",
+    material: "PVC",
+    configuracion: "Sistema de ventanas",
+    proveedor: "Thermowin Kompen",
+    lineSystem: "Star Line 500",
+    ventoraPlantillaId: null,
+    familyKey: "thermowin:kom-500",
+    familyLabel: "Star Line 500",
+    identitySource: "NUEVA STAR LINE 500 2025.pdf · p. 1",
+    productCatalogEvidence: {
+      document: "NUEVA STAR LINE 500 2025.pdf",
+      printedPages: "1–3",
+    },
+    compatibility: {
+      componentTypes: ["Ventana", "Paño fijo"],
+      openingTypes: ["Fijo", "Abatible"],
+      materials: ["PVC"],
+      configurations: [
+        { id: "ventana-abatible", componentType: "Ventana", openingType: "Abatible", label: "Ventana abatible", typology: "abatible", variant: "ventana-abatible" },
+        { id: "ventana-fija", componentType: "Ventana", openingType: "Fijo", label: "Ventana fija", typology: "pano_fijo", variant: "ventana-fija" },
+        { id: "pano-fijo", componentType: "Paño fijo", openingType: "Fijo", label: "Paño fijo", typology: "pano_fijo", variant: "pano-fijo" },
+      ],
+    },
+  },
+  {
+    catalogKey: "ventora:thermowin-americana-s70",
+    nombre: "Americana PVC S-70 TW",
+    material: "PVC",
+    configuracion: "Sistema de ventanas",
+    proveedor: "Thermowin Kompen",
+    lineSystem: "Americana S-70",
+    ventoraPlantillaId: null,
+    familyKey: "thermowin:americana-s70",
+    familyLabel: "Americana S-70",
+    identitySource: "NUEVO CATALOGO LINEA AMERICANA S-70 TW 2022.pdf · p. 1",
+    productCatalogEvidence: {
+      document: "NUEVO CATALOGO LINEA AMERICANA S-70 TW 2022.pdf",
+      printedPages: "1–5",
+    },
+    compatibility: {
+      componentTypes: ["Ventana", "Paño fijo"],
+      openingTypes: ["Corredera", "Fijo", "Guillotina", "Celosía"],
+      materials: ["PVC"],
+      configurations: [
+        { id: "ventana-corredera", componentType: "Ventana", openingType: "Corredera", label: "Ventana corredera", typology: "corredera", variant: "ventana-corredera" },
+        { id: "pano-fijo", componentType: "Paño fijo", openingType: "Fijo", label: "Paño fijo", typology: "pano_fijo", variant: "pano-fijo" },
+        { id: "ventana-guillotina", componentType: "Ventana", openingType: "Guillotina", label: "Ventana guillotina", typology: "personalizada", variant: "ventana-guillotina" },
+        { id: "ventana-celosia", componentType: "Ventana", openingType: "Celosía", label: "Ventana celosía", typology: "personalizada", variant: "ventana-celosia" },
+      ],
+    },
   },
   {
     catalogKey: "ventora:winhouse-new-s75-doble-riel",

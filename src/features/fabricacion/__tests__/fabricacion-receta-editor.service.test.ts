@@ -1,5 +1,6 @@
 import {
   crearRecetaFabricacionVacia,
+  crearPerfilDesdeReferenciaCatalogo,
   patchFabricacionPerfil,
   patchRecipeGlassNombre,
   reorderFabricacionItems,
@@ -10,6 +11,45 @@ import { listVentoraGlassCatalogOptions } from "@/features/cotizaciones/new-quot
 import { RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO } from "@/features/fabricacion/fixtures/receta-corredera-dos-hojas.fixture";
 
 describe("fabricacion-receta-editor.service helpers", () => {
+  it("crea un perfil con código de catálogo y mantiene pendiente su fórmula", () => {
+    const profile = crearPerfilDesdeReferenciaCatalogo("p-kom701", {
+      code: "KOM 701",
+      name: "Marco fijo",
+      role: "Marco",
+      description: "Perfil publicado en catálogo",
+      provider: "Thermowin Kompen",
+      source: "NUEVA PRIME LINE 700 2025 · p. 2",
+      codeStatus: "catalog_reference",
+    });
+
+    expect(profile).toEqual(
+      expect.objectContaining({
+        id: "p-kom701",
+        codigoPerfil: "KOM 701",
+        nombrePerfil: "Marco fijo",
+        funcion: "Marco",
+        requerido: true,
+        datosPendientes: [
+          "Elegir base de medida para este perfil.",
+          "Definir descuento en mm para este perfil.",
+          "Indicar cantidad por ventana para este perfil.",
+        ],
+      })
+    );
+    expect(profile.observaciones).toContain("No define fórmula de corte.");
+    const evaluation = evaluarRecetaListaParaProbar({
+      ...crearRecetaFabricacionVacia({ recipeIdentityId: "r2", lineName: "Prime Line 700" }),
+      perfiles: [profile],
+    });
+    expect(evaluation.listaParaProbar).toBe(false);
+    expect(evaluation.bloqueos).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/Falta fórmula de medida/i),
+        expect.stringMatching(/Falta descuento persistido/i),
+      ])
+    );
+  });
+
   it("reordena perfiles de forma segura", () => {
     const ids = ["a", "b", "c", "d"];
     expect(reorderFabricacionItems(ids, 0, 2)).toEqual(["b", "c", "a", "d"]);

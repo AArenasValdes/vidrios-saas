@@ -645,6 +645,8 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
         ? 1
         : presentation.fabricacionModulos,
     apertura,
+    configurationId: presentation.fabricacionConfiguracionId || null,
+    compositionId: presentation.fabricacionComposicionId || null,
     herraje: presentation.fabricacionHerraje || null,
     variante:
       baharFoldingVariant?.slug ||

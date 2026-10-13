@@ -19,12 +19,19 @@ import {
 } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
 import { getActiveRecipeProfileRules } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import { MOBILE_WIZARD_STEPS } from "@/features/fabricacion/services/fabricacion-line-workflow.utils";
+import {
+  getCatalogProductConfigurations,
+  type CatalogProductConfiguration,
+} from "@/features/cotizaciones/line-templates/services/line-template-compatibility.service";
+import { getLineVariantSlotsForFabricationTree } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
+import { isSodalL25CatalogKey } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import type { MobileWizardStepId } from "@/features/fabricacion/types/fabricacion-line-workflow";
 import type {
   FabricacionEntradaCalculo,
   FabricacionReceta,
   FabricacionResultadoCubicacion,
 } from "@/features/fabricacion/types/fabricacion-domain";
+import type { LineProfileReference } from "@/features/cotizaciones/line-templates/types/line-profile-references";
 import type {
   FabricationRecipeRecord,
   FabricationRecipeTestRecord,
@@ -38,9 +45,16 @@ type SheetState =
   | { type: "accessory"; id: string }
   | null;
 
+type PendingWorkshopConfiguration = {
+  configuration: CatalogProductConfiguration;
+  leavesCount: number;
+  compositionId: string;
+};
+
 type Props = {
   templateName: string;
   catalogKey?: string | null;
+  catalogProfiles?: LineProfileReference[];
   selected: FabricationRecipeRecord;
   lineRecipes?: FabricationRecipeRecord[];
   draft: FabricacionReceta;
@@ -54,6 +68,11 @@ type Props = {
   onDraftChange: (recipe: FabricacionReceta) => void;
   onSelectRecipe?: (recipe: FabricationRecipeRecord) => void;
   onCreateMissingSlot?: (slot: LineVariantSlot) => void;
+  onCreateCatalogConfiguration?: (
+    configuration: import("@/features/cotizaciones/line-templates/services/line-template-compatibility.service").CatalogProductConfiguration,
+    leavesCount?: number | null,
+    compositionId?: string | null
+  ) => void;
   onContinueToRecipe: () => void;
   onPersistRecipe: (recipe: FabricacionReceta) => Promise<void>;
   onSaveTest: (input: {
@@ -78,9 +97,17 @@ const stepVariants = {
   }),
 };
 
+const STEP_GUIDANCE: Record<MobileWizardStepId, string> = {
+  product: "Elige el sistema y la composición.",
+  profiles: "Agrega perfiles y completa base, cantidad y descuento.",
+  glass: "Define el vidrio y los accesorios de esta base.",
+  validate: "Revisa pendientes y prueba con medidas reales.",
+};
+
 export function FabricacionMobileWizard({
   templateName,
   catalogKey = null,
+  catalogProfiles = [],
   selected,
   lineRecipes = [],
   draft,
@@ -94,6 +121,7 @@ export function FabricacionMobileWizard({
   onDraftChange,
   onSelectRecipe,
   onCreateMissingSlot,
+  onCreateCatalogConfiguration,
   onContinueToRecipe,
   onPersistRecipe,
   onSaveTest,
@@ -103,11 +131,48 @@ export function FabricacionMobileWizard({
   const reduceMotion = useReducedMotion();
   const [direction, setDirection] = useState(1);
   const [sheet, setSheet] = useState<SheetState>(null);
+  const [profileAddError, setProfileAddError] = useState<string | null>(null);
+  const [pendingWorkshopConfiguration, setPendingWorkshopConfiguration] =
+    useState<PendingWorkshopConfiguration | null>(null);
+  const [workshopConfigurationSelectionStarted, setWorkshopConfigurationSelectionStarted] =
+    useState(false);
   const stepIndex = MOBILE_WIZARD_STEPS.findIndex((entry) => entry.id === step);
   const previousStep = MOBILE_WIZARD_STEPS[stepIndex - 1]?.id ?? null;
   const nextStep = MOBILE_WIZARD_STEPS[stepIndex + 1]?.id ?? null;
   const stepTitle =
     MOBILE_WIZARD_STEPS.find((entry) => entry.id === step)?.label ?? "Fabricación";
+  const productConfigurations = getCatalogProductConfigurations(catalogKey);
+  const productConfigurationSelected = productConfigurations.some((configuration) =>
+    (draft.identidad.configurationId === configuration.id ||
+      (!draft.identidad.configurationId &&
+        configuration.typology === draft.identidad.tipologia &&
+        configuration.variant === draft.identidad.variante)) &&
+      (!configuration.compositionPending || Boolean(draft.identidad.compositionId))
+  );
+  const currentCatalogConfiguration = productConfigurations.find((configuration) =>
+    draft.identidad.configurationId === configuration.id ||
+    (!draft.identidad.configurationId &&
+      configuration.typology === draft.identidad.tipologia &&
+      configuration.variant === draft.identidad.variante)
+  );
+  const hasExplicitLegacyRecipePath =
+    getLineVariantSlotsForFabricationTree(catalogKey).length > 0 ||
+    isSodalL25CatalogKey(catalogKey) ||
+    lineRecipes.some((recipe) =>
+      recipe.definition.identidad.configurationId != null ||
+      !["", "estandar"].includes(recipe.definition.identidad.variante.toLowerCase())
+    );
+  const needsConfigurationBeforeContinue =
+    productConfigurations.length > 0 || !hasExplicitLegacyRecipePath;
+  const hasSavedRecipeData =
+    selected.definition.perfiles.length > 0 ||
+    selected.definition.vidrios.length > 0 ||
+    selected.definition.accesorios.length > 0;
+  const canBrowseExistingRecipe = hasSavedRecipeData || hasExplicitLegacyRecipePath;
+  const hasSelectedConfiguration =
+    (pendingWorkshopConfiguration != null || (!workshopConfigurationSelectionStarted &&
+      (productConfigurationSelected || draft.identidad.configurationId != null))) &&
+    !(currentCatalogConfiguration?.compositionPending && !draft.identidad.compositionId);
   const wizardProgressPct = Math.round(
     ((stepIndex + 1) / MOBILE_WIZARD_STEPS.length) * 100
   );
@@ -132,6 +197,16 @@ export function FabricacionMobileWizard({
 
   const goNext = () => {
     if (step === "product") {
+      if (pendingWorkshopConfiguration) {
+        setPendingWorkshopConfiguration(null);
+        setWorkshopConfigurationSelectionStarted(false);
+        onCreateCatalogConfiguration?.(
+          pendingWorkshopConfiguration.configuration,
+          pendingWorkshopConfiguration.leavesCount,
+          pendingWorkshopConfiguration.compositionId
+        );
+        return;
+      }
       onContinueToRecipe();
       return;
     }
@@ -148,6 +223,21 @@ export function FabricacionMobileWizard({
 
   const openSheet = (next: SheetState) => {
     setSheet(next);
+  };
+
+  const addProfile = async (profile: ReturnType<typeof crearPerfilFabricacionVacio>) => {
+    if (isSaving) return;
+    const nextRecipe = { ...draft, perfiles: [...draft.perfiles, profile] };
+    setProfileAddError(null);
+    onDraftChange(nextRecipe);
+    try {
+      await onPersistRecipe(nextRecipe);
+      openSheet({ type: "profile", id: profile.id });
+    } catch (error) {
+      setProfileAddError(
+        error instanceof Error ? error.message : "No se pudo guardar el perfil. Intenta de nuevo."
+      );
+    }
   };
 
   return (
@@ -167,6 +257,7 @@ export function FabricacionMobileWizard({
               Paso {stepIndex + 1} de {MOBILE_WIZARD_STEPS.length}
             </p>
             <h1 id="fabricacion-wizard-title">{stepTitle}</h1>
+            <p className={s.wizardStepHint}>{STEP_GUIDANCE[step]}</p>
           </div>
           <button type="button" className={s.backButton} onClick={onClose} aria-label="Cerrar">
             <X aria-hidden />
@@ -207,9 +298,17 @@ export function FabricacionMobileWizard({
                 draft={draft}
                 recipes={lineRecipes}
                 readOnly={readOnly}
-                onDraftChange={onDraftChange}
                 onSelectRecipe={onSelectRecipe}
                 onCreateMissingSlot={onCreateMissingSlot}
+                onCreateCatalogConfiguration={onCreateCatalogConfiguration}
+                onWorkshopConfigurationSelectionChange={(configuration, leavesCount, compositionId) => {
+                  setWorkshopConfigurationSelectionStarted(true);
+                  setPendingWorkshopConfiguration(
+                    configuration && leavesCount != null && compositionId
+                      ? { configuration, leavesCount, compositionId }
+                      : null
+                  );
+                }}
               />
             ) : null}
 
@@ -218,16 +317,14 @@ export function FabricacionMobileWizard({
                 <FabricacionProfileList
                   recipe={draft}
                   readOnly={readOnly}
+                  catalogProfileCount={catalogProfiles.length}
                   onSelectProfile={(id) => openSheet({ type: "profile", id })}
                   onAddProfile={() => {
                     const id = crypto.randomUUID();
-                    onDraftChange({
-                      ...draft,
-                      perfiles: [...draft.perfiles, crearPerfilFabricacionVacio(id)],
-                    });
-                    openSheet({ type: "profile", id });
+                    void addProfile(crearPerfilFabricacionVacio(id));
                   }}
                 />
+                {profileAddError ? <p className={s.errorBand} role="alert">{profileAddError}</p> : null}
               </div>
             ) : null}
 
@@ -286,10 +383,14 @@ export function FabricacionMobileWizard({
           <button
             type="button"
             className={s.primaryButton}
-            disabled={isSaving}
+            disabled={
+              isSaving ||
+              (step === "product" && needsConfigurationBeforeContinue && !hasSelectedConfiguration && !canBrowseExistingRecipe) ||
+              (step === "product" && pendingWorkshopConfiguration != null && !onCreateCatalogConfiguration)
+            }
             onClick={goNext}
           >
-            Continuar
+            {step === "product" ? "Perfiles y descuentos" : "Continuar"}
             <ArrowRight size={16} aria-hidden />
           </button>
         </footer>
@@ -305,6 +406,7 @@ export function FabricacionMobileWizard({
           sourceReference={selected.sourceReference}
           lineName={templateName}
           workshopRecipes={[draft]}
+          catalogProfiles={catalogProfiles}
           readOnly={readOnly}
           onClose={() => setSheet(null)}
           onSelectProfile={(id) => setSheet({ type: "profile", id })}

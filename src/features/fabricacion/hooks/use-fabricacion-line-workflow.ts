@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import type { CotizacionLineTemplateMaterial } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import type { CatalogProductConfiguration } from "@/features/cotizaciones/line-templates/services/line-template-compatibility.service";
 import {
   getSuggestedRecipesForLine,
   type BibliotecaRecetaSugerida,
@@ -27,10 +28,7 @@ import {
   resolveInitialFabricationStepForTemplate,
   resolveMobileVariantTreeEntryStep,
 } from "@/features/fabricacion/services/fabricacion-workflow-initial-step.service";
-import {
-  buildFabricationRecipeSummary,
-  VENTORA_LARGO_COMERCIAL_PRESET_MM,
-} from "@/features/fabricacion/services/fabricacion-regla-humana.service";
+import { VENTORA_LARGO_COMERCIAL_PRESET_MM } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import {
   cloneFabricacionRecipe,
   countFabricacionRecipeHistory,
@@ -173,7 +171,7 @@ export function useFabricacionLineWorkflow({
       lineName: template?.nombre ?? "",
       providerName: template?.proveedor,
     }),
-    [lineTemplateId, template?.catalogKey, template?.nombre]
+    [lineTemplateId, template?.catalogKey, template?.nombre, template?.proveedor]
   );
   const sodalLineRecipes = useMemo(
     () => mergeSodalEditorRecipeDefaults({
@@ -379,6 +377,7 @@ export function useFabricacionLineWorkflow({
       definition: FabricacionReceta;
       sourceType: FabricationRecipeSourceType;
       sourceReference?: string | null;
+      initialStep?: RecipeWorkflowStepId;
     }) => {
       if (!template) return;
       const created = await createRecipe({
@@ -392,7 +391,7 @@ export function useFabricacionLineWorkflow({
         sourceType: input.sourceType,
         sourceReference: input.sourceReference,
       });
-      openEditor(created);
+      openEditor(created, input.initialStep);
     },
     [createRecipe, lineTemplateId, openEditor, template]
   );
@@ -628,6 +627,77 @@ export function useFabricacionLineWorkflow({
       updateRecipe,
       updateTemplate,
     ]
+  );
+
+  const handleCreateCatalogConfiguration = useCallback(
+    async (
+      configuration: CatalogProductConfiguration,
+      leavesCount?: number | null,
+      compositionId?: string | null
+    ) => {
+      if (!template || !draft) return;
+      if (
+        selected &&
+        selected.status !== "validated" &&
+        JSON.stringify(draft) !== JSON.stringify(selected.definition)
+      ) {
+        const saved = await handleSave(draft, { silent: true });
+        if (!saved) return;
+      }
+
+      const count = leavesCount ?? configuration.leavesCounts?.[0] ?? 1;
+      const structuralMeta = resolverBaseEstructuralVentora({
+        tipologia: configuration.typology,
+        hojas: count,
+      });
+      const structuralBase = structuralMeta
+        ? crearBaseTipologicaVentora({
+            tipologia: structuralMeta.tipologia,
+            hojas: count,
+            modulos: count,
+            lineName: template.nombre,
+          })
+        : crearRecetaFabricacionVacia({
+            recipeIdentityId: crypto.randomUUID(),
+            lineName: template.nombre,
+          });
+      const definition = structuralBase;
+      definition.identidad = {
+        ...definition.identidad,
+        configurationId: configuration.id,
+        compositionId: compositionId ?? null,
+        configurationRevision: 1,
+        tipologia: configuration.typology,
+        hojas: count,
+        modulos: count,
+        apertura: configuration.openingType,
+        variante: configuration.variant,
+        nombre: `${template.nombre} · ${configuration.label}${compositionId ? ` · ${compositionId}` : ""}`,
+      };
+      definition.datosPendientes = [
+        ...(leavesCount == null && !configuration.leavesCounts?.length
+          ? ["Composición y cantidad de hojas/paños pendientes de confirmar."]
+          : []),
+        ...(compositionId?.startsWith("workshop:")
+          ? ["Composición declarada por el taller; confirmar su disposición con la pauta antes de validar."]
+          : []),
+        "Identificar los perfiles de esta composición y completar cantidades y descuentos con la pauta.",
+        ...(configuration.source === "workshop"
+          ? ["Configuración declarada por el taller; confirmar su aplicación antes de usar el despiece."]
+          : []),
+      ];
+      await handleCreateFromDefinition({
+        definition,
+        sourceType: "manual",
+        initialStep: "components",
+        sourceReference: configuration.source === "workshop"
+          ? `configuracion-taller:${configuration.id}`
+          : compositionId?.startsWith("workshop:")
+            ? `configuracion-catalogo-taller:${configuration.id}:${compositionId}`
+            : `configuracion-catalogo:${configuration.id}`,
+      });
+    },
+    [draft, handleCreateFromDefinition, handleSave, selected, template]
   );
 
   const navigateToRecipeStep = useCallback(
@@ -1029,6 +1099,7 @@ export function useFabricacionLineWorkflow({
     handleCreate,
     handleCreateFromDefinition,
     handleCreateMissingVariant,
+    handleCreateCatalogConfiguration,
     handleSave,
     handleSaveLineSetup,
     handleContinueToRecipe,

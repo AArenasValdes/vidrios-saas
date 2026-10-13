@@ -775,7 +775,7 @@ Generado desde app/ y verificado por pnpm docs:check. El detalle funcional de ca
 | `/api/cotizaciones/visual-qa/costo-tecnico-parcial` | route | private / QA | `app/api/cotizaciones/visual-qa/costo-tecnico-parcial/route.ts` |
 | `/api/proveedor-catalogos/qa-context` | route | private / Supplier Catalog V1 QA allowlist | `app/api/proveedor-catalogos/qa-context/route.ts` |
 | `/api/proveedor-catalogos/resolve-presentations` | route | private / organización autenticada; resuelve asociaciones confirmadas de líneas Veratec | `app/api/proveedor-catalogos/resolve-presentations/route.ts` |
-| `/api/proveedor-catalogos/taller-presentaciones` | route | private / admin o maestro; presentaciones privadas de la organización, sin modificar catálogo oficial | `app/api/proveedor-catalogos/taller-presentaciones/route.ts` |
+| `/api/proveedor-catalogos/taller-presentaciones` | route | private / admin o maestro; presentaciones privadas Veratec y cuatro familias Thermowin por línea canónica y `organization_id`, sin modificar catálogo oficial | `app/api/proveedor-catalogos/taller-presentaciones/route.ts` |
 | `/api/proveedor-catalogos/mis-precios` | route | private / lectura para usuarios de organización; edición admin o maestro, precios aislados por organización | `app/api/proveedor-catalogos/mis-precios/route.ts` |
-| `/configuracion/empresa/mis-precios` | page | private / usuarios autenticados con organización activa; configuración de compra | `app/(pwa-app)/configuracion/empresa/mis-precios/page.tsx` |
+| `/configuracion/empresa/mis-precios` | page | private / usuarios autenticados con organización activa; configuración de compra, incluye entrada contextual **Perfiles y costos** desde las cuatro líneas Thermowin | `app/(pwa-app)/configuracion/empresa/mis-precios/page.tsx` |
 | `/qa-precios-compra` | page | private / QA | `app/(landing-web)/qa-precios-compra/page.tsx` |
