@@ -20,6 +20,8 @@ import {
 
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
+import { useQuoteProviderVisibility } from "@/features/cotizaciones/line-templates/hooks/useQuoteProviderVisibility";
+import { filterQuoteTemplatesByProviderVisibility } from "@/features/cotizaciones/line-templates/services/quote-provider-visibility.service";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { resolveOrganizationPricingSettings } from "@/features/organization-region/services/organization-region.service";
 import {
@@ -210,12 +212,17 @@ function NuevaCotizacionPageContent() {
   const commercialDefaultsAppliedRef = useRef(false);
   const profitabilityDefaultsAppliedRef = useRef(false);
   const {
-    activeTemplates: activeLineTemplates,
+    activeTemplates: loadedActiveLineTemplates,
     createTemplate: createLineTemplate,
     updateTemplate: updateLineTemplate,
     loadTemplates: reloadLineTemplates,
     isSaving: isSavingQuickPriceTemplate,
   } = useCotizacionLineTemplates({ activeOnly: true, enabled: step !== 1 });
+  const providerVisibility = useQuoteProviderVisibility({ enabled: step !== 1 });
+  const activeLineTemplates = useMemo(
+    () => filterQuoteTemplatesByProviderVisibility(loadedActiveLineTemplates, providerVisibility.hiddenProviderKeys),
+    [loadedActiveLineTemplates, providerVisibility.hiddenProviderKeys]
+  );
   const {
     recipes: fabricationRecipes,
     organizationId: fabricationOrganizationId,

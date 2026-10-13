@@ -15,6 +15,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
+import { useQuoteProviderVisibility } from "@/features/cotizaciones/line-templates/hooks/useQuoteProviderVisibility";
 import { isChileOrganizationCountry } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import { buildTechnicalCardStatus } from "@/features/cotizaciones/line-templates/services/catalogo-fabricacion-card-status";
 import {
@@ -263,6 +264,7 @@ export function LineasPreciosPageClient({
     [profile?.currencyCode, profile?.locale]
   );
   const { organizacionId } = useAuth();
+  const providerVisibility = useQuoteProviderVisibility();
   const {
     templates,
     isLoading,
@@ -324,6 +326,23 @@ export function LineasPreciosPageClient({
     useState<LineasPreciosMobileNavigationState | null>(null);
   const [catalogScrollRestoreTarget, setCatalogScrollRestoreTarget] =
     useState<number | null>(null);
+
+  const handleProviderVisibilityChange = useCallback(async (provider: string, hidden: boolean) => {
+    try {
+      await providerVisibility.setProviderHidden(provider, hidden);
+      setFeedback({
+        kind: "success",
+        message: hidden
+          ? `${provider} se ocultó en cotizaciones.`
+          : `${provider} volverá a aparecer en cotizaciones.`,
+      });
+    } catch {
+      setFeedback({
+        kind: "error",
+        message: "No se pudo guardar el cambio. Inténtalo nuevamente.",
+      });
+    }
+  }, [providerVisibility.setProviderHidden]);
 
   useEffect(() => {
     if (catalogRestoreInitializedRef.current) return;
@@ -1181,6 +1200,11 @@ export function LineasPreciosPageClient({
   return (
     <>
       <LineasPreciosMobileView
+        hiddenProviderKeys={providerVisibility.hiddenProviderKeys}
+        savingProviderKeys={providerVisibility.savingProviderKeys}
+        providerVisibilityUnavailable={Boolean(providerVisibility.error)}
+        providerVisibilityLoading={providerVisibility.isLoading}
+        onProviderVisibilityChange={(provider, hidden) => void handleProviderVisibilityChange(provider, hidden)}
         showPurchasePricesEntry={showPurchasePricesEntry}
         purchasePricesHref={purchasePricesHref}
         templates={templates}

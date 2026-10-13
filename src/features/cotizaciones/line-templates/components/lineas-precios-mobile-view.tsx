@@ -7,6 +7,8 @@ import {
   LuChevronLeft,
   LuChevronRight,
   LuDoorOpen,
+  LuEye,
+  LuEyeOff,
   LuGem,
   LuLayers,
   LuLayoutGrid,
@@ -29,6 +31,7 @@ import {
   type CotizacionLineTemplate,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { isVentoraCatalogKey, VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
+import { normalizeQuoteProviderKey } from "@/features/cotizaciones/line-templates/services/quote-provider-visibility.service";
 import {
   getLineTemplateProviderLabel,
   groupLineTemplatesByProvider,
@@ -79,6 +82,11 @@ type TechnicalStatus = {
 type BrowseScope = "mine" | "providers";
 
 type Props = {
+  hiddenProviderKeys?: ReadonlySet<string>;
+  savingProviderKeys?: ReadonlySet<string>;
+  providerVisibilityUnavailable?: boolean;
+  providerVisibilityLoading?: boolean;
+  onProviderVisibilityChange?: (provider: string, hidden: boolean) => void;
   showPurchasePricesEntry?: boolean;
   purchasePricesHref?: string;
   templates: CotizacionLineTemplate[];
@@ -260,6 +268,11 @@ function matchesStatus(
 }
 
 export function LineasPreciosMobileView({
+  hiddenProviderKeys = new Set<string>(),
+  savingProviderKeys = new Set<string>(),
+  providerVisibilityUnavailable = false,
+  providerVisibilityLoading = false,
+  onProviderVisibilityChange,
   showPurchasePricesEntry = false,
   purchasePricesHref = "/configuracion/empresa/mis-precios",
   templates,
@@ -876,6 +889,13 @@ export function LineasPreciosMobileView({
           key={openProviderFamily?.key ?? openProviderGroup?.key ?? "providers"}
           aria-label="Proveedores"
         >
+          {!openProviderGroup && providerVisibilityLoading ? (
+            <p className={s.providerVisibilityNotice}>Cargando preferencias de proveedores…</p>
+          ) : !openProviderGroup && providerVisibilityUnavailable ? (
+            <p className={s.providerVisibilityNotice}>
+              La preferencia de visibilidad no está disponible hasta actualizar la base de datos.
+            </p>
+          ) : null}
           {openProviderGroup && (openProviderFamily || openProviderGroup.glassGroups?.some((group) => group.key === providerFamilyKey)) ? (
             <>
               <button type="button" className={s.familyHeader} onClick={() => {
@@ -1053,26 +1073,45 @@ export function LineasPreciosMobileView({
                 const providerLabel = provider.universalAluminum
                   ? "Líneas universales de aluminio"
                   : provider.label;
+                const providerKey = normalizeQuoteProviderKey(provider.key) ?? "";
+                const isHiddenFromQuotes = hiddenProviderKeys.has(providerKey);
+                const isSavingVisibility = savingProviderKeys.has(providerKey);
+                const canToggleQuoteVisibility = Boolean(onProviderVisibilityChange) && providerKey !== "sin-proveedor";
                 return (
-                  <button
-                    key={provider.key}
-                    type="button"
-                    className={s.familyHeader}
-                    onClick={() => {
-                    setShowHiddenUniversalReferences(false);
-                      setProviderName(provider.key);
-                      setProviderFamilyKey(null);
-                    }}
-                  >
-                    <span className={s.familyHeaderLeading}>
-                      <span className={s.providerMark} aria-hidden>{provider.universalAluminum ? "Al" : providerMonogram(provider.label)}</span>
-                      <span className={s.familyName}>{providerLabel}</span>
-                    </span>
-                    <span className={s.familyCount}>
-                      {countLabel}
-                      <LuChevronRight className={s.familyIcon} aria-hidden />
-                    </span>
-                  </button>
+                  <div key={provider.key} className={s.providerRow}>
+                    <button
+                      type="button"
+                      className={s.familyHeader}
+                      onClick={() => {
+                        setShowHiddenUniversalReferences(false);
+                        setProviderName(provider.key);
+                        setProviderFamilyKey(null);
+                      }}
+                    >
+                      <span className={s.familyHeaderLeading}>
+                        <span className={s.providerMark} aria-hidden>{provider.universalAluminum ? "Al" : providerMonogram(provider.label)}</span>
+                        <span className={s.familyName}>{providerLabel}</span>
+                      </span>
+                      <span className={s.familyCount}>
+                        {countLabel}
+                        <LuChevronRight className={s.familyIcon} aria-hidden />
+                      </span>
+                    </button>
+                    {canToggleQuoteVisibility ? (
+                      <button
+                        type="button"
+                        className={s.providerVisibilityButton}
+                        aria-label={`${isHiddenFromQuotes ? "Mostrar" : "Ocultar"} ${providerLabel} en cotizaciones`}
+                        title={`${isHiddenFromQuotes ? "Mostrar" : "Ocultar"} en cotizaciones`}
+                        disabled={isSavingVisibility || providerVisibilityUnavailable || providerVisibilityLoading}
+                        aria-pressed={isHiddenFromQuotes}
+                        onClick={() => onProviderVisibilityChange?.(provider.key, !isHiddenFromQuotes)}
+                      >
+                        {isHiddenFromQuotes ? <LuEye aria-hidden /> : <LuEyeOff aria-hidden />}
+                        <span>{isSavingVisibility ? "Guardando…" : isHiddenFromQuotes ? "Mostrar" : "Ocultar"}</span>
+                      </button>
+                    ) : null}
+                  </div>
                 );
               })}
               {showPurchasePricesEntry && categoryFilter !== "vidrio" ? (
