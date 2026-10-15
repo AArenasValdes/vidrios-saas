@@ -6,10 +6,12 @@ import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templa
 import type { TechnicalCostSnapshot } from "@/features/proveedor-catalogos/services/costo-tecnico-parcial.service";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { resolveComponentColorName } from "@/constants/component-colors";
+import { resolveUniversalAluminumLineKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
 export type WorkProfileMaterialRow = {
   key: string;
   code: string;
+  familyKey?: string | null;
   /** SKU guardado en la pauta conjunta, incluso si todavía no tiene precio. */
   supplierSku?: string | null;
   description: string;
@@ -194,16 +196,31 @@ function materialPrice(input: {
   code: string | null;
   description: string;
   finish: string;
+  familyKey?: string | null;
+  allowLegacyFamilyMatch?: boolean;
   commercialLengthMm?: number;
   quantity?: number;
 }): WorkMaterialPrice | null {
-  const candidates = input.lines.filter((line) => {
-    const codeMatch = Boolean(input.code && [line.technicalCode, line.supplierTechnicalCode].includes(input.code));
-    const descriptionMatch = normalizeMatch(line.technicalName) === normalizeMatch(input.description);
+  const exactCodeCandidates = input.code
+    ? input.lines.filter((line) =>
+      [line.technicalCode, line.supplierTechnicalCode].includes(input.code!) &&
+      (!input.familyKey || line.familyKey === input.familyKey || (input.allowLegacyFamilyMatch && !line.familyKey))
+    )
+    : [];
+  // Prefer technical identity over a repeated human-readable label. Names such
+  // as "Riel superior" occur across aluminum families and must never make an
+  // exact, priced code look ambiguous or borrow another profile's price.
+  const candidates = (exactCodeCandidates.length > 0
+    ? exactCodeCandidates
+    : input.lines.filter((line) =>
+      (!input.familyKey || line.familyKey === input.familyKey || (input.allowLegacyFamilyMatch && !line.familyKey)) &&
+      normalizeMatch(line.technicalName) === normalizeMatch(input.description)
+    )
+  ).filter((line) => {
     const finishMatch = !input.finish || normalizeMatch(line.finishName) === "sin acabado especifico" || normalizeMatch(line.finishName) === normalizeMatch(input.finish);
     const lengthMatch = input.commercialLengthMm == null || line.commercialLengthMm === input.commercialLengthMm;
     const quantityMatch = input.quantity == null || (line.quantity ?? line.bars) === input.quantity;
-    return (codeMatch || descriptionMatch) && finishMatch && lengthMatch && quantityMatch;
+    return finishMatch && lengthMatch && quantityMatch;
   });
   if (candidates.length !== 1) return null;
   const line = candidates[0]!;
@@ -228,6 +245,10 @@ function buildProfileRows(summary: FabricationQuoteSummary, cost: TechnicalCostS
 
   const groups = new Map<string, WorkProfileMaterialRow>();
   for (const bar of source.bars) {
+    const familyKeys = unique(source.sourcePresentations
+      .filter((presentation) => presentation.presentationKey === bar.presentationKey)
+      .map((presentation) => resolveUniversalAluminumLineKey(presentation.catalogLineKey) ?? presentation.catalogLineKey ?? ""));
+    const familyKey = familyKeys.length === 1 ? familyKeys[0] : null;
     const line = lineNamesForBar(bar, summary, source);
     const key = [
       bar.materialKey,
@@ -248,6 +269,7 @@ function buildProfileRows(summary: FabricationQuoteSummary, cost: TechnicalCostS
     groups.set(key, {
       key,
       code: bar.codigoPerfil || "—",
+      familyKey,
       supplierSku: bar.supplierSku?.trim() || null,
       description: bar.nombrePerfil || bar.codigoPerfil || "Perfil sin descripción",
       line,
@@ -259,9 +281,25 @@ function buildProfileRows(summary: FabricationQuoteSummary, cost: TechnicalCostS
       price: null,
     });
   }
+  const familiesByCode = new Map<string, Set<string>>();
+  for (const row of groups.values()) {
+    if (!row.familyKey) continue;
+    const familyKeys = familiesByCode.get(row.code) ?? new Set<string>();
+    familyKeys.add(row.familyKey);
+    familiesByCode.set(row.code, familyKeys);
+  }
   return [...groups.values()].map((row) => ({
     ...row,
-    price: cost ? materialPrice({ lines: cost.lines, code: row.code, description: row.description, finish: row.configuredFinish ?? row.finish, commercialLengthMm: row.commercialLengthMm, quantity: row.bars }) : null,
+    price: cost ? materialPrice({
+      lines: cost.lines,
+      code: row.code,
+      description: row.description,
+      finish: row.configuredFinish ?? row.finish,
+      familyKey: row.familyKey,
+      allowLegacyFamilyMatch: !row.familyKey || (familiesByCode.get(row.code)?.size ?? 0) <= 1,
+      commercialLengthMm: row.commercialLengthMm,
+      quantity: row.bars,
+    }) : null,
   })).sort((a, b) =>
     a.line.localeCompare(b.line, "es") ||
     a.code.localeCompare(b.code, "es") ||

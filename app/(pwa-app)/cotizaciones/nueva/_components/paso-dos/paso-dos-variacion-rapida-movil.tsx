@@ -1,7 +1,9 @@
 "use client";
 
 import { LuX } from "react-icons/lu";
+import { useState } from "react";
 
+import { formatCurrencyInput } from "@/features/cotizaciones/new-quote/workflow-ui";
 import s from "../../page.module.css";
 
 type VariationOverlayItemDraft = {
@@ -25,6 +27,7 @@ type Props = {
     key: "ancho" | "alto" | "precio" | "sistema",
     value: string
   ) => void;
+  onApplyUnitPriceToAll: (value: string) => void;
   onEditFull: (itemId: string) => void;
   onClose: () => void;
 };
@@ -37,9 +40,17 @@ export function PasoDosVariacionRapidaMovil({
   items,
   systemOptions,
   onDraftChange,
+  onApplyUnitPriceToAll,
   onEditFull,
   onClose,
 }: Props) {
+  const [bulkPrice, setBulkPrice] = useState(() => {
+    const firstPrice = items[0]?.precio.replace(/[^\d]/g, "") ?? "";
+    return items.every((item) => item.precio.replace(/[^\d]/g, "") === firstPrice)
+      ? firstPrice
+      : "";
+  });
+
   return (
     <div className={s.stepTwoMobileCreatorOverlay}>
       <div className={`${s.stepTwoMobileCreatorShell} ${s.stepTwoMobileVariationShell}`}>
@@ -65,6 +76,30 @@ export function PasoDosVariacionRapidaMovil({
 
         <div className={`${s.stepTwoMobileCreatorBody} ${s.stepTwoMobileVariationBody}`}>
           <div className={s.stepTwoMobileVariationStack}>
+            <section className={s.stepTwoMobileVariationBulkPrice} aria-label="Precio para todas las piezas">
+              <label className={s.stepTwoMobileVariationField}>
+                <span>{priceLabel} para todas</span>
+                <input
+                  className={s.stepTwoMobileVariationInput}
+                  aria-label={`${priceLabel} para todas las piezas`}
+                  inputMode="numeric"
+                  placeholder="0"
+                  type="text"
+                  value={formatCurrencyInput(bulkPrice)}
+                  onChange={(event) => setBulkPrice(event.target.value.replace(/[^\d]/g, ""))}
+                />
+              </label>
+              <button
+                className={s.stepTwoMobileVariationBulkPriceAction}
+                disabled={!bulkPrice}
+                onClick={() => onApplyUnitPriceToAll(bulkPrice)}
+                type="button"
+              >
+                Aplicar a las {totalItems} piezas
+              </button>
+              <p>Luego puedes ajustar el valor de cualquier pieza por separado.</p>
+            </section>
+
             {items.map((item) => (
               <article key={item.id} className={s.stepTwoMobileVariationUnitCard}>
                 <div className={s.stepTwoMobileVariationUnitHead}>

@@ -23,6 +23,7 @@ import accordion from "./line-template-catalog-accordion.module.css";
 
 const FAMILY_ICONS: Record<LineTemplateFamilyKey, IconType> = {
   correderas: LuLayoutGrid,
+  abatibles: LuSquare,
   fijos: LuMinimize2,
   proyectantes: LuSquare,
   puertas: LuDoorOpen,

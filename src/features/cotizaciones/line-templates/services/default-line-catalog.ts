@@ -82,6 +82,7 @@ type VentoraDefaultLineDefinition = {
   familyLabel?: string;
   configurationKey?: string;
   configurationLabel?: string;
+  profileSourceCatalogKey?: string;
   compatibility?: {
     componentTypes?: string[];
     openingTypes?: string[];
@@ -95,6 +96,9 @@ type VentoraDefaultLineDefinition = {
       typology: string;
       variant: string;
       leavesCounts?: number[];
+      /** La fila del proveedor existe, pero su disposición geométrica aún no está resuelta. */
+      compositionPending?: boolean;
+      source?: "catalog" | "workshop";
     }>;
   };
   identitySource?: string;
@@ -112,7 +116,7 @@ function buildVentoraDefaultLine(
   definition: VentoraDefaultLineDefinition
 ): Omit<CreateCotizacionLineTemplateInput, "organizationId"> {
   const workshopProfiles = getVentoraProfileReferencesForCatalogKey(
-    definition.catalogKey
+    definition.profileSourceCatalogKey ?? definition.catalogKey
   );
 
   return {
@@ -161,7 +165,7 @@ function buildVentoraDefaultLine(
       ...(definition.configurationKey ? { configurationKey: definition.configurationKey } : {}),
       configurationLabel: definition.configurationLabel ?? definition.configuracion,
       ...(definition.compatibility ? { compatibility: definition.compatibility } : {}),
-      structuralArchetypeId: CATALOG_KEY_TO_ARQUETIPO[definition.catalogKey] ?? null,
+      structuralArchetypeId: CATALOG_KEY_TO_ARQUETIPO[definition.profileSourceCatalogKey ?? definition.catalogKey] ?? null,
       ...(definition.lineSystem ? { lineSystem: definition.lineSystem } : {}),
       ...(definition.ventoraPlantillaId
         ? { ventoraPlantillaId: definition.ventoraPlantillaId }
@@ -1335,11 +1339,104 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     lineSystem: "Andes",
     ventoraPlantillaId: null,
   },
+  {
+    catalogKey: "ventora:veka-pd10",
+    nombre: "VEKA PD10",
+    material: "PVC",
+    configuracion: "Varias tipologías PVC",
+    proveedor: "VEKA",
+    lineSystem: "PD10",
+    ventoraPlantillaId: null,
+    familyKey: "veka:pd10",
+    familyLabel: "VEKA PD10",
+    identitySource: "Catálogo global Alumétrica VEKA PD10 · consulta 2026-10-13",
+    cuttingGuideSource: "https://alumetrica.comunaclic.cl/Catalogo/Lineas/Detalle/927fda38-d3b4-4440-a2f3-09c253847f02",
+    compatibility: {
+      componentTypes: ["Ventana"],
+      openingTypes: ["Corredera", "Fijo"],
+      leavesCounts: [2],
+      materials: ["PVC"],
+      configurations: [
+        { id: "veka-pd10-1h-1f-18-20", componentType: "Ventana", openingType: "Corredera", label: "1H+1F ESPEJO · 18–20 mm", typology: "corredera", variant: "1h-1f-espejo-18-20", leavesCounts: [2], compositionPending: true, source: "catalog" },
+        { id: "veka-pd10-1h-1f-24-25", componentType: "Ventana", openingType: "Fijo", label: "1H+1F ESPEJO DVH · 24–25 mm", typology: "pano_fijo", variant: "1h-1f-espejo-24-25", leavesCounts: [2], compositionPending: true, source: "catalog" },
+        { id: "veka-pd10-1h-1f-3-5", componentType: "Ventana", openingType: "Fijo", label: "1H+1F ESPEJO · monolítico 3–5 mm", typology: "pano_fijo", variant: "1h-1f-espejo-3-5", leavesCounts: [2], compositionPending: true, source: "catalog" },
+        { id: "veka-pd10-1f-1h-1f-17-19", componentType: "Ventana", openingType: "Corredera", label: "1F+1H+1F ESPEJO · 17–19 mm", typology: "corredera", variant: "1f-1h-1f-espejo-17-19", leavesCounts: [2], compositionPending: true, source: "catalog" },
+        { id: "veka-pd10-1f-1h-1f-24-25", componentType: "Ventana", openingType: "Corredera", label: "1F+1H+1F ESPEJO · 24–25 mm", typology: "corredera", variant: "1f-1h-1f-espejo-24-25", leavesCounts: [2], compositionPending: true, source: "catalog" },
+        { id: "veka-pd10-1f-1h-1f-3-5", componentType: "Ventana", openingType: "Fijo", label: "1F+1H+1F ESPEJO · monolítico 3–5 mm", typology: "pano_fijo", variant: "1f-1h-1f-espejo-3-5", leavesCounts: [2], compositionPending: true, source: "catalog" },
+      ],
+    },
+  },
+  {
+    catalogKey: "ventora:veka-softline-39dj",
+    nombre: "VEKA Softline 39DJ",
+    material: "PVC",
+    configuracion: "Varias tipologías PVC",
+    proveedor: "VEKA",
+    lineSystem: "Softline 39DJ",
+    ventoraPlantillaId: null,
+    familyKey: "veka:softline-39dj",
+    familyLabel: "VEKA Softline 39DJ",
+    identitySource: "Catálogo global Alumétrica VEKA Softline 39DJ · consulta 2026-10-13",
+    cuttingGuideSource: "https://alumetrica.comunaclic.cl/Catalogo/Lineas/Detalle/3526af13-cafb-48fa-a767-1167d7ac7db7",
+    compatibility: {
+      componentTypes: ["Ventana"],
+      openingTypes: ["Abatible", "Fijo", "Proyectante"],
+      leavesCounts: [2],
+      materials: ["PVC"],
+      configurations: [
+        { id: "veka-softline-abatible-derecha-mono-tp", componentType: "Ventana", openingType: "Abatible", label: "Abatible Derecha Mono + TP", typology: "abatible", variant: "abatible-derecha-mono-tp", leavesCounts: [2], compositionPending: true, source: "catalog" },
+        { id: "veka-softline-abatible-derecha-mono-4-5", componentType: "Ventana", openingType: "Abatible", label: "Abatible Derecha monolítico 4–5 mm", typology: "abatible", variant: "abatible-derecha-mono-4-5", leavesCounts: [2], compositionPending: true, source: "catalog" },
+        { id: "veka-softline-abatible-izquierda-mono-tp", componentType: "Ventana", openingType: "Abatible", label: "Abatible Izquierda Mono + TP", typology: "abatible", variant: "abatible-izquierda-mono-tp", leavesCounts: [2], compositionPending: true, source: "catalog" },
+        { id: "veka-softline-abatible-izquierda-mono-4-5", componentType: "Ventana", openingType: "Abatible", label: "Abatible Izquierda monolítico 4–5 mm", typology: "abatible", variant: "abatible-izquierda-mono-4-5", leavesCounts: [2], compositionPending: true, source: "catalog" },
+        { id: "veka-softline-fijo-mono-tp", componentType: "Ventana", openingType: "Fijo", label: "Fijo Mono + TP", typology: "pano_fijo", variant: "fijo-mono-tp", leavesCounts: [2], compositionPending: true, source: "catalog" },
+        { id: "veka-softline-fijo-mono-4-5", componentType: "Ventana", openingType: "Fijo", label: "Fijo monolítico 4–5 mm", typology: "pano_fijo", variant: "fijo-mono-4-5", leavesCounts: [2], compositionPending: true, source: "catalog" },
+        { id: "veka-softline-proyectante-mono-tp", componentType: "Ventana", openingType: "Proyectante", label: "Proyectante Mono + TP", typology: "proyectante", variant: "proyectante-mono-tp", leavesCounts: [2], compositionPending: true, source: "catalog" },
+        { id: "veka-softline-proyectante-mono-4-5", componentType: "Ventana", openingType: "Proyectante", label: "Proyectante monolítico 4–5 mm", typology: "proyectante", variant: "proyectante-mono-4-5", leavesCounts: [2], compositionPending: true, source: "catalog" },
+      ],
+    },
+  },
 ];
+
+function expandLineConfigurations(
+  definitions: readonly VentoraDefaultLineDefinition[]
+): VentoraDefaultLineDefinition[] {
+  return definitions.flatMap((definition) => {
+    const configurations = definition.compatibility?.configurations;
+    if (!configurations || configurations.length <= 1) return [definition];
+
+    return configurations.map((configuration, index) => {
+      const catalogKey = index === 0
+        ? definition.catalogKey
+        : `${definition.catalogKey}:configuration:${configuration.id}`;
+      const compatibility = {
+        componentTypes: [configuration.componentType],
+        openingTypes: [configuration.openingType],
+        ...(configuration.leavesCounts?.length
+          ? { leavesCounts: [...configuration.leavesCounts] }
+          : {}),
+        ...(definition.compatibility?.materials?.length
+          ? { materials: [...definition.compatibility.materials] }
+          : {}),
+        configurations: [{ ...configuration }],
+      };
+
+      return {
+        ...definition,
+        catalogKey,
+        nombre: `${definition.nombre} · ${configuration.label}`,
+        configuracion: configuration.label,
+        configurationKey: configuration.id,
+        configurationLabel: configuration.label,
+        profileSourceCatalogKey: definition.profileSourceCatalogKey ?? definition.catalogKey,
+        compatibility,
+      };
+    });
+  });
+}
 
 export const VENTORA_DEFAULT_LINE_CATALOG: Array<
   Omit<CreateCotizacionLineTemplateInput, "organizationId">
-> = VENTORA_DEFAULT_LINE_DEFINITIONS.map(buildVentoraDefaultLine);
+> = expandLineConfigurations(VENTORA_DEFAULT_LINE_DEFINITIONS).map(buildVentoraDefaultLine);
 
 /** Proveedor canónico del catálogo para presentar filas antiguas sin reescribir su registro. */
 export function resolveDefaultLineCatalogProvider(

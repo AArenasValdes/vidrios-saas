@@ -186,6 +186,7 @@ type Props = {
     key: "ancho" | "alto" | "precio" | "sistema",
     value: string
   ) => void;
+  onApplyVariationQuickEditPriceToAll: (value: string) => void;
   onEditVariationFull: (itemId: string) => void;
   onCloseVariationQuickEdit: () => void;
   onEditItem: (item: CotizacionWorkflowItem) => void;
@@ -276,6 +277,7 @@ export function PasoDosWizardMovil({
   variationQuickEdit,
   onGoToSummary,
   onVariationQuickEditChange,
+  onApplyVariationQuickEditPriceToAll,
   onEditVariationFull,
   onCloseVariationQuickEdit,
   onEditItem,
@@ -582,6 +584,7 @@ export function PasoDosWizardMovil({
         items={variationQuickEdit.items}
         systemOptions={variationQuickEdit.systemOptions}
         onDraftChange={onVariationQuickEditChange}
+        onApplyUnitPriceToAll={onApplyVariationQuickEditPriceToAll}
         onEditFull={onEditVariationFull}
         onClose={onCloseVariationQuickEdit}
       />

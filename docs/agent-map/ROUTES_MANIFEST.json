@@ -128,6 +128,12 @@
       "source": "app/api/admin/clientes/extend-trial/route.ts"
     },
     {
+      "path": "/api/admin/clientes/link-mercadopago",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/clientes/link-mercadopago/route.ts"
+    },
+    {
       "path": "/api/admin/clientes/provision",
       "type": "api",
       "area": "api",

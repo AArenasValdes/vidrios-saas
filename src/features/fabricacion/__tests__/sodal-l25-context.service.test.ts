@@ -1,6 +1,8 @@
 import {
   applySodalL25VidrioToForm,
   findSodalL25LineRecipe,
+  listSodalL25LegOptions,
+  listSodalL25ReinforcementOptions,
   mergeSodalL25WorkspaceRecipes,
   resolveSodalL25QuoteConfig,
   summarizeSodalL25LineCoverage,
@@ -50,6 +52,37 @@ function l25Recipe(hojas: 2 | 3 | 4): FabricationRecipeRecord {
 }
 
 describe("sodal-l25-context.service", () => {
+  it("mantiene disponibles las variantes canónicas L25 aunque la consulta persistida esté vacía", () => {
+    const legs = listSodalL25LegOptions({
+      recipes: [],
+      glazing: "monolithic",
+      hojas: 2,
+    });
+    expect(legs).toEqual([
+      { value: "open", label: "Pierna abierta", available: true },
+      { value: "closed", label: "Pierna cerrada", available: true },
+    ]);
+
+    const reinforcement = listSodalL25ReinforcementOptions({
+      recipes: [],
+      glazing: "monolithic",
+      hojas: 2,
+      leg: "open",
+    });
+    expect(reinforcement).toEqual([
+      { value: "normal", label: "Normal", available: true },
+      { value: "reinforced", label: "Reforzada", available: true },
+    ]);
+  });
+
+  it("no habilita una combinación L25 ausente para vidrio y cantidad de hojas", () => {
+    expect(listSodalL25LegOptions({
+      recipes: [],
+      glazing: "dvh",
+      hojas: 5,
+    }).every((option) => !option.available)).toBe(true);
+  });
+
   it("prioriza el vidrio elegido sobre un glazing L25 stale", () => {
     const config = resolveSodalL25QuoteConfig({
       catalogKey: "ventora:l25",

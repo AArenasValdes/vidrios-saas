@@ -8,6 +8,7 @@ import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templ
 
 export type LineTemplateFamilyKey =
   | "correderas"
+  | "abatibles"
   | "fijos"
   | "proyectantes"
   | "puertas"
@@ -18,6 +19,7 @@ export type LineTemplateFamilyKey =
 
 export const LINE_TEMPLATE_FAMILY_ORDER: LineTemplateFamilyKey[] = [
   "correderas",
+  "abatibles",
   "fijos",
   "proyectantes",
   "puertas",
@@ -29,6 +31,7 @@ export const LINE_TEMPLATE_FAMILY_ORDER: LineTemplateFamilyKey[] = [
 
 export const LINE_TEMPLATE_FAMILY_LABELS: Record<LineTemplateFamilyKey, string> = {
   correderas: "Correderas",
+  abatibles: "Abatibles",
   fijos: "Fijos",
   proyectantes: "Proyectantes",
   puertas: "Puertas",
@@ -58,12 +61,12 @@ export function resolveFamilyFromLineConfiguration(lineConfiguration: string): L
   }
   if (
     normalized.includes("puerta") ||
-    normalized.includes("abatible") ||
     normalized.includes("vaivén") ||
     normalized.includes("vaiven")
   ) {
     return "puertas";
   }
+  if (normalized.includes("abatible")) return "abatibles";
   if (normalized.includes("fachada")) {
     return "fachadas";
   }
@@ -83,13 +86,15 @@ function resolveFamilyFromArchetypeTipologia(
   if (tipologia === "pano_fijo") {
     return "fijos";
   }
+  if (tipologia === "abatible") {
+    return "abatibles";
+  }
   if (tipologia === "proyectante") {
     return "proyectantes";
   }
   if (
     tipologia === "puerta_abatible" ||
-    tipologia === "puerta_vaiven" ||
-    tipologia === "abatible"
+    tipologia === "puerta_vaiven"
   ) {
     return "puertas";
   }
@@ -187,11 +192,31 @@ export function getSingleFamilyTemplate<T>(templates: readonly T[]): T | null {
   return templates.length === 1 ? templates[0] : null;
 }
 
+/** Cuenta las variantes documentadas dentro de una línea canónica del proveedor. */
+export function getDocumentedConfigurationCount(template: CotizacionLineTemplate): number {
+  const stored = template.catalogMetadata as {
+    compatibility?: { configurations?: unknown[] };
+  } | null;
+  const canonical = VENTORA_DEFAULT_LINE_CATALOG.find((entry) => entry.catalogKey === template.catalogKey);
+  const canonicalCompatibility = canonical?.catalogMetadata?.compatibility as
+    | { configurations?: unknown[] }
+    | undefined;
+  const storedConfigurations = stored?.compatibility?.configurations;
+  const canonicalConfigurationKey = typeof canonical?.catalogMetadata?.configurationKey === "string";
+  const count = canonicalConfigurationKey
+    ? canonicalCompatibility?.configurations?.length ?? 1
+    : Array.isArray(storedConfigurations) && storedConfigurations.length > 0
+      ? storedConfigurations.length
+      : canonicalCompatibility?.configurations?.length ?? 0;
+  return count || 1;
+}
+
 /** La identidad canónica completa metadata antigua de catálogo sin reescribir precios ni filas privadas. */
 export function resolveDocumentedLineIdentity(template: CotizacionLineTemplate) {
   const canonical = VENTORA_DEFAULT_LINE_CATALOG.find((entry) => entry.catalogKey === template.catalogKey);
   const stored = template.catalogMetadata;
   const fallback = canonical?.catalogMetadata;
+  const hasCanonicalConfiguration = typeof fallback?.configurationKey === "string";
   const universalFamilyKey = template.categoria === "aluminio" &&
     typeof fallback?.familyKey === "string" &&
     fallback.familyKey.startsWith("universal:aluminio:")
@@ -206,8 +231,10 @@ export function resolveDocumentedLineIdentity(template: CotizacionLineTemplate) 
       ? typeof fallback?.familyLabel === "string" ? fallback.familyLabel : null
       : typeof stored?.familyLabel === "string" && stored.familyLabel.trim()
       ? stored.familyLabel : typeof fallback?.familyLabel === "string" ? fallback.familyLabel : null,
-    configurationLabel: typeof stored?.configurationLabel === "string" && stored.configurationLabel.trim()
-      ? stored.configurationLabel : typeof fallback?.configurationLabel === "string" ? fallback.configurationLabel : null,
+    configurationLabel: hasCanonicalConfiguration && typeof fallback?.configurationLabel === "string"
+      ? fallback.configurationLabel
+      : typeof stored?.configurationLabel === "string" && stored.configurationLabel.trim()
+        ? stored.configurationLabel : typeof fallback?.configurationLabel === "string" ? fallback.configurationLabel : null,
   };
 }
 

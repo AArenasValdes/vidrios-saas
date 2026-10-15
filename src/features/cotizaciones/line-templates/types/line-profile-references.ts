@@ -1,6 +1,6 @@
 import type { CotizacionLineTemplateCatalogMetadata } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 
-export const LINE_PROFILE_REFERENCE_SEED_VERSION = 9;
+export const LINE_PROFILE_REFERENCE_SEED_VERSION = 10;
 
 export const PROFILE_REFERENCE_SOURCES = {
   SODAL_CATALOG: "https://sodal.cl/catalogos/",
@@ -15,6 +15,10 @@ export const PROFILE_REFERENCE_SOURCES = {
     "https://www.alumet.cl/wp-content/uploads/2020/02/202700803-ALUMET-ALUMCO-ALUMINIO.pdf",
   ALUMETRICA_CATALOG:
     "https://alumetrica.comunaclic.cl/Catalogo/Lineas/Detalle/3b5e6093-5b49-4640-b9e5-5db111dc4ffb",
+  ALUMETRICA_VEKA_PD10:
+    "https://alumetrica.comunaclic.cl/Catalogo/Lineas/Detalle/927fda38-d3b4-4440-a2f3-09c253847f02",
+  ALUMETRICA_VEKA_SOFTLINE_39DJ:
+    "https://alumetrica.comunaclic.cl/Catalogo/Lineas/Detalle/3526af13-cafb-48fa-a767-1167d7ac7db7",
 } as const;
 
 export type LineProfileReferenceCodeStatus =

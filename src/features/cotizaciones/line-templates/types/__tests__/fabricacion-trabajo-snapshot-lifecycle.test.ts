@@ -4,6 +4,7 @@ import {
   resolveFabricacionSnapshotsIndependently,
   resolveFabricacionTrabajoSnapshotForQuoteSave,
   shouldResolveFabricationRecipesForQuoteSave,
+  shouldResolveSupplierPresentationsForQuoteSave,
 } from "@/features/cotizaciones/services/fabricacion-trabajo-snapshot-lifecycle.service";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
@@ -111,6 +112,14 @@ function workflowItem(overrides: Partial<CotizacionWorkflowItem> = {}): Cotizaci
 }
 
 describe("fabricacion-trabajo-snapshot lifecycle", () => {
+  it("resuelve presentaciones para altas, borradores y recalculo técnico, no al editar solo datos comerciales", () => {
+    expect(shouldResolveSupplierPresentationsForQuoteSave()).toBe(true);
+    expect(shouldResolveSupplierPresentationsForQuoteSave({ existingId: "draft-1", finalizingDraft: true })).toBe(true);
+    expect(shouldResolveSupplierPresentationsForQuoteSave({ existingId: "quote-1", itemCountToResolve: 1 })).toBe(true);
+    expect(shouldResolveSupplierPresentationsForQuoteSave({ existingId: "quote-1", shouldRebuildTrabajoSnapshot: true })).toBe(true);
+    expect(shouldResolveSupplierPresentationsForQuoteSave({ existingId: "quote-1" })).toBe(false);
+  });
+
   it("limita la lectura de recetas a líneas únicas de piezas que se resolverán", () => {
     const items = [
       workflowItem({ id: "linea-20" }),
@@ -229,6 +238,37 @@ describe("fabricacion-trabajo-snapshot lifecycle", () => {
     expect(prepared.items[0]?.fabricacionSnapshot).toBeNull();
   });
 
+  it("vuelve a resolver L42 cuando se cambia expresamente de ALAR a Normal", () => {
+    const metadata = (variant: string, recipeId: string) =>
+      encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "210",
+        catalogLineKey: "ventora:l42",
+        sistema: "Proyectante",
+        fabricacionTipologia: "proyectante",
+        fabricacionHojas: 1,
+        fabricacionModulos: 1,
+        fabricacionVariante: variant,
+        fabricationRecipeId: recipeId,
+      });
+    const previous = workflowItem({
+      lineaComercial: "Serie 42",
+      observaciones: metadata("alar_marco_4201", "1cf1fa7c-1a66-490a-af68-45401f39a349"),
+      fabricacionSnapshot: null,
+    });
+    const changed = workflowItem({
+      lineaComercial: "Serie 42",
+      observaciones: metadata("normal", ""),
+      fabricacionSnapshot: itemSnapshot,
+    });
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({
+      existingId: "1113",
+      existingItems: [previous],
+      items: [changed],
+    });
+    expect(prepared.itemIdsToResolve).toEqual(new Set(["item-1"]));
+    expect(prepared.items[0]?.fabricacionSnapshot).toBeNull();
+  });
+
   it("no completa una pauta histórica ausente al guardar cambios comerciales", () => {
     const oldItem = workflowItem();
     const unchangedTechnicalInput = workflowItem({ precioUnitario: 160000, precioTotal: 160000 });
@@ -253,6 +293,43 @@ describe("fabricacion-trabajo-snapshot lifecycle", () => {
 
     expect(prepared.itemIdsToResolve.size).toBe(0);
     expect(prepared.items[0]?.fabricacionSnapshot).toBe(itemSnapshot);
+  });
+
+  it("reconstruye la pauta conjunta al guardar explícitamente una pieza histórica que no tenía snapshot", () => {
+    const oldItem = workflowItem({ id: "item-20", fabricacionSnapshot: null });
+    const acceptedItem = workflowItem({ id: "item-20", fabricacionSnapshot: itemSnapshot });
+    const alreadySavedItem = workflowItem({
+      id: "item-25",
+      codigo: "V2",
+      fabricacionSnapshot: makeItemSnapshot(1900),
+    });
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({
+      existingId: "quote-1",
+      existingItems: [oldItem, alreadySavedItem],
+      items: [acceptedItem, alreadySavedItem],
+    });
+
+    expect(prepared.itemIdsToResolve.size).toBe(0);
+    expect(prepared.shouldRebuildTrabajoSnapshot).toBe(true);
+
+    const rebuilt = resolveFabricacionTrabajoSnapshotForQuoteSave({
+      existingId: "quote-1",
+      existingSnapshot: existingGlobalSnapshot,
+      forceRebuild: prepared.shouldRebuildTrabajoSnapshot,
+      capturedAt: "2026-10-14T12:00:00.000Z",
+      items: prepared.items.map((item) => ({
+        id: item.id,
+        codigo: item.codigo,
+        nombre: item.nombre,
+        lineaComercial: item.lineaComercial,
+        snapshot: item.fabricacionSnapshot ?? null,
+      })),
+    });
+
+    expect(rebuilt?.itemCountWithPauta).toBe(2);
+    expect(rebuilt?.bars.flatMap((bar) => bar.cortes.map((cut) => cut.codigoItem))).toEqual(
+      expect.arrayContaining(["V1", "V2"])
+    );
   });
 
   it("cotización nueva empaqueta antes con el SKU/largo comercial explícito", () => {

@@ -66,6 +66,7 @@ import {
 import { groupMissingPresentations, resolveDespieceReviewSelectionPrompt } from "@/features/cotizaciones/visual-composer/services/despiece-review-presentation.service";
 import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
 import { formatVariantDisplayLabel } from "@/features/fabricacion/services/fabricacion-line-variant.service";
+import { resolveUniversalPricedLineFallbacks } from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
 import { useSupplierPresentationResolution } from "@/features/proveedor-catalogos/hooks/use-supplier-presentation-resolution";
 import { resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 import {
@@ -142,6 +143,8 @@ function groupJointCuts(bar: FabricacionTrabajoBarra) {
 type Props = {
   open: boolean;
   items: CotizacionWorkflowItem[];
+  /** Original persisted items; `items` may include unsaved live calculations. */
+  persistedItems?: readonly CotizacionWorkflowItem[];
   lineTemplates: CotizacionLineTemplate[];
   quotePricingMode: QuotePricingMode;
   activeItemId: string | null;
@@ -153,7 +156,11 @@ type Props = {
     itemId?: string;
     snapshot?: CotizacionItemCubicationSnapshot | null;
   }) => Promise<void> | void;
-  onSaveQuoteItem?: (itemId: string, snapshot: CotizacionItemCubicationSnapshot) => Promise<void> | void;
+  onSaveQuoteItem?: (
+    itemId: string,
+    snapshot: CotizacionItemCubicationSnapshot,
+    fabricacionSnapshot?: NonNullable<QuoteConstructorItemPatch["fabricacionSnapshot"]>
+  ) => Promise<void> | void;
   isSavingQuoteItem?: boolean;
   isSavingCubicationLineAdjustment?: boolean;
   /** Si el padre ya cargó recetas, evita un segundo fetch al abrir el modal. */
@@ -379,6 +386,7 @@ function resolvePersonalizadoFallbackSnapshot(input: {
 export function DespieceReviewSurface({
   open,
   items,
+  persistedItems,
   lineTemplates,
   quotePricingMode,
   activeItemId,
@@ -402,6 +410,9 @@ export function DespieceReviewSurface({
   const [isAdjustmentChoiceOpen, setIsAdjustmentChoiceOpen] = useState(false);
   const [hasOfferedAdjustmentChoice, setHasOfferedAdjustmentChoice] = useState(false);
   const [quoteItemSaveError, setQuoteItemSaveError] = useState<string | null>(null);
+  const [savedCalculatedSnapshotKeys, setSavedCalculatedSnapshotKeys] = useState<Set<string>>(
+    () => new Set()
+  );
   const [pendingAdjustmentSnapshot, setPendingAdjustmentSnapshot] =
     useState<CotizacionItemCubicationSnapshot | null>(null);
   const scrollRestoreRef = useRef(0);
@@ -477,6 +488,43 @@ export function DespieceReviewSurface({
   const activeResolution = selectedItem
     ? pieceResolutions.get(selectedItem.id) ?? null
     : null;
+  const l42NormalCandidate = useMemo(() => {
+    const catalogKey = selectedForm?.catalogLineKey || selectedTemplate?.catalogKey || null;
+    const lineTemplateId = Number(selectedForm?.lineTemplateId || selectedTemplate?.id);
+    if (
+      !selectedItem || !selectedForm || !Number.isInteger(lineTemplateId) ||
+      (catalogKey !== "ventora:l42" && catalogKey !== "ventora:arquetipo-l42-proyectante") ||
+      selectedForm.fabricacionVariante !== "alar_marco_4201"
+    ) return null;
+    return resolveUniversalPricedLineFallbacks({
+      catalogKey,
+      lineTemplateId,
+      organizationId,
+      lineName: selectedTemplate?.nombre || selectedItem.lineaComercial || "Serie 42",
+      variant: "normal",
+      leavesCount: 1,
+      typology: "proyectante",
+      glassName: selectedItem.vidrio,
+      recipes: persistedRecipes,
+    })[0] ?? null;
+  }, [organizationId, persistedRecipes, selectedForm, selectedItem, selectedTemplate]);
+  const activeCalculatedSnapshotKey = selectedItem && activeResolution?.formal
+    ? buildFabricacionSnapshotSyncKey(selectedItem.id, activeResolution.formal)
+    : null;
+  const persistedItem = selectedItem
+    ? persistedItems?.find((item) => item.id === selectedItem.id)
+    : null;
+  const calculatedSnapshotAlreadyPersisted = selectedItem && activeResolution?.formal
+    ? persistedItems
+      ? fabricacionSnapshotMatchesCalculatedOutput(
+          persistedItem?.fabricacionSnapshot,
+          activeResolution.formal
+        )
+      : fabricacionSnapshotMatchesCalculatedOutput(
+          selectedItem.fabricacionSnapshot,
+          activeResolution.formal
+        )
+    : false;
   const handleSelectFabricationRecipe = (recipeId: string) => {
     if (!selectedItem || !activeResolution) return;
     const recipe = activeResolution.candidateRecipes?.find((candidate) => candidate.id === recipeId);
@@ -848,6 +896,19 @@ export function DespieceReviewSurface({
     }
   };
 
+  const handleSaveCalculatedQuoteItem = async () => {
+    if (!selectedItem || !activeSnapshot || !activeResolution?.formal || !onSaveQuoteItem) return;
+    setQuoteItemSaveError(null);
+    try {
+      await onSaveQuoteItem(selectedItem.id, activeSnapshot, activeResolution.formal);
+      if (activeCalculatedSnapshotKey) {
+        setSavedCalculatedSnapshotKeys((current) => new Set(current).add(activeCalculatedSnapshotKey));
+      }
+    } catch {
+      setQuoteItemSaveError("No pudimos guardar esta pauta. Intenta nuevamente.");
+    }
+  };
+
   const handleKeepQuoteOnly = () => {
     setIsAdjustmentChoiceOpen(false);
     setPendingAdjustmentSnapshot(null);
@@ -1203,6 +1264,20 @@ export function DespieceReviewSurface({
                             ) : null}
                           </>
                         ) : null}
+                        {!isEditMode &&
+                        onSaveQuoteItem &&
+                        activeSnapshot?.source !== "manual" &&
+                        activeResolution?.formal &&
+                        !calculatedSnapshotAlreadyPersisted &&
+                        !savedCalculatedSnapshotKeys.has(activeCalculatedSnapshotKey ?? "") ? (
+                          <button
+                            type="button"
+                            onClick={() => void handleSaveCalculatedQuoteItem()}
+                            disabled={Boolean(isSavingQuoteItem)}
+                          >
+                            {isSavingQuoteItem ? "Guardando…" : "Guardar pauta en cotización"}
+                          </button>
+                        ) : null}
                         {isEditMode ? (
                             <button type="button" onClick={handleAddCut} disabled={!ensureEditableBase()}>
                             Agregar corte
@@ -1357,6 +1432,28 @@ export function DespieceReviewSurface({
                             ? "Esta pieza no tiene reglas técnicas de cubicación. Puedes cotizar igual; define la pauta cuando el taller la tenga."
                             : "Aún no hay cortes para esta pieza. Completa línea y medidas, o agrega cortes manualmente.")}
                         </div>
+                        {l42NormalCandidate && !activeResolution?.formal ? (
+                          <button
+                            type="button"
+                            className={styles.editModeButton}
+                            onClick={() => {
+                              if (!selectedItem) return;
+                              onUpdateItem(selectedItem.id, {
+                                fabricationRecipeId: "",
+                                fabricacionTipologia: "proyectante",
+                                fabricacionVariante: "normal",
+                                fabricacionApertura: l42NormalCandidate.definition.identidad.apertura ?? "",
+                                fabricacionHerraje: "",
+                                fabricacionHojas: 1,
+                                fabricacionModulos: 1,
+                                fabricacionSnapshot: null,
+                                cubicationSnapshot: null,
+                              });
+                            }}
+                          >
+                            Usar variante Normal confirmada
+                          </button>
+                        ) : null}
                         {activeResolution?.estado === "multiples_recetas" &&
                         (activeResolution.candidateRecipes?.length ?? 0) > 1 ? (
                           <label className={styles.recipeSelection}>

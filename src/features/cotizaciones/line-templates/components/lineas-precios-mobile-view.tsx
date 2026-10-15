@@ -32,6 +32,7 @@ import {
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { isVentoraCatalogKey, VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import { normalizeQuoteProviderKey } from "@/features/cotizaciones/line-templates/services/quote-provider-visibility.service";
+import { getCatalogProductConfigurations } from "@/features/cotizaciones/line-templates/services/line-template-compatibility.service";
 import {
   getLineTemplateProviderLabel,
   groupLineTemplatesByProvider,
@@ -39,6 +40,7 @@ import {
 
 import {
   getSingleFamilyTemplate,
+  getDocumentedConfigurationCount,
   groupLineTemplatesByDocumentedFamily,
   groupLineTemplatesByFamily,
   LINE_TEMPLATE_FAMILY_LABELS,
@@ -148,6 +150,7 @@ const TECHNICAL_OPTIONS: Array<{ value: MobileTechnicalFilter; label: string }> 
 const FAMILY_ICONS: Record<LineTemplateFamilyKey | "propias", IconType> = {
   propias: LuUser,
   correderas: LuLayoutGrid,
+  abatibles: LuSquare,
   fijos: LuMinimize2,
   proyectantes: LuSquare,
   puertas: LuDoorOpen,
@@ -212,17 +215,60 @@ function groupGlassByKind(templates: CotizacionLineTemplate[]) {
   }));
 }
 
-function explicitCatalogTypology(template: CotizacionLineTemplate): LineTemplateFamilyKey | null {
+function explicitCatalogTypology(template: CotizacionLineTemplate): LineTemplateFamilyKey | "mixta" | null {
   const stored = template.catalogMetadata as {
-    compatibility?: { openingTypes?: unknown; componentTypes?: unknown };
+    compatibility?: {
+      openingTypes?: unknown;
+      componentTypes?: unknown;
+      configurations?: Array<{ typology?: unknown; openingType?: unknown; componentType?: unknown }>;
+    };
   } | null;
   const canonical = VENTORA_DEFAULT_LINE_CATALOG.find((entry) => entry.catalogKey === template.catalogKey);
-  const canonicalCompatibility = canonical?.catalogMetadata?.compatibility;
+  const canonicalCompatibility = canonical?.catalogMetadata?.compatibility as {
+    openingTypes?: unknown;
+    componentTypes?: unknown;
+    configurations?: Array<{ typology?: unknown; openingType?: unknown; componentType?: unknown }>;
+  } | undefined;
   const compatibility = stored?.compatibility ?? (
     canonicalCompatibility && typeof canonicalCompatibility === "object"
       ? canonicalCompatibility as { openingTypes?: unknown; componentTypes?: unknown }
       : null
   );
+  const configurations = typeof canonical?.catalogMetadata?.configurationKey === "string"
+    ? canonicalCompatibility?.configurations ?? []
+    : (stored?.compatibility?.configurations?.length
+        ? stored.compatibility.configurations
+        : canonicalCompatibility?.configurations) ?? [];
+  if (configurations.length > 0) {
+    const keys = new Set<LineTemplateFamilyKey>();
+    for (const configuration of configurations) {
+      const typology = typeof configuration.typology === "string" ? configuration.typology : "";
+      const opening = typeof configuration.openingType === "string" ? configuration.openingType.toLowerCase() : "";
+      const component = typeof configuration.componentType === "string" ? configuration.componentType.toLowerCase() : "";
+      if (typology === "corredera" || typology === "puerta_corredera") {
+        keys.add(typology === "puerta_corredera" ? "puertas" : "correderas");
+      } else if (typology === "abatible") {
+        keys.add("abatibles");
+      } else if (typology === "proyectante") {
+        keys.add("proyectantes");
+      } else if (typology === "pano_fijo") {
+        keys.add("fijos");
+      } else if (typology === "puerta_abatible" || typology === "puerta_vaiven" || component.includes("puerta")) {
+        keys.add("puertas");
+      } else if (opening.includes("corredera")) {
+        keys.add("correderas");
+      } else if (opening.includes("proyectante")) {
+        keys.add("proyectantes");
+      } else if (opening.includes("abatible")) {
+        keys.add("abatibles");
+      } else if (opening.includes("fijo")) {
+        keys.add("fijos");
+      }
+    }
+    if (keys.size === 1) return [...keys][0];
+    if (keys.size > 1) return "mixta";
+    return null;
+  }
   const openings = Array.isArray(compatibility?.openingTypes)
     ? compatibility.openingTypes.filter((value): value is string => typeof value === "string")
     : [];
@@ -245,12 +291,13 @@ function documentedFamilyTypology(
 ): LineTemplateFamilyKey | "mixta" {
   const explicit = family.templates
     .map(explicitCatalogTypology)
-    .filter((key): key is LineTemplateFamilyKey => key != null);
+    .filter((key): key is LineTemplateFamilyKey | "mixta" => key != null);
   const keys = new Set(
     explicit.length > 0
       ? explicit
       : family.templates.map((template) => resolveLineTemplateFamilyKey(template))
   );
+  if (keys.has("mixta")) return "mixta";
   if (keys.size === 1) {
     const [only] = keys;
     return only;
@@ -316,6 +363,7 @@ export function LineasPreciosMobileView({
   const [providerFamilyKey, setProviderFamilyKey] = useState<string | null>(null);
   const [showHiddenUniversalReferences, setShowHiddenUniversalReferences] = useState(false);
   const [selectedLine, setSelectedLine] = useState<CotizacionLineTemplate | null>(null);
+  const [selectedLineDisplayName, setSelectedLineDisplayName] = useState<string | null>(null);
   const navigationRestoreAppliedRef = useRef(false);
 
   useEffect(() => {
@@ -333,6 +381,7 @@ export function LineasPreciosMobileView({
             (template) => String(template.id) === String(navigationRestore.selectedLineId)
           ) ?? null
     );
+    setSelectedLineDisplayName(null);
     navigationRestoreAppliedRef.current = true;
     onNavigationRestoreConsumed();
   }, [isLoading, navigationRestore, onNavigationRestoreConsumed, templates]);
@@ -520,6 +569,19 @@ export function LineasPreciosMobileView({
       ? [...activeUniversalReferences, ...hiddenUniversalReferences]
       : activeUniversalReferences
     : openProviderFamilyTemplates;
+  const providerFamilyConfigurations = openProviderFamily
+    ? openProviderFamily.templates.flatMap((template) =>
+        getCatalogProductConfigurations(template.catalogKey).map((configuration) => ({
+          template,
+          configuration,
+        }))
+      )
+    : [];
+  const showProviderConfigurationRows = Boolean(
+    openProviderFamily &&
+    openProviderFamily.templates.length === 1 &&
+    providerFamilyConfigurations.length > 1
+  );
 
   const resetNavigation = () => {
     setMineDrill(null);
@@ -532,13 +594,28 @@ export function LineasPreciosMobileView({
     setShowHiddenUniversalReferences(false);
     const family = openProviderGroup?.families.find((candidate) => candidate.key === key);
     const singleTemplate = family ? getSingleFamilyTemplate(family.templates) : null;
-    if (singleTemplate) {
+    const hasMultipleConfigurations = singleTemplate
+      ? getCatalogProductConfigurations(singleTemplate.catalogKey).length > 1
+      : false;
+    if (singleTemplate && !hasMultipleConfigurations) {
       setProviderFamilyKey(null);
+      setSelectedLineDisplayName(null);
       setSelectedLine(singleTemplate);
       return;
     }
 
     setProviderFamilyKey(key);
+    setSelectedLineDisplayName(null);
+    setSelectedLine(null);
+  };
+
+  const openLineActions = (template: CotizacionLineTemplate, displayName?: string) => {
+    setSelectedLineDisplayName(displayName?.trim() || null);
+    setSelectedLine(template);
+  };
+
+  const closeLineActions = () => {
+    setSelectedLineDisplayName(null);
     setSelectedLine(null);
   };
 
@@ -755,7 +832,7 @@ export function LineasPreciosMobileView({
                 template={template}
                 technicalStatus={technicalStatus}
                 formatMoney={formatMoney}
-                onOpenActions={() => setSelectedLine(template)}
+                onOpenActions={() => openLineActions(template)}
                 onEditPrice={() => onEditPrice(template)}
                 rowIndex={rowIndex}
               />
@@ -784,7 +861,7 @@ export function LineasPreciosMobileView({
                 template={template}
                 technicalStatus={technicalStatus}
                 formatMoney={formatMoney}
-                onOpenActions={() => setSelectedLine(template)}
+                onOpenActions={() => openLineActions(template)}
                 onEditPrice={() => onEditPrice(template)}
                 rowIndex={rowIndex}
               />
@@ -813,7 +890,7 @@ export function LineasPreciosMobileView({
                 template={template}
                 technicalStatus={technicalStatus}
                 formatMoney={formatMoney}
-                onOpenActions={() => setSelectedLine(template)}
+                onOpenActions={() => openLineActions(template)}
                 onEditPrice={() => onEditPrice(template)}
                 rowIndex={rowIndex}
               />
@@ -911,7 +988,22 @@ export function LineasPreciosMobileView({
                   </span>
                 </span>
               </button>
-              {visibleProviderFamilyTemplates.map((template, rowIndex) => {
+              {showProviderConfigurationRows ? providerFamilyConfigurations.map(({ template, configuration }, rowIndex) => {
+                const technicalStatus = technicalStatuses.get(String(template.id));
+                if (!technicalStatus) return null;
+                return (
+                  <LineasPreciosMobileLineRow
+                    key={configuration.id}
+                    template={template}
+                    displayNameOverride={`${template.nombre} · ${configuration.label}`}
+                    technicalStatus={technicalStatus}
+                    formatMoney={formatMoney}
+                    onOpenActions={() => openLineActions(template, `${template.nombre} · ${configuration.label}`)}
+                    onEditPrice={() => onEditPrice(template)}
+                    rowIndex={rowIndex}
+                  />
+                );
+              }) : visibleProviderFamilyTemplates.map((template, rowIndex) => {
                 const technicalStatus = technicalStatuses.get(String(template.id));
                 if (!technicalStatus) return null;
                 return (
@@ -920,7 +1012,7 @@ export function LineasPreciosMobileView({
                     template={template}
                     technicalStatus={technicalStatus}
                     formatMoney={formatMoney}
-                    onOpenActions={() => setSelectedLine(template)}
+                    onOpenActions={() => openLineActions(template)}
                     onEditPrice={() => onEditPrice(template)}
                     rowIndex={rowIndex}
                   />
@@ -977,7 +1069,7 @@ export function LineasPreciosMobileView({
                       template={template}
                       technicalStatus={technicalStatus}
                       formatMoney={formatMoney}
-                      onOpenActions={() => setSelectedLine(template)}
+                      onOpenActions={() => openLineActions(template)}
                       onEditPrice={() => onEditPrice(template)}
                       rowIndex={rowIndex}
                     />
@@ -1048,7 +1140,7 @@ export function LineasPreciosMobileView({
                         >
                           <span className={s.familyName}>{family.label}</span>
                           <span className={s.familyCount}>
-                            {family.templates.length} {family.templates.length === 1 ? "configuración" : "configuraciones"}
+                            {family.templates.reduce((total, template) => total + getDocumentedConfigurationCount(template), 0)} configuraciones
                             <LuChevronRight className={s.familyIcon} aria-hidden />
                           </span>
                         </button>
@@ -1212,7 +1304,7 @@ export function LineasPreciosMobileView({
         <div
           className={s.sheetBackdrop}
           role="presentation"
-          onClick={() => setSelectedLine(null)}
+          onClick={closeLineActions}
         >
           <section
             className={s.lineActionSheet}
@@ -1224,13 +1316,13 @@ export function LineasPreciosMobileView({
             <header>
               <div className={s.lineSheetHeaderCopy}>
                 <h2 id="mobile-line-actions-title">
-                  {resolveLineTemplateDisplayName(selectedLine)}
+                  {selectedLineDisplayName ?? resolveLineTemplateDisplayName(selectedLine)}
                 </h2>
                 <p>{selectedLineContext?.subtitle}</p>
               </div>
               <button
                 type="button"
-                onClick={() => setSelectedLine(null)}
+                onClick={closeLineActions}
                 aria-label="Cerrar acciones"
               >
                 <LuX aria-hidden />
@@ -1243,7 +1335,7 @@ export function LineasPreciosMobileView({
                 className={`${s.lineSheetAction} ${s.lineSheetActionPrimary}`}
                 onClick={() => {
                   const template = selectedLine;
-                  setSelectedLine(null);
+                  closeLineActions();
                   onEdit(template);
                 }}
               >
@@ -1255,7 +1347,7 @@ export function LineasPreciosMobileView({
                 className={s.lineSheetAction}
                 onClick={() => {
                   const template = selectedLine;
-                  setSelectedLine(null);
+                  closeLineActions();
                   onEditPrice(template);
                 }}
               >
@@ -1276,7 +1368,7 @@ export function LineasPreciosMobileView({
                       showHiddenUniversalReferences,
                       selectedLineId: selectedLine.id,
                     });
-                    setSelectedLine(null);
+                    closeLineActions();
                   }}
                 >
                   {selectedLineContext.fabricationActionLabel}
@@ -1287,7 +1379,7 @@ export function LineasPreciosMobileView({
                 className={`${s.lineSheetAction} ${s.lineSheetActionQuiet}`}
                 onClick={() => {
                   const template = selectedLine;
-                  setSelectedLine(null);
+                  closeLineActions();
                   onToggleActive(template);
                 }}
               >
@@ -1299,7 +1391,7 @@ export function LineasPreciosMobileView({
                 disabled={isSaving}
                 onClick={() => {
                   const template = selectedLine;
-                  setSelectedLine(null);
+                  closeLineActions();
                   onDuplicate(template);
                 }}
               >
@@ -1314,7 +1406,7 @@ export function LineasPreciosMobileView({
                 disabled={isSaving}
                 onClick={() => {
                   const template = selectedLine;
-                  setSelectedLine(null);
+                  closeLineActions();
                   onRequestDelete(template);
                 }}
               >

@@ -161,7 +161,10 @@ export function resolveFabricacionContextFromLineCatalog(
 ): FabricacionLineaCotizacionContext | null {
   const metadata = template.catalogMetadata ?? {};
   const canonicalProjectingLine =
-    template.catalogKey === "ventora:l32" || template.catalogKey === "ventora:l42";
+    template.catalogKey === "ventora:l32" ||
+    template.catalogKey === "ventora:arquetipo-l32-proyectante" ||
+    template.catalogKey === "ventora:l42" ||
+    template.catalogKey === "ventora:arquetipo-l42-proyectante";
   const fromConfiguration = canonicalProjectingLine
     ? null
     : parseLineConfigurationContext(metadata.lineConfiguration);
@@ -188,7 +191,11 @@ export function resolveFabricacionContextFromLineCatalog(
     fabricationRecipeId: "",
     fabricacionApertura: "",
     fabricacionHerraje: "",
-    fabricacionVariante: "",
+    fabricacionVariante:
+      template.catalogKey === "ventora:l42" ||
+      template.catalogKey === "ventora:arquetipo-l42-proyectante"
+        ? "normal"
+        : "",
   };
 }
 
@@ -224,6 +231,19 @@ export function resolveFabricacionContextForLineAssignment(input: {
   const catalogContext = resolveFabricacionContextFromLineCatalog(input.template);
   const lineTemplateId = normalizeLineTemplateId(input.template.id);
   if (!lineTemplateId) {
+    return catalogContext;
+  }
+
+  // A new L42 projecting item uses the owner-confirmed Normal recipe. A
+  // workshop-specific ALAR draft remains selectable explicitly, but must not
+  // become the default merely because it is the only persisted recipe.
+  if (
+    (input.template.catalogKey === "ventora:l42" ||
+      input.template.catalogKey === "ventora:arquetipo-l42-proyectante") &&
+    !input.form.fabricationRecipeId?.trim() &&
+    !input.form.fabricacionVariante?.trim() &&
+    catalogContext?.fabricacionTipologia === "proyectante"
+  ) {
     return catalogContext;
   }
 

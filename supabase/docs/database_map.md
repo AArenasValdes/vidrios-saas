@@ -1000,6 +1000,7 @@ auth.users (1) ──── (N) users
 - El historial remoto contenia seis versiones sin archivo local. Se recuperaron con `supabase migration fetch --linked`: `20260517053830`, `20260517054151`, `20260518040656`, `20260708173558`, `20260709195129` y `20260717071404`.
 - Corresponden a cambios ya documentados en este mapa (hardening multi-tenant, policies, catalogo, Quote Studio y configuracion visual), pero con timestamps remotos distintos de sus copias locales historicas. No implica que esas capacidades falten en produccion.
 - La base de datos remota confirma que existen las piezas recurrentes de Mercado Pago: tabla `suscripciones_organizacion`, indice unico de suscripcion abierta, RPCs de conciliacion y ledger de pagos.
+- Preparada localmente la migración `20261013120000_link_existing_mercadopago_subscriptions.sql`: agrega `link_active_manual_subscription_to_mercadopago(...)`, RPC solo `service_role` para asociar un periodo manual vigente a un `preapproval` externo verificado. Conserva las fechas vigentes, cambia el método de pago proyectado a Mercado Pago y no activa ni extiende acceso. No aplicada ni registrada en remoto.
 - Fase 2 de Mercado Pago `20260812233117` y el default de trial 15 dias `20260813002850` fueron aplicados y registrados en remoto. El cambio no actualiza trials existentes.
 - La deuda restante son versiones locales antiguas sin marca remota. Es un bloqueo de automatizacion para `db push`, no una autorizacion para ejecutar o marcar esas migraciones en bloque.
 

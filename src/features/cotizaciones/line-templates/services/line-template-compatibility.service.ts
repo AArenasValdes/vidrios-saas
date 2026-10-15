@@ -136,9 +136,12 @@ function declaration(template: CotizacionLineTemplate): CompatibilityDeclaration
     defaultValue && typeof defaultValue === "object" && !Array.isArray(defaultValue)
       ? (defaultValue as CompatibilityDeclaration)
       : null;
+  const isCanonicalConfiguration = typeof getDefaultLineCatalogMetadata(template.catalogKey)?.configurationKey === "string";
   const isBahar5200Line = template.catalogKey?.startsWith("ventora:veratec-bahar-5200-") === true;
   const isElegansFixedLine = template.catalogKey === "ventora:veratec-elegans-60-fijo";
-  const value =
+  const value = isCanonicalConfiguration && defaultDeclaration
+    ? defaultDeclaration
+    :
     (isBahar5200Line || isElegansFixedLine) &&
     storedDeclaration &&
     defaultDeclaration

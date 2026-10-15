@@ -1,13 +1,14 @@
 /** @jest-environment jsdom */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MisPreciosContent } from "../mis-precios-content";
 
 const catalog = {
   providers: [{ providerKey: "supplier-a", providerName: "Proveedor A", revision: "2026-06", percentage: -10,
     presentations: [
-      { presentationId: "rail-1", sku: "SUP-A-1", name: "Riel proveedor A", finish: "Blanco", purchaseUnit: "M", commercialLengthMm: 5800, referenceNetPrice: 10940, currency: "CLP", ownNetPrice: 9000, effective: { unitNetPrice: 9000, source: "organization_override" as const, currency: "CLP" } },
+      { presentationId: "rail-1", familyKeys: ["universal:aluminio:l20"], technicalCodes: ["2001", "SUP-A-1"], sku: "SUP-A-1", name: "Riel proveedor A", finish: "Blanco", purchaseUnit: "M", commercialLengthMm: 5800, referenceNetPrice: 10940, currency: "CLP", ownNetPrice: 9000, effective: { unitNetPrice: 9000, source: "organization_override" as const, currency: "CLP" } },
       { presentationId: "stop-1", sku: "SUP-A-2", name: "Tope proveedor A", finish: "Blanco", purchaseUnit: "PCS", commercialLengthMm: null, referenceNetPrice: 1076, currency: "CLP", ownNetPrice: null, effective: { unitNetPrice: 968.4, source: "provider_adjustment" as const, currency: "CLP" } },
       { presentationId: "pending-1", sku: "SUP-A-3", name: "Escuadra pendiente", finish: null, purchaseUnit: "PCS", commercialLengthMm: null, referenceNetPrice: null, currency: "CLP", ownNetPrice: null, effective: null },
+      { presentationId: "pending-technical-code", familyKeys: ["universal:aluminio:l20"], technicalCodes: ["2003"], sku: "2003", supplierSku: null, name: "Jamba abierta", finish: "LEGNO", purchaseUnit: "TIRA", commercialLengthMm: 6000, referenceNetPrice: null, currency: "CLP", ownNetPrice: null, effective: null },
     ] }],
 };
 
@@ -16,14 +17,89 @@ const setup = (save = jest.fn(async () => true)) => {
   return save;
 };
 
-it("muestra proveedores primero y busca por nombre o SKU", () => {
+it("muestra proveedores primero y busca por nombre o código", () => {
   setup();
   expect(screen.getByRole("heading", { name: "Proveedores" })).toBeInTheDocument();
-  expect(screen.getByText("Junio 2026 · 3 productos")).toBeInTheDocument();
+  expect(screen.getByText("Junio 2026 · 4 productos")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: /Proveedor A/ }));
-  fireEvent.change(screen.getByRole("searchbox", { name: "Buscar producto o SKU" }), { target: { value: "SUP-A-1" } });
+  fireEvent.change(screen.getByRole("searchbox", { name: "Buscar perfil o código" }), { target: { value: "2001" } });
   expect(screen.getByText("Riel proveedor A")).toBeInTheDocument();
   expect(screen.queryByText("Tope proveedor A")).not.toBeInTheDocument();
+});
+
+it("muestra el código técnico y oculta los identificadores internos del proveedor", () => {
+  setup();
+  fireEvent.click(screen.getByRole("button", { name: /Proveedor A/ }));
+  fireEvent.change(screen.getByRole("searchbox", { name: "Buscar perfil o código" }), { target: { value: "2001" } });
+  expect(screen.getByText(/Código 2001 · Blanco · 5,8 m/)).toBeInTheDocument();
+  expect(screen.queryByText(/SUP-A-1/)).not.toBeInTheDocument();
+});
+
+it("muestra el código técnico del perfil aunque su precio esté pendiente", () => {
+  setup();
+  fireEvent.click(screen.getByRole("button", { name: /Proveedor A/ }));
+  fireEvent.change(screen.getByRole("searchbox", { name: "Buscar perfil o código" }), { target: { value: "2003" } });
+  expect(screen.getByText(/Código 2003 · LEGNO · 6 m/)).toBeInTheDocument();
+});
+
+it("no repite el código técnico y mantiene las dos columnas de precio legibles", () => {
+  const sameCodeCatalog = {
+    providers: [{
+      ...catalog.providers[0]!,
+      presentations: [...catalog.providers[0]!.presentations, {
+        presentationId: "duplicate-code",
+        familyKeys: ["universal:aluminio:l20"],
+        technicalCodes: ["2016"],
+        sku: "2016",
+        supplierSku: "2016",
+        name: "Traspaso termopanel",
+        finish: null,
+        purchaseUnit: "TIRA",
+        commercialLengthMm: 6000,
+        referenceNetPrice: null,
+        currency: "CLP",
+        ownNetPrice: null,
+        effective: null,
+      }],
+    }],
+  };
+  render(<MisPreciosContent catalog={sameCodeCatalog} error={null} busy={false} save={jest.fn(async () => true)} refresh={async () => undefined} />);
+  fireEvent.click(screen.getByRole("button", { name: /Proveedor A/ }));
+  const row = screen.getByRole("button", { name: /Editar precio de Traspaso termopanel/ });
+  expect(row).toHaveTextContent("Código 2016 · 6 m");
+  expect(row).not.toHaveTextContent("SKU 2016");
+  expect(within(row).getByText("Referencia")).toBeInTheDocument();
+  expect(within(row).getByText("Efectivo")).toBeInTheDocument();
+  expect(within(row).getAllByText("Pendiente")).toHaveLength(2);
+});
+
+it("ordena todas las líneas numéricamente y cada línea por su código técnico", () => {
+  const source = catalog.providers[0]!.presentations[0]!;
+  const makeProfile = (line: number, code: number) => ({
+    ...source,
+    presentationId: `L${line}-${code}`,
+    familyKeys: [`universal:aluminio:l${line}`],
+    technicalCodes: [String(code)],
+    sku: `supplier-${code}`,
+    name: `L${line} perfil ${code}`,
+  });
+  const orderedCatalog = {
+    providers: [{
+      ...catalog.providers[0]!,
+      presentations: [makeProfile(4000, 4002), makeProfile(25, 2502), makeProfile(20, 2009), makeProfile(25, 2501), makeProfile(20, 2001)],
+    }],
+  };
+  render(<MisPreciosContent catalog={orderedCatalog} error={null} busy={false} save={jest.fn(async () => true)} refresh={async () => undefined} />);
+  fireEvent.click(screen.getByRole("button", { name: /Proveedor A/ }));
+
+  const listedCodes = () => screen.getAllByRole("button")
+    .map((button) => button.getAttribute("aria-label") ?? "")
+    .filter((label) => label.startsWith("Editar precio de L"))
+    .map((label) => /Código (\d+)/.exec(label)?.[1]);
+  expect(listedCodes()).toEqual(["2001", "2009", "2501", "2502", "4002"]);
+
+  fireEvent.change(screen.getByLabelText("Sistema"), { target: { value: "universal:aluminio:l25" } });
+  expect(listedCodes()).toEqual(["2501", "2502"]);
 });
 
 it("edita precio propio desde sheet y permite volver al precio del proveedor", async () => {

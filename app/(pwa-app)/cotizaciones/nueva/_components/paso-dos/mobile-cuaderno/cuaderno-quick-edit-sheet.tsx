@@ -21,10 +21,13 @@ import { resolveComponentFabricacionHojas } from "@/features/cotizaciones/new-qu
 import { SodalL25QuoteConfigPanel } from "@/features/fabricacion/components/sodal-l25-quote-config-panel";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import {
-  getRecipeTechnicalHint,
   resolveConstructorRecipeCandidates,
   resolveConstructorRecipeSelection,
 } from "@/features/fabricacion/services/constructor-recipe-selection.service";
+import {
+  getConstructorRecipeProfileCodeLabel,
+  getConstructorRecipeSourceLabel,
+} from "@/features/fabricacion/services/constructor-recipe-option-label.service";
 import { resolveFabricationRecipe } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
 import { resolveUniversalPricedLineFallbacks } from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
 import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
@@ -62,18 +65,18 @@ function formatRecipeOptionLabel(
   recipe: NonNullable<ReturnType<typeof resolveConstructorRecipeSelection>>,
   candidates: readonly NonNullable<ReturnType<typeof resolveConstructorRecipeSelection>>[]
 ) {
-  const variantLabel = `${formatVariantDisplayLabel(recipe)} · ${recipe.definition.identidad.hojas} hojas`;
+  const leaves = recipe.definition.identidad.hojas;
+  const variantLabel = `${formatVariantDisplayLabel(recipe)} · ${leaves} ${leaves === 1 ? "hoja" : "hojas"}`;
   const duplicateLabels = candidates.filter(
     (candidate) =>
-      `${formatVariantDisplayLabel(candidate)} · ${candidate.definition.identidad.hojas} hojas` ===
+      `${formatVariantDisplayLabel(candidate)} · ${candidate.definition.identidad.hojas} ${candidate.definition.identidad.hojas === 1 ? "hoja" : "hojas"}` ===
       variantLabel
   );
-  if (duplicateLabels.length < 2) return variantLabel;
-
-  const technicalHint = getRecipeTechnicalHint(recipe);
-  return technicalHint
-    ? `${variantLabel} · ${technicalHint}`
-    : `${variantLabel} · ${recipe.definition.identidad.codigo || recipe.id}`;
+  const sourceLabel = getConstructorRecipeSourceLabel(recipe);
+  const profileCodes = duplicateLabels.length > 1
+    ? getConstructorRecipeProfileCodeLabel(recipe)
+    : null;
+  return [variantLabel, sourceLabel, profileCodes].filter(Boolean).join(" · ");
 }
 
 function resolveVariantCatalogKey(
@@ -112,7 +115,7 @@ type Props = {
   onClose: () => void;
   onSave: (patch: QuoteConstructorItemPatch) => void;
   onTemplatePriceUpdated?: (itemId: string, template: CotizacionLineTemplate) => void;
-  onOpenConstructor: () => void;
+  onOpenConstructor: (pendingChanges: QuoteConstructorItemPatch) => void;
   onDuplicate: () => void;
   onRemove: () => void;
 };
@@ -385,7 +388,7 @@ export function CuadernoQuickEditSheet({
       : "";
   };
 
-  const handleSave = () => {
+  const buildPendingChanges = (): QuoteConstructorItemPatch => {
     const patch: QuoteConstructorItemPatch = {
       nombre: nombre.trim().slice(0, 120) || item.nombre,
       ancho: ancho.trim(),
@@ -471,8 +474,10 @@ export function CuadernoQuickEditSheet({
         patch.markPriceManual = true;
       }
     }
-    onSave(patch);
+    return patch;
   };
+
+  const handleSave = () => onSave(buildPendingChanges());
 
   const handleLineTemplateChange = (
     nextLineTemplateId: string,
@@ -689,7 +694,7 @@ export function CuadernoQuickEditSheet({
           <section className={s.sheetSection} aria-label="Linea y precio">
             <div className={s.sheetSectionHead}>
               <strong>Linea y precio</strong>
-              <span>Al elegir linea se recalcula con la plantilla configurada.</span>
+              <span>La línea define el precio de venta; la composición define el despiece.</span>
             </div>
             <div className={s.compactPicker}>
               <LineTemplatePicker
@@ -712,17 +717,22 @@ export function CuadernoQuickEditSheet({
                 ariaLabel="Elegir linea de esta pieza"
               />
             </div>
+            {selectedLineTemplate?.proveedor ? (
+              <p className={s.variantSourceHint}>
+                Proveedor seleccionado: <strong>{selectedLineTemplate.proveedor}</strong>
+              </p>
+            ) : null}
 
             {!selectedLineIsSodalL25 && showFabricationVariant ? (
               <label className={s.field}>
-                <span className={s.fieldLabel}>Variante de fabricación</span>
+                <span className={s.fieldLabel}>Composición para el despiece</span>
                 <select
                   className={s.fieldInput}
-                  aria-label="Variante de fabricación"
+                  aria-label="Composición para el despiece"
                   value={fabricationSelection}
                   onChange={(event) => setFabricationSelectionDraft(event.target.value)}
                 >
-                  <option value="">Elige una variante</option>
+                  <option value="">Elige una composición</option>
                   {inlineRecipeCandidates.length > 0
                     ? inlineRecipeCandidates.map((recipe) => (
                         <option key={recipe.id} value={`recipe:${recipe.id}`}>
@@ -801,7 +811,11 @@ export function CuadernoQuickEditSheet({
             </div>
           </section>
 
-          <button type="button" className={s.constructorLink} onClick={onOpenConstructor}>
+          <button
+            type="button"
+            className={s.constructorLink}
+            onClick={() => onOpenConstructor(buildPendingChanges())}
+          >
             <span>
               <p className={s.constructorLinkTitle}>Forma y apertura</p>
               <p className={s.constructorLinkHelp}>

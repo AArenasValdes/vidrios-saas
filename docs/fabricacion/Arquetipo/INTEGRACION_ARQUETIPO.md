@@ -60,6 +60,34 @@ La sincronización global de líneas por organización queda en `scripts/catalog
 - El catálogo técnico Arquetipo no presenta una lista general de precios. No crear ceros para perfiles ausentes de la cotización.
 - No persistir nombre, RUT, teléfono ni dirección del cliente de la cotización dentro de fixtures, pruebas o documentación.
 
+### Enlace de precio y pauta en cotización (2026-10-14)
+
+- La matriz versionada conserva 84 presentaciones en diez familias y los 29 importes netos de la cotización 27811. El test `arquetipo-catalogo-2026-10-05.contract.test.ts` fija los importes por SKU/código y deja 55 presentaciones sin precio como pendientes.
+- En `Líneas y precios` se muestran por separado el código técnico del perfil y el SKU Arquetipo; `2001` y `30892001` identifican campos distintos.
+- Para las diez familias universales, la selección automática de costo prioriza Arquetipo. Una presentación privada explícitamente preferida por el taller conserva precedencia; no se sustituye un perfil faltante por el código o precio de otro proveedor.
+- Si la receta ya calculó cortes pero falta una presentación de compra, el snapshot conjunto conserva esos cortes usando el largo guardado en la receta. SKU y costo permanecen pendientes. El predeterminado Ventora de 6.000 mm solo entra cuando la receta no declara otro largo.
+- El precio de venta por m² vive en la línea comercial y no se calcula desde el precio de compra por tira. Los precios comerciales faltantes siguen editables y pendientes; las recetas no sustentadas, incluida L35, no generan cortes.
+- Cotizaciones sin cambios comerciales/técnicos conservan sus snapshots. Al finalizar un borrador o guardar una edición técnica se vuelven a resolver presentaciones para el snapshot que se reconstruye.
+
+### Cruce de precio Arquetipo y composiciones con pauta (2026-10-14)
+
+La cotización 27811 asigna precio de compra a perfiles individuales por tira; no identifica una ventana completa ni una variante de fabricación. El catálogo describe sistemas y muestra secciones. Por eso, el hecho de que un perfil tenga precio no autoriza a formar una composición ni a trasladar su precio a otro código. En una receta calculable, los cortes se guardan aunque algún perfil de esa composición siga con costo pendiente.
+
+| Familia | Perfiles con precio Arquetipo | Composiciones que describe el catálogo | Cobertura de receta actual y límite |
+|---|---|---|---|
+| L20 | 2001, 2002, 2004, 2005, 2009, 2010, 2019 | Corredera de 2–3 hojas; opciones de cámara de agua/portafelpa, monolítico/termopanel y piernas/cierres distintos. No ofrece paño fijo. | Pauta de taller confirmada solo para corredera 2H, pierna abierta y jamba 2009. Las otras composiciones requieren su variante y receta exactas; el precio de 2010/2019 no las habilita por sí mismo. |
+| L25 | 2501, 2502, 2504, 2505, 2507, 2509, 2510 | Corredera de 2–4 hojas, rieles de 2/3 vías, monolítico/termopanel y piernas normal/abierta/cerrada/reforzada. | Se preservan las 18 variantes canónicas SODAL/Zeta existentes. Resolver por hojas, vidrio, pierna y refuerzo; no reemplazar sus perfiles ni fórmulas al enlazar precios. |
+| L32 | 3201, 3202, 3204, 3208 | Proyectante y paño fijo; hay perfiles de marco con cámara de agua y palillo. | Pauta confirmada solo para proyectante Normal 1H (3201, 3202, 3208). 3204 es ambiguo y no integra esa receta; paño fijo y cámara de agua no están cubiertos. |
+| L42 | 4202, 4204, 4209, 4229 | Proyectante y paño fijo, con alternativas de marco/cámara y junquillo para vidrio. | Pauta confirmada solo para proyectante Normal 1H. Usa marco 4201, hoja 4202 y junquillo monolítico 4229: el precio de 4209 es para marco fijo y no se copia a 4201; 4204 queda ambiguo. Paño fijo, cámara y termopanel requieren receta propia. |
+| L5000 | 5001–5007 | Corredera de 2–3 hojas, con opciones de cierre embutido/caracol y pierna normal. | Pauta de taller confirmada solo para Caracol 2H; no extender automáticamente a 3H ni a otros cierres. |
+| L15 | Sin precio en cotización 27811 | Corredera de 2–3 hojas y variantes 4H con 2 o 4 rieles. | Hay recetas calculables separadas por topología; para 4H se debe seleccionar 2 o 4 rieles. No atribuirles precio Arquetipo. |
+| L4000 | Sin precio en cotización 27811 | El catálogo Arquetipo describe corredera 2H. | La receta 2H existente resuelve; no atribuirle los precios de otras familias. Variantes 3H/4H necesitan evidencia propia de su sistema antes de ofrecerse como composición Arquetipo. |
+| L12 | Sin precio en cotización 27811 | Shower para tina con 2 hojas correderas; receptáculo con 2 paños fijos y 2 correderas. | Pauta de taller confirmada para Shower 2H. La composición de receptáculo de 4 paños no se deriva de ella. |
+| L35 | Sin precio en cotización 27811 | Puertas vaivén/abatibles con bastidor normal o liviano. | Sin receta completa: faltan composición seleccionada, cantidades y descuentos; debe permanecer sin pauta hasta contar con esa fuente. |
+| L45 | Sin precio en cotización 27811 | El catálogo aporta perfiles de puerta, no las reglas de armado/corte. | Existe receta independiente de puerta abatible 1H en fuente SODAL/Indalum, calculable como preliminar. No se considera una receta extraída del catálogo Arquetipo ni validada por taller. |
+
+La matriz distingue cuatro hechos diferentes: un perfil puede tener costo de compra; una línea puede tener precio de venta por m²; una composición puede tener receta calculable; y esa receta puede o no estar validada por el taller. Solo el tercer hecho produce el despiece. Las discrepancias de descripción en 2010, 2019, 3204 y 4204 conservan su identidad/rol; el perfil 4209 corresponde a marco fijo y no sustituye al 4201 de la receta proyectante. Ninguno se redirige a perfiles parecidos.
+
 El CSV local de preparación, sin datos del cliente, fue reemplazado como fuente de ejecución por el fixture versionado `src/features/proveedor-catalogos/fixtures/arquetipo-catalogo-2026-10-05.ts` y el importador `scripts/catalog/import-arquetipo-global.ts`. El lote se aplicó con `--apply` al proyecto Supabase de producción `yrtrwgkaopfumpidjthk`; el preflight encontró 284 inserciones y cero conflictos. Verificación posterior: 10 familias, 84 insumos técnicos, 84 presentaciones, 29 precios y suma CLP 513.984. No se cargó información personal de la cotización.
 
 La cotización no contiene precios para las líneas 15, 4000, 35, 45 o 12; quedaron sus códigos/presentaciones técnicas visibles sin precio, sin valores cero. La línea 15, 4000 y 45 conservan las incompatibilidades de receta descritas arriba. La publicación del catálogo no crea fórmulas para esas líneas ni las declara validadas. Las reglas de Línea 12 capturadas desde la pantalla siguen preliminares y el largo de 6.000 mm sigue siendo supuesto del usuario.

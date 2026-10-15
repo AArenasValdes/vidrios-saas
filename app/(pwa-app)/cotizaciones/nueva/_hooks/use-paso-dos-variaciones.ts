@@ -277,7 +277,24 @@ export function usePasoDosVariaciones({
       builtItems.push(groupedItem);
     }
 
-    changedDrafts.forEach((itemDraft, index) => {
+    const changedGroups = Array.from(
+      changedDrafts.reduce((groups, itemDraft) => {
+        const key = JSON.stringify([
+          itemDraft.ancho,
+          itemDraft.alto,
+          itemDraft.precio,
+          itemDraft.sistema,
+          force && itemDraft.id === forcedDraftId ? itemDraft.id : "",
+        ]);
+        const group = groups.get(key) ?? [];
+        group.push(itemDraft);
+        groups.set(key, group);
+        return groups;
+      }, new Map<string, typeof changedDrafts>())
+    ).map(([, group]) => group);
+
+    changedGroups.forEach((group, index) => {
+      const itemDraft = group[0];
       const originalIndex = variationQuickEditDraft.items.findIndex(
         (current) => current.id === itemDraft.id
       );
@@ -289,10 +306,14 @@ export function usePasoDosVariaciones({
             : index === 0
               ? variationQuickEditDraft.baseCode
               : buildVariationMemberCode(variationQuickEditDraft.baseCode, originalIndex + 1),
-        cantidad: "1",
+        cantidad: String(group.length),
         ancho: itemDraft.ancho,
         alto: itemDraft.alto,
         costoProveedorUnitario: itemDraft.precio,
+        precioAjustadoManual:
+          parsed.precioAjustadoManual ||
+          (variationQuickEditDraft.pricingMode === "precio_directo" &&
+            itemDraft.precio !== baseline.precio),
         referencia: composeComponentReference(
           itemDraft.sistema,
           variationQuickEditDraft.configuracion
@@ -302,9 +323,11 @@ export function usePasoDosVariaciones({
         lineTemplates: activeLineTemplates,
       });
       itemsWithoutSource.push(nextItem);
-      builtItemsByDraftId.set(itemDraft.id, nextItem);
+      group.forEach((draft) => builtItemsByDraftId.set(draft.id, nextItem));
       builtItems.push(nextItem);
     });
+
+    const firstGroupedDraft = unchangedCount > 0 ? baseline : changedGroups[0]?.[0] ?? baseline;
 
     return {
       changed: true,
@@ -314,7 +337,12 @@ export function usePasoDosVariaciones({
         tipo: variationQuickEditDraft.tipo,
         pricingMode: variationQuickEditDraft.pricingMode,
         configuracion: variationQuickEditDraft.configuracion,
-        base: variationQuickEditDraft.base,
+        base: {
+          ancho: firstGroupedDraft.ancho,
+          alto: firstGroupedDraft.alto,
+          precio: firstGroupedDraft.precio,
+          sistema: firstGroupedDraft.sistema,
+        },
         itemIds: builtItems.map((item) => item.id),
       },
       nextItems: [
@@ -333,7 +361,7 @@ export function usePasoDosVariaciones({
   const syncMaterializedResult = (materialized: MaterializedVariationResult) => {
     setItems(materialized.nextItems);
 
-    if (materialized.family && materialized.family.itemIds.length > 1) {
+    if (materialized.family) {
       setVariationFamilies((current) => {
         const others = current.filter(
           (family) => family.familyId !== materialized.family?.familyId
@@ -341,12 +369,6 @@ export function usePasoDosVariaciones({
         return [...others, materialized.family!];
       });
       return;
-    }
-
-    if (materialized.family) {
-      setVariationFamilies((current) =>
-        current.filter((family) => family.familyId !== materialized.family?.familyId)
-      );
     }
   };
 
@@ -368,6 +390,18 @@ export function usePasoDosVariaciones({
                   }
                 : item
             ),
+          }
+        : current
+    );
+  };
+
+  const handleApplyVariationQuickEditPriceToAll = (value: string) => {
+    setVariationQuickEditDraft((current) =>
+      current
+        ? {
+            ...current,
+            dirty: true,
+            items: current.items.map((item) => ({ ...item, precio: value })),
           }
         : current
     );
@@ -512,7 +546,6 @@ export function usePasoDosVariaciones({
           family.itemIds
             .map((itemId) => items.find((item) => item.id === itemId) ?? null)
             .filter((item): item is CotizacionWorkflowItem => item !== null)
-            .filter((item) => item.cantidad === 1)
             .map((item) => [item.id, family.baseCode] as const)
         )
       ),
@@ -533,6 +566,7 @@ export function usePasoDosVariaciones({
     openVariationQuickEdit,
     openVariationQuickEditForFamily,
     handleVariationQuickEditChange,
+    handleApplyVariationQuickEditPriceToAll,
     handleEditVariationFull,
     handleCloseVariationQuickEdit,
     handleItemRemoved,

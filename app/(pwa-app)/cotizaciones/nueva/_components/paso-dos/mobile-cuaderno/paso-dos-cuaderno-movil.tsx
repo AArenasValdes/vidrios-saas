@@ -18,6 +18,7 @@ import {
   type QuoteConstructorItemPatch,
   type QuoteConstructorPresetId,
 } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
+import { setGuidedVisualDimensions } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
 import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
@@ -279,18 +280,23 @@ export function PasoDosCuadernoMovil({
       .filter(Boolean)
       .join(" · ") || "Agrega piezas a tu cotización";
 
-  const buildCompositionConfig = (item: CotizacionWorkflowItem) =>
-    getQuoteConstructorItemConfig(item) ??
-    createQuoteConstructorPresetConfig("fijo", {
+  const buildCompositionConfig = (item: CotizacionWorkflowItem) => {
+    const existing = getQuoteConstructorItemConfig(item);
+    if (existing) {
+      return setGuidedVisualDimensions(existing, {
+        widthMm: item.ancho || existing.widthMm,
+        heightMm: item.alto || existing.heightMm,
+      });
+    }
+    return createQuoteConstructorPresetConfig("fijo", {
       widthMm: item.ancho || 1200,
       heightMm: item.alto || 1000,
     });
+  };
 
   const compositionConfig = useMemo(
     () => (compositionItem ? buildCompositionConfig(compositionItem) : null),
-    // Mantiene estable la composicion mientras se edita la misma pieza.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [compositionItem?.id]
+    [compositionItem]
   );
 
   const applyComposition = (item: CotizacionWorkflowItem, next: GuidedVisualConfig) => {
@@ -666,7 +672,10 @@ export function PasoDosCuadernoMovil({
             setQuickEditItemId(null);
           }}
           onTemplatePriceUpdated={onTemplatePriceUpdated}
-          onOpenConstructor={() => {
+          onOpenConstructor={(pendingChanges) => {
+            // El editor rápido mantiene campos en estado local. Al cambiar a composición
+            // debe confirmar ese borrador antes de desmontarse para no perderlo.
+            onUpdateItem(quickEditItem.id, pendingChanges);
             setReturnToQuickEditAfterConstructor(false);
             setCompositionItemId(quickEditItem.id);
             setQuickEditItemId(null);

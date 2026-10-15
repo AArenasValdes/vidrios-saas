@@ -389,9 +389,15 @@ export function resolveUniversalPricedLineFallbacks(input: {
       recipe.status !== "archived",
   );
   const workshopConfirmedLine = USER_CONFIRMED_UNIVERSAL_WORKSHOP_LINE_KEYS.has(input.catalogKey);
+  // The default L42 candidate is Normal even when a separate ALAR workshop
+  // draft exists. Only a workshop recipe for the same variant blocks it.
+  const requestedVariant = input.variant ??
+    (input.catalogKey === "ventora:l42" || input.catalogKey === "ventora:arquetipo-l42-proyectante"
+      ? "normal"
+      : null);
   const hasWorkshopCustomizedRecipe = activeLineRecipes.some((recipe) => {
     if (!recipe.sourceReference?.startsWith("taller:personalizada:")) return false;
-    if (input.variant && recipe.variant !== input.variant) return false;
+    if (requestedVariant && recipe.variant !== requestedVariant) return false;
     if (input.leavesCount != null && recipe.leavesCount !== input.leavesCount) return false;
     if (input.typology && recipe.typology !== input.typology) return false;
     return true;

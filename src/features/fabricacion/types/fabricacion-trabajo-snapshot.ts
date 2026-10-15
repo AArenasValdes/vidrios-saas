@@ -12,8 +12,10 @@ export type FabricacionTrabajoItemInput = {
   supplierFamilyKey?: string | null;
   /** Resuelta explícitamente desde presentaciones confirmadas del catálogo. */
   supplierPresentationSelections?: FabricacionTrabajoPresentationSelection[];
-  /** Si el catálogo aplica a esta línea, una resolución ausente nunca usa el largo de receta. */
+  /** Si el catálogo aplica a esta línea, una resolución ausente debe quedar registrada como pendiente. */
   requireSupplierPresentation?: boolean;
+  /** Mantiene la pauta calculable con el largo de receta cuando falta la presentación de compra. */
+  allowRecipeLengthWhenSupplierPending?: boolean;
   snapshot: FabricacionCotizacionSnapshot | null;
 };
 export type FabricacionTrabajoPresentationSelection = {

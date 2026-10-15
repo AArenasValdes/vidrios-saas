@@ -42,6 +42,8 @@ describe("CostoTecnicoParcialPanel", () => {
     expect(screen.getByText("1 insumos valorizados")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Ver materiales" }));
     expect(screen.getByText("Tornillo")).toBeInTheDocument();
+    expect(screen.getByText("Código técnico: R")).toBeInTheDocument();
+    expect(screen.getByText("Sin presentación confirmada")).toBeInTheDocument();
     expect(screen.getByText("17 unidad")).toBeInTheDocument();
     expect(screen.queryByText(/CLP supuesto|validar con proveedor/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/SKU-PRIVATE/)).not.toBeInTheDocument();

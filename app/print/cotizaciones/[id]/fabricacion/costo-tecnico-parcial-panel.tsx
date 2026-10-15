@@ -228,7 +228,9 @@ export function CostoTecnicoParcialPanel({ quoteId, onSnapshotChange }: { quoteI
                   <div className={styles.pendingIdentity}>
                     <div>
                       <strong>{entry.description}</strong>
+                      {entry.technicalCode ? <span>Código técnico: {entry.technicalCode}</span> : null}
                       {entry.quantity != null ? <span>{entry.quantity} {entry.unit ?? "unidad"}</span> : null}
+                      {entry.reason ? <p className={styles.pendingReason}>{entry.reason}</p> : null}
                     </div>
                     {canConfigure && entry.technicalCode ? <button type="button" className={styles.priceAction} onClick={() => isEditing ? setActivePriceEntry(null) : void openPendingPrice(entryKey, entry.technicalCode!)} aria-expanded={isEditing}>
                       {isEditing ? "Cerrar" : "Agregar mi precio"}

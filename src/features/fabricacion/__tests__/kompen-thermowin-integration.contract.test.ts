@@ -15,6 +15,16 @@ const KEYS = [
   "ventora:thermowin-americana-s70",
 ] as const;
 
+const LINE_KEYS = VENTORA_DEFAULT_LINE_CATALOG
+  .filter((entry) =>
+    KEYS.includes(entry.catalogKey as (typeof KEYS)[number]) ||
+    entry.catalogKey?.startsWith("ventora:kompen-prime-line-700:configuration:") === true ||
+    entry.catalogKey?.startsWith("ventora:kompen-form-line-800:configuration:") === true ||
+    entry.catalogKey?.startsWith("ventora:kompen-star-line-500:configuration:") === true ||
+    entry.catalogKey?.startsWith("ventora:thermowin-americana-s70:configuration:") === true
+  )
+  .map((entry) => entry.catalogKey as string);
+
 function line(catalogKey: string, id: number): CotizacionLineTemplate {
   const source = VENTORA_DEFAULT_LINE_CATALOG.find((entry) => entry.catalogKey === catalogKey);
   if (!source) throw new Error(`Falta línea ${catalogKey}`);
@@ -46,7 +56,7 @@ function line(catalogKey: string, id: number): CotizacionLineTemplate {
 }
 
 describe("Kompen Thermowin: contrato de integración documental", () => {
-  const lines = KEYS.map((key, index) => line(key, index + 1));
+  const lines = LINE_KEYS.map((key, index) => line(key, index + 1));
 
   it.each([
     ["NUEVA PRIME LINE 700 2025 (2).pdf", "9E17573F771A74D218EFE658F9050CA590B91F6383090A5DF16783DADA18D54C"],
@@ -61,7 +71,8 @@ describe("Kompen Thermowin: contrato de integración documental", () => {
   });
 
   it("registra cuatro sistemas con identidad, procedencia y perfiles propios, sin precio supuesto", () => {
-    expect(new Set(lines.map((entry) => entry.catalogKey)).size).toBe(4);
+    expect(new Set(lines.map((entry) => entry.catalogKey)).size).toBe(12);
+    expect(new Set(lines.map((entry) => entry.catalogMetadata?.familyKey)).size).toBe(4);
     for (const entry of lines) {
       expect(entry.precioM2Sugerido).toBe(0);
       expect(entry.catalogMetadata?.familyKey).toMatch(/^thermowin:/);
@@ -89,10 +100,14 @@ describe("Kompen Thermowin: contrato de integración documental", () => {
   it.each([
     ["Ventana", "Abatible", [KEYS[0], KEYS[2]]],
     ["Ventana", "Corredera", [KEYS[1], KEYS[3]]],
-    ["Ventana", "Guillotina", [KEYS[3]]],
-    ["Ventana", "Celosía", [KEYS[3]]],
-    ["Puerta", "Corredera", [KEYS[1]]],
-    ["Paño fijo", "Fijo", [KEYS[0], KEYS[2], KEYS[3]]],
+    ["Ventana", "Guillotina", ["ventora:thermowin-americana-s70:configuration:ventana-guillotina"]],
+    ["Ventana", "Celosía", ["ventora:thermowin-americana-s70:configuration:ventana-celosia"]],
+    ["Puerta", "Corredera", ["ventora:kompen-form-line-800:configuration:puerta-corredera"]],
+    ["Paño fijo", "Fijo", [
+      "ventora:kompen-prime-line-700:configuration:pano-fijo",
+      "ventora:kompen-star-line-500:configuration:pano-fijo",
+      "ventora:thermowin-americana-s70:configuration:pano-fijo",
+    ]],
   ])("filtra %s / %s por compatibilidad explícita", (tipo, sistema, expected) => {
     expect(filterLineTemplatesForComponent(lines, { tipo, sistema, material: "PVC" })
       .map((entry) => entry.catalogKey)).toEqual(expected);

@@ -17,6 +17,17 @@ export function shouldResolveFabricationRecipesForQuoteSave(input: {
   return input.existingStatus === "borrador" && input.nextStatus !== "borrador";
 }
 
+/** Relee vínculos de compra solo al crear o recalcular técnicamente una cotización. */
+export function shouldResolveSupplierPresentationsForQuoteSave(input: {
+  existingId?: string | number | null;
+  finalizingDraft?: boolean;
+  itemCountToResolve?: number;
+  shouldRebuildTrabajoSnapshot?: boolean;
+} = {}) {
+  return input.existingId == null || input.finalizingDraft === true ||
+    (input.itemCountToResolve ?? 0) > 0 || input.shouldRebuildTrabajoSnapshot === true;
+}
+
 function fabricationInputKey(item: CotizacionWorkflowItem) {
   const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
   return JSON.stringify({
@@ -64,10 +75,13 @@ export function prepareFabricacionSnapshotsForQuoteSave(input: {
 }): {
   items: CotizacionWorkflowItem[];
   itemIdsToResolve: Set<string>;
+  /** An explicitly accepted item snapshot must refresh the quote-level rollup. */
+  shouldRebuildTrabajoSnapshot: boolean;
 } {
   const resolveAllMissing = input.existingId == null || input.finalizingDraft === true;
   const existingById = new Map((input.existingItems ?? []).map((item) => [item.id, item]));
   const itemIdsToResolve = new Set<string>();
+  let shouldRebuildTrabajoSnapshot = false;
 
   const items = input.items.map((item) => {
     if (item.tipoItem === "item_libre_con_valor") return item;
@@ -80,6 +94,14 @@ export function prepareFabricacionSnapshotsForQuoteSave(input: {
     }
 
     if (previous && !changed) {
+      if (
+        item.fabricacionSnapshot &&
+        JSON.stringify(item.fabricacionSnapshot) !== JSON.stringify(previous.fabricacionSnapshot ?? null)
+      ) {
+        // This path is reached only when a user explicitly saves a calculated
+        // pauta from the review surface. Preserve all other historical items.
+        shouldRebuildTrabajoSnapshot = true;
+      }
       const preserved = item.fabricacionSnapshot ?? previous.fabricacionSnapshot ?? null;
       if (preserved) return { ...item, fabricacionSnapshot: preserved };
       if (!resolveAllMissing) return item;
@@ -92,7 +114,7 @@ export function prepareFabricacionSnapshotsForQuoteSave(input: {
     return item;
   });
 
-  return { items, itemIdsToResolve };
+  return { items, itemIdsToResolve, shouldRebuildTrabajoSnapshot };
 }
 
 /**

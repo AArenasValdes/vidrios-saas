@@ -93,17 +93,48 @@ function priceOrigin(row: MyPresentationPrice, adjustmentPercentage: number) {
   return "Pendiente";
 }
 
+function technicalCode(row: MyPresentationPrice) {
+  return row.technicalCodes?.find((code) => code.trim()) ?? null;
+}
+
+function universalAluminumLineNumber(row: MyPresentationPrice) {
+  return (row.familyKeys ?? []).reduce((lowest, familyKey) => {
+    const match = /(?:^|:)(?:l)(\d+)$/i.exec(familyKey);
+    if (!match) return lowest;
+    const value = Number(match[1]);
+    return Number.isSafeInteger(value) ? Math.min(lowest, value) : lowest;
+  }, Number.MAX_SAFE_INTEGER);
+}
+
+function numericTechnicalCode(row: MyPresentationPrice) {
+  const codes = (row.technicalCodes ?? []).map((code) => code.trim());
+  const exactNumbers = codes.filter((code) => /^\d+$/.test(code)).map(Number);
+  const candidates = exactNumbers.length
+    ? exactNumbers
+    : codes.map((code) => /^(\d+)/.exec(code)?.[1]).filter((code): code is string => Boolean(code)).map(Number);
+  return candidates.length ? Math.min(...candidates) : Number.MAX_SAFE_INTEGER;
+}
+
+function presentationMeta(row: MyPresentationPrice) {
+  const code = technicalCode(row);
+  return [
+    code ? `Código ${code}` : null,
+    row.finish,
+    row.commercialLengthMm ? `${(row.commercialLengthMm / 1000).toLocaleString("es-CL")} m` : row.purchaseUnit,
+  ].filter(Boolean).join(" · ");
+}
+
 function ProductRow({ row, adjustmentPercentage, onOpen }: { row: MyPresentationPrice; adjustmentPercentage: number; onOpen: () => void }) {
   const effective = row.effective?.unitNetPrice ?? null;
   const effectiveCurrency = row.effective?.currency ?? row.currency;
   const origin = priceOrigin(row, adjustmentPercentage);
-  const meta = `${row.sku}${row.finish ? ` · ${row.finish}` : ""}${row.commercialLengthMm ? ` · ${(row.commercialLengthMm / 1000).toLocaleString("es-CL")} m` : ` · ${row.purchaseUnit}`}`;
+  const meta = presentationMeta(row);
   return (
     <button
       className={s.product}
       type="button"
       onClick={onOpen}
-      aria-label={`Editar precio de ${row.name}, ${row.sku}. Referencia ${money(row.referenceNetPrice, row.currency)}. Efectivo ${money(effective, effectiveCurrency)}. ${origin}`}
+      aria-label={`Editar precio de ${row.name}, ${presentationMeta(row)}. Referencia ${money(row.referenceNetPrice, row.currency)}. Efectivo ${money(effective, effectiveCurrency)}. ${origin}`}
     >
       <span className={s.productIdentity}>
         <strong>{row.name}</strong>
@@ -275,14 +306,20 @@ export function MisPreciosContent({ catalog, error, busy, save, refresh }: Retur
   };
 
   const selectedProvider = providers.find((provider) => provider.providerKey === selectedKey) ?? null;
-  const familyKeys = useMemo(() => [...new Set((selectedProvider?.presentations ?? []).flatMap((row) => row.familyKeys ?? []))].sort(), [selectedProvider]);
+  const familyKeys = useMemo(() => [...new Set((selectedProvider?.presentations ?? []).flatMap((row) => row.familyKeys ?? []))]
+    .sort((a, b) => {
+      const familyNumber = (key: string) => Number(/(?:^|:)l(\d+)$/i.exec(key)?.[1] ?? Number.MAX_SAFE_INTEGER);
+      return familyNumber(a) - familyNumber(b) || a.localeCompare(b, "es-CL", { numeric: true });
+    }), [selectedProvider]);
   const familyLabel = (key: string) => key.split(":").at(-1)?.replace(/[-_]+/g, " ").replace(/\b\w/g, (letter) => letter.toLocaleUpperCase("es-CL")) ?? key;
   const visibleRows = (selectedProvider?.presentations ?? []).filter((row) => {
-    const matchesSearch = `${row.sku} ${row.name} ${row.finish ?? ""}`.toLocaleLowerCase("es-CL").includes(search.trim().toLocaleLowerCase("es-CL"));
+    const matchesSearch = `${row.technicalCodes?.join(" ") ?? ""} ${row.name} ${row.finish ?? ""}`.toLocaleLowerCase("es-CL").includes(search.trim().toLocaleLowerCase("es-CL"));
     const matchesFamily = familyKey === "all" || row.familyKeys?.includes(familyKey);
     const matchesFilter = productFilter === "all" || (productFilter === "custom" ? row.ownNetPrice != null : row.effective?.unitNetPrice == null);
     return matchesSearch && matchesFamily && matchesFilter;
-  });
+  }).sort((a, b) => universalAluminumLineNumber(a) - universalAluminumLineNumber(b)
+    || numericTechnicalCode(a) - numericTechnicalCode(b)
+    || a.name.localeCompare(b.name, "es-CL", { numeric: true }));
   const selectedRow = sheet?.kind === "price" ? selectedProvider?.presentations.find((row) => row.presentationId === sheet.presentationId) ?? null : null;
   const customCount = selectedProvider?.presentations.filter((row) => row.ownNetPrice != null).length ?? 0;
 
@@ -360,7 +397,7 @@ export function MisPreciosContent({ catalog, error, busy, save, refresh }: Retur
   const previewPercentage = sheet?.kind === "adjustment" ? (Number(adjustmentAmount) || 0) * (adjustmentMode === "discount" ? -1 : 1) : 0;
   const adjustedPreview = adjustmentPreview ? adjustedNet(adjustmentPreview.referenceNetPrice, previewPercentage) : null;
   const sheetAdjusted = selectedRow && selectedProvider ? adjustedNet(selectedRow.referenceNetPrice, selectedProvider.percentage) : null;
-  const productMeta = selectedRow ? `${selectedRow.sku}${selectedRow.finish ? ` · ${selectedRow.finish}` : ""}${selectedRow.commercialLengthMm ? ` · ${(selectedRow.commercialLengthMm / 1000).toLocaleString("es-CL")} m` : ` · ${selectedRow.purchaseUnit}`}` : "";
+  const productMeta = selectedRow ? presentationMeta(selectedRow) : "";
   const adjustmentLabel = selectedProvider ? (selectedProvider.percentage === 0 ? "Sin ajuste" : `${selectedProvider.percentage < 0 ? "Descuento" : "Recargo"} ${formatPercent(selectedProvider.percentage)}%`) : "";
 
   const sheetNode = sheet ? (
@@ -511,7 +548,7 @@ export function MisPreciosContent({ catalog, error, busy, save, refresh }: Retur
                 <div className={s.tools}>
                   <label className={s.search}>
                     <SearchGlyph />
-                    <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar producto o SKU" aria-label="Buscar producto o SKU" enterKeyHint="search" autoComplete="off" autoCorrect="off" />
+                    <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar perfil o código" aria-label="Buscar perfil o código" enterKeyHint="search" autoComplete="off" autoCorrect="off" />
                     <button type="button" className={s.clearSearch} aria-label="Limpiar búsqueda" onClick={() => setSearch("")} hidden={!search}>
                       <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.2 2.2 9.8 9.8M9.8 2.2 2.2 9.8" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
                     </button>

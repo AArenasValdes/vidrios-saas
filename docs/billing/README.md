@@ -104,6 +104,25 @@ ignorados. Un pago que ya figure como `processed` no se recupera por replay
 con el mismo `request_id`; su recuperación requiere reemitir el evento o
 reconciliar el recurso desde Mercado Pago con su ID original.
 
+### Vincular suscripciones externas ya activas
+
+Las suscripciones creadas desde enlaces externos de “Planes de suscripción” no
+traen la reserva ni la referencia Ventora del checkout. Un administrador puede
+vincularlas desde `/admin/clientes/[organizationId]` → **Vincular pago
+automático**, ingresando el ID exacto del `preapproval` que muestra Mercado
+Pago. El servidor consulta la suscripción real y exige estado `authorized`, el
+ID de plan configurado para el plan vigente, monto y moneda exactos, y un único
+periodo manual activo que coincida con el vencimiento del perfil.
+
+La vinculación conserva el periodo ya pagado y no concede días nuevos. Una vez
+asociada, el webhook firmado reconcilia los próximos eventos por ID de
+suscripción; `/api/cron/mercadopago-billing` recupera el cobro aprobado desde
+Mercado Pago si la notificación no llega. Solo un pago confirmado extiende el
+acceso. La acción está protegida por administrador y usa el RPC
+`link_active_manual_subscription_to_mercadopago`, disponible en la migración
+local `20261013120000_link_existing_mercadopago_subscriptions.sql`; la
+migración debe aplicarse antes de usarla en producción.
+
 ## Comportamientos importantes
 
 - **Solo Chile:** empresas con `organization_profile.country_code !== 'CL'` reciben respuesta de no disponibilidad; no se crea reserva ni cobro CLP.
@@ -134,6 +153,7 @@ reconciliar el recurso desde Mercado Pago con su ID original.
 | Lifecycle / Mi plan | `src/features/subscriptions/services/mercadopago-lifecycle.service.ts` |
 | API create | `app/api/subscriptions/mercadopago/create/route.ts` |
 | API webhook | `app/api/subscriptions/mercadopago/webhook/route.ts` |
+| Vincular suscripción MP existente (solo admin) | `app/api/admin/clientes/link-mercadopago/route.ts` |
 | API cron diario | `app/api/cron/mercadopago-billing/route.ts` |
 | Agenda cron Vercel | `vercel.json` |
 | UI activación | `app/(subscription-gate)/cuenta-vencida/` |

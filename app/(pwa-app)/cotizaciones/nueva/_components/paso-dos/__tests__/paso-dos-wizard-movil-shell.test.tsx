@@ -182,6 +182,7 @@ const baseProps = {
   variationQuickEdit: null,
   onGoToSummary: jest.fn(),
   onVariationQuickEditChange: jest.fn(),
+  onApplyVariationQuickEditPriceToAll: jest.fn(),
   onEditVariationFull: jest.fn(),
   onCloseVariationQuickEdit: jest.fn(),
   onEditItem: jest.fn(),

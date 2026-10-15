@@ -46,6 +46,8 @@ export type SupplierQuoteItemColor = {
 };
 
 type CostLine = {
+  /** Canonical family captured so a repeated technical code cannot cross systems. */
+  familyKey?: string | null;
   presentationId?: string;
   providerKey?: string;
   /** Code preserved from the saved recipe/cutting snapshot. */
@@ -105,6 +107,7 @@ export function technicalCostStatusFromDatabase(
 }
 
 type PendingCut = {
+  familyKey: string;
   technicalCode: string;
   finishKey: string;
   technicalName: string;
@@ -301,9 +304,13 @@ export function buildPartialTechnicalCostSnapshot(input: {
   const cutsByGroup = new Map<string, PendingCut[]>();
   const missing = new Map<string, { technicalCode: string | null; description: string; reason: string; quantity?: number; unit?: string }>();
   for (const entry of snapshot.missingPresentations ?? []) {
-    missing.set(`${entry.itemId}|${entry.technicalCode}|${entry.finishKey}`, {
+    const relatedCut = snapshot.bars
+      .flatMap((bar) => bar.cortes)
+      .find((cut) => cut.itemId === entry.itemId && cut.codigoPerfil.trim() === entry.technicalCode.trim());
+    const key = `${entry.technicalCode}|${entry.finishKey}`;
+    missing.set(key, {
       technicalCode: entry.technicalCode,
-      description: entry.supplierSku ?? entry.technicalCode,
+      description: relatedCut?.funcion || entry.supplierSku || entry.technicalCode,
       reason: entry.reason,
     });
   }
@@ -366,6 +373,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
       const groupKey = [cut.codigoPerfil, finishKey, lineFamily, quoteItem?.configurationKey ?? "", bar.despunteInicialMm, kerfMm, bar.supplierPresentationId ?? `${bar.supplierProviderKey ?? ""}:${bar.supplierSku ?? "legacy"}`].join("|");
       const group = cutsByGroup.get(groupKey) ?? [];
       group.push({
+        familyKey: lineFamily,
         technicalCode: cut.codigoPerfil,
         finishKey,
         technicalName: candidates[0].technicalName,
@@ -444,6 +452,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
       if (!resolved || selectedBars.length === 0) continue;
       const unitPrice = resolved.unitNetPrice;
       lines.push({
+        familyKey: group[0].familyKey,
         presentationId: selected.presentationId,
         providerKey: selected.providerKey,
         technicalCode: group[0].technicalCode,
@@ -500,6 +509,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
     const unitPrice = resolved.unitNetPrice;
     const barCount = bars.filter((bar) => bar.cuts.length > 0).length;
     lines.push({
+      familyKey: group[0].familyKey,
       presentationId: presentation.presentationId,
       providerKey: presentation.providerKey,
       technicalCode: acceptedCuts[0].technicalCode,

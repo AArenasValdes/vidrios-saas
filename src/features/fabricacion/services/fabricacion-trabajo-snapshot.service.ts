@@ -95,23 +95,23 @@ export function construirFabricacionTrabajoSnapshot(input: {
         const selection = item.supplierPresentationSelections?.find(
           (entry) => entry.technicalCode.trim() === cut.codigoPerfil.trim()
         );
-        const selectedPresentationIsIncomplete = Boolean(selection && (
-          selection.status !== "resolved" ||
-          selection.commercialLengthMm == null ||
-          selection.commercialLengthMm <= 0
-        ));
-        if ((item.requireSupplierPresentation && !selection) || selectedPresentationIsIncomplete) {
+        const selectedPresentationIsUsable = Boolean(selection?.status === "resolved" &&
+          selection.commercialLengthMm != null && selection.commercialLengthMm > 0);
+        const selectedPresentationIsIncomplete = Boolean(selection && !selectedPresentationIsUsable);
+        const presentationIsPending = (item.requireSupplierPresentation && !selectedPresentationIsUsable) || selectedPresentationIsIncomplete;
+        if (presentationIsPending) {
           missingPresentations.push({
             itemId: item.id,
             technicalCode: cut.codigoPerfil,
             finishKey: acabadoKey,
-            reason: selection?.reason ?? "No hay una presentación comercial confirmada para este perfil y acabado.",
+            reason: selection?.reason ?? "No hay una presentación comercial confirmada para este perfil y acabado; se usa el largo configurado en la receta y el costo queda pendiente.",
             supplierSku: selection?.supplierSku ?? null,
           });
-          continue;
+          if (!item.allowRecipeLengthWhenSupplierPending) continue;
         }
-        const commercialLength = selection
-          ? Math.round(selection.commercialLengthMm ?? 0)
+        const usableSelection = selectedPresentationIsUsable ? selection : null;
+        const commercialLength = usableSelection
+          ? Math.round(usableSelection.commercialLengthMm ?? 0)
           : Math.round(bar.largoComercialMm);
         if (commercialLength <= 0) {
           missingPresentations.push({
@@ -127,7 +127,7 @@ export function construirFabricacionTrabajoSnapshot(input: {
           materialKey,
           acabadoKey,
           commercialLength,
-          selection?.presentationId ?? selection?.supplierSku ?? "receta",
+          usableSelection?.presentationId ?? usableSelection?.supplierSku ?? `receta:${cut.codigoPerfil}`,
         ]);
         // A physical presentation may be used by several explicit catalog lines.
         // Keep each source link while still allowing compatible cuts to share bars.
@@ -143,11 +143,11 @@ export function construirFabricacionTrabajoSnapshot(input: {
           catalogLineKey,
           finishKey: acabadoKey,
           commercialLengthMm: commercialLength,
-          supplierPresentationId: selection?.presentationId ?? null,
-          providerKey: selection?.providerKey ?? null,
-          supplierSku: selection?.supplierSku ?? null,
-          finishCode: selection?.finishCode ?? null,
-          finishName: selection?.finishName ?? null,
+          supplierPresentationId: usableSelection?.presentationId ?? null,
+          providerKey: usableSelection?.providerKey ?? null,
+          supplierSku: usableSelection?.supplierSku ?? null,
+          finishCode: usableSelection?.finishCode ?? null,
+          finishName: usableSelection?.finishName ?? null,
         });
         pending.push({
           itemId: item.id,
@@ -166,11 +166,11 @@ export function construirFabricacionTrabajoSnapshot(input: {
           largoComercialMm: commercialLength,
           despunteInicialMm: Math.round(bar.despunteInicialMm),
           perdidaCorteMm: kerf,
-          supplierPresentationId: selection?.presentationId ?? null,
-          supplierProviderKey: selection?.providerKey ?? null,
-          supplierSku: selection?.supplierSku ?? null,
-          supplierFinishCode: selection?.finishCode ?? null,
-          supplierFinishName: selection?.finishName ?? null,
+          supplierPresentationId: usableSelection?.presentationId ?? null,
+          supplierProviderKey: usableSelection?.providerKey ?? null,
+          supplierSku: usableSelection?.supplierSku ?? null,
+          supplierFinishCode: usableSelection?.finishCode ?? null,
+          supplierFinishName: usableSelection?.finishName ?? null,
         });
       }
     }

@@ -3,6 +3,8 @@ export type MyPresentationPrice = {
   familyKeys?: string[];
   technicalCodes?: string[];
   sku: string;
+  /** Null when a technical code is used only as an internal placeholder, not as a provider SKU. */
+  supplierSku?: string | null;
   name: string;
   finish: string | null;
   purchaseUnit: string;

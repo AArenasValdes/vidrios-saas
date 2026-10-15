@@ -91,6 +91,43 @@ describe("resolver explícito de presentación para pauta", () => {
     expect(chosen).toMatchObject({ status: "resolved", presentationId: "own-3", commercialLengthMm: 6800 });
   });
 
+  it("usa Arquetipo como referencia automática y no sustituye por otra lista de proveedor", () => {
+    const arquetipo: ConfirmedSupplierPresentation = {
+      presentationId: "arq-2001", providerKey: "arquetipo", supplierSku: "30892001",
+      technicalCode: "2001", recipeComponentCodes: [], familyKeys: ["universal:aluminio:l20"],
+      finishCode: null, finishName: null, finishResolution: "finish_independent", commercialLengthMm: 6000,
+      preferred: true,
+    };
+    const sodal: ConfirmedSupplierPresentation = {
+      ...arquetipo, presentationId: "sodal-2001", providerKey: "sodal", supplierSku: "SODAL-2001",
+      preferred: false,
+    };
+    const request = { itemId: "A", familyKey: "ventora:l20", finishName: "Blanco", technicalCodes: ["2001"] };
+
+    expect(resolveSupplierPresentationsForQuoteItem({ request, presentations: [sodal, arquetipo] })[0])
+      .toMatchObject({ status: "resolved", providerKey: "arquetipo", supplierSku: "30892001" });
+    expect(resolveSupplierPresentationsForQuoteItem({ request, presentations: [sodal] })[0])
+      .toMatchObject({ status: "missing", providerKey: null, supplierSku: null });
+  });
+
+  it("respeta una presentación propia del taller marcada como preferida", () => {
+    const arquetipo: ConfirmedSupplierPresentation = {
+      presentationId: "arq-2001", providerKey: "arquetipo", supplierSku: "30892001",
+      technicalCode: "2001", recipeComponentCodes: [], familyKeys: ["universal:aluminio:l20"],
+      finishCode: null, finishName: null, finishResolution: "finish_independent", commercialLengthMm: 6000,
+      preferred: true,
+    };
+    const workshop: ConfirmedSupplierPresentation = {
+      ...arquetipo, presentationId: "own-2001", providerKey: "taller:7", supplierSku: "MI-CODIGO-2001",
+      preferred: true,
+    };
+
+    expect(resolveSupplierPresentationsForQuoteItem({
+      request: { itemId: "A", familyKey: "ventora:l20", finishName: "Blanco", technicalCodes: ["2001"] },
+      presentations: [arquetipo, workshop],
+    })[0]).toMatchObject({ status: "resolved", providerKey: "taller:7", supplierSku: "MI-CODIGO-2001" });
+  });
+
   it("resuelve la presentación privada solo para su configuración y acabado", () => {
     const workshop: ConfirmedSupplierPresentation = {
       presentationId: "own-1", providerKey: "taller:3", supplierSku: "TALLER-HOJA-NEGRA",

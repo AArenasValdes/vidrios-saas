@@ -8,7 +8,10 @@ import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotiz
 
 import { usePasoDosVariaciones } from "../use-paso-dos-variaciones";
 
-function createGroupedItem(): CotizacionWorkflowItem {
+function createGroupedItem(
+  pricingMode: "margen" | "precio_directo" = "margen",
+  quantity = "2"
+): CotizacionWorkflowItem {
   return buildItemFromForm(
     {
       codigo: "V1",
@@ -22,13 +25,13 @@ function createGroupedItem(): CotizacionWorkflowItem {
       customSchemeDescription: "",
       isCustomScheme: false,
       lineTemplateId: "",
-      pricingMode: "margen",
+      pricingMode,
       vidrio: "Incoloro monolítico 5mm",
       nombre: "Ventana",
       descripcion: "",
       ancho: "800",
       alto: "1500",
-      cantidad: "2",
+      cantidad: quantity,
       costoProveedorUnitario: "120000",
       margenPct: "100",
       precioPorM2: "",
@@ -46,8 +49,16 @@ function createGroupedItem(): CotizacionWorkflowItem {
   );
 }
 
-function ProbeVariaciones() {
-  const [items, setItems] = React.useState<CotizacionWorkflowItem[]>([createGroupedItem()]);
+function ProbeVariaciones({
+  pricingMode = "margen",
+  quantity = "2",
+}: {
+  pricingMode?: "margen" | "precio_directo";
+  quantity?: string;
+}) {
+  const [items, setItems] = React.useState<CotizacionWorkflowItem[]>([
+    createGroupedItem(pricingMode, quantity),
+  ]);
   const [editingItemId, setEditingItemId] = React.useState<string | null>(null);
 
   const variaciones = usePasoDosVariaciones({
@@ -73,6 +84,13 @@ function ProbeVariaciones() {
       <span data-testid="items">
         {items.map((item) => `${item.codigo}:${item.cantidad}`).join("|")}
       </span>
+      <span data-testid="precios">
+        {items.map((item) => item.costoProveedorUnitario).join("|")}
+      </span>
+      <span data-testid="precios-manuales">
+        {items.map((item) => String(item.precioAjustadoManual)).join("|")}
+      </span>
+      <span data-testid="ajustadas">{Object.keys(variaciones.adjustedItems).join("|")}</span>
       <span data-testid="abierto">{variaciones.variationQuickEdit ? "si" : "no"}</span>
       <span data-testid="editando">{editingItemId ?? ""}</span>
       <span data-testid="familias">{String(variaciones.variationFamilies.length)}</span>
@@ -84,6 +102,22 @@ function ProbeVariaciones() {
       </button>
       <button type="button" onClick={() => variaciones.handleCloseVariationQuickEdit()}>
         cerrar
+      </button>
+      <button
+        type="button"
+        onClick={() => variaciones.handleApplyVariationQuickEditPriceToAll("155000")}
+      >
+        aplicar-precio-todas
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          if (firstDraftId) {
+            variaciones.handleVariationQuickEditChange(firstDraftId, "precio", "170000");
+          }
+        }}
+      >
+        cambiar-precio-pieza
       </button>
       <button
         type="button"
@@ -166,6 +200,63 @@ describe("usePasoDosVariaciones", () => {
 
     expect(screen.getByTestId("items")).toHaveTextContent("V1:1");
     expect(screen.getByTestId("items")).toHaveTextContent("V1-2:1");
+  });
+
+  it("debe aplicar el valor unitario a todas las piezas del grupo", () => {
+    render(<ProbeVariaciones quantity="45" />);
+
+    act(() => {
+      fireEvent.click(screen.getByText("abrir"));
+    });
+
+    act(() => {
+      fireEvent.click(screen.getByText("aplicar-precio-todas"));
+    });
+
+    act(() => {
+      fireEvent.click(screen.getByText("cerrar"));
+    });
+
+    expect(screen.getByTestId("precios").textContent).toBe("155000");
+    expect(screen.getByTestId("items").textContent).toBe("V1:45");
+    expect(screen.getByTestId("ajustadas").textContent).not.toBe("");
+  });
+
+  it("debe mantener el grupo unido salvo que una pieza tenga un precio distinto", () => {
+    render(<ProbeVariaciones quantity="45" />);
+
+    act(() => {
+      fireEvent.click(screen.getByText("abrir"));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText("aplicar-precio-todas"));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText("cambiar-precio-pieza"));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText("cerrar"));
+    });
+
+    expect(screen.getByTestId("items").textContent).toBe("V1:1|V1-3:44");
+    expect(screen.getByTestId("precios").textContent).toBe("170000|155000");
+  });
+
+  it("debe conservar el valor masivo como manual si la línea usa precio directo", () => {
+    render(<ProbeVariaciones pricingMode="precio_directo" />);
+
+    act(() => {
+      fireEvent.click(screen.getByText("abrir"));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText("aplicar-precio-todas"));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText("cerrar"));
+    });
+
+    expect(screen.getByTestId("precios").textContent).toBe("155000");
+    expect(screen.getByTestId("precios-manuales").textContent).toBe("true");
   });
 
   it("debe materializar la pieza y abrir edicion completa sobre la ajustada", () => {

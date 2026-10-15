@@ -116,7 +116,7 @@ describe("FabricacionMobileProductStep", () => {
     expect(screen.queryByRole("button", { name: "Abatible" })).not.toBeInTheDocument();
   });
 
-  it("muestra en Prime solo configuraciones del catálogo y deja las hojas pendientes", () => {
+  it("muestra la configuración exacta de la línea Prime seleccionada y deja las hojas pendientes", () => {
     const selected = recipe(2, "prime-empty");
     selected.lineName = "Prime Line KOM 700";
     selected.definition.perfiles = [];
@@ -136,15 +136,12 @@ describe("FabricacionMobileProductStep", () => {
 
     expect(screen.getByRole("heading", { name: "Qué fabricarás" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Ventana abatible/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Puerta abatible/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Paño fijo/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Puerta abatible/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Paño fijo/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Proyectante" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "4 hojas" })).not.toBeInTheDocument();
     expect(screen.getByText(/En Perfiles completas cantidades y descuentos con la pauta/)).toBeInTheDocument();
 
-    const doorChoice = screen.getByRole("button", { name: /Puerta abatible/ });
-    fireEvent.click(doorChoice);
-    expect(doorChoice).toHaveAttribute("aria-pressed", "true");
     expect(onDraftChange).not.toHaveBeenCalled();
   });
 

@@ -929,11 +929,68 @@ const THERMOWIN_AMERICANA_S70_PROFILES: LineProfileReference[] = [
   kompenRef("R70-004", "Refuerzo traslapo móvil", "Refuerzo", THERMOWIN_AMERICANA_S70_DOCUMENT, 5),
 ];
 
+function alumetricaVekaProfileRef(input: {
+  code: string;
+  name: string;
+  role: string;
+  line: "PD10" | "Softline 39DJ";
+  source: string;
+  section?: string;
+  commercialLengthMm: number;
+}): LineProfileReference {
+  return {
+    code: input.code,
+    name: input.name,
+    role: input.role,
+    description: `${input.section ? `Sección ${input.section} mm` : "Sección no indicada"} · barra publicada ${input.commercialLengthMm} mm`,
+    provider: "VEKA",
+    source: input.source,
+    codeStatus: "catalog_reference",
+  };
+}
+
+const ALUMETRICA_VEKA_PD10_SOURCE = PROFILE_REFERENCE_SOURCES.ALUMETRICA_VEKA_PD10;
+const ALUMETRICA_VEKA_SOFTLINE_SOURCE = PROFILE_REFERENCE_SOURCES.ALUMETRICA_VEKA_SOFTLINE_39DJ;
+
+const VEKA_PD10_PROFILES: LineProfileReference[] = [
+  alumetricaVekaProfileRef({ code: "142.020", name: "Calzo de Acristalar", role: "Accesorio", line: "PD10", source: ALUMETRICA_VEKA_PD10_SOURCE, section: "100×20", commercialLengthMm: 5800 }),
+  alumetricaVekaProfileRef({ code: "713.013", name: "Refuerzo - Travesaño PD1011", role: "Refuerzo", line: "PD10", source: ALUMETRICA_VEKA_PD10_SOURCE, commercialLengthMm: 5800 }),
+  alumetricaVekaProfileRef({ code: "713.021", name: "Refuerzo 713.021", role: "Refuerzo", line: "PD10", source: ALUMETRICA_VEKA_PD10_SOURCE, commercialLengthMm: 5800 }),
+  alumetricaVekaProfileRef({ code: "713.033", name: "Refuerzo - Hoja 35x58mm", role: "Refuerzo", line: "PD10", source: ALUMETRICA_VEKA_PD10_SOURCE, commercialLengthMm: 5800 }),
+  alumetricaVekaProfileRef({ code: "713.265", name: "Refuerzo 713.265", role: "Refuerzo", line: "PD10", source: ALUMETRICA_VEKA_PD10_SOURCE, commercialLengthMm: 5800 }),
+  alumetricaVekaProfileRef({ code: "744.004", name: "Cinta Doble Contacto", role: "Accesorio", line: "PD10", source: ALUMETRICA_VEKA_PD10_SOURCE, commercialLengthMm: 5800 }),
+  alumetricaVekaProfileRef({ code: "744.008", name: "Tapa Desagüe con Válvula", role: "Accesorio", line: "PD10", source: ALUMETRICA_VEKA_PD10_SOURCE, commercialLengthMm: 5800 }),
+  alumetricaVekaProfileRef({ code: "744.026", name: "Patín Doble", role: "Accesorio", line: "PD10", source: ALUMETRICA_VEKA_PD10_SOURCE, commercialLengthMm: 5800 }),
+  alumetricaVekaProfileRef({ code: "AM3700", name: "Adaptador 4 Hojas 43x51mm", role: "Adaptador", line: "PD10", source: ALUMETRICA_VEKA_PD10_SOURCE, section: "43×51", commercialLengthMm: 5800 }),
+  alumetricaVekaProfileRef({ code: "AM3800", name: "Recubrimiento Adaptador 4 Hojas 17x44mm", role: "Adaptador", line: "PD10", source: ALUMETRICA_VEKA_PD10_SOURCE, section: "44×17", commercialLengthMm: 5800 }),
+  alumetricaVekaProfileRef({ code: "BV50T", name: "Junquillo Flexible 8 x 19mm - Vidrio 24-25 mm", role: "Junquillo", line: "PD10", source: ALUMETRICA_VEKA_PD10_SOURCE, section: "8×19", commercialLengthMm: 5800 }),
+  alumetricaVekaProfileRef({ code: "BV707191", name: "Junquillo Flexible 8 x 32mm - Vidrio 3-4-5 mm", role: "Junquillo", line: "PD10", source: ALUMETRICA_VEKA_PD10_SOURCE, section: "8×32", commercialLengthMm: 5800 }),
+  alumetricaVekaProfileRef({ code: "BV707192", name: "Junquillo Flexible 8 x 21,5mm - Vidrio 18-19-20mm", role: "Junquillo", line: "PD10", source: ALUMETRICA_VEKA_PD10_SOURCE, section: "8×21,5", commercialLengthMm: 5800 }),
+  alumetricaVekaProfileRef({ code: "Felpa 5x5mm", name: "Felpa 5x5mm", role: "Felpa", line: "PD10", source: ALUMETRICA_VEKA_PD10_SOURCE, commercialLengthMm: 5800 }),
+  alumetricaVekaProfileRef({ code: "PD1011", name: "Travesaño 110x58mm", role: "Travesaño", line: "PD10", source: ALUMETRICA_VEKA_PD10_SOURCE, section: "110×58", commercialLengthMm: 6500 }),
+  alumetricaVekaProfileRef({ code: "PD1014", name: "Marco 38x89mm - 709.606", role: "Marco", line: "PD10", source: ALUMETRICA_VEKA_PD10_SOURCE, section: "90×38", commercialLengthMm: 6500 }),
+  alumetricaVekaProfileRef({ code: "PDA1018", name: "Riel Aluminio 12x39mm - 705.563", role: "Riel", line: "PD10", source: ALUMETRICA_VEKA_PD10_SOURCE, section: "12×39", commercialLengthMm: 5800 }),
+  alumetricaVekaProfileRef({ code: "SR1174", name: "Traslapo Fijo 44x58mm - 709.605", role: "Traslapo fijo", line: "PD10", source: ALUMETRICA_VEKA_PD10_SOURCE, section: "44×58", commercialLengthMm: 5800 }),
+  alumetricaVekaProfileRef({ code: "SR1175", name: "Hoja 35x58mm - 705.336", role: "Hoja", line: "PD10", source: ALUMETRICA_VEKA_PD10_SOURCE, section: "35×58", commercialLengthMm: 5800 }),
+  alumetricaVekaProfileRef({ code: "SR1176", name: "Traslapo Móvil 44x58mm - 705.337", role: "Traslapo móvil", line: "PD10", source: ALUMETRICA_VEKA_PD10_SOURCE, section: "44×58", commercialLengthMm: 5800 }),
+  alumetricaVekaProfileRef({ code: "SR1177", name: "Enganche Central 35x58mm - 705.338", role: "Enganche central", line: "PD10", source: ALUMETRICA_VEKA_PD10_SOURCE, section: "53×12", commercialLengthMm: 5800 }),
+];
+
+const VEKA_SOFTLINE_39DJ_PROFILES: LineProfileReference[] = [
+  alumetricaVekaProfileRef({ code: "101.170", name: "Marco 47 mm", role: "Marco", line: "Softline 39DJ", source: ALUMETRICA_VEKA_SOFTLINE_SOURCE, section: "39×47", commercialLengthMm: 6500 }),
+  alumetricaVekaProfileRef({ code: "102.327", name: "Hoja - Trabesaño", role: "Hoja / travesaño", line: "Softline 39DJ", source: ALUMETRICA_VEKA_SOFTLINE_SOURCE, section: "39×65", commercialLengthMm: 6500 }),
+  alumetricaVekaProfileRef({ code: "107.528", name: "Junquillo Recto", role: "Junquillo", line: "Softline 39DJ", source: ALUMETRICA_VEKA_SOFTLINE_SOURCE, section: "18×7", commercialLengthMm: 6500 }),
+  alumetricaVekaProfileRef({ code: "107.591", name: "Junquillo Recto 18 x 18.5 mm", role: "Junquillo", line: "Softline 39DJ", source: ALUMETRICA_VEKA_SOFTLINE_SOURCE, section: "18×19", commercialLengthMm: 6500 }),
+  alumetricaVekaProfileRef({ code: "113.105", name: "Refuerzo de Acero 24.5 x 8.5 mm", role: "Refuerzo", line: "Softline 39DJ", source: ALUMETRICA_VEKA_SOFTLINE_SOURCE, section: "25×9", commercialLengthMm: 5800 }),
+];
+
 const CATALOG_KEY_PROFILE_SETS: Record<string, LineProfileReference[]> = {
   "ventora:kompen-prime-line-700": KOMPEN_PRIME_700_PROFILES,
   "ventora:kompen-form-line-800": KOMPEN_FORM_800_PROFILES,
   "ventora:kompen-star-line-500": KOMPEN_STAR_500_PROFILES,
   "ventora:thermowin-americana-s70": THERMOWIN_AMERICANA_S70_PROFILES,
+  "ventora:veka-pd10": VEKA_PD10_PROFILES,
+  "ventora:veka-softline-39dj": VEKA_SOFTLINE_39DJ_PROFILES,
   "ventora:l5000": SERIE_5000_PROFILES,
   "ventora:l20": SERIE_20_PROFILES,
   "ventora:l20-fijos": SERIE_20_PROFILES,
@@ -1015,16 +1072,17 @@ export function getVentoraProfileReferencesForCatalogKey(
   const key = catalogKey?.trim();
   if (!key) return null;
 
-  const codedProfiles = CATALOG_KEY_PROFILE_SETS[key];
+  const profileSourceKey = key.split(":configuration:", 1)[0] ?? key;
+  const codedProfiles = CATALOG_KEY_PROFILE_SETS[key] ?? CATALOG_KEY_PROFILE_SETS[profileSourceKey];
   if (codedProfiles) {
     return buildWorkshopProfilesPayload(codedProfiles);
   }
 
-  if (!PENDING_VALIDATION_CATALOG_KEYS.has(key)) {
+  if (!PENDING_VALIDATION_CATALOG_KEYS.has(key) && !PENDING_VALIDATION_CATALOG_KEYS.has(profileSourceKey)) {
     return null;
   }
 
-  const archetypeId = CATALOG_KEY_TO_ARQUETIPO[key];
+  const archetypeId = CATALOG_KEY_TO_ARQUETIPO[key] ?? CATALOG_KEY_TO_ARQUETIPO[profileSourceKey];
   if (!archetypeId) return null;
 
   return buildWorkshopProfilesPayload(

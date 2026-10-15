@@ -147,6 +147,37 @@ export function createOrganizationSubscriptionRepository() {
       return (data as OrganizationSubscriptionRow | null) ?? null;
     },
 
+    async linkActiveManualSubscriptionToMercadoPago(input: {
+      subscriptionId: number;
+      providerSubscriptionId: string;
+      providerPlanId: string;
+      providerStatus: string;
+      nextPaymentAt: string | null;
+    }): Promise<number> {
+      // La funcion SQL cambia proveedor y payment_method en una sola transaccion,
+      // preservando el periodo que ya estaba pagado manualmente.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const admin = createAdminClient() as any;
+      const { data, error } = await admin.rpc(
+        "link_active_manual_subscription_to_mercadopago",
+        {
+          p_subscription_id: input.subscriptionId,
+          p_provider_subscription_id: input.providerSubscriptionId,
+          p_provider_plan_id: input.providerPlanId,
+          p_provider_status: input.providerStatus,
+          p_next_payment_at: input.nextPaymentAt,
+        }
+      );
+
+      if (error || typeof data !== "number") {
+        throw new Error(
+          `Error al vincular suscripcion Mercado Pago: ${error?.message ?? "respuesta invalida"}`
+        );
+      }
+
+      return data;
+    },
+
     async getByExternalReference(
       externalReference: string
     ): Promise<OrganizationSubscriptionRow | null> {

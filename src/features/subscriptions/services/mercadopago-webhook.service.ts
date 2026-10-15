@@ -61,10 +61,16 @@ function assertSubscriptionIdentity(input: {
   );
   const currency = input.resource.auto_recurring?.currency_id?.trim().toUpperCase();
 
-  if (
-    normalizeMercadoPagoExternalReference(input.resource.external_reference) !==
-    input.local.external_reference
-  ) {
+  const externalReferenceMatches =
+    normalizeMercadoPagoExternalReference(input.resource.external_reference) ===
+    input.local.external_reference;
+  const explicitlyLinkedSubscriptionMatches =
+    input.local.provider_subscription_id === input.resource.id;
+
+  // Las suscripciones antiguas creadas desde un enlace externo de MP no
+  // contienen la referencia Ventora. Solo se acepta esa diferencia si el ID
+  // exacto del preapproval ya fue vinculado por una acción administrativa.
+  if (!externalReferenceMatches && !explicitlyLinkedSubscriptionMatches) {
     throw new Error("La suscripcion consultada no coincide con Ventora.");
   }
 

@@ -67,6 +67,24 @@ function createDraft(overrides: Record<string, unknown> = {}) {
 }
 
 describe("use-paso-dos-agregar-grupo helpers", () => {
+  it("inicia L42 guiada en la variante Normal confirmada", () => {
+    const selected = applyLineTemplateToGrupoDraft(createDraft(), {
+      id: 210,
+      nombre: "Serie 42 — Proyectante / paño fijo",
+      categoria: "aluminio",
+      material: "Aluminio",
+      catalogKey: "ventora:l42",
+      catalogMetadata: { lineConfiguration: "Proyectante 1 hoja" },
+      vidrioPrincipalRecomendado: null,
+      precioM2Sugerido: 80000,
+      minimoCobrable: 35000,
+      redondeoPrecio: 1000,
+    });
+    expect(selected.fabricacionTipologia).toBe("proyectante");
+    expect(selected.fabricacionHojas).toBe(1);
+    expect(selected.fabricacionVariante).toBe("normal");
+    expect(selected.fabricationRecipeId).toBe("");
+  });
   it("preserva el contexto de fabricación de las líneas WinHouse al agregarlas a una cotización", () => {
     const s60 = applyLineTemplateToGrupoDraft(createDraft(), {
       id: 225,

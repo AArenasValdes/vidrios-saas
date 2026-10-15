@@ -801,7 +801,7 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
     );
   }, [cotizaciones]);
 
-  const loadCotizacionById = useCallback(async (id: string, options?: { silent?: boolean }) => {
+  const loadCotizacionById = useCallback(async (id: string, options?: { silent?: boolean; forceRefresh?: boolean }) => {
     if (!organizacionId) {
       return null;
     }
@@ -813,7 +813,7 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
       cotizaciones.find((record) => record.id === id) ??
       null;
 
-    if (existingRecord?.items.length) {
+    if (existingRecord?.items.length && !options?.forceRefresh) {
       return existingRecord;
     }
 

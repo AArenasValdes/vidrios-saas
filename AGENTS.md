@@ -1,7 +1,7 @@
 # AGENTS.md - Ventora
 
 Estado: vigente
-Actualizado: 2026-09-29
+Actualizado: 2026-10-14
 Responsable: ingeniería + agentes del repositorio
 
 Lee antes de editar. Ultima consolidacion: 2026-09-04.
@@ -120,6 +120,12 @@ Ultima actualizacion operativa: 2026-09-29
 - El cron está registrado en `vercel.json` (`0 9 * * *`) y protegido con `CRON_SECRET`. No afirmar entrega real de webhook sin evidencia de MP.
 - La reconciliación se limita a referencias `ventora:cl:` y valida organización, plan/monto y recursos reales mediante RPC idempotentes existentes; no requiere nueva migración.
 - Archivos guía: `app/api/cron/mercadopago-billing/route.ts`, `src/features/subscriptions/services/mercadopago-webhook.service.ts`, `src/features/subscriptions/repositories/organization-subscription.repository.ts`, `docs/billing/README.md`.
+
+### Preparación local 2026-10-13 (suscripciones MP externas)
+
+- Se agregó a la ficha admin un flujo para vincular suscripciones externas existentes por su ID de `preapproval`; valida estado autorizado, plan, monto, moneda y periodo manual vigente.
+- La migración local `20261013120000_link_existing_mercadopago_subscriptions.sql` preserva el periodo vigente y habilita la reconciliación por ID. El próximo pago aprobado renueva la cuenta; la vinculación no concede días.
+- Esta preparación aún no está desplegada ni aplicada en producción. Aluminios del Carmen y SUR PVC requieren vincular sus IDs después del despliegue/migración. Ver `docs/billing/README.md`.
 
 ### Ya resuelto en pasada 2026-07-24 (Cubicación V1 vendible)
 
@@ -284,6 +290,10 @@ Ultima actualizacion operativa: 2026-09-29
 
 - Para QA automatizado confiable, preferir `pnpm run build` + `pnpm run start`.
 - El `pnpm run dev` actual en `:3000` puede quedar con HMR degradado (`webpack-hmr` handshake invalido) y falsear pruebas de login/client hydration.
+- **Servidor local en Codex:** `Ready` de Next solo confirma que el proceso inició; no confirma que el navegador pueda alcanzarlo. Antes de probar login, comprobar desde el mismo entorno que ejecuta el navegador que `http://127.0.0.1:3000/login` responde por HTTP (`200` o una redirección esperada) y luego abrir esa misma URL. Si `fetch`/`Invoke-WebRequest` da `ETIMEDOUT`, `ECONNREFUSED` o acceso al socket denegado, registrar el entorno/puerto y detener el diagnóstico de rutas: es un problema de alcance entre el proceso y el navegador, no evidencia de fallo de autenticación.
+- No cambiar de puerto a ciegas ni cerrar procesos desconocidos. En este checkout Next comparte `.next`; debe correr una sola instancia `next dev`, porque otro puerto no evita el bloqueo de `.next`. Identificar el PID dueño del puerto antes de detenerlo.
+- Si el proceso informa `Ready` pero una comprobación local no conecta, reiniciar una vez en `127.0.0.1:3000` y verificar de nuevo. Un `next dev` lanzado dentro del sandbox puede mostrar `Ready` mientras sus sockets quedan aislados del navegador; cambiar de puerto no corrige ese aislamiento. Ejecutarlo en el host/runtime que comparte red con el navegador o usar el mecanismo de port-forwarding soportado por ese entorno. Si hace falta, pedir/usar ejecución local aprobada para iniciar el servidor; después verificar HTTP desde ese mismo host. No afirmar que localhost está disponible basándose solo en el banner `Ready`.
+- Mantener el bind en loopback (`127.0.0.1`); no usar `0.0.0.0`, abrir firewall ni exponer el servidor a la LAN sin autorización explícita. No borrar `.next` mientras cualquier instancia Next del checkout esté activa.
 
 ## Convenciones criticas
 

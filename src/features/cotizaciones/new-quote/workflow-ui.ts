@@ -2518,11 +2518,18 @@ export function reconcileWorkflowItemPricing(
 
   try {
     const form = mapItemToForm(item);
-    return buildItemFromForm(form, items, item.id, {
+    const repriced = buildItemFromForm(form, items, item.id, {
       quotePricingMode,
       lineTemplates: options?.lineTemplates,
       lineTemplateCatalogMetadata: options?.lineTemplateCatalogMetadata,
     });
+    // Repricing does not edit fabrication. The saved snapshot may have been
+    // calculated from a confirmed fallback while the form still references an
+    // older draft recipe ID; rebuilding the form must not discard that snapshot.
+    return {
+      ...repriced,
+      fabricacionSnapshot: item.fabricacionSnapshot ?? null,
+    };
   } catch {
     return item;
   }

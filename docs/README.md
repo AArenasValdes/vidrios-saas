@@ -44,6 +44,7 @@ Si dos documentos contradicen código o una fuente superior, detenerse, registra
 - Cotización, PDF, WhatsApp, clientes, solicitudes y aprobación pública son núcleo comercial.
 - Mercado Pago Chile opera en producción; otros mercados siguen apagados.
 - Para renovaciones MP, webhook firmado es la vía primaria y `/api/cron/mercadopago-billing` reconcilia diariamente estados/pagos confirmados que no llegaron por webhook. El débito automático lo gestiona el `preapproval` autorizado de Mercado Pago.
+- Suscripciones recurrentes que ya existían fuera de Ventora pueden vincularse desde la ficha de administración; se verifica ID, plan, monto, moneda y periodo vigente. La vinculación no renueva por sí sola. Ver `docs/billing/README.md`.
 - Growth OS concentra prospección, contenido, conversión, onboarding, cobro y revisión semanal.
 - Pauta de fabricación es interna, referencial, sin precios y separada del PDF cliente.
 - El P0 de consistencia catálogo/Fabricación está protegido en producción: una receta con composición incompleta no puede mostrarse como lista para probar ni generar snapshot técnico.

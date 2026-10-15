@@ -1,4 +1,5 @@
 import {
+  getDocumentedConfigurationCount,
   getSingleFamilyTemplate,
   groupLineTemplatesByFamily,
   groupLineTemplatesByDocumentedFamily,
@@ -44,6 +45,17 @@ describe("line-template-catalog-family", () => {
         makeTemplate({ id: "second", nombre: "Corredera Lineal 70 reforzada" }),
       ])
     ).toBeNull();
+  });
+
+  it("cuenta una configuración por cada fila comercial canónica", () => {
+    expect(getDocumentedConfigurationCount(makeTemplate({
+      nombre: "VEKA PD10",
+      catalogKey: "ventora:veka-pd10",
+    }))).toBe(1);
+    expect(getDocumentedConfigurationCount(makeTemplate({
+      nombre: "VEKA Softline 39DJ",
+      catalogKey: "ventora:veka-softline-39dj",
+    }))).toBe(1);
   });
 
   it("clasifica Serie 20 corredera y fijos en familias distintas", () => {

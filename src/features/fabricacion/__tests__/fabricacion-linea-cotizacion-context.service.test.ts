@@ -43,6 +43,40 @@ function buildRecipe(input: {
 }
 
 describe("fabricacion-linea-cotizacion-context.service", () => {
+  it("usa la variante Normal confirmada al asignar L42 sin selección explícita", () => {
+    const catalogMetadata = { lineConfiguration: "Proyectante 1 hoja" };
+    const catalog = resolveFabricacionContextFromLineCatalog({
+      catalogKey: "ventora:l42",
+      catalogMetadata,
+    });
+    expect(catalog?.fabricacionVariante).toBe("normal");
+    const customDraft = {
+      ...buildRecipe({ id: "alar-personalizada", lineTemplateId: 210, tipologia: "proyectante", hojas: 1, status: "draft" }),
+      variant: "alar_marco_4201",
+      sourceReference: "taller:personalizada:user-provided%3Aalar-linea42%3Aproyectante-4201%3A2026-09-21",
+      definition: {
+        ...buildRecipe({ id: "alar-personalizada", lineTemplateId: 210, tipologia: "proyectante", hojas: 1, status: "draft" }).definition,
+        identidad: {
+          ...buildRecipe({ id: "alar-personalizada", lineTemplateId: 210, tipologia: "proyectante", hojas: 1, status: "draft" }).definition.identidad,
+          variante: "alar_marco_4201",
+        },
+      },
+    };
+    const template = { id: 210, catalogKey: "ventora:l42", catalogMetadata };
+    const form = {
+      tipo: "Ventana", nombre: "Ventana proyectante", descripcion: "", sistema: "Proyectante",
+      configuracion: "", fabricacionHojas: 1, fabricacionTipologia: "proyectante",
+      fabricationRecipeId: "", fabricacionVariante: "",
+    };
+    const defaultContext = resolveFabricacionContextForLineAssignment({ template, recipes: [customDraft], organizationId: 1, form });
+    expect(defaultContext?.fabricacionVariante).toBe("normal");
+    expect(defaultContext?.fabricationRecipeId).toBe("");
+    const explicitContext = resolveFabricacionContextForLineAssignment({
+      template, recipes: [customDraft], organizationId: 1,
+      form: { ...form, fabricationRecipeId: customDraft.id, fabricacionVariante: "alar_marco_4201" },
+    });
+    expect(explicitContext?.fabricacionVariante).toBe("alar_marco_4201");
+  });
   it("resuelve AL-32 como proyectante aunque conserve metadata histórica", () => {
     const context = resolveFabricacionContextFromLineCatalog({
       catalogKey: "ventora:l32",

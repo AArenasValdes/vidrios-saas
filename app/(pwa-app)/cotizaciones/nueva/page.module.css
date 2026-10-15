@@ -7811,6 +7811,38 @@
   padding-bottom: 0.24rem;
 }
 
+.stepTwoMobileVariationBulkPrice {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.82rem;
+  border: 1px solid rgba(79, 125, 212, 0.24);
+  border-radius: 16px;
+  background: #f5f8ff;
+}
+
+.stepTwoMobileVariationBulkPrice p {
+  margin: 0;
+  color: #667085;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.stepTwoMobileVariationBulkPriceAction {
+  min-height: 2.7rem;
+  border: 1px solid #4f7dd4;
+  border-radius: 13px;
+  background: #4f7dd4;
+  color: #fff;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.stepTwoMobileVariationBulkPriceAction:disabled {
+  border-color: #d0dae9;
+  background: #e9eef6;
+  color: #8a96a6;
+}
+
 .stepTwoMobileVariationUnitCard {
   display: flex;
   flex-direction: column;

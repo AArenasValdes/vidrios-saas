@@ -4,6 +4,9 @@ import {
   VENTORA_DEFAULT_LINE_CATALOG,
   type SeedLineTemplateDeps,
 } from "../default-line-catalog";
+import { getVentoraProfileReferencesForCatalogKey } from "../../fixtures/ventora-profile-references";
+import { evaluateLineCompatibility, getCatalogProductConfigurations } from "../line-template-compatibility.service";
+import { resolveFabricationRecipe } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
 
 function makeMockDeps(
   existing: Array<{ catalog_key?: string | null }> = []
@@ -139,7 +142,113 @@ describe("seedDefaultLineCatalog", () => {
       "ventora:kompen-star-line-500",
       "ventora:thermowin-americana-s70",
     ]));
-    expect(catalogSize).toBe(73);
+    expect(catalogSize).toBe(95);
+  });
+
+  it("expone cada configuración VEKA como una línea cotizable independiente y mantiene sus fórmulas pendientes", () => {
+    const pd10 = VENTORA_DEFAULT_LINE_CATALOG.filter((line) => line.catalogKey.startsWith("ventora:veka-pd10"));
+    const softline = VENTORA_DEFAULT_LINE_CATALOG.filter((line) => line.catalogKey.startsWith("ventora:veka-softline-39dj"));
+
+    expect(pd10).toHaveLength(6);
+    expect(softline).toHaveLength(8);
+    expect(pd10[0]).toMatchObject({
+      nombre: expect.stringContaining("VEKA PD10 · 1H+1F ESPEJO · 18–20 mm"),
+      proveedor: "VEKA",
+      material: "PVC",
+      precioM2Sugerido: 0,
+      catalogMetadata: {
+        familyKey: "veka:pd10",
+        configurationKey: "veka-pd10-1h-1f-18-20",
+        cuttingGuideSource: expect.stringContaining("927fda38-d3b4-4440-a2f3-09c253847f02"),
+        compatibility: { configurations: [expect.objectContaining({ id: "veka-pd10-1h-1f-18-20", openingType: "Corredera", compositionPending: true })] },
+      },
+    });
+    expect(pd10.every((line) => line.catalogMetadata?.compatibility?.configurations?.length === 1)).toBe(true);
+    expect(softline.every((line) => line.catalogMetadata?.compatibility?.configurations?.length === 1)).toBe(true);
+    expect(softline.map((line) => line.catalogMetadata?.compatibility?.configurations?.[0])).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "veka-softline-abatible-derecha-mono-tp", openingType: "Abatible", typology: "abatible", compositionPending: true }),
+      expect.objectContaining({ id: "veka-softline-abatible-izquierda-mono-tp", openingType: "Abatible", typology: "abatible", compositionPending: true }),
+      expect.objectContaining({ id: "veka-softline-fijo-mono-tp", openingType: "Fijo", typology: "pano_fijo", compositionPending: true }),
+      expect.objectContaining({ id: "veka-softline-proyectante-mono-tp", openingType: "Proyectante", typology: "proyectante", compositionPending: true }),
+    ]));
+    expect(softline.map((line) => line.catalogMetadata?.compatibility?.configurations?.[0]?.typology)).toEqual([
+      "abatible", "abatible", "abatible", "abatible", "pano_fijo", "pano_fijo", "proyectante", "proyectante",
+    ]);
+
+    for (const line of [...pd10, ...softline]) {
+      expect(line?.catalogMetadata).not.toHaveProperty("fabricationRecipe");
+      expect(line?.catalogMetadata?.cubicationStatus).toBe("pending");
+      expect(line.precioM2Sugerido).toBe(0);
+    }
+  });
+
+  it("adjunta referencias de perfiles VEKA con barras y procedencia, sin promoverlas a receta", () => {
+    const pd10 = getVentoraProfileReferencesForCatalogKey("ventora:veka-pd10:configuration:veka-pd10-1f-1h-1f-24-25")?.profiles ?? [];
+    const softline = getVentoraProfileReferencesForCatalogKey("ventora:veka-softline-39dj:configuration:veka-softline-proyectante-mono-4-5")?.profiles ?? [];
+
+    expect(pd10).toHaveLength(21);
+    expect(pd10.find((profile) => profile.code === "PD1011")).toMatchObject({
+      provider: "VEKA",
+      description: expect.stringContaining("6500 mm"),
+      codeStatus: "catalog_reference",
+      source: expect.stringContaining("927fda38-d3b4-4440-a2f3-09c253847f02"),
+    });
+    expect(softline).toHaveLength(5);
+    expect(softline.find((profile) => profile.code === "113.105")).toMatchObject({
+      provider: "VEKA",
+      description: expect.stringContaining("5800 mm"),
+      codeStatus: "catalog_reference",
+      source: expect.stringContaining("3526af13-cafb-48fa-a767-1167d7ac7db7"),
+    });
+  });
+
+  it("conserva una configuración de origen pendiente por línea mobile y devuelve sin_receta", () => {
+    const lines = VENTORA_DEFAULT_LINE_CATALOG.filter((line) =>
+      line.catalogKey.startsWith("ventora:veka-pd10") || line.catalogKey.startsWith("ventora:veka-softline-39dj")
+    );
+
+    for (const line of lines) {
+      const catalogKey = line.catalogKey;
+      const configurations = getCatalogProductConfigurations(catalogKey);
+      expect(configurations).toHaveLength(1);
+      expect(configurations.every((configuration) => configuration.compositionPending)).toBe(true);
+      expect(configurations.every((configuration) => !/Alumétrica|etiqueta Fijo|origen etiqueta/i.test(configuration.label))).toBe(true);
+
+      const recipe = resolveFabricationRecipe([], {
+        organizationId: "org-veka-contract",
+        lineTemplateId: `template-${catalogKey}`,
+        catalogKey,
+        tipologia: "pano_fijo",
+        hojas: 2,
+        variante: configurations[0]?.variant,
+      });
+      expect(recipe.estado).toBe("sin_receta");
+    }
+  });
+
+  it("resuelve cada compatibilidad comercial VEKA sin cruzar aperturas entre configuraciones", () => {
+    const softlines = VENTORA_DEFAULT_LINE_CATALOG.filter((line) => line.catalogKey.startsWith("ventora:veka-softline-39dj"));
+    const pd10s = VENTORA_DEFAULT_LINE_CATALOG.filter((line) => line.catalogKey.startsWith("ventora:veka-pd10"));
+
+    for (const line of softlines) {
+      const openingType = line.catalogMetadata?.compatibility?.configurations?.[0]?.openingType;
+      expect(evaluateLineCompatibility({
+        line,
+        context: { componentType: "Ventana", openingType, leavesCount: 2, material: "PVC" },
+      }).commercial).toBe("compatible");
+    }
+    expect(evaluateLineCompatibility({
+      line: softlines[0]!,
+      context: { componentType: "Ventana", openingType: "Corredera", leavesCount: 2, material: "PVC" },
+    }).commercial).toBe("incompatible");
+
+    for (const line of pd10s) {
+      const openingType = line.catalogMetadata?.compatibility?.configurations?.[0]?.openingType;
+      expect(evaluateLineCompatibility({
+        line,
+        context: { componentType: "Ventana", openingType, leavesCount: 2, material: "PVC" },
+      }).commercial).toBe("compatible");
+    }
   });
 
   it("reconoce sistemas del catálogo VERATEC sin asignarles precio ni receta inventada", () => {

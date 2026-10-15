@@ -5,6 +5,8 @@ Fecha: 2026-09-19
 Registros separados por no tener equivalencia clara en el catálogo canónico Ventora.
 Pendientes. No son líneas comerciales Ventora y no deben sembrarse ni convertirse en receta.
 
+Revisión VEKA del 2026-10-13: se desplegaron y transcribieron en vista **Detalle** las 6 reglas PD10 y 8 reglas Softline, junto con los perfiles. Ver [expediente PD10](veka/PD10/INTEGRACION_LINEA.md) y [expediente Softline 39DJ](veka/SOFTLINE_39DJ/INTEGRACION_LINEA.md). Las reglas sí eran accesibles; la vista Modelos solo mostraba tarjetas. Ambas líneas entraron al catálogo canónico y al Paso 1 con los rótulos de apertura que publica cada fila; las composiciones quedan marcadas pendientes y no tienen receta/slot, pues etiquetas de apertura, conteo de hojas/vidrios y perfiles de consumo discrepan de los planes de corte. Resolver esas inconsistencias antes de publicar despiece mobile.
+
 | Línea Alumétrica | Fabricante | Material | Variantes visibles | Perfiles | Tipologías | URL |
 |---|---|---|---|---:|---:|---|
 | Fijo + Proyectante + Abatir + Puertas | ADOPEN | PVC | Fijo 7, Proyectante 2, Abatible 8; mono 8 / TP 9; 2 hojas | 14 | 17 | https://alumetrica.comunaclic.cl/Catalogo/Lineas/Detalle/a7d31b0e-496e-46f9-a898-0b3f621c879f |

@@ -57,6 +57,9 @@ export async function GET() {
               row.supplierSku,
             ].filter((code): code is string => Boolean(code?.trim())))],
             sku: row.supplierSku,
+            supplierSku: providerKey === "arquetipo" && catalogRow?.technicalCode === row.supplierSku && row.netPrice == null
+              ? null
+              : row.supplierSku,
             name: row.presentationDescription,
             finish: row.finishName,
             purchaseUnit: row.purchaseUnit,

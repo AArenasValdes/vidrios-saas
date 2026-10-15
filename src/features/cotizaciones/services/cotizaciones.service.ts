@@ -45,7 +45,10 @@ import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabri
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import { resolveSupplierPresentationsForQuote } from "@/features/proveedor-catalogos/services/supplier-presentations.client";
 import { resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
-import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
+import {
+  normalizeUniversalAluminumFamilyKey,
+  VENTORA_DEFAULT_LINE_CATALOG,
+} from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import {
   organizationProfileRepository,
   type OrganizationProfileRepository,
@@ -58,6 +61,7 @@ import {
   resolveFabricacionSnapshotsIndependently,
   resolveFabricacionTrabajoSnapshotForQuoteSave,
   shouldResolveFabricationRecipesForQuoteSave,
+  shouldResolveSupplierPresentationsForQuoteSave,
 } from "@/features/cotizaciones/services/fabricacion-trabajo-snapshot-lifecycle.service";
 
 type CotizacionesAppServiceDeps = {
@@ -1286,29 +1290,38 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
           lineaComercial: item.lineaComercial,
           colorHex: presentation.colorHex,
           catalogLineKey: presentation.catalogLineKey,
+          supplierFamilyKey: item.fabricacionSnapshot?.supplierFamilyKey,
           snapshot: item.fabricacionSnapshot ?? null,
         };
       });
-      const supplierPresentationResolution = input.existingId == null
+      const shouldResolveSupplierPresentations = shouldResolveSupplierPresentationsForQuoteSave({
+        existingId: input.existingId,
+        finalizingDraft,
+        itemCountToResolve: snapshotPreparation.itemIdsToResolve.size,
+        shouldRebuildTrabajoSnapshot: snapshotPreparation.shouldRebuildTrabajoSnapshot,
+      });
+      const supplierPresentationResolution = shouldResolveSupplierPresentations
         ? await resolveSupplierPresentationsForNewQuote(normalizedItems)
         : null;
       const fabricacionTrabajoSnapshot = resolveFabricacionTrabajoSnapshotForQuoteSave({
         existingId: input.existingId,
         existingSnapshot: existingCotizacion?.fabricacionTrabajoSnapshot,
         forceRebuild:
-          finalizingDraft || snapshotPreparation.itemIdsToResolve.size > 0,
+          finalizingDraft ||
+          snapshotPreparation.itemIdsToResolve.size > 0 ||
+          snapshotPreparation.shouldRebuildTrabajoSnapshot,
         capturedAt: financialSnapshotCalculatedAt,
         items: fabricationItems.map((item) => {
           const resolved = supplierPresentationResolution?.selections[item.id];
-          const requiresCatalogPresentation = Boolean(
-            supplierPresentationResolution?.enabled && item.snapshot?.supplierFamilyKey
-          );
+          const isUniversalAluminum = normalizeUniversalAluminumFamilyKey(item.supplierFamilyKey) != null;
+          const requiresCatalogPresentation = isUniversalAluminum;
           return {
             ...item,
             ...(requiresCatalogPresentation
               ? {
                   requireSupplierPresentation: true,
                   supplierPresentationSelections: resolved ?? [],
+                  allowRecipeLengthWhenSupplierPending: true,
                 }
               : {}),
           };

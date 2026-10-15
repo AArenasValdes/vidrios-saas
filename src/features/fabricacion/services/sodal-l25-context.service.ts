@@ -10,6 +10,7 @@ import {
   buildSodalL25VariantSlug,
   isValidSodalL25Combination,
   parseSodalL25VariantSlug,
+  SODAL_L25_FAMILIES,
   SODAL_L25_CATALOG_KEY,
   type SodalL25GlazingSlug,
   type SodalL25LegSlug,
@@ -280,11 +281,20 @@ export function listSodalL25LegOptions(input: {
     ? [input.reinforcement]
     : ["normal", "reinforced"];
 
+  const hasCanonicalVariant = (leg: SodalL25LegSlug, reinforcement: SodalL25ReinforcementSlug) =>
+    SODAL_L25_FAMILIES.some(
+      (family) =>
+        family.glazing === input.glazing &&
+        family.leg === leg &&
+        family.reinforcement === reinforcement &&
+        Boolean(family.canonicalByLeaves[input.hojas as 2 | 3 | 4])
+    );
+
   return (["open", "closed"] as const).map((leg) => ({
     value: leg,
     label: formatSodalL25LegLabel(leg),
     available: reinforcements.some((reinforcement) =>
-      input.recipes.some(
+      hasCanonicalVariant(leg, reinforcement) || input.recipes.some(
         (recipe) =>
           isSodalL25ZetaValidatedRecipe(recipe) &&
           recipe.definition.identidad.hojas === input.hojas &&
@@ -309,7 +319,13 @@ export function listSodalL25ReinforcementOptions(input: {
     value: reinforcement,
     label: formatSodalL25ReinforcementLabel(reinforcement),
     available: input.leg
-      ? input.recipes.some(
+      ? SODAL_L25_FAMILIES.some(
+          (family) =>
+            family.glazing === input.glazing &&
+            family.leg === input.leg &&
+            family.reinforcement === reinforcement &&
+            Boolean(family.canonicalByLeaves[input.hojas as 2 | 3 | 4])
+        ) || input.recipes.some(
           (recipe) =>
             isSodalL25ZetaValidatedRecipe(recipe) &&
             recipe.definition.identidad.hojas === input.hojas &&

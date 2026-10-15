@@ -3273,6 +3273,8 @@ function goNextFromStep1() {
             onMostrarIvaChange: handleMostrarIvaChange,
             onInternalObservationChange: handleInternalObservationChange,
             onVariationQuickEditChange: pasoDosVariaciones.handleVariationQuickEditChange,
+            onApplyVariationQuickEditPriceToAll:
+              pasoDosVariaciones.handleApplyVariationQuickEditPriceToAll,
             onEditVariationFull: pasoDosVariaciones.handleEditVariationFull,
             onCloseVariationQuickEdit: pasoDosVariaciones.handleCloseVariationQuickEdit,
             onEditItem: handleEditItem,

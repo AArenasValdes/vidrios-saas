@@ -218,6 +218,64 @@ describe("despiece de líneas universales con precio Arquetipo", () => {
     expect(resolved.formal?.result.perfiles.length).toBeGreaterThan(0);
   });
 
+  it("mantiene una receta propia ALAR incompleta sin sustituirla y calcula L42 Normal si se elige esa variante", () => {
+    const canonical = resolveUniversalPricedLineFallback({
+      catalogKey: "ventora:l42", lineTemplateId: 210, organizationId: 1,
+      lineName: "Serie 42", variant: "normal", leavesCount: 1,
+      typology: "proyectante", recipes: [],
+    })!;
+    const customDraft: FabricationRecipeRecord = {
+      ...canonical,
+      id: "1cf1fa7c-1a66-490a-af68-45401f39a349",
+      status: "draft",
+      variant: "alar_marco_4201",
+      sourceType: "manual",
+      sourceReference: "taller:personalizada:user-provided%3Aalar-linea42%3Aproyectante-4201%3A2026-09-21",
+      definition: {
+        ...canonical.definition,
+        identidad: { ...canonical.definition.identidad, variante: "alar_marco_4201" },
+        perfiles: [],
+      },
+    };
+    expect(resolveUniversalPricedLineFallbacks({
+      catalogKey: "ventora:l42", lineTemplateId: 210, organizationId: 1,
+      lineName: "Serie 42", variant: null, leavesCount: 1,
+      typology: "proyectante", recipes: [customDraft],
+    }).map((recipe) => recipe.variant)).toEqual(["normal"]);
+    expect(resolveUniversalPricedLineFallbacks({
+      catalogKey: "ventora:l42", lineTemplateId: 210, organizationId: 1,
+      lineName: "Serie 42", variant: null, leavesCount: 1,
+      typology: "proyectante", recipes: [{ ...customDraft, variant: "normal" }],
+    })).toEqual([]);
+    const item = itemFor(pricedLines.find((line) => line.line === "L42")!);
+    const selectedCustom = {
+      ...item,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "210", catalogLineKey: "ventora:l42", sistema: "Proyectante",
+        fabricacionTipologia: "proyectante", fabricacionHojas: 1, fabricacionModulos: 1,
+        fabricacionVariante: "alar_marco_4201", fabricationRecipeId: customDraft.id,
+      }),
+    };
+    expect(resolveFabricacionDespieceForQuoteItem({
+      item: selectedCustom, recipes: [customDraft], organizationId: 1,
+    }).formal).toBeNull();
+
+    const normalItem = {
+      ...selectedCustom,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "210", catalogLineKey: "ventora:l42", sistema: "Proyectante",
+        fabricacionTipologia: "proyectante", fabricacionHojas: 1, fabricacionModulos: 1,
+        fabricacionVariante: "normal", fabricationRecipeId: "",
+      }),
+    };
+    const normal = resolveFabricacionDespieceForQuoteItem({
+      item: normalItem, recipes: [customDraft], organizationId: 1,
+    });
+    expect(normal.estado).toBe("calculado");
+    expect(normal.formal?.recipeId).toBe("ventora:universal:l42:normal");
+    expect(normal.formal?.pauta.length).toBeGreaterThan(0);
+  });
+
   it.each(pricedLines)("calcula $line con una referencia compatible", (line) => {
     const item = itemFor(line);
     const resolved = resolveFabricacionDespieceForQuoteItem({

@@ -641,6 +641,7 @@ Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las
 | `/api/subscriptions/mercadopago/create` | POST | Reserva y crea suscripcion MP Chile autenticada | `app/api/subscriptions/mercadopago/create/route.ts` |
 | `/api/subscriptions/mercadopago/webhook` | POST | Valida firma, consulta recurso MP y reconcilia idempotente | `app/api/subscriptions/mercadopago/webhook/route.ts` |
 | `/api/cron/mercadopago-billing` | GET | Cron Vercel diario, protegido por `CRON_SECRET`; recupera conciliación de suscripciones MP pendientes o próximas/vencidas | `app/api/cron/mercadopago-billing/route.ts` |
+| `/api/admin/clientes/link-mercadopago` | POST | Solo admin; vincula un preapproval externo verificado al periodo pagado vigente de una organización | `app/api/admin/clientes/link-mercadopago/route.ts` |
 | `/qa-precios-compra` | GET | Página interna de QA del catálogo de precios de compra; no equivale a administración productiva del catálogo | `app/(landing-web)/qa-precios-compra/page.tsx` |
 
 ---
@@ -676,6 +677,7 @@ Generado desde app/ y verificado por pnpm docs:check. El detalle funcional de ca
 | `/api/admin/activacion` | api | api | `app/api/admin/activacion/route.ts` |
 | `/api/admin/clientes` | api | api | `app/api/admin/clientes/route.ts` |
 | `/api/admin/clientes/activate-payment` | api | api | `app/api/admin/clientes/activate-payment/route.ts` |
+| `/api/admin/clientes/link-mercadopago` | api | api | `app/api/admin/clientes/link-mercadopago/route.ts` |
 | `/api/admin/clientes/deactivate-trial` | api | api | `app/api/admin/clientes/deactivate-trial/route.ts` |
 | `/api/admin/clientes/extend-trial` | api | api | `app/api/admin/clientes/extend-trial/route.ts` |
 | `/api/admin/clientes/provision` | api | api | `app/api/admin/clientes/provision/route.ts` |

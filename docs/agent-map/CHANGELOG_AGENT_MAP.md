@@ -2,6 +2,54 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-10-15 - Prioridad de código exacto en materiales valorizados
+
+- La lista del trabajo enlaza por familia y código técnico exactos; las cotizaciones históricas sin familia usan el código solo cuando no hay colisión entre familias. El nombre queda como respaldo acotado. Esto evita que etiquetas repetidas como “Riel superior” oculten precios o crucen familias.
+- Se agregaron regresiones para L25 monolítico con pierna cerrada normal y L5000 Caracol 2H: ambos conjuntos resuelven sus siete códigos con precio Arquetipo; L42 proyectante confirmado conserva el 4201 pendiente porque Arquetipo no publica ese código.
+
+## 2026-10-14 - Aluminio universal: pauta con costo pendiente
+
+- Las diez familias tradicionales conservan los 84 perfiles técnicos y 29 precios Arquetipo LEGNO; el test de contrato fija cada SKU/precio y mantiene 55 perfiles como pendientes.
+- La resolución distingue código técnico y SKU, usa Arquetipo como referencia automática de costo y respeta presentaciones privadas del taller marcadas preferidas.
+- Si falta presentación/costo, la pauta conserva los cortes calculables con el largo de la receta y reporta el faltante; no genera recetas para variantes sin fórmula.
+- Altas, finalización de borradores y cambios técnicos resuelven presentaciones para el snapshot reconstruido. Los guardados comerciales no recalculan cotizaciones históricas.
+- Precio comercial por m² permanece separado del costo técnico por tira.
+
+## 2026-10-13 - Agrupar piezas con ajuste unitario común
+
+- Al materializar el ajuste rápido, piezas iguales en medidas, sistema y valor unitario se consolidan en una sola línea con su cantidad.
+- Una excepción individual conserva una línea separada; el grupo mantiene la marca `Ajustada` sin inflar el PDF con filas idénticas.
+
+## 2026-10-13 - Precio masivo en ajuste por piezas móvil
+
+- El editor Paso 2 puede aplicar un valor unitario a todas las piezas del grupo en edición; los campos individuales permiten excepciones.
+- El valor se guarda junto con el borrador al cerrar. En precio directo se conserva como override manual para evitar que la plantilla lo reemplace.
+- No modifica el precio del catálogo ni componentes fuera del grupo.
+
+## 2026-10-13 - Configuraciones cotizables por fila
+
+- Las configuraciones publicadas como variantes ahora se siembran como líneas Ventora independientes en `cotizacion_line_templates`, agrupadas por familia en la interfaz común de Líneas y precios.
+- Cada clave conserva su precio propio; la primera variante conserva la clave/precio previo de la familia y las nuevas empiezan sin precio. El seed existente agrega solo claves faltantes y no reemplaza líneas, precios o recetas del taller.
+- Americana S-70, Prime/Form/Star Kompen, VEKA PD10 y Softline 39DJ quedan como filas de configuración individuales; composición sin fórmula conciliada sigue pendiente y no habilita despiece.
+- Catálogo y auditorías pasan de 75 a 95 líneas; perfiles documentados se resuelven desde el catálogo fuente por clave de configuración.
+
+## 2026-10-13 - VEKA Alumétrica PD10 y Softline 39DJ
+
+- Catálogo canónico sube de 73 a 75 líneas. Líneas y precios muestra el conteo real de configuraciones (6 PD10, 8 Softline), no el conteo de filas comerciales; las familias con varias tipologías aparecen como mixtas.
+- Softline muestra 4 abatibles, 2 fijos y 2 proyectantes según los nombres explícitos de Modelos; conserva que la ficha Alumétrica etiqueta como Fijo varias filas. PD10 conserva sus 3 Corredera y 3 Fijo publicados.
+- Se incluyen 21 referencias PD10 y 5 Softline con fuente VEKA y largo publicado. Importes `$0,00` no se importan como precio/costo.
+- Expedientes transcriben las 14 fórmulas de vidrio, cortes y consumo. No hay slots ni recetas VEKA hasta reconciliar conflictos; resolver debe permanecer `sin_receta`.
+- Test de catálogo/profiles y auditorías de catálogo ajustadas al total 75. No equivale a validación física de taller.
+
+## 2026-10-13 - Vinculacion de suscripciones Mercado Pago externas
+
+- La ficha admin de una organización permite asociar el ID exacto de una suscripción recurrente existente.
+- El servidor verifica el estado autorizado, plan, monto y moneda contra Mercado Pago, y requiere un único periodo manual activo que coincida exactamente con la fecha vigente del perfil.
+- La migración `20261013120000_link_existing_mercadopago_subscriptions.sql` transforma el registro vigente en una suscripción MP y conserva su periodo. No inserta un pago ni concede días; webhooks firmados y cron renuevan solo con cobro confirmado.
+- `mercadopago-webhook.service.ts` permite que una referencia externa difiera únicamente si el mismo ID de preapproval ya fue vinculado de forma administrativa.
+- Migración local pendiente de aplicar en producción; las suscripciones concretas de Aluminios del Carmen y SUR PVC aún deben vincularse desde sus fichas admin.
+- Sin cambios a cobros, planes, claves ni registros remotos en esta pasada.
+
 ## 2026-10-13 - Visibilidad de proveedores en cotizaciones
 
 - La lista móvil de proveedores en `Líneas y precios` permite ocultar o volver a mostrar cada proveedor para la organización activa.
@@ -2963,3 +3011,34 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
 - El largo preliminar se muestra como información azul en una sola nota, no como error rojo repetido. Elegir un largo comercial específico o confirmar la tira estándar limpia la marca pendiente de ese perfil y sus avisos heredados.
 - En el Paso 1 del editor móvil, cambiar el componente del catálogo deja una sola opción marcada. Elegir una composición solo la selecciona; el avance y la creación de la configuración quedan para el botón **Perfiles y descuentos**.
 - Si el perfil no tiene una longitud propia, la pauta usa 6.000 mm como predeterminado Ventora incluso si el dato heredado estaba marcado pendiente. El maestro puede guardar otro largo por perfil; la ausencia de ese override ya no bloquea tiras ni activa el aviso “Completa los largos comerciales”.
+
+## 2026-10-13 — Navegación interna de configuraciones VEKA
+
+- Al abrir una familia de proveedor con una sola línea canónica y varias configuraciones documentadas, la vista móvil ahora muestra las configuraciones internas del proveedor antes de las acciones de la línea.
+- Las opciones usan filas del patrón común del catálogo, sin una segunda ficha comercial que distraiga. Se quitaron de los nombres las anotaciones que repetían cómo Alumétrica etiquetó algunos modelos; las diferencias de fuente permanecen en el expediente técnico.
+- Verificado en localhost: VEKA PD10 expone 6 configuraciones y Softline 39DJ expone 8, sin esas anotaciones. ESLint, TypeScript y `pnpm fabrication:verify` pasan (181 suites, 1.514 pruebas y `docs:check`). No se ejecutó build para evitar interferir con el `.next` del servidor local abierto.
+
+## 2026-10-14 — Recuperación explícita de pautas históricas ausentes
+
+- La revisión de fabricación ahora permite guardar una pauta calculada que faltaba en una cotización existente. El guardado persiste el snapshot de esa pieza y reconstruye el consolidado conjunto con los snapshots disponibles, sin recalcular silenciosamente otras piezas históricas.
+- En la cotización QA 1112, Guiada/Constructor calculaban L5000, L20 y L25 en la revisión, pero el resumen guardado conservaba solo 1 de 3 pautas. No se modificó esa cotización; el CTA nuevo permite que el taller decida qué pauta acepta y guarda.
+- Precios: la cotización 1112 ya tenía precio de venta en L20/L25. La fuente Arquetipo 27811 contiene referencias netas de compra para 7/14 códigos L20, 7/23 L25 y 4/6 L42; perfiles sin precio fuente quedan pendientes, sin ceros ni importes inferidos.
+- `pnpm fabrication:verify`: 182 suites y 1.519 pruebas; TypeScript y documentación aprobados. Se ejecutaron además 95 pruebas dirigidas de pauta y precio. Build y smoke de navegador quedan pendientes para no escribir ni alterar la cotización QA activa.
+
+## 2026-10-14 — Cruce de precios Arquetipo y composiciones de aluminio (local)
+
+- Se agregó a `docs/fabricacion/Arquetipo/INTEGRACION_ARQUETIPO.md` una matriz de las diez familias: perfiles con precio, composiciones descritas por el catálogo y alcance real de recetas disponibles.
+- Se separa el precio de compra por tira del precio de venta por m² y de la disponibilidad de una composición con despiece; códigos ambiguos y variantes sin fórmula siguen pendientes sin sustituciones por parecido.
+- Pruebas dirigidas: `fabricacion-despiece-universal-precios.test.ts` y contrato de catálogo Arquetipo, 23 pruebas aprobadas. Sin build ni smoke de navegador en esta revisión documental.
+
+## 2026-10-15 — Variantes L25 y detalle de costos pendientes
+
+- El selector de pierna/refuerzo en Constructor considera las 18 combinaciones L25 canónicas confirmadas aun cuando la consulta de recetas persistidas no las devuelva; combinaciones fuera del catálogo siguen bloqueadas.
+- El resumen de costo presenta el código técnico y el motivo del pendiente, además de agrupar faltantes repetidos por código y acabado. L42 `4201` permanece pendiente porque Arquetipo no publica ese código; `4209` no se sustituye por `4201`.
+- Pruebas dirigidas cubren disponibilidad canónica L25 y presentación de código/motivo en el costo. No se reconstruye `.next` ni se altera la cotización del usuario.
+
+## 2026-10-15 — Claridad de variantes de fabricación en Constructor móvil
+
+- El editor móvil separa el proveedor de la línea comercial de la fuente técnica de la receta; cambia el rótulo a **Composición para el despiece** y muestra fuentes como **Base Ventora**, **Taller confirmado** o el proveedor documentado.
+- Copias técnicamente idénticas siguen consolidadas. Las composiciones diferentes con el mismo nombre se distinguen por una lista breve de códigos de perfil, sin repetir ajustes en cada corte.
+- Pruebas dirigidas: selección y etiquetas de receta; ESLint dirigido sin errores (mantiene una advertencia previa de dependencia no usada en el hook). Build y smoke visual no ejecutados para no interferir con `.next` de la instancia local.

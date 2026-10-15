@@ -112,6 +112,27 @@ function createBaseItem() {
 }
 
 describe("workflow-ui paso 2", () => {
+  it("inicia L42 del Constructor en Normal sin tomar un borrador ALAR", () => {
+    const selected = applyLineTemplateToComponentForm(
+      createLinePricingForm({ lineTemplateId: "", sistema: "Proyectante", fabricacionTipologia: "" }),
+      {
+        id: 210,
+        nombre: "Serie 42 — Proyectante / paño fijo",
+        categoria: "aluminio",
+        material: "Aluminio",
+        catalogKey: "ventora:l42",
+        catalogMetadata: { lineConfiguration: "Proyectante 1 hoja" },
+        vidrioPrincipalRecomendado: null,
+        precioM2Sugerido: 80000,
+        minimoCobrable: 35000,
+        redondeoPrecio: 1000,
+      }
+    );
+    expect(selected.fabricacionTipologia).toBe("proyectante");
+    expect(selected.fabricacionHojas).toBe(1);
+    expect(selected.fabricacionVariante).toBe("normal");
+    expect(selected.fabricationRecipeId).toBe("");
+  });
   it.each([
     ["ventora:kompen-prime-line-700", "Abatible", "1 hoja"],
     ["ventora:kompen-form-line-800", "Corredera", "3 hojas"],
@@ -759,6 +780,33 @@ describe("workflow-ui paso 2", () => {
     expect(reconciled.precioUnitario).toBe(1520000);
     expect(reconciled.precioTotal).toBe(1520000);
     expect(reconciled.precioAjustadoManual).toBe(true);
+  });
+
+  it("conserva la pauta formal guardada al reconciliar solo el precio, aunque apunte a una receta anterior", () => {
+    const base = createBaseItem();
+    const observaciones = encodeCotizacionItemPresentationMeta({
+      lineTemplateId: "206",
+      catalogLineKey: "ventora:l20",
+      sistema: "Corredera",
+      fabricacionTipologia: "corredera",
+      fabricacionHojas: 2,
+      fabricacionModulos: 2,
+      fabricacionVariante: "estandar",
+      fabricationRecipeId: "b28e231b-d251-413a-9cf8-02692dd33246",
+    });
+    const item = { ...base, lineaComercial: "Serie 20", observaciones };
+    const formal = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [],
+      organizationId: 1,
+    }).formal;
+    expect(formal?.recipeId).toBe("ventora:universal:l20:estandar");
+    const [repriced] = reconcileWorkflowItemsPricing([{
+      ...item,
+      fabricacionSnapshot: formal,
+    }], "por_item");
+    expect(repriced.fabricacionSnapshot).toEqual(formal);
+    expect(repriced.fabricacionSnapshot?.pauta.length).toBeGreaterThan(0);
   });
 
   it("conserva precio manual al aplicar borradores rapidos sincronizados", () => {

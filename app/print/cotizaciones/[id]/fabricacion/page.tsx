@@ -75,6 +75,7 @@ export default function CotizacionFabricacionPrintPage() {
   const { profile: organizationProfile } = useOrganizationProfile();
   const { recipes, organizationId: fabricationOrganizationId } = useFabricationRecipes({ readOnly: true });
   const [loadError, setLoadError] = useState<string | null>(null);
+  const refreshedQuoteIdRef = useRef<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
@@ -105,10 +106,12 @@ export default function CotizacionFabricacionPrintPage() {
   }, []);
 
   useEffect(() => {
+    if (refreshedQuoteIdRef.current === params.id) return;
+    refreshedQuoteIdRef.current = params.id;
     let cancelled = false;
     async function load() {
       try {
-        await loadCotizacionById(params.id);
+        await loadCotizacionById(params.id, { forceRefresh: true });
       } catch (error) {
         if (!cancelled) {
           setLoadError(
@@ -206,14 +209,18 @@ export default function CotizacionFabricacionPrintPage() {
 
   const handleSaveFabricationItem = useCallback(async (
     itemId: string,
-    snapshot: NonNullable<QuoteConstructorItemPatch["cubicationSnapshot"]>
+    snapshot: NonNullable<QuoteConstructorItemPatch["cubicationSnapshot"]>,
+    fabricacionSnapshot?: NonNullable<QuoteConstructorItemPatch["fabricacionSnapshot"]>
   ) => {
     if (!cotizacion) return;
     const currentItems = editedItemsRef.current ?? cotizacion.items;
     const nextItems = currentItems.map((item) => item.id === itemId
       ? {
           ...item,
-          observaciones: encodeCotizacionItemCubicationOverride(item.observaciones, snapshot),
+          observaciones: snapshot.source === "manual"
+            ? encodeCotizacionItemCubicationOverride(item.observaciones, snapshot)
+            : item.observaciones,
+          ...(fabricacionSnapshot ? { fabricacionSnapshot } : {}),
         }
       : item);
     editedItemsRef.current = nextItems;
@@ -341,6 +348,7 @@ export default function CotizacionFabricacionPrintPage() {
         key={despieceSession}
         open={despieceOpen}
         items={items}
+        persistedItems={cotizacion.items}
         lineTemplates={lineTemplates}
         quotePricingMode={normalizeQuotePricingMode(cotizacion.quotePricingMode)}
         activeItemId={despieceItemId}

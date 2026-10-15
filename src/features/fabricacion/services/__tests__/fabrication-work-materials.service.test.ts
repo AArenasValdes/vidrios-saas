@@ -198,6 +198,58 @@ describe("fabrication-work-materials.service", () => {
     expect(materials.glassOrder.map((row) => row.totalM2).sort((a, b) => a - b)).toEqual([2.4288, 2.52]);
   });
 
+  it("prioriza el código técnico exacto cuando el nombre del perfil se repite entre líneas", () => {
+    const snapshot = jobSnapshot();
+    const sourceBar = snapshot.bars[0]!;
+    snapshot.sourcePresentations[0]!.catalogLineKey = "ventora:l5000";
+    snapshot.bars = [{
+      ...sourceBar,
+      codigoPerfil: "5001",
+      nombrePerfil: "Riel superior",
+      largoComercialMm: 6000,
+      cortes: sourceBar.cortes.map((cut) => ({ ...cut, codigoPerfil: "5001", funcion: "Riel superior" })),
+    }];
+    const cost = {
+      schemaVersion: 2,
+      status: "partial",
+      calculatedAt: "2026-10-15T10:00:00.000Z",
+      currency: "CLP",
+      knownNetTotal: 13_477,
+      sourcePautaCapturedAt: "2026-10-15T09:00:00.000Z",
+      assumptions: [],
+      missing: [],
+      lines: [
+        {
+          familyKey: "universal:aluminio:l5000", technicalCode: "5001", technicalName: "Riel superior", supplierSku: "30895001", finishCode: "",
+          finishName: "Sin acabado específico", commercialLengthMm: 6000, purchaseUnit: "TIRA", bars: 1,
+          netPricePerPresentation: 13_477, sourcePrice: 13_477, effectivePriceSource: "reference",
+          priceBasis: "commercial_presentation", lineNet: 13_477, currency: "CLP", priceListId: "arquetipo",
+          priceListRevision: "cot-27811-2026-10-01-legno", cuts: [],
+        },
+        {
+          familyKey: "universal:aluminio:l20", technicalCode: "5001", technicalName: "Riel superior", supplierSku: "30892001", finishCode: "",
+          finishName: "Sin acabado específico", commercialLengthMm: 6000, purchaseUnit: "TIRA", bars: 1,
+          netPricePerPresentation: 21_189, sourcePrice: 21_189, effectivePriceSource: "reference",
+          priceBasis: "commercial_presentation", lineNet: 21_189, currency: "CLP", priceListId: "arquetipo",
+          priceListRevision: "cot-27811-2026-10-01-legno", cuts: [],
+        },
+      ],
+    } as TechnicalCostSnapshot;
+
+    const materials = buildWorkMaterialsDocument({
+      summary: summary(snapshot),
+      items: [item({ id: "1", code: "V1", line: "Serie 5000", glass: "Monolítico" })],
+      technicalCostSnapshot: cost,
+    });
+
+    expect(materials.profiles).toHaveLength(1);
+    expect(materials.profiles[0]?.price).toMatchObject({
+      sku: "30895001",
+      unitPrice: 13_477,
+      subtotal: 13_477,
+    });
+  });
+
   it("no deduce medidas de ventanas ni barras si faltan snapshots conjuntos", () => {
     const materials = buildWorkMaterialsDocument({
       summary: summary(null),

@@ -109,6 +109,94 @@ describe("buildPartialTechnicalCostSnapshot", () => {
     });
   });
 
+  it("completa los costos disponibles de la receta L42 confirmada y deja identificado el 4201 sin precio", () => {
+    const l42Prices = pricedArquetipoProfiles
+      .filter(([, , , , familyKey]) => familyKey === "universal:aluminio:l42")
+      .map(([, presentation, technicalInput, recipeCode, familyKey]) => price({
+        presentationId: presentation.sku,
+        providerKey: "arquetipo",
+        preferred: true,
+        familyKeys: technicalInput.familyKeys,
+        technicalCode: technicalInput.sourceCode,
+        recipeComponentCodes: technicalInput.recipeComponentCodes,
+        technicalName: technicalInput.name,
+        supplierSku: presentation.sku,
+        finishCode: "",
+        finishName: null,
+        finishResolution: "finish_independent",
+        purchaseUnit: "TIRA",
+        commercialLengthMm: presentation.commercialLengthMm,
+        netPrice: presentation.netPrice,
+        priceListId: "arquetipo-27811",
+        priceListRevision: "2026-10-05",
+        presentationDescription: `${familyKey} ${recipeCode}`,
+      }));
+
+    const result = buildPartialTechnicalCostSnapshot({
+      workSnapshot: pauta([
+        { code: "4201", item: "A", length: 1200 },
+        { code: "4202", item: "A", length: 1200 },
+        { code: "4229", item: "A", length: 1200 },
+      ]),
+      quoteItems: [{ code: "A", color: "Blanco", catalogLineKey: "ventora:l42", supplierFamilyKey: "universal:aluminio:l42" }],
+      availablePrices: l42Prices,
+    });
+
+    expect(result?.lines).toEqual(expect.arrayContaining([
+      expect.objectContaining({ technicalCode: "4202", supplierSku: "30894202", lineNet: 24375 }),
+      expect.objectContaining({ technicalCode: "4229", supplierSku: "30894229", lineNet: 6510 }),
+    ]));
+    expect(result?.missing).toEqual(expect.arrayContaining([
+      expect.objectContaining({ technicalCode: "4201", reason: expect.stringContaining("No hay presentación") }),
+    ]));
+  });
+
+  it.each([
+    {
+      label: "L25 monolítico de pierna cerrada normal",
+      familyKey: "universal:aluminio:l25",
+      lineKey: "ventora:l25",
+      item: "L25-2H",
+      codes: ["2501", "2502", "2504", "2505", "2507", "2509", "2510"],
+    },
+    {
+      label: "L5000 Caracol 2H",
+      familyKey: "universal:aluminio:l5000",
+      lineKey: "ventora:l5000",
+      item: "L5000-2H",
+      codes: ["5001", "5002", "5003", "5004", "5005", "5006", "5007"],
+    },
+  ])("resuelve todos los perfiles con precio de $label", ({ familyKey, lineKey, item, codes }) => {
+    const familyPrices = pricedArquetipoProfiles
+      .filter(([, , , , candidateFamily]) => candidateFamily === familyKey)
+      .map(([, presentation, technicalInput, recipeCode]) => price({
+        presentationId: presentation.sku,
+        providerKey: "arquetipo",
+        familyKeys: technicalInput.familyKeys,
+        technicalCode: technicalInput.sourceCode,
+        recipeComponentCodes: technicalInput.recipeComponentCodes,
+        technicalName: technicalInput.name,
+        supplierSku: presentation.sku,
+        finishCode: "",
+        finishName: null,
+        finishResolution: "finish_independent",
+        purchaseUnit: "TIRA",
+        commercialLengthMm: presentation.commercialLengthMm,
+        netPrice: presentation.netPrice,
+        priceListId: "arquetipo-27811",
+        priceListRevision: "2026-10-05",
+        presentationDescription: `${familyKey} ${recipeCode}`,
+      }));
+    const result = buildPartialTechnicalCostSnapshot({
+      workSnapshot: pauta(codes.map((code) => ({ code, item, length: 1000 }))),
+      quoteItems: [{ code: item, color: "Aluminio mate", catalogLineKey: lineKey, supplierFamilyKey: familyKey }],
+      availablePrices: familyPrices,
+    });
+
+    expect(result?.lines.map((line) => line.technicalCode).sort()).toEqual([...codes].sort());
+    expect(result?.missing.filter((entry) => entry.technicalCode)).toEqual([]);
+  });
+
   it("prioriza el precio Arquetipo LEGNO como referencia de una línea universal aunque otro proveedor sea más barato", () => {
     const result = buildPartialTechnicalCostSnapshot({
       workSnapshot: pauta([{ code: "2001", item: "A", length: 1200 }]),

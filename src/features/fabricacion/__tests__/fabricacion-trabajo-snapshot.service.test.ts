@@ -201,3 +201,36 @@ describe("consolidación de pauta por trabajo", () => {
     expect(construirFabricacionTrabajoSnapshot({ items: [item("a", "#ffffff", tooShort)] })).toBeNull();
   });
 });
+
+  it("conserva la pauta universal de aluminio con el largo de receta cuando falta SKU o precio", () => {
+    const aluminum = snapshot({ pautaBarras: {
+      ...snapshot().pautaBarras,
+      barras: [{
+        ...snapshot().pautaBarras!.barras[0]!,
+        codigoPerfil: "2001",
+        largoComercialMm: 6000,
+        cortes: [{ ...snapshot().pautaBarras!.barras[0]!.cortes[0]!, codigoPerfil: "2001", largoMm: 2800 }],
+      }],
+    } });
+    const result = construirFabricacionTrabajoSnapshot({
+      items: [{
+        ...item("l20", "#ffffff", aluminum),
+        supplierFamilyKey: "universal:aluminio:l20",
+        requireSupplierPresentation: true,
+        allowRecipeLengthWhenSupplierPending: true,
+        supplierPresentationSelections: [{
+          technicalCode: "2001", status: "missing", presentationId: null, providerKey: null,
+          supplierSku: null, finishCode: null, finishName: null, commercialLengthMm: null,
+          reason: "No existe una presentación Arquetipo con precio para el código 2001.",
+        }],
+      }],
+    });
+
+    expect(result).toMatchObject({ totalBars: 1, totalProfilesLinealMm: 2800 });
+    expect(result?.bars[0]).toMatchObject({ codigoPerfil: "2001", largoComercialMm: 6000, supplierSku: null });
+    expect(result?.bars[0]?.cortes).toHaveLength(1);
+    expect(result?.missingPresentations).toEqual([expect.objectContaining({
+      technicalCode: "2001",
+      reason: "No existe una presentación Arquetipo con precio para el código 2001.",
+    })]);
+  });

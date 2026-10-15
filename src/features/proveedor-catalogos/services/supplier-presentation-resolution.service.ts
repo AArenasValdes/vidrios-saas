@@ -95,8 +95,17 @@ export function resolveSupplierPresentationsForQuoteItem(input: {
         Boolean(request.finishName) && normalize(entry.finishName) === normalize(request.finishName))
     );
 
+    const universalAluminumFamily = normalizeUniversalAluminumFamilyKey(request.familyKey);
+    const preferredWorkshopCandidates = candidates.filter((entry) =>
+      entry.providerKey.startsWith("taller:") && entry.preferred === true
+    );
+    const arquetipoCandidates = candidates.filter((entry) => entry.providerKey === "arquetipo");
     const preferredCandidates = candidates.filter((entry) => entry.preferred === true);
-    const effectiveCandidates = preferredCandidates.length === 1 ? preferredCandidates : candidates;
+    const effectiveCandidates = universalAluminumFamily
+      ? preferredWorkshopCandidates.length > 0
+        ? preferredWorkshopCandidates
+        : arquetipoCandidates
+      : preferredCandidates.length === 1 ? preferredCandidates : candidates;
 
     if (effectiveCandidates.length === 0) {
       return {

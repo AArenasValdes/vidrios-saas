@@ -53,6 +53,8 @@ export function AdminClientDetailWorkspace({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [isMercadoPagoLinkOpen, setIsMercadoPagoLinkOpen] = useState(false);
+  const [providerSubscriptionId, setProviderSubscriptionId] = useState("");
   const [isTestConfirmOpen, setIsTestConfirmOpen] = useState(false);
   const [planCode, setPlanCode] = useState<BillingPlanCode>("founder_monthly");
   const [reference, setReference] = useState("");
@@ -90,6 +92,31 @@ export function AdminClientDetailWorkspace({
       router.refresh();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Error al pagar.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleLinkMercadoPagoSubscription() {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/admin/clientes/link-mercadopago", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          organizationId: client.organizationId,
+          providerSubscriptionId,
+        }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "No pudimos vincular Mercado Pago.");
+      setMessage("Suscripción de Mercado Pago vinculada. El periodo vigente se conservó; los próximos pagos aprobados renovarán esta cuenta automáticamente.");
+      setProviderSubscriptionId("");
+      setIsMercadoPagoLinkOpen(false);
+      router.refresh();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Error al vincular Mercado Pago.");
     } finally {
       setIsSubmitting(false);
     }
@@ -198,6 +225,9 @@ export function AdminClientDetailWorkspace({
           ) : null}
           <button type="button" className={s.secondaryBtn} onClick={() => setIsPaymentOpen(true)}>
             Registrar pago
+          </button>
+          <button type="button" className={s.secondaryBtn} onClick={() => setIsMercadoPagoLinkOpen(true)}>
+            Vincular pago automático
           </button>
           <button type="button" className={s.secondaryBtn} onClick={() => void handleExtendTrial()}>
             Extender trial
@@ -427,6 +457,45 @@ export function AdminClientDetailWorkspace({
                 <button type="button" className={s.secondaryBtn} onClick={() => setIsPaymentOpen(false)}>Cancelar</button>
                 <button type="button" className={s.primaryBtn} disabled={isSubmitting} onClick={() => void handleActivatePayment()}>
                   Registrar pago
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isMercadoPagoLinkOpen ? (
+        <div className={s.modalBackdrop} onClick={() => setIsMercadoPagoLinkOpen(false)}>
+          <div className={s.modal} onClick={(event) => event.stopPropagation()}>
+            <div className={s.modalHeader}>
+              <h3>Vincular pago automático</h3>
+              <button type="button" className={s.iconBtn} onClick={() => setIsMercadoPagoLinkOpen(false)}>
+                <LuX aria-hidden />
+              </button>
+            </div>
+            <div className={s.form}>
+              <p className={s.modalHint}>
+                Ingresa el ID de la suscripción existente en Mercado Pago. Ventora comprobará que esté autorizada y que coincidan plan, monto y moneda. Se conserva el periodo actual; esta acción no activa ni extiende días.
+              </p>
+              <label>
+                ID de suscripción Mercado Pago
+                <input
+                  value={providerSubscriptionId}
+                  onChange={(event) => setProviderSubscriptionId(event.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="Ej.: 123456789"
+                />
+              </label>
+              <div className={s.modalActions}>
+                <button type="button" className={s.secondaryBtn} onClick={() => setIsMercadoPagoLinkOpen(false)}>Cancelar</button>
+                <button
+                  type="button"
+                  className={s.primaryBtn}
+                  disabled={isSubmitting || !providerSubscriptionId.trim()}
+                  onClick={() => void handleLinkMercadoPagoSubscription()}
+                >
+                  Vincular suscripción
                 </button>
               </div>
             </div>

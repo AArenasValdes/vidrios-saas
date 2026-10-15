@@ -1,6 +1,7 @@
 /** @jest-environment jsdom */
 
 import { fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
 
 jest.mock("@/features/auth/hooks/useAuth", () => ({
   useAuth: () => ({ organizacionId: "test-org-1", userId: "test-user" }),
@@ -17,7 +18,10 @@ import {
   listLeafModules,
   type GuidedVisualConfig,
 } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
-import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import {
+  decodeCotizacionItemPresentationMeta,
+  encodeCotizacionItemPresentationMeta,
+} from "@/utils/cotizacion-item-presentation";
 
 import {
   countIncompleteCuadernoPieces,
@@ -302,6 +306,113 @@ describe("PasoDosCuadernoMovil", () => {
       expect.objectContaining({
         costoProveedorUnitario: "120000",
         lineTemplateId: "linea-a",
+      })
+    );
+  });
+
+  it("conserva datos editados al pasar de edición rápida a composición", () => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: jest.fn().mockReturnValue({
+        matches: false,
+        addListener: jest.fn(),
+        removeListener: jest.fn(),
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+      }),
+    });
+    const initial = baseItem();
+    const line = baseLineTemplate();
+    const onUpdate = jest.fn();
+    function Harness() {
+      const [items, setItems] = useState([initial]);
+      return (
+        <PasoDosCuadernoMovil
+          {...defaultProps}
+          items={items}
+          lineTemplates={[line]}
+          glassOptions={["Incoloro monolítico 5mm", "Laminado 3+3mm"]}
+          onUpdateItem={(itemId, patch) => {
+            onUpdate(itemId, patch);
+            setItems((current) =>
+              current.map((item) =>
+                item.id === itemId
+                  ? (() => {
+                      const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+                      return {
+                      ...item,
+                      ancho: patch.ancho === undefined ? item.ancho : Number(patch.ancho),
+                      alto: patch.alto === undefined ? item.alto : Number(patch.alto),
+                      vidrio: patch.vidrio ?? item.vidrio,
+                      costoProveedorUnitario:
+                        patch.costoProveedorUnitario === undefined
+                          ? item.costoProveedorUnitario
+                          : Number(patch.costoProveedorUnitario),
+                      observaciones: encodeCotizacionItemPresentationMeta({
+                        ...meta,
+                        guidedVisualConfig: patch.guidedVisualConfig ?? meta.guidedVisualConfig,
+                        lineTemplateId: patch.lineTemplateId ?? meta.lineTemplateId,
+                        material: patch.material ?? meta.material,
+                        colorHex: patch.colorHex ?? meta.colorHex,
+                      }),
+                      };
+                    })()
+                  : item
+              )
+            );
+          }}
+        />
+      );
+    }
+
+    render(<Harness />);
+    fireEvent.click(screen.getByText("Ventana fija"));
+    fireEvent.change(screen.getByLabelText("Ancho (mm)"), { target: { value: "1600" } });
+    fireEvent.change(screen.getByLabelText("Alto (mm)"), { target: { value: "1250" } });
+    fireEvent.click(screen.getByRole("button", { name: "Cambiar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Blanco" }));
+    fireEvent.click(screen.getByRole("button", { name: "Elegir linea de esta pieza" }));
+    fireEvent.click(screen.getByRole("option", { name: /Linea A/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Elegir tipo de vidrio" }));
+    fireEvent.click(screen.getByRole("option", { name: "Laminado 3+3mm" }));
+    fireEvent.click(screen.getByRole("button", { name: /Forma y apertura/i }));
+
+    expect(onUpdate).toHaveBeenNthCalledWith(
+      1,
+      "item-1",
+      expect.objectContaining({
+        ancho: "1600",
+        alto: "1250",
+        lineTemplateId: "linea-a",
+        vidrio: "Laminado 3+3mm",
+        material: "Aluminio",
+        colorHex: expect.any(String),
+      })
+    );
+    expect(screen.getByRole("button", { name: /Partir lado/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Partir lado/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Usar esta composicion" }));
+
+    const compositionPatch = onUpdate.mock.calls.at(-1)?.[1];
+    const checkpointPatch = onUpdate.mock.calls[0]?.[1];
+    expect(compositionPatch).toMatchObject({ ancho: "1600", alto: "1250" });
+    expect(compositionPatch.guidedVisualConfig.widthMm).toBe(1600);
+    expect(compositionPatch.guidedVisualConfig.heightMm).toBe(1250);
+    expect(listLeafModules(compositionPatch.guidedVisualConfig.root)).toHaveLength(2);
+
+    fireEvent.click(screen.getByText("Ventana fija"));
+    expect(screen.getByLabelText("Ancho (mm)")).toHaveValue("1600");
+    expect(screen.getByLabelText("Alto (mm)")).toHaveValue("1250");
+    expect(screen.getByText("Laminado 3+3mm")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    expect(onUpdate).toHaveBeenLastCalledWith(
+      "item-1",
+      expect.objectContaining({
+        ancho: "1600",
+        alto: "1250",
+        lineTemplateId: "linea-a",
+        vidrio: "Laminado 3+3mm",
+        colorHex: checkpointPatch.colorHex,
       })
     );
   });

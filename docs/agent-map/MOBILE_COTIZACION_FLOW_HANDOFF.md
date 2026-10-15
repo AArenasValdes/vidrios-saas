@@ -1,6 +1,6 @@
 # Handoff - Flujo movil de cotizacion por items / Constructor
 
-Ultima consolidacion: 2026-10-09.
+Ultima consolidacion: 2026-10-15.
 
 ## Recetas del Constructor, variantes y snapshots (2026-10-09)
 
@@ -10,6 +10,7 @@ Ultima consolidacion: 2026-10-09.
 - Los selectores de Guiada, Constructor y revisión de fabricación consolidan recetas que comparten reglas técnicas. Una alternativa única se resuelve sin pedir elección; varias fórmulas distintas siguen requiriendo elección explícita. Al consolidar, se conserva la receta que el maestro ya tenía elegida.
 - El selector rápido del Constructor combina las recetas guardadas con el mismo fallback universal que la cotización. Los perfiles/códigos y ajustes distintos siguen visibles; cuando el rótulo se repite, la UI añade una referencia técnica para distinguirlo.
 - Opciones que repiten exactamente identidad técnica y reglas se consolidan. Diferencias de códigos de perfil o descuentos permanecen como opciones distintas; cuando el rótulo se repite, se añaden los códigos técnicos para distinguirlas.
+- En el editor rápido, el proveedor de la línea se muestra aparte de la fuente técnica de cada receta. Las opciones se llaman **Composición para el despiece**, usan hoja/hojas correctamente y exponen la fuente declarada; copias exactas siguen consolidadas y alternativas con el mismo nombre muestran sus códigos de perfil sin repetir descuentos por cada corte. No llamar “receta Arquetipo” a una fórmula Ventora solo porque la línea seleccionada usa precios Arquetipo.
 - Si no se elige entre varias alternativas, el Constructor conserva el contexto inferido de tipología/hojas; no lo convierte en una receta elegida ni genera snapshot ambiguo.
 - La tipología `shower` se resuelve antes de reglas genéricas de puerta/corredera. Constructor y Guiada comparten la resolución final; snapshots ya guardados no se recalculan.
 - Variantes solo se consideran cubiertas si la receta compatible entrega cortes y pauta calculables. Un nombre visible en el selector no demuestra cobertura.
@@ -191,6 +192,7 @@ Reglas importantes:
 - Las lineas de Cristal deben poder elegirse en el selector correcto cuando corresponde vidrio/cristal, pero la linea global no debe usarlas.
 - Al elegir una linea, el precio sugerido se calcula con `applyLineTemplateToComponentForm` y `buildComponentFormLinePricingSummary`.
 - Si el usuario escribe manualmente el precio, se marca como precio manual.
+- En el ajuste por piezas de un lote, se puede aplicar un valor unitario a todas las piezas del grupo actual. Al cerrar, piezas con iguales medidas, sistema y valor se vuelven a agrupar en una sola línea con su cantidad y marca `Ajustada`; las excepciones quedan separadas solo cuando tienen datos distintos. El valor individual permanece disponible y el override no cambia precios de catálogo.
 - Cambiar material/color debe reflejarse en el preview del croquis mediante `colorHex`.
 - En movil, la pauta de corte no se edita. Solo queda como dato rapido; la revision completa es desktop.
 
