@@ -43,7 +43,6 @@ import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer
 import { hasQuickCompositionStructuralChanges, type QuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import {
   describeIncompleteFabricacionMessage,
-  formatVariantDisplayLabel,
   isFabricacionRecipeReadyForSnapshot,
 } from "@/features/fabricacion/services/fabricacion-line-variant.service";
 import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
@@ -68,8 +67,8 @@ import {
 import { resolveFabricationRecipe } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
 import {
   dedupeConstructorRecipeCandidates,
-  getRecipeTechnicalHint,
 } from "@/features/fabricacion/services/constructor-recipe-selection.service";
+import { QuoteFabricationVariantPicker } from "@/features/fabricacion/components/quote-fabrication-variant-picker";
 import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
 import { construirFabricacionTrabajoSnapshot } from "@/features/fabricacion/services/fabricacion-trabajo-snapshot.service";
 import {
@@ -103,6 +102,7 @@ export type PautaCubicacionFormSlice = {
   vidrio?: string;
   /** Variante/herraje elegido cuando hay varias recetas activas compatibles. */
   fabricationRecipeId?: string;
+  supplierProviderKey?: string;
   fabricacionTipologia?: string;
   fabricacionHojas?: number | null;
   fabricacionModulos?: number | null;
@@ -174,6 +174,7 @@ type Props = {
     fabricacionReinforcement: string;
     fabricacionVariante: string;
   }) => void;
+  onSupplierProviderKeyChange?: (providerKey: string) => void;
   onSaveCubicationLineAdjustment?: (input?: {
     snapshot?: CotizacionItemCubicationSnapshot | null;
   }) => Promise<void> | void;
@@ -372,6 +373,7 @@ export function PautaCubicacionPanel({
   onFabricacionSnapshotChange,
   onFabricacionContextoChange,
   onFabricacionL25ConfigChange,
+  onSupplierProviderKeyChange,
   onSaveCubicationLineAdjustment,
   isSavingCubicationLineAdjustment,
   lineSelectionHint = "precio",
@@ -414,6 +416,7 @@ export function PautaCubicacionPanel({
       sistema: componentForm.sistema,
     });
   const effectiveFabricacionHojas = resolveComponentFabricacionHojas({
+    tipo: componentForm.tipo,
     sheetScheme: componentForm.sheetScheme,
     fabricacionHojas: componentForm.fabricacionHojas,
     hojasBase: componentForm.hojasBase,
@@ -596,16 +599,10 @@ export function PautaCubicacionPanel({
     compositionNeedsRecipeReview,
     componentForm.fabricacionApertura,
     componentForm.fabricacionHerraje,
-    componentForm.fabricacionHojas,
     componentForm.fabricacionModulos,
     componentForm.fabricacionVariante,
     componentForm.fabricationRecipeId,
-    componentForm.quickCompositionAdjustment,
-    componentForm.sheetVariant,
     componentForm.vidrio,
-    componentForm.guidedVisualConfig,
-    componentForm.hojasBase,
-    componentForm.sheetScheme,
     componentForm.sistema,
     effectiveFabricacionHojas,
     explicitTipologia,
@@ -617,6 +614,7 @@ export function PautaCubicacionPanel({
     persistedRecipes,
     pieceApertura,
     sodalConfig,
+    selectedTemplate?.nombre,
     widthMm,
   ]);
   const sodalLineHeaderLabel = useMemo(() => {
@@ -825,6 +823,7 @@ export function PautaCubicacionPanel({
     quantity,
     selectedPersistedRecipe,
     selectedPersistedRecipeReady,
+    selectedTemplate?.catalogMetadata?.familyKey,
     needsS75LeafAWidth,
     s75LeafAWidth,
     s75LeafAWidthValid,
@@ -1015,8 +1014,8 @@ export function PautaCubicacionPanel({
           : cubicationConfig?.status === "validada";
   const readOnlyFormalSnapshot = Boolean(formalSnapshot);
 
+  const supplierFamilyKey = formalSnapshot?.supplierFamilyKey ?? null;
   const supplierPresentationRequests = useMemo(() => {
-    const supplierFamilyKey = formalSnapshot?.supplierFamilyKey;
     const resolvedCatalogLineKey = catalogKey ?? selectedTemplate?.catalogKey ?? null;
     const technicalCodes = formalSnapshot?.result.perfiles
       .map((profile) => profile.codigoPerfil.trim())
@@ -1028,9 +1027,48 @@ export function PautaCubicacionPanel({
       familyKey: supplierFamilyKey,
       finishName: resolveSupplierFinishName(null, componentForm.colorHex),
       technicalCodes: [...new Set(technicalCodes)],
+      providerKey: componentForm.supplierProviderKey || null,
     }];
-  }, [formalSnapshot, catalogKey, selectedTemplate?.catalogKey, componentForm.colorHex]);
-  const supplierPresentationResolution = useSupplierPresentationResolution(supplierPresentationRequests);
+  }, [formalSnapshot, supplierFamilyKey, catalogKey, selectedTemplate?.catalogKey, componentForm.colorHex, componentForm.supplierProviderKey]);
+  const supplierPresentationResolution = useSupplierPresentationResolution(supplierPresentationRequests, {
+    includeProviderOptions: true,
+  });
+  const supplierProviderOptions = supplierPresentationResolution.result?.providerOptions?.["pauta-preview"] ?? [];
+  const supplierResolutionError = supplierPresentationResolution.result?.itemErrors?.["pauta-preview"] ?? null;
+  // Empty means keep the existing automatic preference resolution. The
+  // explicit override is applied only after the user picks a provider.
+  const selectedSupplierProviderKey = componentForm.supplierProviderKey || "";
+  const selectedSupplierProviderOption = supplierProviderOptions.find((option) => option.providerKey === selectedSupplierProviderKey) ?? null;
+  const [familyPreferenceOverride, setFamilyPreferenceOverride] = useState<{ familyKey: string; providerKey: string | null } | null>(null);
+  const [familyPreferenceSaving, setFamilyPreferenceSaving] = useState(false);
+  const [familyPreferenceError, setFamilyPreferenceError] = useState<string | null>(null);
+  const storedFamilyPreference = supplierPresentationResolution.result?.familyPreferences?.[supplierFamilyKey ?? ""] ?? null;
+  const effectiveFamilyPreference = familyPreferenceOverride && familyPreferenceOverride.familyKey === supplierFamilyKey
+    ? familyPreferenceOverride.providerKey
+    : storedFamilyPreference;
+  const canManageFamilyPreferences = supplierPresentationResolution.result?.canManageFamilyPreferences === true;
+  const saveFamilyPreference = async (providerKey: string | null) => {
+    if (!supplierFamilyKey || (!providerKey && !effectiveFamilyPreference)) return;
+    setFamilyPreferenceSaving(true);
+    setFamilyPreferenceError(null);
+    try {
+      const response = await fetch("/api/proveedor-catalogos/preferencias-familia", {
+        method: providerKey ? "PUT" : "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(providerKey ? { familyKey: supplierFamilyKey, providerKey } : { familyKey: supplierFamilyKey }),
+      });
+      if (response.status === 503) {
+        throw new Error("La preferencia habitual todavía no está disponible en esta versión. Puedes elegir un proveedor para esta pieza.");
+      }
+      if (!response.ok) throw new Error("No se pudo actualizar el proveedor habitual.");
+      setFamilyPreferenceOverride({ familyKey: supplierFamilyKey, providerKey });
+      onSupplierProviderKeyChange?.("");
+    } catch {
+      setFamilyPreferenceError("No se pudo actualizar el proveedor habitual. Inténtalo nuevamente.");
+    } finally {
+      setFamilyPreferenceSaving(false);
+    }
+  };
   const supplierTrabajoSnapshot = useMemo(() => {
     if (!formalSnapshot || supplierPresentationResolution.result?.enabled !== true) return null;
     return construirFabricacionTrabajoSnapshot({
@@ -1537,54 +1575,48 @@ export function PautaCubicacionPanel({
           </div>
           <em className={editor.cubicacionStatusMuted}>Elegir variante</em>
         </header>
-        <label className={editor.cubicacionWaiting}>
-          <span>Variante de fabricación</span>
-          <select
-            value={componentForm.fabricationRecipeId ?? ""}
-            onChange={(event) => {
-              const recipeId = event.target.value;
-              if (useFormalDomain) {
-                handlePersistedRecipeSelection(recipeId);
-                return;
-              }
-              onFabricationRecipeIdChange?.(recipeId);
-              if (!selectedTemplate || !recipeId || widthMm <= 0 || heightMm <= 0) return;
-              const next = buildCubicationSnapshotFromCatalogMetadata({
-                lineTemplateId: String(selectedTemplate.id),
-                catalogMetadata: selectedTemplate.catalogMetadata,
-                widthMm,
-                heightMm,
-                quantity,
-                preferredRecipeId: recipeId,
-                apertura: pieceApertura,
-              });
-              onCubicationSnapshotChange(next);
-            }}
-          >
-            <option value="">Selecciona…</option>
-            {useFormalDomain && formalResolution?.estado === "multiples_recetas"
-              ? formalResolution.candidatas.map((candidate) => (
-                  <option key={candidate.id} value={candidate.id}>
-                    {formatVariantDisplayLabel(candidate)}
-                    {formalResolution.candidatas.filter(
-                      (other) => formatVariantDisplayLabel(other) === formatVariantDisplayLabel(candidate)
-                    ).length > 1 && getRecipeTechnicalHint(candidate)
-                      ? ` · ${getRecipeTechnicalHint(candidate)}`
-                      : ""}
-                    {` · ${candidate.definition.identidad.hojas} hojas · v${candidate.version}`}
-                  </option>
-                ))
-              : recipeSelection?.candidates.map((candidate: FabricationRecipe) => (
-                  <option key={candidate.id} value={candidate.id}>
-                    {herrajeDisplayLabel(
-                      candidate.herrajeTipo,
-                      candidate.herrajeLabel
-                    )}
-                    {candidate.variant ? ` · ${candidate.variant}` : ""}
-                  </option>
-                ))}
-          </select>
-        </label>
+        {useFormalDomain && formalResolution?.estado === "multiples_recetas" ? (
+          <QuoteFabricationVariantPicker
+            title="Fabricación"
+            candidates={formalResolution.candidatas}
+            selectedRecipeId={componentForm.fabricationRecipeId || null}
+            onSelectRecipe={(recipe) => handlePersistedRecipeSelection(recipe.id)}
+          />
+        ) : (
+          <label className={editor.cubicacionWaiting}>
+            <span>Variante de fabricación</span>
+            <select
+              value={componentForm.fabricationRecipeId ?? ""}
+              onChange={(event) => {
+                const recipeId = event.target.value;
+                if (useFormalDomain) {
+                  handlePersistedRecipeSelection(recipeId);
+                  return;
+                }
+                onFabricationRecipeIdChange?.(recipeId);
+                if (!selectedTemplate || !recipeId || widthMm <= 0 || heightMm <= 0) return;
+                const next = buildCubicationSnapshotFromCatalogMetadata({
+                  lineTemplateId: String(selectedTemplate.id),
+                  catalogMetadata: selectedTemplate.catalogMetadata,
+                  widthMm,
+                  heightMm,
+                  quantity,
+                  preferredRecipeId: recipeId,
+                  apertura: pieceApertura,
+                });
+                onCubicationSnapshotChange(next);
+              }}
+            >
+              <option value="">Selecciona…</option>
+              {recipeSelection?.candidates.map((candidate: FabricationRecipe) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {herrajeDisplayLabel(candidate.herrajeTipo, candidate.herrajeLabel)}
+                  {candidate.variant ? ` · ${candidate.variant}` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </section>
     );
   }
@@ -1688,6 +1720,52 @@ export function PautaCubicacionPanel({
         </em>
       </header>
 
+      {supplierPresentationRequests.length > 0 && onSupplierProviderKeyChange ? (
+        <details className={editor.supplierProviderDisclosure}>
+          <summary>
+            <span>Proveedor de compra</span>
+            <strong>{selectedSupplierProviderOption?.label ?? (selectedSupplierProviderKey ? "Proveedor guardado · revisar cobertura" : "Automático")}</strong>
+          </summary>
+          <div className={editor.supplierProviderDisclosureBody}>
+            {supplierResolutionError ? <small role="status">{supplierResolutionError}</small> : null}
+            <label className={editor.supplierProviderField}>
+              <span>Cambiar proveedor para esta pieza</span>
+              <select
+                aria-label="Proveedor de compra para esta pieza"
+                value={selectedSupplierProviderKey}
+                onChange={(event) => onSupplierProviderKeyChange(event.target.value)}
+                disabled={supplierPresentationResolution.isResolving && supplierProviderOptions.length === 0}
+              >
+                <option value="">Automático · comportamiento anterior</option>
+                {selectedSupplierProviderKey && !selectedSupplierProviderOption ? (
+                  <option value={selectedSupplierProviderKey}>Proveedor guardado · revisar cobertura</option>
+                ) : null}
+                {supplierProviderOptions.map((option) => (
+                  <option key={option.providerKey} value={option.providerKey}>
+                    {option.label}{option.isReference ? " · Referencia" : ""} · {option.pricedProfileCount}/{option.totalProfileCount} perfiles con precio
+                  </option>
+                ))}
+              </select>
+              <small>Solo cambia el costo de compra; el precio de venta de la línea se mantiene.</small>
+            </label>
+            {canManageFamilyPreferences && (selectedSupplierProviderKey || effectiveFamilyPreference) ? (
+              <span className={editor.supplierPreferenceActions}>
+                {effectiveFamilyPreference ? <small>Habitual: {supplierProviderOptions.find((option) => option.providerKey === effectiveFamilyPreference)?.label ?? effectiveFamilyPreference}</small> : null}
+                {selectedSupplierProviderKey ? <button type="button" disabled={familyPreferenceSaving} onClick={() => void saveFamilyPreference(selectedSupplierProviderKey)}>
+                  {effectiveFamilyPreference === selectedSupplierProviderKey ? "Proveedor habitual de esta línea" : "Usar como proveedor habitual"}
+                </button> : null}
+                {effectiveFamilyPreference ? <button type="button" disabled={familyPreferenceSaving} onClick={() => void saveFamilyPreference(null)}>Quitar preferencia</button> : null}
+              </span>
+            ) : null}
+            {familyPreferenceError ? <small role="status">{familyPreferenceError}</small> : null}
+          </div>
+        </details>
+      ) : null}
+      {formalSnapshot?.result.perfiles.length && !supplierFamilyKey ? (
+        <div className={editor.supplierProviderDisclosureBody} role="status">
+          Proveedor pendiente: esta línea todavía no tiene familia de compra configurada.
+        </div>
+      ) : null}
 
       {s75GeometryControl}
       {s75LeafWidthControl}

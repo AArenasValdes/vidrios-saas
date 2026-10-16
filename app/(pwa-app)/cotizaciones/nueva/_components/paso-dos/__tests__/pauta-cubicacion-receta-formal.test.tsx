@@ -170,7 +170,16 @@ describe("PautaCubicacionPanel con recetas persistidas", () => {
             commercialLengthMm: 6000,
           })),
         ]));
-        return { ok: true, json: async () => ({ enabled: true, selections }) };
+        return { ok: true, json: async () => ({
+          enabled: true,
+          selections,
+          providerOptions: {
+            "pauta-preview": [
+              { providerKey: "arquetipo", label: "Arquetipo", pricedProfileCount: 7, totalProfileCount: 7, isReference: true },
+              { providerKey: "xelena", label: "Xelena", pricedProfileCount: 5, totalProfileCount: 7, isReference: false },
+            ],
+          },
+        }) };
       }
       return { ok: false, json: async () => ({}) };
     });
@@ -180,6 +189,7 @@ describe("PautaCubicacionPanel con recetas persistidas", () => {
       value: fetchMock,
     });
     const onFormalSnapshot = jest.fn();
+    const onSupplierProviderChange = jest.fn();
 
     render(
       <PautaCubicacionPanel
@@ -208,6 +218,7 @@ describe("PautaCubicacionPanel con recetas persistidas", () => {
         onFabricacionSnapshotChange={onFormalSnapshot}
         onFabricationRecipeIdChange={jest.fn()}
         onFabricacionContextoChange={jest.fn()}
+        onSupplierProviderKeyChange={onSupplierProviderChange}
       />
     );
 
@@ -234,6 +245,10 @@ describe("PautaCubicacionPanel con recetas persistidas", () => {
     expect(document.body.textContent).not.toContain("5.800 mm");
     expect(draft.status).toBe("draft");
     expect(draft.definition.estado).toBe("lista_para_validar");
+    const supplierSelect = await screen.findByRole("combobox", { name: "Proveedor de compra para esta pieza" });
+    expect(supplierSelect).toHaveValue("");
+    fireEvent.change(supplierSelect, { target: { value: "xelena" } });
+    expect(onSupplierProviderChange).toHaveBeenCalledWith("xelena");
   });
 
   it("pide solo variante o herraje y guarda la receta elegida", async () => {
@@ -265,9 +280,7 @@ describe("PautaCubicacionPanel con recetas persistidas", () => {
       />
     );
 
-    fireEvent.change(screen.getByLabelText("Variante de fabricación"), {
-      target: { value: "recipe-premium" },
-    });
+    fireEvent.click(screen.getByRole("button", { name: /Termopanel/ }));
 
     expect(onFormalSnapshot).toHaveBeenCalledWith(
       expect.objectContaining({

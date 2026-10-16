@@ -15,7 +15,10 @@ import {
   type SodalL25LegSlug,
   type SodalL25ReinforcementSlug,
 } from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
-import type { FabricacionTipologia } from "@/features/fabricacion/types/fabricacion-domain";
+import type {
+  FabricacionAtributosTecnicos,
+  FabricacionTipologia,
+} from "@/features/fabricacion/types/fabricacion-domain";
 import type {
   FabricationRecipeRecord,
   FabricationRecipeStatus,
@@ -53,6 +56,8 @@ export type FabricacionRecetaResolucionInput = {
   allowPreliminaryNonValidated?: boolean;
   anchoTotalMm?: number | null;
   altoTotalMm?: number | null;
+  /** Contrato estructurado compartido; los campos planos se mantienen como adaptador histórico. */
+  atributosTecnicos?: FabricacionAtributosTecnicos;
 };
 
 export type ResolveFabricationRecipeInput = FabricacionRecetaResolucionInput & {
@@ -141,12 +146,24 @@ export function resolveFabricationRecipe(
   input: ResolveFabricationRecipeInput
 ): FabricacionRecetaResolucion {
   const catalogFiltered = filterRecipesForCatalogResolution(recipes, input.catalogKey);
+  const technicalAttributes = input.atributosTecnicos;
+  const selectedLeaves = technicalAttributes?.leaves ?? input.hojas;
+  const selectedGlass = technicalAttributes?.glass ?? input.glassName;
+  const glazing = (technicalAttributes?.glazing ?? input.glazing) as
+    | SodalL25GlazingSlug
+    | null
+    | undefined;
+  const leg = (technicalAttributes?.leg ?? input.leg) as SodalL25LegSlug | null | undefined;
+  const reinforcement = (technicalAttributes?.reinforcement ?? input.reinforcement) as
+    | SodalL25ReinforcementSlug
+    | null
+    | undefined;
   const veratecGlassVariant =
-    input.catalogKey === VERATEC_7400_CATALOG_KEY && input.glassName
-      ? resolveVeratec7400VariantForSelectedGlass(input.glassName)
+    input.catalogKey === VERATEC_7400_CATALOG_KEY && selectedGlass
+      ? resolveVeratec7400VariantForSelectedGlass(selectedGlass)
       : null;
   const filtered =
-    input.catalogKey === VERATEC_7400_CATALOG_KEY && input.glassName?.trim()
+    input.catalogKey === VERATEC_7400_CATALOG_KEY && selectedGlass?.trim()
       ? catalogFiltered.filter(
           (recipe) =>
             veratecGlassVariant !== null &&
@@ -157,14 +174,14 @@ export function resolveFabricationRecipe(
 
   if (
     input.catalogKey === SODAL_L25_CATALOG_KEY &&
-    input.glazing &&
-    input.leg &&
-    input.reinforcement
+    glazing &&
+    leg &&
+    reinforcement
   ) {
     variante = buildSodalL25VariantSlug({
-      glazing: input.glazing,
-      leg: input.leg,
-      reinforcement: input.reinforcement,
+      glazing,
+      leg,
+      reinforcement,
     });
   }
 
@@ -181,7 +198,7 @@ export function resolveFabricationRecipe(
 
   if (input.catalogKey === SODAL_4800_CATALOG_KEY) {
     const observed = isObservedSodal4800Measure({
-      leaves: input.hojas ?? 0,
+      leaves: selectedLeaves ?? 0,
       widthMm: input.anchoTotalMm ?? 0,
       heightMm: input.altoTotalMm ?? 0,
     });
@@ -200,6 +217,8 @@ export function resolveFabricationRecipe(
       }
       return resolverRecetaFabricacionCompatibleInternal(formulaRecipes, {
         ...input,
+        hojas: selectedLeaves,
+        glassName: selectedGlass,
         variante,
         topology,
         allowPreliminaryNonValidated: Boolean(input.previewListaParaProbar),
@@ -209,6 +228,8 @@ export function resolveFabricationRecipe(
 
   return resolverRecetaFabricacionCompatibleInternal(filteredForResolution, {
     ...input,
+    hojas: selectedLeaves,
+    glassName: selectedGlass,
     variante,
     topology,
     // Snapshot/PDF y matching comercial siguen exigiendo receta validada.
@@ -305,7 +326,15 @@ function statusAllowsPreliminaryUse(status: FabricationRecipeStatus) {
 function pickNewestByIdentity(recipes: FabricationRecipeRecord[]) {
   const byIdentity = new Map<string, FabricationRecipeRecord>();
   recipes.forEach((recipe) => {
-    const key = recipe.definition.identidad.recetaId;
+    const key = [
+      recipe.scope,
+      recipe.organizationId ?? "global",
+      recipe.lineTemplateId,
+      recipe.sourceType,
+      recipe.sourceName ?? "",
+      recipe.sourceReference ?? "",
+      recipe.definition.identidad.recetaId,
+    ].join("|");
     const current = byIdentity.get(key);
     if (!current || recipe.version > current.version) {
       byIdentity.set(key, recipe);
@@ -327,6 +356,21 @@ function resolverRecetaFabricacionCompatibleInternal(
   input: FabricacionRecetaResolucionInput,
   controlledRecipeId?: string | null,
 ): FabricacionRecetaResolucion {
+  const attrs = input.atributosTecnicos;
+  const effectiveInput: FabricacionRecetaResolucionInput = {
+    ...input,
+    lineTemplateId: attrs?.lineTemplateId ?? input.lineTemplateId,
+    tipologia: attrs?.typology ?? input.tipologia,
+    hojas: attrs?.leaves ?? input.hojas,
+    apertura: attrs?.opening ?? input.apertura,
+    herraje: attrs?.hardware ?? input.herraje,
+    hardwareMode: attrs?.hardwareMode ?? input.hardwareMode,
+    variante: attrs?.variant ?? input.variante,
+    topology: attrs?.topology ?? input.topology,
+    configurationId: attrs?.configurationId ?? input.configurationId,
+    compositionId: attrs?.compositionId ?? input.compositionId,
+    glassName: attrs?.glass ?? input.glassName,
+  };
   const descartadas: FabricacionRecetaDescartada[] = [];
   const compatible = recipes.filter((recipe) => {
     const identidad = recipe.definition.identidad;
@@ -335,7 +379,7 @@ function resolverRecetaFabricacionCompatibleInternal(
       descartadas.push(discard(recipe, "La receta esta archivada."));
       return false;
     }
-    if (recipe.lineTemplateId !== input.lineTemplateId) {
+    if (recipe.lineTemplateId !== effectiveInput.lineTemplateId) {
       descartadas.push(discard(recipe, "Pertenece a otra linea comercial."));
       return false;
     }
@@ -350,72 +394,73 @@ function resolverRecetaFabricacionCompatibleInternal(
     }
     if (
       recipe.scope === "organization" &&
-      input.organizationId !== null &&
-      recipe.organizationId !== input.organizationId
+      effectiveInput.organizationId !== null &&
+      recipe.organizationId !== effectiveInput.organizationId
     ) {
       descartadas.push(discard(recipe, "Pertenece a otra empresa."));
       return false;
     }
-    if (normalizeText(identidad.tipologia) !== normalizeText(input.tipologia)) {
+    if (normalizeText(identidad.tipologia) !== normalizeText(effectiveInput.tipologia)) {
       descartadas.push(discard(recipe, "La tipologia no coincide."));
       return false;
     }
-    if (identidad.configurationId != null || input.configurationId != null) {
+    if (identidad.configurationId != null || effectiveInput.configurationId != null) {
       if (
         !identidad.configurationId ||
-        !input.configurationId ||
-        normalizeText(identidad.configurationId) !== normalizeText(input.configurationId)
+        !effectiveInput.configurationId ||
+        normalizeText(identidad.configurationId) !== normalizeText(effectiveInput.configurationId)
       ) {
         descartadas.push(discard(recipe, "La configuración no coincide o no está identificada."));
         return false;
       }
     }
-    if (input.compositionId != null) {
+    if (effectiveInput.compositionId != null) {
       if (
         !identidad.compositionId ||
-        normalizeText(identidad.compositionId) !== normalizeText(input.compositionId)
+        normalizeText(identidad.compositionId) !== normalizeText(effectiveInput.compositionId)
       ) {
         descartadas.push(discard(recipe, "La composición no coincide o no está identificada."));
         return false;
       }
     }
-    if (input.hojas != null && identidad.hojas !== input.hojas) {
+    if (effectiveInput.hojas != null && identidad.hojas !== effectiveInput.hojas) {
       descartadas.push(discard(recipe, "La cantidad de hojas no coincide."));
       return false;
     }
-    if (input.modulos != null && identidad.modulos !== input.modulos) {
+    if (effectiveInput.modulos != null && identidad.modulos !== effectiveInput.modulos) {
       descartadas.push(discard(recipe, "La cantidad de modulos no coincide."));
       return false;
     }
     if (
-      input.apertura &&
+      effectiveInput.apertura &&
       identidad.apertura &&
-      normalizeText(identidad.apertura) !== normalizeText(input.apertura)
+      normalizeText(identidad.apertura) !== normalizeText(effectiveInput.apertura)
     ) {
       descartadas.push(discard(recipe, "La apertura no coincide."));
       return false;
     }
     if (
-      input.topology &&
+      effectiveInput.topology &&
       identidad.topology &&
-      normalizeText(identidad.topology) !== normalizeText(input.topology)
+      normalizeText(identidad.topology) !== normalizeText(effectiveInput.topology)
     ) {
       descartadas.push(discard(recipe, "La topologia no coincide."));
       return false;
     }
     if (
-      input.hardwareMode &&
+      effectiveInput.hardwareMode &&
       identidad.hardwareMode &&
-      normalizeText(identidad.hardwareMode) !== normalizeText(input.hardwareMode)
+      normalizeText(identidad.hardwareMode) !== normalizeText(effectiveInput.hardwareMode)
     ) {
       descartadas.push(discard(recipe, "El modo de herraje no coincide."));
       return false;
     }
-    if (input.herraje && identidad.herraje && normalizeText(identidad.herraje) !== normalizeText(input.herraje)) {
+    if (effectiveInput.herraje && identidad.herraje &&
+      normalizeText(identidad.herraje) !== normalizeText(effectiveInput.herraje)) {
       descartadas.push(discard(recipe, "El herraje no coincide."));
       return false;
     }
-    if (input.variante && normalizeText(identidad.variante) !== normalizeText(input.variante)) {
+    if (effectiveInput.variante && normalizeText(identidad.variante) !== normalizeText(effectiveInput.variante)) {
       descartadas.push(discard(recipe, "La variante no coincide."));
       return false;
     }
@@ -444,7 +489,15 @@ function resolverRecetaFabricacionCompatibleInternal(
   compatible
     .filter((recipe) => statusAllowsAutomaticUse(recipe.status))
     .forEach((recipe) => {
-      const key = recipe.definition.identidad.recetaId;
+      const key = [
+        recipe.scope,
+        recipe.organizationId ?? "global",
+        recipe.lineTemplateId,
+        recipe.sourceType,
+        recipe.sourceName ?? "",
+        recipe.sourceReference ?? "",
+        recipe.definition.identidad.recetaId,
+      ].join("|");
       const current = validatedByIdentity.get(key);
       if (!current || recipe.version > current.version) {
         validatedByIdentity.set(key, recipe);

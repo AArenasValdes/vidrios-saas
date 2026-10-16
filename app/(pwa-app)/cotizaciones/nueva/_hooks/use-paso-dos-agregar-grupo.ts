@@ -130,6 +130,7 @@ export type PasoDosGrupoDraft = {
   quickCompositionAdjustment: QuickCompositionAdjustment | null;
   vidrio: string;
   lineTemplateId: string;
+  supplierProviderKey?: string;
   cubicationSnapshot: CotizacionItemCubicationSnapshot | null;
   fabricationRecipeId: string;
   fabricacionTipologia: string;
@@ -138,6 +139,8 @@ export type PasoDosGrupoDraft = {
   fabricacionApertura: string;
   fabricacionHerraje: string;
   fabricacionVariante: string;
+  fabricacionConfiguracionId: string;
+  fabricacionComposicionId: string;
   fabricacionAnchoHojaAMm: number | null;
   catalogLineKey: string;
   fabricacionGlazing: string;
@@ -627,6 +630,8 @@ export function applyLineTemplateToGrupoDraft(
     fabricacionApertura: baharFoldingLeaves ? "plegable" : fabricationContext?.fabricacionApertura ?? "",
     fabricacionHerraje: fabricationContext?.fabricacionHerraje ?? "",
     fabricacionVariante: baharFoldingVariant ?? fabricationContext?.fabricacionVariante ?? "",
+    fabricacionConfiguracionId: fabricationContext?.fabricacionConfiguracionId ?? "",
+    fabricacionComposicionId: fabricationContext?.fabricacionComposicionId ?? "",
     fabricacionAnchoHojaAMm: null,
     catalogLineKey,
     fabricacionGlazing: "",
@@ -935,6 +940,7 @@ export function createInitialPasoDosGrupoDraft({
     quickCompositionAdjustment: seedForm?.quickCompositionAdjustment ?? null,
     vidrio: seedForm?.vidrio?.trim() || suggestedForm.vidrio,
     lineTemplateId: seedForm?.lineTemplateId ?? "",
+    supplierProviderKey: seedForm?.supplierProviderKey ?? "",
     cubicationSnapshot: seedForm?.cubicationSnapshot ?? null,
     fabricationRecipeId: seedForm?.fabricationRecipeId ?? "",
     fabricacionTipologia: seedForm?.fabricacionTipologia ?? "",
@@ -943,6 +949,8 @@ export function createInitialPasoDosGrupoDraft({
     fabricacionApertura: seedForm?.fabricacionApertura ?? "",
     fabricacionHerraje: seedForm?.fabricacionHerraje ?? "",
     fabricacionVariante: seedForm?.fabricacionVariante ?? "",
+    fabricacionConfiguracionId: seedForm?.fabricacionConfiguracionId ?? "",
+    fabricacionComposicionId: seedForm?.fabricacionComposicionId ?? "",
     fabricacionAnchoHojaAMm: seedForm?.fabricacionAnchoHojaAMm ?? null,
     catalogLineKey: seedForm?.catalogLineKey ?? "",
     fabricacionGlazing: seedForm?.fabricacionGlazing ?? "",
@@ -1048,6 +1056,7 @@ export function buildPasoDosGrupoComponentForm({
     nombre: syncedDraft.nombre ?? "",
     descripcion: syncedDraft.descripcion ?? "",
     lineTemplateId: syncedDraft.lineTemplateId,
+    supplierProviderKey: syncedDraft.supplierProviderKey,
     cubicationSnapshot: syncedDraft.cubicationSnapshot,
     fabricationRecipeId: syncedDraft.fabricationRecipeId,
     fabricacionTipologia:
@@ -1062,6 +1071,8 @@ export function buildPasoDosGrupoComponentForm({
     fabricacionApertura: syncedDraft.fabricacionApertura,
     fabricacionHerraje: syncedDraft.fabricacionHerraje,
     fabricacionVariante: syncedDraft.fabricacionVariante,
+    fabricacionConfiguracionId: syncedDraft.fabricacionConfiguracionId,
+    fabricacionComposicionId: syncedDraft.fabricacionComposicionId,
     fabricacionAnchoHojaAMm: syncedDraft.fabricacionAnchoHojaAMm,
     catalogLineKey: syncedDraft.catalogLineKey,
     fabricacionGlazing: syncedDraft.fabricacionGlazing,
@@ -1467,6 +1478,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
       catalogEspesor: "",
       catalogTerminacion: "",
       lineTemplateId: "",
+      supplierProviderKey: undefined,
       referencia: "",
       precioPorM2: "",
       minimoCobrable: "",
@@ -1480,6 +1492,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
       setDraft((current) => ({
         ...current,
         lineTemplateId: "",
+        supplierProviderKey: undefined,
         catalogCategoria: current.material === "PVC" ? "pvc" : current.material === "Cristal" ? "vidrio" : "aluminio",
         catalogEspesor: "",
         catalogTerminacion: "",
@@ -1499,11 +1512,17 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
       return;
     }
 
-    setDraft((current) => applyLineTemplateToGrupoDraft(current, template));
+    setDraft((current) => ({
+      ...applyLineTemplateToGrupoDraft(current, template),
+      supplierProviderKey: undefined,
+    }));
   };
 
   const applyCreatedLineTemplate = (template: CotizacionLineTemplate) => {
-    setDraft((current) => applyLineTemplateToGrupoDraft(current, template));
+    setDraft((current) => ({
+      ...applyLineTemplateToGrupoDraft(current, template),
+      supplierProviderKey: undefined,
+    }));
   };
 
   const updateColorHex = (colorHex: string) => {
@@ -1742,6 +1761,10 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
 
   const updateFabricationRecipeId = (fabricationRecipeId: string) => {
     setDraft((current) => ({ ...current, fabricationRecipeId }));
+  };
+
+  const updateSupplierProviderKey = (supplierProviderKey: string) => {
+    setDraft((current) => ({ ...current, supplierProviderKey }));
   };
 
   const updateFabricacionSnapshot = (
@@ -2135,6 +2158,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     updateVidrio,
     updateCubicationSnapshot,
     updateFabricationRecipeId,
+    updateSupplierProviderKey,
     updateFabricacionSnapshot,
     updateFabricacionContexto,
     updateFabricacionL25Config,

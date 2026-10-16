@@ -2265,7 +2265,16 @@ function NuevaCotizacionPageContent() {
             };
       }
 
+      const supplierProviderChanged =
+        formPatch.supplierProviderKey !== undefined &&
+        formPatch.supplierProviderKey !== form.supplierProviderKey;
       form = { ...form, ...formPatch };
+      if (supplierProviderChanged) {
+        // Provider identity is part of the internal purchase snapshot. Rebuild
+        // it only when the user explicitly changes this quote item.
+        form.fabricacionSnapshot = null;
+        form.cubicationSnapshot = null;
+      }
 
       if (patch.material) {
         form.catalogCategoria = patch.material === "PVC" ? "pvc" : "aluminio";
@@ -3531,6 +3540,7 @@ function goNextFromStep1() {
             onFabricacionSnapshotChange: pasoDosAgregarGrupo.updateFabricacionSnapshot,
             onFabricacionContextoChange: pasoDosAgregarGrupo.updateFabricacionContexto,
             onFabricacionL25ConfigChange: pasoDosAgregarGrupo.updateFabricacionL25Config,
+            onSupplierProviderKeyChange: pasoDosAgregarGrupo.updateSupplierProviderKey,
             onPrecioChange: pasoDosAgregarGrupo.updatePrecio,
             onPrecioPorM2Change: pasoDosAgregarGrupo.updatePrecioPorM2,
             onMinimoCobrableChange: pasoDosAgregarGrupo.updateMinimoCobrable,

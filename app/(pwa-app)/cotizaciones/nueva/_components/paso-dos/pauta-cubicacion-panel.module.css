@@ -133,6 +133,90 @@
   line-height: 1.4;
 }
 
+.supplierProviderField {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.7rem 0;
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.supplierProviderField select {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.65rem;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+}
+
+.supplierProviderField small {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.supplierProviderDisclosure {
+  margin: 0.65rem 0;
+  border: 1px solid #dbe3ee;
+  border-radius: 0.7rem;
+  background: #fff;
+}
+
+.supplierProviderDisclosure summary {
+  display: flex;
+  min-height: 2.7rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  padding: 0.6rem 0.75rem;
+  color: #334155;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.supplierProviderDisclosure summary strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.supplierProviderDisclosure[open] summary {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.supplierProviderDisclosureBody {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.7rem;
+}
+
+.supplierPreferenceActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.supplierPreferenceActions button {
+  border: 0;
+  background: transparent;
+  color: var(--color-primary, #1769e0);
+  padding: 4px 0;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
 .cubicacionStatusOk,
 .cubicacionStatusWarn,
 .cubicacionStatusMuted {

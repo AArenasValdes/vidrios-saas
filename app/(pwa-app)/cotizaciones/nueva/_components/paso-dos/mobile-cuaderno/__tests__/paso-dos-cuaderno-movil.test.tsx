@@ -295,6 +295,7 @@ describe("PasoDosCuadernoMovil", () => {
 
     fireEvent.click(screen.getByText("Ventana fija"));
     fireEvent.click(screen.getByRole("button", { name: "Elegir linea de esta pieza" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mis líneas" }));
     fireEvent.click(screen.getByRole("option", { name: /Linea A/i }));
 
     expect(onUpdateItem).not.toHaveBeenCalled();
@@ -372,6 +373,7 @@ describe("PasoDosCuadernoMovil", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cambiar" }));
     fireEvent.click(screen.getByRole("button", { name: "Blanco" }));
     fireEvent.click(screen.getByRole("button", { name: "Elegir linea de esta pieza" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mis líneas" }));
     fireEvent.click(screen.getByRole("option", { name: /Linea A/i }));
     fireEvent.click(screen.getByRole("button", { name: "Elegir tipo de vidrio" }));
     fireEvent.click(screen.getByRole("option", { name: "Laminado 3+3mm" }));
@@ -460,7 +462,7 @@ describe("PasoDosCuadernoMovil", () => {
     );
   });
 
-  it("mantiene el material actual en Compatibles y permite explorar otros en Todas", () => {
+  it("no presume compatibilidad de líneas privadas y permite explorarlas en Mis líneas y Todas", () => {
     render(
       <PasoDosCuadernoMovil
         {...defaultProps}
@@ -480,9 +482,12 @@ describe("PasoDosCuadernoMovil", () => {
     );
 
     fireEvent.click(screen.getByText("Ventana fija"));
+    fireEvent.click(screen.getByRole("button", { name: "PVC" }));
     fireEvent.click(screen.getByRole("button", { name: "Elegir linea de esta pieza" }));
 
     expect(screen.getByRole("button", { name: "Compatibles" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("option", { name: /PVC 25/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Mis líneas" }));
     expect(screen.getByRole("option", { name: /PVC 25/i })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: /Aluminio 32/i })).not.toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("button", { name: "Todas" })[0]);

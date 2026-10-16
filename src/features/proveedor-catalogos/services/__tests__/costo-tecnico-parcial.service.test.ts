@@ -1,4 +1,5 @@
 import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
+import { crearRecetaSerie42Sodal } from "@/features/fabricacion/fixtures/serie-42-provider-recipes";
 import { ARQUETIPO_CATALOGO_2026_10_05 } from "../../fixtures/arquetipo-catalogo-2026-10-05";
 import { VERATEC_7400_JUNIO_2026_IMPORT } from "../../fixtures/veratec-7400-junio-2026";
 import {
@@ -149,6 +150,61 @@ describe("buildPartialTechnicalCostSnapshot", () => {
     expect(result?.missing).toEqual(expect.arrayContaining([
       expect.objectContaining({ technicalCode: "4201", reason: expect.stringContaining("No hay presentación") }),
     ]));
+  });
+
+  it("valora todos los perfiles de la variante L42 sin cámara monolítica con la referencia Arquetipo", () => {
+    let id = 0;
+    const recipe = crearRecetaSerie42Sodal({
+      lineName: "Serie 42",
+      createId: () => `l42-sodal-${++id}`,
+    });
+    const recipeCodes = [...new Set(recipe.perfiles.map((profile) => profile.codigoPerfil))].sort();
+    const l42Prices = pricedArquetipoProfiles
+      .filter(([, , , , familyKey]) => familyKey === "universal:aluminio:l42")
+      .map(([, presentation, technicalInput, recipeCode, familyKey]) => price({
+        presentationId: presentation.sku,
+        providerKey: "arquetipo",
+        preferred: true,
+        familyKeys: technicalInput.familyKeys,
+        technicalCode: technicalInput.sourceCode,
+        recipeComponentCodes: technicalInput.recipeComponentCodes,
+        technicalName: technicalInput.name,
+        supplierSku: presentation.sku,
+        finishCode: "",
+        finishName: null,
+        finishResolution: "finish_independent",
+        purchaseUnit: "TIRA",
+        commercialLengthMm: presentation.commercialLengthMm,
+        netPrice: presentation.netPrice,
+        priceListId: "arquetipo-27811",
+        priceListRevision: "2026-10-05",
+        presentationDescription: `${familyKey} ${recipeCode}`,
+      }));
+
+    const result = buildPartialTechnicalCostSnapshot({
+      workSnapshot: pauta(recipeCodes.map((code) => ({ code, item: "L42-SODAL", length: 1200 }))),
+      quoteItems: [{
+        code: "L42-SODAL",
+        color: "Blanco",
+        catalogLineKey: "ventora:l42",
+        supplierFamilyKey: "universal:aluminio:l42",
+      }],
+      availablePrices: l42Prices,
+    });
+
+    expect(recipeCodes).toEqual(["4202", "4209", "4229"]);
+    // Los tres perfiles de aluminio tienen precio; el costo total queda
+    // parcial porque esta cotización no incluye el precio del vidrio.
+    expect(result?.status).toBe("partial");
+    expect(result?.lines.map((line) => [line.technicalCode, line.supplierSku, line.netPricePerPresentation])).toEqual(
+      expect.arrayContaining([
+        ["4202", "30894202", 24375],
+        ["4209", "30894209", 15140],
+        ["4229", "30894229", 6510],
+      ])
+    );
+    expect(result?.missing.filter((entry) => entry.technicalCode)).toEqual([]);
+    expect(result?.missing.some((entry) => entry.description === "Vidrio")).toBe(true);
   });
 
   it.each([

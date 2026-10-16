@@ -96,6 +96,7 @@ type VentoraDefaultLineDefinition = {
       typology: string;
       variant: string;
       leavesCounts?: number[];
+      movingLeavesCounts?: number[];
       /** La fila del proveedor existe, pero su disposición geométrica aún no está resuelta. */
       compositionPending?: boolean;
       source?: "catalog" | "workshop";
@@ -323,6 +324,7 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     ventoraPlantillaId: "L5000",
     familyKey: "universal:aluminio:l5000",
     familyLabel: "Línea 5000 · Aluminio universal",
+    compatibility: { componentTypes: ["Ventana"], openingTypes: ["Corredera"], leavesCounts: [2], materials: ["Aluminio"] },
     lineFamilyType: "traditional",
     lineSourceModel: "multiprovider",
     identitySource: "Línea 5000 · identidad universal confirmada por el taller",
@@ -337,6 +339,7 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     ventoraPlantillaId: "L20",
     familyKey: "universal:aluminio:l20",
     familyLabel: "Línea 20 · Aluminio universal",
+    compatibility: { componentTypes: ["Ventana"], openingTypes: ["Corredera"], leavesCounts: [2], materials: ["Aluminio"] },
     lineFamilyType: "traditional",
     lineSourceModel: "multiprovider",
     identitySource: "Línea 20 · identidad universal confirmada por el taller",
@@ -351,6 +354,7 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     ventoraPlantillaId: "L25",
     familyKey: "universal:aluminio:l25",
     familyLabel: "Línea 25 · Aluminio universal",
+    compatibility: { componentTypes: ["Ventana"], openingTypes: ["Corredera"], leavesCounts: [2], materials: ["Aluminio"] },
     lineFamilyType: "traditional",
     lineSourceModel: "multiprovider",
     identitySource: "Línea 25 · identidad universal confirmada por el taller",
@@ -365,6 +369,12 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     ventoraPlantillaId: null,
     familyKey: "universal:aluminio:l32",
     familyLabel: "Línea 32 · Aluminio universal",
+    compatibility: {
+      materials: ["Aluminio"],
+      configurations: [
+        { id: "ventora:l32:proyectante", componentType: "Ventana", openingType: "Proyectante", label: "Ventana proyectante", typology: "proyectante", variant: "normal", leavesCounts: [1] },
+      ],
+    },
     lineFamilyType: "traditional",
     lineSourceModel: "multiprovider",
     identitySource: "Línea 32 · identidad universal confirmada por el taller",
@@ -381,6 +391,7 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     lineSourceModel: "multiprovider",
     familyKey: "universal:aluminio:l35",
     familyLabel: "Línea 35 · Aluminio universal",
+    compatibility: { componentTypes: ["Puerta"], openingTypes: ["Abatible", "Vaivén"], materials: ["Aluminio"] },
     identitySource: "Línea 35 · identidad universal confirmada por el taller",
   },
   {
@@ -395,6 +406,7 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     lineSourceModel: "multiprovider",
     familyKey: "universal:aluminio:l15",
     familyLabel: "Línea 15 · Aluminio universal",
+    compatibility: { componentTypes: ["Ventana"], openingTypes: ["Corredera"], leavesCounts: [2], materials: ["Aluminio"] },
     identitySource: "Línea 15 · identidad universal confirmada por el taller",
     cuttingGuideSource: "Despiece oficial Línea AL-15 corredera 2 hojas",
   },
@@ -410,6 +422,7 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     lineSourceModel: "multiprovider",
     familyKey: "universal:aluminio:l4000",
     familyLabel: "Línea 4000 · Aluminio universal",
+    compatibility: { componentTypes: ["Ventana"], openingTypes: ["Corredera"], leavesCounts: [2], materials: ["Aluminio"] },
     identitySource: "Línea 4000 · identidad universal confirmada por el taller",
     cuttingGuideSource: "Despiece oficial Línea 4000 Columbia corredera 2 hojas",
   },
@@ -425,6 +438,7 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     lineSourceModel: "multiprovider",
     familyKey: "universal:aluminio:l45",
     familyLabel: "Línea 45 · Aluminio universal",
+    compatibility: { componentTypes: ["Puerta"], openingTypes: ["Abatible"], leavesCounts: [1], materials: ["Aluminio"] },
     identitySource: "Línea 45 · identidad universal confirmada por el taller",
     cuttingGuideSource: "Matrices de extrusión Serie 45 practicable",
   },
@@ -438,6 +452,7 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     ventoraPlantillaId: null,
     familyKey: "universal:aluminio:l12",
     familyLabel: "Línea 12 · Aluminio universal",
+    compatibility: { componentTypes: ["Shower", "Shower Door"], openingTypes: ["Corredera"], leavesCounts: [2], materials: ["Aluminio"] },
     lineFamilyType: "traditional",
     lineSourceModel: "multiprovider",
     identitySource: "Línea 12 · identidad universal confirmada por el taller",
@@ -452,6 +467,12 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     ventoraPlantillaId: null,
     familyKey: "universal:aluminio:l42",
     familyLabel: "Línea 42 · Aluminio universal",
+    compatibility: {
+      materials: ["Aluminio"],
+      configurations: [
+        { id: "ventora:l42:proyectante", componentType: "Ventana", openingType: "Proyectante", label: "Ventana proyectante", typology: "proyectante", variant: "normal", leavesCounts: [1] },
+      ],
+    },
     lineFamilyType: "traditional",
     lineSourceModel: "multiprovider",
     identitySource: "Línea 42 · identidad universal confirmada por el taller",
@@ -464,6 +485,7 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     proveedor: "SODAL",
     lineSystem: "Serie 4800",
     ventoraPlantillaId: null,
+    compatibility: { componentTypes: ["Ventana"], openingTypes: ["Corredera"], leavesCounts: [2], materials: ["Aluminio"] },
     identitySource: "SODAL Diamond · Serie 4800 corredera 2 hojas",
   },
   {
@@ -1198,10 +1220,13 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     },
     compatibility: {
       componentTypes: ["Ventana", "Puerta", "Paño fijo"],
-      openingTypes: ["Fijo", "Abatible"],
+      openingTypes: ["Fijo", "Oscilobatiente", "Proyectante", "Abatible"],
       materials: ["PVC"],
       configurations: [
         { id: "ventana-abatible", componentType: "Ventana", openingType: "Abatible", label: "Ventana abatible", typology: "abatible", variant: "ventana-abatible" },
+        { id: "ventana-oscilobatiente", componentType: "Ventana", openingType: "Oscilobatiente", label: "Ventana oscilobatiente", typology: "oscilobatiente", variant: "ventana-oscilobatiente" },
+        { id: "ventana-proyectante", componentType: "Ventana", openingType: "Proyectante", label: "Ventana proyectante", typology: "proyectante", variant: "ventana-proyectante" },
+        { id: "ventana-fija", componentType: "Ventana", openingType: "Fijo", label: "Ventana fija", typology: "pano_fijo", variant: "ventana-fija" },
         { id: "puerta-abatible", componentType: "Puerta", openingType: "Abatible", label: "Puerta abatible", typology: "puerta_abatible", variant: "puerta-abatible" },
         { id: "pano-fijo", componentType: "Paño fijo", openingType: "Fijo", label: "Paño fijo", typology: "pano_fijo", variant: "pano-fijo" },
       ],
@@ -1227,7 +1252,9 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
       openingTypes: ["Corredera"],
       materials: ["PVC"],
       configurations: [
-        { id: "ventana-corredera", componentType: "Ventana", openingType: "Corredera", label: "Ventana corredera", typology: "corredera", variant: "ventana-corredera" },
+        { id: "ventana-corredera", componentType: "Ventana", openingType: "Corredera", label: "Ventana corredera · doble riel", typology: "corredera", variant: "ventana-corredera", leavesCounts: [2], movingLeavesCounts: [2] },
+        { id: "ventana-monoriel", componentType: "Ventana", openingType: "Corredera", label: "Ventana corredera · monorriel", typology: "corredera", variant: "ventana-monoriel", leavesCounts: [2], movingLeavesCounts: [1] },
+        { id: "ventana-triple-riel", componentType: "Ventana", openingType: "Corredera", label: "Ventana corredera · triple riel", typology: "corredera", variant: "ventana-triple-riel", leavesCounts: [3], movingLeavesCounts: [3] },
         { id: "puerta-corredera", componentType: "Puerta", openingType: "Corredera", label: "Puerta corredera", typology: "puerta_corredera", variant: "puerta-corredera" },
       ],
     },
@@ -1252,7 +1279,8 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
       openingTypes: ["Fijo", "Abatible"],
       materials: ["PVC"],
       configurations: [
-        { id: "ventana-abatible", componentType: "Ventana", openingType: "Abatible", label: "Ventana abatible", typology: "abatible", variant: "ventana-abatible" },
+        { id: "ventana-abatible", componentType: "Ventana", openingType: "Abatible", label: "Ventana abatible exterior", typology: "abatible", variant: "ventana-abatible" },
+        { id: "ventana-proyectante", componentType: "Ventana", openingType: "Proyectante", label: "Ventana proyectante", typology: "proyectante", variant: "ventana-proyectante" },
         { id: "ventana-fija", componentType: "Ventana", openingType: "Fijo", label: "Ventana fija", typology: "pano_fijo", variant: "ventana-fija" },
         { id: "pano-fijo", componentType: "Paño fijo", openingType: "Fijo", label: "Paño fijo", typology: "pano_fijo", variant: "pano-fijo" },
       ],
@@ -1279,9 +1307,10 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
       materials: ["PVC"],
       configurations: [
         { id: "ventana-corredera", componentType: "Ventana", openingType: "Corredera", label: "Ventana corredera", typology: "corredera", variant: "ventana-corredera" },
-        { id: "pano-fijo", componentType: "Paño fijo", openingType: "Fijo", label: "Paño fijo", typology: "pano_fijo", variant: "pano-fijo" },
+        { id: "ventana-fija", componentType: "Ventana", openingType: "Fijo", label: "Ventana fija", typology: "pano_fijo", variant: "ventana-fija" },
         { id: "ventana-guillotina", componentType: "Ventana", openingType: "Guillotina", label: "Ventana guillotina", typology: "personalizada", variant: "ventana-guillotina" },
         { id: "ventana-celosia", componentType: "Ventana", openingType: "Celosía", label: "Ventana celosía", typology: "personalizada", variant: "ventana-celosia" },
+        { id: "pano-fijo", componentType: "Paño fijo", openingType: "Fijo", label: "Paño fijo", typology: "pano_fijo", variant: "pano-fijo" },
       ],
     },
   },
@@ -1293,6 +1322,12 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     proveedor: "WinHouse",
     lineSystem: "New S75",
     ventoraPlantillaId: null,
+    compatibility: {
+      componentTypes: ["Ventana"],
+      openingTypes: ["Corredera"],
+      leavesCounts: [2, 3, 4],
+      materials: ["PVC"],
+    },
   },
   {
     catalogKey: "ventora:winhouse-new-s75-triple-riel",
@@ -1302,6 +1337,12 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     proveedor: "WinHouse",
     lineSystem: "New S75",
     ventoraPlantillaId: null,
+    compatibility: {
+      componentTypes: ["Ventana"],
+      openingTypes: ["Corredera"],
+      leavesCounts: [3],
+      materials: ["PVC"],
+    },
   },
   {
     catalogKey: "ventora:winhouse-s60",
@@ -1320,6 +1361,12 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     proveedor: "WinHouse",
     lineSystem: "Andes",
     ventoraPlantillaId: null,
+    compatibility: {
+      componentTypes: ["Ventana"],
+      openingTypes: ["Corredera"],
+      leavesCounts: [2],
+      materials: ["PVC"],
+    },
   },
   {
     catalogKey: "ventora:winhouse-andes-monorriel",
@@ -1413,6 +1460,9 @@ function expandLineConfigurations(
         openingTypes: [configuration.openingType],
         ...(configuration.leavesCounts?.length
           ? { leavesCounts: [...configuration.leavesCounts] }
+          : {}),
+        ...(configuration.movingLeavesCounts?.length
+          ? { movingLeavesCounts: [...configuration.movingLeavesCounts] }
           : {}),
         ...(definition.compatibility?.materials?.length
           ? { materials: [...definition.compatibility.materials] }

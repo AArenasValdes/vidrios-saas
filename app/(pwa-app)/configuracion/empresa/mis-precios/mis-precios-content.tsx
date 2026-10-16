@@ -67,6 +67,7 @@ const supplierLogos = {
   veratec: { src: "/Icon-Empresas/veratec.webp", width: 320, height: 55 },
   winhouse: { src: "/Icon-Empresas/winhouse.webp", width: 320, height: 72 },
   arquetipo: { src: "/Icon-Empresas/arquetipo.webp", width: 320, height: 82 },
+  kompen: { src: "/Icon-Empresas/kompen.png", width: 1493, height: 546 },
 } as const;
 
 function supplierLogo(providerKey: string, providerName: string) {
@@ -74,6 +75,7 @@ function supplierLogo(providerKey: string, providerName: string) {
   if (identity.includes("xelena") || identity.includes("veratec")) return supplierLogos.veratec;
   if (identity.includes("winhouse")) return supplierLogos.winhouse;
   if (identity.includes("arquetipo")) return supplierLogos.arquetipo;
+  if (identity.includes("kompen") || identity.includes("thermowin")) return supplierLogos.kompen;
   return null;
 }
 

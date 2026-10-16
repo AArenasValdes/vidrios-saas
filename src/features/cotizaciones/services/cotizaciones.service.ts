@@ -183,6 +183,7 @@ async function resolveSupplierPresentationsForNewQuote(items: readonly Cotizacio
       familyKey: snapshot.supplierFamilyKey,
       finishName: resolveSupplierFinishName(meta.catalogTerminacion, meta.colorHex),
       technicalCodes: [...new Set(snapshot.result.perfiles.map((row) => row.codigoPerfil.trim()).filter(Boolean))],
+      providerKey: meta.supplierProviderKey || null,
     }];
   });
   // La cotización comercial sigue guardándose aunque el catálogo QA no esté habilitado.

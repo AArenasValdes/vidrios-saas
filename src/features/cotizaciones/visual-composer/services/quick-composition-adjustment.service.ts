@@ -30,7 +30,13 @@ function resolveLeafCount(input: QuickCompositionSelection): number | null {
   }
   if (tipo === "puerta" && system === "corredera") return config === "1 fija + 1 movil" || config === "2 moviles" ? 2 : config.includes("4 hojas") ? 4 : null;
   if (tipo === "puerta" && system === "abatible") return config.includes("4 hojas") ? 4 : config.includes("2 hojas") || config.includes("fijo lateral") ? 2 : ["1 hoja", "con fijo superior"].includes(config) ? 1 : null;
-  if (tipo === "shower door" && system === "corredera" && config === "frontal") return scheme.includes("2 hojas") || scheme.includes("1 fija") ? 2 : null;
+  if (tipo === "shower door") {
+    const composition = norm(input.sheetScheme);
+    if (!composition) return 1;
+    const modules = [...composition.matchAll(/(\d+)\s*(?:hojas?|panos?|modulos?|fij[oa]s?|correderas?|puertas?)/g)]
+      .reduce((sum, match) => sum + Number(match[1]) * (composition.slice(match.index ?? 0).startsWith(`${match[1]} corredera por lado`) ? 2 : 1), 0);
+    return modules || (composition.includes("por lado") ? 2 : 1);
+  }
   return null;
 }
 
@@ -54,7 +60,8 @@ export function resolveQuickCompositionCapabilities(input: QuickCompositionSelec
   const sheetSchemes = canAdjust
     ? getSheetSchemeOptions({ tipo: input.tipo, sistema: input.sistema, configuracion: input.configuracion })
       .flatMap((value) => {
-        if (!/^([1-6]) (hojas|panos)$/.test(norm(value))) return [];
+        const isShowerDoorComposition = norm(input.tipo) === "shower door";
+        if (!isShowerDoorComposition && !/^([1-6]) (hojas|panos)$/.test(norm(value))) return [];
         const candidate = { ...input, sheetScheme: value, sheetVariant: "" };
         const candidateBase = buildQuickCompositionBaseConfig(candidate);
         if (!candidateBase.supported) return [];

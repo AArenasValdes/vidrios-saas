@@ -2,6 +2,7 @@ import {
   getConstructorRecipeProfileCodeLabel,
   getConstructorRecipeSourceLabel,
 } from "@/features/fabricacion/services/constructor-recipe-option-label.service";
+import { formatVariantDisplayLabel } from "@/features/fabricacion/services/fabricacion-line-variant.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
 function recipe(overrides: Partial<FabricationRecipeRecord> = {}): FabricationRecipeRecord {
@@ -55,12 +56,12 @@ describe("constructor recipe option labels", () => {
       getConstructorRecipeSourceLabel(
         recipe({ sourceName: "Taller · confirmación del titular" })
       )
-    ).toBe("Taller confirmado");
+    ).toBe("Ventora");
   });
 
   it("labels a Ventora reference separately from a supplier price list", () => {
     expect(getConstructorRecipeSourceLabel(recipe({ sourceName: "Referencia Ventora" }))).toBe(
-      "Base Ventora"
+      "Ventora"
     );
   });
 
@@ -72,7 +73,30 @@ describe("constructor recipe option labels", () => {
     ).toBe("Arquetipo");
   });
 
+  it("identifies a user-authored option as a workshop variant", () => {
+    expect(getConstructorRecipeSourceLabel(recipe({
+      sourceReference: "taller:personalizada:l5000:variante-1",
+      sourceName: null,
+    }))).toBe("Variante del taller");
+  });
+
   it("shows unique profile codes instead of repeating each cut rule", () => {
     expect(getConstructorRecipeProfileCodeLabel(recipe())).toBe("Perfiles 3201, 3202, 3208");
+  });
+
+  it("names the Arquetipo no-chamber recipe clearly in the constructor", () => {
+    const arquetipoRecipe = recipe({
+      variant: "arquetipo_sin_camara_monolitico",
+      providerName: "Arquetipo",
+      sourceName: "Arquetipo · precios LEGNO / cortes SODAL",
+      sourceReference: "arquetipo:linea-42:legno:sodal-serie-4200-sin-camara-monolitico:v1",
+    });
+
+    expect(formatVariantDisplayLabel(arquetipoRecipe)).toBe(
+      "Arquetipo · Sin cámara · Monolítico",
+    );
+    expect(getConstructorRecipeSourceLabel(arquetipoRecipe)).toBe(
+      "Arquetipo · precios LEGNO / cortes SODAL",
+    );
   });
 });

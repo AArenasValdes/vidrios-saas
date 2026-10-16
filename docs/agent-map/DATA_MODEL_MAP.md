@@ -1,7 +1,7 @@
 # Data Model Map - Ventora
 
 Estado: vigente
-Actualizado: 2026-10-13
+Actualizado: 2026-10-15
 Responsable: ingeniería + Supabase
 
 Fuente de verdad, en orden: base remota verificada, migraciones registradas, `supabase/docs/database_map.md` y `supabase/docs/rls_policies.md`; `supabase/docs/current_schema.sql` es baseline historico hasta regenerarlo.
@@ -11,6 +11,14 @@ Seguridad remota verificada 2026-08-20: el historial de 82 migraciones local/rem
 Verificación documental remota: 2026-08-13.
 Clasificación: tablas activas core, tablas activas growth, tablas legacy/dormidas y tablas propuestas separadas explícitamente abajo.
 
+### Addendum 2026-10-15 — `organization_supplier_family_preferences`
+
+- Estado: el usuario informa que aplicó `20261015185810_organization_supplier_family_preferences.sql`. Esta actualización no verificó entorno, ledger ni esquema desplegado; `current_schema.sql` permanece como baseline histórico.
+- Esquema: PK `(organization_id, family_key)`, `provider_key` estable, `created_at`/`updated_at` y FK a `organizations(id) ON DELETE CASCADE`.
+- Seguridad: RLS habilitada; SELECT autenticado limitado por `(select public.get_org_id())`; sin grants ni policies de escritura para `anon`/`authenticated`; `service_role` escribe desde API autenticada con permiso `admin`/`tecnico`, validación de proveedor/familia y organización derivada de sesión.
+- Resolución: selección explícita por pieza → preferencia de organización/familia → resolución automática previa. Si el proveedor preferido no tiene presentación, precio o largo utilizable, el faltante permanece visible sin sustitución silenciosa.
+- Sin cambios en precios de venta, recetas, fórmulas, cotizaciones históricas ni snapshots. pgTAP `supabase/tests/organization_supplier_family_preferences_security.test.sql` pendiente por disponibilidad de Postgres local. Prueba dirigida de API: 1 suite / 7 tests aprobados para aislamiento, lectura/escritura, actualización, eliminación y permisos.
+
 ---
 
 ## Tablas activas (core del producto)
@@ -19,7 +27,7 @@ Clasificación: tablas activas core, tablas activas growth, tablas legacy/dormid
 
 - **Proposito**: Raiz del multi-tenant. Cada empresa cliente SaaS es una organizacion.
 - **Campos importantes**: `id` (bigint PK), `nombre`, `correo`, `telefono`, `direccion`, `logo_url`, `plan`, `creado_en`, `actualizado_en`, `eliminado_en`
-- **Relaciones**: 1:N con users, clients, projects, cotizaciones, cotizacion_items, cotizacion_line_templates, fabrication_recipes privadas, fabrication_recipe_tests privadas, materials, historial_precios, organization_profile, solicitudes_contacto, labor_costs, web_push_subscriptions, cotizacion_code_counters, public_landing_gallery, public_landing_testimonials, pagos_suscripcion
+- **Relaciones**: 1:N con users, clients, projects, cotizaciones, cotizacion_items, cotizacion_line_templates, fabrication_recipes privadas, fabrication_recipe_tests privadas, materials, historial_precios, organization_profile, `organization_supplier_family_preferences`, solicitudes_contacto, labor_costs, web_push_subscriptions, cotizacion_code_counters, public_landing_gallery, public_landing_testimonials, pagos_suscripcion
 - **Usada por**: Auth (resolver org), todas las features (filtro tenant)
 - **Archivos donde aparece**: Todos los repositories, `src/features/auth/repositories/auth.repository.ts`
 - **Riesgos**: No hacer hard delete de organizaciones con datos asociados. `clients`, `projects`, `cotizaciones` y otras tablas pueden bloquear por FK; el flujo correcto es soft delete con `eliminado_en`.
@@ -309,7 +317,7 @@ Estas tablas no están aprobadas para implementación inmediata. No crear migrac
 - `oportunidades`
 - `cobros`
 
-## Tabla preparada localmente, pendiente de aplicar en remoto
+## Tablas preparadas localmente, pendientes de verificar en la base remota
 
 ### Tabla: product_feedback
 

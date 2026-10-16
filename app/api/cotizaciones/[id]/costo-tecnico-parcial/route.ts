@@ -38,6 +38,13 @@ function parseQuoteId(value: string) {
   return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
+function isCostSnapshotStale(
+  snapshot: TechnicalCostSnapshot | null | undefined,
+  workSnapshot: ReturnType<typeof parseFabricacionTrabajoSnapshot>
+) {
+  return Boolean(snapshot && (!workSnapshot || snapshot.sourcePautaCapturedAt !== workSnapshot.capturedAt));
+}
+
 async function authorize() {
   const context = await resolveAuthenticatedRouteContext();
   return {
@@ -75,6 +82,7 @@ export async function GET(_request: Request, route: RouteContext) {
       enabled: true,
       canConfigure: canManageSupplierCatalog(access.role),
       snapshot: existing?.snapshot ?? null,
+      snapshotIsStale: isCostSnapshotStale(existing?.snapshot, workSnapshot),
       canCalculate: !existing && hasSavedMaterialData,
       canRefresh: Boolean(existing && hasSavedMaterialData && canManageSupplierCatalog(access.role)),
     });
@@ -122,7 +130,11 @@ export async function POST(request: Request, route: RouteContext) {
       selectedPriceLists = parsedBody.data.selectedPriceLists;
       refreshExisting = parsedBody.data.refresh === true;
     }
-    if (existing && !refreshExisting) return NextResponse.json({ snapshot: existing.snapshot, persisted: true });
+    if (existing && !refreshExisting) return NextResponse.json({
+      snapshot: existing.snapshot,
+      persisted: true,
+      snapshotIsStale: isCostSnapshotStale(existing.snapshot, workSnapshot),
+    });
     if (refreshExisting && !canManageSupplierCatalog(access.role)) {
       return NextResponse.json({ error: "No tienes permiso para actualizar los precios de esta cotización." }, { status: 403 });
     }
@@ -150,7 +162,7 @@ export async function POST(request: Request, route: RouteContext) {
       snapshot: snapshot as TechnicalCostSnapshot,
       refreshExisting,
     });
-    return NextResponse.json({ snapshot: persisted.snapshot, persisted: true });
+    return NextResponse.json({ snapshot: persisted.snapshot, persisted: true, snapshotIsStale: false });
   } catch (error) {
     if (error instanceof PriceListSelectionError) return NextResponse.json({ error: error.message }, { status: 400 });
     console.error("[API] costo técnico parcial calculate", error);

@@ -86,6 +86,7 @@ export type QuoteConstructorItemPatch = Partial<
     | "fabricacionLeg"
     | "fabricacionReinforcement"
     | "fabricationRecipeId"
+    | "supplierProviderKey"
     | "fabricacionAnchoHojaAMm"
     | "fabricacionHojas"
     | "fabricacionModulos"

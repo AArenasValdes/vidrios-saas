@@ -22,7 +22,32 @@ export type SupplierPresentationResolutionRequest = {
   finishName: string | null;
   technicalCodes: readonly string[];
   configurationKey?: string | null;
+  /** Explicit purchase-price provider selected for this quote item. */
+  providerKey?: string | null;
 };
+
+export type SupplierPriceCoveragePresentation = {
+  presentationId?: string;
+  providerKey?: string;
+  technicalCode: string;
+  recipeComponentCodes?: readonly string[];
+  familyKeys?: readonly string[];
+  finishName: string | null;
+  finishResolution: "specific" | "finish_independent";
+  commercialLengthMm?: number | null;
+  configurationKey?: string | null;
+  netPrice: number | null;
+};
+
+/** Explicit piece selection wins; otherwise use the organization's preference.
+ * A null result deliberately leaves the legacy automatic resolver in control.
+ */
+export function resolveEffectiveSupplierProviderKey(input: {
+  explicitProviderKey?: string | null;
+  familyPreferenceProviderKey?: string | null;
+}): string | null {
+  return input.explicitProviderKey?.trim() || input.familyPreferenceProviderKey?.trim() || null;
+}
 
 function normalize(value: string | null | undefined) {
   return (value ?? "").trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CL");
@@ -30,6 +55,71 @@ function normalize(value: string | null | undefined) {
 
 function normalizeCode(value: string) {
   return value.trim().toLocaleUpperCase("en-US");
+}
+
+export function resolveSupplierPriceProviderCoverage(input: {
+  request: SupplierPresentationResolutionRequest;
+  presentations: readonly SupplierPriceCoveragePresentation[];
+}): Array<{ providerKey: string; pricedProfileCount: number; totalProfileCount: number; isReference: boolean }> {
+  const { request } = input;
+  const requestedCodes = [...new Set(request.technicalCodes.map(normalizeCode).filter(Boolean))];
+  const candidatesByProviderAndCode = new Map<string, Map<string, Map<string, SupplierPriceCoveragePresentation>>>();
+  for (const [index, entry] of input.presentations.entries()) {
+    if (!entry.providerKey) continue;
+    const familyMatches = (entry.familyKeys ?? []).some((key) =>
+      (normalizeUniversalAluminumFamilyKey(key) ?? key).toLocaleLowerCase("es-CL") ===
+      (normalizeUniversalAluminumFamilyKey(request.familyKey) ?? request.familyKey).toLocaleLowerCase("es-CL")
+    );
+    const configurationMatches = !entry.configurationKey || entry.configurationKey === request.configurationKey;
+    const finishMatches = entry.finishResolution === "finish_independent" ||
+      Boolean(request.finishName && entry.finishName && normalize(entry.finishName) === normalize(request.finishName));
+    if (!familyMatches || !configurationMatches || !finishMatches) continue;
+    const linkedCodes = new Set([entry.technicalCode, ...(entry.recipeComponentCodes ?? [])].map(normalizeCode));
+    for (const requestedCode of requestedCodes) {
+      if (!linkedCodes.has(requestedCode)) continue;
+      const byCode = candidatesByProviderAndCode.get(entry.providerKey) ?? new Map();
+      const byPresentation = byCode.get(requestedCode) ?? new Map();
+      // Repeated family associations for one presentation are still one
+      // candidate. Distinct presentations remain ambiguous, even if only one
+      // currently has a price or their lengths happen to match.
+      byPresentation.set(entry.presentationId ?? `row:${index}`, entry);
+      byCode.set(requestedCode, byPresentation);
+      candidatesByProviderAndCode.set(entry.providerKey, byCode);
+    }
+  }
+  const coveredByProvider = [...candidatesByProviderAndCode.entries()].flatMap(([providerKey, byCode]) => {
+    const covered = new Set([...byCode.entries()].flatMap(([code, presentations]) => {
+      if (presentations.size !== 1) return [];
+      const [presentation] = presentations.values();
+      if (!presentation || presentation.netPrice == null || presentation.netPrice <= 0 ||
+        presentation.commercialLengthMm == null || presentation.commercialLengthMm <= 0) return [];
+      return [code];
+    }));
+    return covered.size > 0 ? [[providerKey, covered] as const] : [];
+  });
+  return coveredByProvider.map(([providerKey, covered]) => ({
+    providerKey,
+    pricedProfileCount: covered.size,
+    totalProfileCount: requestedCodes.length,
+    isReference: providerKey === "arquetipo",
+  })).sort((left, right) => Number(right.isReference) - Number(left.isReference) || left.providerKey.localeCompare(right.providerKey, "es-CL"));
+}
+
+export function isSupplierProviderCompatibleWithFamily(input: {
+  providerKey: string;
+  familyKey: string;
+  organizationId: number;
+  presentations: readonly ConfirmedSupplierPresentation[];
+}): boolean {
+  const providerKey = input.providerKey.trim();
+  if (!providerKey || providerKey.startsWith("taller:") && providerKey !== `taller:${input.organizationId}`) return false;
+  const familyKey = (normalizeUniversalAluminumFamilyKey(input.familyKey) ?? input.familyKey).toLocaleLowerCase("es-CL");
+  return input.presentations.some((presentation) =>
+    presentation.providerKey === providerKey &&
+    presentation.familyKeys.some((candidate) =>
+      (normalizeUniversalAluminumFamilyKey(candidate) ?? candidate).toLocaleLowerCase("es-CL") === familyKey
+    )
+  );
 }
 
 export function resolveSupplierPresentationFamilyKeys(input: {
@@ -84,6 +174,7 @@ export function resolveSupplierPresentationsForQuoteItem(input: {
   const { request } = input;
   return [...new Set(request.technicalCodes.map(normalizeCode).filter(Boolean))].map((technicalCode) => {
     const candidates = input.presentations.filter((entry) =>
+      (!request.providerKey || entry.providerKey === request.providerKey) &&
       entry.familyKeys.some((familyKey) =>
         (normalizeUniversalAluminumFamilyKey(familyKey) ?? familyKey) ===
         (normalizeUniversalAluminumFamilyKey(request.familyKey) ?? request.familyKey)
@@ -102,7 +193,9 @@ export function resolveSupplierPresentationsForQuoteItem(input: {
     const arquetipoCandidates = candidates.filter((entry) => entry.providerKey === "arquetipo");
     const preferredCandidates = candidates.filter((entry) => entry.preferred === true);
     const effectiveCandidates = universalAluminumFamily
-      ? preferredWorkshopCandidates.length > 0
+      ? request.providerKey
+        ? candidates
+        : preferredWorkshopCandidates.length > 0
         ? preferredWorkshopCandidates
         : arquetipoCandidates
       : preferredCandidates.length === 1 ? preferredCandidates : candidates;

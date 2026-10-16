@@ -387,6 +387,7 @@ describe("QuoteConstructorWorkspace", () => {
     });
 
     fireEvent.click(screen.getByLabelText("Elegir línea de VEN-01"));
+    fireEvent.click(screen.getByRole("button", { name: "Mis líneas" }));
     fireEvent.click(screen.getByRole("option", { name: /L5000/i }));
 
     expect(props.onUpdateItem).toHaveBeenCalledTimes(1);

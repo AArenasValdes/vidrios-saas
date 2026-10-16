@@ -333,6 +333,7 @@
 
 .list {
   display: grid;
+  align-content: start;
   gap: 0.45rem;
   min-height: 0;
   overflow: auto;
@@ -341,6 +342,7 @@
 
 .providerGroup {
   display: grid;
+  align-content: start;
   gap: 0.45rem;
   min-width: 0;
 }
@@ -370,12 +372,14 @@
 
 .optionGrid {
   display: grid;
+  align-content: start;
   grid-template-columns: 1fr;
   gap: 0.42rem;
 }
 
 .familyGroup {
   display: grid;
+  align-content: start;
   gap: 0.42rem;
   min-width: 0;
 }

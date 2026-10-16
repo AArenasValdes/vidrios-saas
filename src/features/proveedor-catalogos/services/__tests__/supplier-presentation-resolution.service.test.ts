@@ -1,4 +1,4 @@
-import { resolveSupplierFinishName, resolveSupplierPresentationsForQuoteItem, resolveSupplierPresentationFamilyKeys, type ConfirmedSupplierPresentation } from "../supplier-presentation-resolution.service";
+import { resolveEffectiveSupplierProviderKey, resolveSupplierFinishName, resolveSupplierPresentationsForQuoteItem, resolveSupplierPresentationFamilyKeys, resolveSupplierPriceProviderCoverage, type ConfirmedSupplierPresentation } from "../supplier-presentation-resolution.service";
 
 const variants: Array<[string, string, string, number]> = [
   ["67401VER000", "000", "Blanco", 5800],
@@ -23,6 +23,24 @@ const presentations: ConfirmedSupplierPresentation[] = variants.map(([sku, finis
 }));
 
 describe("resolver explícito de presentación para pauta", () => {
+  it("prioriza proveedor de pieza, luego preferencia de familia y finalmente resolución automática", () => {
+    expect(resolveEffectiveSupplierProviderKey({ explicitProviderKey: " alumco ", familyPreferenceProviderKey: "arquetipo" })).toBe("alumco");
+    expect(resolveEffectiveSupplierProviderKey({ familyPreferenceProviderKey: "arquetipo" })).toBe("arquetipo");
+    expect(resolveEffectiveSupplierProviderKey({ explicitProviderKey: " ", familyPreferenceProviderKey: " " })).toBeNull();
+  });
+
+  it("no sustituye un proveedor habitual si no tiene presentación para un perfil", () => {
+    const arquetipo: ConfirmedSupplierPresentation = {
+      presentationId: "arq-4201", providerKey: "arquetipo", supplierSku: "30892001",
+      technicalCode: "4201", recipeComponentCodes: [], familyKeys: ["universal:aluminio:l42"],
+      finishCode: null, finishName: null, finishResolution: "finish_independent", commercialLengthMm: 6000,
+    };
+    const preferredProvider = resolveEffectiveSupplierProviderKey({ familyPreferenceProviderKey: "alumco" });
+    expect(resolveSupplierPresentationsForQuoteItem({
+      request: { itemId: "L42", familyKey: "ventora:l42", finishName: null, technicalCodes: ["4201"], providerKey: preferredProvider },
+      presentations: [arquetipo],
+    })[0]).toMatchObject({ status: "missing", providerKey: null, commercialLengthMm: null });
+  });
   it("normaliza las familias y exclusiones legacy a la identidad universal", () => {
     expect(resolveSupplierPresentationFamilyKeys({
       familyKeys: ["arquetipo:l15"],
@@ -108,6 +126,84 @@ describe("resolver explícito de presentación para pauta", () => {
       .toMatchObject({ status: "resolved", providerKey: "arquetipo", supplierSku: "30892001" });
     expect(resolveSupplierPresentationsForQuoteItem({ request, presentations: [sodal] })[0])
       .toMatchObject({ status: "missing", providerKey: null, supplierSku: null });
+  });
+
+  it("respeta el proveedor elegido y deja pendiente el perfil si no tiene presentación", () => {
+    const arquetipo: ConfirmedSupplierPresentation = {
+      presentationId: "arq-2001", providerKey: "arquetipo", supplierSku: "30892001",
+      technicalCode: "2001", recipeComponentCodes: [], familyKeys: ["universal:aluminio:l20"],
+      finishCode: null, finishName: null, finishResolution: "finish_independent", commercialLengthMm: 6000,
+      preferred: true,
+    };
+    const alumco: ConfirmedSupplierPresentation = {
+      ...arquetipo, presentationId: "alumco-2001", providerKey: "alumco", supplierSku: "AL-2001",
+      preferred: false,
+    };
+    const request = { itemId: "A", familyKey: "ventora:l20", finishName: "Blanco", technicalCodes: ["2001"] };
+
+    expect(resolveSupplierPresentationsForQuoteItem({
+      request: { ...request, providerKey: "alumco" }, presentations: [arquetipo, alumco],
+    })[0]).toMatchObject({ status: "resolved", providerKey: "alumco", supplierSku: "AL-2001" });
+    expect(resolveSupplierPresentationsForQuoteItem({
+      request: { ...request, providerKey: "sodal" }, presentations: [arquetipo, alumco],
+    })[0]).toMatchObject({ status: "missing", providerKey: null, supplierSku: null });
+  });
+
+  it("muestra cobertura de precio por proveedor solo para familia, código, configuración y acabado compatibles", () => {
+    const base = {
+      presentationId: "presentation-4201",
+      technicalCode: "4201",
+      recipeComponentCodes: [],
+      familyKeys: ["universal:aluminio:l42"],
+      finishName: "Blanco",
+      finishResolution: "specific" as const,
+      configurationKey: "l42:proyectante-1h",
+      commercialLengthMm: 6000,
+      netPrice: 18000,
+    };
+    const options = resolveSupplierPriceProviderCoverage({
+      request: {
+        itemId: "V1", familyKey: "ventora:l42", finishName: "Blanco",
+        technicalCodes: ["4201", "4202"], configurationKey: "l42:proyectante-1h",
+      },
+      presentations: [
+        { ...base, providerKey: "alumco" },
+        { ...base, presentationId: "arq-4202", providerKey: "arquetipo", technicalCode: "4202" },
+        { ...base, presentationId: "sodal-4209", providerKey: "sodal", technicalCode: "4209" },
+        { ...base, presentationId: "otro-acabado", providerKey: "otro-acabado", finishName: "Negro" },
+        { ...base, presentationId: "otra-configuracion", providerKey: "otra-configuracion", configurationKey: "l42:puerta" },
+        { ...base, presentationId: "sin-precio", providerKey: "sin-precio", netPrice: null },
+      ],
+    });
+
+    expect(options).toEqual([
+      { providerKey: "arquetipo", pricedProfileCount: 1, totalProfileCount: 2, isReference: true },
+      { providerKey: "alumco", pricedProfileCount: 1, totalProfileCount: 2, isReference: false },
+    ]);
+  });
+
+  it("no presenta como cubierto un código con presentación ambigua o sin largo comercial", () => {
+    const base = {
+      technicalCode: "2501",
+      familyKeys: ["universal:aluminio:l25"],
+      finishName: null,
+      finishResolution: "finish_independent" as const,
+      commercialLengthMm: 6000,
+      netPrice: 12000,
+      providerKey: "arquetipo",
+    };
+    const options = resolveSupplierPriceProviderCoverage({
+      request: {
+        itemId: "L25", familyKey: "ventora:l25", finishName: null, technicalCodes: ["2501", "2502"],
+      },
+      presentations: [
+        { ...base, presentationId: "ambiguous-1" },
+        { ...base, presentationId: "ambiguous-2", commercialLengthMm: 5800 },
+        { ...base, presentationId: "no-length", technicalCode: "2502", commercialLengthMm: null },
+      ],
+    });
+
+    expect(options).toEqual([]);
   });
 
   it("respeta una presentación propia del taller marcada como preferida", () => {

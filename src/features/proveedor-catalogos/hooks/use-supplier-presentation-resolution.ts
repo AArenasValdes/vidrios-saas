@@ -9,9 +9,11 @@ import {
 
 /** Fetches current explicit selections for a preview. Persisted snapshots remain owned by callers. */
 export function useSupplierPresentationResolution(
-  requests: readonly SupplierPresentationQuoteItemRequest[]
+  requests: readonly SupplierPresentationQuoteItemRequest[],
+  options: { includeProviderOptions?: boolean } = {}
 ) {
   const key = useMemo(() => JSON.stringify(requests), [requests]);
+  const includeProviderOptions = options.includeProviderOptions === true;
   const [state, setState] = useState<{
     key: string;
     result: SupplierPresentationResolutionResponse | null;
@@ -19,20 +21,19 @@ export function useSupplierPresentationResolution(
 
   useEffect(() => {
     if (requests.length === 0) {
-      setState(null);
       return;
     }
     let active = true;
     // Parse from the serialized key so freshly-created request arrays with the
     // same payload do not trigger duplicate network calls on every render.
     const stableRequests = JSON.parse(key) as SupplierPresentationQuoteItemRequest[];
-    void resolveSupplierPresentationsForQuote(stableRequests).then((result) => {
+    void resolveSupplierPresentationsForQuote(stableRequests, { includeProviderOptions }).then((result) => {
       if (active) setState({ key, result });
     });
     return () => { active = false; };
-  }, [key, requests.length]);
+  }, [includeProviderOptions, key, requests.length]);
 
-  const result = state?.key === key ? state.result : null;
+  const result = requests.length > 0 && state?.key === key ? state.result : null;
   return {
     result,
     isResolving: requests.length > 0 && state?.key !== key,

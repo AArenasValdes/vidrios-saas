@@ -24,6 +24,7 @@ import {
   shouldShowSystemSelectionForComponent,
   resolveVitrinaHojasBasePatch,
   resolveVitrinaLeafCount,
+  resolveComponentFabricacionHojas,
   isDesktopPieceSystemStepComplete,
   isWorkflowItemEffectivelyComplete,
   shouldShowGuidedComposerEntry,
@@ -45,6 +46,8 @@ import {
   updateModuleType,
 } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
+import { filterLineCatalogTemplates } from "@/features/cotizaciones/line-templates/services/line-option-presentation.service";
+import { resolveLineCompatibilityOpeningType } from "@/features/cotizaciones/line-templates/services/line-template-compatibility.service";
 import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import { setQuickPaneDecoration } from "@/features/cotizaciones/visual-composer/services/quick-composition-adjustment.service";
 import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
@@ -194,6 +197,26 @@ describe("workflow-ui paso 2", () => {
     expect(item.alto).toBe(Number(form.alto));
     expect(item.costoProveedorUnitario).toBe(Number(form.costoProveedorUnitario));
     expect(meta.guidedVisualConfig).toBeNull();
+  });
+
+  it("guarda las medidas actuales junto a la composición visual editada", () => {
+    const previousConfig = createQuoteConstructorPresetConfig("corredera", {
+      widthMm: 1200,
+      heightMm: 1000,
+    });
+    const form = createLinePricingForm({
+      ancho: "1830",
+      alto: "1240",
+      guidedVisualConfig: previousConfig,
+    });
+
+    const item = buildItemFromForm(form, [], null);
+    const savedConfig = decodeCotizacionItemPresentationMeta(item.observaciones).guidedVisualConfig;
+
+    expect(item.ancho).toBe(1830);
+    expect(item.alto).toBe(1240);
+    expect(savedConfig).toMatchObject({ widthMm: 1830, heightMm: 1240 });
+    expect(savedConfig?.root).toEqual(previousConfig.root);
   });
 
   it("debe incluir DVH / Termopaneles en orden comercial", () => {
@@ -439,6 +462,7 @@ describe("workflow-ui paso 2", () => {
       fabricacionModulos: 4,
       fabricacionVariante: "doble_riel_4h_80_dvh_17_20",
       fabricationRecipeId: "",
+      supplierProviderKey: "alumco",
       fabricacionSnapshot: null,
     });
 
@@ -458,6 +482,7 @@ describe("workflow-ui paso 2", () => {
     const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
     expect(presentation.fabricacionHojas).toBe(4);
     expect(presentation.fabricacionVariante).toBe("doble_riel_4h_80_dvh_17_20");
+    expect(presentation.supplierProviderKey).toBe("alumco");
   });
 
   it("debe regenerar el nombre comercial cuando cambia el tipo y queda un nombre viejo", () => {
@@ -1365,6 +1390,120 @@ describe("workflow-ui paso 2", () => {
       tipo: "Vitrina",
       configuracion: "Con perfileria 2 hojas",
     })).toEqual({ hojasBase: 2 });
+  });
+
+  it("filtra correderas del Constructor con las hojas comerciales, no por el único módulo inicial del dibujo", () => {
+    const guidedVisualConfig = createQuoteConstructorPresetConfig("corredera");
+    const leavesCount = resolveComponentFabricacionHojas({
+      tipo: "Ventana",
+      sistema: "Personalizado",
+      hojasBase: 1,
+      guidedVisualConfig,
+    });
+
+    expect(leavesCount).toBe(2);
+    expect(
+      filterLineCatalogTemplates({
+        templates: VENTORA_DEFAULT_LINE_CATALOG,
+        tab: "compatible",
+        context: {
+          componentType: "Ventana",
+          openingType: "Corredera",
+          leavesCount,
+          material: "Aluminio",
+        },
+      }).map((template) => template.catalogKey)
+    ).toEqual(expect.arrayContaining([
+      "ventora:l5000",
+      "ventora:l20",
+      "ventora:l25",
+      "ventora:serie-4800-corredera-2h",
+      "ventora:serie-15-corredera-2h",
+      "ventora:serie-4000-corredera-2h",
+    ]));
+
+    expect(resolveComponentFabricacionHojas({
+      tipo: "Ventana",
+      fabricacionHojas: 1,
+      hojasBase: 1,
+      guidedVisualConfig,
+    })).toBe(1);
+  });
+
+  it("muestra sistemas PVC documentados para corredera de 2 hojas móviles", () => {
+    const getFormRows = (sheetVariant: string, leaves: number) =>
+      filterLineTemplatesForComponent(VENTORA_DEFAULT_LINE_CATALOG, {
+        tipo: "Ventana",
+        material: "PVC",
+        sistema: "Corredera",
+        configuracion: `${leaves} hojas · ${sheetVariant}`,
+        fabricacionHojas: leaves,
+        sheetVariant,
+      })
+        .map((template) => template.catalogKey)
+        .filter((catalogKey): catalogKey is string => Boolean(
+          catalogKey === "ventora:kompen-form-line-800" ||
+          catalogKey?.startsWith("ventora:kompen-form-line-800:configuration:")
+        ))
+        .sort();
+
+    const twoMovingLeaves = filterLineTemplatesForComponent(VENTORA_DEFAULT_LINE_CATALOG, {
+      tipo: "Ventana",
+      material: "PVC",
+      sistema: "Corredera",
+      configuracion: "2 hojas · 2 móviles",
+      fabricacionHojas: 2,
+      sheetVariant: "2 móviles",
+    }).map((template) => template.catalogKey);
+
+    expect(twoMovingLeaves).toEqual(expect.arrayContaining([
+      "ventora:kompen-form-line-800",
+      "ventora:winhouse-new-s75-doble-riel",
+      "ventora:winhouse-andes-doble-riel",
+    ]));
+    expect(twoMovingLeaves).not.toContain("ventora:winhouse-new-s75-triple-riel");
+    expect(twoMovingLeaves).not.toContain("ventora:kompen-prime-line-700");
+    expect(twoMovingLeaves).not.toContain("ventora:kompen-star-line-500");
+    expect(getFormRows("2 móviles", 2)).toEqual(["ventora:kompen-form-line-800"]);
+    expect(getFormRows("1 fija + 1 móvil", 2)).toEqual([
+      "ventora:kompen-form-line-800:configuration:ventana-monoriel",
+    ]);
+    expect(getFormRows("3 móviles", 3)).toEqual([
+      "ventora:kompen-form-line-800:configuration:ventana-triple-riel",
+    ]);
+  });
+
+  it("resuelve Shower Corredera como dos hojas para que Línea 12 aparezca compatible", () => {
+    const leavesCount = resolveComponentFabricacionHojas({
+      tipo: "Shower Door",
+      sistema: "Shower",
+      configuracion: "Corredera",
+      catalogLineKey: "ventora:serie-12-shower-corredera",
+      fabricacionHojas: 1,
+      hojasBase: 1,
+    });
+
+    expect(leavesCount).toBe(2);
+    expect(filterLineCatalogTemplates({
+      templates: VENTORA_DEFAULT_LINE_CATALOG,
+      tab: "compatible",
+      context: {
+        componentType: "Shower Door",
+        openingType: resolveLineCompatibilityOpeningType("Shower", "Corredera"),
+        leavesCount,
+        material: "Aluminio",
+      },
+    }).map((template) => template.catalogKey)).toContain("ventora:serie-12-shower-corredera");
+  });
+
+  it("conserva una cantidad de hojas mayor a dos ya elegida en Shower Corredera", () => {
+    expect(resolveComponentFabricacionHojas({
+      tipo: "Shower Door",
+      sistema: "Shower",
+      configuracion: "Corredera",
+      fabricacionHojas: 3,
+      hojasBase: 1,
+    })).toBe(3);
   });
 
   it("considera completa la composición cuando hay guidedVisualConfig aunque sheetScheme esté vacío", () => {

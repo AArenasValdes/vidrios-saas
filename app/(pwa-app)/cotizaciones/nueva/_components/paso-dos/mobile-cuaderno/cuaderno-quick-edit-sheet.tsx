@@ -1,10 +1,13 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { LuArrowRight, LuX } from "react-icons/lu";
 
 import { LineTemplatePicker } from "@/features/cotizaciones/line-templates/components/line-template-picker";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import { resolveLineCompatibilityOpeningType } from "@/features/cotizaciones/line-templates/services/line-template-compatibility.service";
+import { resolveSupplierFamilyKeyForLineTemplate } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
+import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import {
   ALUMINUM_COLOR_OPTIONS,
   applyLineTemplateToComponentForm,
@@ -24,17 +27,20 @@ import {
   resolveConstructorRecipeCandidates,
   resolveConstructorRecipeSelection,
 } from "@/features/fabricacion/services/constructor-recipe-selection.service";
-import {
-  getConstructorRecipeProfileCodeLabel,
-  getConstructorRecipeSourceLabel,
-} from "@/features/fabricacion/services/constructor-recipe-option-label.service";
 import { resolveFabricationRecipe } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
 import { resolveUniversalPricedLineFallbacks } from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
 import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
-import { formatVariantDisplayLabel } from "@/features/fabricacion/services/fabricacion-line-variant.service";
+import { QuoteFabricationVariantPicker } from "@/features/fabricacion/components/quote-fabrication-variant-picker";
 import { getLineVariantSlots } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
+import type {
+  SodalL25GlazingSlug,
+  SodalL25LegSlug,
+  SodalL25ReinforcementSlug,
+} from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
 import { isSodalL25CatalogKey, resolveEffectiveSodalL25CatalogKey } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
+import { resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
+import { resolveSupplierPresentationsForQuote, type SupplierPriceProviderOption } from "@/features/proveedor-catalogos/services/supplier-presentations.client";
 import {
   measureDimensionFieldLabel,
   measureDimensionPlaceholder,
@@ -59,24 +65,6 @@ function getColorOptionsForMaterial(material: ProfileMaterial) {
 function inferLeavesFromLineLabel(value: string | null | undefined): number | null {
   const match = value?.match(/(?:^|\D)([234])\s*hojas?(?:\D|$)/i);
   return match?.[1] ? Number(match[1]) : null;
-}
-
-function formatRecipeOptionLabel(
-  recipe: NonNullable<ReturnType<typeof resolveConstructorRecipeSelection>>,
-  candidates: readonly NonNullable<ReturnType<typeof resolveConstructorRecipeSelection>>[]
-) {
-  const leaves = recipe.definition.identidad.hojas;
-  const variantLabel = `${formatVariantDisplayLabel(recipe)} · ${leaves} ${leaves === 1 ? "hoja" : "hojas"}`;
-  const duplicateLabels = candidates.filter(
-    (candidate) =>
-      `${formatVariantDisplayLabel(candidate)} · ${candidate.definition.identidad.hojas} ${candidate.definition.identidad.hojas === 1 ? "hoja" : "hojas"}` ===
-      variantLabel
-  );
-  const sourceLabel = getConstructorRecipeSourceLabel(recipe);
-  const profileCodes = duplicateLabels.length > 1
-    ? getConstructorRecipeProfileCodeLabel(recipe)
-    : null;
-  return [variantLabel, sourceLabel, profileCodes].filter(Boolean).join(" · ");
 }
 
 function resolveVariantCatalogKey(
@@ -152,6 +140,17 @@ export function CuadernoQuickEditSheet({
   );
   const [showColorChoices, setShowColorChoices] = useState(false);
   const [fabricationSelectionDraft, setFabricationSelectionDraft] = useState<string | null>(null);
+  const [supplierProviderKeyDraft, setSupplierProviderKeyDraft] = useState<string | null>(null);
+  const [supplierProviderResolution, setSupplierProviderResolution] = useState<{
+    key: string;
+    options: SupplierPriceProviderOption[];
+    familyPreferenceProviderKey: string | null;
+    canManageFamilyPreferences: boolean;
+    error: string | null;
+  } | null>(null);
+  const [familyPreferenceOverride, setFamilyPreferenceOverride] = useState<{ familyKey: string; providerKey: string | null } | null>(null);
+  const [familyPreferenceSaving, setFamilyPreferenceSaving] = useState(false);
+  const [familyPreferenceError, setFamilyPreferenceError] = useState<string | null>(null);
   const [sodalL25ConfigDraft, setSodalL25ConfigDraft] = useState<
     Pick<
       ComponentFormState,
@@ -216,6 +215,9 @@ export function CuadernoQuickEditSheet({
     form.fabricacionTipologia ||
     null;
   const selectedRecipeLeaves = resolveComponentFabricacionHojas({
+    tipo: form.tipo,
+    sistema: form.sistema,
+    configuracion: form.configuracion,
     sheetScheme: form.sheetScheme,
     fabricacionHojas: form.fabricacionHojas,
     fabricacionVariante: form.fabricacionVariante,
@@ -223,7 +225,7 @@ export function CuadernoQuickEditSheet({
     catalogLineKey: selectedCatalogLineKey,
     hojasBase: form.hojasBase,
     guidedVisualConfig: form.guidedVisualConfig,
-  });
+  }) ?? inferLeavesFromLineLabel(`${selectedLineTemplate?.nombre ?? ""} ${form.referencia ?? ""}`);
   const sodalL25Leaves =
     inferLeavesFromLineLabel(
       `${selectedLineTemplate?.nombre ?? ""} ${form.referencia ?? ""} ${item.lineaComercial ?? ""}`
@@ -260,24 +262,42 @@ export function CuadernoQuickEditSheet({
       catalogKey: selectedCatalogLineKey,
       tipologia: selectedRecipeTypology,
       hojas: selectedRecipeLeaves,
-      variante: null,
-      preferredRecipeId: null,
+      modulos: form.fabricacionModulos,
+      apertura: form.fabricacionApertura || resolveLineCompatibilityOpeningType(form.sistema, form.configuracion, form.guidedVisualConfig),
+      herraje: form.fabricacionHerraje,
+      variante: (sodalL25ConfigDraft?.fabricacionVariante ?? form.fabricacionVariante) || null,
+      configurationId: form.fabricacionConfiguracionId || null,
+      compositionId: form.fabricacionComposicionId || null,
+      preferredRecipeId: form.fabricationRecipeId || null,
+      glassName: vidrioDraft ?? form.vidrio,
+      glazing: (sodalL25ConfigDraft?.fabricacionGlazing ?? form.fabricacionGlazing) as
+        | SodalL25GlazingSlug
+        | undefined,
+      leg: (sodalL25ConfigDraft?.fabricacionLeg ?? form.fabricacionLeg) as
+        | SodalL25LegSlug
+        | undefined,
+      reinforcement:
+        (sodalL25ConfigDraft?.fabricacionReinforcement ?? form.fabricacionReinforcement) as
+          | SodalL25ReinforcementSlug
+          | undefined,
+      atributosTecnicos: {
+        lineTemplateId: selectedRecipeLineTemplateId,
+        typology: selectedRecipeTypology,
+        leaves: selectedRecipeLeaves,
+        opening: form.fabricacionApertura || resolveLineCompatibilityOpeningType(form.sistema, form.configuracion, form.guidedVisualConfig),
+        hardware: form.fabricacionHerraje || null,
+        variant: (sodalL25ConfigDraft?.fabricacionVariante ?? form.fabricacionVariante) || null,
+        configurationId: form.fabricacionConfiguracionId || null,
+        compositionId: form.fabricacionComposicionId || null,
+        glass: vidrioDraft ?? form.vidrio,
+        glazing: sodalL25ConfigDraft?.fabricacionGlazing ?? form.fabricacionGlazing,
+        leg: sodalL25ConfigDraft?.fabricacionLeg ?? form.fabricacionLeg,
+        reinforcement:
+          sodalL25ConfigDraft?.fabricacionReinforcement ?? form.fabricacionReinforcement,
+      },
       previewListaParaProbar: true,
     });
-    if (exactResolution.candidatas.length > 0 || selectedRecipeLeaves == null) {
-      return exactResolution;
-    }
-    const unresolvedLeaves = resolveFabricationRecipe(selectedLineRecipes, {
-      organizationId: recipeOrganizationId,
-      lineTemplateId: selectedRecipeLineTemplateId,
-      catalogKey: selectedCatalogLineKey,
-      tipologia: selectedRecipeTypology,
-      hojas: null,
-      variante: null,
-      preferredRecipeId: null,
-      previewListaParaProbar: true,
-    });
-    return unresolvedLeaves.candidatas.length > 0 ? unresolvedLeaves : exactResolution;
+    return exactResolution;
   }, [
     canLoadSelectedLineRecipes,
     isLoadingSelectedLineRecipes,
@@ -287,6 +307,22 @@ export function CuadernoQuickEditSheet({
     selectedRecipeLeaves,
     selectedRecipeLineTemplateId,
     selectedRecipeTypology,
+    sodalL25ConfigDraft,
+    vidrioDraft,
+    form.vidrio,
+    form.fabricacionGlazing,
+    form.fabricacionLeg,
+    form.fabricacionReinforcement,
+    form.fabricacionModulos,
+    form.fabricacionApertura,
+    form.fabricacionHerraje,
+    form.fabricacionVariante,
+    form.fabricacionConfiguracionId,
+    form.fabricacionComposicionId,
+    form.fabricationRecipeId,
+    form.sistema,
+    form.configuracion,
+    form.guidedVisualConfig,
   ]);
   const universalRecipeCandidates = useMemo(() => {
     if (
@@ -305,13 +341,15 @@ export function CuadernoQuickEditSheet({
       variant: null,
       leavesCount: selectedRecipeLeaves,
       typology: selectedRecipeTypology,
-      glassName: form.vidrio,
+      glassName: vidrioDraft ?? form.vidrio,
+      includeDocumentedVariants: true,
       recipes: selectedLineRecipes,
     });
   }, [
     canLoadSelectedLineRecipes,
     form.referencia,
     form.vidrio,
+    vidrioDraft,
     nombre,
     recipeOrganizationId,
     selectedCatalogLineKey,
@@ -327,8 +365,9 @@ export function CuadernoQuickEditSheet({
         storedCandidates: inlineRecipeResolution?.candidatas ?? [],
         universalFallbackCandidates: universalRecipeCandidates,
         preferredRecipeId: form.fabricationRecipeId,
+        catalogKey: selectedCatalogLineKey,
       }),
-    [form.fabricationRecipeId, inlineRecipeResolution?.candidatas, universalRecipeCandidates]
+    [form.fabricationRecipeId, inlineRecipeResolution?.candidatas, selectedCatalogLineKey, universalRecipeCandidates]
   );
   const l20VariantSlots = useMemo(() => {
     if (selectedCatalogLineKey !== "ventora:l20" && selectedCatalogLineKey !== "ventora:l20-fijos") {
@@ -337,21 +376,104 @@ export function CuadernoQuickEditSheet({
     return getLineVariantSlots(selectedCatalogLineKey).filter(
       (slot) => slot.typology === selectedRecipeTypology
     );
-  }, [selectedCatalogLineKey, selectedRecipeLeaves, selectedRecipeTypology]);
-  const showFabricationVariant =
-    inlineRecipeCandidates.length > 1 ||
-    (inlineRecipeCandidates.length === 0 && l20VariantSlots.length > 0);
-  const currentRecipeCandidate = inlineRecipeCandidates.find(
-    (recipe) =>
-      recipe.id === form.fabricationRecipeId ||
-      (form.fabricacionVariante && recipe.definition.identidad.variante === form.fabricacionVariante)
-  );
+  }, [selectedCatalogLineKey, selectedRecipeTypology]);
+  const showFabricationVariant = inlineRecipeCandidates.length > 0 || l20VariantSlots.length > 0;
+  const existingRecipeSelection = form.fabricationRecipeId && inlineRecipeCandidates.some(
+    (recipe) => recipe.id === form.fabricationRecipeId,
+  )
+    ? `recipe:${form.fabricationRecipeId}`
+    : form.fabricacionVariante
+      ? `variant:${form.fabricacionVariante}`
+      : "";
+  const currentRecipeCandidate = resolveConstructorRecipeSelection({
+    selection: existingRecipeSelection,
+    candidates: inlineRecipeCandidates,
+  });
   const currentFabricationSelection = currentRecipeCandidate
     ? `recipe:${currentRecipeCandidate.id}`
     : form.fabricacionVariante
       ? `variant:${form.fabricacionVariante}`
       : "";
   const fabricationSelection = fabricationSelectionDraft ?? currentFabricationSelection;
+  const supplierRecipe = resolveConstructorRecipeSelection({
+    selection: fabricationSelection,
+    candidates: inlineRecipeCandidates,
+  }) ?? (fabricationSelection === "" ? inlineRecipeResolution?.receta ?? null : null);
+  const supplierLineTemplate = selectedLineTemplate ??
+    VENTORA_DEFAULT_LINE_CATALOG.find((line) => line.catalogKey === selectedCatalogLineKey) ?? null;
+  const supplierFamilyKey = resolveSupplierFamilyKeyForLineTemplate(supplierLineTemplate);
+  const supplierResolutionRequest = useMemo(() => {
+    const technicalCodes = [...new Set((supplierRecipe?.definition.perfiles ?? [])
+      .map((profile) => profile.codigoPerfil.trim()).filter(Boolean))];
+    if (!selectedCatalogLineKey || !supplierFamilyKey || technicalCodes.length === 0) return null;
+    return {
+      itemId: String(item.id),
+      catalogLineKey: selectedCatalogLineKey,
+      familyKey: supplierFamilyKey,
+      finishName: resolveSupplierFinishName(form.catalogTerminacion, colorHexDraft ?? form.colorHex),
+      technicalCodes,
+      providerKey: supplierProviderKeyDraft !== null ? supplierProviderKeyDraft : form.supplierProviderKey || null,
+    };
+  }, [colorHexDraft, form.catalogTerminacion, form.colorHex, form.supplierProviderKey, item.id, selectedCatalogLineKey, supplierFamilyKey, supplierProviderKeyDraft, supplierRecipe]);
+  const supplierResolutionKey = JSON.stringify(supplierResolutionRequest);
+  useEffect(() => {
+    if (!supplierResolutionRequest) return;
+    let active = true;
+    void resolveSupplierPresentationsForQuote([supplierResolutionRequest], { includeProviderOptions: true }).then((result) => {
+      if (active) setSupplierProviderResolution({
+        key: supplierResolutionKey,
+        options: result?.providerOptions?.[String(item.id)] ?? [],
+        familyPreferenceProviderKey: result?.familyPreferences?.[String(supplierResolutionRequest.familyKey)] ?? null,
+        canManageFamilyPreferences: result?.canManageFamilyPreferences === true,
+        error: result?.itemErrors?.[String(item.id)] ?? null,
+      });
+    });
+    return () => { active = false; };
+  }, [item.id, supplierResolutionKey, supplierResolutionRequest]);
+  const supplierOptions = supplierProviderResolution?.key === supplierResolutionKey
+    ? supplierProviderResolution.options
+    : [];
+  const isLoadingSupplierOptions = Boolean(supplierResolutionRequest && supplierProviderResolution?.key !== supplierResolutionKey);
+  const storedSupplierProviderKey = supplierProviderKeyDraft ?? form.supplierProviderKey;
+  const requestedFamilyPreference = supplierProviderResolution?.key === supplierResolutionKey
+    ? supplierProviderResolution.familyPreferenceProviderKey
+    : null;
+  const effectiveFamilyPreference = familyPreferenceOverride && familyPreferenceOverride.familyKey === supplierResolutionRequest?.familyKey
+    ? familyPreferenceOverride.providerKey
+    : requestedFamilyPreference;
+  const selectedSupplierProviderKey = supplierProviderKeyDraft !== null
+    ? supplierProviderKeyDraft
+    : storedSupplierProviderKey || effectiveFamilyPreference || "";
+  const selectedSupplierOption = supplierOptions.find((option) => option.providerKey === selectedSupplierProviderKey) ?? null;
+  const canManageFamilyPreferences = supplierProviderResolution?.key === supplierResolutionKey && supplierProviderResolution.canManageFamilyPreferences;
+  const saveFamilyPreference = async (providerKey: string | null) => {
+    if (!supplierResolutionRequest || !providerKey && !effectiveFamilyPreference) return;
+    setFamilyPreferenceSaving(true);
+    setFamilyPreferenceError(null);
+    try {
+      const response = await fetch("/api/proveedor-catalogos/preferencias-familia", {
+        method: providerKey ? "PUT" : "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(providerKey
+          ? { familyKey: supplierResolutionRequest.familyKey, providerKey }
+          : { familyKey: supplierResolutionRequest.familyKey }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null) as { error?: string } | null;
+        if (response.status === 503) {
+          throw new Error("El proveedor habitual no está disponible todavía. Esta pieza seguirá usando la resolución automática.");
+        }
+        throw new Error(payload?.error || "No se pudo guardar el proveedor habitual.");
+      }
+      setFamilyPreferenceOverride({ familyKey: supplierResolutionRequest.familyKey, providerKey });
+      // Clear any old per-piece override so the saved family default becomes effective.
+      setSupplierProviderKeyDraft("");
+    } catch (error) {
+      setFamilyPreferenceError(error instanceof Error ? error.message : "No se pudo actualizar el proveedor habitual.");
+    } finally {
+      setFamilyPreferenceSaving(false);
+    }
+  };
   const vidrio = vidrioDraft ?? form.vidrio;
   const colorHex = colorHexDraft ?? form.colorHex;
   const materialColorOptions = getColorOptionsForMaterial(materialDraft);
@@ -398,6 +520,7 @@ export function CuadernoQuickEditSheet({
       vidrio,
       material: materialDraft,
       colorHex,
+      supplierProviderKey: selectedSupplierProviderKey,
     };
     if (lineTemplateIdDraft !== null) {
       patch.catalogLineKey = lineTemplateId ? selectedCatalogLineKey ?? "" : "";
@@ -409,13 +532,17 @@ export function CuadernoQuickEditSheet({
         cubicationSnapshot: null,
       });
     }
-    if (fabricationSelectionDraft !== null) {
+    if (fabricationSelectionDraft !== null || lineTemplateIdDraft !== null) {
+      const requestedFabricationSelection = fabricationSelectionDraft ?? "";
       const selectedRecipe = resolveConstructorRecipeSelection({
-        selection: fabricationSelectionDraft,
+        // On a newly selected commercial line, persist the sole unambiguous
+        // validated recipe (Ventora for Ventora catalog lines). Ambiguous
+        // candidates remain unselected until the user chooses one.
+        selection: requestedFabricationSelection,
         candidates: inlineRecipeCandidates,
       });
-      const selectedVariant = fabricationSelectionDraft.startsWith("variant:")
-        ? fabricationSelectionDraft.slice("variant:".length)
+      const selectedVariant = requestedFabricationSelection.startsWith("variant:")
+        ? requestedFabricationSelection.slice("variant:".length)
         : "";
       const selectedVariantSlot = l20VariantSlots.find(
         (slot) => slot.variantSlug === selectedVariant
@@ -710,42 +837,88 @@ export function CuadernoQuickEditSheet({
                 preferredMaterial={materialDraft}
                 compatibilityContext={{
                   componentType: form.tipo,
-                  openingType: form.configuracion?.trim() || form.sistema,
-                  leavesCount: Number(form.fabricacionHojas) || null,
+                  openingType: resolveLineCompatibilityOpeningType(form.sistema, form.configuracion, form.guidedVisualConfig),
+                  leavesCount: selectedRecipeLeaves,
                   material: materialDraft,
                 }}
                 ariaLabel="Elegir linea de esta pieza"
               />
             </div>
-            {selectedLineTemplate?.proveedor ? (
-              <p className={s.variantSourceHint}>
-                Proveedor seleccionado: <strong>{selectedLineTemplate.proveedor}</strong>
-              </p>
+            {!selectedLineIsSodalL25 && showFabricationVariant ? (
+              <QuoteFabricationVariantPicker
+                title="Fabricación"
+                candidates={inlineRecipeCandidates}
+                selectedRecipeId={fabricationSelection.startsWith("recipe:") ? fabricationSelection.slice("recipe:".length) : null}
+                onSelectRecipe={(recipe) => setFabricationSelectionDraft(`recipe:${recipe.id}`)}
+                legacyOptions={l20VariantSlots.map((slot) => ({
+                  value: slot.variantSlug,
+                  label: slot.variantLabel,
+                  detail: `${slot.leavesCount} ${slot.leavesCount === 1 ? "hoja" : "hojas"}${slot.pendingFields.length ? " · Datos técnicos pendientes" : ""}`,
+                }))}
+                selectedLegacyValue={fabricationSelection.startsWith("variant:") ? fabricationSelection.slice("variant:".length) : null}
+                onSelectLegacy={(value) => setFabricationSelectionDraft(`variant:${value}`)}
+              />
             ) : null}
 
-            {!selectedLineIsSodalL25 && showFabricationVariant ? (
-              <label className={s.field}>
-                <span className={s.fieldLabel}>Composición para el despiece</span>
-                <select
-                  className={s.fieldInput}
-                  aria-label="Composición para el despiece"
-                  value={fabricationSelection}
-                  onChange={(event) => setFabricationSelectionDraft(event.target.value)}
-                >
-                  <option value="">Elige una composición</option>
-                  {inlineRecipeCandidates.length > 0
-                    ? inlineRecipeCandidates.map((recipe) => (
-                        <option key={recipe.id} value={`recipe:${recipe.id}`}>
-                          {formatRecipeOptionLabel(recipe, inlineRecipeCandidates)}
-                        </option>
-                      ))
-                    : l20VariantSlots.map((slot) => (
-                        <option key={slot.variantSlug} value={`variant:${slot.variantSlug}`}>
-                          {slot.variantLabel} · {slot.leavesCount} hojas
+            {supplierResolutionRequest ? (
+              <details className={s.supplierDisclosure}>
+                <summary>
+                  <span>Proveedor de compra</span>
+                  <strong>
+                    {selectedSupplierOption?.label ??
+                      (selectedSupplierProviderKey ? "Proveedor guardado · revisar cobertura" : "Automático")}
+                  </strong>
+                </summary>
+                <div className={s.supplierDisclosureBody}>
+                  <label className={s.field}>
+                    <span className={s.fieldLabel}>Cambiar proveedor para esta pieza</span>
+                    <select
+                      className={s.fieldInput}
+                      aria-label="Proveedor para precio de perfiles"
+                      value={selectedSupplierProviderKey}
+                      onChange={(event) => setSupplierProviderKeyDraft(event.target.value)}
+                    >
+                      <option value="">Automático · comportamiento anterior</option>
+                      {selectedSupplierProviderKey && !supplierOptions.some((option) => option.providerKey === selectedSupplierProviderKey) ? (
+                        <option value={selectedSupplierProviderKey}>Proveedor guardado · sin precio para esta composición</option>
+                      ) : null}
+                      {supplierOptions.map((option) => (
+                        <option key={option.providerKey} value={option.providerKey}>
+                          {option.label}{option.isReference ? " · Referencia" : ""} · {option.pricedProfileCount}/{option.totalProfileCount} perfiles con precio
                         </option>
                       ))}
-                </select>
-              </label>
+                    </select>
+                  </label>
+                  <span className={s.variantSourceHint}>
+                    Cambia el costo de compra; la línea conserva el precio de venta.
+                    {selectedSupplierProviderKey && !selectedSupplierOption ? " No se reemplazará por otro proveedor si faltan perfiles." : ""}
+                  </span>
+                {canManageFamilyPreferences && (selectedSupplierProviderKey || effectiveFamilyPreference) ? (
+                  <span className={s.supplierPreferenceActions}>
+                    {effectiveFamilyPreference ? <span>Habitual: {supplierOptions.find((option) => option.providerKey === effectiveFamilyPreference)?.label ?? effectiveFamilyPreference}</span> : null}
+                    {selectedSupplierProviderKey ? <button type="button" disabled={familyPreferenceSaving} onClick={() => void saveFamilyPreference(selectedSupplierProviderKey)}>
+                      {effectiveFamilyPreference === selectedSupplierProviderKey ? "Proveedor habitual de esta línea" : "Usar como proveedor habitual"}
+                    </button> : null}
+                    {effectiveFamilyPreference ? (
+                      <button type="button" disabled={familyPreferenceSaving} onClick={() => void saveFamilyPreference(null)}>Quitar preferencia</button>
+                    ) : null}
+                  </span>
+                ) : null}
+                {isLoadingSupplierOptions ? <span className={s.variantSourceHint}>Buscando listas de precios compatibles…</span> : null}
+                {supplierProviderResolution?.key === supplierResolutionKey && supplierProviderResolution.error ? (
+                  <span className={s.preferenceError} role="status">{supplierProviderResolution.error}</span>
+                ) : null}
+                {!isLoadingSupplierOptions && supplierOptions.length === 0 ? (
+                  <span className={s.variantSourceHint}>No hay precios compatibles para los perfiles de esta composición.</span>
+                ) : null}
+                  {familyPreferenceError ? <span className={s.preferenceError} role="status">{familyPreferenceError}</span> : null}
+                </div>
+              </details>
+            ) : null}
+            {supplierRecipe?.definition.perfiles.length && !supplierFamilyKey ? (
+              <p className={s.variantSourceHint} role="status">
+                Proveedor pendiente: esta línea todavía no tiene familia de compra configurada.
+              </p>
             ) : null}
 
             {selectedLineIsSodalL25 ? (
@@ -791,7 +964,7 @@ export function CuadernoQuickEditSheet({
 
             <div className={s.technicalNote}>
               <strong>Cubicacion y pauta de corte</strong>
-              <span>Se revisa en desktop con la linea elegida. En movil queda como dato rapido.</span>
+              <span>Se revisa desde la pauta de fabricación.</span>
             </div>
           </section>
 

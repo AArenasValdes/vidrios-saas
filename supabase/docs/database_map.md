@@ -1,5 +1,13 @@
 # Database Map - Ventora
 
+## Addendum 2026-10-15 - Preferencia de proveedor por familia
+
+- `organization_supplier_family_preferences` guarda un proveedor habitual por `(organization_id, family_key)`; `provider_key` es identidad estable, no un SKU ni nombre de pantalla.
+- La FK elimina preferencias al borrar la organización. `created_at`/`updated_at` registran cambios. No relaciona ni altera precios de venta, recetas, fórmulas, snapshots de cotización ni históricos.
+- RLS activa. `authenticated` tiene SELECT con `organization_id = get_org_id()`; no tiene permisos ni policies de escritura. `anon`/`public` no tienen acceso. Escrituras solo mediante API autenticada, autorización `admin`/`tecnico`, org derivada de sesión y repository de servidor con `organization_id` explícito.
+- Migración: `20261015185810_organization_supplier_family_preferences.sql`. El usuario informa que ya la aplicó. En esta actualización no se verificaron el entorno, el ledger ni el esquema desplegado; no atribuir el estado a QA o producción sin introspección fechada.
+- Prueba pgTAP: `supabase/tests/organization_supplier_family_preferences_security.test.sql`; pendiente de ejecución local porque el servicio Postgres/Docker no estaba disponible en la verificación anterior. Las pruebas Jest de API cubren lectura, aislamiento y escrituras autorizadas.
+
 ## Addendum 2026-10-13 - Visibilidad de proveedores en cotizaciones
 
 - La migración `20261013024746_organization_quote_provider_visibility.sql` agrega `organization_quote_provider_visibility`: una fila por empresa y proveedor significa que ese proveedor se oculta de los selectores de cotización.
@@ -10,7 +18,7 @@
 - Verificación posterior: RLS activa, tres policies por organización, permisos `SELECT`/`INSERT`/`DELETE` para `authenticated` y sin permiso `UPDATE`.
 - El dump `current_schema.sql` sigue siendo anterior y no debe interpretarse como prueba de aplicación.
 
-> Corte documental: el dump base `current_schema.sql` está registrado en Git el 2026-09-30 09:25 -0300. Hay una lectura remota focal de snapshots del 2026-09-30, pero no una reconciliación completa del esquema en esta sesión. La migración supplier V1 es posterior y solo está verificada en QA local.
+> Corte documental: el dump base `current_schema.sql` está registrado en Git el 2026-09-30 09:25 -0300. Hay una lectura remota focal de snapshots del 2026-09-30, pero no una reconciliación completa del esquema en esta sesión. La migración supplier V1 fue verificada solo en QA local. La preferencia de proveedor por familia tiene aplicación reportada por el usuario, sin entorno ni esquema comprobados en este corte; el dump base no se actualizó.
 
 Fuente por entorno: producción requiere introspección remota fechada + ledger remoto; repositorio usa este mapa, el dump base y migraciones; QA usa su esquema introspectado. `database.types.ts` es referencia complementaria, no prueba de migración aplicada.
 Fecha de generación original del mapa: 2026-05-30; addenda fechados por hallazgo.

@@ -1,6 +1,6 @@
 # Expediente de integración — Thermowin Kompen
 
-Estado: **base comercial y referencias documentales**. Fecha: 2026-10-12. Alcance solicitado: los cuatro sistemas de esta carpeta. Guía: [workflow de integración](../WORKFLOW_INTEGRAR_NUEVA_LINEA.md).
+Estado: **catálogo documental y precios de compra 2026 preparados localmente**. Fecha: 2026-10-16. Alcance: los cuatro sistemas de esta carpeta. Guía: [workflow de integración](../WORKFLOW_INTEGRAR_NUEVA_LINEA.md).
 
 ## Identidad y alcance
 
@@ -17,10 +17,70 @@ SHA-256 de los archivos conservados, en el mismo orden: `9E17573F771A74D218EFE65
 
 ### Alcance de esta etapa
 
-- Cuatro líneas canónicas PVC sembrables por organización chilena, sin precio sugerido. Cada taller configura su precio por m², mínimo y redondeo.
+- Cuatro líneas canónicas PVC sembrables por organización chilena. El precio comercial por m², mínimo y redondeo siguen siendo propios de cada taller.
 - Lista inicial de códigos y roles de perfiles como **referencias de catálogo** en `workshopProfiles`, con página fuente. No es inventario exhaustivo de auxiliares/herrajes; no son piezas de una receta ni llevan cantidades.
+- Se transcribió un lote global de 46 precios de compra para perfiles de Prime 700, Form 800 y Americana S-70 en `src/features/proveedor-catalogos/fixtures/thermowin-kompen-precios-2026.ts`. Todos son netos CLP y vigentes durante 2026 según confirmación del usuario. Los perfiles de Prime/Form están presentados como `TR`; S-70 conserva la unidad `UN` que muestra su lista. Para cubicación de compra se registran 6.000 mm, indicados por el usuario; ese largo no se ve impreso en las imágenes.
+- Las filas se enlazan por proveedor + `familyKey` + código técnico + acabado + presentación. El lote es global en el catálogo de proveedor, y cada organización puede ocultar Thermowin Kompen desde la visibilidad de sus líneas; no se modifica ni precarga el precio de venta por m². Un precio propio del taller conserva su precedencia.
 - Compatibilidad comercial explícita por tipo de componente y sistema de apertura. El número de hojas queda abierto porque los catálogos no publican una matriz de composiciones fabricables.
+- La lámina comercial Kompen/Thermowin aportada por el titular (2026-10-16) identifica, además, estas configuraciones: Form 800 mono/doble/triple riel; Prime 700 oscilobatiente, proyectante, fijo y puerta abatible; Star 500 proyectante, abatible exterior y fijo; Americana S-70 corredera, guillotina, celosía y fijo. Se registran como configuraciones comerciales distintas en `default-line-catalog.ts`; las variantes Form mantienen `thermowin:kom-800` y heredan solo referencias/precios de esa misma familia. Las hojas de Form no se deducen de los diagramas.
+- El precio de venta para cotizar sigue siendo el precio comercial por m² configurado por cada organización. Los valores importados en esta etapa son precios de compra de perfiles por TR o UN y están disponibles en Mis precios. Que una configuración pueda elegirse y cotizarse no exige receta/descuento; en cambio, el costo de materiales de una ventana no se calcula sumando esos precios sin el metraje/cantidad de cada perfil.
+- Prime 700, Form 800 y Americana S-70 tienen perfiles con presentaciones/precios de compra en el lote cargado. Star 500 dispone de referencias técnicas, pero no se encontró una lista de precios suya entre las imágenes; queda sin precio de compra hasta recibir evidencia. No se reutilizan precios de otra familia.
 - **Ninguna variante recibe receta de despiece, vidrio calculado, barras o estado `validated` desde estos PDF.** Tampoco se escriben precios, recetas o presentaciones en Supabase remoto por documentar esta base.
+
+### Precios de compra extraídos
+
+Importes CLP netos por unidad indicada en origen. En las listas Prime/Form la unidad es `TR`; para Americana S-70 se conserva `UN`. El sufijo interno de presentación identifica código y acabado cuando la columna de SKU de algunas fotos quedó fuera del recorte; no se presenta como SKU impreso del proveedor. La lista no lleva fecha impresa, por lo que “vigente en 2026” proviene de la confirmación del titular.
+
+| Familia | Perfil/código técnico | Acabado | Unidad | Precio neto |
+|---|---|---|---|---:|
+| Prime 700 | KOM 701 | Nogal | TR | $31.421 |
+| Prime 700 | KOM 701 | Blanco | TR | $18.831 |
+| Prime 700 | KOM 701 | Antracita | TR | $32.993 |
+| Prime 700 | R701 | Independiente | TR | $8.003 |
+| Prime 700 | KOM 607 | Nogal | TR | $9.940 |
+| Prime 700 | KOM 607 | Antracita | TR | $10.436 |
+| Prime 700 | KOM 427/701 | Nogal | TR | $15.796 |
+| Prime 700 | KOM 427/701 | Blanco | TR | $12.981 |
+| Prime 700 | KOM 427/701 | Antracita | TR | $16.587 |
+| Prime 700 | KOM 709 | Antracita | TR | $43.109 |
+| Prime 700 | R709 | Independiente | TR | $7.318 |
+| Prime 700 | KOM 617 | Blanco | TR | $7.008 |
+| Form 800 | KOM 801 | Nogal | TR | $39.194 |
+| Form 800 | KOM 801 | Blanco | TR | $22.838 |
+| Form 800 | KOM 801 | Antracita | TR | $41.154 |
+| Form 800 | KOM 802 | Antracita | TR | $53.934 |
+| Form 800 | KOM 804 | Nogal | TR | $43.088 |
+| Form 800 | KOM 804 | Blanco | TR | $25.740 |
+| Form 800 | KOM 804 | Antracita | TR | $45.243 |
+| Form 800 | R802T | Antracita | TR | $16.725 |
+| Form 800 | KOM 822 | Nogal | TR | $44.848 |
+| Form 800 | KOM 822 | Antracita | TR | $47.090 |
+| Form 800 | R822 | Independiente | TR | $16.200 |
+| Form 800 | KOM 817 | Nogal | TR | $17.689 |
+| Form 800 | KOM 817 | Blanco | TR | $7.382 |
+| Form 800 | KOM 817 | Antracita | TR | $18.574 |
+| Form 800 | KOM 506 | Nogal | TR | $8.388 |
+| Form 800 | KOM 506 | Antracita | TR | $8.807 |
+| Form 800 | KOM 826 | Antracita | TR | $14.226 |
+| Form 800 | KOM 505 | Blanco | TR | $4.516 |
+| Form 800 | KOM 426/801 | Nogal | TR | $14.703 |
+| Form 800 | KOM 426/801 | Blanco | TR | $11.886 |
+| Form 800 | KOM 426/801 | Antracita | TR | $15.437 |
+| Form 800 | R801T | Independiente | TR | $10.158 |
+| Form 800 | R804 | Independiente | TR | $8.214 |
+| Form 800 | Riel 800 | Negro | TR | $6.948 |
+| Form 800 | Riel 800 | Mate | TR | $6.948 |
+| Americana S-70 | 70-001 Marco fijo corredero | Blanco | UN | $11.025 |
+| Americana S-70 | 70-002 Mullion | Blanco | UN | $15.191 |
+| Americana S-70 | 70-003 Traslapo fijo | Blanco | UN | $7.350 |
+| Americana S-70 | 70-004 Traslapo móvil | Blanco | UN | $5.444 |
+| Americana S-70 | 70-005 Hoja corredera | Blanco | UN | $4.729 |
+| Americana S-70 | 70-006 Riel guía | Blanco | UN | $2.089 |
+| Americana S-70 | 70-007 Junquillo simple | Blanco | UN | $1.045 |
+| Americana S-70 | R70-003 Refuerzo traslapo fijo | Independiente | UN | $9.404 |
+| Americana S-70 | R70-004 Refuerzo traslapo móvil | Independiente | UN | $8.451 |
+
+No se incorporaron herrajes ni accesorios en esta matriz. El rodamiento `P22115` aparece con $3.448 y $2.758 en imágenes distintas; queda pendiente de confirmación y no se elige uno automáticamente. La base no completa referencias o acabados ausentes en otras filas.
 
 ## Matriz de reglas y ejemplos independientes
 
@@ -47,7 +107,7 @@ Los junquillos tienen **bandas de vidrio distintas según sistema**. El código 
 | Catálogo y seed | `default-line-catalog.ts` + `catalog_key` | Cuatro entradas PVC; seed idempotente por clave y `organization_id`, sin reemplazar precios |
 | Selector cotización y Paso 1 móvil | `line-template-compatibility.service.ts`, `workflow-ui.ts`, `fabricacion-mobile-product-step.tsx` | Pares exactos componente/apertura del catálogo; las hojas quedan fuera de la selección hasta confirmarlas en el Plan de armado. El CTA móvil va a **Perfiles y descuentos** |
 | Precio de venta | `line-template-price-editor.tsx` → `cotizacion_line_templates` | Precio por m² editable por organización; no tomarlo del PDF |
-| Perfil con precio de compra | Enlace **Perfiles y costos** de cada línea → `/configuracion/empresa/mis-precios?supplier=thermowin&family=…&lineTemplateId=…` → `/api/proveedor-catalogos/taller-presentaciones` | La API autoriza rol, línea activa y `organization_id`; acepta las cuatro familias canónicas. El maestro puede elegir una referencia documental para completar código/nombre y guardar una presentación privada con SKU, acabado, largo y costo propios. No convierte la referencia en insumo oficial ni en receta |
+| Perfil con precio de compra | Enlace **Perfiles y costos** de cada línea → `/configuracion/empresa/mis-precios?supplier=thermowin&family=…&lineTemplateId=…` → `/api/proveedor-catalogos/taller-presentaciones` | El catálogo global importado se resuelve por proveedor/familia/código/acabado/presentación. Una presentación privada de la organización conserva precedencia. La API existente autoriza rol, línea activa y `organization_id` para costos privados. No convierte una referencia en receta |
 | Fixture y slots | `src/features/fabricacion/fixtures/` y `line-base-variant-catalog.ts` | Pendientes: sin fórmulas ni ejemplos independientes no crear slot `complete` |
 | Resolver de receta | `fabricacion-receta-resolver.service.ts` | Exigir `line_template_id + tipología + hojas + variante + vidrio` cuando haya receta; sin receta debe devolver `sin_receta` |
 | Snapshot y guardado | `cotizacion_items.fabricacion_snapshot` | Solo tras cálculo completo; conservar historial cuando el taller edite la receta |
@@ -89,3 +149,18 @@ Los junquillos tienen **bandas de vidrio distintas según sistema**. El código 
 - Navegador QA: no ejecutado. Se inspeccionaron sesiones de navegador, pero no se probó ni persistió una cotización QA local con los cuatro sistemas. Base remota y validación física del taller: no comprobadas.
 - Estado: **catálogo documental local**, despiece pendiente de Plan de armado/pauta con fórmulas y validación de taller. Ninguna escritura remota, migración o despliegue.
 - Próximo insumo confirmado por el titular: subirá pautas o Plan de armado del fabricante. Para cada sistema y composición hacen falta medidas de entrada, lista completa de perfiles y vidrios, cantidad, regla de corte, ángulos, riel/hojas y dos trabajos de ejemplo. Cada documento se revisará por variante antes de crear una receta calculable; Zeta solo sirve si se captura la configuración exacta y el Plan de armado, con fuente y salida verificables.
+
+### Actualización de precios de compra — 2026-10-16
+
+- Lote cargado y releído en el catálogo global Supabase (`yrtrwgkaopfumpidjthk`): proveedor `thermowin-kompen`, lista `2026`, 30 códigos técnicos, 30 vínculos de familia, 46 presentaciones y 46 precios netos. Suma de precios unitarios de referencia: $829.081 CLP (no representa el valor de compra de un trabajo). Importación idempotente, solo inserta filas faltantes y detiene conflictos; script `scripts/qa/import-thermowin-kompen-prices-guarded.ts`.
+- Las imágenes se volvieron a revisar por título y contenido: Prime 700 Nogal, proyectante Prime 700 Antracita, Form 800 Antracita mono/doble, Form 800 Nogal doble/monorriel, lista Form 800 + Prime 700 Blanco, refuerzos 800, Americana S-70 y Mullion S-70. Los títulos determinan las familias/acabados; no se cruzan entre filas por similitud.
+- La lista blanca distingue `R800-0003 · Riel 800 aluminio mate` del riel negro `R800-8518`; “Mate/Negro” describe el acabado del riel de aluminio, no el color del PVC. Al cotizar una pieza cuyo perfil técnico sea solo `Riel 800`, el resolver no usará ninguno por inferencia a partir de Nogal/Antracita; queda pendiente hasta que la configuración/receta identifique el acabado del riel.
+- El precio de Americana S-70 conserva `UN` según la columna de unidad de la imagen. Prime/Form conserva `TR`. La nota de evidencia registra la unidad correspondiente y el largo 6.000 mm indicado por el usuario.
+- El logo fuente `logo_KOMPEN.png` se copia a `public/Icon-Empresas/kompen.png` y se muestra en la cabecera del proveedor de `/configuracion/empresa/mis-precios`.
+- No hay precios extraídos para Star Line KOM 500 en las imágenes disponibles.
+- Confirmación del usuario: precios vigentes durante 2026, netos CLP, largo comercial estándar 6.000 mm. La presentación de Americana conserva `UN` como unidad impresa; Prime/Form conservan `TR`.
+- Las comprobaciones del fixture prueban esquema, conteo, montos, acabados PVC, largo, resolución por familia/proveedor y el aislamiento del acabado del riel. El script realizó preflight (155 inserciones posibles, cero filas previas), insertó las filas y releyó/contrastó todas las 155 filas. El `GET /api/proveedor-catalogos/mis-precios` ya consume estas tablas globales y aplica los ajustes/overrides por organización al leerlas.
+- Visibilidad global compatible con preferencia de cada organización: `organization_quote_provider_visibility`, `useQuoteProviderVisibility` y `quote-provider-visibility.service.ts` permiten ocultar Thermowin Kompen de sus líneas/cotizaciones. No se creó una tabla nueva.
+- Excluido por discrepancia: rodamiento `P22115`, visto a $3.448 y $2.758. También se excluyeron los demás herrajes/accesorios; esta matriz cubre perfiles.
+- Referencias internas para perfiles antracita cuando la foto recorta la columna SKU usan `código técnico + acabado`; la evidencia lo declara como identificador interno y no como SKU Thermowin impreso. El panel debe seguir mostrando al maestro el código técnico y el acabado.
+- La carga de precios de compra no crea fórmulas, recetas ni costo de materiales para una cotización. Las familias Kompen continúan sin recetas productivas; el costo automático solo podrá calcularse cuando una composición compatible aporte códigos técnicos y geometría. El precio comercial por m² de cada línea permanece separado.

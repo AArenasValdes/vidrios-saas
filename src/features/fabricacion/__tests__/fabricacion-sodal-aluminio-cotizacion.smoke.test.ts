@@ -69,6 +69,7 @@ describe("smoke de despiece Aluminio en cotización y resumen", () => {
       leavesCount: testCase.leaves,
       typology: testCase.typology,
       glassName: testCase.glass,
+      includeDocumentedVariants: true,
       recipes: [],
     });
 

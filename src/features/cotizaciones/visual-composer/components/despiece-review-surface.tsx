@@ -615,6 +615,7 @@ export function DespieceReviewSurface({
           snapshot,
           colorHex: presentation.colorHex,
           catalogLineKey: presentation.catalogLineKey,
+          supplierProviderKey: presentation.supplierProviderKey,
           fabricacionSnapshot: resolution?.formal ?? item.fabricacionSnapshot ?? null,
         };
       })
@@ -630,6 +631,7 @@ export function DespieceReviewSurface({
       familyKey: fabricacionSnapshot.supplierFamilyKey,
       finishName: resolveSupplierFinishName(null, carrier.colorHex),
       technicalCodes: [...new Set(fabricacionSnapshot.result.perfiles.map((profile) => profile.codigoPerfil.trim()).filter(Boolean))],
+      providerKey: carrier.supplierProviderKey || null,
     }];
   }), [consolidatedCarriers]);
   const supplierPresentationResolution = useSupplierPresentationResolution(supplierPresentationRequests);

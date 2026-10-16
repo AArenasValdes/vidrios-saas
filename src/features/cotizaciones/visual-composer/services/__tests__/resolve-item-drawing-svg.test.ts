@@ -57,6 +57,23 @@ describe("resolveCotizacionItemDrawingSvg", () => {
     expect([...svg.matchAll(/data-window-glass="true"[^>]*\swidth="([\d.]+)"/g)]).toHaveLength(3);
   });
 
+  it("renderiza las medidas actuales del ítem si la configuración guardada quedó antigua", () => {
+    const svg = resolveCotizacionItemDrawingSvg({
+      tipo: "Ventana",
+      sistema: "Corredera",
+      ancho: 1830,
+      alto: 1240,
+      colorHex: "#a8a8a8",
+      variant: "pdf",
+      guidedVisualConfig: createDefaultGuidedVisualConfig({ widthMm: 1200, heightMm: 1000 }),
+    });
+
+    expect(svg).toContain(">1830 mm</text>");
+    expect(svg).toContain(">1240 mm</text>");
+    expect(svg).not.toContain(">1200 mm</text>");
+    expect(svg).not.toContain(">1000 mm</text>");
+  });
+
   it("prioriza un ajuste rápido explícito sobre el dibujo legacy 3H", () => {
     const base = createDefaultGuidedVisualConfig({ widthMm: 2000, heightMm: 1200 });
     const adjusted = {

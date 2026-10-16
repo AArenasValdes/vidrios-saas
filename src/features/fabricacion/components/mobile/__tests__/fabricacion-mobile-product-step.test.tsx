@@ -108,11 +108,11 @@ describe("FabricacionMobileProductStep", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: "Corredera" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Fijos" })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Pierna abierta · Jamba 2009" })
+      screen.getByRole("button", { name: /Ventana corredera/i })
     ).toBeInTheDocument();
+    // L20 is documented as corredera 2H; do not expose a fixed-pane option.
+    expect(screen.queryByRole("button", { name: /Fijo/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Abatible" })).not.toBeInTheDocument();
   });
 

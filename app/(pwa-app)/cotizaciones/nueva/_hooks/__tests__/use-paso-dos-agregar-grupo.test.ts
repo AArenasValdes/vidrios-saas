@@ -50,6 +50,8 @@ function createDraft(overrides: Record<string, unknown> = {}) {
     isCustomScheme: false,
     vidrio: "Incoloro monolitico 5mm",
     lineTemplateId: "",
+    fabricacionConfiguracionId: "",
+    fabricacionComposicionId: "",
     referencia: "",
     ancho: "1200",
     alto: "1500",
@@ -733,5 +735,22 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
     const item = buildItemFromForm(form, [], null, { quotePricingMode: "por_item" });
     expect(item.precioUnitario).toBeGreaterThan(0);
     expect(decodeCotizacionItemPresentationMeta(item.observaciones).guidedVisualConfig).not.toBeNull();
+  });
+
+  it("conserva las identidades de configuración y composición desde Guiada al guardar el componente", () => {
+    const form = buildPasoDosGrupoComponentForm({
+      items: [],
+      pricingMode: "precio_directo",
+      provider: "",
+      draft: createDraft({
+        fabricacionConfiguracionId: "ventora:l20:corredera-2h",
+        fabricacionComposicionId: "taller:l20:riel-01",
+      }) as PasoDosGrupoDraft,
+    });
+    const item = buildItemFromForm(form, [], "identity-roundtrip", { quotePricingMode: "por_item" });
+    const metadata = decodeCotizacionItemPresentationMeta(item.observaciones);
+
+    expect(metadata.fabricacionConfiguracionId).toBe("ventora:l20:corredera-2h");
+    expect(metadata.fabricacionComposicionId).toBe("taller:l20:riel-01");
   });
 });

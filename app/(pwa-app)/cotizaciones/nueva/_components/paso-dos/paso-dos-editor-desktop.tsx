@@ -1103,6 +1103,9 @@ function TabDespiece({
             onComponentChange("fabricacionReinforcement", value.fabricacionReinforcement);
             onComponentChange("fabricacionVariante", value.fabricacionVariante);
           }}
+          onSupplierProviderKeyChange={(providerKey) =>
+            onComponentChange("supplierProviderKey", providerKey)
+          }
           onSaveCubicationLineAdjustment={onSaveCubicationLineAdjustment}
           isSavingCubicationLineAdjustment={isSavingCubicationLineAdjustment}
           lineSelectionHint="precio"

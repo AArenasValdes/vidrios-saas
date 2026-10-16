@@ -35,6 +35,7 @@ export function PautaConsolidadaPanel({ items }: Props) {
       familyKey: snapshot.supplierFamilyKey,
       finishName: resolveSupplierFinishName(meta.catalogTerminacion, meta.colorHex),
       technicalCodes: [...new Set(snapshot.result.perfiles.map((row) => row.codigoPerfil.trim()).filter(Boolean))],
+      providerKey: meta.supplierProviderKey || null,
     }];
   }), [items]);
   const resolutionKey = useMemo(() => JSON.stringify(resolutionRequests), [resolutionRequests]);

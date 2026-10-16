@@ -171,6 +171,7 @@ type Props = {
     fabricacionReinforcement: string;
     fabricacionVariante: string;
   }) => void;
+  onSupplierProviderKeyChange?: (providerKey: string) => void;
   /** Abre la revisión de despiece desktop compartida (rápida/guiada). */
   onOpenDespieceReview?: () => void;
   onPrecioChange: (value: string) => void;
@@ -442,6 +443,7 @@ export function PasoDosAgregarGrupoSheet({
   onFabricacionSnapshotChange,
   onFabricacionContextoChange,
   onFabricacionL25ConfigChange,
+  onSupplierProviderKeyChange,
   onOpenDespieceReview,
   onPrecioChange,
   onPrecioPorM2Change,
@@ -2294,6 +2296,7 @@ export function PasoDosAgregarGrupoSheet({
                       sistema: draft.sistema,
                       vidrio: draft.vidrio,
                       fabricationRecipeId: draft.fabricationRecipeId,
+                      supplierProviderKey: draft.supplierProviderKey,
                       fabricacionTipologia: draft.fabricacionTipologia,
                       fabricacionHojas: draft.fabricacionHojas,
                       fabricacionModulos: draft.fabricacionModulos,
@@ -2317,6 +2320,7 @@ export function PasoDosAgregarGrupoSheet({
                     onFabricacionSnapshotChange={onFabricacionSnapshotChange}
                     onFabricacionContextoChange={onFabricacionContextoChange}
                     onFabricacionL25ConfigChange={onFabricacionL25ConfigChange}
+                    onSupplierProviderKeyChange={onSupplierProviderKeyChange}
                     lineSelectionHint="medidas"
                     showBarUsageInline
                     personalizadoAssistMode={personalizadoAssistMode}

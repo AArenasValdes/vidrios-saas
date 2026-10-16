@@ -145,6 +145,68 @@ describe("integracion receta fabricacion -> cotizacion", () => {
     expect(result.descartadas[0]?.motivo).toBe("La tipologia no coincide.");
   });
 
+  it("exige coincidencia exacta de los atributos estructurados presentes", () => {
+    const recipe = recipeRecord({
+      definition: validatedDefinition({
+        recetaId: "sliding-normal",
+        variante: "normal",
+        topology: "corredera",
+      }),
+    });
+    const matching = resolverRecetaFabricacionCompatible([recipe], {
+      organizationId: 1,
+      lineTemplateId: 10,
+      tipologia: "corredera",
+      atributosTecnicos: {
+        lineTemplateId: 10,
+        typology: "corredera",
+        topology: "corredera",
+        leaves: 2,
+        variant: "normal",
+      },
+    });
+    const conflictingTopology = resolverRecetaFabricacionCompatible(
+      [recipeRecord({ definition: validatedDefinition({ recetaId: "fixed-normal", variante: "normal", topology: "pano_fijo" }) })],
+      {
+        organizationId: 1,
+        lineTemplateId: 10,
+        tipologia: "corredera",
+        atributosTecnicos: { topology: "corredera", variant: "normal" },
+      },
+    );
+
+    expect(matching.estado).toBe("receta_unica");
+    expect(conflictingTopology.estado).toBe("sin_receta");
+    expect(conflictingTopology.descartadas[0]?.motivo).toBe("La topologia no coincide.");
+  });
+
+  it("mantiene ambiguas dos procedencias con la misma fórmula y distinta identidad", () => {
+    const first = recipeRecord({
+      id: "recipe-arquetipo",
+      definition: validatedDefinition({ recetaId: "arquetipo", variante: "normal" }),
+      sourceType: "manufacturer",
+      sourceReference: "arquetipo:l20:normal",
+    });
+    const second = recipeRecord({
+      id: "recipe-alumco",
+      definition: validatedDefinition({ recetaId: "alumco", variante: "normal" }),
+      sourceType: "manufacturer",
+      sourceReference: "alumco:l20:normal",
+    });
+    const result = resolverRecetaFabricacionCompatible([first, second], {
+      organizationId: 1,
+      lineTemplateId: 10,
+      tipologia: "corredera",
+      hojas: 2,
+    });
+
+    expect(result.estado).toBe("multiples_recetas");
+    expect(result.candidatas.map((recipe) => recipe.id)).toEqual([
+      "recipe-arquetipo",
+      "recipe-alumco",
+    ]);
+  });
+
   it("solo permite receta no validada con accion explicita", () => {
     const draft = recipeRecord({
       status: "testing",

@@ -2,6 +2,7 @@ import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/s
 import { applyCommercialPalilloToGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/services/guided-visual-palillo-compat.service";
 import {
   ensureGuidedVisualConfig,
+  setGuidedVisualDimensions,
   type GuidedVisualConfig,
 } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import type { QuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
@@ -119,8 +120,15 @@ export function resolveCotizacionItemDrawingSvg(
     }
 
     if (input.guidedVisualConfig) {
+      const dimensionSyncedConfig = setGuidedVisualDimensions(
+        ensureGuidedVisualConfig(input.guidedVisualConfig),
+        {
+          widthMm: input.ancho ?? undefined,
+          heightMm: input.alto ?? undefined,
+        }
+      );
       const guidedVisualConfig = applyCommercialPalilloToGuidedVisualConfig({
-        config: ensureGuidedVisualConfig(input.guidedVisualConfig),
+        config: dimensionSyncedConfig,
         palilloEnabled: input.palilloEnabled,
         palilloType: input.palilloType,
       });

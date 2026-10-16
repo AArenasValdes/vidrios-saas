@@ -49,6 +49,8 @@ function fabricationInputKey(item: CotizacionWorkflowItem) {
     fabricacionModulos: meta.fabricacionModulos,
     fabricacionApertura: meta.fabricacionApertura,
     fabricacionHerraje: meta.fabricacionHerraje,
+    fabricacionConfiguracionId: meta.fabricacionConfiguracionId,
+    fabricacionComposicionId: meta.fabricacionComposicionId,
     fabricacionVariante: meta.fabricacionVariante,
     fabricacionAnchoHojaAMm: meta.fabricacionAnchoHojaAMm,
     fabricacionGlazing: meta.fabricacionGlazing,
@@ -60,6 +62,12 @@ function fabricationInputKey(item: CotizacionWorkflowItem) {
     guidedVisualConfig: meta.guidedVisualConfig,
     quickCompositionAdjustment: meta.quickCompositionAdjustment,
   });
+}
+
+function supplierProviderKey(item: CotizacionWorkflowItem): string {
+  return (decodeCotizacionItemPresentationMeta(item.observaciones).supplierProviderKey ?? "")
+    .trim()
+    .toLocaleLowerCase("es-CL");
 }
 
 /**
@@ -75,7 +83,7 @@ export function prepareFabricacionSnapshotsForQuoteSave(input: {
 }): {
   items: CotizacionWorkflowItem[];
   itemIdsToResolve: Set<string>;
-  /** An explicitly accepted item snapshot must refresh the quote-level rollup. */
+  /** Explicit pauta saves and provider changes must refresh the quote-level rollup. */
   shouldRebuildTrabajoSnapshot: boolean;
 } {
   const resolveAllMissing = input.existingId == null || input.finalizingDraft === true;
@@ -87,6 +95,13 @@ export function prepareFabricacionSnapshotsForQuoteSave(input: {
     if (item.tipoItem === "item_libre_con_valor") return item;
     const previous = existingById.get(item.id);
     const changed = previous != null && fabricationInputKey(previous) !== fabricationInputKey(item);
+    const supplierChanged = previous != null && supplierProviderKey(previous) !== supplierProviderKey(item);
+
+    if (supplierChanged) {
+      // A supplier choice changes resolved presentation, finish/length and the
+      // consolidated work pauta. It does not change the piece's recipe geometry.
+      shouldRebuildTrabajoSnapshot = true;
+    }
 
     if (changed) {
       itemIdsToResolve.add(item.id);

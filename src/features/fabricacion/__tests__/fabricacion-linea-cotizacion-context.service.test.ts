@@ -13,6 +13,8 @@ function buildRecipe(input: {
   tipologia: string;
   hojas: number;
   status: "validated" | "draft";
+  variante?: string;
+  configurationId?: string;
 }): FabricationRecipeRecord {
   return {
     id: input.id,
@@ -31,7 +33,8 @@ function buildRecipe(input: {
         modulos: input.hojas,
         apertura: "",
         herraje: "",
-        variante: "",
+        variante: input.variante ?? "",
+        ...(input.configurationId ? { configurationId: input.configurationId } : {}),
       },
       perfiles: [],
       accesorios: [],
@@ -76,6 +79,7 @@ describe("fabricacion-linea-cotizacion-context.service", () => {
       form: { ...form, fabricationRecipeId: customDraft.id, fabricacionVariante: "alar_marco_4201" },
     });
     expect(explicitContext?.fabricacionVariante).toBe("alar_marco_4201");
+    expect(explicitContext?.fabricationRecipeId).toBe("");
   });
   it("resuelve AL-32 como proyectante aunque conserve metadata histórica", () => {
     const context = resolveFabricacionContextFromLineCatalog({
@@ -110,6 +114,8 @@ describe("fabricacion-linea-cotizacion-context.service", () => {
           tipologia: "proyectante",
           hojas: 1,
           status: "validated",
+          variante: "normal",
+          configurationId: "ventora:l32:proyectante",
         }),
       ],
       organizationId: 1,
@@ -180,6 +186,8 @@ describe("fabricacion-linea-cotizacion-context.service", () => {
           tipologia: "proyectante",
           hojas: 1,
           status: "validated",
+          variante: "normal",
+          configurationId: "ventora:l32:proyectante",
         }),
         buildRecipe({
           id: "rec-corredera",
@@ -203,7 +211,7 @@ describe("fabricacion-linea-cotizacion-context.service", () => {
 
     expect(context?.fabricacionTipologia).toBe("proyectante");
     expect(context?.fabricacionHojas).toBe(1);
-    expect(context?.fabricationRecipeId).toBe("");
+    expect(context?.fabricationRecipeId).toBe("rec-proyectante");
   });
 
   it("no conserva la tipología anterior al cambiar a WinHouse S60", () => {

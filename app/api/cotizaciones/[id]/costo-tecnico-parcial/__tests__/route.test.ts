@@ -16,7 +16,7 @@ jest.mock("@/features/proveedor-catalogos/services/costo-tecnico-parcial.service
   buildPartialTechnicalCostSnapshot: jest.fn(),
 }));
 
-import { POST } from "../route";
+import { GET, POST } from "../route";
 import { resolveAuthenticatedRouteContext } from "@/features/auth/services/auth-route-access.service";
 import {
   getExistingTechnicalCostSnapshot,
@@ -208,4 +208,29 @@ describe("POST /api/cotizaciones/[id]/costo-tecnico-parcial", () => {
     expect(readOrganizationPurchasePricing).toHaveBeenCalledWith(expect.objectContaining({ organizationId: 941 }));
   });
 
+});
+
+describe("GET /api/cotizaciones/[id]/costo-tecnico-parcial", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (resolveAuthenticatedRouteContext as jest.Mock).mockResolvedValue({
+      user: { id: "qa-user", email: "admin@test.com" }, profile: { organizationId: 3, rol: "admin" },
+    });
+    (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue(quote());
+  });
+
+  it("marca como obsoleto un costo congelado cuando cambió la captura de pauta/proveedor", async () => {
+    (getExistingTechnicalCostSnapshot as jest.Mock).mockResolvedValue({
+      snapshot: { ...costSnapshot, sourcePautaCapturedAt: "2026-10-05T09:00:00.000Z" }, status: "partial",
+    });
+    const response = await GET(new Request("http://localhost/api/cotizaciones/1046/costo-tecnico-parcial"), route);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ snapshotIsStale: true });
+  });
+
+  it("mantiene vigente el costo cuando la pauta y su captura no cambiaron", async () => {
+    (getExistingTechnicalCostSnapshot as jest.Mock).mockResolvedValue({ snapshot: costSnapshot, status: "partial" });
+    const response = await GET(new Request("http://localhost/api/cotizaciones/1046/costo-tecnico-parcial"), route);
+    expect(await response.json()).toMatchObject({ snapshotIsStale: false });
+  });
 });

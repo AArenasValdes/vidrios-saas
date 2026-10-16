@@ -45,8 +45,7 @@ export function ensureStructuralDraftsClient(
   const existing = structuralSeedRuns.get(key);
   if (existing) return existing;
 
-  let trackedRun: Promise<boolean>;
-  trackedRun = prepareStructuralDrafts(organizationId).finally(() => {
+  const trackedRun = prepareStructuralDrafts(organizationId).finally(() => {
       // Compartimos solo el trabajo concurrente. El catálogo o sus variantes
       // pueden cambiar durante la sesión y una promesa resuelta no debe dejar
       // sin sembrar una línea nueva (p. ej. WinHouse New S75).

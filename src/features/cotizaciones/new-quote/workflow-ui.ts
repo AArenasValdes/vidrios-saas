@@ -64,10 +64,12 @@ import {
   type CotizacionMirrorPaneDirection,
   type CotizacionItemFreeValueIvaMode,
 } from "@/utils/cotizacion-item-presentation";
-import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import { setGuidedVisualDimensions, type GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import type { QuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import { hasQuickCompositionStructuralChanges } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
-import { countLeafModules } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import {
+  listLeafModules,
+} from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import { applyCommercialPalilloToGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/services/guided-visual-palillo-compat.service";
 import { resolveQuoteConstructorCommercialName, isQuoteConstructorPresetDefaultName } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import {
@@ -88,6 +90,9 @@ import {
 } from "@/features/cotizaciones/services/component-catalog.service";
 
 export function resolveComponentFabricacionHojas(form: {
+  tipo?: string | null;
+  sistema?: string | null;
+  configuracion?: string | null;
   sheetScheme?: string | null;
   fabricacionHojas?: number | null;
   fabricacionVariante?: string | null;
@@ -109,13 +114,51 @@ export function resolveComponentFabricacionHojas(form: {
     (normalizedLineIdentity.includes("winhouse") && normalizedLineIdentity.includes("s75"));
   if (isWinHouseS75Line && winHouseS75Variant) return winHouseS75Variant.leaves;
 
-  const guidedVisualLeafCount = form.guidedVisualConfig?.root
-    ? countLeafModules(form.guidedVisualConfig.root)
+  const showerSliding = /shower/i.test(`${form.tipo ?? ""} ${form.sistema ?? ""} ${form.configuracion ?? ""}`) &&
+    /corredera/i.test(`${form.sistema ?? ""} ${form.configuracion ?? ""}`);
+  // A multi-leaf value is already a deliberate technical selection or comes
+  // from a persisted composition. Only the generic one-leaf seed is replaced
+  // by the documented two-leaf default for Shower Corredera.
+  if (showerSliding && (form.fabricacionHojas ?? 0) > 1) return form.fabricacionHojas ?? null;
+  const explicitSheetScheme = (form.sheetScheme ?? "").trim().match(/^(\d+)\s*hojas?$/i);
+  const explicitSheetCount = explicitSheetScheme ? Number(explicitSheetScheme[1]) : null;
+  if (
+    form.catalogLineKey === "ventora:serie-12-shower-corredera" &&
+    (!explicitSheetCount || explicitSheetCount === 1)
+  ) {
+    // L12 is catalogued as Shower Corredera 2H; generic shower drafts can
+    // still carry the unrelated 1H default used by fixed/glass components.
+    return 2;
+  }
+  if (showerSliding && (!explicitSheetCount || explicitSheetCount === 1)) return 2;
+  if (explicitSheetCount) return explicitSheetCount;
+
+  const visualModules = form.guidedVisualConfig?.root
+    ? listLeafModules(form.guidedVisualConfig.root)
+    : [];
+  const visualModuleCount = visualModules.length || null;
+  // A single Constructor module describes the drawing, not the commercial sash
+  // count. In particular, a new sliding window starts as one visual module while
+  // its commercial default is 2 leaves. Explicit sheetScheme/fabricacionHojas
+  // still take precedence in resolveCommercialFabricacionHojas; use the drawing
+  // as a leaf count only after it contains multiple modules.
+  const guidedVisualLeafCount = visualModuleCount && visualModuleCount > 1
+    ? visualModuleCount
     : null;
+  const hasExplicitLeafCount = Boolean(form.sheetScheme?.trim()) ||
+    (typeof form.fabricacionHojas === "number" && form.fabricacionHojas > 0);
+  const isUnspecifiedSlidingWindow =
+    form.tipo?.trim().toLocaleLowerCase("es") === "ventana" &&
+    visualModules.length === 1 &&
+    visualModules[0].type === "corredera" &&
+    !hasExplicitLeafCount;
   return resolveCommercialFabricacionHojas({
     sheetScheme: form.sheetScheme,
     fabricacionHojas: form.fabricacionHojas,
-    hojasBase: form.hojasBase,
+    // A new sliding-window drawing starts as one visual module. Until the
+    // maestro chooses a technical leaf scheme, preserve the usual commercial
+    // 2-leaf window default even if the generic form was initialized with 1.
+    hojasBase: isUnspecifiedSlidingWindow ? 2 : form.hojasBase,
     guidedVisualLeafCount:
       guidedVisualLeafCount && guidedVisualLeafCount > 0 ? guidedVisualLeafCount : null,
   });
@@ -174,6 +217,8 @@ export type ComponentFormState = {
   cubicationSnapshot?: CotizacionItemCubicationSnapshot | null;
   /** Variante de receta elegida cuando hay varias activas compatibles. */
   fabricationRecipeId?: string;
+  /** Proveedor del precio de compra de perfiles, independiente de la receta. */
+  supplierProviderKey?: string;
   /** Contexto tecnico explicito; los items antiguos pueden seguir sin estos datos. */
   fabricacionTipologia?: string;
   fabricacionHojas?: number | null;
@@ -1150,6 +1195,7 @@ export function filterLineTemplatesForComponent(
     sistema?: string | null;
     configuracion?: string | null;
     sheetScheme?: string | null;
+    sheetVariant?: string | null;
     fabricacionHojas?: number | null;
   }
 ) {
@@ -1168,6 +1214,11 @@ export function filterLineTemplatesForComponent(
   const preferredMaterial = input.material === "PVC" ? "PVC" : "Aluminio";
   const configuredLeaves = Number(input.configuracion?.match(/(\d+)\s*hojas?/i)?.[1]) || null;
   const sheetCount = input.fabricacionHojas ?? configuredLeaves ?? (Number(input.sheetScheme?.match(/\d+/)?.[0]) || null);
+  const normalizedSheetVariant = (input.sheetVariant ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("es-CL");
+  const movingLeavesCount = Number(normalizedSheetVariant.match(/(\d+)\s*movil(?:es)?\b/)?.[1]) || null;
   const profileTemplates = activeTemplates.filter((template) =>
     isProfileLineTemplate(template) &&
     evaluateLineCompatibility({
@@ -1176,6 +1227,7 @@ export function filterLineTemplatesForComponent(
         componentType: input.tipo,
         openingType: input.sistema?.trim() || input.configuracion,
         leavesCount: Number.isFinite(sheetCount) ? sheetCount : null,
+        movingLeavesCount,
         material: input.material,
       },
     }).commercial === "compatible"
@@ -2460,6 +2512,7 @@ export function buildSuggestedComponentForm(
     guidedVisualConfig: current.guidedVisualConfig ?? null,
     cubicationSnapshot: current.cubicationSnapshot ?? null,
     fabricationRecipeId: current.fabricationRecipeId ?? "",
+    supplierProviderKey: current.supplierProviderKey ?? "",
     fabricacionTipologia: current.fabricacionTipologia ?? "",
     fabricacionHojas: current.fabricacionHojas ?? null,
     fabricacionModulos: current.fabricacionModulos ?? null,
@@ -2649,6 +2702,7 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     fabricacionLeg,
     fabricacionReinforcement,
     fabricationRecipeId,
+    supplierProviderKey,
   } =
     decodeCotizacionItemPresentationMeta(item.observaciones);
   const formalCubicationSnapshot = item.fabricacionSnapshot
@@ -2741,6 +2795,7 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     cubicationSnapshot: formalCubicationSnapshot ?? cubicationSnapshot,
     fabricationRecipeId:
       fabricationRecipeId || item.fabricacionSnapshot?.recipeId || "",
+    supplierProviderKey,
     fabricacionTipologia:
       fabricacionTipologia ||
       item.fabricacionSnapshot?.recipeIdentity.tipologia ||
@@ -2791,6 +2846,12 @@ export function buildItemFromForm(
   const quotePricingMode = normalizeQuotePricingMode(options?.quotePricingMode);
   const hydratedForm = hydrateComponentFormFromLineTemplate(form, options);
   const syncedForm = syncTemplatePricingInComponentForm(hydratedForm);
+  const guidedVisualConfig = syncedForm.guidedVisualConfig
+    ? setGuidedVisualDimensions(syncedForm.guidedVisualConfig, {
+        widthMm: syncedForm.ancho ? Number(syncedForm.ancho) : undefined,
+        heightMm: syncedForm.alto ? Number(syncedForm.alto) : undefined,
+      })
+    : null;
   const linePricingSummary = buildComponentFormLinePricingSummary(syncedForm);
   const hasTemplateReference =
     Boolean(syncedForm.lineTemplateId?.trim()) ||
@@ -2868,7 +2929,7 @@ export function buildItemFromForm(
     sheetVariant,
     customSchemeDescription,
     isCustomScheme,
-    guidedVisualConfig: syncedForm.guidedVisualConfig,
+    guidedVisualConfig,
     configuracion,
     palilloEnabled: syncedForm.palilloEnabled,
     palilloType: syncedForm.palilloType,
@@ -2911,7 +2972,7 @@ export function buildItemFromForm(
     isCustomScheme,
   });
   const structuralCompositionChanged = Boolean(
-    syncedForm.guidedVisualConfig?.quickCompositionStructural ||
+    guidedVisualConfig?.quickCompositionStructural ||
       hasQuickCompositionStructuralChanges(syncedForm.quickCompositionAdjustment)
   );
   const supportedVeratec7400FourMobileBase = isVeratec7400FourMobileComposition({
@@ -2921,7 +2982,7 @@ export function buildItemFromForm(
     fabricacionModulos: syncedForm.fabricacionModulos,
     sheetScheme,
     sheetVariant,
-    guidedVisualConfig: syncedForm.guidedVisualConfig,
+    guidedVisualConfig,
     quickCompositionAdjustment: syncedForm.quickCompositionAdjustment,
   });
   const quickCompositionAdjusted =
@@ -2938,13 +2999,14 @@ export function buildItemFromForm(
     quickCompositionAdjusted,
   });
   const resolvedFabricacionHojas = resolveComponentFabricacionHojas({
+    tipo: syncedForm.tipo,
     sheetScheme,
     fabricacionHojas: syncedForm.fabricacionHojas,
     fabricacionVariante: syncedForm.fabricacionVariante,
     referencia: syncedForm.referencia,
     catalogLineKey: syncedForm.catalogLineKey,
     hojasBase,
-    guidedVisualConfig: syncedForm.guidedVisualConfig,
+    guidedVisualConfig,
   });
   const lineTemplateIdNumber = syncedForm.lineTemplateId
     ? Number(syncedForm.lineTemplateId)
@@ -3073,9 +3135,9 @@ export function buildItemFromForm(
       mirrorPaneCount: syncedForm.mirrorPaneCount,
       mirrorPaneDirection: syncedForm.mirrorPaneDirection,
       mirrorInteriorLine: syncedForm.mirrorInteriorLine,
-      guidedVisualConfig: syncedForm.guidedVisualConfig
+      guidedVisualConfig: guidedVisualConfig
         ? applyCommercialPalilloToGuidedVisualConfig({
-            config: syncedForm.guidedVisualConfig,
+            config: guidedVisualConfig,
             palilloEnabled: syncedForm.palilloEnabled,
             palilloType: syncedForm.palilloType,
           })
@@ -3088,12 +3150,14 @@ export function buildItemFromForm(
       fabricacionHerraje: syncedForm.fabricacionHerraje,
       fabricacionVariante: sodalConfig?.variantSlug || syncedForm.fabricacionVariante,
       fabricacionConfiguracionId: syncedForm.fabricacionConfiguracionId,
+      fabricacionComposicionId: syncedForm.fabricacionComposicionId,
       fabricacionAnchoHojaAMm: syncedForm.fabricacionAnchoHojaAMm ?? null,
       catalogLineKey: resolvedCatalogLineKey,
       fabricacionGlazing: sodalConfig?.glazing || syncedForm.fabricacionGlazing,
       fabricacionLeg: syncedForm.fabricacionLeg,
       fabricacionReinforcement: syncedForm.fabricacionReinforcement,
       fabricationRecipeId: syncedForm.fabricationRecipeId,
+      supplierProviderKey: syncedForm.supplierProviderKey,
       cubicationSnapshot: formalFabricationSnapshot ? null : cubicationSnapshot,
       raw: syncedForm.observaciones,
     }),
@@ -3154,6 +3218,7 @@ export function applyQuotePricingToItems(
       fabricacionComposicionId,
       fabricacionAnchoHojaAMm,
       fabricationRecipeId,
+      supplierProviderKey,
     } = decodeCotizacionItemPresentationMeta(item.observaciones);
 
     return {
@@ -3222,6 +3287,7 @@ export function applyQuotePricingToItems(
         fabricacionComposicionId,
         fabricacionAnchoHojaAMm,
         fabricationRecipeId,
+        supplierProviderKey,
         cubicationSnapshot: null,
         raw,
       }),

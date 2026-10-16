@@ -37,6 +37,8 @@ Ventora es **software comercial para maestros, talleres y empresas de vidrio/alu
 
 Cotizar **precio** no requiere cubicación.
 
+**Proveedores de compra (Fase 3, 2026-10-15):** en Guiada y Constructor, la elección explícita por pieza tiene prioridad sobre el proveedor habitual de la organización/familia y la resolución automática previa. Los perfiles, su costo de compra, el precio comercial de venta y la receta técnica permanecen como datos separados. Un dato de proveedor faltante queda pendiente, sin sustitución inferida ni recálculo silencioso de costos guardados. Detalle de persistencia y alcance en `docs/agent-map/DATA_MODEL_MAP.md` y `supabase/docs/database_map.md`; la migración fue aplicada según informa el usuario, sin verificación de entorno en el corte documental.
+
 ---
 
 ## 4. Qué se implementó en Fase 4 V1 vendible (24-07-2026, base histórica)

@@ -269,6 +269,36 @@ describe("fabricacion-trabajo-snapshot lifecycle", () => {
     expect(prepared.items[0]?.fabricacionSnapshot).toBeNull();
   });
 
+  it.each([
+    ["configuración", "fabricacionConfiguracionId" as const],
+    ["composición", "fabricacionComposicionId" as const],
+  ])("invalida la pauta anterior al cambiar la identidad de %s", (_label, identityField) => {
+    const metadata = (identity: string) => encodeCotizacionItemPresentationMeta({
+      lineTemplateId: "220",
+      catalogLineKey: "universal:aluminio:l20",
+      fabricacionTipologia: "corredera",
+      fabricacionHojas: 2,
+      [identityField]: identity,
+    });
+    const previous = workflowItem({
+      observaciones: metadata("configuracion-a"),
+      fabricacionSnapshot: itemSnapshot,
+    });
+    const changed = workflowItem({
+      observaciones: metadata("configuracion-b"),
+      fabricacionSnapshot: itemSnapshot,
+    });
+
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({
+      existingId: "quote-1",
+      existingItems: [previous],
+      items: [changed],
+    });
+
+    expect(prepared.itemIdsToResolve).toEqual(new Set(["item-1"]));
+    expect(prepared.items[0]?.fabricacionSnapshot).toBeNull();
+  });
+
   it("no completa una pauta histórica ausente al guardar cambios comerciales", () => {
     const oldItem = workflowItem();
     const unchangedTechnicalInput = workflowItem({ precioUnitario: 160000, precioTotal: 160000 });
@@ -292,6 +322,60 @@ describe("fabricacion-trabajo-snapshot lifecycle", () => {
     });
 
     expect(prepared.itemIdsToResolve.size).toBe(0);
+    expect(prepared.items[0]?.fabricacionSnapshot).toBe(itemSnapshot);
+  });
+
+  it("al cambiar solo el proveedor conserva los cortes por pieza y reconstruye la pauta de compra", () => {
+    const itemWithProvider = (providerKey: string) => workflowItem({
+      fabricacionSnapshot: itemSnapshot,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "220",
+        catalogLineKey: "universal:aluminio:l20",
+        supplierProviderKey: providerKey,
+      }),
+    });
+    const previous = itemWithProvider("arquetipo");
+    const edited = itemWithProvider("alumco");
+
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({
+      existingId: "quote-1",
+      existingItems: [previous],
+      // The edit form can omit this snapshot while changing provider metadata.
+      items: [{ ...edited, fabricacionSnapshot: null }],
+    });
+
+    expect(prepared.itemIdsToResolve).toEqual(new Set());
+    expect(prepared.items[0]?.fabricacionSnapshot).toBe(itemSnapshot);
+    expect(prepared.shouldRebuildTrabajoSnapshot).toBe(true);
+    expect(shouldResolveSupplierPresentationsForQuoteSave({
+      existingId: "quote-1",
+      itemCountToResolve: prepared.itemIdsToResolve.size,
+      shouldRebuildTrabajoSnapshot: prepared.shouldRebuildTrabajoSnapshot,
+    })).toBe(true);
+  });
+
+  it("no reconstruye la pauta por un cambio comercial cuando el proveedor no cambia", () => {
+    const meta = encodeCotizacionItemPresentationMeta({
+      lineTemplateId: "220",
+      catalogLineKey: "universal:aluminio:l20",
+      supplierProviderKey: "arquetipo",
+    });
+    const previous = workflowItem({ fabricacionSnapshot: itemSnapshot, observaciones: meta });
+    const edited = workflowItem({
+      fabricacionSnapshot: null,
+      observaciones: meta,
+      precioUnitario: 160000,
+      precioTotal: 160000,
+    });
+
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({
+      existingId: "quote-1",
+      existingItems: [previous],
+      items: [edited],
+    });
+
+    expect(prepared.itemIdsToResolve.size).toBe(0);
+    expect(prepared.shouldRebuildTrabajoSnapshot).toBe(false);
     expect(prepared.items[0]?.fabricacionSnapshot).toBe(itemSnapshot);
   });
 

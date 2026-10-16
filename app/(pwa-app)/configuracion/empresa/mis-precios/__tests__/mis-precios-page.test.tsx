@@ -27,6 +27,20 @@ it("muestra proveedores primero y busca por nombre o código", () => {
   expect(screen.queryByText("Tope proveedor A")).not.toBeInTheDocument();
 });
 
+it("muestra el logo Kompen al abrir el catálogo Thermowin", () => {
+  const { container } = render(<MisPreciosContent catalog={{ providers: [{
+    providerKey: "thermowin-kompen",
+    providerName: "Thermowin Kompen",
+    revision: "2026",
+    percentage: 0,
+    presentations: [{ presentationId: "kom-701", familyKeys: ["thermowin:kom-700"], technicalCodes: ["KOM 701"], sku: "701-3154", name: "Marco fijo Euro 701", finish: "Nogal", purchaseUnit: "TR", commercialLengthMm: 6000, referenceNetPrice: 31421, currency: "CLP", ownNetPrice: null, effective: { unitNetPrice: 31421, source: "reference", currency: "CLP" } }],
+  }] }} error={null} busy={false} save={jest.fn(async () => true)} refresh={async () => undefined} />);
+
+  fireEvent.click(screen.getByRole("button", { name: /Thermowin Kompen/ }));
+  expect(container.querySelector('img[src="/Icon-Empresas/kompen.png"]')).toBeInTheDocument();
+  expect(screen.getByText("2026 · 1 producto")).toBeInTheDocument();
+});
+
 it("muestra el código técnico y oculta los identificadores internos del proveedor", () => {
   setup();
   fireEvent.click(screen.getByRole("button", { name: /Proveedor A/ }));

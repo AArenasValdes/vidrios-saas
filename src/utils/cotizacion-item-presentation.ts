@@ -77,6 +77,7 @@ export type CotizacionItemPresentationMeta = {
   fabricacionLeg: string;
   fabricacionReinforcement: string;
   fabricationRecipeId: string;
+  supplierProviderKey: string;
   raw: string;
 };
 
@@ -296,6 +297,7 @@ export function encodeCotizacionItemPresentationMeta(input: {
   fabricacionLeg?: string | null;
   fabricacionReinforcement?: string | null;
   fabricationRecipeId?: string | null;
+  supplierProviderKey?: string | null;
   raw?: string;
 }) {
   const material = normalizeMaterial(input.material);
@@ -418,6 +420,10 @@ export function encodeCotizacionItemPresentationMeta(input: {
   const fabricationRecipeId = (input.fabricationRecipeId ?? "")
     .trim()
     .replace(/\]/g, "");
+  const supplierProviderKey = (input.supplierProviderKey ?? "")
+    .trim()
+    .replace(/\]/g, "")
+    .slice(0, 100);
   void input.cubicationSnapshot;
   const cubicationSnapshot = "";
   const raw = (input.raw ?? "").trim();
@@ -473,6 +479,7 @@ export function encodeCotizacionItemPresentationMeta(input: {
     `[flg:${fabricacionLeg}]` +
     `[frf:${fabricacionReinforcement}]` +
     `[frid:${fabricationRecipeId}]` +
+    `[spk:${supplierProviderKey}]` +
     `[cub:${cubicationSnapshot}]`;
 
   return raw ? `${meta} ${raw}` : meta;
@@ -601,6 +608,8 @@ export function decodeCotizacionItemPresentationMeta(
     source.match(/\[frf:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const fabricationRecipeId =
     source.match(/\[frid:([^\]]*)\]/)?.[1]?.trim() ?? "";
+  const supplierProviderKey =
+    source.match(/\[spk:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const cubicationSnapshot = parseCubicationSnapshot(
     source.match(/\[cub:([^\]]*)\]/)?.[1]
   );
@@ -660,6 +669,7 @@ export function decodeCotizacionItemPresentationMeta(
     .replace(/\[flg:[^\]]*\]/g, "")
     .replace(/\[frf:[^\]]*\]/g, "")
     .replace(/\[frid:[^\]]*\]/g, "")
+    .replace(/\[spk:[^\]]*\]/g, "")
     .replace(/\[cub:[^\]]*\]/g, "")
     .trim();
 
@@ -716,6 +726,7 @@ export function decodeCotizacionItemPresentationMeta(
     fabricacionLeg,
     fabricacionReinforcement,
     fabricationRecipeId,
+    supplierProviderKey,
     raw,
   };
 }

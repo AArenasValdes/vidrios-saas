@@ -58,6 +58,10 @@ export type SupplierCatalogDatabase = {
         { id: string; organization_id: number; family_key: string; configuration_key: string | null; insumo_oficial_id: string | null; codigo_tecnico: string; codigo_receta: string | null; nombre_perfil: string; sku_taller: string; descripcion: string; modo_acabado: string; acabado_nombre: string | null; unidad_compra: string; largo_comercial_mm: number | null; precio_neto: number | null; moneda: string | null; preferida: boolean; revision: number; creado_por: string | null; creado_en: string; actualizado_en: string; eliminado_en: string | null },
         { id?: string; organization_id: number; family_key: string; configuration_key?: string | null; insumo_oficial_id?: string | null; codigo_tecnico: string; codigo_receta?: string | null; nombre_perfil: string; sku_taller: string; descripcion: string; modo_acabado: string; acabado_nombre?: string | null; unidad_compra: string; largo_comercial_mm?: number | null; precio_neto?: number | null; moneda?: string | null; preferida?: boolean; revision?: number; creado_por?: string | null; creado_en?: string; actualizado_en?: string; eliminado_en?: string | null }
       >;
+      organization_supplier_family_preferences: Table<
+        { organization_id: number; family_key: string; provider_key: string; created_at: string; updated_at: string },
+        { organization_id: number; family_key: string; provider_key: string; created_at?: string; updated_at?: string }
+      >;
       cotizacion_costos_tecnicos: Table<
         { id: string; cotizacion_id: number; organization_id: number; estado: string; snapshot: Json; calculado_en: string },
         { id?: string; cotizacion_id: number; organization_id: number; estado: string; snapshot: Json; calculado_en?: string }

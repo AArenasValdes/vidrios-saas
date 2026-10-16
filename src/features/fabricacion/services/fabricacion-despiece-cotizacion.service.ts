@@ -921,6 +921,7 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
         leavesCount: recipeResolutionInput.hojas,
         typology: recipeResolutionInput.tipologia,
         glassName: recipeResolutionInput.glassName,
+        includeDocumentedVariants: true,
         recipes: input.recipes,
       });
       if (fallbacks.length > 0) {
@@ -948,8 +949,7 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
           {
             ...recipeResolutionInput,
             variante:
-              fallbacks.length === 1 &&
-              fallbacks[0]?.variant === "normal" &&
+            fallbacks.some((fallback) => fallback.variant === "normal") &&
               (resolveConfirmedUniversalFallbackVariant({
                 catalogKey,
                 variant: recipeResolutionInput.variante,

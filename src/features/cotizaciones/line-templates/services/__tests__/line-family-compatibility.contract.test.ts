@@ -1,7 +1,10 @@
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { VENTORA_DEFAULT_LINE_CATALOG } from "../default-line-catalog";
 import { evaluateLineCompatibility } from "../line-template-compatibility.service";
-import { groupLineTemplatesByFamily } from "../line-template-family.service";
+import {
+  groupLineTemplatesByFamily,
+  resolveSupplierFamilyKeyForLineTemplate,
+} from "../line-template-family.service";
 import { filterLineCatalogTemplates } from "../line-option-presentation.service";
 
 function line(overrides: Partial<CotizacionLineTemplate> = {}): CotizacionLineTemplate {
@@ -69,6 +72,13 @@ describe("contrato de familia y compatibilidad", () => {
     ]);
   });
 
+  it("deja pendiente una familia de proveedor que aún no está declarada", () => {
+    expect(resolveSupplierFamilyKeyForLineTemplate({
+      catalogKey: "ventora:s33-corredera-2h",
+      catalogMetadata: {},
+    })).toBeNull();
+  });
+
   it("evalúa compatibilidad declarada aparte de receta y precio comercial", () => {
     const target = line({
       catalogKey: "ventora:veratec-7400-corredera",
@@ -95,6 +105,32 @@ describe("contrato de familia y compatibilidad", () => {
 
     expect(compatible).toMatchObject({ commercial: "compatible", recipe: "ready_to_test", commercialPrice: "configured" });
     expect(incompatible).toMatchObject({ commercial: "incompatible", recipe: "not_checked" });
+  });
+
+  it("no marca como compatible una línea PVC sin apertura ni cantidad de hojas declaradas", () => {
+    const partial = line({
+      catalogKey: "ventora:veratec-inova-76",
+      catalogMetadata: {
+        compatibility: {
+          componentTypes: ["Ventana"],
+          materials: ["PVC"],
+        },
+      },
+      material: "PVC",
+      categoria: "pvc",
+    });
+    const context = {
+      componentType: "Ventana",
+      openingType: "Corredera",
+      leavesCount: 2,
+      material: "PVC",
+    };
+
+    expect(evaluateLineCompatibility({ line: partial, context })).toMatchObject({
+      commercial: "insufficient_data",
+      commercialEvidence: "incomplete_declaration",
+    });
+    expect(filterLineCatalogTemplates({ templates: [partial], tab: "compatible", context })).toEqual([]);
   });
 
   it("reconoce Abatir como apertura abatible para líneas Veratec Elegans", () => {

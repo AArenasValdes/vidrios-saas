@@ -3,6 +3,7 @@ import {
   type PlantillaVentoraCorrederaId,
 } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
 import { crearRecetaSerie32ProyectanteNormal, crearRecetaSerie42Proyectante } from "@/features/fabricacion/fixtures/plantillas-ventora-proyectante";
+import { crearRecetaSerie42Sodal } from "@/features/fabricacion/fixtures/serie-42-provider-recipes";
 import { crearRecetasP2U, P2U_CATALOG_KEYS } from "@/features/fabricacion/fixtures/traditional-p2u-recipes";
 import { crearRecetasSodalP2A } from "@/features/fabricacion/fixtures/sodal-p2a-recipes";
 import {
@@ -11,22 +12,9 @@ import {
 } from "@/features/fabricacion/fixtures/sodal-catalogo-2026-recipes";
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
+import { resolveUniversalAluminumLineKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
-const UNIVERSAL_ALUMINUM_LINE_KEYS = {
-  "ventora:l20": "L20",
-  "ventora:arquetipo-l20-corredera-2h": "L20",
-  "ventora:l32": "L32",
-  "ventora:arquetipo-l32-proyectante": "L32",
-  "ventora:l42": "L42",
-  "ventora:arquetipo-l42-proyectante": "L42",
-  "ventora:l5000": "L5000",
-  "ventora:serie-12-shower-corredera": "L12",
-  "ventora:serie-15-corredera-2h": "L15",
-  "ventora:arquetipo-l15-corredera-2h": "L15",
-  "ventora:serie-4000-corredera-2h": "L4000",
-  "ventora:arquetipo-l4000-corredera-2h": "L4000",
-  "ventora:serie-45-puerta": "L45",
-  "ventora:arquetipo-l45-puerta": "L45",
+const SPECIALIZED_UNIVERSAL_LINE_NAMES: Readonly<Record<string, string>> = {
   "ventora:s33-corredera-2h": "S33",
   "ventora:s33-rpt-corredera-2h": "S33-RPT",
   "ventora:optima-s28-corredera-2h": "S28",
@@ -36,7 +24,13 @@ const UNIVERSAL_ALUMINUM_LINE_KEYS = {
   "ventora:multislide-s83-8h": "S83",
   "ventora:serie-3200-puerta-abatible-1h": "S3200",
   "ventora:serie-4600-puerta-vaiven": "S4600",
-} as const;
+};
+
+function resolveUniversalLineName(catalogKey: string): string | null {
+  const aluminumFamilyKey = resolveUniversalAluminumLineKey(catalogKey);
+  if (aluminumFamilyKey) return aluminumFamilyKey.replace("universal:aluminio:l", "L");
+  return SPECIALIZED_UNIVERSAL_LINE_NAMES[catalogKey] ?? null;
+}
 
 const SODAL_CATALOGO_2026_KEYS = new Set<string>([
   "ventora:optima-s28-corredera-2h",
@@ -134,7 +128,7 @@ function markUserConfirmedProfileCutRecipe(definition: FabricationRecipeRecord["
   };
 }
 
-type UniversalPricedLineKey = keyof typeof UNIVERSAL_ALUMINUM_LINE_KEYS;
+type UniversalPricedLineKey = string;
 
 type UniversalFallbackInput = {
   catalogKey: UniversalPricedLineKey;
@@ -146,6 +140,62 @@ type UniversalFallbackInput = {
   typology?: string | null;
   glassName?: string | null;
 };
+
+const L42_ARQUETIPO_NO_CHAMBER_VARIANT = "arquetipo_sin_camara_monolitico";
+const L42_ARQUETIPO_NO_CHAMBER_VARIANT_ALIASES = new Set([
+  L42_ARQUETIPO_NO_CHAMBER_VARIANT,
+  "sodal_sin_camara_monolitico",
+]);
+
+function isL42CatalogKey(catalogKey: string): boolean {
+  return catalogKey === "ventora:l42" || catalogKey === "ventora:arquetipo-l42-proyectante";
+}
+
+function buildArquetipoL42NoChamberRecipe(
+  input: UniversalFallbackInput,
+): FabricationRecipeRecord {
+  const definition = crearRecetaSerie42Sodal({ lineName: input.lineName });
+  definition.identidad = {
+    ...definition.identidad,
+    codigo: "ARQUETIPO-L42-SIN-CAMARA-MONOLITICO-1H",
+    nombre: `${input.lineName.trim() || "Serie 42"} · Arquetipo · Sin cámara · Monolítico`,
+    variante: L42_ARQUETIPO_NO_CHAMBER_VARIANT,
+  };
+  definition.datosPendientes = [
+    "Validar una fabricación real con perfiles Arquetipo antes de usar como pauta final.",
+  ];
+  definition.permitirCalculoPreliminarConPendientes = true;
+  definition.notasValidacion = [
+    ...definition.notasValidacion,
+    "Perfiles y precios de compra: referencia Arquetipo LEGNO (4209, 4202 y 4229).",
+    "Origen de las reglas de corte: ficha SODAL Serie 4200; no se presenta como una pauta técnica emitida por Arquetipo.",
+  ];
+
+  return {
+    id: `arquetipo:l42:${L42_ARQUETIPO_NO_CHAMBER_VARIANT}`,
+    organizationId: input.organizationId,
+    lineTemplateId: input.lineTemplateId,
+    scope: "ventora",
+    providerName: "Arquetipo",
+    lineName: input.lineName,
+    typology: definition.identidad.tipologia,
+    leavesCount: definition.identidad.hojas,
+    variant: L42_ARQUETIPO_NO_CHAMBER_VARIANT,
+    version: definition.version,
+    status: "testing",
+    definition,
+    sourceType: "manufacturer",
+    sourceReference: "arquetipo:linea-42:legno:sodal-serie-4200-sin-camara-monolitico:v1",
+    sourceName: "Arquetipo · precios LEGNO / cortes SODAL",
+    sourceRevision: "Arquetipo cot. 27811 + SODAL Serie 4200 2026-09-21",
+    parentRecipeId: null,
+    validatedAt: null,
+    validatedBy: null,
+    createdAt: "2026-10-15T00:00:00.000Z",
+    updatedAt: "2026-10-15T00:00:00.000Z",
+    eliminadoEn: null,
+  };
+}
 
 function buildSodalCatalogo2026Recipes(input: UniversalFallbackInput): FabricationRecipeRecord[] {
   if (!SODAL_CATALOGO_2026_KEYS.has(input.catalogKey)) return [];
@@ -224,7 +274,8 @@ function buildSodalCatalogo2026Recipes(input: UniversalFallbackInput): Fabricati
 }
 
 function buildReferenceRecipe(input: UniversalFallbackInput): FabricationRecipeRecord | null {
-  const line = UNIVERSAL_ALUMINUM_LINE_KEYS[input.catalogKey];
+  const line = resolveUniversalLineName(input.catalogKey);
+  if (!line) return null;
   if (SODAL_CATALOGO_2026_KEYS.has(input.catalogKey)) {
     const sodal2026 = buildSodalCatalogo2026Recipes(input);
     return sodal2026.length === 1 ? sodal2026[0]! : null;
@@ -364,7 +415,11 @@ export function resolveUniversalPricedLineFallback(input: {
   leavesCount?: number | null;
   recipes: readonly FabricationRecipeRecord[];
 }): FabricationRecipeRecord | null {
-  const candidates = resolveUniversalPricedLineFallbacks(input);
+  const candidates = resolveUniversalPricedLineFallbacks({
+    ...input,
+    // El fallback singular conserva Normal como opción predeterminada de L42.
+    includeDocumentedVariants: false,
+  });
   return candidates.length === 1 ? candidates[0]! : null;
 }
 
@@ -377,22 +432,32 @@ export function resolveUniversalPricedLineFallbacks(input: {
   leavesCount?: number | null;
   typology?: string | null;
   glassName?: string | null;
+  /** Incluye composiciones documentadas alternativas en el selector del Constructor. */
+  includeDocumentedVariants?: boolean;
   recipes: readonly FabricationRecipeRecord[];
 }): FabricationRecipeRecord[] {
-  if (!(input.catalogKey && input.catalogKey in UNIVERSAL_ALUMINUM_LINE_KEYS)) {
-    return [];
-  }
+  const catalogKey = input.catalogKey;
+  if (!catalogKey) return [];
+  const lineName = resolveUniversalLineName(catalogKey);
+  if (!lineName) return [];
   const activeLineRecipes = input.recipes.filter(
     (recipe) =>
       recipe.lineTemplateId === input.lineTemplateId &&
       !recipe.eliminadoEn &&
       recipe.status !== "archived",
   );
-  const workshopConfirmedLine = USER_CONFIRMED_UNIVERSAL_WORKSHOP_LINE_KEYS.has(input.catalogKey);
+  const workshopConfirmedLine = USER_CONFIRMED_UNIVERSAL_WORKSHOP_LINE_KEYS.has(catalogKey);
+  const isL42 = isL42CatalogKey(catalogKey);
+  const requestedArquetipoNoChamber = Boolean(
+    input.variant && L42_ARQUETIPO_NO_CHAMBER_VARIANT_ALIASES.has(input.variant),
+  );
+  const includeArquetipoNoChamber = isL42 && (
+    input.includeDocumentedVariants === true || requestedArquetipoNoChamber
+  );
   // The default L42 candidate is Normal even when a separate ALAR workshop
   // draft exists. Only a workshop recipe for the same variant blocks it.
   const requestedVariant = input.variant ??
-    (input.catalogKey === "ventora:l42" || input.catalogKey === "ventora:arquetipo-l42-proyectante"
+    (catalogKey === "ventora:l42" || catalogKey === "ventora:arquetipo-l42-proyectante"
       ? "normal"
       : null);
   const hasWorkshopCustomizedRecipe = activeLineRecipes.some((recipe) => {
@@ -402,9 +467,9 @@ export function resolveUniversalPricedLineFallbacks(input: {
     if (input.typology && recipe.typology !== input.typology) return false;
     return true;
   });
-  if (hasWorkshopCustomizedRecipe) return [];
+  if (hasWorkshopCustomizedRecipe && !includeArquetipoNoChamber) return [];
 
-  const isSodal2026 = SODAL_CATALOGO_2026_KEYS.has(input.catalogKey);
+  const isSodal2026 = SODAL_CATALOGO_2026_KEYS.has(catalogKey);
   const replaceableStructuralDrafts = isSodal2026 && activeLineRecipes.every(
     (recipe) => recipe.status !== "validated" && isReplaceableUniversalStructuralRecipe(recipe),
   );
@@ -412,13 +477,14 @@ export function resolveUniversalPricedLineFallbacks(input: {
     activeLineRecipes.some(
       (recipe) =>
         recipe.status === "validated" &&
+        !(includeArquetipoNoChamber && isL42 && recipe.variant === "normal" && !input.variant) &&
         !(workshopConfirmedLine && isReplaceableUniversalStructuralRecipe(recipe)) &&
         (!isSodal2026 || !input.typology || recipe.typology === input.typology) &&
         (!input.variant || recipe.variant === input.variant) &&
         (input.leavesCount == null || recipe.leavesCount === input.leavesCount),
     ) ||
     (activeLineRecipes.length > 0 &&
-      !USER_CONFIRMED_UNIVERSAL_WORKSHOP_LINE_KEYS.has(input.catalogKey) &&
+      !USER_CONFIRMED_UNIVERSAL_WORKSHOP_LINE_KEYS.has(catalogKey) &&
       !replaceableStructuralDrafts)
   ) {
     return [];
@@ -426,7 +492,7 @@ export function resolveUniversalPricedLineFallbacks(input: {
 
   if (isSodal2026) {
     const candidates = buildSodalCatalogo2026Recipes({
-      catalogKey: input.catalogKey as UniversalPricedLineKey,
+      catalogKey: catalogKey as UniversalPricedLineKey,
       lineTemplateId: input.lineTemplateId,
       organizationId: input.organizationId,
       lineName: input.lineName,
@@ -447,7 +513,7 @@ export function resolveUniversalPricedLineFallbacks(input: {
   }
 
   const fallback = buildReferenceRecipe({
-    catalogKey: input.catalogKey as UniversalPricedLineKey,
+    catalogKey: catalogKey as UniversalPricedLineKey,
     lineTemplateId: input.lineTemplateId,
     organizationId: input.organizationId,
     lineName: input.lineName,
@@ -456,5 +522,21 @@ export function resolveUniversalPricedLineFallbacks(input: {
     typology: input.typology,
     glassName: input.glassName,
   });
-  return fallback ? [fallback] : [];
+  const candidates = fallback ? [fallback] : [];
+
+  if (includeArquetipoNoChamber && (input.leavesCount == null || input.leavesCount === 1) &&
+    (!input.typology || input.typology === "proyectante")) {
+    candidates.push(buildArquetipoL42NoChamberRecipe({
+      catalogKey: catalogKey as UniversalPricedLineKey,
+      lineTemplateId: input.lineTemplateId,
+      organizationId: input.organizationId,
+      lineName: input.lineName,
+      variant: L42_ARQUETIPO_NO_CHAMBER_VARIANT,
+      leavesCount: 1,
+      typology: "proyectante",
+      glassName: input.glassName,
+    }));
+  }
+
+  return candidates;
 }

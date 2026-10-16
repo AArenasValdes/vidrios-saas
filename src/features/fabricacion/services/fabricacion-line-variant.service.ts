@@ -151,6 +151,10 @@ export function findRecipeForVariantSlot(
 }
 
 export function formatVariantDisplayLabel(recipe: FabricationRecipeRecord): string {
+  if (recipe.variant === "arquetipo_sin_camara_monolitico") {
+    return "Arquetipo · Sin cámara · Monolítico";
+  }
+
   if (isSodalL25ZetaValidatedRecipe(recipe)) {
     return formatSodalL25FullRecipeNameFromRecipe(recipe) ?? recipe.definition.identidad.nombre;
   }

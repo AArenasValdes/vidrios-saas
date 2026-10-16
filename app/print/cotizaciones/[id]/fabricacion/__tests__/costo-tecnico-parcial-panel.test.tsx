@@ -120,6 +120,17 @@ describe("CostoTecnicoParcialPanel", () => {
     expect(screen.queryByText("$0")).not.toBeInTheDocument();
   });
 
+  it("identifica el monto guardado como desactualizado y explica cómo revisarlo", async () => {
+    jest.spyOn(global, "fetch").mockResolvedValue({ ok: true, status: 200, json: async () => ({
+      enabled: true, canRefresh: true, snapshotIsStale: true,
+      snapshot: { schemaVersion: 2, status: "partial", priceOrigin: "reference", currency: "CLP", knownNetTotal: 90000, lines: [], missing: [], assumptions: [], calculatedAt: "2026-10-12T12:00:00Z", sourcePautaCapturedAt: "2026-10-02T11:00:00Z" },
+    }) } as Response);
+    render(<CostoTecnicoParcialPanel quoteId="qa-stale" />);
+    expect(await screen.findByText("Costo guardado (desactualizado)")).toBeInTheDocument();
+    expect(screen.getByText(/Cambió la pauta o el proveedor desde este cálculo/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Actualizar costos" })).toBeInTheDocument();
+  });
+
   it("guarda un precio propio y actualiza el costo congelado de esta cotización", async () => {
     const fetchMock = jest.spyOn(global, "fetch")
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({

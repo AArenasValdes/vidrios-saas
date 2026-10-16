@@ -1,7 +1,7 @@
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { getLineTemplateSystemMetadata, lineTemplateNeedsCommercialPrice } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { getFabricationRecipeFromMetadata } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
-import { evaluateLineCompatibility, type LineCompatibilityContext } from "./line-template-compatibility.service";
+import { evaluateLineCompatibility, normalizeOpeningType, type LineCompatibilityContext } from "./line-template-compatibility.service";
 import { resolveLineTemplateFamily } from "./line-template-family.service";
 
 export type LineCatalogTab = "compatible" | "own" | "all";
@@ -34,7 +34,17 @@ export type LineCatalogGroup = {
 };
 
 export function hasEnoughLineCompatibilityContext(context: LineCompatibilityContext | null | undefined) {
-  return Boolean(context?.componentType?.trim() && context?.openingType?.trim() && context?.material?.trim());
+  const component = context?.componentType?.trim();
+  const opening = context?.openingType?.trim();
+  const material = context?.material?.trim();
+  if (!component || !opening || !material) return false;
+
+  const normalizedComponent = component.toLocaleLowerCase("es-CL").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const knownComponent = ["ventana", "puerta", "pano fijo", "shower", "shower door"]
+    .some((value) => normalizedComponent === value || normalizedComponent.startsWith(`${value} `));
+  const knownOpening = ["corredera", "abatible", "proyectante", "fijo", "vaiven", "plegable", "pivotante", "shower", "guillotina", "celosia"]
+    .includes(normalizeOpeningType(opening));
+  return knownComponent && knownOpening;
 }
 
 export function getDefaultLineCatalogTab(input: {
@@ -42,7 +52,9 @@ export function getDefaultLineCatalogTab(input: {
   hasOwnLines: boolean;
 }): LineCatalogTab {
   if (input.hasCompatibilityContext) return "compatible";
-  if (input.hasOwnLines) return "own";
+  // Without an explicit component/opening pair, "Mis líneas" hides the shared
+  // catalog and can make the picker look empty. Start on the full catalog and
+  // let the material filter narrow it without claiming compatibility.
   return "all";
 }
 
@@ -119,9 +131,14 @@ export function filterLineCatalogTemplates(input: {
     if (input.tab === "own" && !own) return false;
     if (input.tab === "compatible") {
       if (!hasEnoughLineCompatibilityContext(input.context)) return false;
-      if (evaluateLineCompatibility({ line: template, context: input.context! }).commercial !== "compatible") return false;
+      const compatibility = evaluateLineCompatibility({ line: template, context: input.context! });
+      if (compatibility.commercial !== "compatible") return false;
+      if (compatibility.commercialEvidence !== "explicit") return false;
     }
-    if (input.material && template.material !== input.material && template.categoria !== "vidrio") return false;
+    if (input.material) {
+      const templateMaterial = template.categoria === "vidrio" ? "Cristal" : template.material;
+      if (templateMaterial !== input.material) return false;
+    }
     if (input.provider === "__sin_proveedor") {
       if (template.proveedor?.trim()) return false;
     } else if (input.provider && (template.proveedor?.trim() || "") !== input.provider) return false;

@@ -2,6 +2,32 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-10-15 - Sincronización de medidas del Constructor en dibujos guardados
+
+- Al guardar, la configuración visual del ítem queda sincronizada con el ancho y alto actuales. El SVG compartido vuelve a sincronizar medidas al renderizar para cubrir cotizaciones históricas.
+- Corrige croquis y cotas obsoletas en impresión y vistas públicas cuando el Constructor ya guardó otras medidas.
+- Regresión: las suites `workflow-ui-step-two` y `resolve-item-drawing-svg` cubren persistencia de medidas junto a la composición y renderizado actualizado desde una configuración visual antigua.
+
+## 2026-10-15 - Composición Shower Door en Guiada
+
+- El ajuste móvil de composición incluye las variantes Shower Door del sistema y configuración elegidos, y deja crear un croquis comercial con módulos y anchos editables.
+- Las modificaciones estructurales conservan el aviso de pauta pendiente; no se amplía la cobertura de recetas.
+
+## 2026-10-15 - Variante L42 sin cámara con perfiles Arquetipo
+
+- El Constructor ofrece `Arquetipo · Sin cámara · Monolítico` con perfiles 4209/4202/4229 y precios de referencia Arquetipo.
+- La procedencia mantiene separados los datos: perfiles/precios Arquetipo; descuentos de corte documentados por SODAL Serie 4200. La receta queda preliminar hasta prueba física con perfiles Arquetipo.
+- Normal 1H conserva el marco 4201 y su costo pendiente; no se reasigna el precio del 4209.
+- Regresión cubre selección del alias, pauta preliminar en cotización y la coexistencia de esta variante con Normal sin modificar snapshots anteriores.
+
+## 2026-10-15 - Proveedor explícito de precios de perfiles en Constructor
+
+- El selector de composición muestra tipología, hojas y códigos de perfil; deja de llamar “receta del taller” a la procedencia técnica.
+- En Constructor, cada pieza puede elegir un catálogo con precio compatible (Arquetipo, Alumco u otros disponibles). Se muestra cobertura `perfiles con precio / total` y queda separada del precio de venta por m².
+- La elección se guarda en metadata privada de la pieza y llega a los snapshots internos. Si el proveedor seleccionado no cubre un código, queda pendiente sin sustituirse por otro proveedor; editarlo invalida el snapshot técnico de esa pieza para recomponerlo al guardar.
+- El endpoint consulta opciones de precio solo cuando el Constructor las solicita; no aumenta el costo de las resoluciones normales de pauta.
+- No se agregan variantes ni composiciones rápidas 2H/3H/4H.
+
 ## 2026-10-15 - Prioridad de código exacto en materiales valorizados
 
 - La lista del trabajo enlaza por familia y código técnico exactos; las cotizaciones históricas sin familia usan el código solo cuando no hay colisión entre familias. El nombre queda como respaldo acotado. Esto evita que etiquetas repetidas como “Riel superior” oculten precios o crucen familias.
@@ -3042,3 +3068,33 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
 - El editor móvil separa el proveedor de la línea comercial de la fuente técnica de la receta; cambia el rótulo a **Composición para el despiece** y muestra fuentes como **Base Ventora**, **Taller confirmado** o el proveedor documentado.
 - Copias técnicamente idénticas siguen consolidadas. Las composiciones diferentes con el mismo nombre se distinguen por una lista breve de códigos de perfil, sin repetir ajustes en cada corte.
 - Pruebas dirigidas: selección y etiquetas de receta; ESLint dirigido sin errores (mantiene una advertencia previa de dependencia no usada en el hook). Build y smoke visual no ejecutados para no interferir con `.next` de la instancia local.
+
+## 2026-10-15 — Fase 1: identidades y cambio de proveedor
+
+- El guardado de cotizaciones distingue la selección del proveedor de la geometría técnica: cambiar proveedor conserva el snapshot por pieza y reconstruye la pauta conjunta con las presentaciones del proveedor elegido.
+- Se añadieron regresiones para cambio Arquetipo → Alumco y para asegurar que cambios solo comerciales no reconstruyan la pauta. Fórmulas, estados, IDs, precios comerciales e históricos permanecen intactos.
+- Se documentaron conflictos L20, alias de fallback L5000, contrato L25 y discrepancia del inventario 73/95 en `docs/fabricacion/BASE_COMUN_LINEAS_SISTEMAS_COMPOSICIONES.md`. No se consultó ni modificó persistencia remota; las decisiones sobre alias y estado real L25 quedan para lectura autorizada antes de una fase posterior.
+
+## 2026-10-15 — Fase 2: contrato y resolución compartida de variantes
+
+- `FabricacionAtributosTecnicos` tipa discriminadores por línea y `FabricacionContratoTecnico` registra sus impactos. El resolver común compara los atributos efectivos cuando la identidad guardada los declara; los campos planos se mantienen como puente de compatibilidad histórica.
+- Guiada y Constructor usan `resolveFabricationRecipe` como matcher. Constructor conserva recetas de procedencias distintas, deduplica solo la repetición del mismo ID persistido y no colapsa fórmulas parecidas; una selección por variante ambigua no elige una receta.
+- La selección usa vidrio/atributos técnicos actuales del editor. Se quitó el fallback Guiada que podía asignar una receta única aunque contradijera el catálogo o los discriminadores.
+- No se alteraron fórmulas, estados, IDs, alias L20/L5000, las 18 variantes L25, precios, snapshots históricos ni persistencia remota. `pnpm fabrication:verify --build`: 184 suites y 1.561 pruebas aprobadas, TypeScript y `docs:check` aprobados; ESLint dirigido sin advertencias. El build falló con `EPERM` al crear `.next/static/chunks/app/api/admin/pagos/reject`; no se eliminó `.next` ni se reintentó. Sin smoke autenticado, lectura remota ni validación física de taller.
+
+## 2026-10-15 — Fase 3: referencias y proveedores por pieza
+
+- El selector de precio por proveedor solo declara cubierto un perfil cuando hay una presentación compatible única, con precio positivo y largo comercial positivo. Presentaciones duplicadas, sin largo o sin precio quedan pendientes; no se deriva SKU, acabado ni largo por similitud.
+- Se mantienen separados línea comercial/precio de venta, receta/cortes y referencia de compra. La actualización de pauta al cambiar proveedor conserva el snapshot de cortes por pieza; los costos técnicos siguen bajo actualización explícita y los overrides propios conservan precedencia.
+- En este cierre inicial de la integración por pieza, la preferencia por organización/familia quedó pendiente porque `organization_profile.proveedor_preferido` es global. Fue implementada en la actualización siguiente de este mismo día; ver **Proveedor habitual por familia** más abajo.
+- Guiada de escritorio agrega selector por pieza sobre la misma API/resolución; el estado automático respeta preferencias de presentación existentes, el override se guarda en el borrador y cambiar línea/material lo limpia. El flujo móvil Constructor conserva su selección existente.
+- Pruebas dirigidas: 4 suites / 107 tests. `pnpm fabrication:verify --build`: 184 suites / 1.564 tests; TypeScript y `docs:check` (123 rutas, 16 documentos) pasan. ESLint dirigido termina sin errores y con 5 advertencias preexistentes de hooks/memoización. El build compila webpack/TypeScript y genera 83 páginas estáticas con escritura ampliada tras el `EPERM` del sandbox. Sin smoke de navegador, consulta remota ni validación física.
+## 2026-10-15 — Proveedor habitual por familia (Fase 3)
+
+- Se implementó `organization_supplier_family_preferences`: una preferencia por `(organization_id, family_key)`, con `provider_key` estable, timestamps y FK con cascada al borrar organización.
+- La migración `20261015185810_organization_supplier_family_preferences.sql` fue aplicada según informa el usuario. No se comprobó en esta actualización el entorno, el ledger ni el esquema; `current_schema.sql` permanece como baseline histórico.
+- Guiada/Constructor respetan proveedor explícito de pieza → preferencia de familia → resolución automática anterior; opción de guardar/quitar preferencia desde edición de pieza.
+- RLS permite solo SELECT autenticado de la propia organización por `get_org_id()`; no hay políticas ni grants cliente para escrituras. La API deriva organización de sesión, verifica permiso `admin`/`tecnico`, valida proveedor/familia y usa cliente de servidor.
+- Se identifica el costo técnico obsoleto al cambiar la captura guardada de pauta/proveedor, sin recálculo silencioso.
+- La prueba dirigida `pnpm test --runInBand --runTestsByPath app/api/proveedor-catalogos/preferencias-familia/__tests__/route.test.ts` pasó: 1 suite / 7 tests, con lectura multiempresa, permisos, rechazo de organización falsificada, guardado/actualización y eliminación. pgTAP no se ejecutó por falta del servicio Postgres local. El resto de pruebas y build previamente ejecutados para esta fase no se repitieron por este cambio documental.
+- No se modifican precios de venta, recetas, fórmulas, cotizaciones históricas ni snapshots. Fase 3 queda detenida aquí; no iniciar Fase 4 sin aprobación.

@@ -404,6 +404,12 @@
       "source": "app/api/proveedor-catalogos/mis-precios/route.ts"
     },
     {
+      "path": "/api/proveedor-catalogos/preferencias-familia",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/proveedor-catalogos/preferencias-familia/route.ts"
+    },
+    {
       "path": "/api/proveedor-catalogos/qa-context",
       "type": "api",
       "area": "api",

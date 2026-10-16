@@ -1,5 +1,13 @@
 # RLS Policies - Ventora
 
+## `organization_supplier_family_preferences` (migración 2026-10-15; aplicación reportada por el usuario)
+
+| Policy | Operación | Restricción |
+|---|---|---|
+| `organization_supplier_family_preferences_select_own` | SELECT authenticated | `organization_id = (select public.get_org_id())` |
+
+`anon`, `public` y `authenticated` no tienen permisos de INSERT/UPDATE/DELETE. Solo `service_role` puede escribir desde la API autenticada, que comprueba rol `admin`/`tecnico`, valida la familia/proveedor y deriva `organization_id` de la sesión. No hay policy de escritura para cliente. El usuario informa que aplicó la migración; en esta actualización no se comprobó el entorno, ledger ni esquema resultante. La prueba pgTAP permanece pendiente de ejecución local.
+
 Fuente de verdad por entorno: para produccion, introspeccion remota y ledger consultados de forma fechada; para el repositorio, `current_schema.sql` más migraciones; para esta QA, dump base más las dos migraciones ejecutadas directamente. No mezclar esos estados.
 Ultima revision integral de policies remota registrada en estas notas: 2026-08-20. La lectura remota focal de `cotizaciones.fabricacion_trabajo_snapshot` consta en el addendum 2026-09-30; no fue una auditoria completa del RLS.
 

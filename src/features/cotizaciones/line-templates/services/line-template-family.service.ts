@@ -29,18 +29,23 @@ export type LineTemplateFamilyGroup = {
   isOwn: boolean;
 };
 
-function metadataFamilyKey(template: CotizacionLineTemplate): string | null {
+type SupplierFamilyTemplateIdentity = {
+  catalogKey?: string | null;
+  catalogMetadata?: CotizacionLineTemplate["catalogMetadata"];
+};
+
+function metadataFamilyKey(template: SupplierFamilyTemplateIdentity): string | null {
   const value = template.catalogMetadata?.familyKey;
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 /** Usa metadata propia primero y la identidad canónica del catálogo como respaldo para plantillas antiguas. */
 export function resolveSupplierFamilyKeyForLineTemplate(
-  template: CotizacionLineTemplate | null | undefined
+  template: SupplierFamilyTemplateIdentity | null | undefined
 ): string | null {
   if (!template) return null;
   return normalizeUniversalAluminumFamilyKey(metadataFamilyKey(template)) ??
-    resolveDefaultLineSupplierFamilyKey(template.catalogKey);
+    resolveDefaultLineSupplierFamilyKey(template.catalogKey ?? null);
 }
 
 function metadataFamilyLabel(template: CotizacionLineTemplate): string | null {

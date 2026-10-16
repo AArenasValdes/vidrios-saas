@@ -11,6 +11,7 @@ type PanelResponse = {
   canCalculate?: boolean;
   canRefresh?: boolean;
   canConfigure?: boolean;
+  snapshotIsStale?: boolean;
   snapshot?: TechnicalCostSnapshot | null;
   error?: string;
 };
@@ -37,6 +38,7 @@ export function CostoTecnicoParcialPanel({ quoteId, onSnapshotChange }: { quoteI
   const [canConfigure, setCanConfigure] = useState(false);
   const [showMaterials, setShowMaterials] = useState(false);
   const [snapshot, setSnapshot] = useState<TechnicalCostSnapshot | null>(null);
+  const [snapshotIsStale, setSnapshotIsStale] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -63,6 +65,7 @@ export function CostoTecnicoParcialPanel({ quoteId, onSnapshotChange }: { quoteI
         setCanRefresh(Boolean(payload.canRefresh));
         setCanConfigure(Boolean(payload.canConfigure));
         setSnapshot(payload.snapshot ?? null);
+        setSnapshotIsStale(Boolean(payload.snapshotIsStale));
         onSnapshotChange?.(payload.snapshot ?? null);
       } catch (error) {
         if (alive) setMessage(error instanceof Error ? error.message : "No pudimos cargar el costo parcial.");
@@ -84,10 +87,11 @@ export function CostoTecnicoParcialPanel({ quoteId, onSnapshotChange }: { quoteI
       const payload = await response.json() as PanelResponse;
       if (!response.ok) throw new Error(payload.error || "No pudimos calcular el costo parcial.");
       setSnapshot(payload.snapshot ?? null);
+      setSnapshotIsStale(Boolean(payload.snapshotIsStale));
       onSnapshotChange?.(payload.snapshot ?? null);
       setCanCalculate(false);
       setCanRefresh(Boolean(payload.snapshot));
-      if (refreshExisting) setNotice("Costos actualizados con los precios vigentes.");
+      if (refreshExisting) setNotice("Costos actualizados con la pauta y los precios vigentes.");
       return true;
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "No pudimos calcular el costo parcial.");
@@ -191,7 +195,7 @@ export function CostoTecnicoParcialPanel({ quoteId, onSnapshotChange }: { quoteI
         <>
           <div className={styles.summary}>
             <div>
-              <span>Total neto conocido</span>
+              <span>{snapshotIsStale ? "Costo guardado (desactualizado)" : "Total neto conocido"}</span>
               <strong>{knownTotal ?? "Sin monto calculable"}</strong>
               <small>{origin} · {status}</small>
             </div>
@@ -201,6 +205,13 @@ export function CostoTecnicoParcialPanel({ quoteId, onSnapshotChange }: { quoteI
               <small>{snapshot.missing.length} pendientes</small>
             </div>
           </div>
+          {snapshotIsStale ? (
+            <p className={styles.staleNotice} role="status">
+              {canRefresh
+                ? "Cambió la pauta o el proveedor desde este cálculo. Actualiza el costo para revisar el valor vigente; el monto guardado no se ha recalculado."
+                : "Este monto corresponde a una pauta anterior y se conserva como referencia histórica. No hay una pauta guardada disponible para recalcularlo."}
+            </p>
+          ) : null}
           <div className={styles.controls}>
             <button type="button" className={styles.detailsButton} onClick={() => setShowMaterials((value) => !value)} aria-expanded={showMaterials}>{showMaterials ? "Ocultar materiales" : "Ver materiales"}</button>
             {canConfigure ? <Link href="/configuracion/empresa/mis-precios">Configurar mis precios</Link> : null}

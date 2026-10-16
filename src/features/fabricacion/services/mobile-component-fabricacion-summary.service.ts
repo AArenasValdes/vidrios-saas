@@ -110,6 +110,7 @@ export function resolveMobileComponentFabricacionSummary(
     organizationId: options?.organizationId ?? null,
   });
   const hojas = resolveComponentFabricacionHojas({
+    tipo: item.tipo,
     sheetScheme: meta.sheetScheme,
     fabricacionHojas: meta.fabricacionHojas,
     hojasBase: meta.hojasBase,

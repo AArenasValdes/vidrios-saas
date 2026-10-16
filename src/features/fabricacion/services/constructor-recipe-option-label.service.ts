@@ -1,12 +1,14 @@
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
 export function getConstructorRecipeSourceLabel(recipe: FabricationRecipeRecord): string {
+  if (recipe.sourceReference?.startsWith("taller:personalizada:")) return "Variante del taller";
+
   const sourceName = recipe.sourceName?.trim();
   if (sourceName) {
     const normalized = sourceName.toLocaleLowerCase("es-CL");
-    if (normalized.includes("confirmación del titular")) return "Taller confirmado";
-    if (normalized.includes("referencia ventora")) return "Base Ventora";
-    if (normalized.includes("referencia universal de taller")) return "Taller";
+    if (normalized.includes("confirmación del titular")) return "Ventora";
+    if (normalized.includes("referencia ventora")) return "Ventora";
+    if (normalized.includes("referencia universal de taller")) return "Configuración del taller";
     return sourceName;
   }
 
@@ -15,7 +17,7 @@ export function getConstructorRecipeSourceLabel(recipe: FabricationRecipeRecord)
     return providerName;
   }
 
-  return recipe.scope === "organization" ? "Receta del taller" : "Base Ventora";
+  return recipe.scope === "organization" ? "Configuración del taller" : "Ventora";
 }
 
 export function getConstructorRecipeProfileCodeLabel(

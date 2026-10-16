@@ -62,6 +62,24 @@ export const FABRICACION_ATRIBUTO_IMPACTOS = [
 export type FabricacionAtributoImpacto =
   (typeof FABRICACION_ATRIBUTO_IMPACTOS)[number];
 
+/** Valores técnicos normalizados que identifican una variante dentro de una línea. */
+export type FabricacionAtributosTecnicos = {
+  lineTemplateId?: number | null;
+  typology?: FabricacionTipologia | string | null;
+  topology?: string | null;
+  leaves?: number | null;
+  opening?: string | null;
+  hardware?: string | null;
+  hardwareMode?: string | null;
+  variant?: string | null;
+  configurationId?: string | null;
+  compositionId?: string | null;
+  glass?: string | null;
+  glazing?: string | null;
+  leg?: string | null;
+  reinforcement?: string | null;
+};
+
 export type FabricacionContratoTecnico = {
   /** Identidad estable de la familia, no el texto comercial visible. */
   familia: string;

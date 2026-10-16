@@ -4,6 +4,18 @@ import { createClient } from "@supabase/supabase-js";
 import { VERATEC_7400_JUNIO_2026_IMPORT as fixture } from "../../src/features/proveedor-catalogos/fixtures/veratec-7400-junio-2026.ts";
 
 type Row = Record<string, unknown>;
+type TableQueryResult = { data: Row[] | null; error: { message: string } | null };
+type TableQuery = PromiseLike<TableQueryResult> & {
+  eq(column: string, value: unknown): TableQuery;
+  in(column: string, values: unknown[]): TableQuery;
+  select(columns: string): TableQuery;
+};
+type TableBuilder = {
+  select(columns: string): TableQuery;
+  insert(records: Row[]): TableQuery;
+  update(values: Row): TableQuery;
+};
+type ImportClient = { from(table: string): TableBuilder };
 
 for (const line of readFileSync(".env.local", "utf8").split(/\r?\n/)) {
   const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
@@ -45,13 +57,17 @@ function exact(actual: Row | undefined, expectedRow: Row, label: string): "INSER
   return "EXISTENTE";
 }
 
-async function rows(client: ReturnType<typeof createClient>, table: string, query: (builder: any) => any): Promise<Row[]> {
+async function rows(
+  client: ImportClient,
+  table: string,
+  query: (builder: TableQuery) => TableQuery,
+): Promise<Row[]> {
   const result = await query(client.from(table).select("*"));
   if (result.error) throw new Error(`${table}: ${result.error.message}`);
   return (result.data ?? []) as Row[];
 }
 
-async function insertMissing(client: ReturnType<typeof createClient>, table: string, records: Row[], existing: Row[]): Promise<Row[]> {
+async function insertMissing(client: ImportClient, table: string, records: Row[], existing: Row[]): Promise<Row[]> {
   if (!records.length) return existing;
   const { data, error } = await client.from(table).insert(records).select("*");
   if (error) throw new Error(`${table}: inserción detenida: ${error.message}`);
@@ -69,7 +85,9 @@ async function main() {
   assert(fixture.priceListRevision === expected.priceRevision, "Lista de precios no coincide con la autorización.");
   assert(fixture.technicalInputs.length === 8 && fixture.presentations.length === 25, "Fixture cambió: requiere nueva revisión antes de importar.");
 
-  const client = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  // Este importador protegido consulta varias tablas dinámicas; esta interfaz
+  // acota las operaciones de Supabase que utiliza.
+  const client = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } }) as unknown as ImportClient;
   const { data: users, error: userError } = await client.from("users").select("id,correo,organization_id,rol").eq("correo", expected.accountEmail);
   if (userError) throw new Error(`Verificación cuenta: ${userError.message}`);
   assert(users?.length === 1 && users[0].organization_id === expected.organizationId && users[0].rol === "admin", "La cuenta QA no resuelve exactamente a admin de organización 3.");
@@ -159,8 +177,9 @@ async function main() {
   const priceActions = priceRecords.map((record) => {
     const actual = priceRows.find((row) => row.presentacion_id === record.presentacion_id);
     if (!actual) return "INSERT" as const;
+    const expectedRecord: Row = record;
     const numericMismatches = ["lista_precio_id", "presentacion_id", "proveedor_key", "precio_neto", "moneda"]
-      .filter((key) => stable(actual[key]) !== stable(record[key]));
+      .filter((key) => stable(actual[key]) !== stable(expectedRecord[key]));
     if (numericMismatches.length) throw new Error(`CONFLICTO precio/${record.sku}: ${numericMismatches.join(", ")}`);
     if (stable(actual.evidencia_precio) === stable(record.evidencia_precio)) return "EXISTENTE" as const;
     const previous = actual.evidencia_precio as Row | undefined;

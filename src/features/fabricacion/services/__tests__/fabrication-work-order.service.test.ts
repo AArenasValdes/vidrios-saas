@@ -96,7 +96,11 @@ describe("orden de fabricación y materiales", () => {
   it("conserva barras, cantidades y largos del snapshot, y reconcilia subtotales con el total parcial guardado", () => {
     const order = buildFabricationWorkOrder({ summary: summary(savedWork()), materials: materials(), technicalCostSnapshot: savedCost() });
     expect(order.pricing).toMatchObject({ status: "partial", knownNetTotal: 11500, pricedCount: 2, pendingCount: 1 });
-    expect(order.materials.profiles[0]?.price?.subtotal! + order.materials.accessories[0]?.price?.subtotal!).toBe(order.pricing.knownNetTotal);
+    const profileSubtotal = order.materials.profiles[0]?.price?.subtotal;
+    const accessorySubtotal = order.materials.accessories[0]?.price?.subtotal;
+    expect(profileSubtotal).toEqual(expect.any(Number));
+    expect(accessorySubtotal).toEqual(expect.any(Number));
+    expect((profileSubtotal ?? Number.NaN) + (accessorySubtotal ?? Number.NaN)).toBe(order.pricing.knownNetTotal);
     expect(order.cutGroups).toHaveLength(1);
     expect(order.cutGroups[0]).toMatchObject({ technicalCode: "5001", barIndex: 1, commercialLengthMm: 6000, theoreticalRemnantMm: 3391 });
     expect(order.cutGroups[0]?.cuts).toMatchObject([

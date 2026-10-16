@@ -64,7 +64,7 @@ function contextFromRecipe(
     fabricacionHojas: identidad.hojas,
     fabricacionModulos: identidad.modulos,
     fabricationRecipeId: recipe.status === "validated" ? recipe.id : "",
-    fabricacionApertura: identidad.apertura ?? "",
+    fabricacionApertura: normalizeConfigurationOpening(identidad.apertura),
     fabricacionHerraje: identidad.herraje ?? "",
     fabricacionVariante: identidad.variante ?? "",
     fabricacionConfiguracionId: identidad.configurationId ?? "",
@@ -220,6 +220,8 @@ export function resolveFabricacionContextForLineAssignment(input: {
     | "fabricacionLeg"
     | "fabricacionReinforcement"
     | "fabricacionVariante"
+    | "fabricacionApertura"
+    | "fabricacionHerraje"
     | "fabricacionConfiguracionId"
     | "fabricacionComposicionId"
     | "fabricationRecipeId"
@@ -251,11 +253,16 @@ export function resolveFabricacionContextForLineAssignment(input: {
     (recipe) => recipe.lineTemplateId === lineTemplateId && !recipe.eliminadoEn
   );
 
-  const selectedWorkshopRecipe = lineRecipes.find(
+  // An explicit selection is authoritative even when it is still a draft.
+  // Keep its technical identity in the form, while contextFromRecipe leaves
+  // fabricationRecipeId empty unless the recipe is validated.
+  const selectedRecipe = lineRecipes.find(
     (recipe) => recipe.id === input.form.fabricationRecipeId &&
-      recipe.definition.identidad.configurationId?.startsWith("workshop:")
+      (input.organizationId == null
+        ? recipe.scope !== "organization"
+        : recipe.organizationId === input.organizationId)
   );
-  if (selectedWorkshopRecipe) return contextFromRecipe(selectedWorkshopRecipe);
+  if (selectedRecipe) return contextFromRecipe(selectedRecipe);
   const workshopLineConfigurations = lineRecipes.filter((recipe) =>
     recipe.definition.identidad.configurationId?.startsWith("workshop:")
   );
@@ -321,19 +328,23 @@ export function resolveFabricacionContextForLineAssignment(input: {
         .sort((left, right) => Number(right.status === "validated") - Number(left.status === "validated"));
       const matchingRecipe = matchingRecipes.length === 1 ? matchingRecipes[0] : null;
       const identity = matchingRecipe?.definition.identidad;
-      return {
-        fabricacionTipologia: configuration.typology,
-        fabricacionHojas: identity?.hojas ?? (configuration.leavesCounts?.length === 1 ? configuration.leavesCounts[0] : null),
-        fabricacionModulos: identity?.modulos ?? (configuration.leavesCounts?.length === 1 ? configuration.leavesCounts[0] : null),
-        fabricationRecipeId: matchingRecipe?.status === "validated" ? matchingRecipe.id : "",
-        fabricacionApertura: configuration.openingType,
-        fabricacionHerraje: identity?.herraje ?? "",
-        fabricacionVariante: identity?.variante ?? configuration.variant,
-        fabricacionConfiguracionId: configuration.id,
-        fabricacionComposicionId: identity?.compositionId ?? input.form.fabricacionComposicionId ?? "",
-      };
+      if (matchingRecipe) {
+        return {
+          fabricacionTipologia: configuration.typology,
+          fabricacionHojas: identity?.hojas ?? (configuration.leavesCounts?.length === 1 ? configuration.leavesCounts[0] : null),
+          fabricacionModulos: identity?.modulos ?? (configuration.leavesCounts?.length === 1 ? configuration.leavesCounts[0] : null),
+          fabricationRecipeId: matchingRecipe.status === "validated" ? matchingRecipe.id : "",
+          fabricacionApertura: normalizeConfigurationOpening(configuration.openingType),
+          fabricacionHerraje: identity?.herraje ?? "",
+          fabricacionVariante: identity?.variante ?? configuration.variant,
+          fabricacionConfiguracionId: configuration.id,
+          fabricacionComposicionId: identity?.compositionId ?? input.form.fabricacionComposicionId ?? "",
+        };
+      }
     }
-    if (requestedOpening || input.form.fabricacionConfiguracionId) return catalogContext;
+    if (matchingConfigurations.length !== 1 && (requestedOpening || input.form.fabricacionConfiguracionId)) {
+      return catalogContext;
+    }
   }
 
   const inferredTipologia = inferirTipologiaFabricacionPieza({
@@ -359,8 +370,8 @@ export function resolveFabricacionContextForLineAssignment(input: {
   const tipologiaHint = hasAuthoritativeWinHouseContext
     ? explicitS60Typology || catalogContext?.fabricacionTipologia || inferredTipologia || null
     : input.form.fabricacionTipologia ||
-      inferredTipologia ||
       catalogContext?.fabricacionTipologia ||
+      inferredTipologia ||
       null;
 
   const guidedVisualLeafCount = input.form.guidedVisualConfig?.root
@@ -448,6 +459,16 @@ export function resolveFabricacionContextForLineAssignment(input: {
             leg: sodalConfig.leg,
             reinforcement: sodalConfig.reinforcement,
             variante: sodalConfig.variantSlug,
+            atributosTecnicos: {
+              lineTemplateId,
+              typology: tipologiaHint,
+              topology: "corredera",
+              leaves: sodalConfig.hojas,
+              glass: input.form.vidrio,
+              glazing: sodalConfig.glazing,
+              leg: sodalConfig.leg,
+              reinforcement: sodalConfig.reinforcement,
+            },
             allowPreliminaryNonValidated: false,
           })
         : isL20CatalogKey(input.template.catalogKey) && (l20Apertura || l20Variante)
@@ -459,6 +480,14 @@ export function resolveFabricacionContextForLineAssignment(input: {
               hojas: hojasHint,
               apertura: l20Apertura,
               variante: l20Variante,
+              atributosTecnicos: {
+                lineTemplateId,
+                typology: tipologiaHint,
+                leaves: hojasHint,
+                opening: l20Apertura,
+                variant: l20Variante,
+                glass: input.form.vidrio,
+              },
               allowPreliminaryNonValidated: false,
             })
           : s75Variant
@@ -469,6 +498,13 @@ export function resolveFabricacionContextForLineAssignment(input: {
                 tipologia: tipologiaHint,
                 hojas: hojasHint,
                 variante: s75Variant,
+                atributosTecnicos: {
+                  lineTemplateId,
+                  typology: tipologiaHint,
+                  leaves: hojasHint,
+                  variant: s75Variant,
+                  glass: input.form.vidrio,
+                },
                 allowPreliminaryNonValidated: false,
               })
           : s60Variant
@@ -479,6 +515,13 @@ export function resolveFabricacionContextForLineAssignment(input: {
                 tipologia: tipologiaHint,
                 hojas: hojasHint,
                 variante: s60Variant,
+                atributosTecnicos: {
+                  lineTemplateId,
+                  typology: tipologiaHint,
+                  leaves: hojasHint,
+                  variant: s60Variant,
+                  glass: input.form.vidrio,
+                },
                 allowPreliminaryNonValidated: false,
               })
           : resolverRecetaFabricacionCompatible(lineRecipes, {
@@ -486,6 +529,17 @@ export function resolveFabricacionContextForLineAssignment(input: {
               lineTemplateId,
               tipologia: tipologiaHint,
               hojas: hojasHint,
+              atributosTecnicos: {
+                lineTemplateId,
+                typology: tipologiaHint,
+                leaves: hojasHint,
+                opening: input.form.fabricacionApertura,
+                hardware: input.form.fabricacionHerraje,
+                variant: input.form.fabricacionVariante,
+                configurationId: input.form.fabricacionConfiguracionId,
+                compositionId: input.form.fabricacionComposicionId,
+                glass: input.form.vidrio,
+              },
               allowPreliminaryNonValidated: false,
             });
 
@@ -498,23 +552,6 @@ export function resolveFabricacionContextForLineAssignment(input: {
 
     if (recipe) {
       return contextFromRecipe(recipe);
-    }
-  }
-
-  const validated = lineRecipes.filter((recipe) => recipe.status === "validated");
-  if (validated.length === 1) {
-    const validatedTipologia = validated[0].definition.identidad.tipologia;
-    const catalogTipologia = catalogContext?.fabricacionTipologia ?? null;
-    const tipologiasCoinciden =
-      !catalogTipologia ||
-      normalizeText(validatedTipologia) === normalizeText(catalogTipologia);
-    const formTipologia = input.form.fabricacionTipologia || null;
-    const formCoincide =
-      !formTipologia ||
-      normalizeText(validatedTipologia) === normalizeText(formTipologia);
-
-    if (tipologiasCoinciden && formCoincide) {
-      return contextFromRecipe(validated[0]);
     }
   }
 
@@ -566,6 +603,7 @@ function normalizeText(value: string | null | undefined) {
 
 function normalizeConfigurationOpening(value: string | null | undefined) {
   const normalized = normalizeText(value);
+  if (!normalized || normalized === "personalizado" || normalized === "configuracion propia") return "";
   if (normalized.includes("corredera")) return "corredera";
   if (normalized.includes("proyectante")) return "proyectante";
   if (normalized.includes("abatible") || normalized.includes("abatir")) return "abatible";

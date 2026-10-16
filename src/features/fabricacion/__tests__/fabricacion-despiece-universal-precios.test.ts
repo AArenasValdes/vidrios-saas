@@ -3,6 +3,7 @@ import { parseSodalL25VariantSlug } from "@/features/fabricacion/fixtures/sodal-
 import { SODAL_L25_FORMULA_VERSION } from "@/features/fabricacion/zeta/sodal-l25-profile-roles";
 import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import { resolveUniversalPricedLineFallback, resolveUniversalPricedLineFallbacks } from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
+import { resolveConstructorRecipeCandidates } from "@/features/fabricacion/services/constructor-recipe-selection.service";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import { decodeCotizacionItemPresentationMeta, encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
@@ -110,6 +111,107 @@ describe("despiece de líneas universales con precio Arquetipo", () => {
       expect(recipe?.definition.identidad.tipologia).toBe("proyectante");
     }
   );
+
+  it.each(["ventora:l42", "ventora:arquetipo-l42-proyectante"])(
+    "expone la alternativa Arquetipo sin cámara con los perfiles valorizables (%s)",
+    (catalogKey) => {
+      const candidate = resolveUniversalPricedLineFallbacks({
+        catalogKey,
+        lineTemplateId: 101,
+        organizationId: 1,
+        lineName: "Serie 42",
+        variant: null,
+        leavesCount: 1,
+        typology: "proyectante",
+        includeDocumentedVariants: true,
+        recipes: [],
+      }).find((recipe) => recipe.variant === "arquetipo_sin_camara_monolitico");
+
+      expect(candidate).toMatchObject({
+        providerName: "Arquetipo",
+        sourceName: "Arquetipo · precios LEGNO / cortes SODAL",
+        status: "testing",
+        definition: {
+          identidad: {
+            variante: "arquetipo_sin_camara_monolitico",
+            hojas: 1,
+            tipologia: "proyectante",
+          },
+        },
+      });
+      expect([...new Set(candidate?.definition.perfiles.map((profile) => profile.codigoPerfil))].sort())
+        .toEqual(["4202", "4209", "4229"]);
+      expect(candidate?.definition.notasValidacion).toEqual(expect.arrayContaining([
+        expect.stringContaining("precios de compra: referencia Arquetipo LEGNO"),
+        expect.stringContaining("Origen de las reglas de corte: ficha SODAL"),
+      ]));
+    },
+  );
+
+  it("muestra Normal y Arquetipo sin cámara juntas sin reemplazar la receta guardada", () => {
+    const canonical = resolveUniversalPricedLineFallback({
+      catalogKey: "ventora:l42",
+      lineTemplateId: 101,
+      organizationId: 1,
+      lineName: "Serie 42",
+      variant: "normal",
+      leavesCount: 1,
+      typology: "proyectante",
+      recipes: [],
+    })!;
+    const storedNormal = {
+      ...canonical,
+      status: "validated" as const,
+      sourceReference: "ventora:taller-confirmado:universal:l42:2026-10-07",
+      sourceName: "Taller · confirmación del titular",
+    };
+    const alternatives = resolveUniversalPricedLineFallbacks({
+      catalogKey: "ventora:l42",
+      lineTemplateId: 101,
+      organizationId: 1,
+      lineName: "Serie 42",
+      variant: null,
+      leavesCount: 1,
+      typology: "proyectante",
+      includeDocumentedVariants: true,
+      recipes: [storedNormal],
+    });
+    const selectable = resolveConstructorRecipeCandidates({
+      storedCandidates: [storedNormal],
+      universalFallbackCandidates: alternatives,
+    });
+
+    expect(selectable.map((recipe) => recipe.variant)).toEqual([
+      "normal",
+      "arquetipo_sin_camara_monolitico",
+    ]);
+    expect(selectable[0]).toBe(storedNormal);
+  });
+
+  it("calcula la variante Arquetipo seleccionada como pauta preliminar sin alterar Normal", () => {
+    const item = itemFor(pricedLines.find((line) => line.line === "L42")!);
+    item.observaciones = encodeCotizacionItemPresentationMeta({
+      lineTemplateId: "101",
+      catalogLineKey: "ventora:l42",
+      sistema: "Proyectante",
+      fabricacionTipologia: "proyectante",
+      fabricacionHojas: 1,
+      fabricacionModulos: 1,
+      fabricacionVariante: "arquetipo_sin_camara_monolitico",
+    });
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [],
+      organizationId: 1,
+    });
+
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.preliminary).toBe(true);
+    expect(resolved.recipe?.variant).toBe("arquetipo_sin_camara_monolitico");
+    expect(resolved.formal?.result.perfiles.map((profile) => profile.codigoPerfil))
+      .toEqual(expect.arrayContaining(["4209", "4202", "4229"]));
+  });
 
   it("resuelve el despiece AL-42 cuando cotización guardó el alias estándar", () => {
     const item = itemFor(pricedLines.find((line) => line.line === "L42")!);

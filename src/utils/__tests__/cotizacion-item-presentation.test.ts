@@ -16,6 +16,7 @@ describe("cotizacion-item-presentation", () => {
       colorHex: "#a8a8a8",
       material: "Aluminio",
       vidrioLineTemplateId: "501",
+      supplierProviderKey: "alumco",
       raw: "Ventana con vidrio de catálogo",
     });
 
@@ -24,6 +25,7 @@ describe("cotizacion-item-presentation", () => {
     expect(decodeCotizacionItemPresentationMeta(encoded)).toEqual(
       expect.objectContaining({
         vidrioLineTemplateId: "501",
+        supplierProviderKey: "alumco",
         raw: "Ventana con vidrio de catálogo",
       })
     );
@@ -130,6 +132,7 @@ describe("cotizacion-item-presentation", () => {
       fabricacionLeg: "",
       fabricacionReinforcement: "",
       fabricationRecipeId: "",
+      supplierProviderKey: "",
       raw: "Ventana living con vidrio claro",
     });
   });

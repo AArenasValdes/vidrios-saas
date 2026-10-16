@@ -71,7 +71,7 @@ describe("Kompen Thermowin: contrato de integración documental", () => {
   });
 
   it("registra cuatro sistemas con identidad, procedencia y perfiles propios, sin precio supuesto", () => {
-    expect(new Set(lines.map((entry) => entry.catalogKey)).size).toBe(12);
+    expect(new Set(lines.map((entry) => entry.catalogKey)).size).toBe(19);
     expect(new Set(lines.map((entry) => entry.catalogMetadata?.familyKey)).size).toBe(4);
     for (const entry of lines) {
       expect(entry.precioM2Sugerido).toBe(0);
@@ -99,7 +99,9 @@ describe("Kompen Thermowin: contrato de integración documental", () => {
 
   it.each([
     ["Ventana", "Abatible", [KEYS[0], KEYS[2]]],
-    ["Ventana", "Corredera", [KEYS[1], KEYS[3]]],
+    ["Ventana", "Proyectante", ["ventora:kompen-prime-line-700:configuration:ventana-proyectante", "ventora:kompen-star-line-500:configuration:ventana-proyectante"]],
+    ["Ventana", "Oscilobatiente", ["ventora:kompen-prime-line-700:configuration:ventana-oscilobatiente"]],
+    ["Ventana", "Corredera", [KEYS[1], "ventora:kompen-form-line-800:configuration:ventana-monoriel", "ventora:kompen-form-line-800:configuration:ventana-triple-riel", KEYS[3]]],
     ["Ventana", "Guillotina", ["ventora:thermowin-americana-s70:configuration:ventana-guillotina"]],
     ["Ventana", "Celosía", ["ventora:thermowin-americana-s70:configuration:ventana-celosia"]],
     ["Puerta", "Corredera", ["ventora:kompen-form-line-800:configuration:puerta-corredera"]],
@@ -111,6 +113,12 @@ describe("Kompen Thermowin: contrato de integración documental", () => {
   ])("filtra %s / %s por compatibilidad explícita", (tipo, sistema, expected) => {
     expect(filterLineTemplatesForComponent(lines, { tipo, sistema, material: "PVC" })
       .map((entry) => entry.catalogKey)).toEqual(expected);
+  });
+
+  it("mantiene el doble riel como identidad existente y expone los rieles Mono y Triple en Form 800", () => {
+    expect(lines.find((entry) => entry.catalogKey === KEYS[1])?.catalogMetadata?.lineConfiguration).toContain("doble riel");
+    expect(lines.map((entry) => entry.catalogKey)).toContain("ventora:kompen-form-line-800:configuration:ventana-monoriel");
+    expect(lines.map((entry) => entry.catalogKey)).toContain("ventora:kompen-form-line-800:configuration:ventana-triple-riel");
   });
 
   it.each([
