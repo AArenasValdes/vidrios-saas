@@ -151,6 +151,75 @@
   margin-bottom: 18px;
 }
 
+.documentActionsSection {
+  margin: 0 0 14px;
+  padding: 14px;
+  border: 1px solid #dce5ef;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.documentActionsSection > div:first-child > p {
+  margin: 0 0 3px;
+  color: #718099;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.documentActionsSection h2 {
+  margin: 0 0 12px;
+  color: #17304f;
+  font-size: 16px;
+}
+
+.documentActionsSection > div:first-child > p:last-child {
+  margin: -7px 0 12px;
+  color: #718099;
+  font-size: 11px;
+}
+
+.documentActionsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.documentActionsGrid article {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #e3eaf2;
+  border-radius: 10px;
+  background: #fbfcfe;
+}
+
+.documentActionsGrid h3 {
+  margin: 0 0 4px;
+  color: #1d385b;
+  font-size: 13px;
+}
+
+.documentActionsGrid p {
+  min-height: 32px;
+  margin: 0 0 8px;
+  color: #718099;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.documentWarnings {
+  margin: 8px 0 0;
+  padding: 9px 12px 9px 28px;
+  border-radius: 8px;
+  color: #704a12;
+  background: #fff8e9;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.documentWarnings li + li { margin-top: 4px; }
+
 .workDocument {
   min-width: 0;
   padding: 18px;
@@ -382,6 +451,26 @@
   list-style: none;
 }
 
+.profileCutsMobile {
+  display: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profileCutsMobile li {
+  display: grid;
+  gap: 5px;
+  padding: 10px 2px;
+  border-bottom: 1px solid #e8edf3;
+  overflow-wrap: anywhere;
+}
+
+.profileCutsMobile strong { color: #183b68; font-size: 12px; }
+.profileCutsMobile span,
+.profileCutsMobile small { color: #62758e; font-size: 11px; line-height: 1.4; }
+.profileCutsMobile b { color: #354f6e; font-size: 11px; }
+
 .profileMaterialsMobile li {
   padding: 10px 2px;
   border-bottom: 1px solid #e8edf3;
@@ -476,6 +565,9 @@
 }
 
 @media (max-width: 700px) {
+  .documentActionsGrid { grid-template-columns: 1fr; }
+  .documentActionsGrid p { min-height: 0; }
+
   .workDocument {
     padding: 12px;
     border-radius: 11px;
@@ -515,6 +607,8 @@
     display: block;
   }
 
+  .profileCutsMobile { display: block; }
+
   .accessoryMaterialsMobile,
   .glassMaterialsMobile { display: block; }
 
@@ -551,7 +645,7 @@
     break-after: page;
   }
 
-  .secondaryWorkshopDetails:not([open]) > :not(summary) {
+  details.secondaryWorkshopDetails:not([open]) > :not(summary) {
     display: none !important;
   }
 
@@ -587,6 +681,8 @@
   .profileMaterialsMobile {
     display: none !important;
   }
+
+  .profileCutsMobile { display: none !important; }
 
     .accessoryMaterialsMobile,
     .glassMaterialsMobile {
@@ -1956,6 +2052,156 @@
   .mShell *, .mShell *::before, .mShell *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
 
+/* Resumen de fabricación mobile: cifras de lectura rápida y acciones en el flujo. */
+.mSummaryMetric {
+  display: grid;
+  grid-template-rows: 28px auto auto;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+  min-height: 102px;
+  padding: 12px;
+  border: 1px solid #dfe8f4;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgb(28 60 101 / 5%);
+}
+
+.mSummaryMetricIcon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 9px;
+  background: #edf5ff;
+  color: #1267dc;
+}
+
+.mSummaryMetricIcon svg { width: 18px; height: 18px; }
+.mSummaryMetricLabel { color: #536b8d; font-size: 12px; font-weight: 600; line-height: 1.25; }
+.mSummaryMetric strong { color: #102a52; font-size: 19px; font-weight: 780; letter-spacing: -.025em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+
+.mSummarySections { display: grid; gap: 12px; }
+.mSummarySection,
+.mCostSummary {
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid #dce6f2;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 6px 22px rgb(24 57 99 / 5%);
+}
+
+.mSectionHeading { display: flex; align-items: flex-start; gap: 11px; margin: 0 0 12px; }
+.mSectionIcon,
+.mDocumentIcon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 12px;
+  background: #eef5ff;
+  color: #1267dc;
+}
+
+.mSectionIcon svg, .mDocumentIcon svg { width: 20px; height: 20px; }
+.mSectionHeading h2 { margin: 1px 0 3px; color: #102a52; font-size: 17px; font-weight: 760; letter-spacing: -.025em; line-height: 1.2; }
+.mSectionHeading p { margin: 0; color: #627895; font-size: 13px; line-height: 1.35; }
+.mDocumentRows .workDocuments { display: block; margin: 0; }
+.mDocumentRows .documentActionsSection { margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
+.mDocumentRows .documentActionsSection > div:first-child { display: none; }
+.mDocumentRows .documentActionsGrid { grid-template-columns: 1fr; gap: 8px; }
+.mDocumentRows .documentActionsGrid article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 8px;
+  padding: 11px 10px;
+  border-color: #e3eaf4;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.mDocumentRows .documentActionsGrid h3 { grid-column: 1; margin: 0; color: #172f54; font-size: 14px; line-height: 1.25; }
+.mDocumentRows .documentActionsGrid p { grid-column: 1; min-height: 0; margin: 0; color: #6b7f99; font-size: 12px; line-height: 1.3; }
+.mDocumentRows .materialDocActions { grid-column: 2; grid-row: 1 / span 2; gap: 6px; margin: 0; }
+.mDocumentRows .materialDocActions button { min-width: 56px; min-height: 42px; padding: 0 8px; border-radius: 11px; color: #1459b1; background: #fff; font-size: 12px; }
+.mDocumentRows .materialDocActions button svg { width: 15px; height: 15px; }
+
+.mDocumentRow {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 11px 10px;
+  border: 1px solid #e3eaf4;
+  border-radius: 14px;
+}
+
+.mDocumentCopy { display: grid; grid-template-columns: auto max-content; align-items: center; gap: 3px 7px; min-width: 0; }
+.mDocumentCopy strong { color: #172f54; font-size: 14px; line-height: 1.25; }
+.mDocumentCopy p { grid-column: 1 / -1; margin: 0; color: #6b7f99; font-size: 12px; line-height: 1.3; }
+.mSimulationBadge { padding: 3px 7px; border-radius: 999px; color: #1557ad; background: #e9f2ff; font-size: 10px; font-weight: 750; }
+.mDocumentAction { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 42px; padding: 0 10px; border: 1px solid #d7e4f5; border-radius: 11px; color: #1459b1; font-size: 13px; font-weight: 700; text-decoration: none; }
+.mDocumentAction svg { width: 15px; height: 15px; }
+
+.mSecondaryDocs { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 11px; }
+.mSecondaryDocs a, .mSecondaryDocs button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 10px; border: 1px solid #e0e8f2; border-radius: 11px; color: #526a88; background: #fff; font: inherit; font-size: 12px; font-weight: 650; text-decoration: none; cursor: pointer; }
+.mSecondaryDocs svg { width: 15px; height: 15px; }
+
+.mCostSummary { padding: 14px; }
+.mCostSummary .mSectionHeading { margin-bottom: 13px; }
+.mCostMetrics { display: grid; grid-template-columns: 1.2fr 1fr .8fr; padding: 9px 0; border-block: 1px solid #e5ebf3; }
+.mCostMetrics > div { display: grid; align-content: start; gap: 5px; min-width: 0; padding: 0 9px; border-left: 1px solid #e5ebf3; }
+.mCostMetrics > div:first-child { padding-left: 0; border-left: 0; }
+.mCostMetrics span { color: #657a96; font-size: 11px; line-height: 1.25; }
+.mCostMetrics strong { color: #142e56; font-size: 16px; line-height: 1.2; overflow-wrap: anywhere; }
+.mCostMetrics > div:first-child strong { font-size: 18px; }
+.mCostWarning { margin: 10px 0 0; padding: 10px 11px; border: 1px solid #f4dfb4; border-radius: 12px; color: #81400a; background: #fff8ea; font-size: 12px; line-height: 1.4; }
+.mCostWarning summary { min-height: 24px; display: flex; align-items: center; color: #874508; font-weight: 700; cursor: pointer; }
+.mCostWarning ul { display: grid; gap: 8px; margin: 10px 0 0; padding: 10px 0 0; border-top: 1px solid #f0dfbf; list-style: none; }
+.mCostWarning li { display: grid; gap: 2px; }
+.mCostWarning li strong { color: #573b1d; }
+.mCostWarning li span { color: #755d3e; }
+.mCostActions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 11px; }
+.mCostActions button, .mCostActions a { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: 0 8px; border: 1px solid #d7e4f5; border-radius: 11px; color: #1459b1; background: #fff; font: inherit; font-size: 12px; font-weight: 700; text-align: center; text-decoration: none; cursor: pointer; }
+.mComponentDisclosure { margin-top: 8px; }
+.mComponentDisclosure > summary { min-height: 44px; padding: 12px 0; color: #195cac; font-size: 14px; font-weight: 700; cursor: pointer; }
+.mDocumentTab { display: grid; gap: 12px; }
+.mDocumentTab .workDocuments { gap: 12px; margin: 0; }
+.mGlassOptimizationAction { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 0 14px; border: 1px solid #d7e4f5; border-radius: 13px; color: #1459b1; background: #fff; font-size: 14px; font-weight: 700; text-decoration: none; }
+.mGlassOptimizationAction svg:first-child { width: 18px; height: 18px; color: #1267dc; }
+.mGlassOptimizationAction svg:last-child { width: 16px; height: 16px; margin-left: auto; color: #7185a0; }
+.mCostTab { padding-bottom: 16px; }
+
+@media (max-width: 719px) {
+  .mHeader { position: relative; top: auto; padding: 12px 4px 14px; background: transparent; backdrop-filter: none; }
+  .mHeaderCopy h1 { font-size: clamp(1.55rem, 6vw, 1.8rem); }
+  .mTotals { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 4px 12px; border: 0; }
+  .mSegmentWrap { position: relative; top: auto; z-index: 2; padding: 0 4px 12px; }
+  .mSegmented { display: flex; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: none; gap: 3px; border: 1px solid #e1e9f3; border-radius: 15px; padding: 4px; background: #eaf1f9; }
+  .mSegmented::-webkit-scrollbar { display: none; }
+  .mSegmentedButton, .mSegmentedActive { flex: 1 0 auto; min-width: 62px; min-height: 42px; padding: 0 9px; border-radius: 11px; white-space: nowrap; font-size: 12px; }
+  .mSegmentedButton { color: #526c8e; }
+  .mSegmentedActive { color: #fff; background: #1269e8; box-shadow: 0 2px 6px rgb(18 105 232 / 22%); }
+  .mContent { padding: 0 4px 24px; }
+  .mDocumentTab .workDocument { padding: 14px; border-radius: 16px; }
+  .mDocumentTab .materialDocHeader { display: block; }
+  .mDocumentTab .materialDocHeading { gap: 10px; }
+  .mDocumentTab .materialDocLogo { width: 72px; }
+  .mDocumentTab .materialDocHeader dl { justify-content: flex-start; margin-top: 10px; }
+}
+
+@media (max-width: 390px) {
+  .mTotals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mSummaryMetric { min-height: 96px; padding: 10px; }
+  .mSummaryMetric strong { font-size: 17px; }
+  .mDocumentRows .documentActionsGrid article { grid-template-columns: minmax(0, 1fr) auto; gap: 3px 6px; padding-inline: 8px; }
+  .mDocumentRows .materialDocActions button { min-width: 48px; padding-inline: 5px; }
+}
+
 .exporting {
   max-width: 794px;
   margin: 0 auto;
@@ -1993,4 +2239,1093 @@
 
 .exportingRoot .mobileFabricacion {
   display: none !important;
+}
+
+/* Pantalla de trabajo: misma tipografía y superficies sobrias que Inicio. */
+@media screen and (max-width: 719px) {
+  .printRoot {
+    padding: 12px 16px calc(28px + env(safe-area-inset-bottom, 0px));
+    background: #eef3f8;
+  }
+
+  .mShell {
+    margin: 0;
+    color: #102038;
+    font-family: var(--font-body), "Segoe UI", sans-serif;
+  }
+
+  .mHeader {
+    padding: 4px 0 17px;
+    background: transparent;
+  }
+
+  .mBack {
+    min-height: 44px;
+    margin-bottom: 2px;
+    color: #1565c0;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .mHeaderCopy h1 {
+    font-family: var(--font-heading), "Segoe UI", sans-serif;
+    font-size: clamp(23px, 6.3vw, 27px);
+    font-weight: 760;
+    line-height: 1.16;
+  }
+
+  .mHeaderCopy p {
+    margin-top: 7px;
+    color: #526983;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .mSegmentWrap { padding: 0 0 14px; }
+  .mSegmented {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    border: 0;
+    border-bottom: 1px solid #dbe4ee;
+    border-radius: 0;
+    padding: 0;
+    background: transparent;
+    scrollbar-width: none;
+    scroll-padding-inline: 12px;
+  }
+  .mSegmented::-webkit-scrollbar { display: none; }
+  .mSegmentedButton,
+  .mSegmentedActive {
+    position: relative;
+    flex: 0 0 auto;
+    min-width: 0;
+    min-height: 48px;
+    padding: 0 13px;
+    border-radius: 0;
+    color: #536983;
+    background: transparent;
+    box-shadow: none;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 650;
+    white-space: nowrap;
+    transition: color 180ms ease, background-color 180ms ease;
+  }
+  .mSegmentedActive { color: #1565c0; }
+  .mSegmentedActive::after {
+    position: absolute;
+    right: 13px;
+    bottom: 0;
+    left: 13px;
+    height: 2px;
+    border-radius: 2px;
+    background: #1e88ff;
+    content: "";
+  }
+  .mSegmentedButton:active,
+  .mSegmentedActive:active { background: #e5eef9; }
+  .mSegmentedButton:focus-visible,
+  .mSegmentedActive:focus-visible,
+  .mPieceCard summary:focus-visible,
+  .mPieceActions button:focus-visible,
+  .mDocumentAction:focus-visible,
+  .mDocumentRows button:focus-visible,
+  .mSecondaryDocs :is(a, button):focus-visible {
+    outline: 2px solid #1e88ff;
+    outline-offset: -3px;
+  }
+
+  .mContent {
+    padding: 0 0 24px;
+    animation: fabricationPanelIn 180ms ease-out both;
+  }
+  @keyframes fabricationPanelIn {
+    from { opacity: .72; transform: translateY(3px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .mSummarySections { display: block; }
+  .mSummarySurface {
+    overflow: hidden;
+    padding: 0 16px 6px;
+    border: 1px solid #e0e8f1;
+    border-radius: 16px;
+    background: #fff;
+  }
+  .mSummarySection {
+    padding: 17px 0 14px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .mSummarySection + .mSummarySection { border-top: 1px solid #e5ebf2; }
+  .mSummarySection h2,
+  .mSummaryHeading h2 {
+    margin: 0 0 11px;
+    color: #142b4a;
+    font-size: 17px;
+    font-weight: 750;
+    letter-spacing: -.02em;
+    line-height: 1.25;
+  }
+  .mSummaryHeading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .mSummaryHeading span { color: #60758e; font-size: 12px; white-space: nowrap; }
+  .mDocumentRows .workDocuments { display: block; margin: 0; }
+  .mDocumentRows .documentActionsSection { margin: 0; padding: 0; border: 0; background: transparent; }
+  .mDocumentRows .documentActionsSection > div:first-child { display: none; }
+  .mDocumentRows .documentActionsGrid { display: block; }
+  .mDocumentRows .documentActionsGrid article,
+  .mDocumentRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    min-height: 64px;
+    margin: 0;
+    padding: 7px 0;
+    border: 0;
+    border-top: 1px solid #e7edf3;
+    border-radius: 0;
+    background: transparent;
+  }
+  .mDocumentRows .documentActionsGrid article:last-child { border-bottom: 0; }
+  .mDocumentRows .documentActionsGrid h3,
+  .mDocumentCopy strong {
+    grid-column: 1;
+    margin: 0;
+    color: #243a56;
+    font-size: 14px;
+    font-weight: 680;
+    line-height: 1.28;
+  }
+  .mDocumentRows .documentActionsGrid p { display: none; }
+  .mDocumentRows .materialDocActions {
+    grid-column: 2;
+    grid-row: 1;
+    gap: 6px;
+    margin: 0;
+  }
+  .mDocumentRows .materialDocActions button,
+  .mDocumentAction {
+    min-width: 46px;
+    min-height: 44px;
+    padding: 0 7px;
+    border: 1px solid #d9e5f3;
+    border-radius: 9px;
+    color: #1459b1;
+    background: #f5f9fe;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 720;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 180ms ease, transform 180ms ease;
+  }
+  .mDocumentRows .materialDocActions button svg { display: none; }
+  .mDocumentRows .materialDocActions button:active,
+  .mDocumentAction:active { background: #e5f0ff; transform: scale(.97); }
+  .mDocumentCopy { display: grid; gap: 3px; }
+  .mDocumentCopy small { color: #647991; font-size: 12px; }
+  .mSecondaryDocs {
+    gap: 3px 12px;
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid #e7edf3;
+  }
+  .mSecondaryDocs a,
+  .mSecondaryDocs button {
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    color: #37638f;
+    background: transparent;
+    font-size: 12px;
+  }
+  .mSecondaryDocs :is(a, button):active { color: #0c58b2; }
+  .mPieceCard {
+    display: block;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-top: 1px solid #e7edf3;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .mPieceCard summary {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) 18px;
+    align-items: center;
+    gap: 11px;
+    min-height: 66px;
+    padding: 8px 0;
+    cursor: pointer;
+    list-style: none;
+  }
+  .mPieceCard summary::-webkit-details-marker { display: none; }
+  .mPieceCode {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border-radius: 9px;
+    color: #155cba;
+    background: #eaf3ff;
+    font-size: 12px;
+    font-weight: 750;
+  }
+  .mPieceCardBody { display: grid; gap: 4px; min-width: 0; }
+  .mPieceTitle { margin: 0; color: #1d334f; font-size: 14px; line-height: 1.25; }
+  .mPieceMeta { margin: 0; color: #5b708b; font-size: 12px; line-height: 1.3; }
+  .mChevron { width: 18px; height: 18px; color: #6b8099; transition: transform 180ms ease; }
+  .mPieceCard[open] .mChevron { transform: rotate(90deg); }
+  .mPieceExpanded {
+    padding: 0 0 14px 47px;
+    animation: fabricationPanelIn 180ms ease-out both;
+  }
+  .mPieceLine { margin: 0 0 10px; color: #526983; font-size: 12px; line-height: 1.4; }
+  .mPieceMetrics { gap: 0; margin: 0 0 10px; border-block: 1px solid #e7edf3; }
+  .mPieceMetrics .mMetric { padding: 9px 5px; background: transparent; text-align: left; }
+  .mPieceMetrics .mMetric + .mMetric { border-left: 1px solid #e7edf3; }
+  .mPieceMetrics .mMetric span { color: #647991; font-size: 11px; letter-spacing: 0; text-transform: none; }
+  .mPieceMetrics .mMetric strong { color: #243a56; font-size: 13px; }
+  .mPieceActions { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+  .mPieceActions button {
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    color: #1459b1;
+    background: transparent;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .mTotals {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    margin: 0;
+    padding: 14px 0 8px;
+    border-top: 1px solid #e5ebf2;
+  }
+  .mSummaryMetric {
+    display: grid;
+    grid-template-rows: auto auto;
+    gap: 5px;
+    min-width: 0;
+    min-height: 0;
+    padding: 2px 8px;
+    border: 0;
+    border-left: 1px solid #e5ebf2;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .mSummaryMetric:first-child { padding-left: 0; border-left: 0; }
+  .mSummaryMetricLabel { color: #5c7089; font-size: 11px; font-weight: 600; line-height: 1.2; }
+  .mSummaryMetric strong { color: #193b67; font-size: 15px; font-weight: 760; white-space: nowrap; }
+  .mDocumentTab .workDocument { padding: 15px; border-color: #e0e8f1; border-radius: 16px; }
+  .mDocumentTab .materialDocHeader h2 { font-size: 18px; }
+  .mDocumentTab .materialDocHeader dt { font-size: 11px; }
+  .mDocumentTab .materialDocHeader dd { font-size: 13px; }
+  .mDocumentTab .materialDocActions button { min-height: 44px; }
+  .mDocumentTab .profileMobileHeading { font-size: 14px; line-height: 1.3; }
+  .mDocumentTab .profileMaterialsMobile li,
+  .mDocumentTab .profileCutsMobile li { padding-block: 13px; }
+  .mDocumentTab .profileMaterialsMobile dt,
+  .mDocumentTab .materialDocHeader dt { color: #5f7188; font-size: 11px; }
+  .mDocumentTab .profileMaterialsMobile dd { font-size: 13px; }
+  .mDocumentTab .profileMaterialsMobile small,
+  .mDocumentTab .materialPriceDetails { color: #5f7188; font-size: 12px; line-height: 1.4; }
+  .mDocumentTab .profileCutsMobile strong { font-size: 14px; }
+  .mDocumentTab .profileCutsMobile span,
+  .mDocumentTab .profileCutsMobile small,
+  .mDocumentTab .profileCutsMobile b { font-size: 12px; line-height: 1.5; }
+  .mDocumentTab .glassOrderMobile small { color: #5f7188; font-size: 12px; }
+  .mCostTab { padding-bottom: 16px; }
+
+  /* Vistas operativas compactas para Materiales, Cortes y Vidrios */
+  .mCompactSurface {
+    overflow: hidden;
+    padding: 0 16px 8px;
+    border: 1px solid #e0e8f1;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgb(20 40 70 / 4%);
+  }
+
+  .mCompactSectionHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 0 12px;
+  }
+
+  .mCompactSectionTitle {
+    margin: 0;
+    color: #142b4a;
+    font-size: 17px;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+  }
+
+  .mCompactSectionSubtitle {
+    margin: 3px 0 0;
+    color: #5b708b;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .mCompactSectionHeader .materialDocActions {
+    display: flex;
+    gap: 6px;
+    margin: 0;
+    flex-shrink: 0;
+  }
+
+  .mCompactSectionHeader .materialDocActions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-width: 50px;
+    min-height: 40px;
+    padding: 0 9px;
+    border: 1px solid #d9e5f3;
+    border-radius: 10px;
+    color: #1459b1;
+    background: #f5f9fe;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 720;
+    cursor: pointer;
+    transition: background-color 160ms ease, transform 160ms ease;
+  }
+
+  .mCompactSectionHeader .materialDocActions button:active {
+    background: #e5f0ff;
+    transform: scale(0.97);
+  }
+
+  .mCompactMetricStrip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
+    padding: 10px 0;
+    border-top: 1px solid #e7edf3;
+    border-bottom: 1px solid #e7edf3;
+    margin-bottom: 4px;
+  }
+
+  .mCompactMetricCell {
+    display: grid;
+    gap: 2px;
+    padding: 0 8px;
+    border-left: 1px solid #e7edf3;
+    min-width: 0;
+  }
+
+  .mCompactMetricCell:first-child {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .mCompactMetricLabel {
+    color: #5b708b;
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  .mCompactMetricValue {
+    color: #102a52;
+    font-size: 14px;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mCompactList {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .mCompactItem {
+    display: grid;
+    gap: 5px;
+    padding: 12px 0;
+    border-top: 1px solid #e7edf3;
+  }
+
+  .mCompactItem:first-child {
+    border-top: 0;
+  }
+
+  .mCompactItemHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .mCompactItemTitleWrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .mCompactCodeBadge {
+    display: inline-grid;
+    place-items: center;
+    min-width: 36px;
+    height: 25px;
+    padding: 0 6px;
+    border-radius: 7px;
+    color: #155cba;
+    background: #eaf3ff;
+    font-size: 12px;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+  }
+
+  .mCompactItemTitle {
+    color: #1d334f;
+    font-size: 14px;
+    font-weight: 680;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mCompactItemQty {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 6px;
+    color: #1e3a5f;
+    background: #edf2f7;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+  }
+
+  .mCompactItemMeta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+    color: #5b708b;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .mCompactItemPriceRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 2px;
+    padding-top: 3px;
+  }
+
+  .mPriceTagValorized {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    color: #0e5b32;
+    background: #e6f6ec;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .mPriceTagReferential {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    color: #475d78;
+    background: #f0f4f9;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .mPriceTagPending {
+    color: #7d8f9f;
+    font-size: 11px;
+  }
+
+  .mPriceFigures {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mPriceFiguresReference {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    text-align: right;
+  }
+
+  .mPriceSubtotal {
+    color: #102a52;
+    font-size: 13px;
+    font-weight: 750;
+  }
+
+  .mPriceUnit {
+    color: #62758e;
+    font-size: 11px;
+  }
+
+  .mPriceFiguresReference .mPriceUnit {
+    line-height: 1.3;
+  }
+
+  .mCompactSubhead {
+    margin: 16px 0 8px;
+    padding-top: 14px;
+    border-top: 1px solid #e5ebf2;
+    color: #142b4a;
+    font-size: 15px;
+    font-weight: 720;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .mReferenceTotalSummary {
+    display: grid;
+    gap: 3px;
+    margin: 8px 0 10px;
+    padding: 9px 11px;
+    border: 1px solid #dbe7f4;
+    border-radius: 9px;
+    background: #f5f8fc;
+    color: #415a78;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .mReferenceTotalSummary strong {
+    color: #102a52;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mReferenceTotalSummary small {
+    color: #62758e;
+    font-size: 10px;
+  }
+
+  .mCompactSubhead span {
+    color: #5b708b;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  /* Referencias de compra desplegables */
+  .mReferencesDisclosure {
+    margin: 14px 0 4px;
+    border-top: 1px solid #e7edf3;
+  }
+
+  .mReferencesSummary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 46px;
+    padding: 10px 0;
+    color: #155cba;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .mReferencesSummary::-webkit-details-marker { display: none; }
+  .mReferencesSummary .mChevron {
+    width: 18px;
+    height: 18px;
+    color: #6b8099;
+    transition: transform 180ms ease;
+  }
+  .mReferencesDisclosure[open] .mChevron { transform: rotate(90deg); }
+
+  .mReferencesContent {
+    padding: 2px 0 12px;
+    animation: fabricationPanelIn 180ms ease-out both;
+  }
+
+  .mReferencesNote {
+    margin: 0 0 10px;
+    color: #657a94;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .mReferencesList {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .mReferenceItem,
+  .mReferenceItemPending {
+    display: grid;
+    gap: 3px;
+    padding: 10px 0;
+    border-top: 1px solid #edf2f7;
+    font-size: 12px;
+  }
+
+  .mReferenceItem:first-child,
+  .mReferenceItemPending:first-child {
+    border-top: 0;
+  }
+
+  .mRefHeading {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .mRefCode {
+    color: #155cba;
+    font-weight: 750;
+  }
+
+  .mRefName {
+    color: #1d334f;
+    font-weight: 650;
+  }
+
+  .mRefMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    color: #647991;
+    font-size: 11px;
+  }
+
+  .mRefPrice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 2px;
+  }
+
+  .mRefPrice strong {
+    color: #102a52;
+    font-size: 13px;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mRefAmbiguous {
+    color: #81400a;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .mRefPending {
+    color: #8c9ba5;
+    font-size: 11px;
+  }
+
+  /* Pauta de Cortes Compacta */
+  .mCutBarCard {
+    border-top: 1px solid #e7edf3;
+  }
+
+  .mCutBarCard:first-of-type {
+    border-top: 0;
+  }
+
+  .mCutBarSummary {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto 18px;
+    align-items: center;
+    gap: 10px;
+    min-height: 62px;
+    padding: 10px 0;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .mCutBarSummary::-webkit-details-marker { display: none; }
+  .mCutBarSummary .mChevron {
+    width: 18px;
+    height: 18px;
+    color: #6b8099;
+    transition: transform 180ms ease;
+  }
+  .mCutBarCard[open] .mChevron { transform: rotate(90deg); }
+
+  .mCutBarInfo {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .mCutBarTitle {
+    color: #1d334f;
+    font-size: 14px;
+    font-weight: 680;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mCutBarMeta {
+    color: #5b708b;
+    font-size: 12px;
+    line-height: 1.3;
+  }
+
+  .mCutBarMetrics {
+    display: grid;
+    gap: 2px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mCutUsed {
+    color: #1e3a5f;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .mCutRemnant {
+    color: #1565c0;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .mCutBarDetails {
+    padding: 4px 0 14px 44px;
+    animation: fabricationPanelIn 180ms ease-out both;
+  }
+
+  .mCutDetailsTitle {
+    margin: 0 0 8px;
+    color: #647991;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .mCutDetailsList {
+    display: grid;
+    gap: 5px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .mCutDetailItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: #f6f9fc;
+  }
+
+  .mCutLengthBadge {
+    display: inline-block;
+    color: #102a52;
+    font-size: 12px;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+    min-width: 90px;
+  }
+
+  .mCutItemInfo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #5b708b;
+    font-size: 12px;
+    min-width: 0;
+  }
+
+  .mCutItemPiece {
+    color: #155cba;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .mCutItemFunc {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Orden de vidrios compacta */
+  .mGlassPaneList {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .mGlassPaneItem {
+    display: grid;
+    gap: 5px;
+    padding: 12px 0;
+    border-top: 1px solid #e7edf3;
+  }
+
+  .mGlassPaneItem:first-child {
+    border-top: 0;
+  }
+
+  .mGlassPaneHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .mGlassPaneRefWrap {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .mGlassPaneRef {
+    color: #1d334f;
+    font-size: 14px;
+    font-weight: 680;
+    line-height: 1.25;
+  }
+
+  .mGlassPaneComp {
+    color: #647991;
+    font-size: 12px;
+  }
+
+  .mGlassPaneQty {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 6px;
+    color: #1e3a5f;
+    background: #edf2f7;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+  }
+
+  .mGlassPaneBody {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .mGlassPaneDims {
+    color: #102a52;
+    font-size: 14px;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mGlassPaneType {
+    color: #2e4460;
+    font-size: 13px;
+  }
+
+  .mGlassPaneFoot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: #5b708b;
+    font-size: 12px;
+  }
+
+  .mGlassPaneArea {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mGlassWarning {
+    margin: 3px 0 0;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: #fff8ea;
+    color: #81400a;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+}
+
+@media screen and (max-width: 375px) {
+  .mSummaryMetric { padding-inline: 5px; }
+  .mSummaryMetric strong { font-size: 14px; }
+  .mDocumentRows .materialDocActions button { min-width: 44px; padding-inline: 5px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mContent, .mPieceExpanded { animation: none; }
+}
+
+.documentActionStatus {
+  margin: 9px 0 0;
+  color: #2c674d;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Desktop and tablet use the same five destinations as the mobile workspace. */
+@media screen and (min-width: 720px) {
+  .desktopFabricacion .pageHeader { align-items: center; margin-bottom: 8px; }
+  .desktopFabricacion .pageHeader h1 { font-size: clamp(24px, 2vw, 30px); }
+  .desktopFabricacion .docEyebrow { font-size: 11px; }
+  .desktopFabricacion .secondaryButton { min-height: 44px; font-size: 13px; }
+  .desktopTabNav {
+    display: flex;
+    gap: 24px;
+    overflow-x: auto;
+    border-bottom: 1px solid #dce5ef;
+    margin-bottom: 18px;
+    scrollbar-width: none;
+  }
+  .desktopTabNav button {
+    flex: 0 0 auto;
+    min-height: 48px;
+    padding: 0 6px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: #52677f;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 650;
+    cursor: pointer;
+    transition: color 180ms ease, border-color 180ms ease;
+  }
+  .desktopTabNav button[aria-selected="true"] { color: #1459b1; border-bottom-color: #1e88ff; }
+  .desktopTabNav button:hover { color: #1459b1; }
+  .desktopTabNav button:focus-visible,
+  .desktopSummaryItems button:focus-visible,
+  .materialDocActions a:focus-visible { outline: 2px solid #1e88ff; outline-offset: 2px; }
+
+  .desktopTabbedDocument .desktopCostSection,
+  .desktopTabbedDocument .desktopGlassSection,
+  .desktopTabbedDocument .desktopSummarySection,
+  .desktopTabbedDocument .secondaryWorkshopDetails,
+  .desktopTabbedDocument .docFooter,
+  .desktopTabbedDocument .workDocuments > * { display: none; }
+  .desktopTabbedDocument[data-active-tab="resumen"] .documentActionsSection,
+  .desktopTabbedDocument[data-active-tab="resumen"] .desktopSummarySection,
+  .desktopTabbedDocument[data-active-tab="materiales"] [data-work-document="materials"],
+  .desktopTabbedDocument[data-active-tab="vidrios"] .desktopGlassSection,
+  .desktopTabbedDocument[data-active-tab="vidrios"] [data-work-document="glass-order"],
+  .desktopTabbedDocument[data-active-tab="cortes"] [data-work-document="profile-cuts"],
+  .desktopTabbedDocument[data-active-tab="cortes"] .secondaryWorkshopDetails,
+  .desktopTabbedDocument[data-active-tab="costos"] .desktopCostSection { display: block; }
+  .desktopTabbedDocument[data-active-tab="vidrios"] { display: flex; flex-direction: column; }
+  .desktopTabbedDocument[data-active-tab="vidrios"] .desktopGlassSection { order: 0; }
+  .desktopTabbedDocument[data-active-tab="vidrios"] .workDocuments { order: 1; }
+
+  .desktopTabbedDocument .documentActionsSection,
+  .desktopSummarySection { border: 1px solid #e0e7ef; border-radius: 16px; background: #fff; }
+  .desktopTabbedDocument .documentActionsSection { margin-bottom: 14px; padding: 20px 24px 7px; }
+  .desktopTabbedDocument .documentActionsSection > div:first-child > p:last-child { display: none; }
+  .desktopTabbedDocument .documentActionsSection h2,
+  .desktopSummaryHeading h2 { margin: 0; color: #152b45; font-size: 18px; font-weight: 750; letter-spacing: -.02em; }
+  .desktopTabbedDocument .documentActionsGrid { grid-template-columns: 1fr; gap: 0; }
+  .desktopTabbedDocument .documentActionsGrid article {
+    display: flex; align-items: center; gap: 12px; min-height: 64px;
+    padding: 10px 0; border: 0; border-radius: 0; border-bottom: 1px solid #e9eef4; background: transparent;
+  }
+  .desktopTabbedDocument .documentActionsGrid article:last-child { border-bottom: 0; }
+  .desktopTabbedDocument .documentActionsGrid h3 { flex: 1; margin: 0; color: #263c59; font-size: 14px; }
+  .desktopTabbedDocument .documentActionsGrid p { flex: 1.4; min-height: 0; margin: 0; font-size: 12px; }
+  .desktopTabbedDocument .documentActionsGrid .materialDocActions { flex: 0 0 auto; margin: 0; }
+  .desktopTabbedDocument .materialDocActions button,
+  .desktopTabbedDocument .materialDocActions a {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    min-height: 44px; min-width: 58px; padding: 0 12px;
+    border: 1px solid #d9e4f0; border-radius: 9px; background: #fff;
+    color: #1459b1; font: inherit; font-size: 12px; font-weight: 700;
+    text-decoration: none; cursor: pointer;
+    transition: background-color 180ms ease, border-color 180ms ease;
+  }
+  .desktopTabbedDocument .materialDocActions button:hover,
+  .desktopTabbedDocument .materialDocActions a:hover { background: #f0f6ff; border-color: #afc9e9; }
+  .desktopSummarySection { padding: 18px 24px 6px; }
+  .desktopSummaryHeading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 6px; }
+  .desktopSummaryHeading span { color: #61758b; font-size: 13px; }
+  .desktopSummaryItems button {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    width: 100%; min-height: 58px; padding: 10px 0;
+    border: 0; border-bottom: 1px solid #e9eef4; background: transparent;
+    color: #1459b1; font: inherit; font-size: 13px; cursor: pointer; text-align: left;
+  }
+  .desktopSummaryItems button span:first-child { display: grid; gap: 3px; }
+  .desktopSummaryItems strong { color: #233a54; font-size: 14px; font-weight: 700; }
+  .desktopSummaryItems small { color: #61758b; font-size: 12px; }
+  .desktopSummaryMetrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin: 0; padding: 14px 0; }
+  .desktopSummaryMetrics div { display: grid; gap: 3px; padding: 0 15px; border-left: 1px solid #e5ebf2; }
+  .desktopSummaryMetrics div:first-child { padding-left: 0; border-left: 0; }
+  .desktopSummaryMetrics dt { color: #60758b; font-size: 12px; }
+  .desktopSummaryMetrics dd { margin: 0; color: #193b67; font-size: 17px; font-weight: 750; }
+  .desktopCutsHeading { margin: 0 0 14px; color: #1c3553; font-size: 18px; }
+  .desktopTabbedDocument .secondaryWorkshopDetails { margin-top: 18px; }
+}
+
+@media screen and (min-width: 720px) and (max-width: 1000px) {
+  .desktopFabricacion .headerActions { flex: 1 1 100%; justify-content: flex-start; }
+  .desktopTabbedDocument .documentActionsGrid article { flex-wrap: wrap; }
+  .desktopTabbedDocument .documentActionsGrid h3 { flex-basis: 38%; }
+  .desktopTabbedDocument .documentActionsGrid p { flex-basis: 50%; }
+  .desktopTabbedDocument .documentActionsGrid .materialDocActions { margin-left: auto; }
+}
+
+@media print {
+  .desktopTabNav,
+  .desktopSummarySection { display: none !important; }
+  .desktopTabbedDocument .workDocuments > .documentActionsSection { display: none !important; }
+  .desktopCostSection,
+  .desktopGlassSection,
+  .desktopTabbedDocument .workDocuments > *,
+  .desktopTabbedDocument .secondaryWorkshopDetails,
+  .desktopTabbedDocument .docFooter { display: block !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .desktopTabNav button,
+  .desktopTabbedDocument .materialDocActions button,
+  .desktopTabbedDocument .materialDocActions a { transition: none; }
 }

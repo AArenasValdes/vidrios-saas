@@ -2,6 +2,14 @@ import { jsPDF } from "jspdf";
 
 import type { FabricationWorkOrder } from "./fabrication-work-order.service";
 import { workOrderPriceSource } from "./fabrication-work-order.service";
+import { calculateProfileReferenceTotal, resolveProfileSupplierPrice } from "./work-materials-price-reference.service";
+import {
+  drawFabricationPdfContinuationHeader,
+  drawFabricationPdfFooters,
+  drawFabricationPdfHeader,
+  drawFabricationPdfSectionTitle,
+  FABRICATION_PDF_COLORS,
+} from "./fabrication-pdf-document-style.service";
 
 export type FabricationWorkOrderPdfMetadata = {
   companyName: string;
@@ -12,15 +20,15 @@ export type FabricationWorkOrderPdfMetadata = {
 
 type Column = { title: string; width: number; align?: "left" | "right" | "center" };
 type Row = { cells: string[] };
+export type FabricationWorkOrderPdfKind = "combined" | "glass-order" | "profile-cuts";
 
 const PAGE_WIDTH = 210;
-const PAGE_HEIGHT = 297;
 const MARGIN = 14;
 const CONTENT_BOTTOM = 278;
-const INK: [number, number, number] = [25, 43, 72];
-const MUTED: [number, number, number] = [87, 105, 132];
-const RULE: [number, number, number] = [211, 220, 232];
-const HEADER: [number, number, number] = [234, 241, 250];
+const INK = FABRICATION_PDF_COLORS.ink;
+const MUTED = FABRICATION_PDF_COLORS.muted;
+const RULE = FABRICATION_PDF_COLORS.rule;
+const HEADER = FABRICATION_PDF_COLORS.pale;
 
 function clean(value: string | null | undefined, fallback = "Pendiente") {
   return value?.trim() || fallback;
@@ -48,24 +56,13 @@ function wrapped(pdf: jsPDF, value: string, width: number) {
   return pdf.splitTextToSize(value || "—", Math.max(8, width - 4)) as string[];
 }
 
-function newPage(pdf: jsPDF) {
+function newPage(pdf: jsPDF, title: string, quoteCode: string, logoDataUrl?: string | null) {
   pdf.addPage("a4", "portrait");
-  pdf.setCharSpace(0);
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(9);
-  pdf.setTextColor(...MUTED);
-  pdf.text("Orden de fabricación y materiales · continuación", MARGIN, 16);
-  pdf.setDrawColor(...RULE);
-  pdf.line(MARGIN, 20, PAGE_WIDTH - MARGIN, 20);
-  return 26;
+  return drawFabricationPdfContinuationHeader(pdf, title, quoteCode, logoDataUrl);
 }
 
 function sectionTitle(pdf: jsPDF, title: string, y: number) {
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(12.5);
-  pdf.setTextColor(...INK);
-  pdf.text(title, MARGIN, y);
-  return y + 5;
+  return drawFabricationPdfSectionTitle(pdf, title, y);
 }
 
 function tableHead(pdf: jsPDF, columns: Column[], y: number) {
@@ -113,10 +110,10 @@ function tableRow(pdf: jsPDF, row: Row, columns: Column[], y: number, height: nu
   return y + height;
 }
 
-function drawTable(pdf: jsPDF, title: string, columns: Column[], values: Row[], startY: number, empty: string) {
+function drawTable(pdf: jsPDF, title: string, columns: Column[], values: Row[], startY: number, empty: string, runningTitle: string, quoteCode: string, logoDataUrl?: string | null) {
   const rows = values.length ? values : [{ cells: [empty, ...columns.slice(1).map(() => "—")] }];
   let y = startY + 4;
-  if (y + 5 + 9 + 11 > CONTENT_BOTTOM) y = newPage(pdf);
+  if (y + 5 + 9 + 11 > CONTENT_BOTTOM) y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
   y = tableHead(pdf, columns, sectionTitle(pdf, title, y));
   rows.forEach((row, index) => {
     const cellLines = row.cells.map((cell, cellIndex) => wrapped(pdf, cell, columns[cellIndex]!.width));
@@ -125,7 +122,7 @@ function drawTable(pdf: jsPDF, title: string, columns: Column[], values: Row[], 
     while (lineOffset < totalLines) {
       const linesAvailable = Math.floor((CONTENT_BOTTOM - y - 4) / 4.05);
       if (linesAvailable < 2) {
-        y = newPage(pdf);
+        y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
         y = tableHead(pdf, columns, sectionTitle(pdf, `${title} · continuación`, y));
         continue;
       }
@@ -135,7 +132,7 @@ function drawTable(pdf: jsPDF, title: string, columns: Column[], values: Row[], 
       };
       const height = rowHeight(pdf, fragment, columns);
       if (y + height > CONTENT_BOTTOM) {
-        y = newPage(pdf);
+        y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
         y = tableHead(pdf, columns, sectionTitle(pdf, `${title} · continuación`, y));
         continue;
       }
@@ -146,61 +143,19 @@ function drawTable(pdf: jsPDF, title: string, columns: Column[], values: Row[], 
   return y;
 }
 
-function drawNote(pdf: jsPDF, value: string, y: number) {
+function drawNote(pdf: jsPDF, value: string, y: number, runningTitle: string, quoteCode: string, logoDataUrl?: string | null) {
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(9.2);
   const lines = wrapped(pdf, value, PAGE_WIDTH - MARGIN * 2);
   const height = lines.length * 4.2 + 4;
-  if (y + height > CONTENT_BOTTOM) y = newPage(pdf);
+  if (y + height > CONTENT_BOTTOM) y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
   pdf.setTextColor(...MUTED);
   pdf.text(lines, MARGIN, y + 5, { lineHeightFactor: 1.2 });
   return y + height;
 }
 
-function drawHeader(pdf: jsPDF, metadata: FabricationWorkOrderPdfMetadata, logoDataUrl?: string | null) {
-  let logoDrawn = false;
-  if (logoDataUrl) {
-    try {
-      const image = pdf.getImageProperties(logoDataUrl);
-      const scale = Math.min(42 / image.width, 12 / image.height);
-      pdf.addImage(logoDataUrl, "PNG", MARGIN, 12, image.width * scale, image.height * scale, undefined, "FAST");
-      logoDrawn = true;
-    } catch { /* El título identifica el documento aunque falte el logo. */ }
-  }
-  if (!logoDrawn) {
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(12);
-    pdf.setTextColor(37, 99, 183);
-    pdf.text("VENTORA", MARGIN, 18);
-  }
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(16);
-  pdf.setTextColor(...INK);
-  pdf.text(["Orden de fabricación", "y materiales"], 62, 17, { lineHeightFactor: 1.14 });
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(9);
-  pdf.setTextColor(...MUTED);
-  pdf.text("DOCUMENTO INTERNO · TALLER", MARGIN, 31);
-  pdf.setDrawColor(...RULE);
-  pdf.line(MARGIN, 34, PAGE_WIDTH - MARGIN, 34);
-  pdf.setFontSize(9.5);
-  pdf.setTextColor(...INK);
-  const left = [`Empresa: ${clean(metadata.companyName, "Empresa")}`, `Trabajo: ${clean(metadata.workName, "—")}`];
-  const right = [`Cotización: ${clean(metadata.quoteCode)}`, `Fecha: ${clean(metadata.issueDate)}`];
-  let y = 40;
-  for (let index = 0; index < left.length; index += 1) {
-    const leftLines = wrapped(pdf, left[index]!, 94);
-    const rightLines = wrapped(pdf, right[index]!, 84);
-    pdf.text(leftLines, MARGIN, y, { lineHeightFactor: 1.2 });
-    pdf.text(rightLines, 112, y, { lineHeightFactor: 1.2 });
-    y += Math.max(leftLines.length, rightLines.length) * 4.3;
-  }
-  pdf.line(MARGIN, y + 1, PAGE_WIDTH - MARGIN, y + 1);
-  return y + 4;
-}
-
-function drawPriceSummary(pdf: jsPDF, order: FabricationWorkOrder, y: number) {
-  if (y + 19 > CONTENT_BOTTOM) y = newPage(pdf);
+function drawPriceSummary(pdf: jsPDF, order: FabricationWorkOrder, y: number, runningTitle: string, quoteCode: string, logoDataUrl?: string | null) {
+  if (y + 19 > CONTENT_BOTTOM) y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
   const label = order.pricing.status === "complete" ? "Costo valorizado neto"
     : order.pricing.status === "partial" ? "Costo valorizado parcial (neto)"
     : "Costo de compra pendiente de revisión";
@@ -218,46 +173,89 @@ function drawPriceSummary(pdf: jsPDF, order: FabricationWorkOrder, y: number) {
   return y + 17;
 }
 
-function drawFooters(pdf: jsPDF, quoteCode: string) {
-  const pages = pdf.getNumberOfPages();
-  for (let page = 1; page <= pages; page += 1) {
-    pdf.setPage(page);
-    pdf.setDrawColor(...RULE);
-    pdf.line(MARGIN, 283, PAGE_WIDTH - MARGIN, 283);
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(8.5);
-    pdf.setTextColor(...MUTED);
-    pdf.text(`Uso interno · ${clean(quoteCode)}`, MARGIN, 288);
-    pdf.text(`${page} / ${pages}`, PAGE_WIDTH - MARGIN, 288, { align: "right" });
-  }
-}
-
 export function createFabricationWorkOrderPdf(
   order: FabricationWorkOrder,
   metadata: FabricationWorkOrderPdfMetadata,
-  logoDataUrl?: string | null
+  logoDataUrl?: string | null,
+  kind: FabricationWorkOrderPdfKind = "combined"
 ) {
+  const title = kind === "glass-order" ? "Orden de vidrios" : kind === "profile-cuts" ? "Pauta de cortes de perfiles" : "Orden de fabricación y materiales";
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: false });
   pdf.setCharSpace(0);
-  let y = drawHeader(pdf, metadata, logoDataUrl);
-  y = drawPriceSummary(pdf, order, y);
+  let y = drawFabricationPdfHeader(pdf, metadata, title, logoDataUrl);
+  const runningTitle = title;
+  if (kind === "combined") y = drawPriceSummary(pdf, order, y, runningTitle, metadata.quoteCode, logoDataUrl);
+  if (kind === "combined") {
   const profiles = order.materials.profiles.map((row): Row => {
-    const supplierSku = row.supplierSku || (!row.price?.isWorkshopCode ? row.price?.sku : null);
-    const code = `Técnico: ${clean(row.code)}${supplierSku ? `\nSKU proveedor: ${supplierSku}` : ""}${row.price?.isWorkshopCode ? `\nInterno taller: ${row.price.sku}` : ""}`;
+    const supplierReference = resolveProfileSupplierPrice(row, order.materials.profilePriceReferences);
+    const storedCost = row.price && row.price.sourceKind !== "reference" ? row.price : null;
+    const referenceTotal = supplierReference
+      ? calculateProfileReferenceTotal(row, { unitPrice: supplierReference.unitPrice, basis: supplierReference.basis })
+      : null;
     return { cells: [
-      code,
-      `${clean(row.description)}\n${clean(row.line, "Línea pendiente")}\n${clean(row.finish, "Acabado pendiente")}`,
+      `Técnico: ${clean(row.code)}${storedCost?.isWorkshopCode ? `\nInterno taller: ${storedCost.sku}` : supplierReference?.supplierSku ? `\nSKU proveedor: ${supplierReference.supplierSku}` : row.supplierSku ? `\nSKU proveedor: ${row.supplierSku}` : ""}`,
+      `${clean(row.description)}\n${clean(row.line, "Línea pendiente")}\nColor aluminio: ${clean(row.configuredFinish ?? row.finish, "Pendiente")}`,
       `${row.bars} ${row.bars === 1 ? "tira" : "tiras"}\n${mm(row.commercialLengthMm)}`,
-      row.price ? `${money(row.price.unitPrice, row.price.currency)}\n${row.price.basis}` : "Pendiente",
-      row.price ? money(row.price.subtotal, row.price.currency) : "Pendiente",
-      row.price ? workOrderPriceSource(row.price) : "Sin precio",
+      supplierReference
+        ? `${money(supplierReference.unitPrice, supplierReference.currency)}\n${supplierReference.basis}`
+        : storedCost ? `${money(storedCost.unitPrice, storedCost.currency)}\n${storedCost.basis}` : "Pendiente",
+      supplierReference
+        ? referenceTotal == null ? "No calculable" : `${money(referenceTotal, supplierReference.currency)}\nreferencial`
+        : storedCost ? money(storedCost.subtotal, storedCost.currency) : "Pendiente",
+      supplierReference?.providerLabel ?? (storedCost ? workOrderPriceSource(storedCost) : "Sin proveedor asociado"),
+      supplierReference?.supplierSku ?? row.supplierSku ?? "—",
     ] };
   });
   y = drawTable(pdf, "1. Resumen de compra · perfiles", [
-    { title: "Códigos", width: 43 }, { title: "Perfil / acabado", width: 44 },
-    { title: "Compra", width: 28 }, { title: "Unitario", width: 22, align: "right" },
-    { title: "Subtotal", width: 22, align: "right" }, { title: "Fuente", width: 23 },
-  ], profiles, y, "Sin tiras en la pauta conjunta guardada");
+    { title: "Código técnico", width: 32 }, { title: "Perfil / color aluminio", width: 35 },
+    { title: "Compra", width: 22 }, { title: "Unitario", width: 20, align: "right" },
+    { title: "Total / subtotal", width: 21, align: "right" }, { title: "Proveedor / origen", width: 30 },
+    { title: "SKU", width: 22 },
+  ], profiles, y, "Sin tiras en la pauta conjunta guardada", runningTitle, metadata.quoteCode, logoDataUrl);
+
+  const rawProfileReferences = order.materials.profilePriceReferences ?? [];
+  const hasProfilePriceLookup = rawProfileReferences.length > 0 ||
+    order.materials.profilePriceReferencesStatus === "loaded" ||
+    order.materials.profilePriceReferencesStatus === "loading" ||
+    order.materials.profilePriceReferencesStatus === "unavailable";
+  if (hasProfilePriceLookup) {
+  const profileReferences = order.materials.profiles.length > 0 ? order.materials.profiles.map((profile): Row => {
+    const reference = resolveProfileSupplierPrice(profile, order.materials.profilePriceReferences);
+    const total = reference
+      ? calculateProfileReferenceTotal(profile, { unitPrice: reference.unitPrice, basis: reference.basis })
+      : null;
+    const status = reference
+      ? total == null ? "Unidad no calculable" : "Asociado a pauta"
+      : order.materials.profilePriceReferencesStatus === "unavailable" ? "Consulta no disponible"
+        : order.materials.profilePriceReferencesStatus === "loading" ? "Consulta pendiente"
+          : "Sin referencia exacta";
+    return { cells: [
+      `${profile.itemCodes.join(", ")} · ${clean(profile.line)}\n${clean(profile.code)} · ${clean(profile.description)}`,
+      `${clean(profile.configuredFinish ?? profile.finish, "Color aluminio pendiente")}\nSKU: ${reference?.supplierSku ?? profile.supplierSku ?? "—"}`,
+      `${reference?.providerLabel ?? "Proveedor pendiente"}\n${reference?.basis ?? "Presentación pendiente"} · ${mm(profile.commercialLengthMm)}`,
+      reference ? money(reference.unitPrice, reference.currency) : "Pendiente",
+      reference && total != null ? money(total, reference.currency) : status,
+    ] };
+  }) : rawProfileReferences.map((row): Row => ({ cells: [
+    `${clean(row.itemCode)} · ${clean(row.line)}\n${clean(row.technicalCode)} · ${clean(row.profileName)}`,
+    `${clean(row.finish, "Color aluminio pendiente")}\nSKU: ${clean(row.supplierSku, "—")}`,
+    `${clean(row.providerLabel)}\n${clean(row.purchaseUnit, "Presentación pendiente")} · ${mm(row.commercialLengthMm)}`,
+    row.status === "priced" && row.netPrice != null && row.currency ? money(row.netPrice, row.currency) : "Pendiente",
+    row.status === "ambiguous" ? "Presentación ambigua · sin pauta asociada" : "Sin pauta asociada",
+  ] }));
+  y = drawTable(pdf, order.materials.profiles.length > 0 ? "Referencias de compra asociadas a la pauta" : "Referencias unitarias de perfiles", [
+    { title: "Partidas, línea y perfil", width: 55 }, { title: "Color aluminio / SKU", width: 35 },
+    { title: "Proveedor / presentación", width: 43 }, { title: "Precio unitario", width: 24, align: "right" },
+    { title: "Total referencial", width: 24, align: "right" },
+  ], profileReferences, y, "Sin perfiles en pauta", runningTitle, metadata.quoteCode, logoDataUrl);
+  y = drawNote(pdf, order.materials.profiles.length > 0
+    ? `Referencias asociadas por código técnico, línea, color y presentación${order.materials.profilePriceReferencesCheckedAt ? ` · consulta ${order.materials.profilePriceReferencesCheckedAt}` : ""}. Total calculado desde precio unitario y cantidad de compra de la pauta. No es un costo guardado ni una cotización confirmada.`
+    : `Referencias unitarias de compra; no representan cantidades de corte ni costo total de fabricación${order.materials.profilePriceReferencesCheckedAt ? ` · consulta ${order.materials.profilePriceReferencesCheckedAt}` : ""}.`, y, runningTitle, metadata.quoteCode, logoDataUrl);
+  } else if (order.materials.profilePriceReferencesStatus === "unavailable" || order.materials.profilePriceReferencesStatus === "loading") {
+    y = drawNote(pdf, order.materials.profilePriceReferencesStatus === "loading"
+      ? "La consulta de precios unitarios seguía en curso al generar este PDF. Vuelve a descargarlo cuando termine."
+      : "No se pudieron consultar los precios unitarios en este momento. Vuelve a generar el PDF para intentarlo otra vez.", y, runningTitle, metadata.quoteCode, logoDataUrl);
+  }
 
   const accessories = order.materials.accessories.map((row): Row => ({ cells: [
     `${row.code ? `Técnico: ${row.code}` : "Código técnico pendiente"}${row.price?.isWorkshopCode ? `\nInterno taller: ${row.price.sku}` : row.price?.sku ? `\nSKU proveedor: ${row.price.sku}` : ""}`,
@@ -271,38 +269,65 @@ export function createFabricationWorkOrderPdf(
     { title: "Códigos", width: 43 }, { title: "Descripción", width: 50 },
     { title: "Cantidad", width: 22 }, { title: "Unitario", width: 22, align: "right" },
     { title: "Subtotal", width: 22, align: "right" }, { title: "Fuente", width: 23 },
-  ], accessories, y, "Sin accesorios registrados");
+  ], accessories, y, "Sin accesorios registrados", runningTitle, metadata.quoteCode, logoDataUrl);
+  }
 
-  const cuts = order.cutGroups.map((group): Row => ({ cells: [
-    `${group.technicalCode} · ${group.profileName}\n${group.barIndex == null ? "Distribución por tira pendiente" : `Tira ${group.barIndex} · ${mm(group.commercialLengthMm)}`}`,
-    group.cuts.length
+  if (kind === "combined" || kind === "profile-cuts") {
+  const cuts = order.cutGroups.map((group): Row => {
+    const profile = `${group.technicalCode} · ${group.profileName}`;
+    const cutRows = group.cuts.length
       ? group.cuts.map((cut) => `${cut.itemCode} · ${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n")
-      : "Sin cortes guardados",
-    group.barIndex == null ? "Pendiente" : mm(group.theoreticalRemnantMm),
-  ] }));
-  y = drawTable(pdf, "2. Pauta de corte", [
-    { title: "Tira / perfil", width: 47 }, { title: "Cortes agrupados", width: 100 },
-    { title: "Remanente teórico", width: 35, align: "right" },
-  ], cuts, y, "Pauta de corte pendiente");
-  y = drawNote(pdf, "En cada tira se agrupan partida, componente, función, cantidad y largo. El remanente teórico corresponde al conjunto completo; confirmar kerf y despunte antes de decidir si puede aprovecharse.", y);
+      : "Sin cortes guardados";
+    const presentation = group.barIndex == null
+      ? "Distribución por tira pendiente"
+      : `Tira ${group.barIndex} · ${mm(group.commercialLengthMm)}`;
 
+    // The standalone profile-cut sheet is for the person cutting the bars:
+    // keep only the profile identity, saved cuts, and theoretical remnant.
+    // The combined work order retains its purchase context in its own section.
+    return kind === "profile-cuts"
+      ? { cells: [`${profile}\n${presentation}`, cutRows, group.barIndex == null ? "Pendiente" : mm(group.theoreticalRemnantMm)] }
+      : { cells: [
+          `${profile}\n${clean(group.line, "Línea pendiente")} · Color aluminio: ${clean(group.finish, "Pendiente")}\n${presentation}`,
+          cutRows,
+          `${clean(group.supplierLabel, "Proveedor pendiente")}${group.supplierSku ? `\nSKU ${group.supplierSku}` : ""}`,
+          group.barIndex == null ? "Pendiente" : mm(group.theoreticalRemnantMm),
+        ] };
+  });
+  y = drawTable(pdf, kind === "profile-cuts" ? "Cortes agrupados" : "2. Pauta de corte", kind === "profile-cuts" ? [
+    { title: "Código / perfil", width: 56 }, { title: "Cortes por componente", width: 89 },
+    { title: "Remanente", width: 37, align: "right" },
+  ] : [
+    { title: "Perfil / línea / color", width: 50 }, { title: "Cortes agrupados", width: 80 },
+    { title: "Proveedor / SKU", width: 30 }, { title: "Remanente teórico", width: 22, align: "right" },
+  ], cuts, y, "Pauta de corte pendiente", runningTitle, metadata.quoteCode, logoDataUrl);
+  y = drawNote(pdf, kind === "profile-cuts"
+    ? "Remanente teórico. Confirmar kerf, despunte y condiciones del taller antes de cortar."
+    : "Los largos provienen de la pauta guardada; el remanente es teórico. Confirmar kerf, despunte y condiciones del taller antes de fabricar. No representa una optimización de planchas de vidrio.",
+  y, runningTitle, metadata.quoteCode, logoDataUrl);
+  }
+
+  if (kind === "combined" || kind === "glass-order") {
   const glass = order.glass.map((row): Row => ({ cells: [
     `${clean(row.itemCode, "Partida pendiente")}\n${row.paneReference}`,
     `${clean(row.type)}\nEspesor: ${clean(row.thickness)}`,
     row.widthMm != null && row.heightMm != null ? `${mm(row.widthMm)} × ${mm(row.heightMm)}` : "Medidas pendientes",
     row.quantity == null ? "Pendiente" : String(row.quantity),
-    row.issue?.includes("superficie contradictoria") ? "Pendiente de revisar" : area(row.totalM2),
+    row.issue ? "Pendiente de revisar" : area(row.totalM2),
   ] }));
-  y = drawTable(pdf, "3. Orden de vidrios", [
+  y = drawTable(pdf, kind === "glass-order" ? "Paños por fabricar" : "3. Orden de vidrios", [
     { title: "Partida / paño", width: 46 }, { title: "Tipo / espesor", width: 49 },
     { title: "Ancho × alto", width: 39 }, { title: "Cant.", width: 17, align: "right" },
     { title: "Superficie", width: 31, align: "right" },
-  ], glass, y, "Sin paños guardados");
+  ], glass, y, "Sin paños guardados", runningTitle, metadata.quoteCode, logoDataUrl);
+  }
 
-  const pending = order.pending.map((row): Row => ({ cells: [row.subject, row.action] }));
-  drawTable(pdf, "4. Pendientes para el maestro", [
-    { title: "Dato", width: 70 }, { title: "Acción", width: 112 },
-  ], pending, y, "Sin pendientes detectados");
-  drawFooters(pdf, metadata.quoteCode);
+  if (kind === "combined") {
+    const pending = order.pending.map((row): Row => ({ cells: [row.subject, row.action] }));
+    drawTable(pdf, "4. Pendientes para el maestro", [
+      { title: "Dato", width: 70 }, { title: "Acción", width: 112 },
+    ], pending, y, "Sin pendientes detectados", runningTitle, metadata.quoteCode, logoDataUrl);
+  }
+  drawFabricationPdfFooters(pdf, metadata.quoteCode);
   return pdf;
 }

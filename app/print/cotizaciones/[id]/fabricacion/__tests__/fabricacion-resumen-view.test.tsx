@@ -18,6 +18,11 @@ import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabric
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import { buildWorkMaterialsDocument } from "@/features/fabricacion/services/fabrication-work-materials.service";
+import { buildFabricationWorkOrder } from "@/features/fabricacion/services/fabrication-work-order.service";
+
+jest.mock("../vidrios/glass-distribution-panel", () => ({
+  GlassDistributionPanel: () => <section aria-label="Distribución de planchas" />,
+}));
 
 import {
   FabricacionResumenView,
@@ -201,17 +206,21 @@ function ViewHarness(props: {
   const [expandedItemId, setExpandedItemId] = useState<string | null>(
     props.expandedItemId === undefined ? viewSummary.items[0]?.itemId ?? null : props.expandedItemId
   );
+  const materialsDocument = buildWorkMaterialsDocument({ summary: viewSummary, items });
 
   return (
     <FabricacionResumenView
       backHref="/cotizaciones/q1"
       pdfHref="/print/cotizaciones/q1"
+      quoteId="q1"
+      glassPlannerEnabled={false}
       codigo="COT-190826-003"
       clienteNombre="Alessandro"
       obra="Trabajo de Alessandro"
       summary={viewSummary}
       items={items}
-      materialsDocument={buildWorkMaterialsDocument({ summary: viewSummary, items })}
+      materialsDocument={materialsDocument}
+      workOrder={buildFabricationWorkOrder({ summary: viewSummary, materials: materialsDocument, quoteItems: items })}
       companyName="Ventora QA"
       issueDate="4 oct 2026"
       technicalCostPanel={props.technicalCostPanel}
@@ -228,14 +237,40 @@ function ViewHarness(props: {
 }
 
 describe("FabricacionResumenView", () => {
-  it("muestra el costo técnico al inicio del documento, antes de materiales y pauta secundaria", () => {
+  it("ofrece descargas PDF y Excel independientes para los tres documentos de fabricación", () => {
+    render(<ViewHarness />);
+
+    expect(screen.getByText("Documentos de fabricación")).toBeInTheDocument();
+    expect(screen.getByText("Distribución de vidrios")).toBeInTheDocument();
+    expect(screen.getByText("Lista de paños y medidas. No incluye planchas ni distribución geométrica.")).toBeInTheDocument();
+    for (const label of ["Descargar listado de materiales", "Descargar orden de vidrios", "Descargar pauta de cortes de perfiles"]) {
+      expect(within(screen.getByLabelText(label)).getAllByRole("button").map((button) => button.textContent)).toEqual(["PDF", "Excel"]);
+    }
+  });
+
+  it("separa el costo técnico en Costos y conserva documentos primero en Resumen", () => {
     render(<ViewHarness technicalCostPanel={<section data-testid="cost-panel">Costo estimado de materiales</section>} />);
 
     const costPanel = screen.getByTestId("cost-panel");
     const materialsHeading = screen.getByRole("heading", { name: "Lista de materiales del trabajo" });
-    const pautaSummary = screen.getByText("Ver pauta, cubicación y cortes por componente");
-    expect(costPanel.compareDocumentPosition(materialsHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(costPanel.compareDocumentPosition(pautaSummary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const article = screen.getByRole("tabpanel");
+    expect(article).toHaveAttribute("data-active-tab", "resumen");
+    expect(screen.getByRole("button", { name: "Descargar PDF preliminar de distribución de planchas" })).toBeInTheDocument();
+    expect(screen.getByText("Documentos de fabricación").compareDocumentPosition(screen.getByText("Componentes con pauta")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "Costos" }));
+    expect(article).toHaveAttribute("data-active-tab", "costos");
+    expect(costPanel).toBeInTheDocument();
+    expect(materialsHeading).toBeInTheDocument();
+  });
+
+  it("navega las cinco pestañas y abre cortes desde un componente", () => {
+    render(<ViewHarness />);
+    for (const tab of ["Materiales", "Vidrios", "Cortes", "Costos", "Resumen"]) {
+      fireEvent.click(screen.getByRole("tab", { name: tab }));
+      expect(screen.getByRole("tab", { name: tab })).toHaveAttribute("aria-selected", "true");
+    }
+    fireEvent.click(screen.getByRole("button", { name: /V1 · Ventana corredera 1200/ }));
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("data-active-tab", "cortes");
   });
 
   it("muestra tiras por perfil en cubicación sin mezclar pauta ni despiece", () => {
@@ -432,8 +467,8 @@ describe("FabricacionResumenView", () => {
 
     expect(screen.getAllByRole("columnheader", { name: "Código" }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("columnheader", { name: "Función" }).length).toBeGreaterThan(0);
-    expect(screen.getByText("RS01")).toBeInTheDocument();
-    expect(screen.getByText("Riel superior propio")).toBeInTheDocument();
+    expect(screen.getAllByText("RS01").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Riel superior propio").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Por asignar").length).toBeGreaterThan(0);
   });
 });

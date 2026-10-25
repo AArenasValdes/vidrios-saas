@@ -3,11 +3,13 @@ import path from "node:path";
 import sharp from "sharp";
 
 import type { FabricationQuoteSummary } from "@/features/cotizaciones/line-templates/types/fabrication-quote-summary";
+import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
 import type { TechnicalCostSnapshot } from "@/features/proveedor-catalogos/services/costo-tecnico-parcial.service";
 import type { WorkMaterialsDocument } from "../fabrication-work-materials.service";
-import { buildFabricationWorkOrder } from "../fabrication-work-order.service";
+import { buildFabricationWorkOrder, workOrderPriceSource } from "../fabrication-work-order.service";
 import { createFabricationWorkOrderPdf } from "../fabrication-work-order-pdf.service";
+import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 function savedWork(): FabricacionTrabajoSnapshot {
   return {
@@ -43,7 +45,7 @@ function materials(): WorkMaterialsDocument {
       line: "Línea 5000", finish: "Aluminio mate", configuredFinish: "Aluminio mate",
       commercialLengthMm: 6000, bars: 1, itemCodes: ["V1", "V2"],
       price: {
-        sku: "SKU-5001", isWorkshopCode: false, sourceKind: "reference", sourceLabel: "Lista referencial · proveedor",
+        sku: "SKU-5001", providerKey: "arquetipo", isWorkshopCode: false, sourceKind: "reference", sourceLabel: "Arquetipo",
         sourceRevision: "archivo-interno-privado", pricedAt: "2026-10-06T10:00:00.000Z",
         basis: "por tira", unitPrice: 10000, subtotal: 10000, currency: "CLP",
       },
@@ -75,6 +77,14 @@ function materials(): WorkMaterialsDocument {
   };
 }
 
+it("rotula el origen de Alumco con su nombre en la orden", () => {
+  expect(workOrderPriceSource({
+    sku: "TI5001A", providerKey: "alumco", isWorkshopCode: false, sourceKind: "reference",
+    sourceLabel: "Alumco · 2026", sourceRevision: "2026", pricedAt: null, basis: "por tira",
+    unitPrice: 12000, subtotal: 12000, currency: "CLP",
+  })).toBe("Alumco · 2026");
+});
+
 function savedCost(): TechnicalCostSnapshot {
   return {
     schemaVersion: 2, status: "partial", calculatedAt: "2026-10-06T10:00:00.000Z", currency: "CLP",
@@ -92,7 +102,32 @@ function pdfText(pdf: ReturnType<typeof createFabricationWorkOrderPdf>) {
   return [...raw.matchAll(/\(((?:\\.|[^\\)])*)\)\s*Tj/g)].map((match) => match[1]!.replace(/\\([\\()])/g, "$1")).join(" ");
 }
 
+function pdfExampleDirectory() {
+  return process.env.VENTORA_PDF_OUTPUT_DIR || path.join(process.cwd(), "tmp", "pdfs");
+}
+
 describe("orden de fabricación y materiales", () => {
+  it("usa el acabado elegido en la cotización también en la pauta PDF", () => {
+    const quoteItem = {
+      id: "v1", observaciones: encodeCotizacionItemPresentationMeta({
+        colorHex: "#7d8791", material: "Aluminio", catalogTerminacion: "Incoloro",
+      }),
+    } as CotizacionWorkflowItem;
+    const snapshot = savedWork();
+    snapshot.bars[0]!.nombrePerfil = "Riel superior Blanco";
+    snapshot.bars[0]!.acabadoKey = "Blanco";
+    const order = buildFabricationWorkOrder({
+      summary: summary(snapshot), materials: materials(), technicalCostSnapshot: savedCost(), quoteItems: [quoteItem],
+    });
+    expect(order.cutGroups[0]).toMatchObject({ profileName: "Riel superior", finish: "Titanio" });
+    const text = pdfText(createFabricationWorkOrderPdf(order, {
+      companyName: "Taller", quoteCode: "COT-TITANIO", workName: "Ventanas", issueDate: "19 oct 2026",
+    }));
+    expect(text).toContain("Riel superior");
+    expect(text).toContain("Color aluminio: Titanio");
+    expect(text).not.toContain("Riel superior Blanco");
+  });
+
   it("conserva barras, cantidades y largos del snapshot, y reconcilia subtotales con el total parcial guardado", () => {
     const order = buildFabricationWorkOrder({ summary: summary(savedWork()), materials: materials(), technicalCostSnapshot: savedCost() });
     expect(order.pricing).toMatchObject({ status: "partial", knownNetTotal: 11500, pricedCount: 2, pendingCount: 1 });
@@ -102,13 +137,29 @@ describe("orden de fabricación y materiales", () => {
     expect(accessorySubtotal).toEqual(expect.any(Number));
     expect((profileSubtotal ?? Number.NaN) + (accessorySubtotal ?? Number.NaN)).toBe(order.pricing.knownNetTotal);
     expect(order.cutGroups).toHaveLength(1);
-    expect(order.cutGroups[0]).toMatchObject({ technicalCode: "5001", barIndex: 1, commercialLengthMm: 6000, theoreticalRemnantMm: 3391 });
+    expect(order.cutGroups[0]).toMatchObject({
+      technicalCode: "5001", line: "Línea 5000", finish: "Aluminio mate", supplierLabel: "Arquetipo",
+      supplierSku: "SKU-5001", barIndex: 1, commercialLengthMm: 6000, theoreticalRemnantMm: 3391,
+    });
     expect(order.cutGroups[0]?.cuts).toMatchObject([
       { itemCode: "V1", quantity: 2, lengthMm: 1000 },
       { itemCode: "V2", quantity: 1, lengthMm: 600 },
     ]);
     expect(order.glass[0]).toMatchObject({ itemCode: "V1", widthMm: 600, heightMm: 1000, quantity: 2, totalM2: 1.2, issue: null });
     expect(order.pending.filter((row) => row.subject === "Carros: precio")).toHaveLength(1);
+  });
+
+  it("vincula proveedor y SKU al perfil de la pauta en el PDF combinado", () => {
+    const order = buildFabricationWorkOrder({ summary: summary(savedWork()), materials: materials(), technicalCostSnapshot: savedCost() });
+    const text = pdfText(createFabricationWorkOrderPdf(order, {
+      companyName: "Taller QA", quoteCode: "COT-QA-ENLACE", workName: "Referencia en pauta", issueDate: "Muestra QA",
+    }));
+
+    expect(text).toContain("Color aluminio");
+    expect(text).toContain("Arquetipo");
+    expect(text).toContain("SKU-5001");
+    expect(text).toContain("referencial");
+    expect(text).toContain("10.000");
   });
 
   it("marca datos contradictorios como pendientes sin sustituir la superficie guardada", () => {
@@ -167,39 +218,94 @@ describe("orden de fabricación y materiales", () => {
 
   it("genera un PDF único con logo Ventora real, compra, cortes agrupados, vidrios y pendientes", async () => {
     const order = buildFabricationWorkOrder({ summary: summary(savedWork()), materials: materials(), technicalCostSnapshot: savedCost() });
-    let logoDataUrl: string | null = null;
-    if (process.env.VENTORA_PDF_EXAMPLE === "1") {
-      const svg = readFileSync(path.join(process.cwd(), "public", "brand", "ventora-logo-boot.svg"));
-      const png = await sharp(svg).png().toBuffer();
-      logoDataUrl = `data:image/png;base64,${png.toString("base64")}`;
-    }
+    const svg = readFileSync(path.join(process.cwd(), "public", "brand", "ventora-logo-compact-on-light.svg"));
+    const png = await sharp(svg, { density: 300 }).resize({ width: 1000, height: 212, fit: "contain" }).png().toBuffer();
+    const logoDataUrl = `data:image/png;base64,${png.toString("base64")}`;
     const pdf = createFabricationWorkOrderPdf(order, {
       companyName: "Taller Ejemplo", quoteCode: "COT-EJEMPLO", workName: "Ventanas", issueDate: "6 oct 2026",
     }, logoDataUrl);
     const text = pdfText(pdf);
     expect(pdf.getNumberOfPages()).toBeGreaterThanOrEqual(1);
-    for (const value of ["Orden de fabricación", "Resumen de compra", "Pauta de corte", "Orden de vidrios", "Pendientes para el maestro", "SKU-5001", "5001", "V1 · Riel superior", "V2 · Riel superior", "2 × 1.000 mm", "1 × 600 mm", "6.000 mm", "3.391 mm", "11.500", "1,20 m²", "Remanente teórico", "Ajustado por el taller"]) {
+    for (const value of ["Orden de fabricación", "Resumen de compra", "Pauta de corte", "Orden de vidrios", "Pendientes para el maestro", "SKU-5001", "5001", "V1 · Riel superior", "V2 · Riel superior", "2 × 1.000 mm", "1 × 600 mm", "6.000 mm", "3.391 mm", "11.500", "1,20 m²", "Remanente teórico", "Ajustado por el taller", "Arquetipo"]) {
       expect(text).toContain(value);
     }
     expect(text).not.toContain("V1 · Ventana corredera 2 hojas · Riel superior");
     expect(text).not.toContain("V2 · Ventana corredera 2 hojas · Riel superior");
     expect((text.match(/3\.391 mm/g) ?? [])).toHaveLength(1);
-    if (logoDataUrl) expect(pdf.internal.pages[1]?.join(" ")).toContain("Do");
-    expect(pdf.getNumberOfPages()).toBe(1);
+    expect(pdf.internal.pages.slice(1).every((page) => page.join(" ").includes("Do"))).toBe(true);
+    expect(pdf.getNumberOfPages()).toBeGreaterThanOrEqual(1);
     expect(text).not.toContain("archivo-privado");
     expect(text).not.toContain("archivo-interno-privado");
     expect(text).not.toContain("arquetipo");
 
     if (process.env.VENTORA_PDF_EXAMPLE === "1") {
-      const output = path.join(process.cwd(), "output", "pdf", "orden-fabricacion-materiales-ejemplo.pdf");
-      mkdirSync(path.dirname(output), { recursive: true });
+      const outputDirectory = pdfExampleDirectory();
+      mkdirSync(outputDirectory, { recursive: true });
+      const output = path.join(outputDirectory, "qa-orden-fabricacion-combinada.pdf");
       writeFileSync(output, Buffer.from(pdf.output("arraybuffer")));
     }
   });
 
+  it("exporta PDF independientes de vidrios y cortes sin arrastrar las otras secciones ni precios", async () => {
+    const order = buildFabricationWorkOrder({ summary: summary(savedWork()), materials: materials(), technicalCostSnapshot: savedCost() });
+    const metadata = { companyName: "Taller", quoteCode: "COT-SEPARADO", workName: "Ventanas", issueDate: "19 oct 2026" };
+    const svg = readFileSync(path.join(process.cwd(), "public", "brand", "ventora-logo-compact-on-light.svg"));
+    const png = await sharp(svg, { density: 300 }).resize({ width: 1000, height: 212, fit: "contain" }).png().toBuffer();
+    const logoDataUrl = `data:image/png;base64,${png.toString("base64")}`;
+    const glassPdf = createFabricationWorkOrderPdf(order, metadata, logoDataUrl, "glass-order");
+    const glassText = pdfText(glassPdf);
+    expect(glassPdf.getNumberOfPages()).toBe(1);
+    expect(glassText).toContain("Orden de vidrios");
+    expect(glassText).toContain("Espesor: 5 mm");
+    expect(glassText).toContain("600 mm");
+    expect(glassText).not.toContain("Plan de corte de vidrios");
+    expect(glassText).not.toContain("Pauta de corte");
+    expect(glassText).not.toContain("11.500");
+
+    const cutsPdf = createFabricationWorkOrderPdf(order, metadata, logoDataUrl, "profile-cuts");
+    const cutsText = pdfText(cutsPdf);
+    expect(cutsText).toContain("Pauta de cortes de perfiles");
+    expect(cutsText).toContain("V1 · Riel superior");
+    expect(cutsText).toContain("3.391 mm");
+    expect(cutsText).toMatch(/remanente teórico/i);
+    expect(cutsText).not.toContain("Orden de vidrios");
+    expect(cutsText).not.toContain("11.500");
+
+    if (process.env.VENTORA_PDF_EXAMPLE === "1") {
+      const outputDirectory = pdfExampleDirectory();
+      mkdirSync(outputDirectory, { recursive: true });
+      writeFileSync(path.join(outputDirectory, "qa-orden-vidrios.pdf"), Buffer.from(glassPdf.output("arraybuffer")));
+      writeFileSync(path.join(outputDirectory, "qa-pauta-perfiles.pdf"), Buffer.from(cutsPdf.output("arraybuffer")));
+    }
+  });
+
+  it("muestra unitarios de perfiles aunque no haya pauta, sin sumarlos como costo de fabricación", () => {
+    const noCutMaterials = materials();
+    noCutMaterials.profiles = [];
+    noCutMaterials.profilePriceReferences = [{
+      key: "V1:5001:arquetipo:p-5001", itemCode: "V1", line: "Serie 5000", finish: "Aluminio mate",
+      technicalCode: "5001", profileName: "Riel superior", providerKey: "arquetipo", providerLabel: "Arquetipo",
+      presentationId: "p-5001", supplierSku: "30895001", presentationDescription: "Tira 6 m",
+      purchaseUnit: "tira", commercialLengthMm: 6000, netPrice: 13_477, currency: "CLP",
+      priceSource: "reference", status: "priced",
+    }];
+    const order = buildFabricationWorkOrder({ summary: summary(null), materials: noCutMaterials, technicalCostSnapshot: null });
+    const text = pdfText(createFabricationWorkOrderPdf(order, {
+      companyName: "Taller", quoteCode: "COT-SIN-PAUTA", workName: "Corredera", issueDate: "17 oct 2026",
+    }));
+
+    expect(text).toContain("Referencias unitarias de perfiles");
+    expect(text).toContain("30895001");
+    expect(text).toContain("13.477");
+    expect(text).toContain("no representan cantidades de corte");
+    expect(order.pricing.status).toBe("pending");
+    expect(order.pricing.knownNetTotal).toBeNull();
+    expect(order.cutGroups).toHaveLength(0);
+  });
+
   it("repite encabezados al continuar tablas largas y muestra el código interno cuando corresponde", () => {
     const many = materials();
-    many.profiles[0]!.price = { ...many.profiles[0]!.price!, sku: "TALLER-5001", isWorkshopCode: true, sourceKind: "own" };
+    many.profiles[0]!.price = { ...many.profiles[0]!.price!, sku: "TALLER-5001", providerKey: null, isWorkshopCode: true, sourceKind: "own", sourceLabel: "Propio del taller" };
     many.accessories = Array.from({ length: 42 }, (_, index) => ({
       ...many.accessories[1]!, key: `acc-${index}`, code: `ACC-${index}`, description: `Accesorio ${index}`,
     }));

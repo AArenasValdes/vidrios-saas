@@ -586,15 +586,16 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
     });
     const item = {
       ...quoteItem({ lineTemplateId: "12", ancho: 1200, alto: 1500 }),
-      tipo: "Shower Door",
+      tipo: "Puerta",
       lineaComercial: "Línea 12",
-      nombre: "Shower 2 hojas",
-      descripcion: "2 hojas",
+      nombre: "Puerta",
+      descripcion: "Shower corredera · 2 hojas",
       observaciones: encodeCotizacionItemPresentationMeta({
         lineTemplateId: "12",
         catalogLineKey: "ventora:serie-12-shower-corredera",
         sistema: "Shower Door",
-        fabricacionTipologia: "shower",
+        // Legacy component forms may persist the generic commercial category.
+        fabricacionTipologia: "corredera",
         fabricacionApertura: "shower",
         fabricacionHojas: 2,
         fabricacionModulos: 1,

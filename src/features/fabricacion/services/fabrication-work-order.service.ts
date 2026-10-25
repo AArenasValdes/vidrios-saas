@@ -1,6 +1,11 @@
 import type { FabricationQuoteSummary } from "@/features/cotizaciones/line-templates/types/fabrication-quote-summary";
+import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { TechnicalCostSnapshot } from "@/features/proveedor-catalogos/services/costo-tecnico-parcial.service";
 import type { WorkMaterialsDocument, WorkMaterialPrice } from "./fabrication-work-materials.service";
+import { resolveProfileSupplierPrice } from "./work-materials-price-reference.service";
+import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { resolveComponentColorName } from "@/constants/component-colors";
+import { resolveUniversalAluminumLineKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
 export type WorkOrderPending = { key: string; subject: string; action: string };
 export type WorkOrderCut = {
@@ -14,12 +19,19 @@ export type WorkOrderCutGroup = {
   key: string;
   technicalCode: string;
   profileName: string;
+  finish?: string | null;
   barIndex: number | null;
   commercialLengthMm: number | null;
   usedMm: number | null;
   theoreticalRemnantMm: number | null;
   trimMm: number | null;
   kerfMm: number | null;
+  line?: string | null;
+  supplierLabel?: string | null;
+  supplierSku?: string | null;
+  familyKey?: string | null;
+  supplierProviderKey?: string | null;
+  supplierPresentationId?: string | null;
   cuts: WorkOrderCut[];
 };
 export type WorkOrderGlass = {
@@ -50,12 +62,44 @@ export type FabricationWorkOrder = {
 };
 
 export function workOrderPriceSource(price: WorkMaterialPrice): string {
+  if (price.providerKey?.trim().toLocaleLowerCase("es-CL") === "arquetipo") return "Arquetipo · junio 2026";
+  if (price.providerKey?.trim().toLocaleLowerCase("es-CL") === "alumco") return "Alumco · 2026";
   if (price.sourceKind === "adjusted") return "Ajustado por el taller";
   if (price.sourceKind === "own" || price.isWorkshopCode) return "Propio del taller";
   return "Referencial";
 }
 
-function buildJointCutGroups(summary: FabricationQuoteSummary, addPending: (key: string, subject: string, action: string) => void) {
+function normalizeFinish(value: string | null | undefined) {
+  return (value ?? "").trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CL");
+}
+
+function selectedFinishForBar(
+  bar: NonNullable<FabricationQuoteSummary["trabajoSnapshot"]>["bars"][number],
+  quoteItemsById: ReadonlyMap<string, CotizacionWorkflowItem>
+) {
+  const selected = [...new Set(bar.cortes.flatMap((cut) => {
+    const item = quoteItemsById.get(cut.itemId);
+    if (!item) return [];
+    const metadata = decodeCotizacionItemPresentationMeta(item.observaciones ?? "");
+    const finish = resolveComponentColorName(metadata.colorHex);
+    return finish && finish !== "Color a definir" ? [finish] : [];
+  }))];
+  return selected.length === 1 ? selected[0]! : bar.acabadoKey;
+}
+
+function profileNameWithoutConflictingFinish(profileName: string, selectedFinish: string) {
+  const name = profileName.trim();
+  const finishes = ["blanco hueso", "negro mate", "blanco", "titanio", "antracita", "negro", "madera"];
+  const suffix = finishes.find((finish) => normalizeFinish(name).endsWith(` ${normalizeFinish(finish)}`));
+  if (!suffix || normalizeFinish(suffix) === normalizeFinish(selectedFinish)) return name;
+  return name.slice(0, name.length - suffix.length).trim();
+}
+
+function buildJointCutGroups(
+  summary: FabricationQuoteSummary,
+  quoteItemsById: ReadonlyMap<string, CotizacionWorkflowItem>,
+  addPending: (key: string, subject: string, action: string) => void
+) {
   const bars = summary.trabajoSnapshot?.bars ?? [];
   return bars.map((bar, barNumber): WorkOrderCutGroup => {
     const cuts = new Map<string, WorkOrderCut>();
@@ -75,10 +119,21 @@ function buildJointCutGroups(summary: FabricationQuoteSummary, addPending: (key:
         lengthMm: cut.largoMm,
       });
     }
+    const finish = selectedFinishForBar(bar, quoteItemsById);
+    const sourcePresentations = summary.trabajoSnapshot?.sourcePresentations ?? [];
+    const families = [...new Set(sourcePresentations
+      .filter((presentation) => presentation.presentationKey === bar.presentationKey)
+      .map((presentation) => presentation.catalogLineKey ? resolveUniversalAluminumLineKey(presentation.catalogLineKey) ?? presentation.catalogLineKey.trim() : null)
+      .filter((familyKey): familyKey is string => Boolean(familyKey)))];
     return {
       key: `${bar.materialKey}|${bar.presentationKey}|${bar.acabadoKey}|${bar.largoComercialMm}|${bar.indice}|${barNumber}`,
       technicalCode: bar.codigoPerfil || "Pendiente",
-      profileName: bar.nombrePerfil || "Perfil sin descripción",
+      profileName: profileNameWithoutConflictingFinish(bar.nombrePerfil || "Perfil sin descripción", finish),
+      finish,
+      familyKey: families.length === 1 ? families[0] : null,
+      supplierProviderKey: bar.supplierProviderKey ?? null,
+      supplierPresentationId: bar.supplierPresentationId ?? null,
+      supplierSku: bar.supplierSku ?? null,
       barIndex: bar.indice,
       commercialLengthMm: bar.largoComercialMm,
       usedMm: bar.usadoMm,
@@ -139,6 +194,7 @@ export function buildFabricationWorkOrder(input: {
   summary: FabricationQuoteSummary;
   materials: WorkMaterialsDocument;
   technicalCostSnapshot?: TechnicalCostSnapshot | null;
+  quoteItems?: readonly CotizacionWorkflowItem[];
 }): FabricationWorkOrder {
   const { summary, materials } = input;
   const cost = input.technicalCostSnapshot ?? null;
@@ -174,7 +230,32 @@ export function buildFabricationWorkOrder(input: {
   }
 
   const hasJointBars = Boolean(summary.trabajoSnapshot?.bars.length);
-  const cutGroups = hasJointBars ? buildJointCutGroups(summary, addPending) : buildHistoricCutGroups(summary);
+  const quoteItemsById = new Map((input.quoteItems ?? []).map((item) => [String(item.id), item]));
+  const rawCutGroups = hasJointBars ? buildJointCutGroups(summary, quoteItemsById, addPending) : buildHistoricCutGroups(summary);
+  const cutGroups = rawCutGroups.map((group) => {
+    const groupItemCodes = [...new Set(group.cuts.map((cut) => cut.itemCode))];
+    if (!group.finish || !group.commercialLengthMm || groupItemCodes.length === 0) return group;
+    const candidates = materials.profiles.filter((profile) =>
+      profile.code === group.technicalCode &&
+      (!group.familyKey || profile.familyKey === group.familyKey) &&
+      (!group.supplierProviderKey || profile.supplierProviderKey === group.supplierProviderKey) &&
+      (!group.supplierPresentationId || profile.supplierPresentationId === group.supplierPresentationId) &&
+      (!group.supplierSku || profile.supplierSku === group.supplierSku) &&
+      normalizeFinish(profile.configuredFinish ?? profile.finish) === normalizeFinish(group.finish) &&
+      profile.commercialLengthMm === group.commercialLengthMm &&
+      groupItemCodes.every((itemCode) => profile.itemCodes.includes(itemCode))
+    );
+    if (candidates.length !== 1) return group;
+    const [profile] = candidates;
+    if (!profile) return group;
+    const reference = resolveProfileSupplierPrice(profile, materials.profilePriceReferences);
+    return {
+      ...group,
+      line: profile.line,
+      supplierLabel: reference?.providerLabel ?? (profile.price ? workOrderPriceSource(profile.price) : profile.supplierProviderKey ?? null),
+      supplierSku: reference?.supplierSku ?? group.supplierSku ?? profile.supplierSku ?? null,
+    };
+  });
   if (!hasJointBars && cutGroups.length > 0) addPending("bar-distribution", "Distribución por tira", "Revisar pauta conjunta pendiente; estos cortes pertenecen a snapshots por pieza.");
   if (cutGroups.length === 0) addPending("cut-plan", "Pauta de corte", "Guardar una pauta técnica para este trabajo.");
 
@@ -187,6 +268,7 @@ export function buildFabricationWorkOrder(input: {
     if (dimensionsValid && !areaValid) issues.push("superficie contradictoria");
     const thickness = row.snapshotThickness === undefined ? row.thickness.trim() : row.snapshotThickness?.trim() ?? "";
     if (!thickness) issues.push("espesor pendiente");
+    if (row.thicknessWarning) issues.push("conflicto de espesor");
     const type = row.glassType === undefined
       ? row.description.trim() && row.description.trim() !== "Vidrio" ? row.description.trim() : null
       : row.glassType?.trim() || null;

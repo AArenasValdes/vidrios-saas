@@ -320,4 +320,33 @@ describe("fabrication quote summary", () => {
     expect(summary.items[0]?.snapshot.cuts[0]).toMatchObject({ profileCode: "7401", lengthMm: 1498 });
     expect(summary.items[0]?.statusLabel).toBe("Ajustada para esta cotización");
   });
+
+  it("presenta el espesor técnico congelado por separado del nombre comercial", () => {
+    const frozen = snapshot({ source: "manual" });
+    const summary = buildFabricationQuoteSummary([{
+      id: "item-glass-thickness",
+      codigo: "V1",
+      nombre: "Ventana",
+      lineaComercial: "Veratec 7400",
+      observaciones: encodeCotizacionItemCubicationOverride(encodeCotizacionItemPresentationMeta({
+        glassTechnicalSpec: {
+          version: 1,
+          productId: "glass-1",
+          thicknessMm: 6.38,
+          category: "laminado",
+          manualCutStatus: "pending_validation",
+          technicalReviewConfirmed: false,
+          sheetWidthMm: null,
+          sheetHeightMm: null,
+          provenance: "catalog",
+          sourceProductId: "glass-1",
+          sourceValues: null,
+          hasConflict: false,
+        },
+        vidrioLineTemplateId: "glass-1",
+      }), frozen),
+    }]);
+
+    expect(summary.items[0]).toMatchObject({ glassThickness: "6,38 mm", glassThicknessWarning: null });
+  });
 });

@@ -14,6 +14,8 @@ function item(input: {
   finish?: string;
   thickness?: string;
   glassTemplateId?: string;
+  supplierProviderKey?: string;
+  catalogTerminacion?: string;
   snapshot?: CotizacionWorkflowItem["fabricacionSnapshot"];
 }) {
   return {
@@ -41,10 +43,11 @@ function item(input: {
     precioAjustadoManual: false,
     origenPrecio: "manual" as const,
     observaciones: encodeCotizacionItemPresentationMeta({
-      colorHex: input.finish ?? "#ffffff",
+      colorHex: input.finish?.startsWith("#") ? input.finish : input.finish?.toLocaleLowerCase("es-CL") === "titanio" ? "#7d8791" : "#ffffff",
       material: "PVC",
       catalogEspesor: input.thickness ?? "4 mm",
-      catalogTerminacion: "Incoloro",
+      catalogTerminacion: input.catalogTerminacion ?? "Incoloro",
+      supplierProviderKey: input.supplierProviderKey,
       vidrioLineTemplateId: input.glassTemplateId,
       fabricacionGlazing: input.glass,
     }),
@@ -155,6 +158,47 @@ function glassSnapshot(glassId: string, name: string, width: number, height: num
 }
 
 describe("fabrication-work-materials.service", () => {
+  it("no asigna al proveedor elegido el precio del proveedor guardado en un snapshot anterior", () => {
+    const snapshot = jobSnapshot();
+    snapshot.bars = [{ ...snapshot.bars[0]!, supplierProviderKey: "arquetipo", supplierSku: "ARQ-5001" }];
+    const cost = {
+      schemaVersion: 2,
+      status: "partial",
+      calculatedAt: "2026-10-19T10:00:00.000Z",
+      currency: "CLP",
+      knownNetTotal: 13_477,
+      sourcePautaCapturedAt: null,
+      assumptions: [],
+      missing: [],
+      lines: [{
+        familyKey: "universal:aluminio:l5000", providerKey: "arquetipo", technicalCode: "5001",
+        technicalName: "Riel superior", supplierSku: "ARQ-5001", finishName: "Sin acabado específico",
+        commercialLengthMm: 6000, purchaseUnit: "TIRA", bars: 1, netPricePerPresentation: 13_477,
+        sourcePrice: 13_477, effectivePriceSource: "reference", priceBasis: "commercial_presentation",
+        lineNet: 13_477, currency: "CLP", priceListId: "arquetipo", priceListRevision: "2026", cuts: [],
+      }],
+    } as TechnicalCostSnapshot;
+    const materials = buildWorkMaterialsDocument({
+      summary: summary(snapshot),
+      items: [item({ id: "V1", code: "V1", glass: "Monolítico", finish: "#7d8791", supplierProviderKey: "alumco", catalogTerminacion: "Titanio" })],
+      technicalCostSnapshot: cost,
+    });
+
+    expect(materials.profiles).toHaveLength(1);
+    expect(materials.profiles[0]).toMatchObject({ supplierProviderKey: "alumco", finish: "Titanio", supplierSku: null, price: null });
+  });
+
+  it("no muestra un sufijo BLANCO cuando la cotización conserva Titanio", () => {
+    const snapshot = jobSnapshot();
+    snapshot.bars = [{ ...snapshot.bars[0]!, nombrePerfil: "RIEL SUPERIOR BLANCO", acabadoKey: "Titanio" }];
+    const materials = buildWorkMaterialsDocument({
+      summary: summary(snapshot),
+      items: [item({ id: "1", code: "V1", line: "Serie 25", glass: "Monolítico", finish: "Titanio" })],
+    });
+
+    expect(materials.profiles[0]).toMatchObject({ description: "RIEL SUPERIOR", finish: "Titanio" });
+  });
+
   it("vincula el precio guardado de un accesorio por cantidad de unidades", () => {
     const accessory = item({ id: "1", code: "V1", glass: "Monolítico", snapshot: glassSnapshot("p1", "Paño", 900, 1400, 1) });
     const cost = {
@@ -250,6 +294,150 @@ describe("fabrication-work-materials.service", () => {
     });
   });
 
+  it("no asigna precio por nombre cuando el código técnico del perfil no coincide", () => {
+    const snapshot = jobSnapshot();
+    snapshot.sourcePresentations[0]!.catalogLineKey = "ventora:l5000";
+    snapshot.bars = [{
+      ...snapshot.bars[0]!,
+      codigoPerfil: "QA-OTRO-CODIGO",
+      nombrePerfil: "Riel de marco",
+      cortes: snapshot.bars[0]!.cortes.map((cut) => ({ ...cut, codigoPerfil: "QA-OTRO-CODIGO" })),
+    }];
+    const cost = {
+      schemaVersion: 2,
+      status: "partial",
+      calculatedAt: "2026-10-15T10:00:00.000Z",
+      currency: "CLP",
+      knownNetTotal: 13_477,
+      sourcePautaCapturedAt: "2026-10-15T09:00:00.000Z",
+      assumptions: [],
+      missing: [],
+      lines: [{
+        familyKey: "universal:aluminio:l5000", technicalCode: "61016", technicalName: "Riel de marco",
+        supplierSku: "SKU-61016", finishCode: "", finishName: "Sin acabado específico",
+        commercialLengthMm: 5800, purchaseUnit: "TIRA", bars: 1, netPricePerPresentation: 13_477,
+        sourcePrice: 13_477, effectivePriceSource: "reference", priceBasis: "commercial_presentation",
+        lineNet: 13_477, currency: "CLP", priceListId: "arquetipo", priceListRevision: "qa", cuts: [],
+      }],
+    } as TechnicalCostSnapshot;
+
+    const materials = buildWorkMaterialsDocument({
+      summary: summary(snapshot),
+      items: [item({ id: "1", code: "V1", line: "Serie 5000", glass: "Monolítico" })],
+      technicalCostSnapshot: cost,
+    });
+
+    expect(materials.profiles).toHaveLength(1);
+    expect(materials.profiles[0]?.price).toBeNull();
+  });
+
+  it("distribuye el costo de una línea L32 agregada entre perfiles horizontales y verticales", () => {
+    const snapshot = jobSnapshot();
+    snapshot.sourcePresentations = [{
+      technicalInputKey: "l32-3201",
+      presentationKey: "p-l32",
+      lineTemplateId: 32,
+      catalogLineKey: "ventora:l32",
+      finishKey: "Negro",
+      commercialLengthMm: 6000,
+    }];
+    const sourceBar = snapshot.bars[0]!;
+    snapshot.bars = [
+      { ...sourceBar, presentationKey: "p-l32", materialKey: "l32-3201", codigoPerfil: "3201", nombrePerfil: "Marco horizontal", acabadoKey: "Negro", largoComercialMm: 6000 },
+      { ...sourceBar, presentationKey: "p-l32", materialKey: "l32-3201", codigoPerfil: "3201", nombrePerfil: "Marco vertical", acabadoKey: "Negro", largoComercialMm: 6000 },
+    ];
+    snapshot.totalBars = 2;
+    const cost = {
+      schemaVersion: 2,
+      status: "partial",
+      calculatedAt: "2026-10-16T10:00:00.000Z",
+      currency: "CLP",
+      knownNetTotal: 23_316,
+      sourcePautaCapturedAt: "2026-10-16T09:00:00.000Z",
+      assumptions: [],
+      missing: [],
+      lines: [{
+        familyKey: "universal:aluminio:l32",
+        providerKey: "arquetipo",
+        technicalCode: "3201",
+        technicalName: "Marco",
+        supplierSku: "30893201",
+        finishCode: "negro",
+        finishName: "Negro",
+        commercialLengthMm: 6000,
+        purchaseUnit: "TIRA",
+        bars: 2,
+        netPricePerPresentation: 11_658,
+        sourcePrice: 11_658,
+        effectivePriceSource: "reference",
+        priceBasis: "commercial_presentation",
+        lineNet: 23_316,
+        currency: "CLP",
+        priceListId: "thermowin",
+        priceListRevision: "2026-10",
+        cuts: [],
+      }],
+    } as TechnicalCostSnapshot;
+
+    const materials = buildWorkMaterialsDocument({
+      summary: summary(snapshot),
+      items: [item({ id: "1", code: "V1", line: "Serie 32", glass: "Monolítico", finish: "#111111" })],
+      technicalCostSnapshot: cost,
+    });
+
+    expect(materials.profiles.map((row) => row.description).sort()).toEqual(["Marco horizontal", "Marco vertical"]);
+    expect(materials.profiles.every((row) => row.price?.sourceLabel === "Arquetipo · junio 2026")).toBe(true);
+    expect(materials.profiles.map((row) => row.price?.subtotal)).toEqual([11_658, 11_658]);
+    expect(materials.profiles.reduce((total, row) => total + (row.price?.subtotal ?? 0), 0)).toBe(23_316);
+  });
+
+  it("deja pendiente el costo agregado si hay más de una referencia candidata", () => {
+    const snapshot = jobSnapshot();
+    snapshot.sourcePresentations = [{
+      technicalInputKey: "l32-3201",
+      presentationKey: "p-l32",
+      lineTemplateId: 32,
+      catalogLineKey: "ventora:l32",
+      finishKey: "#111111",
+      commercialLengthMm: 6000,
+    }];
+    const sourceBar = snapshot.bars[0]!;
+    snapshot.bars = [
+      { ...sourceBar, presentationKey: "p-l32", materialKey: "l32-3201", codigoPerfil: "3201", nombrePerfil: "Marco horizontal", acabadoKey: "Negro", largoComercialMm: 6000 },
+      { ...sourceBar, presentationKey: "p-l32", materialKey: "l32-3201", codigoPerfil: "3201", nombrePerfil: "Marco vertical", acabadoKey: "Negro", largoComercialMm: 6000 },
+    ];
+    snapshot.totalBars = 2;
+    const line = {
+      familyKey: "universal:aluminio:l32",
+      technicalCode: "3201",
+      technicalName: "Marco",
+      supplierSku: "SKU",
+      finishCode: "negro",
+      finishName: "Negro",
+      commercialLengthMm: 6000,
+      purchaseUnit: "TIRA",
+      bars: 2,
+      netPricePerPresentation: 11_658,
+      sourcePrice: 11_658,
+      effectivePriceSource: "reference",
+      priceBasis: "commercial_presentation",
+      lineNet: 23_316,
+      currency: "CLP",
+      priceListId: "lista",
+      priceListRevision: "2026-10",
+      cuts: [],
+    };
+    const cost = { schemaVersion: 2, status: "partial", calculatedAt: "2026-10-16T10:00:00.000Z", currency: "CLP", knownNetTotal: 46_632, sourcePautaCapturedAt: null, assumptions: [], missing: [], lines: [line, { ...line, supplierSku: "OTRO-SKU", lineNet: 23_316 }] } as TechnicalCostSnapshot;
+
+    const materials = buildWorkMaterialsDocument({
+      summary: summary(snapshot),
+      items: [item({ id: "1", code: "V1", line: "Serie 32", glass: "Monolítico", finish: "#111111" })],
+      technicalCostSnapshot: cost,
+    });
+
+    expect(materials.profiles.every((row) => row.price == null)).toBe(true);
+  });
+
   it("no deduce medidas de ventanas ni barras si faltan snapshots conjuntos", () => {
     const materials = buildWorkMaterialsDocument({
       summary: summary(null),
@@ -282,7 +470,7 @@ describe("fabrication-work-materials.service", () => {
     expect(new Set(materials.glassOrder.map((row) => row.key)).size).toBe(2);
   });
 
-  it("resuelve el espesor desde metadatos estructurados y el acabado desde equivalencias configuradas", () => {
+  it("no completa el espesor histórico desde el catálogo editable y conserva equivalencias de acabado", () => {
     const withUnknownFinish = item({
       id: "1", code: "V1", glass: "DVH sin espesor estructurado", finish: "#a8a8a8", glassTemplateId: "22",
       thickness: "", snapshot: glassSnapshot("internal-pane-uuid", "Paño principal", 600, 900, 1),
@@ -301,10 +489,12 @@ describe("fabrication-work-materials.service", () => {
     });
 
     expect(material.glassOrder[0]).toMatchObject({
-      thickness: "24 mm",
+      thickness: "Pendiente",
+      snapshotThickness: null,
       paneReference: "V1 · Paño 1",
       measuresPending: false,
     });
+    expect(material.glassOrder[0]?.thicknessWarning).toBeNull();
     expect(material.profiles).toEqual([]);
 
     const profileSummary = summary(jobSnapshot());
@@ -323,6 +513,40 @@ describe("fabrication-work-materials.service", () => {
     });
     const materials = buildWorkMaterialsDocument({ summary: summary(null), items: [noThickness] });
 
-    expect(materials.glassOrder[0].thickness).toBe("");
+    expect(materials.glassOrder[0].thickness).toBe("Pendiente");
+  });
+
+  it("usa el espesor técnico congelado del snapshot en materiales y orden de vidrios", () => {
+    const frozen = glassSnapshot("glass-4", "Hoja móvil", 600, 900, 1)!;
+    frozen.glassSelection = {
+      productId: "glass-4",
+      displayName: "Vidrio de catálogo",
+      technicalSpec: {
+        version: 1,
+        productId: "glass-4",
+        thicknessMm: 6.38,
+        category: "laminado",
+        manualCutStatus: "pending_validation",
+        technicalReviewConfirmed: false,
+        sheetWidthMm: null,
+        sheetHeightMm: null,
+        provenance: "catalog",
+        sourceProductId: "glass-4",
+        sourceValues: null,
+        hasConflict: false,
+      },
+    };
+    const selected = item({
+      id: "1", code: "V1", glass: "Vidrio de catálogo", thickness: "4 mm",
+      glassTemplateId: "glass-4", snapshot: frozen,
+    });
+    const materials = buildWorkMaterialsDocument({ summary: summary(null), items: [selected] });
+
+    expect(materials.glass[0]).toMatchObject({ thickness: "6,38 mm", thicknessWarning: expect.stringContaining("contradictorios") });
+    expect(materials.glassOrder[0]).toMatchObject({
+      thickness: "6,38 mm",
+      snapshotThickness: "6,38 mm",
+      thicknessWarning: expect.stringContaining("contradictorios"),
+    });
   });
 });

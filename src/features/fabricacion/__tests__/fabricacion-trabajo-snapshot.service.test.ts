@@ -192,6 +192,39 @@ describe("consolidación de pauta por trabajo", () => {
     })]);
   });
 
+  it("conserva el proveedor elegido aunque no tenga presentación para el perfil", () => {
+    const aluminum = snapshot({ pautaBarras: {
+      ...snapshot().pautaBarras,
+      barras: [{
+        ...snapshot().pautaBarras!.barras[0]!,
+        codigoPerfil: "2503",
+        largoComercialMm: 6000,
+        cortes: [{ ...snapshot().pautaBarras!.barras[0]!.cortes[0]!, codigoPerfil: "2503", largoMm: 2800 }],
+      }],
+    } });
+    const result = construirFabricacionTrabajoSnapshot({
+      items: ["alumco", "arquetipo"].map((providerKey) => ({
+        ...item(providerKey, "#7d8791", aluminum),
+        supplierFamilyKey: "universal:aluminio:l25",
+        supplierProviderKey: providerKey,
+        requireSupplierPresentation: true,
+        allowRecipeLengthWhenSupplierPending: true,
+        supplierPresentationSelections: [{
+          technicalCode: "2503", status: "missing" as const, presentationId: null, providerKey,
+          supplierSku: null, finishCode: null, finishName: null, commercialLengthMm: null,
+          reason: `${providerKey} no tiene precio para este perfil.`,
+        }],
+      })),
+    });
+
+    expect(result?.totalBars).toBe(2);
+    expect(result?.bars.map((bar) => bar.supplierProviderKey).sort()).toEqual(["alumco", "arquetipo"]);
+    expect(result?.missingPresentations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ technicalCode: "2503", itemId: "alumco", reason: "alumco no tiene precio para este perfil." }),
+      expect.objectContaining({ technicalCode: "2503", itemId: "arquetipo", reason: "arquetipo no tiene precio para este perfil." }),
+    ]));
+  });
+
   it("no crea una pauta conjunta incompleta si un corte no cabe en su barra", () => {
     const tooShort = snapshot({ pautaBarras: {
       ...snapshot().pautaBarras,

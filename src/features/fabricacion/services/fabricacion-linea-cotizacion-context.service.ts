@@ -160,6 +160,20 @@ export function resolveFabricacionContextFromLineCatalog(
   template: Pick<CotizacionLineTemplate, "catalogKey" | "catalogMetadata">
 ): FabricacionLineaCotizacionContext | null {
   const metadata = template.catalogMetadata ?? {};
+  if (template.catalogKey === "ventora:serie-12-shower-corredera") {
+    // La configuración comercial de esta plantilla dice "Corredera", pero
+    // su receta es específicamente Shower 2H. No dejar que el parser genérico
+    // de líneas convierta su tipología técnica en una corredera de ventana.
+    return {
+      fabricacionTipologia: "shower",
+      fabricacionHojas: 2,
+      fabricacionModulos: 1,
+      fabricationRecipeId: "",
+      fabricacionApertura: "shower",
+      fabricacionHerraje: "",
+      fabricacionVariante: "",
+    };
+  }
   const canonicalProjectingLine =
     template.catalogKey === "ventora:l32" ||
     template.catalogKey === "ventora:arquetipo-l32-proyectante" ||
@@ -359,6 +373,7 @@ export function resolveFabricacionContextForLineAssignment(input: {
   const hasAuthoritativeWinHouseContext = WINHOUSE_CATALOG_KEYS.has(
     input.template.catalogKey ?? ""
   );
+  const isLine12Shower = input.template.catalogKey === "ventora:serie-12-shower-corredera";
   const explicitS60Typology = input.template.catalogKey === "ventora:winhouse-s60"
     ? resolveWinHouseS60QuoteTypology({
         selectedTypology: input.form.fabricacionTipologia,
@@ -367,7 +382,9 @@ export function resolveFabricacionContextForLineAssignment(input: {
         description: input.form.descripcion,
       })
     : null;
-  const tipologiaHint = hasAuthoritativeWinHouseContext
+  const tipologiaHint = isLine12Shower
+    ? "shower"
+    : hasAuthoritativeWinHouseContext
     ? explicitS60Typology || catalogContext?.fabricacionTipologia || inferredTipologia || null
     : input.form.fabricacionTipologia ||
       catalogContext?.fabricacionTipologia ||
@@ -377,7 +394,9 @@ export function resolveFabricacionContextForLineAssignment(input: {
   const guidedVisualLeafCount = input.form.guidedVisualConfig?.root
     ? countLeafModules(input.form.guidedVisualConfig.root)
     : null;
-  const resolvedHojasHint =
+  const resolvedHojasHint = isLine12Shower
+    ? 2
+    :
     resolveCommercialFabricacionHojas({
       sheetScheme: input.form.sheetScheme,
       fabricacionHojas: input.form.fabricacionHojas,

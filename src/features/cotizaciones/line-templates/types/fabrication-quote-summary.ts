@@ -19,6 +19,7 @@ import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotiz
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { hasQuickCompositionStructuralChanges } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import { isVeratec7400FourMobileComposition } from "@/features/fabricacion/services/veratec-quote-composition.service";
+import { resolveFrozenGlassThickness } from "@/features/fabricacion/services/glass-thickness-resolution.service";
 
 export type FabricationSummaryItem = {
   itemId: string;
@@ -35,6 +36,8 @@ export type FabricationSummaryItem = {
   statusLabel: string;
   profilesMl: number;
   glassM2: number;
+  glassThickness: string;
+  glassThicknessWarning: string | null;
   accessoryUnits: number;
   barCount: number;
   fabricacionSnapshot: FabricacionCotizacionSnapshot | null;
@@ -198,6 +201,13 @@ export function buildFabricationQuoteSummary(
     const status = item.fabricacionSnapshot
       ? item.fabricacionSnapshot.recipeStatus
       : ((recipe?.status ?? snapshot.status) as RecipeStatus | string);
+    const glassThickness = resolveFrozenGlassThickness({
+      observations: item.observaciones,
+      snapshot: item.fabricacionSnapshot,
+      selectedProductId: (item.tipo ?? item.tipoItem ?? "").trim().toLocaleLowerCase("es-CL") === "vidrio / cristal"
+        ? meta.lineTemplateId
+        : meta.vidrioLineTemplateId,
+    });
     const geometryOnly = Boolean(liveResolution?.geometryOnly) && !meta.cubicationSnapshot;
 
     rows.push({
@@ -221,6 +231,8 @@ export function buildFabricationQuoteSummary(
           : formatStatusLabel(status),
       profilesMl: snapshot.totalProfilesLinealMm / 1000,
       glassM2: snapshot.glass?.totalM2 ?? 0,
+      glassThickness: glassThickness.display,
+      glassThicknessWarning: glassThickness.warning,
       accessoryUnits: snapshot.accessoryUnits,
       barCount: snapshot.bars.length,
       fabricacionSnapshot: item.fabricacionSnapshot ?? null,

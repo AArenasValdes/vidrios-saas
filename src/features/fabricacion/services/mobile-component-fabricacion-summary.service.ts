@@ -21,6 +21,7 @@ import {
   resolveFabricacionDespieceForQuoteItem,
 } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { resolveFrozenGlassThickness } from "@/features/fabricacion/services/glass-thickness-resolution.service";
 
 function isWorkflowItemCommerciallyIncomplete(item: CotizacionWorkflowItem) {
   return !item.precioTotal || item.precioTotal === 0 || !item.ancho || !item.alto;
@@ -182,6 +183,16 @@ export function resolveMobileComponentFabricacionSummary(
     contextualLineLabel ? { label: "Línea", value: contextualLineLabel } : null,
     hojas ? { label: "Hojas", value: String(hojas) } : null,
     item.vidrio?.trim() ? { label: "Vidrio", value: item.vidrio.trim() } : null,
+    item.vidrio?.trim() ? {
+      label: "Espesor técnico",
+      value: resolveFrozenGlassThickness({
+        observations: item.observaciones,
+        snapshot: item.fabricacionSnapshot,
+        selectedProductId: item.tipo.trim().toLocaleLowerCase("es-CL") === "vidrio / cristal"
+          ? meta.lineTemplateId
+          : meta.vidrioLineTemplateId,
+      }).display,
+    } : null,
     meta.fabricacionLeg
       ? { label: "Pierna", value: formatSodalL25LegLabel(meta.fabricacionLeg) }
       : null,

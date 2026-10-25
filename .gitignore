@@ -35,6 +35,8 @@ tmp-*
 
 # Cursor local state. Las skills del workflow Zeta sí se versionan.
 .cursor/*
+!.cursor/agents/
+!.cursor/agents/*.md
 !.cursor/skills/
 !.cursor/skills/**
 

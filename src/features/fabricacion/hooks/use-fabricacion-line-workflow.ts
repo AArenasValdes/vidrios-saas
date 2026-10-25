@@ -25,9 +25,11 @@ import { crearRecetaFabricacionVacia } from "@/features/fabricacion/services/fab
 import { enriquecerCodigosPerfilRecetaFabricacion } from "@/features/fabricacion/services/fabricacion-receta-codigos.service";
 import { enriquecerRecetaDesdeCatalogo } from "@/features/fabricacion/services/enriquecer-receta-desde-catalogo.service";
 import {
+  applyUniqueDeclaredCatalogComposition,
   resolveInitialFabricationStepForTemplate,
   resolveMobileVariantTreeEntryStep,
 } from "@/features/fabricacion/services/fabricacion-workflow-initial-step.service";
+import { resolveUniqueRecipeGlassRecommendation } from "@/features/fabricacion/services/fabricacion-line-glass-recommendation.service";
 import { VENTORA_LARGO_COMERCIAL_PRESET_MM } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import {
   cloneFabricacionRecipe,
@@ -312,9 +314,13 @@ export function useFabricacionLineWorkflow({
         catalogKey: template?.catalogKey,
         lineName: template?.nombre,
       });
+      const catalogIdentity =
+        recipe.status !== "validated" && raw.perfiles.length === 0
+          ? applyUniqueDeclaredCatalogComposition(raw, template?.catalogKey)
+          : raw;
       const enriched = enriquecerRecetaDesdeCatalogo({
         receta: enriquecerCodigosPerfilRecetaFabricacion({
-          receta: raw,
+          receta: catalogIdentity,
           sourceType: recipe.sourceType,
           sourceReference: recipe.sourceReference,
           lineName: recipe.lineName,
@@ -595,8 +601,26 @@ export function useFabricacionLineWorkflow({
             { quiet: silent }
           );
 
-      if (template && template.material !== lineMaterial) {
-        await updateTemplate(template.id, { material: lineMaterial });
+      if (template) {
+        const glassRecommendation = resolveUniqueRecipeGlassRecommendation(
+          recipes,
+          selected.id,
+          recipeToSave
+        );
+        const templatePatch: {
+          material?: CotizacionLineTemplateMaterial;
+          vidrioPrincipalRecomendado?: string;
+        } = {};
+        if (template.material !== lineMaterial) templatePatch.material = lineMaterial;
+        if (
+          glassRecommendation &&
+          glassRecommendation !== template.vidrioPrincipalRecomendado
+        ) {
+          templatePatch.vidrioPrincipalRecomendado = glassRecommendation;
+        }
+        if (Object.keys(templatePatch).length > 0) {
+          await updateTemplate(template.id, templatePatch);
+        }
       }
 
       setSelectedId(updated.id);
@@ -620,6 +644,7 @@ export function useFabricacionLineWorkflow({
       lineMaterial,
       lineName,
       providerName,
+      recipes,
       resolveStartModePersistence,
       selected,
       lineTemplateId,

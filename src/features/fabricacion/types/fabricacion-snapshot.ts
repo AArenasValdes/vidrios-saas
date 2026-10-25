@@ -6,6 +6,7 @@ import type {
   FabricacionResultadoCubicacion,
   FabricacionVidrioResultado,
 } from "@/features/fabricacion/types/fabricacion-domain";
+import type { GlassTechnicalSpec } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
 import type {
   FabricationRecipeScope,
   FabricationRecipeStatus,
@@ -56,6 +57,12 @@ export type FabricacionCotizacionSnapshot = {
   lineTemplateId: number | null;
   /** Familia técnica explícita del catálogo comercial; no se deduce por nombre. */
   supplierFamilyKey?: string | null;
+  /** Frozen catalog selection; intentionally contains no purchase or sale prices. */
+  glassSelection?: {
+    productId: string | null;
+    displayName: string | null;
+    technicalSpec: GlassTechnicalSpec | null;
+  };
   recipeIdentity: FabricacionIdentidadReceta;
   input: FabricacionEntradaCalculo;
   selectedVariant: string | null;

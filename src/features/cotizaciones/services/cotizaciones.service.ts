@@ -56,6 +56,7 @@ import {
 import { createQuoteRegionSnapshot } from "@/features/organization-region/services/quote-region-snapshot.service";
 import { resolveQuotePricingSettings } from "@/features/organization-region/services/quote-region-display.service";
 import {
+  ensureLogicalComponentIdsForQuoteSave,
   getFabricationRecipeLineTemplateIdsForSnapshotResolution,
   prepareFabricacionSnapshotsForQuoteSave,
   resolveFabricacionSnapshotsIndependently,
@@ -87,6 +88,14 @@ export type GuardarCotizacionWorkflowInput = {
   sourceSolicitudId?: string | null;
   requestKey?: string;
 };
+
+function isUnlinkedQuoteFallbackTitle(value: string): boolean {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLocaleLowerCase("es-CL") === "cotizacion";
+}
 
 type GetWorkflowByIdOptions = {
   seed?: CotizacionWorkflowRecord | null;
@@ -1103,9 +1112,8 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
       ? await cotizacionesRepo.getById(input.existingId, input.organizationId)
       : null;
     const quotePricingMode = normalizeQuotePricingMode(input.draft.quotePricingMode);
-    let normalizedItems = reconcileWorkflowItemsPricing(
-      input.draft.items,
-      quotePricingMode
+    let normalizedItems = ensureLogicalComponentIdsForQuoteSave(
+      reconcileWorkflowItemsPricing(input.draft.items, quotePricingMode)
     );
     const finalizingDraft = shouldResolveFabricationRecipesForQuoteSave({
       existingId: input.existingId,
@@ -1214,8 +1222,17 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
       };
 
       const needsRegionalLookup = !existingCotizacion?.regionalSnapshot;
+      // Reopening a legacy quote without a project uses "Cotización" as a UI
+      // fallback. Saving an unrelated field (for example, a note) must not
+      // turn that placeholder into a newly linked project.
+      const keepLegacyQuoteUnlinked = Boolean(
+        input.existingId &&
+          existingCotizacion &&
+          !existingCotizacion.proyectoId &&
+          isUnlinkedQuoteFallbackTitle(input.draft.obra)
+      );
       const projectPromise =
-        !isAnonymousClient && clientResult
+        !isAnonymousClient && clientResult && !keepLegacyQuoteUnlinked
           ? withTimeout(
               ensureProject({
                 organizationId: input.organizationId,
@@ -1292,6 +1309,7 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
           colorHex: presentation.colorHex,
           catalogLineKey: presentation.catalogLineKey,
           supplierFamilyKey: item.fabricacionSnapshot?.supplierFamilyKey,
+          supplierProviderKey: presentation.supplierProviderKey || null,
           snapshot: item.fabricacionSnapshot ?? null,
         };
       });

@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 
 import type { WorkMaterialsDocument } from "../fabrication-work-materials.service";
+import type { FabricationWorkOrder } from "../fabrication-work-order.service";
 import { buildWorkMaterialsWorkbook } from "../work-materials-excel-export.service";
 
 const document: WorkMaterialsDocument = {
@@ -13,6 +14,12 @@ const document: WorkMaterialsDocument = {
     commercialLengthMm: 6000,
     bars: 1,
     itemCodes: ["V1", "V2"],
+    price: {
+      providerKey: "arquetipo",
+      sku: "30895001", isWorkshopCode: false, sourceLabel: "Arquetipo", sourceKind: "reference",
+      sourceRevision: "lista-actual", pricedAt: "2026-10-15T10:00:00.000Z", basis: "por tira",
+      unitPrice: 13_477, subtotal: 13_477, currency: "CLP",
+    },
   }],
   accessories: [{
     key: "accessory-1",
@@ -23,6 +30,12 @@ const document: WorkMaterialsDocument = {
     line: "Serie 5000",
     finish: "Aluminio mate",
     itemCodes: ["V1", "V2"],
+    price: {
+      providerKey: "arquetipo",
+      sku: "ACC-4", isWorkshopCode: false, sourceLabel: "Arquetipo", sourceKind: "reference",
+      sourceRevision: "lista-actual", pricedAt: "2026-10-15T10:00:00.000Z", basis: "por unidad",
+      unitPrice: 1_250, subtotal: 5_000, currency: "CLP",
+    },
   }],
   glass: [{
     key: "glass-1",
@@ -72,17 +85,90 @@ describe("buildWorkMaterialsWorkbook", () => {
     expect(workbook.SheetNames).toEqual(["Perfiles", "Accesorios", "Vidrios"]);
     const profiles = workbook.Sheets.Perfiles;
     expect(profiles.A1.v).toBe("VENTORA · Perfiles totales");
-    expect(profiles.F8.v).toBe(1);
-    expect(profiles.G8.v).toBe("V1, V2");
-    expect(profiles["!autofilter"]?.ref).toBe("A7:G8");
-    expect(profiles["!cols"]?.[4]?.wch).toBe(20);
+    expect(profiles.E8.v).toBe("Aluminio mate");
+    expect(profiles.F8.v).toBe("Arquetipo");
+    expect(profiles.H8.v).toBe(1);
+    expect(profiles.I8.v).toBe("V1, V2");
+    expect(profiles.J8.v).toBe(13_477);
+    expect(profiles.K8.v).toBe(13_477);
+    expect(profiles.L8.v).toBe("Total referencial");
+    expect(profiles["!autofilter"]?.ref).toBe("A7:L8");
+    expect(profiles["!cols"]?.[4]?.wch).toBe(22);
     expect(workbook.Props?.Subject).toBe("Cotización COT-041026-002");
 
     const exported = XLSX.write(workbook, { bookType: "xlsx", type: "buffer" });
     const reopened = XLSX.read(exported, { type: "buffer" });
-    expect(reopened.Sheets.Perfiles["!autofilter"]?.ref).toBe("A7:G8");
+    expect(reopened.Sheets.Perfiles["!autofilter"]?.ref).toBe("A7:L8");
     expect(reopened.Sheets.Perfiles["!merges"]).toHaveLength(3);
-    expect(reopened.Sheets.Perfiles.F8.v).toBe(1);
+    expect(reopened.Sheets.Perfiles.H8.v).toBe(1);
+    expect(reopened.Sheets.Perfiles.J8.v).toBe(13_477);
+    expect(reopened.Sheets.Accesorios.H8.v).toBe(1_250);
+    expect(reopened.Sheets.Accesorios.I8.v).toBe(5_000);
+  });
+
+  it("exporta referencias enlazadas al perfil y a sus cantidades de pauta", () => {
+    const withReferences: WorkMaterialsDocument = {
+      ...document,
+      profilePriceReferences: [{
+        key: "V1:5001:arquetipo:p-5001", itemCode: "V1", line: "Serie 5000", finish: "Aluminio mate",
+        technicalCode: "5001", profileName: "Riel superior", providerKey: "arquetipo", providerLabel: "Arquetipo",
+        presentationId: "p-5001", supplierSku: "30895001", presentationDescription: "Tira 6 m",
+        purchaseUnit: "tira", commercialLengthMm: 6000, netPrice: 13_477, currency: "CLP",
+        priceSource: "reference", status: "priced",
+      }],
+      profilePriceReferencesCheckedAt: "2026-10-17T10:00:00.000Z",
+    };
+    const workbook = buildWorkMaterialsWorkbook(XLSX, { ...metadata, document: withReferences, kind: "materials" });
+    const sheet = workbook.Sheets["Precios perfiles"];
+
+    expect(workbook.SheetNames).toContain("Precios perfiles");
+    expect(sheet.A8.v).toBe("V1, V2");
+    expect(sheet.C8.v).toBe("5001");
+    expect(sheet.F8.v).toBe("Arquetipo");
+    expect(sheet.G8.v).toBe("30895001");
+    expect(sheet.H8.v).toBe("por tira");
+    expect(sheet.J8.v).toBe(1);
+    expect(sheet.K8.v).toBe(13_477);
+    expect(sheet.L8.v).toBe(13_477);
+    expect(sheet.M8.v).toBe("Disponible · asociado a pauta");
+    expect(sheet.A9).toBeUndefined();
+    expect(sheet.L8.v).not.toBe(13_477 * 2);
+  });
+
+  it("enlaza una línea y color distintos por identidad exacta, sin cruzar otra familia", () => {
+    const profile = {
+      ...document.profiles[0]!, key: "QA-L25-01", code: "QA-L25-01", description: "Perfil de prueba QA",
+      familyKey: "universal:aluminio:l25", line: "L25", finish: "Titanio", configuredFinish: "Titanio",
+      bars: 2, itemCodes: ["V1", "V2"], price: null,
+    };
+    const makeReference = (itemCode: string, familyKey: string, providerKey: string, providerLabel: string, supplierSku: string, netPrice: number) => ({
+      key: `${itemCode}:${providerKey}:${supplierSku}`, itemCode, line: "L25", lineNames: ["L25"], familyKey,
+      finish: "Titanio", technicalCode: profile.code, profileName: profile.description,
+      providerKey, providerLabel, presentationId: "alumco-presentation", supplierSku,
+      presentationDescription: "Tira 6 m", purchaseUnit: "tira", commercialLengthMm: 6000, netPrice,
+      currency: "CLP", priceSource: "reference" as const, status: "priced" as const,
+    });
+    const withReferences: WorkMaterialsDocument = {
+      ...document,
+      profiles: [profile],
+      profilePriceReferencesStatus: "loaded",
+      profilePriceReferences: [
+        makeReference("V1", "universal:aluminio:l25", "alumco", "Alumco · QA", "QA-L25-SKU", 20_000),
+        makeReference("V2", "universal:aluminio:l25", "alumco", "Alumco · QA", "QA-L25-SKU", 20_000),
+        makeReference("V1", "universal:aluminio:l5000", "arquetipo", "Arquetipo · QA", "WRONG-FAMILY", 99_999),
+      ],
+    };
+    const workbook = buildWorkMaterialsWorkbook(XLSX, { ...metadata, document: withReferences, kind: "materials" });
+
+    expect(workbook.Sheets.Perfiles.E8.v).toBe("Titanio");
+    expect(workbook.Sheets.Perfiles.F8.v).toBe("Alumco · QA");
+    expect(workbook.Sheets.Perfiles.J8.v).toBe(20_000);
+    expect(workbook.Sheets.Perfiles.K8.v).toBe(40_000);
+    expect(workbook.Sheets["Precios perfiles"].G8.v).toBe("QA-L25-SKU");
+    expect(workbook.Sheets["Precios perfiles"].L8.v).toBe(40_000);
+    expect(workbook.Sheets["Precios perfiles"].F8.v).toBe("Alumco · QA");
+    expect(workbook.Sheets.Vidrios.D8.v).toBe("5 mm");
+    expect(workbook.Sheets.Perfiles.K8.v).not.toBe(99_999);
   });
 
   it("exporta orden de vidrios con medidas y cantidad trazables", () => {
@@ -91,9 +177,39 @@ describe("buildWorkMaterialsWorkbook", () => {
 
     expect(workbook.SheetNames).toEqual(["Orden de vidrios"]);
     expect(sheet.B8.v).toBe("V1 · Paño 1 · Ventana corredera");
-    expect(sheet.E8.v).toBe(611);
-    expect(sheet.F8.v).toBe(1222);
-    expect(sheet.G8.v).toBe(2);
-    expect(sheet.H8.z).toContain("m²");
+    expect(sheet.D8.v).toBe("5 mm");
+    expect(sheet.F8.v).toBe(611);
+    expect(sheet.G8.v).toBe(1222);
+    expect(sheet.H8.v).toBe(2);
+    expect(sheet.I8.z).toContain("m²");
+  });
+
+  it("exporta cortes agrupados desde la pauta guardada, sin mezclar materiales ni precios alternativos", () => {
+    const workOrder = {
+      cutGroups: [{
+        key: "bar-1", technicalCode: "5001", profileName: "Riel superior", finish: "Aluminio mate",
+        line: "Serie 5000", supplierLabel: "Arquetipo", supplierSku: "30895001",
+        barIndex: 1, commercialLengthMm: 6000, usedMm: 2609, theoreticalRemnantMm: 3391,
+        trimMm: 0, kerfMm: 0,
+        cuts: [{ itemCode: "V1", component: "Ventana", functionName: "Riel superior", quantity: 2, lengthMm: 1000 }],
+      }],
+    } as FabricationWorkOrder;
+    const workbook = buildWorkMaterialsWorkbook(XLSX, { ...metadata, kind: "profile-cuts", workOrder });
+    const sheet = workbook.Sheets["Cortes perfiles"];
+
+    expect(workbook.SheetNames).toEqual(["Cortes perfiles"]);
+    expect(sheet.A8.v).toBe("5001");
+    expect(sheet.C8.v).toBe("Serie 5000");
+    expect(sheet.D8.v).toBe("Aluminio mate");
+    expect(sheet.E8.v).toBe("Arquetipo");
+    expect(sheet.F8.v).toBe("30895001");
+    expect(sheet.H8.v).toBe("V1");
+    expect(sheet.J8.v).toBe("Riel superior");
+    expect(sheet.K8.v).toBe(2);
+    expect(sheet.L8.v).toBe(1000);
+    expect(sheet.M8.v).toBe(3391);
+
+    const materialWorkbook = buildWorkMaterialsWorkbook(XLSX, { ...metadata, kind: "materials", includeSupplierPriceReferences: false });
+    expect(materialWorkbook.SheetNames).toEqual(["Perfiles", "Accesorios", "Vidrios"]);
   });
 });

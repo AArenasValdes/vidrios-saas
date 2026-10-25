@@ -11,7 +11,12 @@ import { buildFabricationQuoteSummary } from "@/features/cotizaciones/line-templ
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
-import { buildWorkMaterialsDocument } from "@/features/fabricacion/services/fabrication-work-materials.service";
+import { buildWorkMaterialsDocument, type WorkMaterialPrice, type WorkProfilePriceReferenceRow } from "@/features/fabricacion/services/fabrication-work-materials.service";
+import { buildFabricationWorkOrder } from "@/features/fabricacion/services/fabrication-work-order.service";
+
+jest.mock("../vidrios/glass-distribution-panel", () => ({
+  GlassDistributionPanel: () => <section aria-label="Distribución de planchas" />,
+}));
 
 import { FabricacionResumenMovil } from "../fabricacion-resumen-movil";
 
@@ -166,18 +171,29 @@ const sharedWorkSnapshot = {
   }],
 } as FabricacionTrabajoSnapshot;
 
-function ViewHarness({ extraItems = items, trabajoSnapshot, technicalCostPanel }: { extraItems?: CotizacionWorkflowItem[]; trabajoSnapshot?: FabricacionTrabajoSnapshot | null; technicalCostPanel?: ReactNode } = {}) {
+function ViewHarness({ extraItems = items, trabajoSnapshot, technicalCostPanel, profilePriceReferences = [], profilePriceReferencesStatus = "not_applicable", profileReferencePrice }: { extraItems?: CotizacionWorkflowItem[]; trabajoSnapshot?: FabricacionTrabajoSnapshot | null; technicalCostPanel?: ReactNode; profilePriceReferences?: WorkProfilePriceReferenceRow[]; profilePriceReferencesStatus?: "loading" | "loaded" | "unavailable" | "not_applicable"; profileReferencePrice?: WorkMaterialPrice } = {}) {
   const summary = buildFabricationQuoteSummary(extraItems, { trabajoSnapshot });
+  const materialsDocument = buildWorkMaterialsDocument({ summary, items: extraItems, profilePriceReferences, profilePriceReferencesStatus });
+  if (profileReferencePrice && materialsDocument.profiles[0]) materialsDocument.profiles[0].price = profileReferencePrice;
+  if (profilePriceReferences.length > 0) {
+    materialsDocument.profiles.forEach((profile) => {
+      profile.familyKey = profilePriceReferences[0]!.familyKey;
+      profile.finish = "Aluminio mate";
+      profile.configuredFinish = "Aluminio mate";
+    });
+  }
   return (
     <FabricacionResumenMovil
       backHref="/cotizaciones/q1"
       pdfHref="/print/cotizaciones/q1"
+      quoteId="q1"
       codigo="COT-190826-003"
       clienteNombre="Alessandro"
       obra="Obra norte"
       summary={summary}
       items={extraItems}
-      materialsDocument={buildWorkMaterialsDocument({ summary, items: extraItems })}
+      materialsDocument={materialsDocument}
+      workOrder={buildFabricationWorkOrder({ summary, materials: materialsDocument, quoteItems: extraItems })}
       companyName="Ventora QA"
       issueDate="4 oct 2026"
       technicalCostPanel={technicalCostPanel}
@@ -185,39 +201,58 @@ function ViewHarness({ extraItems = items, trabajoSnapshot, technicalCostPanel }
       exportError={null}
       onDownload={jest.fn()}
       onPrint={jest.fn()}
+      onOpenDespiece={jest.fn()}
     />
   );
 }
 
 describe("FabricacionResumenMovil", () => {
-  it("ubica el costo técnico antes de materiales y pauta, sin crear una sección al final", () => {
+  it("muestra documentos, componentes e indicadores en ese orden", () => {
     render(<ViewHarness technicalCostPanel={<section data-testid="cost-panel">Costo estimado de materiales</section>} />);
 
-    const costPanel = screen.getByTestId("cost-panel");
-    const materialsHeading = screen.getByRole("heading", { name: "Lista de materiales del trabajo" });
-    const pautaSummary = screen.getByText("Ver pauta, cortes y sobrantes");
-    expect(costPanel.compareDocumentPosition(materialsHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(costPanel.compareDocumentPosition(pautaSummary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Resumen de fabricación" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Indicadores del trabajo")).toBeInTheDocument();
+    expect(within(screen.getByLabelText("Indicadores del trabajo")).getByText("Perfiles")).toBeInTheDocument();
+    expect(screen.getByText("Con pauta")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Optimizar vidrios" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Documentos de fabricación" }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Descargar PDF preliminar de distribución de planchas" })).toBeInTheDocument();
+    const surface = screen.getByLabelText("Resumen y documentos").firstElementChild;
+    expect(surface?.children[0]).toHaveTextContent("Documentos de fabricación");
+    expect(surface?.children[1]).toHaveTextContent("Componentes con pauta");
+    expect(surface?.children[2]).toHaveTextContent("Con pauta");
+    expect(screen.queryByTestId("cost-panel")).not.toBeInTheDocument();
+    expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument();
   });
 
-  it("prioriza la pauta conjunta guardada y permite abrir los componentes por separado", () => {
+  it("mantiene separadas la orden y la distribución de planchas", () => {
     render(<ViewHarness />);
 
-    expect(screen.getByRole("heading", { name: "Resumen de fabricación" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Pauta conjunta" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("heading", { name: "Pauta conjunta no disponible" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("tab", { name: "Por componente" }));
-    expect(screen.getByRole("button", { name: "Ver detalle de V1 · Ventana corredera" })).toBeInTheDocument();
-    expect(screen.getAllByText("Pauta lista")).toHaveLength(2);
-    expect(screen.queryByRole("button", { name: /Mostrar detalle/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /PDF cliente/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Descargar orden de fabricación y materiales/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Imprimir/i })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("tab", { name: "Pauta conjunta" }));
-    expect(screen.getAllByAltText("Ventora")).toHaveLength(2);
-    for (const logo of screen.getAllByAltText("Ventora")) {
-      expect(logo).toHaveAttribute("src", "/brand/ventora-logo-boot.svg");
-    }
+    fireEvent.click(screen.getByRole("tab", { name: "Vidrios" }));
+
+    expect(screen.getByRole("heading", { name: "Orden de vidrios" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Distribución de planchas" })).toBeInTheDocument();
+  });
+
+  it("muestra los costos solo en su pestaña", () => {
+    render(<ViewHarness technicalCostPanel={<section data-testid="cost-panel">Costo estimado de materiales</section>} />);
+    expect(screen.queryByTestId("cost-panel")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Costos" }));
+    expect(screen.getByTestId("cost-panel")).toBeVisible();
+  });
+
+  it("separa materiales, vidrios, cortes y costos en sus secciones", () => {
+    render(<ViewHarness technicalCostPanel={<section data-testid="cost-panel">Costo estimado de materiales</section>} />);
+
+    fireEvent.click(screen.getByRole("tab", { name: "Materiales" }));
+    expect(screen.getByRole("heading", { name: "Lista de materiales del trabajo" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Vidrios" }));
+    expect(screen.getByRole("heading", { name: "Orden de vidrios" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Cortes" }));
+    expect(screen.getByRole("heading", { name: "Pauta de cortes de perfiles" })).toBeInTheDocument();
+    expect(screen.getByText("Ver pauta, cortes y sobrantes")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Costos" }));
+    expect(screen.getByTestId("cost-panel")).toBeVisible();
   });
 
   it("muestra en móvil los componentes cuya pauta quedó pendiente por estructura", () => {
@@ -231,7 +266,7 @@ describe("FabricacionResumenMovil", () => {
     render(<ViewHarness extraItems={[item]} />);
 
     expect(screen.getByText("Composición por revisar")).toBeInTheDocument();
-    expect(screen.getByText("La pauta automática queda pendiente hasta tener una receta compatible.")).toBeInTheDocument();
+    expect(screen.getByText("La pauta queda pendiente hasta tener una receta compatible.")).toBeInTheDocument();
     expect(screen.getByText("Con pauta")).toBeInTheDocument();
     expect(screen.getByText("0/1")).toBeInTheDocument();
   });
@@ -239,14 +274,14 @@ describe("FabricacionResumenMovil", () => {
   it("abre el detalle del componente con Resumen, Cortes y Despiece", () => {
     render(<ViewHarness />);
 
-    fireEvent.click(screen.getByRole("tab", { name: "Por componente" }));
-    fireEvent.click(screen.getByRole("button", { name: "Ver detalle de V1 · Ventana corredera" }));
+    fireEvent.click(screen.getByText("V1").closest("summary")!);
+    fireEvent.click(screen.getAllByRole("button", { name: "Ver detalle" })[0]);
 
     expect(screen.getByRole("heading", { name: "V1 · Ventana corredera" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Resumen" })).toHaveAttribute("aria-selected", "true");
+    expect(within(screen.getByRole("tablist", { name: "Detalle del componente" })).getByRole("tab", { name: "Resumen" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByLabelText("Perfiles")).toBeInTheDocument();
     expect(screen.getByLabelText("Vidrio")).toBeInTheDocument();
-    expect(screen.getByLabelText("Tiras")).toBeInTheDocument();
+    expect(screen.getAllByLabelText("Tiras").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByLabelText("Accesorios")).toBeInTheDocument();
     expect(screen.getByLabelText("Configuración técnica")).toBeInTheDocument();
 
@@ -260,9 +295,91 @@ describe("FabricacionResumenMovil", () => {
     expect(screen.getByText("2 × 1.500 mm")).toBeInTheDocument();
   });
 
+  it("muestra la vista compacta operativa en Materiales con perfiles, accesorios y descargas", () => {
+    render(<ViewHarness trabajoSnapshot={sharedWorkSnapshot} />);
+    fireEvent.click(screen.getByRole("tab", { name: "Materiales" }));
+
+    expect(screen.getByRole("heading", { name: "Lista de materiales del trabajo" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Perfiles y cantidades para comprar")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Descargar listado de materiales" })).toBeInTheDocument();
+    expect(within(screen.getByRole("group", { name: "Descargar listado de materiales" })).getByRole("button", { name: "PDF" })).toBeInTheDocument();
+    expect(within(screen.getByRole("group", { name: "Descargar listado de materiales" })).getByRole("button", { name: "Excel" })).toBeInTheDocument();
+    expect(screen.getByText("Perfiles a comprar")).toBeInTheDocument();
+    expect(screen.getByText("R-01")).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("muestra color, proveedor y total referencial calculado desde la pauta", () => {
+    const profilePriceReferences = ["V1", "V2"].map((itemCode) => ({
+      key: `${itemCode}:R-01:arquetipo:p-r01`, itemCode, line: "L25", lineNames: ["L25"],
+      familyKey: "universal:aluminio:l25", finish: "Aluminio mate", technicalCode: "R-01", profileName: "Riel",
+      providerKey: "arquetipo", providerLabel: "Arquetipo", presentationId: "p-r01", supplierSku: "QA-R01",
+      presentationDescription: "Tira 5.800 mm", purchaseUnit: "tira", commercialLengthMm: 5800, netPrice: 13_477,
+      currency: "CLP", priceSource: "reference" as const, status: "priced" as const,
+    }));
+    render(<ViewHarness trabajoSnapshot={sharedWorkSnapshot} profilePriceReferences={profilePriceReferences} />);
+    fireEvent.click(screen.getByRole("tab", { name: "Materiales" }));
+
+    expect(screen.getByText("Proveedor · Arquetipo")).toBeInTheDocument();
+    const profiles = screen.getByLabelText("Perfiles y cantidades para comprar");
+    expect(within(profiles).getByText("Unitario · $13.477 / tira")).toBeInTheDocument();
+    expect(within(profiles).getByText("Total referencial · $13.477")).toBeInTheDocument();
+    expect(within(profiles).getByText("Color aluminio: Aluminio mate")).toBeInTheDocument();
+    expect(screen.getByText("Total referencial de perfiles")).toBeInTheDocument();
+    expect(screen.getByText("Arquetipo · $13.477")).toBeInTheDocument();
+    expect(within(profiles).queryByText("Precio pendiente")).not.toBeInTheDocument();
+  });
+
+  it("mantiene visible el proveedor cuando el precio referencial llega con el material", () => {
+    render(<ViewHarness trabajoSnapshot={sharedWorkSnapshot} profileReferencePrice={{
+      sku: "QA-R01", providerKey: "arquetipo", isWorkshopCode: false, sourceKind: "reference",
+      sourceLabel: "Arquetipo · junio 2026", sourceRevision: "lista-2026-06", pricedAt: null,
+      basis: "por tira", unitPrice: 13_477, subtotal: 13_477, currency: "CLP",
+    }} />);
+    fireEvent.click(screen.getByRole("tab", { name: "Materiales" }));
+
+    const profiles = screen.getByLabelText("Perfiles y cantidades para comprar");
+    expect(within(profiles).getByText("Proveedor · Arquetipo · junio 2026")).toBeInTheDocument();
+    expect(within(profiles).getByText("Total referencial · $13.477")).toBeInTheDocument();
+  });
+
+  it("espera la consulta de precios antes de habilitar el PDF de materiales", () => {
+    render(<ViewHarness trabajoSnapshot={sharedWorkSnapshot} profilePriceReferencesStatus="loading" />);
+    fireEvent.click(screen.getByRole("tab", { name: "Materiales" }));
+
+    expect(screen.getByRole("button", { name: "Consultando…" })).toBeDisabled();
+    expect(screen.getByText("Consultando precio de referencia…")).toBeInTheDocument();
+  });
+
+  it("muestra la vista compacta operativa en Cortes por barra/perfil sin duplicar tablas", () => {
+    render(<ViewHarness trabajoSnapshot={sharedWorkSnapshot} />);
+    fireEvent.click(screen.getByRole("tab", { name: "Cortes" }));
+
+    expect(screen.getByRole("heading", { name: "Pauta de cortes de perfiles" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Totales de cortes")).toBeInTheDocument();
+    expect(screen.getByLabelText("Cortes agrupados por perfil")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Descargar pauta de cortes de perfiles" })).toBeInTheDocument();
+    expect(within(screen.getByRole("group", { name: "Descargar pauta de cortes de perfiles" })).getByRole("button", { name: "PDF" })).toBeInTheDocument();
+    expect(within(screen.getByRole("group", { name: "Descargar pauta de cortes de perfiles" })).getByRole("button", { name: "Excel" })).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("muestra la vista compacta operativa en Vidrios sin duplicación de la orden imprimible", () => {
+    render(<ViewHarness />);
+    fireEvent.click(screen.getByRole("tab", { name: "Vidrios" }));
+
+    expect(screen.getByRole("region", { name: "Distribución de planchas" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Orden de vidrios" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Orden de corte de vidrios")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Descargar orden de vidrios" })).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
   it("muestra primero las tiras compartidas con cortes y sobrante, después el resumen agrupado", () => {
     render(<ViewHarness trabajoSnapshot={sharedWorkSnapshot} />);
 
+    fireEvent.click(screen.getByRole("tab", { name: "Cortes" }));
+    fireEvent.click(screen.getByText("Ver pauta, cortes y sobrantes"));
     const consolidado = screen.getByLabelText("Qué fabricar");
     expect(within(consolidado).getByText("Largo usado en cortes")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Pauta conjunta · trabajo completo" })).toBeInTheDocument();

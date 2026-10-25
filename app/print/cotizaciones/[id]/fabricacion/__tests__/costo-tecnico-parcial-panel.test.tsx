@@ -38,9 +38,9 @@ describe("CostoTecnicoParcialPanel", () => {
 
     render(<CostoTecnicoParcialPanel quoteId="qa-1" />);
     expect(await screen.findByText("Costo estimado de materiales")).toBeInTheDocument();
-    expect(screen.getByText("$194.929")).toBeInTheDocument();
+    expect(await screen.findByText("$194.929")).toBeInTheDocument();
     expect(screen.getByText("1 insumos valorizados")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Ver materiales" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Ver materiales" }));
     expect(screen.getByText("Tornillo")).toBeInTheDocument();
     expect(screen.getByText("Código técnico: R")).toBeInTheDocument();
     expect(screen.getByText("Sin presentación confirmada")).toBeInTheDocument();
@@ -80,7 +80,7 @@ describe("CostoTecnicoParcialPanel", () => {
 
     render(<CostoTecnicoParcialPanel quoteId="qa-2" />);
     expect(await screen.findByText("Costo estimado de materiales")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Ver materiales" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Ver materiales" }));
     expect(screen.getByText("Blanco · 2 PCS")).toBeInTheDocument();
     expect(screen.getAllByText("$2.152")).toHaveLength(2);
   });
@@ -128,7 +128,7 @@ describe("CostoTecnicoParcialPanel", () => {
     render(<CostoTecnicoParcialPanel quoteId="qa-stale" />);
     expect(await screen.findByText("Costo guardado (desactualizado)")).toBeInTheDocument();
     expect(screen.getByText(/Cambió la pauta o el proveedor desde este cálculo/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Actualizar costos" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Actualizar costos" })).toBeInTheDocument();
   });
 
   it("guarda un precio propio y actualiza el costo congelado de esta cotización", async () => {

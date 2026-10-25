@@ -32,6 +32,7 @@ function formatMoney(value: number | null, currency: string | null) {
 }
 
 export function CostoTecnicoParcialPanel({ quoteId, onSnapshotChange }: { quoteId: string; onSnapshotChange?: (snapshot: TechnicalCostSnapshot | null) => void }) {
+  const [loading, setLoading] = useState(true);
   const [enabled, setEnabled] = useState(false);
   const [canCalculate, setCanCalculate] = useState(false);
   const [canRefresh, setCanRefresh] = useState(false);
@@ -69,6 +70,8 @@ export function CostoTecnicoParcialPanel({ quoteId, onSnapshotChange }: { quoteI
         onSnapshotChange?.(payload.snapshot ?? null);
       } catch (error) {
         if (alive) setMessage(error instanceof Error ? error.message : "No pudimos cargar el costo parcial.");
+      } finally {
+        if (alive) setLoading(false);
       }
     }
     void load();
@@ -170,7 +173,10 @@ export function CostoTecnicoParcialPanel({ quoteId, onSnapshotChange }: { quoteI
     }
   };
 
-  if (!enabled && !message) return null;
+  if (!enabled && !message) return <section className={styles.panel} aria-label="Costo estimado de materiales" data-testid="supplier-technical-cost-panel">
+    <h2>Costo estimado de materiales</h2>
+    <p className={styles.empty} role="status">{loading ? "Cargando costos…" : "No hay un costo técnico disponible para esta cotización."}</p>
+  </section>;
   const knownTotal = formatMoney(snapshot?.knownNetTotal ?? null, snapshot?.currency ?? null);
   const presentationDescription = (line: TechnicalCostSnapshot["lines"][number]) =>
     line.quantity != null

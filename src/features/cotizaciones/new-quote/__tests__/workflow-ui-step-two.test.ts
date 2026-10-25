@@ -1,5 +1,6 @@
 import {
   applyLineTemplateToComponentForm,
+  applyGlassSelectionToComponentForm,
   applyQuickEditDraftStatesToItems,
   buildFreeValueItemFromForm,
   buildItemFromForm,
@@ -47,7 +48,7 @@ import {
 } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import { filterLineCatalogTemplates } from "@/features/cotizaciones/line-templates/services/line-option-presentation.service";
-import { resolveLineCompatibilityOpeningType } from "@/features/cotizaciones/line-templates/services/line-template-compatibility.service";
+import { resolveLineCompatibilityContext } from "@/features/cotizaciones/line-templates/services/line-template-compatibility.service";
 import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import { setQuickPaneDecoration } from "@/features/cotizaciones/visual-composer/services/quick-composition-adjustment.service";
 import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
@@ -115,6 +116,106 @@ function createBaseItem() {
 }
 
 describe("workflow-ui paso 2", () => {
+  it("conserva identidad y ficha técnica cuando se selecciona un vidrio del catálogo", () => {
+    const selected = applyLineTemplateToComponentForm(
+      createLinePricingForm({ vidrio: "Vidrio anterior", vidrioLineTemplateId: "old-glass" }),
+      {
+        id: 3643,
+        nombre: "Float Incoloro 5mm",
+        categoria: "vidrio",
+        material: "Cristal",
+        catalogKey: null,
+        catalogMetadata: {
+          espesor: "5 mm",
+          categoriaTecnica: "monolitico",
+          corteManualEstado: "pending_validation",
+          planchaAnchoMm: 3210,
+          planchaAltoMm: 2250,
+        },
+        vidrioPrincipalRecomendado: null,
+        precioM2Sugerido: 10000,
+        minimoCobrable: 0,
+        redondeoPrecio: 0,
+      }
+    );
+
+    expect(selected.vidrio).toBe("Float Incoloro 5mm");
+    expect(selected.vidrioLineTemplateId).toBe("3643");
+    expect(selected.glassTechnicalSpec).toMatchObject({
+      productId: "3643",
+      thicknessMm: 5,
+      category: "monolitico",
+      manualCutStatus: "pending_validation",
+      sheetWidthMm: 3210,
+      sheetHeightMm: 2250,
+      provenance: "catalog",
+    });
+  });
+
+  it("resuelve el ID del catálogo y borra ficha anterior al elegir vidrio sin identidad", () => {
+    const catalog = [{
+      id: 3643,
+      nombre: "Float Incoloro 5mm",
+      categoria: "vidrio",
+      material: "Cristal",
+      catalogKey: null,
+      catalogMetadata: {
+        espesor: "5 mm",
+        categoriaTecnica: "monolitico",
+        corteManualEstado: "pending_validation",
+        planchaAnchoMm: 3210,
+        planchaAltoMm: 2250,
+      },
+    }];
+    const linked = applyGlassSelectionToComponentForm(
+      createLinePricingForm({ vidrio: "Otro", vidrioLineTemplateId: "old", glassTechnicalSpec: null }),
+      { displayName: "Float Incoloro 5mm", productId: "3643" },
+      catalog
+    );
+    expect(linked.vidrioLineTemplateId).toBe("3643");
+    expect(linked.glassTechnicalSpec?.productId).toBe("3643");
+
+    const custom = applyGlassSelectionToComponentForm(
+      linked,
+      { displayName: "Vidrio ingresado por el taller" },
+      catalog
+    );
+    expect(custom.vidrio).toBe("Vidrio ingresado por el taller");
+    expect(custom.vidrioLineTemplateId).toBe("");
+    expect(custom.glassTechnicalSpec).toBeNull();
+  });
+
+  it("persiste y rehidrata la identidad y especificación del vidrio seleccionado", () => {
+    const catalog = [{
+      id: 3643,
+      nombre: "Float Incoloro 5mm",
+      categoria: "vidrio",
+      material: "Cristal",
+      catalogKey: null,
+      catalogMetadata: {
+        espesor: "5 mm",
+        categoriaTecnica: "monolitico",
+        corteManualEstado: "pending_validation",
+        planchaAnchoMm: 3210,
+        planchaAltoMm: 2250,
+      },
+    }];
+    const selected = applyGlassSelectionToComponentForm(
+      createLinePricingForm(),
+      { displayName: "Float Incoloro 5mm", productId: "3643" },
+      catalog
+    );
+
+    const saved = buildItemFromForm(selected, [], null);
+    const reopened = mapItemToForm(saved);
+    const meta = decodeCotizacionItemPresentationMeta(saved.observaciones);
+
+    expect(meta.vidrioLineTemplateId).toBe("3643");
+    expect(meta.glassTechnicalSpec).toMatchObject({ productId: "3643", manualCutStatus: "pending_validation" });
+    expect(reopened.vidrioLineTemplateId).toBe("3643");
+    expect(reopened.glassTechnicalSpec).toMatchObject({ productId: "3643", thicknessMm: 5, manualCutStatus: "pending_validation" });
+  });
+
   it("inicia L42 del Constructor en Normal sin tomar un borrador ALAR", () => {
     const selected = applyLineTemplateToComponentForm(
       createLinePricingForm({ lineTemplateId: "", sistema: "Proyectante", fabricacionTipologia: "" }),
@@ -525,6 +626,15 @@ describe("workflow-ui paso 2", () => {
     );
 
     expect(item.nombre).toBe("Ventana living premium");
+  });
+
+  it("muestra Shower corredera aunque la clasificación comercial guardada sea Puerta", () => {
+    expect(resolveWorkflowItemDisplayName({
+      tipo: "Puerta",
+      nombre: "Puerta",
+      sistema: "Shower Door",
+      configuracion: "Corredera",
+    })).toBe("Shower corredera");
   });
 
   it("debe calcular el siguiente codigo por tipo de componente", () => {
@@ -1475,24 +1585,27 @@ describe("workflow-ui paso 2", () => {
 
   it("resuelve Shower Corredera como dos hojas para que Línea 12 aparezca compatible", () => {
     const leavesCount = resolveComponentFabricacionHojas({
-      tipo: "Shower Door",
+      tipo: "Puerta",
       sistema: "Shower",
-      configuracion: "Corredera",
-      catalogLineKey: "ventora:serie-12-shower-corredera",
+      configuracion: "1 hojas",
       fabricacionHojas: 1,
       hojasBase: 1,
+      referencia: "Shower corredera",
     });
 
     expect(leavesCount).toBe(2);
+    const compatibilityContext = resolveLineCompatibilityContext({
+      componentType: "Puerta",
+      system: "Shower",
+      configuration: "1 hojas",
+      componentLabel: "Shower corredera",
+      leavesCount,
+      material: "Aluminio",
+    });
     expect(filterLineCatalogTemplates({
       templates: VENTORA_DEFAULT_LINE_CATALOG,
       tab: "compatible",
-      context: {
-        componentType: "Shower Door",
-        openingType: resolveLineCompatibilityOpeningType("Shower", "Corredera"),
-        leavesCount,
-        material: "Aluminio",
-      },
+      context: compatibilityContext,
     }).map((template) => template.catalogKey)).toContain("ventora:serie-12-shower-corredera");
   });
 

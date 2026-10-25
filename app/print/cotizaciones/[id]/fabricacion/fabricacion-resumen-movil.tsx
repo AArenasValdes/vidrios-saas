@@ -37,7 +37,13 @@ import {
 } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import type { WorkMaterialsDocument } from "@/features/fabricacion/services/fabrication-work-materials.service";
+import type { FabricationWorkOrder } from "@/features/fabricacion/services/fabrication-work-order.service";
 import { WorkMaterialsDocumentPanel } from "./work-materials-document-panel";
+import { CompactMaterialsView, CompactCutsView, CompactGlassView } from "./fabricacion-movil-compact-views";
+import { GlassDistributionPanel } from "./vidrios/glass-distribution-panel";
+import { useDirectGlassDistribution } from "@/features/fabricacion/hooks/use-direct-glass-distribution";
+import { GlassSheetFormatDialog } from "@/features/fabricacion/components/glass-sheet-format-dialog";
+import { GlassDistributionCoverageNotice } from "./vidrios/glass-distribution-coverage-notice";
 
 import {
   buildCubicacionPerfilRows,
@@ -52,12 +58,13 @@ import {
 } from "./fabricacion-resumen-view";
 import s from "./page.module.css";
 
-type HomeTab = "componentes" | "consolidado";
+type HomeTab = "resumen" | "materiales" | "vidrios" | "cortes" | "costos";
 type DetailTab = "resumen" | "cortes" | "despiece";
 
 type Props = {
   backHref: string;
   pdfHref: string;
+  quoteId: string;
   codigo: string;
   clienteNombre: string;
   obra: string;
@@ -66,11 +73,13 @@ type Props = {
   isExporting: boolean;
   exportError: string | null;
   materialsDocument: WorkMaterialsDocument;
+  workOrder: FabricationWorkOrder;
   companyName: string;
   issueDate: string;
   technicalCostPanel?: ReactNode;
   onDownload: () => void;
   onPrint: () => void;
+  onOpenDespiece: (itemId: string) => void;
 };
 
 function formatVariantLabel(value: string | null | undefined) {
@@ -109,23 +118,41 @@ function SegmentedControl<T extends string>({
   value,
   options,
   ariaLabel,
+  id,
   onChange,
 }: {
   value: T;
   options: Array<{ id: T; label: string }>;
   ariaLabel: string;
+  id: string;
   onChange: (value: T) => void;
 }) {
+  const activeIndex = options.findIndex((option) => option.id === value);
   return (
-    <div className={s.mSegmented} role="tablist" aria-label={ariaLabel}>
+    <div className={s.mSegmented} role="tablist" aria-label={ariaLabel} onKeyDown={(event) => {
+      const nextIndex = event.key === "ArrowRight" ? (activeIndex + 1) % options.length
+        : event.key === "ArrowLeft" ? (activeIndex - 1 + options.length) % options.length
+          : event.key === "Home" ? 0 : event.key === "End" ? options.length - 1 : -1;
+      if (nextIndex < 0) return;
+      event.preventDefault();
+      const next = options[nextIndex];
+      onChange(next.id);
+      document.getElementById(`${id}-${next.id}`)?.focus();
+    }}>
       {options.map((option) => (
         <button
           key={option.id}
+          id={`${id}-${option.id}`}
           type="button"
           role="tab"
           aria-selected={value === option.id}
+          aria-controls={`${id}-panel`}
+          tabIndex={value === option.id ? 0 : -1}
           className={value === option.id ? s.mSegmentedActive : s.mSegmentedButton}
-          onClick={() => onChange(option.id)}
+          onClick={(event) => {
+            onChange(option.id);
+            event.currentTarget.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+          }}
         >
           {option.label}
         </button>
@@ -138,6 +165,15 @@ function MetricCell({ label, value }: { label: string; value: string }) {
   return (
     <div className={s.mMetric}>
       <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function SummaryMetricCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className={s.mSummaryMetric}>
+      <span className={s.mSummaryMetricLabel}>{label}</span>
       <strong>{value}</strong>
     </div>
   );
@@ -156,40 +192,38 @@ function TechRow({ label, value }: { label: string; value: string }) {
 function ComponentCard({
   row,
   onOpen,
+  onOpenDespiece,
 }: {
   row: FabricationSummaryItem;
   onOpen: () => void;
+  onOpenDespiece: () => void;
 }) {
   const lineCaption = formatFabricationItemLineCaption(row.lineName, row.material);
   const unitLabel = row.quantity === 1 ? "unidad" : "unidades";
 
   return (
-    <button
-      type="button"
-      className={s.mPieceCard}
-      onClick={onOpen}
-      aria-label={`Ver detalle de ${row.codigo} · ${row.nombre}`}
-    >
-      <div className={s.mPieceCardBody}>
-        <p className={s.mPieceTitle}>
-          {row.codigo} · {row.nombre}
-        </p>
-        <p className={s.mPieceLine}>{lineCaption}</p>
-        <p className={s.mPieceMeta}>
-          {row.widthMm} × {row.heightMm} mm · {row.quantity} {unitLabel}
-        </p>
+    <details className={s.mPieceCard}>
+      <summary>
+        <span className={s.mPieceCode}>{row.codigo}</span>
+        <span className={s.mPieceCardBody}>
+          <strong className={s.mPieceTitle}>{row.nombre}</strong>
+          <span className={s.mPieceMeta}>{row.widthMm.toLocaleString("es-CL")} × {row.heightMm.toLocaleString("es-CL")} mm · {row.quantity} {unitLabel}</span>
+        </span>
+        <LuChevronRight aria-hidden className={s.mChevron} />
+      </summary>
+      <div className={s.mPieceExpanded}>
+        <p className={s.mPieceLine}>{lineCaption} · {row.statusLabel}</p>
         <div className={s.mPieceMetrics}>
           <MetricCell label="Perfiles" value={formatMl(row.profilesMl)} />
           <MetricCell label="Vidrio" value={formatM2(row.glassM2)} />
-          <MetricCell
-            label="Tiras"
-            value={formatTirasNecesariasLabel(row.barCount, row.snapshot.bars)}
-          />
+          <MetricCell label="Tiras" value={formatTirasNecesariasLabel(row.barCount, row.snapshot.bars)} />
         </div>
-        <p className={s.mPieceStatus}>Pauta lista</p>
+        <div className={s.mPieceActions}>
+          <button type="button" onClick={onOpen}>Ver detalle</button>
+          <button type="button" onClick={onOpenDespiece}>Revisar despiece</button>
+        </div>
       </div>
-      <LuChevronRight aria-hidden className={s.mChevron} />
-    </button>
+    </details>
   );
 }
 
@@ -246,6 +280,8 @@ function DetailResumen({
       <section className={s.mGroup} aria-label="Vidrio">
         <h3>Vidrio</h3>
         <p className={s.mGroupLead}>{formatM2(row.glassM2)}</p>
+        <p className={s.mGroupNote}>Espesor técnico: {row.glassThickness}</p>
+        {row.glassThicknessWarning ? <p className={s.mGroupNote}>{row.glassThicknessWarning}</p> : null}
         {glass ? (
           <p className={s.mGroupNote}>
             {formatMm(glass.widthMm)} × {formatMm(glass.heightMm)}
@@ -366,18 +402,8 @@ function DetailDespiece({ row }: { row: FabricationSummaryItem }) {
 
 function ConsolidadoView({
   summary,
-  materialsDocument,
-  companyName,
-  codigo,
-  obra,
-  issueDate,
 }: {
   summary: FabricationQuoteSummary;
-  materialsDocument: WorkMaterialsDocument;
-  companyName: string;
-  codigo: string;
-  obra: string;
-  issueDate: string;
 }) {
   const consolidated = useMemo(
     () =>
@@ -396,14 +422,6 @@ function ConsolidadoView({
 
   return (
     <div className={s.mStack}>
-      <WorkMaterialsDocumentPanel
-        document={materialsDocument}
-        companyName={companyName}
-        quoteCode={codigo}
-        work={obra}
-        issueDate={issueDate}
-      />
-
       <details className={s.secondaryWorkshopDetails}>
         <summary>Ver pauta, cortes y sobrantes</summary>
         {consolidated.lineGroups.length === 0 ? (
@@ -510,6 +528,7 @@ function ConsolidadoView({
 export function FabricacionResumenMovil({
   backHref,
   pdfHref,
+  quoteId,
   codigo,
   clienteNombre,
   obra,
@@ -518,15 +537,24 @@ export function FabricacionResumenMovil({
   isExporting,
   exportError,
   materialsDocument,
+  workOrder,
   companyName,
   issueDate,
   technicalCostPanel,
   onDownload,
   onPrint,
+  onOpenDespiece,
 }: Props) {
-  const [homeTab, setHomeTab] = useState<HomeTab>("consolidado");
+  const [homeTab, setHomeTab] = useState<HomeTab>("resumen");
   const [detailItemId, setDetailItemId] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>("resumen");
+
+  const glassDistribution = useDirectGlassDistribution({
+    quoteId,
+    quoteCode: codigo,
+    clientName: clienteNombre,
+    workName: obra,
+  });
 
   const detailRow = summary.items.find((row) => row.itemId === detailItemId) ?? null;
   const detailSource = detailRow
@@ -571,30 +599,27 @@ export function FabricacionResumenMovil({
       </header>
 
       {!detailRow ? (
-        <>
-          <section className={s.mTotals} aria-label="Totales">
-            <MetricCell label="Largo usado en cortes" value={formatMl(summary.totalProfilesMl)} />
-            <MetricCell label="Vidrio" value={formatM2(summary.totalGlassM2)} />
-            <MetricCell label="Tiras" value={summary.totalBars == null ? "—" : String(summary.totalBars)} />
-            <MetricCell label="Con pauta" value={`${summary.items.length}/${summary.totalItems}`} />
-          </section>
-          <div className={s.mSegmentWrap}>
+        <div className={s.mSegmentWrap}>
             <SegmentedControl
               value={homeTab}
-              ariaLabel="Vista de fabricación"
+              ariaLabel="Secciones de fabricación"
+              id="fabricacion-tabs"
               options={[
-                { id: "consolidado", label: "Pauta conjunta" },
-                { id: "componentes", label: "Por componente" },
+                { id: "resumen", label: "Resumen" },
+                { id: "materiales", label: "Materiales" },
+                { id: "vidrios", label: "Vidrios" },
+                { id: "cortes", label: "Cortes" },
+                { id: "costos", label: "Costos" },
               ]}
               onChange={setHomeTab}
             />
-          </div>
-        </>
+        </div>
       ) : (
         <div className={s.mSegmentWrap}>
           <SegmentedControl
             value={detailTab}
             ariaLabel="Detalle del componente"
+            id="fabricacion-detail-tabs"
             options={[
               { id: "resumen", label: "Resumen" },
               { id: "cortes", label: "Cortes" },
@@ -605,21 +630,26 @@ export function FabricacionResumenMovil({
         </div>
       )}
 
-      {!detailRow ? technicalCostPanel : null}
+      {exportError ? <p className={s.mExportNotice} role="alert">{exportError}</p> : null}
 
-      {exportError ? <p className={s.mExportNotice}>{exportError}</p> : null}
-
-      <div className={s.mContent}>
-        {!detailRow && summary.compositionsPendingRecipe.length > 0 ? (
-          <section className={s.compositionReviewNotice} aria-label="Composiciones pendientes de receta">
-            <strong>Composición por revisar</strong>
-            <p>La pauta automática queda pendiente hasta tener una receta compatible.</p>
-            <ul>
-              {summary.compositionsPendingRecipe.map((item) => (
-                <li key={item.itemId}>{item.codigo} · {item.nombre}</li>
-              ))}
-            </ul>
-          </section>
+      <div
+        id={detailRow ? "fabricacion-detail-tabs-panel" : "fabricacion-tabs-panel"}
+        role="tabpanel"
+        aria-labelledby={detailRow ? `fabricacion-detail-tabs-${detailTab}` : `fabricacion-tabs-${homeTab}`}
+        className={s.mContent}
+      >
+        {!detailRow ? (
+          <div hidden={homeTab !== "vidrios"}>
+            <GlassDistributionPanel
+              quoteId={quoteId}
+              quoteCode={codigo}
+              clientName={clienteNombre}
+              workName={obra}
+              enabled
+              autoPreview={homeTab === "vidrios"}
+              preloadPreview
+            />
+          </div>
         ) : null}
         {detailRow ? (
           detailTab === "resumen" ? (
@@ -629,56 +659,124 @@ export function FabricacionResumenMovil({
           ) : (
             <DetailDespiece row={detailRow} />
           )
-        ) : homeTab === "consolidado" ? (
-          <ConsolidadoView
-            summary={summary}
-            materialsDocument={materialsDocument}
+        ) : homeTab === "materiales" ? (
+          <CompactMaterialsView
+            document={materialsDocument}
+            workOrder={workOrder}
             companyName={companyName}
-            codigo={codigo}
-            obra={obra}
+            quoteCode={codigo}
+            work={obra}
             issueDate={issueDate}
           />
-        ) : summary.items.length === 0 ? (
-          <p className={s.mEmpty}>
-            {summary.compositionsPendingRecipe.length > 0
-              ? "No hay componentes con pauta compatible para esta composición."
-              : "Esta cotización aún no tiene pauta de fabricación congelada en las piezas."}
-          </p>
-        ) : homeTab === "componentes" ? (
-          <div className={s.mCardStack}>
-            {summary.items.map((row) => (
-              <ComponentCard
-                key={row.itemId}
-                row={row}
-                onOpen={() => {
-                  setDetailItemId(row.itemId);
-                  setDetailTab("resumen");
-                }}
-              />
-            ))}
-          </div>
-        ) : null}
+        ) : homeTab === "vidrios" ? (
+          <CompactGlassView
+            quoteId={quoteId}
+            quoteCode={codigo}
+            clienteNombre={clienteNombre}
+            obra={obra}
+            document={materialsDocument}
+            workOrder={workOrder}
+            companyName={companyName}
+            issueDate={issueDate}
+          />
+        ) : homeTab === "cortes" ? (
+          <CompactCutsView
+            summary={summary}
+            workOrder={workOrder}
+            materialsDocument={materialsDocument}
+            companyName={companyName}
+            quoteCode={codigo}
+            work={obra}
+            issueDate={issueDate}
+          />
+        ) : homeTab === "costos" ? (
+          <section className={s.mCostTab} aria-label="Costos de fabricación">
+            {technicalCostPanel}
+            {!technicalCostPanel ? <p className={s.mEmpty}>Los costos de fabricación no están habilitados para esta cotización.</p> : null}
+          </section>
+        ) : (
+          <section className={s.mSummarySections} aria-label="Resumen y documentos">
+            <div className={s.mSummarySurface}>
+              <section className={s.mSummarySection}>
+                <h2>Documentos de fabricación</h2>
+                <div className={s.mDocumentRows}>
+                  <WorkMaterialsDocumentPanel document={materialsDocument} workOrder={workOrder} companyName={companyName} quoteCode={codigo} work={obra} issueDate={issueDate} view="actions" />
+                  <div className={s.mDocumentRow}>
+                    <span className={s.mDocumentCopy}>
+                      <strong>Distribución de planchas de vidrio</strong>
+                      <small>PDF preliminar</small>
+                    </span>
+                    <button
+                      type="button"
+                      className={s.mDocumentAction}
+                      onClick={glassDistribution.startDownload}
+                      disabled={glassDistribution.isGenerating || glassDistribution.isCoverageLoading || glassDistribution.coverage?.status !== "complete"}
+                      aria-label="Descargar PDF preliminar de distribución de planchas"
+                      aria-busy={glassDistribution.isGenerating}
+                    >
+                      {glassDistribution.isGenerating ? "Generando…" : "PDF"}
+                    </button>
+                  </div>
+                  <GlassDistributionCoverageNotice quoteId={quoteId} coverage={glassDistribution.coverage} />
+                  {glassDistribution.error ? (
+                    <p role="alert" className={s.exportNotice}>
+                      {glassDistribution.error}
+                    </p>
+                  ) : null}
+                  {glassDistribution.notice ? (
+                    <p role="status" className={s.documentActionStatus}>
+                      {glassDistribution.notice}
+                    </p>
+                  ) : null}
+                </div>
+                <div className={s.mSecondaryDocs}>
+                  <button type="button" onClick={onDownload} disabled={isExporting}><LuDownload aria-hidden />{isExporting ? "Generando…" : "PDF conjunto"}</button>
+                  <Link href={pdfHref}><LuFileText aria-hidden />PDF cliente</Link>
+                  <button type="button" onClick={onPrint}><LuPrinter aria-hidden />Imprimir</button>
+                </div>
+              </section>
+
+              <section className={s.mSummarySection}>
+                <div className={s.mSummaryHeading}><h2>Componentes con pauta</h2><span>{summary.items.length} de {summary.totalItems}</span></div>
+                {summary.items.length > 0 ? (
+                  <div className={s.mCardStack}>
+                    {summary.items.map((row) => <ComponentCard
+                      key={row.itemId}
+                      row={row}
+                      onOpen={() => { setDetailItemId(row.itemId); setDetailTab("resumen"); }}
+                      onOpenDespiece={() => onOpenDespiece(row.itemId)}
+                    />)}
+                  </div>
+                ) : <p className={s.mEmpty}>{summary.compositionsPendingRecipe.length > 0 ? "No hay componentes con pauta compatible para esta composición." : "Esta cotización aún no tiene pauta de fabricación guardada."}</p>}
+              </section>
+
+              <section className={s.mTotals} aria-label="Indicadores del trabajo">
+                <SummaryMetricCell label="Perfiles" value={formatMl(summary.totalProfilesMl)} />
+                <SummaryMetricCell label="Vidrio" value={formatM2(summary.totalGlassM2)} />
+                <SummaryMetricCell label="Tiras" value={summary.totalBars == null ? "—" : String(summary.totalBars)} />
+                <SummaryMetricCell label="Con pauta" value={`${summary.items.length}/${summary.totalItems}`} />
+              </section>
+            </div>
+            {summary.compositionsPendingRecipe.length > 0 ? (
+              <section className={s.compositionReviewNotice} aria-label="Composiciones pendientes de receta">
+                <strong>Composición por revisar</strong>
+                <p>La pauta queda pendiente hasta tener una receta compatible.</p>
+                <details>
+                  <summary>Ver {summary.compositionsPendingRecipe.length} {summary.compositionsPendingRecipe.length === 1 ? "componente" : "componentes"}</summary>
+                  <ul>{summary.compositionsPendingRecipe.map((item) => <li key={item.itemId}>{item.codigo} · {item.nombre}</li>)}</ul>
+                </details>
+              </section>
+            ) : null}
+          </section>
+        )}
       </div>
 
-      <footer className={s.mActions}>
-        <button
-          type="button"
-          className={s.mActionPrimary}
-          onClick={onDownload}
-          disabled={isExporting}
-        >
-          <LuDownload aria-hidden />
-          {isExporting ? "Generando..." : "Descargar orden de fabricación y materiales"}
-        </button>
-        <Link href={pdfHref} className={s.mActionGhost}>
-          <LuFileText aria-hidden />
-          PDF cliente
-        </Link>
-        <button type="button" className={s.mActionGhost} onClick={onPrint}>
-          <LuPrinter aria-hidden />
-          Imprimir
-        </button>
-      </footer>
+      <GlassSheetFormatDialog
+        open={glassDistribution.formatDialogOpen}
+        onOpenChange={glassDistribution.setFormatDialogOpen}
+        onSubmit={glassDistribution.confirmFormat}
+        isSubmitting={glassDistribution.isGenerating}
+      />
     </div>
   );
 }

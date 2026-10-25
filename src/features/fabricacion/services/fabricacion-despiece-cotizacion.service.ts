@@ -504,7 +504,12 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   });
   const isBaharExteriorLine = catalogKey === `${VERATEC_BAHAR_5200_CATALOG_KEY_PREFIX}-ventana-exterior`;
   const tipologia =
-    (isBaharExteriorLine
+    (catalogKey === "ventora:serie-12-shower-corredera"
+      // La identidad exacta del catálogo L12 fija el producto como Shower.
+      // Cotizaciones antiguas pueden conservar "Puerta" o "corredera" como
+      // clasificación comercial; no deben impedir resolver su receta 2H.
+      ? "shower"
+      : isBaharExteriorLine
       ? inferredTipologia || presentation.fabricacionTipologia
       : catalogKey === WINHOUSE_S60_CATALOG_KEY
       ? resolveWinHouseS60QuoteTypology({
@@ -532,7 +537,9 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     presentation.sistema
   );
   const hojas =
-    catalogKey === WINHOUSE_S60_CATALOG_KEY &&
+    catalogKey === "ventora:serie-12-shower-corredera"
+      ? 2
+      : catalogKey === WINHOUSE_S60_CATALOG_KEY &&
     (tipologia === "pano_fijo" || tipologia === "proyectante")
       ? 1
       : resolveLeavesCount(input.item, presentation);

@@ -127,7 +127,8 @@ export function construirFabricacionTrabajoSnapshot(input: {
           materialKey,
           acabadoKey,
           commercialLength,
-          usableSelection?.presentationId ?? usableSelection?.supplierSku ?? `receta:${cut.codigoPerfil}`,
+          usableSelection?.presentationId ?? usableSelection?.supplierSku ??
+            usableSelection?.providerKey ?? selection?.providerKey ?? item.supplierProviderKey ?? `receta:${cut.codigoPerfil}`,
         ]);
         // A physical presentation may be used by several explicit catalog lines.
         // Keep each source link while still allowing compatible cuts to share bars.
@@ -144,7 +145,7 @@ export function construirFabricacionTrabajoSnapshot(input: {
           finishKey: acabadoKey,
           commercialLengthMm: commercialLength,
           supplierPresentationId: usableSelection?.presentationId ?? null,
-          providerKey: usableSelection?.providerKey ?? null,
+          providerKey: usableSelection?.providerKey ?? selection?.providerKey ?? item.supplierProviderKey ?? null,
           supplierSku: usableSelection?.supplierSku ?? null,
           finishCode: usableSelection?.finishCode ?? null,
           finishName: usableSelection?.finishName ?? null,
@@ -167,7 +168,7 @@ export function construirFabricacionTrabajoSnapshot(input: {
           despunteInicialMm: Math.round(bar.despunteInicialMm),
           perdidaCorteMm: kerf,
           supplierPresentationId: usableSelection?.presentationId ?? null,
-          supplierProviderKey: usableSelection?.providerKey ?? null,
+          supplierProviderKey: usableSelection?.providerKey ?? selection?.providerKey ?? item.supplierProviderKey ?? null,
           supplierSku: usableSelection?.supplierSku ?? null,
           supplierFinishCode: usableSelection?.finishCode ?? null,
           supplierFinishName: usableSelection?.finishName ?? null,

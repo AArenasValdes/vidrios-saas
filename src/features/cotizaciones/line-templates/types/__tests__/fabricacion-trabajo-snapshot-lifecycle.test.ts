@@ -1,4 +1,5 @@
 import {
+  ensureLogicalComponentIdsForQuoteSave,
   getFabricationRecipeLineTemplateIdsForSnapshotResolution,
   prepareFabricacionSnapshotsForQuoteSave,
   resolveFabricacionSnapshotsIndependently,
@@ -7,7 +8,10 @@ import {
   shouldResolveSupplierPresentationsForQuoteSave,
 } from "@/features/cotizaciones/services/fabricacion-trabajo-snapshot-lifecycle.service";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
-import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import {
+  decodeCotizacionItemPresentationMeta,
+  encodeCotizacionItemPresentationMeta,
+} from "@/utils/cotizacion-item-presentation";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import { construirFabricacionTrabajoSnapshot } from "@/features/fabricacion/services/fabricacion-trabajo-snapshot.service";
 import { buildConsolidatedCubicationPautaFromSnapshots } from "@/features/cotizaciones/line-templates/types/cotizacion-cubication-consolidated";
@@ -203,6 +207,83 @@ describe("fabricacion-trabajo-snapshot lifecycle", () => {
 
     expect(prepared.itemIdsToResolve).toEqual(new Set(["draft-item-2"]));
     expect(prepared.items[0]?.fabricacionSnapshot).toBe(itemSnapshot);
+  });
+
+  it("invalida el snapshot si cambia solo el producto de vidrio o su espesor congelado", () => {
+    const saved = workflowItem({
+      fabricacionSnapshot: itemSnapshot,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "220",
+        vidrioLineTemplateId: "glass-1",
+        catalogEspesor: "4 mm",
+      }),
+    });
+    const changedProduct = {
+      ...saved,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "220",
+        vidrioLineTemplateId: "glass-2",
+        catalogEspesor: "4 mm",
+      }),
+    };
+    const changedThickness = {
+      ...saved,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "220",
+        vidrioLineTemplateId: "glass-1",
+        catalogEspesor: "5 mm",
+      }),
+    };
+
+    for (const changed of [changedProduct, changedThickness]) {
+      const prepared = prepareFabricacionSnapshotsForQuoteSave({
+        existingId: "quote-1",
+        existingItems: [saved],
+        items: [changed],
+      });
+      expect(prepared.itemIdsToResolve).toEqual(new Set(["item-1"]));
+      expect(prepared.items[0]?.fabricacionSnapshot).toBeNull();
+    }
+
+    const structuredThicknessChange = {
+      ...saved,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "220",
+        vidrioLineTemplateId: "glass-1",
+        catalogEspesor: "4 mm",
+        glassTechnicalSpec: {
+          version: 1 as const,
+          productId: "glass-1",
+          thicknessMm: 5,
+          category: "monolitico" as const,
+          manualCutStatus: "pending_validation" as const,
+          sheetWidthMm: null,
+          sheetHeightMm: null,
+          provenance: "catalog" as const,
+          sourceProductId: "glass-1",
+          sourceValues: null,
+          hasConflict: false,
+        },
+      }),
+    };
+    expect(prepareFabricacionSnapshotsForQuoteSave({
+      existingId: "quote-1",
+      existingItems: [saved],
+      items: [structuredThicknessChange],
+    }).itemIdsToResolve).toEqual(new Set(["item-1"]));
+  });
+
+  it("asigna IDs lógicos al guardar y conserva IDs existentes entre reemplazos", () => {
+    const withoutId = workflowItem();
+    const firstSave = ensureLogicalComponentIdsForQuoteSave([withoutId]);
+    const assignedId = firstSave[0] && decodeCotizacionItemPresentationMeta(firstSave[0].observaciones).logicalComponentId;
+    expect(assignedId).toMatch(/^[0-9a-f-]{36}$/i);
+
+    const physicalRowReplacement = ensureLogicalComponentIdsForQuoteSave([
+      { ...firstSave[0]!, id: "new-physical-row-id" },
+    ]);
+    expect(decodeCotizacionItemPresentationMeta(physicalRowReplacement[0]!.observaciones).logicalComponentId)
+      .toBe(assignedId);
   });
 
   it("al finalizar un borrador resuelve piezas sin snapshot", () => {

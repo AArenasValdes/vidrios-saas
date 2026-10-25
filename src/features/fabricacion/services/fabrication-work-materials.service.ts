@@ -4,9 +4,12 @@ import type { FabricationQuoteSummary } from "@/features/cotizaciones/line-templ
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { TechnicalCostSnapshot } from "@/features/proveedor-catalogos/services/costo-tecnico-parcial.service";
+import type { SupplierProfilePricePreview } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { resolveComponentColorName } from "@/constants/component-colors";
 import { resolveUniversalAluminumLineKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
+import { resolveFrozenGlassThickness } from "@/features/fabricacion/services/glass-thickness-resolution.service";
+import { formatGlassDisplayName } from "@/features/fabricacion/services/glass-display-name.service";
 
 export type WorkProfileMaterialRow = {
   key: string;
@@ -14,6 +17,8 @@ export type WorkProfileMaterialRow = {
   familyKey?: string | null;
   /** SKU guardado en la pauta conjunta, incluso si todavía no tiene precio. */
   supplierSku?: string | null;
+  supplierProviderKey?: string | null;
+  supplierPresentationId?: string | null;
   description: string;
   line: string;
   finish: string;
@@ -33,12 +38,15 @@ export type WorkAccessoryMaterialRow = {
   line: string;
   finish: string;
   configuredFinish: string | null;
+  familyKey?: string | null;
+  supplierProviderKey?: string | null;
   itemCodes: string[];
   price?: WorkMaterialPrice | null;
 };
 
 export type WorkMaterialPrice = {
   sku: string;
+  providerKey?: string | null;
   isWorkshopCode: boolean;
   sourceKind?: "reference" | "own" | "adjusted";
   sourceLabel: string;
@@ -55,6 +63,7 @@ export type WorkGlassMaterialRow = {
   code: string | null;
   description: string;
   thickness: string;
+  thicknessWarning?: string | null;
   finish: string;
   composition: string;
   line: string;
@@ -75,6 +84,7 @@ export type WorkGlassOrderRow = {
   /** Valores conservados en la pieza; el PDF no toma el catálogo editable actual. */
   glassType?: string | null;
   snapshotThickness?: string | null;
+  thicknessWarning?: string | null;
   finish: string;
   composition: string;
   widthMm: number | null;
@@ -85,11 +95,24 @@ export type WorkGlassOrderRow = {
   measuresPending: boolean;
 };
 
+/** Precio unitario consultado para una referencia de línea; no expresa consumo ni costo por pieza. */
+export type WorkProfilePriceReferenceRow = SupplierProfilePricePreview & {
+  key: string;
+  itemCode: string;
+  line: string;
+  lineNames: string[];
+  familyKey: string;
+  finish: string;
+};
+
 export type WorkMaterialsDocument = {
   profiles: WorkProfileMaterialRow[];
   accessories: WorkAccessoryMaterialRow[];
   glass: WorkGlassMaterialRow[];
   glassOrder: WorkGlassOrderRow[];
+  profilePriceReferences?: WorkProfilePriceReferenceRow[];
+  profilePriceReferencesCheckedAt?: string | null;
+  profilePriceReferencesStatus?: "loading" | "loaded" | "unavailable" | "not_applicable";
   hasJointCuttingPlan: boolean;
   pricing?: {
     status: TechnicalCostSnapshot["status"];
@@ -134,8 +157,24 @@ function configuredFinish(value: string | null | undefined) {
     : normalized;
 }
 
+function profileNameForFinish(value: string, selectedFinish: string) {
+  const knownFinishes = ["blanco hueso", "negro mate", "blanco", "titanio", "antracita", "negro", "madera"];
+  const normalizedName = normalizeMatch(value);
+  const normalizedFinish = normalizeMatch(selectedFinish);
+  const suffix = knownFinishes.find((finish) => normalizedName.endsWith(` ${normalizeMatch(finish)}`));
+  if (!suffix || normalizedFinish === "acabado sin definir" || normalizedFinish === normalizeMatch(suffix)) return value;
+  return value.slice(0, value.length - suffix.length).trim();
+}
+
 function fullGlassDescription(item: WorkItem, thickness: string, finish: string, composition: string) {
-  return unique([item.vidrio?.trim() ?? "", composition, thickness, finish]).join(" · ") || "Vidrio";
+  const thicknessMatch = thickness.match(/(\d+(?:[.,]\d+)?)\s*mm/i);
+  const thicknessMm = thicknessMatch ? Number(thicknessMatch[1]?.replace(",", ".")) : null;
+  return unique([
+    formatGlassDisplayName(item.vidrio, thicknessMm),
+    formatGlassDisplayName(composition, thicknessMm),
+    thickness,
+    finish,
+  ]).filter((value) => value !== "Vidrio").join(" · ") || "Vidrio";
 }
 
 function snapshotGlassRows(item: WorkItem) {
@@ -187,6 +226,37 @@ function lineNamesForBar(
   return resolved.join(" / ") || "Sin línea identificada";
 }
 
+function finishForBar(bar: FabricacionTrabajoSnapshot["bars"][number], itemsByCode: ReadonlyMap<string, WorkItem>) {
+  const selectedFinishes = unique(bar.cortes.flatMap((cut) => {
+    const item = itemsByCode.get(cut.codigoItem);
+    if (!item) return [];
+    const presentation = presentationFor(item);
+    const finish = resolveComponentColorName(presentation.colorHex);
+    return finish && finish !== "Color a definir" ? [finish] : [];
+  }));
+
+  // The saved quote item is the source for the selected finish. The joint
+  // cutting snapshot may retain a legacy finish label from an earlier edit.
+  return selectedFinishes.length === 1 ? selectedFinishes[0] : bar.acabadoKey;
+}
+
+function configuredFinishForBar(bar: FabricacionTrabajoSnapshot["bars"][number], itemsByCode: ReadonlyMap<string, WorkItem>) {
+  const hasSelectedCatalogColor = bar.cortes.some((cut) => {
+    const item = itemsByCode.get(cut.codigoItem);
+    return item != null && resolveComponentColorName(presentationFor(item).colorHex) !== "Color a definir";
+  });
+  return hasSelectedCatalogColor ? null : configuredFinish(bar.acabadoKey);
+}
+
+function providerForBar(bar: FabricacionTrabajoSnapshot["bars"][number], itemsByCode: ReadonlyMap<string, WorkItem>) {
+  const selectedProviders = unique(bar.cortes.flatMap((cut) => {
+    const item = itemsByCode.get(cut.codigoItem);
+    const providerKey = item ? presentationFor(item).supplierProviderKey.trim().toLocaleLowerCase("es-CL") : "";
+    return providerKey ? [providerKey] : [];
+  }));
+  return selectedProviders.length === 1 ? selectedProviders[0] : bar.supplierProviderKey?.trim().toLocaleLowerCase("es-CL") || null;
+}
+
 function normalizeMatch(value: string | null | undefined) {
   return (value ?? "").trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CL");
 }
@@ -200,51 +270,105 @@ function materialPrice(input: {
   allowLegacyFamilyMatch?: boolean;
   commercialLengthMm?: number;
   quantity?: number;
+  aggregateBars?: number;
+  providerKey?: string | null;
+  supplierSku?: string | null;
+  presentationId?: string | null;
 }): WorkMaterialPrice | null {
-  const exactCodeCandidates = input.code
+  const identityCandidates = input.code
     ? input.lines.filter((line) =>
       [line.technicalCode, line.supplierTechnicalCode].includes(input.code!) &&
+      (!input.supplierSku || line.supplierSku === input.supplierSku) &&
+      (!input.presentationId || line.presentationId === input.presentationId) &&
       (!input.familyKey || line.familyKey === input.familyKey || (input.allowLegacyFamilyMatch && !line.familyKey))
     )
     : [];
   // Prefer technical identity over a repeated human-readable label. Names such
   // as "Riel superior" occur across aluminum families and must never make an
   // exact, priced code look ambiguous or borrow another profile's price.
-  const candidates = (exactCodeCandidates.length > 0
-    ? exactCodeCandidates
+  const identityMatches = input.code && input.code !== "—"
+    ? identityCandidates
     : input.lines.filter((line) =>
       (!input.familyKey || line.familyKey === input.familyKey || (input.allowLegacyFamilyMatch && !line.familyKey)) &&
       normalizeMatch(line.technicalName) === normalizeMatch(input.description)
-    )
-  ).filter((line) => {
+    ).filter((line) => {
     const finishMatch = !input.finish || normalizeMatch(line.finishName) === "sin acabado especifico" || normalizeMatch(line.finishName) === normalizeMatch(input.finish);
     const lengthMatch = input.commercialLengthMm == null || line.commercialLengthMm === input.commercialLengthMm;
-    const quantityMatch = input.quantity == null || (line.quantity ?? line.bars) === input.quantity;
-    return finishMatch && lengthMatch && quantityMatch;
+    const providerMatch = !input.providerKey || line.providerKey?.trim().toLocaleLowerCase("es-CL") === input.providerKey.trim().toLocaleLowerCase("es-CL");
+    return finishMatch && lengthMatch && providerMatch;
   });
-  if (candidates.length !== 1) return null;
-  const line = candidates[0]!;
+  const candidates = identityMatches.filter((line) => input.quantity == null || (line.quantity ?? line.bars) === input.quantity);
+  let allocatedSubtotal: number | null = null;
+  let line: TechnicalCostSnapshot["lines"][number] | undefined;
+  const aggregateCandidates = candidates.length > 1 ? candidates : candidates.length === 0 ? identityMatches : [];
+  if (candidates.length === 1) {
+    line = candidates[0];
+  } else if (
+    aggregateCandidates.length > 1 && input.quantity != null &&
+    aggregateCandidates.reduce((total, candidate) => total + (candidate.quantity ?? candidate.bars), 0) === input.quantity &&
+    aggregateCandidates.every((candidate) => candidate.providerKey === aggregateCandidates[0]?.providerKey &&
+      candidate.supplierSku === aggregateCandidates[0]?.supplierSku &&
+      candidate.netPricePerPresentation === aggregateCandidates[0]?.netPricePerPresentation &&
+      candidate.currency === aggregateCandidates[0]?.currency &&
+      candidate.priceListId === aggregateCandidates[0]?.priceListId &&
+      candidate.priceListRevision === aggregateCandidates[0]?.priceListRevision)
+  ) {
+    line = aggregateCandidates[0];
+    allocatedSubtotal = aggregateCandidates.reduce((total, candidate) => total + candidate.lineNet, 0);
+  } else if (
+    candidates.length === 0 &&
+    input.aggregateBars != null &&
+    input.quantity != null &&
+    input.aggregateBars > input.quantity &&
+    identityMatches.length === 1
+  ) {
+    const aggregateLine = identityMatches[0]!;
+    const aggregateQuantity = aggregateLine.quantity ?? aggregateLine.bars;
+    if (aggregateQuantity === input.aggregateBars && aggregateLine.quantity == null && aggregateLine.bars > 0) {
+      line = aggregateLine;
+      allocatedSubtotal = aggregateLine.lineNet * input.quantity / aggregateLine.bars;
+    }
+  }
+  if (candidates.length > 1 || !line) return null;
   const isWorkshopCode = line.effectivePriceSource === "workshop" || line.providerKey?.startsWith("taller:") === true;
   return {
     sku: line.supplierSku,
+    providerKey: line.providerKey ?? null,
     isWorkshopCode,
     sourceKind: isWorkshopCode ? "own" : line.effectivePriceSource === "provider_adjustment" || line.effectivePriceSource === "organization_override" ? "adjusted" : "reference",
-    sourceLabel: isWorkshopCode ? "Precio propio del taller" : `Lista referencial · ${line.providerKey ?? "Proveedor"}`,
+    sourceLabel: isWorkshopCode
+      ? "Precio propio del taller"
+      : line.providerKey?.trim().toLocaleLowerCase("es-CL") === "arquetipo"
+        ? "Arquetipo · junio 2026"
+        : line.providerKey?.trim().toLocaleLowerCase("es-CL") === "alumco"
+          ? "Alumco · 2026"
+          : `Lista referencial · ${line.providerKey ?? "Proveedor"}`,
     sourceRevision: line.priceListRevision,
     pricedAt: line.pricedAt ?? null,
     basis: line.priceBasis === "per_meter" ? "por metro" : line.quantity != null ? "por unidad" : "por tira",
     unitPrice: line.netPricePerPresentation,
-    subtotal: line.lineNet,
+    subtotal: allocatedSubtotal ?? line.lineNet,
     currency: line.currency,
   };
 }
 
-function buildProfileRows(summary: FabricationQuoteSummary, cost: TechnicalCostSnapshot | null): WorkProfileMaterialRow[] {
+function buildProfileRows(
+  summary: FabricationQuoteSummary,
+  items: readonly WorkItem[],
+  cost: TechnicalCostSnapshot | null
+): WorkProfileMaterialRow[] {
   const source = summary.trabajoSnapshot;
   if (!source) return [];
 
   const groups = new Map<string, WorkProfileMaterialRow>();
+  const itemsByCode = new Map(items.map((item) => [item.codigo, item]));
   for (const bar of source.bars) {
+    const finishValue = finishForBar(bar, itemsByCode);
+    const providerKey = providerForBar(bar, itemsByCode);
+    const savedSku = providerKey === bar.supplierProviderKey?.trim().toLocaleLowerCase("es-CL")
+      ? bar.supplierSku?.trim() || null
+      : null;
+    const finish = commercialFinish(finishValue);
     const familyKeys = unique(source.sourcePresentations
       .filter((presentation) => presentation.presentationKey === bar.presentationKey)
       .map((presentation) => resolveUniversalAluminumLineKey(presentation.catalogLineKey) ?? presentation.catalogLineKey ?? ""));
@@ -252,12 +376,15 @@ function buildProfileRows(summary: FabricationQuoteSummary, cost: TechnicalCostS
     const line = lineNamesForBar(bar, summary, source);
     const key = [
       bar.materialKey,
-      bar.presentationKey,
+      familyKey,
       bar.codigoPerfil,
-      bar.nombrePerfil,
+      profileNameForFinish(bar.nombrePerfil || bar.codigoPerfil || "Perfil sin descripción", finish),
       line,
-      bar.acabadoKey,
+      finishValue,
       bar.largoComercialMm,
+      providerKey ?? "",
+      bar.supplierPresentationId ?? "",
+      savedSku ?? "",
     ].join("|");
     const existing = groups.get(key);
     const itemCodes = unique(bar.cortes.map((cut) => cut.codigoItem));
@@ -270,11 +397,15 @@ function buildProfileRows(summary: FabricationQuoteSummary, cost: TechnicalCostS
       key,
       code: bar.codigoPerfil || "—",
       familyKey,
-      supplierSku: bar.supplierSku?.trim() || null,
-      description: bar.nombrePerfil || bar.codigoPerfil || "Perfil sin descripción",
+      supplierSku: savedSku,
+      supplierProviderKey: providerKey,
+      supplierPresentationId: bar.supplierPresentationId ?? null,
+      // Some reference names embed a finish; omit it if it conflicts with the
+      // finish selected on the quote, which is shown separately in the row.
+      description: profileNameForFinish(bar.nombrePerfil || bar.codigoPerfil || "Perfil sin descripción", finish),
       line,
-      finish: commercialFinish(bar.acabadoKey),
-      configuredFinish: configuredFinish(bar.acabadoKey),
+      finish,
+      configuredFinish: configuredFinishForBar(bar, itemsByCode),
       commercialLengthMm: bar.largoComercialMm,
       bars: 1,
       itemCodes,
@@ -288,7 +419,8 @@ function buildProfileRows(summary: FabricationQuoteSummary, cost: TechnicalCostS
     familyKeys.add(row.familyKey);
     familiesByCode.set(row.code, familyKeys);
   }
-  return [...groups.values()].map((row) => ({
+  const profileRows = [...groups.values()];
+  return profileRows.map((row) => ({
     ...row,
     price: cost ? materialPrice({
       lines: cost.lines,
@@ -296,9 +428,17 @@ function buildProfileRows(summary: FabricationQuoteSummary, cost: TechnicalCostS
       description: row.description,
       finish: row.configuredFinish ?? row.finish,
       familyKey: row.familyKey,
+      supplierSku: row.supplierSku,
+      presentationId: row.supplierPresentationId,
       allowLegacyFamilyMatch: !row.familyKey || (familiesByCode.get(row.code)?.size ?? 0) <= 1,
       commercialLengthMm: row.commercialLengthMm,
       quantity: row.bars,
+      aggregateBars: profileRows
+        .filter((candidate) => candidate.code === row.code && candidate.familyKey === row.familyKey &&
+          candidate.configuredFinish === row.configuredFinish && candidate.commercialLengthMm === row.commercialLengthMm &&
+          candidate.supplierProviderKey === row.supplierProviderKey)
+        .reduce((total, candidate) => total + candidate.bars, 0),
+      providerKey: row.supplierProviderKey,
     }) : null,
   })).sort((a, b) =>
     a.line.localeCompare(b.line, "es") ||
@@ -320,7 +460,9 @@ function buildAccessoryRows(items: readonly WorkItem[], cost: TechnicalCostSnaps
       const line = item.lineaComercial.trim() || `Línea ${item.fabricacionSnapshot?.lineTemplateId ?? "sin identificar"}`;
       const finish = commercialFinish(presentation.colorHex);
       const lineIdentity = item.fabricacionSnapshot?.lineTemplateId ?? line;
-      const key = `${code ?? "sin-codigo"}|${description}|${unit}|${lineIdentity}|${finish}`;
+      const familyKey = item.fabricacionSnapshot?.supplierFamilyKey ?? null;
+      const providerKey = presentation.supplierProviderKey.trim().toLocaleLowerCase("es-CL") || null;
+      const key = `${code ?? "sin-codigo"}|${description}|${unit}|${lineIdentity}|${familyKey ?? ""}|${providerKey ?? ""}|${finish}`;
       const existing = groups.get(key);
       if (existing) {
         existing.quantity += accessory.cantidadUnidades;
@@ -335,6 +477,8 @@ function buildAccessoryRows(items: readonly WorkItem[], cost: TechnicalCostSnaps
           line,
           finish,
           configuredFinish: configuredFinish(presentation.colorHex),
+          familyKey,
+          supplierProviderKey: providerKey,
           itemCodes: [item.codigo],
           price: null,
         });
@@ -343,7 +487,15 @@ function buildAccessoryRows(items: readonly WorkItem[], cost: TechnicalCostSnaps
   }
   return [...groups.values()].map((row) => ({
     ...row,
-    price: cost ? materialPrice({ lines: cost.lines, code: row.code, description: row.description, finish: row.configuredFinish ?? row.finish, quantity: row.quantity }) : null,
+    price: cost ? materialPrice({
+      lines: cost.lines,
+      code: row.code,
+      description: row.description,
+      finish: row.configuredFinish ?? row.finish,
+      familyKey: row.familyKey,
+      providerKey: row.supplierProviderKey,
+      quantity: row.quantity,
+    }) : null,
   })).sort((a, b) =>
     (a.code ?? "").localeCompare(b.code ?? "", "es") ||
     a.description.localeCompare(b.description, "es")
@@ -364,25 +516,18 @@ function resolveGlassCatalogCode(item: WorkItem, templates: readonly CotizacionL
   return value?.trim() ?? null;
 }
 
-function resolveGlassThickness(item: WorkItem, templates: readonly CotizacionLineTemplate[]) {
-  const presentation = presentationFor(item);
-  if (presentation.catalogEspesor.trim()) return presentation.catalogEspesor.trim();
-
-  const templateId = item.tipo.trim().toLowerCase() === "vidrio / cristal"
-    ? presentation.lineTemplateId
-    : presentation.vidrioLineTemplateId;
-  const template = templates.find((candidate) =>
-    candidate.categoria === "vidrio" && String(candidate.id) === templateId && !candidate.eliminadoEn
-  );
-  const thickness = template?.catalogMetadata.espesor;
-  return typeof thickness === "string" && thickness.trim() ? thickness.trim() : "";
-}
-
 function buildGlassRows(items: readonly WorkItem[], templates: readonly CotizacionLineTemplate[]): WorkGlassMaterialRow[] {
   const groups = new Map<string, WorkGlassMaterialRow>();
   for (const item of items) {
     const presentation = presentationFor(item);
-    const thickness = resolveGlassThickness(item, templates);
+    const resolvedThickness = resolveFrozenGlassThickness({
+      observations: item.observaciones,
+      snapshot: item.fabricacionSnapshot,
+      selectedProductId: item.tipo.trim().toLocaleLowerCase("es-CL") === "vidrio / cristal"
+        ? presentation.lineTemplateId
+        : presentation.vidrioLineTemplateId,
+    });
+    const thickness = resolvedThickness.thicknessMm == null ? "Pendiente" : resolvedThickness.display;
     const finish = presentation.catalogTerminacion.trim();
     const composition = presentation.fabricacionGlazing.trim();
     const description = fullGlassDescription(item, thickness, finish, composition);
@@ -397,7 +542,7 @@ function buildGlassRows(items: readonly WorkItem[], templates: readonly Cotizaci
       existing.totalM2 = roundM2(existing.totalM2 + totalM2);
       existing.itemCodes = unique([...existing.itemCodes, item.codigo]);
     }
-    else groups.set(key, { key, code, description, thickness, finish, composition, line, totalM2: roundM2(totalM2), itemCodes: [item.codigo] });
+    else groups.set(key, { key, code, description, thickness, thicknessWarning: resolvedThickness.warning, finish, composition, line, totalM2: roundM2(totalM2), itemCodes: [item.codigo] });
   }
   return [...groups.values()].sort((a, b) => a.description.localeCompare(b.description, "es"));
 }
@@ -406,13 +551,23 @@ function buildGlassOrderRows(items: readonly WorkItem[], templates: readonly Cot
   const rows: WorkGlassOrderRow[] = [];
   for (const item of items) {
     const presentation = presentationFor(item);
-    const thickness = resolveGlassThickness(item, templates);
+    const resolvedThickness = resolveFrozenGlassThickness({
+      observations: item.observaciones,
+      snapshot: item.fabricacionSnapshot,
+      selectedProductId: item.tipo.trim().toLocaleLowerCase("es-CL") === "vidrio / cristal"
+        ? presentation.lineTemplateId
+        : presentation.vidrioLineTemplateId,
+    });
+    const hasGlassIdentity = Boolean(item.vidrio?.trim() || item.fabricacionSnapshot?.glassSelection?.productId);
+    const thickness = resolvedThickness.thicknessMm == null
+      ? hasGlassIdentity ? "Pendiente" : ""
+      : resolvedThickness.display;
     const finish = presentation.catalogTerminacion.trim();
     const composition = presentation.fabricacionGlazing.trim();
     const code = resolveGlassCatalogCode(item, templates);
     const glassRows = snapshotGlassRows(item);
     if (glassRows.length === 0) {
-      if (!item.vidrio?.trim() && !thickness && !composition) continue;
+      if (!item.vidrio?.trim() && !resolvedThickness.thicknessMm && !item.fabricacionSnapshot?.glassSelection?.productId && !composition) continue;
       rows.push({
         key: `${item.id}|pending`,
         groupKey: [item.vidrio?.trim(), thickness, finish, composition].join("|"),
@@ -424,7 +579,8 @@ function buildGlassOrderRows(items: readonly WorkItem[], templates: readonly Cot
         description: fullGlassDescription(item, thickness, finish, composition),
         thickness,
         glassType: item.vidrio?.trim() || null,
-        snapshotThickness: presentation.catalogEspesor.trim() || null,
+        snapshotThickness: resolvedThickness.thicknessMm == null ? null : resolvedThickness.display,
+        thicknessWarning: resolvedThickness.warning,
         finish,
         composition,
         widthMm: null,
@@ -442,15 +598,16 @@ function buildGlassOrderRows(items: readonly WorkItem[], templates: readonly Cot
       rows.push({
         key: `${item.id}|${glass.reference}|${index}`,
         groupKey: [item.vidrio?.trim(), thickness, finish, composition].join("|"),
-        groupLabel: fullGlassDescription(item, thickness, finish, composition || glass.name),
+        groupLabel: fullGlassDescription(item, thickness, finish, composition || formatGlassDisplayName(glass.name, resolvedThickness.thicknessMm)),
         code,
         componentCode: item.codigo,
         componentName: item.nombre,
         paneReference: glass.reference || `${item.codigo || "Componente"} · Paño ${index + 1}`,
-        description: fullGlassDescription(item, thickness, finish, composition || glass.name),
+        description: fullGlassDescription(item, thickness, finish, composition || formatGlassDisplayName(glass.name, resolvedThickness.thicknessMm)),
         thickness,
         glassType: item.vidrio?.trim() || null,
-        snapshotThickness: presentation.catalogEspesor.trim() || null,
+        snapshotThickness: resolvedThickness.thicknessMm == null ? null : resolvedThickness.display,
+        thicknessWarning: resolvedThickness.warning,
         finish,
         composition,
         widthMm: hasMeasures ? glass.width : null,
@@ -474,14 +631,20 @@ export function buildWorkMaterialsDocument(input: {
   items: readonly CotizacionWorkflowItem[];
   lineTemplates?: readonly CotizacionLineTemplate[];
   technicalCostSnapshot?: TechnicalCostSnapshot | null;
+  profilePriceReferences?: readonly WorkProfilePriceReferenceRow[];
+  profilePriceReferencesCheckedAt?: string | null;
+  profilePriceReferencesStatus?: WorkMaterialsDocument["profilePriceReferencesStatus"];
 }): WorkMaterialsDocument {
   const items = input.items as readonly WorkItem[];
   const lineTemplates = input.lineTemplates ?? [];
   return {
-    profiles: buildProfileRows(input.summary, input.technicalCostSnapshot ?? null),
+    profiles: buildProfileRows(input.summary, items, input.technicalCostSnapshot ?? null),
     accessories: buildAccessoryRows(items, input.technicalCostSnapshot ?? null),
     glass: buildGlassRows(items, lineTemplates),
     glassOrder: buildGlassOrderRows(items, lineTemplates),
+    profilePriceReferences: [...(input.profilePriceReferences ?? [])],
+    profilePriceReferencesCheckedAt: input.profilePriceReferencesCheckedAt ?? null,
+    profilePriceReferencesStatus: input.profilePriceReferencesStatus ?? "not_applicable",
     hasJointCuttingPlan: Boolean(input.summary.trabajoSnapshot),
     pricing: input.technicalCostSnapshot ? {
       status: input.technicalCostSnapshot.status,

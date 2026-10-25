@@ -383,4 +383,75 @@ describe("integracion receta fabricacion -> cotizacion", () => {
     expect(fabricacionSnapshotMatchesCalculatedOutput(original, changed)).toBe(false);
     expect(fabricacionSnapshotMatchesCalculatedOutput(changed, changed)).toBe(true);
   });
+
+  it("detecta cambios solo de geometría, cantidad o selección del vidrio", () => {
+    const original = construirSnapshotFabricacionCotizacion({
+      recipe: recipeRecord(),
+      entrada: {
+        anchoTotalMm: 1200,
+        altoTotalMm: 1000,
+        cantidad: 1,
+        hojas: 2,
+        modulos: 2,
+        variante: "estandar",
+      },
+    });
+    const withGlass = {
+      ...original,
+      glassSelection: {
+        productId: "glass-1",
+        displayName: "Monolítico 4 mm",
+        technicalSpec: null,
+      },
+      result: {
+        ...original.result,
+        vidrios: [{
+          vidrioId: "glass-sash",
+          nombre: "Vidrio hoja",
+          anchoMm: 550,
+          altoMm: 900,
+          cantidadPiezas: 2,
+          totalM2: 0.99,
+          trazabilidad: [],
+        }],
+      },
+    };
+    const changedGeometry = structuredClone(withGlass);
+    changedGeometry.result.vidrios[0]!.anchoMm += 1;
+    const changedQuantity = structuredClone(withGlass);
+    changedQuantity.result.vidrios[0]!.cantidadPiezas += 1;
+    const changedProduct = structuredClone(withGlass);
+    changedProduct.glassSelection.productId = "glass-2";
+
+    for (const changed of [changedGeometry, changedQuantity, changedProduct]) {
+      expect(fabricacionSnapshotMatchesCalculatedOutput(withGlass, changed)).toBe(false);
+      expect(buildFabricacionSnapshotSyncKey("item-1", withGlass)).not.toBe(
+        buildFabricacionSnapshotSyncKey("item-1", changed)
+      );
+    }
+  });
+
+  it("normaliza orden de perfiles, paños y pautas al comparar y sincronizar", () => {
+    const original = construirSnapshotFabricacionCotizacion({
+      recipe: recipeRecord(),
+      entrada: {
+        anchoTotalMm: 1200,
+        altoTotalMm: 1000,
+        cantidad: 1,
+        hojas: 2,
+        modulos: 2,
+        variante: "estandar",
+      },
+    });
+    const reordered = structuredClone(original);
+    reordered.result.perfiles.reverse();
+    reordered.pautaBarras?.barras.reverse();
+    reordered.pautaBarras?.barras.forEach((bar) => bar.cortes.reverse());
+    reordered.result.vidrios.reverse();
+
+    expect(fabricacionSnapshotMatchesCalculatedOutput(original, reordered)).toBe(true);
+    expect(buildFabricacionSnapshotSyncKey("item-1", original)).toBe(
+      buildFabricacionSnapshotSyncKey("item-1", reordered)
+    );
+  });
 });

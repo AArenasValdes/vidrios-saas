@@ -39,6 +39,10 @@ import {
   type CotizacionLineTemplate,
   type CotizacionLineTemplateCatalogMetadata,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import {
+  resolveGlassTechnicalSpecForProduct,
+  type GlassTechnicalSpec,
+} from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
 import { evaluateLineCompatibility } from "@/features/cotizaciones/line-templates/services/line-template-compatibility.service";
 import {
   fabricacionSnapshotToLegacyCubicationSnapshot,
@@ -114,8 +118,13 @@ export function resolveComponentFabricacionHojas(form: {
     (normalizedLineIdentity.includes("winhouse") && normalizedLineIdentity.includes("s75"));
   if (isWinHouseS75Line && winHouseS75Variant) return winHouseS75Variant.leaves;
 
-  const showerSliding = /shower/i.test(`${form.tipo ?? ""} ${form.sistema ?? ""} ${form.configuracion ?? ""}`) &&
-    /corredera/i.test(`${form.sistema ?? ""} ${form.configuracion ?? ""}`);
+  const visualModules = form.guidedVisualConfig?.root
+    ? listLeafModules(form.guidedVisualConfig.root)
+    : [];
+  const showerSliding = /shower/i.test(`${form.tipo ?? ""} ${form.sistema ?? ""} ${form.configuracion ?? ""} ${form.referencia ?? ""}`) && (
+    /corredera/i.test(`${form.sistema ?? ""} ${form.configuracion ?? ""} ${form.referencia ?? ""}`) ||
+    (visualModules.length > 0 && visualModules.every((module) => module.type === "shower_corredera"))
+  );
   // A multi-leaf value is already a deliberate technical selection or comes
   // from a persisted composition. Only the generic one-leaf seed is replaced
   // by the documented two-leaf default for Shower Corredera.
@@ -133,9 +142,6 @@ export function resolveComponentFabricacionHojas(form: {
   if (showerSliding && (!explicitSheetCount || explicitSheetCount === 1)) return 2;
   if (explicitSheetCount) return explicitSheetCount;
 
-  const visualModules = form.guidedVisualConfig?.root
-    ? listLeafModules(form.guidedVisualConfig.root)
-    : [];
   const visualModuleCount = visualModules.length || null;
   // A single Constructor module describes the drawing, not the commercial sash
   // count. In particular, a new sliding window starts as one visual module while
@@ -185,6 +191,8 @@ export type ComponentFormState = {
   lineTemplateId: string;
   /** Catálogo cristal vinculado en ventanas/puertas (formato/costo técnico; no precio comercial). */
   vidrioLineTemplateId: string;
+  glassTechnicalSpec: GlassTechnicalSpec | null;
+  logicalComponentId: string;
   pricingMode: PricingMode;
   vidrio: string;
   nombre: string;
@@ -1677,9 +1685,20 @@ export function resolveWorkflowItemDisplayName(input: {
   tipo: string;
   nombre: string;
   codigo?: string;
+  sistema?: string | null;
+  configuracion?: string | null;
 }) {
   const nombre = input.nombre?.trim() ?? "";
   const tipo = input.tipo?.trim() || "Componente";
+  const showerContext = normalizeComparableComponentText(
+    `${input.sistema ?? ""} ${input.configuracion ?? ""} ${nombre}`
+  );
+
+  if (showerContext.includes("shower")) {
+    if (normalizeComparableComponentText(nombre).includes("shower")) return nombre;
+    const sliding = /corredera/.test(showerContext);
+    return sliding ? "Shower corredera" : "Shower";
+  }
 
   if (!nombre) {
     return tipo;
@@ -2332,6 +2351,21 @@ export function applyLineTemplateToComponentForm(
     (resolvedCatalogKey === VERATEC_7400_CATALOG_KEY
       ? "Incoloro monolítico 4mm"
       : form.vidrio);
+  const selectedGlassProduct = template.categoria === "vidrio" ? template : null;
+  const selectedGlassProductId = selectedGlassProduct
+    ? String(selectedGlassProduct.id)
+    : form.vidrioLineTemplateId?.trim() ?? "";
+  const selectedGlassTechnicalSpec = selectedGlassProduct
+    ? resolveGlassTechnicalSpecForProduct({
+        productId: selectedGlassProductId,
+        catalogMetadata: selectedGlassProduct.catalogMetadata,
+        existing: form.glassTechnicalSpec?.productId === selectedGlassProductId
+          ? form.glassTechnicalSpec
+          : null,
+      })
+    : form.glassTechnicalSpec?.productId === selectedGlassProductId
+      ? form.glassTechnicalSpec
+      : null;
   const selectedSheetVariant = resolveDefaultSheetVariantForLine({
     catalogLineKey: resolvedCatalogKey,
     sheetScheme: form.sheetScheme,
@@ -2383,12 +2417,12 @@ export function applyLineTemplateToComponentForm(
               catalogTerminacion: glassMetadata.terminacion ?? "",
             })
           : form.fabricacionGlazing ?? "",
-      vidrio:
-        template.categoria === "vidrio"
-          ? template.nombre
-          : recommendedGlass,
-      vidrioLineTemplateId:
-        template.categoria === "vidrio" ? "" : form.vidrioLineTemplateId ?? "",
+      // Keep a catalog selection as an identity, not only its display name.
+      // A line recommendation may populate an empty selection, but must not
+      // replace the glass name while retaining a different catalog ID.
+      vidrio: selectedGlassProduct?.nombre ?? (selectedGlassProductId ? form.vidrio : recommendedGlass),
+      vidrioLineTemplateId: selectedGlassProductId,
+      glassTechnicalSpec: selectedGlassTechnicalSpec,
       pricingMode: "precio_directo",
       margenPct: "0",
       precioPorM2: String(Math.round(template.precioM2Sugerido)),
@@ -2403,6 +2437,37 @@ export function applyLineTemplateToComponentForm(
     ),
     { forceSuggestedPrice: !preserveManualPrice }
   );
+}
+
+/** Resolve a selected catalog glass by its tenant-scoped ID and clear stale technical data on change. */
+export function applyGlassSelectionToComponentForm(
+  form: ComponentFormState,
+  selection: { displayName: string; productId?: string | null },
+  lineTemplates: readonly LineTemplateFormLookup[]
+): ComponentFormState {
+  const productId = selection.productId?.trim() ?? "";
+  const template = productId
+    ? lineTemplates.find((candidate) => String(candidate.id) === productId && candidate.categoria === "vidrio")
+    : undefined;
+  if (!template || !template.nombre) {
+    return {
+      ...form,
+      vidrio: selection.displayName,
+      vidrioLineTemplateId: "",
+      glassTechnicalSpec: null,
+    };
+  }
+  const resolvedId = String(template.id);
+  return {
+    ...form,
+    vidrio: template.nombre,
+    vidrioLineTemplateId: resolvedId,
+    glassTechnicalSpec: resolveGlassTechnicalSpecForProduct({
+      productId: resolvedId,
+      catalogMetadata: template.catalogMetadata,
+      existing: form.glassTechnicalSpec?.productId === resolvedId ? form.glassTechnicalSpec : null,
+    }),
+  };
 }
 
 export function filterGlassOptions(query: string) {
@@ -2477,6 +2542,8 @@ export function buildSuggestedComponentForm(
     isCustomScheme: current.isCustomScheme ?? false,
     lineTemplateId: current.lineTemplateId ?? "",
     vidrioLineTemplateId: current.vidrioLineTemplateId ?? "",
+    glassTechnicalSpec: current.glassTechnicalSpec ?? null,
+    logicalComponentId: current.logicalComponentId ?? "",
     pricingMode,
     vidrio: pickSuggestedString(current.vidrio, suggestion.vidrio),
     nombre: current.nombre ?? "",
@@ -2673,6 +2740,8 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     raw,
     lineTemplateId,
     vidrioLineTemplateId,
+    glassTechnicalSpec,
+    logicalComponentId,
     precioPorM2,
     minimoCobrable,
     redondeoPrecio,
@@ -2732,6 +2801,8 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     isCustomScheme,
     lineTemplateId,
     vidrioLineTemplateId,
+    glassTechnicalSpec,
+    logicalComponentId,
     pricingMode,
     vidrio: item.vidrio ?? "",
     nombre: item.nombre,
@@ -3011,6 +3082,16 @@ export function buildItemFromForm(
   const lineTemplateIdNumber = syncedForm.lineTemplateId
     ? Number(syncedForm.lineTemplateId)
     : null;
+  const glassTemplate = options?.lineTemplates?.find(
+    (template) => String(template.id) === syncedForm.vidrioLineTemplateId
+  );
+  const resolvedGlassTechnicalSpec = syncedForm.vidrioLineTemplateId
+    ? resolveGlassTechnicalSpecForProduct({
+        productId: syncedForm.vidrioLineTemplateId,
+        catalogMetadata: glassTemplate?.catalogMetadata ?? null,
+        existing: syncedForm.glassTechnicalSpec,
+      })
+    : syncedForm.glassTechnicalSpec;
   const resolvedCatalogLineKey =
     resolveEffectiveSodalL25CatalogKey({
       catalogLineKey: syncedForm.catalogLineKey,
@@ -3119,6 +3200,8 @@ export function buildItemFromForm(
       pricingMode,
       lineTemplateId: syncedForm.lineTemplateId,
       vidrioLineTemplateId: syncedForm.vidrioLineTemplateId,
+      glassTechnicalSpec: resolvedGlassTechnicalSpec,
+      logicalComponentId: syncedForm.logicalComponentId,
       precioPorM2: syncedForm.precioPorM2 ? Number(syncedForm.precioPorM2) : null,
       minimoCobrable: syncedForm.minimoCobrable ? Number(syncedForm.minimoCobrable) : null,
       redondeoPrecio: syncedForm.redondeoPrecio ? Number(syncedForm.redondeoPrecio) : null,
@@ -3163,7 +3246,20 @@ export function buildItemFromForm(
     }),
     tipoItem: "componente",
     }),
-    fabricacionSnapshot: formalFabricationSnapshot,
+    fabricacionSnapshot: formalFabricationSnapshot
+      ? {
+          ...formalFabricationSnapshot,
+          ...(syncedForm.vidrioLineTemplateId || resolvedGlassTechnicalSpec
+            ? {
+                glassSelection: {
+                  productId: syncedForm.vidrioLineTemplateId || null,
+                  displayName: syncedForm.vidrio || null,
+                  technicalSpec: resolvedGlassTechnicalSpec ?? null,
+                },
+              }
+            : {}),
+        }
+      : null,
   };
 }
 
@@ -3197,6 +3293,9 @@ export function applyQuotePricingToItems(
       catalogTerminacion,
       raw,
       lineTemplateId,
+      vidrioLineTemplateId,
+      glassTechnicalSpec,
+      logicalComponentId,
       precioPorM2,
       minimoCobrable,
       redondeoPrecio,
@@ -3261,6 +3360,9 @@ export function applyQuotePricingToItems(
         catalogTerminacion,
         pricingMode,
         lineTemplateId,
+        vidrioLineTemplateId,
+        glassTechnicalSpec,
+        logicalComponentId,
         precioPorM2: precioPorM2 ?? item.precioPorM2,
         minimoCobrable: minimoCobrable ?? item.minimoCobrable,
         redondeoPrecio: redondeoPrecio ?? item.redondeoPrecio,

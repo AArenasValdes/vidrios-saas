@@ -3,6 +3,13 @@ import {
   deriveRecipeStatus,
   getFabricationRecipeFromMetadata,
 } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
+import {
+  glassCategoryRequiresTechnicalReview,
+  parseExplicitGlassThicknessMm,
+  type GlassManualCutStatus,
+  type GlassPaneOrientation,
+  type GlassTechnicalCategory,
+} from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
 
 export const LINE_TEMPLATE_MATERIALS = ["Aluminio", "PVC", "Cristal"] as const;
 export type CotizacionLineTemplateMaterial = (typeof LINE_TEMPLATE_MATERIALS)[number];
@@ -106,10 +113,15 @@ export function getLineTemplateProfilePreview(
 
 export type CotizacionGlassProductMetadata = {
   espesor: string | null;
+  espesorMm: number | null;
   terminacion: string | null;
+  categoriaTecnica: GlassTechnicalCategory;
+  corteManualEstado: GlassManualCutStatus;
+  revisionTecnicaExplicita: boolean;
   /** Formato comercial de plancha (mm). Solo categoría vidrio. */
   planchaAnchoMm: number | null;
   planchaAltoMm: number | null;
+  pieceOrientation: GlassPaneOrientation;
 };
 
 export type CotizacionLineTemplateSystemMetadata = {
@@ -308,17 +320,54 @@ function normalizeMetadataPositiveInteger(value: unknown): number | null {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
+function normalizeMetadataPositiveNumber(value: unknown): number | null {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function resolveExplicitGlassThicknessMm(explicit: unknown, legacyText: unknown): number | null {
+  const explicitValue = normalizeMetadataPositiveNumber(explicit);
+  if (explicitValue != null) return explicitValue;
+  return parseExplicitGlassThicknessMm(legacyText);
+}
+
 export function getLineTemplateGlassMetadata(
   metadata: CotizacionLineTemplate["catalogMetadata"] | null | undefined
 ): CotizacionGlassProductMetadata {
+  const categoriaTecnica = normalizeGlassTechnicalCategory(metadata?.categoriaTecnica);
+  const revisionTecnicaExplicita = metadata?.revisionTecnicaExplicita === true;
+  const requestedStatus = normalizeGlassManualCutStatus(metadata?.corteManualEstado);
+  const specialReviewRequired = glassCategoryRequiresTechnicalReview(categoriaTecnica);
   return {
     espesor: normalizeMetadataText(metadata?.espesor),
+    espesorMm: resolveExplicitGlassThicknessMm(metadata?.espesorMm, metadata?.espesor),
     terminacion:
       normalizeMetadataText(metadata?.terminacion) ??
       normalizeMetadataText(metadata?.descripcion),
+    categoriaTecnica,
+    corteManualEstado: categoriaTecnica === "pendiente" || (specialReviewRequired && !revisionTecnicaExplicita)
+      ? "pending_validation"
+      : requestedStatus,
+    revisionTecnicaExplicita,
     planchaAnchoMm: normalizeMetadataPositiveInteger(metadata?.planchaAnchoMm),
     planchaAltoMm: normalizeMetadataPositiveInteger(metadata?.planchaAltoMm),
+    pieceOrientation: metadata?.orientacionCorte === "fixed" || metadata?.orientacionCorte === "rotatable" || metadata?.orientacionCorte === "grain_or_coating_directional"
+      ? metadata.orientacionCorte
+      : "unknown",
   };
+}
+
+function normalizeGlassTechnicalCategory(value: unknown): GlassTechnicalCategory {
+  const allowed: readonly GlassTechnicalCategory[] = ["monolitico", "laminado", "dvh", "templado", "espejo", "otro", "pendiente"];
+  return typeof value === "string" && allowed.includes(value as GlassTechnicalCategory)
+    ? value as GlassTechnicalCategory
+    : "pendiente";
+}
+
+function normalizeGlassManualCutStatus(value: unknown): GlassManualCutStatus {
+  return value === "confirmed" || value === "not_admitted" || value === "pending_validation"
+    ? value
+    : "pending_validation";
 }
 
 export function hasLineTemplateGlassSheetConfig(
@@ -339,6 +388,29 @@ export function mergeLineTemplateGlassMetadata(
     if (value) next.espesor = value.slice(0, 40);
     else delete next.espesor;
   }
+
+  if (input.espesorMm !== undefined) {
+    if (input.espesorMm != null && Number.isFinite(input.espesorMm) && input.espesorMm > 0) {
+      next.espesorMm = input.espesorMm;
+    } else {
+      delete next.espesorMm;
+    }
+  }
+
+  if (input.categoriaTecnica !== undefined) next.categoriaTecnica = input.categoriaTecnica;
+  if (input.pieceOrientation !== undefined) {
+    if (input.pieceOrientation === "unknown") delete next.orientacionCorte;
+    else next.orientacionCorte = input.pieceOrientation;
+  }
+  if (input.revisionTecnicaExplicita !== undefined) next.revisionTecnicaExplicita = input.revisionTecnicaExplicita;
+  if (input.corteManualEstado !== undefined) next.corteManualEstado = input.corteManualEstado;
+  const finalCategory = normalizeGlassTechnicalCategory(next.categoriaTecnica);
+  const finalStatus = normalizeGlassManualCutStatus(next.corteManualEstado);
+  const specialReviewRequired = glassCategoryRequiresTechnicalReview(finalCategory);
+  next.categoriaTecnica = finalCategory;
+  next.corteManualEstado = finalCategory === "pendiente" || (specialReviewRequired && next.revisionTecnicaExplicita !== true)
+    ? "pending_validation"
+    : finalStatus;
 
   if (input.terminacion !== undefined) {
     const value = input.terminacion?.trim() ?? "";

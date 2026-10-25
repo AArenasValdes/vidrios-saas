@@ -100,6 +100,46 @@ describe("fabricacion-linea-cotizacion-context.service", () => {
     });
   });
 
+  it("mantiene L12 como Shower 2H aunque la metadata comercial diga Corredera", () => {
+    const template = {
+      id: 541,
+      catalogKey: "ventora:serie-12-shower-corredera",
+      catalogMetadata: { lineConfiguration: "Shower Door · Corredera 2 hojas" },
+    };
+    const context = resolveFabricacionContextForLineAssignment({
+      template,
+      recipes: [
+        buildRecipe({
+          id: "line-12-541",
+          lineTemplateId: 541,
+          tipologia: "shower",
+          hojas: 2,
+          status: "validated",
+          variante: "Tina · 2 hojas correderas",
+        }),
+      ],
+      organizationId: 1,
+      form: {
+        tipo: "Puerta",
+        nombre: "Puerta",
+        descripcion: "Shower corredera 2 hojas",
+        sistema: "Corredera",
+        configuracion: "2 hojas",
+        fabricacionHojas: 1,
+        fabricacionTipologia: "corredera",
+        fabricacionVariante: "",
+        fabricationRecipeId: "",
+      },
+    });
+
+    expect(context).toMatchObject({
+      fabricacionTipologia: "shower",
+      fabricacionHojas: 2,
+      fabricationRecipeId: "line-12-541",
+      fabricacionVariante: "Tina · 2 hojas correderas",
+    });
+  });
+
   it("prioriza la tipología proyectante canónica de AL-32", () => {
     const context = resolveFabricacionContextForLineAssignment({
       template: {

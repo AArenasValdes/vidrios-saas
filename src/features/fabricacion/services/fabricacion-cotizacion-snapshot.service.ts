@@ -20,6 +20,14 @@ function cloneReceta(receta: FabricacionReceta): FabricacionReceta {
   return JSON.parse(JSON.stringify(receta)) as FabricacionReceta;
 }
 
+function ordered<T>(values: readonly T[], project: (value: T) => unknown = (value) => value): unknown[] {
+  return values.map((value) => project(value)).sort((left, right) => {
+    const leftJson = JSON.stringify(left);
+    const rightJson = JSON.stringify(right);
+    return leftJson < rightJson ? -1 : leftJson > rightJson ? 1 : 0;
+  });
+}
+
 /**
  * Compara la salida técnica mostrada en cubicación, despiece y pauta.
  * Se omite `calculatedAt`: recalcular sin cambios no debe reescribir el borrador,
@@ -35,7 +43,17 @@ export function fabricacionSnapshotMatchesCalculatedOutput(
     recipeId: snapshot.recipeId,
     recipeVersion: snapshot.recipeVersion,
     input: snapshot.input,
-    perfiles: snapshot.result.perfiles.map((perfil) => ({
+    glassSelection: snapshot.glassSelection ?? null,
+    vidrios: ordered(snapshot.result.vidrios, (glass) => ({
+      vidrioId: glass.vidrioId,
+      nombre: glass.nombre,
+      anchoMm: glass.anchoMm,
+      altoMm: glass.altoMm,
+      cantidadPiezas: glass.cantidadPiezas,
+      totalM2: glass.totalM2,
+      trazabilidad: ordered(glass.trazabilidad),
+    })),
+    perfiles: ordered(snapshot.result.perfiles, (perfil) => ({
       componenteId: perfil.componenteId,
       codigoPerfil: perfil.codigoPerfil,
       nombrePerfil: perfil.nombrePerfil,
@@ -48,7 +66,7 @@ export function fabricacionSnapshotMatchesCalculatedOutput(
     pautaBarras: snapshot.pautaBarras
       ? {
           calculable: snapshot.pautaBarras.calculable,
-          barras: snapshot.pautaBarras.barras.map((barra) => ({
+          barras: ordered(snapshot.pautaBarras.barras, (barra) => ({
             materialKey: barra.materialKey ?? "",
             codigoPerfil: barra.codigoPerfil,
             nombrePerfil: barra.nombrePerfil,
@@ -56,7 +74,7 @@ export function fabricacionSnapshotMatchesCalculatedOutput(
             largoComercialMm: barra.largoComercialMm,
             usadoMm: barra.usadoMm,
             sobranteMm: barra.sobranteMm,
-            cortes: barra.cortes.map((corte) => ({
+            cortes: ordered(barra.cortes, (corte) => ({
               componenteId: corte.componenteId,
               codigoPerfil: corte.codigoPerfil,
               funcion: corte.funcion,
@@ -81,6 +99,16 @@ export function buildFabricacionSnapshotSyncKey(
     recipeId: snapshot.recipeId,
     recipeVersion: snapshot.recipeVersion,
     input: snapshot.input,
+    glassSelection: snapshot.glassSelection ?? null,
+    glassPanes: ordered(snapshot.result.vidrios, (glass) => ({
+      id: glass.vidrioId,
+      name: glass.nombre,
+      widthMm: glass.anchoMm,
+      heightMm: glass.altoMm,
+      quantity: glass.cantidadPiezas,
+      totalM2: glass.totalM2,
+      trace: ordered(glass.trazabilidad),
+    })),
     selectedVariant: snapshot.selectedVariant,
     supplierFamilyKey: snapshot.supplierFamilyKey ?? null,
     recipeIdentity: {
@@ -93,7 +121,7 @@ export function buildFabricacionSnapshotSyncKey(
       herraje: snapshot.recipeIdentity.herraje,
       variante: snapshot.recipeIdentity.variante,
     },
-    profiles: snapshot.result.perfiles.map((profile) => ({
+    profiles: ordered(snapshot.result.perfiles, (profile) => ({
       code: profile.codigoPerfil,
       name: profile.nombrePerfil,
       function: profile.funcion,
@@ -102,18 +130,18 @@ export function buildFabricacionSnapshotSyncKey(
       quantity: profile.cantidadPiezas,
       totalMm: profile.totalLinealMm,
     })),
-    bars: snapshot.pautaBarras?.barras.map((bar) => ({
+    bars: snapshot.pautaBarras ? ordered(snapshot.pautaBarras.barras, (bar) => ({
       materialKey: bar.materialKey ?? null,
       code: bar.codigoPerfil,
       name: bar.nombrePerfil,
       lengthMm: bar.largoComercialMm,
-      cuts: bar.cortes.map((cut) => ({
+      cuts: ordered(bar.cortes, (cut) => ({
         code: cut.codigoPerfil,
         function: cut.funcion,
         cut: cut.corte ?? null,
         lengthMm: cut.largoMm,
       })),
-    })) ?? null,
+    })) : null,
   });
 }
 

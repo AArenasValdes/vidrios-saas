@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import { FabricacionMobileProductStep } from "@/features/fabricacion/components/mobile/fabricacion-mobile-product-step";
 import { crearBaseTipologicaVentora } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
@@ -251,4 +251,66 @@ describe("FabricacionMobileProductStep", () => {
     expect(screen.getByText(/agrega los códigos y nombres que usa tu taller/i))
       .toBeInTheDocument();
   });
+
+  it.each([
+    {
+      catalogKey: "ventora:kompen-form-line-800:configuration:ventana-monoriel",
+      leaves: 2,
+      compositionId: "fijo-1-movil",
+      compositionLabel: "1 fija + 1 móvil",
+    },
+    {
+      catalogKey: "ventora:kompen-form-line-800",
+      leaves: 2,
+      compositionId: "2-moviles",
+      compositionLabel: "2 hojas móviles",
+    },
+    {
+      catalogKey: "ventora:kompen-form-line-800:configuration:ventana-triple-riel",
+      leaves: 3,
+      compositionId: "3-moviles",
+      compositionLabel: "3 hojas móviles",
+    },
+  ])(
+    "resuelve sin pasos redundantes $catalogKey según hojas y móviles documentados",
+    async ({ catalogKey, leaves, compositionId, compositionLabel }) => {
+      const selected = recipe(2, `thermowin-${compositionId}`);
+      selected.lineName = "Form Line KOM 800";
+      selected.providerName = "Thermowin Kompen";
+      selected.definition.identidad.variante = catalogKey.includes("monoriel")
+        ? "ventana-monoriel"
+        : catalogKey.includes("triple-riel")
+          ? "ventana-triple-riel"
+          : "ventana-corredera";
+      selected.definition.perfiles = [];
+      selected.definition.vidrios = [];
+      selected.definition.accesorios = [];
+      const onWorkshopConfigurationSelectionChange = jest.fn();
+
+      render(
+        <FabricacionMobileProductStep
+          templateName="Form Line KOM 800"
+          catalogKey={catalogKey}
+          selected={selected}
+          draft={selected.definition}
+          recipes={[]}
+          readOnly={false}
+          onDraftChange={() => undefined}
+          onWorkshopConfigurationSelectionChange={onWorkshopConfigurationSelectionChange}
+        />
+      );
+
+      await waitFor(() => {
+        expect(onWorkshopConfigurationSelectionChange).toHaveBeenCalledWith(
+          expect.objectContaining({ id: expect.any(String) }),
+          leaves,
+          compositionId
+        );
+      });
+      expect(screen.getByLabelText("Resumen del producto")).toHaveTextContent(`${leaves} hojas`);
+      expect(screen.getByLabelText("Resumen del producto")).toHaveTextContent(compositionLabel);
+      expect(screen.queryByRole("group", { name: "Disposición de las hojas" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /monorriel|doble riel|triple riel/i })).not.toBeInTheDocument();
+    }
+  );
 });

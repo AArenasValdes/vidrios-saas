@@ -1,6 +1,14 @@
 import { jsPDF } from "jspdf";
 
 import type { WorkMaterialsDocument } from "./fabrication-work-materials.service";
+import { calculateProfileReferenceTotal, formatProfilePriceBasis, resolveProfileSupplierPrice } from "./work-materials-price-reference.service";
+import {
+  drawFabricationPdfContinuationHeader,
+  drawFabricationPdfFooters,
+  drawFabricationPdfHeader,
+  drawFabricationPdfSectionTitle,
+  FABRICATION_PDF_COLORS,
+} from "./fabrication-pdf-document-style.service";
 
 export type WorkMaterialsPdfMetadata = {
   companyName: string;
@@ -13,16 +21,17 @@ const PAGE_WIDTH = 210;
 const PAGE_HEIGHT = 297;
 const MARGIN = 14;
 const COLORS = {
-  ink: [25, 43, 72] as const,
-  muted: [87, 105, 132] as const,
-  accent: [37, 99, 183] as const,
-  headerFill: [234, 241, 250] as const,
-  rowFill: [248, 250, 253] as const,
-  rule: [211, 220, 232] as const,
+  ink: FABRICATION_PDF_COLORS.ink,
+  muted: FABRICATION_PDF_COLORS.muted,
+  accent: FABRICATION_PDF_COLORS.blue,
+  headerFill: FABRICATION_PDF_COLORS.pale,
+  rowFill: FABRICATION_PDF_COLORS.row,
+  rule: FABRICATION_PDF_COLORS.rule,
 };
+const CONTENT_BOTTOM = PAGE_HEIGHT - MARGIN - 5;
 
 type Column = { title: string; width: number; align?: "left" | "right" | "center" };
-type TableRow = { cells: string[]; quantityIndex?: number; smallIndices?: number[] };
+type TableRow = { cells: string[]; quantityIndex?: number; smallIndices?: number[]; referenceIndices?: number[] };
 
 function clean(value: string | null | undefined, fallback = "—") {
   const normalized = value?.trim();
@@ -42,7 +51,7 @@ function formatMoney(value: number, currency: string) {
 }
 
 function priceDescription(price: NonNullable<WorkMaterialsDocument["profiles"][number]["price"]>) {
-  return price.isWorkshopCode ? price.sourceLabel : "Precio referencial";
+  return price.sourceLabel;
 }
 
 function drawCellText(
@@ -110,7 +119,8 @@ function drawTableRow(pdf: jsPDF, row: TableRow, columns: Column[], x: number, y
   let columnX = x;
   columns.forEach((column, columnIndex) => {
     const isQuantity = columnIndex === row.quantityIndex;
-    const fontSize = row.smallIndices?.includes(columnIndex) ? 8.2 : isQuantity ? 10.4 : 9.6;
+    const isReference = row.referenceIndices?.includes(columnIndex) === true;
+    const fontSize = isReference ? 8.2 : row.smallIndices?.includes(columnIndex) ? 8.2 : isQuantity ? 10.4 : 9.6;
     drawCellText(
       pdf,
       row.cells[columnIndex] ?? "—",
@@ -119,7 +129,7 @@ function drawTableRow(pdf: jsPDF, row: TableRow, columns: Column[], x: number, y
       column.width,
       column.align,
       isQuantity,
-      isQuantity ? COLORS.accent : COLORS.ink,
+      isQuantity || isReference ? COLORS.accent : COLORS.ink,
       fontSize
     );
     columnX += column.width;
@@ -129,12 +139,13 @@ function drawTableRow(pdf: jsPDF, row: TableRow, columns: Column[], x: number, y
   pdf.line(x, y + height, x + tableWidth, y + height);
 }
 
-function drawSectionTitle(pdf: jsPDF, title: string, y: number) {
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(13.5);
-  pdf.setTextColor(...COLORS.ink);
-  pdf.text(title, MARGIN, y);
-  return y + 5;
+type PageContext = { metadata: WorkMaterialsPdfMetadata; logoDataUrl?: string | null };
+
+function drawContinuationTableHeader(pdf: jsPDF, title: string, columns: Column[], context: PageContext) {
+  pdf.addPage("a4", "portrait");
+  let y = drawFabricationPdfContinuationHeader(pdf, "Lista de materiales", context.metadata.quoteCode, context.logoDataUrl);
+  y = drawFabricationPdfSectionTitle(pdf, `${title} · continuación`, y);
+  return drawTableHeader(pdf, columns, MARGIN, y);
 }
 
 function ensureSpace(
@@ -142,18 +153,11 @@ function ensureSpace(
   y: number,
   requiredHeight: number,
   title: string,
-  columns: Column[]
+  columns: Column[],
+  context: PageContext
 ) {
-  if (y + requiredHeight <= PAGE_HEIGHT - MARGIN) return y;
-  pdf.addPage("a4", "portrait");
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(11);
-  pdf.setTextColor(...COLORS.muted);
-  pdf.text("Lista de materiales · continuación", MARGIN, 15);
-  pdf.setDrawColor(...COLORS.rule);
-  pdf.line(MARGIN, 19, PAGE_WIDTH - MARGIN, 19);
-  const sectionY = drawSectionTitle(pdf, title, 29);
-  return drawTableHeader(pdf, columns, MARGIN, sectionY);
+  if (y + requiredHeight <= CONTENT_BOTTOM) return y;
+  return drawContinuationTableHeader(pdf, title, columns, context);
 }
 
 function drawSection(
@@ -162,114 +166,38 @@ function drawSection(
   columns: Column[],
   rows: TableRow[],
   y: number,
-  emptyLabel: string
+  emptyLabel: string,
+  context: PageContext,
+  reserveBelow = 0
 ) {
   y += 6;
-  const fullSectionHeight = 5 + 9 + rows.reduce((total, row) => total + rowHeight(pdf, row, columns), 0);
-  const continuationTop = 26;
-  if (
-    rows.length > 0 &&
-    fullSectionHeight + continuationTop <= PAGE_HEIGHT - MARGIN &&
-    y + fullSectionHeight > PAGE_HEIGHT - MARGIN
-  ) {
-    pdf.addPage("a4", "portrait");
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(11);
-    pdf.setTextColor(...COLORS.muted);
-    pdf.text("Lista de materiales · continuación", MARGIN, 15);
-    pdf.setDrawColor(...COLORS.rule);
-    pdf.line(MARGIN, 19, PAGE_WIDTH - MARGIN, 19);
-    y = continuationTop;
+  const firstRow = rows[0] ?? { cells: [emptyLabel, ...columns.slice(1).map(() => "—")] };
+  const sectionStartHeight = 5 + 9 + rowHeight(pdf, firstRow, columns);
+  if (y + sectionStartHeight > CONTENT_BOTTOM) {
+    y = drawContinuationTableHeader(pdf, title, columns, context);
+  } else {
+    y = drawFabricationPdfSectionTitle(pdf, title, y);
+    y = drawTableHeader(pdf, columns, MARGIN, y);
   }
-  if (y + 16 > PAGE_HEIGHT - MARGIN) {
-    pdf.addPage("a4", "portrait");
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(11);
-    pdf.setTextColor(...COLORS.muted);
-    pdf.text("Lista de materiales · continuación", MARGIN, 15);
-    pdf.setDrawColor(...COLORS.rule);
-    pdf.line(MARGIN, 19, PAGE_WIDTH - MARGIN, 19);
-    y = 26;
-  }
-  y = drawSectionTitle(pdf, title, y);
-  y = drawTableHeader(pdf, columns, MARGIN, y);
 
   if (rows.length === 0) {
     const empty: TableRow = { cells: [emptyLabel, ...columns.slice(1).map(() => "—")] };
     const height = 14;
-    y = ensureSpace(pdf, y, height, title, columns);
+    y = ensureSpace(pdf, y, height, title, columns, context);
     drawTableRow(pdf, empty, columns, MARGIN, y, height, 0);
     return y + height;
   }
 
-  let rowIndex = 0;
-  for (const row of rows) {
+  for (const [rowIndex, row] of rows.entries()) {
     let height = rowHeight(pdf, row, columns);
-    y = ensureSpace(pdf, y, height, title, columns);
+    const reserveForNextSection = rowIndex === rows.length - 1 ? reserveBelow : 0;
+    y = ensureSpace(pdf, y, height + reserveForNextSection, title, columns, context);
     // Re-measure after a page break; repeated headers consume room but row height is unchanged.
     height = rowHeight(pdf, row, columns);
-    drawTableRow(pdf, row, columns, MARGIN, y, height, rowIndex++);
+    drawTableRow(pdf, row, columns, MARGIN, y, height, rowIndex);
     y += height;
   }
   return y;
-}
-
-function drawHeader(pdf: jsPDF, metadata: WorkMaterialsPdfMetadata, logoDataUrl?: string | null) {
-  let logoDrawn = false;
-  if (logoDataUrl) {
-    try {
-      const image = pdf.getImageProperties(logoDataUrl);
-      const maxWidth = 44;
-      const maxHeight = 12;
-      const scale = Math.min(maxWidth / image.width, maxHeight / image.height);
-      const width = image.width * scale;
-      const height = image.height * scale;
-      pdf.addImage(logoDataUrl, "PNG", MARGIN, 11.5 + (maxHeight - height) / 2, width, height, undefined, "FAST");
-      logoDrawn = true;
-    } catch {
-      // The document remains usable when an optional brand asset cannot be embedded.
-    }
-  }
-  if (!logoDrawn) {
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(13);
-    pdf.setTextColor(...COLORS.accent);
-    pdf.text("VENTORA", MARGIN, 18);
-  }
-
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(18);
-  pdf.setTextColor(...COLORS.ink);
-  pdf.text("Lista de materiales", 65, 18);
-
-  pdf.setDrawColor(...COLORS.rule);
-  pdf.setLineWidth(0.35);
-  pdf.line(MARGIN, 25, PAGE_WIDTH - MARGIN, 25);
-
-  const metaTop = 32;
-  const labelColor = COLORS.muted;
-  let maxSecondRowLines = 1;
-  const details = [
-    { label: "EMPRESA", value: clean(metadata.companyName), x: MARGIN, y: metaTop, width: 88 },
-    { label: "COTIZACIÓN", value: clean(metadata.quoteCode), x: 112, y: metaTop, width: 84 },
-    { label: "TRABAJO", value: clean(metadata.workName), x: MARGIN, y: metaTop + 11, width: 88 },
-    { label: "FECHA", value: clean(metadata.issueDate), x: 112, y: metaTop + 11, width: 84 },
-  ];
-  for (const detail of details) {
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(8);
-    pdf.setTextColor(...labelColor);
-    pdf.text(detail.label, detail.x, detail.y);
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(10.5);
-    pdf.setTextColor(...COLORS.ink);
-    const lines = pdf.splitTextToSize(detail.value, detail.width) as string[];
-    if (detail.y > metaTop) maxSecondRowLines = Math.max(maxSecondRowLines, lines.length);
-    pdf.text(lines, detail.x, detail.y + 4.5, { lineHeightFactor: 1.15 });
-  }
-  const dividerY = Math.max(55, metaTop + 11 + 4.5 + (maxSecondRowLines - 1) * 4.8 + 3);
-  pdf.line(MARGIN, dividerY, PAGE_WIDTH - MARGIN, dividerY);
-  return dividerY + 7;
 }
 
 export function createWorkMaterialsPdf(
@@ -278,7 +206,8 @@ export function createWorkMaterialsPdf(
   logoDataUrl?: string | null
 ) {
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: false });
-  let y = drawHeader(pdf, metadata, logoDataUrl);
+  let y = drawFabricationPdfHeader(pdf, metadata, "Lista de materiales", logoDataUrl);
+  const pageContext: PageContext = { metadata, logoDataUrl };
 
   if (document.pricing) {
     pdf.setFillColor(245, 248, 252);
@@ -299,26 +228,89 @@ export function createWorkMaterialsPdf(
   }
 
   const profileColumns: Column[] = [
-    { title: "Código / SKU", width: 40 },
-    { title: "Perfil y precio", width: 52 },
-    { title: "Acabado", width: 21 },
-    { title: "Compra", width: 25, align: "center" },
-    { title: "Unitario", width: 22, align: "right" },
-    { title: "Subtotal", width: 22, align: "right" },
+    { title: "Código", width: 22 },
+    { title: "Perfil", width: 30 },
+    { title: "Color aluminio", width: 25 },
+    { title: "Proveedor", width: 34 },
+    { title: "Compra", width: 24, align: "center" },
+    { title: "Unitario", width: 24, align: "right" },
+    { title: "Total", width: 23, align: "right" },
   ];
-  const profileRows = document.profiles.map((profile) => ({
-    cells: [
-      `${clean(profile.code)}${profile.price ? `\n${profile.price.sku}` : ""}`,
-      `${clean(profile.description)}\n${clean(profile.line)}${profile.price ? `\n${priceDescription(profile.price)}` : ""}`,
-      clean(profile.configuredFinish, "Acabado sin definir"),
-      `${profile.bars} ${profile.bars === 1 ? "tira" : "tiras"}\n${formatLength(profile.commercialLengthMm)} c/u`,
-      profile.price ? `${formatMoney(profile.price.unitPrice, profile.price.currency)}\n${profile.price.basis}` : "Pendiente",
-      profile.price ? formatMoney(profile.price.subtotal, profile.price.currency) : "Pendiente",
-    ],
-    quantityIndex: 3,
-    smallIndices: [0, 1],
+  const profilesWithReferences = document.profiles.map((profile) => ({
+    profile,
+    supplierPrice: resolveProfileSupplierPrice(profile, document.profilePriceReferences),
+    storedCost: profile.price && profile.price.sourceKind !== "reference" ? profile.price : null,
   }));
-  y = drawSection(pdf, "Perfiles totales", profileColumns, profileRows, y, "Sin perfiles en pauta conjunta");
+  const profileRows = profilesWithReferences.map(({ profile, supplierPrice, storedCost }) => {
+    const referenceTotal = supplierPrice
+      ? calculateProfileReferenceTotal(profile, { unitPrice: supplierPrice.unitPrice, basis: supplierPrice.basis })
+      : null;
+    const hasSupplierReference = supplierPrice != null;
+    const referenceStatus = !storedCost && !supplierPrice && document.profilePriceReferencesStatus === "unavailable"
+      ? "Consulta no disponible"
+      : !storedCost && !supplierPrice && document.profilePriceReferencesStatus === "loading"
+        ? "Consulta en curso"
+        : !storedCost && !supplierPrice && document.profilePriceReferencesStatus === "loaded"
+          ? "Sin referencia exacta"
+          : "Pendiente";
+    return {
+      cells: [
+        `${clean(profile.code)}${supplierPrice?.supplierSku ? `\nSKU ${supplierPrice.supplierSku}` : storedCost?.sku ? `\nSKU ${storedCost.sku}` : profile.supplierSku ? `\nSKU ${profile.supplierSku}` : ""}`,
+        `${clean(profile.description)}\n${clean(profile.line)}`,
+        clean(profile.configuredFinish, "Acabado sin definir"),
+        supplierPrice?.providerLabel ?? (storedCost ? priceDescription(storedCost) : referenceStatus),
+        `${profile.bars} ${profile.bars === 1 ? "tira" : "tiras"}\n${formatLength(profile.commercialLengthMm)}`,
+        supplierPrice
+          ? `${formatMoney(supplierPrice.unitPrice, supplierPrice.currency)} ${formatProfilePriceBasis(supplierPrice.basis)}`
+          : storedCost ? `${formatMoney(storedCost.unitPrice, storedCost.currency)}\n${storedCost.basis}` : referenceStatus,
+        supplierPrice
+          ? referenceTotal == null ? "No calculable" : `${formatMoney(referenceTotal, supplierPrice.currency)}\nreferencial`
+          : storedCost ? formatMoney(storedCost.subtotal, storedCost.currency) : referenceStatus,
+      ],
+      smallIndices: [0, 1, 3, 4, 6],
+      referenceIndices: hasSupplierReference ? [5, 6] : [],
+    };
+  });
+  y = drawSection(pdf, "Perfiles", profileColumns, profileRows, y, "Sin perfiles en pauta conjunta", pageContext);
+  if (profilesWithReferences.some(({ supplierPrice }) => supplierPrice != null)) {
+    pdf.setFont("helvetica", "normal");
+    const totalsBySource = new Map<string, { provider: string; currency: string; amount: number; count: number }>();
+    for (const { profile, supplierPrice } of profilesWithReferences) {
+      const provider = supplierPrice?.providerLabel;
+      const providerKey = supplierPrice?.providerKey ?? provider;
+      const currency = supplierPrice?.currency;
+      if (!supplierPrice || !provider || !providerKey || !currency) continue;
+      const amount = calculateProfileReferenceTotal(profile, { unitPrice: supplierPrice.unitPrice, basis: supplierPrice.basis });
+      if (amount == null) continue;
+      const key = `${providerKey}:${currency}`;
+      const current = totalsBySource.get(key) ?? { provider, currency, amount: 0, count: 0 };
+      current.amount += amount;
+      current.count += 1;
+      totalsBySource.set(key, current);
+    }
+    const coverage = profilesWithReferences.filter(({ supplierPrice }) => supplierPrice).length;
+    const totalLines = [...totalsBySource.values()].map((total) =>
+      `Total referencial · ${total.provider} · ${total.currency}: ${formatMoney(total.amount, total.currency)} (${total.count} perfiles)`
+    );
+    const totalText = totalLines.length ? totalLines.join("\n") : "No se puede calcular el total: la unidad de compra no coincide con tiras de la pauta.";
+    const note = `${totalText}\nCalculado desde el precio unitario y la cantidad de compra de la pauta. Referencia de proveedor; no es un costo guardado ni una cotización confirmada. Cobertura: ${coverage} de ${document.profiles.length} perfiles.`;
+    const noteLines = pdf.splitTextToSize(note, PAGE_WIDTH - MARGIN * 2) as string[];
+    const noteHeight = noteLines.length * 3.5 + 5;
+    if (y + noteHeight > CONTENT_BOTTOM) {
+      pdf.addPage("a4", "portrait");
+      y = drawFabricationPdfContinuationHeader(pdf, "Lista de materiales", metadata.quoteCode, logoDataUrl);
+      y = drawFabricationPdfSectionTitle(pdf, "Perfiles · referencia de compra", y);
+    }
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9);
+    pdf.setTextColor(...COLORS.ink);
+    pdf.text(noteLines.slice(0, totalLines.length || 1), MARGIN, y + 3.2, { lineHeightFactor: 1.2 });
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8.2);
+    pdf.setTextColor(...COLORS.muted);
+    pdf.text(noteLines.slice(totalLines.length || 1), MARGIN, y + 3.2 + (totalLines.length || 1) * 3.5, { lineHeightFactor: 1.2 });
+    y += noteHeight;
+  }
 
   const accessoryColumns: Column[] = [
     { title: "Código / SKU", width: 36 },
@@ -337,23 +329,25 @@ export function createWorkMaterialsPdf(
     ],
     smallIndices: [0, 1],
   }));
-  y = drawSection(pdf, "Accesorios", accessoryColumns, accessoryRows, y, "Sin accesorios registrados");
-
   const glassColumns: Column[] = [
     { title: "Descripción", width: 65 },
-    { title: "Espesor", width: 25 },
+    { title: "Espesor técnico", width: 25 },
     { title: "Superficie total", width: 34, align: "right" },
     { title: "Partidas asociadas", width: 58 },
   ];
   const glassRows = document.glass.map((glass) => ({
     cells: [
-      clean(glass.description),
-      clean(glass.thickness, "Pendiente"),
+      `${clean(glass.description)}${glass.thicknessWarning ? `\n${clean(glass.thicknessWarning)}` : ""}`,
+      clean(glass.thickness, "Sin dato técnico"),
       formatSquareMeters(glass.totalM2),
       glass.itemCodes.length ? glass.itemCodes.join(", ") : "—",
     ],
   }));
-  drawSection(pdf, "Vidrios", glassColumns, glassRows, y, "Sin vidrios registrados");
+  const glassSectionHeight = 5 + 9 + glassRows.reduce((total, row) => total + rowHeight(pdf, row, glassColumns), 0);
+  y = drawSection(pdf, "Accesorios", accessoryColumns, accessoryRows, y, "Sin accesorios registrados", pageContext, glassSectionHeight);
+  drawSection(pdf, "Vidrios", glassColumns, glassRows, y, "Sin vidrios registrados", pageContext);
+
+  drawFabricationPdfFooters(pdf, metadata.quoteCode);
 
   return pdf;
 }

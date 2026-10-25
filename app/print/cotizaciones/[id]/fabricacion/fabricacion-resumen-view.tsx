@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode, RefObject } from "react";
+import { useState, type ReactNode, type RefObject } from "react";
 import {
   LuArrowLeft,
   LuArrowUpRight,
@@ -41,9 +41,11 @@ import { getQuoteConstructorItemConfig } from "@/features/cotizaciones/visual-co
 import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import type { WorkMaterialsDocument } from "@/features/fabricacion/services/fabrication-work-materials.service";
+import type { FabricationWorkOrder } from "@/features/fabricacion/services/fabrication-work-order.service";
 
 import s from "./page.module.css";
 import { WorkMaterialsDocumentPanel } from "./work-materials-document-panel";
+import { GlassDistributionPanel } from "./vidrios/glass-distribution-panel";
 
 export function formatMl(value: number) {
   return `${value.toLocaleString("es-CL", {
@@ -338,6 +340,8 @@ export function groupBarsByProfile(
 type Props = {
   backHref: string;
   pdfHref: string;
+  quoteId: string;
+  glassPlannerEnabled: boolean;
   codigo: string;
   clienteNombre: string;
   obra: string;
@@ -349,6 +353,7 @@ type Props = {
   isExporting: boolean;
   exportError: string | null;
   materialsDocument: WorkMaterialsDocument;
+  workOrder: FabricationWorkOrder;
   companyName: string;
   issueDate: string;
   technicalCostPanel?: ReactNode;
@@ -403,6 +408,8 @@ function CubicacionMetrics({ row }: { row: FabricationSummaryItem }) {
       <div>
         <span>Vidrio</span>
         <strong>{formatM2(row.glassM2)}</strong>
+        <small>Espesor técnico: {row.glassThickness}</small>
+        {row.glassThicknessWarning ? <small>{row.glassThicknessWarning}</small> : null}
       </div>
       <div>
         <span>Accesorios</span>
@@ -517,6 +524,8 @@ function PautaRows({ row }: { row: FabricationSummaryItem }) {
 export function FabricacionResumenView({
   backHref,
   pdfHref,
+  quoteId,
+  glassPlannerEnabled,
   codigo,
   clienteNombre,
   obra,
@@ -528,6 +537,7 @@ export function FabricacionResumenView({
   isExporting,
   exportError,
   materialsDocument,
+  workOrder,
   companyName,
   issueDate,
   technicalCostPanel,
@@ -535,6 +545,15 @@ export function FabricacionResumenView({
   onDownload,
   onPrint,
 }: Props) {
+  const [activeTab, setActiveTab] = useState<"resumen" | "materiales" | "vidrios" | "cortes" | "costos">("resumen");
+  const tabs = [
+    ["resumen", "Resumen"],
+    ["materiales", "Materiales"],
+    ["vidrios", "Vidrios"],
+    ["cortes", "Cortes"],
+    ["costos", "Costos"],
+  ] as const;
+
   return (
     <>
       <div className={s.pageHeader}>
@@ -558,18 +577,22 @@ export function FabricacionResumenView({
           </p>
         </div>
         <div className={`${s.headerActions} ${s.printHide}`}>
+          <button type="button" onClick={() => setActiveTab("vidrios")} className={s.secondaryButton}>
+            <LuFileText aria-hidden />
+            <span>Distribución de vidrios</span>
+          </button>
           <Link href={pdfHref} className={s.secondaryButton}>
             <LuFileText aria-hidden />
             <span>PDF cliente</span>
           </Link>
           <button
             type="button"
-            className={s.primaryButton}
+            className={s.secondaryButton}
             onClick={onDownload}
             disabled={isExporting}
           >
             <LuDownload aria-hidden />
-            <span>{isExporting ? "Generando..." : "Descargar orden de fabricación y materiales"}</span>
+            <span>{isExporting ? "Generando..." : "PDF conjunto (compatibilidad)"}</span>
           </button>
           <button type="button" className={s.secondaryButton} onClick={onPrint}>
             <LuPrinter aria-hidden />
@@ -578,7 +601,31 @@ export function FabricacionResumenView({
         </div>
       </div>
 
-      <article ref={documentRef} className={s.document}>
+      <nav className={`${s.desktopTabNav} ${s.printHide}`} role="tablist" aria-label="Secciones de fabricación"
+        onKeyDown={(event) => {
+          const currentIndex = tabs.findIndex(([id]) => id === activeTab);
+          const nextIndex = event.key === "ArrowRight" ? (currentIndex + 1) % tabs.length
+            : event.key === "ArrowLeft" ? (currentIndex + tabs.length - 1) % tabs.length
+            : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : null;
+          if (nextIndex === null) return;
+          event.preventDefault();
+          const nextTab = tabs[nextIndex];
+          if (!nextTab) return;
+          setActiveTab(nextTab[0]);
+          event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[nextIndex]?.focus();
+        }}>
+        {tabs.map(([id, label]) => (
+          <button key={id} type="button" role="tab" id={`desktop-fabricacion-tab-${id}`}
+            aria-selected={activeTab === id} aria-controls="desktop-fabricacion-panel"
+            tabIndex={activeTab === id ? 0 : -1}
+            onClick={() => setActiveTab(id)}>
+            {label}
+          </button>
+        ))}
+      </nav>
+
+      <article ref={documentRef} className={`${s.document} ${s.desktopTabbedDocument}`} data-active-tab={activeTab}
+        id="desktop-fabricacion-panel" role="tabpanel" aria-labelledby={`desktop-fabricacion-tab-${activeTab}`}>
         <header className={s.printTitle}>
           <p className={s.docEyebrow}>Uso interno · no enviar al cliente</p>
           <h1>Resumen de fabricación</h1>
@@ -599,18 +646,54 @@ export function FabricacionResumenView({
           <p className={`${s.exportNotice} ${s.printHide}`}>{exportError}</p>
         ) : null}
 
-        {technicalCostPanel}
+        <div className={s.desktopCostSection}>
+          {technicalCostPanel ?? <p className={s.emptyState}>Los costos de fabricación no están disponibles para esta cotización.</p>}
+        </div>
+
+        <div className={s.desktopGlassSection}>
+          <GlassDistributionPanel quoteId={quoteId} quoteCode={codigo} clientName={clienteNombre} workName={obra} enabled={glassPlannerEnabled} autoPreview={activeTab === "vidrios"} preloadPreview={glassPlannerEnabled} />
+        </div>
 
         <WorkMaterialsDocumentPanel
           document={materialsDocument}
+          workOrder={workOrder}
           companyName={companyName}
           quoteCode={codigo}
           work={obra}
           issueDate={issueDate}
+          distributionHref={`/print/cotizaciones/${quoteId}/fabricacion/vidrios`}
+          quoteId={quoteId}
+          clientName={clienteNombre}
         />
 
-        <details className={s.secondaryWorkshopDetails}>
-          <summary>Ver pauta, cubicación y cortes por componente</summary>
+        <section className={s.desktopSummarySection} aria-label="Resumen de fabricación">
+          <div className={s.desktopSummaryHeading}>
+            <h2>Componentes con pauta</h2>
+            <span>{summary.items.length} de {summary.totalItems}</span>
+          </div>
+          {summary.items.length ? (
+            <div className={s.desktopSummaryItems}>
+              {summary.items.map((row) => (
+                <button key={row.itemId} type="button" onClick={() => {
+                  setActiveTab("cortes");
+                  if (expandedItemId !== row.itemId) onToggleItem(row.itemId);
+                }}>
+                  <span><strong>{row.codigo} · {row.nombre}</strong><small>{row.widthMm} × {row.heightMm} mm · {row.quantity} {row.quantity === 1 ? "unidad" : "unidades"}</small></span>
+                  <span aria-hidden>Ver cortes →</span>
+                </button>
+              ))}
+            </div>
+          ) : <p className={s.emptyState}>Esta cotización aún no tiene componentes con pauta guardada.</p>}
+          <dl className={s.desktopSummaryMetrics} aria-label="Indicadores del trabajo">
+            <div><dt>Perfiles</dt><dd>{formatMl(summary.totalProfilesMl)}</dd></div>
+            <div><dt>Vidrio</dt><dd>{formatM2(summary.totalGlassM2)}</dd></div>
+            <div><dt>Tiras</dt><dd>{summary.totalBars ?? "—"}</dd></div>
+            <div><dt>Con pauta</dt><dd>{summary.items.length}/{summary.totalItems}</dd></div>
+          </dl>
+        </section>
+
+        <div className={s.secondaryWorkshopDetails}>
+          <h2 className={s.desktopCutsHeading}>Pauta, cubicación y cortes por componente</h2>
 
         <section className={s.totalsStrip} aria-label="Resumen general">
           <div>
@@ -732,7 +815,7 @@ export function FabricacionResumenView({
                     </div>
                     <div>
                       <dt>Vidrio</dt>
-                      <dd>{formatM2(row.glassM2)}</dd>
+                      <dd>{formatM2(row.glassM2)} · {row.glassThickness}</dd>
                     </div>
                     <div>
                       <dt>Accesorios</dt>
@@ -806,7 +889,7 @@ export function FabricacionResumenView({
           })
         )}
 
-        </details>
+        </div>
 
         <footer className={s.docFooter}>
           <p>

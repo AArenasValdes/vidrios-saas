@@ -1,5 +1,7 @@
 import {
+  applyUniqueDeclaredCatalogComposition,
   resolveInitialFabricationStepForTemplate,
+  resolveUniqueDeclaredCatalogComposition,
   resolveMobileVariantTreeEntryStep,
 } from "@/features/fabricacion/services/fabricacion-workflow-initial-step.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
@@ -95,6 +97,79 @@ describe("resolveInitialFabricationStepForTemplate", () => {
         recipe
       )
     ).toBe("base");
+  });
+
+  it("abre directo en componentes cuando la línea ya representa una configuración completa del catálogo", () => {
+    const recipe = buildRecipe();
+    expect(
+      resolveInitialFabricationStepForTemplate(
+        { catalogKey: "ventora:kompen-form-line-800:configuration:ventana-monoriel" },
+        recipe
+      )
+    ).toBe("components");
+
+    const resolved = resolveUniqueDeclaredCatalogComposition(
+      "ventora:kompen-form-line-800:configuration:ventana-monoriel"
+    );
+    expect(resolved).toMatchObject({
+      configuration: { id: "ventana-monoriel", typology: "corredera" },
+      compositionId: "fijo-1-movil",
+      leavesCount: 2,
+    });
+  });
+
+  it.each([
+    ["ventora:kompen-form-line-800", "2-moviles"],
+    ["ventora:kompen-form-line-800:configuration:ventana-triple-riel", "3-moviles"],
+  ])("resuelve la composición declarada para %s", (catalogKey, compositionId) => {
+    expect(resolveUniqueDeclaredCatalogComposition(catalogKey)?.compositionId).toBe(
+      compositionId
+    );
+  });
+
+  it("mantiene el paso de producto en líneas con un selector de variantes independiente", () => {
+    expect(
+      resolveInitialFabricationStepForTemplate(
+        { catalogKey: "ventora:l20" },
+        buildRecipe({ definition: { ...buildRecipe().definition, perfiles: [{
+          id: "p1",
+          funcion: "Riel superior",
+          nombrePerfil: "2001",
+          codigoPerfil: "2001",
+          requerido: true,
+          reglaMedida: { base: "ancho_total", ajusteMm: -12 },
+          reglaCantidad: { tipo: "fijo", cantidad: 1 },
+          largoComercialMm: 6000,
+          tallerPerfilId: null,
+        }] } })
+      )
+    ).toBe("base");
+  });
+
+  it("no salta a componentes si la entrada del catálogo no declara hojas", () => {
+    expect(
+      resolveInitialFabricationStepForTemplate(
+        { catalogKey: "ventora:kompen-prime-line-700" },
+        buildRecipe()
+      )
+    ).toBe("base");
+  });
+
+  it("prepara identidad exacta de catálogo en memoria sin alterar reglas de corte", () => {
+    const recipe = buildRecipe().definition;
+    const catalogKey = "ventora:kompen-form-line-800:configuration:ventana-monoriel";
+    const prepared = applyUniqueDeclaredCatalogComposition(recipe, catalogKey);
+    expect(prepared.identidad).toMatchObject({
+      configurationId: "ventana-monoriel",
+      compositionId: "fijo-1-movil",
+      configurationRevision: 1,
+      tipologia: "corredera",
+      variante: "ventana-monoriel",
+    });
+    expect(prepared.perfiles).toEqual(recipe.perfiles);
+    expect(
+      applyUniqueDeclaredCatalogComposition(prepared, catalogKey)
+    ).toBe(prepared);
   });
 
   it("abre en producto cuando la línea tiene variaciones", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { FabricacionTipologiaPreview } from "@/features/fabricacion/components/fabricacion-tipologia-preview";
 import {
@@ -110,6 +110,71 @@ function formatSodalProfileRule(profile: FabricacionReceta["perfiles"][number]):
 }
 
 type SummaryFact = { label: string; value: string };
+
+type CatalogCompositionOption = {
+  id: string;
+  label: string;
+  leaves: number;
+  movingLeaves: number | null;
+};
+
+const SLIDING_COMPOSITION_OPTIONS: CatalogCompositionOption[] = [
+  { id: "2-moviles", label: "2 hojas móviles", leaves: 2, movingLeaves: 2 },
+  { id: "fijo-1-movil", label: "1 fija + 1 móvil", leaves: 2, movingLeaves: 1 },
+  { id: "3-moviles", label: "3 hojas móviles", leaves: 3, movingLeaves: 3 },
+  { id: "4-moviles", label: "4 hojas móviles", leaves: 4, movingLeaves: 4 },
+];
+
+function getCatalogCompositionOptions(
+  configuration: CatalogProductConfiguration
+): CatalogCompositionOption[] {
+  const opening = configuration.openingType
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const allowedLeaves = configuration.leavesCounts;
+  const allowed = (options: CatalogCompositionOption[]) => {
+    const filtered = allowedLeaves?.length
+      ? options.filter((option) => allowedLeaves.includes(option.leaves))
+      : options;
+    return filtered.length || !allowedLeaves?.length
+      ? filtered
+      : allowedLeaves.map((count) => ({
+          id: `distribucion-pendiente-${count}`,
+          label: `${count} ${count === 1 ? "hoja" : "hojas"} · distribución de mi taller`,
+          leaves: count,
+          movingLeaves: null,
+        }));
+  };
+
+  if (opening.includes("fijo") || configuration.componentType.toLowerCase().includes("paño fijo")) {
+    return allowed([{ id: "1-fijo", label: "1 paño fijo", leaves: 1, movingLeaves: 0 }]);
+  }
+  if (opening.includes("corredera")) {
+    const options = allowed(SLIDING_COMPOSITION_OPTIONS);
+    if (configuration.leavesCounts?.length === 1 && configuration.movingLeavesCounts?.length === 1) {
+      return options.filter(
+        (option) =>
+          option.leaves === configuration.leavesCounts?.[0] &&
+          option.movingLeaves === configuration.movingLeavesCounts?.[0]
+      );
+    }
+    return options;
+  }
+  return allowed([
+    { id: "1-hoja", label: "1 hoja", leaves: 1, movingLeaves: 1 },
+    { id: "2-hojas", label: "2 hojas", leaves: 2, movingLeaves: 2 },
+  ]);
+}
+
+function hasOneExplicitComposition(configuration: CatalogProductConfiguration): boolean {
+  if (configuration.leavesCounts?.length !== 1) return false;
+  const opening = configuration.openingType
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  return !opening.includes("corredera") || configuration.movingLeavesCounts?.length === 1;
+}
 
 function ProductSummaryCard({
   templateName,
@@ -476,6 +541,7 @@ export function FabricacionMobileProductStep({
   onCreateCatalogConfiguration,
   onWorkshopConfigurationSelectionChange,
 }: Props) {
+  const autoSelectionRef = useRef<string | null>(null);
   const isSavedWorkshopConfiguration = draft.identidad.configurationId?.startsWith("workshop:") === true;
   const [workshopComponent, setWorkshopComponent] = useState(() => {
     if (!isSavedWorkshopConfiguration) return "Ventana";
@@ -526,12 +592,7 @@ export function FabricacionMobileProductStep({
     (!draft.identidad.configurationId &&
       configuration.typology === draft.identidad.tipologia &&
       configuration.variant === draft.identidad.variante)
-  ) ?? (
-    catalogConfigurations.length === 1 &&
-    hasKnownFabricationPath
-      ? catalogConfigurations[0]
-      : null
-  );
+  ) ?? (catalogConfigurations.length === 1 ? catalogConfigurations[0] : null);
   const isWorkshopConfiguration = draft.identidad.configurationId?.startsWith("workshop:") === true;
   const veratecSlots = getLineVariantSlotsForFabricationTree(catalogKey);
   const sodalRecipeChoices = useMemo(() => {
@@ -584,6 +645,70 @@ export function FabricacionMobileProductStep({
     : workshopOpening === "Fijo"
       ? [{ id: "1-fijo", label: "1 paño fijo", leaves: 1, modules: 1 }]
       : [{ id: "1-hoja", label: "1 hoja", leaves: 1, modules: 1 }];
+  const activeConfigurationForComposition = configurationAwaitingComposition ??
+    (selectedCatalogConfiguration &&
+    !draft.identidad.compositionId &&
+    (hasExistingRecipeData || !hasKnownFabricationPath || hasOneExplicitComposition(selectedCatalogConfiguration))
+      ? selectedCatalogConfiguration
+      : null);
+  const activeConfigurationOptions = activeConfigurationForComposition
+    ? getCatalogCompositionOptions(activeConfigurationForComposition)
+    : [];
+  const hasExactCatalogComposition = Boolean(
+    activeConfigurationForComposition &&
+    hasOneExplicitComposition(activeConfigurationForComposition) &&
+    activeConfigurationOptions.length === 1
+  );
+  const activeConfigurationComposition = activeConfigurationForComposition
+    ? activeConfigurationOptions.find(
+        (composition) =>
+          composition.id === configurationCompositionId ||
+          composition.id === draft.identidad.compositionId?.replace(/^workshop:/, "")
+      ) ?? (hasExactCatalogComposition ? activeConfigurationOptions[0] : null)
+    : null;
+  const exactCatalogCompositionResolved = Boolean(
+    hasExactCatalogComposition &&
+    activeConfigurationComposition
+  );
+  const autoSelectionKey = exactCatalogCompositionResolved &&
+    activeConfigurationForComposition &&
+    activeConfigurationComposition &&
+    !hasExistingRecipeData &&
+    !readOnly &&
+    onWorkshopConfigurationSelectionChange
+    ? `${activeConfigurationForComposition.id}:${activeConfigurationComposition.id}`
+    : null;
+  useEffect(() => {
+    if (
+      !autoSelectionKey ||
+      !activeConfigurationForComposition ||
+      !activeConfigurationComposition ||
+      !onWorkshopConfigurationSelectionChange
+    ) {
+      return;
+    }
+    const currentCompositionId = draft.identidad.compositionId?.replace(/^workshop:/, "");
+    if (
+      draft.identidad.configurationId === activeConfigurationForComposition.id &&
+      currentCompositionId === activeConfigurationComposition.id
+    ) {
+      return;
+    }
+    if (autoSelectionRef.current === autoSelectionKey) return;
+    autoSelectionRef.current = autoSelectionKey;
+    onWorkshopConfigurationSelectionChange(
+      activeConfigurationForComposition,
+      activeConfigurationComposition.leaves,
+      activeConfigurationComposition.id
+    );
+  }, [
+    activeConfigurationComposition,
+    activeConfigurationForComposition,
+    autoSelectionKey,
+    draft.identidad.compositionId,
+    draft.identidad.configurationId,
+    onWorkshopConfigurationSelectionChange,
+  ]);
   const summaryUsesWorkshopSelection = needsWorkshopConfiguration || isWorkshopConfiguration;
   const selectedWorkshopComposition = workshopCompositionOptions.find((option) => option.id === workshopComposition) ?? null;
   const typologyLabel =
@@ -596,7 +721,7 @@ export function FabricacionMobileProductStep({
   // catálogo sin cambiar todavía la receta del taller.
   const displayedLeavesCount = summaryUsesWorkshopSelection
     ? selectedWorkshopComposition?.leaves ?? 0
-    : singleDocumentedSlot?.leavesCount ?? draft.identidad.hojas;
+    : activeConfigurationComposition?.leaves ?? singleDocumentedSlot?.leavesCount ?? draft.identidad.hojas;
   const previewLeavesCount = summaryUsesWorkshopSelection
     ? selectedWorkshopComposition?.leaves ?? (draft.identidad.hojas > 0 ? draft.identidad.hojas : 2)
     : displayedLeavesCount;
@@ -630,6 +755,9 @@ export function FabricacionMobileProductStep({
   const summaryVariantLabel = summaryUsesWorkshopSelection
     ? selectedWorkshopComposition?.label ?? "Por elegir"
     : variantLabel;
+  const showCatalogConfigurationChoices =
+    catalogConfigurations.length > 1 ||
+    (hasExistingRecipeData && !exactCatalogCompositionResolved);
 
   const selectCatalogConfiguration = (configuration: CatalogProductConfiguration) => {
     if (readOnly) return;
@@ -642,52 +770,10 @@ export function FabricacionMobileProductStep({
     onWorkshopConfigurationSelectionChange?.(null);
   };
 
-  const configurationCompositionOptions = (configuration: CatalogProductConfiguration) => {
-    const opening = configuration.openingType.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    const allowedCounts = configuration.leavesCounts;
-    const allowed = (options: Array<{ id: string; label: string; leaves: number }>) => {
-      const filtered = allowedCounts?.length
-        ? options.filter((option) => allowedCounts.includes(option.leaves))
-        : options;
-      return filtered.length || !allowedCounts?.length
-        ? filtered
-        : allowedCounts.map((count) => ({
-            id: `distribucion-pendiente-${count}`,
-            label: `${count} ${count === 1 ? "hoja" : "hojas"} · distribución de mi taller`,
-            leaves: count,
-          }));
-    };
-    if (opening.includes("fijo") || configuration.componentType.toLowerCase().includes("paño fijo")) {
-      return allowed([{ id: "1-fijo", label: "1 paño fijo", leaves: 1 }]);
-    }
-    if (opening.includes("corredera")) {
-      return allowed([
-        { id: "2-moviles", label: "2 hojas móviles", leaves: 2 },
-        { id: "fijo-1-movil", label: "1 paño fijo + 1 móvil", leaves: 2 },
-        { id: "3-moviles", label: "3 hojas móviles", leaves: 3 },
-        { id: "4-moviles", label: "4 hojas móviles", leaves: 4 },
-      ]);
-    }
-    return allowed([
-      { id: "1-hoja", label: "1 hoja", leaves: 1 },
-      { id: "2-hojas", label: "2 hojas", leaves: 2 },
-    ]);
-  };
-  const activeConfigurationForComposition = configurationAwaitingComposition ??
-    (selectedCatalogConfiguration &&
-    !draft.identidad.compositionId &&
-    !hasKnownFabricationPath
-      ? selectedCatalogConfiguration
-      : null);
-  const activeConfigurationComposition = activeConfigurationForComposition
-    ? configurationCompositionOptions(activeConfigurationForComposition).find(
-        (composition) => composition.id === configurationCompositionId
-      ) ?? null
-    : null;
-  const selectWorkshopDeclaredComposition = (configuration: CatalogProductConfiguration, composition: { id: string; label: string; leaves: number }) => {
+  const selectWorkshopDeclaredComposition = (configuration: CatalogProductConfiguration, composition: CatalogCompositionOption) => {
     if (readOnly || !onWorkshopConfigurationSelectionChange) return;
     setConfigurationCompositionId(composition.id);
-    onWorkshopConfigurationSelectionChange(configuration, composition.leaves, `workshop:${composition.id}`);
+    onWorkshopConfigurationSelectionChange(configuration, composition.leaves, composition.id);
   };
   const selectWorkshopConfiguration = (composition: { id: string; label: string; leaves: number }) => {
     if (readOnly || !onCreateCatalogConfiguration) return;
@@ -724,7 +810,7 @@ export function FabricacionMobileProductStep({
         typologyLabel={summaryUsesWorkshopSelection ? summaryTypologyLabel : activeConfigurationForComposition?.label ?? selectedCatalogConfiguration?.label ?? (usesCatalogConfigurationPicker ? "Por configurar" : typologyLabel)}
         hojasLabel={hojasLabel}
         variantLabel={summaryVariantLabel}
-        showLeaves={summaryUsesWorkshopSelection ? Boolean(selectedWorkshopComposition) : !usesCatalogConfigurationPicker}
+        showLeaves={summaryUsesWorkshopSelection ? Boolean(selectedWorkshopComposition) : Boolean(activeConfigurationComposition) || !usesCatalogConfigurationPicker}
         showPreview={summaryUsesWorkshopSelection || !usesCatalogConfigurationPicker || Boolean(selectedCatalogConfiguration || activeConfigurationForComposition)}
         extraFacts={
           summaryUsesWorkshopSelection
@@ -788,34 +874,40 @@ export function FabricacionMobileProductStep({
         </section>
       ) : usesCatalogConfigurationPicker ? (
         <section className={s.configSection} aria-labelledby="product-config-title">
-          <h2 id="product-config-title">Qué fabricarás</h2>
-          <p className={s.configHint}>
-            El sistema ya viene definido por la línea. Elige el componente del catálogo.
-          </p>
-          <div className={s.catalogConfigurationChoices}>
-            {catalogConfigurations.map((configuration) => (
-              <button
-                key={configuration.id}
-                type="button"
-                className={s.catalogConfigurationChoice}
-                data-active={(configurationAwaitingComposition?.id ?? selectedCatalogConfiguration?.id) === configuration.id ? "true" : "false"}
-                aria-pressed={(configurationAwaitingComposition?.id ?? selectedCatalogConfiguration?.id) === configuration.id}
-                disabled={readOnly}
-                onClick={() => {
-                  selectCatalogConfiguration(configuration);
-                }}
-              >
-                <span>{configuration.label}</span>
-                <small>{configuration.componentType} · {configuration.openingType}</small>
-              </button>
-            ))}
-          </div>
-          {activeConfigurationForComposition ? (
+          <h2 id="product-config-title">
+            {showCatalogConfigurationChoices ? "Qué fabricarás" : "Configuración del sistema"}
+          </h2>
+          {showCatalogConfigurationChoices ? (
+            <>
+              <p className={s.configHint}>
+                Elige el sistema indicado en el catálogo de esta línea.
+              </p>
+              <div className={s.catalogConfigurationChoices}>
+                {catalogConfigurations.map((configuration) => (
+                  <button
+                    key={configuration.id}
+                    type="button"
+                    className={s.catalogConfigurationChoice}
+                    data-active={(configurationAwaitingComposition?.id ?? selectedCatalogConfiguration?.id) === configuration.id ? "true" : "false"}
+                    aria-pressed={(configurationAwaitingComposition?.id ?? selectedCatalogConfiguration?.id) === configuration.id}
+                    disabled={readOnly}
+                    onClick={() => selectCatalogConfiguration(configuration)}
+                  >
+                    <span>{configuration.label}</span>
+                    <small>{configuration.componentType} · {configuration.openingType}</small>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : null}
+          {activeConfigurationForComposition && !exactCatalogCompositionResolved ? (
             <fieldset className={s.choiceSet}>
-              <legend>Composición que usa tu taller</legend>
-              <p className={s.configHint}>El catálogo indica el sistema; confirma qué disposición fabricarás. Esta elección queda pendiente de revisar con tu pauta.</p>
+              <legend>Disposición de las hojas</legend>
+              <p className={s.configHint}>
+                Elige solo si el catálogo no define cuántas hojas se mueven.
+              </p>
               <div className={s.choiceGrid}>
-                {configurationCompositionOptions(activeConfigurationForComposition).map((composition) => (
+                {activeConfigurationOptions.map((composition) => (
                   <button
                     key={composition.id}
                     type="button"
@@ -831,9 +923,15 @@ export function FabricacionMobileProductStep({
               </div>
             </fieldset>
           ) : null}
-          <p className={s.configHint}>
-            En Perfiles completas cantidades y descuentos con la pauta. La selección de composición del taller no confirma que el fabricante la incluya.
-          </p>
+          {exactCatalogCompositionResolved ? (
+            <p className={s.configHint}>
+              Sistema y movimiento de hojas definidos por el catálogo. Continúa a Perfiles y descuentos.
+            </p>
+          ) : (
+            <p className={s.configHint}>
+              En Perfiles completas cantidades y descuentos con la pauta.
+            </p>
+          )}
         </section>
       ) : sodalVariants.length > 0 && !(variantPicker && variantPicker.axes.length > 0) ? (
         <>

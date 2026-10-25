@@ -2,7 +2,10 @@ import { construirFabricacionTrabajoSnapshot } from "@/features/fabricacion/serv
 import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
-import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import {
+  decodeCotizacionItemPresentationMeta,
+  encodeCotizacionItemPresentationMeta,
+} from "@/utils/cotizacion-item-presentation";
 
 type FabricationSnapshotCarrier = Parameters<
   typeof construirFabricacionTrabajoSnapshot
@@ -42,8 +45,12 @@ function fabricationInputKey(item: CotizacionWorkflowItem) {
     cantidad: item.cantidad,
     lineTemplateId: meta.lineTemplateId,
     catalogLineKey: meta.catalogLineKey,
+    vidrioLineTemplateId: meta.vidrioLineTemplateId,
+    catalogEspesor: meta.catalogEspesor,
+    glassTechnicalSpec: meta.glassTechnicalSpec,
     material: meta.material,
     colorHex: meta.colorHex,
+    catalogTerminacion: meta.catalogTerminacion,
     fabricacionTipologia: meta.fabricacionTipologia,
     fabricacionHojas: meta.fabricacionHojas,
     fabricacionModulos: meta.fabricacionModulos,
@@ -61,6 +68,41 @@ function fabricationInputKey(item: CotizacionWorkflowItem) {
     sheetVariant: meta.sheetVariant,
     guidedVisualConfig: meta.guidedVisualConfig,
     quickCompositionAdjustment: meta.quickCompositionAdjustment,
+  });
+}
+
+function createLogicalComponentId(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") return globalThis.crypto.randomUUID();
+  const bytes = new Uint8Array(16);
+  globalThis.crypto.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+/** Adds durable logical IDs only inside an explicit quote-save operation. */
+export function ensureLogicalComponentIdsForQuoteSave(
+  items: readonly CotizacionWorkflowItem[]
+): CotizacionWorkflowItem[] {
+  const seen = new Set<string>();
+  return items.map((item) => {
+    if (item.tipoItem === "item_libre_con_valor") return item;
+    const metadata = decodeCotizacionItemPresentationMeta(item.observaciones);
+    if (metadata.logicalComponentId && !seen.has(metadata.logicalComponentId)) {
+      seen.add(metadata.logicalComponentId);
+      return item;
+    }
+    const logicalComponentId = createLogicalComponentId();
+    seen.add(logicalComponentId);
+    return {
+      ...item,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        ...metadata,
+        logicalComponentId,
+        raw: metadata.raw,
+      }),
+    };
   });
 }
 
@@ -145,7 +187,23 @@ export function resolveFabricacionSnapshotsIndependently(input: {
   return input.items.map((item) => {
     if (!input.itemIdsToResolve.has(item.id)) return item;
     try {
-      return { ...item, fabricacionSnapshot: input.resolveSnapshot(item) };
+      const resolved = input.resolveSnapshot(item);
+      if (!resolved) return { ...item, fabricacionSnapshot: null };
+      const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
+      const glassSelection = presentation.vidrioLineTemplateId || presentation.glassTechnicalSpec
+        ? {
+            productId: presentation.vidrioLineTemplateId || null,
+            displayName: item.vidrio || null,
+            technicalSpec: presentation.glassTechnicalSpec,
+          }
+        : undefined;
+      return {
+        ...item,
+        fabricacionSnapshot: {
+          ...resolved,
+          ...(glassSelection ? { glassSelection } : {}),
+        },
+      };
     } catch (error) {
       input.onItemError?.(item, error);
       return item;

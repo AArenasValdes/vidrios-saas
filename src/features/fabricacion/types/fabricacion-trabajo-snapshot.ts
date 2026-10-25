@@ -10,6 +10,8 @@ export type FabricacionTrabajoItemInput = {
   colorHex?: string | null;
   catalogLineKey?: string | null;
   supplierFamilyKey?: string | null;
+  /** Explicit supplier choice remains authoritative when a profile is missing there. */
+  supplierProviderKey?: string | null;
   /** Resuelta explícitamente desde presentaciones confirmadas del catálogo. */
   supplierPresentationSelections?: FabricacionTrabajoPresentationSelection[];
   /** Si el catálogo aplica a esta línea, una resolución ausente debe quedar registrada como pendiente. */

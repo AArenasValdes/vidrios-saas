@@ -15,6 +15,9 @@ const eslintConfig = defineConfig([
     ".agents/**",
     ".jest-cache/**",
     "next-env.d.ts",
+    // Build output from the isolated optimizer visual QA app (next.config.mjs sets this distDir).
+    "qa/optimizer-visual-20261024/.next-optimizer-visual/**",
+    "qa/optimizer-visual-20261024/next-env.d.ts",
     "caveman/**",
     "supabase/docs/database.types.ts",
   ]),
