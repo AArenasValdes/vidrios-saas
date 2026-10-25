@@ -13,6 +13,7 @@ import {
   normalizeQuickCompositionAdjustment,
   type QuickCompositionAdjustment,
 } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
+import { normalizeGlassTechnicalSpec, type GlassTechnicalSpec } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
 
 export type ComponentMaterial = "Aluminio" | "PVC" | "Cristal";
 export type CotizacionItemCatalogCategoria = "aluminio" | "pvc" | "vidrio" | "otros";
@@ -41,6 +42,10 @@ export type CotizacionItemPresentationMeta = {
   lineTemplateId: string;
   /** Catálogo cristal vinculado en ventanas/puertas (solo formato/costo técnico). */
   vidrioLineTemplateId: string;
+  /** Snapshot técnico del producto de vidrio seleccionado; no contiene datos de precio. */
+  glassTechnicalSpec: GlassTechnicalSpec | null;
+  /** Identidad lógica del componente, estable entre reemplazos de fila física. */
+  logicalComponentId: string;
   precioPorM2: number | null;
   minimoCobrable: number | null;
   redondeoPrecio: number | null;
@@ -261,6 +266,8 @@ export function encodeCotizacionItemPresentationMeta(input: {
   pricingMode?: PricingMode;
   lineTemplateId?: string;
   vidrioLineTemplateId?: string;
+  glassTechnicalSpec?: GlassTechnicalSpec | null;
+  logicalComponentId?: string | null;
   precioPorM2?: number | null;
   minimoCobrable?: number | null;
   redondeoPrecio?: number | null;
@@ -323,6 +330,14 @@ export function encodeCotizacionItemPresentationMeta(input: {
   const vidrioLineTemplateId = (input.vidrioLineTemplateId ?? "")
     .trim()
     .replace(/\]/g, "");
+  const glassTechnicalSpec = normalizeGlassTechnicalSpec(input.glassTechnicalSpec);
+  const encodedGlassTechnicalSpec = glassTechnicalSpec
+    ? encodeURIComponent(JSON.stringify(glassTechnicalSpec))
+    : "";
+  const logicalComponentId = (input.logicalComponentId ?? "")
+    .trim()
+    .replace(/\]/g, "")
+    .slice(0, 120);
   const precioPorM2 =
     input.precioPorM2 !== null && input.precioPorM2 !== undefined
       ? String(Math.round(input.precioPorM2))
@@ -444,6 +459,8 @@ export function encodeCotizacionItemPresentationMeta(input: {
     `[pm:${pricingMode}]` +
     `[lti:${lineTemplateId}]` +
     `[vlti:${vidrioLineTemplateId}]` +
+    `[gts:${encodedGlassTechnicalSpec}]` +
+    `[lci:${logicalComponentId}]` +
     `[pm2:${precioPorM2}]` +
     `[min:${minimoCobrable}]` +
     `[rnd:${redondeoPrecio}]` +
@@ -541,6 +558,16 @@ export function decodeCotizacionItemPresentationMeta(
   const pricingMode = normalizePricingMode(source.match(/\[pm:([^\]]*)\]/)?.[1]);
   const lineTemplateId = source.match(/\[lti:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const vidrioLineTemplateId = source.match(/\[vlti:([^\]]*)\]/)?.[1]?.trim() ?? "";
+  let glassTechnicalSpec: GlassTechnicalSpec | null = null;
+  const encodedGlassTechnicalSpec = source.match(/\[gts:([^\]]*)\]/)?.[1];
+  if (encodedGlassTechnicalSpec) {
+    try {
+      glassTechnicalSpec = normalizeGlassTechnicalSpec(JSON.parse(decodeURIComponent(encodedGlassTechnicalSpec)));
+    } catch {
+      glassTechnicalSpec = null;
+    }
+  }
+  const logicalComponentId = source.match(/\[lci:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const precioPorM2 = parseOptionalNumber(source.match(/\[pm2:([^\]]*)\]/)?.[1]);
   const minimoCobrable = parseOptionalNumber(source.match(/\[min:([^\]]*)\]/)?.[1]);
   const redondeoPrecio = parseOptionalNumber(source.match(/\[rnd:([^\]]*)\]/)?.[1]);
@@ -634,6 +661,8 @@ export function decodeCotizacionItemPresentationMeta(
     .replace(/\[pm:[^\]]*\]/g, "")
     .replace(/\[lti:[^\]]*\]/g, "")
     .replace(/\[vlti:[^\]]*\]/g, "")
+    .replace(/\[gts:[^\]]*\]/g, "")
+    .replace(/\[lci:[^\]]*\]/g, "")
     .replace(/\[pm2:[^\]]*\]/g, "")
     .replace(/\[min:[^\]]*\]/g, "")
     .replace(/\[rnd:[^\]]*\]/g, "")
@@ -690,6 +719,8 @@ export function decodeCotizacionItemPresentationMeta(
     pricingMode,
     lineTemplateId,
     vidrioLineTemplateId,
+    glassTechnicalSpec,
+    logicalComponentId,
     precioPorM2,
     minimoCobrable,
     redondeoPrecio,

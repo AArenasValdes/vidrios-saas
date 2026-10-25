@@ -37,6 +37,36 @@ describe("cotizacion-item-presentation", () => {
     ).toBe("glass-42");
   });
 
+  it("conserva especificación técnica versionada y la identidad lógica del componente", () => {
+    const glassTechnicalSpec = {
+      version: 1 as const,
+      productId: "501",
+      thicknessMm: 5,
+      category: "monolitico" as const,
+      manualCutStatus: "confirmed" as const,
+      sheetWidthMm: 3210,
+      sheetHeightMm: 2250,
+      provenance: "catalog" as const,
+      sourceProductId: "501",
+      sourceValues: null,
+      hasConflict: false,
+    };
+    const encoded = encodeCotizacionItemPresentationMeta({
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      vidrioLineTemplateId: "501",
+      glassTechnicalSpec,
+      logicalComponentId: "component-stable-1",
+      raw: "Ventana",
+    });
+
+    expect(decodeCotizacionItemPresentationMeta(encoded)).toMatchObject({
+      glassTechnicalSpec,
+      logicalComponentId: "component-stable-1",
+      vidrioLineTemplateId: "501",
+    });
+  });
+
   it("debe codificar y decodificar la metadata visual del componente", () => {
     const encoded = encodeCotizacionItemPresentationMeta({
       colorHex: "#2a2a2a",

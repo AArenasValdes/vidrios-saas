@@ -9,6 +9,22 @@ export type SupplierPresentationQuoteItemRequest = {
   providerKey?: string | null;
 };
 
+export type SupplierProfilePricePreview = {
+  technicalCode: string;
+  profileName: string;
+  providerKey: string;
+  providerLabel: string;
+  presentationId: string;
+  supplierSku: string;
+  presentationDescription: string;
+  purchaseUnit: string;
+  commercialLengthMm: number | null;
+  netPrice: number | null;
+  currency: string | null;
+  priceSource: "reference" | "provider_adjustment" | "organization_override" | "workshop" | null;
+  status: "priced" | "missing_price" | "ambiguous";
+};
+
 export type SupplierPriceProviderOption = {
   providerKey: string;
   label: string;
@@ -22,6 +38,7 @@ export type SupplierPresentationResolutionResponse = {
   selections: Record<string, FabricacionTrabajoPresentationSelection[]>;
   itemErrors?: Record<string, string>;
   providerOptions?: Record<string, SupplierPriceProviderOption[]>;
+  profilePrices?: Record<string, SupplierProfilePricePreview[]>;
   familyPreferences?: Record<string, string>;
   canManageFamilyPreferences?: boolean;
 };

@@ -153,7 +153,7 @@ export async function readQuoteForTechnicalCost(input: {
   const admin = getClient();
   const [{ data, error }, { data: items, error: itemError }] = await Promise.all([
     admin.from("cotizaciones")
-      .select("id, organization_id, creado_en, fabricacion_trabajo_snapshot")
+      .select("id, organization_id, codigo, creado_en, fabricacion_trabajo_snapshot")
       .eq("id", input.quoteId)
       .eq("organization_id", input.organizationId)
       .is("eliminado_en", null)
@@ -169,13 +169,17 @@ export async function readQuoteForTechnicalCost(input: {
   if (itemError) throw new Error(itemError.message);
 
   return {
+    code: String(data.codigo ?? "").trim(),
     createdAt: data.creado_en as string | null,
     workSnapshot: data.fabricacion_trabajo_snapshot,
     items: (items ?? []).map((item) => ({
       id: String(item.id),
       code: String(item.codigo ?? "").trim(),
+      name: decodeCotizacionItemPresentationMeta(item.observaciones).referencia || String(item.codigo ?? "").trim(),
+      description: String(item.vidrio ?? ""),
       color: item.color as string | null,
       glassDescription: item.vidrio as string | null,
+      observaciones: item.observaciones as string | null,
       colorHex: decodeCotizacionItemPresentationMeta(item.observaciones).colorHex,
       finishName: decodeCotizacionItemPresentationMeta(item.observaciones).catalogTerminacion,
       catalogLineKey: decodeCotizacionItemPresentationMeta(item.observaciones).catalogLineKey,

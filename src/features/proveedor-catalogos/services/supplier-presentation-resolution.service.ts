@@ -26,6 +26,21 @@ export type SupplierPresentationResolutionRequest = {
   providerKey?: string | null;
 };
 
+export type SupplierProfilePricePreview = {
+  technicalCode: string;
+  profileName: string;
+  providerKey: string;
+  providerLabel: string;
+  presentationId: string;
+  supplierSku: string;
+  presentationDescription: string;
+  purchaseUnit: string;
+  commercialLengthMm: number | null;
+  netPrice: number | null;
+  currency: string | null;
+  priceSource: "reference" | "provider_adjustment" | "organization_override" | "workshop" | null;
+  status: "priced" | "missing_price" | "ambiguous";
+};
 export type SupplierPriceCoveragePresentation = {
   presentationId?: string;
   providerKey?: string;
