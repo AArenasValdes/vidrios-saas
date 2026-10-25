@@ -1,6 +1,7 @@
 import { buildGlassDistributionCoverage } from "../glass-distribution-coverage.service";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { NormalizedGlassPane } from "../glass-pane-normalization.service";
+import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 function item(id: string, code: string, glass = "Float 5 mm"): CotizacionWorkflowItem {
   return {
@@ -85,5 +86,23 @@ describe("buildGlassDistributionCoverage", () => {
 
     expect(coverage.status).toBe("unavailable");
     expect(coverage.pendingReferences[0]?.reason).toMatch(/snapshot legacy/i);
+  });
+
+  it("considera completa la cobertura manual aunque el componente no tenga snapshot de perfiles", () => {
+    const component = item("item-1", "V2", "Float 5 mm");
+    component.fabricacionSnapshot = null;
+    component.observaciones = encodeCotizacionItemPresentationMeta({
+      logicalComponentId: "component-item-1",
+      manualGlassMeasurements: { version: 1, entries: [{
+        id: "manual-pane-v2", source: "manual", version: 1, productId: "product-glass-5",
+        technicalFingerprint: "catalog-fingerprint", widthMm: 750, heightMm: 1600, quantity: 2,
+        recordedAt: "2026-10-25T12:00:00.000Z",
+      }] },
+    });
+    const manualPane = pane("item-1", "manual-pane-v2", { dimensionProvenance: "manual", recipeStatus: null });
+
+    const coverage = buildGlassDistributionCoverage({ items: [component], panes: [manualPane] });
+
+    expect(coverage).toMatchObject({ status: "complete", completeReferenceCount: 1, pendingReferenceCount: 0 });
   });
 });

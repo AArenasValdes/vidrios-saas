@@ -153,13 +153,13 @@ export async function readQuoteForTechnicalCost(input: {
   const admin = getClient();
   const [{ data, error }, { data: items, error: itemError }] = await Promise.all([
     admin.from("cotizaciones")
-      .select("id, organization_id, codigo, creado_en, fabricacion_trabajo_snapshot")
+      .select("id, organization_id, numero, creado_en, fabricacion_trabajo_snapshot")
       .eq("id", input.quoteId)
       .eq("organization_id", input.organizationId)
       .is("eliminado_en", null)
       .maybeSingle(),
     admin.from("cotizacion_items")
-      .select("id, codigo, color, vidrio, observaciones, fabricacion_snapshot")
+      .select("id, codigo, color, vidrio, observaciones, fabricacion_snapshot, manual_glass_measurements")
       .eq("cotizacion_id", input.quoteId)
       .eq("organization_id", input.organizationId)
       .is("eliminado_en", null),
@@ -169,7 +169,7 @@ export async function readQuoteForTechnicalCost(input: {
   if (itemError) throw new Error(itemError.message);
 
   return {
-    code: String(data.codigo ?? "").trim(),
+    code: String(data.numero ?? `COT-${data.id}`),
     createdAt: data.creado_en as string | null,
     workSnapshot: data.fabricacion_trabajo_snapshot,
     items: (items ?? []).map((item) => ({
@@ -180,6 +180,7 @@ export async function readQuoteForTechnicalCost(input: {
       color: item.color as string | null,
       glassDescription: item.vidrio as string | null,
       observaciones: item.observaciones as string | null,
+      manualGlassMeasurements: item.manual_glass_measurements,
       colorHex: decodeCotizacionItemPresentationMeta(item.observaciones).colorHex,
       finishName: decodeCotizacionItemPresentationMeta(item.observaciones).catalogTerminacion,
       catalogLineKey: decodeCotizacionItemPresentationMeta(item.observaciones).catalogLineKey,

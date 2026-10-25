@@ -13,6 +13,7 @@ import { readQuoteForTechnicalCost } from "@/features/proveedor-catalogos/reposi
 import { extractNormalizedGlassPanesForOrganization } from "@/features/fabricacion/services/glass-pane-normalization.service";
 import { optimizeGlassCuttingBatch } from "@/features/fabricacion/services/glass-sheet-optimizer.service";
 import { createClient } from "@/lib/supabase/server";
+import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 const route = { params: Promise.resolve({ id: "1170" }) };
 const row = {
@@ -47,6 +48,29 @@ describe("/api/cotizaciones/[id]/optimizacion-vidrios", () => {
     expect(response.status).toBe(200);
     expect(readQuoteForTechnicalCost).toHaveBeenCalledWith({ quoteId: 1170, organizationId: 12 });
     expect(extractNormalizedGlassPanesForOrganization).toHaveBeenCalledWith(expect.objectContaining({ organizationId: 12, quoteId: 1170 }));
+  });
+
+  it("resuelve productos de referencias manuales solo desde el catálogo activo de la organización", async () => {
+    const observations = encodeCotizacionItemPresentationMeta({
+      logicalComponentId: "component-1",
+      manualGlassMeasurements: { version: 1, entries: [{
+        id: "manual-pane", source: "manual", version: 1, productId: "43", technicalFingerprint: "fp",
+        widthMm: 600, heightMm: 1000, quantity: 1, recordedAt: "2026-10-25T12:00:00.000Z",
+      }] },
+    });
+    (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue({ code: "COT-1170", items: [
+      { id: "item-1", code: "V1", name: "Paño fijo", glassDescription: "Float", observaciones: observations, fabricacionSnapshot: null },
+    ] });
+
+    const response = await GET(new Request("http://localhost"), route);
+
+    expect(response.status).toBe(200);
+    expect(supabaseQuery.eq).toHaveBeenCalledWith("organization_id", 12);
+    expect(supabaseQuery.eq).toHaveBeenCalledWith("categoria", "vidrio");
+    expect(supabaseQuery.eq).toHaveBeenCalledWith("is_active", true);
+    expect(extractNormalizedGlassPanesForOrganization).toHaveBeenCalledWith(expect.objectContaining({
+      catalogGlassProducts: expect.any(Map),
+    }));
   });
 
   it("A: reporta cobertura completa para paños congelados de dos componentes", async () => {

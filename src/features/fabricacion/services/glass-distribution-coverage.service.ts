@@ -55,6 +55,7 @@ function itemHasExplicitGlass(item: CotizacionWorkflowItem): boolean {
     item.vidrio.trim()
     || presentation.vidrioLineTemplateId
     || presentation.glassTechnicalSpec
+    || (item.manualGlassMeasurements ?? presentation.manualGlassMeasurements).entries.length > 0
     || selection?.productId
     || selection?.displayName
     || (Array.isArray(resultPanes) && resultPanes.length > 0)

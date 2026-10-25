@@ -1,5 +1,6 @@
 import type { ComponentFormState } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import {
   createDefaultGuidedVisualConfig,
   listLeafModules,
@@ -71,6 +72,9 @@ export type QuoteConstructorItemPatch = Partial<
     | "alto"
     | "cantidad"
     | "vidrio"
+    | "vidrioLineTemplateId"
+    | "glassTechnicalSpec"
+    | "manualGlassMeasurements"
     | "material"
     | "colorHex"
     | "lineTemplateId"
@@ -95,6 +99,20 @@ export type QuoteConstructorItemPatch = Partial<
 > & {
   markPriceManual?: boolean;
 };
+
+/**
+ * A resolver-produced snapshot is an explicit technical update. Preserve it
+ * after commercial form hydration, which can otherwise reject a valid
+ * universal/fallback recipe because the editor still carries an older recipe ID.
+ */
+export function preserveExplicitFabricationSnapshot<T extends CotizacionWorkflowItem>(
+  rebuiltItem: T,
+  explicitSnapshot: FabricacionCotizacionSnapshot | null | undefined
+): T {
+  return explicitSnapshot === undefined
+    ? rebuiltItem
+    : { ...rebuiltItem, fabricacionSnapshot: explicitSnapshot };
+}
 
 export function createQuoteConstructorPresetConfig(
   type: QuoteConstructorPresetId,

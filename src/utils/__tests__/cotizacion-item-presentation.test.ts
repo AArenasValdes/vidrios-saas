@@ -578,6 +578,10 @@ describe("cotizacion-item-presentation", () => {
       fabricacionHerraje: "caracol",
       fabricacionVariante: "termopanel",
       fabricationRecipeId: "11111111-1111-4111-8111-111111111111",
+      manualGlassMeasurements: { version: 1, entries: [{
+        id: "private-pane", source: "manual", version: 1, productId: "501", technicalFingerprint: "private-fingerprint",
+        widthMm: 600, heightMm: 1000, quantity: 2, recordedAt: "2026-10-25T12:00:00Z",
+      }] },
       guidedVisualConfig: guided,
       raw: "Instalacion incluida",
     });
@@ -593,6 +597,8 @@ describe("cotizacion-item-presentation", () => {
       /\[(?:pm|lti|pm2|min|rnd|psu|man|po|tcv|net|iva|mp|csi|ft|fh|fmo|fap|fhe|fv|frid|cub):/i
     );
     expect(sanitized).not.toContain("future_recipe_id");
+    expect(sanitized).not.toContain("private-pane");
+    expect(sanitized).not.toContain("[gpm:");
     expect(decoded).toEqual(
       expect.objectContaining({
         referencia: "Serie 25",

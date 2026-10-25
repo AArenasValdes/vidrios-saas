@@ -12,7 +12,10 @@ import {
   calculateCotizacionWorkflowTotals,
 } from "../cotizaciones-workflow.service";
 import type { CotizacionWorkflowItem } from "../../types/cotizacion-workflow";
-import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import {
+  decodeCotizacionItemPresentationMeta,
+  encodeCotizacionItemPresentationMeta,
+} from "@/utils/cotizacion-item-presentation";
 
 function createItem(overrides: Partial<CotizacionWorkflowItem> = {}): CotizacionWorkflowItem {
   const pricingMode =
@@ -62,6 +65,72 @@ function createItem(overrides: Partial<CotizacionWorkflowItem> = {}): Cotizacion
 }
 
 describe("quote-studio-financial.service", () => {
+  it("preserva nota y especificación manual de vidrio al ajustar el precio recomendado", () => {
+    const observations = encodeCotizacionItemPresentationMeta({
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      referencia: "Serie prueba",
+      vidrioLineTemplateId: "glass-5mm",
+      glassTechnicalSpec: {
+        version: 1,
+        productId: "glass-5mm",
+        thicknessMm: 5,
+        category: "monolitico",
+        manualCutStatus: "pending_validation",
+        technicalReviewConfirmed: false,
+        sheetWidthMm: 2500,
+        sheetHeightMm: 1800,
+        pieceOrientation: "unknown",
+        provenance: "catalog",
+        sourceProductId: "glass-5mm",
+        sourceValues: null,
+        hasConflict: false,
+      },
+      manualGlassMeasurements: {
+        version: 1,
+        entries: [{
+          id: "pane-1",
+          source: "manual",
+          version: 1,
+          productId: "glass-5mm",
+          technicalFingerprint: "catalog-spec-v1",
+          widthMm: 600,
+          heightMm: 1000,
+          quantity: 2,
+          recordedAt: "2026-10-25T12:00:00.000Z",
+        }],
+      },
+      logicalComponentId: "component-v2",
+      raw: "Nota del maestro: confirmar junquillo",
+    });
+    const item = {
+      ...createItem({ observaciones: observations }),
+      manualGlassMeasurements: decodeCotizacionItemPresentationMeta(observations).manualGlassMeasurements,
+    };
+
+    const result = applyQuoteStudioRecommendedPrice({
+      items: [item],
+      precioRecomendadoNeto: 800000,
+      currentNeto: 1000000,
+      targetSubtotal: 800000,
+    });
+    const decoded = decodeCotizacionItemPresentationMeta(result.items[0]?.observaciones);
+
+    expect(result.applied).toBe(true);
+    expect(decoded.raw).toBe("Nota del maestro: confirmar junquillo");
+    expect(result.items[0]?.manualGlassMeasurements?.entries).toEqual([
+      expect.objectContaining({
+        id: "pane-1",
+        productId: "glass-5mm",
+        widthMm: 600,
+        heightMm: 1000,
+        quantity: 2,
+      }),
+    ]);
+    expect(decoded.glassTechnicalSpec).toMatchObject({ productId: "glass-5mm", thicknessMm: 5 });
+    expect(decoded.logicalComponentId).toBe("component-v2");
+  });
+
   it("calcula precio recomendado con margen real y no markup", () => {
     const summary = buildQuoteStudioFinancialSummary({
       items: [createItem()],

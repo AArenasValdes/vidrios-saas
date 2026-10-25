@@ -1,5 +1,6 @@
 import type { EntityId } from "@/types/common";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
+import type { ManualGlassPaneMeasurementsSnapshot } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
 
 export type TipoCotizacionItem =
   | "configurado"
@@ -45,6 +46,7 @@ export type CotizacionItem = {
   descripcion: string | null;
   unidad: string | null;
   observaciones: string | null;
+  manualGlassMeasurements?: ManualGlassPaneMeasurementsSnapshot | null;
   fabricacionSnapshot: FabricacionCotizacionSnapshot | null;
   tipoItem: TipoCotizacionItem | string | null;
   creadoEn: string | null;
@@ -88,6 +90,7 @@ export type CrearCotizacionItemInput = {
   descripcion?: string | null;
   unidad?: string | null;
   observaciones?: string | null;
+  manualGlassMeasurements?: ManualGlassPaneMeasurementsSnapshot | null;
   fabricacionSnapshot?: FabricacionCotizacionSnapshot | null;
   tipoItem?: TipoCotizacionItem | string | null;
   productTypeId?: EntityId | null;

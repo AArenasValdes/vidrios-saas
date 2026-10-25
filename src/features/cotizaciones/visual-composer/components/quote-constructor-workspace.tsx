@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  buildFabricacionSnapshotSyncKey,
   fabricacionSnapshotMatchesCalculatedOutput,
 } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import {
@@ -27,6 +28,7 @@ import {
 } from "react-icons/lu";
 
 import { DespieceInspectorSummary } from "@/features/cotizaciones/visual-composer/components/despiece-inspector-summary";
+import { ManualGlassMeasurementsEditor } from "@/features/cotizaciones/components/manual-glass-measurements-editor";
 import { SodalL25QuoteConfigPanel } from "@/features/fabricacion/components/sodal-l25-quote-config-panel";
 import { LineTemplatePicker } from "@/features/cotizaciones/line-templates/components/line-template-picker";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
@@ -41,6 +43,7 @@ import {
 } from "@/features/cotizaciones/new-quote/quote-piece-domain";
 import {
   COLOR_OPTIONS,
+  applyGlassSelectionToComponentForm,
   mapItemToForm,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
@@ -591,6 +594,7 @@ export function QuoteConstructorWorkspace({
     return result;
   }, [activeForm, activeItem, activeTemplate, fabricationRecipes, organizationId]);
   const activeRecipeCandidates = activeFabricationResolution?.candidateRecipes ?? [];
+  const lastSyncedFabricationKeyRef = useRef<string | null>(null);
   const activeView = activeItem
     ? buildPieceDomainView(
         activeFabricationResolution?.estado === "calculado" &&
@@ -709,17 +713,28 @@ export function QuoteConstructorWorkspace({
     );
   }, [activeItem?.id, activeForm?.fabricacionAnchoHojaAMm]);
   useEffect(() => {
-    if (!activeItem || !activeFabricationResolution) return;
+    if (!activeItem || !activeFabricationResolution) {
+      lastSyncedFabricationKeyRef.current = null;
+      return;
+    }
     if (
       activeFabricationResolution.estado !== "calculado" ||
       !activeFabricationResolution.formal
     ) {
+      lastSyncedFabricationKeyRef.current = null;
       return;
     }
     const next = activeFabricationResolution.formal;
     if (fabricacionSnapshotMatchesCalculatedOutput(activeItem.fabricacionSnapshot, next)) {
+      lastSyncedFabricationKeyRef.current = null;
       return;
     }
+    // Some fallback recipe resolvers can produce a fresh snapshot object on
+    // every render. Guard the pending write by its stable calculation content
+    // so syncing it into the draft cannot trigger an update loop.
+    const calculationKey = buildFabricacionSnapshotSyncKey(activeItem.id, next);
+    if (lastSyncedFabricationKeyRef.current === calculationKey) return;
+    lastSyncedFabricationKeyRef.current = calculationKey;
     onUpdateItem(activeItem.id, {
       fabricacionSnapshot: next,
       cubicationSnapshot: activeFabricationResolution.cubication,
@@ -730,6 +745,19 @@ export function QuoteConstructorWorkspace({
         (option) => option.hex.toLowerCase() === activeForm.colorHex.toLowerCase()
       )
     : null;
+  const updateActiveGlassSelection = (displayName: string, productId?: string) => {
+    if (!activeItem || !activeForm) return;
+    const next = applyGlassSelectionToComponentForm(
+      activeForm,
+      { displayName, productId },
+      lineTemplates
+    );
+    onUpdateItem(activeItem.id, {
+      vidrio: next.vidrio,
+      vidrioLineTemplateId: next.vidrioLineTemplateId,
+      glassTechnicalSpec: next.glassTechnicalSpec,
+    });
+  };
   const [composerItemId, setComposerItemId] = useState<string | null>(null);
   const [actionMenuItemId, setActionMenuItemId] = useState<string | null>(null);
   const [openSections, setOpenSections] = useState<Set<InspectorSectionId>>(
@@ -1645,14 +1673,37 @@ export function QuoteConstructorWorkspace({
                 >
                   <div className={s.inspectorField}>
                     <span>Vidrio</span>
+                    <select
+                      aria-label="Vincular vidrio del catálogo"
+                      value={activeForm.vidrioLineTemplateId}
+                      onChange={(event) => {
+                        const template = lineTemplates.find((candidate) => String(candidate.id) === event.target.value && candidate.categoria === "vidrio");
+                        updateActiveGlassSelection(template?.nombre ?? activeForm.vidrio, template ? String(template.id) : "");
+                      }}
+                    >
+                      <option value="">Vidrio escrito o sin vínculo</option>
+                      {lineTemplates.filter((template) => template.categoria === "vidrio").map((template) => (
+                        <option key={template.id} value={String(template.id)}>{template.nombre}</option>
+                      ))}
+                    </select>
+                    {activeForm.vidrioLineTemplateId ? <small>Vinculado: {lineTemplates.find((template) => String(template.id) === activeForm.vidrioLineTemplateId)?.nombre}</small> : activeForm.vidrio ? <small>Este vidrio está guardado solo por nombre. Elige un producto para asociar su ficha técnica.</small> : null}
                     <GlassOptionPicker
                       options={glassOptions}
                       value={activeForm.vidrio}
-                      onChange={(vidrio) => onUpdateItem(activeItem.id, { vidrio })}
+                      onChange={(vidrio) => updateActiveGlassSelection(vidrio)}
                       ariaLabel="Elegir tipo de vidrio"
                       placeholder="Elegir vidrio"
                     />
                   </div>
+                  <ManualGlassMeasurementsEditor
+                    compact
+                    value={activeForm.manualGlassMeasurements}
+                    automaticDimensionsAvailable={Boolean(activeForm.fabricacionSnapshot?.result?.vidrios?.some((pane) => pane.anchoMm > 0 && pane.altoMm > 0))}
+                    templates={lineTemplates}
+                    onChange={(manualGlassMeasurements) =>
+                      onUpdateItem(activeItem.id, { manualGlassMeasurements })
+                    }
+                  />
                   <div className={s.inspectorField}>
                     <span>Color del perfil</span>
                     <div className={s.colorGrid} role="group" aria-label="Colores del perfil">

@@ -276,6 +276,7 @@ function mapDatabaseItemToWorkflowItem(
       allowZeroValue: presentation.displayMode === "item_libre",
       }),
       fabricacionSnapshot: item.fabricacionSnapshot ?? null,
+      manualGlassMeasurements: item.manualGlassMeasurements,
     };
   }
 
@@ -329,12 +330,14 @@ function mapDatabaseItemToWorkflowItem(
       precioAjustadoManual: true,
       origenPrecio: presentation.origenPrecio ?? "manual",
       fabricacionSnapshot: item.fabricacionSnapshot ?? null,
+      manualGlassMeasurements: item.manualGlassMeasurements,
     };
   }
 
   return {
     ...calculatedItem,
     fabricacionSnapshot: item.fabricacionSnapshot ?? null,
+    manualGlassMeasurements: item.manualGlassMeasurements,
   };
 }
 
@@ -493,6 +496,7 @@ function mapWorkflowItemToRepositoryItem(
     descripcion: item.descripcion,
     unidad: item.unidad,
     observaciones: item.observaciones || null,
+    manualGlassMeasurements: item.manualGlassMeasurements ?? null,
     fabricacionSnapshot: item.fabricacionSnapshot ?? null,
     tipoItem: isFreeValueItem ? "item_libre_con_valor" : "componente",
     productTypeId: null,

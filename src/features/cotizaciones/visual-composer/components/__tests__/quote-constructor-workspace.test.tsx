@@ -2,6 +2,7 @@
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
+import { useState } from "react";
 
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
@@ -10,6 +11,15 @@ import { WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY } from "@/features/fabricacion/fixt
 import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { QuoteConstructorWorkspace } from "../quote-constructor-workspace";
+import * as fabricationResolutionService from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
+import { buildItemFromForm, mapItemToForm } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { preserveExplicitFabricationSnapshot } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
+
+jest.mock("@/features/fabricacion/services/fabricacion-despiece-cotizacion.service", () => ({
+  ...jest.requireActual("@/features/fabricacion/services/fabricacion-despiece-cotizacion.service"),
+  resolveFabricacionDespieceForQuoteItem: jest.fn(),
+}));
 
 jest.mock("@/features/cotizaciones/visual-composer/components/guided-visual-composer", () => ({
   GuidedVisualComposer: ({ open }: { open?: boolean }) =>
@@ -147,6 +157,11 @@ function renderWorkspace(overrides: Partial<ComponentProps<typeof QuoteConstruct
 describe("QuoteConstructorWorkspace", () => {
   afterEach(() => {
     jest.mocked(useOrganizationMeasureUnit).mockReturnValue("mm");
+    jest.mocked(fabricationResolutionService.resolveFabricacionDespieceForQuoteItem).mockImplementation(
+      jest.requireActual<typeof import("@/features/fabricacion/services/fabricacion-despiece-cotizacion.service")>(
+        "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service"
+      ).resolveFabricacionDespieceForQuoteItem
+    );
   });
 
   it("muestra presets y varias piezas en el mismo cuaderno", () => {
@@ -180,6 +195,120 @@ describe("QuoteConstructorWorkspace", () => {
       })
     );
     expect(props.onAddPreset).toHaveBeenCalledWith("puerta_corredera");
+  });
+
+  it("sincroniza una salida resuelta una sola vez aunque el padre reconstruya el item", () => {
+    const snapshot = {
+      schemaVersion: 1,
+      tipo: "fabricacion_receta_snapshot",
+      recipeId: "confirmed-fallback",
+      recipeDefinitionId: "definition-1",
+      recipeVersion: 1,
+      recipeStatus: "validated",
+      recipeScope: "global",
+      lineTemplateId: null,
+      recipeIdentity: {
+        recetaId: "definition-1", codigo: "L5000", nombre: "L5000",
+        tipologia: "corredera", hojas: 2, modulos: 2, herraje: null, variante: "normal",
+      },
+      input: {
+        anchoTotalMm: 1200, altoTotalMm: 1000, cantidad: 1,
+        hojas: 2, modulos: 2, variante: "normal",
+      },
+      selectedVariant: "normal",
+      result: {
+        engineVersion: 1, recetaId: "definition-1", recetaVersion: 1,
+        estadoReceta: "validada", entradaNormalizada: null, perfiles: [], vidrios: [],
+        accesorios: [], advertencias: [], totalLinealMm: 0, totalVidrioM2: 0, calculable: true,
+      },
+      pauta: [], vidrios: [], advertencias: [], calculatedAt: "2026-10-25T00:00:00.000Z",
+    } as unknown as FabricacionCotizacionSnapshot;
+    jest.mocked(fabricationResolutionService.resolveFabricacionDespieceForQuoteItem).mockReturnValue({
+        estado: "calculado", formal: snapshot, cubication: null, recipe: null,
+        barsAvailable: true, preliminary: false, message: null,
+      });
+
+    const props = {
+      items: [item("a", "VEN-01")],
+      quotePricingMode: "por_item" as const,
+      lineTemplates: [],
+      glassOptions: [],
+      activeItemId: "a",
+      totalClienteManual: null,
+      formatCurrencyInput: (value: string) => value,
+      onActiveItemChange: jest.fn(),
+      onAddPreset: jest.fn(),
+      onDuplicateItem: jest.fn(),
+      onRemoveItem: jest.fn(),
+      onMoveItem: jest.fn(),
+      onEditAdvanced: jest.fn(),
+      onRecalculateTemplatePrice: jest.fn(),
+      onGlobalTotalChange: jest.fn(),
+      onGoToSummary: jest.fn(),
+      onOpenDespieceReview: jest.fn(),
+    } satisfies Omit<ComponentProps<typeof QuoteConstructorWorkspace>, "onUpdateItem">;
+    const onUpdateItem = jest.fn();
+
+    function ParentHarness() {
+      const [items, setItems] = useState(props.items);
+      const updateItem = (itemId: string, patch: Parameters<NonNullable<ComponentProps<typeof QuoteConstructorWorkspace>["onUpdateItem"]>>[1]) => {
+        onUpdateItem(itemId, patch);
+        setItems((current) => current.map((currentItem) => {
+          if (currentItem.id !== itemId) return currentItem;
+          const rebuilt = buildItemFromForm(mapItemToForm(currentItem), current, itemId);
+          return preserveExplicitFabricationSnapshot(rebuilt, patch.fabricacionSnapshot);
+        }));
+      };
+      return <QuoteConstructorWorkspace {...props} items={items} onUpdateItem={updateItem} />;
+    }
+
+    render(<ParentHarness />);
+
+    expect(onUpdateItem).toHaveBeenCalledTimes(1);
+    expect(onUpdateItem).toHaveBeenCalledWith("a", expect.objectContaining({ fabricacionSnapshot: snapshot }));
+  });
+
+  it("mantiene la ficha del vidrio al editar el ancho y limpia la asociación al cambiar a vidrio escrito", () => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: jest.fn().mockReturnValue({
+        matches: false,
+        addListener: jest.fn(),
+        removeListener: jest.fn(),
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+      }),
+    });
+    const glass = lineTemplate({
+      id: 3643,
+      nombre: "Float Incoloro 5mm",
+      categoria: "vidrio",
+      material: "Cristal",
+      catalogMetadata: {
+        espesorMm: 5,
+        categoriaTecnica: "monolitico",
+        corteManualEstado: "pending_validation",
+        planchaAnchoMm: 2500,
+        planchaAltoMm: 1800,
+        orientacionCorte: "unknown",
+      },
+    });
+    const props = renderWorkspace({ lineTemplates: [glass], glassOptions: ["Vidrio personalizado"] });
+
+    fireEvent.change(screen.getByLabelText("Vincular vidrio del catálogo"), { target: { value: "3643" } });
+    expect(props.onUpdateItem).toHaveBeenCalledWith("a", expect.objectContaining({
+      vidrio: "Float Incoloro 5mm",
+      vidrioLineTemplateId: "3643",
+      glassTechnicalSpec: expect.objectContaining({ productId: "3643", thicknessMm: 5, manualCutStatus: "pending_validation" }),
+    }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Elegir tipo de vidrio" }));
+    fireEvent.click(screen.getByRole("option", { name: "Vidrio personalizado" }));
+    expect(props.onUpdateItem).toHaveBeenLastCalledWith("a", expect.objectContaining({
+      vidrio: "Vidrio personalizado",
+      vidrioLineTemplateId: "",
+      glassTechnicalSpec: null,
+    }));
   });
 
   it("confirma medidas inline y expone acciones de orden", () => {

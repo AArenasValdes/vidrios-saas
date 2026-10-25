@@ -10,6 +10,7 @@ import type { GlassManualCutProcessConstraints, GlassSheetPhysicalFormat } from 
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { readQuoteForTechnicalCost } from "@/features/proveedor-catalogos/repositories/costo-tecnico-parcial.repository";
 import { createClient } from "@/lib/supabase/server";
+import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 export const dynamic = "force-dynamic";
 
@@ -75,9 +76,41 @@ async function loadPanes(quoteId: number, organizationId: number) {
     precioAjustadoManual: false,
     origenPrecio: "manual",
     observaciones: item.observaciones ?? "",
+    manualGlassMeasurements: item.manualGlassMeasurements == null
+      ? decodeCotizacionItemPresentationMeta(item.observaciones).manualGlassMeasurements
+      : item.manualGlassMeasurements as CotizacionWorkflowItem["manualGlassMeasurements"],
     fabricacionSnapshot: item.fabricacionSnapshot as CotizacionWorkflowItem["fabricacionSnapshot"],
   }));
-  const panes = extractNormalizedGlassPanesForOrganization({ organizationId, quoteId, items }).map((pane) => ({
+  const manualProductIds = [...new Set(items.flatMap((item) =>
+    (item.manualGlassMeasurements ?? decodeCotizacionItemPresentationMeta(item.observaciones).manualGlassMeasurements).entries.map((entry) => entry.productId)
+  ))];
+  const catalogGlassProducts = new Map<string, { name: string; catalogMetadata: Record<string, unknown> }>();
+  if (manualProductIds.length > 0) {
+    const supabase = await createClient();
+    const numericIds = manualProductIds.flatMap((value) => {
+      const id = Number(value);
+      return Number.isSafeInteger(id) && id > 0 ? [id] : [];
+    });
+    if (numericIds.length > 0) {
+      const { data, error } = await supabase.from("cotizacion_line_templates")
+        .select("id, nombre, catalog_metadata")
+        .eq("organization_id", organizationId)
+        .eq("categoria", "vidrio")
+        .eq("is_active", true)
+        .in("id", numericIds)
+        .is("eliminado_en", null);
+      if (error) throw error;
+      for (const row of data ?? []) {
+        catalogGlassProducts.set(String(row.id), {
+          name: row.nombre,
+          catalogMetadata: row.catalog_metadata && typeof row.catalog_metadata === "object" && !Array.isArray(row.catalog_metadata)
+            ? row.catalog_metadata as Record<string, unknown>
+            : {},
+        });
+      }
+    }
+  }
+  const panes = extractNormalizedGlassPanesForOrganization({ organizationId, quoteId, items, catalogGlassProducts }).map((pane) => ({
     ...pane,
     componentName: items.find((item) => item.id === pane.quoteItemId)?.nombre ?? null,
     quoteCode: quote.code,

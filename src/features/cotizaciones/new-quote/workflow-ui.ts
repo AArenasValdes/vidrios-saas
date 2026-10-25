@@ -48,6 +48,7 @@ import {
   fabricacionSnapshotToLegacyCubicationSnapshot,
 } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
+import type { ManualGlassPaneMeasurementsSnapshot } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
 import {
   resolveCubicationSnapshotForSave,
   type CotizacionItemCubicationSnapshot,
@@ -192,6 +193,7 @@ export type ComponentFormState = {
   /** Catálogo cristal vinculado en ventanas/puertas (formato/costo técnico; no precio comercial). */
   vidrioLineTemplateId: string;
   glassTechnicalSpec: GlassTechnicalSpec | null;
+  manualGlassMeasurements?: ManualGlassPaneMeasurementsSnapshot;
   logicalComponentId: string;
   pricingMode: PricingMode;
   vidrio: string;
@@ -2543,6 +2545,7 @@ export function buildSuggestedComponentForm(
     lineTemplateId: current.lineTemplateId ?? "",
     vidrioLineTemplateId: current.vidrioLineTemplateId ?? "",
     glassTechnicalSpec: current.glassTechnicalSpec ?? null,
+    manualGlassMeasurements: current.manualGlassMeasurements ?? { version: 1, entries: [] },
     logicalComponentId: current.logicalComponentId ?? "",
     pricingMode,
     vidrio: pickSuggestedString(current.vidrio, suggestion.vidrio),
@@ -2741,6 +2744,7 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     lineTemplateId,
     vidrioLineTemplateId,
     glassTechnicalSpec,
+    manualGlassMeasurements: legacyManualGlassMeasurements,
     logicalComponentId,
     precioPorM2,
     minimoCobrable,
@@ -2774,6 +2778,7 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     supplierProviderKey,
   } =
     decodeCotizacionItemPresentationMeta(item.observaciones);
+  const manualGlassMeasurements = item.manualGlassMeasurements ?? legacyManualGlassMeasurements;
   const formalCubicationSnapshot = item.fabricacionSnapshot
     ? fabricacionSnapshotToLegacyCubicationSnapshot(item.fabricacionSnapshot)
     : null;
@@ -2802,6 +2807,7 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     lineTemplateId,
     vidrioLineTemplateId,
     glassTechnicalSpec,
+    manualGlassMeasurements,
     logicalComponentId,
     pricingMode,
     vidrio: item.vidrio ?? "",
@@ -3246,6 +3252,7 @@ export function buildItemFromForm(
     }),
     tipoItem: "componente",
     }),
+    manualGlassMeasurements: syncedForm.manualGlassMeasurements ?? { version: 1, entries: [] },
     fabricacionSnapshot: formalFabricationSnapshot
       ? {
           ...formalFabricationSnapshot,
@@ -3295,6 +3302,7 @@ export function applyQuotePricingToItems(
       lineTemplateId,
       vidrioLineTemplateId,
       glassTechnicalSpec,
+      manualGlassMeasurements,
       logicalComponentId,
       precioPorM2,
       minimoCobrable,
@@ -3394,6 +3402,7 @@ export function applyQuotePricingToItems(
         raw,
       }),
       }),
+      manualGlassMeasurements: item.manualGlassMeasurements ?? manualGlassMeasurements,
       fabricacionSnapshot: item.fabricacionSnapshot ?? null,
     };
   });

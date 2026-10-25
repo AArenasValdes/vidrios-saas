@@ -169,7 +169,7 @@ describe("GlassDistributionPanel", () => {
     expect(await screen.findByRole("img", { name: "Distribución en plancha de 2500 por 1800 milímetros" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /PDF bloqueado · cobertura incompleta/ })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Compartir" })).toBeDisabled();
-    expect(screen.getByRole("link", { name: "Corregir cotización" })).toHaveAttribute("href", "/cotizaciones/1");
+    expect(screen.getByRole("link", { name: "Revisar componentes de la cotización" })).toHaveAttribute("href", "/cotizaciones/nueva?edit=1&step=2");
     expect(createGlassDistributionPdf).not.toHaveBeenCalled();
     expect(downloadPdfBlob).not.toHaveBeenCalled();
   });

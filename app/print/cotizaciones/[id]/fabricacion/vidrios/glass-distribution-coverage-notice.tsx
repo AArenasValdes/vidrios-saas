@@ -33,7 +33,7 @@ export function GlassDistributionCoverageNotice({
         </ul>
       ) : null}
       {coverage.pendingReferences.length === 0 && coverage.diagnostics[0] ? <p>{coverage.diagnostics[0]}</p> : null}
-      <Link href={`/cotizaciones/${encodeURIComponent(quoteId)}`}>Corregir cotización</Link>
+      <Link href={`/cotizaciones/nueva?edit=${encodeURIComponent(quoteId)}&step=2`}>Revisar componentes de la cotización</Link>
     </aside>
   );
 }

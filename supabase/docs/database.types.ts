@@ -218,6 +218,7 @@ export type Database = {
           descripcion: string | null
           eliminado_en: string | null
           fabricacion_snapshot: Json | null
+          manual_glass_measurements: Json | null
           id: number
           linea: string | null
           margen_pct: number | null
@@ -251,6 +252,7 @@ export type Database = {
           descripcion?: string | null
           eliminado_en?: string | null
           fabricacion_snapshot?: Json | null
+          manual_glass_measurements?: Json | null
           id?: never
           linea?: string | null
           margen_pct?: number | null
@@ -284,6 +286,7 @@ export type Database = {
           descripcion?: string | null
           eliminado_en?: string | null
           fabricacion_snapshot?: Json | null
+          manual_glass_measurements?: Json | null
           id?: never
           linea?: string | null
           margen_pct?: number | null

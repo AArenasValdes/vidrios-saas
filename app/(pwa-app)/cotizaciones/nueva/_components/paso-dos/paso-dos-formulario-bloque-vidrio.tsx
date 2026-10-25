@@ -4,6 +4,7 @@ import { LuSearch } from "react-icons/lu";
 
 import { buildGlassValue } from "@/features/cotizaciones/new-quote/workflow-ui";
 import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
+import { ManualGlassMeasurementsEditor } from "@/features/cotizaciones/components/manual-glass-measurements-editor";
 import type { PasoDosFormularioComponenteProps } from "../../_types/paso-dos";
 
 import s from "../../page.module.css";
@@ -24,6 +25,7 @@ type Props = Pick<
   | "onGlassQueryChange"
   | "onGlassSelect"
   | "onCreateCustomGlass"
+  | "onComponentChange"
 >;
 
 export function PasoDosFormularioBloqueVidrio({
@@ -41,6 +43,7 @@ export function PasoDosFormularioBloqueVidrio({
   onGlassQueryChange,
   onGlassSelect,
   onCreateCustomGlass,
+  onComponentChange,
 }: Props) {
   if (componentForm.tipo === "Trabajo personalizado" || isFreeValueComponentType(componentForm.tipo)) {
     return null;
@@ -53,7 +56,7 @@ export function PasoDosFormularioBloqueVidrio({
       <div className={s.formSectionHead}>
         <span className={s.formSectionEyebrow}>{isMirrorComponent ? "Espejos" : "Vidrio"}</span>
         <strong>{isMirrorComponent ? "Espejos recomendados" : "Vidrio"}</strong>
-        {!isMobileViewport ? <p>Dejalo visible desde el inicio porque suele cambiar en terreno.</p> : null}
+        {!isMobileViewport ? <p>Se asigna a esta pieza; puedes usar el mismo producto en otras.</p> : null}
       </div>
 
       <div className={`${s.field} ${s.fieldFull}`}>
@@ -95,6 +98,8 @@ export function PasoDosFormularioBloqueVidrio({
                     <strong>Del catálogo de vidrios</strong>
                     <span>Vincula formato de plancha y costo técnico. No cambia el precio de la ventana.</span>
                   </div>
+                  {componentForm.vidrio && !componentForm.vidrioLineTemplateId ? <small>El vidrio actual está guardado solo por nombre. Selecciona un producto para vincular su ficha técnica; no se asociará por similitud.</small> : null}
+                  {componentForm.vidrioLineTemplateId ? <small>Vínculo para guardar: {glassCatalogTemplates.find((template) => String(template.id) === componentForm.vidrioLineTemplateId)?.nombre ?? "producto seleccionado"}</small> : null}
                   <div className={s.glassChipGrid}>
                     {glassCatalogTemplates.map((template) => {
                       const isActive =
@@ -213,6 +218,15 @@ export function PasoDosFormularioBloqueVidrio({
           Elige el vidrio por categoria. Pensado para tocar rapido desde el celular.
         </span>
       </div>
+      {isMirrorComponent ? null : (
+        <ManualGlassMeasurementsEditor
+          compact={isMobileViewport}
+          value={componentForm.manualGlassMeasurements}
+          automaticDimensionsAvailable={Boolean(componentForm.fabricacionSnapshot?.result?.vidrios?.some((pane) => pane.anchoMm > 0 && pane.altoMm > 0))}
+          templates={glassCatalogTemplates}
+          onChange={(value) => onComponentChange("manualGlassMeasurements", value)}
+        />
+      )}
     </section>
   );
 }

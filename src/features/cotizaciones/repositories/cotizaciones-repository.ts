@@ -12,6 +12,8 @@ import { normalizeQuoteCreationSurface } from "@/features/cotizaciones/types/quo
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import { parseQuoteRegionSnapshot } from "@/features/organization-region/services/quote-region-snapshot.service";
 import { parseFabricacionTrabajoSnapshot } from "@/features/fabricacion/services/fabricacion-trabajo-snapshot.service";
+import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { resolveManualGlassPaneMeasurements } from "@/features/cotizaciones/services/manual-glass-pane-measurements.service";
 
 type CotizacionesRepositoryDeps = {
   clientFactory?: ReturnType<typeof createClient>;
@@ -90,6 +92,7 @@ type CotizacionItemRow = {
   unidad: string | null;
   observaciones: string | null;
   fabricacion_snapshot?: unknown;
+  manual_glass_measurements?: unknown;
   tipo_item: string | null;
   creado_en: string | null;
   product_type_id: EntityId | null;
@@ -126,7 +129,7 @@ const COTIZACION_LIST_SELECT =
 const COTIZACION_LIST_SELECT_LEGACY =
   "id, proyecto_id, organization_id, numero, estado, creado_en, actualizado_en, total";
 const COTIZACION_ITEM_SELECT =
-  "id, cotizacion_id, codigo, tipo_componente, orden, cantidad, precio_unitario, subtotal, organization_id, ancho, alto, area_m2, linea, color, vidrio, nombre, actualizado_en, eliminado_en, descripcion, unidad, observaciones, fabricacion_snapshot, tipo_item, creado_en, product_type_id, system_line_id, configuration_id, costo_unitario, costo_total, margen_pct, utilidad";
+  "id, cotizacion_id, codigo, tipo_componente, orden, cantidad, precio_unitario, subtotal, organization_id, ancho, alto, area_m2, linea, color, vidrio, nombre, actualizado_en, eliminado_en, descripcion, unidad, observaciones, fabricacion_snapshot, manual_glass_measurements, tipo_item, creado_en, product_type_id, system_line_id, configuration_id, costo_unitario, costo_total, margen_pct, utilidad";
 const COTIZACION_ITEM_SELECT_LEGACY =
   "id, cotizacion_id, cantidad, precio_unitario, subtotal, organization_id, ancho, alto, area_m2, linea, color, vidrio, nombre, actualizado_en, eliminado_en, descripcion, unidad, observaciones, tipo_item, creado_en, product_type_id, system_line_id, configuration_id, costo_unitario, costo_total, margen_pct, utilidad";
 const COTIZACION_BREAKDOWN_SELECT =
@@ -236,7 +239,8 @@ function isMissingComponentFieldsError(error: unknown) {
     (haystack.includes("codigo") ||
       haystack.includes("tipo_componente") ||
       haystack.includes("orden") ||
-      haystack.includes("fabricacion_snapshot")) &&
+      haystack.includes("fabricacion_snapshot") ||
+      haystack.includes("manual_glass_measurements")) &&
     (haystack.includes("column") ||
       haystack.includes("schema cache") ||
       haystack.includes("does not exist"))
@@ -385,6 +389,10 @@ function mapCotizacionItem(
     descripcion: row.descripcion,
     unidad: row.unidad,
     observaciones: row.observaciones,
+    manualGlassMeasurements: resolveManualGlassPaneMeasurements(
+      row.manual_glass_measurements,
+      decodeCotizacionItemPresentationMeta(row.observaciones).manualGlassMeasurements,
+    ),
     fabricacionSnapshot: parseFabricacionSnapshot(row.fabricacion_snapshot),
     tipoItem: row.tipo_item,
     creadoEn: row.creado_en,
@@ -575,6 +583,7 @@ function buildItemInsert(
     unidad: input.unidad ?? null,
     observaciones: input.observaciones ?? null,
     fabricacion_snapshot: input.fabricacionSnapshot ?? null,
+    manual_glass_measurements: input.manualGlassMeasurements ?? null,
     tipo_item: input.tipoItem ?? null,
     product_type_id: input.productTypeId ?? null,
     system_line_id: input.systemLineId ?? null,
@@ -765,6 +774,7 @@ function mapSnapshotItemToCreateInput(item: CotizacionItem): CrearCotizacionItem
     descripcion: item.descripcion,
     unidad: item.unidad,
     observaciones: item.observaciones,
+    manualGlassMeasurements: item.manualGlassMeasurements,
     fabricacionSnapshot: item.fabricacionSnapshot,
     tipoItem: item.tipoItem,
     productTypeId: item.productTypeId,

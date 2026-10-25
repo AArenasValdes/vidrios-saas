@@ -124,6 +124,7 @@ import {
   createQuoteConstructorPresetConfig,
   getQuoteConstructorItemConfig,
   moveQuoteConstructorItem,
+  preserveExplicitFabricationSnapshot,
   type QuoteConstructorItemPatch,
   type QuoteConstructorPresetId,
 } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
@@ -2318,7 +2319,9 @@ function NuevaCotizacionPageContent() {
         form = syncTemplatePricingInComponentForm(form, { forceSuggestedPrice: true });
       }
 
-      const nextItem = buildItemFromForm(form, current.items, itemId, buildItemFromFormOptions);
+      const rebuiltItem = buildItemFromForm(form, current.items, itemId, buildItemFromFormOptions);
+      // Keep a resolver-produced technical snapshot through commercial form hydration.
+      const nextItem = preserveExplicitFabricationSnapshot(rebuiltItem, patch.fabricacionSnapshot);
       return {
         ...current,
         items: current.items.map((candidate) =>

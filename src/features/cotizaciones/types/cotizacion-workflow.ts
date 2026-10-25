@@ -3,6 +3,7 @@ import type { QuoteCreationSurface } from "@/features/cotizaciones/types/quote-c
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import type { QuoteRegionSnapshot } from "@/features/organization-region/types/quote-region-snapshot";
 import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
+import type { ManualGlassPaneMeasurementsSnapshot } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
 
 export type EstadoCotizacionWorkflow =
   | "borrador"
@@ -70,6 +71,7 @@ export type CotizacionWorkflowItem = {
   precioAjustadoManual: boolean;
   origenPrecio: "margen" | "plantilla" | "manual";
   observaciones: string;
+  manualGlassMeasurements?: ManualGlassPaneMeasurementsSnapshot | null;
   fabricacionSnapshot?: FabricacionCotizacionSnapshot | null;
 };
 

@@ -67,12 +67,12 @@ export type SupplierCatalogDatabase = {
         { id?: string; cotizacion_id: number; organization_id: number; estado: string; snapshot: Json; calculado_en?: string }
       >;
       cotizaciones: Table<
-        { id: number; organization_id: number; codigo: string | null; creado_en: string | null; eliminado_en: string | null; fabricacion_trabajo_snapshot: Json | null },
-        { id?: number; organization_id: number; codigo?: string | null; creado_en?: string | null; eliminado_en?: string | null; fabricacion_trabajo_snapshot?: Json | null }
+        { id: number; organization_id: number; numero: string | null; creado_en: string | null; eliminado_en: string | null; fabricacion_trabajo_snapshot: Json | null },
+        { id?: number; organization_id: number; numero?: string | null; creado_en?: string | null; eliminado_en?: string | null; fabricacion_trabajo_snapshot?: Json | null }
       >;
       cotizacion_items: Table<
-        { id: number; codigo: string | null; color: string | null; vidrio: string | null; observaciones: string | null; fabricacion_snapshot: Json | null; cotizacion_id: number; organization_id: number; eliminado_en: string | null },
-        { id?: number; codigo?: string | null; color?: string | null; vidrio?: string | null; observaciones?: string | null; fabricacion_snapshot?: Json | null; cotizacion_id: number; organization_id: number; eliminado_en?: string | null }
+        { id: number; codigo: string | null; color: string | null; vidrio: string | null; nombre: string | null; descripcion: string | null; observaciones: string | null; fabricacion_snapshot: Json | null; manual_glass_measurements: Json | null; cotizacion_id: number; organization_id: number; eliminado_en: string | null },
+        { id?: number; codigo?: string | null; color?: string | null; vidrio?: string | null; nombre?: string | null; descripcion?: string | null; observaciones?: string | null; fabricacion_snapshot?: Json | null; manual_glass_measurements?: Json | null; cotizacion_id: number; organization_id: number; eliminado_en?: string | null }
       >;
       cotizacion_line_templates: Table<
         { id: number; organization_id: number; catalog_key: string | null; eliminado_en: string | null },

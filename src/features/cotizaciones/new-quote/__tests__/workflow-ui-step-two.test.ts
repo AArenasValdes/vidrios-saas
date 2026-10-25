@@ -2,6 +2,7 @@ import {
   applyLineTemplateToComponentForm,
   applyGlassSelectionToComponentForm,
   applyQuickEditDraftStatesToItems,
+  applyQuotePricingToItems,
   buildFreeValueItemFromForm,
   buildItemFromForm,
   buildNextComponentCode,
@@ -214,6 +215,39 @@ describe("workflow-ui paso 2", () => {
     expect(meta.glassTechnicalSpec).toMatchObject({ productId: "3643", manualCutStatus: "pending_validation" });
     expect(reopened.vidrioLineTemplateId).toBe("3643");
     expect(reopened.glassTechnicalSpec).toMatchObject({ productId: "3643", thicknessMm: 5, manualCutStatus: "pending_validation" });
+  });
+
+  it("persiste, reabre y conserva varias medidas manuales al guardar una receta automática", () => {
+    const manualGlassMeasurements = {
+      version: 1 as const,
+      entries: [
+        { id: "manual-a", source: "manual" as const, version: 1 as const, productId: "3643", technicalFingerprint: "fingerprint-a", widthMm: 600, heightMm: 1000, quantity: 2, recordedAt: "2026-10-25T12:00:00.000Z" },
+        { id: "manual-b", source: "manual" as const, version: 1 as const, productId: "3644", technicalFingerprint: "fingerprint-b", widthMm: 500, heightMm: 900, quantity: 1, recordedAt: "2026-10-25T12:01:00.000Z" },
+      ],
+    };
+    const form = createLinePricingForm({ manualGlassMeasurements });
+    const saved = buildItemFromForm(form, [], null);
+    const reopened = mapItemToForm(saved);
+    reopened.nombre = "Ventana editada";
+    const editedAndSaved = buildItemFromForm(reopened, [saved], saved.id);
+    const finalReopen = mapItemToForm(editedAndSaved);
+
+    expect(reopened.manualGlassMeasurements).toEqual(manualGlassMeasurements);
+    expect(finalReopen.manualGlassMeasurements).toEqual(manualGlassMeasurements);
+    expect(editedAndSaved.manualGlassMeasurements?.entries).toHaveLength(2);
+  });
+
+  it("conserva medidas manuales al recalcular precios de la cotización", () => {
+    const form = createLinePricingForm({
+      manualGlassMeasurements: { version: 1, entries: [
+        { id: "manual-a", source: "manual", version: 1, productId: "3643", technicalFingerprint: "fp", widthMm: 600, heightMm: 1000, quantity: 2, recordedAt: "2026-10-25T12:00:00.000Z" },
+      ] },
+    });
+    const item = buildItemFromForm(form, [], null);
+
+    const repriced = applyQuotePricingToItems([item], "margen", "20");
+
+    expect(repriced[0]!.manualGlassMeasurements?.entries).toEqual(form.manualGlassMeasurements?.entries);
   });
 
   it("inicia L42 del Constructor en Normal sin tomar un borrador ALAR", () => {

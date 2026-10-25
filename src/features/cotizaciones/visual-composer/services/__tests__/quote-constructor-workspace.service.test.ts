@@ -7,8 +7,10 @@ import {
   isQuoteConstructorCompatibleItem,
   isQuoteConstructorPresetDefaultName,
   moveQuoteConstructorItem,
+  preserveExplicitFabricationSnapshot,
   resolveQuoteConstructorCommercialName,
 } from "../quote-constructor-workspace.service";
+import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import { listLeafModules } from "../../types/guided-visual-config";
 
 function item(overrides: Partial<CotizacionWorkflowItem> = {}): CotizacionWorkflowItem {
@@ -42,6 +44,16 @@ function item(overrides: Partial<CotizacionWorkflowItem> = {}): CotizacionWorkfl
 }
 
 describe("quote constructor workspace service", () => {
+  it("preserva el snapshot explícito del resolver al reconstruir un item desde el formulario", () => {
+    const rebuilt = item({ fabricacionSnapshot: null });
+    const resolvedSnapshot = { recipeId: "universal-confirmed" } as FabricacionCotizacionSnapshot;
+
+    expect(preserveExplicitFabricationSnapshot(rebuilt, resolvedSnapshot).fabricacionSnapshot)
+      .toBe(resolvedSnapshot);
+    expect(preserveExplicitFabricationSnapshot(rebuilt, null).fabricacionSnapshot).toBeNull();
+    expect(preserveExplicitFabricationSnapshot(rebuilt, undefined)).toBe(rebuilt);
+  });
+
   it("expone las doce tipologías visuales del modo rápido", () => {
     expect(QUOTE_CONSTRUCTOR_PRESETS.map((preset) => preset.id)).toEqual([
       "fijo",

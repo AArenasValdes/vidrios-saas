@@ -4,12 +4,17 @@ import { useMemo, useState } from "react";
 import { LuChevronDown, LuChevronLeft, LuEllipsis, LuPencilRuler } from "react-icons/lu";
 
 import { LineTemplatePicker } from "@/features/cotizaciones/line-templates/components/line-template-picker";
+import { ManualGlassMeasurementsEditor } from "@/features/cotizaciones/components/manual-glass-measurements-editor";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import {
   buildPieceDomainView,
   getPiecePresentationMeta,
 } from "@/features/cotizaciones/new-quote/quote-piece-domain";
-import { COLOR_OPTIONS, mapItemToForm } from "@/features/cotizaciones/new-quote/workflow-ui";
+import {
+  applyGlassSelectionToComponentForm,
+  COLOR_OPTIONS,
+  mapItemToForm,
+} from "@/features/cotizaciones/new-quote/workflow-ui";
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 import { formatMeasurePairFromMm } from "@/features/organization-profile/services/measure-unit.service";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
@@ -358,15 +363,59 @@ export function CuadernoConstructorMovil({
                     {section.id === "vidrio" ? (
                       <>
                         <div className={s.field}>
-                          <span className={s.fieldLabel}>Vidrio</span>
+                          <span className={s.fieldLabel}>Vidrio del catálogo</span>
+                          <LineTemplatePicker
+                            templates={lineTemplates.filter((template) => template.categoria === "vidrio")}
+                            value={form.vidrioLineTemplateId}
+                            onChange={(productId, template) => {
+                              const next = applyGlassSelectionToComponentForm(
+                                form,
+                                {
+                                  displayName: template?.nombre ?? "",
+                                  productId,
+                                },
+                                lineTemplates
+                              );
+                              onUpdateItem(item.id, {
+                                vidrio: next.vidrio,
+                                vidrioLineTemplateId: next.vidrioLineTemplateId,
+                                glassTechnicalSpec: next.glassTechnicalSpec,
+                              });
+                            }}
+                            mode="glass"
+                            ariaLabel="Elegir vidrio del catálogo"
+                          />
+                        </div>
+                        <div className={s.field}>
+                          <span className={s.fieldLabel}>Vidrio personalizado o sugerido</span>
                           <GlassOptionPicker
                             options={glassOptions}
-                            value={form.vidrio}
-                            onChange={(vidrio) => onUpdateItem(item.id, { vidrio })}
-                            ariaLabel="Elegir tipo de vidrio"
+                            value={form.vidrioLineTemplateId ? "" : form.vidrio}
+                            onChange={(vidrio) => {
+                              const next = applyGlassSelectionToComponentForm(
+                                form,
+                                { displayName: vidrio },
+                                lineTemplates
+                              );
+                              onUpdateItem(item.id, {
+                                vidrio: next.vidrio,
+                                vidrioLineTemplateId: next.vidrioLineTemplateId,
+                                glassTechnicalSpec: next.glassTechnicalSpec,
+                              });
+                            }}
+                            ariaLabel="Elegir vidrio personalizado o sugerido"
                             placeholder="Elegir vidrio"
                           />
                         </div>
+                        <ManualGlassMeasurementsEditor
+                          compact
+                          value={form.manualGlassMeasurements}
+                          automaticDimensionsAvailable={Boolean(form.fabricacionSnapshot?.result?.vidrios?.some((pane) => pane.anchoMm > 0 && pane.altoMm > 0))}
+                          templates={lineTemplates}
+                          onChange={(manualGlassMeasurements) =>
+                            onUpdateItem(item.id, { manualGlassMeasurements })
+                          }
+                        />
                         <div className={s.field}>
                           <span className={s.fieldLabel}>Color del perfil</span>
                           <div className={s.colorGrid} role="group" aria-label="Colores">

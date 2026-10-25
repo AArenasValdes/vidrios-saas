@@ -3,6 +3,10 @@ import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-pr
 import type { FabricacionVidrioResultado } from "@/features/fabricacion/types/fabricacion-domain";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import type { GlassTechnicalSpec } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
+import { buildCatalogGlassTechnicalSpec } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
+import {
+  getCatalogGlassTechnicalFingerprint,
+} from "@/features/cotizaciones/services/manual-glass-pane-measurements.service";
 
 export const GLASS_PANE_NORMALIZATION_VERSION = 1 as const;
 const MAX_NORMALIZED_PHYSICAL_UNITS = 2_000;
@@ -22,7 +26,7 @@ export type NormalizedGlassPane = {
   widthMm: number | null;
   heightMm: number | null;
   quantity: number;
-  dimensionProvenance: "validated_recipe" | "recipe_trace" | "legacy_snapshot" | "missing";
+  dimensionProvenance: "validated_recipe" | "recipe_trace" | "manual" | "legacy_snapshot" | "missing";
   dimensionTraceRuleIds: string[];
   recipeStatus: string | null;
   validationStatus: "eligible_for_manual_planning" | "requires_review";
@@ -36,6 +40,7 @@ type ExtractInput = {
   organizationId: string | number;
   quoteId: string | number;
   item: CotizacionWorkflowItem;
+  catalogGlassProducts?: ReadonlyMap<string, { name: string; catalogMetadata: Record<string, unknown> }>;
 };
 
 function positiveInteger(value: unknown): number | null {
@@ -65,8 +70,9 @@ function normalizeRow(input: {
   dimensionTraceRuleIds: string[];
   recipeStatus: string | null;
   snapshotVersion: number;
-  source: "validated_recipe" | "recipe_trace" | "legacy_snapshot" | "missing";
+  source: "validated_recipe" | "recipe_trace" | "manual" | "legacy_snapshot" | "missing";
   rawSnapshot: unknown;
+  additionalWarnings?: string[];
 }): NormalizedGlassPane {
   const { context } = input;
   const warnings: string[] = [];
@@ -87,6 +93,7 @@ function normalizeRow(input: {
   if (input.quantity <= 0 || !Number.isSafeInteger(input.quantity)) warnings.push("La cantidad del snapshot no es válida.");
   if (input.quantity > MAX_NORMALIZED_PHYSICAL_UNITS) warnings.push("La cantidad excede el límite seguro de paños para una optimización.");
   if (input.source === "legacy_snapshot") warnings.push("El paño proviene de un snapshot legacy sin identidad técnica completa.");
+  warnings.push(...(input.additionalWarnings ?? []));
 
   const paneId = input.logicalComponentId && input.glassId
     ? `${input.logicalComponentId}:${input.glassId}`
@@ -95,8 +102,8 @@ function normalizeRow(input: {
     ? Array.from({ length: input.quantity }, (_, index) => `${paneId}:${index + 1}`)
     : [];
   const recipeValidated = input.recipeStatus === "validated";
-  if (!recipeValidated) warnings.push("La receta no está validada por el taller.");
-  const eligible = warnings.length === 0 && recipeValidated && input.source !== "legacy_snapshot";
+  if (!recipeValidated && input.source !== "manual") warnings.push("La receta no está validada por el taller.");
+  const eligible = warnings.length === 0 && (recipeValidated || input.source === "manual") && input.source !== "legacy_snapshot";
 
   return {
     organizationId: context.organizationId,
@@ -134,9 +141,13 @@ export function extractNormalizedGlassPanes(input: ExtractInput): NormalizedGlas
   const productId = selection?.productId ?? (presentation.vidrioLineTemplateId || null);
   const displayName = selection?.displayName ?? (input.item.vidrio || null);
 
-  if (snapshot?.result?.vidrios?.length) {
-    return snapshot.result.vidrios.map((glass: FabricacionVidrioResultado) => {
-      const dimensionTraceRuleIds = glass.trazabilidad.map((trace) => trace.reglaId);
+  const recipePanes = Array.isArray(snapshot?.result?.vidrios) && snapshot.result.vidrios.length > 0
+    ? snapshot.result.vidrios.map((glass: FabricacionVidrioResultado) => {
+      // Older or partially persisted snapshots may omit trace metadata. Geometry still
+      // comes exclusively from the frozen pane result; missing trace only reduces evidence.
+      const dimensionTraceRuleIds = Array.isArray(glass.trazabilidad)
+        ? glass.trazabilidad.flatMap((trace) => typeof trace?.reglaId === "string" ? [trace.reglaId] : [])
+        : [];
       const provenance = snapshot.recipeStatus === "validated"
         ? "validated_recipe"
         : "recipe_trace";
@@ -158,8 +169,56 @@ export function extractNormalizedGlassPanes(input: ExtractInput): NormalizedGlas
         rawSnapshot: { snapshot, glass },
       });
       return row;
-    });
+    })
+    : [];
+
+  const manualMeasurements = input.item.manualGlassMeasurements ?? presentation.manualGlassMeasurements;
+  const manual = manualMeasurements.entries.flatMap((entry) => {
+    const catalogProduct = input.catalogGlassProducts?.get(entry.productId);
+    const currentSpec = catalogProduct
+      ? buildCatalogGlassTechnicalSpec({ productId: entry.productId, metadata: catalogProduct.catalogMetadata })
+      : null;
+    const specFingerprint = currentSpec ? getCatalogGlassTechnicalFingerprint(currentSpec) : null;
+    const warnings = !catalogProduct
+      ? ["El vidrio guardado ya no está disponible en el catálogo activo de esta organización."]
+      : specFingerprint !== entry.technicalFingerprint
+        ? ["La ficha técnica del vidrio cambió desde que se ingresaron estas medidas; revisa y vuelve a guardar la referencia."]
+        : [];
+    return [normalizeRow({
+      context: input,
+      logicalComponentId,
+      glassId: entry.id,
+      productId: entry.productId,
+      displayName: catalogProduct?.name ?? entry.productId,
+      spec: currentSpec,
+      widthMm: positiveInteger(entry.widthMm),
+      heightMm: positiveInteger(entry.heightMm),
+      quantity: positiveInteger(entry.quantity) ?? 0,
+      dimensionTraceRuleIds: [],
+      recipeStatus: null,
+      snapshotVersion: entry.version,
+      source: "manual",
+      rawSnapshot: entry,
+      additionalWarnings: warnings,
+    })];
+  });
+
+  if (recipePanes.length > 0) {
+    // A validated automatic pane wins for its catalog product. Manual entries remain
+    // stored and are used for other products or when the automatic result is invalid.
+    const validAutomaticProducts = new Set(recipePanes
+      .filter((pane) => pane.validationStatus === "eligible_for_manual_planning")
+      .map((pane) => pane.productId)
+      .filter((id): id is string => Boolean(id)));
+    const manualPanes = manual.filter((pane) => pane.productId == null || !validAutomaticProducts.has(pane.productId));
+    const retainedRecipePanes = recipePanes.filter((pane) =>
+      pane.validationStatus === "eligible_for_manual_planning"
+      || !manual.some((manualPane) => manualPane.productId === pane.productId)
+    );
+    return [...retainedRecipePanes, ...manualPanes];
   }
+
+  if (manual.length > 0) return manual;
 
   const legacyGlass = presentation.cubicationSnapshot?.glass;
   if (!legacyGlass) return [];
@@ -186,10 +245,12 @@ export function extractNormalizedGlassPanesForOrganization(input: {
   organizationId: string | number;
   quoteId: string | number;
   items: readonly CotizacionWorkflowItem[];
+  catalogGlassProducts?: ReadonlyMap<string, { name: string; catalogMetadata: Record<string, unknown> }>;
 }): NormalizedGlassPane[] {
   return input.items.flatMap((item) => extractNormalizedGlassPanes({
     organizationId: input.organizationId,
     quoteId: input.quoteId,
     item,
+    catalogGlassProducts: input.catalogGlassProducts,
   }));
 }

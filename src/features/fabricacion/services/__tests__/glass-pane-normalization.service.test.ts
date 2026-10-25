@@ -1,7 +1,9 @@
-import { extractNormalizedGlassPanes } from "@/features/fabricacion/services/glass-pane-normalization.service";
+import { extractNormalizedGlassPanes, extractNormalizedGlassPanesForOrganization } from "@/features/fabricacion/services/glass-pane-normalization.service";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
-import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { decodeCotizacionItemPresentationMeta, encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { buildCatalogGlassTechnicalSpec } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
+import { getCatalogGlassTechnicalFingerprint } from "@/features/cotizaciones/services/manual-glass-pane-measurements.service";
 
 function paneItem(input: {
   recipeStatus?: string;
@@ -120,6 +122,21 @@ describe("glass-pane-normalization.service", () => {
     expect(first?.technicalSpec?.thicknessMm).toBe(5);
   });
 
+  it("preserva las dimensiones guardadas si un snapshot histórico no incluye trazabilidad", () => {
+    const item = paneItem();
+    const snapshot = JSON.parse(JSON.stringify(item.fabricacionSnapshot)) as FabricacionCotizacionSnapshot;
+    (snapshot.result.vidrios[0] as unknown as { trazabilidad?: unknown }).trazabilidad = undefined;
+
+    const [pane] = extractNormalizedGlassPanes({
+      organizationId: 4,
+      quoteId: 88,
+      item: { ...item, fabricacionSnapshot: snapshot },
+    });
+
+    expect(pane).toMatchObject({ widthMm: 690, heightMm: 1390, quantity: 2 });
+    expect(pane?.dimensionTraceRuleIds).toEqual([]);
+  });
+
   it("rehidrata las seis unidades físicas esperadas desde resultados congelados sin multiplicarlas por la cantidad del componente", () => {
     const item = paneItem();
     const snapshot = JSON.parse(JSON.stringify(item.fabricacionSnapshot)) as FabricacionCotizacionSnapshot;
@@ -148,5 +165,131 @@ describe("glass-pane-normalization.service", () => {
     expect(panes.reduce((sum, pane) => sum + pane.quantity, 0)).toBe(6);
     expect(panes.flatMap((pane) => pane.paneUnitIds)).toHaveLength(6);
     expect(panes.reduce((sum, pane) => sum + (pane.widthMm ?? 0) * (pane.heightMm ?? 0) * pane.quantity, 0)).toBe(3_066_080);
+  });
+
+  it("permite varias referencias manuales completas sin snapshot ni receta de perfiles", () => {
+    const metadata = { espesor: "5 mm", categoriaTecnica: "monolitico", revisionTecnicaExplicita: true, corteManualEstado: "confirmed", planchaAnchoMm: 2500, planchaAltoMm: 1800 };
+    const specA = buildCatalogGlassTechnicalSpec({ productId: "501", metadata });
+    const specB = buildCatalogGlassTechnicalSpec({ productId: "502", metadata });
+    const item = paneItem();
+    item.fabricacionSnapshot = null;
+    item.observaciones = encodeCotizacionItemPresentationMeta({
+      logicalComponentId: "logical-component-1",
+      manualGlassMeasurements: { version: 1, entries: [
+        { id: "manual-a", source: "manual", version: 1, productId: "501", technicalFingerprint: getCatalogGlassTechnicalFingerprint(specA), widthMm: 600, heightMm: 1000, quantity: 2, recordedAt: "2026-10-25T12:00:00Z" },
+        { id: "manual-b", source: "manual", version: 1, productId: "502", technicalFingerprint: getCatalogGlassTechnicalFingerprint(specB), widthMm: 500, heightMm: 900, quantity: 1, recordedAt: "2026-10-25T12:00:00Z" },
+      ] },
+    });
+
+    const panes = extractNormalizedGlassPanes({
+      organizationId: 4,
+      quoteId: 1248,
+      item,
+      catalogGlassProducts: new Map([
+        ["501", { name: "Float 5 mm", catalogMetadata: metadata }],
+        ["502", { name: "Laminado 5 mm", catalogMetadata: { ...metadata, categoriaTecnica: "monolitico" } }],
+      ]),
+    });
+
+    expect(panes.map(({ glassId, widthMm, heightMm, quantity, dimensionProvenance, validationStatus }) => ({ glassId, widthMm, heightMm, quantity, dimensionProvenance, validationStatus }))).toEqual([
+      { glassId: "manual-a", widthMm: 600, heightMm: 1000, quantity: 2, dimensionProvenance: "manual", validationStatus: "eligible_for_manual_planning" },
+      { glassId: "manual-b", widthMm: 500, heightMm: 900, quantity: 1, dimensionProvenance: "manual", validationStatus: "eligible_for_manual_planning" },
+    ]);
+  });
+
+  it("prioriza una receta automática válida sin borrar la medida manual persistida", () => {
+    const item = paneItem();
+    const metadata = { espesor: "5 mm", categoriaTecnica: "monolitico", revisionTecnicaExplicita: true, corteManualEstado: "confirmed", planchaAnchoMm: 2500, planchaAltoMm: 1800 };
+    const spec = buildCatalogGlassTechnicalSpec({ productId: "glass-5mm", metadata });
+    item.observaciones = encodeCotizacionItemPresentationMeta({
+      logicalComponentId: "logical-component-1",
+      manualGlassMeasurements: { version: 1, entries: [
+        { id: "manual-fallback", source: "manual", version: 1, productId: "glass-5mm", technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec), widthMm: 620, heightMm: 1010, quantity: 1, recordedAt: "2026-10-25T12:00:00Z" },
+      ] },
+    });
+
+    const panes = extractNormalizedGlassPanes({
+      organizationId: 4,
+      quoteId: 1248,
+      item,
+      catalogGlassProducts: new Map([["glass-5mm", { name: "Float 5 mm", catalogMetadata: metadata }]]),
+    });
+
+    expect(panes).toHaveLength(1);
+    expect(panes[0]).toMatchObject({ glassId: "sash-glass", widthMm: 690, heightMm: 1390, dimensionProvenance: "validated_recipe" });
+    expect(JSON.stringify(decodeCotizacionItemPresentationMeta(item.observaciones).manualGlassMeasurements)).toContain("manual-fallback");
+  });
+
+  it("recupera la medida manual si el resultado automático deja de resolver ese producto", () => {
+    const item = paneItem();
+    const automaticSnapshot = JSON.parse(JSON.stringify(item.fabricacionSnapshot)) as FabricacionCotizacionSnapshot;
+    automaticSnapshot.result.vidrios[0]!.anchoMm = 0;
+    item.fabricacionSnapshot = automaticSnapshot;
+    const metadata = { espesor: "5 mm", categoriaTecnica: "monolitico", revisionTecnicaExplicita: true, corteManualEstado: "confirmed", planchaAnchoMm: 2500, planchaAltoMm: 1800 };
+    const spec = buildCatalogGlassTechnicalSpec({ productId: "glass-5mm", metadata });
+    item.observaciones = encodeCotizacionItemPresentationMeta({
+      logicalComponentId: "logical-component-1",
+      manualGlassMeasurements: { version: 1, entries: [
+        { id: "manual-fallback", source: "manual", version: 1, productId: "glass-5mm", technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec), widthMm: 620, heightMm: 1010, quantity: 1, recordedAt: "2026-10-25T12:00:00Z" },
+      ] },
+    });
+
+    const panes = extractNormalizedGlassPanes({
+      organizationId: 4,
+      quoteId: 1248,
+      item,
+      catalogGlassProducts: new Map([["glass-5mm", { name: "Float 5 mm", catalogMetadata: metadata }]]),
+    });
+
+    expect(panes).toHaveLength(1);
+    expect(panes[0]).toMatchObject({ glassId: "manual-fallback", widthMm: 620, heightMm: 1010, quantity: 1, dimensionProvenance: "manual", validationStatus: "eligible_for_manual_planning" });
+  });
+
+  it("combina V1 automática y V2 manual sin exigir despiece de perfiles para V2", () => {
+    const automatic = paneItem();
+    const manual = { ...paneItem(), id: "physical-row-2", codigo: "V2", nombre: "Paño fijo", fabricacionSnapshot: null };
+    const metadata = { espesor: "5 mm", categoriaTecnica: "monolitico", revisionTecnicaExplicita: true, corteManualEstado: "confirmed", planchaAnchoMm: 2500, planchaAltoMm: 1800 };
+    const spec = buildCatalogGlassTechnicalSpec({ productId: "502", metadata });
+    manual.observaciones = encodeCotizacionItemPresentationMeta({
+      logicalComponentId: "logical-component-v2",
+      manualGlassMeasurements: { version: 1, entries: [
+        { id: "manual-fixed", source: "manual", version: 1, productId: "502", technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec), widthMm: 750, heightMm: 1600, quantity: 1, recordedAt: "2026-10-25T12:00:00Z" },
+      ] },
+    });
+
+    const panes = extractNormalizedGlassPanesForOrganization({
+      organizationId: 4,
+      quoteId: 1248,
+      items: [automatic, manual],
+      catalogGlassProducts: new Map([["502", { name: "Float 5 mm", catalogMetadata: metadata }]]),
+    });
+
+    expect(panes.map(({ quoteItemId, widthMm, heightMm, dimensionProvenance, validationStatus }) => ({ quoteItemId, widthMm, heightMm, dimensionProvenance, validationStatus }))).toEqual([
+      { quoteItemId: "physical-row-1", widthMm: 690, heightMm: 1390, dimensionProvenance: "validated_recipe", validationStatus: "eligible_for_manual_planning" },
+      { quoteItemId: "physical-row-2", widthMm: 750, heightMm: 1600, dimensionProvenance: "manual", validationStatus: "eligible_for_manual_planning" },
+    ]);
+  });
+
+  it("mantiene una referencia manual pendiente si su ficha técnica de catálogo cambió", () => {
+    const metadata = { espesor: "5 mm", categoriaTecnica: "monolitico", revisionTecnicaExplicita: true, corteManualEstado: "confirmed", planchaAnchoMm: 2500, planchaAltoMm: 1800 };
+    const originalSpec = buildCatalogGlassTechnicalSpec({ productId: "501", metadata });
+    const item = paneItem();
+    item.fabricacionSnapshot = null;
+    item.observaciones = encodeCotizacionItemPresentationMeta({
+      logicalComponentId: "logical-component-1",
+      manualGlassMeasurements: { version: 1, entries: [
+        { id: "manual-a", source: "manual", version: 1, productId: "501", technicalFingerprint: getCatalogGlassTechnicalFingerprint(originalSpec), widthMm: 600, heightMm: 1000, quantity: 2, recordedAt: "2026-10-25T12:00:00Z" },
+      ] },
+    });
+
+    const [pane] = extractNormalizedGlassPanes({
+      organizationId: 4,
+      quoteId: 1248,
+      item,
+      catalogGlassProducts: new Map([["501", { name: "Float actualizado", catalogMetadata: { ...metadata, planchaAnchoMm: 3000 } }]]),
+    });
+
+    expect(pane).toMatchObject({ dimensionProvenance: "manual", validationStatus: "requires_review", widthMm: 600, heightMm: 1000, quantity: 2 });
+    expect(pane?.warnings.join(" ")).toMatch(/cambió/i);
   });
 });
