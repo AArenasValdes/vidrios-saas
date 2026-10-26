@@ -22,6 +22,7 @@ const MAX_EXACT_UNITS = 8;
 // Bound the physical-unit expansion before allocating unit IDs or search state.
 const MAX_PHYSICAL_UNITS = 2_000;
 const positiveInt = (value: number | null | undefined): value is number => Number.isSafeInteger(value) && Number(value) > 0;
+const positiveThickness = (value: number | null | undefined): value is number => typeof value === "number" && Number.isFinite(value) && value > 0;
 const nonNegativeInt = (value: number) => Number.isSafeInteger(value) && value >= 0;
 const rectArea = (rect: GlassRect) => rect.widthMm * rect.heightMm;
 
@@ -71,7 +72,7 @@ function validationErrors(panes: readonly GlassPanePlanningUnit[], profile: Glas
   const errors: string[] = [];
   if (!positiveInt(profile.sheet.widthMm) || !positiveInt(profile.sheet.heightMm)) errors.push("Formato de plancha inválido.");
   if (mode === "workshop" && (profile.sheet.orientation === "unknown" || profile.sheet.source === "unknown")) errors.push("La orientación o fuente del formato de plancha requiere confirmación.");
-  if (!positiveInt(profile.thicknessMm)) errors.push("Espesor de plancha inválido.");
+  if (!positiveThickness(profile.thicknessMm)) errors.push("Espesor de plancha inválido.");
   if (!nonNegativeInt(profile.process.edgeTrimMm.top) || !nonNegativeInt(profile.process.edgeTrimMm.right)
     || !nonNegativeInt(profile.process.edgeTrimMm.bottom) || !nonNegativeInt(profile.process.edgeTrimMm.left)) {
     errors.push("Los despuntes configurados deben ser milímetros enteros no negativos.");

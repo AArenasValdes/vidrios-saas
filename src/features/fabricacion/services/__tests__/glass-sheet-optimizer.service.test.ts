@@ -203,6 +203,22 @@ describe("optimizeGlassCuttingBatch", () => {
     expect(result.every((row) => row.status === "feasible")).toBe(true);
   });
 
+  it("acepta espesores catalogados fraccionarios, como DVH de 4,5 mm", () => {
+    const thicknessMm = 4.5;
+    const sourcePane = pane({ id: "dvh-45", width: 600, height: 1000, thickness: thicknessMm, category: "dvh" });
+    const cuttingProfile = profile({
+      profileId: "dvh-45-profile",
+      thicknessMm,
+      category: "dvh",
+      process: { ...profile().process, supportedCategories: ["dvh"], supportedThicknessesMm: [thicknessMm] },
+    });
+
+    const result = run([sourcePane], cuttingProfile);
+
+    expect(result.status).toBe("feasible");
+    expect(result.sheets[0]?.panes).toHaveLength(1);
+  });
+
   it("TC-11/12: pausa paños no admitidos, pendientes, legacy o sin dimensiones", () => {
     for (const value of [
       pane({ id: "manual-not-admitted", width: 500, height: 500, manualCutStatus: "not_admitted" }),
