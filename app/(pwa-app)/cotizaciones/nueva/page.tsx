@@ -68,6 +68,7 @@ import {
 import type { QuoteCreationSurface } from "@/features/cotizaciones/types/quote-creation-surface";
 import {
   buildItemFromForm,
+  applyGlassSelectionToComponentForm,
   buildNextComponentCode,
   buildSuggestedComponentForm,
   CLP,
@@ -174,12 +175,15 @@ function NuevaCotizacionPageContent() {
   const duplicateId = searchParams.get("duplicate");
   const requestedStepParam = searchParams.get("step");
   const requestedModeParam = searchParams.get("modo");
+  const requestedGlassItemId = searchParams.get("itemId");
+  const requestedGlassFocus = searchParams.get("focus") === "glass";
   const forceFreshQuote = isExplicitNewQuoteRequest(searchParams.get("nueva"));
   const requestedStep: StepKey | null =
     requestedStepParam === "2" ? 2 : requestedStepParam === "3" ? 3 : null;
   const requestedConstructorMode = requestedModeParam === "constructor";
   const requestedConstructorEntry = requestedConstructorMode && !editId && !duplicateId;
   const glassCloseTimeoutRef = useRef<number | null>(null);
+  const handledGlassEditRequestRef = useRef<string | null>(null);
   const pendingNextDraftRef = useRef(false);
   const step1InputRefs = useRef<Record<Step1FieldKey, HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>>({
     clientSearch: null,
@@ -1098,6 +1102,25 @@ function NuevaCotizacionPageContent() {
       }
     });
   };
+
+  const openItemForEditingRef = useRef(openItemForEditing);
+
+  useEffect(() => {
+    openItemForEditingRef.current = openItemForEditing;
+  });
+
+  useEffect(() => {
+    if (!editId || !requestedGlassFocus || !requestedGlassItemId || !isReady) return;
+    const requestKey = `${editId}:${requestedGlassItemId}`;
+    if (handledGlassEditRequestRef.current === requestKey) return;
+    const item = draft.items.find((candidate) => candidate.id === requestedGlassItemId);
+    if (!item) return;
+
+    handledGlassEditRequestRef.current = requestKey;
+    const frame = window.requestAnimationFrame(() => openItemForEditingRef.current(item));
+    return () => window.cancelAnimationFrame(frame);
+  }, [draft.items, editId, isReady, requestedGlassFocus, requestedGlassItemId]);
+
   const pasoDosVariaciones = usePasoDosVariaciones({
     items: draft.items,
     activeLineTemplates,
@@ -1159,6 +1182,15 @@ function NuevaCotizacionPageContent() {
           ...cur,
           [key]: value,
           cubicationSnapshot: null,
+        } as ComponentFormState;
+      }
+
+      if (key === "vidrio") {
+        return {
+          ...cur,
+          vidrio: String(value),
+          vidrioLineTemplateId: "",
+          glassTechnicalSpec: null,
         } as ComponentFormState;
       }
 
@@ -2320,8 +2352,15 @@ function NuevaCotizacionPageContent() {
       }
 
       const rebuiltItem = buildItemFromForm(form, current.items, itemId, buildItemFromFormOptions);
-      // Keep a resolver-produced technical snapshot through commercial form hydration.
-      const nextItem = preserveExplicitFabricationSnapshot(rebuiltItem, patch.fabricacionSnapshot);
+      // A snapshot supplied by the fabrication resolver is already based on the
+      // current item and must survive form hydration. buildItemFromForm may
+      // reject it when a confirmed fallback recipe differs from the recipe ID
+      // still stored in the form, which otherwise causes the workspace effect
+      // to send the same update on every render.
+      const nextItem = preserveExplicitFabricationSnapshot(
+        rebuiltItem,
+        patch.fabricacionSnapshot
+      );
       return {
         ...current,
         items: current.items.map((candidate) =>
@@ -2693,8 +2732,11 @@ function NuevaCotizacionPageContent() {
   }
 
   const handleGlassSelect = (nextGlass: string, vidrioLineTemplateId = "") => {
-    handleComponentChange("vidrio", nextGlass);
-    handleComponentChange("vidrioLineTemplateId", vidrioLineTemplateId);
+    setComponentForm((current) => applyGlassSelectionToComponentForm(
+      current,
+      { displayName: nextGlass, productId: vidrioLineTemplateId },
+      activeLineTemplates
+    ));
     setGlassQuery("");
 
     if (glassCloseTimeoutRef.current !== null) {
@@ -2718,7 +2760,7 @@ function NuevaCotizacionPageContent() {
     setCustomGlassOptions([...nextOptions]);
 
     if (savedValue) {
-      handleComponentChange("vidrio", savedValue);
+      handleGlassSelect(savedValue, "");
       setGlassQuery("");
     }
   };
@@ -3342,6 +3384,7 @@ function goNextFromStep1() {
               systemOptions: pasoDosAgregarGrupoMovil.systemOptions,
               configurationOptions: pasoDosAgregarGrupoMovil.configurationOptions,
               glassOptions: pasoDosAgregarGrupoMovil.glassOptions,
+              glassCatalogTemplates: pasoDosAgregarGrupoMovil.glassCatalogTemplates,
               visibleLineTemplates: pasoDosAgregarGrupoMovil.visibleLineTemplates,
               linePricingSummary: pasoDosAgregarGrupoMovil.linePricingSummary,
               isSavingLineTemplate: isSavingQuickPriceTemplate,
@@ -3363,6 +3406,7 @@ function goNextFromStep1() {
               onNombreChange: pasoDosAgregarGrupoMovil.updateNombre,
               onDescripcionChange: pasoDosAgregarGrupoMovil.updateDescripcion,
               onSelectLineTemplate: pasoDosAgregarGrupoMovil.selectLineTemplate,
+              onSupplierProviderKeyChange: pasoDosAgregarGrupoMovil.updateSupplierProviderKey,
               onApplyCreatedLineTemplate: handleApplyPricedLineTemplateToGrupoMovil,
               onCreateLineTemplate: handleCreateMobileLineTemplate,
               onColorChange: pasoDosAgregarGrupoMovil.updateColorHex,
@@ -3380,6 +3424,7 @@ function goNextFromStep1() {
               onMirrorPaneDirectionChange: pasoDosAgregarGrupoMovil.updateMirrorPaneDirection,
               onMirrorInteriorLineChange: pasoDosAgregarGrupoMovil.updateMirrorInteriorLine,
               onVidrioChange: pasoDosAgregarGrupoMovil.updateVidrio,
+              onSelectGlassProduct: pasoDosAgregarGrupoMovil.selectGlassProduct,
               onCreateCustomGlass: (value) => {
                 const savedValue = normalizeCustomGlassValue(value);
                 const nextOptions = saveCustomGlassOption(
@@ -3495,6 +3540,7 @@ function goNextFromStep1() {
             subtypeOptions: pasoDosAgregarGrupo.subtypeOptions,
             systemOptions: pasoDosAgregarGrupo.systemOptions,
             glassOptions: pasoDosAgregarGrupo.glassOptions,
+            glassCatalogTemplates: pasoDosAgregarGrupo.glassCatalogTemplates,
             visibleLineTemplates: pasoDosAgregarGrupo.visibleLineTemplates,
             summary: pasoDosAgregarGrupo.summary,
             globalError,
@@ -3524,6 +3570,7 @@ function goNextFromStep1() {
             onCustomSchemeDescriptionChange: pasoDosAgregarGrupo.updateCustomSchemeDescription,
             onGuidedVisualConfigChange: pasoDosAgregarGrupo.updateGuidedVisualConfig,
             onVidrioChange: pasoDosAgregarGrupo.updateVidrio,
+            onSelectGlassProduct: pasoDosAgregarGrupo.selectGlassProduct,
             onCreateCustomGlass: (value) => {
               const savedValue = normalizeCustomGlassValue(value);
               const nextOptions = saveCustomGlassOption(

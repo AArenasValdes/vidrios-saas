@@ -38,6 +38,10 @@ import {
   CotizacionLineTemplateUnidadCobro,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import {
+  glassCategoryRequiresTechnicalReview,
+  parseExplicitGlassThicknessMm,
+} from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
+import {
   applyCalibrationPresetToCubicationPatch,
   getCubicationSystemCalibrationPreset,
   resolveStatusAfterCalibrationEdit,
@@ -157,7 +161,11 @@ function buildDraft(template?: CotizacionLineTemplate): LineTemplateFormDraft {
     categoria: template?.categoria ?? "aluminio",
     unidadCobro: template?.unidadCobro ?? "m2",
     material: template?.material ?? "",
-    espesor: glassMetadata.espesor ?? "",
+    espesor: glassMetadata.espesor ?? (glassMetadata.espesorMm != null ? String(glassMetadata.espesorMm) : ""),
+    categoriaTecnica: glassMetadata.categoriaTecnica,
+    corteManualEstado: glassMetadata.corteManualEstado,
+    revisionTecnicaExplicita: glassMetadata.revisionTecnicaExplicita,
+    pieceOrientation: glassMetadata.pieceOrientation,
     terminacion: glassMetadata.terminacion ?? "",
     planchaAnchoMm:
       glassMetadata.planchaAnchoMm != null ? String(glassMetadata.planchaAnchoMm) : "",
@@ -942,6 +950,21 @@ export function LineasPreciosPageClient({
     value: LineTemplateFormDraft[K]
   ) => {
     setDraft((current) => {
+      if (key === "categoriaTecnica") {
+        const categoriaTecnica = value as LineTemplateFormDraft["categoriaTecnica"];
+        return {
+          ...current,
+          categoriaTecnica,
+          corteManualEstado: "pending_validation",
+          revisionTecnicaExplicita: false,
+        };
+      }
+
+      if (key === "revisionTecnicaExplicita" && value === false &&
+        glassCategoryRequiresTechnicalReview(current.categoriaTecnica)) {
+        return { ...current, revisionTecnicaExplicita: false, corteManualEstado: "pending_validation" };
+      }
+
       if (key === "categoria") {
         const categoria = value as CotizacionLineTemplateCategoria;
         if (categoria === "vidrio") {
@@ -1026,7 +1049,12 @@ export function LineasPreciosPageClient({
                 isGlassDraft
                   ? {
                       espesor: draft.espesor,
+                      espesorMm: parseExplicitGlassThicknessMm(draft.espesor),
                       terminacion: draft.terminacion,
+                      categoriaTecnica: draft.categoriaTecnica,
+                      corteManualEstado: draft.corteManualEstado,
+                      revisionTecnicaExplicita: draft.revisionTecnicaExplicita,
+                      pieceOrientation: draft.pieceOrientation,
                       planchaAnchoMm: parseDecimal(draft.planchaAnchoMm) || null,
                       planchaAltoMm: parseDecimal(draft.planchaAltoMm) || null,
                     }

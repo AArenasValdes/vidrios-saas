@@ -42,7 +42,7 @@ export function hasEnoughLineCompatibilityContext(context: LineCompatibilityCont
   const normalizedComponent = component.toLocaleLowerCase("es-CL").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const knownComponent = ["ventana", "puerta", "pano fijo", "shower", "shower door"]
     .some((value) => normalizedComponent === value || normalizedComponent.startsWith(`${value} `));
-  const knownOpening = ["corredera", "abatible", "proyectante", "fijo", "vaiven", "plegable", "pivotante", "shower", "guillotina", "celosia"]
+  const knownOpening = ["corredera", "abatible", "oscilobatiente", "proyectante", "fijo", "vaiven", "plegable", "pivotante", "shower", "guillotina", "celosia"]
     .includes(normalizeOpeningType(opening));
   return knownComponent && knownOpening;
 }

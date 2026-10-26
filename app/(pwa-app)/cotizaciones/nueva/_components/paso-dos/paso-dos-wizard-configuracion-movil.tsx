@@ -12,7 +12,7 @@ import type {
   CreateCotizacionLineTemplateInput,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { lineTemplateNeedsCommercialPrice } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
-import { resolveLineCompatibilityOpeningType } from "@/features/cotizaciones/line-templates/services/line-template-compatibility.service";
+import { resolveLineCompatibilityContext, resolveLineCompatibilityOpeningType } from "@/features/cotizaciones/line-templates/services/line-template-compatibility.service";
 import {
   filterLineCatalogTemplates,
   getDefaultLineCatalogTab,
@@ -51,20 +51,22 @@ import {
   shouldShowSystemSelectionForComponent,
   shouldShowSheetSchemeForComponent,
   resolveComponentFabricacionHojas,
-  type ComponentFormLinePricingSummary,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import { buildCotizacionMirrorPaneMeasure } from "@/utils/cotizacion-item-presentation";
 import { SodalL25QuoteConfigPanel } from "@/features/fabricacion/components/sodal-l25-quote-config-panel";
 import {
   dedupeLineTemplatesForQuotePicker,
   formatLineTemplateQuotePickerLabel,
-  resolveCotizacionItemSodalL25LineDisplayLabel,
 } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import { MeasureDimensionInput } from "@/features/cotizaciones/components/measure-dimension-input";
 import { ComponentPreview } from "@/features/cotizaciones/components/component-preview";
 import { buildQuickCompositionBaseConfig } from "@/features/cotizaciones/visual-composer/services/quick-composition-adjustment.service";
 import type { QuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
+import { resolveSupplierFamilyKeyForLineTemplate } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
+import { getLineTemplateWorkshopProfiles } from "@/features/cotizaciones/line-templates/types/line-profile-references";
+import { resolveSupplierFinishName, resolveSupplierTechnicalCodesForQuote } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
+import { useSupplierPresentationResolution } from "@/features/proveedor-catalogos/hooks/use-supplier-presentation-resolution";
 import {
   formatMeasurePairFromMm,
   measureDimensionFieldLabel,
@@ -131,7 +133,6 @@ type Props = {
   isRecommendedGlass: (option: string) => boolean;
   canCreateCustomGlass: boolean;
   isSavingLineTemplate: boolean;
-  linePricingSummary: ComponentFormLinePricingSummary;
   lineTemplateOptions: readonly CotizacionLineTemplate[];
   onAltoChange: (value: string) => void;
   onAnchoChange: (value: string) => void;
@@ -144,6 +145,7 @@ type Props = {
   onNombreChange: (value: string) => void;
   onDescripcionChange: (value: string) => void;
   onSelectLineTemplate: (templateId: string) => void;
+  onSupplierProviderKeyChange?: (providerKey: string) => void;
   onColorChange: (colorHex: string) => void;
   onConfiguracionChange: (value: string) => void;
   onSheetSchemeChange: (value: string) => void;
@@ -158,6 +160,8 @@ type Props = {
   onPricingModeChange: (mode: PricingMode) => void;
   onSistemaChange: (value: string) => void;
   onVidrioChange: (value: string) => void;
+  onSelectGlassProduct?: (productId: string) => void;
+  glassCatalogTemplates?: readonly CotizacionLineTemplate[];
   onPalilloEnabledChange: (enabled: boolean) => void;
   onPalilloTypeChange: (palilloType: string) => void;
   onCostInputScopeChange: (scope: "group_total" | "unit") => void;
@@ -215,10 +219,10 @@ export function PasoDosWizardConfiguracionMovil({
   onQuickCompositionAdjustment,
   formattedPriceValue,
   glassCatalogGroups,
+  glassCatalogTemplates = [],
   isRecommendedGlass,
   canCreateCustomGlass,
   isSavingLineTemplate,
-  linePricingSummary,
   lineTemplateOptions,
   onAltoChange,
   onAnchoChange,
@@ -229,6 +233,7 @@ export function PasoDosWizardConfiguracionMovil({
   onNombreChange,
   onDescripcionChange,
   onSelectLineTemplate,
+  onSupplierProviderKeyChange,
   onColorChange,
   onConfiguracionChange,
   onSheetSchemeChange,
@@ -243,6 +248,7 @@ export function PasoDosWizardConfiguracionMovil({
   onPricingModeChange,
   onSistemaChange,
   onVidrioChange,
+  onSelectGlassProduct,
   onPalilloEnabledChange,
   onPalilloTypeChange,
   onCostInputScopeChange,
@@ -306,7 +312,6 @@ export function PasoDosWizardConfiguracionMovil({
     [lineTemplateOptions]
   );
   const referencia = draft.referencia?.trim() ?? "";
-  const precioPorM2 = draft.precioPorM2?.trim() ?? "";
   const isBowWindow = draft.subtipo === "Ventana" && draft.sistema === "Bow Window";
   const isMobileGuidedThreeLeafCentralFixedSlidingWindow =
     draft.subtipo === "Ventana" &&
@@ -380,7 +385,14 @@ export function PasoDosWizardConfiguracionMovil({
     totalClienteManual !== null && totalClienteManual !== undefined
       ? formatCurrencyInput(String(totalClienteManual))
       : "";
-  const primaryColorOptions = useMemo(() => colorOptions.slice(0, 4), [colorOptions]);
+  const primaryColorOptions = useMemo(() => {
+    if (draft.material === "Aluminio") {
+      const commonLabels = new Set(["Aluminio mate", "Blanco", "Titanio", "Negro"]);
+      const commonOptions = colorOptions.filter((option) => commonLabels.has(option.label));
+      if (commonOptions.length === commonLabels.size) return commonOptions;
+    }
+    return colorOptions.slice(0, 4);
+  }, [colorOptions, draft.material]);
   const visibleColorOptions = showAllColors ? colorOptions : primaryColorOptions;
   const selectedLineTemplate = useMemo(
     () => {
@@ -536,32 +548,36 @@ export function PasoDosWizardConfiguracionMovil({
         slot.leavesCount === selectedRecipeLeaves
     );
   }, [selectedCatalogLineKey, selectedRecipeLeaves, selectedRecipeTypology]);
-  const showInlineRecipeVariants = inlineRecipeCandidates.length > 0 || l20VariantSlots.length > 0;
-  const lineSummaryLabel = useMemo(() => {
-    return (
-      resolveCotizacionItemSodalL25LineDisplayLabel({
-        catalogLineKey: draft.catalogLineKey,
-        referencia,
-        fabricacionHojas: draft.fabricacionHojas,
-        sheetScheme: draft.sheetScheme,
-        hojasBase: draft.hojasBase,
-        fabricacionGlazing: draft.fabricacionGlazing,
-        fabricacionLeg: draft.fabricacionLeg,
-        fabricacionReinforcement: draft.fabricacionReinforcement,
-        fabricacionVariante: draft.fabricacionVariante,
-      }) ?? referencia
-    );
-  }, [
-    draft.catalogLineKey,
-    draft.fabricacionGlazing,
-    draft.fabricacionHojas,
-    draft.fabricacionLeg,
-    draft.fabricacionReinforcement,
-    draft.fabricacionVariante,
-    draft.hojasBase,
-    draft.sheetScheme,
-    referencia,
-  ]);
+  const showInlineRecipeVariants = inlineRecipeCandidates.length > 1 || l20VariantSlots.length > 0;
+  const supplierFamilyKey = resolveSupplierFamilyKeyForLineTemplate(selectedLineTemplate);
+  const supplierRecipe = inlineRecipeCandidates.find((candidate) => candidate.id === draft.fabricationRecipeId)
+    ?? (inlineRecipeCandidates.length === 1 ? inlineRecipeCandidates[0] : inlineRecipeResolution?.receta ?? null);
+  const supplierPresentationRequests = useMemo(() => {
+    const recipeCodes = supplierRecipe?.definition.perfiles
+      .map((profile) => profile.codigoPerfil.trim())
+      .filter(Boolean) ?? [];
+    const documentedCodes = getLineTemplateWorkshopProfiles(selectedLineTemplate?.catalogMetadata)?.profiles
+      .filter((profile) => profile.codeStatus === "catalog_reference" && profile.code?.trim())
+      .map((profile) => profile.code!.trim()) ?? [];
+    const technicalCodes = resolveSupplierTechnicalCodesForQuote({ recipeCodes, documentedCodes });
+    if (!selectedLineTemplate?.catalogKey || !supplierFamilyKey || technicalCodes.length === 0) return [];
+    return [{
+      itemId: "guided-line-provider-preview",
+      catalogLineKey: selectedLineTemplate.catalogKey,
+      familyKey: supplierFamilyKey,
+      finishName: resolveSupplierFinishName(draft.catalogTerminacion, draft.colorHex),
+      technicalCodes,
+    }];
+  }, [draft.catalogTerminacion, draft.colorHex, selectedLineTemplate, supplierFamilyKey, supplierRecipe]);
+  const supplierPresentationResolution = useSupplierPresentationResolution(supplierPresentationRequests, {
+    includeProviderOptions: true,
+    includeProfilePrices: false,
+  });
+  const supplierProviderOptions = supplierPresentationResolution.result?.providerOptions?.["guided-line-provider-preview"] ?? [];
+  const familyPreferenceProviderKey = supplierPresentationResolution.result?.familyPreferences?.[supplierFamilyKey ?? ""] ?? null;
+  const defaultSupplierLabel = supplierProviderOptions.find((option) => option.providerKey === familyPreferenceProviderKey)?.label
+    ?? supplierProviderOptions.find((option) => option.providerKey === "arquetipo")?.label
+    ?? "Automático";
   const selectedLineLabel = useMemo(() => {
     if (!draft.lineTemplateId) {
       return isGlassProduct ? "Precio manual o sin cristal" : "Precio manual o sin linea";
@@ -601,15 +617,18 @@ export function PasoDosWizardConfiguracionMovil({
     return isGlassProduct ? candidates : filterLineCatalogTemplates({
       templates: candidates,
       tab: lineCatalogTab,
-      context: {
+      context: resolveLineCompatibilityContext({
         componentType: draft.subtipo,
-        openingType: resolveLineCompatibilityOpeningType(draft.sistema, draft.configuracion, draft.guidedVisualConfig),
+        system: draft.sistema,
+        configuration: draft.configuracion,
+        componentLabel: `${draft.nombre ?? ""} ${draft.referencia ?? ""}`,
         leavesCount,
         material: draft.material,
-      },
+        guidedVisualConfig: draft.guidedVisualConfig,
+      }),
       material: requiresProfileMaterial ? lineMaterialFilter : null,
     });
-  }, [availableLineTemplates, draft.configuracion, draft.guidedVisualConfig, draft.material, draft.subtipo, draft.sistema, isGlassProduct, lineCatalogTab, lineMaterialFilter, lineSelectorQuery, requiresProfileMaterial, selectedRecipeLeaves]);
+  }, [availableLineTemplates, draft.configuracion, draft.guidedVisualConfig, draft.material, draft.nombre, draft.referencia, draft.subtipo, draft.sistema, isGlassProduct, lineCatalogTab, lineMaterialFilter, lineSelectorQuery, requiresProfileMaterial, selectedRecipeLeaves]);
   const lineTemplateFamilyGroups = useMemo(
     () => groupLineCatalogTemplates(filteredLineTemplates),
     [filteredLineTemplates]
@@ -617,11 +636,15 @@ export function PasoDosWizardConfiguracionMovil({
 
   const openLineSelector = () => {
     setLineSelectorQuery("");
-    const context = {
+    const context = resolveLineCompatibilityContext({
       componentType: draft.subtipo,
-      openingType: resolveLineCompatibilityOpeningType(draft.sistema, draft.configuracion, draft.guidedVisualConfig),
+      system: draft.sistema,
+      configuration: draft.configuracion,
+      componentLabel: `${draft.nombre ?? ""} ${draft.referencia ?? ""}`,
+      leavesCount: selectedRecipeLeaves,
       material: draft.material,
-    };
+      guidedVisualConfig: draft.guidedVisualConfig,
+    });
     setLineCatalogTab(getDefaultLineCatalogTab({
       hasCompatibilityContext: !isGlassProduct && hasEnoughLineCompatibilityContext(context),
       hasOwnLines: availableLineTemplates.some((template) => !template.catalogKey?.startsWith("ventora:")),
@@ -1548,6 +1571,41 @@ export function PasoDosWizardConfiguracionMovil({
         </div>
       ) : null}
 
+      {requiresProfileMaterial ? (
+        <div className={s.stepTwoMobileBlockSecundario}>
+          <div className={s.stepTwoMobileBlockHeaderInline}>
+            <div className={s.stepTwoMobileBlockLabel}>Color perfil</div>
+            {colorOptions.length > primaryColorOptions.length ? (
+              <button
+                className={s.stepTwoMobileSecondaryLink}
+                onClick={() => setShowAllColors((current) => !current)}
+                type="button"
+              >
+                {showAllColors ? "Menos opciones" : "Mas opciones"}
+              </button>
+            ) : null}
+          </div>
+
+          <div className={s.stepTwoMobileColorGridCompact}>
+            {visibleColorOptions.map((option) => (
+              <button
+                key={option.hex}
+                className={`${s.stepTwoMobileColorPill} ${draft.colorHex.toLowerCase() === option.hex.toLowerCase() ? s.stepTwoMobileColorPillActive : ""}`}
+                onClick={() => onColorChange(option.hex)}
+                type="button"
+              >
+                <span
+                  className={s.stepTwoMobileColorSwatch}
+                  style={{ backgroundColor: option.hex }}
+                  aria-hidden
+                />
+                <span>{option.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       <div className={s.stepTwoMobileBlockSecundario}>
         <div className={s.stepTwoMobileBlockHeaderInline}>
           <div className={s.stepTwoMobileBlockLabel}>
@@ -1560,7 +1618,8 @@ export function PasoDosWizardConfiguracionMovil({
           </button>
         </div>
         <button
-          className={`${s.stepTwoMobileLineTrigger} ${isLineSelectorOpen ? s.stepTwoMobileLineTriggerOpen : ""}`}
+          aria-pressed={Boolean(draft.lineTemplateId)}
+          className={`${s.stepTwoMobileLineTrigger} ${isLineSelectorOpen ? s.stepTwoMobileLineTriggerOpen : ""} ${draft.lineTemplateId ? s.stepTwoMobileLineTriggerSelected : ""}`}
           onClick={openLineSelector}
           type="button"
         >
@@ -1593,14 +1652,33 @@ export function PasoDosWizardConfiguracionMovil({
               Agregar precio ahora
             </button>
           </div>
-        ) : lineSummaryLabel && precioPorM2 ? (
-          <div className={s.stepTwoMobileLineSummary}>
-            <span>{lineSummaryLabel}</span>
-            <strong>
-              {linePricingSummary.precioUnitarioSugerido !== null
-                ? `Sugerido: $${linePricingSummary.precioUnitarioSugerido.toLocaleString("es-CL")}`
-                : `Base: $${Number(precioPorM2 || 0).toLocaleString("es-CL")}/m2`}
-            </strong>
+        ) : null}
+        {supplierPresentationRequests.length > 0 && onSupplierProviderKeyChange ? (
+          <div className={s.stepTwoMobileSupplierPicker}>
+            <label className={s.stepTwoMobileSupplierField}>
+              <span>Proveedor de compra</span>
+              <select
+                aria-label="Proveedor de compra para esta línea"
+                value={draft.supplierProviderKey ?? ""}
+                onChange={(event) => onSupplierProviderKeyChange(event.target.value)}
+                disabled={supplierPresentationResolution.isResolving && supplierProviderOptions.length === 0}
+              >
+                <option value="">Predeterminado · {defaultSupplierLabel}</option>
+                {supplierProviderOptions.map((option) => (
+                  <option key={option.providerKey} value={option.providerKey}>
+                    {option.label} · {option.pricedProfileCount}/{option.totalProfileCount} perfiles con precio
+                    {!option.pricedProfileCount && option.otherAvailableFinishNames?.length
+                      ? ` · precio en ${option.otherAvailableFinishNames.slice(0, 2).join(", ")}`
+                      : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <small>
+              {supplierPresentationResolution.isResolving
+                ? "Cargando proveedores…"
+                : "Puedes cambiar el proveedor para esta pieza. El precio de venta de la línea se mantiene."}
+            </small>
           </div>
         ) : null}
         {showInlineRecipeVariants ? (
@@ -1710,7 +1788,7 @@ export function PasoDosWizardConfiguracionMovil({
                   {!isGlassProduct ? (
                     <nav className={s.stepTwoMobileLineTabs} aria-label="Tipo de líneas">
                       {([
-                        ...(hasEnoughLineCompatibilityContext({ componentType: draft.subtipo, openingType: resolveLineCompatibilityOpeningType(draft.sistema, draft.configuracion, draft.guidedVisualConfig), material: draft.material }) ? [["compatible", "Compatibles"] as const] : []),
+                        ...(hasEnoughLineCompatibilityContext(resolveLineCompatibilityContext({ componentType: draft.subtipo, system: draft.sistema, configuration: draft.configuracion, componentLabel: `${draft.nombre ?? ""} ${draft.referencia ?? ""}`, leavesCount: selectedRecipeLeaves, material: draft.material, guidedVisualConfig: draft.guidedVisualConfig })) ? [["compatible", "Compatibles"] as const] : []),
                         ...(availableLineTemplates.some((template) => !template.catalogKey?.startsWith("ventora:")) ? [["own", "Mis líneas"] as const] : []),
                         ["all", "Todas"] as const,
                       ]).map(([key, label]) => (
@@ -2203,41 +2281,6 @@ export function PasoDosWizardConfiguracionMovil({
         </div>
       ), document.body) : null}
 
-      {requiresProfileMaterial ? (
-        <div className={s.stepTwoMobileBlockSecundario}>
-          <div className={s.stepTwoMobileBlockHeaderInline}>
-            <div className={s.stepTwoMobileBlockLabel}>Color perfil</div>
-            {colorOptions.length > primaryColorOptions.length ? (
-              <button
-                className={s.stepTwoMobileSecondaryLink}
-                onClick={() => setShowAllColors((current) => !current)}
-                type="button"
-              >
-                {showAllColors ? "Menos opciones" : "Mas opciones"}
-              </button>
-            ) : null}
-          </div>
-
-          <div className={s.stepTwoMobileColorGridCompact}>
-            {visibleColorOptions.map((option) => (
-              <button
-                key={option.hex}
-                className={`${s.stepTwoMobileColorPill} ${draft.colorHex.toLowerCase() === option.hex.toLowerCase() ? s.stepTwoMobileColorPillActive : ""}`}
-                onClick={() => onColorChange(option.hex)}
-                type="button"
-              >
-                <span
-                  className={s.stepTwoMobileColorSwatch}
-                  style={{ backgroundColor: option.hex }}
-                  aria-hidden
-                />
-                <span>{option.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
       <div className={s.stepTwoMobileBlockHero}>
         <div className={s.stepTwoMobileCompositionHeader}>
           <div className={s.stepTwoMobileBlockLabel}>Medidas</div>
@@ -2374,10 +2417,13 @@ export function PasoDosWizardConfiguracionMovil({
           canCreateCustomGlass={canCreateCustomGlass}
           currentGlass={draft.vidrio}
           glassCatalogGroups={glassCatalogGroups}
+          glassCatalogTemplates={glassCatalogTemplates}
+          selectedGlassProductId={draft.vidrioLineTemplateId}
           isRecommendedGlass={isRecommendedGlass}
           onCreateCustomGlass={onCreateCustomGlass}
           onSetVidSearch={onSetVidSearch}
           onVidrioChange={onVidrioChange}
+          onSelectGlassProduct={onSelectGlassProduct}
           recommendedReason={recommendedReason}
           recommendedVidrios={recommendedVidrios}
           searchResults={searchResults}

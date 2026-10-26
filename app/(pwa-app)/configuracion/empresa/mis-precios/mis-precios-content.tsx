@@ -13,12 +13,22 @@ type SheetState = { kind: "adjustment"; providerKey: string } | { kind: "price";
 type ProductFilter = "all" | "custom" | "pending";
 type SavePhase = "idle" | "saved";
 
+const moneyFormatters = new Map<string, Intl.NumberFormat>();
+const percentFormatter = new Intl.NumberFormat("es-CL", { maximumFractionDigits: 1 });
+const inputFormatter = new Intl.NumberFormat("es-CL", { maximumFractionDigits: 0 });
+
 function money(value: number | null, currency: string | null) {
-  return value == null || !currency ? "Pendiente" : new Intl.NumberFormat("es-CL", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
+  if (value == null || !currency) return "Pendiente";
+  let formatter = moneyFormatters.get(currency);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat("es-CL", { style: "currency", currency, maximumFractionDigits: 0 });
+    moneyFormatters.set(currency, formatter);
+  }
+  return formatter.format(value);
 }
 
 function formatPercent(value: number) {
-  return new Intl.NumberFormat("es-CL", { maximumFractionDigits: 1 }).format(Math.abs(value));
+  return percentFormatter.format(Math.abs(value));
 }
 
 function formatRevision(value: string) {
@@ -30,7 +40,7 @@ function formatRevision(value: string) {
 
 function formatInput(value: string) {
   const digits = value.replace(/\D/g, "");
-  return digits ? new Intl.NumberFormat("es-CL", { maximumFractionDigits: 0 }).format(Number(digits)) : "";
+  return digits ? inputFormatter.format(Number(digits)) : "";
 }
 
 function adjustedNet(reference: number | null, percentage: number) {
@@ -68,6 +78,7 @@ const supplierLogos = {
   winhouse: { src: "/Icon-Empresas/winhouse.webp", width: 320, height: 72 },
   arquetipo: { src: "/Icon-Empresas/arquetipo.webp", width: 320, height: 82 },
   kompen: { src: "/Icon-Empresas/kompen.png", width: 1493, height: 546 },
+  alumco: { src: "/Icon-Empresas/alumco.jpeg", width: 1167, height: 406 },
 } as const;
 
 function supplierLogo(providerKey: string, providerName: string) {
@@ -76,7 +87,13 @@ function supplierLogo(providerKey: string, providerName: string) {
   if (identity.includes("winhouse")) return supplierLogos.winhouse;
   if (identity.includes("arquetipo")) return supplierLogos.arquetipo;
   if (identity.includes("kompen") || identity.includes("thermowin")) return supplierLogos.kompen;
+  if (identity.includes("alumco")) return supplierLogos.alumco;
   return null;
+}
+
+function supplierRevisionLabel(providerKey: string, revision: string) {
+  if (providerKey === "alumco") return /(?:^|[^0-9])((?:19|20)\d{2})(?:[^0-9]|$)/.exec(revision)?.[1] ?? "2026";
+  return formatRevision(revision);
 }
 
 function SupplierLogo({ providerKey, providerName }: { providerKey: string; providerName: string }) {
@@ -165,7 +182,7 @@ function ProviderRow({ provider, selected, onSelect }: { provider: MySupplierPri
       <SupplierLogo providerKey={provider.providerKey} providerName={provider.providerName} />
       <span className={s.providerCopy}>
         <strong>{provider.providerName}</strong>
-        <small>{formatRevision(provider.revision)} · {provider.presentations.length} {provider.presentations.length === 1 ? "producto" : "productos"}</small>
+        <small>{supplierRevisionLabel(provider.providerKey, provider.revision)} · {provider.presentations.length} {provider.presentations.length === 1 ? "producto" : "productos"}</small>
         <small>{status}</small>
       </span>
       <Chevron />
@@ -314,14 +331,17 @@ export function MisPreciosContent({ catalog, error, busy, save, refresh }: Retur
       return familyNumber(a) - familyNumber(b) || a.localeCompare(b, "es-CL", { numeric: true });
     }), [selectedProvider]);
   const familyLabel = (key: string) => key.split(":").at(-1)?.replace(/[-_]+/g, " ").replace(/\b\w/g, (letter) => letter.toLocaleUpperCase("es-CL")) ?? key;
-  const visibleRows = (selectedProvider?.presentations ?? []).filter((row) => {
-    const matchesSearch = `${row.technicalCodes?.join(" ") ?? ""} ${row.name} ${row.finish ?? ""}`.toLocaleLowerCase("es-CL").includes(search.trim().toLocaleLowerCase("es-CL"));
-    const matchesFamily = familyKey === "all" || row.familyKeys?.includes(familyKey);
-    const matchesFilter = productFilter === "all" || (productFilter === "custom" ? row.ownNetPrice != null : row.effective?.unitNetPrice == null);
-    return matchesSearch && matchesFamily && matchesFilter;
-  }).sort((a, b) => universalAluminumLineNumber(a) - universalAluminumLineNumber(b)
-    || numericTechnicalCode(a) - numericTechnicalCode(b)
-    || a.name.localeCompare(b.name, "es-CL", { numeric: true }));
+  const visibleRows = useMemo(() => {
+    const normalizedSearch = search.trim().toLocaleLowerCase("es-CL");
+    return (selectedProvider?.presentations ?? []).filter((row) => {
+      const matchesSearch = `${row.technicalCodes?.join(" ") ?? ""} ${row.name} ${row.finish ?? ""}`.toLocaleLowerCase("es-CL").includes(normalizedSearch);
+      const matchesFamily = familyKey === "all" || row.familyKeys?.includes(familyKey);
+      const matchesFilter = productFilter === "all" || (productFilter === "custom" ? row.ownNetPrice != null : row.effective?.unitNetPrice == null);
+      return matchesSearch && matchesFamily && matchesFilter;
+    }).sort((a, b) => universalAluminumLineNumber(a) - universalAluminumLineNumber(b)
+      || numericTechnicalCode(a) - numericTechnicalCode(b)
+      || a.name.localeCompare(b.name, "es-CL", { numeric: true }));
+  }, [selectedProvider, search, familyKey, productFilter]);
   const selectedRow = sheet?.kind === "price" ? selectedProvider?.presentations.find((row) => row.presentationId === sheet.presentationId) ?? null : null;
   const customCount = selectedProvider?.presentations.filter((row) => row.ownNetPrice != null).length ?? 0;
 
@@ -534,8 +554,7 @@ export function MisPreciosContent({ catalog, error, busy, save, refresh }: Retur
                   <div className={s.settings}>
                     <div className={s.settingsRow}>
                       <span className={s.settingsCopy}>
-                        <small>Lista de referencia</small>
-                        <strong>{formatRevision(selectedProvider.revision)}</strong>
+                        <strong>{supplierRevisionLabel(selectedProvider.providerKey, selectedProvider.revision)}</strong>
                       </span>
                     </div>
                     <button className={s.settingsRow} type="button" onClick={() => openSheet({ kind: "adjustment", providerKey: selectedProvider.providerKey })}>

@@ -46,6 +46,20 @@ describe("line option presentation contract", () => {
     expect(getDefaultLineCatalogTab({ hasCompatibilityContext: true, hasOwnLines: true })).toBe("compatible");
   });
 
+  it("shows the Prime Line KOM 700 for an oscillobatiente window", () => {
+    const prime = line({
+      id: 700,
+      catalogKey: "ventora:kompen-prime-line-700:configuration:ventana-oscilobatiente",
+      nombre: "Prime Line KOM 700 · Ventana oscilobatiente",
+      material: "PVC",
+      proveedor: "Thermowin Kompen",
+    });
+    const context = { componentType: "Ventana", openingType: "Oscilobatiente", material: "PVC" };
+
+    expect(hasEnoughLineCompatibilityContext(context)).toBe(true);
+    expect(filterLineCatalogTemplates({ templates: [prime], tab: "compatible", context })).toEqual([prime]);
+  });
+
   it("uses the chosen configuration when the generic system field says Personalizado", () => {
     expect(resolveLineCompatibilityOpeningType("Personalizado", "Corredera 2 hojas")).toBe("Corredera 2 hojas");
     expect(resolveLineCompatibilityOpeningType("Corredera", "Corredera 2 hojas")).toBe("Corredera");

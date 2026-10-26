@@ -252,6 +252,47 @@ export function resolveLineCompatibilityOpeningType(
   return null;
 }
 
+/** Normaliza la identidad visible del Shower para compartir el mismo filtro en Guiada y Constructor. */
+export function resolveLineCompatibilityContext(input: {
+  componentType?: string | null;
+  system?: string | null;
+  configuration?: string | null;
+  componentLabel?: string | null;
+  leavesCount?: number | null;
+  movingLeavesCount?: number | null;
+  material?: string | null;
+  guidedVisualConfig?: GuidedVisualConfig | null;
+}): LineCompatibilityContext {
+  const visualModules = input.guidedVisualConfig?.root
+    ? listLeafModules(input.guidedVisualConfig.root)
+    : [];
+  const explicitShowerSliding = /shower/i.test([
+    input.componentType,
+    input.system,
+    input.configuration,
+    input.componentLabel,
+  ].filter(Boolean).join(" ")) && (
+    /corredera/i.test([
+      input.system,
+      input.configuration,
+      input.componentLabel,
+    ].filter(Boolean).join(" ")) ||
+    (visualModules.length > 0 && visualModules.every((module) => module.type === "shower_corredera"))
+  );
+
+  return {
+    componentType: explicitShowerSliding ? "Shower Door" : input.componentType,
+    openingType: explicitShowerSliding
+      ? "Corredera"
+      : resolveLineCompatibilityOpeningType(input.system, input.configuration, input.guidedVisualConfig),
+    leavesCount: explicitShowerSliding && (input.leavesCount == null || input.leavesCount === 1)
+      ? 2
+      : input.leavesCount,
+    movingLeavesCount: input.movingLeavesCount,
+    material: input.material,
+  };
+}
+
 function matchesOpeningType(values: string[] | undefined, input: string | null | undefined) {
   if (!values?.length || !input?.trim()) return true;
   return values.some((value) => normalizeOpeningType(value) === normalizeOpeningType(input));

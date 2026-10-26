@@ -111,6 +111,7 @@ function normalizeUnidadCobroFromRow(
 const NESTED_CATALOG_METADATA_KEYS = new Set([
   "fabricationRecipe",
   "workshopProfiles",
+  "glassCuttingWorkshopProfile",
 ]);
 
 function mapCatalogMetadata(

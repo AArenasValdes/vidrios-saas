@@ -164,12 +164,13 @@ describe("GlassDistributionPanel", () => {
     render(<GlassDistributionPanel quoteId="1" quoteCode="COT-QA" clientName="Cliente QA" workName="Obra QA" enabled autoPreview />);
 
     expect(await screen.findByText("Distribución parcial")).toBeInTheDocument();
-    expect(screen.getByText(/no representa toda la cotización/)).toBeInTheDocument();
-    expect(screen.getByText(/V2 · Paño fijo/)).toBeInTheDocument();
+    expect(screen.getByText("Faltan las medidas del vidrio de V2 · Paño fijo")).toBeInTheDocument();
+    expect(screen.queryByText(/Faltan dimensiones válidas del paño/)).not.toBeInTheDocument();
     expect(await screen.findByRole("img", { name: "Distribución en plancha de 2500 por 1800 milímetros" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /PDF bloqueado · cobertura incompleta/ })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Compartir" })).toBeDisabled();
-    expect(screen.getByRole("link", { name: "Revisar componentes de la cotización" })).toHaveAttribute("href", "/cotizaciones/nueva?edit=1&step=2");
+    expect(screen.getByRole("link", { name: "Ingresar medidas" })).toHaveAttribute("href", "/cotizaciones/nueva?edit=1&step=2&itemId=item-2&focus=glass");
+    expect(screen.getByText("Para descargar el pedido completo, ingresa las medidas de vidrio pendientes.")).toBeInTheDocument();
     expect(createGlassDistributionPdf).not.toHaveBeenCalled();
     expect(downloadPdfBlob).not.toHaveBeenCalled();
   });

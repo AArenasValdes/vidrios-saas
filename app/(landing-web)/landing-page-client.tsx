@@ -10,6 +10,14 @@ import { faqs, LOGIN_HREF, REGISTRO_HREF } from "./landing-shared";
 import { PricingPlans } from "@/features/billing/components/pricing-plans";
 import s from "./landing.module.css";
 
+const TrustedWorkshopsSection = dynamic(
+  () =>
+    import("@/components/landing/trusted-workshops-section").then((mod) => ({
+      default: mod.TrustedWorkshopsSection,
+    })),
+  { ssr: true }
+);
+
 const ContrastSection = dynamic(
   () =>
     import("@/components/landing/contrast-section").then((mod) => ({
@@ -80,6 +88,8 @@ export function LandingBelowFold() {
 
   return (
     <>
+      <TrustedWorkshopsSection />
+
       <ContrastSection />
 
       <ProblemFlowSection />

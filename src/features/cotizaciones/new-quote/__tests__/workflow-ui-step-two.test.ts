@@ -1823,6 +1823,17 @@ describe("workflow-ui paso 2", () => {
     expect(errors.material).toBeUndefined();
   });
 
+  it("permite cotizar una ventana sin despiece aunque falten las medidas finales de vidrio", () => {
+    const form = createLinePricingForm({
+      referencia: "S-38 RPT",
+      sistema: "Proyectante",
+      lineTemplateId: "tpl-s38-rpt",
+      manualGlassMeasurements: null,
+    });
+
+    expect(validateComponentForm(form, [], null)).toEqual({});
+  });
+
   it("predetermina catalogo de cristal y filtra productos de cristal para componentes solo vidrio", () => {
     const form = buildSuggestedComponentForm({ tipo: "Vidrio / Cristal" });
 

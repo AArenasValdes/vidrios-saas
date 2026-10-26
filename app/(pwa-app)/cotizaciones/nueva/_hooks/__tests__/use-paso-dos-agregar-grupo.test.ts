@@ -7,6 +7,7 @@ import {
   buildPasoDosGrupoSummary,
   buildStructuredAlcanceDetalleItem,
   applyLineTemplateToGrupoDraft,
+  applyGlassSelectionToPasoDosGrupoDraft,
   createInitialPasoDosGrupoDraft,
   getConfigurationOptionsForSubtype,
   getSubtypeOptionsForCategory,
@@ -21,7 +22,7 @@ import {
   syncDraftTemplatePricing,
   type PasoDosGrupoDraft,
 } from "../use-paso-dos-agregar-grupo";
-import { buildItemFromForm } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { buildItemFromForm, mapItemToForm } from "@/features/cotizaciones/new-quote/workflow-ui";
 import { createDefaultGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
@@ -49,6 +50,8 @@ function createDraft(overrides: Record<string, unknown> = {}) {
     customSchemeDescription: "",
     isCustomScheme: false,
     vidrio: "Incoloro monolitico 5mm",
+    vidrioLineTemplateId: "",
+    glassTechnicalSpec: null,
     lineTemplateId: "",
     fabricacionConfiguracionId: "",
     fabricacionComposicionId: "",
@@ -69,6 +72,84 @@ function createDraft(overrides: Record<string, unknown> = {}) {
 }
 
 describe("use-paso-dos-agregar-grupo helpers", () => {
+  it("conserva el vidrio de catálogo 3643 desde el borrador hasta guardar, reabrir y editar", () => {
+    const glass = {
+      id: 3643,
+      organizationId: 1,
+      catalogKey: null,
+      nombre: "Float Incoloro 5mm",
+      categoria: "vidrio" as const,
+      unidadCobro: "m2" as const,
+      material: "Cristal" as const,
+      vidrioPrincipalRecomendado: null,
+      costoBase: 0,
+      precioM2Sugerido: 0,
+      minimoCobrable: 0,
+      redondeoPrecio: 0,
+      mermaPct: 0,
+      margenObjetivoPct: null,
+      proveedor: null,
+      vigenciaDesde: null,
+      vigenciaHasta: null,
+      catalogMetadata: {
+        espesorMm: 5,
+        categoriaTecnica: "monolitico",
+        corteManualEstado: "pending_validation",
+        revisionTecnicaExplicita: false,
+        planchaAnchoMm: 2500,
+        planchaAltoMm: 1800,
+        orientacionCorte: "unknown",
+      },
+      isActive: true,
+      sortOrder: 0,
+      creadoEn: null,
+      actualizadoEn: null,
+      eliminadoEn: null,
+    };
+    const draft = createDraft({ vidrio: "Float Incoloro 5mm" }) as PasoDosGrupoDraft;
+    const selectedDraft = applyGlassSelectionToPasoDosGrupoDraft({
+      draft,
+      selection: { displayName: glass.nombre, productId: String(glass.id) },
+      items: [],
+      pricingMode: "precio_directo",
+      provider: "",
+      lineTemplates: [glass],
+    });
+    expect(selectedDraft.vidrioLineTemplateId).toBe("3643");
+    expect(selectedDraft.glassTechnicalSpec).toMatchObject({
+      productId: "3643", sourceProductId: "3643", thicknessMm: 5,
+      category: "monolitico", pieceOrientation: "unknown", sheetWidthMm: 2500,
+      sheetHeightMm: 1800, manualCutStatus: "pending_validation",
+    });
+
+    const form = buildPasoDosGrupoComponentForm({
+      items: [], pricingMode: "precio_directo", provider: "", draft: selectedDraft,
+    });
+    const savedItem = buildItemFromForm(form, [], null);
+    const reopened = mapItemToForm(savedItem);
+    expect(reopened.vidrioLineTemplateId).toBe("3643");
+    expect(reopened.glassTechnicalSpec).toMatchObject({ productId: "3643", manualCutStatus: "pending_validation" });
+
+    const editedItem = buildItemFromForm({ ...reopened, colorHex: "#ffffff" }, [savedItem], savedItem.id);
+    expect(mapItemToForm(editedItem).vidrioLineTemplateId).toBe("3643");
+    expect(mapItemToForm(editedItem).glassTechnicalSpec).toMatchObject({ thicknessMm: 5, sheetWidthMm: 2500 });
+
+    const changedProduct = applyGlassSelectionToPasoDosGrupoDraft({
+      draft: selectedDraft,
+      selection: { displayName: "Float Incoloro 6mm", productId: "3644" },
+      items: [], pricingMode: "precio_directo", provider: "",
+      lineTemplates: [{ ...glass, id: 3644, nombre: "Float Incoloro 6mm", catalogMetadata: { ...glass.catalogMetadata, espesorMm: 6 } }],
+    });
+    expect(changedProduct.glassTechnicalSpec).toMatchObject({ productId: "3644", thicknessMm: 6 });
+
+    const custom = applyGlassSelectionToPasoDosGrupoDraft({
+      draft: changedProduct,
+      selection: { displayName: "Vidrio personalizado 5 mm" },
+      items: [], pricingMode: "precio_directo", provider: "", lineTemplates: [glass],
+    });
+    expect(custom.vidrioLineTemplateId).toBe("");
+    expect(custom.glassTechnicalSpec).toBeNull();
+  });
   it("inicia L42 guiada en la variante Normal confirmada", () => {
     const selected = applyLineTemplateToGrupoDraft(createDraft(), {
       id: 210,

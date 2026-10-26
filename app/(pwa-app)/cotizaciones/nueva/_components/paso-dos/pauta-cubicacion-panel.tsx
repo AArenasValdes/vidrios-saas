@@ -87,7 +87,11 @@ import {
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import { useSupplierPresentationResolution } from "@/features/proveedor-catalogos/hooks/use-supplier-presentation-resolution";
-import { resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
+import { resolveSupplierFinishName, resolveSupplierTechnicalCodesForQuote } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
+import { getLineTemplateWorkshopProfiles } from "@/features/cotizaciones/line-templates/types/line-profile-references";
+import { resolveSupplierFamilyKeyForLineTemplate } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
+import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
+import { SupplierProfilePricePreview } from "@/features/proveedor-catalogos/components/supplier-profile-price-preview";
 import { resolveUniversalAluminumLineKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
 import editor from "./pauta-cubicacion-panel.module.css";
@@ -100,6 +104,7 @@ export type PautaCubicacionFormSlice = {
   tipo?: string;
   sistema?: string;
   vidrio?: string;
+  catalogTerminacion?: string;
   /** Variante/herraje elegido cuando hay varias recetas activas compatibles. */
   fabricationRecipeId?: string;
   supplierProviderKey?: string;
@@ -1014,22 +1019,27 @@ export function PautaCubicacionPanel({
           : cubicationConfig?.status === "validada";
   const readOnlyFormalSnapshot = Boolean(formalSnapshot);
 
-  const supplierFamilyKey = formalSnapshot?.supplierFamilyKey ?? null;
+  const supplierCatalogLine = selectedTemplate ?? VENTORA_DEFAULT_LINE_CATALOG.find((line) => line.catalogKey === (catalogKey ?? componentForm.catalogLineKey)) ?? null;
+  const supplierFamilyKey = formalSnapshot?.supplierFamilyKey ?? resolveSupplierFamilyKeyForLineTemplate(supplierCatalogLine);
   const supplierPresentationRequests = useMemo(() => {
     const resolvedCatalogLineKey = catalogKey ?? selectedTemplate?.catalogKey ?? null;
-    const technicalCodes = formalSnapshot?.result.perfiles
+    const recipeCodes = formalSnapshot?.result.perfiles
       .map((profile) => profile.codigoPerfil.trim())
       .filter(Boolean) ?? [];
+    const documentedCodes = getLineTemplateWorkshopProfiles(supplierCatalogLine?.catalogMetadata)?.profiles
+      .filter((profile) => profile.codeStatus === "catalog_reference" && profile.code?.trim())
+      .map((profile) => profile.code!.trim()) ?? [];
+    const technicalCodes = resolveSupplierTechnicalCodesForQuote({ recipeCodes, documentedCodes });
     if (!supplierFamilyKey || !resolvedCatalogLineKey || technicalCodes.length === 0) return [];
     return [{
       itemId: "pauta-preview",
       catalogLineKey: resolvedCatalogLineKey,
       familyKey: supplierFamilyKey,
-      finishName: resolveSupplierFinishName(null, componentForm.colorHex),
+      finishName: resolveSupplierFinishName(componentForm.catalogTerminacion, componentForm.colorHex),
       technicalCodes: [...new Set(technicalCodes)],
       providerKey: componentForm.supplierProviderKey || null,
     }];
-  }, [formalSnapshot, supplierFamilyKey, catalogKey, selectedTemplate?.catalogKey, componentForm.colorHex, componentForm.supplierProviderKey]);
+  }, [formalSnapshot, supplierFamilyKey, catalogKey, selectedTemplate?.catalogKey, supplierCatalogLine, componentForm.catalogTerminacion, componentForm.colorHex, componentForm.supplierProviderKey]);
   const supplierPresentationResolution = useSupplierPresentationResolution(supplierPresentationRequests, {
     includeProviderOptions: true,
   });
@@ -1454,10 +1464,10 @@ export function PautaCubicacionPanel({
         : "Elige una línea comercial en Precio para generar la pauta de esta pieza."
     : useFormalDomain && formalResolution?.estado === "sin_receta"
       ? effectiveFabricacionHojas != null
-        ? "No hay receta compatible con esta tipología y cantidad de hojas."
+        ? "Sin despiece de perfiles para esta configuración."
         : formalResolution.candidatas.length > 0
-          ? "Hay recetas para esta linea, pero ninguna validada coincide con esta pieza."
-          : "Esta linea todavia no tiene una receta compatible validada."
+          ? "Sin despiece de perfiles para esta configuración."
+          : "Sin despiece de perfiles para esta línea."
     : useFormalDomain && selectedPersistedRecipe && !selectedPersistedRecipeReady
       ? describeIncompleteFabricacionMessage(
           isFabricacionRecipeReadyForSnapshot(selectedPersistedRecipe).pendingFields
@@ -1742,12 +1752,20 @@ export function PautaCubicacionPanel({
                 ) : null}
                 {supplierProviderOptions.map((option) => (
                   <option key={option.providerKey} value={option.providerKey}>
-                    {option.label}{option.isReference ? " · Referencia" : ""} · {option.pricedProfileCount}/{option.totalProfileCount} perfiles con precio
+                    {option.label}{option.isReference ? " · Referencia" : ""} · {option.pricedProfileCount}/{option.totalProfileCount} perfiles con precio{option.otherAvailableFinishNames?.length ? ` · precio en ${option.otherAvailableFinishNames.slice(0, 2).join(", ")}` : ""}
                   </option>
                 ))}
               </select>
               <small>Solo cambia el costo de compra; el precio de venta de la línea se mantiene.</small>
             </label>
+            <SupplierProfilePricePreview
+              prices={supplierPresentationResolution.result?.profilePrices?.["pauta-preview"] ?? []}
+              providerKey={selectedSupplierProviderKey || effectiveFamilyPreference}
+              familyKey={supplierFamilyKey}
+              finishName={supplierPresentationRequests[0]?.finishName ?? null}
+              canManagePrice={supplierPresentationResolution.result?.canManageSupplierPrices === true}
+              onPriceSaved={supplierPresentationResolution.refresh}
+            />
             {canManageFamilyPreferences && (selectedSupplierProviderKey || effectiveFamilyPreference) ? (
               <span className={editor.supplierPreferenceActions}>
                 {effectiveFamilyPreference ? <small>Habitual: {supplierProviderOptions.find((option) => option.providerKey === effectiveFamilyPreference)?.label ?? effectiveFamilyPreference}</small> : null}

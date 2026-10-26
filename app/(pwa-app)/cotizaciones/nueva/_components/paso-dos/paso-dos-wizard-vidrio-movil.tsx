@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { LuSearch, LuX } from "react-icons/lu";
+import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 
 import { repairBrokenText } from "./paso-dos-wizard-movil.utils";
 import s from "../../page.module.css";
@@ -25,6 +26,9 @@ type Props = {
   subtipo: string;
   vidSearch: string;
   canCreateCustomGlass: boolean;
+  glassCatalogTemplates?: readonly CotizacionLineTemplate[];
+  selectedGlassProductId?: string;
+  onSelectGlassProduct?: (productId: string) => void;
 };
 
 export function PasoDosWizardVidrioMovil({
@@ -40,6 +44,9 @@ export function PasoDosWizardVidrioMovil({
   subtipo,
   vidSearch,
   canCreateCustomGlass,
+  glassCatalogTemplates = [],
+  selectedGlassProductId = "",
+  onSelectGlassProduct,
 }: Props) {
   const [isGlassModalOpen, setIsGlassModalOpen] = useState(false);
   const isMirrorComponent = subtipo.trim() === "Espejo";
@@ -55,7 +62,7 @@ export function PasoDosWizardVidrioMovil({
             <div>
               <span className={s.cardLabel}>Catalogo de vidrios</span>
               <strong>Cambiar vidrio</strong>
-              <span className={s.stepTwoMobileNestedModalSubtle}>{recommendedReason}</span>
+              <span className={s.stepTwoMobileNestedModalSubtle}>Para esta pieza · puede repetirse en otros componentes</span>
             </div>
             <button
               className={s.stepTwoMobileHeaderAction}
@@ -68,6 +75,30 @@ export function PasoDosWizardVidrioMovil({
           </div>
 
           <div className={s.stepTwoMobileNestedModalBody}>
+            {glassCatalogTemplates.length > 0 ? (
+              <section className={s.stepTwoMobileGlassGroup} aria-label="Productos de vidrio del catálogo">
+                <div className={s.stepTwoMobileGlassGroupTitle}>Vidrio para este componente</div>
+                {currentGlass && !selectedGlassProductId ? <small>El vidrio actual está guardado solo por nombre. Elige un producto aquí para vincular su ficha técnica.</small> : null}
+                {selectedGlassProductId ? <small>Vinculado: {glassCatalogTemplates.find((template) => String(template.id) === selectedGlassProductId)?.nombre ?? "producto del catálogo"}</small> : null}
+                <div className={s.stepTwoMobileChoiceChips}>
+                  {glassCatalogTemplates.map((template) => (
+                    <button
+                      key={template.id}
+                      type="button"
+                      aria-pressed={selectedGlassProductId === String(template.id)}
+                      className={`${s.stepTwoMobileChoiceChip} ${selectedGlassProductId === String(template.id) ? s.stepTwoMobileChoiceChipActive : ""}`}
+                      onClick={() => {
+                        onSelectGlassProduct?.(String(template.id));
+                        setIsGlassModalOpen(false);
+                      }}
+                    >
+                      <span>{repairBrokenText(template.nombre)}</span>
+                      <small>Producto activo del catálogo</small>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ) : null}
             <div className={s.stepTwoMobileVidrioSearchWrap}>
               <LuSearch
                 aria-hidden

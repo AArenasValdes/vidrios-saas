@@ -41,6 +41,23 @@ it("muestra el logo Kompen al abrir el catálogo Thermowin", () => {
   expect(screen.getByText("2026 · 1 producto")).toBeInTheDocument();
 });
 
+it("muestra el logo Alumco y solo el año 2026 en su lista", () => {
+  const { container } = render(<MisPreciosContent catalog={{ providers: [{
+    providerKey: "alumco",
+    providerName: "Alumco",
+    revision: "notas-000000984-000000986-2026-10-14",
+    percentage: 0,
+    presentations: [{ presentationId: "alumco-5001", familyKeys: ["universal:aluminio:l5000"], technicalCodes: ["5001"], sku: "TI5001A", name: "Riel superior", finish: "Titanio", purchaseUnit: "TR", commercialLengthMm: 6000, referenceNetPrice: 13351, currency: "CLP", ownNetPrice: null, effective: { unitNetPrice: 13351, source: "reference", currency: "CLP" } }],
+  }] }} error={null} busy={false} save={jest.fn(async () => true)} refresh={async () => undefined} />);
+
+  expect(container.querySelector('img[src="/Icon-Empresas/alumco.jpeg"]')).toBeInTheDocument();
+  expect(screen.getByText("2026 · 1 producto")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /Alumco/ }));
+  expect(screen.getAllByText("2026").length).toBeGreaterThan(0);
+  expect(screen.queryByText("Lista de referencia")).not.toBeInTheDocument();
+  expect(screen.queryByText(/notas-000000984/)).not.toBeInTheDocument();
+});
+
 it("muestra el código técnico y oculta los identificadores internos del proveedor", () => {
   setup();
   fireEvent.click(screen.getByRole("button", { name: /Proveedor A/ }));

@@ -338,6 +338,12 @@
       "source": "app/api/cotizaciones/[id]/costo-tecnico-parcial/route.ts"
     },
     {
+      "path": "/api/cotizaciones/[id]/optimizacion-vidrios",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/cotizaciones/[id]/optimizacion-vidrios/route.ts"
+    },
+    {
       "path": "/api/cotizaciones/[id]/pdf-descargado",
       "type": "api",
       "area": "api",
@@ -696,6 +702,12 @@
       "type": "page",
       "area": "print",
       "source": "app/print/cotizaciones/[id]/fabricacion/page.tsx"
+    },
+    {
+      "path": "/print/cotizaciones/[id]/fabricacion/vidrios",
+      "type": "page",
+      "area": "print",
+      "source": "app/print/cotizaciones/[id]/fabricacion/vidrios/page.tsx"
     },
     {
       "path": "/privacy",

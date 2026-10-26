@@ -11,6 +11,7 @@ import {
   hasPerSystemConfigurations,
 } from "@/features/cotizaciones/services/component-catalog.service";
 import { LineTemplatePicker } from "@/features/cotizaciones/line-templates/components/line-template-picker";
+import { resolveLineCompatibilityContext } from "@/features/cotizaciones/line-templates/services/line-template-compatibility.service";
 import { MeasureDimensionInput } from "@/features/cotizaciones/components/measure-dimension-input";
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 import {
@@ -831,6 +832,8 @@ function TabMedidas({
                         <strong>Del catálogo de vidrios</strong>
                         <span>Vincula formato de plancha y costo técnico. No cambia el precio de la ventana.</span>
                       </div>
+                      {componentForm.vidrio && !componentForm.vidrioLineTemplateId ? <small>El vidrio actual está guardado solo por nombre. Selecciona un producto para vincular su ficha técnica; no se asociará por similitud.</small> : null}
+                      {componentForm.vidrioLineTemplateId ? <small>Vínculo para guardar: {glassCatalogTemplates.find((template) => String(template.id) === componentForm.vidrioLineTemplateId)?.nombre ?? "producto seleccionado"}</small> : null}
                       <div className={s.glassChipGrid}>
                         {glassCatalogTemplates.map((template) => {
                           const isActive =
@@ -1177,12 +1180,14 @@ function TabPrecio({
               onTemplatePriceUpdated={onTemplatePriceUpdated}
               mode={isGlassCatalogItem ? "glass" : "profile"}
               preferredMaterial={isGlassCatalogItem ? null : componentForm.material}
-              compatibilityContext={isGlassCatalogItem ? null : {
+              compatibilityContext={isGlassCatalogItem ? null : resolveLineCompatibilityContext({
                 componentType: componentForm.tipo,
-                openingType: componentForm.configuracion?.trim() || componentForm.sistema,
+                system: componentForm.sistema,
+                configuration: componentForm.configuracion,
+                componentLabel: componentForm.referencia,
                 leavesCount: componentForm.fabricacionHojas,
                 material: componentForm.material,
-              }}
+              })}
               ariaLabel={`Seleccionar ${catalogLabelLower}`}
             />
             <label className={s.field}>

@@ -4,12 +4,38 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 
 import { usePasoDosAgregarGrupoMovil } from "../use-paso-dos-agregar-grupo-movil";
 
+const catalogGlass = {
+  id: 3643,
+  organizationId: 1,
+  catalogKey: null,
+  nombre: "Float Incoloro 5mm",
+  categoria: "vidrio" as const,
+  unidadCobro: "m2" as const,
+  material: "Cristal" as const,
+  vidrioPrincipalRecomendado: null,
+  costoBase: 0,
+  precioM2Sugerido: 0,
+  minimoCobrable: 0,
+  redondeoPrecio: 0,
+  mermaPct: 0,
+  margenObjetivoPct: null,
+  proveedor: null,
+  vigenciaDesde: null,
+  vigenciaHasta: null,
+  catalogMetadata: { espesorMm: 5, categoriaTecnica: "monolitico", planchaAnchoMm: 2500, planchaAltoMm: 1800 },
+  isActive: true,
+  sortOrder: 0,
+  creadoEn: null,
+  actualizadoEn: null,
+  eliminadoEn: null,
+};
+
 function ProbePasoDosAgregarGrupoMovil() {
   const wizard = usePasoDosAgregarGrupoMovil({
     items: [],
     pricingMode: "margen",
     provider: "",
-    activeLineTemplates: [],
+    activeLineTemplates: [catalogGlass],
   });
 
   return (
@@ -20,7 +46,10 @@ function ProbePasoDosAgregarGrupoMovil() {
       <span data-testid="cantidad">{String(wizard.draft.cantidad)}</span>
       <span data-testid="linea">{wizard.draft.referencia}</span>
       <span data-testid="vidrio">{wizard.draft.vidrio}</span>
+      <span data-testid="vidrio-id">{wizard.draft.vidrioLineTemplateId}</span>
+      <span data-testid="vidrio-spec">{wizard.draft.glassTechnicalSpec?.thicknessMm ?? "pendiente"}</span>
       <span data-testid="linea-id">{wizard.draft.lineTemplateId}</span>
+      <span data-testid="proveedor">{wizard.draft.supplierProviderKey}</span>
       <span data-testid="precio">{wizard.draft.precio}</span>
       <span data-testid="modo">{wizard.draft.pricingMode}</span>
       <span data-testid="margen-pct">{wizard.draft.margenPct}</span>
@@ -57,8 +86,17 @@ function ProbePasoDosAgregarGrupoMovil() {
       <button type="button" onClick={() => wizard.updatePrecio("333000")}>
         precio manual
       </button>
+      <button type="button" onClick={() => wizard.updateSupplierProviderKey("alumco")}>
+        elegir alumco
+      </button>
       <button type="button" onClick={() => wizard.updateMargenPct("80")}>
         margen propio
+      </button>
+      <button type="button" onClick={() => wizard.selectGlassProduct("3643")}>
+        elegir vidrio 3643
+      </button>
+      <button type="button" onClick={() => wizard.updateVidrio("Vidrio personalizado")}>
+        vidrio personalizado
       </button>
       <button
         type="button"
@@ -143,6 +181,33 @@ describe("usePasoDosAgregarGrupoMovil", () => {
     expect(screen.getByTestId("linea")).toHaveTextContent("Línea 5000");
     expect(screen.getByTestId("vidrio")).toHaveTextContent("Templado 8mm");
     expect(screen.getByTestId("linea-id")).toHaveTextContent("tmpl-1");
+  });
+
+  it("guarda la elección explícita de proveedor en el borrador", () => {
+    render(<ProbePasoDosAgregarGrupoMovil />);
+
+    act(() => {
+      fireEvent.click(screen.getByText("abrir"));
+      fireEvent.click(screen.getByText("elegir alumco"));
+    });
+
+    expect(screen.getByTestId("proveedor")).toHaveTextContent("alumco");
+  });
+
+  it("transmite el ID y ficha del vidrio seleccionado y limpia el vínculo al escribir uno propio", () => {
+    render(<ProbePasoDosAgregarGrupoMovil />);
+    act(() => {
+      fireEvent.click(screen.getByText("abrir"));
+      fireEvent.click(screen.getByText("elegir vidrio 3643"));
+    });
+    expect(screen.getByTestId("vidrio")).toHaveTextContent("Float Incoloro 5mm");
+    expect(screen.getByTestId("vidrio-id")).toHaveTextContent("3643");
+    expect(screen.getByTestId("vidrio-spec")).toHaveTextContent("5");
+
+    act(() => fireEvent.click(screen.getByText("vidrio personalizado")));
+    expect(screen.getByTestId("vidrio")).toHaveTextContent("Vidrio personalizado");
+    expect(screen.getByTestId("vidrio-id")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("vidrio-spec")).toHaveTextContent("pendiente");
   });
 
   it("debe recalcular valor directo al volver desde modo margen", () => {

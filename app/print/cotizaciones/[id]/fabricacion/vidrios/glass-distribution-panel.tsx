@@ -231,9 +231,9 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
         body: JSON.stringify(requestBody),
       });
       const body = await response.json() as CalculationResponse & { error?: string; diagnostics?: string[] };
-      if (!response.ok) throw new Error([body.error, ...(body.diagnostics ?? [])].filter(Boolean).join(" ") || "No pudimos calcular la distribución.");
+      if (!response.ok) throw new Error(body.error || "No pudimos preparar la distribución. Revisa las medidas de vidrio e inténtalo otra vez.");
       if (!body.coverage || (downloadAfter && body.coverage.status !== "complete")) {
-        throw new Error(body.coverage?.diagnostics.join(" ") || "No se puede generar el PDF: la cobertura de vidrio no está completa.");
+        throw new Error("No se puede descargar el pedido completo. Ingresa las medidas de vidrio pendientes y vuelve a intentarlo.");
       }
       const displayedSnapshots = panes.map((pane) => pane.snapshotFingerprint);
       if (!sameSnapshotSet(displayedSnapshots, body.generatedFrom ?? [])) {
@@ -277,7 +277,7 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
       if (!response.ok) throw new Error(body.error || "No pudimos confirmar los paños actuales.");
       if (body.coverage.status !== "complete") {
         setSource(body);
-        throw new Error("La cobertura de vidrio está incompleta. La vista previa no representa toda la cotización y no se puede descargar como pedido completo.");
+        throw new Error("No se puede descargar el pedido completo. Ingresa las medidas de vidrio pendientes y vuelve a intentarlo.");
       }
       const current = body.panes.map((pane) => pane.snapshotFingerprint);
       if (!sameSnapshotSet(current, generatedFrom)) {
@@ -297,12 +297,14 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
         body: JSON.stringify(requestBody),
       });
       const calculation = await calculationResponse.json() as CalculationResponse & { error?: string; diagnostics?: string[] };
-      if (!calculationResponse.ok) throw new Error([calculation.error, ...(calculation.diagnostics ?? [])].filter(Boolean).join(" ") || "No se pudo validar la cobertura antes de generar el PDF.");
+      if (!calculationResponse.ok) throw new Error(calculation.error || "No se pudo preparar el PDF. Revisa las medidas de vidrio e inténtalo otra vez.");
       if (calculation.coverage.status !== "complete" || !sameSnapshotSet(current, calculation.generatedFrom ?? [])) {
         setResults(null);
         setPreviewOpen(false);
         setSource(body);
-        throw new Error("La cobertura o los paños cambiaron. Revisa la cotización y vuelve a calcular la distribución.");
+        throw new Error(calculation.coverage.status !== "complete"
+          ? "No se puede descargar el pedido completo. Ingresa las medidas de vidrio pendientes y vuelve a intentarlo."
+          : "Los vidrios guardados cambiaron. Vuelve a calcular la distribución antes de descargar.");
       }
       if (!calculation.results?.length || calculation.results.some((result) => result.status !== "feasible" || !result.verification.passed || result.sheets.length === 0)) {
         throw new Error(calculation.results?.flatMap((result) => result.errors).filter(Boolean)[0] || "No se encontró una distribución geométrica verificable.");
@@ -359,12 +361,12 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
     <section className={s.panel} aria-labelledby="glass-distribution-title" id="glass-distribution">
       <header className={s.heading}>
         <span className={s.icon}><LuLayers3 aria-hidden /></span>
-        <div><h2 id="glass-distribution-title">Distribución de planchas</h2><p>Usa solo las medidas de paño guardadas en la cubicación técnica.</p></div>
+        <div><h2 id="glass-distribution-title">Distribución de planchas</h2><p>Se usan las medidas finales guardadas para cada vidrio.</p></div>
       </header>
 
       {loading ? <p className={s.status}><LuLoaderCircle className={s.spinner} aria-hidden />Cargando vidrio y paños…</p> : null}
       {!loading && source ? <GlassDistributionCoverageNotice quoteId={quoteId} coverage={source.coverage} /> : null}
-      {!loading && source && panes.length === 0 ? <p className={s.empty}>{source.diagnostics[0] || "Esta cotización todavía no tiene paños técnicos guardados."}</p> : null}
+      {!loading && source && panes.length === 0 ? <p className={s.empty}>Aún no hay medidas de vidrio disponibles para distribuir.</p> : null}
 
       {panes.length > 0 ? <>
         <div className={s.glassGroups}>
@@ -398,6 +400,11 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
           <button type="button" className={s.secondaryAction} disabled={!canCalculate || busy || !results || source?.coverage.status !== "complete"} onClick={() => void exportPreviewResult("share")}><LuShare2 aria-hidden /> Compartir</button>
           <button type="button" className={s.secondaryAction} disabled={!canCalculate || busy} onClick={() => results ? setPreviewOpen(true) : void calculate(false, true)}><LuEye aria-hidden /> {results ? "Ampliar vista" : "Vista previa"}</button>
         </div>
+        {source?.coverage.status !== "complete" ? (
+          <p className={s.pdfBlockedNote} role="status">
+            Para descargar el pedido completo, ingresa las medidas de vidrio pendientes.
+          </p>
+        ) : null}
         {autoPreview && selected ? <div className={s.inlinePreview} aria-label="Vista previa preliminar de distribución">
           <div className={s.previewSheetHeader}><strong>Vista previa · plancha {selectedSheetIndex + 1}</strong><span>{selected.sheet.rawSheet.widthMm} × {selected.sheet.rawSheet.heightMm} mm</span></div>
           <div className={s.previewDrawingWrap}><PlanDrawing result={selected.result} allPlans={allSheets} /></div>

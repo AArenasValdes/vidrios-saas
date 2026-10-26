@@ -94,8 +94,8 @@ function pendingStudyRef(
 }
 
 const SERIE_5000_PROFILES: LineProfileReference[] = [
-  industryRef({ code: "5001", name: "Riel inferior", role: "Marco" }),
-  industryRef({ code: "5002", name: "Riel superior", role: "Marco" }),
+  industryRef({ code: "5001", name: "Riel superior", role: "Marco" }),
+  industryRef({ code: "5002", name: "Riel inferior", role: "Marco" }),
   industryRef({ code: "5003", name: "Jamba", role: "Marco" }),
   industryRef({ code: "5004", name: "Zócalo", role: "Hoja" }),
   industryRef({ code: "5005", name: "Cabezal", role: "Hoja" }),
@@ -862,6 +862,13 @@ const THERMOWIN_AMERICANA_S70_DOCUMENT = "NUEVO CATALOGO LINEA AMERICANA S-70 TW
 // Referencias comerciales, sin cantidades, medidas de corte ni precio del proveedor.
 const KOMPEN_PRIME_700_PROFILES: LineProfileReference[] = [
   kompenRef("KOM 701", "Marco fijo", "Marco", KOMPEN_PRIME_700_DOCUMENT, 2),
+  catalogRef({
+    code: "KOM 427/701",
+    name: "Aleta perimetral 427/701",
+    role: "Aleta",
+    provider: "Thermowin Kompen",
+    source: "docs/fabricacion/Kompen Thermowin/price/LÍNEA 700 PARA VENTANA FIJA COLOR NOGAL.jpeg",
+  }),
   kompenRef("KOM 702", "Hoja ventana interior", "Hoja", KOMPEN_PRIME_700_DOCUMENT, 3),
   kompenRef("KOM 703", "Pilar / poste", "Poste", KOMPEN_PRIME_700_DOCUMENT, 4),
   kompenRef("KOM 706", "Hoja puerta interior", "Hoja", KOMPEN_PRIME_700_DOCUMENT, 5),
@@ -902,6 +909,20 @@ const KOMPEN_FORM_800_PROFILES: LineProfileReference[] = [
   kompenRef("R804", "Refuerzo hoja ventana", "Refuerzo", KOMPEN_FORM_800_DOCUMENT, 4, "Ventanas correderas"),
   kompenRef("R815", "Refuerzo hoja puerta", "Refuerzo", KOMPEN_FORM_800_DOCUMENT, 5, "Puertas correderas"),
   kompenRef("R822", "Refuerzo traslapo fijo", "Refuerzo", KOMPEN_FORM_800_DOCUMENT, 6),
+  catalogRef({
+    code: "KOM 426/801",
+    name: "Aleta perimetral 426/801",
+    role: "Aleta",
+    provider: "Thermowin Kompen",
+    source: "docs/fabricacion/Kompen Thermowin/price/Agregar la Aleta y los Refuerzos-linea800.jpeg",
+  }),
+  catalogRef({
+    code: "Riel 800",
+    name: "Riel de aluminio 800",
+    role: "Riel",
+    provider: "Thermowin Kompen",
+    source: "docs/fabricacion/Kompen Thermowin/price/Misma línea 800 pero en Monorriel (una corredera).jpeg",
+  }),
 ];
 
 const KOMPEN_STAR_500_PROFILES: LineProfileReference[] = [

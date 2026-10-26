@@ -149,6 +149,8 @@ type Props = {
   onCustomSchemeDescriptionChange: (value: string) => void;
   onGuidedVisualConfigChange?: (value: GuidedVisualConfig | null) => void;
   onVidrioChange: (value: string) => void;
+  onSelectGlassProduct?: (productId: string) => void;
+  glassCatalogTemplates?: readonly CotizacionLineTemplate[];
   onCreateCustomGlass: (value: string) => void;
   onAnchoChange: (value: string) => void;
   onAltoChange: (value: string) => void;
@@ -435,6 +437,8 @@ export function PasoDosAgregarGrupoSheet({
   onCustomSchemeDescriptionChange,
   onGuidedVisualConfigChange,
   onVidrioChange,
+  onSelectGlassProduct = () => {},
+  glassCatalogTemplates = [],
   onCreateCustomGlass,
   onAnchoChange,
   onAltoChange,
@@ -3511,6 +3515,22 @@ export function PasoDosAgregarGrupoSheet({
                   Tipo de vidrio
                 </label>
                 <div>
+                  <label className={s.label} htmlFor="grupo-vidrio-catalogo">Vincular producto del catálogo</label>
+                  <select
+                    className={s.input}
+                    id="grupo-vidrio-catalogo"
+                    aria-label="Vincular vidrio del catálogo"
+                    value={draft.vidrioLineTemplateId}
+                    onChange={(event) => onSelectGlassProduct(event.target.value)}
+                  >
+                    <option value="">Sin vínculo técnico</option>
+                    {glassCatalogTemplates.map((template) => (
+                      <option key={template.id} value={String(template.id)}>
+                        {template.nombre}
+                      </option>
+                    ))}
+                  </select>
+                  {draft.vidrioLineTemplateId ? <small>Vinculado: {glassCatalogTemplates.find((template) => String(template.id) === draft.vidrioLineTemplateId)?.nombre}</small> : draft.vidrio ? <small>El vidrio está guardado solo por nombre. Selecciona un producto para asociar su ficha técnica.</small> : null}
                   <input
                     className={s.input}
                     list="grupo-vidrio-opciones"

@@ -1,7 +1,7 @@
 # AGENTS.md - Ventora
 
 Estado: vigente
-Actualizado: 2026-10-14
+Actualizado: 2026-10-17
 Responsable: ingeniería + agentes del repositorio
 
 Lee antes de editar. Ultima consolidacion: 2026-09-04.
@@ -75,6 +75,8 @@ docs/
 ## Integración de líneas con fabricación
 
 Antes de agregar o ampliar una línea, leer `docs/fabricacion/WORKFLOW_INTEGRAR_NUEVA_LINEA.md` y copiar `docs/fabricacion/PLANTILLA_INTEGRACION_LINEA.md` a la carpeta de evidencia de esa línea.
+
+El agente de proyecto `.cursor/agents/ventora-line-integration-guardian.md` aplica ese workflow y `docs/fabricacion/MAPA_CONEXIONES_LINEA.md` al agregar, cambiar o diagnosticar líneas, variantes, proveedores, precios, snapshots o salidas de fabricación. Usarlo como guía para comprobar el recorrido completo; un selector o una suite aislada no acreditan integración.
 
 - Trazar fuente → fixture → catálogo/seed → selección de cotización → snapshot → despiece/pauta interna. La presencia en el selector no demuestra integración.
 - Para perfiles con precio, trazar también `familyKey + código técnico + acabado + presentación` hasta el precio de compra privado; el precio de venta por línea permanece separado. Códigos iguales entre familias no comparten presentación, largo ni precio sin equivalencia explícita.

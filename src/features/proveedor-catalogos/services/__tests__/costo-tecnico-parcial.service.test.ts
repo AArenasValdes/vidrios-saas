@@ -1,6 +1,7 @@
 import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
 import { crearRecetaSerie42Sodal } from "@/features/fabricacion/fixtures/serie-42-provider-recipes";
 import { ARQUETIPO_CATALOGO_2026_10_05 } from "../../fixtures/arquetipo-catalogo-2026-10-05";
+import { ALUMCO_ALUMINIO_NOTAS_VENTA_2026_10_14 } from "../../fixtures/alumco-aluminio-notas-venta-2026-10-14";
 import { VERATEC_7400_JUNIO_2026_IMPORT } from "../../fixtures/veratec-7400-junio-2026";
 import {
   buildPartialTechnicalCostSnapshot,
@@ -108,6 +109,150 @@ describe("buildPartialTechnicalCostSnapshot", () => {
       lineNet: presentation.netPrice,
       currency: "CLP",
     });
+  });
+
+  it("no sustituye con Arquetipo un proveedor explícito Alumco si falta el precio", () => {
+    const workSnapshot = pauta([{ code: "2503", item: "V2", length: 1000 }]);
+    workSnapshot.bars[0]!.supplierProviderKey = "alumco";
+    const result = buildPartialTechnicalCostSnapshot({
+      workSnapshot,
+      quoteItems: [{ code: "V2", color: "Titanio", catalogLineKey: "ventora:l25", supplierFamilyKey: "universal:aluminio:l25" }],
+      availablePrices: [price({
+        presentationId: "arq-2503", providerKey: "arquetipo", preferred: true,
+        familyKeys: ["universal:aluminio:l25"], technicalCode: "2503", recipeComponentCodes: ["2503"],
+        finishCode: "", finishName: null, finishResolution: "finish_independent", netPrice: 12000,
+        commercialLengthMm: 6000, supplierSku: "30892503",
+      })],
+    });
+
+    expect(result?.lines).toHaveLength(0);
+    expect(result?.missing).toEqual(expect.arrayContaining([
+      expect.objectContaining({ technicalCode: "2503" }),
+    ]));
+  });
+
+  it("valora el proveedor explícito por clave aunque la pauta aún no tenga SKU", () => {
+    const workSnapshot = pauta([{ code: "2501", item: "L25", length: 1200 }]);
+    workSnapshot.bars[0]!.supplierProviderKey = "alumco";
+    workSnapshot.bars[0]!.acabadoKey = "Titanio";
+    workSnapshot.bars[0]!.largoComercialMm = 6000;
+    const result = buildPartialTechnicalCostSnapshot({
+      workSnapshot,
+      quoteItems: [{ code: "L25", color: "Titanio", catalogLineKey: "ventora:l25", supplierFamilyKey: "universal:aluminio:l25" }],
+      availablePrices: [
+        price({
+          presentationId: "arq-2501", providerKey: "arquetipo", preferred: true,
+          familyKeys: ["universal:aluminio:l25"], technicalCode: "2501", recipeComponentCodes: ["2501"],
+          finishCode: "", finishName: null, finishResolution: "finish_independent", netPrice: 27888,
+          commercialLengthMm: 6000, supplierSku: "30892501",
+        }),
+        price({
+          presentationId: "alumco-2501", providerKey: "alumco",
+          familyKeys: ["universal:aluminio:l25"], technicalCode: "2501", recipeComponentCodes: ["2501"],
+          finishCode: "TI", finishName: "Titanio", netPrice: 24551,
+          commercialLengthMm: 6000, supplierSku: "TI2501A",
+        }),
+      ],
+    });
+
+    expect(result?.lines).toHaveLength(1);
+    expect(result?.lines[0]).toMatchObject({
+      providerKey: "alumco",
+      technicalCode: "2501",
+      supplierSku: "TI2501A",
+      netPricePerPresentation: 24551,
+      lineNet: 24551,
+    });
+    expect(result?.missing).toEqual([
+      expect.objectContaining({ technicalCode: null, description: "Vidrio" }),
+    ]);
+  });
+
+  it.each([
+    ["2509", "Jamba cerrada", 18234],
+    ["2510", "Pierna cerrada", 18809],
+  ])("valora L25 %s (%s) con su precio Alumco", (profileCode, profileName, netPrice) => {
+    const workSnapshot = pauta([{ code: profileCode, item: "L25-cerrada", length: 1465 }]);
+    workSnapshot.bars[0]!.supplierProviderKey = "alumco";
+    workSnapshot.bars[0]!.largoComercialMm = 6000;
+    const availablePrices: CatalogPresentationPrice[] = ALUMCO_ALUMINIO_NOTAS_VENTA_2026_10_14.presentations.map((presentation) => {
+      const technical = ALUMCO_ALUMINIO_NOTAS_VENTA_2026_10_14.technicalInputs.find((row) => row.technicalKey === presentation.technicalKey)!;
+      return {
+        presentationId: presentation.sku,
+        providerKey: "alumco",
+        familyKeys: technical.familyKeys,
+        technicalCode: technical.sourceCode,
+        recipeComponentCodes: technical.recipeComponentCodes ?? [],
+        technicalName: technical.name,
+        supplierSku: presentation.sku,
+        presentationDescription: presentation.description,
+        finishCode: presentation.finishCode ?? "",
+        finishName: presentation.finishName,
+        finishResolution: presentation.finishResolution,
+        purchaseUnit: presentation.purchaseUnit,
+        commercialLengthMm: presentation.commercialLengthMm,
+        netPrice: presentation.netPrice,
+        priceBasis: "commercial_presentation",
+        currency: presentation.currency,
+        priceListId: "alumco-2026-10-14",
+        priceListRevision: ALUMCO_ALUMINIO_NOTAS_VENTA_2026_10_14.priceListRevision,
+      };
+    });
+    const result = buildPartialTechnicalCostSnapshot({
+      workSnapshot,
+      quoteItems: [{ code: "L25-cerrada", color: "Titanio", catalogLineKey: "ventora:l25", supplierFamilyKey: "universal:aluminio:l25" }],
+      availablePrices,
+    });
+
+    expect(result?.lines).toEqual([expect.objectContaining({
+      providerKey: "alumco",
+      technicalCode: profileCode,
+      technicalName: profileName,
+      supplierSku: `TI${profileCode}A`,
+      netPricePerPresentation: netPrice,
+      lineNet: netPrice,
+    })]);
+  });
+
+  it("no aplica a pierna abierta los precios Alumco de jamba y pierna cerradas", () => {
+    const availablePrices: CatalogPresentationPrice[] = ALUMCO_ALUMINIO_NOTAS_VENTA_2026_10_14.presentations.map((presentation) => {
+      const technical = ALUMCO_ALUMINIO_NOTAS_VENTA_2026_10_14.technicalInputs.find((row) => row.technicalKey === presentation.technicalKey)!;
+      return {
+        presentationId: presentation.sku,
+        providerKey: "alumco",
+        familyKeys: technical.familyKeys,
+        technicalCode: technical.sourceCode,
+        recipeComponentCodes: technical.recipeComponentCodes ?? [],
+        technicalName: technical.name,
+        supplierSku: presentation.sku,
+        presentationDescription: presentation.description,
+        finishCode: presentation.finishCode ?? "",
+        finishName: presentation.finishName,
+        finishResolution: presentation.finishResolution,
+        purchaseUnit: presentation.purchaseUnit,
+        commercialLengthMm: presentation.commercialLengthMm,
+        netPrice: presentation.netPrice,
+        priceBasis: "commercial_presentation",
+        currency: presentation.currency,
+        priceListId: "alumco-2026-10-14",
+        priceListRevision: ALUMCO_ALUMINIO_NOTAS_VENTA_2026_10_14.priceListRevision,
+      };
+    });
+
+    for (const profileCode of ["2503", "2506"]) {
+      const workSnapshot = pauta([{ code: profileCode, item: "L25-abierta", length: 1465 }]);
+      workSnapshot.bars[0]!.supplierProviderKey = "alumco";
+      workSnapshot.bars[0]!.largoComercialMm = 6000;
+      const result = buildPartialTechnicalCostSnapshot({
+        workSnapshot,
+        quoteItems: [{ code: "L25-abierta", color: "Titanio", catalogLineKey: "ventora:l25", supplierFamilyKey: "universal:aluminio:l25" }],
+        availablePrices,
+      });
+      expect(result?.lines).toHaveLength(0);
+      expect(result?.missing).toEqual(expect.arrayContaining([
+        expect.objectContaining({ technicalCode: profileCode }),
+      ]));
+    }
   });
 
   it("completa los costos disponibles de la receta L42 confirmada y deja identificado el 4201 sin precio", () => {
@@ -378,6 +523,29 @@ describe("buildPartialTechnicalCostSnapshot", () => {
       "Vidrio monolítico 4 mm",
     ]));
     expect(result?.assumptions).toEqual([]);
+  });
+
+  it("distingue el costo base del catálogo de vidrio del precio por presentación de proveedor", () => {
+    const result = buildPartialTechnicalCostSnapshot({
+      workSnapshot: pauta([{ code: "7401", item: "A", length: 2000 }]),
+      quoteItems: [{ code: "A", color: "Blanco", glassDescription: "Float incoloro QA 5 mm" }],
+      availablePrices: [price({
+        technicalCode: "7401",
+        supplierSku: "67401VER000",
+        finishCode: "000",
+        finishName: "Blanco",
+        commercialLengthMm: 5800,
+        netPrice: 31476,
+      })],
+    });
+
+    expect(result?.missing).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        description: "Float incoloro QA 5 mm",
+        reason: expect.stringContaining("El costo base ingresado en el catálogo de vidrios no se incluye en este resumen"),
+      }),
+    ]));
+    expect(result?.missing[0]?.reason).not.toContain("Sin precio ni presentación de vidrio");
   });
 
   it("resuelve el riel por mapping funcional y no mezcla barras físicas de acabados distintos", () => {

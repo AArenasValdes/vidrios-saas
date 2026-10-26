@@ -25,38 +25,50 @@ function getClient() {
 }
 
 /** Catálogo técnico confirmado, independiente de que una lista tenga precio activo. */
-export async function readConfirmedSupplierPresentations(organizationId?: number): Promise<ConfirmedSupplierPresentation[]> {
+export async function readConfirmedSupplierPresentations(
+  organizationId?: number,
+  options: { familyKeys?: readonly string[] } = {}
+): Promise<ConfirmedSupplierPresentation[]> {
   const admin = getClient();
-  const workshopRows = organizationId ? await listWorkshopPresentations(organizationId).catch((error: unknown) => {
+  const familyKeys = options.familyKeys?.length ? [...new Set(options.familyKeys)] : null;
+  const workshopRowsPromise = organizationId ? listWorkshopPresentations(organizationId).catch((error: unknown) => {
     if (error instanceof WorkshopPresentationsSchemaMissingError) return [];
     throw error;
-  }) : [];
-  const workshopPresentations: ConfirmedSupplierPresentation[] = workshopRows.map((row) => ({
-    presentationId: String(row.id),
-    providerKey: `taller:${organizationId}`,
-    supplierSku: String(row.sku_taller),
-    technicalCode: String(row.codigo_tecnico),
-    recipeComponentCodes: row.codigo_receta ? [String(row.codigo_receta)] : [],
-    familyKeys: [String(row.family_key)],
-    configurationKey: row.configuration_key ? String(row.configuration_key) : null,
-    preferred: row.preferida === true,
-    finishCode: null,
-    finishName: row.acabado_nombre ? String(row.acabado_nombre) : null,
-    finishResolution: row.modo_acabado === "independiente" ? "finish_independent" : "specific",
-    commercialLengthMm: row.largo_comercial_mm == null ? null : Number(row.largo_comercial_mm),
-  }));
-  const { data: presentations, error } = await admin.from("catalogo_presentaciones_proveedor")
+  }) : Promise.resolve([]);
+  let familyQuery = admin.from("catalogo_insumo_familias").select("insumo_tecnico_id, family_key");
+  if (familyKeys) familyQuery = familyQuery.in("family_key", familyKeys);
+  const [workshopRows, familyResult] = await Promise.all([workshopRowsPromise, familyQuery]);
+  const { data: familyRows, error: familyError } = familyResult;
+  if (familyError) throw new Error(familyError.message);
+  const workshopPresentations: ConfirmedSupplierPresentation[] = workshopRows
+    .filter((row) => !familyKeys || familyKeys.includes(String(row.family_key)))
+    .map((row) => ({
+      presentationId: String(row.id),
+      providerKey: `taller:${organizationId}`,
+      supplierSku: String(row.sku_taller),
+      technicalCode: String(row.codigo_tecnico),
+      recipeComponentCodes: row.codigo_receta ? [String(row.codigo_receta)] : [],
+      familyKeys: [String(row.family_key)],
+      configurationKey: row.configuration_key ? String(row.configuration_key) : null,
+      preferred: row.preferida === true,
+      finishCode: null,
+      finishName: row.acabado_nombre ? String(row.acabado_nombre) : null,
+      finishResolution: row.modo_acabado === "independiente" ? "finish_independent" : "specific",
+      commercialLengthMm: row.largo_comercial_mm == null ? null : Number(row.largo_comercial_mm),
+    }));
+  const familyIds = [...new Set((familyRows ?? []).map((row) => String(row.insumo_tecnico_id)))];
+  if (familyKeys && familyIds.length === 0) return workshopPresentations;
+
+  let presentationQuery = admin.from("catalogo_presentaciones_proveedor")
     .select("id, proveedor_key, sku_proveedor, modo_acabado, acabado_codigo, acabado_nombre, largo_comercial_mm, insumo_tecnico_id")
     .eq("estado_asociacion", "confirmada");
+  if (familyIds.length > 0) presentationQuery = presentationQuery.in("insumo_tecnico_id", familyIds);
+  const { data: presentations, error } = await presentationQuery;
   if (error) throw new Error(error.message);
   const technicalIds = [...new Set((presentations ?? []).map((row) => row.insumo_tecnico_id).filter(Boolean).map(String))];
   if (technicalIds.length === 0) return workshopPresentations;
-  const [{ data: inputs, error: inputError }, { data: familyRows, error: familyError }] = await Promise.all([
-    admin.from("catalogo_insumos_tecnicos").select("id, codigo_fuente, evidencia").in("id", technicalIds),
-    admin.from("catalogo_insumo_familias").select("insumo_tecnico_id, family_key").in("insumo_tecnico_id", technicalIds),
-  ]);
+  const { data: inputs, error: inputError } = await admin.from("catalogo_insumos_tecnicos").select("id, codigo_fuente, evidencia").in("id", technicalIds);
   if (inputError) throw new Error(inputError.message);
-  if (familyError) throw new Error(familyError.message);
   const inputById = new Map((inputs ?? []).map((row) => [String(row.id), row]));
   const familiesByInput = new Map<string, string[]>();
   for (const row of familyRows ?? []) {
@@ -159,7 +171,7 @@ export async function readQuoteForTechnicalCost(input: {
       .is("eliminado_en", null)
       .maybeSingle(),
     admin.from("cotizacion_items")
-      .select("id, codigo, color, vidrio, observaciones, fabricacion_snapshot, manual_glass_measurements")
+      .select("id, codigo, nombre, descripcion, color, vidrio, observaciones, fabricacion_snapshot, manual_glass_measurements")
       .eq("cotizacion_id", input.quoteId)
       .eq("organization_id", input.organizationId)
       .is("eliminado_en", null),
@@ -175,14 +187,15 @@ export async function readQuoteForTechnicalCost(input: {
     items: (items ?? []).map((item) => ({
       id: String(item.id),
       code: String(item.codigo ?? "").trim(),
-      name: decodeCotizacionItemPresentationMeta(item.observaciones).referencia || String(item.codigo ?? "").trim(),
-      description: String(item.vidrio ?? ""),
+      name: String(item.nombre ?? decodeCotizacionItemPresentationMeta(item.observaciones).referencia ?? item.codigo ?? "").trim(),
+      description: String(item.descripcion ?? item.vidrio ?? "").trim(),
       color: item.color as string | null,
       glassDescription: item.vidrio as string | null,
       observaciones: item.observaciones as string | null,
       manualGlassMeasurements: item.manual_glass_measurements,
       colorHex: decodeCotizacionItemPresentationMeta(item.observaciones).colorHex,
       finishName: decodeCotizacionItemPresentationMeta(item.observaciones).catalogTerminacion,
+      supplierProviderKey: decodeCotizacionItemPresentationMeta(item.observaciones).supplierProviderKey || null,
       catalogLineKey: decodeCotizacionItemPresentationMeta(item.observaciones).catalogLineKey,
       configurationKey: VENTORA_DEFAULT_LINE_CATALOG.find((line) => line.catalogKey === decodeCotizacionItemPresentationMeta(item.observaciones).catalogLineKey)?.catalogMetadata?.configurationKey as string | undefined,
       fabricacionSnapshot: item.fabricacion_snapshot,
@@ -199,12 +212,32 @@ export async function readQuoteForTechnicalCost(input: {
 export async function readSupplierPresentationPrices(input: {
   selectedByProvider?: Readonly<Record<string, SupplierPriceListSelection>>;
   preferredListIdsByProvider?: Readonly<Record<string, string>>;
+  /** Restrict quote-time resolution to the requested commercial families. */
+  familyKeys?: readonly string[];
   asOf?: Date;
 } = {}): Promise<CatalogPresentationPrice[]> {
   const admin = getClient();
-  const { data: lists, error: listsError } = await admin.from("catalogo_listas_precios")
-    .select("id, proveedor_key, revision, publicado_en, vigente_desde, vigente_hasta, creado_en, moneda, base_precio");
+  let familyQuery = admin.from("catalogo_insumo_familias").select("insumo_tecnico_id, family_key");
+  if (input.familyKeys?.length) familyQuery = familyQuery.in("family_key", [...new Set(input.familyKeys)]);
+  const confirmedPresentations = () => admin.from("catalogo_presentaciones_proveedor")
+    .select("id, proveedor_key, sku_proveedor, descripcion, modo_acabado, acabado_codigo, acabado_nombre, unidad_compra, largo_comercial_mm, insumo_tecnico_id")
+    .eq("estado_asociacion", "confirmada");
+  // The full catalog has no dependency on the family lookup. Scoped quote
+  // requests still wait for the matching input IDs before reading presentations.
+  const [listsResult, familyResult, unscopedPresentationsResult] = await Promise.all([
+    admin.from("catalogo_listas_precios")
+      .select("id, proveedor_key, revision, publicado_en, vigente_desde, vigente_hasta, creado_en, moneda, base_precio"),
+    familyQuery,
+    input.familyKeys?.length ? Promise.resolve(null) : confirmedPresentations(),
+  ]);
+  const { data: lists, error: listsError } = listsResult;
+  const { data: scopedFamilyRows, error: scopedFamilyError } = familyResult;
   if (listsError) throw new Error(listsError.message);
+  if (scopedFamilyError) throw new Error(scopedFamilyError.message);
+  const scopedTechnicalIds = input.familyKeys?.length
+    ? [...new Set((scopedFamilyRows ?? []).map((row) => String(row.insumo_tecnico_id)))]
+    : null;
+  if (scopedTechnicalIds && scopedTechnicalIds.length === 0) return [];
   const selectedLists = selectSupplierPriceLists({
     lists: (lists ?? []).map((list) => ({
       id: String(list.id),
@@ -219,42 +252,37 @@ export async function readSupplierPresentationPrices(input: {
     preferredListIdsByProvider: input.preferredListIdsByProvider,
     asOf: input.asOf,
   });
-  const selectedListIds = [...selectedLists.values()].map((list) => list.id);
-  const providerKeys = [...selectedLists.keys()];
-  if (selectedListIds.length === 0 || providerKeys.length === 0) return [];
-
-  const [{ data: prices, error: pricesError }, { data: presentations, error: presentationError }] = await Promise.all([
+  if (selectedLists.size === 0) return [];
+  const { data: presentations, error: presentationError } = unscopedPresentationsResult
+    ?? await confirmedPresentations().in("insumo_tecnico_id", scopedTechnicalIds ?? []);
+  if (presentationError) throw new Error(presentationError.message);
+  const technicalInputIds = [...new Set((presentations ?? []).map((row) => row.insumo_tecnico_id).filter(Boolean).map(String))];
+  if (technicalInputIds.length === 0) return [];
+  const providerKeys = [...new Set((presentations ?? []).map((row) => String(row.proveedor_key)))];
+  const selectedListIds = [...selectedLists.values()]
+    .filter((list) => providerKeys.includes(list.providerKey))
+    .map((list) => list.id);
+  if (selectedListIds.length === 0) return [];
+  const presentationIds = [...new Set((presentations ?? []).map((row) => String(row.id)))];
+  const [{ data: prices, error: pricesError }, { data: technicalInputs, error: technicalInputError }] = await Promise.all([
     admin.from("catalogo_precios_presentacion")
       .select("lista_precio_id, presentacion_id, precio_neto, moneda")
-      .in("lista_precio_id", selectedListIds),
-    admin.from("catalogo_presentaciones_proveedor")
-      .select("id, proveedor_key, sku_proveedor, descripcion, modo_acabado, acabado_codigo, acabado_nombre, unidad_compra, largo_comercial_mm, insumo_tecnico_id")
-      .in("proveedor_key", providerKeys)
-      .eq("estado_asociacion", "confirmada"),
+      .in("lista_precio_id", selectedListIds)
+      .in("presentacion_id", presentationIds),
+    admin.from("catalogo_insumos_tecnicos")
+      .select("id, codigo_fuente, nombre, evidencia")
+      .in("id", technicalInputIds),
   ]);
   if (pricesError) throw new Error(pricesError.message);
-  if (presentationError) throw new Error(presentationError.message);
+  if (technicalInputError) throw new Error(technicalInputError.message);
   const providerByListId = new Map((lists ?? []).map((list) => [String(list.id), String(list.proveedor_key)]));
   const priceByPresentation = new Map((prices ?? []).map((price) => [
     `${String(price.presentacion_id)}|${providerByListId.get(String(price.lista_precio_id)) ?? ""}`,
     price,
   ]));
-  const technicalInputIds = [...new Set((presentations ?? []).map((row) => row.insumo_tecnico_id).filter(Boolean).map(String))];
-  if (technicalInputIds.length === 0) return [];
-
-  const [{ data: technicalInputs, error: technicalInputError }, { data: inputFamilies, error: familyError }] = await Promise.all([
-    admin.from("catalogo_insumos_tecnicos")
-      .select("id, codigo_fuente, nombre, evidencia")
-      .in("id", technicalInputIds),
-    admin.from("catalogo_insumo_familias")
-      .select("insumo_tecnico_id, family_key")
-      .in("insumo_tecnico_id", technicalInputIds),
-  ]);
-  if (technicalInputError) throw new Error(technicalInputError.message);
-  if (familyError) throw new Error(familyError.message);
   const inputById = new Map((technicalInputs ?? []).map((row) => [String(row.id), row]));
   const familyKeysByInputId = new Map<string, string[]>();
-  for (const row of inputFamilies ?? []) {
+  for (const row of scopedFamilyRows ?? []) {
     const key = String(row.insumo_tecnico_id);
     familyKeysByInputId.set(key, [...(familyKeysByInputId.get(key) ?? []), String(row.family_key)]);
   }

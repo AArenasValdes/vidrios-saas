@@ -1130,26 +1130,89 @@
 
 .supplierPreferenceActions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px;
-  margin-top: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 0 0 2px;
 }
 
 .supplierPreferenceActions button {
-  border: 0;
-  background: transparent;
+  min-height: 48px;
+  border: 1px solid #c9dcfa;
+  border-radius: 10px;
+  background: #f5f9ff;
   color: var(--color-primary, #1769e0);
-  padding: 4px 0;
+  padding: 8px 12px;
   font: inherit;
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 0.8rem;
+  font-weight: 700;
   text-align: left;
   cursor: pointer;
+}
+
+.supplierPreferenceActions .supplierDefaultButton {
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-color: #1769e0;
+  background: #1769e0;
+  color: #fff;
+  box-shadow: 0 2px 5px rgba(23, 105, 224, 0.18);
+  text-align: center;
+}
+
+.supplierPreferenceActions .supplierDefaultButton:hover:not(:disabled) {
+  border-color: #0d58c6;
+  background: #0d58c6;
+}
+
+.supplierPreferenceActions .supplierDefaultButton:focus-visible {
+  outline: 3px solid rgba(23, 105, 224, 0.3);
+  outline-offset: 2px;
+}
+
+.supplierPreferenceActions .supplierPreferenceRemove {
+  min-height: 36px;
+  border-color: transparent;
+  background: transparent;
+  padding: 4px 0;
+  font-size: 0.74rem;
+  font-weight: 600;
 }
 
 .supplierPreferenceActions button:disabled {
   opacity: 0.6;
   cursor: wait;
+}
+
+.supplierDefaultStatus {
+  color: var(--cq-navy);
+  font-size: 0.77rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.supplierChangeNote {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 8px;
+  border: 1px solid #dce9fb;
+  border-left: 3px solid #4b8fe8;
+  background: #f4f8ff;
+  color: #52677f;
+  padding: 6px 9px;
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.supplierChangeNote svg {
+  flex: 0 0 auto;
+  color: #3979c7;
 }
 
 .supplierDisclosure {

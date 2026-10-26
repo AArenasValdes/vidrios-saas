@@ -40,6 +40,7 @@ export type SupplierQuoteItemColor = {
   finishName?: string | null;
   catalogLineKey?: string | null;
   supplierFamilyKey?: string | null;
+  supplierProviderKey?: string | null;
   configurationKey?: string | null;
   glassDescription?: string | null;
   recipeAccessories?: SupplierRecipeAccessoryConsumption[];
@@ -183,14 +184,20 @@ function matchesSelectedPresentation(
   // Legacy recipes without a supplier selection keep the previous family +
   // finish resolution behavior; their bar length is a calculation output,
   // not evidence of a selected supplier presentation.
-  if (!selection.presentationId && !selection.supplierSku) return true;
+  if (!selection.presentationId && !selection.supplierSku && !selection.providerKey) return true;
   if (
     candidate.commercialLengthMm != null && selection.commercialLengthMm != null &&
     candidate.commercialLengthMm !== selection.commercialLengthMm
   ) return false;
   if (selection.presentationId && candidate.presentationId === selection.presentationId) return true;
-  if (!selection.supplierSku || candidate.supplierSku !== selection.supplierSku) return false;
   if (selection.providerKey && candidate.providerKey !== selection.providerKey) return false;
+  // A saved supplier choice can intentionally contain only the provider key
+  // (for example when the quote was created before presentation IDs/SKUs were
+  // hydrated). In that case, family + recipe code are already constrained by
+  // the caller, so matching the selected provider is sufficient. Requiring a
+  // SKU here made every priced profile appear pending for explicit suppliers.
+  if (selection.supplierSku && candidate.supplierSku !== selection.supplierSku) return false;
+  if (!selection.supplierSku && !selection.providerKey) return false;
   if (selection.finishCode && candidate.finishCode && candidate.finishCode !== selection.finishCode) return false;
   if (
     selection.finishName && candidate.finishName &&
@@ -199,7 +206,21 @@ function matchesSelectedPresentation(
   return true;
 }
 
-function selectedPresentationForBar(bar: FabricacionTrabajoSnapshot["bars"][number]) {
+function selectedPresentationForBar(
+  bar: FabricacionTrabajoSnapshot["bars"][number],
+  quoteItem?: SupplierQuoteItemColor
+) {
+  const selectedProviderKey = quoteItem?.supplierProviderKey?.trim();
+  if (selectedProviderKey && selectedProviderKey !== bar.supplierProviderKey) {
+    return {
+      presentationId: null,
+      providerKey: selectedProviderKey,
+      supplierSku: null,
+      finishCode: null,
+      finishName: quoteItem?.finishName ?? null,
+      commercialLengthMm: bar.largoComercialMm,
+    };
+  }
   return {
     presentationId: bar.supplierPresentationId ?? null,
     providerKey: bar.supplierProviderKey ?? null,
@@ -339,7 +360,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
         (!entry.configurationKey || entry.configurationKey === quoteItem?.configurationKey) &&
         matchesCatalogFamily(entry, quoteItem?.catalogLineKey, quoteItem?.supplierFamilyKey) &&
         matchesRecipeComponent(entry, cut.codigoPerfil) &&
-        matchesSelectedPresentation(entry, selectedPresentationForBar(bar)) && (
+        matchesSelectedPresentation(entry, selectedPresentationForBar(bar, quoteItem)) && (
           entry.finishResolution === "finish_independent" ||
           entry.finishResolution === "specific" && normalizeFinish(entry.finishName) === normalizeFinish(finishName)
         )
@@ -369,8 +390,9 @@ export function buildPartialTechnicalCostSnapshot(input: {
       const lineFamily = resolveUniversalAluminumLineKey(quoteItem?.supplierFamilyKey) ??
         resolveUniversalAluminumLineKey(quoteItem?.catalogLineKey) ??
         quoteItem?.supplierFamilyKey ?? quoteItem?.catalogLineKey ?? "";
-      const selectedPresentation = selectedPresentationForBar(bar);
-      const groupKey = [cut.codigoPerfil, finishKey, lineFamily, quoteItem?.configurationKey ?? "", bar.despunteInicialMm, kerfMm, bar.supplierPresentationId ?? `${bar.supplierProviderKey ?? ""}:${bar.supplierSku ?? "legacy"}`].join("|");
+      const selectedPresentation = selectedPresentationForBar(bar, quoteItem);
+      const presentationIdentity = [selectedPresentation.presentationId ?? "", selectedPresentation.providerKey ?? "", selectedPresentation.supplierSku ?? ""].join(":");
+      const groupKey = [cut.codigoPerfil, finishKey, lineFamily, quoteItem?.configurationKey ?? "", bar.despunteInicialMm, kerfMm, presentationIdentity].join("|");
       const group = cutsByGroup.get(groupKey) ?? [];
       group.push({
         familyKey: lineFamily,
@@ -542,7 +564,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
     missing.set(`glass|${description}`, {
       technicalCode: null,
       description,
-      reason: "Sin precio ni presentación de vidrio en la lista importada.",
+      reason: "El costo base ingresado en el catálogo de vidrios no se incluye en este resumen. Falta una presentación de compra del proveedor con precio.",
     });
   }
   for (const quoteItem of input.quoteItems) {

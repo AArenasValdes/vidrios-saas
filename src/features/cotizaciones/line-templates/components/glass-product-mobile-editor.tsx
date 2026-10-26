@@ -9,6 +9,12 @@ import {
 } from "react-icons/lu";
 
 import { formatCurrencyInput } from "@/features/cotizaciones/new-quote/workflow-ui";
+import {
+  GLASS_TECHNICAL_CATEGORIES,
+  glassCategoryRequiresTechnicalReview,
+  type GlassManualCutStatus,
+  type GlassTechnicalCategory,
+} from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
 
 import type { LineTemplateFormDraft } from "./line-template-form-wizard";
 import s from "./line-template-mobile-editor.module.css";
@@ -19,6 +25,22 @@ const ROUNDING_OPTIONS = [
   { value: "5000", label: "A $5.000" },
   { value: "10000", label: "A $10.000" },
 ] as const;
+
+const GLASS_CATEGORY_LABELS: Record<GlassTechnicalCategory, string> = {
+  monolitico: "Monolítico",
+  laminado: "Laminado",
+  dvh: "DVH",
+  templado: "Templado",
+  espejo: "Espejo",
+  otro: "Otro especial",
+  pendiente: "Pendiente de identificar",
+};
+
+const MANUAL_CUT_STATUS_LABELS: Record<GlassManualCutStatus, string> = {
+  confirmed: "Apto para corte manual",
+  not_admitted: "No apto para corte manual",
+  pending_validation: "Pendiente de validar",
+};
 
 type Props = {
   sheetMode: "new" | "edit";
@@ -51,6 +73,9 @@ export function GlassProductMobileEditor({
   onClose,
 }: Props) {
   const activeStep = step === 2 ? 2 : 1;
+  const requiresTechnicalReview = glassCategoryRequiresTechnicalReview(draft.categoriaTecnica);
+  const manualCutDecisionBlocked = draft.categoriaTecnica === "pendiente" ||
+    (requiresTechnicalReview && !draft.revisionTecnicaExplicita);
 
   return (
     <section
@@ -74,7 +99,7 @@ export function GlassProductMobileEditor({
           </h2>
           <p>
             {activeStep === 1
-              ? "Datos comerciales del cristal"
+              ? "Producto compartido; lo asignas a cada componente al cotizar"
               : "Formato de plancha y costo de compra"}
           </p>
         </div>
@@ -114,6 +139,66 @@ export function GlassProductMobileEditor({
                 autoComplete="off"
               />
             </label>
+
+            <label className={s.field}>
+              <span>Espesor técnico (mm)</span>
+              <input
+                inputMode="decimal"
+                value={draft.espesor}
+                onChange={(event) => onDraftChange("espesor", event.target.value)}
+                placeholder="Ej. 4 o 6,38"
+                aria-label="Espesor técnico en milímetros"
+              />
+              <small>Se guarda solo si está indicado explícitamente; no se deduce del nombre.</small>
+            </label>
+
+            <label className={s.field}>
+              <span>Categoría técnica</span>
+              <select
+                value={draft.categoriaTecnica}
+                onChange={(event) => onDraftChange("categoriaTecnica", event.target.value as GlassTechnicalCategory)}
+                aria-label="Categoría técnica del vidrio"
+              >
+                {GLASS_TECHNICAL_CATEGORIES.map((category) => (
+                  <option key={category} value={category}>{GLASS_CATEGORY_LABELS[category]}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className={s.field}>
+              <span>Corte manual</span>
+              <select
+                value={draft.corteManualEstado}
+                onChange={(event) => onDraftChange("corteManualEstado", event.target.value as GlassManualCutStatus)}
+                aria-label="Aptitud del producto para corte manual"
+              >
+                {Object.entries(MANUAL_CUT_STATUS_LABELS).map(([value, label]) => (
+                  <option
+                    key={value}
+                    value={value}
+                    disabled={value !== "pending_validation" && manualCutDecisionBlocked}
+                  >
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <small>La aptitud no sustituye las medidas ni la receta validada.</small>
+            </label>
+
+            {requiresTechnicalReview ? (
+              <label className={s.activeRow}>
+                <span>
+                  <strong>Revisión técnica especial</strong>
+                  <small>Confirma que revisaste las restricciones de {GLASS_CATEGORY_LABELS[draft.categoriaTecnica].toLocaleLowerCase("es-CL")}.</small>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={draft.revisionTecnicaExplicita}
+                  onChange={(event) => onDraftChange("revisionTecnicaExplicita", event.target.checked)}
+                  aria-label="Confirmo que realicé la revisión técnica especial"
+                />
+              </label>
+            ) : null}
 
             <div className={s.moneyGrid}>
               <label className={s.field}>
@@ -207,6 +292,16 @@ export function GlassProductMobileEditor({
             </div>
 
             <form className={s.form} onSubmit={(event) => event.preventDefault()}>
+              <label className={s.field}>
+                <span>Orientación de corte del vidrio</span>
+                <select value={draft.pieceOrientation} onChange={(event) => onDraftChange("pieceOrientation", event.target.value as LineTemplateFormDraft["pieceOrientation"])}>
+                  <option value="unknown">Sin confirmar</option>
+                  <option value="fixed">No se gira</option>
+                  <option value="rotatable">Se puede girar 90°</option>
+                  <option value="grain_or_coating_directional">Direccional; no se gira</option>
+                </select>
+                <small>Se guarda en la ficha técnica y define si se puede rotar cada paño.</small>
+              </label>
               <div className={s.moneyGrid}>
                 <label className={s.field}>
                   <span>Ancho de plancha (mm)</span>

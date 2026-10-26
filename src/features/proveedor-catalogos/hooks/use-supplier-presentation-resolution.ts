@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   resolveSupplierPresentationsForQuote,
   type SupplierPresentationQuoteItemRequest,
@@ -10,10 +10,12 @@ import {
 /** Fetches current explicit selections for a preview. Persisted snapshots remain owned by callers. */
 export function useSupplierPresentationResolution(
   requests: readonly SupplierPresentationQuoteItemRequest[],
-  options: { includeProviderOptions?: boolean } = {}
+  options: { includeProviderOptions?: boolean; includeProfilePrices?: boolean } = {}
 ) {
-  const key = useMemo(() => JSON.stringify(requests), [requests]);
   const includeProviderOptions = options.includeProviderOptions === true;
+  const includeProfilePrices = options.includeProfilePrices !== false;
+  const key = useMemo(() => JSON.stringify({ requests, includeProfilePrices }), [includeProfilePrices, requests]);
+  const [refreshRevision, setRefreshRevision] = useState(0);
   const [state, setState] = useState<{
     key: string;
     result: SupplierPresentationResolutionResponse | null;
@@ -26,16 +28,24 @@ export function useSupplierPresentationResolution(
     let active = true;
     // Parse from the serialized key so freshly-created request arrays with the
     // same payload do not trigger duplicate network calls on every render.
-    const stableRequests = JSON.parse(key) as SupplierPresentationQuoteItemRequest[];
-    void resolveSupplierPresentationsForQuote(stableRequests, { includeProviderOptions }).then((result) => {
+    const payload = JSON.parse(key) as {
+      requests: SupplierPresentationQuoteItemRequest[];
+      includeProfilePrices: boolean;
+    };
+    void resolveSupplierPresentationsForQuote(payload.requests, {
+      includeProviderOptions,
+      includeProfilePrices: payload.includeProfilePrices,
+    }).then((result) => {
       if (active) setState({ key, result });
     });
     return () => { active = false; };
-  }, [includeProviderOptions, key, requests.length]);
+  }, [includeProviderOptions, key, refreshRevision, requests.length]);
 
   const result = requests.length > 0 && state?.key === key ? state.result : null;
+  const refresh = useCallback(() => setRefreshRevision((revision) => revision + 1), []);
   return {
     result,
     isResolving: requests.length > 0 && state?.key !== key,
+    refresh,
   };
 }

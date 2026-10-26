@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   ALUMINUM_COLOR_OPTIONS,
+  applyGlassSelectionToComponentForm,
   buildItemFromForm,
   buildGlassValue,
   buildCommercialComponentDisplayName,
@@ -36,6 +37,8 @@ import {
   getLineTemplateGlassMetadata,
   type CotizacionLineTemplate,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import type { GlassTechnicalSpec } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
+import { resolveGlassTechnicalSpecForProduct } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
 import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
@@ -129,6 +132,8 @@ export type PasoDosGrupoDraft = {
   guidedVisualConfig: GuidedVisualConfig | null;
   quickCompositionAdjustment: QuickCompositionAdjustment | null;
   vidrio: string;
+  vidrioLineTemplateId: string;
+  glassTechnicalSpec: GlassTechnicalSpec | null;
   lineTemplateId: string;
   supplierProviderKey?: string;
   cubicationSnapshot: CotizacionItemCubicationSnapshot | null;
@@ -383,6 +388,8 @@ export function buildStructuredAlcanceDetalleForm(input: {
       lineTemplateId: "",
       pricingMode: "precio_directo",
       vidrio: "",
+      vidrioLineTemplateId: "",
+      glassTechnicalSpec: null,
       nombre: manualName,
       descripcion: description,
       ancho,
@@ -650,6 +657,14 @@ export function applyLineTemplateToGrupoDraft(
       template.categoria === "vidrio"
         ? template.nombre
         : template.vidrioPrincipalRecomendado?.trim() || draft.vidrio,
+    vidrioLineTemplateId: template.categoria === "vidrio" ? String(template.id) : draft.vidrioLineTemplateId,
+    glassTechnicalSpec: template.categoria === "vidrio"
+      ? resolveGlassTechnicalSpecForProduct({
+          productId: String(template.id),
+          catalogMetadata: template.catalogMetadata,
+          existing: draft.glassTechnicalSpec,
+        })
+      : draft.glassTechnicalSpec,
     pricingMode: "precio_directo",
     priceInputMode: "line_m2",
     precioPorM2: String(Math.round(template.precioM2Sugerido)),
@@ -939,6 +954,8 @@ export function createInitialPasoDosGrupoDraft({
     guidedVisualConfig: seedForm?.guidedVisualConfig ?? null,
     quickCompositionAdjustment: seedForm?.quickCompositionAdjustment ?? null,
     vidrio: seedForm?.vidrio?.trim() || suggestedForm.vidrio,
+    vidrioLineTemplateId: seedForm?.vidrioLineTemplateId ?? "",
+    glassTechnicalSpec: seedForm?.glassTechnicalSpec ?? null,
     lineTemplateId: seedForm?.lineTemplateId ?? "",
     supplierProviderKey: seedForm?.supplierProviderKey ?? "",
     cubicationSnapshot: seedForm?.cubicationSnapshot ?? null,
@@ -1019,6 +1036,8 @@ export function buildPasoDosGrupoComponentForm({
       descripcion: syncedDraft.descripcion ?? "",
       pricingMode: syncedDraft.pricingMode,
       vidrio: syncedDraft.vidrio,
+      vidrioLineTemplateId: syncedDraft.vidrioLineTemplateId,
+      glassTechnicalSpec: syncedDraft.glassTechnicalSpec,
       ancho: syncedDraft.ancho,
       alto: syncedDraft.alto,
       cantidad: String(Math.max(1, syncedDraft.cantidad)),
@@ -1081,6 +1100,8 @@ export function buildPasoDosGrupoComponentForm({
     fabricacionSnapshot: syncedDraft.fabricacionSnapshot,
     pricingMode: syncedDraft.pricingMode,
     vidrio: syncedDraft.vidrio,
+    vidrioLineTemplateId: syncedDraft.vidrioLineTemplateId,
+    glassTechnicalSpec: syncedDraft.glassTechnicalSpec,
     ancho: syncedDraft.ancho,
     alto: syncedDraft.alto,
     cantidad: String(Math.max(1, syncedDraft.cantidad)),
@@ -1098,6 +1119,26 @@ export function buildPasoDosGrupoComponentForm({
     palilloType: syncedDraft.palilloType,
     costInputScope: syncedDraft.priceInputMode === "piece_total" ? "group_total" : "unit",
   });
+}
+
+export function applyGlassSelectionToPasoDosGrupoDraft(input: {
+  draft: PasoDosGrupoDraft;
+  selection: { displayName: string; productId?: string | null };
+  items: CotizacionWorkflowItem[];
+  pricingMode: PricingMode;
+  provider: PreferredProvider;
+  lineTemplates: readonly CotizacionLineTemplate[];
+}): PasoDosGrupoDraft {
+  const form = buildPasoDosGrupoComponentForm(input);
+  const selected = applyGlassSelectionToComponentForm(form, input.selection, input.lineTemplates);
+  const sodalAware = applySodalL25VidrioToForm(input.draft, selected.vidrio);
+
+  return {
+    ...sodalAware,
+    vidrio: selected.vidrio,
+    vidrioLineTemplateId: selected.vidrioLineTemplateId,
+    glassTechnicalSpec: selected.glassTechnicalSpec,
+  };
 }
 
 export function buildPasoDosGrupoSelectionPatch({
@@ -1247,6 +1288,10 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   const glassOptions = useMemo(
     () => getGlassOptionsForSubtype(draft.subtipo, params.customGlassOptions),
     [draft.subtipo, params.customGlassOptions]
+  );
+  const glassCatalogTemplates = useMemo(
+    () => activeLineTemplates.filter((template) => template.categoria === "vidrio"),
+    [activeLineTemplates]
   );
   const visibleLineTemplates = useMemo(
     () =>
@@ -1747,9 +1792,30 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   };
 
   const updateVidrio = (vidrio: string) => {
-    setDraft((current) => ({
-      ...applySodalL25VidrioToForm(current, vidrio),
-      vidrioLineTemplateId: "",
+    setDraft((current) => applyGlassSelectionToPasoDosGrupoDraft({
+      draft: current,
+      selection: { displayName: vidrio },
+      items: params.items,
+      pricingMode: params.pricingMode,
+      provider: params.provider,
+      lineTemplates: activeLineTemplates,
+    }));
+  };
+
+  const selectGlassProduct = (productId: string) => {
+    if (!productId) {
+      updateVidrio(draft.vidrio);
+      return;
+    }
+    const template = glassCatalogTemplates.find((candidate) => String(candidate.id) === productId);
+    if (!template) return;
+    setDraft((current) => applyGlassSelectionToPasoDosGrupoDraft({
+      draft: current,
+      selection: { displayName: template.nombre, productId: String(template.id) },
+      items: params.items,
+      pricingMode: params.pricingMode,
+      provider: params.provider,
+      lineTemplates: activeLineTemplates,
     }));
   };
 
@@ -2114,6 +2180,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     systemOptions,
     configurationOptions,
     glassOptions,
+    glassCatalogTemplates,
     visibleLineTemplates,
     summary,
     openSheet,
@@ -2156,6 +2223,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     updateIvaMode,
     updateCobraPrecioSeparado,
     updateVidrio,
+    selectGlassProduct,
     updateCubicationSnapshot,
     updateFabricationRecipeId,
     updateSupplierProviderKey,

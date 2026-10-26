@@ -39,7 +39,7 @@ describe("resolver explícito de presentación para pauta", () => {
     expect(resolveSupplierPresentationsForQuoteItem({
       request: { itemId: "L42", familyKey: "ventora:l42", finishName: null, technicalCodes: ["4201"], providerKey: preferredProvider },
       presentations: [arquetipo],
-    })[0]).toMatchObject({ status: "missing", providerKey: null, commercialLengthMm: null });
+    })[0]).toMatchObject({ status: "missing", providerKey: "alumco", commercialLengthMm: null });
   });
   it("normaliza las familias y exclusiones legacy a la identidad universal", () => {
     expect(resolveSupplierPresentationFamilyKeys({
@@ -55,6 +55,9 @@ describe("resolver explícito de presentación para pauta", () => {
   it("resuelve el acabado desde la etiqueta configurada o el hex exacto del catálogo", () => {
     expect(resolveSupplierFinishName("Negro Mate", "#ffffff")).toBe("Negro Mate");
     expect(resolveSupplierFinishName("Ventana", "#2a2a2a")).toBe("Negro");
+    expect(resolveSupplierFinishName("Titanio", "#7d8791")).toBe("Titanio");
+    expect(resolveSupplierFinishName(null, "#7d8791")).toBe("Titanio");
+    expect(resolveSupplierFinishName("Aluminio mate", "#a8a8a8")).toBeNull();
     expect(resolveSupplierFinishName("gris nuevo", "#123456")).toBeNull();
   });
 
@@ -146,7 +149,7 @@ describe("resolver explícito de presentación para pauta", () => {
     })[0]).toMatchObject({ status: "resolved", providerKey: "alumco", supplierSku: "AL-2001" });
     expect(resolveSupplierPresentationsForQuoteItem({
       request: { ...request, providerKey: "sodal" }, presentations: [arquetipo, alumco],
-    })[0]).toMatchObject({ status: "missing", providerKey: null, supplierSku: null });
+    })[0]).toMatchObject({ status: "missing", providerKey: "sodal", supplierSku: null });
   });
 
   it("muestra cobertura de precio por proveedor solo para familia, código, configuración y acabado compatibles", () => {

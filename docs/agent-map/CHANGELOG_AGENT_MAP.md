@@ -2,6 +2,55 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-10-19 - Handoff Antigravity / Gemini 4 Argon
+
+- Se creó `docs/agent-map/ANTIGRAVITY_PROJECT_CONTEXT.md` como contexto autocontenido para otro agente de código.
+- El handoff resume producto, arquitectura, rutas críticas, recetas y evidencia, separación de precios/snapshots, seguridad multi-tenant, estado sucio del worktree, comandos `pnpm`, límites de alcance y criterios de validación.
+- Incluye un prompt reusable que obliga a leer las fuentes rectoras, inspeccionar cambios locales y separar pruebas automáticas, navegador y taller.
+- No se modificó código, schema, migración, configuración de producción ni comportamiento de Ventora.
+
+## 2026-10-18 - Carga de Mis precios
+
+- Caché de 60 s exclusivamente para catálogo oficial/nombres; precios privados y autenticación siempre actuales, con respuesta HTTP no almacenable.
+- Eliminada lectura repetida de familias; presentaciones sin filtro se consultan en paralelo. Las lecturas de cotización por familia conservan su alcance.
+- Una sola solicitud inicial por montaje incluso con Strict Mode; recarga después de guardar. Filtro/orden de productos memoizados y formateadores de moneda reutilizados. `loading.tsx` entrega una transición de ruta visible.
+- Medición local autenticada: API antes 2.093 ms; respuestas con catálogo en caché 870 y 1.024 ms. No son métricas de producción ni de primera compilación de Next en desarrollo.
+- Smoke móvil: entrar desde Empresa, abrir Alumco, buscar 2509, abrir/cancelar editor; conserva Titanio, 6 m y $18.234. Sin errores de consola durante la comprobación.
+
+## 2026-10-17 - Resolución de acabado Alumco en cotización
+
+- El selector de compra anuncia otros acabados con precio cuando no coinciden con el acabado efectivo de la pieza; no usa esos precios hasta que el maestro elija el acabado correspondiente.
+- El catálogo de color reconoce `Titanio` por etiqueta y por el hex configurado. “Aluminio mate” permanece distinto, para no aplicar por error los SKU TI a otra terminación.
+- Regresión de la API cubre Serie 5000 con acabado sin resolver (`0/7`, disponible en Titanio) y con Titanio (`7/7`).
+
+## 2026-10-17 - Alumco en Mis precios y cobertura exacta por familia
+
+- “Mis precios” muestra el logo Alumco y solo el año `2026`; la evidencia mantiene las fechas reales de las notas (14-10-2026).
+- Se corrigió la identidad visible de los perfiles Serie 5000 según el catálogo y las notas: 5001 es Riel superior y 5002 Riel inferior.
+- Pruebas comprueban resolución al seleccionar Alumco por familia y código, conservando pendientes donde no existe referencia exacta (L42 4201); no se infieren equivalencias desde nombres.
+- No cambian recetas, descuentos, precios de venta ni snapshots. Validación de interfaz pendiente de smoke visual autenticado.
+
+## 2026-10-17 - Precios de perfiles Alumco
+
+- Se preparó el lote de 42 SKU de las notas Alumco 000000984/986 para ocho familias de aluminio (L12, L20, L25, L32, L35, L42, L45 y L5000), como precios netos CLP por tira de 6.000 mm.
+- Los SKU `TI` se registran como Titanio; `RO3506P` (Tapa) y `RO3507P` (Portafelpa) son independientes del color por aclaración del titular. No se aplican descuentos de corte ni se crean fórmulas.
+- El precio se conecta por familia y código. Línea 45 reutiliza solamente la equivalencia ya documentada `4502 → 4522`; el código 4511 no se fuerza a una receta.
+- Se añadieron fixture contractual, pruebas de suma por factura y resolución de precio sin exigir pauta, además de un importador global idempotente con preflight y verificación posterior. Tras autorización explícita, se insertaron 42 presentaciones y 42 precios; RO3506P/RO3507P quedaron independientes del acabado. Sin migración: el esquema existente admite el modo independiente.
+- Documento de evidencia: `docs/fabricacion/Alumco/INTEGRACION_PRECIOS_2026-10-14.md`.
+
+## 2026-10-17 - Guardar precios faltantes de perfiles desde la cotización
+
+- Guiada, Constructor y la revisión de pauta permiten guardar el precio neto de una presentación confirmada al proveedor seleccionado.
+- El endpoint autenticado deriva la organización de la sesión y vuelve a comprobar proveedor, familia, código, acabado y largo antes de guardar el override en `organizacion_precios_presentacion`.
+- El mismo valor aparece en “Mis precios” y se vuelve a resolver en la cotización. Presentaciones ausentes/ambiguas y moneda sin determinar siguen pendientes; no se crean perfiles, presentaciones ni precios globales.
+- Pruebas dirigidas: ruta de precios, resolución de cotización y componente de captura; no se ejecutaron escritura en base remota ni smoke visual autenticado.
+
+## 2026-10-17 - Agente y gate de integración de líneas
+
+- Se creó `ventora-line-integration-guardian` como agente de proyecto, con el workflow existente como fuente de verdad y sin resolutores nuevos.
+- `docs/fabricacion/MAPA_CONEXIONES_LINEA.md` registra rutas, funciones, identidades y comprobaciones desde catálogo/precio hasta Guiada, Constructor, proveedor, snapshot y PDF/Excel.
+- El expediente de línea exige precio de venta/compra, cobertura de perfiles, paridad de salidas y resultados separados de pruebas automáticas, navegador y taller.
+
 ## 2026-10-15 - Sincronización de medidas del Constructor en dibujos guardados
 
 - Al guardar, la configuración visual del ítem queda sincronizada con el ancho y alto actuales. El SVG compartido vuelve a sincronizar medidas al renderizar para cubrir cotizaciones históricas.
@@ -3098,3 +3147,22 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
 - Se identifica el costo técnico obsoleto al cambiar la captura guardada de pauta/proveedor, sin recálculo silencioso.
 - La prueba dirigida `pnpm test --runInBand --runTestsByPath app/api/proveedor-catalogos/preferencias-familia/__tests__/route.test.ts` pasó: 1 suite / 7 tests, con lectura multiempresa, permisos, rechazo de organización falsificada, guardado/actualización y eliminación. pgTAP no se ejecutó por falta del servicio Postgres local. El resto de pruebas y build previamente ejecutados para esta fase no se repitieron por este cambio documental.
 - No se modifican precios de venta, recetas, fórmulas, cotizaciones históricas ni snapshots. Fase 3 queda detenida aquí; no iniciar Fase 4 sin aprobación.
+# 2026-10-17 — Precio de perfil independiente del despiece y gate automático
+
+- Guiada y Constructor consultan precios por perfil desde códigos de receta cuando hay una receta y desde códigos documentados de la línea cuando no la hay. La consulta mantiene familia/acabado/presentación exactos y aplica ajustes/precios propios de la organización. La vista indica precio unitario por perfil; no inventa cantidades ni total de pieza sin pauta.
+- `fabrication-verify.yml` queda configurado para pull request, push a `main`, agenda semanal y activación manual. La suite no necesita credenciales de negocio ni escribe datos remotos. El agente de integración conserva su función de diagnóstico; el workflow no invoca un LLM ni autoriza arreglos automáticos.
+- Ver `docs/fabricacion/MAPA_CONEXIONES_LINEA.md`, `docs/fabricacion/WORKFLOW_INTEGRAR_NUEVA_LINEA.md` y el caso Kompen en `supplier-profile-price-preview.test.ts`.
+
+## 2026-10-21 — Simulación de planchas de vidrio (Etapa 3B)
+
+- El Resumen de fabricación incorpora **Optimizar vidrios** y una vista mobile-first con paños tomados solo de snapshots, parámetros físicos explícitos por ejecución, propuesta geométrica por vidrio, SVG proporcional, secuencia, retazos/desperdicio y PDF independiente. No guarda reglas ni plan, no consulta ni cambia precios, inventario, snapshots o PDFs existentes.
+- El plan se etiqueta como **Simulación - pendiente de validación del taller**. La API vuelve a autorizar la organización y carga la cotización por `organization_id`; un fingerprint de snapshots descarta la propuesta si la cotización cambia. El vidrio sin identidad técnica, espesor o formato queda pendiente.
+- `treeForSinglePane` compara rotaciones y ambos órdenes de corte; la expansión física se limita a 2.000 unidades en normalizador/optimizador. Casos añadidos para 9 piezas fijas, retazo 600 × 1.000 y límite de cantidad.
+- Verificación: optimizador + API 28 tests dirigidos, TypeScript y `docs:check` pasan. `pnpm fabrication:verify` falla solo por el snapshot previo Kompen (17/21 esperados, 18/23 locales); no se actualizó. ESLint focal termina sin errores, con dos advertencias previas en el page de resumen. Smoke visual confirmó carga, rechazo de CSS global y corrección de lista móvil. Cotización 1182 mostró dimensiones desde snapshot legacy pero sin identidad/especificación formal; se bloqueó como corresponde, por lo que no fue posible generar un PDF de caso real ni validar sus páginas visualmente. No se ejecutó build porque Next dev usaba `.next` en el navegador local; detenerlo o reconstruir `.next` podía interrumpir la sesión abierta.
+
+## 2026-10-21 — Correcciones del simulador de vidrio (Etapa 3B.1)
+
+- La selección de un vidrio del catálogo resuelve por ID dentro de las opciones de la organización, guarda `vidrioLineTemplateId` y una ficha técnica congelada en la metadata del ítem; reemplazarlo por un vidrio propio limpia ambos valores. La ficha conserva `corteManualEstado` y orientación del vidrio; pendiente/desconocida no se convierte en confirmada.
+- `cutSequence` distingue desplazamiento local, coordenada absoluta y extremos absolutos. Un único conversor geométrico alimenta el SVG y el PDF; el verificador independiente comprueba la coherencia de los campos emitidos.
+- La ficha de vidrio permite declarar orientación fija, girable o direccional. El simulador exige una decisión de orientación para plancha, paños desconocidos y retazos; no inicia con regla física preseleccionada. El PDF lista cada unidad física con medidas colocadas, giro y plancha, y separa paños, candidatos de retazo, desperdicio, despuntes y pérdidas de separación. Los paños bloqueados muestran causas concretas y acceso a la cotización.
+- Verificación: 5 suites focales / 116 tests pasan; `tsc --noEmit` y ESLint focal pasan con dos advertencias preexistentes en `lineas-precios-page-client.tsx`. `pnpm fabrication:verify` ejecutó 198 suites: 197 suites / 1.728 tests pasan y queda un fallo de snapshot ajeno a esta etapa (catálogo Kompen local 18/23 vs. snapshot 17/21); no se actualizó. No se ejecutó build ni smoke PDF autenticado; no hubo entorno QA aislado disponible en esta ejecución y no se alteraron cotizaciones productivas.

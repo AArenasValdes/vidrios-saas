@@ -14,26 +14,34 @@ export function GlassDistributionCoverageNotice({
   if (!coverage || coverage.status === "complete") return null;
 
   const partial = coverage.status === "partial";
+  const editUrl = (itemId: string) => {
+    const params = new URLSearchParams({ edit: quoteId, step: "2" });
+    if (itemId) {
+      params.set("itemId", itemId);
+      params.set("focus", "glass");
+    }
+    return `/cotizaciones/nueva?${params.toString()}`;
+  };
+
   return (
-    <aside className={s.notice} role="alert" aria-live="polite">
-      <strong>{partial ? "Distribución parcial" : "Distribución no disponible"}</strong>
-      <p>
-        {partial
-          ? "La vista previa incluye solo referencias con medidas verificadas; no representa toda la cotización. No descargues este plano como pedido completo."
-          : "No hay referencias de paño con medidas técnicas completas para preparar un pedido al proveedor."}
-      </p>
+    <aside className={s.notice} aria-label="Cobertura de medidas de vidrio" aria-live="polite">
+      <div className={s.summary}>
+        <strong>{partial ? "Distribución parcial" : "Medidas de vidrio pendientes"}</strong>
+        <span>{coverage.completeReferenceCount} completas · {coverage.pendingReferenceCount} pendientes</span>
+      </div>
       {coverage.pendingReferences.length > 0 ? (
         <ul>
           {coverage.pendingReferences.map((reference) => (
             <li key={`${reference.quoteItemId}:${reference.componentCode}`}>
-              <b>{reference.componentCode} · {reference.componentName}</b>
-              {reference.displayName ? ` · ${reference.displayName}` : ""}: {reference.reason}
+              <div className={s.pendingCopy}>
+                <b>Faltan las medidas del vidrio de {reference.componentCode} · {reference.componentName}</b>
+                {reference.displayName ? <small>{reference.displayName}</small> : null}
+              </div>
+              <Link href={editUrl(reference.quoteItemId)}>Ingresar medidas</Link>
             </li>
           ))}
         </ul>
-      ) : null}
-      {coverage.pendingReferences.length === 0 && coverage.diagnostics[0] ? <p>{coverage.diagnostics[0]}</p> : null}
-      <Link href={`/cotizaciones/nueva?edit=${encodeURIComponent(quoteId)}&step=2`}>Revisar componentes de la cotización</Link>
+      ) : <p>Aún no hay medidas de vidrio disponibles para distribuir.</p>}
     </aside>
   );
 }

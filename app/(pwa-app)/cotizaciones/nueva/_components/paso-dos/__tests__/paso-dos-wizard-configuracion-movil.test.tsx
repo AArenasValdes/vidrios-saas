@@ -10,6 +10,20 @@ jest.mock("@/features/organization-profile/hooks/use-organization-measure-unit",
   useOrganizationMeasureUnit: () => "mm",
 }));
 
+jest.mock("@/features/proveedor-catalogos/hooks/use-supplier-presentation-resolution", () => ({
+  useSupplierPresentationResolution: () => ({
+    isResolving: false,
+    result: {
+      providerOptions: {
+        "guided-line-provider-preview": [
+          { providerKey: "alumco", label: "Alumco · 2026", pricedProfileCount: 0, totalProfileCount: 7, isReference: false, otherAvailableFinishNames: ["Titanio"] },
+        ],
+      },
+      familyPreferences: {},
+    },
+  }),
+}));
+
 import { PasoDosWizardConfiguracionMovil } from "../paso-dos-wizard-configuracion-movil";
 import { createDefaultGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 
@@ -22,6 +36,11 @@ const baseProps = {
   colorOptions: [
     { label: "Aluminio mate", hex: "#a8a8a8" },
     { label: "Blanco", hex: "#f0eeeb" },
+    { label: "Blanco hueso", hex: "#dfd5c4" },
+    { label: "Negro", hex: "#2a2a2a" },
+    { label: "Negro mate", hex: "#444444" },
+    { label: "Madera", hex: "#8b5e3c" },
+    { label: "Titanio", hex: "#7d8791" },
   ],
   displayConfigurationOptions: ["2 hojas"],
   displaySystemOptions: ["Corredera"],
@@ -140,6 +159,65 @@ const baseProps = {
 };
 
 describe("PasoDosWizardConfiguracionMovil", () => {
+  it("pone el color antes de la línea y prioriza Titanio sin quitar Blanco hueso", () => {
+    const onColorChange = jest.fn();
+    render(<PasoDosWizardConfiguracionMovil {...baseProps} onColorChange={onColorChange} />);
+
+    const colorHeading = screen.getByText("Color perfil");
+    const lineHeading = screen.getByText("Linea comercial");
+    expect(colorHeading.compareDocumentPosition(lineHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Titanio" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Blanco hueso" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Titanio" }));
+    expect(onColorChange).toHaveBeenCalledWith("#7d8791");
+    fireEvent.click(screen.getByRole("button", { name: "Mas opciones" }));
+    expect(screen.getByRole("button", { name: "Blanco hueso" })).toBeInTheDocument();
+  });
+
+  it("permite elegir proveedor en Guiada, elimina el resumen repetido y marca la línea seleccionada", () => {
+    const onSupplierProviderKeyChange = jest.fn();
+    render(
+      <PasoDosWizardConfiguracionMovil
+        {...baseProps}
+        onSupplierProviderKeyChange={onSupplierProviderKeyChange}
+        draft={{ ...baseProps.draft, lineTemplateId: "al-1", catalogLineKey: "ventora:l25" }}
+        lineTemplateOptions={[{
+          id: "al-1",
+          organizationId: "org-1",
+          nombre: "Serie 25",
+          material: "Aluminio",
+          categoria: "aluminio",
+          unidadCobro: "m2",
+          precioM2Sugerido: 80000,
+          minimoCobrable: 0,
+          redondeoPrecio: 1000,
+          vidrioPrincipalRecomendado: null,
+          catalogKey: "ventora:l25",
+          catalogMetadata: {
+            familyKey: "universal:aluminio:l25",
+            workshopProfiles: {
+              seedVersion: 1,
+              profiles: [{ code: "2501", name: "Marco", role: "marco", description: null, provider: null, source: null, codeStatus: "catalog_reference" }],
+            },
+          },
+          isActive: true,
+          creadoEn: "2026-10-18T00:00:00.000Z",
+          actualizadoEn: "2026-10-18T00:00:00.000Z",
+        }]}
+      />
+    );
+
+    const lineButton = screen.getByRole("button", { name: /Serie 25.*80\.000/i });
+    expect(lineButton).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByText("Base: $80.000/m2")).not.toBeInTheDocument();
+    fireEvent.change(screen.getByRole("combobox", { name: "Proveedor de compra para esta línea" }), {
+      target: { value: "alumco" },
+    });
+    expect(onSupplierProviderKeyChange).toHaveBeenCalledWith("alumco");
+    expect(screen.getByRole("option", { name: /Alumco · 2026 · 0\/7 perfiles con precio · precio en Titanio/i })).toBeInTheDocument();
+  });
+
   it("permite abrir Ajustar composición cuando el sistema ya está elegido y aún no hay esquema de hojas", () => {
     render(<PasoDosWizardConfiguracionMovil {...baseProps} />);
 

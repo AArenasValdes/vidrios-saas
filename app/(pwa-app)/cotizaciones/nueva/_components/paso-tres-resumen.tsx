@@ -346,6 +346,7 @@ export function PasoTresResumen({
                   <tbody>
                     {draft.items.map((item) => {
                       const configText = getStepThreeItemConfiguration(item);
+                      const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
                       const isExpanded = Boolean(expandedItems[item.id]);
 
                       return (
@@ -362,6 +363,8 @@ export function PasoTresResumen({
                                   tipo: item.tipo,
                                   nombre: item.nombre,
                                   codigo: item.codigo,
+                                  sistema: presentation.sistema,
+                                  configuracion: presentation.configuracion,
                                 })}
                               </span>
                               <span className={s.rtItemConfig} title={configText}>

@@ -10,10 +10,11 @@ describe("ventora profile references", () => {
     expect(payload?.profiles).toHaveLength(7);
     expect(payload?.profiles[0]).toMatchObject({
       code: "5001",
-      name: "Riel inferior",
+      name: "Riel superior",
       role: "Marco",
       codeStatus: "catalog_reference",
     });
+    expect(payload?.profiles[1]).toMatchObject({ code: "5002", name: "Riel inferior" });
     expect(payload?.profiles.map((profile) => profile.code)).toEqual([
       "5001",
       "5002",

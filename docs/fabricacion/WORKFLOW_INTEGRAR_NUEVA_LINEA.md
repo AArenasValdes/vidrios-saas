@@ -1,11 +1,13 @@
 # Workflow seguro para integrar una línea de fabricación
 
-**Vigente:** 2026-09-27  
+**Vigente:** 2026-10-17
 **Alcance:** receta, cubicación, despiece, pauta referencial y selección en cotización.
 
 Este procedimiento es obligatorio para agregar o ampliar líneas con salida técnica. Su objetivo es mantener rastreable cada regla, probar las variantes y evitar que una receta documental se presente como validada por taller.
 
 Copiar la [plantilla de integración](PLANTILLA_INTEGRACION_LINEA.md) a la carpeta de evidencia de la línea. Ese expediente conserva decisiones, fórmulas, pruebas y pendientes para que otro agente continúe sin reconstruir la investigación.
+
+El [mapa de conexiones](MAPA_CONEXIONES_LINEA.md) enumera las rutas, funciones e indicadores que deben comprobarse desde catálogo y precios hasta Guiada, Constructor, snapshots, PDF y Excel. El agente de proyecto `.cursor/agents/ventora-line-integration-guardian.md` aplica este workflow; el mapa no reemplaza la inspección del código vigente.
 
 Para la unificación transversal pendiente, consultar [Base común de líneas, sistemas y composiciones](BASE_COMUN_LINEAS_SISTEMAS_COMPOSICIONES.md). Documenta las brechas actuales, la identidad propuesta y criterios de aceptación; no describe una funcionalidad ya desplegada.
 
@@ -57,6 +59,8 @@ Antes de dar una línea por integrada, comprobar cada tramo con una identidad co
 - La línea y el sistema elegidos en el catálogo se muestran como contexto; no se vuelven a pedir al maestro.
 - Declarar pares exactos componente + apertura/configuración bajo `catalogMetadata.compatibility.configurations`. El Paso 1 móvil solo ofrece esos pares. No combinar `componentTypes × openingTypes` porque crea cruces que el fabricante no publicó.
 - Mostrar hojas, rieles o subvariantes solo si la fuente los identifica; si falta el dato, indicarlo y dejar la composición pendiente.
+- Cuando una configuración declara una sola cantidad de hojas y una sola cantidad de hojas móviles, resolver esa composición automáticamente y mostrarla como resumen. No pedir al maestro que vuelva a seleccionar el sistema o la distribución. Si hay más de una combinación documentada, mostrar solo esas combinaciones; si falta un discriminador, pedir únicamente ese dato.
+- La resolución automática fija la identidad del producto, no valida una fórmula ni inventa descuentos. El cálculo de despiece sigue dependiendo de una receta compatible con sus propias reglas y datos.
 - La acción principal del Paso 1 dice **Perfiles y descuentos** y lleva al perfil que se edita. El descuento en mm queda junto a la base y cantidad de ese perfil, con unidad explícita y estado claro cuando no hay regla.
 - En **Perfiles y descuentos**, exponer perfiles/códigos de `workshopProfiles` o fixture canónico con la fuente por documento/página. Cuando el fabricante identifica la aplicación, guardar `applicationGroup` (por ejemplo, ventanas correderas o puertas correderas) y agrupar esas referencias en la UI. Dejar las no clasificadas en **Otros perfiles del catálogo**; no inferir su uso por coincidencias de nombre. Agregar una referencia crea una regla incompleta visible, no una fórmula: mantener el pendiente de base, descuento y cantidad hasta leer el Plan de armado.
 - Cualquier perfil de cualquier sistema puede eliminarse desde su edición. Confirmar antes de quitarlo y persistir la receta sin ese ID; probar que se elimina de la lista y no reaparece al reabrir.
@@ -126,7 +130,7 @@ pnpm fabrication:verify --build
 
 Detener primero cualquier servidor del mismo checkout que use `.next` y volver a iniciarlo después del build. No saltar errores preexistentes ni convertir una prueba unitaria en afirmación de QA visual, base remota o validación física. Si falla un snapshot, revisar su diferencia y la evidencia antes de actualizarlo con un comando dirigido a esa suite.
 
-`.github/workflows/fabrication-verify.yml` ejecuta el mismo gate en cada pull request y por ejecución manual, sin credenciales de negocio ni escrituras remotas. Conserva el informe como artefacto incluso ante fallos. Versionar el archivo configura el workflow; solo una ejecución en GitHub confirma CI. El bloqueo de merge requiere que el repositorio configure `fabrication-verify` como check obligatorio en su protección de rama.
+`.github/workflows/fabrication-verify.yml` ejecuta el mismo gate en cada pull request, push a `main`, semanalmente (lunes 08:17 UTC) y por ejecución manual, sin credenciales de negocio ni escrituras remotas. Conserva el informe como artefacto incluso ante fallos. Es una automatización de pruebas; no invoca un LLM ni modifica código o datos. Versionar el archivo configura el workflow; solo una ejecución en GitHub confirma CI. El bloqueo de merge requiere que el repositorio configure `fabrication-verify` como check obligatorio en su protección de rama.
 
 ## 5. Smoke visual seguro
 

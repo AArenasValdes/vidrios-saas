@@ -30,6 +30,16 @@
 .codex-*
 pdf-ref-shot.png
 tmp-*
+/tmp/
+/qa/optimizer-visual-20261024/
+/qa/supabase-current-state-20261023/
+/qa/supabase-schema-replay-20261023/
+/supabase/.temp/
+/component.tgz
+/output/fabricacion-mobile-qa/
+/output/pdf/ventora-correccion-*/
+/output/pdf/ventora-distribucion-vidrios-qa*
+/output/pdf/orden-fabricacion-materiales-ejemplo.pdf
 .tmp/arquetipo/
 /tmp/zeta-auth/
 

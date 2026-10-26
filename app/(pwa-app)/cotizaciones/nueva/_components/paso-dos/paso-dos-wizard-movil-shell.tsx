@@ -90,6 +90,7 @@ export type WizardActions = {
   systemOptions: readonly string[];
   configurationOptions: readonly string[];
   glassOptions: readonly string[];
+  glassCatalogTemplates: readonly CotizacionLineTemplate[];
   visibleLineTemplates: readonly CotizacionLineTemplate[];
   linePricingSummary: ComponentFormLinePricingSummary;
   isSavingLineTemplate: boolean;
@@ -111,6 +112,7 @@ export type WizardActions = {
   onNombreChange: (value: string) => void;
   onDescripcionChange: (value: string) => void;
   onSelectLineTemplate: (templateId: string) => void;
+  onSupplierProviderKeyChange: (providerKey: string) => void;
   onApplyCreatedLineTemplate: (template: CotizacionLineTemplate) => void;
   onCreateLineTemplate: (
     input: Omit<CreateCotizacionLineTemplateInput, "organizationId">
@@ -130,6 +132,7 @@ export type WizardActions = {
   onMirrorPaneDirectionChange: (value: PasoDosGrupoDraft["mirrorPaneDirection"]) => void;
   onMirrorInteriorLineChange: (value: PasoDosGrupoDraft["mirrorInteriorLine"]) => void;
   onVidrioChange: (value: string) => void;
+  onSelectGlassProduct: (productId: string) => void;
   onCreateCustomGlass: (value: string) => void;
   onAnchoChange: (value: string) => void;
   onAltoChange: (value: string) => void;
@@ -767,11 +770,11 @@ export function PasoDosWizardMovil({
                   displaySystemOptions={displaySystemOptions}
                   formattedPriceValue={formattedPriceValue}
                   glassCatalogGroups={glassCatalogGroups}
+                  glassCatalogTemplates={wizard.glassCatalogTemplates}
                   canCreateCustomGlass={canCreateCustomGlass}
                   isRecommendedGlass={(option) =>
                     isRecommendedGlass(option, glassRecommendation.recommendedOptions)
                   }
-                  linePricingSummary={wizard.linePricingSummary}
                   lineTemplateOptions={visibleLineTemplates}
                   isSavingLineTemplate={wizard.isSavingLineTemplate}
                   onAltoChange={wizard.onAltoChange}
@@ -783,6 +786,7 @@ export function PasoDosWizardMovil({
                   onNombreChange={wizard.onNombreChange}
                   onDescripcionChange={wizard.onDescripcionChange}
                   onSelectLineTemplate={wizard.onSelectLineTemplate}
+                  onSupplierProviderKeyChange={wizard.onSupplierProviderKeyChange}
                   onColorChange={wizard.onColorChange}
                   onConfiguracionChange={wizard.onConfiguracionChange}
                   onPalilloEnabledChange={wizard.onPalilloEnabledChange}
@@ -801,6 +805,7 @@ export function PasoDosWizardMovil({
                   onCobraPrecioSeparadoChange={wizard.onCobraPrecioSeparadoChange}
                   onSistemaChange={wizard.onSistemaChange}
                   onVidrioChange={wizard.onVidrioChange}
+                  onSelectGlassProduct={wizard.onSelectGlassProduct}
                   onAddAlcanceDetalle={wizard.onAddAlcanceDetalle}
                   onUpdateAlcanceDetalle={wizard.onUpdateAlcanceDetalle}
                   onRemoveAlcanceDetalle={wizard.onRemoveAlcanceDetalle}

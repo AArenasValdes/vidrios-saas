@@ -2,13 +2,18 @@ name: Fabricación y cotización
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "17 8 * * 1"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: fabrication-${{ github.event.pull_request.number || github.ref }}
+  group: fabrication-${{ github.event.pull_request.number || github.ref || github.run_id }}
   cancel-in-progress: true
 
 jobs:

@@ -82,9 +82,21 @@ Importes CLP netos por unidad indicada en origen. En las listas Prime/Form la un
 
 No se incorporaron herrajes ni accesorios en esta matriz. El rodamiento `P22115` aparece con $3.448 y $2.758 en imágenes distintas; queda pendiente de confirmación y no se elige uno automáticamente. La base no completa referencias o acabados ausentes en otras filas.
 
+## Revisión de la pauta Excel recibida — 2026-10-25
+
+Se revisó `Pauta%20Kompen.xlsx` en modo de solo lectura. La hoja `500 y 802` declara “Perfil Kompen”, color blanco y fecha 2018-04-16. Contiene bloques con fórmulas para `PROYECTANTE 500`, `FIJO 500` y varias composiciones correderas monorriel/triple riel. `Pauta Original` y `Hoja1` contienen reglas y ejemplos con etiquetas 700 y medidas de obras; no identifican de forma consistente la línea y configuración exactas. No se encontró un bloque rotulado 802 ni un cruce explícito entre sus resultados y códigos de perfil.
+
+Reglas legibles en la hoja `500 y 802`:
+
+- `PROYECTANTE 500`: hoja `ancho − 52` / `alto − 52`; TMP `ancho − 166` / `alto − 166` (a partir de la fórmula de hoja menos 114).
+- `FIJO 500`: TMP `ancho − 84` / `alto − 84`.
+- Las secciones monorriel muestran cálculos para hoja/TMP y ejemplos de entrada, pero no asignan cada resultado a códigos KOM concretos ni especifican la lista y cantidad completa de cortes del marco, encuentros, uniones y ángulos.
+
+Estas expresiones sirven para reproducir resultados parciales de vidrio/hoja, pero **no bastan para sembrar una receta de corte**: faltan cantidades y cortes completos por componente, el cruce inequívoco de cada bloque con una variante/código de catálogo y dos resultados independientes por variante. No se trasladan a recetas cotizables ni a pauta operativa por ahora, y no se marca ninguna familia como lista para probar o validada. Los códigos de perfiles de los PDF de catálogo no se usan para completar esos vacíos por similitud de nombre.
+
 ## Matriz de reglas y ejemplos independientes
 
-Los catálogos muestran secciones, dimensiones de perfil y refuerzos. **No muestran reglas de longitud de corte, cantidades por pieza, ángulos de unión, descuentos de vidrio ni ejemplos de entrada/salida**. La cota de una sección (por ejemplo, marco KOM 701 de 61 × 62 mm en Prime p. 2, o KOM 801 de 71 × 47 mm en Form p. 2) no se transforma en descuento de fabricación.
+Los catálogos PDF muestran secciones, dimensiones de perfil y refuerzos, no reglas de corte. La pauta Excel agrega las expresiones parciales descritas arriba, pero no resuelve por sí sola la lista de cortes y su identidad por variante. La cota de una sección (por ejemplo, marco KOM 701 de 61 × 62 mm en Prime p. 2, o KOM 801 de 71 × 47 mm en Form p. 2) no se transforma en descuento de fabricación.
 
 | Variante candidata | Tipología / hojas / riel / vidrio | Fuente | Perfiles identificados | Fórmula y cantidad | Ejemplos A/B | Pendiente y efecto |
 |---|---|---|---|---|---|---|

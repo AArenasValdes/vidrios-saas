@@ -1,4 +1,7 @@
 import type { FabricacionTrabajoPresentationSelection } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
+import type { CatalogPresentationPrice } from "./costo-tecnico-parcial.service";
+import type { OrganizationPurchasePricing } from "./precio-compra.service";
+import { resolvePurchasePrice } from "./precio-compra.service";
 import { normalizeUniversalAluminumFamilyKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
 export type ConfirmedSupplierPresentation = {
@@ -53,6 +56,116 @@ export type SupplierPriceCoveragePresentation = {
   configurationKey?: string | null;
   netPrice: number | null;
 };
+
+/** Recipe codes win when a recipe is resolved; otherwise use only published line references. */
+export function resolveSupplierTechnicalCodesForQuote(input: {
+  recipeCodes: readonly string[];
+  documentedCodes: readonly string[];
+}): string[] {
+  const selected = input.recipeCodes.length > 0 ? input.recipeCodes : input.documentedCodes;
+  return [...new Set(selected.map((code) => code.trim()).filter(Boolean))];
+}
+
+/**
+ * Shows exact catalog/price evidence for documented line references. This is
+ * deliberately independent of a recipe: it never estimates cut quantities or
+ * a complete component cost. Distinct confirmed presentations remain ambiguous.
+ */
+export function resolveSupplierProfilePricePreviews(input: {
+  request: SupplierPresentationResolutionRequest;
+  references: readonly { code: string; name: string }[];
+  presentations: readonly CatalogPresentationPrice[];
+  providerNames: ReadonlyMap<string, string>;
+  organizationPricing?: OrganizationPurchasePricing;
+}): SupplierProfilePricePreview[] {
+  const familyKey = (normalizeUniversalAluminumFamilyKey(input.request.familyKey) ?? input.request.familyKey).toLocaleLowerCase("es-CL");
+  const refsByCode = new Map<string, { code: string; name: string }>();
+  for (const reference of input.references) {
+    const code = normalizeCode(reference.code);
+    if (code && !refsByCode.has(code)) refsByCode.set(code, reference);
+  }
+  const output: SupplierProfilePricePreview[] = [];
+  for (const [code, reference] of refsByCode) {
+    const candidates = input.presentations.filter((entry) =>
+      entry.providerKey && entry.presentationId &&
+      (entry.familyKeys ?? []).some((key) =>
+        (normalizeUniversalAluminumFamilyKey(key) ?? key).toLocaleLowerCase("es-CL") === familyKey
+      ) &&
+      (!entry.configurationKey || entry.configurationKey === input.request.configurationKey) &&
+      (normalizeCode(entry.technicalCode) === code || (entry.recipeComponentCodes ?? []).some((linked) => normalizeCode(linked) === code)) &&
+      (entry.finishResolution === "finish_independent" ||
+        Boolean(input.request.finishName && entry.finishName && normalize(entry.finishName) === normalize(input.request.finishName)))
+    );
+    const byProvider = new Map<string, CatalogPresentationPrice[]>();
+    for (const candidate of candidates) {
+      const providerKey = candidate.providerKey!;
+      byProvider.set(providerKey, [...(byProvider.get(providerKey) ?? []), candidate]);
+    }
+    if (byProvider.size === 0) {
+      output.push({
+        technicalCode: reference.code,
+        profileName: reference.name,
+        providerKey: "",
+        providerLabel: "Sin presentación con precio para este acabado",
+        presentationId: "",
+        supplierSku: "",
+        presentationDescription: reference.name,
+        purchaseUnit: "",
+        commercialLengthMm: null,
+        netPrice: null,
+        currency: null,
+        priceSource: null,
+        status: "missing_price",
+      });
+    }
+    for (const [providerKey, providerCandidates] of byProvider) {
+      const [presentation] = providerCandidates;
+      if (providerCandidates.length !== 1 || !presentation?.presentationId) {
+        output.push({
+          technicalCode: reference.code,
+          profileName: reference.name,
+          providerKey,
+          providerLabel: input.providerNames.get(providerKey) ?? providerKey,
+          presentationId: "",
+          supplierSku: "",
+          presentationDescription: reference.name,
+          purchaseUnit: "",
+          commercialLengthMm: null,
+          netPrice: null,
+          currency: null,
+          priceSource: null,
+          status: "ambiguous",
+        });
+        continue;
+      }
+      const price = resolvePurchasePrice({
+        providerKey,
+        presentationId: presentation.presentationId,
+        referenceNetPrice: presentation.netPrice,
+        referenceBasis: presentation.priceBasis,
+        referenceCurrency: presentation.currency,
+        commercialLengthMm: presentation.commercialLengthMm,
+        organizationPricing: input.organizationPricing,
+      });
+      output.push({
+        technicalCode: reference.code,
+        profileName: reference.name,
+        providerKey,
+        providerLabel: input.providerNames.get(providerKey) ?? providerKey,
+        presentationId: presentation.presentationId,
+        supplierSku: presentation.supplierSku,
+        presentationDescription: presentation.presentationDescription,
+        purchaseUnit: presentation.purchaseUnit,
+        commercialLengthMm: presentation.commercialLengthMm,
+        netPrice: price?.unitNetPrice ?? null,
+        currency: price?.currency ?? null,
+        priceSource: presentation.origin === "workshop" ? "workshop" : price?.source ?? null,
+        status: price ? "priced" : "missing_price",
+      });
+    }
+  }
+  return output;
+}
 
 /** Explicit piece selection wins; otherwise use the organization's preference.
  * A null result deliberately leaves the legacy automatic resolver in control.
@@ -164,6 +277,7 @@ export function resolveSupplierFinishName(value: string | null | undefined, colo
     antracita: "Antracita",
     negro: "Negro",
     "negro mate": "Negro Mate",
+    titanio: "Titanio",
   };
   if (labels[normalized]) return labels[normalized];
   const labelsByExactHex: Record<string, string> = {
@@ -174,6 +288,7 @@ export function resolveSupplierFinishName(value: string | null | undefined, colo
     "#6f4a34": "Nogal",
     "#b7834a": "Roble Dorado",
     "#4f555d": "Antracita",
+    "#7d8791": "Titanio",
   };
   return labelsByExactHex[(colorHex ?? "").trim().toLowerCase()] ?? null;
 }
@@ -220,7 +335,7 @@ export function resolveSupplierPresentationsForQuoteItem(input: {
         technicalCode,
         status: "missing" as const,
         presentationId: null,
-        providerKey: null,
+        providerKey: request.providerKey ?? null,
         supplierSku: null,
         finishCode: null,
         finishName: null,
@@ -234,7 +349,7 @@ export function resolveSupplierPresentationsForQuoteItem(input: {
         technicalCode,
         status: "ambiguous" as const,
         presentationId: null,
-        providerKey: null,
+        providerKey: request.providerKey ?? null,
         supplierSku: null,
         finishCode: null,
         finishName: null,

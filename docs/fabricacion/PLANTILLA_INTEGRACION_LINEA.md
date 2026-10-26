@@ -10,6 +10,19 @@ Copiar este archivo a la carpeta de evidencia correspondiente y completar antes 
 - Variantes solicitadas y variantes explícitamente fuera de alcance:
 - Salida: cotizable / preliminar calculable / bloqueada por dato geométrico / validada por taller:
 
+## Contrato comercial y de compra
+
+Registrar la línea comercial y la receta por separado. Si no hay precio de venta o compra confirmado, indicar el faltante; nunca poner cero como precio efectivo. Guía de rutas e indicadores: [mapa de conexiones](MAPA_CONEXIONES_LINEA.md).
+
+| `catalog_key` / configuración / `line_template_id` | Precio venta: m², mínimo, redondeo y fuente | `familyKey` / `configurationKey` / proveedor | Código + acabado + presentación + largo + precio compra | Estado y pendiente |
+|---|---|---|---|---|
+| Completar | Completar | Completar | Completar | Completar |
+
+- Precio de venta manual probado antes/después de cambiar proveedor:
+- Preferencia de proveedor: explícito de pieza / habitual de taller / automático anterior; resultado:
+- Códigos requeridos con precio y largo / códigos requeridos; ambiguos y sin precio:
+- Organizaciones sin preferencia y proveedor preferido sin presentación válida:
+
 ## Matriz de reglas y ejemplos independientes
 
 Una fila por variante y rol. Expresar todas las medidas de prueba en mm. No obtener el valor esperado llamando al mismo motor bajo prueba.
@@ -32,11 +45,14 @@ Registrar redondeo, largos de barra, kerf, umbrales y unidades con su propia pro
 | Catálogo y slots | | |
 | Seed por organización y reintento | | |
 | Selector guiado y Constructor | | |
+| Precio de venta en Mis precios y en cotización | | |
 | Vidrio final y entradas adicionales | | |
 | Resolver por línea, tipología, hojas y variante | | |
+| Proveedor y presentación por código/acabado/largo | | |
+| Costo técnico vigente o pendiente | | |
 | Snapshot, guardado y reapertura | | |
 | Despiece y barras | | |
-| Impresión interna y PDF cliente | | |
+| Impresión interna, PDF/Excel fabricación y PDF cliente | | |
 
 ## Pruebas exigibles
 
@@ -48,6 +64,9 @@ Registrar redondeo, largos de barra, kerf, umbrales y unidades con su propia pro
 - [ ] Otra organización, otra línea, archivados y eliminados no intervienen en la selección.
 - [ ] Snapshot histórico permanece congelado; recálculo nuevo solo por la acción prevista.
 - [ ] Barras conservan piezas y no mezclan perfiles incompatibles; largos imposibles se advierten.
+- [ ] Precio comercial independiente: área, mínimo y redondeo correctos; edición manual persiste y no cambia por proveedor.
+- [ ] Proveedor explícito/habitual/automático respeta prioridad; acabado y presentación tienen precio/largo efectivo o pendiente visible, sin sustitución silenciosa ni costo antiguo presentado como vigente.
+- [ ] Vista interna, PDF y Excel de fabricación concuerdan con snapshot en códigos, cortes, tiras, fuentes, costos y pendientes; PDF cliente no expone datos técnicos.
 - [ ] Estado preliminar y aviso visible; pasar tests no cambia validación de taller.
 - [ ] Referencias del catálogo muestran código, nombre y página fuente; las aplicaciones documentadas se agrupan y las demás quedan aparte; agregarlas no crea una fórmula no documentada.
 - [ ] Perfil eliminado desaparece tras guardar y reabrir; disponible para línea propia y canónica.
@@ -72,5 +91,6 @@ Para declarar toda la línea integrada, recorrer todas las configuraciones nueva
 - Informe `test-results/fabrication/verification.json` (generado, no versionar):
 - Pruebas automáticas / navegador / build: aprobado, fallido o no ejecutado por separado:
 - Variantes calculables y bloqueadas con motivo concreto:
+- Indicadores del mapa con denominadores: compatibilidad, variantes, perfiles valorizados, precio, cortes, persistencia y salidas:
 - Escrituras realizadas en cuenta QA; base remota, migraciones y despliegue si los hubo:
 - Archivos y documentación actualizados; riesgos reales y siguiente paso:

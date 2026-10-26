@@ -1,7 +1,7 @@
 # Agent Map - Indice Maestro del Proyecto
 
 Estado: vigente
-Actualizado: 2026-10-15
+Actualizado: 2026-10-17
 Responsable: ingeniería
 
 ## Proposito
@@ -41,6 +41,8 @@ Si la tarea toca dashboard Fase 5 o su contrato de datos, leer tambien `docs/des
 15. **`MOBILE_COTIZACION_FLOW_HANDOFF.md`** - Flujo movil por items / Constructor de piezas
 16. **`../manuales/MANUAL_LINEAS_CUBICACION_PAUTA.md`** - Manual corto para taller
 17. **`../fabricacion/BASE_COMUN_LINEAS_SISTEMAS_COMPOSICIONES.md`** - Diagnóstico y contrato común de sistemas, composiciones, perfiles y recetas; implementación parcial e inventario de 73 entradas.
+18. **`../fabricacion/MAPA_CONEXIONES_LINEA.md`** - Recorrido comprobable de una línea desde catálogo/precios hasta cotización, proveedor, snapshot y PDF/Excel; guía del agente `.cursor/agents/ventora-line-integration-guardian.md`.
+19. **`ANTIGRAVITY_PROJECT_CONTEXT.md`** - Handoff autocontenido para Antigravity/Gemini 4 Argon con contexto de producto, arquitectura, límites, worktree, validación y prompt reusable.
 
 ## Foco actual
 

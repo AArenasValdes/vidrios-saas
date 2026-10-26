@@ -16,6 +16,12 @@ import {
 import { formatCurrencyInput } from "@/features/cotizaciones/new-quote/workflow-ui";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatLineTemplatePriceLabel } from "@/features/cotizaciones/line-templates/utils/catalog-labels";
+import {
+  GLASS_TECHNICAL_CATEGORIES,
+  glassCategoryRequiresTechnicalReview,
+  type GlassManualCutStatus,
+  type GlassTechnicalCategory,
+} from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
 
 import type { LineTemplateFormDraft } from "./line-template-form-wizard";
 import { GlassProductMobileEditor } from "./glass-product-mobile-editor";
@@ -27,6 +33,22 @@ const ROUNDING_OPTIONS = [
   { value: "5000", label: "Redondear a $5.000" },
   { value: "10000", label: "Redondear a $10.000" },
 ] as const;
+
+const GLASS_CATEGORY_LABELS: Record<GlassTechnicalCategory, string> = {
+  monolitico: "Monolítico",
+  laminado: "Laminado",
+  dvh: "DVH",
+  templado: "Templado",
+  espejo: "Espejo",
+  otro: "Otro especial",
+  pendiente: "Pendiente de identificar",
+};
+
+const MANUAL_CUT_STATUS_LABELS: Record<GlassManualCutStatus, string> = {
+  confirmed: "Apto para corte manual",
+  not_admitted: "No apto para corte manual",
+  pending_validation: "Pendiente de validar",
+};
 
 type Props = {
   sheetMode: "new" | "edit";
@@ -85,6 +107,9 @@ export function GlassProductFormWizard({
 
   const maxStep = 2;
   const openStep = Math.min(wizardStep, maxStep);
+  const requiresTechnicalReview = glassCategoryRequiresTechnicalReview(draft.categoriaTecnica);
+  const manualCutDecisionBlocked = draft.categoriaTecnica === "pendiente" ||
+    (requiresTechnicalReview && !draft.revisionTecnicaExplicita);
 
   useEffect(() => {
     const media = window.matchMedia("(min-width: 1024px)");
@@ -210,7 +235,7 @@ export function GlassProductFormWizard({
               </span>
               <span>
                 <strong>Compra</strong>
-                {costoBase > 0 ? formatCurrency(costoBase) : "Sin plancha"}
+                {costoBase > 0 ? formatCurrency(costoBase) : "Costo pendiente"}
               </span>
               <span>
                 <strong>Estado</strong>
@@ -270,7 +295,7 @@ export function GlassProductFormWizard({
                         <LuTag aria-hidden />
                         <div>
                           <strong>Identidad del cristal</strong>
-                          <span>Así aparecerá al cotizar piezas de vidrio</span>
+                          <span>Producto compartido; lo asignas a cada componente al cotizar.</span>
                         </div>
                       </div>
 
@@ -283,6 +308,72 @@ export function GlassProductFormWizard({
                           placeholder="Ej: Float 10 mm templado, Laminado 3+3"
                         />
                       </label>
+
+                      <div className={`${s.formSectionGrid} ${s.fieldSpan2}`}>
+                        <label className={s.fieldBlock}>
+                          <span className={s.fieldLabel}>Espesor técnico (mm)</span>
+                          <input
+                            className={s.textInput}
+                            inputMode="decimal"
+                            value={draft.espesor}
+                            onChange={(event) => onDraftChange("espesor", event.target.value)}
+                            placeholder="Ej: 4 o 6,38"
+                            aria-label="Espesor técnico en milímetros"
+                          />
+                          <span className={s.pricingFieldHelp}>Dato técnico explícito; no se obtiene del nombre.</span>
+                        </label>
+
+                        <label className={s.fieldBlock}>
+                          <span className={s.fieldLabel}>Categoría técnica</span>
+                          <select
+                            className={s.textInput}
+                            value={draft.categoriaTecnica}
+                            onChange={(event) => onDraftChange("categoriaTecnica", event.target.value as GlassTechnicalCategory)}
+                            aria-label="Categoría técnica del vidrio"
+                          >
+                            {GLASS_TECHNICAL_CATEGORIES.map((category) => (
+                              <option key={category} value={category}>{GLASS_CATEGORY_LABELS[category]}</option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label className={`${s.fieldBlock} ${s.fieldSpan2}`}>
+                          <span className={s.fieldLabel}>Corte manual</span>
+                          <select
+                            className={s.textInput}
+                            value={draft.corteManualEstado}
+                            onChange={(event) => onDraftChange("corteManualEstado", event.target.value as GlassManualCutStatus)}
+                            aria-label="Aptitud del producto para corte manual"
+                          >
+                            {Object.entries(MANUAL_CUT_STATUS_LABELS).map(([value, label]) => (
+                              <option
+                                key={value}
+                                value={value}
+                                disabled={value !== "pending_validation" && manualCutDecisionBlocked}
+                              >
+                                {label}
+                              </option>
+                            ))}
+                          </select>
+                          <span className={s.pricingFieldHelp}>La confirmación no reemplaza medidas, identificación ni receta validada.</span>
+                        </label>
+
+                        {requiresTechnicalReview ? (
+                          <label className={`${s.fieldBlock} ${s.fieldSpan2}`}>
+                            <span className={s.fieldLabel}>Revisión técnica especial</span>
+                            <span className={s.pricingFieldHelp}>Para vidrio {GLASS_CATEGORY_LABELS[draft.categoriaTecnica].toLocaleLowerCase("es-CL")}, confirma revisión antes de declarar aptitud.</span>
+                            <span className={s.activeCardCopy}>
+                              <input
+                                type="checkbox"
+                                checked={draft.revisionTecnicaExplicita}
+                                onChange={(event) => onDraftChange("revisionTecnicaExplicita", event.target.checked)}
+                                aria-label="Confirmo que realicé la revisión técnica especial"
+                              />
+                              Confirmo que revisé las restricciones técnicas de este producto.
+                            </span>
+                          </label>
+                        ) : null}
+                      </div>
                     </section>
 
                     <section className={s.wizardStep1Section}>
@@ -495,6 +586,16 @@ export function GlassProductFormWizard({
                 </p>
 
                 <div className={s.formSectionGrid}>
+                  <label className={`${s.fieldBlock} ${s.fieldSpan2}`}>
+                    <span className={s.fieldLabel}>Orientación de corte del vidrio</span>
+                    <select className={s.textInput} value={draft.pieceOrientation} onChange={(event) => onDraftChange("pieceOrientation", event.target.value as LineTemplateFormDraft["pieceOrientation"])}>
+                      <option value="unknown">Sin confirmar</option>
+                      <option value="fixed">No se gira</option>
+                      <option value="rotatable">Se puede girar 90°</option>
+                      <option value="grain_or_coating_directional">Direccional; no se gira</option>
+                    </select>
+                    <span className={s.pricingFieldHelp}>La orientación se conserva como dato técnico y limita el giro de los paños.</span>
+                  </label>
                   <label className={s.fieldBlock}>
                     <span className={s.fieldLabel}>
                       Ancho de plancha (mm) <em className={s.optionalMark}>opcional</em>

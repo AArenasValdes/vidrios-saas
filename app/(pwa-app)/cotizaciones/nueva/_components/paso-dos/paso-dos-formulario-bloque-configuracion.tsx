@@ -26,6 +26,7 @@ import {
   shouldShowSystemSelectionForComponent,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import { LineTemplatePicker } from "@/features/cotizaciones/line-templates/components/line-template-picker";
+import { resolveLineCompatibilityContext } from "@/features/cotizaciones/line-templates/services/line-template-compatibility.service";
 import { MeasureDimensionInput } from "@/features/cotizaciones/components/measure-dimension-input";
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 import {
@@ -162,12 +163,14 @@ export function PasoDosFormularioBloqueConfiguracion({
             preferredMaterial={
               isGlassCatalogSelection(componentForm) ? null : componentForm.material
             }
-            compatibilityContext={isGlassCatalogSelection(componentForm) ? null : {
+            compatibilityContext={isGlassCatalogSelection(componentForm) ? null : resolveLineCompatibilityContext({
               componentType: componentForm.tipo,
-              openingType: componentForm.configuracion?.trim() || componentForm.sistema,
+              system: componentForm.sistema,
+              configuration: componentForm.configuracion,
+              componentLabel: componentForm.referencia,
               leavesCount: componentForm.fabricacionHojas,
               material: componentForm.material,
-            }}
+            })}
             ariaLabel="Seleccionar linea comercial"
           />
           <label className={s.field}>

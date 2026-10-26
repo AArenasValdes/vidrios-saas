@@ -23,7 +23,6 @@ import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotiz
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import { DEFAULT_MARGIN_PCT } from "@/features/cotizaciones/types/pricing-mode";
 import type { CostInputScope } from "@/features/cotizaciones/types/pricing-mode";
-import { applySodalL25VidrioToForm } from "@/features/fabricacion/services/sodal-l25-context.service";
 import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
 
 import type { PasoDosGrupoDraft } from "./use-paso-dos-agregar-grupo";
@@ -43,6 +42,7 @@ import {
   syncDraftTemplatePricing,
   type PasoDosGrupoCategoria,
   type PasoDosGrupoEntryMode,
+  applyGlassSelectionToPasoDosGrupoDraft,
 } from "./use-paso-dos-agregar-grupo";
 import { useMobileViewportStability } from "./use-mobile-viewport-stability";
 
@@ -99,6 +99,10 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   const glassOptions = useMemo(
     () => getGlassOptionsForSubtype(draft.subtipo, params.customGlassOptions),
     [draft.subtipo, params.customGlassOptions]
+  );
+  const glassCatalogTemplates = useMemo(
+    () => activeLineTemplates.filter((template) => template.categoria === "vidrio"),
+    [activeLineTemplates]
   );
   const visibleLineTemplates = useMemo(
     // El selector móvil aplica sus pestañas sobre el catálogo completo. Si
@@ -288,6 +292,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
       setDraft((current) => ({
         ...current,
         lineTemplateId: "",
+        supplierProviderKey: "",
         referencia: "",
         precioPorM2: "",
         minimoCobrable: "",
@@ -304,11 +309,21 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
       return;
     }
 
-    setDraft((current) => applyLineTemplateToGrupoDraft(current, template));
+    setDraft((current) => ({
+      ...applyLineTemplateToGrupoDraft(current, template),
+      supplierProviderKey: "",
+    }));
   };
 
   const applyCreatedLineTemplate = (template: CotizacionLineTemplate) => {
-    setDraft((current) => applyLineTemplateToGrupoDraft(current, template));
+    setDraft((current) => ({
+      ...applyLineTemplateToGrupoDraft(current, template),
+      supplierProviderKey: "",
+    }));
+  };
+
+  const updateSupplierProviderKey = (supplierProviderKey: string) => {
+    setDraft((current) => ({ ...current, supplierProviderKey }));
   };
 
   const updateColorHex = (colorHex: string) => {
@@ -522,9 +537,30 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   };
 
   const updateVidrio = (vidrio: string) => {
-    setDraft((current) => ({
-      ...applySodalL25VidrioToForm(current, vidrio),
-      vidrioLineTemplateId: "",
+    setDraft((current) => applyGlassSelectionToPasoDosGrupoDraft({
+      draft: current,
+      selection: { displayName: vidrio },
+      items: params.items,
+      pricingMode: params.pricingMode,
+      provider: params.provider,
+      lineTemplates: activeLineTemplates,
+    }));
+  };
+
+  const selectGlassProduct = (productId: string) => {
+    if (!productId) {
+      updateVidrio(draft.vidrio);
+      return;
+    }
+    const template = glassCatalogTemplates.find((candidate) => String(candidate.id) === productId);
+    if (!template) return;
+    setDraft((current) => applyGlassSelectionToPasoDosGrupoDraft({
+      draft: current,
+      selection: { displayName: template.nombre, productId: String(template.id) },
+      items: params.items,
+      pricingMode: params.pricingMode,
+      provider: params.provider,
+      lineTemplates: activeLineTemplates,
     }));
   };
 
@@ -725,6 +761,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     systemOptions,
     configurationOptions,
     glassOptions,
+    glassCatalogTemplates,
     visibleLineTemplates,
     linePricingSummary,
     openSheet,
@@ -742,6 +779,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     updateCantidad,
     updateMaterial,
     selectLineTemplate,
+    updateSupplierProviderKey,
     applyCreatedLineTemplate,
     updateColorHex,
     updateSistema,
@@ -764,6 +802,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     updateIvaMode,
     updateCobraPrecioSeparado,
     updateVidrio,
+    selectGlassProduct,
     updateAncho,
     updateAlto,
     updatePrecio,

@@ -16,6 +16,8 @@ export type SupplierPriceProviderOption = {
   pricedProfileCount: number;
   totalProfileCount: number;
   isReference: boolean;
+  /** Other explicitly priced finishes for this line/code set, never applied silently. */
+  otherAvailableFinishNames?: string[];
 };
 
 export type SupplierPresentationResolutionResponse = {
@@ -26,11 +28,12 @@ export type SupplierPresentationResolutionResponse = {
   profilePrices?: Record<string, SupplierProfilePricePreview[]>;
   familyPreferences?: Record<string, string>;
   canManageFamilyPreferences?: boolean;
+  canManageSupplierPrices?: boolean;
 };
 
 export async function resolveSupplierPresentationsForQuote(
   items: readonly SupplierPresentationQuoteItemRequest[],
-  options: { includeProviderOptions?: boolean } = {}
+  options: { includeProviderOptions?: boolean; includeProfilePrices?: boolean } = {}
 ): Promise<SupplierPresentationResolutionResponse | null> {
   if (items.length === 0) return null;
   try {
@@ -38,7 +41,11 @@ export async function resolveSupplierPresentationsForQuote(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       cache: "no-store",
-      body: JSON.stringify({ items, includeProviderOptions: options.includeProviderOptions === true }),
+      body: JSON.stringify({
+        items,
+        includeProviderOptions: options.includeProviderOptions === true,
+        includeProfilePrices: options.includeProfilePrices !== false,
+      }),
     });
     if (!response.ok) return null;
     const payload = await response.json() as SupplierPresentationResolutionResponse;

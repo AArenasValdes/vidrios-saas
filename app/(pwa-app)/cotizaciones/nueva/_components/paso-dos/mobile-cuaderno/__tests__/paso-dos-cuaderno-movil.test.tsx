@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { useState } from "react";
 
 jest.mock("@/features/auth/hooks/useAuth", () => ({
@@ -452,7 +452,10 @@ describe("PasoDosCuadernoMovil", () => {
     fireEvent.click(screen.getByRole("button", { name: "Elegir linea de esta pieza" }));
     fireEvent.click(screen.getAllByRole("button", { name: "Todas" })[0]);
     fireEvent.click(screen.getByRole("button", { name: "Cristal" }));
-    fireEvent.click(screen.getByRole("option", { name: /Cristal monolitico 5mm/i }));
+    fireEvent.click(
+      within(screen.getByRole("listbox", { name: "Elegir linea de esta pieza" }))
+        .getByRole("option", { name: /Cristal monolitico 5mm/i })
+    );
 
     expect(onUpdateItem).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
@@ -460,6 +463,41 @@ describe("PasoDosCuadernoMovil", () => {
       "item-1",
       expect.objectContaining({ lineTemplateId: "cristal-5" })
     );
+  });
+
+  it("guarda el ID y la ficha del vidrio 3643 al editar otra propiedad", () => {
+    render(
+      <PasoDosCuadernoMovil
+        {...defaultProps}
+        items={[baseItem({ id: "item-1" })]}
+        lineTemplates={[baseLineTemplate({
+          id: 3643,
+          nombre: "Float Incoloro 5mm",
+          categoria: "vidrio",
+          material: "Cristal",
+          catalogMetadata: {
+            espesorMm: 5,
+            categoriaTecnica: "monolitico",
+            corteManualEstado: "pending_validation",
+            planchaAnchoMm: 2500,
+            planchaAltoMm: 1800,
+            orientacionCorte: "unknown",
+          },
+        })]}
+      />
+    );
+
+    fireEvent.click(screen.getByText("Ventana fija"));
+    fireEvent.change(screen.getByLabelText("Vincular vidrio del catálogo"), { target: { value: "3643" } });
+    fireEvent.change(screen.getByLabelText("Ancho (mm)"), { target: { value: "1400" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    expect(onUpdateItem).toHaveBeenCalledWith("item-1", expect.objectContaining({
+      ancho: "1400",
+      vidrio: "Float Incoloro 5mm",
+      vidrioLineTemplateId: "3643",
+      glassTechnicalSpec: expect.objectContaining({ productId: "3643", thicknessMm: 5, manualCutStatus: "pending_validation" }),
+    }));
   });
 
   it("no presume compatibilidad de líneas privadas y permite explorarlas en Mis líneas y Todas", () => {

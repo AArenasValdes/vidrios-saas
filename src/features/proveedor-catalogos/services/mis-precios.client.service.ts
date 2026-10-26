@@ -28,7 +28,10 @@ export type MyPricesCatalog = { providers: MySupplierPrices[] };
 const endpoint = "/api/proveedor-catalogos/mis-precios";
 
 export async function loadMyPrices(): Promise<MyPricesCatalog> {
-  const response = await fetch(endpoint, { cache: "no-store" });
+  // The API sends Cache-Control: private, no-store for the personalized result.
+  // A client no-store directive would also bypass Next's common catalog cache
+  // in development, causing the whole supplier catalog to be queried again.
+  const response = await fetch(endpoint);
   const payload = await response.json() as MyPricesCatalog & { error?: string };
   if (!response.ok) throw new Error(payload.error || "No pudimos cargar tus precios.");
   return payload;
@@ -40,6 +43,24 @@ export async function saveMyPriceChange(change:
   | { kind: "clear_override"; providerKey: string; presentationId: string }
 ) {
   const response = await fetch(endpoint, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(change) });
+  const payload = await response.json() as { error?: string };
+  if (!response.ok) throw new Error(payload.error || "No pudimos guardar el precio.");
+}
+
+export async function saveQuotePresentationPrice(change: {
+  providerKey: string;
+  presentationId: string;
+  familyKey: string;
+  technicalCode: string;
+  finishName: string;
+  netPrice: number;
+  currency: string;
+}) {
+  const response = await fetch(endpoint, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ kind: "quote_override", ...change }),
+  });
   const payload = await response.json() as { error?: string };
   if (!response.ok) throw new Error(payload.error || "No pudimos guardar el precio.");
 }

@@ -4,6 +4,15 @@
 # --- Build caches y artefactos locales ---
 /.tmp/
 /tmp/
+/.codex/
+/qa/optimizer-visual-20261024/
+/qa/supabase-current-state-20261023/
+/qa/supabase-schema-replay-20261023/
+/component.tgz
+/output/fabricacion-mobile-qa/
+/output/pdf/ventora-correccion-*/
+/output/pdf/ventora-distribucion-vidrios-qa*
+/output/pdf/orden-fabricacion-materiales-ejemplo.pdf
 .codex-*
 .jest-cache/
 .next/
@@ -45,6 +54,8 @@ public/video-assets/
 !/public/brand/ventora-logo-compact-on-light.svg
 !/public/brand/ventora-logo-login-clean-dark.svg
 !/public/brand/ventora-logo-premium-dark.svg
+!/public/brand/clientes/
+!/public/brand/clientes/**
 
 # Landing: fuentes PNG/JPEG de trabajo; producción usa webp (+ 1 png de dashboard)
 /public/ventora-landing-page/**/*.png

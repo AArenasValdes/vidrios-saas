@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
-import { LuArrowRight, LuX } from "react-icons/lu";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { LuArrowRight, LuInfo, LuStar, LuX } from "react-icons/lu";
 
 import { LineTemplatePicker } from "@/features/cotizaciones/line-templates/components/line-template-picker";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
-import { resolveLineCompatibilityOpeningType } from "@/features/cotizaciones/line-templates/services/line-template-compatibility.service";
+import { resolveLineCompatibilityContext, resolveLineCompatibilityOpeningType } from "@/features/cotizaciones/line-templates/services/line-template-compatibility.service";
 import { resolveSupplierFamilyKeyForLineTemplate } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
 import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import {
   ALUMINUM_COLOR_OPTIONS,
+  applyGlassSelectionToComponentForm,
   applyLineTemplateToComponentForm,
   buildComponentFormLinePricingSummary,
   PVC_COLOR_OPTIONS,
@@ -39,8 +40,11 @@ import type {
 } from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
 import { isSodalL25CatalogKey, resolveEffectiveSodalL25CatalogKey } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
-import { resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
+import { resolveSupplierFinishName, resolveSupplierTechnicalCodesForQuote } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 import { resolveSupplierPresentationsForQuote, type SupplierPriceProviderOption } from "@/features/proveedor-catalogos/services/supplier-presentations.client";
+import type { SupplierProfilePricePreview } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
+import { getLineTemplateWorkshopProfiles } from "@/features/cotizaciones/line-templates/types/line-profile-references";
+import { SupplierProfilePricePreview as SupplierProfilePricePreviewComponent } from "@/features/proveedor-catalogos/components/supplier-profile-price-preview";
 import {
   measureDimensionFieldLabel,
   measureDimensionPlaceholder,
@@ -122,6 +126,7 @@ export function CuadernoQuickEditSheet({
 }: Props) {
   const measureUnit = useOrganizationMeasureUnit();
   const titleId = useId();
+  const supplierDisclosureRef = useRef<HTMLDetailsElement>(null);
   useMobileViewportStability();
   const form = useMemo(() => mapItemToForm(item), [item]);
   const [nombre, setNombre] = useState(item.nombre);
@@ -134,6 +139,7 @@ export function CuadernoQuickEditSheet({
   const [selectedLineTemplateDraft, setSelectedLineTemplateDraft] =
     useState<CotizacionLineTemplate | null>(null);
   const [vidrioDraft, setVidrioDraft] = useState<string | null>(null);
+  const [glassProductIdDraft, setGlassProductIdDraft] = useState<string | null>(null);
   const [colorHexDraft, setColorHexDraft] = useState<string | null>(null);
   const [materialDraft, setMaterialDraft] = useState<ProfileMaterial>(() =>
     normalizeProfileMaterial(form.material)
@@ -144,8 +150,10 @@ export function CuadernoQuickEditSheet({
   const [supplierProviderResolution, setSupplierProviderResolution] = useState<{
     key: string;
     options: SupplierPriceProviderOption[];
+    profilePrices: SupplierProfilePricePreview[];
     familyPreferenceProviderKey: string | null;
     canManageFamilyPreferences: boolean;
+    canManageSupplierPrices: boolean;
     error: string | null;
   } | null>(null);
   const [familyPreferenceOverride, setFamilyPreferenceOverride] = useState<{ familyKey: string; providerKey: string | null } | null>(null);
@@ -403,8 +411,12 @@ export function CuadernoQuickEditSheet({
     VENTORA_DEFAULT_LINE_CATALOG.find((line) => line.catalogKey === selectedCatalogLineKey) ?? null;
   const supplierFamilyKey = resolveSupplierFamilyKeyForLineTemplate(supplierLineTemplate);
   const supplierResolutionRequest = useMemo(() => {
-    const technicalCodes = [...new Set((supplierRecipe?.definition.perfiles ?? [])
-      .map((profile) => profile.codigoPerfil.trim()).filter(Boolean))];
+    const recipeCodes = (supplierRecipe?.definition.perfiles ?? [])
+      .map((profile) => profile.codigoPerfil.trim()).filter(Boolean);
+    const documentedCodes = getLineTemplateWorkshopProfiles(supplierLineTemplate?.catalogMetadata)?.profiles
+      .filter((profile) => profile.codeStatus === "catalog_reference" && profile.code?.trim())
+      .map((profile) => profile.code!.trim()) ?? [];
+    const technicalCodes = resolveSupplierTechnicalCodesForQuote({ recipeCodes, documentedCodes });
     if (!selectedCatalogLineKey || !supplierFamilyKey || technicalCodes.length === 0) return null;
     return {
       itemId: String(item.id),
@@ -412,9 +424,8 @@ export function CuadernoQuickEditSheet({
       familyKey: supplierFamilyKey,
       finishName: resolveSupplierFinishName(form.catalogTerminacion, colorHexDraft ?? form.colorHex),
       technicalCodes,
-      providerKey: supplierProviderKeyDraft !== null ? supplierProviderKeyDraft : form.supplierProviderKey || null,
     };
-  }, [colorHexDraft, form.catalogTerminacion, form.colorHex, form.supplierProviderKey, item.id, selectedCatalogLineKey, supplierFamilyKey, supplierProviderKeyDraft, supplierRecipe]);
+  }, [colorHexDraft, form.catalogTerminacion, form.colorHex, item.id, selectedCatalogLineKey, supplierFamilyKey, supplierLineTemplate?.catalogMetadata, supplierRecipe]);
   const supplierResolutionKey = JSON.stringify(supplierResolutionRequest);
   useEffect(() => {
     if (!supplierResolutionRequest) return;
@@ -423,15 +434,22 @@ export function CuadernoQuickEditSheet({
       if (active) setSupplierProviderResolution({
         key: supplierResolutionKey,
         options: result?.providerOptions?.[String(item.id)] ?? [],
+        profilePrices: result?.profilePrices?.[String(item.id)] ?? [],
         familyPreferenceProviderKey: result?.familyPreferences?.[String(supplierResolutionRequest.familyKey)] ?? null,
         canManageFamilyPreferences: result?.canManageFamilyPreferences === true,
-        error: result?.itemErrors?.[String(item.id)] ?? null,
+        canManageSupplierPrices: result?.canManageSupplierPrices === true,
+        error: result
+          ? result.itemErrors?.[String(item.id)] ?? null
+          : "No se pudo cargar la lista de proveedores. Intenta de nuevo en unos segundos.",
       });
     });
     return () => { active = false; };
   }, [item.id, supplierResolutionKey, supplierResolutionRequest]);
   const supplierOptions = supplierProviderResolution?.key === supplierResolutionKey
     ? supplierProviderResolution.options
+    : [];
+  const supplierProfilePrices = supplierProviderResolution?.key === supplierResolutionKey
+    ? supplierProviderResolution.profilePrices
     : [];
   const isLoadingSupplierOptions = Boolean(supplierResolutionRequest && supplierProviderResolution?.key !== supplierResolutionKey);
   const storedSupplierProviderKey = supplierProviderKeyDraft ?? form.supplierProviderKey;
@@ -445,6 +463,9 @@ export function CuadernoQuickEditSheet({
     ? supplierProviderKeyDraft
     : storedSupplierProviderKey || effectiveFamilyPreference || "";
   const selectedSupplierOption = supplierOptions.find((option) => option.providerKey === selectedSupplierProviderKey) ?? null;
+  const automaticSupplierLabel = effectiveFamilyPreference
+    ? supplierOptions.find((option) => option.providerKey === effectiveFamilyPreference)?.label ?? effectiveFamilyPreference
+    : supplierOptions.find((option) => option.providerKey === "arquetipo")?.label ?? "Arquetipo 2026";
   const canManageFamilyPreferences = supplierProviderResolution?.key === supplierResolutionKey && supplierProviderResolution.canManageFamilyPreferences;
   const saveFamilyPreference = async (providerKey: string | null) => {
     if (!supplierResolutionRequest || !providerKey && !effectiveFamilyPreference) return;
@@ -468,6 +489,9 @@ export function CuadernoQuickEditSheet({
       setFamilyPreferenceOverride({ familyKey: supplierResolutionRequest.familyKey, providerKey });
       // Clear any old per-piece override so the saved family default becomes effective.
       setSupplierProviderKeyDraft("");
+      if (providerKey && supplierDisclosureRef.current) {
+        supplierDisclosureRef.current.open = false;
+      }
     } catch (error) {
       setFamilyPreferenceError(error instanceof Error ? error.message : "No se pudo actualizar el proveedor habitual.");
     } finally {
@@ -475,6 +499,7 @@ export function CuadernoQuickEditSheet({
     }
   };
   const vidrio = vidrioDraft ?? form.vidrio;
+  const selectedGlassProductId = glassProductIdDraft ?? (vidrioDraft === null ? form.vidrioLineTemplateId : "");
   const colorHex = colorHexDraft ?? form.colorHex;
   const materialColorOptions = getColorOptionsForMaterial(materialDraft);
   const currentColor =
@@ -486,7 +511,7 @@ export function CuadernoQuickEditSheet({
     ? materialColorOptions
     : [currentColor, ...materialColorOptions];
 
-  const buildLocalForm = (): ComponentFormState => ({
+  const buildLocalForm = (): ComponentFormState => applyGlassSelectionToComponentForm({
     ...form,
     nombre,
     ancho,
@@ -497,7 +522,7 @@ export function CuadernoQuickEditSheet({
     material: materialDraft,
     colorHex,
     costoProveedorUnitario: precio,
-  });
+  }, { displayName: vidrio, productId: selectedGlassProductId }, lineTemplates);
 
   const getSuggestedPriceForTemplate = (templateId: string) => {
     const template = lineTemplates.find((candidate) => String(candidate.id) === templateId);
@@ -518,6 +543,8 @@ export function CuadernoQuickEditSheet({
       cantidad: cantidad.trim() || "1",
       lineTemplateId,
       vidrio,
+      vidrioLineTemplateId: buildLocalForm().vidrioLineTemplateId,
+      glassTechnicalSpec: buildLocalForm().glassTechnicalSpec,
       material: materialDraft,
       colorHex,
       supplierProviderKey: selectedSupplierProviderKey,
@@ -641,6 +668,13 @@ export function CuadernoQuickEditSheet({
 
   const handleVidrioChange = (nextVidrio: string) => {
     setVidrioDraft(nextVidrio);
+    setGlassProductIdDraft("");
+  };
+
+  const handleGlassProductChange = (productId: string) => {
+    const template = lineTemplates.find((candidate) => String(candidate.id) === productId && candidate.categoria === "vidrio");
+    setGlassProductIdDraft(template ? String(template.id) : "");
+    if (template) setVidrioDraft(template.nombre);
   };
 
   const handleMaterialChange = (nextMaterial: ProfileMaterial) => {
@@ -835,12 +869,15 @@ export function CuadernoQuickEditSheet({
                 onTemplateChange={setSelectedLineTemplateDraft}
                 mode="profile"
                 preferredMaterial={materialDraft}
-                compatibilityContext={{
+                compatibilityContext={resolveLineCompatibilityContext({
                   componentType: form.tipo,
-                  openingType: resolveLineCompatibilityOpeningType(form.sistema, form.configuracion, form.guidedVisualConfig),
+                  system: form.sistema,
+                  configuration: form.configuracion,
+                  componentLabel: `${form.nombre ?? ""} ${form.referencia ?? ""}`,
                   leavesCount: selectedRecipeLeaves,
                   material: materialDraft,
-                }}
+                  guidedVisualConfig: form.guidedVisualConfig,
+                })}
                 ariaLabel="Elegir linea de esta pieza"
               />
             </div>
@@ -861,54 +898,100 @@ export function CuadernoQuickEditSheet({
             ) : null}
 
             {supplierResolutionRequest ? (
-              <details className={s.supplierDisclosure}>
+              <details ref={supplierDisclosureRef} className={s.supplierDisclosure}>
                 <summary>
                   <span>Proveedor de compra</span>
                   <strong>
                     {selectedSupplierOption?.label ??
-                      (selectedSupplierProviderKey ? "Proveedor guardado · revisar cobertura" : "Automático")}
+                      (selectedSupplierProviderKey ? "Proveedor guardado · revisar cobertura" : `${automaticSupplierLabel} · predeterminado`)}
                   </strong>
                 </summary>
                 <div className={s.supplierDisclosureBody}>
                   <label className={s.field}>
-                    <span className={s.fieldLabel}>Cambiar proveedor para esta pieza</span>
+                    <span className={s.fieldLabel}>Proveedor para esta pieza</span>
                     <select
                       className={s.fieldInput}
                       aria-label="Proveedor para precio de perfiles"
                       value={selectedSupplierProviderKey}
                       onChange={(event) => setSupplierProviderKeyDraft(event.target.value)}
                     >
-                      <option value="">Automático · comportamiento anterior</option>
+                      <option value="">Predeterminado · {automaticSupplierLabel}</option>
                       {selectedSupplierProviderKey && !supplierOptions.some((option) => option.providerKey === selectedSupplierProviderKey) ? (
                         <option value={selectedSupplierProviderKey}>Proveedor guardado · sin precio para esta composición</option>
                       ) : null}
                       {supplierOptions.map((option) => (
                         <option key={option.providerKey} value={option.providerKey}>
-                          {option.label}{option.isReference ? " · Referencia" : ""} · {option.pricedProfileCount}/{option.totalProfileCount} perfiles con precio
+                          {option.label} · {option.pricedProfileCount}/{option.totalProfileCount} perfiles con precio{option.otherAvailableFinishNames?.length ? ` · precio en ${option.otherAvailableFinishNames.slice(0, 2).join(", ")}` : ""}
                         </option>
                       ))}
                     </select>
                   </label>
                   <span className={s.variantSourceHint}>
-                    Cambia el costo de compra; la línea conserva el precio de venta.
+                    Este cambio aplica a esta pieza y conserva el precio de venta de la línea.
                     {selectedSupplierProviderKey && !selectedSupplierOption ? " No se reemplazará por otro proveedor si faltan perfiles." : ""}
                   </span>
-                {canManageFamilyPreferences && (selectedSupplierProviderKey || effectiveFamilyPreference) ? (
-                  <span className={s.supplierPreferenceActions}>
-                    {effectiveFamilyPreference ? <span>Habitual: {supplierOptions.find((option) => option.providerKey === effectiveFamilyPreference)?.label ?? effectiveFamilyPreference}</span> : null}
-                    {selectedSupplierProviderKey ? <button type="button" disabled={familyPreferenceSaving} onClick={() => void saveFamilyPreference(selectedSupplierProviderKey)}>
-                      {effectiveFamilyPreference === selectedSupplierProviderKey ? "Proveedor habitual de esta línea" : "Usar como proveedor habitual"}
-                    </button> : null}
-                    {effectiveFamilyPreference ? (
-                      <button type="button" disabled={familyPreferenceSaving} onClick={() => void saveFamilyPreference(null)}>Quitar preferencia</button>
-                    ) : null}
-                  </span>
-                ) : null}
+                  {canManageFamilyPreferences && (selectedSupplierProviderKey || effectiveFamilyPreference) ? (
+                    <div className={s.supplierPreferenceActions}>
+                      {selectedSupplierProviderKey && effectiveFamilyPreference !== selectedSupplierProviderKey ? (
+                        <button
+                          type="button"
+                          className={s.supplierDefaultButton}
+                          disabled={familyPreferenceSaving}
+                          onClick={() => void saveFamilyPreference(selectedSupplierProviderKey)}
+                        >
+                          <LuStar size={16} aria-hidden="true" />
+                          {familyPreferenceSaving
+                            ? "Guardando…"
+                            : `Dejar ${selectedSupplierOption?.label ?? selectedSupplierProviderKey} como predeterminado`}
+                        </button>
+                      ) : effectiveFamilyPreference ? (
+                        <span className={s.supplierDefaultStatus} role="status">
+                          {familyPreferenceSaving
+                            ? "Guardando proveedor predeterminado…"
+                            : `Predeterminado para esta línea: ${supplierOptions.find((option) => option.providerKey === effectiveFamilyPreference)?.label ?? effectiveFamilyPreference}`}
+                        </span>
+                      ) : null}
+                      <span className={s.supplierChangeNote} role="note">
+                        <LuInfo size={14} aria-hidden="true" />
+                        <span>Puedes cambiar el proveedor cuando quieras.</span>
+                      </span>
+                      {effectiveFamilyPreference ? (
+                        <button
+                          type="button"
+                          className={s.supplierPreferenceRemove}
+                          disabled={familyPreferenceSaving}
+                          onClick={() => void saveFamilyPreference(null)}
+                        >
+                          Quitar predeterminado
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  <SupplierProfilePricePreviewComponent
+                    prices={supplierProfilePrices}
+                    providerKey={selectedSupplierProviderKey || effectiveFamilyPreference || "arquetipo"}
+                    familyKey={supplierResolutionRequest.familyKey}
+                    finishName={supplierResolutionRequest.finishName}
+                    canManagePrice={supplierProviderResolution?.key === supplierResolutionKey && supplierProviderResolution.canManageSupplierPrices}
+                    onPriceSaved={async () => {
+                      if (!supplierResolutionRequest) return;
+                      const result = await resolveSupplierPresentationsForQuote([supplierResolutionRequest], { includeProviderOptions: true });
+                      setSupplierProviderResolution({
+                        key: supplierResolutionKey,
+                        options: result?.providerOptions?.[String(item.id)] ?? [],
+                        profilePrices: result?.profilePrices?.[String(item.id)] ?? [],
+                        familyPreferenceProviderKey: result?.familyPreferences?.[String(supplierResolutionRequest.familyKey)] ?? null,
+                        canManageFamilyPreferences: result?.canManageFamilyPreferences === true,
+                        canManageSupplierPrices: result?.canManageSupplierPrices === true,
+                        error: result?.itemErrors?.[String(item.id)] ?? null,
+                      });
+                    }}
+                  />
                 {isLoadingSupplierOptions ? <span className={s.variantSourceHint}>Buscando listas de precios compatibles…</span> : null}
                 {supplierProviderResolution?.key === supplierResolutionKey && supplierProviderResolution.error ? (
                   <span className={s.preferenceError} role="status">{supplierProviderResolution.error}</span>
                 ) : null}
-                {!isLoadingSupplierOptions && supplierOptions.length === 0 ? (
+                {!isLoadingSupplierOptions && supplierOptions.length === 0 && !supplierProviderResolution?.error ? (
                   <span className={s.variantSourceHint}>No hay precios compatibles para los perfiles de esta composición.</span>
                 ) : null}
                   {familyPreferenceError ? <span className={s.preferenceError} role="status">{familyPreferenceError}</span> : null}
@@ -974,6 +1057,20 @@ export function CuadernoQuickEditSheet({
               <span>Tipo de vidrio para esta pieza.</span>
             </div>
             <div className={s.compactPicker}>
+              <label className={s.fieldLabel} htmlFor="constructor-glass-catalog">Producto del catálogo</label>
+              <select
+                id="constructor-glass-catalog"
+                className={s.fieldInput}
+                aria-label="Vincular vidrio del catálogo"
+                value={selectedGlassProductId}
+                onChange={(event) => handleGlassProductChange(event.target.value)}
+              >
+                <option value="">Vidrio escrito o sin vínculo</option>
+                {lineTemplates.filter((template) => template.categoria === "vidrio").map((template) => (
+                  <option key={template.id} value={String(template.id)}>{template.nombre}</option>
+                ))}
+              </select>
+              {selectedGlassProductId ? <small>Vinculado: {lineTemplates.find((template) => String(template.id) === selectedGlassProductId)?.nombre}</small> : vidrio ? <small>Este vidrio está guardado solo por nombre. Elige un producto para asociar su ficha técnica.</small> : null}
               <GlassOptionPicker
                 options={glassOptions}
                 value={vidrio}
