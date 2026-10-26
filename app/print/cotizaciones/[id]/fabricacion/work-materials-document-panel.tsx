@@ -8,6 +8,9 @@ import type { ReactNode } from "react";
 
 import type { WorkMaterialsDocument } from "@/features/fabricacion/services/fabrication-work-materials.service";
 import type { FabricationWorkOrder } from "@/features/fabricacion/services/fabrication-work-order.service";
+import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { ManualGlassPaneMeasurementsSnapshot } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
+import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { sanitizeFileNamePart } from "@/utils/sanitize-file-name";
 import { useDirectGlassDistribution } from "@/features/fabricacion/hooks/use-direct-glass-distribution";
 import { GlassSheetFormatDialog } from "@/features/fabricacion/components/glass-sheet-format-dialog";
@@ -29,6 +32,9 @@ export type WorkMaterialsDocumentPanelProps = {
   distributionHref?: string;
   quoteId?: string;
   clientName?: string;
+  items: readonly CotizacionWorkflowItem[];
+  lineTemplates: readonly CotizacionLineTemplate[];
+  onSaveManualGlassMeasurements: (itemId: string, value: ManualGlassPaneMeasurementsSnapshot) => Promise<void>;
 };
 
 function formatMm(value: number | null) {
@@ -200,8 +206,15 @@ export function WorkMaterialsDocumentPanel(props: WorkMaterialsDocumentPanelProp
                   {glassDistribution.isGenerating ? "Generando…" : "PDF"}
                 </button>
               </div>
-              {props.quoteId ? <GlassDistributionCoverageNotice quoteId={props.quoteId} coverage={glassDistribution.coverage} /> : null}
-              <GlassDistributionCoverageNotice quoteId={props.quoteId} coverage={glassDistribution.coverage} />
+              {props.quoteId ? (
+                <GlassDistributionCoverageNotice
+                  quoteId={props.quoteId}
+                  coverage={glassDistribution.coverage}
+                  items={props.items}
+                  templates={props.lineTemplates}
+                  onSaveMeasurements={props.onSaveManualGlassMeasurements}
+                />
+              ) : null}
             </article>
           ) : props.distributionHref ? (
             <article>

@@ -8,6 +8,13 @@ import {
 } from "../services/direct-glass-distribution.service";
 import type { GlassDistributionCoverage } from "../services/glass-distribution-coverage.service";
 
+const GLASS_DISTRIBUTION_REFRESH_EVENT = "ventora:glass-distribution-refresh";
+
+export function refreshDirectGlassDistribution(quoteId: string) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(GLASS_DISTRIBUTION_REFRESH_EVENT, { detail: quoteId }));
+}
+
 export type UseDirectGlassDistributionOptions = {
   quoteId: string;
   quoteCode: string;
@@ -37,11 +44,15 @@ export function useDirectGlassDistribution({
 
   useEffect(() => {
     if (!quoteId) return;
-    const controller = new AbortController();
-    void fetchGlassDistributionData(quoteId, controller.signal)
-      .then((data) => setCoverageState({ quoteId, coverage: data.coverage }))
-      .catch(() => {
-        if (!controller.signal.aborted) setCoverageState({
+    let controller: AbortController | null = null;
+    const load = () => {
+      controller?.abort();
+      const requestController = new AbortController();
+      controller = requestController;
+      void fetchGlassDistributionData(quoteId, requestController.signal)
+        .then((data) => setCoverageState({ quoteId, coverage: data.coverage }))
+        .catch(() => {
+          if (!requestController.signal.aborted) setCoverageState({
           quoteId,
           coverage: {
             status: "unavailable",
@@ -51,8 +62,17 @@ export function useDirectGlassDistribution({
             diagnostics: ["No se pudo comprobar la cobertura técnica de vidrio."],
           },
         });
-      });
-    return () => controller.abort();
+        });
+    };
+    const handleRefresh = (event: Event) => {
+      if (event instanceof CustomEvent && event.detail === quoteId) load();
+    };
+    load();
+    window.addEventListener(GLASS_DISTRIBUTION_REFRESH_EVENT, handleRefresh);
+    return () => {
+      controller?.abort();
+      window.removeEventListener(GLASS_DISTRIBUTION_REFRESH_EVENT, handleRefresh);
+    };
   }, [quoteId]);
 
   const updateError = useCallback(

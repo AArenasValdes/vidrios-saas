@@ -30,6 +30,8 @@ import {
 } from "@/features/cotizaciones/line-templates/services/cut-profile-display.service";
 import { buildComponentPreviewInputFromWorkflowItem } from "@/features/cotizaciones/services/resolve-component-preview-svg";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { ManualGlassPaneMeasurementsSnapshot } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
+import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import {
   formatSodalL25GlazingLabel,
   formatSodalL25LegLabel,
@@ -70,6 +72,8 @@ type Props = {
   obra: string;
   summary: FabricationQuoteSummary;
   items: CotizacionWorkflowItem[];
+  lineTemplates: readonly CotizacionLineTemplate[];
+  onSaveManualGlassMeasurements: (itemId: string, value: ManualGlassPaneMeasurementsSnapshot) => Promise<void>;
   isExporting: boolean;
   exportError: string | null;
   materialsDocument: WorkMaterialsDocument;
@@ -534,6 +538,8 @@ export function FabricacionResumenMovil({
   obra,
   summary,
   items,
+  lineTemplates,
+  onSaveManualGlassMeasurements,
   isExporting,
   exportError,
   materialsDocument,
@@ -648,6 +654,9 @@ export function FabricacionResumenMovil({
               enabled
               autoPreview={homeTab === "vidrios"}
               preloadPreview
+            items={items}
+            templates={lineTemplates}
+            onSaveManualGlassMeasurements={onSaveManualGlassMeasurements}
             />
           </div>
         ) : null}
@@ -700,7 +709,7 @@ export function FabricacionResumenMovil({
               <section className={s.mSummarySection}>
                 <h2>Documentos de fabricación</h2>
                 <div className={s.mDocumentRows}>
-                  <WorkMaterialsDocumentPanel document={materialsDocument} workOrder={workOrder} companyName={companyName} quoteCode={codigo} work={obra} issueDate={issueDate} view="actions" />
+                  <WorkMaterialsDocumentPanel document={materialsDocument} workOrder={workOrder} companyName={companyName} quoteCode={codigo} work={obra} issueDate={issueDate} view="actions" items={items} lineTemplates={lineTemplates} onSaveManualGlassMeasurements={onSaveManualGlassMeasurements} />
                   <div className={s.mDocumentRow}>
                     <span className={s.mDocumentCopy}>
                       <strong>Distribución de planchas de vidrio</strong>
@@ -717,7 +726,7 @@ export function FabricacionResumenMovil({
                       {glassDistribution.isGenerating ? "Generando…" : "PDF"}
                     </button>
                   </div>
-                  <GlassDistributionCoverageNotice quoteId={quoteId} coverage={glassDistribution.coverage} />
+                  <GlassDistributionCoverageNotice quoteId={quoteId} coverage={glassDistribution.coverage} items={items} templates={lineTemplates} onSaveMeasurements={onSaveManualGlassMeasurements} />
                   {glassDistribution.error ? (
                     <p role="alert" className={s.exportNotice}>
                       {glassDistribution.error}

@@ -42,10 +42,8 @@
 }
 
 .notice li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  display: grid;
+  gap: 8px;
   padding-top: 7px;
   border-top: 1px solid #e4eaf1;
 }
@@ -80,6 +78,85 @@
   border-radius: 5px;
 }
 
+.pendingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.editButton,
+.saveButton,
+.cancelButton {
+  min-height: 44px;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.editButton {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: #1858a8;
+}
+
+.editButton:focus-visible,
+.saveButton:focus-visible,
+.cancelButton:focus-visible {
+  outline: 3px solid #8ec5ff;
+  outline-offset: 2px;
+}
+
+.inlineEditor {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0 4px;
+  padding: 12px;
+  border: 1px solid #d9e2ee;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.editorActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.saveButton {
+  border: 1px solid #1769d2;
+  background: #1769d2;
+  color: #fff;
+}
+
+.saveButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.cancelButton {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #33445d;
+}
+
+.saveError {
+  margin: 0;
+  color: #a52626;
+  font-size: 13px;
+}
+
+.saveNotice {
+  margin: 0;
+  color: #24624a;
+  font-size: 13px;
+}
+
 @media (max-width: 520px) {
   .summary {
     align-items: flex-start;
@@ -87,11 +164,14 @@
     gap: 2px;
   }
 
-  .notice li {
+  .pendingRow {
     align-items: flex-start;
   }
 
-  .notice a {
-    min-height: 44px;
-  }
+  .editButton { min-height: 44px; }
+
+  .editorActions { flex-direction: column-reverse; }
+
+  .saveButton,
+  .cancelButton { width: 100%; min-height: 48px; }
 }

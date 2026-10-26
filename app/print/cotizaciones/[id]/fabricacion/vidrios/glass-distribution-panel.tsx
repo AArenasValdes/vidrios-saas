@@ -6,6 +6,9 @@ import { LuChevronLeft, LuChevronRight, LuDownload, LuEye, LuLayers3, LuLoaderCi
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { GlassCuttingResult } from "@/features/fabricacion/types/glass-sheet-optimizer-contracts";
 import type { GlassTechnicalSpec } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
+import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { ManualGlassPaneMeasurementsSnapshot } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
 import { downloadPdfBlob } from "@/utils/cotizacion-pdf";
 import { sanitizeFileNamePart } from "@/utils/sanitize-file-name";
 import { createGlassDistributionPdf } from "@/features/fabricacion/services/glass-distribution-pdf.service";
@@ -60,6 +63,9 @@ type Props = {
   enabled: boolean;
   autoPreview?: boolean;
   preloadPreview?: boolean;
+  items: readonly CotizacionWorkflowItem[];
+  templates: readonly CotizacionLineTemplate[];
+  onSaveManualGlassMeasurements: (itemId: string, value: ManualGlassPaneMeasurementsSnapshot) => Promise<void>;
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -143,7 +149,7 @@ function PlanDrawing({ result, allPlans }: { result: GlassCuttingResult; allPlan
   );
 }
 
-export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workName, enabled, autoPreview = false, preloadPreview = false }: Props) {
+export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workName, enabled, autoPreview = false, preloadPreview = false, items, templates, onSaveManualGlassMeasurements }: Props) {
   const [source, setSource] = useState<PlanResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -365,7 +371,15 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
       </header>
 
       {loading ? <p className={s.status}><LuLoaderCircle className={s.spinner} aria-hidden />Cargando vidrio y paños…</p> : null}
-      {!loading && source ? <GlassDistributionCoverageNotice quoteId={quoteId} coverage={source.coverage} /> : null}
+      {!loading && source ? (
+        <GlassDistributionCoverageNotice
+          quoteId={quoteId}
+          coverage={source.coverage}
+          items={items}
+          templates={templates}
+          onSaveMeasurements={onSaveManualGlassMeasurements}
+        />
+      ) : null}
       {!loading && source && panes.length === 0 ? <p className={s.empty}>Aún no hay medidas de vidrio disponibles para distribuir.</p> : null}
 
       {panes.length > 0 ? <>

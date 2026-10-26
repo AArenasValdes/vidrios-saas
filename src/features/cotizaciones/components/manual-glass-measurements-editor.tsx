@@ -22,9 +22,10 @@ type Props = {
   selectedGlassProductId?: string | null;
   componentId?: string | null;
   paneConfiguration?: ManualGlassPaneConfiguration;
+  openImmediately?: boolean;
 };
 
-export function ManualGlassMeasurementsEditor({ value, templates, onChange, compact = false, automaticDimensionsAvailable = false, selectedGlassProductId = null, componentId = null, paneConfiguration }: Props) {
+export function ManualGlassMeasurementsEditor({ value, templates, onChange, compact = false, automaticDimensionsAvailable = false, selectedGlassProductId = null, componentId = null, paneConfiguration, openImmediately = false }: Props) {
   const headingId = useId();
   const glassDeepLinkRequestKey = typeof window !== "undefined" && (() => {
     const params = new URLSearchParams(window.location.search);
@@ -51,18 +52,18 @@ export function ManualGlassMeasurementsEditor({ value, templates, onChange, comp
   const [editingSlotId, setEditingSlotId] = useState("");
   const [duplicateEntry, setDuplicateEntry] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(openImmediately);
   const selectedProduct = glassProducts.find((template) => String(template.id) === productId) ?? null;
   const selectedSpec = selectedProduct ? getCatalogGlassTechnicalSpec(selectedProduct) : null;
 
   useEffect(() => {
-    if (!glassDeepLinkRequestKey) return;
+    if (!openImmediately && !glassDeepLinkRequestKey) return;
     const timer = window.setTimeout(() => {
       setIsFormOpen(true);
       if (selectedGlassProductId) setProductId(selectedGlassProductId);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [selectedGlassProductId, glassDeepLinkRequestKey]);
+  }, [selectedGlassProductId, glassDeepLinkRequestKey, openImmediately]);
 
   const resetForm = () => {
     setProductId(selectedGlassProductId ?? "");

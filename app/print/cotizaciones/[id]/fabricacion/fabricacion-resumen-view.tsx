@@ -33,6 +33,8 @@ import {
   herrajeDisplayLabel,
 } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { ManualGlassPaneMeasurementsSnapshot } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
+import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type {
   CotizacionItemCubicationSnapshot,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
@@ -347,6 +349,8 @@ type Props = {
   obra: string;
   summary: FabricationQuoteSummary;
   items: CotizacionWorkflowItem[];
+  lineTemplates: readonly CotizacionLineTemplate[];
+  onSaveManualGlassMeasurements: (itemId: string, value: ManualGlassPaneMeasurementsSnapshot) => Promise<void>;
   expandedItemId: string | null;
   onToggleItem: (itemId: string) => void;
   onOpenDespiece: (itemId: string) => void;
@@ -531,6 +535,8 @@ export function FabricacionResumenView({
   obra,
   summary,
   items,
+  lineTemplates,
+  onSaveManualGlassMeasurements,
   expandedItemId,
   onToggleItem,
   onOpenDespiece,
@@ -651,7 +657,7 @@ export function FabricacionResumenView({
         </div>
 
         <div className={s.desktopGlassSection}>
-          <GlassDistributionPanel quoteId={quoteId} quoteCode={codigo} clientName={clienteNombre} workName={obra} enabled={glassPlannerEnabled} autoPreview={activeTab === "vidrios"} preloadPreview={glassPlannerEnabled} />
+          <GlassDistributionPanel quoteId={quoteId} quoteCode={codigo} clientName={clienteNombre} workName={obra} enabled={glassPlannerEnabled} autoPreview={activeTab === "vidrios"} preloadPreview={glassPlannerEnabled} items={items} templates={lineTemplates} onSaveManualGlassMeasurements={onSaveManualGlassMeasurements} />
         </div>
 
         <WorkMaterialsDocumentPanel
@@ -664,6 +670,9 @@ export function FabricacionResumenView({
           distributionHref={`/print/cotizaciones/${quoteId}/fabricacion/vidrios`}
           quoteId={quoteId}
           clientName={clienteNombre}
+          items={items}
+          lineTemplates={lineTemplates}
+          onSaveManualGlassMeasurements={onSaveManualGlassMeasurements}
         />
 
         <section className={s.desktopSummarySection} aria-label="Resumen de fabricación">

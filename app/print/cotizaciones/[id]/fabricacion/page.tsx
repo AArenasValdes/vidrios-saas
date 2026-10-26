@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
 import { mapRecordToDraft } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { ManualGlassPaneMeasurementsSnapshot } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
 import type { QuoteConstructorItemPatch } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import { buildFabricationQuoteSummary } from "@/features/cotizaciones/line-templates/types/fabrication-quote-summary";
@@ -320,6 +321,33 @@ export default function CotizacionFabricacionPrintPage() {
     setEditedItems(record.items);
   }, [cotizacion, saveWorkflow]);
 
+  const handleSaveManualGlassMeasurements = useCallback(async (
+    itemId: string,
+    manualGlassMeasurements: ManualGlassPaneMeasurementsSnapshot
+  ) => {
+    if (!cotizacion) throw new Error("No encontramos la cotización para guardar las medidas.");
+    const currentItems = editedItemsRef.current ?? cotizacion.items;
+    const nextItems = currentItems.map((item) => item.id === itemId
+      ? { ...item, manualGlassMeasurements }
+      : item);
+    if (!nextItems.some((item) => item.id === itemId)) throw new Error("No encontramos el componente seleccionado.");
+
+    editedItemsRef.current = nextItems;
+    setEditedItems(nextItems);
+    const draft = mapRecordToDraft(cotizacion);
+    draft.items = nextItems;
+    const record = await saveWorkflow({
+      draft,
+      estado: cotizacion.estado,
+      existingId: cotizacion.id,
+      existingCode: cotizacion.codigo,
+      existingClientId: cotizacion.clientId,
+      existingProjectId: cotizacion.projectId,
+    });
+    editedItemsRef.current = record.items;
+    setEditedItems(record.items);
+  }, [cotizacion, saveWorkflow]);
+
   const handlePrint = useCallback(() => {
     window.print();
   }, []);
@@ -392,6 +420,8 @@ export default function CotizacionFabricacionPrintPage() {
             obra={cotizacion.obra}
             summary={summary}
             items={items}
+            lineTemplates={lineTemplates}
+            onSaveManualGlassMeasurements={handleSaveManualGlassMeasurements}
             materialsDocument={materialsDocument}
             workOrder={workOrder}
             companyName={organizationProfile?.empresaNombre ?? ""}
@@ -417,6 +447,8 @@ export default function CotizacionFabricacionPrintPage() {
             obra={cotizacion.obra}
             summary={summary}
             items={items}
+            lineTemplates={lineTemplates}
+            onSaveManualGlassMeasurements={handleSaveManualGlassMeasurements}
             materialsDocument={materialsDocument}
             workOrder={workOrder}
             companyName={organizationProfile?.empresaNombre ?? ""}
