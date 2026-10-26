@@ -70,6 +70,21 @@ describe("buildGlassDistributionCoverage", () => {
     expect(coverage.pendingReferences[0]).toMatchObject({ componentCode: "V2", reason: "Faltan dimensiones válidas del paño." });
   });
 
+  it("no declara completa una receta automática con dimensiones pero sin validación; exige una receta validada o medida manual", () => {
+    const coverage = buildGlassDistributionCoverage({
+      items: [item("item-1", "V1")],
+      panes: [pane("item-1", "glass-1", {
+        dimensionProvenance: "recipe_trace",
+        recipeStatus: "lista_para_validar",
+        validationStatus: "requires_review",
+        warnings: ["La receta no está validada por el taller."],
+      })],
+    });
+
+    expect(coverage).toMatchObject({ status: "unavailable", completeReferenceCount: 0, pendingReferenceCount: 1 });
+    expect(coverage.pendingReferences[0]?.reason).toBe("La receta no está validada por el taller.");
+  });
+
   it("C: devuelve no disponible y no asigna unidades si todos los snapshots carecen de medidas", () => {
     const coverage = buildGlassDistributionCoverage({
       items: [item("item-1", "V1"), item("item-2", "V2")],
@@ -165,16 +180,26 @@ describe("buildGlassDistributionCoverage", () => {
   it("exige confirmación para una composición sin conteo confiable y la invalida al cambiar divisiones", () => {
     let visual = createDefaultGuidedVisualConfig({ widthMm: 1500, heightMm: 1800 });
     const moduleId = listLeafModules(visual.root)[0]!.id;
-    const oldFingerprint = resolveManualGlassPaneSlots({
-      componentType: "Configuración especial",
-      guidedVisualConfig: visual,
-    }).configurationFingerprint;
+    const resolveFingerprint = (config: typeof visual) => {
+      const presentation = decodeCotizacionItemPresentationMeta(encodeCotizacionItemPresentationMeta({
+        fabricacionTipologia: "Configuración especial",
+        guidedVisualConfig: config,
+      }));
+      return resolveManualGlassPaneSlots({
+        componentType: presentation.fabricacionTipologia,
+        system: presentation.sistema,
+        configuration: presentation.configuracion,
+        sheetScheme: presentation.sheetScheme,
+        fabricacionHojas: presentation.fabricacionHojas,
+        guidedVisualConfig: presentation.guidedVisualConfig,
+        quickCompositionAdjustment: presentation.quickCompositionAdjustment,
+      });
+    };
+    const oldResolution = resolveFingerprint(visual);
     visual = applyPalilloPresetToModule(visual, moduleId, "v1");
-    const currentFingerprint = resolveManualGlassPaneSlots({
-      componentType: "Configuración especial",
-      guidedVisualConfig: visual,
-    }).configurationFingerprint;
-    expect(resolveManualGlassPaneSlots({ componentType: "Configuración especial", guidedVisualConfig: visual }).countIsKnown).toBe(false);
+    const currentResolution = resolveFingerprint(visual);
+    const currentFingerprint = currentResolution.configurationFingerprint;
+    expect(currentResolution.countIsKnown).toBe(false);
     const component = item("item-1", "V1", "Float 5 mm");
     const measurement = {
       id: "manual-unknown-layout",
@@ -205,18 +230,24 @@ describe("buildGlassDistributionCoverage", () => {
       const decoded = decodeCotizacionItemPresentationMeta(component.observaciones);
       expect(decoded.fabricacionTipologia).toBe("Configuración especial");
       expect(resolveManualGlassPaneSlots({
-        componentType: decoded.fabricacionTipologia,
+        componentType: decoded.fabricacionTipologia || component.tipo,
+        system: decoded.sistema,
+        configuration: decoded.configuracion,
+        sheetScheme: decoded.sheetScheme,
+        fabricacionHojas: decoded.fabricacionHojas,
         guidedVisualConfig: decoded.guidedVisualConfig,
-      })).toMatchObject({ countIsKnown: false, configurationFingerprint });
+        quickCompositionAdjustment: decoded.quickCompositionAdjustment,
+      })).toMatchObject({ countIsKnown: false });
       return buildGlassDistributionCoverage({
         items: [component],
         panes: [pane("item-1", measurement.id, { dimensionProvenance: "manual", recipeStatus: null })],
       });
     };
 
-    expect(currentFingerprint).not.toBe(oldFingerprint);
+    expect(currentFingerprint).not.toBe(oldResolution.configurationFingerprint);
     const confirmedCoverage = makeCoverage(currentFingerprint);
+    expect(confirmedCoverage.completeReferenceCount).toBe(1);
     expect(confirmedCoverage.pendingReferences).toEqual([]);
-    expect(makeCoverage(oldFingerprint)).toMatchObject({ status: "partial", pendingReferenceCount: 1 });
+    expect(makeCoverage(oldResolution.configurationFingerprint)).toMatchObject({ status: "partial", pendingReferenceCount: 1 });
   });
 });

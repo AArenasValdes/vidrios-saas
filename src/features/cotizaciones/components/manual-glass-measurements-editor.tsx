@@ -97,6 +97,7 @@ export function ManualGlassMeasurementsEditor({ value, templates, onChange, comp
       widthMm: width,
       heightMm: height,
       quantity: count,
+      quantityBasis,
       paneSlotId: editingSlotId || undefined,
       sourcePosition: expectedSlots.find((slot) => slot.id === editingSlotId)?.position,
       rectangularVerified: expectedSlots.find((slot) => slot.id === editingSlotId)?.rectangular ?? true,
@@ -116,6 +117,7 @@ export function ManualGlassMeasurementsEditor({ value, templates, onChange, comp
   };
 
   const beginEdit = (entry: ManualGlassPaneMeasurement) => {
+    setIsFormOpen(true);
     setProductId(entry.productId);
     setWidthMm(String(entry.widthMm));
     setHeightMm(String(entry.heightMm));

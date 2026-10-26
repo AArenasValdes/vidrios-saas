@@ -315,6 +315,39 @@ describe("glass-pane-normalization.service", () => {
     expect(panes.flatMap((pane) => pane.paneUnitIds)).toHaveLength(6);
   });
 
+  it("excluye las geometrías no rectangulares de la optimización rectangular verificada", () => {
+    const item = paneItem();
+    item.fabricacionSnapshot = null;
+    const metadata = { espesor: "5 mm", categoriaTecnica: "monolitico", revisionTecnicaExplicita: true, corteManualEstado: "confirmed", planchaAnchoMm: 2500, planchaAltoMm: 1800 };
+    const spec = buildCatalogGlassTechnicalSpec({ productId: "glass-5mm", metadata });
+    item.observaciones = encodeCotizacionItemPresentationMeta({
+      logicalComponentId: "logical-component-1",
+      manualGlassMeasurements: { version: 2, entries: [{
+        id: "manual-non-rectangular",
+        source: "manual",
+        version: 2,
+        productId: "glass-5mm",
+        technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec),
+        widthMm: 600,
+        heightMm: 1000,
+        quantity: 1,
+        quantityBasis: "per_component",
+        rectangularVerified: false,
+        recordedAt: "2026-10-25T12:00:00Z",
+      }] },
+    });
+
+    const [pane] = extractNormalizedGlassPanes({
+      organizationId: 4,
+      quoteId: 1248,
+      item,
+      catalogGlassProducts: new Map([["glass-5mm", { name: "Float 5 mm", catalogMetadata: metadata }]]),
+    });
+
+    expect(pane).toMatchObject({ validationStatus: "requires_review" });
+    expect(pane?.warnings).toContain("La geometría del paño no es rectangular y no se puede enviar como corte rectangular verificado.");
+  });
+
   it("mantiene una referencia manual pendiente si su ficha técnica de catálogo cambió", () => {
     const metadata = { espesor: "5 mm", categoriaTecnica: "monolitico", revisionTecnicaExplicita: true, corteManualEstado: "confirmed", planchaAnchoMm: 2500, planchaAltoMm: 1800 };
     const originalSpec = buildCatalogGlassTechnicalSpec({ productId: "501", metadata });

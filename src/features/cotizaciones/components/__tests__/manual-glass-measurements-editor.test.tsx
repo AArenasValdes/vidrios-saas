@@ -42,6 +42,33 @@ describe("ManualGlassMeasurementsEditor", () => {
     }));
   });
 
+  it("conserva la cantidad física total al editar una referencia v1 histórica", () => {
+    const onChange = jest.fn();
+    const legacy = {
+      version: 1 as const,
+      entries: [{
+        id: "legacy-pane",
+        source: "manual" as const,
+        version: 1 as const,
+        productId: "501",
+        technicalFingerprint: "legacy-fingerprint",
+        widthMm: 750,
+        heightMm: 1600,
+        quantity: 2,
+        recordedAt: "2026-10-25T12:00:00.000Z",
+      }],
+    };
+    render(<ManualGlassMeasurementsEditor templates={[glassTemplate]} value={legacy} onChange={onChange} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Editar medidas de Float incoloro 5 mm" }));
+    expect(screen.getByLabelText("Cantidad física total")).toHaveValue("2");
+    fireEvent.click(screen.getByRole("button", { name: "Guardar medidas" }));
+
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+      entries: [expect.objectContaining({ id: "legacy-pane", quantity: 2, quantityBasis: "total" })],
+    }));
+  });
+
   it("rechaza una ficha de vidrio sin datos técnicos suficientes", () => {
     const onChange = jest.fn();
     const incomplete = { ...glassTemplate, catalogMetadata: { espesor: "5 mm" } } as CotizacionLineTemplate;

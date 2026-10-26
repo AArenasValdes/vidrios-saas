@@ -102,7 +102,10 @@ function validationErrors(panes: readonly GlassPanePlanningUnit[], profile: Glas
   panes.forEach((pane) => {
     const spec = pane.technicalSpec;
     if (mode === "workshop" && pane.validationStatus !== "eligible_for_manual_planning") errors.push(...pane.warnings, `El paño ${pane.paneId} requiere revisión técnica.`);
-    if (pane.recipeStatus !== "validated") errors.push(`La receta del paño ${pane.paneId} no está validada.`);
+    if (mode === "workshop" && pane.recipeStatus !== "validated") errors.push(`La receta del paño ${pane.paneId} no está validada.`);
+    if (mode === "geometric_preview" && pane.recipeStatus !== "validated" && pane.dimensionProvenance !== "manual") {
+      errors.push(`El paño ${pane.paneId} no tiene una receta validada ni medidas manuales.`);
+    }
     if (pane.dimensionProvenance === "legacy_snapshot") errors.push(`El paño ${pane.paneId} proviene de un snapshot histórico incompleto.`);
     if (!pane.logicalComponentId || !pane.glassId || !pane.productId || !spec) errors.push(`El paño ${pane.paneId} carece de identidad o especificación congelada.`);
     if (!positiveInt(pane.widthMm) || !positiveInt(pane.heightMm)) errors.push(`El paño ${pane.paneId} tiene dimensiones inválidas.`);

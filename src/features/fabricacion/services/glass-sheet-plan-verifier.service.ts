@@ -215,7 +215,8 @@ export function verifyGlassSheetPlans(input: {
         if (pane.rotated && source.orientation !== "rotatable") findings.push(`La unidad ${pane.paneUnitId} fue rotada aunque su orientación no lo permite.`);
         if ((mode === "workshop" && (source.validationStatus !== "eligible_for_manual_planning" || source.technicalSpec?.manualCutStatus !== "confirmed"
           || !source.technicalSpec?.technicalReviewConfirmed && ["laminado", "dvh", "templado", "espejo", "otro"].includes(source.technicalSpec?.category ?? "pendiente")))
-          || source.recipeStatus !== "validated" || source.dimensionProvenance === "legacy_snapshot" || source.technicalSpec?.hasConflict
+          || (source.recipeStatus !== "validated" && !(mode === "geometric_preview" && source.dimensionProvenance === "manual"))
+          || source.dimensionProvenance === "legacy_snapshot" || source.technicalSpec?.hasConflict
           || (mode === "geometric_preview" && source.technicalSpec?.manualCutStatus === "not_admitted")) {
           findings.push(`La unidad ${pane.paneUnitId} no tiene admisión técnica vigente para corte manual.`);
         }

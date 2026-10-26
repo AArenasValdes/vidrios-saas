@@ -42,7 +42,7 @@ function pane(input: {
   orientation?: "fixed" | "rotatable" | "grain_or_coating_directional" | "unknown";
   status?: "eligible_for_manual_planning" | "requires_review";
   recipeStatus?: string | null;
-  dimensionProvenance?: "validated_recipe" | "recipe_trace" | "legacy_snapshot" | "missing";
+  dimensionProvenance?: "validated_recipe" | "recipe_trace" | "manual" | "legacy_snapshot" | "missing";
   manualCutStatus?: "confirmed" | "not_admitted" | "pending_validation";
   sheetWidth?: number | null;
   sheetHeight?: number | null;
@@ -232,6 +232,29 @@ describe("optimizeGlassCuttingBatch", () => {
     expect(result.productionReadiness).toBe("requires_workshop_validation");
     expect(result.sheets[0]?.panes[0]?.rotated).toBe(false);
     expect(result.sheets[0]?.cutSequence.length).toBeGreaterThan(0);
+  });
+
+  it("permite PDF preliminar con medidas manuales, pero sigue bloqueando el modo de taller sin receta validada", () => {
+    const manualPane = pane({
+      id: "manual-preview",
+      width: 500,
+      height: 1000,
+      recipeStatus: null,
+      dimensionProvenance: "manual",
+    });
+    const preview = optimizeGlassCuttingBatch({
+      panes: [manualPane],
+      profiles: [profile()],
+      mode: "geometric_preview",
+    })[0]!;
+
+    expect(preview.status).toBe("feasible");
+    expect(preview.verification.passed).toBe(true);
+    expect(preview.productionReadiness).toBe("requires_workshop_validation");
+
+    const workshop = optimizeGlassCuttingBatch({ panes: [manualPane], profiles: [profile()], mode: "workshop" })[0]!;
+    expect(workshop.status).toBe("requires_review");
+    expect(workshop.errors).toContain("La receta del paño pane-manual-preview no está validada.");
   });
 
   it("TC-14: clasifica candidatos de retazo según umbrales explícitos y conserva áreas", () => {

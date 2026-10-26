@@ -83,6 +83,7 @@ export function isGlassCoveragePaneComplete(pane: CoveragePane): boolean {
     && Number.isSafeInteger(pane.quantity)
     && pane.quantity > 0
     && pane.quantity === physicalUnitCount
+    && (pane.recipeStatus === "validated" || pane.dimensionProvenance === "manual")
     && pane.dimensionProvenance !== "legacy_snapshot"
   );
 }
