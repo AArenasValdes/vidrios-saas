@@ -1,7 +1,13 @@
 import { buildGlassDistributionCoverage } from "../glass-distribution-coverage.service";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { NormalizedGlassPane } from "../glass-pane-normalization.service";
-import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { decodeCotizacionItemPresentationMeta, encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import {
+  applyPalilloPresetToModule,
+  createDefaultGuidedVisualConfig,
+  listLeafModules,
+} from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import { resolveManualGlassPaneSlots } from "@/features/cotizaciones/services/manual-glass-pane-slots.service";
 
 function item(id: string, code: string, glass = "Float 5 mm"): CotizacionWorkflowItem {
   return {
@@ -37,6 +43,21 @@ describe("buildGlassDistributionCoverage", () => {
     });
 
     expect(coverage).toMatchObject({ status: "complete", completeReferenceCount: 2, pendingReferenceCount: 0, pendingReferences: [] });
+  });
+
+  it("acepta espesores de vidrio decimales válidos, como 4,5 mm", () => {
+    const coverage = buildGlassDistributionCoverage({
+      items: [item("item-1", "V1")],
+      panes: [pane("item-1", "glass-4-5", {
+        technicalSpec: {
+          ...pane("item-1", "glass-4-5").technicalSpec!,
+          category: "dvh",
+          thicknessMm: 4.5,
+        },
+      })],
+    });
+
+    expect(coverage).toMatchObject({ status: "complete", completeReferenceCount: 1, pendingReferenceCount: 0 });
   });
 
   it("B: marca parcial una cotización cuando una referencia no tiene dimensiones", () => {
@@ -110,6 +131,7 @@ describe("buildGlassDistributionCoverage", () => {
     const component = item("item-1", "V1", "Float 5 mm");
     component.observaciones = encodeCotizacionItemPresentationMeta({
       logicalComponentId: "component-item-1",
+      fabricacionTipologia: "Corredera",
       sheetScheme: "4 hojas",
       manualGlassMeasurements: { version: 2, expectedPaneCount: 4, entries: [{
         id: "manual-pane-1", source: "manual", version: 2, productId: "product-glass-5",
@@ -131,12 +153,70 @@ describe("buildGlassDistributionCoverage", () => {
     ["cuatro hojas", "4 hojas", 4],
   ])("no duplica referencias vacías cuando faltan todos los paños de %s", (_label, sheetScheme, expectedCount) => {
     const component = item("item-1", "V1", "Float 10 mm");
-    component.observaciones = encodeCotizacionItemPresentationMeta({ sheetScheme });
+    component.observaciones = encodeCotizacionItemPresentationMeta({ fabricacionTipologia: "Corredera", sheetScheme });
 
     const coverage = buildGlassDistributionCoverage({ items: [component], panes: [] });
 
     expect(coverage.status).toBe("unavailable");
     expect(coverage.pendingReferenceCount).toBe(expectedCount);
     expect(coverage.pendingReferences.every((reference) => reference.quoteItemId === "item-1")).toBe(true);
+  });
+
+  it("exige confirmación para una composición sin conteo confiable y la invalida al cambiar divisiones", () => {
+    let visual = createDefaultGuidedVisualConfig({ widthMm: 1500, heightMm: 1800 });
+    const moduleId = listLeafModules(visual.root)[0]!.id;
+    const oldFingerprint = resolveManualGlassPaneSlots({
+      componentType: "Configuración especial",
+      guidedVisualConfig: visual,
+    }).configurationFingerprint;
+    visual = applyPalilloPresetToModule(visual, moduleId, "v1");
+    const currentFingerprint = resolveManualGlassPaneSlots({
+      componentType: "Configuración especial",
+      guidedVisualConfig: visual,
+    }).configurationFingerprint;
+    expect(resolveManualGlassPaneSlots({ componentType: "Configuración especial", guidedVisualConfig: visual }).countIsKnown).toBe(false);
+    const component = item("item-1", "V1", "Float 5 mm");
+    const measurement = {
+      id: "manual-unknown-layout",
+      source: "manual" as const,
+      version: 2 as const,
+      productId: "product-glass-1",
+      technicalFingerprint: "catalog-fingerprint",
+      widthMm: 600,
+      heightMm: 1000,
+      quantity: 1,
+      quantityBasis: "per_component" as const,
+      rectangularVerified: true,
+      recordedAt: "2026-10-25T12:00:00.000Z",
+    };
+    const makeCoverage = (configurationFingerprint: string) => {
+      component.observaciones = encodeCotizacionItemPresentationMeta({
+        fabricacionTipologia: "Configuración especial",
+        guidedVisualConfig: visual,
+        manualGlassMeasurements: {
+          version: 2,
+          entries: [measurement],
+          configurationFingerprint,
+          allPanesConfirmed: true,
+        },
+      });
+      expect(decodeCotizacionItemPresentationMeta(component.observaciones).manualGlassMeasurements)
+        .toMatchObject({ configurationFingerprint, allPanesConfirmed: true });
+      const decoded = decodeCotizacionItemPresentationMeta(component.observaciones);
+      expect(decoded.fabricacionTipologia).toBe("Configuración especial");
+      expect(resolveManualGlassPaneSlots({
+        componentType: decoded.fabricacionTipologia,
+        guidedVisualConfig: decoded.guidedVisualConfig,
+      })).toMatchObject({ countIsKnown: false, configurationFingerprint });
+      return buildGlassDistributionCoverage({
+        items: [component],
+        panes: [pane("item-1", measurement.id, { dimensionProvenance: "manual", recipeStatus: null })],
+      });
+    };
+
+    expect(currentFingerprint).not.toBe(oldFingerprint);
+    const confirmedCoverage = makeCoverage(currentFingerprint);
+    expect(confirmedCoverage.pendingReferences).toEqual([]);
+    expect(makeCoverage(oldFingerprint)).toMatchObject({ status: "partial", pendingReferenceCount: 1 });
   });
 });

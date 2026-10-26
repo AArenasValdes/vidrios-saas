@@ -15,6 +15,13 @@ describe("ventora profile references", () => {
       codeStatus: "catalog_reference",
     });
     expect(payload?.profiles[1]).toMatchObject({ code: "5002", name: "Riel inferior" });
+    expect(payload?.profiles.slice(2).map(({ code, name, role }) => ({ code, name, role }))).toEqual([
+      { code: "5003", name: "Jamba", role: "Marco" },
+      { code: "5004", name: "Cabezal", role: "Hoja" },
+      { code: "5005", name: "Zócalo", role: "Hoja" },
+      { code: "5006", name: "Pierna", role: "Hoja" },
+      { code: "5007", name: "Traslapo", role: "Hoja" },
+    ]);
     expect(payload?.profiles.map((profile) => profile.code)).toEqual([
       "5001",
       "5002",

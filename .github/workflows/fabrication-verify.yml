@@ -6,7 +6,8 @@ on:
     branches:
       - main
   schedule:
-    - cron: "17 8 * * 1"
+    - cron: "17 8 * * *"
+      timezone: "America/Santiago"
   workflow_dispatch:
 
 permissions:
@@ -30,6 +31,9 @@ jobs:
           run_install: false
       - run: pnpm install --frozen-lockfile
       - run: pnpm fabrication:verify
+      - name: Resumen de verificación
+        if: always()
+        run: node scripts/fabrication/write-github-summary.mjs
       - name: Guardar resultados incluso si falla una prueba
         if: always()
         uses: actions/upload-artifact@v4

@@ -97,10 +97,10 @@ const SERIE_5000_PROFILES: LineProfileReference[] = [
   industryRef({ code: "5001", name: "Riel superior", role: "Marco" }),
   industryRef({ code: "5002", name: "Riel inferior", role: "Marco" }),
   industryRef({ code: "5003", name: "Jamba", role: "Marco" }),
-  industryRef({ code: "5004", name: "Zócalo", role: "Hoja" }),
-  industryRef({ code: "5005", name: "Cabezal", role: "Hoja" }),
-  industryRef({ code: "5006", name: "Traslapo", role: "Hoja" }),
-  industryRef({ code: "5007", name: "Pierna", role: "Hoja" }),
+  industryRef({ code: "5004", name: "Cabezal", role: "Hoja" }),
+  industryRef({ code: "5005", name: "Zócalo", role: "Hoja" }),
+  industryRef({ code: "5006", name: "Pierna", role: "Hoja" }),
+  industryRef({ code: "5007", name: "Traslapo", role: "Hoja" }),
 ];
 
 const SERIE_20_PROFILES: LineProfileReference[] = [

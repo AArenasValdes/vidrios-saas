@@ -72,7 +72,7 @@ export function isGlassCoveragePaneComplete(pane: CoveragePane): boolean {
     && pane.productId
     && pane.technicalSpec
     && !pane.technicalSpec.hasConflict
-    && Number.isSafeInteger(pane.technicalSpec.thicknessMm)
+    && Number.isFinite(pane.technicalSpec.thicknessMm)
     && Number(pane.technicalSpec.thicknessMm) > 0
     && pane.technicalSpec.category
     && pane.technicalSpec.category !== "pendiente"

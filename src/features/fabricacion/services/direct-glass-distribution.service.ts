@@ -64,7 +64,7 @@ export function isPaneEligibleForDistribution(pane: GlassDistributionPane): pane
       pane.productId &&
       spec &&
       !spec.hasConflict &&
-      Number.isSafeInteger(spec.thicknessMm) &&
+      Number.isFinite(spec.thicknessMm) &&
       Number(spec.thicknessMm) > 0 &&
       spec.category !== "pendiente" &&
       Number.isSafeInteger(pane.widthMm) &&
@@ -74,7 +74,7 @@ export function isPaneEligibleForDistribution(pane: GlassDistributionPane): pane
       Number.isSafeInteger(pane.quantity) &&
       pane.quantity > 0 &&
       pane.quantity === pane.physicalUnitCount &&
-      pane.recipeStatus === "validated" &&
+      (pane.recipeStatus === "validated" || pane.dimensionProvenance === "manual") &&
       pane.dimensionProvenance !== "legacy_snapshot"
   );
 }

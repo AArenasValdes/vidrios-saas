@@ -58,18 +58,28 @@ export function resolveManualGlassPaneSlots(input: ManualGlassPaneConfiguration)
   const adjustment = input.quickCompositionAdjustment;
   const schemeCount = input.sheetScheme?.trim().match(/^(\d+)\s*hojas?$/i)?.[1];
   const productShapeLabel = `${input.componentType ?? ""} ${input.system ?? ""} ${input.configuration ?? ""}`;
+  const slidingConfiguration = /corredera|sliding/i.test(`${productShapeLabel} ${input.sheetScheme ?? ""}`);
   const simpleSinglePaneType = /fijo|proyectante|oscilobatiente|abatible/i.test(productShapeLabel)
     && !/corredera/i.test(`${productShapeLabel} ${input.sheetScheme ?? ""}`);
-  const explicitCount = adjustment?.paneCount
-    ?? (schemeCount ? Number(schemeCount) : null)
-    ?? (input.fabricacionHojas && input.fabricacionHojas > 1 ? input.fabricacionHojas : null)
-    ?? (simpleSinglePaneType ? 1 : null);
-  const multiModuleCount = visualModules.length > 1 ? visualModules.length : null;
+  const hasInternalDivisions = visualModules.some((module) => Boolean(module.palilloLayout) || module.palillos.length > 0);
+  const configuredSlidingCount = slidingConfiguration && !hasInternalDivisions
+    ? (schemeCount ? Number(schemeCount) : null)
+      ?? (input.fabricacionHojas && input.fabricacionHojas > 1 ? input.fabricacionHojas : null)
+    : null;
+  // A Constructor split is a trusted pane boundary. A module's palillos are
+  // visual dividers and do not state whether the glass is split into pieces.
+  const structuralModuleCount = visualModules.length > 1 && !hasInternalDivisions
+    ? visualModules.length
+    : null;
   const canInferSingleModule = visualModules.length === 1
     && visualModules[0]?.type !== "corredera"
     && visualModules[0]?.type !== "puerta_corredera"
     && visualModules[0]?.type !== "shower_corredera";
-  const count = explicitCount ?? multiModuleCount ?? (canInferSingleModule ? 1 : null);
+  const count = adjustment?.paneCount
+    ?? structuralModuleCount
+    ?? configuredSlidingCount
+    ?? (!hasInternalDivisions && simpleSinglePaneType ? 1 : null)
+    ?? (!hasInternalDivisions && canInferSingleModule ? 1 : null);
   const configPayload = {
     componentType: input.componentType ?? null,
     system: input.system ?? null,
@@ -85,7 +95,13 @@ export function resolveManualGlassPaneSlots(input: ManualGlassPaneConfiguration)
       fixedLeftMm: adjustment.fixedLeftMm,
       fixedRightMm: adjustment.fixedRightMm,
     } : null,
-    modules: visualModules.map((module) => ({ id: module.id, type: module.type, glassShape: module.glassShape })),
+    modules: visualModules.map((module) => ({
+      id: module.id,
+      type: module.type,
+      glassShape: module.glassShape,
+      palillos: module.palillos,
+      palilloLayout: module.palilloLayout,
+    })),
     frameShape: input.guidedVisualConfig?.frameShape ?? null,
   };
   const configurationFingerprint = fingerprint(configPayload);

@@ -34,7 +34,7 @@ export function normalizeManualGlassPaneMeasurements(value: unknown): ManualGlas
     return [{
       id: row.id.trim(),
       source: "manual",
-      version: MANUAL_GLASS_PANE_MEASUREMENTS_VERSION,
+      version: row.version,
       productId: row.productId.trim(),
       technicalFingerprint: row.technicalFingerprint.trim(),
       widthMm: Number(row.widthMm),

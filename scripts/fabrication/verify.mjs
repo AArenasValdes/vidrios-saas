@@ -3,11 +3,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { assertJestReport, discoverTests, parseOptions } from "./verification-plan.mjs";
+import { assertLineIntegrationReport } from "./line-integration-gate.mjs";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const output = path.join(root, "test-results/fabrication");
 mkdirSync(output, { recursive: true });
 const reportPath = path.join(output, "verification.json");
+const jestPath = path.join(output, "jest.json");
+const integrationPath = path.join(output, "line-integration.json");
 const report = {
   startedAt: new Date().toISOString(),
   status: "running",
@@ -18,6 +21,9 @@ const report = {
 };
 const save = () => writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);
 save(); // Invalidate a previous successful report before starting any work.
+// Also invalidate subordinate reports before any early exit can upload stale data.
+writeFileSync(jestPath, "{}\n");
+writeFileSync(integrationPath, "{}\n");
 
 function runStep(name, executable, args) {
   console.log(`\n[fabrication:verify] ${name}`);
@@ -53,10 +59,11 @@ try {
   report.buildRequested = options.build;
   save();
 
-  runStep("Pruebas del verificador", process.execPath, ["--test", "scripts/fabrication/verification-plan.test.mjs"]);
-  const jestPath = path.join(output, "jest.json");
-  // An interrupted run must never reuse an earlier Jest success.
-  writeFileSync(jestPath, "{}\n");
+  runStep("Pruebas del verificador", process.execPath, ["--test",
+    "scripts/fabrication/verification-plan.test.mjs",
+    "scripts/fabrication/line-integration-gate.test.mjs",
+    "scripts/fabrication/write-github-summary.test.mjs",
+  ]);
   const jest = runStep("Regresión de fabricación y cotización", process.execPath, [
     pnpmCli, "exec", "jest", "--runInBand", "--config=scripts/fabrication/jest.config.mjs",
     "--json", `--outputFile=${jestPath}`,
@@ -68,6 +75,18 @@ try {
   } catch (error) {
     jest.status = "failed";
     jest.error = error.message;
+  }
+  try {
+    const integration = JSON.parse(readFileSync(integrationPath, "utf8"));
+    const summary = assertLineIntegrationReport(integration, integration.fixtures?.lineasDeclaradas);
+    report.lineIntegration = {
+      source: "fixtures_locales", report: "test-results/fabrication/line-integration.json",
+      lines: summary.lines, configurations: summary.rows, byLayer: summary.layers,
+      remote: "not_checked",
+    };
+  } catch (error) {
+    jest.status = "failed";
+    jest.error = [jest.error, `Reporte de integración: ${error.message}`].filter(Boolean).join("; ");
   }
   save();
   runStep("TypeScript", process.execPath, [pnpmCli, "exec", "tsc", "--noEmit"]);

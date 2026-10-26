@@ -89,6 +89,24 @@ describe("/api/cotizaciones/[id]/optimizacion-vidrios", () => {
     expect(body.panes.map((pane: { physicalUnitCount: number | null }) => pane.physicalUnitCount)).toEqual([1, 1]);
   });
 
+  it("cuenta y completa un paño manual con espesor decimal de 4,5 mm", async () => {
+    (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue({ code: "COT-1170", items: [
+      { id: "item-1", code: "V1", name: "Paño fijo", glassDescription: "Float 4,5 mm", observaciones: "", fabricacionSnapshot: null },
+    ] });
+    (extractNormalizedGlassPanesForOrganization as jest.Mock).mockReturnValue([{
+      ...row,
+      technicalSpec: { ...row.technicalSpec, thicknessMm: 4.5, category: "dvh" },
+      dimensionProvenance: "manual",
+      recipeStatus: null,
+    }]);
+
+    const response = await GET(new Request("http://localhost"), route);
+    const body = await response.json();
+
+    expect(body.coverage).toMatchObject({ status: "complete", completeReferenceCount: 1, pendingReferenceCount: 0 });
+    expect(body.panes[0].physicalUnitCount).toBe(1);
+  });
+
   it("B: informa explícitamente el componente pendiente y omite su cantidad física", async () => {
     (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue({ code: "COT-1170", items: [
       { id: "item-1", code: "V1", name: "Corredera", glassDescription: "Float", observaciones: "", fabricacionSnapshot: {} },
@@ -116,7 +134,7 @@ describe("/api/cotizaciones/[id]/optimizacion-vidrios", () => {
     const response = await GET(new Request("http://localhost"), route);
     const body = await response.json();
     expect(body.coverage).toMatchObject({ status: "unavailable", completeReferenceCount: 0, pendingReferenceCount: 2 });
-    expect(body.coverage.pendingReferences.every((reference: { reason: string }) => /No existe un paño técnico congelado/.test(reference.reason))).toBe(true);
+    expect(body.coverage.pendingReferences.every((reference: { reason: string }) => /Falta registrar uno o más paños de vidrio/.test(reference.reason))).toBe(true);
     expect(body.coverage.pendingReferences[0]).not.toHaveProperty("physicalUnitCount");
   });
 

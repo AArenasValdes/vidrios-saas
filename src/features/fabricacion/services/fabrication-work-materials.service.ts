@@ -7,7 +7,10 @@ import type { TechnicalCostSnapshot } from "@/features/proveedor-catalogos/servi
 import type { SupplierProfilePricePreview } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { resolveComponentColorName } from "@/constants/component-colors";
-import { resolveUniversalAluminumLineKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
+import {
+  getDefaultLineCatalogMetadata,
+  resolveUniversalAluminumLineKey,
+} from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import { resolveFrozenGlassThickness } from "@/features/fabricacion/services/glass-thickness-resolution.service";
 import { formatGlassDisplayName } from "@/features/fabricacion/services/glass-display-name.service";
 
@@ -352,16 +355,33 @@ function materialPrice(input: {
   };
 }
 
+function familyKeyForQuoteItem(
+  item: WorkItem | undefined,
+  templatesById: ReadonlyMap<string, CotizacionLineTemplate>
+) {
+  if (!item) return null;
+  const presentation = presentationFor(item);
+  const lineTemplateId = presentation.lineTemplateId || String(item.fabricacionSnapshot?.lineTemplateId ?? "");
+  const template = templatesById.get(lineTemplateId);
+  const catalogLineKey = presentation.catalogLineKey || template?.catalogKey || "";
+  if (!catalogLineKey) return null;
+  const metadata = getDefaultLineCatalogMetadata(catalogLineKey);
+  const familyKey = typeof metadata?.familyKey === "string" ? metadata.familyKey.trim() : "";
+  return familyKey || resolveUniversalAluminumLineKey(catalogLineKey) || null;
+}
+
 function buildProfileRows(
   summary: FabricationQuoteSummary,
   items: readonly WorkItem[],
-  cost: TechnicalCostSnapshot | null
+  cost: TechnicalCostSnapshot | null,
+  lineTemplates: readonly CotizacionLineTemplate[]
 ): WorkProfileMaterialRow[] {
   const source = summary.trabajoSnapshot;
   if (!source) return [];
 
   const groups = new Map<string, WorkProfileMaterialRow>();
   const itemsByCode = new Map(items.map((item) => [item.codigo, item]));
+  const templatesById = new Map(lineTemplates.map((template) => [String(template.id), template]));
   for (const bar of source.bars) {
     const finishValue = finishForBar(bar, itemsByCode);
     const providerKey = providerForBar(bar, itemsByCode);
@@ -369,10 +389,17 @@ function buildProfileRows(
       ? bar.supplierSku?.trim() || null
       : null;
     const finish = commercialFinish(finishValue);
-    const familyKeys = unique(source.sourcePresentations
+    const sourceFamilyKeys = unique(source.sourcePresentations
       .filter((presentation) => presentation.presentationKey === bar.presentationKey)
       .map((presentation) => resolveUniversalAluminumLineKey(presentation.catalogLineKey) ?? presentation.catalogLineKey ?? ""));
-    const familyKey = familyKeys.length === 1 ? familyKeys[0] : null;
+    const itemCodes = unique(bar.cortes.map((cut) => cut.codigoItem));
+    const itemFamilyKeys = unique(itemCodes.map((itemCode) => familyKeyForQuoteItem(itemsByCode.get(itemCode), templatesById) ?? ""));
+    // Older joint snapshots can lack catalogLineKey in sourcePresentations even
+    // though the quote item still has an explicit line-template identity. Recover
+    // the family only when every item sharing this bar resolves to one family.
+    const familyKey = sourceFamilyKeys.length > 0
+      ? sourceFamilyKeys.length === 1 ? sourceFamilyKeys[0] : null
+      : itemFamilyKeys.length === 1 ? itemFamilyKeys[0] : null;
     const line = lineNamesForBar(bar, summary, source);
     const key = [
       bar.materialKey,
@@ -387,7 +414,6 @@ function buildProfileRows(
       savedSku ?? "",
     ].join("|");
     const existing = groups.get(key);
-    const itemCodes = unique(bar.cortes.map((cut) => cut.codigoItem));
     if (existing) {
       existing.bars += 1;
       existing.itemCodes = unique([...existing.itemCodes, ...itemCodes]);
@@ -638,7 +664,7 @@ export function buildWorkMaterialsDocument(input: {
   const items = input.items as readonly WorkItem[];
   const lineTemplates = input.lineTemplates ?? [];
   return {
-    profiles: buildProfileRows(input.summary, items, input.technicalCostSnapshot ?? null),
+    profiles: buildProfileRows(input.summary, items, input.technicalCostSnapshot ?? null, lineTemplates),
     accessories: buildAccessoryRows(items, input.technicalCostSnapshot ?? null),
     glass: buildGlassRows(items, lineTemplates),
     glassOrder: buildGlassOrderRows(items, lineTemplates),

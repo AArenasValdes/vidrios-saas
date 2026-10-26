@@ -1,10 +1,12 @@
 import type { FabricationQuoteSummary } from "@/features/cotizaciones/line-templates/types/fabrication-quote-summary";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
 import type { TechnicalCostSnapshot } from "@/features/proveedor-catalogos/services/costo-tecnico-parcial.service";
 import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 import { buildWorkMaterialsDocument } from "../fabrication-work-materials.service";
+import { resolveProfileSupplierPrice } from "../work-materials-price-reference.service";
 
 function item(input: {
   id: string;
@@ -158,6 +160,52 @@ function glassSnapshot(glassId: string, name: string, width: number, height: num
 }
 
 describe("fabrication-work-materials.service", () => {
+  it("recupera la familia desde la plantilla explícita cuando un snapshot histórico no la conservó", () => {
+    const snapshot = jobSnapshot();
+    snapshot.bars = [{
+      ...snapshot.bars[0]!,
+      codigoPerfil: "5001",
+      nombrePerfil: "Riel superior",
+      largoComercialMm: 6000,
+      cortes: [{ ...snapshot.bars[0]!.cortes[0]!, codigoPerfil: "5001", funcion: "Riel superior" }],
+    }];
+    const quoteItem = item({ id: "item-1", code: "V1", line: "Serie 5000", glass: "Monolítico", finish: "#a8a8a8" });
+    quoteItem.observaciones = encodeCotizacionItemPresentationMeta({
+      colorHex: "#a8a8a8", material: "Aluminio", lineTemplateId: "1",
+    });
+    const template = {
+      id: 1,
+      catalogKey: "ventora:l5000",
+      catalogMetadata: { familyKey: "universal:aluminio:l5000" },
+      nombre: "Serie 5000",
+    } as CotizacionLineTemplate;
+    const document = buildWorkMaterialsDocument({
+      summary: summary(snapshot),
+      items: [quoteItem],
+      lineTemplates: [template],
+      profilePriceReferences: [{
+        key: "V1:5001:arquetipo:p-5001", itemCode: "V1", line: "Serie 5000", lineNames: ["Serie 5000"],
+        familyKey: "universal:aluminio:l5000", finish: "Aluminio mate", technicalCode: "5001",
+        profileName: "Riel superior", providerKey: "arquetipo", providerLabel: "Arquetipo · junio 2026",
+        presentationId: "p-5001", supplierSku: "30895001", presentationDescription: "Tira 6 m",
+        purchaseUnit: "tira", commercialLengthMm: 6000, netPrice: 13_477, currency: "CLP",
+        priceSource: "reference", status: "priced",
+      }],
+      profilePriceReferencesStatus: "loaded",
+    });
+
+    expect(document.profiles).toHaveLength(1);
+    expect(document.profiles[0]).toMatchObject({
+      familyKey: "universal:aluminio:l5000",
+      itemCodes: ["V1"],
+    });
+    expect(resolveProfileSupplierPrice(document.profiles[0]!, document.profilePriceReferences)).toMatchObject({
+      providerKey: "arquetipo",
+      supplierSku: "30895001",
+      unitPrice: 13_477,
+    });
+  });
+
   it("no asigna al proveedor elegido el precio del proveedor guardado en un snapshot anterior", () => {
     const snapshot = jobSnapshot();
     snapshot.bars = [{ ...snapshot.bars[0]!, supplierProviderKey: "arquetipo", supplierSku: "ARQ-5001" }];

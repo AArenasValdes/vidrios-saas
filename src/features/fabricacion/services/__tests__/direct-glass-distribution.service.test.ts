@@ -70,6 +70,15 @@ describe("direct-glass-distribution.service", () => {
     ).toBe(false);
   });
 
+  it("permite distribuir vidrio con espesor decimal válido", () => {
+    expect(isPaneEligibleForDistribution({
+      ...basePane,
+      technicalSpec: { ...basePane.technicalSpec!, thicknessMm: 4.5, category: "dvh" },
+      dimensionProvenance: "manual",
+      recipeStatus: null,
+    })).toBe(true);
+  });
+
   it("verifica la presencia del formato técnico de plancha", () => {
     expect(paneHasSheetFormat(basePane.technicalSpec)).toBe(true);
 
