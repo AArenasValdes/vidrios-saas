@@ -98,6 +98,29 @@ describe("ManualGlassMeasurementsEditor", () => {
 
       expect(await screen.findByLabelText("Producto del catálogo")).toHaveValue("501");
       expect(screen.getByLabelText("Ancho final (mm)")).toBeInTheDocument();
+      expect(screen.getByText(/Selecciona un paño y un vidrio, ingresa ancho, alto y cantidad/)).toBeInTheDocument();
+    } finally {
+      window.history.replaceState({}, "", new URL(previousUrl).pathname + new URL(previousUrl).search);
+    }
+  });
+
+  it("vuelve a abrir el formulario cuando el enlace cambia al vidrio de otro componente", async () => {
+    const previousUrl = window.location.href;
+    window.history.replaceState({}, "", "/cotizaciones/nueva?edit=quote-1&step=2&itemId=item-1&focus=glass");
+    try {
+      const view = render(
+        <ManualGlassMeasurementsEditor templates={[glassTemplate]} selectedGlassProductId="501" componentId="item-2" onChange={jest.fn()} />
+      );
+
+      expect(screen.queryByLabelText("Producto del catálogo")).not.toBeInTheDocument();
+
+      window.history.replaceState({}, "", "/cotizaciones/nueva?edit=quote-1&step=2&itemId=item-2&focus=glass");
+      view.rerender(
+        <ManualGlassMeasurementsEditor templates={[glassTemplate]} selectedGlassProductId="501" componentId="item-2" onChange={jest.fn()} />
+      );
+
+      expect(await screen.findByLabelText("Producto del catálogo")).toHaveValue("501");
+      expect(screen.getByLabelText("Ancho final (mm)")).toBeInTheDocument();
     } finally {
       window.history.replaceState({}, "", new URL(previousUrl).pathname + new URL(previousUrl).search);
     }

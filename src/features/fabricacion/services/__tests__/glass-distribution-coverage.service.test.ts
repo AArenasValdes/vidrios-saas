@@ -125,4 +125,18 @@ describe("buildGlassDistributionCoverage", () => {
     expect(coverage.status).toBe("partial");
     expect(coverage.pendingReferenceCount).toBe(3);
   });
+
+  it.each([
+    ["tres hojas", "3 hojas", 3],
+    ["cuatro hojas", "4 hojas", 4],
+  ])("no duplica referencias vacías cuando faltan todos los paños de %s", (_label, sheetScheme, expectedCount) => {
+    const component = item("item-1", "V1", "Float 10 mm");
+    component.observaciones = encodeCotizacionItemPresentationMeta({ sheetScheme });
+
+    const coverage = buildGlassDistributionCoverage({ items: [component], panes: [] });
+
+    expect(coverage.status).toBe("unavailable");
+    expect(coverage.pendingReferenceCount).toBe(expectedCount);
+    expect(coverage.pendingReferences.every((reference) => reference.quoteItemId === "item-1")).toBe(true);
+  });
 });

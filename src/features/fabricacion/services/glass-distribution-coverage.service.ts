@@ -125,6 +125,7 @@ export function buildGlassDistributionCoverage(input: {
     });
     const itemRefs = [...refs.values()].filter((reference) => reference.item?.id === item.id);
     const itemPanes = itemRefs.flatMap((reference) => reference.panes);
+    let hasExpectedPendingSlots = false;
 
     if (expected.countIsKnown) {
       const snapshotStale = manualSnapshot.configurationFingerprint != null
@@ -136,6 +137,7 @@ export function buildGlassDistributionCoverage(input: {
         : 0;
       const actualCount = Math.max(manualSlotIds.size, automaticPaneCount);
       const missingCount = snapshotStale ? expected.slots.length : Math.max(0, expected.slots.length - actualCount);
+      hasExpectedPendingSlots = missingCount > 0;
       for (let index = 0; index < missingCount; index += 1) {
         refs.set(`${item.id}|expected-pane-pending-${index + 1}`, {
           panes: [], item,
@@ -148,7 +150,7 @@ export function buildGlassDistributionCoverage(input: {
     }
 
     if (!itemHasExplicitGlass(item)) continue;
-    if (itemRefs.length === 0) {
+    if (itemRefs.length === 0 && !hasExpectedPendingSlots) {
       refs.set(`${item.id}|unresolved-glass-reference`, { panes: [], item });
     }
   }

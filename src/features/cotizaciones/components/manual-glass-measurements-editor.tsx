@@ -26,10 +26,14 @@ type Props = {
 
 export function ManualGlassMeasurementsEditor({ value, templates, onChange, compact = false, automaticDimensionsAvailable = false, selectedGlassProductId = null, componentId = null, paneConfiguration }: Props) {
   const headingId = useId();
-  const shouldOpenFromDeepLink = typeof window !== "undefined" && (() => {
+  const glassDeepLinkRequestKey = typeof window !== "undefined" && (() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get("focus") === "glass" && Boolean(componentId) && params.get("itemId") === componentId;
-  })();
+    const quoteId = params.get("edit");
+    const targetItemId = params.get("itemId");
+    return params.get("focus") === "glass" && Boolean(componentId) && targetItemId === componentId
+      ? `${quoteId ?? ""}:${targetItemId}`
+      : null;
+  })() || null;
   const snapshot = normalizeManualGlassPaneMeasurements(value);
   const paneResolution = resolveManualGlassPaneSlots(paneConfiguration ?? {});
   const expectedSlots = paneResolution.slots;
@@ -52,13 +56,13 @@ export function ManualGlassMeasurementsEditor({ value, templates, onChange, comp
   const selectedSpec = selectedProduct ? getCatalogGlassTechnicalSpec(selectedProduct) : null;
 
   useEffect(() => {
-    if (!shouldOpenFromDeepLink) return;
+    if (!glassDeepLinkRequestKey) return;
     const timer = window.setTimeout(() => {
       setIsFormOpen(true);
       if (selectedGlassProductId) setProductId(selectedGlassProductId);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [selectedGlassProductId, shouldOpenFromDeepLink]);
+  }, [selectedGlassProductId, glassDeepLinkRequestKey]);
 
   const resetForm = () => {
     setProductId(selectedGlassProductId ?? "");
@@ -205,6 +209,7 @@ export function ManualGlassMeasurementsEditor({ value, templates, onChange, comp
         <p className={s.catalogEmpty}>No hay vidrios activos en el catálogo de esta organización.</p>
       ) : isFormOpen ? (
         <form className={s.form} onSubmit={saveMeasurement}>
+          <p className={s.validationHint}>Selecciona un paño y un vidrio, ingresa ancho, alto y cantidad, y pulsa «Agregar referencia de vidrio». Al completar las posiciones, pulsa «Guardar cambios».</p>
           {expectedSlots.length > 0 ? (
             <label className={s.productField}>
               <span>Posición del paño</span>
