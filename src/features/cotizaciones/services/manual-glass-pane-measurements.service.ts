@@ -14,14 +14,14 @@ export function normalizeManualGlassPaneMeasurements(value: unknown): ManualGlas
     return { version: MANUAL_GLASS_PANE_MEASUREMENTS_VERSION, entries: [] };
   }
   const candidate = value as Record<string, unknown>;
-  if (candidate.version !== MANUAL_GLASS_PANE_MEASUREMENTS_VERSION || !Array.isArray(candidate.entries)) {
+  if ((candidate.version !== 1 && candidate.version !== MANUAL_GLASS_PANE_MEASUREMENTS_VERSION) || !Array.isArray(candidate.entries)) {
     return { version: MANUAL_GLASS_PANE_MEASUREMENTS_VERSION, entries: [] };
   }
   const entries = candidate.entries.flatMap((entry): ManualGlassPaneMeasurement[] => {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
     const row = entry as Record<string, unknown>;
     if (
-      row.version !== MANUAL_GLASS_PANE_MEASUREMENTS_VERSION ||
+      (row.version !== 1 && row.version !== MANUAL_GLASS_PANE_MEASUREMENTS_VERSION) ||
       row.source !== "manual" ||
       typeof row.id !== "string" || !row.id.trim() ||
       typeof row.productId !== "string" || !row.productId.trim() ||
@@ -40,10 +40,22 @@ export function normalizeManualGlassPaneMeasurements(value: unknown): ManualGlas
       widthMm: Number(row.widthMm),
       heightMm: Number(row.heightMm),
       quantity: Number(row.quantity),
+      ...(row.quantityBasis === "total" || row.quantityBasis === "per_component" ? { quantityBasis: row.quantityBasis } : {}),
+      ...(typeof row.paneSlotId === "string" && row.paneSlotId ? { paneSlotId: row.paneSlotId } : {}),
+      ...(typeof row.sourcePosition === "string" && row.sourcePosition ? { sourcePosition: row.sourcePosition } : {}),
+      ...(typeof row.rectangularVerified === "boolean" ? { rectangularVerified: row.rectangularVerified } : {}),
       recordedAt: row.recordedAt,
     }];
   });
-  return { version: MANUAL_GLASS_PANE_MEASUREMENTS_VERSION, entries };
+  return {
+    version: candidate.version,
+    entries,
+    ...(typeof candidate.configurationFingerprint === "string" || candidate.configurationFingerprint === null
+      ? { configurationFingerprint: candidate.configurationFingerprint as string | null } : {}),
+    ...(typeof candidate.expectedPaneCount === "number" && Number.isSafeInteger(candidate.expectedPaneCount) && candidate.expectedPaneCount > 0
+      ? { expectedPaneCount: candidate.expectedPaneCount } : {}),
+    ...(candidate.allPanesConfirmed === true ? { allPanesConfirmed: true } : {}),
+  };
 }
 
 /** JSONB NULL means legacy data may be consulted; a present empty snapshot is an explicit deletion. */
@@ -112,7 +124,11 @@ export function createManualGlassPaneMeasurement(input: {
   widthMm: number;
   heightMm: number;
   quantity: number;
+  quantityBasis?: "total" | "per_component";
   existingId?: string;
+  paneSlotId?: string;
+  sourcePosition?: string;
+  rectangularVerified?: boolean;
   now?: string;
 }): ManualGlassPaneMeasurement {
   const spec = getCatalogGlassTechnicalSpec(input.product);
@@ -131,6 +147,10 @@ export function createManualGlassPaneMeasurement(input: {
     widthMm: input.widthMm,
     heightMm: input.heightMm,
     quantity: input.quantity,
+    quantityBasis: input.quantityBasis ?? "per_component",
+    ...(input.paneSlotId ? { paneSlotId: input.paneSlotId } : {}),
+    ...(input.sourcePosition ? { sourcePosition: input.sourcePosition } : {}),
+    rectangularVerified: input.rectangularVerified !== false,
     recordedAt: input.now ?? new Date().toISOString(),
   };
 }

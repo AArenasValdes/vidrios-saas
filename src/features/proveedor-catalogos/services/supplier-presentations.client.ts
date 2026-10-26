@@ -1,4 +1,5 @@
 import type { FabricacionTrabajoPresentationSelection } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
+import type { SupplierProfilePricePreview } from "./supplier-presentation-resolution.service";
 
 export type SupplierPresentationQuoteItemRequest = {
   itemId: string;
@@ -7,22 +8,6 @@ export type SupplierPresentationQuoteItemRequest = {
   finishName: string | null;
   technicalCodes: string[];
   providerKey?: string | null;
-};
-
-export type SupplierProfilePricePreview = {
-  technicalCode: string;
-  profileName: string;
-  providerKey: string;
-  providerLabel: string;
-  presentationId: string;
-  supplierSku: string;
-  presentationDescription: string;
-  purchaseUnit: string;
-  commercialLengthMm: number | null;
-  netPrice: number | null;
-  currency: string | null;
-  priceSource: "reference" | "provider_adjustment" | "organization_override" | "workshop" | null;
-  status: "priced" | "missing_price" | "ambiguous";
 };
 
 export type SupplierPriceProviderOption = {

@@ -105,4 +105,24 @@ describe("buildGlassDistributionCoverage", () => {
 
     expect(coverage).toMatchObject({ status: "complete", completeReferenceCount: 1, pendingReferenceCount: 0 });
   });
+
+  it("mantiene pendientes los tres paños que faltan en una configuración explícita de cuatro", () => {
+    const component = item("item-1", "V1", "Float 5 mm");
+    component.observaciones = encodeCotizacionItemPresentationMeta({
+      logicalComponentId: "component-item-1",
+      sheetScheme: "4 hojas",
+      manualGlassMeasurements: { version: 2, expectedPaneCount: 4, entries: [{
+        id: "manual-pane-1", source: "manual", version: 2, productId: "product-glass-5",
+        technicalFingerprint: "catalog-fingerprint", widthMm: 600, heightMm: 1000, quantity: 1,
+        quantityBasis: "per_component", paneSlotId: "pane-1", sourcePosition: "Paño 1", rectangularVerified: true,
+        recordedAt: "2026-10-25T12:00:00.000Z",
+      }] },
+    });
+    const coverage = buildGlassDistributionCoverage({
+      items: [component],
+      panes: [pane("item-1", "manual-pane-1", { dimensionProvenance: "manual", recipeStatus: null, paneSlotId: "pane-1" })],
+    });
+    expect(coverage.status).toBe("partial");
+    expect(coverage.pendingReferenceCount).toBe(3);
+  });
 });

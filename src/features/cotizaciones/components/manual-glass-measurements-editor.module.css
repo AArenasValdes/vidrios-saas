@@ -12,9 +12,12 @@
 .heading h3 { margin: 0; color: var(--text-primary, #1e293b); font-size: 14px; font-weight: 700; }
 .heading p { margin: 4px 0 0; color: var(--text-secondary, #64748b); font-size: 12px; line-height: 1.45; }
 .sourceBadge { flex: 0 0 auto; padding: 3px 8px; border-radius: 999px; background: #eaf2ff; color: #1858a8; font-size: 11px; font-weight: 700; }
-.empty, .catalogEmpty, .validationHint, .error { margin: 0; font-size: 12px; line-height: 1.45; }
-.empty { color: #7a4a05; }
+.emptyState { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.empty, .catalogEmpty, .validationHint, .error { margin: 0; font-size: 13px; line-height: 1.45; }
+.empty { color: var(--text-secondary, #526175); }
 .catalogEmpty, .validationHint { color: var(--text-secondary, #64748b); }
+.confirmAll { display: flex; align-items: flex-start; gap: 9px; color: var(--text-secondary, #526175); font-size: 13px; line-height: 1.4; }
+.confirmAll input { width: 18px; height: 18px; margin: 0; accent-color: #1769c2; }
 .error { color: #a12622; }
 .entries { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .entry { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 10px; border: 1px solid var(--border, #d9e1eb); border-radius: 10px; background: #fff; }
@@ -23,16 +26,18 @@
 .entryCopy span { color: var(--text-secondary, #64748b); font-size: 12px; }
 .entryActions { display: flex; flex: 0 0 auto; gap: 4px; }
 .entryActions button, .secondaryButton { min-height: 36px; padding: 0 9px; border: 1px solid var(--border, #d9e1eb); border-radius: 8px; background: #fff; color: #225ea8; font-size: 12px; font-weight: 650; }
+.entryButton { min-height: 38px; width: fit-content; padding: 0 12px; border: 1px solid #c9d9ef; border-radius: 9px; background: #f5f9ff; color: #175ca7; font-size: 13px; font-weight: 700; }
 .form { display: grid; gap: 10px; }
 .productField, .measureFields label { display: grid; gap: 5px; color: var(--text-secondary, #526175); font-size: 11px; font-weight: 650; }
 .productField select, .measureFields input { width: 100%; min-height: 42px; padding: 0 10px; border: 1px solid var(--border, #ccd7e4); border-radius: 9px; background: #fff; color: var(--text-primary, #1e293b); font: inherit; font-size: 14px; }
 .measureFields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .formActions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 .primaryButton { min-height: 40px; padding: 0 13px; border: 0; border-radius: 9px; background: #1769c2; color: #fff; font-size: 12px; font-weight: 700; }
-.primaryButton:focus-visible, .secondaryButton:focus-visible, .entryActions button:focus-visible, .productField select:focus-visible, .measureFields input:focus-visible { outline: 3px solid #8ec5ff; outline-offset: 2px; }
+.primaryButton:focus-visible, .secondaryButton:focus-visible, .entryButton:focus-visible, .entryActions button:focus-visible, .productField select:focus-visible, .measureFields input:focus-visible { outline: 3px solid #8ec5ff; outline-offset: 2px; }
 .primaryButton:disabled { opacity: .55; }
 
 @media (max-width: 420px) {
+  .emptyState { align-items: flex-start; flex-direction: column; }
   .measureFields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .measureFields label:last-child { grid-column: 1 / -1; }
   .entry { align-items: flex-start; }

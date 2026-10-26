@@ -1,5 +1,7 @@
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import { normalizeManualGlassPaneMeasurements } from "@/features/cotizaciones/services/manual-glass-pane-measurements.service";
+import { resolveManualGlassPaneSlots } from "@/features/cotizaciones/services/manual-glass-pane-slots.service";
 
 export type GlassDistributionCoverageStatus = "complete" | "partial" | "unavailable";
 
@@ -109,8 +111,43 @@ export function buildGlassDistributionCoverage(input: {
   }
 
   for (const item of input.items) {
-    if (!itemHasExplicitGlass(item)) continue;
+    const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
+    const savedManual = item.manualGlassMeasurements ?? presentation.manualGlassMeasurements;
+    const manualSnapshot = normalizeManualGlassPaneMeasurements(savedManual);
+    const expected = resolveManualGlassPaneSlots({
+      componentType: presentation.fabricacionTipologia || item.tipo,
+      system: presentation.sistema,
+      configuration: presentation.configuracion,
+      sheetScheme: presentation.sheetScheme,
+      fabricacionHojas: presentation.fabricacionHojas,
+      guidedVisualConfig: presentation.guidedVisualConfig,
+      quickCompositionAdjustment: presentation.quickCompositionAdjustment,
+    });
     const itemRefs = [...refs.values()].filter((reference) => reference.item?.id === item.id);
+    const itemPanes = itemRefs.flatMap((reference) => reference.panes);
+
+    if (expected.countIsKnown) {
+      const snapshotStale = manualSnapshot.configurationFingerprint != null
+        && manualSnapshot.configurationFingerprint !== expected.configurationFingerprint;
+      const manualSlotIds = new Set(manualSnapshot.entries.map((entry) => entry.paneSlotId).filter((id): id is string => Boolean(id)));
+      const automaticPaneCount = itemPanes.some((pane) => pane.dimensionProvenance === "validated_recipe")
+        ? itemPanes.filter((pane) => pane.dimensionProvenance === "validated_recipe")
+          .reduce((sum, pane) => sum + (item.cantidad > 0 ? pane.quantity / item.cantidad : 0), 0)
+        : 0;
+      const actualCount = Math.max(manualSlotIds.size, automaticPaneCount);
+      const missingCount = snapshotStale ? expected.slots.length : Math.max(0, expected.slots.length - actualCount);
+      for (let index = 0; index < missingCount; index += 1) {
+        refs.set(`${item.id}|expected-pane-pending-${index + 1}`, {
+          panes: [], item,
+        });
+      }
+    } else if (manualSnapshot.version === 2 && itemHasExplicitGlass(item) && itemRefs.length > 0
+      && manualSnapshot.entries.length > 0
+      && (!manualSnapshot.allPanesConfirmed || manualSnapshot.configurationFingerprint !== expected.configurationFingerprint)) {
+      refs.set(`${item.id}|pane-completeness-unconfirmed`, { panes: [], item });
+    }
+
+    if (!itemHasExplicitGlass(item)) continue;
     if (itemRefs.length === 0) {
       refs.set(`${item.id}|unresolved-glass-reference`, { panes: [], item });
     }
@@ -129,7 +166,7 @@ export function buildGlassDistributionCoverage(input: {
     const item = reference.item;
     const reason = pane
       ? [...new Set(pane.warnings)].join(" ") || "La referencia no tiene dimensiones técnicas completas y verificables."
-      : "No existe un paño técnico congelado con dimensiones para esta referencia.";
+      : "Falta registrar uno o más paños de vidrio de este componente.";
     pendingReferences.push({
       quoteItemId: item?.id ?? pane?.quoteItemId ?? "",
       componentCode: pane?.componentCode ?? item?.codigo ?? "Componente",

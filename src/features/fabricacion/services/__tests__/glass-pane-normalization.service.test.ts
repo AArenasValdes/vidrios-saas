@@ -245,6 +245,28 @@ describe("glass-pane-normalization.service", () => {
     expect(panes[0]).toMatchObject({ glassId: "manual-fallback", widthMm: 620, heightMm: 1010, quantity: 1, dimensionProvenance: "manual", validationStatus: "eligible_for_manual_planning" });
   });
 
+  it("usa el respaldo manual si la receta válida solo cubre parte de los paños del mismo vidrio", () => {
+    const item = paneItem();
+    const metadata = { espesor: "5 mm", categoriaTecnica: "monolitico", revisionTecnicaExplicita: true, corteManualEstado: "confirmed", planchaAnchoMm: 2500, planchaAltoMm: 1800 };
+    const spec = buildCatalogGlassTechnicalSpec({ productId: "glass-5mm", metadata });
+    item.observaciones = encodeCotizacionItemPresentationMeta({
+      logicalComponentId: "logical-component-1",
+      manualGlassMeasurements: { version: 2, expectedPaneCount: 2, configurationFingerprint: "two-panes", entries: [1, 2].map((index) => ({
+        id: `manual-slot-${index}`, source: "manual" as const, version: 2 as const, productId: "glass-5mm",
+        technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec), widthMm: 600 + index, heightMm: 1000,
+        quantity: 1, quantityBasis: "per_component" as const, paneSlotId: `pane-${index}`, sourcePosition: `Paño ${index}`,
+        rectangularVerified: true, recordedAt: "2026-10-25T12:00:00Z",
+      })) },
+    });
+    const panes = extractNormalizedGlassPanes({
+      organizationId: 4, quoteId: 1248, item,
+      catalogGlassProducts: new Map([["glass-5mm", { name: "Float 5 mm", catalogMetadata: metadata }]]),
+    });
+    expect(panes).toHaveLength(2);
+    expect(panes.every((pane) => pane.dimensionProvenance === "manual")).toBe(true);
+    expect(panes.map((pane) => pane.paneSlotId)).toEqual(["pane-1", "pane-2"]);
+  });
+
   it("combina V1 automática y V2 manual sin exigir despiece de perfiles para V2", () => {
     const automatic = paneItem();
     const manual = { ...paneItem(), id: "physical-row-2", codigo: "V2", nombre: "Paño fijo", fabricacionSnapshot: null };
@@ -268,6 +290,29 @@ describe("glass-pane-normalization.service", () => {
       { quoteItemId: "physical-row-1", widthMm: 690, heightMm: 1390, dimensionProvenance: "validated_recipe", validationStatus: "eligible_for_manual_planning" },
       { quoteItemId: "physical-row-2", widthMm: 750, heightMm: 1600, dimensionProvenance: "manual", validationStatus: "eligible_for_manual_planning" },
     ]);
+  });
+
+  it("multiplica una sola vez los tres paños manuales por la cantidad cotizada", () => {
+    const item = paneItem();
+    item.fabricacionSnapshot = null;
+    const metadata = { espesor: "5 mm", categoriaTecnica: "monolitico", revisionTecnicaExplicita: true, corteManualEstado: "confirmed", planchaAnchoMm: 2500, planchaAltoMm: 1800 };
+    const spec = buildCatalogGlassTechnicalSpec({ productId: "501", metadata });
+    item.observaciones = encodeCotizacionItemPresentationMeta({
+      logicalComponentId: "logical-component-1",
+      manualGlassMeasurements: { version: 2, expectedPaneCount: 3, configurationFingerprint: "fixture", entries: [1, 2, 3].map((index) => ({
+        id: `manual-${index}`, source: "manual" as const, version: 2 as const, productId: "501",
+        technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec), widthMm: 600 + index,
+        heightMm: 1000, quantity: 1, quantityBasis: "per_component" as const,
+        paneSlotId: `pane-${index}`, sourcePosition: `Paño ${index}`, rectangularVerified: true,
+        recordedAt: "2026-10-25T12:00:00Z",
+      })) },
+    });
+    const panes = extractNormalizedGlassPanes({
+      organizationId: 4, quoteId: 1248, item,
+      catalogGlassProducts: new Map([["501", { name: "Float 5 mm", catalogMetadata: metadata }]]),
+    });
+    expect(panes.map((pane) => pane.quantity)).toEqual([2, 2, 2]);
+    expect(panes.flatMap((pane) => pane.paneUnitIds)).toHaveLength(6);
   });
 
   it("mantiene una referencia manual pendiente si su ficha técnica de catálogo cambió", () => {

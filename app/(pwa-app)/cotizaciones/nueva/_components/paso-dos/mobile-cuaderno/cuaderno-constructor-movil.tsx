@@ -409,8 +409,11 @@ export function CuadernoConstructorMovil({
                         </div>
                         <ManualGlassMeasurementsEditor
                           compact
+                          componentId={item.id}
                           value={form.manualGlassMeasurements}
                           automaticDimensionsAvailable={Boolean(form.fabricacionSnapshot?.result?.vidrios?.some((pane) => pane.anchoMm > 0 && pane.altoMm > 0))}
+                          selectedGlassProductId={form.vidrioLineTemplateId}
+                          paneConfiguration={{ componentType: form.fabricacionTipologia || form.tipo, system: form.sistema, configuration: form.configuracion, sheetScheme: form.sheetScheme, fabricacionHojas: form.fabricacionHojas, guidedVisualConfig: form.guidedVisualConfig, quickCompositionAdjustment: form.quickCompositionAdjustment }}
                           templates={lineTemplates}
                           onChange={(manualGlassMeasurements) =>
                             onUpdateItem(item.id, { manualGlassMeasurements })
