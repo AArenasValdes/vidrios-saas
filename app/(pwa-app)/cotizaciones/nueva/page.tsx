@@ -2331,11 +2331,16 @@ function NuevaCotizacionPageContent() {
         form.precioAjustadoManual = true;
         form.origenPrecio = "manual";
       }
-      // Medidas/cantidad invalidan el snapshot salvo que el patch traiga uno nuevo explícito.
+      const glassSelectionChanged =
+        (patch.vidrio !== undefined && patch.vidrio !== item.vidrio) ||
+        (patch.vidrioLineTemplateId !== undefined &&
+          patch.vidrioLineTemplateId !== form.vidrioLineTemplateId);
+      // Geometría y selección de vidrio invalidan snapshots viejos salvo que
+      // el patch incluya un cálculo explícito basado en los valores nuevos.
       if (
         patch.cubicationSnapshot === undefined &&
         patch.fabricacionSnapshot === undefined &&
-        (patch.ancho !== undefined || patch.alto !== undefined || patch.cantidad !== undefined)
+        (patch.ancho !== undefined || patch.alto !== undefined || patch.cantidad !== undefined || glassSelectionChanged)
       ) {
         form.cubicationSnapshot = null;
         form.fabricacionSnapshot = null;

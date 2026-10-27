@@ -12,6 +12,7 @@ import {
 } from "@/features/fabricacion/fixtures/veratec-7400-corredera-recipe";
 import { buildSeedPayloadForVariantSlot } from "@/features/fabricacion/services/fabricacion-line-variant.service";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
+import { VERATEC_7400_4MM_SOURCE_ORACLE } from "@/features/fabricacion/__tests__/veratec-7400-regression-cases";
 
 function makeId() {
   let counter = 0;
@@ -41,18 +42,19 @@ describe("VERATEC 7400 corredera 2 hojas", () => {
   });
 
   it("calcula destajes, vidrio, herrajes y barra documentados para monolítico 4 mm", () => {
+    const testCase = VERATEC_7400_4MM_SOURCE_ORACLE;
     const recipe = crearRecetaVeratec7400Corredera({
       lineName: "Veratec 7400",
-      variant: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+      variant: testCase.identity.variant,
       createId: makeId(),
     });
     const result = calcularCubicacionYPauta(recipe, {
-      anchoTotalMm: 1200,
-      altoTotalMm: 1000,
-      cantidad: 1,
-      hojas: 2,
-      modulos: 2,
-      variante: VERATEC_7400_VARIANT_MONOLITICO_4MM,
+      anchoTotalMm: testCase.dimensionsMm.width,
+      altoTotalMm: testCase.dimensionsMm.height,
+      cantidad: testCase.dimensionsMm.quantity,
+      hojas: testCase.identity.leaves,
+      modulos: testCase.identity.leaves,
+      variante: testCase.identity.variant,
     });
 
     expect(result.calculable).toBe(true);
@@ -60,24 +62,11 @@ describe("VERATEC 7400 corredera 2 hojas", () => {
       profile.codigoPerfil,
       profile.medidaMm,
       profile.cantidadPiezas,
-    ])).toEqual([
-      ["7401", 1206, 2],
-      ["7401", 1006, 2],
-      ["AB01016-E", 1088, 2],
-      ["7414", 604, 4],
-      ["7414", 912, 4],
-      ["7418", 906, 2],
-      ["6306", 452, 4],
-      ["6306", 833, 4],
-      ["69014STL001", 530, 4],
-      ["69014STL001", 930, 4],
-      ["69069STL000", 520, 4],
-      ["69069STL000", 920, 4],
-    ]);
+    ])).toEqual(testCase.expectedProfileCuts);
     expect(result.vidrios[0]).toMatchObject({
-      anchoMm: 442,
-      altoMm: 823,
-      cantidadPiezas: 2,
+      anchoMm: testCase.expectedGlass.widthMm,
+      altoMm: testCase.expectedGlass.heightMm,
+      cantidadPiezas: testCase.expectedGlass.quantity,
     });
     expect(result.accesorios.map((item) => item.cantidadUnidades)).toEqual([
       2, 1, 1, 16, 4, 2, 2, 2, 4, 1, 2, 2, 17,

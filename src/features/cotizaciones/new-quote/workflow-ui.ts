@@ -2913,6 +2913,38 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
   };
 }
 
+function normalizeVeratec7400DefaultConstructorPreset(
+  form: ComponentFormState
+): ComponentFormState {
+  if (
+    form.catalogLineKey !== VERATEC_7400_CATALOG_KEY ||
+    normalizeSearchValue(form.tipo) !== "ventana" ||
+    form.sistema?.trim() !== "Personalizado" ||
+    form.configuracion?.trim() !== "Personalizado" ||
+    form.sheetScheme?.trim() !== "Personalizado" ||
+    !form.guidedVisualConfig ||
+    form.guidedVisualConfig.quickCompositionStructural ||
+    hasQuickCompositionStructuralChanges(form.quickCompositionAdjustment)
+  ) {
+    return form;
+  }
+
+  const leaves = listLeafModules(form.guidedVisualConfig.root);
+  if (leaves.length !== 1 || leaves[0]?.type !== "corredera") return form;
+
+  // The default Constructor preset represents Veratec 7400's standard two
+  // mobile leaves. Keep that identity explicit so geometryOnly can preserve
+  // structural cuts without treating the 4 mm glazing recipe as compatible.
+  return {
+    ...form,
+    sistema: "Corredera",
+    configuracion: "",
+    sheetScheme: "2 hojas",
+    sheetVariant: "2 móviles",
+    isCustomScheme: false,
+  };
+}
+
 export function buildItemFromForm(
   form: ComponentFormState,
   items: CotizacionWorkflowItem[],
@@ -2921,7 +2953,9 @@ export function buildItemFromForm(
 ) {
   const pricingMode = normalizePricingMode(form.pricingMode);
   const quotePricingMode = normalizeQuotePricingMode(options?.quotePricingMode);
-  const hydratedForm = hydrateComponentFormFromLineTemplate(form, options);
+  const hydratedForm = normalizeVeratec7400DefaultConstructorPreset(
+    hydrateComponentFormFromLineTemplate(form, options)
+  );
   const syncedForm = syncTemplatePricingInComponentForm(hydratedForm);
   const guidedVisualConfig = syncedForm.guidedVisualConfig
     ? setGuidedVisualDimensions(syncedForm.guidedVisualConfig, {
@@ -3142,10 +3176,21 @@ export function buildItemFromForm(
           tipologia: syncedForm.fabricacionTipologia,
         }).snapshot
       : null;
+  const snapshotGlassSelection = syncedForm.fabricacionSnapshot?.glassSelection;
+  const snapshotGlassTechnicalSpec = snapshotGlassSelection?.technicalSpec ?? null;
+  const currentGlassTechnicalSpec = syncedForm.glassTechnicalSpec ?? null;
+  const snapshotGlassSelectionMatches =
+    !snapshotGlassSelection ||
+    ((snapshotGlassSelection.displayName ?? "").trim() === syncedForm.vidrio.trim() &&
+      (snapshotGlassSelection.productId ?? null) === (syncedForm.vidrioLineTemplateId?.trim() || null) &&
+      (snapshotGlassTechnicalSpec?.thicknessMm ?? null) ===
+        (currentGlassTechnicalSpec?.thicknessMm ?? null) &&
+      (snapshotGlassTechnicalSpec?.category ?? null) === (currentGlassTechnicalSpec?.category ?? null));
   const formalFabricationSnapshot = quickCompositionAdjusted
     ? null
     :
     syncedForm.fabricacionSnapshot &&
+    snapshotGlassSelectionMatches &&
     syncedForm.fabricacionSnapshot.lineTemplateId ===
       (syncedForm.lineTemplateId ? Number(syncedForm.lineTemplateId) : null) &&
     syncedForm.fabricacionSnapshot.input.anchoTotalMm ===

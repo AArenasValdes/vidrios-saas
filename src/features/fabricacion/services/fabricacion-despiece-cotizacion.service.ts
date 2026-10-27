@@ -692,6 +692,21 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
       ? resolveVeratecGeometryOnlyGlass(input.item.vidrio)
       : null;
 
+  if (veratecGeometryOnlyGlass?.kind === "monolithic_unsupported") {
+    const thicknessLabel = veratecGeometryOnlyGlass.thicknessMm == null
+      ? "sin espesor identificado"
+      : `${veratecGeometryOnlyGlass.thicknessMm} mm`;
+    return {
+      estado: "composicion_sin_receta",
+      formal: null,
+      cubication: null,
+      recipe: null,
+      barsAvailable: false,
+      preliminary: false,
+      message: `Sliding 7400 no tiene una variante monolítica habilitada para ${thicknessLabel}. La documentación disponible indica un rango desde 4 mm; no se generó despiece de perfiles ni se sustituyó por la receta de 4 mm.`,
+    };
+  }
+
   // Si el espesor coincide con una variante documental 7400 (20/24 mm), deja
   // que el resolver seleccione su receta preliminar y que el taller edite sus
   // cortes en el resumen. Los vidrios fuera de esas variantes conservan el
@@ -1116,12 +1131,13 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
 }
 
 type VeratecGeometryOnlyGlass = {
-  kind: "monolithic_unmapped" | "termopanel_preliminary" | "termopanel_unmapped";
+  kind: "monolithic_unmapped" | "monolithic_unsupported" | "termopanel_preliminary" | "termopanel_unmapped";
   thicknessMm: number | null;
 };
 
 const VERATEC_7400_AUTOMATED_GLASS_MATRIX = {
-  monolithic: [4],
+  verifiedMonolithic: [4],
+  structuralOnlyMonolithic: [5, 6, 8, 10, 12],
   termopanel: [20, 24],
 } as const;
 
@@ -1151,10 +1167,16 @@ function resolveVeratecGeometryOnlyGlass(
       : null;
 
   if (/\bmonolit(?:ico|ic)?\b/.test(normalized)) {
-    if (thicknessMm === VERATEC_7400_AUTOMATED_GLASS_MATRIX.monolithic[0]) return null;
-    return thicknessMm != null && Number.isFinite(thicknessMm)
-      ? { kind: "monolithic_unmapped", thicknessMm }
-      : null;
+    if (thicknessMm === VERATEC_7400_AUTOMATED_GLASS_MATRIX.verifiedMonolithic[0]) return null;
+    const isAvailableStructuralOnlyThickness =
+      thicknessMm != null &&
+      VERATEC_7400_AUTOMATED_GLASS_MATRIX.structuralOnlyMonolithic.some(
+        (allowed) => allowed === thicknessMm
+      );
+    return {
+      kind: isAvailableStructuralOnlyThickness ? "monolithic_unmapped" : "monolithic_unsupported",
+      thicknessMm: thicknessMm != null && Number.isFinite(thicknessMm) ? thicknessMm : null,
+    };
   }
 
   if (/\b(termopanel|dvh|doble\s+vidriado)\b/.test(normalized)) {
