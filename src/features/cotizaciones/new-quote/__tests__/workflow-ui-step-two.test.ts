@@ -122,6 +122,11 @@ describe("workflow-ui paso 2", () => {
       createLinePricingForm({
         lineTemplateId: "old-line",
         catalogLineKey: "ventora:linea-anterior",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 2,
+        fabricacionModulos: 2,
+        fabricacionApertura: "corredera",
+        fabricacionHerraje: "herrajes-de-linea-anterior",
         fabricationRecipeId: "recipe-old-line",
         fabricacionVariante: "variant-old-line",
         fabricacionConfiguracionId: "configuration-old-line",
@@ -147,6 +152,11 @@ describe("workflow-ui paso 2", () => {
 
     expect(nextLine.lineTemplateId).toBe("9411");
     expect(nextLine.catalogLineKey).toBe("ventora:linea-comercial-sin-receta");
+    expect(nextLine.fabricacionTipologia).toBe("");
+    expect(nextLine.fabricacionHojas).toBeNull();
+    expect(nextLine.fabricacionModulos).toBeNull();
+    expect(nextLine.fabricacionApertura).toBe("");
+    expect(nextLine.fabricacionHerraje).toBe("");
     expect(nextLine.fabricationRecipeId).toBe("");
     expect(nextLine.fabricacionVariante).toBe("");
     expect(nextLine.fabricacionConfiguracionId).toBe("");

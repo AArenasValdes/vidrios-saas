@@ -663,6 +663,11 @@ export function prepareFabricacionFormForLineAssignment(
 
   return {
     ...form,
+    fabricacionTipologia: "",
+    fabricacionHojas: null,
+    fabricacionModulos: null,
+    fabricacionApertura: "",
+    fabricacionHerraje: "",
     fabricationRecipeId: "",
     fabricacionVariante: "",
     fabricacionConfiguracionId: "",

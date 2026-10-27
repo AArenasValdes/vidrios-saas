@@ -25,6 +25,11 @@ import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/s
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
+import { SODAL_L25_FORMULA_VERSION } from "@/features/fabricacion/zeta/sodal-l25-profile-roles";
+import {
+  getZetaActivationBlockers,
+  isObservedZetaMeasure,
+} from "@/features/fabricacion/services/fabricacion-evidence-gate.service";
 
 function recipeRecord(input: {
   id: string;
@@ -96,7 +101,7 @@ function createModeItem(input: {
   template: CotizacionLineTemplate;
   recipes: FabricationRecipeRecord[];
   glass: string;
-  fabrication: Partial<ReturnType<typeof decodeCotizacionItemPresentationMeta>>;
+  selections?: Partial<ReturnType<typeof decodeCotizacionItemPresentationMeta>>;
   widthMm?: number;
   heightMm?: number;
   customComposition?: boolean;
@@ -132,19 +137,36 @@ function createModeItem(input: {
     fabricationRecipes: input.recipes,
     organizationId: 1,
   });
+  const isS75 = input.template.catalogKey === WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY;
+  const isL25 = input.template.catalogKey === "ventora:l25";
+  const selectedForm = {
+    ...assigned,
+    ...(isS75
+      ? { fabricacionVariante: input.selections?.fabricacionVariante ?? "" }
+      : {}),
+    ...(isL25
+      ? {
+          fabricacionApertura: "corredera",
+          fabricacionVariante: input.selections?.fabricacionVariante ?? "",
+          fabricacionGlazing: input.selections?.fabricacionGlazing ?? "",
+          fabricacionLeg: input.selections?.fabricacionLeg ?? "",
+          fabricacionReinforcement: input.selections?.fabricacionReinforcement ?? "",
+        }
+      : {}),
+    ...(input.customComposition
+      ? {
+          fabricacionVariante: input.selections?.fabricacionVariante ?? "",
+          isCustomScheme: true,
+          customSchemeDescription: "Composición visual pendiente de revisión",
+          fabricacionConfiguracionId: "custom:qa-window",
+          fabricacionComposicionId: "custom:qa-two-modules",
+        }
+      : {}),
+  };
   return buildItemFromForm(
     {
-      ...assigned,
+      ...selectedForm,
       vidrio: input.glass,
-      ...input.fabrication,
-      ...(input.customComposition
-        ? {
-            isCustomScheme: true,
-            customSchemeDescription: "Composición visual pendiente de revisión",
-            fabricacionConfiguracionId: "custom:qa-window",
-            fabricacionComposicionId: "custom:qa-two-modules",
-          }
-        : {}),
     },
     [],
     `${input.mode}-${input.template.id}`,
@@ -183,6 +205,7 @@ function resolutionSignature(item: ReturnType<typeof buildItemFromForm>, recipes
   return {
     state: result.estado,
     recipeId: result.recipe?.id ?? null,
+    recipeModules: result.recipe?.definition.identidad.modulos ?? null,
     preliminary: result.preliminary,
     calculatedProfileCuts: (result.formal?.result.perfiles ?? []).map((profile) => ({
       code: profile.codigoPerfil,
@@ -266,7 +289,8 @@ describe("contrato común de identidad técnica Guiada / Constructor", () => {
     variant: "monolithic_open_normal",
     definition: l25Bundle.definition,
     sourceReference: l25Bundle.sourceReference,
-    sourceRevision: l25Bundle.sourceRevision,
+    // Solo la versión fórmula derivada vigente puede previsualizarse con evidencia raw incompleta.
+    sourceRevision: SODAL_L25_FORMULA_VERSION,
     status: "testing",
     lineName: "L25 SODAL",
     sourceName: "SODAL",
@@ -278,13 +302,6 @@ describe("contrato común de identidad técnica Guiada / Constructor", () => {
       template: veratec,
       recipes: [veratecRecipe],
       glass: "Incoloro monolítico 4mm",
-      fabrication: {
-        fabricacionTipologia: "corredera",
-        fabricacionHojas: 2,
-        fabricacionModulos: 2,
-        fabricacionApertura: "corredera",
-        fabricacionVariante: VERATEC_7400_VARIANT_MONOLITICO_4MM,
-      },
       expectedState: "calculado",
     },
     {
@@ -292,13 +309,6 @@ describe("contrato común de identidad técnica Guiada / Constructor", () => {
       template: veratec,
       recipes: [veratecRecipe],
       glass: "Incoloro monolítico 5mm",
-      fabrication: {
-        fabricacionTipologia: "corredera",
-        fabricacionHojas: 2,
-        fabricacionModulos: 2,
-        fabricacionApertura: "corredera",
-        fabricacionVariante: VERATEC_7400_VARIANT_MONOLITICO_4MM,
-      },
       expectedState: "receta_incompleta",
     },
     {
@@ -306,11 +316,7 @@ describe("contrato común de identidad técnica Guiada / Constructor", () => {
       template: s75,
       recipes: [s75Recipe],
       glass: "4mm",
-      fabrication: {
-        fabricacionTipologia: "corredera",
-        fabricacionHojas: 2,
-        fabricacionModulos: 2,
-        fabricacionApertura: "corredera",
+      selections: {
         fabricacionVariante: s75Variant,
       },
       expectedState: "calculado",
@@ -322,17 +328,13 @@ describe("contrato común de identidad técnica Guiada / Constructor", () => {
       glass: "4mm",
       widthMm: 1800,
       heightMm: 1500,
-      fabrication: {
-        fabricacionTipologia: "corredera",
-        fabricacionHojas: 2,
-        fabricacionModulos: 1,
-        fabricacionApertura: "corredera",
+      selections: {
         fabricacionVariante: "monolithic_open_normal",
         fabricacionGlazing: "monolithic",
         fabricacionLeg: "open",
         fabricacionReinforcement: "normal",
       },
-      expectedState: "sin_receta",
+      expectedState: "calculado",
     },
   ] as const;
 
@@ -341,7 +343,7 @@ describe("contrato común de identidad técnica Guiada / Constructor", () => {
       template: testCase.template,
       recipes: [...testCase.recipes],
       glass: testCase.glass,
-      fabrication: testCase.fabrication,
+      selections: testCase.selections,
       widthMm: testCase.widthMm,
       heightMm: testCase.heightMm,
     };
@@ -360,6 +362,37 @@ describe("contrato común de identidad técnica Guiada / Constructor", () => {
       precioUnitario: guidedItem.precioUnitario,
     });
     expect(constructorItem.precioUnitario).toBe(guidedItem.precioUnitario);
+
+    if (testCase.name.startsWith("SODAL L25")) {
+      expect(technicalIdentity(guidedItem)).toMatchObject({
+        typology: "corredera",
+        leaves: 2,
+        modules: 2,
+        variant: "monolithic_open_normal",
+        glazing: "monolithic",
+        leg: "open",
+        reinforcement: "normal",
+      });
+      // La pauta L25 declara un módulo de cálculo para la corredera 2H; la identidad comercial conserva sus 2 hojas.
+      expect(guidedResolution.recipeId).toBe(l25Recipe.id);
+      expect(guidedResolution.recipeModules).toBe(1);
+      expect(guidedResolution.state).toBe("calculado");
+      expect(l25Recipe.status).toBe("testing");
+      expect(l25Recipe.sourceRevision).toBe(SODAL_L25_FORMULA_VERSION);
+      expect(l25Bundle.confirmed.testDimensions).toEqual({ widthMm: 1800, heightMm: 1500 });
+      expect(isObservedZetaMeasure(l25Recipe, 1800, 1500)).toBe(true);
+      expect(getZetaActivationBlockers(l25Recipe)).not.toHaveLength(0);
+      expect(guidedResolution.calculatedProfileCuts).toEqual([
+        { code: "2501", role: "Riel superior", length: 1784, quantity: 2, cut: "90°/90°" },
+        { code: "2502", role: "Riel inferior", length: 1784, quantity: 2, cut: "90°/90°" },
+        { code: "2503", role: "Jamba", length: 1500, quantity: 4, cut: "90°/90°" },
+        { code: "2504", role: "Cabezal de hoja", length: 888, quantity: 4, cut: "90°/90°" },
+        { code: "2505", role: "Zócalo de hoja", length: 888, quantity: 4, cut: "90°/90°" },
+        { code: "2506", role: "Pierna de hoja", length: 1465, quantity: 4, cut: "90°/90°" },
+        { code: "2507", role: "Traslapo de hoja", length: 1465, quantity: 4, cut: "90°/90°" },
+      ]);
+      expect(guidedResolution.glass).toEqual([{ width: 834, height: 1372, quantity: 4 }]);
+    }
   });
 
   it("conserva la identidad personalizada y deja ambas resoluciones pendientes", () => {
@@ -367,11 +400,7 @@ describe("contrato común de identidad técnica Guiada / Constructor", () => {
       template: veratec,
       recipes: [veratecRecipe],
       glass: "Incoloro monolítico 4mm",
-      fabrication: {
-        fabricacionTipologia: "corredera",
-        fabricacionHojas: 2,
-        fabricacionModulos: 2,
-        fabricacionApertura: "corredera",
+      selections: {
         fabricacionVariante: VERATEC_7400_VARIANT_MONOLITICO_4MM,
       },
       customComposition: true,
