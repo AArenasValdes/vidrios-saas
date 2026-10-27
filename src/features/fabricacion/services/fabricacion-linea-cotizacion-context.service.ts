@@ -639,25 +639,44 @@ export function mergeFabricacionLineaContextIntoForm(
 
   return {
     ...form,
-    fabricacionTipologia: context.fabricacionTipologia,
-    fabricacionHojas: context.fabricacionHojas,
-    fabricacionModulos: context.fabricacionModulos,
-    fabricationRecipeId: context.fabricationRecipeId,
-    fabricacionApertura: context.fabricacionApertura,
-    fabricacionHerraje: context.fabricacionHerraje,
-    fabricacionVariante: context.fabricacionVariante,
-    fabricacionConfiguracionId: context.fabricacionConfiguracionId,
-    fabricacionComposicionId: context.fabricacionComposicionId,
+    fabricacionTipologia: context.fabricacionTipologia || form.fabricacionTipologia || "",
+    fabricacionHojas: context.fabricacionHojas ?? form.fabricacionHojas ?? null,
+    fabricacionModulos: context.fabricacionModulos ?? form.fabricacionModulos ?? null,
+    fabricationRecipeId: context.fabricationRecipeId || form.fabricationRecipeId || "",
+    fabricacionApertura: context.fabricacionApertura || form.fabricacionApertura || "",
+    fabricacionHerraje: context.fabricacionHerraje || form.fabricacionHerraje || "",
+    fabricacionVariante: context.fabricacionVariante || form.fabricacionVariante || "",
+    fabricacionConfiguracionId:
+      context.fabricacionConfiguracionId || form.fabricacionConfiguracionId || "",
+    fabricacionComposicionId:
+      context.fabricacionComposicionId || form.fabricacionComposicionId || "",
   };
 }
 
 export function prepareFabricacionFormForLineAssignment(
   form: ComponentFormState,
-  template: Pick<CotizacionLineTemplate, "id">
+  template: Pick<CotizacionLineTemplate, "id" | "catalogKey">
 ): ComponentFormState {
-  const nextLineTemplateId = normalizeLineTemplateId(template.id);
-  const currentLineTemplateId = normalizeLineTemplateId(form.lineTemplateId);
-  if (nextLineTemplateId === null || currentLineTemplateId === nextLineTemplateId) {
+  const currentRawLineId = (form.lineTemplateId ?? "").trim();
+  const nextRawLineId = template.id != null ? String(template.id).trim() : "";
+  const currentCatalogKey = (form.catalogLineKey ?? "").trim();
+  const nextCatalogKey = (template.catalogKey ?? "").trim();
+
+  const hasExistingLineIdentity = Boolean(currentRawLineId || currentCatalogKey);
+  if (!hasExistingLineIdentity || (!nextRawLineId && !nextCatalogKey)) {
+    return form;
+  }
+
+  const sameLineId =
+    Boolean(currentRawLineId && nextRawLineId) && currentRawLineId === nextRawLineId;
+  const sameCatalogKey =
+    Boolean(currentCatalogKey && nextCatalogKey) && currentCatalogKey === nextCatalogKey;
+  const conflictingCatalogKey =
+    Boolean(currentCatalogKey && nextCatalogKey) && currentCatalogKey !== nextCatalogKey;
+  const conflictingLineId =
+    Boolean(currentRawLineId && nextRawLineId) && currentRawLineId !== nextRawLineId;
+
+  if ((sameLineId && !conflictingCatalogKey) || (sameCatalogKey && !conflictingLineId)) {
     return form;
   }
 
@@ -675,6 +694,8 @@ export function prepareFabricacionFormForLineAssignment(
     fabricacionGlazing: "",
     fabricacionLeg: "",
     fabricacionReinforcement: "",
+    fabricacionAnchoHojaAMm: null,
+    supplierProviderKey: "",
     fabricacionSnapshot: null,
     cubicationSnapshot: null,
   };
