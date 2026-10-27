@@ -118,10 +118,17 @@ function createBaseItem() {
 
 describe("workflow-ui paso 2", () => {
   it("descarta identidad técnica de una línea anterior si la nueva no resuelve receta", () => {
+    const previousSketch = createDefaultGuidedVisualConfig({ widthMm: 1320, heightMm: 980 });
     const nextLine = applyLineTemplateToComponentForm(
       createLinePricingForm({
         lineTemplateId: "old-line",
         catalogLineKey: "ventora:linea-anterior",
+        ancho: "1320",
+        alto: "980",
+        costoProveedorUnitario: "123000",
+        precioPorM2: "65000",
+        precioAjustadoManual: true,
+        guidedVisualConfig: previousSketch,
         fabricacionTipologia: "corredera",
         fabricacionHojas: 2,
         fabricacionModulos: 2,
@@ -157,6 +164,10 @@ describe("workflow-ui paso 2", () => {
     expect(nextLine.fabricacionModulos).toBeNull();
     expect(nextLine.fabricacionApertura).toBe("");
     expect(nextLine.fabricacionHerraje).toBe("");
+    expect(nextLine.ancho).toBe("1320");
+    expect(nextLine.alto).toBe("980");
+    expect(nextLine.costoProveedorUnitario).toBe("123000");
+    expect(nextLine.guidedVisualConfig).toEqual(previousSketch);
     expect(nextLine.fabricationRecipeId).toBe("");
     expect(nextLine.fabricacionVariante).toBe("");
     expect(nextLine.fabricacionConfiguracionId).toBe("");
