@@ -280,6 +280,50 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
       fabricacionSnapshot: constructor.formal,
     });
 
+    const legacySnapshot = { ...constructor.formal! };
+    delete legacySnapshot.glassSelection;
+    const legacyItem = { ...constructorItem, fabricacionSnapshot: legacySnapshot };
+    const unchangedLegacyReopen = buildItemFromForm(
+      mapItemToForm(legacyItem),
+      [legacyItem],
+      legacyItem.id,
+      { lineTemplates: [template], fabricationRecipes: [recipe], organizationId: 1 }
+    );
+    expect(unchangedLegacyReopen.fabricacionSnapshot).toEqual(legacySnapshot);
+
+    const editedLegacyItem = buildItemFromForm(
+      { ...mapItemToForm(legacyItem), vidrio: "Incoloro monolítico 5mm" },
+      [legacyItem],
+      legacyItem.id,
+      { lineTemplates: [template], fabricationRecipes: [recipe], organizationId: 1 }
+    );
+    expect(editedLegacyItem.fabricacionSnapshot).toBeNull();
+    expect(editedLegacyItem.precioUnitario).toBe(259200);
+    const editedLegacyResolution = resolveFabricacionDespieceForQuoteItem({
+      item: editedLegacyItem,
+      recipes: [recipe],
+      organizationId: 1,
+    });
+    expect(editedLegacyResolution.estado).toBe("receta_incompleta");
+    expect(editedLegacyResolution.preliminary).toBe(true);
+    expect(editedLegacyResolution.formal).toBeNull();
+    expect(editedLegacyResolution.geometryOnly?.profiles.length).toBeGreaterThan(0);
+
+    const restoredFourMmItem = buildItemFromForm(
+      { ...mapItemToForm(editedLegacyItem), vidrio: "Incoloro monolítico 4mm" },
+      [editedLegacyItem],
+      editedLegacyItem.id,
+      { lineTemplates: [template], fabricationRecipes: [recipe], organizationId: 1 }
+    );
+    const restoredFourMmResolution = resolveFabricacionDespieceForQuoteItem({
+      item: restoredFourMmItem,
+      recipes: [recipe],
+      organizationId: 1,
+    });
+    expect(restoredFourMmItem.precioUnitario).toBe(259200);
+    expect(restoredFourMmResolution.estado).toBe("calculado");
+    expect(restoredFourMmResolution.formal?.recipeId).toBe(recipe.id);
+
     const threeLeafTemplate = {
       ...template,
       id: 1397,

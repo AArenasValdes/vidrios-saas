@@ -3070,10 +3070,11 @@ export function buildItemFromForm(
         : "plantilla"
       : "manual";
 
-  const previousPresentation = editingItemId
-    ? decodeCotizacionItemPresentationMeta(
-        items.find((item) => item.id === editingItemId)?.observaciones
-      )
+  const previousItem = editingItemId
+    ? items.find((item) => item.id === editingItemId) ?? null
+    : null;
+  const previousPresentation = previousItem
+    ? decodeCotizacionItemPresentationMeta(previousItem.observaciones)
     : null;
   const personalizadoAssistMode = isCubicationPersonalizadoAssistMode({
     tipo: syncedForm.tipo,
@@ -3179,13 +3180,19 @@ export function buildItemFromForm(
   const snapshotGlassSelection = syncedForm.fabricacionSnapshot?.glassSelection;
   const snapshotGlassTechnicalSpec = snapshotGlassSelection?.technicalSpec ?? null;
   const currentGlassTechnicalSpec = syncedForm.glassTechnicalSpec ?? null;
-  const snapshotGlassSelectionMatches =
-    !snapshotGlassSelection ||
-    ((snapshotGlassSelection.displayName ?? "").trim() === syncedForm.vidrio.trim() &&
+  const snapshotGlassSelectionMatches = snapshotGlassSelection
+    ? (snapshotGlassSelection.displayName ?? "").trim() === syncedForm.vidrio.trim() &&
       (snapshotGlassSelection.productId ?? null) === (syncedForm.vidrioLineTemplateId?.trim() || null) &&
       (snapshotGlassTechnicalSpec?.thicknessMm ?? null) ===
         (currentGlassTechnicalSpec?.thicknessMm ?? null) &&
-      (snapshotGlassTechnicalSpec?.category ?? null) === (currentGlassTechnicalSpec?.category ?? null));
+      (snapshotGlassTechnicalSpec?.category ?? null) === (currentGlassTechnicalSpec?.category ?? null)
+    : previousItem !== null &&
+      previousItem.vidrio.trim() === syncedForm.vidrio.trim() &&
+      (previousPresentation?.vidrioLineTemplateId || null) ===
+        (syncedForm.vidrioLineTemplateId?.trim() || null) &&
+      (previousPresentation?.glassTechnicalSpec?.thicknessMm ?? null) ===
+        (currentGlassTechnicalSpec?.thicknessMm ?? null) &&
+      (previousPresentation?.glassTechnicalSpec?.category ?? null) === (currentGlassTechnicalSpec?.category ?? null);
   const formalFabricationSnapshot = quickCompositionAdjusted
     ? null
     :
