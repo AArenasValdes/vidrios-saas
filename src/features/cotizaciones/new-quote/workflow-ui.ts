@@ -15,7 +15,9 @@ import {
 import type { MeasureUnit } from "@/features/organization-profile/types/measure-unit";
 import {
   mergeFabricacionLineaContextIntoForm,
+  prepareFabricacionFormForLineAssignment,
   resolveFabricacionContextForLineAssignment,
+  resolveAndMergeFabricacionContextForLineAssignment,
   type FabricacionLineaCotizacionContext,
 } from "@/features/fabricacion/services/fabricacion-linea-cotizacion-context.service";
 import { SODAL_L25_CATALOG_KEY } from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
@@ -1881,7 +1883,7 @@ export function hydrateComponentFormFromLineTemplate(
     return form;
   }
 
-  const fabricationContext = resolveFabricacionContextForLineAssignment({
+  const withFabricacionContext = resolveAndMergeFabricacionContextForLineAssignment({
     template,
     recipes: options?.fabricationRecipes ?? [],
     organizationId: options?.organizationId ?? null,
@@ -1889,7 +1891,6 @@ export function hydrateComponentFormFromLineTemplate(
   });
 
   const sameSelectedLine = form.lineTemplateId === String(template.id);
-  const withFabricacionContext = mergeFabricacionLineaContextIntoForm(form, fabricationContext);
   const hasExplicitRecipeSelection =
     sameSelectedLine && Boolean(form.fabricationRecipeId?.trim());
   const hasExplicitVariantSelection =
@@ -1977,7 +1978,6 @@ export function hydrateComponentFormFromLineTemplate(
   }
 
   const appliedTemplateForm = applyLineTemplateToComponentForm(effectiveWithFabricacion, template, {
-    fabricationContext,
     fabricationRecipes: options?.fabricationRecipes,
     organizationId: options?.organizationId,
   });
@@ -2373,13 +2373,14 @@ export function applyLineTemplateToComponentForm(
     sheetScheme: form.sheetScheme,
     sheetVariant: form.sheetVariant,
   });
+  const assignmentForm = prepareFabricacionFormForLineAssignment(form, template);
   const fabricationContext =
     options?.fabricationContext ??
     resolveFabricacionContextForLineAssignment({
       template,
       recipes: options?.fabricationRecipes ?? [],
       organizationId: options?.organizationId ?? null,
-      form,
+      form: assignmentForm,
     });
   const effectiveFabricationContext: FabricacionLineaCotizacionContext | null = baharFoldingLeaves
     ? {
@@ -2397,7 +2398,7 @@ export function applyLineTemplateToComponentForm(
   return syncTemplatePricingInComponentForm(
     mergeFabricacionLineaContextIntoForm(
       {
-      ...form,
+      ...assignmentForm,
       material: template.material,
       catalogCategoria: template.categoria === "vidrio" ? "vidrio" : template.categoria === "pvc" ? "pvc" : "aluminio",
       catalogEspesor: glassMetadata.espesor ?? "",
@@ -2418,7 +2419,7 @@ export function applyLineTemplateToComponentForm(
               catalogEspesor: glassMetadata.espesor ?? "",
               catalogTerminacion: glassMetadata.terminacion ?? "",
             })
-          : form.fabricacionGlazing ?? "",
+          : assignmentForm.fabricacionGlazing ?? "",
       // Keep a catalog selection as an identity, not only its display name.
       // A line recommendation may populate an empty selection, but must not
       // replace the glass name while retaining a different catalog ID.
@@ -2432,8 +2433,8 @@ export function applyLineTemplateToComponentForm(
       redondeoPrecio: String(Math.round(template.redondeoPrecio ?? 0)),
       precioAjustadoManual: preserveManualPrice,
       origenPrecio: preserveManualPrice ? "manual" : "plantilla",
-      cubicationSnapshot: form.lineTemplateId === String(template.id) ? form.cubicationSnapshot ?? null : null,
-      fabricacionSnapshot: form.lineTemplateId === String(template.id) ? form.fabricacionSnapshot ?? null : null,
+      cubicationSnapshot: assignmentForm.lineTemplateId === String(template.id) ? assignmentForm.cubicationSnapshot ?? null : null,
+      fabricacionSnapshot: assignmentForm.lineTemplateId === String(template.id) ? assignmentForm.fabricacionSnapshot ?? null : null,
     },
       effectiveFabricationContext
     ),

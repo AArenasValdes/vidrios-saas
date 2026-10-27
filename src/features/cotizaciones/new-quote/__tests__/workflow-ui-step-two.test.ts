@@ -117,6 +117,45 @@ function createBaseItem() {
 }
 
 describe("workflow-ui paso 2", () => {
+  it("descarta identidad técnica de una línea anterior si la nueva no resuelve receta", () => {
+    const nextLine = applyLineTemplateToComponentForm(
+      createLinePricingForm({
+        lineTemplateId: "old-line",
+        catalogLineKey: "ventora:linea-anterior",
+        fabricationRecipeId: "recipe-old-line",
+        fabricacionVariante: "variant-old-line",
+        fabricacionConfiguracionId: "configuration-old-line",
+        fabricacionComposicionId: "composition-old-line",
+        fabricacionGlazing: "dvh",
+        fabricacionLeg: "open",
+        fabricacionReinforcement: "reinforced",
+      }),
+      {
+        id: 9411,
+        nombre: "Línea comercial sin receta",
+        categoria: "aluminio",
+        material: "Aluminio",
+        catalogKey: "ventora:linea-comercial-sin-receta",
+        catalogMetadata: {},
+        vidrioPrincipalRecomendado: null,
+        precioM2Sugerido: 80000,
+        minimoCobrable: 0,
+        redondeoPrecio: 1000,
+      },
+      { fabricationRecipes: [], organizationId: 1 }
+    );
+
+    expect(nextLine.lineTemplateId).toBe("9411");
+    expect(nextLine.catalogLineKey).toBe("ventora:linea-comercial-sin-receta");
+    expect(nextLine.fabricationRecipeId).toBe("");
+    expect(nextLine.fabricacionVariante).toBe("");
+    expect(nextLine.fabricacionConfiguracionId).toBe("");
+    expect(nextLine.fabricacionComposicionId).toBe("");
+    expect(nextLine.fabricacionGlazing).toBe("");
+    expect(nextLine.fabricacionLeg).toBe("");
+    expect(nextLine.fabricacionReinforcement).toBe("");
+  });
+
   it("conserva identidad y ficha técnica cuando se selecciona un vidrio del catálogo", () => {
     const selected = applyLineTemplateToComponentForm(
       createLinePricingForm({ vidrio: "Vidrio anterior", vidrioLineTemplateId: "old-glass" }),
