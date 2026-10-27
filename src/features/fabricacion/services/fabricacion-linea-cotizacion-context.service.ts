@@ -650,3 +650,49 @@ export function mergeFabricacionLineaContextIntoForm(
     fabricacionComposicionId: context.fabricacionComposicionId,
   };
 }
+
+export function prepareFabricacionFormForLineAssignment(
+  form: ComponentFormState,
+  template: Pick<CotizacionLineTemplate, "id">
+): ComponentFormState {
+  const nextLineTemplateId = normalizeLineTemplateId(template.id);
+  const currentLineTemplateId = normalizeLineTemplateId(form.lineTemplateId);
+  if (nextLineTemplateId === null || currentLineTemplateId === nextLineTemplateId) {
+    return form;
+  }
+
+  return {
+    ...form,
+    fabricacionTipologia: "",
+    fabricacionHojas: null,
+    fabricacionModulos: null,
+    fabricacionApertura: "",
+    fabricacionHerraje: "",
+    fabricationRecipeId: "",
+    fabricacionVariante: "",
+    fabricacionConfiguracionId: "",
+    fabricacionComposicionId: "",
+    fabricacionGlazing: "",
+    fabricacionLeg: "",
+    fabricacionReinforcement: "",
+    fabricacionSnapshot: null,
+    cubicationSnapshot: null,
+  };
+}
+
+export function resolveAndMergeFabricacionContextForLineAssignment(input: {
+  template: Pick<CotizacionLineTemplate, "id" | "catalogKey" | "catalogMetadata">;
+  recipes: FabricationRecipeRecord[];
+  organizationId: number | null;
+  form: ComponentFormState;
+}): ComponentFormState {
+  const form = prepareFabricacionFormForLineAssignment(input.form, input.template);
+  const context = resolveFabricacionContextForLineAssignment({
+    template: input.template,
+    recipes: input.recipes,
+    organizationId: input.organizationId,
+    form,
+  });
+
+  return mergeFabricacionLineaContextIntoForm(form, context);
+}
