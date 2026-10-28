@@ -13,7 +13,16 @@ import { createDefaultGuidedVisualConfig } from "@/features/cotizaciones/visual-
 import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import { setQuickPaneDecoration } from "@/features/cotizaciones/visual-composer/services/quick-composition-adjustment.service";
 import { prepareFabricacionSnapshotsForQuoteSave } from "@/features/cotizaciones/services/fabricacion-trabajo-snapshot-lifecycle.service";
-import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import {
+  decodeCotizacionItemPresentationMeta,
+  encodeCotizacionItemCubicationOverride,
+  encodeCotizacionItemPresentationMeta,
+} from "@/utils/cotizacion-item-presentation";
+import { buildCatalogGlassTechnicalSpec } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
+import { getCatalogGlassTechnicalFingerprint } from "@/features/cotizaciones/services/manual-glass-pane-measurements.service";
+import { resolveManualGlassPaneSlots } from "@/features/cotizaciones/services/manual-glass-pane-slots.service";
+import { buildGlassDistributionCoverage } from "@/features/fabricacion/services/glass-distribution-coverage.service";
+import { extractNormalizedGlassPanes } from "@/features/fabricacion/services/glass-pane-normalization.service";
 import {
   crearRecetaVeratec7400Corredera,
   VERATEC_7400_CATALOG_KEY,
@@ -887,5 +896,720 @@ describe("Escenario 2: invalidación segura de snapshots vs. preservación hist�
     expect(projectFormTechnicalIdentity(rehydratedForm)).toEqual(expectedIdentity);
     expect(projectFormTechnicalIdentity(reassignedSameLineForm)).toEqual(expectedIdentity);
     expect(rebuiltSameLine.fabricacionSnapshot).toEqual(snapshot);
+  });
+});
+
+describe("Escenario 3: conteo y reconciliación de vidrios con recipe_trace, slots manuales y casos históricos", () => {
+  const fixtures = buildScenarioOneFixtures();
+  const catalogGlass4mmMeta = {
+    espesor: "4mm",
+    categoriaTecnica: "monolitico",
+    revisionTecnicaExplicita: true,
+    corteManualEstado: "confirmed",
+    planchaAnchoMm: 2500,
+    planchaAltoMm: 1800,
+  };
+  const catalogGlassLam6mmMeta = {
+    espesor: "6mm",
+    categoriaTecnica: "laminado",
+    revisionTecnicaExplicita: true,
+    corteManualEstado: "confirmed",
+    planchaAnchoMm: 3210,
+    planchaAltoMm: 2250,
+  };
+
+  function buildVeratecDraft2HItem(overrides?: Partial<ComponentFormState>) {
+    const { form, templates, recipes } = fixtures.veratec;
+    const effectiveForm: ComponentFormState = { ...form, ...overrides };
+    const baseItem = buildItemFromForm(effectiveForm, [], "item-glass-2h", {
+      lineTemplates: templates,
+      fabricationRecipes: recipes,
+      organizationId: 1,
+    });
+    const resolution = resolveFabricacionDespieceForQuoteItem({
+      item: baseItem,
+      recipes,
+      organizationId: 1,
+    });
+    const snapshot = resolution.formal!;
+    const itemWithLogicalId: CotizacionWorkflowItem = {
+      ...baseItem,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        ...decodeCotizacionItemPresentationMeta(baseItem.observaciones),
+        logicalComponentId: "logical-veratec-2h",
+      }),
+      fabricacionSnapshot: snapshot,
+    };
+    return { item: itemWithLogicalId, snapshot, templates, recipes };
+  }
+
+  it("3A.1: receta preliminar 2H con dos paños agrupados (recipe_trace) no duplica referencias pendientes contra los 2 slots esperados", () => {
+    const { item: itemWithDraftSnapshot } = buildVeratecDraft2HItem();
+    const presentation = decodeCotizacionItemPresentationMeta(
+      itemWithDraftSnapshot.observaciones
+    );
+    const expectedSlots = resolveManualGlassPaneSlots({
+      componentType: presentation.fabricacionTipologia || itemWithDraftSnapshot.tipo,
+      system: presentation.sistema,
+      configuration: presentation.configuracion,
+      sheetScheme: presentation.sheetScheme,
+      fabricacionHojas: presentation.fabricacionHojas,
+      guidedVisualConfig: presentation.guidedVisualConfig,
+      quickCompositionAdjustment: presentation.quickCompositionAdjustment,
+    });
+    expect(expectedSlots.countIsKnown).toBe(true);
+    expect(expectedSlots.slots).toHaveLength(2);
+
+    const extractedPanes = extractNormalizedGlassPanes({
+      organizationId: 1,
+      quoteId: 700,
+      item: itemWithDraftSnapshot,
+    });
+    expect(extractedPanes).toHaveLength(1);
+    expect(extractedPanes[0]).toMatchObject({
+      dimensionProvenance: "recipe_trace",
+      recipeStatus: "draft",
+      quantity: 2,
+      validationStatus: "requires_review",
+    });
+
+    const coverage = buildGlassDistributionCoverage({
+      items: [itemWithDraftSnapshot],
+      panes: extractedPanes,
+    });
+
+    expect(coverage.status).toBe("unavailable");
+    expect(coverage.completeReferenceCount).toBe(0);
+    expect(coverage.pendingReferenceCount).toBe(1);
+    expect(coverage.pendingReferenceCount).toBeLessThanOrEqual(expectedSlots.slots.length);
+  });
+
+  it("3A.2: receta preliminar 2H con dos paños separados (Hoja A y Hoja B) reporta exactamente 2 referencias pendientes y no 4", () => {
+    const { item: baseItem, snapshot: baseSnapshot } = buildVeratecDraft2HItem();
+    const firstGlass = baseSnapshot.result.vidrios[0]!;
+    const twoRowDraftSnapshot: FabricacionCotizacionSnapshot = {
+      ...baseSnapshot,
+      recipeStatus: "draft",
+      result: {
+        ...baseSnapshot.result,
+        vidrios: [
+          { ...firstGlass, vidrioId: "vidrio-hoja-a", nombre: "Vidrio Hoja A", cantidadPiezas: 1 },
+          { ...firstGlass, vidrioId: "vidrio-hoja-b", nombre: "Vidrio Hoja B", cantidadPiezas: 1 },
+        ],
+      },
+    };
+    const itemWithTwoRowDraft: CotizacionWorkflowItem = {
+      ...baseItem,
+      fabricacionSnapshot: twoRowDraftSnapshot,
+    };
+
+    const extractedPanes = extractNormalizedGlassPanes({
+      organizationId: 1,
+      quoteId: 701,
+      item: itemWithTwoRowDraft,
+    });
+    expect(extractedPanes).toHaveLength(2);
+    expect(extractedPanes.every((pane) => pane.dimensionProvenance === "recipe_trace")).toBe(true);
+
+    const coverage = buildGlassDistributionCoverage({
+      items: [itemWithTwoRowDraft],
+      panes: extractedPanes,
+    });
+
+    expect(coverage.status).toBe("unavailable");
+    expect(coverage.completeReferenceCount).toBe(0);
+    expect(coverage.pendingReferenceCount).toBe(2);
+  });
+
+  it("3B: un paño manual confirmado (pane-1) y otro preliminar (recipe_trace) sin correspondencia explícita reportan 1 completo y 1 pendiente sin duplicar ni ocultar el slot faltante", () => {
+    const { item: baseItem, snapshot: baseSnapshot } = buildVeratecDraft2HItem();
+    const firstGlass = baseSnapshot.result.vidrios[0]!;
+    const expectedTechSpec = buildCatalogGlassTechnicalSpec({
+      productId: "glass-prod-4mm",
+      metadata: catalogGlass4mmMeta,
+    });
+
+    for (const draftVidrios of [
+      [{ ...firstGlass, vidrioId: "vidrio-parcial-sin-slot", cantidadPiezas: 1 }],
+      [
+        { ...firstGlass, vidrioId: "vidrio-hoja-a", nombre: "Vidrio Hoja A", cantidadPiezas: 1 },
+        { ...firstGlass, vidrioId: "vidrio-hoja-b", nombre: "Vidrio Hoja B", cantidadPiezas: 1 },
+      ],
+    ]) {
+      const itemWithManualSlot1AndUnboundTrace: CotizacionWorkflowItem = {
+        ...baseItem,
+        manualGlassMeasurements: {
+          version: 2,
+          expectedPaneCount: 2,
+          entries: [
+            {
+              id: "manual-slot-1",
+              source: "manual",
+              version: 2,
+              productId: "glass-prod-4mm",
+              technicalFingerprint: getCatalogGlassTechnicalFingerprint(expectedTechSpec),
+              widthMm: 442,
+              heightMm: 1323,
+              quantity: 1,
+              quantityBasis: "per_component",
+              paneSlotId: "pane-1",
+              sourcePosition: "Paño 1",
+              rectangularVerified: true,
+              recordedAt: "2026-10-27T12:00:00.000Z",
+            },
+          ],
+        },
+        fabricacionSnapshot: {
+          ...baseSnapshot,
+          recipeStatus: "draft",
+          result: { ...baseSnapshot.result, vidrios: draftVidrios },
+        },
+      };
+
+      const extractedPanes = extractNormalizedGlassPanes({
+        organizationId: 1,
+        quoteId: 702,
+        item: itemWithManualSlot1AndUnboundTrace,
+        catalogGlassProducts: new Map([
+          ["glass-prod-4mm", { name: "Incoloro monolítico 4mm", catalogMetadata: catalogGlass4mmMeta }],
+        ]),
+      });
+
+      const coverage = buildGlassDistributionCoverage({
+        items: [itemWithManualSlot1AndUnboundTrace],
+        panes: extractedPanes,
+      });
+
+      expect(coverage.status).toBe("partial");
+      expect(coverage.completeReferenceCount).toBe(1);
+      expect(coverage.pendingReferenceCount).toBe(1);
+    }
+  });
+
+  it("3C: dos vidrios distintos en una misma composición 2H reconcilian cada slot por su paneSlotId sin duplicar pendientes", () => {
+    const { item: baseItem } = buildVeratecDraft2HItem();
+    const spec4mm = buildCatalogGlassTechnicalSpec({
+      productId: "glass-prod-4mm",
+      metadata: catalogGlass4mmMeta,
+    });
+    const specLam6mm = buildCatalogGlassTechnicalSpec({
+      productId: "glass-prod-lam6mm",
+      metadata: catalogGlassLam6mmMeta,
+    });
+    const catalogMap = new Map([
+      ["glass-prod-4mm", { name: "Incoloro monolítico 4mm", catalogMetadata: catalogGlass4mmMeta }],
+      ["glass-prod-lam6mm", { name: "Laminado 6mm", catalogMetadata: catalogGlassLam6mmMeta }],
+    ]);
+
+    const itemTwoValidDistinctGlasses: CotizacionWorkflowItem = {
+      ...baseItem,
+      fabricacionSnapshot: null,
+      manualGlassMeasurements: {
+        version: 2,
+        expectedPaneCount: 2,
+        entries: [
+          {
+            id: "manual-pane-1-4mm",
+            source: "manual",
+            version: 2,
+            productId: "glass-prod-4mm",
+            technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec4mm),
+            widthMm: 550,
+            heightMm: 1320,
+            quantity: 1,
+            quantityBasis: "per_component",
+            paneSlotId: "pane-1",
+            sourcePosition: "Paño 1",
+            rectangularVerified: true,
+            recordedAt: "2026-10-27T12:00:00.000Z",
+          },
+          {
+            id: "manual-pane-2-lam6mm",
+            source: "manual",
+            version: 2,
+            productId: "glass-prod-lam6mm",
+            technicalFingerprint: getCatalogGlassTechnicalFingerprint(specLam6mm),
+            widthMm: 550,
+            heightMm: 1320,
+            quantity: 1,
+            quantityBasis: "per_component",
+            paneSlotId: "pane-2",
+            sourcePosition: "Paño 2",
+            rectangularVerified: true,
+            recordedAt: "2026-10-27T12:00:00.000Z",
+          },
+        ],
+      },
+    };
+
+    const completePanes = extractNormalizedGlassPanes({
+      organizationId: 1,
+      quoteId: 703,
+      item: itemTwoValidDistinctGlasses,
+      catalogGlassProducts: catalogMap,
+    });
+    const completeCoverage = buildGlassDistributionCoverage({
+      items: [itemTwoValidDistinctGlasses],
+      panes: completePanes,
+    });
+    expect(completeCoverage).toMatchObject({
+      status: "complete",
+      completeReferenceCount: 2,
+      pendingReferenceCount: 0,
+    });
+
+    // Si el segundo vidrio en pane-2 tiene ficha desactualizada o requiere revisión, pane-1 queda completo y pane-2 pendiente (sin agregar un 3er pendiente).
+    const partialPanes = extractNormalizedGlassPanes({
+      organizationId: 1,
+      quoteId: 703,
+      item: itemTwoValidDistinctGlasses,
+      catalogGlassProducts: new Map([
+        ["glass-prod-4mm", { name: "Incoloro monolítico 4mm", catalogMetadata: catalogGlass4mmMeta }],
+      ]),
+    });
+    const partialCoverage = buildGlassDistributionCoverage({
+      items: [itemTwoValidDistinctGlasses],
+      panes: partialPanes,
+    });
+    expect(partialCoverage.status).toBe("partial");
+    expect(partialCoverage.completeReferenceCount).toBe(1);
+    expect(partialCoverage.pendingReferenceCount).toBe(1);
+  });
+
+  it("3D: cantidad comercial mayor que uno (cantidad = 3) cuenta cada paño físico una sola vez por componente y por unidad", () => {
+    const { item: draftItem3x, snapshot: draftSnapshot3x } = buildVeratecDraft2HItem({
+      cantidad: "3",
+    });
+    expect(draftItem3x.cantidad).toBe(3);
+    expect(draftSnapshot3x.result.vidrios[0]?.cantidadPiezas).toBe(6);
+
+    const draftPanes = extractNormalizedGlassPanes({
+      organizationId: 1,
+      quoteId: 704,
+      item: draftItem3x,
+    });
+    expect(draftPanes).toHaveLength(1);
+    expect(draftPanes[0]?.quantity).toBe(6);
+
+    const draftCoverage = buildGlassDistributionCoverage({
+      items: [draftItem3x],
+      panes: draftPanes,
+    });
+    expect(draftCoverage.status).toBe("unavailable");
+    expect(draftCoverage.completeReferenceCount).toBe(0);
+    expect(draftCoverage.pendingReferenceCount).toBe(1);
+
+    // Receta preliminar 2H con 2 filas separadas y cantidad comercial = 3 (3 unidades por hoja = 6 piezas totales)
+    const firstGlass = draftSnapshot3x.result.vidrios[0]!;
+    const itemTwoRows3x: CotizacionWorkflowItem = {
+      ...draftItem3x,
+      fabricacionSnapshot: {
+        ...draftSnapshot3x,
+        result: {
+          ...draftSnapshot3x.result,
+          vidrios: [
+            { ...firstGlass, vidrioId: "hoja-a", nombre: "Hoja A", cantidadPiezas: 3 },
+            { ...firstGlass, vidrioId: "hoja-b", nombre: "Hoja B", cantidadPiezas: 3 },
+          ],
+        },
+      },
+    };
+    const twoRowPanes = extractNormalizedGlassPanes({
+      organizationId: 1,
+      quoteId: 704,
+      item: itemTwoRows3x,
+    });
+    const twoRowCoverage = buildGlassDistributionCoverage({
+      items: [itemTwoRows3x],
+      panes: twoRowPanes,
+    });
+    expect(twoRowCoverage.pendingReferenceCount).toBe(2);
+  });
+
+  it("3E: ausencia de snapshot reporta exactamente los slots esperados pendientes sin inflar ni ocultar referencias", () => {
+    const { item: baseItem } = buildVeratecDraft2HItem();
+    const itemWithoutSnapshot: CotizacionWorkflowItem = {
+      ...baseItem,
+      fabricacionSnapshot: null,
+    };
+
+    const extractedPanes = extractNormalizedGlassPanes({
+      organizationId: 1,
+      quoteId: 705,
+      item: itemWithoutSnapshot,
+    });
+    expect(extractedPanes).toEqual([]);
+
+    const coverage = buildGlassDistributionCoverage({
+      items: [itemWithoutSnapshot],
+      panes: extractedPanes,
+    });
+    expect(coverage.status).toBe("unavailable");
+    expect(coverage.completeReferenceCount).toBe(0);
+    expect(coverage.pendingReferenceCount).toBe(2);
+  });
+
+  it("3F: snapshot histórico válido conserva cobertura completa y snapshot legacy [cub:] permanece pendiente sin duplicarse contra slots", () => {
+    const { item: baseItem, snapshot: baseSnapshot } = buildVeratecDraft2HItem();
+    const spec4mm = buildCatalogGlassTechnicalSpec({
+      productId: "glass-prod-4mm",
+      metadata: catalogGlass4mmMeta,
+    });
+    const firstGlass = baseSnapshot.result.vidrios[0]!;
+    const glassWithoutTrace = { ...firstGlass };
+    delete (glassWithoutTrace as { trazabilidad?: unknown }).trazabilidad;
+
+    const historicalValidItem: CotizacionWorkflowItem = {
+      ...baseItem,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        ...decodeCotizacionItemPresentationMeta(baseItem.observaciones),
+        logicalComponentId: "logical-hist-valid",
+        vidrioLineTemplateId: "glass-prod-4mm",
+        glassTechnicalSpec: spec4mm,
+      }),
+      fabricacionSnapshot: {
+        ...baseSnapshot,
+        recipeStatus: "validated",
+        glassSelection: {
+          productId: "glass-prod-4mm",
+          displayName: "Incoloro monolítico 4mm",
+          technicalSpec: spec4mm,
+        },
+        result: {
+          ...baseSnapshot.result,
+          vidrios: [glassWithoutTrace],
+        },
+      },
+    };
+
+    const validPanes = extractNormalizedGlassPanes({
+      organizationId: 1,
+      quoteId: 706,
+      item: historicalValidItem,
+    });
+    const validCoverage = buildGlassDistributionCoverage({
+      items: [historicalValidItem],
+      panes: validPanes,
+    });
+    expect(validCoverage).toMatchObject({
+      status: "complete",
+      completeReferenceCount: 1,
+      pendingReferenceCount: 0,
+    });
+
+    // Legacy [cub:] snapshot en corredera 2H con quantity = 2 no debe duplicarse a 3 pendientes
+    const legacyCubItem: CotizacionWorkflowItem = {
+      ...baseItem,
+      fabricacionSnapshot: null,
+      observaciones: encodeCotizacionItemCubicationOverride(
+        encodeCotizacionItemPresentationMeta({
+          ...decodeCotizacionItemPresentationMeta(baseItem.observaciones),
+          logicalComponentId: "logical-hist-cub",
+        }),
+        {
+          v: 1,
+          source: "auto",
+          lineTemplateId: "1396",
+          system: "corredera",
+          status: "validada",
+          capturedAt: "2026-08-01T00:00:00.000Z",
+          widthMm: 1200,
+          heightMm: 1500,
+          quantity: 1,
+          cuts: [
+            {
+              label: "Marco",
+              functionLabel: "Riel superior",
+              quantity: 1,
+              lengthMm: 1200,
+              totalLinealMm: 1200,
+            },
+          ],
+          bars: [],
+          totalUsedMm: 0,
+          totalWasteMm: 0,
+          wastePct: 0,
+          totalProfilesLinealMm: 0,
+          accessoryUnits: 0,
+          glass: {
+            widthMm: 550,
+            heightMm: 1320,
+            quantity: 2,
+            areaEachM2: 0.726,
+            totalM2: 1.452,
+          },
+        }
+      ),
+    };
+    const legacyPanes = extractNormalizedGlassPanes({
+      organizationId: 1,
+      quoteId: 706,
+      item: legacyCubItem,
+    });
+    const legacyCoverage = buildGlassDistributionCoverage({
+      items: [legacyCubItem],
+      panes: legacyPanes,
+    });
+    expect(legacyCoverage.status).toBe("unavailable");
+    expect(legacyCoverage.completeReferenceCount).toBe(0);
+    expect(legacyCoverage.pendingReferenceCount).toBe(1);
+    expect(legacyCoverage.pendingReferences[0]?.reason).toMatch(/snapshot legacy/i);
+  });
+
+  it("3G: paños validados (agrupados o separados) y mediciones manuales completas sobre un componente preliminar no duplican unidades ni referencias", () => {
+    const { item: baseItem, snapshot: baseSnapshot } = buildVeratecDraft2HItem();
+    const spec4mm = buildCatalogGlassTechnicalSpec({
+      productId: "glass-prod-4mm",
+      metadata: catalogGlass4mmMeta,
+    });
+    const firstGlass = baseSnapshot.result.vidrios[0]!;
+
+    // Caso 1: Receta validada con 2 filas separadas (Hoja A y Hoja B)
+    const validatedTwoRowItem: CotizacionWorkflowItem = {
+      ...baseItem,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        ...decodeCotizacionItemPresentationMeta(baseItem.observaciones),
+        logicalComponentId: "logical-val-2row",
+        vidrioLineTemplateId: "glass-prod-4mm",
+        glassTechnicalSpec: spec4mm,
+      }),
+      fabricacionSnapshot: {
+        ...baseSnapshot,
+        recipeStatus: "validated",
+        glassSelection: {
+          productId: "glass-prod-4mm",
+          displayName: "Incoloro monolítico 4mm",
+          technicalSpec: spec4mm,
+        },
+        result: {
+          ...baseSnapshot.result,
+          vidrios: [
+            { ...firstGlass, vidrioId: "hoja-a", nombre: "Hoja A", cantidadPiezas: 1 },
+            { ...firstGlass, vidrioId: "hoja-b", nombre: "Hoja B", cantidadPiezas: 1 },
+          ],
+        },
+      },
+    };
+    const validatedPanes = extractNormalizedGlassPanes({
+      organizationId: 1,
+      quoteId: 707,
+      item: validatedTwoRowItem,
+    });
+    expect(validatedPanes).toHaveLength(2);
+    expect(validatedPanes.reduce((sum, p) => sum + p.quantity, 0)).toBe(2);
+    const validatedCoverage = buildGlassDistributionCoverage({
+      items: [validatedTwoRowItem],
+      panes: validatedPanes,
+    });
+    expect(validatedCoverage).toMatchObject({
+      status: "complete",
+      completeReferenceCount: 2,
+      pendingReferenceCount: 0,
+    });
+
+    // Caso 2: Componente con snapshot preliminar (productId null) donde el taller completó manualmente ambos slots (pane-1 y pane-2)
+    const itemWithBothManualSlotsAndDraftSnapshot: CotizacionWorkflowItem = {
+      ...baseItem,
+      manualGlassMeasurements: {
+        version: 2,
+        expectedPaneCount: 2,
+        entries: [1, 2].map((idx) => ({
+          id: `manual-slot-${idx}`,
+          source: "manual" as const,
+          version: 2 as const,
+          productId: "glass-prod-4mm",
+          technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec4mm),
+          widthMm: 550,
+          heightMm: 1320,
+          quantity: 1,
+          quantityBasis: "per_component" as const,
+          paneSlotId: `pane-${idx}`,
+          sourcePosition: `Paño ${idx}`,
+          rectangularVerified: true,
+          recordedAt: "2026-10-27T12:00:00.000Z",
+        })),
+      },
+    };
+    const manualOverDraftPanes = extractNormalizedGlassPanes({
+      organizationId: 1,
+      quoteId: 707,
+      item: itemWithBothManualSlotsAndDraftSnapshot,
+      catalogGlassProducts: new Map([
+        ["glass-prod-4mm", { name: "Incoloro monolítico 4mm", catalogMetadata: catalogGlass4mmMeta }],
+      ]),
+    });
+    expect(manualOverDraftPanes).toHaveLength(2);
+    expect(manualOverDraftPanes.every((pane) => pane.dimensionProvenance === "manual")).toBe(true);
+    const manualOverDraftCoverage = buildGlassDistributionCoverage({
+      items: [itemWithBothManualSlotsAndDraftSnapshot],
+      panes: manualOverDraftPanes,
+    });
+    expect(manualOverDraftCoverage).toMatchObject({
+      status: "complete",
+      completeReferenceCount: 2,
+      pendingReferenceCount: 0,
+    });
+  });
+
+  it("3H: slots ambiguos, duplicados, sin paneSlotId en multi-hoja o con huella vencida no se marcan completos ni se asignan por índice", () => {
+    const { item: baseItem } = buildVeratecDraft2HItem();
+    const spec4mm = buildCatalogGlassTechnicalSpec({
+      productId: "glass-prod-4mm",
+      metadata: catalogGlass4mmMeta,
+    });
+    const catalogMap = new Map([
+      ["glass-prod-4mm", { name: "Incoloro monolítico 4mm", catalogMetadata: catalogGlass4mmMeta }],
+    ]);
+
+    // 1) Dos entradas manuales que reclaman el mismo slot "pane-1" dejando "pane-2" vacío
+    const duplicateSlotItem: CotizacionWorkflowItem = {
+      ...baseItem,
+      fabricacionSnapshot: null,
+      manualGlassMeasurements: {
+        version: 2,
+        expectedPaneCount: 2,
+        entries: [
+          {
+            id: "dup-slot-1a",
+            source: "manual",
+            version: 2,
+            productId: "glass-prod-4mm",
+            technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec4mm),
+            widthMm: 550,
+            heightMm: 1320,
+            quantity: 1,
+            quantityBasis: "per_component",
+            paneSlotId: "pane-1",
+            sourcePosition: "Paño 1",
+            rectangularVerified: true,
+            recordedAt: "2026-10-27T12:00:00.000Z",
+          },
+          {
+            id: "dup-slot-1b",
+            source: "manual",
+            version: 2,
+            productId: "glass-prod-4mm",
+            technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec4mm),
+            widthMm: 560,
+            heightMm: 1320,
+            quantity: 1,
+            quantityBasis: "per_component",
+            paneSlotId: "pane-1",
+            sourcePosition: "Paño 1",
+            rectangularVerified: true,
+            recordedAt: "2026-10-27T12:00:00.000Z",
+          },
+        ],
+      },
+    };
+    const dupPanes = extractNormalizedGlassPanes({
+      organizationId: 1,
+      quoteId: 708,
+      item: duplicateSlotItem,
+      catalogGlassProducts: catalogMap,
+    });
+    const dupCoverage = buildGlassDistributionCoverage({
+      items: [duplicateSlotItem],
+      panes: dupPanes,
+    });
+    expect(dupPanes.every((pane) => pane.validationStatus === "requires_review")).toBe(true);
+    expect(dupCoverage.status).toBe("unavailable");
+    expect(dupCoverage.completeReferenceCount).toBe(0);
+    expect(dupCoverage.pendingReferenceCount).toBe(2);
+
+    // 2) Una entrada manual con pane-1 y otra entrada manual SIN paneSlotId en ventana 2H: no se asigna por índice a pane-2
+    const unslottedSecondManualItem: CotizacionWorkflowItem = {
+      ...baseItem,
+      fabricacionSnapshot: null,
+      manualGlassMeasurements: {
+        version: 2,
+        expectedPaneCount: 2,
+        entries: [
+          {
+            id: "manual-slot-1",
+            source: "manual",
+            version: 2,
+            productId: "glass-prod-4mm",
+            technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec4mm),
+            widthMm: 550,
+            heightMm: 1320,
+            quantity: 1,
+            quantityBasis: "per_component",
+            paneSlotId: "pane-1",
+            sourcePosition: "Paño 1",
+            rectangularVerified: true,
+            recordedAt: "2026-10-27T12:00:00.000Z",
+          },
+          {
+            id: "manual-unslotted",
+            source: "manual",
+            version: 2,
+            productId: "glass-prod-4mm",
+            technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec4mm),
+            widthMm: 550,
+            heightMm: 1320,
+            quantity: 1,
+            quantityBasis: "per_component",
+            rectangularVerified: true,
+            recordedAt: "2026-10-27T12:00:00.000Z",
+          },
+        ],
+      },
+    };
+    const unslottedPanes = extractNormalizedGlassPanes({
+      organizationId: 1,
+      quoteId: 708,
+      item: unslottedSecondManualItem,
+      catalogGlassProducts: catalogMap,
+    });
+    const unslottedCoverage = buildGlassDistributionCoverage({
+      items: [unslottedSecondManualItem],
+      panes: unslottedPanes,
+    });
+    expect(unslottedPanes[0]?.validationStatus).toBe("eligible_for_manual_planning");
+    expect(unslottedPanes[1]?.validationStatus).toBe("requires_review");
+    expect(unslottedCoverage.status).toBe("partial");
+    expect(unslottedCoverage.completeReferenceCount).toBe(1);
+    expect(unslottedCoverage.pendingReferenceCount).toBe(1);
+
+    // 3) Huella de configuración vencida en ventana 2H invalida la completitud de los paños manuales sin inflar a 4 referencias
+    const staleManualItem: CotizacionWorkflowItem = {
+      ...baseItem,
+      fabricacionSnapshot: null,
+      manualGlassMeasurements: {
+        version: 2,
+        expectedPaneCount: 2,
+        configurationFingerprint: "pane-config-obsoleto",
+        entries: [1, 2].map((idx) => ({
+          id: `stale-slot-${idx}`,
+          source: "manual" as const,
+          version: 2 as const,
+          productId: "glass-prod-4mm",
+          technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec4mm),
+          widthMm: 550,
+          heightMm: 1320,
+          quantity: 1,
+          quantityBasis: "per_component" as const,
+          paneSlotId: `pane-${idx}`,
+          sourcePosition: `Paño ${idx}`,
+          rectangularVerified: true,
+          recordedAt: "2026-10-27T12:00:00.000Z",
+        })),
+      },
+    };
+    const stalePanes = extractNormalizedGlassPanes({
+      organizationId: 1,
+      quoteId: 708,
+      item: staleManualItem,
+      catalogGlassProducts: catalogMap,
+    });
+    const staleCoverage = buildGlassDistributionCoverage({
+      items: [staleManualItem],
+      panes: stalePanes,
+    });
+    expect(stalePanes.every((pane) => pane.validationStatus === "requires_review")).toBe(true);
+    expect(staleCoverage.status).toBe("unavailable");
+    expect(staleCoverage.completeReferenceCount).toBe(0);
+    expect(staleCoverage.pendingReferenceCount).toBe(2);
   });
 });
