@@ -637,6 +637,8 @@ export function mergeFabricacionLineaContextIntoForm(
 ): ComponentFormState {
   if (!context) return form;
 
+  if (form.fabricacionIdentidadPersistida === true) return form;
+
   return {
     ...form,
     fabricacionTipologia: context.fabricacionTipologia || form.fabricacionTipologia || "",
@@ -698,6 +700,7 @@ export function prepareFabricacionFormForLineAssignment(
     supplierProviderKey: "",
     fabricacionSnapshot: null,
     cubicationSnapshot: null,
+    fabricacionIdentidadPersistida: false,
   };
 }
 

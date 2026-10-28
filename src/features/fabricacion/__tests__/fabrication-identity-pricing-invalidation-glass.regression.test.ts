@@ -698,6 +698,74 @@ describe("Escenario 2: invalidación segura de snapshots vs. preservación hist�
     expect(rebuilt.fabricacionSnapshot).toBeNull();
   });
 
+  const singleDiscriminatorChanges: Array<
+    [string, (form: ComponentFormState) => ComponentFormState]
+  > = [
+    ["tipología", (form) => ({ ...form, fabricacionTipologia: "fijo" })],
+    ["hojas", (form) => ({ ...form, fabricacionHojas: 3 })],
+    ["módulos", (form) => ({ ...form, fabricacionModulos: 3 })],
+    ["apertura", (form) => ({ ...form, fabricacionApertura: "abatible" })],
+    ["herraje", (form) => ({ ...form, fabricacionHerraje: "otro-herraje" })],
+    ["variante", (form) => ({ ...form, fabricacionVariante: "otra-variante" })],
+    ["receta", (form) => ({ ...form, fabricationRecipeId: "otra-receta" })],
+    ["configuración", (form) => ({ ...form, fabricacionConfiguracionId: "otra-config" })],
+    ["composición", (form) => ({ ...form, fabricacionComposicionId: "otra-composicion" })],
+    ["vidrio técnico", (form) => ({ ...form, fabricacionGlazing: "termopanel" })],
+    ["pierna", (form) => ({ ...form, fabricacionLeg: "reforzada" })],
+    ["refuerzo", (form) => ({ ...form, fabricacionReinforcement: "sin_refuerzo" })],
+    ["ancho hoja A", (form) => ({ ...form, fabricacionAnchoHojaAMm: 700 })],
+    ["esquema de hojas", (form) => ({ ...form, sheetScheme: "3 hojas" })],
+    ["variante de hojas", (form) => ({ ...form, sheetVariant: "1 fija + 1 móvil" })],
+    ["sistema", (form) => ({ ...form, sistema: "Abatible" })],
+    ["configuración comercial", (form) => ({ ...form, configuracion: "Proyectante" })],
+    ["línea de catálogo", (form) => ({ ...form, catalogLineKey: "ventora:otra-linea" })],
+  ];
+
+  it.each(singleDiscriminatorChanges)(
+    "2B.4.x: invalida el snapshot al cambiar solo el discriminador %s",
+    (_label, changeForm) => {
+      const { item, template, recipe } = buildVeratecItemWithSnapshot();
+      const editedForm = changeForm(mapItemToForm(item));
+      const rebuilt = buildItemFromForm(editedForm, [item], item.id, {
+        lineTemplates: [template],
+        fabricationRecipes: [recipe],
+        organizationId: 1,
+      });
+
+      expect(rebuilt.fabricacionSnapshot).toBeNull();
+    }
+  );
+
+  it.each([
+    ["receta", { fabricationRecipeId: "" }],
+    ["variante", { fabricacionVariante: "" }],
+    ["configuración", { fabricacionConfiguracionId: "" }],
+  ] as const)(
+    "2B.4.y: permite borrar intencionalmente solo la %s sin retener el snapshot anterior",
+    (_label, clearedField) => {
+      const { item, template, recipe } = buildVeratecItemWithSnapshot();
+      const editedForm: ComponentFormState = {
+        ...mapItemToForm(item),
+        ...clearedField,
+      };
+      const rebuilt = buildItemFromForm(editedForm, [item], item.id, {
+        lineTemplates: [template],
+        fabricationRecipes: [recipe],
+        organizationId: 1,
+      });
+
+      expect(rebuilt.fabricacionSnapshot).toBeNull();
+      const reopenedForm = mapItemToForm(rebuilt);
+      const rehydratedForm = hydrateComponentFormFromLineTemplate(reopenedForm, {
+        lineTemplates: [template],
+        fabricationRecipes: [recipe],
+        organizationId: 1,
+      });
+      const field = Object.keys(clearedField)[0] as keyof ComponentFormState;
+      expect(rehydratedForm[field]).toBe("");
+    }
+  );
+
   it("2B.5: invalida fabricacionSnapshot y limpia discriminadores residuales al cambiar de línea (Sodal L25 -> Veratec 7400)", () => {
     const sodalItem = buildItemFromForm(fixtures.sodalL25.form, [], "item-sodal-1", {
       lineTemplates: fixtures.sodalL25.templates,
@@ -762,6 +830,35 @@ describe("Escenario 2: invalidación segura de snapshots vs. preservación hist�
     expect(savePreparation.items[0]?.fabricacionSnapshot).toEqual(snapshot);
     expect(savePreparation.items[1]?.fabricacionSnapshot).toBeNull();
   });
+
+  it.each([
+    ["sin tags", "Nota histórica sin tags de identidad", false],
+    ["metadata parcial", "[frid:11111111-1111-4111-8111-111111111111]", true],
+  ] as const)(
+    "2B.6.1: conserva snapshot histórico con %s",
+    (_label, observaciones, hasPersistedMetadata) => {
+    const { item, snapshot, template, recipe } = buildVeratecItemWithSnapshot();
+    const historicalItem: CotizacionWorkflowItem = {
+      ...item,
+      observaciones,
+    };
+    const reopenedForm = mapItemToForm(historicalItem);
+    const rehydratedForm = hydrateComponentFormFromLineTemplate(reopenedForm, {
+      lineTemplates: [template],
+      fabricationRecipes: [recipe],
+      organizationId: 1,
+    });
+    const rebuilt = buildItemFromForm(rehydratedForm, [historicalItem], item.id, {
+      lineTemplates: [template],
+      fabricationRecipes: [recipe],
+      organizationId: 1,
+    });
+
+    expect(reopenedForm.fabricacionIdentidadPersistida).toBe(hasPersistedMetadata);
+    expect(reopenedForm.fabricationRecipeId).toBe(snapshot.recipeId);
+    expect(rebuilt.fabricacionSnapshot).toEqual(snapshot);
+    }
+  );
 
   it("2B.7: rehidratar o reasignar la misma línea no limpia atributos válidos ni destruye el snapshot vigente", () => {
     const { item, snapshot, template, recipe } = buildVeratecItemWithSnapshot();

@@ -246,6 +246,8 @@ export type ComponentFormState = {
   fabricacionLeg?: string;
   fabricacionReinforcement?: string;
   fabricacionSnapshot?: FabricacionCotizacionSnapshot | null;
+  /** Persisted metadata makes empty technical fields intentional on rehydration. */
+  fabricacionIdentidadPersistida?: boolean;
 };
 
 export type FieldErrors = Partial<
@@ -1891,7 +1893,21 @@ export function hydrateComponentFormFromLineTemplate(
   });
 
   const sameSelectedLine = form.lineTemplateId === String(template.id);
-  const withFabricacion = sameSelectedLine
+  const preservePersistedIdentity = sameSelectedLine && form.fabricacionIdentidadPersistida === true;
+  const withFabricacion = preservePersistedIdentity
+    ? {
+        ...withFabricacionContext,
+        fabricacionTipologia: form.fabricacionTipologia ?? "",
+        fabricacionHojas: form.fabricacionHojas ?? null,
+        fabricacionModulos: form.fabricacionModulos ?? null,
+        fabricationRecipeId: form.fabricationRecipeId ?? "",
+        fabricacionApertura: form.fabricacionApertura ?? "",
+        fabricacionHerraje: form.fabricacionHerraje ?? "",
+        fabricacionVariante: form.fabricacionVariante ?? "",
+        fabricacionConfiguracionId: form.fabricacionConfiguracionId ?? "",
+        fabricacionComposicionId: form.fabricacionComposicionId ?? "",
+      }
+    : sameSelectedLine
     ? {
         ...withFabricacionContext,
         fabricationRecipeId:
@@ -1983,7 +1999,22 @@ export function hydrateComponentFormFromLineTemplate(
     fabricationRecipes: options?.fabricationRecipes,
     organizationId: options?.organizationId,
   });
-  const hydratedTemplateForm = sameSelectedLine
+  const hydratedTemplateForm = preservePersistedIdentity
+    ? {
+        ...appliedTemplateForm,
+        fabricacionTipologia: effectiveWithFabricacion.fabricacionTipologia ?? "",
+        fabricacionHojas: effectiveWithFabricacion.fabricacionHojas ?? null,
+        fabricacionModulos: effectiveWithFabricacion.fabricacionModulos ?? null,
+        fabricationRecipeId: effectiveWithFabricacion.fabricationRecipeId ?? "",
+        fabricacionApertura: effectiveWithFabricacion.fabricacionApertura ?? "",
+        fabricacionHerraje: effectiveWithFabricacion.fabricacionHerraje ?? "",
+        fabricacionVariante: effectiveWithFabricacion.fabricacionVariante ?? "",
+        fabricacionConfiguracionId:
+          effectiveWithFabricacion.fabricacionConfiguracionId ?? "",
+        fabricacionComposicionId:
+          effectiveWithFabricacion.fabricacionComposicionId ?? "",
+      }
+    : sameSelectedLine
     ? {
         ...appliedTemplateForm,
         fabricationRecipeId:
@@ -2868,7 +2899,11 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     sheetVariant,
     customSchemeDescription,
     isCustomScheme,
-    lineTemplateId,
+    lineTemplateId:
+      lineTemplateId ||
+      (item.fabricacionSnapshot?.lineTemplateId != null
+        ? String(item.fabricacionSnapshot.lineTemplateId)
+        : ""),
     vidrioLineTemplateId,
     glassTechnicalSpec,
     manualGlassMeasurements,
@@ -2982,6 +3017,9 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     fabricacionLeg: fabricacionLeg || "",
     fabricacionReinforcement: fabricacionReinforcement || "",
     fabricacionSnapshot: item.fabricacionSnapshot ?? null,
+    fabricacionIdentidadPersistida: /\[(?:gvc|qca|ft|fh|fmo|fap|fhe|fv|fcid|fcmp|fwa|lck|fgl|flg|frf|frid|spk):/.test(
+      item.observaciones ?? ""
+    ),
   };
 }
 
@@ -3270,55 +3308,65 @@ export function buildItemFromForm(
   const effectiveFabricacionGlazing =
     sodalConfig?.glazing || syncedForm.fabricacionGlazing || "";
   const snapshotIdentity = syncedForm.fabricacionSnapshot?.recipeIdentity;
-  const hasEncodedPreviousPresentation = Boolean(previousItem?.observaciones?.includes("["));
+  const hasPreviousPresentationTag = (tag: string) =>
+    new RegExp(`\\[${tag}:`).test(previousItem?.observaciones ?? "");
   const snapshotDiscriminatorsMatch =
     syncedForm.fabricacionSnapshot != null &&
     (resolvedFabricacionHojas == null ||
       syncedForm.fabricacionSnapshot.input.hojas === resolvedFabricacionHojas) &&
+    (syncedForm.fabricacionSnapshot.input.hojas == null ||
+      syncedForm.fabricacionSnapshot.input.hojas === syncedForm.fabricacionHojas) &&
     (syncedForm.fabricacionModulos == null ||
       sodalConfig != null ||
       syncedForm.fabricacionSnapshot.input.modulos === syncedForm.fabricacionModulos) &&
-    (!syncedForm.fabricacionTipologia ||
-      snapshotIdentity?.tipologia === syncedForm.fabricacionTipologia) &&
-    (!effectiveFabricacionVariante ||
+    (!snapshotIdentity?.tipologia ||
+      snapshotIdentity.tipologia === (syncedForm.fabricacionTipologia || "")) &&
+    (!syncedForm.fabricacionSnapshot.selectedVariant ||
       syncedForm.fabricacionSnapshot.selectedVariant === effectiveFabricacionVariante) &&
-    (!syncedForm.fabricationRecipeId ||
-      syncedForm.fabricacionSnapshot.recipeId === syncedForm.fabricationRecipeId) &&
-    (!syncedForm.fabricacionApertura ||
-      !snapshotIdentity?.apertura ||
-      snapshotIdentity.apertura === syncedForm.fabricacionApertura) &&
-    (!syncedForm.fabricacionHerraje ||
-      !snapshotIdentity?.herraje ||
-      snapshotIdentity.herraje === syncedForm.fabricacionHerraje) &&
-    (!syncedForm.fabricacionConfiguracionId ||
-      !snapshotIdentity?.configurationId ||
-      snapshotIdentity.configurationId === syncedForm.fabricacionConfiguracionId) &&
-    (!syncedForm.fabricacionComposicionId ||
-      !snapshotIdentity?.compositionId ||
-      snapshotIdentity.compositionId === syncedForm.fabricacionComposicionId) &&
-    (!hasEncodedPreviousPresentation ||
-      previousPresentation === null ||
-      ((previousPresentation.catalogLineKey || "") === (resolvedCatalogLineKey || "") &&
-        (previousPresentation.fabricacionGlazing || "") === effectiveFabricacionGlazing &&
-        (previousPresentation.fabricacionLeg || "") === (syncedForm.fabricacionLeg || "") &&
+    (!syncedForm.fabricacionSnapshot.recipeId ||
+      syncedForm.fabricacionSnapshot.recipeId === (syncedForm.fabricationRecipeId || "")) &&
+    (!snapshotIdentity?.apertura ||
+      snapshotIdentity.apertura === (syncedForm.fabricacionApertura || "")) &&
+    (!snapshotIdentity?.herraje ||
+      snapshotIdentity.herraje === (syncedForm.fabricacionHerraje || "")) &&
+    (!snapshotIdentity?.configurationId ||
+      snapshotIdentity.configurationId === (syncedForm.fabricacionConfiguracionId || "")) &&
+    (!snapshotIdentity?.compositionId ||
+      snapshotIdentity.compositionId === (syncedForm.fabricacionComposicionId || "")) &&
+    (previousPresentation === null ||
+    ((!hasPreviousPresentationTag("lck") ||
+      (previousPresentation.catalogLineKey || "") === (resolvedCatalogLineKey || "")) &&
+      (!hasPreviousPresentationTag("fgl") ||
+        (previousPresentation.fabricacionGlazing || "") === effectiveFabricacionGlazing) &&
+      (!hasPreviousPresentationTag("flg") ||
+        (previousPresentation.fabricacionLeg || "") === (syncedForm.fabricacionLeg || "")) &&
+      (!hasPreviousPresentationTag("frf") ||
         (previousPresentation.fabricacionReinforcement || "") ===
-          (syncedForm.fabricacionReinforcement || "") &&
+          (syncedForm.fabricacionReinforcement || "")) &&
+      (!hasPreviousPresentationTag("fcid") ||
         (previousPresentation.fabricacionConfiguracionId ||
           snapshotIdentity?.configurationId ||
-          "") === (syncedForm.fabricacionConfiguracionId || "") &&
+          "") === (syncedForm.fabricacionConfiguracionId || "")) &&
+      (!hasPreviousPresentationTag("fcmp") ||
         (previousPresentation.fabricacionComposicionId ||
           snapshotIdentity?.compositionId ||
-          "") === (syncedForm.fabricacionComposicionId || "") &&
+          "") === (syncedForm.fabricacionComposicionId || "")) &&
+      (!hasPreviousPresentationTag("fap") ||
         (previousPresentation.fabricacionApertura ||
           snapshotIdentity?.apertura ||
-          "") === (syncedForm.fabricacionApertura || "") &&
+          "") === (syncedForm.fabricacionApertura || "")) &&
+      (!hasPreviousPresentationTag("fhe") ||
         (previousPresentation.fabricacionHerraje ||
           snapshotIdentity?.herraje ||
-          "") === (syncedForm.fabricacionHerraje || "") &&
-        (previousPresentation.sheetScheme || "") === (sheetScheme || "") &&
-        (previousPresentation.sheetVariant || "") === (sheetVariant || "") &&
-        (previousPresentation.sistema || "") === (sistema || "") &&
-        (previousPresentation.configuracion || "") === (configuracion || "")));
+          "") === (syncedForm.fabricacionHerraje || "")) &&
+      (!hasPreviousPresentationTag("ss") ||
+        (previousPresentation.sheetScheme || "") === (sheetScheme || "")) &&
+      (!hasPreviousPresentationTag("sv") ||
+        (previousPresentation.sheetVariant || "") === (sheetVariant || "")) &&
+      (!hasPreviousPresentationTag("sys") ||
+        (previousPresentation.sistema || "") === (sistema || "")) &&
+      (!hasPreviousPresentationTag("cfg") ||
+        (previousPresentation.configuracion || "") === (configuracion || ""))));
   const formalFabricationSnapshot = quickCompositionAdjusted
     ? null
     :
