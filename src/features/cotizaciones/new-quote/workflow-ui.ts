@@ -1,4 +1,4 @@
-﻿import {
+import {
   getComponentSuggestion,
   type PreferredProvider,
 } from "@/features/cotizaciones/services/component-suggestions.service";
@@ -246,6 +246,8 @@ export type ComponentFormState = {
   fabricacionLeg?: string;
   fabricacionReinforcement?: string;
   fabricacionSnapshot?: FabricacionCotizacionSnapshot | null;
+  /** Persisted metadata makes empty technical fields intentional on rehydration. */
+  fabricacionIdentidadPersistida?: boolean;
 };
 
 export type FieldErrors = Partial<
@@ -1891,37 +1893,53 @@ export function hydrateComponentFormFromLineTemplate(
   });
 
   const sameSelectedLine = form.lineTemplateId === String(template.id);
-  const hasExplicitRecipeSelection =
-    sameSelectedLine && Boolean(form.fabricationRecipeId?.trim());
-  const hasExplicitVariantSelection =
-    sameSelectedLine && Boolean(form.fabricacionVariante?.trim());
-  const withFabricacion = hasExplicitRecipeSelection
+  const preservePersistedIdentity = sameSelectedLine && form.fabricacionIdentidadPersistida === true;
+  const withFabricacion = preservePersistedIdentity
     ? {
         ...withFabricacionContext,
-        fabricationRecipeId: form.fabricationRecipeId,
-        fabricacionTipologia: form.fabricacionTipologia,
-        fabricacionHojas: form.fabricacionHojas,
-        fabricacionModulos: form.fabricacionModulos,
-        fabricacionApertura: form.fabricacionApertura,
-        fabricacionHerraje: form.fabricacionHerraje,
-        fabricacionVariante: form.fabricacionVariante,
-        fabricacionConfiguracionId: form.fabricacionConfiguracionId,
-        fabricacionComposicionId: form.fabricacionComposicionId,
+        fabricacionTipologia: form.fabricacionTipologia ?? "",
+        fabricacionHojas: form.fabricacionHojas ?? null,
+        fabricacionModulos: form.fabricacionModulos ?? null,
+        fabricationRecipeId: form.fabricationRecipeId ?? "",
+        fabricacionApertura: form.fabricacionApertura ?? "",
+        fabricacionHerraje: form.fabricacionHerraje ?? "",
+        fabricacionVariante: form.fabricacionVariante ?? "",
+        fabricacionConfiguracionId: form.fabricacionConfiguracionId ?? "",
+        fabricacionComposicionId: form.fabricacionComposicionId ?? "",
       }
-    : hasExplicitVariantSelection
-      ? {
-          ...withFabricacionContext,
-          fabricacionVariante: form.fabricacionVariante,
-          fabricacionConfiguracionId: form.fabricacionConfiguracionId,
-          fabricacionComposicionId: form.fabricacionComposicionId,
-        }
-      : sameSelectedLine
-        ? withFabricacionContext
-          : {
-              ...withFabricacionContext,
-              fabricacionConfiguracionId: "",
-              fabricacionComposicionId: "",
-            };
+    : sameSelectedLine
+    ? {
+        ...withFabricacionContext,
+        fabricationRecipeId:
+          form.fabricationRecipeId || withFabricacionContext.fabricationRecipeId || "",
+        fabricacionTipologia:
+          form.fabricacionTipologia || withFabricacionContext.fabricacionTipologia || "",
+        fabricacionHojas:
+          form.fabricacionHojas ?? withFabricacionContext.fabricacionHojas ?? null,
+        fabricacionModulos:
+          form.fabricacionModulos ?? withFabricacionContext.fabricacionModulos ?? null,
+        fabricacionApertura:
+          form.fabricacionApertura || withFabricacionContext.fabricacionApertura || "",
+        fabricacionHerraje:
+          form.fabricacionHerraje || withFabricacionContext.fabricacionHerraje || "",
+        fabricacionVariante:
+          form.fabricacionVariante || withFabricacionContext.fabricacionVariante || "",
+        fabricacionConfiguracionId:
+          form.fabricacionConfiguracionId ||
+          withFabricacionContext.fabricacionConfiguracionId ||
+          "",
+        fabricacionComposicionId:
+          form.fabricacionComposicionId ||
+          withFabricacionContext.fabricacionComposicionId ||
+          "",
+      }
+    : {
+        ...withFabricacionContext,
+        fabricacionConfiguracionId:
+          withFabricacionContext.fabricacionConfiguracionId || "",
+        fabricacionComposicionId:
+          withFabricacionContext.fabricacionComposicionId || "",
+      };
   const selectedWinHouseS75Variant = WINHOUSE_NEW_S75_VARIANTS.find(
     (variant) => variant.slug === form.fabricacionVariante
   );
@@ -1981,16 +1999,72 @@ export function hydrateComponentFormFromLineTemplate(
     fabricationRecipes: options?.fabricationRecipes,
     organizationId: options?.organizationId,
   });
-  return s75VariantMatchesTemplate
+  const hydratedTemplateForm = preservePersistedIdentity
     ? {
         ...appliedTemplateForm,
+        fabricacionTipologia: effectiveWithFabricacion.fabricacionTipologia ?? "",
+        fabricacionHojas: effectiveWithFabricacion.fabricacionHojas ?? null,
+        fabricacionModulos: effectiveWithFabricacion.fabricacionModulos ?? null,
+        fabricationRecipeId: effectiveWithFabricacion.fabricationRecipeId ?? "",
+        fabricacionApertura: effectiveWithFabricacion.fabricacionApertura ?? "",
+        fabricacionHerraje: effectiveWithFabricacion.fabricacionHerraje ?? "",
+        fabricacionVariante: effectiveWithFabricacion.fabricacionVariante ?? "",
+        fabricacionConfiguracionId:
+          effectiveWithFabricacion.fabricacionConfiguracionId ?? "",
+        fabricacionComposicionId:
+          effectiveWithFabricacion.fabricacionComposicionId ?? "",
+      }
+    : sameSelectedLine
+    ? {
+        ...appliedTemplateForm,
+        fabricationRecipeId:
+          effectiveWithFabricacion.fabricationRecipeId ||
+          appliedTemplateForm.fabricationRecipeId ||
+          "",
+        fabricacionTipologia:
+          effectiveWithFabricacion.fabricacionTipologia ||
+          appliedTemplateForm.fabricacionTipologia ||
+          "",
+        fabricacionHojas:
+          effectiveWithFabricacion.fabricacionHojas ??
+          appliedTemplateForm.fabricacionHojas ??
+          null,
+        fabricacionModulos:
+          effectiveWithFabricacion.fabricacionModulos ??
+          appliedTemplateForm.fabricacionModulos ??
+          null,
+        fabricacionApertura:
+          effectiveWithFabricacion.fabricacionApertura ||
+          appliedTemplateForm.fabricacionApertura ||
+          "",
+        fabricacionHerraje:
+          effectiveWithFabricacion.fabricacionHerraje ||
+          appliedTemplateForm.fabricacionHerraje ||
+          "",
+        fabricacionVariante:
+          effectiveWithFabricacion.fabricacionVariante ||
+          appliedTemplateForm.fabricacionVariante ||
+          "",
+        fabricacionConfiguracionId:
+          effectiveWithFabricacion.fabricacionConfiguracionId ||
+          appliedTemplateForm.fabricacionConfiguracionId ||
+          "",
+        fabricacionComposicionId:
+          effectiveWithFabricacion.fabricacionComposicionId ||
+          appliedTemplateForm.fabricacionComposicionId ||
+          "",
+      }
+    : appliedTemplateForm;
+  return s75VariantMatchesTemplate
+    ? {
+        ...hydratedTemplateForm,
         fabricacionHojas: form.fabricacionHojas ?? selectedWinHouseS75Variant.leaves,
         fabricacionModulos:
           form.fabricacionModulos ?? form.fabricacionHojas ?? selectedWinHouseS75Variant.leaves,
         fabricacionVariante: selectedWinHouseS75Variant.slug,
         fabricationRecipeId: form.fabricationRecipeId ?? "",
       }
-    : appliedTemplateForm;
+    : hydratedTemplateForm;
 }
 
 function resolveLineTemplateCatalogMetadataForForm(
@@ -2373,7 +2447,34 @@ export function applyLineTemplateToComponentForm(
     sheetScheme: form.sheetScheme,
     sheetVariant: form.sheetVariant,
   });
-  const assignmentForm = prepareFabricacionFormForLineAssignment(form, template);
+  const nextVidrio =
+    selectedGlassProduct?.nombre ?? (selectedGlassProductId ? form.vidrio : recommendedGlass);
+  const preparedForm = prepareFabricacionFormForLineAssignment(form, template);
+  const nextFabricacionGlazing = isSodalL25Line
+    ? (lineRecommendation
+        ? inferSodalL25GlazingFromGlass({
+            vidrio:
+              template.categoria === "vidrio"
+                ? template.nombre
+                : recommendedGlass,
+            catalogEspesor: glassMetadata.espesor ?? "",
+            catalogTerminacion: glassMetadata.terminacion ?? "",
+          })
+        : preparedForm.fabricacionGlazing ||
+          inferSodalL25GlazingFromGlass({
+            vidrio:
+              template.categoria === "vidrio"
+                ? template.nombre
+                : recommendedGlass,
+            catalogEspesor: glassMetadata.espesor ?? "",
+            catalogTerminacion: glassMetadata.terminacion ?? "",
+          }))
+    : preparedForm.fabricacionGlazing ?? "";
+  const assignmentForm: ComponentFormState = {
+    ...preparedForm,
+    vidrio: nextVidrio,
+    fabricacionGlazing: nextFabricacionGlazing,
+  };
   const fabricationContext =
     options?.fabricationContext ??
     resolveFabricacionContextForLineAssignment({
@@ -2410,20 +2511,11 @@ export function applyLineTemplateToComponentForm(
       lineTemplateId: String(template.id),
       catalogLineKey: resolvedCatalogKey,
       sheetVariant: selectedSheetVariant,
-      fabricacionGlazing: isSodalL25Line
-          ? inferSodalL25GlazingFromGlass({
-              vidrio:
-                template.categoria === "vidrio"
-                  ? template.nombre
-                  : recommendedGlass,
-              catalogEspesor: glassMetadata.espesor ?? "",
-              catalogTerminacion: glassMetadata.terminacion ?? "",
-            })
-          : assignmentForm.fabricacionGlazing ?? "",
+      fabricacionGlazing: nextFabricacionGlazing,
       // Keep a catalog selection as an identity, not only its display name.
       // A line recommendation may populate an empty selection, but must not
       // replace the glass name while retaining a different catalog ID.
-      vidrio: selectedGlassProduct?.nombre ?? (selectedGlassProductId ? form.vidrio : recommendedGlass),
+      vidrio: nextVidrio,
       vidrioLineTemplateId: selectedGlassProductId,
       glassTechnicalSpec: selectedGlassTechnicalSpec,
       pricingMode: "precio_directo",
@@ -2770,6 +2862,8 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     fabricacionApertura,
     fabricacionHerraje,
     fabricacionVariante,
+    fabricacionConfiguracionId,
+    fabricacionComposicionId,
     fabricacionAnchoHojaAMm,
     catalogLineKey,
     fabricacionGlazing,
@@ -2805,7 +2899,11 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     sheetVariant,
     customSchemeDescription,
     isCustomScheme,
-    lineTemplateId,
+    lineTemplateId:
+      lineTemplateId ||
+      (item.fabricacionSnapshot?.lineTemplateId != null
+        ? String(item.fabricacionSnapshot.lineTemplateId)
+        : ""),
     vidrioLineTemplateId,
     glassTechnicalSpec,
     manualGlassMeasurements,
@@ -2898,6 +2996,14 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
       fabricacionVariante ||
       item.fabricacionSnapshot?.selectedVariant ||
       "",
+    fabricacionConfiguracionId:
+      fabricacionConfiguracionId ||
+      item.fabricacionSnapshot?.recipeIdentity.configurationId ||
+      "",
+    fabricacionComposicionId:
+      fabricacionComposicionId ||
+      item.fabricacionSnapshot?.recipeIdentity.compositionId ||
+      "",
     fabricacionAnchoHojaAMm:
       fabricacionAnchoHojaAMm ?? item.fabricacionSnapshot?.input.anchoHojaAMm ?? null,
     catalogLineKey:
@@ -2911,6 +3017,9 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     fabricacionLeg: fabricacionLeg || "",
     fabricacionReinforcement: fabricacionReinforcement || "",
     fabricacionSnapshot: item.fabricacionSnapshot ?? null,
+    fabricacionIdentidadPersistida: /\[(?:gvc|qca|ft|fh|fmo|fap|fhe|fv|fcid|fcmp|fwa|lck|fgl|flg|frf|frid|spk):/.test(
+      item.observaciones ?? ""
+    ),
   };
 }
 
@@ -3194,11 +3303,76 @@ export function buildItemFromForm(
       (previousPresentation?.glassTechnicalSpec?.thicknessMm ?? null) ===
         (currentGlassTechnicalSpec?.thicknessMm ?? null) &&
       (previousPresentation?.glassTechnicalSpec?.category ?? null) === (currentGlassTechnicalSpec?.category ?? null);
+  const effectiveFabricacionVariante =
+    sodalConfig?.variantSlug || syncedForm.fabricacionVariante || "";
+  const effectiveFabricacionGlazing =
+    sodalConfig?.glazing || syncedForm.fabricacionGlazing || "";
+  const snapshotIdentity = syncedForm.fabricacionSnapshot?.recipeIdentity;
+  const hasPreviousPresentationTag = (tag: string) =>
+    new RegExp(`\\[${tag}:`).test(previousItem?.observaciones ?? "");
+  const snapshotDiscriminatorsMatch =
+    syncedForm.fabricacionSnapshot != null &&
+    (resolvedFabricacionHojas == null ||
+      syncedForm.fabricacionSnapshot.input.hojas === resolvedFabricacionHojas) &&
+    (syncedForm.fabricacionSnapshot.input.hojas == null ||
+      syncedForm.fabricacionSnapshot.input.hojas === syncedForm.fabricacionHojas) &&
+    (syncedForm.fabricacionModulos == null ||
+      sodalConfig != null ||
+      syncedForm.fabricacionSnapshot.input.modulos === syncedForm.fabricacionModulos) &&
+    (!snapshotIdentity?.tipologia ||
+      snapshotIdentity.tipologia === (syncedForm.fabricacionTipologia || "")) &&
+    (!syncedForm.fabricacionSnapshot.selectedVariant ||
+      syncedForm.fabricacionSnapshot.selectedVariant === effectiveFabricacionVariante) &&
+    (!syncedForm.fabricacionSnapshot.recipeId ||
+      syncedForm.fabricacionSnapshot.recipeId === (syncedForm.fabricationRecipeId || "")) &&
+    (!snapshotIdentity?.apertura ||
+      snapshotIdentity.apertura === (syncedForm.fabricacionApertura || "")) &&
+    (!snapshotIdentity?.herraje ||
+      snapshotIdentity.herraje === (syncedForm.fabricacionHerraje || "")) &&
+    (!snapshotIdentity?.configurationId ||
+      snapshotIdentity.configurationId === (syncedForm.fabricacionConfiguracionId || "")) &&
+    (!snapshotIdentity?.compositionId ||
+      snapshotIdentity.compositionId === (syncedForm.fabricacionComposicionId || "")) &&
+    (previousPresentation === null ||
+    ((!hasPreviousPresentationTag("lck") ||
+      (previousPresentation.catalogLineKey || "") === (resolvedCatalogLineKey || "")) &&
+      (!hasPreviousPresentationTag("fgl") ||
+        (previousPresentation.fabricacionGlazing || "") === effectiveFabricacionGlazing) &&
+      (!hasPreviousPresentationTag("flg") ||
+        (previousPresentation.fabricacionLeg || "") === (syncedForm.fabricacionLeg || "")) &&
+      (!hasPreviousPresentationTag("frf") ||
+        (previousPresentation.fabricacionReinforcement || "") ===
+          (syncedForm.fabricacionReinforcement || "")) &&
+      (!hasPreviousPresentationTag("fcid") ||
+        (previousPresentation.fabricacionConfiguracionId ||
+          snapshotIdentity?.configurationId ||
+          "") === (syncedForm.fabricacionConfiguracionId || "")) &&
+      (!hasPreviousPresentationTag("fcmp") ||
+        (previousPresentation.fabricacionComposicionId ||
+          snapshotIdentity?.compositionId ||
+          "") === (syncedForm.fabricacionComposicionId || "")) &&
+      (!hasPreviousPresentationTag("fap") ||
+        (previousPresentation.fabricacionApertura ||
+          snapshotIdentity?.apertura ||
+          "") === (syncedForm.fabricacionApertura || "")) &&
+      (!hasPreviousPresentationTag("fhe") ||
+        (previousPresentation.fabricacionHerraje ||
+          snapshotIdentity?.herraje ||
+          "") === (syncedForm.fabricacionHerraje || "")) &&
+      (!hasPreviousPresentationTag("ss") ||
+        (previousPresentation.sheetScheme || "") === (sheetScheme || "")) &&
+      (!hasPreviousPresentationTag("sv") ||
+        (previousPresentation.sheetVariant || "") === (sheetVariant || "")) &&
+      (!hasPreviousPresentationTag("sys") ||
+        (previousPresentation.sistema || "") === (sistema || "")) &&
+      (!hasPreviousPresentationTag("cfg") ||
+        (previousPresentation.configuracion || "") === (configuracion || ""))));
   const formalFabricationSnapshot = quickCompositionAdjusted
     ? null
     :
     syncedForm.fabricacionSnapshot &&
     snapshotGlassSelectionMatches &&
+    snapshotDiscriminatorsMatch &&
     syncedForm.fabricacionSnapshot.lineTemplateId ===
       (syncedForm.lineTemplateId ? Number(syncedForm.lineTemplateId) : null) &&
     syncedForm.fabricacionSnapshot.input.anchoTotalMm ===
@@ -3207,16 +3381,9 @@ export function buildItemFromForm(
       (syncedForm.alto ? Math.round(Number(syncedForm.alto)) : 0) &&
     syncedForm.fabricacionSnapshot.input.cantidad ===
       Math.round(Number(syncedForm.cantidad || 1)) &&
-    (syncedForm.fabricacionSnapshot.input.anchoHojaAMm ?? null) ===
-      (syncedForm.fabricacionAnchoHojaAMm ?? null) &&
-    (!syncedForm.fabricacionTipologia ||
-      syncedForm.fabricacionSnapshot.recipeIdentity.tipologia ===
-        syncedForm.fabricacionTipologia) &&
-    (!syncedForm.fabricacionVariante ||
-      syncedForm.fabricacionSnapshot.selectedVariant ===
-        syncedForm.fabricacionVariante) &&
-    (!syncedForm.fabricationRecipeId ||
-      syncedForm.fabricacionSnapshot.recipeId === syncedForm.fabricationRecipeId)
+    (syncedForm.fabricacionSnapshot.input.anchoHojaAMm ??
+      previousPresentation?.fabricacionAnchoHojaAMm ??
+      null) === (syncedForm.fabricacionAnchoHojaAMm ?? null)
       ? syncedForm.fabricacionSnapshot
       : autoSodalSnapshot;
 
@@ -3361,6 +3528,7 @@ export function applyQuotePricingToItems(
       minimoCobrable,
       redondeoPrecio,
       precioAjustadoManual,
+      encodedCostInputScope,
       palilloEnabled,
       palilloType,
       mirrorFormat,
@@ -3368,6 +3536,7 @@ export function applyQuotePricingToItems(
       mirrorPaneDirection,
       mirrorInteriorLine,
       guidedVisualConfig,
+      quickCompositionAdjustment,
       fabricacionTipologia,
       fabricacionHojas,
       fabricacionModulos,
@@ -3377,6 +3546,10 @@ export function applyQuotePricingToItems(
       fabricacionConfiguracionId,
       fabricacionComposicionId,
       fabricacionAnchoHojaAMm,
+      catalogLineKey,
+      fabricacionGlazing,
+      fabricacionLeg,
+      fabricacionReinforcement,
       fabricationRecipeId,
       supplierProviderKey,
     } = decodeCotizacionItemPresentationMeta(item.observaciones);
@@ -3435,11 +3608,14 @@ export function applyQuotePricingToItems(
         origenPrecio: pricingMode === "precio_directo" ? item.origenPrecio : "margen",
         palilloEnabled,
         palilloType,
+        margenPct: Number.isFinite(normalizedMargin) ? normalizedMargin : null,
+        costInputScope: encodedCostInputScope || undefined,
         mirrorFormat,
         mirrorPaneCount,
         mirrorPaneDirection,
         mirrorInteriorLine,
         guidedVisualConfig,
+        quickCompositionAdjustment,
         fabricacionTipologia,
         fabricacionHojas,
         fabricacionModulos,
@@ -3449,6 +3625,10 @@ export function applyQuotePricingToItems(
         fabricacionConfiguracionId,
         fabricacionComposicionId,
         fabricacionAnchoHojaAMm,
+        catalogLineKey,
+        fabricacionGlazing,
+        fabricacionLeg,
+        fabricacionReinforcement,
         fabricationRecipeId,
         supplierProviderKey,
         cubicationSnapshot: null,
