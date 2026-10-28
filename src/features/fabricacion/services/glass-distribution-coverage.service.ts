@@ -30,7 +30,7 @@ type CoveragePane = {
   productId: string | null;
   displayName: string | null;
   logicalComponentId: string | null;
-  technicalSpec: { hasConflict?: boolean; thicknessMm?: number | null; category?: string } | null;
+  technicalSpec: { productId?: string | null; hasConflict?: boolean; thicknessMm?: number | null; category?: string } | null;
   widthMm: number | null;
   heightMm: number | null;
   quantity: number;
@@ -68,11 +68,14 @@ function itemHasExplicitGlass(item: CotizacionWorkflowItem): boolean {
 export function isGlassCoveragePaneComplete(pane: CoveragePane): boolean {
   const physicalUnitCount = pane.physicalUnitCount ?? pane.paneUnitIds?.length ?? 0;
   return Boolean(
+    pane.validationStatus === "eligible_for_manual_planning"
+    &&
     pane.logicalComponentId
     && pane.glassId
     && pane.productId
     && pane.technicalSpec
     && !pane.technicalSpec.hasConflict
+    && (!pane.technicalSpec.productId || pane.technicalSpec.productId === pane.productId)
     && Number.isFinite(pane.technicalSpec.thicknessMm)
     && Number(pane.technicalSpec.thicknessMm) > 0
     && pane.technicalSpec.category
@@ -86,6 +89,43 @@ export function isGlassCoveragePaneComplete(pane: CoveragePane): boolean {
     && pane.quantity === physicalUnitCount
     && (pane.recipeStatus === "validated" || pane.dimensionProvenance === "manual")
     && pane.dimensionProvenance !== "legacy_snapshot"
+  );
+}
+
+/** Safe for an informative geometric preview; it does not grant coverage or workshop eligibility. */
+export function isGlassPaneGeometryComplete(pane: CoveragePane): boolean {
+  const physicalUnitCount = pane.physicalUnitCount ?? pane.paneUnitIds?.length ?? 0;
+  const warnings = pane.warnings ?? [];
+  const blocksGeometry = warnings.some((warning) =>
+    warning.includes("ficha técnica del vidrio cambió")
+    || warning.includes("configuración del componente cambió")
+    || warning.includes("debe asociarse explícitamente")
+    || warning.includes("múltiples mediciones manuales asignadas")
+    || warning.includes("no corresponde a un múltiplo de la cantidad comercial")
+    || warning.includes("cantidad comercial guardada del componente no es válida")
+    || warning.includes("geometría del paño no es rectangular")
+  );
+  return Boolean(
+    !blocksGeometry
+    && pane.dimensionProvenance !== "legacy_snapshot"
+    && pane.dimensionProvenance !== "missing"
+    && pane.logicalComponentId
+    && pane.glassId
+    && pane.productId
+    && pane.technicalSpec
+    && !pane.technicalSpec.hasConflict
+    && (!pane.technicalSpec.productId || pane.technicalSpec.productId === pane.productId)
+    && Number.isFinite(pane.technicalSpec.thicknessMm)
+    && Number(pane.technicalSpec.thicknessMm) > 0
+    && pane.technicalSpec.category
+    && pane.technicalSpec.category !== "pendiente"
+    && Number.isSafeInteger(pane.widthMm)
+    && Number(pane.widthMm) > 0
+    && Number.isSafeInteger(pane.heightMm)
+    && Number(pane.heightMm) > 0
+    && Number.isSafeInteger(pane.quantity)
+    && pane.quantity > 0
+    && pane.quantity === physicalUnitCount
   );
 }
 
@@ -114,8 +154,16 @@ export function buildGlassDistributionCoverage(input: {
     else refs.set(key, { panes: [pane], item: itemsById.get(pane.quoteItemId) });
   }
 
-  const isPaneComplete = (pane: CoveragePane): boolean =>
-    !invalidatedSlotPanes.has(pane) && isGlassCoveragePaneComplete(pane);
+  const isPaneComplete = (pane: CoveragePane): boolean => {
+    const item = itemsById.get(pane.quoteItemId);
+    const itemQuantity = item?.cantidad;
+    return !invalidatedSlotPanes.has(pane)
+      && Number.isSafeInteger(itemQuantity)
+      && Number(itemQuantity) > 0
+      && Number.isSafeInteger(pane.quantity)
+      && pane.quantity % Number(itemQuantity) === 0
+      && isGlassCoveragePaneComplete(pane);
+  };
 
   for (const item of input.items) {
     const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
@@ -130,10 +178,20 @@ export function buildGlassDistributionCoverage(input: {
       guidedVisualConfig: presentation.guidedVisualConfig,
       quickCompositionAdjustment: presentation.quickCompositionAdjustment,
     });
-    const itemQuantity = Math.max(1, Number.isSafeInteger(item.cantidad) && item.cantidad > 0 ? item.cantidad : 1);
+    const itemQuantity = Number.isSafeInteger(item.cantidad) && item.cantidad > 0 ? item.cantidad : 0;
     const itemRefs = [...refs.entries()].filter(([, reference]) => reference.item?.id === item.id);
     const itemPanes = itemRefs.flatMap(([, reference]) => reference.panes);
     let hasExpectedPendingSlots = false;
+
+    for (const pane of itemPanes) {
+      if (itemQuantity === 0) {
+        pane.warnings.push("La cantidad comercial guardada del componente no es válida; no se puede reconciliar la cantidad física de vidrio.");
+        invalidatedSlotPanes.add(pane);
+      } else if (Number.isSafeInteger(pane.quantity) && pane.quantity > 0 && pane.quantity % itemQuantity !== 0) {
+        pane.warnings.push("La cantidad física congelada no corresponde a un múltiplo de la cantidad comercial del componente.");
+        invalidatedSlotPanes.add(pane);
+      }
+    }
 
     if (expected.countIsKnown) {
       const validSlotIds = new Set(expected.slots.map((slot) => slot.id));
@@ -189,13 +247,13 @@ export function buildGlassDistributionCoverage(input: {
         });
       }
 
-      const automaticPaneCount = itemPanes
+      const automaticPaneCount = itemQuantity > 0 ? itemPanes
         .filter((pane) => pane.dimensionProvenance === "validated_recipe" && isPaneComplete(pane))
-        .reduce((sum, pane) => sum + pane.quantity / itemQuantity, 0);
+        .reduce((sum, pane) => sum + pane.quantity / itemQuantity, 0) : 0;
 
       const coveredSlotsCount = snapshotStale
         ? 0
-        : Math.min(expected.slots.length, Math.max(coveredManualSlotIds.size, Math.round(automaticPaneCount)));
+        : Math.min(expected.slots.length, Math.max(coveredManualSlotIds.size, automaticPaneCount));
       const uncoveredSlotsCount = Math.max(0, expected.slots.length - coveredSlotsCount);
 
       if (coveredSlotsCount > 0) {
@@ -228,7 +286,8 @@ export function buildGlassDistributionCoverage(input: {
           (qtySum, pane) => qtySum + (Number.isSafeInteger(pane.quantity) && pane.quantity > 0 ? pane.quantity : 0),
           0
         );
-        const slotsForRef = refQuantity > 0 ? Math.max(1, Math.round(refQuantity / itemQuantity)) : 1;
+        if (itemQuantity > 0 && refQuantity > 0 && refQuantity % itemQuantity !== 0) return sum + expected.slots.length;
+        const slotsForRef = refQuantity > 0 && itemQuantity > 0 ? Math.max(1, refQuantity / itemQuantity) : 1;
         return sum + slotsForRef;
       }, 0);
 

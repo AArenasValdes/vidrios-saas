@@ -4,7 +4,7 @@ jest.mock("server-only", () => ({}));
 jest.mock("@/lib/supabase/admin", () => ({ createAdminClient: jest.fn() }));
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { persistTechnicalCostSnapshot, readSupplierPresentationPrices } from "../costo-tecnico-parcial.repository";
+import { persistTechnicalCostSnapshot, readQuoteForTechnicalCost, readSupplierPresentationPrices } from "../costo-tecnico-parcial.repository";
 import type { TechnicalCostSnapshot } from "../../services/costo-tecnico-parcial.service";
 
 describe("persistTechnicalCostSnapshot", () => {
@@ -52,6 +52,43 @@ describe("persistTechnicalCostSnapshot", () => {
     ]));
     expect(query.insert).not.toHaveBeenCalled();
     expect(result).toMatchObject({ snapshot, status: "complete" });
+  });
+});
+
+describe("readQuoteForTechnicalCost", () => {
+  it("recupera la cantidad comercial persistida del ítem junto con su snapshot", async () => {
+    const selects: Array<{ table: string; columns: string }> = [];
+    const rows = {
+      cotizaciones: { id: 1170, organization_id: 12, numero: "COT-1170", creado_en: "2026-10-27T12:00:00Z", fabricacion_trabajo_snapshot: null },
+      cotizacion_items: [{
+        id: 801,
+        codigo: "V1",
+        nombre: "Ventana corredera 2H",
+        descripcion: "2 paños monolíticos",
+        vidrio: "Float 5 mm",
+        observaciones: "",
+        cantidad: 3,
+        fabricacion_snapshot: { recipeStatus: "validated" },
+        manual_glass_measurements: null,
+      }],
+    };
+    const from = jest.fn((table: keyof typeof rows) => {
+      const query = {
+        select: jest.fn((columns: string) => { selects.push({ table, columns }); return query; }),
+        eq: jest.fn(() => query),
+        is: jest.fn(() => query),
+        maybeSingle: jest.fn().mockResolvedValue({ data: rows[table], error: null }),
+        then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) =>
+          Promise.resolve({ data: rows[table], error: null }).then(resolve, reject),
+      };
+      return query;
+    });
+    (createAdminClient as jest.Mock).mockReturnValue({ from });
+
+    const quote = await readQuoteForTechnicalCost({ quoteId: 1170, organizationId: 12 });
+
+    expect(selects.find(({ table }) => table === "cotizacion_items")?.columns).toContain("cantidad");
+    expect(quote?.items[0]).toMatchObject({ id: "801", quantity: 3, fabricacionSnapshot: rows.cotizacion_items[0].fabricacion_snapshot });
   });
 });
 

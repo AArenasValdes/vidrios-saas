@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { AuthRouteAccessError, resolveAuthenticatedRouteContext } from "@/features/auth/services/auth-route-access.service";
 import { extractNormalizedGlassPanesForOrganization } from "@/features/fabricacion/services/glass-pane-normalization.service";
-import { buildGlassDistributionCoverage, isGlassCoveragePaneComplete } from "@/features/fabricacion/services/glass-distribution-coverage.service";
+import { buildGlassDistributionCoverage, isGlassCoveragePaneComplete, isGlassPaneGeometryComplete } from "@/features/fabricacion/services/glass-distribution-coverage.service";
 import { optimizeGlassCuttingBatch } from "@/features/fabricacion/services/glass-sheet-optimizer.service";
 import type { GlassCuttingProfile, GlassPanePlanningUnit } from "@/features/fabricacion/types/glass-sheet-optimizer-contracts";
 import type { GlassManualCutProcessConstraints, GlassSheetPhysicalFormat } from "@/features/fabricacion/types/glass-cutting-contracts";
@@ -61,7 +61,7 @@ async function loadPanes(quoteId: number, organizationId: number) {
     descripcion: item.description,
     ancho: null,
     alto: null,
-    cantidad: 1,
+    cantidad: item.quantity,
     unidad: "unidad",
     areaM2: null,
     costoProveedorUnitario: 0,
@@ -173,7 +173,7 @@ export async function GET(_request: Request, route: RouteContext) {
     const workshopProfiles = await readWorkshopProfiles(organizationId, loaded.panes.map((pane) => pane.productId));
     return NextResponse.json({ quoteCode: loaded.quote.code, panes: loaded.panes.map(({ paneUnitIds, ...pane }) => ({
       ...pane,
-      physicalUnitCount: isGlassCoveragePaneComplete({ ...pane, paneUnitIds }) ? paneUnitIds.length : null,
+      physicalUnitCount: isGlassPaneGeometryComplete({ ...pane, paneUnitIds }) ? paneUnitIds.length : null,
     })), diagnostics: loaded.diagnostics, coverage: loaded.coverage, workshopProfiles });
   } catch (error) {
     if (error instanceof AuthRouteAccessError) return NextResponse.json({ error: error.message }, { status: error.status });
@@ -228,7 +228,10 @@ export async function POST(request: Request, route: RouteContext) {
     if (mode === "provider_pdf" && loaded.coverage.status !== "complete") {
       return NextResponse.json({ error: "No se puede generar un PDF para el proveedor: la cobertura de vidrio está incompleta.", diagnostics: loaded.coverage.diagnostics, coverage: loaded.coverage }, { status: 422 });
     }
-    const completePanes = loaded.panes.filter(isGlassCoveragePaneComplete);
+    if (!isGeometricRequest && loaded.coverage.status !== "complete") {
+      return NextResponse.json({ error: "La pauta operativa requiere cobertura técnica completa de vidrio.", diagnostics: loaded.coverage.diagnostics, coverage: loaded.coverage }, { status: 422 });
+    }
+    const completePanes = loaded.panes.filter(isGeometricRequest ? isGlassPaneGeometryComplete : isGlassCoveragePaneComplete);
     if (isGeometricRequest && completePanes.length === 0) {
       return NextResponse.json({ error: "No hay paños completos para mostrar una vista previa.", diagnostics: loaded.coverage.diagnostics, coverage: loaded.coverage }, { status: 422 });
     }

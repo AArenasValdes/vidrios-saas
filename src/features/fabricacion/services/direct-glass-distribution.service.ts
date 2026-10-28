@@ -21,6 +21,7 @@ export type GlassDistributionPane = {
   physicalUnitCount: number | null;
   dimensionProvenance: string;
   recipeStatus: string;
+  validationStatus?: "eligible_for_manual_planning" | "requires_review";
   warnings: string[];
   snapshotFingerprint: string;
 };
@@ -74,6 +75,7 @@ export function isPaneEligibleForDistribution(pane: GlassDistributionPane): pane
       Number.isSafeInteger(pane.quantity) &&
       pane.quantity > 0 &&
       pane.quantity === pane.physicalUnitCount &&
+      pane.validationStatus === "eligible_for_manual_planning" &&
       (pane.recipeStatus === "validated" || pane.dimensionProvenance === "manual") &&
       pane.dimensionProvenance !== "legacy_snapshot"
   );

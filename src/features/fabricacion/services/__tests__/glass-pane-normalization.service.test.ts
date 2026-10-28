@@ -167,11 +167,79 @@ describe("glass-pane-normalization.service", () => {
     expect(panes.reduce((sum, pane) => sum + (pane.widthMm ?? 0) * (pane.heightMm ?? 0) * pane.quantity, 0)).toBe(3_066_080);
   });
 
+  it("3 ventanas × 2 slots conserva seis unidades de snapshot ya multiplicadas", () => {
+    const item = paneItem();
+    item.cantidad = 3;
+    const snapshot = JSON.parse(JSON.stringify(item.fabricacionSnapshot)) as FabricacionCotizacionSnapshot;
+    snapshot.result.vidrios = [
+      { vidrioId: "slot-1", nombre: "Paño 1", anchoMm: 600, altoMm: 1000, cantidadPiezas: 3, totalM2: 1.8, trazabilidad: [] },
+      { vidrioId: "slot-2", nombre: "Paño 2", anchoMm: 500, altoMm: 900, cantidadPiezas: 3, totalM2: 1.35, trazabilidad: [] },
+    ];
+    snapshot.vidrios = snapshot.result.vidrios;
+
+    const panes = extractNormalizedGlassPanes({ organizationId: 4, quoteId: 88, item: { ...item, fabricacionSnapshot: snapshot } });
+
+    expect(panes.map((pane) => pane.quantity)).toEqual([3, 3]);
+    expect(panes.reduce((sum, pane) => sum + pane.quantity, 0)).toBe(6);
+    expect(panes.every((pane) => pane.validationStatus === "eligible_for_manual_planning")).toBe(true);
+  });
+
+  it("no completa un snapshot con cinco piezas cuando el componente vendido tiene cantidad tres", () => {
+    const item = paneItem();
+    item.cantidad = 3;
+    const snapshot = JSON.parse(JSON.stringify(item.fabricacionSnapshot)) as FabricacionCotizacionSnapshot;
+    snapshot.result.vidrios[0]!.cantidadPiezas = 5;
+
+    const [pane] = extractNormalizedGlassPanes({ organizationId: 4, quoteId: 88, item: { ...item, fabricacionSnapshot: snapshot } });
+
+    expect(pane).toMatchObject({ quantity: 5, validationStatus: "requires_review" });
+    expect(pane?.warnings).toContain("La cantidad física congelada no corresponde a un múltiplo de la cantidad comercial del componente.");
+  });
+
+  it("invalida todas las mediciones que reclaman el mismo slot manual", () => {
+    const metadata = { espesor: "5 mm", categoriaTecnica: "monolitico", revisionTecnicaExplicita: true, corteManualEstado: "confirmed", planchaAnchoMm: 2500, planchaAltoMm: 1800 };
+    const spec = buildCatalogGlassTechnicalSpec({ productId: "501", metadata });
+    const item = paneItem();
+    item.cantidad = 1;
+    item.fabricacionSnapshot = null;
+    item.observaciones = encodeCotizacionItemPresentationMeta({
+      logicalComponentId: "logical-component-1",
+      fabricacionTipologia: "Corredera",
+      sheetScheme: "2 hojas",
+      manualGlassMeasurements: { version: 2, entries: ["a", "b"].map((id) => ({
+        id: `duplicate-${id}`,
+        source: "manual" as const,
+        version: 2 as const,
+        productId: "501",
+        technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec),
+        widthMm: 600,
+        heightMm: 1000,
+        quantity: 1,
+        quantityBasis: "per_component" as const,
+        paneSlotId: "pane-1",
+        rectangularVerified: true,
+        recordedAt: "2026-10-25T12:00:00Z",
+      })) },
+    });
+
+    const panes = extractNormalizedGlassPanes({
+      organizationId: 4,
+      quoteId: 1248,
+      item,
+      catalogGlassProducts: new Map([["501", { name: "Float 5 mm", catalogMetadata: metadata }]]),
+    });
+
+    expect(panes).toHaveLength(2);
+    expect(panes.every((pane) => pane.validationStatus === "requires_review")).toBe(true);
+    expect(panes.every((pane) => pane.warnings.some((warning) => warning.includes("múltiples mediciones manuales asignadas")))).toBe(true);
+  });
+
   it("permite varias referencias manuales completas sin snapshot ni receta de perfiles", () => {
     const metadata = { espesor: "5 mm", categoriaTecnica: "monolitico", revisionTecnicaExplicita: true, corteManualEstado: "confirmed", planchaAnchoMm: 2500, planchaAltoMm: 1800 };
     const specA = buildCatalogGlassTechnicalSpec({ productId: "501", metadata });
     const specB = buildCatalogGlassTechnicalSpec({ productId: "502", metadata });
     const item = paneItem();
+    item.cantidad = 1;
     item.fabricacionSnapshot = null;
     item.observaciones = encodeCotizacionItemPresentationMeta({
       logicalComponentId: "logical-component-1",
@@ -222,6 +290,7 @@ describe("glass-pane-normalization.service", () => {
 
   it("recupera la medida manual si el resultado automático deja de resolver ese producto", () => {
     const item = paneItem();
+    item.cantidad = 1;
     const automaticSnapshot = JSON.parse(JSON.stringify(item.fabricacionSnapshot)) as FabricacionCotizacionSnapshot;
     automaticSnapshot.result.vidrios[0]!.anchoMm = 0;
     item.fabricacionSnapshot = automaticSnapshot;
@@ -270,6 +339,7 @@ describe("glass-pane-normalization.service", () => {
   it("combina V1 automática y V2 manual sin exigir despiece de perfiles para V2", () => {
     const automatic = paneItem();
     const manual = { ...paneItem(), id: "physical-row-2", codigo: "V2", nombre: "Paño fijo", fabricacionSnapshot: null };
+    manual.cantidad = 1;
     const metadata = { espesor: "5 mm", categoriaTecnica: "monolitico", revisionTecnicaExplicita: true, corteManualEstado: "confirmed", planchaAnchoMm: 2500, planchaAltoMm: 1800 };
     const spec = buildCatalogGlassTechnicalSpec({ productId: "502", metadata });
     manual.observaciones = encodeCotizacionItemPresentationMeta({
@@ -313,6 +383,73 @@ describe("glass-pane-normalization.service", () => {
     });
     expect(panes.map((pane) => pane.quantity)).toEqual([2, 2, 2]);
     expect(panes.flatMap((pane) => pane.paneUnitIds)).toHaveLength(6);
+  });
+
+  it("no vuelve a multiplicar una medición manual cuyo quantityBasis es total", () => {
+    const item = paneItem();
+    item.cantidad = 3;
+    item.fabricacionSnapshot = null;
+    const metadata = { espesor: "5 mm", categoriaTecnica: "monolitico", revisionTecnicaExplicita: true, corteManualEstado: "confirmed", planchaAnchoMm: 2500, planchaAltoMm: 1800 };
+    const spec = buildCatalogGlassTechnicalSpec({ productId: "501", metadata });
+    item.observaciones = encodeCotizacionItemPresentationMeta({
+      logicalComponentId: "logical-component-1",
+      manualGlassMeasurements: { version: 1, entries: [{
+        id: "manual-total",
+        source: "manual",
+        version: 1,
+        productId: "501",
+        technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec),
+        widthMm: 600,
+        heightMm: 1000,
+        quantity: 6,
+        quantityBasis: "total",
+        recordedAt: "2026-10-25T12:00:00Z",
+      }] },
+    });
+
+    const [pane] = extractNormalizedGlassPanes({
+      organizationId: 4,
+      quoteId: 1248,
+      item,
+      catalogGlassProducts: new Map([["501", { name: "Float 5 mm", catalogMetadata: metadata }]]),
+    });
+
+    expect(pane).toMatchObject({ quantity: 6, validationStatus: "eligible_for_manual_planning" });
+    expect(pane?.paneUnitIds).toHaveLength(6);
+  });
+
+  it("no sustituye por una unidad la cantidad comercial inválida en una medición por componente", () => {
+    const item = paneItem();
+    item.cantidad = 0;
+    item.fabricacionSnapshot = null;
+    const metadata = { espesor: "5 mm", categoriaTecnica: "monolitico", revisionTecnicaExplicita: true, corteManualEstado: "confirmed", planchaAnchoMm: 2500, planchaAltoMm: 1800 };
+    const spec = buildCatalogGlassTechnicalSpec({ productId: "501", metadata });
+    item.observaciones = encodeCotizacionItemPresentationMeta({
+      logicalComponentId: "logical-component-1",
+      manualGlassMeasurements: { version: 1, entries: [{
+        id: "manual-invalid-commercial-quantity",
+        source: "manual",
+        version: 1,
+        productId: "501",
+        technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec),
+        widthMm: 600,
+        heightMm: 1000,
+        quantity: 1,
+        quantityBasis: "per_component",
+        recordedAt: "2026-10-25T12:00:00Z",
+      }] },
+    });
+
+    const [pane] = extractNormalizedGlassPanes({
+      organizationId: 4,
+      quoteId: 1248,
+      item,
+      catalogGlassProducts: new Map([["501", { name: "Float 5 mm", catalogMetadata: metadata }]]),
+    });
+
+    expect(pane).toMatchObject({ quantity: 0, validationStatus: "requires_review" });
+    expect(pane?.paneUnitIds).toEqual([]);
+    expect(pane?.warnings).toContain("La cantidad comercial guardada del componente no es válida; no se puede reconciliar la cantidad física de vidrio.");
   });
 
   it("excluye las geometrías no rectangulares de la optimización rectangular verificada", () => {

@@ -35,6 +35,7 @@ type PaneInput = {
   physicalUnitCount: number | null;
   dimensionProvenance: string;
   recipeStatus: string;
+  validationStatus: "eligible_for_manual_planning" | "requires_review";
   warnings: string[];
   snapshotFingerprint: string;
 };

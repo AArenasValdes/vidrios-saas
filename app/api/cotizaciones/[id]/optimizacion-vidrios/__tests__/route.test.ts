@@ -24,7 +24,7 @@ const row = {
   recipeStatus: "validated", validationStatus: "eligible_for_manual_planning", warnings: [], snapshotVersion: 1,
   snapshotFingerprint: "snapshot-1", normalizationVersion: 1,
 };
-const quote = { code: "COT-1170", items: [{ id: "item-1", code: "V1", glassDescription: "Monolítico", observaciones: "", fabricacionSnapshot: {} }] };
+const quote = { code: "COT-1170", items: [{ id: "item-1", quantity: 1, code: "V1", glassDescription: "Monolítico", observaciones: "", fabricacionSnapshot: {} }] };
 const supabaseQuery = {
   select: jest.fn(), eq: jest.fn(), in: jest.fn(), is: jest.fn(), maybeSingle: jest.fn(), update: jest.fn(),
   then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: [], error: null }).then(resolve),
@@ -59,7 +59,7 @@ describe("/api/cotizaciones/[id]/optimizacion-vidrios", () => {
       }] },
     });
     (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue({ code: "COT-1170", items: [
-      { id: "item-1", code: "V1", name: "Paño fijo", glassDescription: "Float", observaciones: observations, fabricacionSnapshot: null },
+      { id: "item-1", quantity: 1, code: "V1", name: "Paño fijo", glassDescription: "Float", observaciones: observations, fabricacionSnapshot: null },
     ] });
 
     const response = await GET(new Request("http://localhost"), route);
@@ -75,8 +75,8 @@ describe("/api/cotizaciones/[id]/optimizacion-vidrios", () => {
 
   it("A: reporta cobertura completa para paños congelados de dos componentes", async () => {
     (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue({ code: "COT-1170", items: [
-      { id: "item-1", code: "V1", name: "Corredera", glassDescription: "Float", observaciones: "", fabricacionSnapshot: {} },
-      { id: "item-2", code: "V2", name: "Fijo", glassDescription: "Float", observaciones: "", fabricacionSnapshot: {} },
+      { id: "item-1", quantity: 1, code: "V1", name: "Corredera", glassDescription: "Float", observaciones: "", fabricacionSnapshot: {} },
+      { id: "item-2", quantity: 1, code: "V2", name: "Fijo", glassDescription: "Float", observaciones: "", fabricacionSnapshot: {} },
     ] });
     (extractNormalizedGlassPanesForOrganization as jest.Mock).mockReturnValue([
       row,
@@ -91,7 +91,7 @@ describe("/api/cotizaciones/[id]/optimizacion-vidrios", () => {
 
   it("cuenta y completa un paño manual con espesor decimal de 4,5 mm", async () => {
     (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue({ code: "COT-1170", items: [
-      { id: "item-1", code: "V1", name: "Paño fijo", glassDescription: "Float 4,5 mm", observaciones: "", fabricacionSnapshot: null },
+      { id: "item-1", quantity: 1, code: "V1", name: "Paño fijo", glassDescription: "Float 4,5 mm", observaciones: "", fabricacionSnapshot: null },
     ] });
     (extractNormalizedGlassPanesForOrganization as jest.Mock).mockReturnValue([{
       ...row,
@@ -109,8 +109,8 @@ describe("/api/cotizaciones/[id]/optimizacion-vidrios", () => {
 
   it("B: informa explícitamente el componente pendiente y omite su cantidad física", async () => {
     (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue({ code: "COT-1170", items: [
-      { id: "item-1", code: "V1", name: "Corredera", glassDescription: "Float", observaciones: "", fabricacionSnapshot: {} },
-      { id: "item-2", code: "V2", name: "Paño fijo", glassDescription: "Float", observaciones: "", fabricacionSnapshot: {} },
+      { id: "item-1", quantity: 1, code: "V1", name: "Corredera", glassDescription: "Float", observaciones: "", fabricacionSnapshot: {} },
+      { id: "item-2", quantity: 1, code: "V2", name: "Paño fijo", glassDescription: "Float", observaciones: "", fabricacionSnapshot: {} },
     ] });
     (extractNormalizedGlassPanesForOrganization as jest.Mock).mockReturnValue([
       row,
@@ -126,8 +126,8 @@ describe("/api/cotizaciones/[id]/optimizacion-vidrios", () => {
 
   it("C: marca no disponible y no inventa unidades para componentes sin dimensiones", async () => {
     (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue({ code: "COT-1170", items: [
-      { id: "item-1", code: "V1", name: "Corredera", glassDescription: "Float", observaciones: "", fabricacionSnapshot: null },
-      { id: "item-2", code: "V2", name: "Paño fijo", glassDescription: "Float", observaciones: "", fabricacionSnapshot: null },
+      { id: "item-1", quantity: 1, code: "V1", name: "Corredera", glassDescription: "Float", observaciones: "", fabricacionSnapshot: null },
+      { id: "item-2", quantity: 1, code: "V2", name: "Paño fijo", glassDescription: "Float", observaciones: "", fabricacionSnapshot: null },
     ] });
     (extractNormalizedGlassPanesForOrganization as jest.Mock).mockReturnValue([]);
 
@@ -140,7 +140,7 @@ describe("/api/cotizaciones/[id]/optimizacion-vidrios", () => {
 
   it("D: informa cobertura parcial cuando un grupo de vidrio está completo y otro no", async () => {
     (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue({ code: "COT-1170", items: [
-      { id: "item-1", code: "V1", name: "Corredera", glassDescription: "Float + Laminado", observaciones: "", fabricacionSnapshot: {} },
+      { id: "item-1", quantity: 1, code: "V1", name: "Corredera", glassDescription: "Float + Laminado", observaciones: "", fabricacionSnapshot: {} },
     ] });
     (extractNormalizedGlassPanesForOrganization as jest.Mock).mockReturnValue([
       row,
@@ -155,8 +155,8 @@ describe("/api/cotizaciones/[id]/optimizacion-vidrios", () => {
 
   it("E: bloquea en el backend la generación del PDF de proveedor si queda una referencia pendiente", async () => {
     (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue({ code: "COT-1170", items: [
-      { id: "item-1", code: "V1", name: "Corredera", glassDescription: "Float", observaciones: "", fabricacionSnapshot: {} },
-      { id: "item-2", code: "V2", name: "Paño fijo", glassDescription: "Float", observaciones: "", fabricacionSnapshot: {} },
+      { id: "item-1", quantity: 1, code: "V1", name: "Corredera", glassDescription: "Float", observaciones: "", fabricacionSnapshot: {} },
+      { id: "item-2", quantity: 1, code: "V2", name: "Paño fijo", glassDescription: "Float", observaciones: "", fabricacionSnapshot: {} },
     ] });
     (extractNormalizedGlassPanesForOrganization as jest.Mock).mockReturnValue([
       row,
@@ -171,9 +171,26 @@ describe("/api/cotizaciones/[id]/optimizacion-vidrios", () => {
     expect(optimizeGlassCuttingBatch).not.toHaveBeenCalled();
   });
 
+  it("bloquea la pauta operativa si faltan slots aunque el paño presente tenga validación individual", async () => {
+    const observations = encodeCotizacionItemPresentationMeta({ fabricacionTipologia: "Corredera", sheetScheme: "2 hojas" });
+    (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue({ code: "COT-1170", items: [
+      { id: "item-1", quantity: 1, code: "V1", name: "Corredera", glassDescription: "Float", observaciones: observations, fabricacionSnapshot: {} },
+    ] });
+    (extractNormalizedGlassPanesForOrganization as jest.Mock).mockReturnValue([row]);
+    const body = {
+      pieceOrientation: "fixed", confirmManualOperations: true, sheetOrientation: "fixed", sheetSource: "workshop_measurement", sheetSourceReference: "medición QA",
+      tableWidthMm: 2500, tableHeightMm: 1800, edgeTrimMm: { top: 0, right: 0, bottom: 0, left: 0 }, separationMm: 0, minimumStripWidthMm: 1,
+      remnantMinimumWidthMm: 400, remnantMinimumHeightMm: 400, remnantOrientation: "fixed", processSourceReference: "fixture QA",
+    };
+    const response = await POST(new Request("http://localhost", { method: "POST", body: JSON.stringify(body) }), route);
+    expect(response.status).toBe(422);
+    expect((await response.json()).error).toMatch(/cobertura técnica completa/i);
+    expect(optimizeGlassCuttingBatch).not.toHaveBeenCalled();
+  });
+
   it("F: conserva como pendiente un snapshot histórico sin alterar sus datos", async () => {
     (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue({ code: "COT-1170", items: [
-      { id: "item-1", code: "V1", name: "Corredera", glassDescription: "Float", observaciones: "", fabricacionSnapshot: {} },
+      { id: "item-1", quantity: 1, code: "V1", name: "Corredera", glassDescription: "Float", observaciones: "", fabricacionSnapshot: {} },
     ] });
     (extractNormalizedGlassPanesForOrganization as jest.Mock).mockReturnValue([{
       ...row, dimensionProvenance: "legacy_snapshot", validationStatus: "requires_review", warnings: ["El paño proviene de un snapshot legacy sin identidad técnica completa."],
@@ -187,7 +204,7 @@ describe("/api/cotizaciones/[id]/optimizacion-vidrios", () => {
   });
 
   it("expone diagnóstico accionable cuando cotización no tiene snapshots de cubicación", async () => {
-    (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue({ code: "COT-1170", items: [{ id: "item-1", code: "V1", fabricacionSnapshot: null }] });
+    (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue({ code: "COT-1170", items: [{ id: "item-1", quantity: 1, code: "V1", fabricacionSnapshot: null }] });
     (extractNormalizedGlassPanesForOrganization as jest.Mock).mockReturnValue([]);
     const response = await GET(new Request("http://localhost"), route);
     const body = await response.json();
@@ -230,6 +247,28 @@ describe("/api/cotizaciones/[id]/optimizacion-vidrios", () => {
       panes: [expect.objectContaining({ orientation: "fixed", validationStatus: "requires_review" })],
       profiles: [expect.objectContaining({ sheet: expect.objectContaining({ orientation: "unknown" }), process: expect.objectContaining({ kerfOrSeparationMm: 0, supportedOperations: [] }) })],
     }));
+  });
+
+  it("permite una vista previa geométrica informativa con cobertura parcial y solo incluye geometría completa", async () => {
+    (extractNormalizedGlassPanesForOrganization as jest.Mock).mockReturnValue([
+      row,
+      { ...row, glassId: "glass-2", paneId: "component-1:glass-2", widthMm: null, validationStatus: "requires_review", warnings: ["Faltan dimensiones válidas del paño."] },
+    ]);
+    const response = await POST(new Request("http://localhost", { method: "POST", body: JSON.stringify({ mode: "geometric_preview" }) }), route);
+    expect(response.status).toBe(200);
+    expect((await response.json()).coverage.status).toBe("partial");
+    expect(optimizeGlassCuttingBatch).toHaveBeenCalledWith(expect.objectContaining({ panes: [expect.objectContaining({ glassId: "glass-1" })] }));
+  });
+
+  it.each([
+    ["conflicto técnico", { technicalSpec: { ...row.technicalSpec, hasConflict: true }, warnings: [] }],
+    ["fingerprint manual obsoleto", { warnings: ["La ficha técnica del vidrio cambió desde que se ingresaron estas medidas; revisa y vuelve a guardar la referencia."] }],
+    ["posición ambigua", { warnings: ["La medición manual debe asociarse explícitamente a su posición de paño."] }],
+  ])("rechaza la vista previa geométrica con %s", async (_label, override) => {
+    (extractNormalizedGlassPanesForOrganization as jest.Mock).mockReturnValue([{ ...row, ...override }]);
+    const response = await POST(new Request("http://localhost", { method: "POST", body: JSON.stringify({ mode: "geometric_preview" }) }), route);
+    expect(response.status).toBe(422);
+    expect(optimizeGlassCuttingBatch).not.toHaveBeenCalled();
   });
 
   it("usa el formato escrito solo para esta vista si falta en el snapshot", async () => {
@@ -277,7 +316,7 @@ describe("/api/cotizaciones/[id]/optimizacion-vidrios", () => {
   });
 
   it("no ejecuta el optimizador si no existen paños congelados", async () => {
-    (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue({ code: "COT-1170", items: [{ id: "item-1", code: "V1", fabricacionSnapshot: null }] });
+    (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue({ code: "COT-1170", items: [{ id: "item-1", quantity: 1, code: "V1", fabricacionSnapshot: null }] });
     (extractNormalizedGlassPanesForOrganization as jest.Mock).mockReturnValue([]);
     const body = {
       pieceOrientation: "fixed", confirmManualOperations: true, sheetOrientation: "fixed", sheetSource: "workshop_measurement", sheetSourceReference: "medición QA",
@@ -299,7 +338,7 @@ describe("/api/cotizaciones/[id]/optimizacion-vidrios", () => {
     };
     const response = await POST(new Request("http://localhost", { method: "POST", body: JSON.stringify(body) }), route);
     expect(response.status).toBe(422);
-    expect((await response.json()).diagnostics).toContain("La receta no está validada por el taller.");
+    expect((await response.json()).diagnostics).toEqual(expect.arrayContaining([expect.stringContaining("La receta no está validada por el taller.")]));
     expect(optimizeGlassCuttingBatch).not.toHaveBeenCalled();
   });
 });

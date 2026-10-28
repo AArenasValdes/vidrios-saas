@@ -96,6 +96,12 @@ function normalizeRow(input: {
   if (input.additionalWarnings?.includes("non_rectangular")) warnings.push("La geometría del paño no es rectangular y no se puede enviar como corte rectangular verificado.");
   if (input.widthMm == null || input.heightMm == null) warnings.push("Faltan dimensiones válidas del paño.");
   if (input.quantity <= 0 || !Number.isSafeInteger(input.quantity)) warnings.push("La cantidad del snapshot no es válida.");
+  const itemQuantity = positiveInteger(context.item.cantidad);
+  if (!itemQuantity) {
+    warnings.push("La cantidad comercial guardada del componente no es válida; no se puede reconciliar la cantidad física de vidrio.");
+  } else if (input.quantity > 0 && input.quantity % itemQuantity !== 0) {
+    warnings.push("La cantidad física congelada no corresponde a un múltiplo de la cantidad comercial del componente.");
+  }
   if (input.quantity > MAX_NORMALIZED_PHYSICAL_UNITS) warnings.push("La cantidad excede el límite seguro de paños para una optimización.");
   if (input.source === "legacy_snapshot") warnings.push("El paño proviene de un snapshot legacy sin identidad técnica completa.");
   warnings.push(...(input.additionalWarnings ?? []));
@@ -247,7 +253,7 @@ export function extractNormalizedGlassPanes(input: ExtractInput): NormalizedGlas
       widthMm: positiveInteger(entry.widthMm),
       heightMm: positiveInteger(entry.heightMm),
       quantity: entry.quantityBasis === "per_component"
-        ? (positiveInteger(entry.quantity) ?? 0) * Math.max(1, positiveInteger(input.item.cantidad) ?? 1)
+        ? (positiveInteger(entry.quantity) ?? 0) * (positiveInteger(input.item.cantidad) ?? 0)
         : positiveInteger(entry.quantity) ?? 0,
       ...(entry.paneSlotId ? { paneSlotId: entry.paneSlotId } : {}),
       dimensionTraceRuleIds: [],
@@ -268,16 +274,16 @@ export function extractNormalizedGlassPanes(input: ExtractInput): NormalizedGlas
       .filter((pane) => pane.validationStatus === "eligible_for_manual_planning")
       .map((pane) => pane.productId)
       .filter((id): id is string => Boolean(id)));
-    const itemQuantity = Math.max(1, positiveInteger(input.item.cantidad) ?? 1);
+    const itemQuantity = positiveInteger(input.item.cantidad);
     const automaticCounts = new Map<string, number>();
     const manualCounts = new Map<string, number>();
     for (const pane of recipePanes) {
       if (pane.validationStatus !== "eligible_for_manual_planning" || !pane.productId) continue;
-      automaticCounts.set(pane.productId, (automaticCounts.get(pane.productId) ?? 0) + pane.quantity / itemQuantity);
+      if (itemQuantity) automaticCounts.set(pane.productId, (automaticCounts.get(pane.productId) ?? 0) + pane.quantity / itemQuantity);
     }
     for (const pane of manual) {
       if (!pane.productId) continue;
-      manualCounts.set(pane.productId, (manualCounts.get(pane.productId) ?? 0) + pane.quantity / itemQuantity);
+      if (itemQuantity) manualCounts.set(pane.productId, (manualCounts.get(pane.productId) ?? 0) + pane.quantity / itemQuantity);
     }
     const manualFallbackProducts = new Set([...manualCounts]
       .filter(([productId, count]) => validAutomaticProducts.has(productId) && count > (automaticCounts.get(productId) ?? 0))

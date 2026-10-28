@@ -85,6 +85,69 @@ describe("buildGlassDistributionCoverage", () => {
     expect(coverage.pendingReferences[0]?.reason).toBe("La receta no está validada por el taller.");
   });
 
+  it("no declara cobertura completa cuando la normalización exige revisión aunque dimensiones y unidades estén presentes", () => {
+    const coverage = buildGlassDistributionCoverage({
+      items: [item("item-1", "V1")],
+      panes: [pane("item-1", "glass-1", {
+        validationStatus: "requires_review",
+        warnings: ["La ficha técnica cambió desde que se guardó la medición."],
+      })],
+    });
+
+    expect(coverage).toMatchObject({ status: "unavailable", completeReferenceCount: 0, pendingReferenceCount: 1 });
+    expect(coverage.pendingReferences[0]?.reason).toContain("La ficha técnica cambió");
+  });
+
+  it("no redondea cinco piezas para cubrir dos slots cuando la cantidad comercial es tres", () => {
+    const component = item("item-1", "V1");
+    component.cantidad = 3;
+    component.observaciones = encodeCotizacionItemPresentationMeta({ fabricacionTipologia: "Corredera", sheetScheme: "2 hojas" });
+
+    const coverage = buildGlassDistributionCoverage({
+      items: [component],
+      panes: [pane("item-1", "glass-1", {
+        quantity: 5,
+        paneUnitIds: Array.from({ length: 5 }, (_, index) => `unit-${index + 1}`),
+      })],
+    });
+
+    expect(coverage.status).not.toBe("complete");
+    expect(coverage.completeReferenceCount).toBe(0);
+    expect(coverage.pendingReferences[0]?.reason).toContain("múltiplo de la cantidad comercial");
+  });
+
+  it("acepta una referencia agrupada con seis piezas para dos slots y cantidad comercial tres", () => {
+    const component = item("item-1", "V1");
+    component.cantidad = 3;
+    component.observaciones = encodeCotizacionItemPresentationMeta({ fabricacionTipologia: "Corredera", sheetScheme: "2 hojas" });
+
+    const coverage = buildGlassDistributionCoverage({
+      items: [component],
+      panes: [pane("item-1", "grouped-glass", {
+        quantity: 6,
+        paneUnitIds: Array.from({ length: 6 }, (_, index) => `unit-${index + 1}`),
+      })],
+    });
+
+    expect(coverage).toMatchObject({ status: "complete", completeReferenceCount: 1, pendingReferenceCount: 0 });
+  });
+
+  it("acepta referencias separadas de tres unidades por slot con cantidad comercial tres", () => {
+    const component = item("item-1", "V1");
+    component.cantidad = 3;
+    component.observaciones = encodeCotizacionItemPresentationMeta({ fabricacionTipologia: "Corredera", sheetScheme: "2 hojas" });
+
+    const coverage = buildGlassDistributionCoverage({
+      items: [component],
+      panes: [
+        pane("item-1", "glass-1", { quantity: 3, paneUnitIds: ["a1", "a2", "a3"] }),
+        pane("item-1", "glass-2", { quantity: 3, paneUnitIds: ["b1", "b2", "b3"] }),
+      ],
+    });
+
+    expect(coverage).toMatchObject({ status: "complete", completeReferenceCount: 2, pendingReferenceCount: 0 });
+  });
+
   it("C: devuelve no disponible y no asigna unidades si todos los snapshots carecen de medidas", () => {
     const coverage = buildGlassDistributionCoverage({
       items: [item("item-1", "V1"), item("item-2", "V2")],
