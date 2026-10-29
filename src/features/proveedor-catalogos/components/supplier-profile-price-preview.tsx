@@ -64,6 +64,7 @@ export function SupplierProfilePricePreview({
             <span className={s.profile}>
               <strong>{price.profileName || price.presentationDescription}</strong>
               <small>{price.technicalCode}{price.supplierSku ? ` · ${price.supplierSku}` : ""}</small>
+              {price.priceAppliesAcrossFinishes && <small>Precio aplicable a todos los colores; SKU físico según acabado.</small>}
             </span>
             <span className={s.amount}>
               {price.status === "priced" && price.netPrice != null && price.currency

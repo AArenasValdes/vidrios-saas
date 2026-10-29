@@ -46,6 +46,23 @@ describe("SupplierProfilePricePreview price entry", () => {
     expect(screen.queryByText("$40.000")).not.toBeInTheDocument();
   });
 
+  it("indica que el precio cubre otros colores sin presentar el SKU Titanio como SKU físico", () => {
+    render(<SupplierProfilePricePreview prices={[{
+      ...missingPrice,
+      providerKey: "alumco",
+      providerLabel: "Alumco",
+      supplierSku: "",
+      priceAppliesAcrossFinishes: true,
+      status: "priced",
+      netPrice: 10210,
+    }]} providerKey="alumco" />);
+
+    fireEvent.click(screen.getByText("Ver precios de 1 perfiles"));
+    expect(screen.getByText("Precio aplicable a todos los colores; SKU físico según acabado.")).toBeInTheDocument();
+    expect(screen.getByText("$10.210")).toBeInTheDocument();
+    expect(screen.queryByText(/802-0003/)).not.toBeInTheDocument();
+  });
+
   it("saves a missing confirmed provider presentation as an organization override", async () => {
     const onPriceSaved = jest.fn();
     render(

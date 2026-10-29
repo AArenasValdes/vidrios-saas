@@ -2,20 +2,26 @@
 
 **Estado:** importado y verificado en el catálogo global el 17-10-2026.  
 **Fuentes:** notas de venta 000000984 y 000000986, emitidas el 14-10-2026 por Alumco NOR Limitada.  
-**Vigencia impresa:** 7 días desde emisión (hasta 21-10-2026).  
+**Vigencia impresa:** 7 días para la cotización/oferta (hasta 21-10-2026); no vence los precios de perfiles. Los precios siguen vigentes hasta que Alumco publique una lista que los reemplace.
 **Unidad y moneda:** precio neto CLP por tira (`TR`).
 **Etiqueta en Mis precios:** `2026` (la fuente original conserva fecha 14-10-2026).
 
 ## Reglas de importación
 
 - Se usa `supplierKey: alumco`, nombre visible **Alumco** y se registra “continuidad comercial de ALAR” como nota de identidad. Las referencias históricas `alar` de fórmulas/catálogos no se renombran ni se mezclan.
-- Las referencias con SKU `TI` identifican perfiles con acabado **Titanio**. Sus precios no se declaran aplicables a otros colores.
+- Por confirmación del titular, los precios de perfiles Alumco aplican a todos sus colores y se mantienen hasta que otra lista los actualice. Esta regla de precio no cambia la identidad física de los SKU: `TI` sigue identificando una presentación Titanio y no se asigna como presentación de compra para otro acabado.
 - Se usa largo de 6.000 mm por tira por instrucción del titular, no porque aparezca impreso en la nota.
 - Se transcriben los precios unitarios de cada fila. No se vuelve a restar el descuento de pronto pago: la suma de las filas coincide exactamente con el NETO de cada nota y el documento presenta el descuento como condición aparte.
-- `RO3506P` (Tapa) y `RO3507P` (Portafelpa) son independientes del color por confirmación del titular. No se les exige acabado ni se presentan como perfiles de color.
-- Para L25, el titular precisa que **2509 = Jamba cerrada** y **2510 = Pierna cerrada**. Sus referencias de precio son las mismas que usan las recetas L25 cerradas; se resuelven por código exacto, familia `universal:aluminio:l25`, acabado Titanio y presentación de 6.000 mm. No se aplican a pierna abierta (códigos de receta 2503/2506); esos perfiles quedan pendientes hasta tener sus presentaciones correspondientes.
+- `RO3506P` (Tapa) y `RO3507P` (Portafelpa) son físicamente independientes del color por confirmación del titular. No se les exige acabado ni se presentan como perfiles de color.
+- Para L25, el titular precisa que **2509 = Jamba cerrada** y **2510 = Pierna cerrada**. Sus referencias de precio son las mismas que usan las recetas L25 cerradas; se resuelven por código exacto y familia `universal:aluminio:l25`. La identidad física de los SKU de origen es Titanio y su presentación mide 6.000 mm; el precio aplica a todos los colores. No se aplican a pierna abierta (códigos de receta 2503/2506); esos perfiles quedan pendientes hasta tener sus presentaciones correspondientes.
 - Los códigos de perfil se asocian por familia numérica y referencias existentes. El único alias hacia receta es `4502 → 4522`, ya documentado en el catálogo Arquetipo para Línea 45. `4511` queda como referencia comercial separada; no se usa para sustituir un perfil de receta.
 - La integración agrega perfiles y precios de compra a catálogo; no agrega recetas, reglas, descuentos de corte ni fórmulas. El precio de venta por m² y los históricos no cambian.
+
+## Resolución de precio y acabado
+
+- La vigencia impresa en las notas se interpreta como vigencia de la oferta. En la selección automática, Alumco conserva esta lista de precios hasta que una lista posterior la reemplace.
+- El alcance del precio (`todos los colores`) se resuelve por separado del acabado físico de la presentación. Una cotización negra puede consultar el importe Alumco confirmado, pero `TI…` no se registra ni se muestra como SKU físico negro; para compra, la presentación exacta del acabado sigue pendiente hasta estar asociada.
+- No se modifican montos ni preferencias de proveedor de organizaciones. La política se aplica al leer precios Alumco y no cambia qué proveedor queda seleccionado por defecto.
 
 ## Cobertura transcrita
 

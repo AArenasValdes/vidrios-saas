@@ -168,6 +168,41 @@ describe("buildPartialTechnicalCostSnapshot", () => {
     ]);
   });
 
+  it("aplica el precio Alumco a otro color sin cambiar la identidad física Titanio del SKU", () => {
+    const workSnapshot = pauta([{ code: "3201", item: "L32-negra", length: 900 }]);
+    workSnapshot.bars[0]!.supplierProviderKey = "alumco";
+    workSnapshot.bars[0]!.acabadoKey = "Negro";
+    workSnapshot.bars[0]!.largoComercialMm = 6000;
+    const result = buildPartialTechnicalCostSnapshot({
+      workSnapshot,
+      quoteItems: [{ code: "L32-negra", color: "Negro", catalogLineKey: "ventora:l32", supplierFamilyKey: "universal:aluminio:l32", supplierProviderKey: "alumco" }],
+      availablePrices: [price({
+        presentationId: "TI3201A",
+        providerKey: "alumco",
+        familyKeys: ["universal:aluminio:l32"],
+        technicalCode: "3201",
+        technicalName: "Marco",
+        supplierSku: "TI3201A",
+        finishCode: "TI",
+        finishName: "Titanio",
+        finishResolution: "specific",
+        priceFinishResolution: "finish_independent",
+        commercialLengthMm: 6000,
+        netPrice: 10210,
+      })],
+    });
+
+    expect(result?.lines).toEqual([expect.objectContaining({
+      providerKey: "alumco",
+      supplierSku: "",
+      priceReferenceSku: "TI3201A",
+      finishCode: "",
+      finishName: "Negro",
+      priceFinishApplicability: "all_finishes",
+      netPricePerPresentation: 10210,
+    })]);
+  });
+
   it.each([
     ["2509", "Jamba cerrada", 18234],
     ["2510", "Pierna cerrada", 18809],

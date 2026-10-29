@@ -6,6 +6,8 @@ const evidenceSchema = z.object({
   observedAs: z.enum(["observed", "derived", "assumed"]),
   confidence: z.enum(["high", "medium", "low"]),
   note: z.string().trim().min(1),
+  /** Price applicability is independent from the physical finish/SKU of a presentation. */
+  finishApplicability: z.enum(["same_finish", "all_finishes"]).optional(),
 });
 
 const technicalInputSchema = z.object({

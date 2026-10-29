@@ -24,6 +24,8 @@ export type CatalogPresentationPrice = {
   finishCode: string;
   finishName: string | null;
   finishResolution: "specific" | "finish_independent";
+  /** Scope of the price only; never changes the physical presentation finish/SKU. */
+  priceFinishResolution?: "specific" | "finish_independent";
   purchaseUnit: string;
   commercialLengthMm: number | null;
   netPrice: number | null;
@@ -57,6 +59,8 @@ type CostLine = {
   supplierTechnicalCode?: string;
   technicalName: string;
   supplierSku: string;
+  /** SKU that supplied a universal price when it is not the selected physical finish. */
+  priceReferenceSku?: string;
   finishCode: string;
   finishName: string;
   commercialLengthMm: number | null;
@@ -71,6 +75,7 @@ type CostLine = {
   priceBasis: "commercial_presentation" | "per_meter";
   lineNet: number;
   currency: string;
+  priceFinishApplicability?: "selected_finish" | "all_finishes";
   priceListId: string;
   priceListRevision: string;
   cuts: Array<{ itemCode: string; cutLengthMm: number }>;
@@ -179,7 +184,8 @@ function matchesSelectedPresentation(
     finishCode?: string | null;
     finishName?: string | null;
     commercialLengthMm?: number | null;
-  }
+  },
+  allowPriceFinishMismatch = false
 ) {
   // Legacy recipes without a supplier selection keep the previous family +
   // finish resolution behavior; their bar length is a calculation output,
@@ -198,9 +204,9 @@ function matchesSelectedPresentation(
   // SKU here made every priced profile appear pending for explicit suppliers.
   if (selection.supplierSku && candidate.supplierSku !== selection.supplierSku) return false;
   if (!selection.supplierSku && !selection.providerKey) return false;
-  if (selection.finishCode && candidate.finishCode && candidate.finishCode !== selection.finishCode) return false;
+  if (!allowPriceFinishMismatch && selection.finishCode && candidate.finishCode && candidate.finishCode !== selection.finishCode) return false;
   if (
-    selection.finishName && candidate.finishName &&
+    !allowPriceFinishMismatch && selection.finishName && candidate.finishName &&
     normalizeFinish(candidate.finishName) !== normalizeFinish(selection.finishName)
   ) return false;
   return true;
@@ -262,6 +268,17 @@ function matchesCatalogFamily(
 
 function normalizeFinish(value: string | null | undefined) {
   return (value ?? "").trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CL");
+}
+
+function matchesPriceFinish(entry: CatalogPresentationPrice, finishName: string | null | undefined) {
+  const resolution = entry.priceFinishResolution ?? entry.finishResolution;
+  return resolution === "finish_independent" ||
+    resolution === "specific" && Boolean(finishName && entry.finishName && normalizeFinish(entry.finishName) === normalizeFinish(finishName));
+}
+
+function priceSkuMatchesPhysicalFinish(entry: CatalogPresentationPrice, finishName: string | null | undefined) {
+  return entry.finishResolution === "finish_independent" ||
+    Boolean(finishName && entry.finishName && normalizeFinish(entry.finishName) === normalizeFinish(finishName));
 }
 
 function canonicalFinishLabel(value: string | null | undefined, colorHex?: string | null) {
@@ -344,7 +361,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
       const independentCandidates = input.availablePrices.filter((entry) =>
         (!entry.configurationKey || entry.configurationKey === quoteItem?.configurationKey) &&
         matchesCatalogFamily(entry, quoteItem?.catalogLineKey, quoteItem?.supplierFamilyKey) &&
-        matchesRecipeComponent(entry, cut.codigoPerfil) && entry.finishResolution === "finish_independent" && resolvedPrice(entry, input.organizationPricing) != null
+        matchesRecipeComponent(entry, cut.codigoPerfil) && matchesPriceFinish(entry, finishName) && resolvedPrice(entry, input.organizationPricing) != null
       );
       if (!finishName && independentCandidates.length === 0) {
         const key = `${cut.codigoPerfil}|finish`;
@@ -360,10 +377,8 @@ export function buildPartialTechnicalCostSnapshot(input: {
         (!entry.configurationKey || entry.configurationKey === quoteItem?.configurationKey) &&
         matchesCatalogFamily(entry, quoteItem?.catalogLineKey, quoteItem?.supplierFamilyKey) &&
         matchesRecipeComponent(entry, cut.codigoPerfil) &&
-        matchesSelectedPresentation(entry, selectedPresentationForBar(bar, quoteItem)) && (
-          entry.finishResolution === "finish_independent" ||
-          entry.finishResolution === "specific" && normalizeFinish(entry.finishName) === normalizeFinish(finishName)
-        )
+        matchesSelectedPresentation(entry, selectedPresentationForBar(bar, quoteItem), entry.priceFinishResolution === "finish_independent") &&
+        matchesPriceFinish(entry, finishName)
       );
       const candidates = matchingPresentations.filter((entry) =>
         entry.commercialLengthMm != null && resolvedPrice(entry, input.organizationPricing) != null
@@ -423,11 +438,8 @@ export function buildPartialTechnicalCostSnapshot(input: {
       (!entry.configurationKey || entry.configurationKey === group[0].configurationKey) &&
         matchesCatalogFamily(entry, group[0].catalogLineKey, itemColors.get(group[0].itemCode)?.supplierFamilyKey) &&
       matchesRecipeComponent(entry, group[0].technicalCode) &&
-      matchesSelectedPresentation(entry, selectedPresentationForCut(group[0])) &&
-      (group[0].finishKey === "independent"
-        ? entry.finishResolution === "finish_independent"
-        : entry.finishResolution === "finish_independent" ||
-          entry.finishResolution === "specific" && normalizeFinish(entry.finishName) === normalizeFinish(group[0].finishKey)) &&
+      matchesSelectedPresentation(entry, selectedPresentationForCut(group[0]), entry.priceFinishResolution === "finish_independent") &&
+      matchesPriceFinish(entry, group[0].finishKey) &&
       resolvedPrice(entry, input.organizationPricing) != null
     );
     const fittingCandidates = candidates.flatMap((candidate) => {
@@ -480,9 +492,12 @@ export function buildPartialTechnicalCostSnapshot(input: {
         technicalCode: group[0].technicalCode,
         ...(selected.technicalCode !== group[0].technicalCode ? { supplierTechnicalCode: selected.technicalCode } : {}),
         technicalName: group[0].technicalName,
-        supplierSku: selected.supplierSku,
-        finishCode: selected.finishCode,
-        finishName: selected.finishName ?? "Sin acabado específico",
+        supplierSku: priceSkuMatchesPhysicalFinish(selected, group[0].finishKey) ? selected.supplierSku : "",
+        ...(!priceSkuMatchesPhysicalFinish(selected, group[0].finishKey) ? { priceReferenceSku: selected.supplierSku } : {}),
+        finishCode: selected.priceFinishResolution === "finish_independent" ? "" : selected.finishCode,
+        finishName: selected.priceFinishResolution === "finish_independent"
+          ? group[0].finishKey
+          : selected.finishName ?? "Sin acabado específico",
         commercialLengthMm: selected.commercialLengthMm,
         purchaseUnit: selected.purchaseUnit,
         bars: selectedBars.length,
@@ -495,6 +510,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
         priceBasis: selected.priceBasis === "unknown" ? "commercial_presentation" : selected.priceBasis,
         lineNet: selectedBars.length * unitPrice,
         currency: resolved.currency,
+        priceFinishApplicability: selected.priceFinishResolution === "finish_independent" ? "all_finishes" : "selected_finish",
         priceListId: selected.priceListId,
         priceListRevision: selected.priceListRevision,
         cuts: group.map((cut) => ({ itemCode: cut.itemCode, cutLengthMm: cut.cutLengthMm })),
@@ -537,9 +553,12 @@ export function buildPartialTechnicalCostSnapshot(input: {
       technicalCode: acceptedCuts[0].technicalCode,
       ...(presentation.technicalCode !== acceptedCuts[0].technicalCode ? { supplierTechnicalCode: presentation.technicalCode } : {}),
       technicalName: acceptedCuts[0].technicalName,
-      supplierSku: presentation.supplierSku,
-      finishCode: presentation.finishCode,
-      finishName: presentation.finishName ?? "Sin acabado específico",
+      supplierSku: priceSkuMatchesPhysicalFinish(presentation, group[0].finishKey) ? presentation.supplierSku : "",
+      ...(!priceSkuMatchesPhysicalFinish(presentation, group[0].finishKey) ? { priceReferenceSku: presentation.supplierSku } : {}),
+      finishCode: presentation.priceFinishResolution === "finish_independent" ? "" : presentation.finishCode,
+      finishName: presentation.priceFinishResolution === "finish_independent"
+        ? group[0].finishKey
+        : presentation.finishName ?? "Sin acabado específico",
       commercialLengthMm: presentation.commercialLengthMm,
       purchaseUnit: presentation.purchaseUnit,
       bars: barCount,
@@ -552,6 +571,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
       priceBasis: presentation.priceBasis === "unknown" ? "commercial_presentation" : presentation.priceBasis,
       lineNet: barCount * unitPrice,
       currency: resolved.currency,
+      priceFinishApplicability: presentation.priceFinishResolution === "finish_independent" ? "all_finishes" : "selected_finish",
       priceListId: presentation.priceListId,
       priceListRevision: presentation.priceListRevision,
       cuts: acceptedCuts.map((cut) => ({ itemCode: cut.itemCode, cutLengthMm: cut.cutLengthMm })),
