@@ -34,6 +34,7 @@ describe("direct-glass-distribution.service", () => {
     physicalUnitCount: 2,
     dimensionProvenance: "recipe",
     recipeStatus: "validated",
+    validationStatus: "eligible_for_manual_planning",
     warnings: [],
     snapshotFingerprint: "fingerprint-1",
   };

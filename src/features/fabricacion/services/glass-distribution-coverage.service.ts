@@ -26,10 +26,11 @@ type CoveragePane = {
   componentCode?: string;
   componentName?: string | null;
   glassId: string | null;
+  paneSlotId?: string;
   productId: string | null;
   displayName: string | null;
   logicalComponentId: string | null;
-  technicalSpec: { hasConflict?: boolean; thicknessMm?: number | null; category?: string } | null;
+  technicalSpec: { productId?: string | null; hasConflict?: boolean; thicknessMm?: number | null; category?: string } | null;
   widthMm: number | null;
   heightMm: number | null;
   quantity: number;
@@ -67,11 +68,14 @@ function itemHasExplicitGlass(item: CotizacionWorkflowItem): boolean {
 export function isGlassCoveragePaneComplete(pane: CoveragePane): boolean {
   const physicalUnitCount = pane.physicalUnitCount ?? pane.paneUnitIds?.length ?? 0;
   return Boolean(
+    pane.validationStatus === "eligible_for_manual_planning"
+    &&
     pane.logicalComponentId
     && pane.glassId
     && pane.productId
     && pane.technicalSpec
     && !pane.technicalSpec.hasConflict
+    && (!pane.technicalSpec.productId || pane.technicalSpec.productId === pane.productId)
     && Number.isFinite(pane.technicalSpec.thicknessMm)
     && Number(pane.technicalSpec.thicknessMm) > 0
     && pane.technicalSpec.category
@@ -85,6 +89,43 @@ export function isGlassCoveragePaneComplete(pane: CoveragePane): boolean {
     && pane.quantity === physicalUnitCount
     && (pane.recipeStatus === "validated" || pane.dimensionProvenance === "manual")
     && pane.dimensionProvenance !== "legacy_snapshot"
+  );
+}
+
+/** Safe for an informative geometric preview; it does not grant coverage or workshop eligibility. */
+export function isGlassPaneGeometryComplete(pane: CoveragePane): boolean {
+  const physicalUnitCount = pane.physicalUnitCount ?? pane.paneUnitIds?.length ?? 0;
+  const warnings = pane.warnings ?? [];
+  const blocksGeometry = warnings.some((warning) =>
+    warning.includes("ficha técnica del vidrio cambió")
+    || warning.includes("configuración del componente cambió")
+    || warning.includes("debe asociarse explícitamente")
+    || warning.includes("múltiples mediciones manuales asignadas")
+    || warning.includes("no corresponde a un múltiplo de la cantidad comercial")
+    || warning.includes("cantidad comercial guardada del componente no es válida")
+    || warning.includes("geometría del paño no es rectangular")
+  );
+  return Boolean(
+    !blocksGeometry
+    && pane.dimensionProvenance !== "legacy_snapshot"
+    && pane.dimensionProvenance !== "missing"
+    && pane.logicalComponentId
+    && pane.glassId
+    && pane.productId
+    && pane.technicalSpec
+    && !pane.technicalSpec.hasConflict
+    && (!pane.technicalSpec.productId || pane.technicalSpec.productId === pane.productId)
+    && Number.isFinite(pane.technicalSpec.thicknessMm)
+    && Number(pane.technicalSpec.thicknessMm) > 0
+    && pane.technicalSpec.category
+    && pane.technicalSpec.category !== "pendiente"
+    && Number.isSafeInteger(pane.widthMm)
+    && Number(pane.widthMm) > 0
+    && Number.isSafeInteger(pane.heightMm)
+    && Number(pane.heightMm) > 0
+    && Number.isSafeInteger(pane.quantity)
+    && pane.quantity > 0
+    && pane.quantity === physicalUnitCount
   );
 }
 
@@ -102,14 +143,27 @@ export function buildGlassDistributionCoverage(input: {
   panes: readonly CoveragePane[];
 }): GlassDistributionCoverage {
   const itemsById = new Map(input.items.map((item) => [item.id, item]));
-  const refs = new Map<string, { panes: CoveragePane[]; item: CotizacionWorkflowItem | undefined }>();
+  const refs = new Map<string, { panes: CoveragePane[]; item: CotizacionWorkflowItem | undefined; isConflictedSlot?: boolean }>();
+  const invalidatedSlotPanes = new Set<CoveragePane>();
 
-  for (const pane of input.panes) {
+  for (const rawPane of input.panes) {
+    const pane: CoveragePane = { ...rawPane, warnings: [...rawPane.warnings] };
     const key = referenceKey(pane);
     const current = refs.get(key);
     if (current) current.panes.push(pane);
     else refs.set(key, { panes: [pane], item: itemsById.get(pane.quoteItemId) });
   }
+
+  const isPaneComplete = (pane: CoveragePane): boolean => {
+    const item = itemsById.get(pane.quoteItemId);
+    const itemQuantity = item?.cantidad;
+    return !invalidatedSlotPanes.has(pane)
+      && Number.isSafeInteger(itemQuantity)
+      && Number(itemQuantity) > 0
+      && Number.isSafeInteger(pane.quantity)
+      && pane.quantity % Number(itemQuantity) === 0
+      && isGlassCoveragePaneComplete(pane);
+  };
 
   for (const item of input.items) {
     const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
@@ -124,21 +178,121 @@ export function buildGlassDistributionCoverage(input: {
       guidedVisualConfig: presentation.guidedVisualConfig,
       quickCompositionAdjustment: presentation.quickCompositionAdjustment,
     });
-    const itemRefs = [...refs.values()].filter((reference) => reference.item?.id === item.id);
-    const itemPanes = itemRefs.flatMap((reference) => reference.panes);
+    const itemQuantity = Number.isSafeInteger(item.cantidad) && item.cantidad > 0 ? item.cantidad : 0;
+    const itemRefs = [...refs.entries()].filter(([, reference]) => reference.item?.id === item.id);
+    const itemPanes = itemRefs.flatMap(([, reference]) => reference.panes);
     let hasExpectedPendingSlots = false;
 
+    for (const pane of itemPanes) {
+      if (itemQuantity === 0) {
+        pane.warnings.push("La cantidad comercial guardada del componente no es válida; no se puede reconciliar la cantidad física de vidrio.");
+        invalidatedSlotPanes.add(pane);
+      } else if (Number.isSafeInteger(pane.quantity) && pane.quantity > 0 && pane.quantity % itemQuantity !== 0) {
+        pane.warnings.push("La cantidad física congelada no corresponde a un múltiplo de la cantidad comercial del componente.");
+        invalidatedSlotPanes.add(pane);
+      }
+    }
+
     if (expected.countIsKnown) {
+      const validSlotIds = new Set(expected.slots.map((slot) => slot.id));
       const snapshotStale = manualSnapshot.configurationFingerprint != null
         && manualSnapshot.configurationFingerprint !== expected.configurationFingerprint;
-      const manualSlotIds = new Set(manualSnapshot.entries.map((entry) => entry.paneSlotId).filter((id): id is string => Boolean(id)));
-      const automaticPaneCount = itemPanes.some((pane) => pane.dimensionProvenance === "validated_recipe")
-        ? itemPanes.filter((pane) => pane.dimensionProvenance === "validated_recipe")
-          .reduce((sum, pane) => sum + (item.cantidad > 0 ? pane.quantity / item.cantidad : 0), 0)
-        : 0;
-      const actualCount = Math.max(manualSlotIds.size, automaticPaneCount);
-      const missingCount = snapshotStale ? expected.slots.length : Math.max(0, expected.slots.length - actualCount);
-      hasExpectedPendingSlots = missingCount > 0;
+
+      const manualPanes = itemPanes.filter((pane) => pane.dimensionProvenance === "manual");
+      const manualEntryByGlassId = new Map(manualSnapshot.entries.map((entry) => [entry.id, entry]));
+      const resolvedSlotByPane = new Map<CoveragePane, string | null>();
+      const slotClaimCounts = new Map<string, number>();
+
+      for (const pane of manualPanes) {
+        const entry = pane.glassId ? manualEntryByGlassId.get(pane.glassId) : undefined;
+        const explicitSlotId = pane.paneSlotId ?? entry?.paneSlotId ?? null;
+        const resolvedSlotId = explicitSlotId
+          ?? (expected.slots.length === 1 && manualPanes.length === 1 ? expected.slots[0]?.id ?? null : null);
+        resolvedSlotByPane.set(pane, resolvedSlotId);
+        if (resolvedSlotId && validSlotIds.has(resolvedSlotId)) {
+          slotClaimCounts.set(resolvedSlotId, (slotClaimCounts.get(resolvedSlotId) ?? 0) + 1);
+        }
+      }
+
+      const coveredManualSlotIds = new Set<string>();
+      const conflictedSlotPanes = new Map<string, CoveragePane[]>();
+
+      for (const pane of manualPanes) {
+        const resolvedSlotId = resolvedSlotByPane.get(pane) ?? null;
+        if (snapshotStale) {
+          pane.warnings.push("La configuración del componente cambió desde que se registraron las medidas manuales; revisa y vuelve a confirmar cada paño.");
+          invalidatedSlotPanes.add(pane);
+        } else if (!resolvedSlotId || !validSlotIds.has(resolvedSlotId)) {
+          pane.warnings.push("La medición manual debe asociarse explícitamente a su posición de paño.");
+          invalidatedSlotPanes.add(pane);
+        } else if ((slotClaimCounts.get(resolvedSlotId) ?? 0) > 1) {
+          pane.warnings.push("Existen múltiples mediciones manuales asignadas a la misma posición de paño.");
+          invalidatedSlotPanes.add(pane);
+          const group = conflictedSlotPanes.get(resolvedSlotId) ?? [];
+          group.push(pane);
+          conflictedSlotPanes.set(resolvedSlotId, group);
+        } else if (isPaneComplete(pane)) {
+          coveredManualSlotIds.add(resolvedSlotId);
+        }
+      }
+
+      for (const [slotId, panesInConflict] of conflictedSlotPanes.entries()) {
+        for (const pane of panesInConflict) {
+          refs.delete(referenceKey(pane));
+        }
+        refs.set(`${item.id}|slot:${slotId}`, {
+          panes: panesInConflict,
+          item,
+          isConflictedSlot: true,
+        });
+      }
+
+      const automaticPaneCount = itemQuantity > 0 ? itemPanes
+        .filter((pane) => pane.dimensionProvenance === "validated_recipe" && isPaneComplete(pane))
+        .reduce((sum, pane) => sum + pane.quantity / itemQuantity, 0) : 0;
+
+      const coveredSlotsCount = snapshotStale
+        ? 0
+        : Math.min(expected.slots.length, Math.max(coveredManualSlotIds.size, automaticPaneCount));
+      const uncoveredSlotsCount = Math.max(0, expected.slots.length - coveredSlotsCount);
+
+      if (coveredSlotsCount > 0) {
+        const unslottedPreliminaryRefKeys = [...refs.entries()]
+          .filter(([, reference]) =>
+            reference.item?.id === item.id
+            && reference.panes.length > 0
+            && reference.panes.every((pane) =>
+              (pane.dimensionProvenance === "recipe_trace" || pane.dimensionProvenance === "legacy_snapshot")
+              && !pane.paneSlotId
+            )
+          )
+          .map(([key]) => key);
+
+        if (unslottedPreliminaryRefKeys.length > uncoveredSlotsCount) {
+          for (const key of unslottedPreliminaryRefKeys.slice(uncoveredSlotsCount)) {
+            refs.delete(key);
+          }
+        }
+      }
+
+      const currentItemRefs = [...refs.values()].filter((reference) => reference.item?.id === item.id);
+      const pendingItemRefs = currentItemRefs.filter(
+        (reference) => !(reference.panes.length > 0 && reference.panes.every(isPaneComplete))
+      );
+
+      const accountedUncoveredSlots = pendingItemRefs.reduce((sum, reference) => {
+        if (reference.isConflictedSlot) return sum + 1;
+        const refQuantity = reference.panes.reduce(
+          (qtySum, pane) => qtySum + (Number.isSafeInteger(pane.quantity) && pane.quantity > 0 ? pane.quantity : 0),
+          0
+        );
+        if (itemQuantity > 0 && refQuantity > 0 && refQuantity % itemQuantity !== 0) return sum + expected.slots.length;
+        const slotsForRef = refQuantity > 0 && itemQuantity > 0 ? Math.max(1, refQuantity / itemQuantity) : 1;
+        return sum + slotsForRef;
+      }, 0);
+
+      const missingCount = Math.max(0, uncoveredSlotsCount - accountedUncoveredSlots);
+      hasExpectedPendingSlots = missingCount > 0 || pendingItemRefs.length > 0;
       for (let index = 0; index < missingCount; index += 1) {
         refs.set(`${item.id}|expected-pane-pending-${index + 1}`, {
           panes: [], item,
@@ -151,7 +305,8 @@ export function buildGlassDistributionCoverage(input: {
     }
 
     if (!itemHasExplicitGlass(item)) continue;
-    if (itemRefs.length === 0 && !hasExpectedPendingSlots) {
+    const updatedItemRefsCount = [...refs.values()].filter((reference) => reference.item?.id === item.id).length;
+    if (updatedItemRefsCount === 0 && !hasExpectedPendingSlots) {
       refs.set(`${item.id}|unresolved-glass-reference`, { panes: [], item });
     }
   }
@@ -159,7 +314,7 @@ export function buildGlassDistributionCoverage(input: {
   let completeReferenceCount = 0;
   const pendingReferences: GlassDistributionReference[] = [];
   for (const reference of refs.values()) {
-    const complete = reference.panes.length > 0 && reference.panes.every(isGlassCoveragePaneComplete);
+    const complete = reference.panes.length > 0 && reference.panes.every(isPaneComplete);
     if (complete) {
       completeReferenceCount += 1;
       continue;
@@ -195,4 +350,3 @@ export function buildGlassDistributionCoverage(input: {
     diagnostics,
   };
 }
-
