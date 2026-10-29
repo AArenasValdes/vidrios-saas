@@ -532,6 +532,25 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     };
   }
 
+  if (
+    (catalogKey === "ventora:l32" || catalogKey === "ventora:arquetipo-l32-proyectante") &&
+    tipologia === "proyectante" &&
+    !isCompatibleSerie32NormalGlass({
+      technicalSpec: presentation.glassTechnicalSpec,
+      glassName: input.item.vidrio,
+    })
+  ) {
+    return {
+      estado: "composicion_sin_receta",
+      formal: null,
+      cubication: null,
+      recipe: null,
+      barsAvailable: false,
+      preliminary: false,
+      message: "La receta Serie 32 proyectante Normal 1H solo describe vidrio monolítico de 4 mm. Confirma una especificación compatible para calcular el despiece.",
+    };
+  }
+
   const aperturaFromPresentation = resolveAperturaForRecipeMatch(
     presentation.fabricacionApertura,
     presentation.sistema
@@ -1128,6 +1147,24 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
         ? "Agrega largos comerciales para calcular tiras."
         : "No se pudo armar la pauta de tiras con esta receta.",
   };
+}
+
+function isCompatibleSerie32NormalGlass(input: {
+  technicalSpec: ReturnType<typeof decodeCotizacionItemPresentationMeta>["glassTechnicalSpec"];
+  glassName: string | null | undefined;
+}): boolean {
+  const spec = input.technicalSpec;
+  if (spec) {
+    return spec.category === "monolitico" && spec.thicknessMm === 4;
+  }
+
+  const normalized = (input.glassName ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  if (/\b(dvh|termopanel|doble\s+vidriado)\b/.test(normalized)) return false;
+  const thickness = normalized.match(/(?:^|\D)(\d+(?:[.,]\d+)?)\s*mm(?:\D|$)/)?.[1];
+  return thickness != null && Number(thickness.replace(",", ".")) === 4;
 }
 
 type VeratecGeometryOnlyGlass = {

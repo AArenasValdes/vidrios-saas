@@ -142,7 +142,7 @@ describe("seedDefaultLineCatalog", () => {
       "ventora:kompen-star-line-500",
       "ventora:thermowin-americana-s70",
     ]));
-    expect(catalogSize).toBe(102);
+    expect(catalogSize).toBe(103);
   });
 
   it("expone cada configuración VEKA como una línea cotizable independiente y mantiene sus fórmulas pendientes", () => {

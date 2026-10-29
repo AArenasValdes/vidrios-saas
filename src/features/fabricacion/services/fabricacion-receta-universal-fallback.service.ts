@@ -351,6 +351,8 @@ function buildReferenceRecipe(input: UniversalFallbackInput): FabricationRecipeR
     }
     sourceReference = `ventora:base-tipologica:${templateId.toLowerCase()}:referencia`;
   } else if (line === "L32") {
+    if (input.typology && input.typology !== "proyectante") return null;
+    if (input.leavesCount != null && input.leavesCount !== 1) return null;
     if (input.variant && input.variant !== "normal") return null;
     definition = crearRecetaSerie32ProyectanteNormal({ lineName: input.lineName });
     sourceReference = "ventora:serie-32-proyectante:normal:referencia";

@@ -342,12 +342,18 @@ export function resolveFabricacionContextForLineAssignment(input: {
         .sort((left, right) => Number(right.status === "validated") - Number(left.status === "validated"));
       const matchingRecipe = matchingRecipes.length === 1 ? matchingRecipes[0] : null;
       const identity = matchingRecipe?.definition.identidad;
-      if (matchingRecipe) {
+      const isCommercialOnlyL32FixedConfiguration =
+        configuration.id === "ventora:l32:pano-fijo" &&
+        configuration.typology === "pano_fijo";
+      if (!matchingRecipe && !isCommercialOnlyL32FixedConfiguration) {
+        // Preserve legacy recipe matching for lines whose catalog declaration
+        // is broader than the selected recipe identity (for example L20).
+      } else {
         return {
           fabricacionTipologia: configuration.typology,
           fabricacionHojas: identity?.hojas ?? (configuration.leavesCounts?.length === 1 ? configuration.leavesCounts[0] : null),
           fabricacionModulos: identity?.modulos ?? (configuration.leavesCounts?.length === 1 ? configuration.leavesCounts[0] : null),
-          fabricationRecipeId: matchingRecipe.status === "validated" ? matchingRecipe.id : "",
+          fabricationRecipeId: matchingRecipe?.status === "validated" ? matchingRecipe.id : "",
           fabricacionApertura: normalizeConfigurationOpening(configuration.openingType),
           fabricacionHerraje: identity?.herraje ?? "",
           fabricacionVariante: identity?.variante ?? configuration.variant,
