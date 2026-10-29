@@ -26,7 +26,7 @@ function pane(quoteItemId: string, glassId: string, overrides: Partial<Normalize
       version: 1, productId: `product-${glassId}`, category: "monolitico", thicknessMm: 5,
       sheetWidthMm: 2500, sheetHeightMm: 1800, pieceOrientation: "unknown", hasConflict: false,
       manualCutStatus: "confirmed", provenance: "catalog", sourceProductId: `product-${glassId}`, sourceValues: null,
-      technicalReviewConfirmed: true,
+      technicalReviewConfirmed: true, purchaseMode: "full_sheet",
     },
     widthMm: 600, heightMm: 1000, quantity: 1, commercialQuantity: 1, dimensionProvenance: "validated_recipe", dimensionTraceRuleIds: [],
     recipeStatus: "validated", validationStatus: "eligible_for_manual_planning", warnings: [], snapshotVersion: 1,
@@ -127,18 +127,24 @@ describe("buildGlassDistributionCoverage", () => {
     expect(getGlassPaneGeometryExclusionReason(legacy)).toMatch(/snapshot histórico/i);
   });
 
-  it("no distribuye automáticamente un producto comprado ya cortado ni una forma de compra sin definir", () => {
+  it("no distribuye productos supplier-cut, undecided ni fichas legacy sin purchaseMode", () => {
     const supplierCut = pane("item-1", "supplier-cut", {
       technicalSpec: { ...pane("item-1", "supplier-cut").technicalSpec!, purchaseMode: "supplier_cut" },
     });
     const undecided = pane("item-1", "undecided", {
       technicalSpec: { ...pane("item-1", "undecided").technicalSpec!, purchaseMode: "undecided" },
     });
+    const legacy = pane("item-1", "legacy", {
+      technicalSpec: { ...pane("item-1", "legacy").technicalSpec!, purchaseMode: undefined },
+    });
 
     expect(getGlassPaneGeometryExclusionReason(supplierCut)).toMatch(/cortado por proveedor/i);
     expect(getGlassPaneGeometryExclusionReason(undecided)).toMatch(/compra por plancha/i);
+    expect(getGlassPaneGeometryExclusionReason(legacy)).toMatch(/ficha antigua.*forma de compra/i);
     expect(isGlassPaneGeometryComplete(supplierCut)).toBe(false);
     expect(isGlassPaneGeometryComplete(undecided)).toBe(false);
+    expect(isGlassPaneGeometryComplete(legacy)).toBe(false);
+    expect(isGlassCoveragePaneComplete(legacy)).toBe(false);
   });
 
   it("no declara cobertura completa cuando la normalización exige revisión aunque dimensiones y unidades estén presentes", () => {

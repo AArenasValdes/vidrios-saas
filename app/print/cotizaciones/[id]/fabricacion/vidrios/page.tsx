@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import type { GlassPanePlanningUnit, GlassCuttingResult, GlassSheetPlan } from "@/features/fabricacion/types/glass-sheet-optimizer-contracts";
 import { resolveGlassCutLineGeometry } from "@/features/fabricacion/services/glass-sheet-cut-geometry.service";
+import type { GlassDistributionCoverage } from "@/features/fabricacion/services/glass-distribution-coverage.service";
 import s from "./page.module.css";
 
 type PanePreview = Omit<GlassPanePlanningUnit, "paneUnitIds" | "orientation"> & { displayName: string | null; physicalUnitCount: number; paneUnitIds?: never; orientation?: never };
@@ -70,6 +71,7 @@ export default function GlassSheetOptimizationPage() {
   const quoteCode = resolvedQuoteCode ?? fallbackQuoteCode;
   const companyName = search.get("empresa") || "";
   const [panes, setPanes] = useState<PanePreview[]>([]);
+  const [coverage, setCoverage] = useState<GlassDistributionCoverage | null>(null);
   const [diagnostics, setDiagnostics] = useState<PaneDiagnostic[]>([]);
   const [calculationWarnings, setCalculationWarnings] = useState<string[]>([]);
   const [workshopProfiles, setWorkshopProfiles] = useState<Record<string, Record<string, unknown>>>({});
@@ -119,6 +121,7 @@ export default function GlassSheetOptimizationPage() {
       if (!response.ok) throw new Error(body.error || "No pudimos leer los paños guardados.");
       if (typeof body.quoteCode === "string") setResolvedQuoteCode(body.quoteCode);
       setPanes(body.panes as PanePreview[]);
+      setCoverage(body.coverage as GlassDistributionCoverage);
       setDiagnostics(Array.isArray(body.diagnostics) ? body.diagnostics.filter((item: unknown): item is string => typeof item === "string") : []);
       applyWorkshopProfiles(body.workshopProfiles, body.panes);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "No pudimos cargar los paños."); }
@@ -134,6 +137,7 @@ export default function GlassSheetOptimizationPage() {
         if (!cancelled) {
           if (typeof body.quoteCode === "string") setResolvedQuoteCode(body.quoteCode);
           setPanes(body.panes as PanePreview[]);
+          setCoverage(body.coverage as GlassDistributionCoverage);
           setDiagnostics(Array.isArray(body.diagnostics) ? body.diagnostics.filter((item: unknown): item is string => typeof item === "string") : []);
           applyWorkshopProfiles(body.workshopProfiles, body.panes);
         }
@@ -166,6 +170,9 @@ export default function GlassSheetOptimizationPage() {
   const allSheets = useMemo(() => results?.flatMap((result) => result.sheets.map((sheet) => ({ result, sheet }))) ?? [], [results]);
   const hasCompletePlan = Boolean(results?.length && results.every((result) => result.status === "feasible")
     && results.every((result) => result.sheets.length > 0));
+  const hasOperationalPlan = Boolean(hasCompletePlan && calculationMode === "workshop"
+    && !loading && coverage?.status === "complete"
+    && results?.every((result) => result.productionReadiness === "workshop_validated"));
   const selected = allSheets[Math.min(selectedSheet, Math.max(0, allSheets.length - 1))];
   const physicalCount = panes.reduce((sum, pane) => sum + pane.physicalUnitCount, 0);
   const profileProductIds = [...new Set(panes.flatMap((pane) => pane.productId ? [pane.productId] : []))];
@@ -239,7 +246,7 @@ export default function GlassSheetOptimizationPage() {
   }
 
   async function downloadPdf() {
-    if (!results || !hasCompletePlan) return;
+    if (!results || !hasCompletePlan || (calculationMode === "workshop" && !hasOperationalPlan)) return;
     const [{ jsPDF }, { sanitizeFileNamePart }] = await Promise.all([import("jspdf"), import("@/utils/sanitize-file-name")]);
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const groups = results.filter((result) => result.status === "feasible");
@@ -503,11 +510,11 @@ export default function GlassSheetOptimizationPage() {
       </details>
     </> : null}
     {results ? <section className={s.section}>
-      <div className={s.sectionHead}><div><p className={s.eyebrow}>{calculationMode === "geometric_preview" ? "Distribución geométrica" : "Pauta operativa preliminar"}</p><h2>Resultado por tipo de vidrio</h2></div><button type="button" onClick={() => void downloadPdf()} className={s.primary} disabled={!hasCompletePlan}>{calculationMode === "geometric_preview" ? "Descargar plan de corte (PDF)" : "Descargar pauta operativa (PDF)"}</button></div>
+      <div className={s.sectionHead}><div><p className={s.eyebrow}>{calculationMode === "geometric_preview" ? "Distribución geométrica" : "Pauta operativa preliminar"}</p><h2>Resultado por tipo de vidrio</h2></div><button type="button" onClick={() => void downloadPdf()} className={s.primary} disabled={calculationMode === "geometric_preview" ? !hasCompletePlan : !hasOperationalPlan}>{calculationMode === "geometric_preview" ? "Descargar simulación PDF · NO APTO PARA CORTE" : hasOperationalPlan ? "Descargar pauta operativa para proveedor" : "PDF operativo bloqueado · taller pendiente"}</button></div>
       {results.map((result) => <article key={result.inputFingerprint} className={s.result}>
         <h3>{glassLabel(panes.find((pane) => pane.productId === result.sheets[0]?.panes[0]?.productId)?.displayName ?? panes.find((pane) => pane.productId === result.sheets[0]?.panes[0]?.productId)?.productId ?? "Grupo de vidrio", panes.find((pane) => pane.productId === result.sheets[0]?.panes[0]?.productId)?.technicalSpec?.thicknessMm ?? null)} · {result.sheets[0]?.rawSheet.widthMm ?? "?"} × {result.sheets[0]?.rawSheet.heightMm ?? "?"} mm</h3>
         {result.status === "feasible" ? <><div className={s.metrics}><div><span>Paños</span><strong>{result.summary.paneCount}</strong></div><div><span>Planchas</span><strong>{result.summary.sheetCount}</strong></div><div><span>Vidrio</span><strong>{fmt(result.summary.paneAreaMm2)} m²</strong></div><div><span>Aprovechamiento útil</span><strong>{result.summary.usableSheetAreaMm2 ? `${(result.summary.paneAreaMm2 / result.summary.usableSheetAreaMm2 * 100).toFixed(1)}%` : "—"}</strong></div><div><span>Superficie restante</span><strong>{fmt(result.summary.rawSheetAreaMm2 - result.summary.paneAreaMm2)} m²</strong></div>{calculationMode === "workshop" ? <><div><span>Retazos candidatos</span><strong>{fmt(result.summary.reusableRemnantsMm2)} m²</strong></div><div><span>Desperdicio estimado</span><strong>{fmt(result.summary.wasteMm2)} m²</strong></div></> : null}</div>
-          <p className={s.pending}>{calculationMode === "geometric_preview" ? "Vista geométrica verificada · No aprobada para fabricación" : "Geometría verificada · Taller pendiente · Costo de compra no informado"}</p>
+          <p className={s.pending}>{calculationMode === "geometric_preview" ? "Vista geométrica informativa · NO APTO PARA CORTE" : hasOperationalPlan ? "Proceso validado para salida operativa" : "Resultado preliminar · taller pendiente; no es pauta para proveedor"}</p>
           {calculationWarnings.length > 0 ? <ul className={s.previewWarnings}>{calculationWarnings.map((warning) => <li key={warning}>{warning}</li>)}</ul> : null}
           {!result.minimumSheetCountProven ? <p className={s.help}>El número de planchas es una propuesta heurística; no es una prueba de mínimo matemático.</p> : null}
           <div className={s.sheetNav} role="tablist" aria-label="Planchas"><span>Plancha:</span>{allSheets.filter((entry) => entry.result.inputFingerprint === result.inputFingerprint).map(({ sheet }, index) => <button type="button" role="tab" aria-selected={selected?.result.inputFingerprint === result.inputFingerprint && selected.sheet.sheetId === sheet.sheetId} onClick={() => setSelectedSheet(allSheets.findIndex((entry) => entry.result.inputFingerprint === result.inputFingerprint && entry.sheet.sheetId === sheet.sheetId))} key={sheet.sheetId}>{index + 1}</button>)}</div>

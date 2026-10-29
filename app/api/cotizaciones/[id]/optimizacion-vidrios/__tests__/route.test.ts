@@ -19,7 +19,7 @@ const route = { params: Promise.resolve({ id: "1170" }) };
 const row = {
   organizationId: 12, quoteId: 1170, quoteItemId: "item-1", logicalComponentId: "component-1", glassId: "glass-1",
   paneId: "component-1:glass-1", paneUnitIds: ["component-1:glass-1:1"], ordinal: 1, productId: "mono-4",
-  displayName: "Monolítico claro", technicalSpec: { productId: "mono-4", thicknessMm: 4, category: "monolitico", sheetWidthMm: 3210, sheetHeightMm: 2250 },
+  displayName: "Monolítico claro", technicalSpec: { productId: "mono-4", thicknessMm: 4, category: "monolitico", sheetWidthMm: 3210, sheetHeightMm: 2250, purchaseMode: "full_sheet" },
   widthMm: 700, heightMm: 900, quantity: 1, commercialQuantity: 1, dimensionProvenance: "validated_recipe", dimensionTraceRuleIds: [],
   recipeStatus: "validated", validationStatus: "eligible_for_manual_planning", warnings: [], snapshotVersion: 1,
   snapshotFingerprint: "snapshot-1", normalizationVersion: 1,
@@ -211,10 +211,27 @@ describe("/api/cotizaciones/[id]/optimizacion-vidrios", () => {
 
     const response = await POST(new Request("http://localhost", { method: "POST", body: JSON.stringify({ mode: "provider_pdf" }) }), route);
     const body = await response.json();
-    expect(response.status).toBe(422);
-    expect(body.error).toMatch(/cobertura de vidrio está incompleta/i);
-    expect(body.coverage.pendingReferences[0].componentCode).toBe("V2");
+    expect(response.status).toBe(400);
+    expect(body.error).toMatch(/reglas físicas requeridas/i);
     expect(optimizeGlassCuttingBatch).not.toHaveBeenCalled();
+  });
+
+  it("separa provider_pdf del perfil geométrico y exige resultado de taller validado", async () => {
+    const body = {
+      mode: "provider_pdf", pieceOrientation: "fixed", confirmManualOperations: true,
+      sheetOrientation: "fixed", sheetSource: "workshop_measurement", sheetSourceReference: "medición de taller QA",
+      tableWidthMm: 3210, tableHeightMm: 2250,
+      edgeTrimMm: { top: 0, right: 0, bottom: 0, left: 0 }, separationMm: 5, minimumStripWidthMm: 10,
+      remnantMinimumWidthMm: 400, remnantMinimumHeightMm: 400, remnantOrientation: "fixed",
+      processSourceReference: "proceso de taller QA",
+    };
+    (optimizeGlassCuttingBatch as jest.Mock).mockReturnValue([{
+      status: "feasible", verification: { passed: true }, productionReadiness: "workshop_validated", sheets: [{}],
+    }]);
+    const response = await POST(new Request("http://localhost", { method: "POST", body: JSON.stringify(body) }), route);
+    expect(response.status).toBe(200);
+    expect(optimizeGlassCuttingBatch).toHaveBeenCalledWith(expect.objectContaining({ mode: "workshop" }));
+    expect((await response.json()).mode).toBe("provider_pdf");
   });
 
   it("bloquea la pauta operativa si faltan slots aunque el paño presente tenga validación individual", async () => {

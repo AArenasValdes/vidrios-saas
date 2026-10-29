@@ -69,6 +69,7 @@ function pane(input: {
       category: input.category ?? "monolitico",
       manualCutStatus: input.manualCutStatus ?? "confirmed",
       technicalReviewConfirmed: true,
+      purchaseMode: "full_sheet",
       sheetWidthMm: input.sheetWidth === undefined ? 2500 : input.sheetWidth,
       sheetHeightMm: input.sheetHeight === undefined ? 1800 : input.sheetHeight,
       provenance: "catalog",
@@ -288,13 +289,13 @@ describe("optimizeGlassCuttingBatch", () => {
   });
 
   it("rechaza en la simulación materiales comprados cortados o sin forma de compra definida", () => {
-    for (const purchaseMode of ["supplier_cut", "undecided"] as const) {
+    for (const purchaseMode of ["supplier_cut", "undecided", undefined] as const) {
       const candidate = pane({ id: `purchase-${purchaseMode}`, width: 520, height: 880, dimensionProvenance: "manual" });
       candidate.technicalSpec = { ...candidate.technicalSpec!, purchaseMode };
       const result = optimizeGlassCuttingBatch({ panes: [candidate], profiles: [profile()], mode: "geometric_preview" })[0]!;
 
       expect(result.status).not.toBe("feasible");
-      expect(result.errors.join(" ")).toMatch(/especificación compatible/i);
+      expect(result.errors.join(" ")).toMatch(/forma de compra|se compra cortado por proveedor/i);
     }
   });
 

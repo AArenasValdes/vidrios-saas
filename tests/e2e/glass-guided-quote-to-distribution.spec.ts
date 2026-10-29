@@ -5,17 +5,6 @@ import { optimizeGlassCuttingBatch } from "../../src/features/fabricacion/servic
 type SavedMeasurement = { id: string; paneSlotId?: string; productId: string; widthMm: number; heightMm: number; quantity: number; quantityBasis?: string };
 type Snapshot = { version: 2; entries: SavedMeasurement[]; manualPaneCount?: number; configurationFingerprint?: string | null; expectedPaneCount?: number | null };
 
-const emptyCoverage = {
-  status: "partial" as const,
-  completeReferenceCount: 0,
-  pendingReferenceCount: 2,
-  pendingReferences: [1, 2].map((number) => ({
-    quoteItemId: "qa-guided-item", paneId: `qa-pane-${number}`, componentCode: "V1", componentName: "Corredera QA x3",
-    displayName: `Paño ${number}`, reason: "Faltan medidas finales del paño.",
-  })),
-  diagnostics: [],
-};
-
 function sourceFor(snapshot: Snapshot) {
   const entries = snapshot.entries;
   const panes = entries.flatMap((entry, entryIndex) => {
@@ -185,7 +174,7 @@ test("Guiada simulada guarda, reabre y distribuye medidas finales sin duplicar u
 
   await expect(page.getByText("Medidas guardadas. Cobertura actualizada.")).toBeVisible();
   await expect(page.getByText("Cobertura operativa: 1 completas · 1 pendientes")).toBeVisible();
-  await expect(page.getByRole("button", { name: /PDF bloqueado · cobertura incompleta/ })).toBeDisabled();
+  await expect(page.getByRole("button", { name: /PDF operativo bloqueado · cobertura incompleta/ })).toBeDisabled();
   await page.screenshot({ path: testInfo.outputPath("guided-glass-partial-coverage.png"), fullPage: true });
 
   await page.reload();

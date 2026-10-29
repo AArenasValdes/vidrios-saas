@@ -251,6 +251,10 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
   const formatInputValid = validDimension(Number(sheetWidth)) && validDimension(Number(sheetHeight));
   const canCalculate = sourceFresh && !refreshingSource && completePanes.length > 0 && (!formatMissing || formatInputValid);
   const visibleResults = resultsQuoteId === quoteId ? results : null;
+  const providerPdfEligible = Boolean(visibleResults?.length && visibleResults.every((result) =>
+    result.calculationMode === "workshop" && result.productionReadiness === "workshop_validated"
+      && result.status === "feasible" && result.verification.passed
+  ));
   const allSheets = useMemo(() => visibleResults?.flatMap((result) => result.sheets.map((sheet) => ({ result, sheet }))) ?? [], [visibleResults]);
   const selected = allSheets[selectedSheetIndex] ?? null;
   const currentQuoteCode = sourceForQuote?.quoteCode || quoteCode;
@@ -564,16 +568,16 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
         </div> : null}
 
         <div className={s.actions}>
-          <button type="button" className={s.primaryAction} disabled={!canCalculate || busy || refreshingSource || !sourceFresh || sourceForQuote?.coverage.status !== "complete"} onClick={() => visibleResults ? void exportPreviewResult("download") : void calculate(true)}>
-            {busy ? <LuLoaderCircle className={s.spinner} aria-hidden /> : <LuDownload aria-hidden />}{busy ? autoPreview && !visibleResults ? "Calculando vista previa…" : "Preparando PDF…" : sourceForQuote?.coverage.status !== "complete" ? "PDF bloqueado · cobertura incompleta" : "Descargar distribución (PDF)"}
+          <button type="button" className={s.primaryAction} disabled={!canCalculate || busy || refreshingSource || !sourceFresh || sourceForQuote?.coverage.status !== "complete" || !providerPdfEligible} onClick={() => visibleResults ? void exportPreviewResult("download") : void calculate(true)}>
+            {busy ? <LuLoaderCircle className={s.spinner} aria-hidden /> : <LuDownload aria-hidden />}{busy ? autoPreview && !visibleResults ? "Calculando vista previa…" : "Preparando PDF…" : sourceForQuote?.coverage.status !== "complete" ? "PDF operativo bloqueado · cobertura incompleta" : providerPdfEligible ? "Descargar PDF operativo para proveedor" : "PDF operativo bloqueado · validación de taller pendiente"}
           </button>
-          <button type="button" className={s.secondaryAction} disabled={!canCalculate || busy || refreshingSource || !visibleResults || sourceForQuote?.coverage.status !== "complete"} onClick={() => void exportPreviewResult("share")}><LuShare2 aria-hidden /> Compartir</button>
+          <button type="button" className={s.secondaryAction} disabled={!canCalculate || busy || refreshingSource || !visibleResults || sourceForQuote?.coverage.status !== "complete" || !providerPdfEligible} onClick={() => void exportPreviewResult("share")}><LuShare2 aria-hidden /> Compartir</button>
           <button type="button" className={s.secondaryAction} disabled={!canCalculate || busy || refreshingSource || !sourceFresh} onClick={() => visibleResults ? setPreviewOpen(true) : void calculate(false, true)}><LuEye aria-hidden /> {visibleResults ? "Ampliar vista" : "Vista previa"}</button>
           {visibleResults ? <button type="button" className={s.secondaryAction} disabled={busy || refreshingSource || !sourceFresh} onClick={() => void downloadSimulationPdf()}><LuDownload aria-hidden /> PDF simulación · NO APTO PARA CORTE</button> : null}
         </div>
         {sourceForQuote?.coverage.status !== "complete" ? (
           <p className={s.pdfBlockedNote} role="status">
-            El PDF de proveedor requiere cobertura técnica completa. Revisa arriba cada referencia pendiente.
+            La cobertura técnica completa no aprueba la fabricación. El PDF operativo para proveedor requiere además un cálculo con proceso de taller validado; prepara la pauta en la sección de fabricación.
           </p>
         ) : null}
         {autoPreview && selected ? <div className={s.inlinePreview} aria-label="Vista previa preliminar de distribución">
@@ -609,7 +613,7 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
             </div> : null}
             <div className={s.previewSummary}><span>{selected.sheet.panes.length} {selected.sheet.panes.length === 1 ? "unidad física" : "unidades físicas"} · {formatArea(selected.sheet.areas.panesMm2)}</span><span>{selected.sheet.remnants.length} sobrantes geométricos · {formatArea(selected.sheet.remnants.reduce((sum, remnant) => sum + remnant.areaMm2, 0))}</span></div>
             <p className={s.previewDisclaimer}>Despuntes y separación geométrica asumidos: 0 mm. El formato se usa sin giro y la orientación de paños no confirmada se mantiene fija. Distribución preliminar. Confirmar medidas y tolerancias con el proveedor antes de cortar.</p>
-            <button type="button" className={s.primaryAction} disabled={busy || refreshingSource || !sourceFresh || sourceForQuote?.coverage.status !== "complete"} onClick={() => void exportPreviewResult("download")}><LuDownload aria-hidden />{busy ? "Generando PDF…" : sourceForQuote?.coverage.status !== "complete" ? "PDF operativo bloqueado · cobertura incompleta" : "PDF operativo para proveedor"}</button>
+<button type="button" className={s.primaryAction} disabled={busy || refreshingSource || !sourceFresh || sourceForQuote?.coverage.status !== "complete" || !providerPdfEligible} onClick={() => void exportPreviewResult("download")}><LuDownload aria-hidden />{busy ? "Generando PDF…" : sourceForQuote?.coverage.status !== "complete" ? "PDF operativo bloqueado · cobertura incompleta" : providerPdfEligible ? "Descargar PDF operativo para proveedor" : "PDF operativo bloqueado · taller pendiente"}</button>
             <button type="button" className={s.secondaryAction} disabled={busy || refreshingSource || !sourceFresh} onClick={() => void downloadSimulationPdf()}><LuDownload aria-hidden /> PDF simulación · NO APTO PARA CORTE</button>
           </> : null}
         </DialogContent>

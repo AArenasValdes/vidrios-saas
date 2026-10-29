@@ -906,6 +906,7 @@ describe("Escenario 3: conteo y reconciliación de vidrios con recipe_trace, slo
     categoriaTecnica: "monolitico",
     revisionTecnicaExplicita: true,
     corteManualEstado: "confirmed",
+    formaCompraVidrio: "full_sheet",
     planchaAnchoMm: 2500,
     planchaAltoMm: 1800,
   };
@@ -914,6 +915,7 @@ describe("Escenario 3: conteo y reconciliación de vidrios con recipe_trace, slo
     categoriaTecnica: "laminado",
     revisionTecnicaExplicita: true,
     corteManualEstado: "confirmed",
+    formaCompraVidrio: "full_sheet",
     planchaAnchoMm: 3210,
     planchaAltoMm: 2250,
   };

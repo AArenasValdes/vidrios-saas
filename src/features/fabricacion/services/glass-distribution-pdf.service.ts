@@ -92,6 +92,12 @@ export function validateGlassDistributionPdfInput(input: GlassDistributionPdfSou
   if (!simulation && input.coverage.completeReferenceCount === 0) return "No se puede generar el PDF: no hay referencias de vidrio con cobertura técnica completa.";
   if (simulation && input.panes.length === 0) return "No se puede generar la simulación: no hay paños geométricos admisibles.";
   if (!input.panes.length || !input.results.length) return "No se puede generar el PDF: la cotización no tiene paños y planos verificados para resumir.";
+  if (simulation && input.results.some((result) => result.calculationMode !== "geometric_preview")) {
+    return "La simulación debe provenir exclusivamente de un cálculo geométrico preliminar.";
+  }
+  if (!simulation && input.results.some((result) => result.calculationMode !== "workshop" || result.productionReadiness !== "workshop_validated")) {
+    return "No se puede generar un PDF operativo para proveedor: el resultado no proviene de un proceso de taller validado.";
+  }
   if (input.results.some((result) => result.status !== "feasible" || !result.verification.passed || result.sheets.length === 0)) {
     return "No se puede generar el PDF: una o más planchas no superaron la verificación geométrica.";
   }
@@ -194,6 +200,33 @@ function addContinuationPage(pdf: jsPDF, title: string, quoteCode: string, logoD
   return y;
 }
 
+function drawSimulationNotices(pdf: jsPDF, source: GlassDistributionPdfSource, notices: string[], startY: number, pageTitle: string) {
+  let y = startY;
+  for (const notice of notices) {
+    let lines = pdf.splitTextToSize(`- ${notice}`, CONTENT_WIDTH_MM) as string[];
+    while (lines.length > 0) {
+      if (y + 4 > CONTENT_BOTTOM_MM) {
+        y = addContinuationPage(pdf, pageTitle, source.quoteCode, source.logoDataUrl, "Advertencias de simulación · continuación");
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(9);
+        pdf.setTextColor(176, 25, 25);
+        pdf.text("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE", PAGE_MARGIN_MM, y, { maxWidth: CONTENT_WIDTH_MM });
+        y += 5;
+      }
+      const availableLines = Math.max(1, Math.floor((CONTENT_BOTTOM_MM - y - 2) / 3.8));
+      const pageLines = lines.slice(0, availableLines);
+      lines = lines.slice(availableLines);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      pdf.setTextColor(176, 25, 25);
+      pdf.text(pageLines, PAGE_MARGIN_MM, y, { lineHeightFactor: 1.05 });
+      y += pageLines.length * 3.8 + 1;
+    }
+  }
+  pdf.setTextColor(...INK);
+  return y;
+}
+
 function drawSummaryPage(pdf: jsPDF, source: GlassDistributionPdfSource, entries: VerifiedPaneEntry[], totalSheets: number) {
   const metadata = {
     companyName: source.clientName || "Cliente",
@@ -235,17 +268,7 @@ function drawSummaryPage(pdf: jsPDF, source: GlassDistributionPdfSource, entries
       ...(source.simulationWarnings ?? []),
       ...(source.previewExclusions ?? []).map((entry) => `${entry.componentCode}${entry.displayName ? ` · ${entry.displayName}` : ""}: ${entry.reason}`),
     ];
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(8);
-    pdf.setTextColor(176, 25, 25);
-    const shown = notices.slice(0, 8);
-    if (notices.length > shown.length) shown.push(`${notices.length - shown.length} advertencias adicionales; revisar en Ventora.`);
-    for (const notice of shown) {
-      const lines = pdf.splitTextToSize(`- ${notice}`, CONTENT_WIDTH_MM) as string[];
-      pdf.text(lines, PAGE_MARGIN_MM, y);
-      y += lines.length * 3.8 + 1;
-    }
-    pdf.setTextColor(...INK);
+    y = drawSimulationNotices(pdf, source, notices, y, pageTitle);
   }
   const groups = buildTypeGroups(source, entries);
   pdf.setFont("helvetica", "normal");
@@ -466,7 +489,7 @@ function drawSheet(
 
   const rows = buildSheetRows(sheet, source.panes, paneOrdinals);
   drawSheetRows(pdf, rows, y, pageIndex + 1, source);
-  drawPreliminaryWarning(pdf, source.mode === "simulation");
+  if (source.mode !== "simulation") drawPreliminaryWarning(pdf);
   return y;
 }
 
@@ -502,6 +525,12 @@ export async function createGlassDistributionPdf(input: GlassDistributionPdfSour
     pdf.addPage("a4", "portrait");
     drawSheet(pdf, sheet, index + 1, sheets.length, input, paneOrdinals);
   });
+  if (input.mode === "simulation") {
+    for (let page = 1; page <= pdf.getNumberOfPages(); page += 1) {
+      pdf.setPage(page);
+      drawPreliminaryWarning(pdf, true);
+    }
+  }
   drawFabricationPdfFooters(pdf, input.quoteCode);
   return pdf;
 }

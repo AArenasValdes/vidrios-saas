@@ -116,7 +116,12 @@ function validationErrors(panes: readonly GlassPanePlanningUnit[], profile: Glas
     }
     if (!positiveInt(pane.widthMm) || !positiveInt(pane.heightMm)) errors.push(`El paño ${pane.paneId} tiene dimensiones inválidas.`);
     else if (!Number.isSafeInteger(pane.widthMm * pane.heightMm)) errors.push(`El área del paño ${pane.paneId} excede el rango entero seguro.`);
-    if (spec && (spec.hasConflict || spec.purchaseMode === "supplier_cut" || spec.purchaseMode === "undecided" || (mode === "workshop" && (spec.manualCutStatus !== "confirmed" || !spec.technicalReviewConfirmed && ["laminado", "dvh", "templado", "espejo", "otro"].includes(spec.category))) || (mode === "geometric_preview" && spec.manualCutStatus === "not_admitted"))) {
+    if (spec && spec.purchaseMode !== "full_sheet") {
+      errors.push(spec.purchaseMode === "supplier_cut"
+        ? `El vidrio ${pane.paneId} se compra cortado por proveedor; no se distribuye como plancha del taller.`
+        : `La forma de compra del vidrio ${pane.paneId} no está confirmada; selecciona plancha completa para distribuirlo.`);
+    }
+    if (spec && (spec.hasConflict || (mode === "workshop" && (spec.manualCutStatus !== "confirmed" || !spec.technicalReviewConfirmed && ["laminado", "dvh", "templado", "espejo", "otro"].includes(spec.category))) || (mode === "geometric_preview" && spec.manualCutStatus === "not_admitted"))) {
       errors.push(`El vidrio del paño ${pane.paneId} no tiene especificación compatible para esta modalidad.`);
     }
     if (spec && (spec.productId !== profile.productId || spec.thicknessMm !== profile.thicknessMm
@@ -812,6 +817,7 @@ function optimizeGroup(
   } : null;
   const status: GlassCuttingResult["status"] = verification.passed ? "feasible" : "requires_review";
   return {
+    calculationMode: mode,
     status,
     geometricFeasibility: verification.passed ? "feasible" : "not_found",
     minimumSheetCountProven: minimumSheetCountProven && !(solver?.limitReached ?? false),
