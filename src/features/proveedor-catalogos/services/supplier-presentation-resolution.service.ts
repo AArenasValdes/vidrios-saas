@@ -42,6 +42,7 @@ export type SupplierProfilePricePreview = {
   netPrice: number | null;
   currency: string | null;
   priceSource: "reference" | "provider_adjustment" | "organization_override" | "workshop" | null;
+  priceAppliesAcrossFinishes?: boolean;
   status: "priced" | "missing_price" | "ambiguous";
 };
 export type SupplierPriceCoveragePresentation = {
@@ -52,6 +53,7 @@ export type SupplierPriceCoveragePresentation = {
   familyKeys?: readonly string[];
   finishName: string | null;
   finishResolution: "specific" | "finish_independent";
+  priceFinishResolution?: "specific" | "finish_independent";
   commercialLengthMm?: number | null;
   configurationKey?: string | null;
   netPrice: number | null;
@@ -93,7 +95,7 @@ export function resolveSupplierProfilePricePreviews(input: {
       ) &&
       (!entry.configurationKey || entry.configurationKey === input.request.configurationKey) &&
       (normalizeCode(entry.technicalCode) === code || (entry.recipeComponentCodes ?? []).some((linked) => normalizeCode(linked) === code)) &&
-      (entry.finishResolution === "finish_independent" ||
+      ((entry.priceFinishResolution ?? entry.finishResolution) === "finish_independent" ||
         Boolean(input.request.finishName && entry.finishName && normalize(entry.finishName) === normalize(input.request.finishName)))
     );
     const byProvider = new Map<string, CatalogPresentationPrice[]>();
@@ -153,13 +155,19 @@ export function resolveSupplierProfilePricePreviews(input: {
         providerKey,
         providerLabel: input.providerNames.get(providerKey) ?? providerKey,
         presentationId: presentation.presentationId,
-        supplierSku: presentation.supplierSku,
+        // A universal price does not make a Titanio SKU a physical SKU for a
+        // different color. Keep that identity in the catalog only.
+        supplierSku: presentation.finishResolution === "finish_independent" ||
+          normalize(presentation.finishName) === normalize(input.request.finishName)
+          ? presentation.supplierSku
+          : "",
         presentationDescription: presentation.presentationDescription,
         purchaseUnit: presentation.purchaseUnit,
         commercialLengthMm: presentation.commercialLengthMm,
         netPrice: price?.unitNetPrice ?? null,
         currency: price?.currency ?? null,
         priceSource: presentation.origin === "workshop" ? "workshop" : price?.source ?? null,
+        priceAppliesAcrossFinishes: presentation.priceFinishResolution === "finish_independent" && presentation.finishResolution === "specific",
         status: price ? "priced" : "missing_price",
       });
     }
@@ -199,7 +207,7 @@ export function resolveSupplierPriceProviderCoverage(input: {
       (normalizeUniversalAluminumFamilyKey(request.familyKey) ?? request.familyKey).toLocaleLowerCase("es-CL")
     );
     const configurationMatches = !entry.configurationKey || entry.configurationKey === request.configurationKey;
-    const finishMatches = entry.finishResolution === "finish_independent" ||
+    const finishMatches = (entry.priceFinishResolution ?? entry.finishResolution) === "finish_independent" ||
       Boolean(request.finishName && entry.finishName && normalize(entry.finishName) === normalize(request.finishName));
     if (!familyMatches || !configurationMatches || !finishMatches) continue;
     const linkedCodes = new Set([entry.technicalCode, ...(entry.recipeComponentCodes ?? [])].map(normalizeCode));

@@ -10,7 +10,7 @@ describe("Alumco · notas de venta 14-10-2026", () => {
     expect(parsed.supplierName).toBe("Alumco");
     expect(parsed.priceListCurrency).toBe("CLP");
     expect(parsed.priceListPublishedOn).toBe("2026-10-14");
-    expect(parsed.priceListValidUntil).toBe("2026-10-21");
+    expect(parsed.priceListValidUntil).toBeNull();
     expect(parsed.presentations).toHaveLength(42);
     expect(parsed.technicalInputs).toHaveLength(42);
     expect(new Set(parsed.presentations.map((row) => row.sku)).size).toBe(42);
@@ -20,6 +20,9 @@ describe("Alumco · notas de venta 14-10-2026", () => {
     expect(independent.every((row) => row.finishCode === null && row.finishName === null)).toBe(true);
     expect(parsed.presentations.filter((row) => row.finishResolution === "specific")
       .every((row) => row.finishCode === "TI" && row.finishName === "Titanio")).toBe(true);
+    expect(parsed.presentations.every((row) => row.priceEvidence?.finishApplicability === "all_finishes")).toBe(true);
+    expect(parsed.presentations.filter((row) => row.finishResolution === "specific")
+      .every((row) => row.priceEvidence?.note.includes("aplican a todos sus colores"))).toBe(true);
     expect(parsed.technicalInputs.every((row) => row.material === "Aluminio" && row.familyKeys.length === 1)).toBe(true);
   });
 
@@ -78,7 +81,7 @@ describe("Alumco · notas de venta 14-10-2026", () => {
     expect(fixture.technicalInputs.find((row) => row.sourceCode === "4511")?.recipeComponentCodes).toBeUndefined();
   });
 
-  it("resuelve precios de compra Alumco por código, familia y Titanio sin exigir una pauta", () => {
+  it("resuelve precios Alumco por código y familia en cualquier color sin cambiar el SKU físico", () => {
     const rows: CatalogPresentationPrice[] = fixture.presentations.map((presentation) => {
       const technical = fixture.technicalInputs.find((row) => row.technicalKey === presentation.technicalKey)!;
       return {
@@ -94,6 +97,7 @@ describe("Alumco · notas de venta 14-10-2026", () => {
         finishCode: presentation.finishCode ?? "",
         finishName: presentation.finishName,
         finishResolution: presentation.finishResolution,
+        priceFinishResolution: presentation.priceEvidence?.finishApplicability === "all_finishes" ? "finish_independent" : presentation.finishResolution,
         purchaseUnit: presentation.purchaseUnit,
         commercialLengthMm: presentation.commercialLengthMm,
         netPrice: presentation.netPrice,
@@ -112,6 +116,33 @@ describe("Alumco · notas de venta 14-10-2026", () => {
     });
     expect(l5000).toHaveLength(7);
     expect(l5000.every((row) => row.status === "priced" && row.providerKey === "alumco" && row.purchaseUnit === "TR" && row.commercialLengthMm === 6000)).toBe(true);
+
+    const black = resolveSupplierProfilePricePreviews({
+      request: { itemId: "quote-item-black", familyKey: "universal:aluminio:l5000", finishName: "Negro", technicalCodes: [], providerKey: "alumco" },
+      references: [{ code: "5001", name: "Riel superior" }],
+      presentations: rows,
+      providerNames: new Map([["alumco", "Alumco"]]),
+    });
+    expect(black).toEqual([expect.objectContaining({
+      status: "priced", netPrice: 13351, supplierSku: "", priceAppliesAcrossFinishes: true,
+    })]);
+
+    const physicalBlack = resolveSupplierPresentationsForQuoteItem({
+      request: { itemId: "quote-item-black", familyKey: "universal:aluminio:l5000", finishName: "Negro", technicalCodes: ["5001"], providerKey: "alumco" },
+      presentations: rows.map((row) => ({
+        presentationId: row.presentationId ?? "",
+        providerKey: row.providerKey ?? "",
+        supplierSku: row.supplierSku,
+        technicalCode: row.technicalCode,
+        recipeComponentCodes: row.recipeComponentCodes ?? [],
+        familyKeys: row.familyKeys ?? [],
+        finishCode: row.finishCode || null,
+        finishName: row.finishName,
+        finishResolution: row.finishResolution,
+        commercialLengthMm: row.commercialLengthMm,
+      })),
+    });
+    expect(physicalBlack[0]).toMatchObject({ status: "missing", supplierSku: null });
 
     const l45 = resolveSupplierProfilePricePreviews({
       request: { itemId: "quote-item-45", familyKey: "universal:aluminio:l45", finishName: "Titanio", technicalCodes: ["4522"], providerKey: "alumco" },
@@ -138,6 +169,7 @@ describe("Alumco · notas de venta 14-10-2026", () => {
         finishCode: presentation.finishCode ?? "",
         finishName: presentation.finishName,
         finishResolution: presentation.finishResolution,
+        priceFinishResolution: presentation.priceEvidence?.finishApplicability === "all_finishes" ? "finish_independent" : presentation.finishResolution,
         purchaseUnit: presentation.purchaseUnit,
         commercialLengthMm: presentation.commercialLengthMm,
         netPrice: presentation.netPrice,

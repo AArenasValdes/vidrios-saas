@@ -103,7 +103,7 @@ describe("readSupplierPresentationPrices", () => {
         revision: "2026",
         publicado_en: "2026-06-01",
         vigente_desde: "2026-06-01",
-        vigente_hasta: null,
+        vigente_hasta: "2026-10-21",
         creado_en: "2026-06-01T00:00:00.000Z",
         moneda: "CLP",
         base_precio: "presentacion_comercial",
@@ -126,6 +126,7 @@ describe("readSupplierPresentationPrices", () => {
         presentacion_id: "presentation-5001",
         precio_neto: 12345,
         moneda: "CLP",
+        evidencia_precio: { finishApplicability: "all_finishes" },
       }],
       catalogo_insumos_tecnicos: [{
         id: "input-5001",
@@ -149,7 +150,9 @@ describe("readSupplierPresentationPrices", () => {
     });
     (createAdminClient as jest.Mock).mockReturnValue({ from });
 
-    const prices = await readSupplierPresentationPrices(scoped ? { familyKeys: [familyKey] } : {});
+    const prices = await readSupplierPresentationPrices(scoped
+      ? { familyKeys: [familyKey], asOf: new Date("2026-10-29T12:00:00.000Z") }
+      : { asOf: new Date("2026-10-29T12:00:00.000Z") });
 
     expect(prices).toEqual([expect.objectContaining({
       providerKey: "alumco",
@@ -157,6 +160,8 @@ describe("readSupplierPresentationPrices", () => {
       familyKeys: [familyKey],
       netPrice: 12345,
       commercialLengthMm: 6000,
+      finishResolution: "specific",
+      priceFinishResolution: "finish_independent",
     })]);
     expect(from.mock.calls.filter(([table]) => table === "catalogo_insumo_familias")).toHaveLength(1);
     expect(filters).toEqual(expect.arrayContaining([

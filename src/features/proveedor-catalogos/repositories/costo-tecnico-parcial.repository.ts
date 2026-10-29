@@ -246,7 +246,9 @@ export async function readSupplierPresentationPrices(input: {
       revision: String(list.revision),
       publishedOn: list.publicado_en as string | null,
       validFrom: list.vigente_desde as string | null,
-      validUntil: list.vigente_hasta as string | null,
+      // Alumco's printed 7-day validity belongs to the quote/offer. Its profile
+      // prices remain active until a newer list replaces them.
+      validUntil: String(list.proveedor_key) === "alumco" ? null : list.vigente_hasta as string | null,
       createdAt: String(list.creado_en),
     })),
     selectedByProvider: input.selectedByProvider,
@@ -267,7 +269,7 @@ export async function readSupplierPresentationPrices(input: {
   const presentationIds = [...new Set((presentations ?? []).map((row) => String(row.id)))];
   const [{ data: prices, error: pricesError }, { data: technicalInputs, error: technicalInputError }] = await Promise.all([
     admin.from("catalogo_precios_presentacion")
-      .select("lista_precio_id, presentacion_id, precio_neto, moneda")
+      .select("lista_precio_id, presentacion_id, precio_neto, moneda, evidencia_precio")
       .in("lista_precio_id", selectedListIds)
       .in("presentacion_id", presentationIds),
     admin.from("catalogo_insumos_tecnicos")
@@ -300,6 +302,9 @@ export async function readSupplierPresentationPrices(input: {
     const evidence = technicalInput.evidencia && typeof technicalInput.evidencia === "object" && !Array.isArray(technicalInput.evidencia)
       ? technicalInput.evidencia as Record<string, unknown>
       : {};
+    const priceEvidence = price?.evidencia_precio && typeof price.evidencia_precio === "object" && !Array.isArray(price.evidencia_precio)
+      ? price.evidencia_precio as Record<string, unknown>
+      : {};
     const recipeComponentCodes = Array.isArray(evidence.recipeComponentCodes)
       ? evidence.recipeComponentCodes.filter((code): code is string => typeof code === "string" && code.trim().length > 0)
       : [];
@@ -322,6 +327,11 @@ export async function readSupplierPresentationPrices(input: {
       finishCode: presentation.acabado_codigo == null ? "" : String(presentation.acabado_codigo),
       finishName: presentation.acabado_nombre == null ? null : String(presentation.acabado_nombre),
       finishResolution: presentation.modo_acabado === "independiente" ? "finish_independent" : "specific",
+      // Alumco's price scope is universal by holder confirmation, but the
+      // physical presentation above keeps its exact finish and supplier SKU.
+      priceFinishResolution: String(presentation.proveedor_key) === "alumco" || priceEvidence.finishApplicability === "all_finishes"
+        ? "finish_independent"
+        : presentation.modo_acabado === "independiente" ? "finish_independent" : "specific",
       purchaseUnit: String(presentation.unidad_compra),
       commercialLengthMm: presentation.largo_comercial_mm == null ? null : Number(presentation.largo_comercial_mm),
       netPrice: price ? Number(price.precio_neto) : null,

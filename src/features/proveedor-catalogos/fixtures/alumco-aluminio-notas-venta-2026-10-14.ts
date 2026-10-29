@@ -120,12 +120,15 @@ const presentations: SupplierCatalogImport["presentations"] = rows.map(([sku, co
     currency: "CLP",
     associationEvidence: evidence(
       source,
-      `SKU ${sku}, código ${code}, descripción y unidad TR observados en la nota de venta ${invoice} (14-10-2026). Se vinculó solo a ${familyKey}. ${code === "2509" || code === "2510" ? "El titular precisa en el catálogo Alumco que 2509 es Jamba cerrada y 2510 Pierna cerrada; solo corresponden a las variantes L25 cerradas que usan esos códigos. No se aplican a pierna abierta (2503/2506)." : ""} ${finishIndependent ? "El titular confirma que Tapa y Portafelpa (RO3506P/RO3507P) no dependen del color; se registran independientes del acabado y no como perfiles de color." : "El prefijo TI identifica acabado Titanio; este precio no se extiende a otros colores."} Largo de 6.000 mm confirmado por el titular. No se deduce ningún sistema de despiece.`,
+      `SKU ${sku}, código ${code}, descripción y unidad TR observados en la nota de venta ${invoice} (14-10-2026). Se vinculó solo a ${familyKey}. ${code === "2509" || code === "2510" ? "El titular precisa en el catálogo Alumco que 2509 es Jamba cerrada y 2510 Pierna cerrada; solo corresponden a las variantes L25 cerradas que usan esos códigos. No se aplican a pierna abierta (2503/2506)." : ""} ${finishIndependent ? "El titular confirma que Tapa y Portafelpa (RO3506P/RO3507P) no dependen físicamente del color; se registran independientes del acabado y no como perfiles de color." : `El SKU ${sku} conserva su identidad física de acabado Titanio (TI).`} Largo de 6.000 mm confirmado por el titular. No se deduce ningún sistema de despiece.`,
     ),
-    priceEvidence: evidence(
-      source,
-      `Precio por tira transcrito de la columna PRECIO de la nota ${invoice} del 14-10-2026: CLP netos ${netPrice}${finishIndependent ? ", independiente del color por confirmación del titular" : ", acabado Titanio (TI)"}. La suma de filas del documento coincide con su NETO. No se aplica otro descuento de pronto pago; la nota incluye una condición de pronto pago, pero no un segundo precio unitario. Vigencia impresa: 7 días desde emisión.`,
-    ),
+    priceEvidence: {
+      ...evidence(
+        source,
+        `Precio por tira transcrito de la columna PRECIO de la nota ${invoice} del 14-10-2026: CLP netos ${netPrice}. El titular confirma que los precios de perfiles Alumco aplican a todos sus colores y se mantienen hasta que una lista nueva los actualice. La vigencia impresa de 7 días corresponde a la cotización/oferta, no al precio de los perfiles. ${finishIndependent ? "La identidad física de Tapa y Portafelpa es independiente del color." : `El SKU ${sku} y su identidad física observada corresponden a Titanio (TI); esa identidad no se extiende a otros acabados.`} La suma de filas del documento coincide con su NETO. No se aplica otro descuento de pronto pago; la nota incluye una condición de pronto pago, pero no un segundo precio unitario.`,
+      ),
+      finishApplicability: "all_finishes" as const,
+    },
   };
 });
 
@@ -145,8 +148,8 @@ export const ALUMCO_ALUMINIO_NOTAS_VENTA_2026_10_14: SupplierCatalogImport = {
   priceListName: "Alumco · Notas 000000984 y 000000986 · 14-10-2026",
   priceListRevision: "notas-000000984-000000986-2026-10-14",
   priceListPublishedOn: "2026-10-14",
-  priceListValidUntil: "2026-10-21",
-  priceListSourceReference: `${sourceByInvoice["000000984"]}; ${sourceByInvoice["000000986"]}. La vigencia impresa es de 7 días. Los SKU TI corresponden a Titanio; Tapa y Portafelpa (RO3506P/RO3507P) son independientes del color por confirmación del titular. El descuento de pronto pago es condicional y no se vuelve a aplicar a los importes por fila.`,
+  priceListValidUntil: null,
+  priceListSourceReference: `${sourceByInvoice["000000984"]}; ${sourceByInvoice["000000986"]}. Los 7 días impresos corresponden a la cotización/oferta, no a la vigencia del precio de perfiles. Por confirmación del titular, estos precios Alumco aplican a todos los colores hasta que otra lista los actualice. Los SKU TI conservan identidad física Titanio. El descuento de pronto pago es condicional y no se vuelve a aplicar a los importes por fila.`,
   priceListPriceBasis: "commercial_presentation",
   priceListCurrency: "CLP",
   technicalInputs,
