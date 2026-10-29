@@ -650,6 +650,12 @@
       "source": "app/(pwa-app)/dashboard/page.tsx"
     },
     {
+      "path": "/e2e-glass-distribution",
+      "type": "page",
+      "area": "private",
+      "source": "app/e2e-glass-distribution/page.tsx"
+    },
+    {
       "path": "/login",
       "type": "page",
       "area": "auth",

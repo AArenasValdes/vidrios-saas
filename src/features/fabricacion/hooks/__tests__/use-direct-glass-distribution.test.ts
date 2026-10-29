@@ -132,4 +132,25 @@ describe("useDirectGlassDistribution", () => {
 
     expect(result.current.isGenerating).toBe(false);
   });
+
+  it("ignora una respuesta de cobertura abortada que llega tarde tras cambiar de cotización", async () => {
+    let resolveFirst!: (value: typeof loadedData) => void;
+    let resolveSecond!: (value: typeof loadedData) => void;
+    const first = new Promise<typeof loadedData>((resolve) => { resolveFirst = resolve; });
+    const second = new Promise<typeof loadedData>((resolve) => { resolveSecond = resolve; });
+    mockFetchData.mockReturnValueOnce(first).mockReturnValueOnce(second);
+
+    const { result, rerender } = renderHook(
+      ({ quoteId }: { quoteId: string }) => useDirectGlassDistribution({ quoteId, quoteCode: quoteId, clientName: "Cliente", workName: "Obra" }),
+      { initialProps: { quoteId: "1247" } }
+    );
+    rerender({ quoteId: "1248" });
+
+    const latestCoverage = { ...loadedData.coverage, diagnostics: ["cotización 1248"] };
+    await act(async () => { resolveSecond({ ...loadedData, coverage: latestCoverage }); });
+    await waitFor(() => expect(result.current.coverage).toEqual(latestCoverage));
+    await act(async () => { resolveFirst({ ...loadedData, coverage: { ...loadedData.coverage, diagnostics: ["cotización 1247"] } }); });
+
+    expect(result.current.coverage).toEqual(latestCoverage);
+  });
 });

@@ -39,6 +39,7 @@
 .resultNote { margin: -8px 0 0; color: #667b98; font-size: 12px; }
 .pdfBlockedNote { margin: -8px 0 0; color: #765e35; font-size: 12px; line-height: 1.45; }
 .error { margin: 0; border-radius: 11px; background: #fff1f0; padding: 11px 13px; color: #a3332d; font-size: 13px; line-height: 1.5; }
+.errorBlock { display: grid; justify-items: start; gap: 8px; }
 .spinner { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
