@@ -35,7 +35,7 @@ export type GlassPaneGeometryCandidate = {
   productId: string | null;
   displayName: string | null;
   logicalComponentId: string | null;
-  technicalSpec: { productId?: string | null; hasConflict?: boolean; thicknessMm?: number | null; category?: string; manualCutStatus?: string } | null;
+  technicalSpec: { productId?: string | null; hasConflict?: boolean; thicknessMm?: number | null; category?: string; manualCutStatus?: string; purchaseMode?: "undecided" | "full_sheet" | "supplier_cut" } | null;
   widthMm: number | null;
   heightMm: number | null;
   quantity: number;
@@ -91,6 +91,8 @@ export function isGlassCoveragePaneComplete(pane: GlassPaneGeometryCandidate): b
     && pane.technicalSpec
     && !pane.technicalSpec.hasConflict
     && pane.technicalSpec.productId === pane.productId
+    && pane.technicalSpec.purchaseMode !== "supplier_cut"
+    && pane.technicalSpec.purchaseMode !== "undecided"
     && Number.isFinite(pane.technicalSpec.thicknessMm)
     && Number(pane.technicalSpec.thicknessMm) > 0
     && pane.technicalSpec.category
@@ -127,6 +129,8 @@ export function getGlassPaneGeometryExclusionReason(pane: GlassPaneGeometryCandi
   if (!pane.productId || !pane.technicalSpec) return "Falta el producto o la especificación técnica congelada del vidrio.";
   if (pane.technicalSpec.hasConflict) return "La especificación técnica del vidrio tiene un conflicto pendiente.";
   if (pane.technicalSpec.productId !== pane.productId) return "El producto no coincide exactamente con la especificación técnica congelada.";
+  if (pane.technicalSpec.purchaseMode === "supplier_cut") return "Este vidrio se compra cortado por proveedor; no corresponde distribuirlo como plancha del taller.";
+  if (pane.technicalSpec.purchaseMode === "undecided") return "Confirma si este vidrio se compra por plancha antes de distribuirlo en el taller.";
   if (!Number.isFinite(pane.technicalSpec.thicknessMm) || Number(pane.technicalSpec.thicknessMm) <= 0) return "Falta un espesor técnico válido del vidrio.";
   if (!pane.technicalSpec.category || pane.technicalSpec.category === "pendiente") return "Falta una categoría técnica compatible del vidrio.";
   if (pane.technicalSpec.manualCutStatus === "not_admitted") return "La especificación del vidrio no admite corte manual.";
@@ -195,6 +199,7 @@ export function buildGlassDistributionCoverage(input: {
       fabricacionHojas: presentation.fabricacionHojas,
       guidedVisualConfig: presentation.guidedVisualConfig,
       quickCompositionAdjustment: presentation.quickCompositionAdjustment,
+      manualPaneCount: manualSnapshot.manualPaneCount,
     });
     const itemQuantity = Number.isSafeInteger(item.cantidad) && item.cantidad > 0 ? item.cantidad : 0;
     const itemRefs = [...refs.entries()].filter(([, reference]) => reference.item?.id === item.id);

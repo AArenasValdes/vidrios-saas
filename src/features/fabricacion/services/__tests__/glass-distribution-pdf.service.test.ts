@@ -152,6 +152,27 @@ describe("createGlassDistributionPdf", () => {
     }
   });
 
+  it("asocia dimensiones distintas por identidad de paño dentro del mismo componente y producto", async () => {
+    const firstPane = pane("same-product-1");
+    const secondPane = { ...pane("same-product-2"), paneId: "pane-second", widthMm: 700, heightMm: 1000 };
+    const results = optimizeGlassCuttingBatch({ panes: [firstPane, secondPane], profiles: [profile], mode: "geometric_preview" });
+    const input = {
+      quoteCode: "COT-QA-2H",
+      clientName: "Cliente QA",
+      workName: "Corredera 2H",
+      coverage: { ...completeCoverage, completeReferenceCount: 2 },
+      panes: [
+        { quoteItemId: "item-qa", paneId: firstPane.paneId, componentCode: "V1", productId: "qa-glass-5mm", displayName: "Float", thicknessMm: 5, category: "monolitico", widthMm: 750, heightMm: 1600, quantity: 1, physicalUnitCount: 1 },
+        { quoteItemId: "item-qa", paneId: secondPane.paneId, componentCode: "V1", productId: "qa-glass-5mm", displayName: "Float", thicknessMm: 5, category: "monolitico", widthMm: 700, heightMm: 1000, quantity: 1, physicalUnitCount: 1 },
+      ],
+      results,
+    };
+
+    expect(validateGlassDistributionPdfInput(input)).toBeNull();
+    const pdf = await createGlassDistributionPdf(input);
+    expect(pdfText(pdf)).toContain("700 × 1.000 mm");
+  });
+
   it("blocks a PDF when the source summary omits dimensions even if the geometry has a verified plan", async () => {
     const results = optimizeGlassCuttingBatch({ panes: [pane("1"), pane("2")], profiles: [profile], mode: "geometric_preview" });
     const error = validateGlassDistributionPdfInput({
@@ -216,6 +237,36 @@ describe("createGlassDistributionPdf", () => {
 
     expect(validateGlassDistributionPdfInput(input)).toMatch(/cobertura de vidrio está incompleta/i);
     await expect(createGlassDistributionPdf(input)).rejects.toThrow(/cobertura de vidrio está incompleta/i);
+  });
+
+  it("permite un PDF de simulación parcial marcado NO APTO PARA CORTE y conserva las exclusiones", async () => {
+    const results = optimizeGlassCuttingBatch({ panes: [pane("1"), pane("2")], profiles: [profile], mode: "geometric_preview" });
+    const input = {
+      mode: "simulation" as const,
+      quoteCode: "COT-QA-SIMULACION",
+      clientName: "Cliente QA",
+      workName: "Trabajo QA",
+      coverage: {
+        status: "partial" as const,
+        completeReferenceCount: 1,
+        pendingReferenceCount: 1,
+        pendingReferences: [{ quoteItemId: "item-fixed", componentCode: "V2", componentName: "Paño fijo", displayName: "Paño 2", reason: "Faltan medidas finales." }],
+        diagnostics: [],
+      },
+      panes: [{ quoteItemId: "item-qa", componentCode: "V1", componentName: "Corredera", productId: "qa-glass-5mm", displayName: "Float incoloro", thicknessMm: 5, category: "monolitico", widthMm: 750, heightMm: 1600, quantity: 2, physicalUnitCount: 2 }],
+      results,
+      simulationWarnings: ["Separación asumida de 0 mm; revisar el proceso del taller."],
+      previewExclusions: [{ componentCode: "V2", componentName: "Paño fijo", displayName: "Paño 2", reason: "Faltan medidas finales." }],
+    };
+
+    expect(validateGlassDistributionPdfInput(input)).toBeNull();
+    const pdf = await createGlassDistributionPdf(input);
+    const text = pdfText(pdf);
+    expect(text).toContain("SIMULACIÓN GEOMÉTRICA");
+    expect(text).toContain("NO APTO PARA CORTE");
+    expect(text).toContain("2 unidades físicas incluidas");
+    expect(text).toContain("Paño 2: Faltan medidas finales.");
+    expect(text).toContain("Separación asumida de 0 mm");
   });
 });
 

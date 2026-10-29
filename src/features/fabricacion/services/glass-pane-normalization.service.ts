@@ -198,6 +198,7 @@ export function extractNormalizedGlassPanes(input: ExtractInput): NormalizedGlas
       fabricacionHojas: presentation.fabricacionHojas,
       guidedVisualConfig: presentation.guidedVisualConfig,
       quickCompositionAdjustment: presentation.quickCompositionAdjustment,
+      manualPaneCount: manualMeasurements.manualPaneCount,
     })
     : null;
   const validSlotIds = expectedSlots?.countIsKnown

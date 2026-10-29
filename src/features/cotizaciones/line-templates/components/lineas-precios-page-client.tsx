@@ -162,6 +162,7 @@ function buildDraft(template?: CotizacionLineTemplate): LineTemplateFormDraft {
     unidadCobro: template?.unidadCobro ?? "m2",
     material: template?.material ?? "",
     espesor: glassMetadata.espesor ?? (glassMetadata.espesorMm != null ? String(glassMetadata.espesorMm) : ""),
+    glassPurchaseMode: glassMetadata.purchaseMode ?? (template ? "legacy" : "undecided"),
     categoriaTecnica: glassMetadata.categoriaTecnica,
     corteManualEstado: glassMetadata.corteManualEstado,
     revisionTecnicaExplicita: glassMetadata.revisionTecnicaExplicita,
@@ -1050,6 +1051,7 @@ export function LineasPreciosPageClient({
                   ? {
                       espesor: draft.espesor,
                       espesorMm: parseExplicitGlassThicknessMm(draft.espesor),
+                      purchaseMode: draft.glassPurchaseMode === "legacy" ? undefined : draft.glassPurchaseMode,
                       terminacion: draft.terminacion,
                       categoriaTecnica: draft.categoriaTecnica,
                       corteManualEstado: draft.corteManualEstado,

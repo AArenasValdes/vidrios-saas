@@ -1699,6 +1699,8 @@ export function QuoteConstructorWorkspace({
                     compact
                     value={activeForm.manualGlassMeasurements}
                     automaticDimensionsAvailable={Boolean(activeForm.fabricacionSnapshot?.result?.vidrios?.some((pane) => pane.anchoMm > 0 && pane.altoMm > 0))}
+                    automaticPanes={activeForm.fabricacionSnapshot?.result?.vidrios?.map((pane) => ({ id: pane.vidrioId, name: pane.nombre, widthMm: pane.anchoMm, heightMm: pane.altoMm, quantity: pane.cantidadPiezas }))}
+                    automaticRecipeStatus={activeForm.fabricacionSnapshot?.recipeStatus}
                     paneConfiguration={{ componentType: activeForm.fabricacionTipologia || activeForm.tipo, system: activeForm.sistema, configuration: activeForm.configuracion, sheetScheme: activeForm.sheetScheme, fabricacionHojas: activeForm.fabricacionHojas, guidedVisualConfig: activeForm.guidedVisualConfig, quickCompositionAdjustment: activeForm.quickCompositionAdjustment }}
                     templates={lineTemplates}
                     onChange={(manualGlassMeasurements) =>

@@ -8,6 +8,7 @@ import type { GlassDistributionCoverage } from "./glass-distribution-coverage.se
 
 export type GlassDistributionPane = {
   quoteItemId: string;
+  paneId?: string;
   logicalComponentId: string | null;
   glassId: string | null;
   productId: string | null;
@@ -43,6 +44,7 @@ export type DirectGlassDistributionExecutionResult =
 export function mapGlassDistributionPdfPanes(panes: GlassDistributionPane[]): GlassDistributionPdfSource["panes"] {
   return panes.map((pane) => ({
     quoteItemId: pane.quoteItemId,
+    paneId: pane.paneId,
     componentCode: pane.componentCode,
     componentName: pane.componentName ?? null,
     productId: pane.productId,

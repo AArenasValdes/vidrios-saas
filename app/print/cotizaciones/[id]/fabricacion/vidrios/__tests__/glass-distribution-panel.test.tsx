@@ -159,7 +159,7 @@ describe("GlassDistributionPanel", () => {
 
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({ mode: "geometric_preview" });
-    expect(screen.getByRole("button", { name: /PDF bloqueado · cobertura incompleta/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /PDF operativo bloqueado · cobertura incompleta/ })).toBeDisabled();
   });
 
   it("previews the verified result and uses that same result for its PDF", async () => {
@@ -171,14 +171,13 @@ describe("GlassDistributionPanel", () => {
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Distribución en plancha de 2500 por 1800 milímetros" })).toBeInTheDocument();
     expect(screen.getByText(/Despuntes y separación geométrica asumidos: 0 mm/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Descargar PDF de esta vista" }));
+    fireEvent.click(screen.getByRole("button", { name: /PDF simulación · NO APTO PARA CORTE/ }));
 
     await waitFor(() => expect(downloadPdfBlob).toHaveBeenCalled());
-    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(fetchMock.mock.calls[2]?.[1]).toEqual({ cache: "no-store" });
-    expect(JSON.parse(String(fetchMock.mock.calls[3]?.[1]?.body))).toEqual({ mode: "provider_pdf" });
     expect(createGlassDistributionPdf).toHaveBeenCalledTimes(1);
-    expect(createGlassDistributionPdf).toHaveBeenLastCalledWith(expect.objectContaining({ coverage: source.coverage, results: [verifiedResult] }));
+    expect(createGlassDistributionPdf).toHaveBeenLastCalledWith(expect.objectContaining({ mode: "simulation", coverage: source.coverage, results: [verifiedResult] }));
   });
 
   it("muestra una vista previa en la pestaña sin iniciar una descarga", async () => {

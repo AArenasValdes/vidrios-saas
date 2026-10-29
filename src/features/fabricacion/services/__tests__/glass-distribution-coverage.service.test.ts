@@ -127,6 +127,20 @@ describe("buildGlassDistributionCoverage", () => {
     expect(getGlassPaneGeometryExclusionReason(legacy)).toMatch(/snapshot histórico/i);
   });
 
+  it("no distribuye automáticamente un producto comprado ya cortado ni una forma de compra sin definir", () => {
+    const supplierCut = pane("item-1", "supplier-cut", {
+      technicalSpec: { ...pane("item-1", "supplier-cut").technicalSpec!, purchaseMode: "supplier_cut" },
+    });
+    const undecided = pane("item-1", "undecided", {
+      technicalSpec: { ...pane("item-1", "undecided").technicalSpec!, purchaseMode: "undecided" },
+    });
+
+    expect(getGlassPaneGeometryExclusionReason(supplierCut)).toMatch(/cortado por proveedor/i);
+    expect(getGlassPaneGeometryExclusionReason(undecided)).toMatch(/compra por plancha/i);
+    expect(isGlassPaneGeometryComplete(supplierCut)).toBe(false);
+    expect(isGlassPaneGeometryComplete(undecided)).toBe(false);
+  });
+
   it("no declara cobertura completa cuando la normalización exige revisión aunque dimensiones y unidades estén presentes", () => {
     const coverage = buildGlassDistributionCoverage({
       items: [item("item-1", "V1")],

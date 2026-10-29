@@ -287,6 +287,17 @@ describe("optimizeGlassCuttingBatch", () => {
     expect(workshop.errors).toContain("La receta del paño pane-trace-preview no está validada.");
   });
 
+  it("rechaza en la simulación materiales comprados cortados o sin forma de compra definida", () => {
+    for (const purchaseMode of ["supplier_cut", "undecided"] as const) {
+      const candidate = pane({ id: `purchase-${purchaseMode}`, width: 520, height: 880, dimensionProvenance: "manual" });
+      candidate.technicalSpec = { ...candidate.technicalSpec!, purchaseMode };
+      const result = optimizeGlassCuttingBatch({ panes: [candidate], profiles: [profile()], mode: "geometric_preview" })[0]!;
+
+      expect(result.status).not.toBe("feasible");
+      expect(result.errors.join(" ")).toMatch(/especificación compatible/i);
+    }
+  });
+
   it("rechaza recipe_trace con dimensiones o identidad física insuficientes", () => {
     const missingGeometry = pane({ id: "trace-missing", width: null, height: 880, recipeStatus: "draft", dimensionProvenance: "recipe_trace" });
     const missingIdentity = { ...pane({ id: "trace-identity", width: 520, height: 880, recipeStatus: "draft", dimensionProvenance: "recipe_trace" }), paneId: "", snapshotFingerprint: "" };

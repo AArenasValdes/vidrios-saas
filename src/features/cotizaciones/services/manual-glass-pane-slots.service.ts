@@ -17,6 +17,7 @@ export type ManualGlassPaneConfiguration = {
   fabricacionHojas?: number | null;
   guidedVisualConfig?: GuidedVisualConfig | null;
   quickCompositionAdjustment?: QuickCompositionAdjustment | null;
+  manualPaneCount?: number | null;
 };
 
 const moduleLabels: Partial<Record<GuidedModuleType, string>> = {
@@ -75,17 +76,23 @@ export function resolveManualGlassPaneSlots(input: ManualGlassPaneConfiguration)
     && visualModules[0]?.type !== "corredera"
     && visualModules[0]?.type !== "puerta_corredera"
     && visualModules[0]?.type !== "shower_corredera";
-  const count = adjustment?.paneCount
+  const inferredCount = adjustment?.paneCount
     ?? structuralModuleCount
     ?? configuredSlidingCount
     ?? (!hasInternalDivisions && simpleSinglePaneType ? 1 : null)
     ?? (!hasInternalDivisions && canInferSingleModule ? 1 : null);
+  const usesManualCount = inferredCount == null
+    && Number.isSafeInteger(input.manualPaneCount)
+    && Number(input.manualPaneCount) > 0
+    && Number(input.manualPaneCount) <= 12;
+  const count = inferredCount ?? (usesManualCount ? Number(input.manualPaneCount) : null);
   const configPayload = {
     componentType: input.componentType ?? null,
     system: input.system ?? null,
     configuration: input.configuration ?? null,
     sheetScheme: input.sheetScheme ?? null,
     fabricacionHojas: input.fabricacionHojas ?? null,
+    manualPaneCount: usesManualCount ? input.manualPaneCount : null,
     quick: adjustment ? {
       paneCount: adjustment.paneCount ?? null,
       paneTypes: adjustment.paneTypes ?? {},
@@ -111,7 +118,7 @@ export function resolveManualGlassPaneSlots(input: ManualGlassPaneConfiguration)
     const paneModule = visualModules.length === count ? visualModules[index] : undefined;
     const quickType = adjustment?.paneTypes?.[`leaf-${index + 1}`];
     const openingType = paneModule ? moduleLabels[paneModule.type] : quickType ? quickTypeLabels[quickType] : componentTypeLabel(productShapeLabel);
-    const id = paneModule?.id ?? `pane-${index + 1}`;
+    const id = paneModule?.id ?? (usesManualCount ? `manual-pane:v1:${index + 1}` : `pane-${index + 1}`);
     const rectangular = (!paneModule || paneModule.glassShape.kind === "rect")
       && (input.guidedVisualConfig?.frameShape.kind ?? "rect") === "rect";
     return {

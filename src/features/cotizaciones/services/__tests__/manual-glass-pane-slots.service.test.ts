@@ -42,6 +42,16 @@ describe("resolveManualGlassPaneSlots", () => {
     expect(resolveManualGlassPaneSlots({ componentType: "Corredera" })).toMatchObject({ countIsKnown: false, slots: [] });
   });
 
+  it("crea posiciones manuales estables, versionadas y sensibles al conteo explícito", () => {
+    const two = resolveManualGlassPaneSlots({ componentType: "Ventana especial", manualPaneCount: 2 });
+    const twoAgain = resolveManualGlassPaneSlots({ componentType: "Ventana especial", manualPaneCount: 2 });
+    const three = resolveManualGlassPaneSlots({ componentType: "Ventana especial", manualPaneCount: 3 });
+
+    expect(two.slots.map((slot) => slot.id)).toEqual(["manual-pane:v1:1", "manual-pane:v1:2"]);
+    expect(two.configurationFingerprint).toBe(twoAgain.configurationFingerprint);
+    expect(two.configurationFingerprint).not.toBe(three.configurationFingerprint);
+  });
+
   it.each([
     ["Paño fijo", "Fijo"],
     ["Proyectante", "Proyectante"],

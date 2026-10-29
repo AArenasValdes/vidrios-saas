@@ -283,6 +283,54 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
       : "PDF abierto. Guárdalo desde el visor del dispositivo.");
   }, [currentQuoteCode, clientName, workName, providerPanes, sourceFresh]);
 
+  const downloadSimulationPdf = useCallback(async () => {
+    if (!visibleResults || resultsQuoteId !== quoteId || !generatedFrom || !sourceFresh || refreshingSource) return;
+    const expectedRevision = dataRevision.current;
+    const calculationQuoteId = quoteId;
+    setBusy(true);
+    setError(null);
+    setDownloadNotice(null);
+    try {
+      const response = await fetch(`/api/cotizaciones/${encodeURIComponent(quoteId)}/optimizacion-vidrios`, { cache: "no-store" });
+      const latest = await response.json() as PlanResponse & { error?: string };
+      if (!response.ok) throw new Error(latest.error || "No pudimos confirmar los paños actuales.");
+      if (dataRevision.current !== expectedRevision || quoteId !== calculationQuoteId) throw new Error("Los paños cambiaron. Actualiza la cobertura y vuelve a simular.");
+      if (!sameSnapshotSet(latest.panes.map((pane) => pane.snapshotFingerprint), generatedFrom)) {
+        setResults(null);
+        setPreviewOpen(false);
+        setSource(latest);
+        setSourceQuoteId(calculationQuoteId);
+        setSourceFresh(true);
+        throw new Error("La cotización cambió desde la simulación. Genera una vista previa nueva antes de descargar.");
+      }
+      const simulationPanes = latest.panes.filter(isPreviewReadyPane);
+      const pdf = await createGlassDistributionPdf({
+        mode: "simulation",
+        quoteCode: latest.quoteCode || currentQuoteCode,
+        clientName,
+        workName,
+        logoDataUrl: await loadVentoraPdfLogoDataUrl(),
+        coverage: latest.coverage,
+        panes: mapGlassDistributionPdfPanes(simulationPanes),
+        results: visibleResults,
+        simulationWarnings: [
+          "Despuntes y separación física asumidos: 0 mm; no representa kerf ni reglas del taller.",
+          ...(simulationPanes.some((pane) => pane.dimensionProvenance === "recipe_trace") ? ["Incluye geometría de receta preliminar, no validada por taller."] : []),
+          ...(simulationPanes.some((pane) => pane.technicalSpec?.pieceOrientation === "unknown") ? ["Orientación del vidrio no confirmada; los paños se mantuvieron fijos."] : []),
+        ],
+        previewExclusions: latest.previewExclusions,
+      });
+      if (dataRevision.current !== expectedRevision || !sourceFresh || quoteId !== calculationQuoteId) throw new Error("Los paños cambiaron. Actualiza la cobertura antes de descargar la simulación.");
+      const downloadStatus = await downloadPdfBlob(pdf.output("blob"), `simulacion-vidrios-no-apto-corte-${sanitizeFileNamePart(latest.quoteCode || "cotizacion", 32)}.pdf`);
+      if (downloadStatus === "failed") throw new Error("No pudimos descargar la simulación. Intenta nuevamente.");
+      setDownloadNotice(downloadStatus === "downloaded" ? "PDF de simulación descargado · NO APTO PARA CORTE." : "PDF de simulación abierto · NO APTO PARA CORTE.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No pudimos generar la simulación.");
+    } finally {
+      setBusy(false);
+    }
+  }, [visibleResults, resultsQuoteId, quoteId, generatedFrom, sourceFresh, refreshingSource, currentQuoteCode, clientName, workName]);
+
   const calculate = useCallback(async (downloadAfter: boolean, openDialog = false) => {
     if (!canCalculate) return;
     const expectedRevision = dataRevision.current;
@@ -521,6 +569,7 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
           </button>
           <button type="button" className={s.secondaryAction} disabled={!canCalculate || busy || refreshingSource || !visibleResults || sourceForQuote?.coverage.status !== "complete"} onClick={() => void exportPreviewResult("share")}><LuShare2 aria-hidden /> Compartir</button>
           <button type="button" className={s.secondaryAction} disabled={!canCalculate || busy || refreshingSource || !sourceFresh} onClick={() => visibleResults ? setPreviewOpen(true) : void calculate(false, true)}><LuEye aria-hidden /> {visibleResults ? "Ampliar vista" : "Vista previa"}</button>
+          {visibleResults ? <button type="button" className={s.secondaryAction} disabled={busy || refreshingSource || !sourceFresh} onClick={() => void downloadSimulationPdf()}><LuDownload aria-hidden /> PDF simulación · NO APTO PARA CORTE</button> : null}
         </div>
         {sourceForQuote?.coverage.status !== "complete" ? (
           <p className={s.pdfBlockedNote} role="status">
@@ -560,7 +609,8 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
             </div> : null}
             <div className={s.previewSummary}><span>{selected.sheet.panes.length} {selected.sheet.panes.length === 1 ? "unidad física" : "unidades físicas"} · {formatArea(selected.sheet.areas.panesMm2)}</span><span>{selected.sheet.remnants.length} sobrantes geométricos · {formatArea(selected.sheet.remnants.reduce((sum, remnant) => sum + remnant.areaMm2, 0))}</span></div>
             <p className={s.previewDisclaimer}>Despuntes y separación geométrica asumidos: 0 mm. El formato se usa sin giro y la orientación de paños no confirmada se mantiene fija. Distribución preliminar. Confirmar medidas y tolerancias con el proveedor antes de cortar.</p>
-            <button type="button" className={s.primaryAction} disabled={busy || refreshingSource || !sourceFresh || sourceForQuote?.coverage.status !== "complete"} onClick={() => void exportPreviewResult("download")}><LuDownload aria-hidden />{busy ? "Generando PDF…" : sourceForQuote?.coverage.status !== "complete" ? "PDF bloqueado · cobertura incompleta" : "Descargar PDF de esta vista"}</button>
+            <button type="button" className={s.primaryAction} disabled={busy || refreshingSource || !sourceFresh || sourceForQuote?.coverage.status !== "complete"} onClick={() => void exportPreviewResult("download")}><LuDownload aria-hidden />{busy ? "Generando PDF…" : sourceForQuote?.coverage.status !== "complete" ? "PDF operativo bloqueado · cobertura incompleta" : "PDF operativo para proveedor"}</button>
+            <button type="button" className={s.secondaryAction} disabled={busy || refreshingSource || !sourceFresh} onClick={() => void downloadSimulationPdf()}><LuDownload aria-hidden /> PDF simulación · NO APTO PARA CORTE</button>
           </> : null}
         </DialogContent>
       </Dialog>

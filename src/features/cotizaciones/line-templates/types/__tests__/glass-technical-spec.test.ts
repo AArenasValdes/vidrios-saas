@@ -4,6 +4,7 @@ import {
   resolveGlassTechnicalSpecForProduct,
 } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
 import { getLineTemplateGlassMetadata, mergeLineTemplateGlassMetadata } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import { isCatalogGlassPlanable } from "@/features/cotizaciones/services/manual-glass-pane-measurements.service";
 
 describe("glass technical spec", () => {
   it("copia solo valores estructurados del catálogo y deja pendientes los no informados", () => {
@@ -84,6 +85,24 @@ describe("glass technical spec", () => {
     });
     expect(saved).toMatchObject({ precioInternoRef: "stable", workshopProfiles: [{ codigo: "A1" }] });
     expect(buildCatalogGlassTechnicalSpec({ productId: "glass-1", metadata: saved }).pieceOrientation).toBe("grain_or_coating_directional");
+  });
+
+  it("persiste forma de compra en metadata y no convierte compra cortada en plancha de taller", () => {
+    const saved = mergeLineTemplateGlassMetadata({ existingCommercialFlag: true }, {
+      espesor: "5",
+      espesorMm: 5,
+      categoriaTecnica: "monolitico",
+      corteManualEstado: "confirmed",
+      purchaseMode: "supplier_cut",
+      planchaAnchoMm: 2500,
+      planchaAltoMm: 1800,
+    });
+    const spec = buildCatalogGlassTechnicalSpec({ productId: "glass-1", metadata: saved });
+
+    expect(saved).toMatchObject({ existingCommercialFlag: true, formaCompraVidrio: "supplier_cut" });
+    expect(getLineTemplateGlassMetadata(saved).purchaseMode).toBe("supplier_cut");
+    expect(spec.purchaseMode).toBe("supplier_cut");
+    expect(isCatalogGlassPlanable(spec)).toBe(false);
   });
 
   it("congela especificación al reabrir el mismo producto y toma metadata solo si cambia la selección", () => {

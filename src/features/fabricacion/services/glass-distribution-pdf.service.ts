@@ -12,13 +12,17 @@ import { formatGlassDisplayName } from "./glass-display-name.service";
 import type { GlassDistributionCoverage } from "./glass-distribution-coverage.service";
 
 export type GlassDistributionPdfSource = {
+  mode?: "provider" | "simulation";
   quoteCode: string;
   clientName: string;
   workName: string;
   logoDataUrl?: string | null;
   coverage: GlassDistributionCoverage;
+  simulationWarnings?: string[];
+  previewExclusions?: Array<{ componentCode: string; componentName?: string | null; displayName?: string | null; reason: string }>;
   panes: Array<{
     quoteItemId: string;
+    paneId?: string;
     componentCode: string;
     productId: string | null;
     displayName: string | null;
@@ -66,18 +70,27 @@ function shortComponentCode(value: string, index: number) {
 }
 
 function sourceForPlannedPane(pane: GlassPlannedPane, sources: PaneSource[]) {
-  return sources.find((source) => source.quoteItemId === pane.quoteItemId && source.productId === pane.productId)
-    ?? sources.find((source) => source.quoteItemId === pane.quoteItemId)
-    ?? null;
+  const exactPane = sources.find((source) => source.quoteItemId === pane.quoteItemId && source.paneId === pane.paneId);
+  if (exactPane) return exactPane;
+  const matchingProduct = sources.filter((source) => source.quoteItemId === pane.quoteItemId && source.productId === pane.productId);
+  if (matchingProduct.length === 1) return matchingProduct[0] ?? null;
+  const matchingItem = sources.filter((source) => source.quoteItemId === pane.quoteItemId);
+  return matchingItem.length === 1 ? matchingItem[0] ?? null : null;
+}
+
+function paneSourceKey(source: PaneSource) {
+  return `${source.quoteItemId}|${source.paneId ?? source.productId ?? "glass-reference"}`;
 }
 
 type VerifiedPaneEntry = { planned: GlassPlannedPane; source: PaneSource; ordinal: number };
 
 export function validateGlassDistributionPdfInput(input: GlassDistributionPdfSource): string | null {
-  if (input.coverage.status !== "complete" || input.coverage.pendingReferenceCount > 0) {
+  const simulation = input.mode === "simulation";
+  if (!simulation && (input.coverage.status !== "complete" || input.coverage.pendingReferenceCount > 0)) {
     return "No se puede generar el PDF para el proveedor: la cobertura de vidrio está incompleta. Revisa las referencias pendientes de la cotización.";
   }
-  if (input.coverage.completeReferenceCount === 0) return "No se puede generar el PDF: no hay referencias de vidrio con cobertura técnica completa.";
+  if (!simulation && input.coverage.completeReferenceCount === 0) return "No se puede generar el PDF: no hay referencias de vidrio con cobertura técnica completa.";
+  if (simulation && input.panes.length === 0) return "No se puede generar la simulación: no hay paños geométricos admisibles.";
   if (!input.panes.length || !input.results.length) return "No se puede generar el PDF: la cotización no tiene paños y planos verificados para resumir.";
   if (input.results.some((result) => result.status !== "feasible" || !result.verification.passed || result.sheets.length === 0)) {
     return "No se puede generar el PDF: una o más planchas no superaron la verificación geométrica.";
@@ -107,13 +120,19 @@ export function validateGlassDistributionPdfInput(input: GlassDistributionPdfSou
     if (source.widthMm !== pane.rect.widthMm || source.heightMm !== pane.rect.heightMm) {
       return `No se puede generar el PDF: las medidas de ${source.componentCode} no coinciden entre cubicación y plano. Vuelve a calcular la distribución.`;
     }
-    const key = `${source.quoteItemId}|${source.productId}`;
+    const key = paneSourceKey(source);
     plannedBySource.set(key, [...(plannedBySource.get(key) ?? []), pane]);
   }
+  const expectedBySource = new Map<string, number>();
   for (const pane of input.panes) {
-    const key = `${pane.quoteItemId}|${pane.productId}`;
-    if ((plannedBySource.get(key)?.length ?? 0) !== pane.physicalUnitCount) {
-      return `No se puede generar el PDF: las unidades físicas de ${pane.componentCode} no coinciden con su plano verificado.`;
+    const key = paneSourceKey(pane);
+    expectedBySource.set(key, (expectedBySource.get(key) ?? 0) + (pane.physicalUnitCount ?? 0));
+  }
+  for (const [key, expectedCount] of expectedBySource) {
+    if ((plannedBySource.get(key)?.length ?? 0) !== expectedCount) {
+      const affectedPane = input.panes.find((pane) => paneSourceKey(pane) === key);
+      const componentCode = affectedPane?.componentCode ?? "un componente";
+      return `No se puede generar el PDF: las unidades físicas de ${componentCode} no coinciden con su plano verificado.`;
     }
   }
   return null;
@@ -182,8 +201,16 @@ function drawSummaryPage(pdf: jsPDF, source: GlassDistributionPdfSource, entries
     workName: source.workName,
     issueDate: "No informada",
   };
-  const pageTitle = "Distribución de planchas de vidrio";
+  const simulation = source.mode === "simulation";
+  const pageTitle = simulation ? "Simulación geométrica de planchas de vidrio" : "Distribución de planchas de vidrio";
   let y = drawFabricationPdfHeader(pdf, metadata, pageTitle, source.logoDataUrl, "Cliente");
+  if (simulation) {
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.setTextColor(176, 25, 25);
+    pdf.text("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE", PAGE_MARGIN_MM, y - 6, { maxWidth: CONTENT_WIDTH_MM });
+    y += 5;
+  }
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(10.5);
   pdf.setTextColor(...INK);
@@ -193,7 +220,9 @@ function drawSummaryPage(pdf: jsPDF, source: GlassDistributionPdfSource, entries
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(8.5);
   pdf.setTextColor(...MUTED);
-  pdf.text(`Cobertura técnica completa: ${source.coverage.completeReferenceCount} de ${totalReferences} referencias · ${totalUnits} unidades físicas verificadas`, PAGE_MARGIN_MM, y - 4);
+  pdf.text(simulation
+    ? `Simulación: ${totalUnits} unidades físicas incluidas · ${source.previewExclusions?.length ?? 0} referencias excluidas de ${totalReferences}`
+    : `Cobertura técnica completa: ${source.coverage.completeReferenceCount} de ${totalReferences} referencias · ${totalUnits} unidades físicas verificadas`, PAGE_MARGIN_MM, y - 4, { maxWidth: CONTENT_WIDTH_MM });
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(10.5);
   pdf.setTextColor(...INK);
@@ -201,6 +230,23 @@ function drawSummaryPage(pdf: jsPDF, source: GlassDistributionPdfSource, entries
   y += 6;
 
   y = drawFabricationPdfSectionTitle(pdf, "Resumen por tipo y espesor", y);
+  if (simulation) {
+    const notices = [
+      ...(source.simulationWarnings ?? []),
+      ...(source.previewExclusions ?? []).map((entry) => `${entry.componentCode}${entry.displayName ? ` · ${entry.displayName}` : ""}: ${entry.reason}`),
+    ];
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8);
+    pdf.setTextColor(176, 25, 25);
+    const shown = notices.slice(0, 8);
+    if (notices.length > shown.length) shown.push(`${notices.length - shown.length} advertencias adicionales; revisar en Ventora.`);
+    for (const notice of shown) {
+      const lines = pdf.splitTextToSize(`- ${notice}`, CONTENT_WIDTH_MM) as string[];
+      pdf.text(lines, PAGE_MARGIN_MM, y);
+      y += lines.length * 3.8 + 1;
+    }
+    pdf.setTextColor(...INK);
+  }
   const groups = buildTypeGroups(source, entries);
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(9.2);
@@ -223,11 +269,14 @@ function drawSummaryPage(pdf: jsPDF, source: GlassDistributionPdfSource, entries
   return y;
 }
 
-function drawPreliminaryWarning(pdf: jsPDF) {
+function drawPreliminaryWarning(pdf: jsPDF, simulation = false) {
   pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(8);
-  pdf.setTextColor(...INK);
-  pdf.text("Distribución preliminar. Confirmar medidas y tolerancias con el proveedor antes de cortar.", PAGE_MARGIN_MM, 277, {
+  pdf.setFontSize(simulation ? 9 : 8);
+  if (simulation) pdf.setTextColor(176, 25, 25);
+  else pdf.setTextColor(...INK);
+  pdf.text(simulation
+    ? "SIMULACIÓN GEOMÉTRICA — NO APTO PARA CORTE. No representa reglas físicas del taller."
+    : "Distribución preliminar. Confirmar medidas y tolerancias con el proveedor antes de cortar.", PAGE_MARGIN_MM, 277, {
     maxWidth: CONTENT_WIDTH_MM,
   });
 }
@@ -304,7 +353,7 @@ function drawSheet(
     workName: source.workName,
     issueDate: "No informada",
   };
-  const title = "Distribución de planchas de vidrio";
+  const title = source.mode === "simulation" ? "Simulación geométrica de planchas de vidrio" : "Distribución de planchas de vidrio";
   let y = startY ?? drawFabricationPdfHeader(pdf, metadata, title, source.logoDataUrl, "Cliente");
   const plannedPane = sheet.panes[0];
   const firstSource = plannedPane ? sourceForPlannedPane(plannedPane, source.panes) : null;
@@ -417,7 +466,7 @@ function drawSheet(
 
   const rows = buildSheetRows(sheet, source.panes, paneOrdinals);
   drawSheetRows(pdf, rows, y, pageIndex + 1, source);
-  drawPreliminaryWarning(pdf);
+  drawPreliminaryWarning(pdf, source.mode === "simulation");
   return y;
 }
 
@@ -427,6 +476,7 @@ function estimateSheetContentHeight(sheet: GlassSheetPlan) {
 }
 
 export async function createGlassDistributionPdf(input: GlassDistributionPdfSource) {
+  if (!input.mode) input = { ...input, mode: "provider" };
   const validationError = validateGlassDistributionPdfInput(input);
   if (validationError) throw new Error(validationError);
   const { jsPDF } = await import("jspdf");
