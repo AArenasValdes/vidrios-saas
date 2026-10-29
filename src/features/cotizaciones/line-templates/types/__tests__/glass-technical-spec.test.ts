@@ -105,6 +105,23 @@ describe("glass technical spec", () => {
     expect(isCatalogGlassPlanable(spec)).toBe(false);
   });
 
+  it("mantiene sin distribuir los productos legacy sin forma de compra confirmada", () => {
+    const spec = buildCatalogGlassTechnicalSpec({
+      productId: "glass-legacy",
+      metadata: {
+        espesor: "5 mm",
+        categoriaTecnica: "monolitico",
+        revisionTecnicaExplicita: true,
+        corteManualEstado: "confirmed",
+        planchaAnchoMm: 2500,
+        planchaAltoMm: 1800,
+      },
+    });
+
+    expect(spec.purchaseMode).toBeUndefined();
+    expect(isCatalogGlassPlanable(spec)).toBe(false);
+  });
+
   it("congela especificación al reabrir el mismo producto y toma metadata solo si cambia la selección", () => {
     const initial = buildCatalogGlassTechnicalSpec({
       productId: "glass-1",

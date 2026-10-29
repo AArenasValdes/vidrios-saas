@@ -14,6 +14,7 @@ const glassTemplate = {
     categoriaTecnica: "monolitico",
     revisionTecnicaExplicita: true,
     corteManualEstado: "confirmed",
+    formaCompraVidrio: "full_sheet",
     planchaAnchoMm: 2500,
     planchaAltoMm: 1800,
   },
@@ -111,6 +112,32 @@ describe("ManualGlassMeasurementsEditor", () => {
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
       entries: [expect.objectContaining({ widthMm: 750, heightMm: 1600, paneSlotId: "pane-1" })],
     }));
+  });
+
+  it("identifica fichas legacy sin forma de compra y permite guardar sus medidas para cotizar", () => {
+    const onChange = jest.fn();
+    const legacyProduct = {
+      ...glassTemplate,
+      catalogMetadata: {
+        espesor: "5 mm",
+        categoriaTecnica: "monolitico",
+        revisionTecnicaExplicita: true,
+        corteManualEstado: "confirmed",
+        planchaAnchoMm: 2500,
+        planchaAltoMm: 1800,
+      },
+    } as CotizacionLineTemplate;
+    render(<ManualGlassMeasurementsEditor templates={[legacyProduct]} paneConfiguration={{ componentType: "Paño fijo" }} onChange={onChange} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Ingresar medidas" }));
+    fireEvent.change(screen.getByLabelText("Posición del paño"), { target: { value: "pane-1" } });
+    fireEvent.change(screen.getByLabelText("Producto del catálogo"), { target: { value: "501" } });
+    expect(screen.getByText(/La forma de compra de esta ficha antigua no está confirmada/i)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Ancho final (mm)"), { target: { value: "750" } });
+    fireEvent.change(screen.getByLabelText("Alto final (mm)"), { target: { value: "1600" } });
+    fireEvent.click(screen.getByRole("button", { name: "Agregar referencia de vidrio" }));
+
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ entries: [expect.objectContaining({ widthMm: 750, heightMm: 1600 })] }));
   });
 
   it("muestra las medidas automáticas sin alerta y conserva el vidrio seleccionado al abrir el respaldo manual", () => {

@@ -95,8 +95,7 @@ export function getCatalogGlassTechnicalSpec(template: CotizacionLineTemplate): 
 export function isCatalogGlassPlanable(spec: GlassTechnicalSpec): boolean {
   return Boolean(
     spec.productId &&
-    spec.purchaseMode !== "supplier_cut" &&
-    spec.purchaseMode !== "undecided" &&
+    spec.purchaseMode === "full_sheet" &&
     spec.category !== "pendiente" &&
     Number.isFinite(spec.thicknessMm) && Number(spec.thicknessMm) > 0 &&
     Number.isSafeInteger(spec.sheetWidthMm) && Number(spec.sheetWidthMm) > 0 &&

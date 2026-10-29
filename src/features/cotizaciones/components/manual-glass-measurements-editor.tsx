@@ -309,7 +309,9 @@ export function ManualGlassMeasurementsEditor({ value, templates, onChange, comp
             <p className={s.validationHint} role="status">
               {selectedSpec.purchaseMode === "supplier_cut"
                 ? "Este vidrio se compra cortado por proveedor. Puedes guardar medidas finales para la cotización, pero no se distribuirá como plancha de corte del taller."
-                : "Puedes guardar las medidas finales ahora. Para distribuirlas, la ficha deberá tener espesor, categoría, formato de plancha y aptitud de corte confirmados."}
+                : selectedSpec.purchaseMode !== "full_sheet"
+                  ? "La forma de compra de esta ficha antigua no está confirmada. Puedes guardar medidas finales; para distribuirlas, confirma plancha completa junto con espesor, categoría, formato y aptitud de corte."
+                  : "Puedes guardar las medidas finales ahora. Para distribuirlas, la ficha deberá tener espesor, categoría, formato de plancha y aptitud de corte confirmados."}
             </p>
           ) : null}
           <div className={s.measureFields}>
