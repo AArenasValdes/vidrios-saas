@@ -98,19 +98,18 @@ function mockFetch() {
 describe("GlassDistributionPanel", () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it("calculates a preliminary distribution directly from saved panes and downloads the PDF", async () => {
+  it("calculates a preliminary distribution but blocks provider PDF without validated workshop process", async () => {
     const fetchMock = mockFetch();
     render(<GlassDistributionPanel quoteId="1" quoteCode="COT-QA" clientName="Cliente QA" workName="Obra QA" enabled />);
 
     expect(await screen.findByText("Float incoloro")).toBeInTheDocument();
     expect(screen.getByText("Plancha 2500 × 1800 mm")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Descargar distribución (PDF)" }));
-
-    await waitFor(() => expect(downloadPdfBlob).toHaveBeenCalled());
-    expect(fetchMock.mock.calls[1]?.[0]).toContain("optimizacion-vidrios");
-    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({ mode: "provider_pdf" });
-    expect(createGlassDistributionPdf).toHaveBeenCalledWith(expect.objectContaining({ coverage: source.coverage, results: [verifiedResult] }));
-    expect(screen.queryByText(/dimensiones de mesa|despuntes en cuatro lados|tira mínima|procedimiento manual/i)).not.toBeInTheDocument();
+    const providerButton = screen.getByRole("button", { name: /PDF operativo bloqueado · validación de taller pendiente/i });
+    expect(providerButton).toBeDisabled();
+    fireEvent.click(providerButton);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(downloadPdfBlob).not.toHaveBeenCalled();
+    expect(createGlassDistributionPdf).not.toHaveBeenCalled();
   });
 
   it("muestra simulación parcial de recipe_trace y mantiene bloqueado el PDF de proveedor", async () => {
@@ -151,7 +150,7 @@ describe("GlassDistributionPanel", () => {
 
     expect(await screen.findByText(/La vista previa usa geometría congelada de una receta preliminar/)).toBeInTheDocument();
     expect(screen.getAllByText(/Faltan dimensiones rectangulares, enteras y positivas congeladas/)).toHaveLength(2);
-    const providerButton = screen.getByRole("button", { name: /PDF bloqueado · cobertura incompleta/ });
+    const providerButton = screen.getByRole("button", { name: /PDF operativo bloqueado · cobertura incompleta/ });
     expect(providerButton).toBeDisabled();
     expect(screen.getByText(/La vista preliminar incluye 2 unidades físicas/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Ingresar medidas" })).not.toBeInTheDocument();
@@ -159,7 +158,7 @@ describe("GlassDistributionPanel", () => {
 
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({ mode: "geometric_preview" });
-    expect(screen.getByRole("button", { name: /PDF bloqueado · cobertura incompleta/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /PDF operativo bloqueado · cobertura incompleta/ })).toBeDisabled();
   });
 
   it("previews the verified result and uses that same result for its PDF", async () => {
@@ -171,14 +170,12 @@ describe("GlassDistributionPanel", () => {
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Distribución en plancha de 2500 por 1800 milímetros" })).toBeInTheDocument();
     expect(screen.getByText(/Despuntes y separación geométrica asumidos: 0 mm/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Descargar PDF de esta vista" }));
-
-    await waitFor(() => expect(downloadPdfBlob).toHaveBeenCalled());
-    expect(fetchMock).toHaveBeenCalledTimes(4);
-    expect(fetchMock.mock.calls[2]?.[1]).toEqual({ cache: "no-store" });
-    expect(JSON.parse(String(fetchMock.mock.calls[3]?.[1]?.body))).toEqual({ mode: "provider_pdf" });
-    expect(createGlassDistributionPdf).toHaveBeenCalledTimes(1);
-    expect(createGlassDistributionPdf).toHaveBeenLastCalledWith(expect.objectContaining({ coverage: source.coverage, results: [verifiedResult] }));
+    const providerButton = screen.getByRole("button", { name: /PDF operativo bloqueado · taller pendiente/i });
+    expect(providerButton).toBeDisabled();
+    fireEvent.click(providerButton);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(createGlassDistributionPdf).not.toHaveBeenCalled();
+    expect(downloadPdfBlob).not.toHaveBeenCalled();
   });
 
   it("muestra una vista previa en la pestaña sin iniciar una descarga", async () => {
@@ -234,11 +231,11 @@ describe("GlassDistributionPanel", () => {
     expect(screen.getByText("Float · 1 paño pendiente")).toBeInTheDocument();
     expect(screen.queryByText(/Faltan dimensiones válidas del paño/)).not.toBeInTheDocument();
     expect(await screen.findByRole("img", { name: "Distribución en plancha de 2500 por 1800 milímetros" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /PDF bloqueado · cobertura incompleta/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /PDF operativo bloqueado · cobertura incompleta/ })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Compartir" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Ingresar medidas" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Ingresar medidas" })).not.toBeInTheDocument();
-    expect(screen.getByText("El PDF de proveedor requiere cobertura técnica completa. Revisa arriba cada referencia pendiente.")).toBeInTheDocument();
+    expect(screen.getByText("La cobertura técnica completa no aprueba la fabricación. El PDF operativo para proveedor requiere además un cálculo con proceso de taller validado; prepara la pauta en la sección de fabricación.")).toBeInTheDocument();
     expect(createGlassDistributionPdf).not.toHaveBeenCalled();
     expect(downloadPdfBlob).not.toHaveBeenCalled();
   });
@@ -302,7 +299,7 @@ describe("GlassDistributionPanel", () => {
     expect(screen.getByText("Cobertura operativa: 1 completas · 1 pendientes")).toBeInTheDocument();
     expect(screen.getByText("pane-2 · 1 paño pendiente")).toBeInTheDocument();
     expect(screen.getAllByText("pane-2 · 1 paño pendiente")).toHaveLength(1);
-    expect(screen.getByRole("button", { name: /PDF bloqueado · cobertura incompleta/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /PDF operativo bloqueado · cobertura incompleta/ })).toBeDisabled();
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
@@ -415,17 +412,15 @@ describe("GlassDistributionPanel", () => {
     expect(screen.queryByText("Vidrio viejo")).not.toBeInTheDocument();
   });
 
-  it("ofrece Compartir y usa descarga normal como alternativa sin Web Share", async () => {
+  it("bloquea compartir un PDF operativo si solo existe resultado geométrico", async () => {
     mockFetch();
     render(<GlassDistributionPanel quoteId="1" quoteCode="COT-QA" clientName="Cliente QA" workName="Obra QA" enabled autoPreview />);
     await screen.findByLabelText("Vista previa preliminar de distribución");
-
-    fireEvent.click(screen.getByRole("button", { name: "Compartir" }));
-    await waitFor(() => expect(downloadPdfBlob).toHaveBeenCalled());
-    expect(screen.getByRole("status")).toHaveTextContent("no permite compartir archivos");
+    expect(screen.getByRole("button", { name: "Compartir" })).toBeDisabled();
+    expect(downloadPdfBlob).not.toHaveBeenCalled();
   });
 
-  it("comparte el PDF solo después de tocar Compartir cuando Web Share acepta archivos", async () => {
+  it("no comparte resultado geométrico aunque Web Share acepte archivos", async () => {
     const originalShare = Object.getOwnPropertyDescriptor(navigator, "share");
     const originalCanShare = Object.getOwnPropertyDescriptor(navigator, "canShare");
     const share = jest.fn().mockResolvedValue(undefined);
@@ -438,9 +433,9 @@ describe("GlassDistributionPanel", () => {
       await screen.findByLabelText("Vista previa preliminar de distribución");
       expect(share).not.toHaveBeenCalled();
 
-      fireEvent.click(screen.getByRole("button", { name: "Compartir" }));
-      await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
-      expect(canShare).toHaveBeenCalledWith({ files: [expect.any(File)] });
+      expect(screen.getByRole("button", { name: "Compartir" })).toBeDisabled();
+      expect(share).not.toHaveBeenCalled();
+      expect(canShare).not.toHaveBeenCalled();
       expect(downloadPdfBlob).not.toHaveBeenCalled();
     } finally {
       if (originalShare) Object.defineProperty(navigator, "share", originalShare);
@@ -452,17 +447,14 @@ describe("GlassDistributionPanel", () => {
 
   it("requires a new calculation when frozen panes changed after the panel loaded", async () => {
     const latestSource = { ...source, panes: [{ ...source.panes[0]!, snapshotFingerprint: "snapshot-2" }] };
-    const fetchMock = jest.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => source })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ quoteCode: "COT-QA", mode: "provider_pdf", coverage: source.coverage, warnings: [], results: [verifiedResult], generatedFrom: ["snapshot-2"] }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => latestSource });
+    const fetchMock = jest.fn().mockResolvedValueOnce({ ok: true, json: async () => latestSource });
     global.fetch = fetchMock as unknown as typeof fetch;
     render(<GlassDistributionPanel quoteId="1" quoteCode="COT-QA" clientName="Cliente QA" workName="Obra QA" enabled />);
 
     await screen.findByText("Float incoloro");
-    fireEvent.click(screen.getByRole("button", { name: "Descargar distribución (PDF)" }));
-
-    expect(await screen.findByRole("alert")).toHaveTextContent("Los paños guardados cambiaron");
+    expect(screen.getByRole("button", { name: /PDF operativo bloqueado/i })).toBeDisabled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(downloadPdfBlob).not.toHaveBeenCalled();
     expect(createGlassDistributionPdf).not.toHaveBeenCalled();
   });
@@ -481,11 +473,9 @@ describe("GlassDistributionPanel", () => {
     await screen.findByText("Falta el formato de plancha. Indica ancho y alto para esta distribución.");
     fireEvent.change(screen.getByLabelText("Ancho de plancha (mm)"), { target: { value: "2500" } });
     fireEvent.change(screen.getByLabelText("Alto de plancha (mm)"), { target: { value: "1800" } });
-    fireEvent.click(screen.getByRole("button", { name: "Descargar distribución (PDF)" }));
-
-    await waitFor(() => expect(downloadPdfBlob).toHaveBeenCalled());
-    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({ mode: "provider_pdf", sheetWidthMm: 2500, sheetHeightMm: 1800 });
-    expect(screen.queryByText(/mesa|tira mínima|procedimiento manual|documento de proveedor/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /PDF operativo bloqueado/i })).toBeDisabled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(downloadPdfBlob).not.toHaveBeenCalled();
   });
 });
 

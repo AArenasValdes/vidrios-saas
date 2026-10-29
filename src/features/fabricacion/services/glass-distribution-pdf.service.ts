@@ -79,6 +79,9 @@ export function validateGlassDistributionPdfInput(input: GlassDistributionPdfSou
   }
   if (input.coverage.completeReferenceCount === 0) return "No se puede generar el PDF: no hay referencias de vidrio con cobertura técnica completa.";
   if (!input.panes.length || !input.results.length) return "No se puede generar el PDF: la cotización no tiene paños y planos verificados para resumir.";
+  if (input.results.some((result) => result.calculationMode !== "workshop" || result.productionReadiness !== "workshop_validated")) {
+    return "No se puede generar un PDF operativo para proveedor: el resultado no proviene de un proceso de taller validado.";
+  }
   if (input.results.some((result) => result.status !== "feasible" || !result.verification.passed || result.sheets.length === 0)) {
     return "No se puede generar el PDF: una o más planchas no superaron la verificación geométrica.";
   }

@@ -32,12 +32,13 @@ const inputSchema = z.object({
   processSourceReference: z.string().trim().min(1).max(180),
 }).strict();
 const geometricPreviewSchema = z.object({
-  mode: z.enum(["geometric_preview", "provider_pdf"]),
+  mode: z.literal("geometric_preview"),
   sheetWidthMm: z.number().int().positive().max(20_000).optional(),
   sheetHeightMm: z.number().int().positive().max(20_000).optional(),
 }).strict().refine((value) => (value.sheetWidthMm == null) === (value.sheetHeightMm == null), {
   message: "Indica ancho y alto del formato juntos.",
 });
+const providerPdfSchema = inputSchema.extend({ mode: z.literal("provider_pdf") });
 const saveWorkshopProfileSchema = inputSchema.extend({
   mode: z.literal("save_workshop_profile"),
   productId: z.string().trim().min(1).max(80),
@@ -228,12 +229,15 @@ export async function POST(request: Request, route: RouteContext) {
   if (!quoteId) return NextResponse.json({ error: "Identificador inválido." }, { status: 400 });
   const payload = await request.json().catch(() => null);
   const geometricRequest = geometricPreviewSchema.safeParse(payload);
+  const providerRequest = providerPdfSchema.safeParse(payload);
   const saveProfile = saveWorkshopProfileSchema.safeParse(payload);
-  const parsed = geometricRequest.success || saveProfile.success ? null : inputSchema.safeParse(payload);
-  if (!geometricRequest.success && !saveProfile.success && !parsed?.success) return NextResponse.json({ error: "Completa las reglas físicas requeridas para esta modalidad.", details: parsed && !parsed.success ? parsed.error.flatten() : undefined }, { status: 400 });
-  const mode = geometricRequest.success ? geometricRequest.data.mode : "workshop";
+  const parsed = geometricRequest.success || providerRequest.success || saveProfile.success ? null : inputSchema.safeParse(payload);
+  if (!geometricRequest.success && !providerRequest.success && !saveProfile.success && !parsed?.success) return NextResponse.json({ error: "Completa las reglas físicas requeridas para esta modalidad.", details: parsed && !parsed.success ? parsed.error.flatten() : undefined }, { status: 400 });
+  const mode = geometricRequest.success ? geometricRequest.data.mode : providerRequest.success ? providerRequest.data.mode : "workshop";
   const isGeometricRequest = geometricRequest.success;
-  const workshopInput = saveProfile.success
+  const workshopInput = providerRequest.success
+    ? Object.fromEntries(Object.entries(providerRequest.data).filter(([key]) => key !== "mode")) as z.infer<typeof inputSchema>
+    : saveProfile.success
     ? Object.fromEntries(Object.entries(saveProfile.data).filter(([key]) => key !== "mode" && key !== "productId")) as z.infer<typeof inputSchema>
     : parsed?.success ? parsed.data : null;
   try {
@@ -335,6 +339,9 @@ export async function POST(request: Request, route: RouteContext) {
       });
     }
     const results = optimizeGlassCuttingBatch({ panes, profiles: [...profilesByKey.values()], mode: isGeometricRequest ? "geometric_preview" : "workshop" });
+    if (mode === "provider_pdf" && results.some((result) => result.status !== "feasible" || !result.verification.passed || result.productionReadiness !== "workshop_validated")) {
+      return NextResponse.json({ error: "La descarga para proveedor requiere un plan verificado y un proceso de taller validado.", diagnostics: results.flatMap((result) => result.errors) }, { status: 422 });
+    }
     const warnings = isGeometricRequest ? [
       "Vista geométrica preliminar: separación asumida de 0 mm; no representa una regla física.",
       "El formato se usa en la orientación indicada; no se evalúa girar la plancha.",

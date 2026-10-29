@@ -17,20 +17,20 @@ const profile: GlassCuttingProfile = {
   thicknessMm: 5,
   category: "monolitico",
   finishOrientationKey: "incoloro",
-  sheet: { widthMm: 2500, heightMm: 1800, orientation: "unknown", source: "catalog", sourceReference: null },
+  sheet: { widthMm: 2500, heightMm: 1800, orientation: "fixed", source: "catalog", sourceReference: "ficha QA" },
   process: {
     tableWidthMm: 2500,
     tableHeightMm: 1800,
     supportedCategories: ["monolitico"],
     supportedThicknessesMm: [5],
     edgeTrimMm: { top: 0, right: 0, bottom: 0, left: 0 },
-    kerfOrSeparationMm: 0,
-    minimumStripWidthMm: 0,
-    reusableRemnant: { minimumWidthMm: 1, minimumHeightMm: 1, orientation: "unknown" },
-    supportedOperations: [],
+    kerfOrSeparationMm: 5,
+    minimumStripWidthMm: 1,
+    reusableRemnant: { minimumWidthMm: 400, minimumHeightMm: 400, orientation: "fixed" },
+    supportedOperations: ["straight_cut", "quiebre"],
     sequence: [],
-    workshopValidation: "unvalidated",
-    sourceReference: null,
+    workshopValidation: "validated",
+    sourceReference: "proceso QA validado",
   },
   purchaseCost: null,
 };
@@ -54,11 +54,11 @@ function pane(id: string): GlassPanePlanningUnit {
       productId: "qa-glass-5mm",
       thicknessMm: 5,
       category: "monolitico",
-      manualCutStatus: "pending_validation",
-      technicalReviewConfirmed: false,
+      manualCutStatus: "confirmed",
+      technicalReviewConfirmed: true,
       sheetWidthMm: 2500,
       sheetHeightMm: 1800,
-      pieceOrientation: "unknown",
+      pieceOrientation: "fixed",
       provenance: "catalog",
       sourceProductId: "qa-glass-5mm",
       sourceValues: null,
@@ -112,9 +112,10 @@ describe("createGlassDistributionPdf", () => {
   });
 
   it("exports the same verified two-pane plan with a consistent summary and plan on one A4 page", async () => {
-    const results = optimizeGlassCuttingBatch({ panes: [pane("1"), pane("2")], profiles: [profile], mode: "geometric_preview" });
+    const results = optimizeGlassCuttingBatch({ panes: [pane("1"), pane("2")], profiles: [profile], mode: "workshop" });
     expect(results).toHaveLength(1);
     expect(results[0]?.status).toBe("feasible");
+    expect(results[0]?.productionReadiness).toBe("workshop_validated");
     expect(results[0]?.verification.passed).toBe(true);
     expect(results[0]?.summary.sheetCount).toBe(1);
 
@@ -139,7 +140,8 @@ describe("createGlassDistributionPdf", () => {
     expect(text).toContain("Planchas necesarias: 1 · Tipos de paño: 1 · Unidades físicas: 2");
     expect(text).toContain("Cobertura técnica completa: 1 de 1 referencias · 2 unidades físicas verificadas");
     expect(text).toContain("V1 · Ventana corredera");
-    expect(text).toContain("Sobrantes: 1.000 × 1.600 mm · 2.500 × 200 mm");
+    expect(text).toContain("Sobrantes:");
+    expect(text).toContain("3 sobrantes geométricos");
     expect(text).toContain("Despuntes y separación asumidos: 0 mm · plancha sin giro.");
     expect(text).toContain("Confirmar medidas y tolerancias con el proveedor antes de cortar.");
     expect(text).not.toContain("unit-1");
@@ -153,7 +155,7 @@ describe("createGlassDistributionPdf", () => {
   });
 
   it("blocks a PDF when the source summary omits dimensions even if the geometry has a verified plan", async () => {
-    const results = optimizeGlassCuttingBatch({ panes: [pane("1"), pane("2")], profiles: [profile], mode: "geometric_preview" });
+    const results = optimizeGlassCuttingBatch({ panes: [pane("1"), pane("2")], profiles: [profile], mode: "workshop" });
     const error = validateGlassDistributionPdfInput({
       quoteCode: "COT-QA-003",
       clientName: "Cliente de prueba",
@@ -176,7 +178,7 @@ describe("createGlassDistributionPdf", () => {
   });
 
   it("keeps page totals consistent for a multi-sheet plan", async () => {
-    const results = optimizeGlassCuttingBatch({ panes: [pane("1"), pane("2"), pane("3"), pane("4")], profiles: [profile], mode: "geometric_preview" });
+    const results = optimizeGlassCuttingBatch({ panes: [pane("1"), pane("2"), pane("3"), pane("4")], profiles: [profile], mode: "workshop" });
     expect(results[0]?.verification.passed).toBe(true);
     expect(results[0]?.summary.sheetCount).toBeGreaterThan(1);
 
@@ -202,7 +204,7 @@ describe("createGlassDistributionPdf", () => {
   });
 
   it("rechaza el PDF incluso con plano válido cuando la cobertura de la cotización es parcial", async () => {
-    const results = optimizeGlassCuttingBatch({ panes: [pane("1"), pane("2")], profiles: [profile], mode: "geometric_preview" });
+    const results = optimizeGlassCuttingBatch({ panes: [pane("1"), pane("2")], profiles: [profile], mode: "workshop" });
     const input = {
       quoteCode: "COT-QA-PARCIAL", clientName: "Cliente QA", workName: "Trabajo QA",
       coverage: {
@@ -216,6 +218,19 @@ describe("createGlassDistributionPdf", () => {
 
     expect(validateGlassDistributionPdfInput(input)).toMatch(/cobertura de vidrio está incompleta/i);
     await expect(createGlassDistributionPdf(input)).rejects.toThrow(/cobertura de vidrio está incompleta/i);
+  });
+
+  it("rechaza en el generador PDF un resultado geométrico aunque la cobertura esté completa", async () => {
+    const results = optimizeGlassCuttingBatch({ panes: [pane("1"), pane("2")], profiles: [profile], mode: "geometric_preview" });
+    expect(results[0]?.calculationMode).toBe("geometric_preview");
+    const input = {
+      quoteCode: "COT-QA-GEOM", clientName: "Cliente QA", workName: "Trabajo QA",
+      coverage: completeCoverage,
+      panes: [{ quoteItemId: "item-qa", componentCode: "V1", productId: "qa-glass-5mm", displayName: "Float", thicknessMm: 5, category: "monolitico", widthMm: 750, heightMm: 1600, quantity: 2, physicalUnitCount: 2 }],
+      results,
+    };
+    expect(validateGlassDistributionPdfInput(input)).toMatch(/proceso de taller validado/i);
+    await expect(createGlassDistributionPdf(input)).rejects.toThrow(/proceso de taller validado/i);
   });
 });
 

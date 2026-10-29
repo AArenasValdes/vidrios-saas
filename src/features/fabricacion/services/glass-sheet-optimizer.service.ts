@@ -812,6 +812,7 @@ function optimizeGroup(
   } : null;
   const status: GlassCuttingResult["status"] = verification.passed ? "feasible" : "requires_review";
   return {
+    calculationMode: mode,
     status,
     geometricFeasibility: verification.passed ? "feasible" : "not_found",
     minimumSheetCountProven: minimumSheetCountProven && !(solver?.limitReached ?? false),
