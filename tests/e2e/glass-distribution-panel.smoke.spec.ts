@@ -115,4 +115,13 @@ test("actualiza la cobertura del panel tras guardar una medición simulada, sin 
   expect(sourceReads).toBe(2);
   expect(simulatedSaves).toBe(1);
   expect(databaseRequests).toEqual([]);
+
+  await page.reload();
+  await expect(page.getByText("1 completas · 1 pendientes")).toBeVisible();
+  await expect(page.getByText("600 × 1000 mm")).toBeVisible();
+  await expect(page.getByText("1 unidad física")).toBeVisible();
+  await expect(page.getByRole("button", { name: /PDF bloqueado · cobertura incompleta/ })).toBeDisabled();
+  expect(sourceReads).toBe(3);
+  expect(simulatedSaves).toBe(1);
+  expect(databaseRequests).toEqual([]);
 });
