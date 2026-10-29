@@ -414,17 +414,20 @@ describe("despiece de líneas universales con precio Arquetipo", () => {
       organizationId: 3,
       lineName: "Serie 32",
       variant: "normal",
+      configurationId: "ventora:l32:proyectante",
       leavesCount: 1,
       recipes: [],
     };
 
-    expect(resolveUniversalPricedLineFallbacks({ ...base, typology: "proyectante" })).toHaveLength(1);
+    const serie32Fallback = resolveUniversalPricedLineFallbacks({ ...base, typology: "proyectante" });
+    expect(serie32Fallback).toHaveLength(1);
+    expect(serie32Fallback[0]?.definition.identidad.configurationId).toBe("ventora:l32:proyectante");
     expect(resolveUniversalPricedLineFallbacks({ ...base, typology: "pano_fijo" })).toEqual([]);
     expect(resolveUniversalPricedLineFallbacks({ ...base, typology: "proyectante", leavesCount: 2 })).toEqual([]);
     expect(resolveUniversalPricedLineFallbacks({ ...base, typology: "proyectante", variant: "con_camara" })).toEqual([]);
   });
 
-  it("bloquea Serie 32 cuando la identidad técnica del vidrio contradice la receta monolítica 4 mm", () => {
+  it("conserva geometría estructural de Serie 32 cuando el vidrio contradice la receta monolítica 4 mm", () => {
     const item = itemFor(pricedLines.find((line) => line.line === "L32")!);
     item.vidrio = "Float 10 mm";
     item.observaciones = encodeCotizacionItemPresentationMeta({
@@ -457,11 +460,16 @@ describe("despiece de líneas universales con precio Arquetipo", () => {
     const result = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 3 });
 
     expect(result).toMatchObject({
-      estado: "composicion_sin_receta",
+      estado: "receta_incompleta",
       formal: null,
       recipe: null,
     });
-    expect(result.message).toContain("monolítico de 4 mm");
+    expect(result.geometryOnly?.profiles.map((profile) => profile.codigoPerfil)).toEqual(
+      expect.arrayContaining(["3201", "3202"]),
+    );
+    expect(result.geometryOnly?.profiles.some((profile) => profile.codigoPerfil === "3208")).toBe(false);
+    expect(result.cubication?.glass).toBeNull();
+    expect(result.message).toMatch(/geometría estructural parcial/i);
     const unknownGlassItem = itemFor(pricedLines.find((line) => line.line === "L32")!);
     unknownGlassItem.vidrio = "Vidrio monolítico";
     const unknownGlassResult = resolveFabricacionDespieceForQuoteItem({
@@ -469,8 +477,9 @@ describe("despiece de líneas universales con precio Arquetipo", () => {
       recipes: [],
       organizationId: 3,
     });
-    expect(unknownGlassResult.estado).toBe("composicion_sin_receta");
+    expect(unknownGlassResult.estado).toBe("receta_incompleta");
     expect(unknownGlassResult.formal).toBeNull();
+    expect(unknownGlassResult.geometryOnly?.profiles).toHaveLength(4);
   });
 
   it("mantiene identidad y cortes por ítem al consolidar una corredera y un proyectante", () => {

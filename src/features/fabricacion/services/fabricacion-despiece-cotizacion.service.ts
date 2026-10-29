@@ -532,24 +532,9 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     };
   }
 
-  if (
+  const isSerie32ProjectingLine =
     (catalogKey === "ventora:l32" || catalogKey === "ventora:arquetipo-l32-proyectante") &&
-    tipologia === "proyectante" &&
-    !isCompatibleSerie32NormalGlass({
-      technicalSpec: presentation.glassTechnicalSpec,
-      glassName: input.item.vidrio,
-    })
-  ) {
-    return {
-      estado: "composicion_sin_receta",
-      formal: null,
-      cubication: null,
-      recipe: null,
-      barsAvailable: false,
-      preliminary: false,
-      message: "La receta Serie 32 proyectante Normal 1H solo describe vidrio monolítico de 4 mm. Confirma una especificación compatible para calcular el despiece.",
-    };
-  }
+    tipologia === "proyectante";
 
   const aperturaFromPresentation = resolveAperturaForRecipeMatch(
     presentation.fabricacionApertura,
@@ -685,7 +670,14 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     leg: sodalConfig?.leg ?? null,
     reinforcement: sodalConfig?.reinforcement ?? null,
     preferredRecipeId: presentation.fabricationRecipeId || null,
-    glassName: input.item.vidrio || null,
+    // L32 Normal 1H resuelve la identidad estructural independiente del vidrio.
+    // Su acristalamiento se clasifica después, para evitar que un vidrio no
+    // documentado descarte también la geometría de marco y hoja.
+    glassName:
+      isSerie32ProjectingLine &&
+      (!presentation.fabricacionVariante || presentation.fabricacionVariante === "normal")
+        ? null
+        : input.item.vidrio || null,
     previewListaParaProbar: true,
   };
   const veratecDefaultTwoMobileComposition =
@@ -893,6 +885,7 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   const sodalCatalogo2026UniversalLine = isSodalCatalogo2026UniversalFallbackKey(catalogKey);
   const shouldResolveUniversalFallback = (state: string) =>
     state === "sin_receta" ||
+    (isSerie32ProjectingLine && state === "composicion_sin_receta") ||
     (userConfirmedUniversalLine &&
       (state === "receta_no_validada" || state === "multiples_recetas")) ||
     (sodalCatalogo2026UniversalLine &&
@@ -962,6 +955,7 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
         leavesCount: recipeResolutionInput.hojas,
         typology: recipeResolutionInput.tipologia,
         glassName: recipeResolutionInput.glassName,
+        configurationId: recipeResolutionInput.configurationId,
         includeDocumentedVariants: true,
         recipes: input.recipes,
       });
@@ -1093,6 +1087,37 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     };
   }
 
+  if (
+    isSerie32ProjectingLine &&
+    isSerie32NormalOneLeafRecipe(recipe, input.organizationId, lineTemplateId) &&
+    resolveSerie32NormalGlazing({
+      technicalSpec: presentation.glassTechnicalSpec,
+      glassName: input.item.vidrio,
+    }) !== "documented_monolithic_4mm"
+  ) {
+    const geometryOnly = buildSerie32StructuralGeometryOnlyFallback({
+      recipe,
+      organizationId: input.organizationId,
+      lineTemplateId,
+      item: input.item,
+      ancho,
+      alto,
+      cantidad,
+    });
+    if (geometryOnly) return geometryOnly;
+
+    return {
+      estado: "receta_incompleta",
+      formal: null,
+      cubication: null,
+      recipe,
+      barsAvailable: false,
+      preliminary: true,
+      message:
+        "La geometría de acristalamiento de Serie 32 Normal requiere especificación monolítica 4 mm. No se pudo aislar una identidad Normal 1H con perfiles estructurales seguros; no se generó un despiece completo.",
+    };
+  }
+
   const formal = construirSnapshotFabricacionCotizacion({
     recipe: canPreviewCalculatedL20Recipe(recipe)
       ? l20PreliminaryRecipe(recipe)
@@ -1149,22 +1174,178 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   };
 }
 
-function isCompatibleSerie32NormalGlass(input: {
+type Serie32NormalGlazingResolution = "documented_monolithic_4mm" | "unresolved";
+
+function resolveSerie32NormalGlazing(input: {
   technicalSpec: ReturnType<typeof decodeCotizacionItemPresentationMeta>["glassTechnicalSpec"];
   glassName: string | null | undefined;
-}): boolean {
+}): Serie32NormalGlazingResolution {
   const spec = input.technicalSpec;
-  if (spec) {
-    return spec.category === "monolitico" && spec.thicknessMm === 4;
-  }
-
   const normalized = (input.glassName ?? "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
-  if (/\b(dvh|termopanel|doble\s+vidriado)\b/.test(normalized)) return false;
-  const thickness = normalized.match(/(?:^|\D)(\d+(?:[.,]\d+)?)\s*mm(?:\D|$)/)?.[1];
-  return thickness != null && Number(thickness.replace(",", ".")) === 4;
+  const namedThickness = normalized.match(/(?:^|\D)(\d+(?:[.,]\d+)?)\s*mm(?:\D|$)/)?.[1];
+  const namedThicknessMm = namedThickness == null
+    ? null
+    : Number(namedThickness.replace(",", "."));
+  const namesOtherComposition = /\b(dvh|termopanel|doble\s+vidriado|laminad[oa]|templad[oa])\b/.test(normalized);
+  const explicitlyMonolithic = /\b(monolitic[oa]|simple)\b/.test(normalized);
+
+  if (spec) {
+    if (
+      spec.hasConflict ||
+      spec.category !== "monolitico" ||
+      spec.thicknessMm !== 4 ||
+      namesOtherComposition ||
+      (namedThicknessMm != null && namedThicknessMm !== spec.thicknessMm)
+    ) {
+      return "unresolved";
+    }
+    return "documented_monolithic_4mm";
+  }
+
+  return explicitlyMonolithic && namedThicknessMm === 4 && !namesOtherComposition
+    ? "documented_monolithic_4mm"
+    : "unresolved";
+}
+
+function buildSerie32StructuralGeometryOnlyFallback(input: {
+  recipe: FabricationRecipeRecord;
+  organizationId: number | null;
+  lineTemplateId: number | null;
+  item: CotizacionWorkflowItem;
+  ancho: number;
+  alto: number;
+  cantidad: number;
+}): FabricacionDespieceCotizacionResult | null {
+  if (!isSerie32NormalOneLeafRecipe(input.recipe, input.organizationId, input.lineTemplateId)) {
+    return null;
+  }
+
+  const sourceDefinition = enriquecerCodigosPerfilRecetaFabricacion({
+    receta: input.recipe.definition,
+    sourceType: input.recipe.sourceType,
+    sourceReference: input.recipe.sourceReference,
+    lineName: input.recipe.lineName,
+  });
+  const structuralProfiles = sourceDefinition.perfiles.filter((profile) =>
+    (profile.codigoPerfil === "3201" && /marco/i.test(profile.funcion)) ||
+    (profile.codigoPerfil === "3202" && /hoja/i.test(profile.funcion))
+  );
+  if (
+    structuralProfiles.length !== 4 ||
+    structuralProfiles.some((profile) =>
+      profile.reglaMedida.base !== "ancho_total" &&
+      profile.reglaMedida.base !== "alto_total" &&
+      profile.reglaMedida.base !== "ancho_por_hoja" &&
+      profile.reglaMedida.base !== "alto_por_hoja"
+    )
+  ) {
+    return null;
+  }
+
+  // This is an in-memory projection of the exact recipe. It deliberately drops
+  // glazing-dependent profiles/materials and never mutates or persists recipe data.
+  const profileDefinition = {
+    ...sourceDefinition,
+    perfiles: structuralProfiles,
+    vidrios: [],
+    accesorios: [],
+    datosPendientes: [],
+  };
+  const entrada = {
+    anchoTotalMm: input.ancho,
+    altoTotalMm: input.alto,
+    cantidad: input.cantidad,
+    hojas: 1,
+    modulos: 1,
+    variante: "normal",
+  };
+  const result = calcularCubicacionYPauta(profileDefinition, entrada);
+  if (!result.calculable || result.perfiles.length !== 4) return null;
+
+  const pautaBarras = construirPautaBarrasFabricacion({
+    receta: profileDefinition,
+    resultado: result,
+  });
+  const displaySnapshot: FabricacionCotizacionSnapshot = {
+    schemaVersion: 1,
+    tipo: "fabricacion_receta_snapshot",
+    recipeId: input.recipe.id,
+    recipeDefinitionId: profileDefinition.identidad.recetaId,
+    recipeVersion: input.recipe.version,
+    recipeStatus: input.recipe.status,
+    recipeScope: input.recipe.scope,
+    lineTemplateId: input.recipe.lineTemplateId,
+    recipeIdentity: profileDefinition.identidad,
+    input: entrada,
+    selectedVariant: "normal",
+    result,
+    pauta: result.perfiles,
+    vidrios: [],
+    advertencias: result.advertencias,
+    pautaBarras,
+    calculatedAt: new Date().toISOString(),
+  };
+  const cubication = fabricacionSnapshotToLegacyCubicationSnapshot(displaySnapshot);
+  cubication.estimationKind = "recipe_geometry_only";
+
+  return {
+    estado: "receta_incompleta",
+    formal: null,
+    cubication,
+    recipe: null,
+    barsAvailable: pautaBarras.calculable && pautaBarras.barras.length > 0,
+    preliminary: true,
+    message:
+      `Geometría estructural parcial de Serie 32 Proyectante Normal 1H calculada para ${input.item.vidrio?.trim() || "vidrio sin especificación"}. ` +
+      "Se muestran únicamente marco 3201 y hoja 3202. Junquillo 3208 y medidas de vidrio quedan pendientes; no es un despiece completo ni una pauta operativa.",
+    geometryOnly: {
+      sourceRecipeId: input.recipe.id,
+      sourceVariant: "normal",
+      profiles: result.perfiles,
+      bars: pautaBarras,
+      pendingCommercial: ["glass", "glass_bead"],
+      commercialMaterials: [
+        {
+          role: "glass",
+          label: input.item.vidrio?.trim() || "Vidrio sin especificación",
+          status: "unmapped",
+          netPrice: null,
+        },
+        {
+          role: "glass_bead",
+          label: "Compatibilidad y medida del junquillo 3208 · por confirmar",
+          status: "unmapped",
+          netPrice: null,
+        },
+      ],
+    },
+  };
+}
+
+function isSerie32NormalOneLeafRecipe(
+  recipe: FabricationRecipeRecord,
+  organizationId: number | null,
+  lineTemplateId: number | null,
+): boolean {
+  const identity = recipe.definition.identidad;
+  return Boolean(
+    organizationId != null &&
+    lineTemplateId != null &&
+    recipe.organizationId === organizationId &&
+    recipe.lineTemplateId === lineTemplateId &&
+    !recipe.eliminadoEn &&
+    recipe.status !== "archived" &&
+    identity.codigo === "L32-PROY-NORMAL-1H" &&
+    identity.tipologia === "proyectante" &&
+    identity.apertura === "proyectante" &&
+    identity.hojas === 1 &&
+    identity.modulos === 1 &&
+    identity.variante === "normal" &&
+    recipe.variant === "normal"
+  );
 }
 
 type VeratecGeometryOnlyGlass = {

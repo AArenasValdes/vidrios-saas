@@ -139,6 +139,7 @@ type UniversalFallbackInput = {
   leavesCount?: number | null;
   typology?: string | null;
   glassName?: string | null;
+  configurationId?: string | null;
 };
 
 const L42_ARQUETIPO_NO_CHAMBER_VARIANT = "arquetipo_sin_camara_monolitico";
@@ -369,6 +370,23 @@ function buildReferenceRecipe(input: UniversalFallbackInput): FabricationRecipeR
     sourceReference = "ventora:serie-42-proyectante:normal:referencia";
   }
 
+  if (
+    line === "L32" &&
+    input.configurationId === "ventora:l32:proyectante"
+  ) {
+    // The catalog has one exact commercial configuration for the existing
+    // Normal 1H recipe. Carry it in the ephemeral fallback identity so the
+    // recipe resolver can match the selected configuration without using glass
+    // compatibility as a proxy for structural identity.
+    definition = {
+      ...definition,
+      identidad: {
+        ...definition.identidad,
+        configurationId: "ventora:l32:proyectante",
+      },
+    };
+  }
+
   if (workshopValidated) {
     definition = markUserConfirmedProfileCutRecipe(definition);
     sourceType = "workshop";
@@ -415,6 +433,7 @@ export function resolveUniversalPricedLineFallback(input: {
   lineName: string;
   variant: string | null;
   leavesCount?: number | null;
+  configurationId?: string | null;
   recipes: readonly FabricationRecipeRecord[];
 }): FabricationRecipeRecord | null {
   const candidates = resolveUniversalPricedLineFallbacks({
@@ -434,6 +453,7 @@ export function resolveUniversalPricedLineFallbacks(input: {
   leavesCount?: number | null;
   typology?: string | null;
   glassName?: string | null;
+  configurationId?: string | null;
   /** Incluye composiciones documentadas alternativas en el selector del Constructor. */
   includeDocumentedVariants?: boolean;
   recipes: readonly FabricationRecipeRecord[];
@@ -502,6 +522,7 @@ export function resolveUniversalPricedLineFallbacks(input: {
       leavesCount: input.leavesCount,
       typology: input.typology,
       glassName: input.glassName,
+      configurationId: input.configurationId,
     });
     return candidates.filter((candidate) =>
       !activeLineRecipes.some((recipe) =>
@@ -523,6 +544,7 @@ export function resolveUniversalPricedLineFallbacks(input: {
     leavesCount: input.leavesCount,
     typology: input.typology,
     glassName: input.glassName,
+    configurationId: input.configurationId,
   });
   const candidates = fallback ? [fallback] : [];
 
