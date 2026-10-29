@@ -88,7 +88,8 @@
 
 .editButton,
 .saveButton,
-.cancelButton {
+.cancelButton,
+.retryButton {
   min-height: 44px;
   border-radius: 10px;
   padding: 8px 12px;
@@ -143,6 +144,18 @@
   border: 1px solid #cbd5e1;
   background: #fff;
   color: #33445d;
+}
+
+.retryButton {
+  justify-self: start;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #33445d;
+}
+
+.retryButton:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
 
 .saveError {

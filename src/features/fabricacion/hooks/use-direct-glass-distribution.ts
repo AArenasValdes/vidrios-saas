@@ -50,7 +50,9 @@ export function useDirectGlassDistribution({
       const requestController = new AbortController();
       controller = requestController;
       void fetchGlassDistributionData(quoteId, requestController.signal)
-        .then((data) => setCoverageState({ quoteId, coverage: data.coverage }))
+        .then((data) => {
+          if (!requestController.signal.aborted) setCoverageState({ quoteId, coverage: data.coverage });
+        })
         .catch(() => {
           if (!requestController.signal.aborted) setCoverageState({
           quoteId,

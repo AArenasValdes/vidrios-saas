@@ -1,11 +1,12 @@
 /** @jest-environment jsdom */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { GlassCuttingResult } from "@/features/fabricacion/types/glass-sheet-optimizer-contracts";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { GlassDistributionPanel } from "../glass-distribution-panel";
 import { createGlassDistributionPdf } from "@/features/fabricacion/services/glass-distribution-pdf.service";
 import { downloadPdfBlob } from "@/utils/cotizacion-pdf";
+import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 jest.mock("@/features/fabricacion/services/glass-distribution-pdf.service", () => ({
   createGlassDistributionPdf: jest.fn(async () => ({ output: () => new Blob(["pdf"], { type: "application/pdf" }) })),
@@ -78,6 +79,7 @@ const source = {
     snapshotFingerprint: "snapshot-1",
   }],
 };
+const glassTemplate = { id: 501, nombre: "Float incoloro 5 mm", categoria: "vidrio", material: "Cristal", catalogMetadata: { espesor: "5 mm", categoriaTecnica: "monolitico", revisionTecnicaExplicita: true, corteManualEstado: "confirmed", planchaAnchoMm: 2500, planchaAltoMm: 1800 }, isActive: true, eliminadoEn: null } as unknown as CotizacionLineTemplate;
 
 function mockFetch() {
   const fetchMock = jest.fn()
@@ -186,6 +188,178 @@ describe("GlassDistributionPanel", () => {
     expect(screen.getByText("Para descargar el pedido completo, ingresa las medidas de vidrio pendientes.")).toBeInTheDocument();
     expect(createGlassDistributionPdf).not.toHaveBeenCalled();
     expect(downloadPdfBlob).not.toHaveBeenCalled();
+  });
+
+  it("actualiza cobertura y paños tras guardar una medición parcial sin recargar", async () => {
+    const pendingSource = {
+      ...source,
+      panes: [],
+      coverage: {
+        status: "partial" as const,
+        completeReferenceCount: 0,
+        pendingReferenceCount: 2,
+        pendingReferences: ["pane-1", "pane-2"].map((displayName) => ({ quoteItemId: "item-1", componentCode: "V1", componentName: "Corredera", displayName, reason: "Faltan dimensiones válidas del paño." })),
+        diagnostics: [],
+      },
+    };
+    const updatedSource = {
+      ...source,
+      coverage: {
+        status: "partial" as const,
+        completeReferenceCount: 1,
+        pendingReferenceCount: 1,
+        pendingReferences: [{ quoteItemId: "item-1", componentCode: "V1", componentName: "Corredera", displayName: "pane-2", reason: "Faltan dimensiones válidas del paño." }],
+        diagnostics: [],
+      },
+    };
+    let resolveUpdatedSource!: (response: unknown) => void;
+    const updatedSourceRequest = new Promise((resolve) => { resolveUpdatedSource = resolve; });
+    const fetchMock = jest.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => pendingSource })
+      .mockReturnValueOnce(updatedSourceRequest);
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const item = {
+      id: "item-1", codigo: "V1", nombre: "Corredera", tipo: "Ventana corredera", vidrio: "Float incoloro 5 mm", cantidad: 1,
+      observaciones: encodeCotizacionItemPresentationMeta({ sheetScheme: "2 hojas" }),
+      manualGlassMeasurements: { version: 2, entries: [] },
+    } as unknown as CotizacionWorkflowItem;
+
+    render(<GlassDistributionPanel
+      quoteId="1" quoteCode="COT-QA" clientName="Cliente QA" workName="Obra QA" enabled
+      items={[item]} templates={[glassTemplate]}
+      onSaveManualGlassMeasurements={jest.fn().mockResolvedValue(undefined)}
+    />);
+
+    expect(await screen.findByText("0 completas · 2 pendientes")).toBeInTheDocument();
+    expect(screen.getByText("pane-1, pane-2 · 2 paños pendientes")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Ingresar medidas" }));
+    await screen.findByLabelText("Posición del paño");
+    fireEvent.change(screen.getByLabelText("Posición del paño"), { target: { value: "pane-1" } });
+    fireEvent.change(screen.getByLabelText("Producto del catálogo"), { target: { value: "501" } });
+    fireEvent.change(screen.getByLabelText("Ancho final (mm)"), { target: { value: "600" } });
+    fireEvent.change(screen.getByLabelText("Alto final (mm)"), { target: { value: "1000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Agregar referencia de vidrio" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar medidas" }));
+    expect(screen.getByRole("button", { name: "Guardando…" })).toBeInTheDocument();
+    expect(await screen.findByText("Actualizando paños, referencias y disponibilidad de descarga…")).toBeInTheDocument();
+    expect(screen.queryByText("0 completas · 2 pendientes")).not.toBeInTheDocument();
+    await act(async () => { resolveUpdatedSource({ ok: true, json: async () => updatedSource }); });
+
+    expect(await screen.findByText("Medidas guardadas. Cobertura actualizada.")).toBeInTheDocument();
+    expect(screen.getByText("1 completas · 1 pendientes")).toBeInTheDocument();
+    expect(screen.getByText("pane-2 · 1 paño pendiente")).toBeInTheDocument();
+    expect(screen.getAllByText("pane-2 · 1 paño pendiente")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: /PDF bloqueado · cobertura incompleta/ })).toBeDisabled();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("permite reintentar una recarga fallida sin volver a guardar medidas", async () => {
+    const partialSource = {
+      ...source,
+      coverage: {
+        status: "partial" as const,
+        completeReferenceCount: 0,
+        pendingReferenceCount: 1,
+        pendingReferences: [{ quoteItemId: "item-1", componentCode: "V1", componentName: "Corredera", displayName: "pane-1", reason: "Faltan dimensiones válidas del paño." }],
+        diagnostics: [],
+      },
+    };
+    const fetchMock = jest.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => partialSource })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: "Error de recarga QA" }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ...source, coverage: { ...source.coverage, status: "complete", completeReferenceCount: 1, pendingReferenceCount: 0, pendingReferences: [] } }) });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const item = {
+      id: "item-1", codigo: "V1", nombre: "Corredera", tipo: "Ventana corredera", vidrio: "Float incoloro 5 mm", cantidad: 1,
+      observaciones: encodeCotizacionItemPresentationMeta({ sheetScheme: "2 hojas" }),
+      manualGlassMeasurements: { version: 2, entries: [] },
+    } as unknown as CotizacionWorkflowItem;
+    const save = jest.fn().mockResolvedValue(undefined);
+
+    render(<GlassDistributionPanel quoteId="1" quoteCode="COT-QA" clientName="Cliente QA" workName="Obra QA" enabled items={[item]} templates={[glassTemplate]} onSaveManualGlassMeasurements={save} />);
+    await screen.findByText("0 completas · 1 pendientes");
+    fireEvent.click(screen.getByRole("button", { name: "Ingresar medidas" }));
+    await screen.findByLabelText("Posición del paño");
+    fireEvent.change(screen.getByLabelText("Posición del paño"), { target: { value: "pane-1" } });
+    fireEvent.change(screen.getByLabelText("Producto del catálogo"), { target: { value: "501" } });
+    fireEvent.change(screen.getByLabelText("Ancho final (mm)"), { target: { value: "600" } });
+    fireEvent.change(screen.getByLabelText("Alto final (mm)"), { target: { value: "1000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Agregar referencia de vidrio" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar medidas" }));
+
+    expect(await screen.findByText(/Las medidas quedaron guardadas, pero no pudimos actualizar la cobertura/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Reintentar actualización" }));
+    expect(await screen.findByText("Medidas guardadas. Cobertura actualizada.")).toBeInTheDocument();
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("1 completas · 0 pendientes")).toBeInTheDocument();
+  });
+
+  it("invalida el plano previo cuando cambian las medidas guardadas", async () => {
+    const partialCoverage = {
+      status: "partial" as const,
+      completeReferenceCount: 1,
+      pendingReferenceCount: 1,
+      pendingReferences: [{ quoteItemId: "item-1", componentCode: "V1", componentName: "Corredera", displayName: "pane-2", reason: "Faltan dimensiones válidas del paño." }],
+      diagnostics: [],
+    };
+    const partialSource = { ...source, coverage: partialCoverage };
+    const completeSource = { ...source, coverage: { ...source.coverage, completeReferenceCount: 1, pendingReferenceCount: 0, pendingReferences: [] } };
+    let resolveUpdatedSource!: (response: unknown) => void;
+    const updatedSourceRequest = new Promise((resolve) => { resolveUpdatedSource = resolve; });
+    const fetchMock = jest.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => partialSource })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ quoteCode: "COT-QA", mode: "geometric_preview", coverage: partialCoverage, warnings: [], results: [verifiedResult], generatedFrom: ["snapshot-1"] }) })
+      .mockReturnValueOnce(updatedSourceRequest);
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const item = {
+      id: "item-1", codigo: "V1", nombre: "Corredera", tipo: "Ventana corredera", vidrio: "Float incoloro 5 mm", cantidad: 1,
+      observaciones: encodeCotizacionItemPresentationMeta({ sheetScheme: "2 hojas" }),
+      manualGlassMeasurements: { version: 2, entries: [] },
+    } as unknown as CotizacionWorkflowItem;
+
+    render(<GlassDistributionPanel quoteId="1" quoteCode="COT-QA" clientName="Cliente QA" workName="Obra QA" enabled items={[item]} templates={[glassTemplate]} onSaveManualGlassMeasurements={jest.fn().mockResolvedValue(undefined)} />);
+    await screen.findByText("1 completas · 1 pendientes");
+    fireEvent.click(screen.getByRole("button", { name: "Vista previa" }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "Escape", code: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Ingresar medidas" }));
+    await screen.findByLabelText("Posición del paño");
+    fireEvent.change(screen.getByLabelText("Posición del paño"), { target: { value: "pane-2" } });
+    fireEvent.change(screen.getByLabelText("Producto del catálogo"), { target: { value: "501" } });
+    fireEvent.change(screen.getByLabelText("Ancho final (mm)"), { target: { value: "600" } });
+    fireEvent.change(screen.getByLabelText("Alto final (mm)"), { target: { value: "1000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Agregar referencia de vidrio" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar medidas" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(await screen.findByText("Actualizando paños, referencias y disponibilidad de descarga…")).toBeInTheDocument();
+    await act(async () => { resolveUpdatedSource({ ok: true, json: async () => completeSource }); });
+
+    expect(await screen.findByText("Cobertura completa")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Vista previa" })).toBeEnabled();
+    expect(screen.queryByLabelText("Vista previa preliminar de distribución")).not.toBeInTheDocument();
+  });
+
+  it("ignora una respuesta anterior que llega después de cambiar de cotización", async () => {
+    let resolveFirst!: (response: unknown) => void;
+    let resolveSecond!: (response: unknown) => void;
+    const first = new Promise((resolve) => { resolveFirst = resolve; });
+    const second = new Promise((resolve) => { resolveSecond = resolve; });
+    const quoteOne = { ...source, quoteCode: "COT-UNO", panes: [{ ...source.panes[0]!, displayName: "Vidrio viejo" }] };
+    const quoteTwo = { ...source, quoteCode: "COT-DOS", panes: [{ ...source.panes[0]!, displayName: "Vidrio vigente" }] };
+    const fetchMock = jest.fn().mockReturnValueOnce(first).mockReturnValueOnce(second);
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const { rerender } = render(<GlassDistributionPanel quoteId="1" quoteCode="COT-UNO" clientName="QA" workName="QA" enabled items={[]} templates={[]} onSaveManualGlassMeasurements={jest.fn()} />);
+    rerender(<GlassDistributionPanel quoteId="2" quoteCode="COT-DOS" clientName="QA" workName="QA" enabled items={[]} templates={[]} onSaveManualGlassMeasurements={jest.fn()} />);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    resolveSecond({ ok: true, json: async () => quoteTwo });
+    expect(await screen.findByText("Vidrio vigente")).toBeInTheDocument();
+    resolveFirst({ ok: true, json: async () => quoteOne });
+    await waitFor(() => expect(screen.getByText("Vidrio vigente")).toBeInTheDocument());
+    expect(screen.queryByText("Vidrio viejo")).not.toBeInTheDocument();
   });
 
   it("ofrece Compartir y usa descarga normal como alternativa sin Web Share", async () => {

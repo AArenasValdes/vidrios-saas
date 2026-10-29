@@ -18,14 +18,19 @@ type Props = {
   items?: readonly CotizacionWorkflowItem[];
   templates?: readonly CotizacionLineTemplate[];
   onSaveMeasurements?: (itemId: string, value: ManualGlassPaneMeasurementsSnapshot) => Promise<void>;
+  isRefreshing?: boolean;
+  isCoverageCurrent?: boolean;
+  refreshError?: string | null;
+  onRetryRefresh?: () => Promise<void>;
 };
 
-export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [], templates = [], onSaveMeasurements = async () => undefined }: Props) {
+export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [], templates = [], onSaveMeasurements = async () => undefined, isRefreshing = false, isCoverageCurrent = true, refreshError = null, onRetryRefresh }: Props) {
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [draft, setDraft] = useState<ManualGlassPaneMeasurementsSnapshot | null>(null);
   const [savingItemId, setSavingItemId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
+  const [retryingRefresh, setRetryingRefresh] = useState(false);
 
   const itemsById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
   const pendingGroups = useMemo(() => {
@@ -49,7 +54,7 @@ export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [],
     return [...groups.values()];
   }, [coverage]);
 
-  if (!coverage || coverage.status === "complete") return null;
+  if (!coverage || (coverage.status === "complete" && !saveNotice && !saveError && !refreshError)) return null;
 
   const partial = coverage.status === "partial";
   const activeItem = activeItemId ? itemsById.get(activeItemId) : undefined;
@@ -74,24 +79,55 @@ export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [],
     setSaveNotice(null);
     try {
       await onSaveMeasurements(activeItemId, draft);
-      refreshDirectGlassDistribution(quoteId);
-      setActiveItemId(null);
-      setDraft(null);
-      setSaveNotice("Medidas guardadas. Actualizando cobertura…");
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : "No pudimos guardar las medidas. Intenta nuevamente.");
+      setSavingItemId(null);
+      return;
+    }
+    refreshDirectGlassDistribution(quoteId);
+    setActiveItemId(null);
+    setDraft(null);
+    if (!onRetryRefresh) {
+      setSaveNotice("Medidas guardadas. La cobertura se actualizará al volver a abrir la distribución.");
+      setSavingItemId(null);
+      return;
+    }
+    setSaveNotice("Medidas guardadas. Actualizando cobertura…");
+    try {
+      await onRetryRefresh?.();
+      setSaveNotice("Medidas guardadas. Cobertura actualizada.");
+    } catch (cause) {
+      const reason = cause instanceof Error ? ` ${cause.message}` : "";
+      setSaveError(`Las medidas quedaron guardadas, pero no pudimos actualizar la cobertura.${reason}`);
     } finally {
       setSavingItemId(null);
+    }
+  };
+
+  const retryCoverageRefresh = async () => {
+    if (!onRetryRefresh || retryingRefresh) return;
+    setRetryingRefresh(true);
+    setSaveError(null);
+    setSaveNotice("Actualizando cobertura…");
+    try {
+      await onRetryRefresh();
+      setSaveNotice("Medidas guardadas. Cobertura actualizada.");
+    } catch {
+      setSaveError("No pudimos actualizar la cobertura. Puedes reintentar sin volver a guardar las medidas.");
+    } finally {
+      setRetryingRefresh(false);
     }
   };
 
   return (
     <aside className={s.notice} aria-label="Cobertura de medidas de vidrio" aria-live="polite" data-quote-id={quoteId}>
       <div className={s.summary}>
-        <strong>{partial ? "Distribución parcial" : "Medidas de vidrio pendientes"}</strong>
-        <span>{coverage.completeReferenceCount} completas · {coverage.pendingReferenceCount} pendientes</span>
+        <strong>{coverage.status === "complete" ? "Cobertura completa" : partial ? "Distribución parcial" : "Medidas de vidrio pendientes"}</strong>
+        <span>{isRefreshing ? "Actualizando cobertura…" : !isCoverageCurrent ? "Cobertura desactualizada" : `${coverage.completeReferenceCount} completas · ${coverage.pendingReferenceCount} pendientes`}</span>
       </div>
-      {pendingGroups.length > 0 ? (
+      {isRefreshing ? <p role="status">Actualizando paños, referencias y disponibilidad de descarga…</p> : null}
+      {!isCoverageCurrent && !isRefreshing ? <p role="status">Se ocultan los conteos anteriores hasta confirmar la cobertura vigente.</p> : null}
+      {isCoverageCurrent && !isRefreshing && pendingGroups.length > 0 ? (
         <ul>
           {pendingGroups.map((group) => {
             const editing = activeItemId === group.itemId;
@@ -142,8 +178,13 @@ export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [],
             );
           })}
         </ul>
-      ) : <p>Aún no hay medidas de vidrio disponibles para distribuir.</p>}
+      ) : isCoverageCurrent && coverage.status !== "complete" && !isRefreshing ? <p>Aún no hay medidas de vidrio disponibles para distribuir.</p> : null}
       {saveNotice ? <p className={s.saveNotice} role="status">{saveNotice}</p> : null}
+      {saveError && !activeItemId ? <p className={s.saveError} role="alert">{saveError}</p> : null}
+      {refreshError && !saveError ? <p className={s.saveError} role="alert">{refreshError}</p> : null}
+      {saveError && onRetryRefresh && !activeItemId ? <button type="button" className={s.retryButton} onClick={() => void retryCoverageRefresh()} disabled={retryingRefresh}>
+        {retryingRefresh ? "Actualizando…" : "Reintentar actualización"}
+      </button> : null}
     </aside>
   );
 }
