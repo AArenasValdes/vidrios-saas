@@ -784,3 +784,10 @@ Generado desde app/ y verificado por pnpm docs:check. El detalle funcional de ca
 | `/api/proveedor-catalogos/mis-precios` | route | private / lectura para usuarios de organización; edición admin o maestro, precios aislados por organización | `app/api/proveedor-catalogos/mis-precios/route.ts` |
 | `/configuracion/empresa/mis-precios` | page | private / usuarios autenticados con organización activa; configuración de compra, incluye entrada contextual **Perfiles y costos** desde las cuatro líneas Thermowin | `app/(pwa-app)/configuracion/empresa/mis-precios/page.tsx` |
 | `/qa-precios-compra` | page | private / QA | `app/(landing-web)/qa-precios-compra/page.tsx` |
+
+## Ruta de soporte E2E: `/e2e-glass-distribution`
+
+- **Tipo**: ruta de prueba local; devuelve 404 en producción y cuando `VENTORA_E2E_TEST_HARNESS` no es exactamente `1`.
+- **Archivos**: `app/e2e-glass-distribution/page.tsx`, `app/e2e-glass-distribution/panel-fixture.tsx`, `tests/e2e/glass-distribution-panel.smoke.spec.ts`.
+- **Uso**: monta el panel real con una cotización sintética; Playwright controla las respuestas de cobertura y el endpoint de guardado simulado. No consulta Supabase ni crea datos.
+- **Límite**: sirve para validar el DOM y flujo del panel en Chromium; no es smoke autenticado ni persistencia E2E de Ventora.
