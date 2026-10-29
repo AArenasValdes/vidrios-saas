@@ -34,6 +34,7 @@ function pane(input: {
   width: number | null;
   height: number | null;
   quantity?: number;
+  commercialQuantity?: number;
   organizationId?: string;
   quoteId?: string;
   productId?: string | null;
@@ -78,6 +79,7 @@ function pane(input: {
     widthMm: input.width,
     heightMm: input.height,
     quantity,
+    commercialQuantity: input.commercialQuantity ?? 1,
     dimensionProvenance: input.dimensionProvenance ?? "validated_recipe",
     dimensionTraceRuleIds: ["glass-rule-1"],
     recipeStatus: input.recipeStatus === undefined ? "validated" : input.recipeStatus,
@@ -271,6 +273,37 @@ describe("optimizeGlassCuttingBatch", () => {
     const workshop = optimizeGlassCuttingBatch({ panes: [manualPane], profiles: [profile()], mode: "workshop" })[0]!;
     expect(workshop.status).toBe("requires_review");
     expect(workshop.errors).toContain("La receta del paño pane-manual-preview no está validada.");
+  });
+
+  it("permite recipe_trace solo como simulación geométrica y mantiene bloqueado taller", () => {
+    const tracedPane = pane({ id: "trace-preview", width: 520, height: 880, recipeStatus: "draft", dimensionProvenance: "recipe_trace", status: "requires_review" });
+    const preview = optimizeGlassCuttingBatch({ panes: [tracedPane], profiles: [profile()], mode: "geometric_preview" })[0]!;
+    expect(preview.status).toBe("feasible");
+    expect(preview.verification.passed).toBe(true);
+    expect(preview.productionReadiness).toBe("requires_workshop_validation");
+
+    const workshop = optimizeGlassCuttingBatch({ panes: [tracedPane], profiles: [profile()], mode: "workshop" })[0]!;
+    expect(workshop.status).toBe("requires_review");
+    expect(workshop.errors).toContain("La receta del paño pane-trace-preview no está validada.");
+  });
+
+  it("rechaza recipe_trace con dimensiones o identidad física insuficientes", () => {
+    const missingGeometry = pane({ id: "trace-missing", width: null, height: 880, recipeStatus: "draft", dimensionProvenance: "recipe_trace" });
+    const missingIdentity = { ...pane({ id: "trace-identity", width: 520, height: 880, recipeStatus: "draft", dimensionProvenance: "recipe_trace" }), paneId: "", snapshotFingerprint: "" };
+    for (const invalid of [missingGeometry, missingIdentity]) {
+      const result = optimizeGlassCuttingBatch({ panes: [invalid], profiles: [profile()], mode: "geometric_preview" })[0]!;
+      expect(result.status).not.toBe("feasible");
+      expect(result.errors.join(" ")).toMatch(/dimensiones inválidas|identidad física estable/i);
+      expect(result.productionReadiness).toBe("requires_workshop_validation");
+    }
+  });
+
+  it("rechaza en el optimizador la cantidad física incoherente con cantidad comercial", () => {
+    const inconsistent = pane({ id: "trace-quantity", width: 520, height: 880, quantity: 3, commercialQuantity: 2, recipeStatus: "draft", dimensionProvenance: "recipe_trace" });
+    const result = optimizeGlassCuttingBatch({ panes: [inconsistent], profiles: [profile()], mode: "geometric_preview" })[0]!;
+
+    expect(result.status).not.toBe("feasible");
+    expect(result.errors.join(" ")).toMatch(/cantidad física.*cantidad comercial/i);
   });
 
   it("TC-14: clasifica candidatos de retazo según umbrales explícitos y conserva áreas", () => {

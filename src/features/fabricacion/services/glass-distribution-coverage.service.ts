@@ -7,6 +7,9 @@ export type GlassDistributionCoverageStatus = "complete" | "partial" | "unavaila
 
 export type GlassDistributionReference = {
   quoteItemId: string;
+  paneId?: string;
+  glassId?: string | null;
+  paneSlotId?: string;
   componentCode: string;
   componentName: string;
   displayName: string | null;
@@ -21,8 +24,10 @@ export type GlassDistributionCoverage = {
   diagnostics: string[];
 };
 
-type CoveragePane = {
+export type GlassPaneGeometryCandidate = {
   quoteItemId: string;
+  paneId?: string;
+  snapshotFingerprint?: string;
   componentCode?: string;
   componentName?: string | null;
   glassId: string | null;
@@ -30,16 +35,26 @@ type CoveragePane = {
   productId: string | null;
   displayName: string | null;
   logicalComponentId: string | null;
-  technicalSpec: { productId?: string | null; hasConflict?: boolean; thicknessMm?: number | null; category?: string } | null;
+  technicalSpec: { productId?: string | null; hasConflict?: boolean; thicknessMm?: number | null; category?: string; manualCutStatus?: string } | null;
   widthMm: number | null;
   heightMm: number | null;
   quantity: number;
+  commercialQuantity?: number | null;
   paneUnitIds?: string[];
   physicalUnitCount?: number | null;
   dimensionProvenance: string;
   recipeStatus: string | null;
   validationStatus?: string;
   warnings: string[];
+};
+
+export type GlassPaneGeometryExclusion = {
+  quoteItemId: string;
+  paneId: string;
+  componentCode: string;
+  componentName: string;
+  displayName: string | null;
+  reason: string;
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -65,7 +80,7 @@ function itemHasExplicitGlass(item: CotizacionWorkflowItem): boolean {
   );
 }
 
-export function isGlassCoveragePaneComplete(pane: CoveragePane): boolean {
+export function isGlassCoveragePaneComplete(pane: GlassPaneGeometryCandidate): boolean {
   const physicalUnitCount = pane.physicalUnitCount ?? pane.paneUnitIds?.length ?? 0;
   return Boolean(
     pane.validationStatus === "eligible_for_manual_planning"
@@ -75,7 +90,7 @@ export function isGlassCoveragePaneComplete(pane: CoveragePane): boolean {
     && pane.productId
     && pane.technicalSpec
     && !pane.technicalSpec.hasConflict
-    && (!pane.technicalSpec.productId || pane.technicalSpec.productId === pane.productId)
+    && pane.technicalSpec.productId === pane.productId
     && Number.isFinite(pane.technicalSpec.thicknessMm)
     && Number(pane.technicalSpec.thicknessMm) > 0
     && pane.technicalSpec.category
@@ -93,10 +108,10 @@ export function isGlassCoveragePaneComplete(pane: CoveragePane): boolean {
 }
 
 /** Safe for an informative geometric preview; it does not grant coverage or workshop eligibility. */
-export function isGlassPaneGeometryComplete(pane: CoveragePane): boolean {
+export function getGlassPaneGeometryExclusionReason(pane: GlassPaneGeometryCandidate): string | null {
   const physicalUnitCount = pane.physicalUnitCount ?? pane.paneUnitIds?.length ?? 0;
   const warnings = pane.warnings ?? [];
-  const blocksGeometry = warnings.some((warning) =>
+  const blockingWarning = warnings.find((warning) =>
     warning.includes("ficha técnica del vidrio cambió")
     || warning.includes("configuración del componente cambió")
     || warning.includes("debe asociarse explícitamente")
@@ -105,31 +120,34 @@ export function isGlassPaneGeometryComplete(pane: CoveragePane): boolean {
     || warning.includes("cantidad comercial guardada del componente no es válida")
     || warning.includes("geometría del paño no es rectangular")
   );
-  return Boolean(
-    !blocksGeometry
-    && pane.dimensionProvenance !== "legacy_snapshot"
-    && pane.dimensionProvenance !== "missing"
-    && pane.logicalComponentId
-    && pane.glassId
-    && pane.productId
-    && pane.technicalSpec
-    && !pane.technicalSpec.hasConflict
-    && (!pane.technicalSpec.productId || pane.technicalSpec.productId === pane.productId)
-    && Number.isFinite(pane.technicalSpec.thicknessMm)
-    && Number(pane.technicalSpec.thicknessMm) > 0
-    && pane.technicalSpec.category
-    && pane.technicalSpec.category !== "pendiente"
-    && Number.isSafeInteger(pane.widthMm)
-    && Number(pane.widthMm) > 0
-    && Number.isSafeInteger(pane.heightMm)
-    && Number(pane.heightMm) > 0
-    && Number.isSafeInteger(pane.quantity)
-    && pane.quantity > 0
-    && pane.quantity === physicalUnitCount
-  );
+  if (blockingWarning) return blockingWarning;
+  if (pane.dimensionProvenance === "legacy_snapshot") return "El snapshot histórico no conserva identidad técnica suficiente para simular este paño.";
+  if (pane.dimensionProvenance === "missing") return "No hay dimensiones congeladas para este paño.";
+  if (!pane.logicalComponentId || !pane.glassId || !pane.paneId || !pane.snapshotFingerprint) return "Falta identidad física estable del componente, vidrio o snapshot.";
+  if (!pane.productId || !pane.technicalSpec) return "Falta el producto o la especificación técnica congelada del vidrio.";
+  if (pane.technicalSpec.hasConflict) return "La especificación técnica del vidrio tiene un conflicto pendiente.";
+  if (pane.technicalSpec.productId !== pane.productId) return "El producto no coincide exactamente con la especificación técnica congelada.";
+  if (!Number.isFinite(pane.technicalSpec.thicknessMm) || Number(pane.technicalSpec.thicknessMm) <= 0) return "Falta un espesor técnico válido del vidrio.";
+  if (!pane.technicalSpec.category || pane.technicalSpec.category === "pendiente") return "Falta una categoría técnica compatible del vidrio.";
+  if (pane.technicalSpec.manualCutStatus === "not_admitted") return "La especificación del vidrio no admite corte manual.";
+  if (!Number.isSafeInteger(pane.widthMm) || Number(pane.widthMm) <= 0 || !Number.isSafeInteger(pane.heightMm) || Number(pane.heightMm) <= 0) {
+    return "Faltan dimensiones rectangulares, enteras y positivas congeladas para este paño.";
+  }
+  if (!Number.isSafeInteger(Number(pane.widthMm) * Number(pane.heightMm))) return "El área geométrica del paño excede el rango entero seguro.";
+  if (!Number.isSafeInteger(pane.quantity) || pane.quantity <= 0 || pane.quantity !== physicalUnitCount) return "La cantidad física no coincide con las identidades de unidad guardadas.";
+  if (!Number.isSafeInteger(pane.commercialQuantity) || Number(pane.commercialQuantity) <= 0) return "Falta una cantidad comercial válida para comprobar las unidades físicas.";
+  if (pane.quantity % Number(pane.commercialQuantity) !== 0) return "La cantidad física no es coherente con la cantidad comercial del componente.";
+  if (!pane.paneUnitIds?.length || pane.paneUnitIds.length !== pane.quantity || pane.paneUnitIds.some((id) => !id.trim())
+    || new Set(pane.paneUnitIds).size !== pane.paneUnitIds.length) return "Faltan identidades físicas únicas para cada unidad de este paño.";
+  return null;
 }
 
-function referenceKey(pane: CoveragePane): string {
+/** Safe for an informative geometric preview; it does not grant coverage or workshop eligibility. */
+export function isGlassPaneGeometryComplete(pane: GlassPaneGeometryCandidate): boolean {
+  return getGlassPaneGeometryExclusionReason(pane) === null;
+}
+
+function referenceKey(pane: GlassPaneGeometryCandidate): string {
   return `${pane.quoteItemId}|${pane.glassId ?? pane.productId ?? pane.displayName ?? "glass-reference"}`;
 }
 
@@ -140,21 +158,21 @@ function referenceKey(pane: CoveragePane): string {
  */
 export function buildGlassDistributionCoverage(input: {
   items: readonly CotizacionWorkflowItem[];
-  panes: readonly CoveragePane[];
+  panes: readonly GlassPaneGeometryCandidate[];
 }): GlassDistributionCoverage {
   const itemsById = new Map(input.items.map((item) => [item.id, item]));
-  const refs = new Map<string, { panes: CoveragePane[]; item: CotizacionWorkflowItem | undefined; isConflictedSlot?: boolean }>();
-  const invalidatedSlotPanes = new Set<CoveragePane>();
+  const refs = new Map<string, { panes: GlassPaneGeometryCandidate[]; item: CotizacionWorkflowItem | undefined; isConflictedSlot?: boolean }>();
+  const invalidatedSlotPanes = new Set<GlassPaneGeometryCandidate>();
 
   for (const rawPane of input.panes) {
-    const pane: CoveragePane = { ...rawPane, warnings: [...rawPane.warnings] };
+    const pane: GlassPaneGeometryCandidate = { ...rawPane, warnings: [...rawPane.warnings] };
     const key = referenceKey(pane);
     const current = refs.get(key);
     if (current) current.panes.push(pane);
     else refs.set(key, { panes: [pane], item: itemsById.get(pane.quoteItemId) });
   }
 
-  const isPaneComplete = (pane: CoveragePane): boolean => {
+  const isPaneComplete = (pane: GlassPaneGeometryCandidate): boolean => {
     const item = itemsById.get(pane.quoteItemId);
     const itemQuantity = item?.cantidad;
     return !invalidatedSlotPanes.has(pane)
@@ -200,7 +218,7 @@ export function buildGlassDistributionCoverage(input: {
 
       const manualPanes = itemPanes.filter((pane) => pane.dimensionProvenance === "manual");
       const manualEntryByGlassId = new Map(manualSnapshot.entries.map((entry) => [entry.id, entry]));
-      const resolvedSlotByPane = new Map<CoveragePane, string | null>();
+      const resolvedSlotByPane = new Map<GlassPaneGeometryCandidate, string | null>();
       const slotClaimCounts = new Map<string, number>();
 
       for (const pane of manualPanes) {
@@ -215,7 +233,7 @@ export function buildGlassDistributionCoverage(input: {
       }
 
       const coveredManualSlotIds = new Set<string>();
-      const conflictedSlotPanes = new Map<string, CoveragePane[]>();
+      const conflictedSlotPanes = new Map<string, GlassPaneGeometryCandidate[]>();
 
       for (const pane of manualPanes) {
         const resolvedSlotId = resolvedSlotByPane.get(pane) ?? null;
@@ -327,6 +345,9 @@ export function buildGlassDistributionCoverage(input: {
       : "Falta registrar uno o más paños de vidrio de este componente.";
     pendingReferences.push({
       quoteItemId: item?.id ?? pane?.quoteItemId ?? "",
+      ...(pane?.paneId ? { paneId: pane.paneId } : {}),
+      ...(pane?.glassId ? { glassId: pane.glassId } : {}),
+      ...(pane?.paneSlotId ? { paneSlotId: pane.paneSlotId } : {}),
       componentCode: pane?.componentCode ?? item?.codigo ?? "Componente",
       componentName: pane?.componentName ?? item?.nombre ?? "Componente de la cotización",
       displayName: pane?.displayName ?? item?.vidrio ?? null,

@@ -67,6 +67,7 @@ function pane(id: string): GlassPanePlanningUnit {
     widthMm: 750,
     heightMm: 1600,
     quantity: 1,
+    commercialQuantity: 1,
     dimensionProvenance: "validated_recipe",
     recipeStatus: "validated",
     validationStatus: "eligible_for_manual_planning",

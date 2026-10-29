@@ -22,6 +22,7 @@ export type GlassPanePlanningUnit = Pick<
   | "widthMm"
   | "heightMm"
   | "quantity"
+  | "commercialQuantity"
   | "dimensionProvenance"
   | "recipeStatus"
   | "validationStatus"

@@ -1,4 +1,4 @@
-import { buildGlassDistributionCoverage } from "../glass-distribution-coverage.service";
+import { buildGlassDistributionCoverage, getGlassPaneGeometryExclusionReason, isGlassCoveragePaneComplete, isGlassPaneGeometryComplete } from "../glass-distribution-coverage.service";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { NormalizedGlassPane } from "../glass-pane-normalization.service";
 import { decodeCotizacionItemPresentationMeta, encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
@@ -28,7 +28,7 @@ function pane(quoteItemId: string, glassId: string, overrides: Partial<Normalize
       manualCutStatus: "confirmed", provenance: "catalog", sourceProductId: `product-${glassId}`, sourceValues: null,
       technicalReviewConfirmed: true,
     },
-    widthMm: 600, heightMm: 1000, quantity: 1, dimensionProvenance: "validated_recipe", dimensionTraceRuleIds: [],
+    widthMm: 600, heightMm: 1000, quantity: 1, commercialQuantity: 1, dimensionProvenance: "validated_recipe", dimensionTraceRuleIds: [],
     recipeStatus: "validated", validationStatus: "eligible_for_manual_planning", warnings: [], snapshotVersion: 1,
     snapshotFingerprint: `fingerprint-${quoteItemId}-${glassId}`, normalizationVersion: 1,
     ...overrides,
@@ -83,6 +83,48 @@ describe("buildGlassDistributionCoverage", () => {
 
     expect(coverage).toMatchObject({ status: "unavailable", completeReferenceCount: 0, pendingReferenceCount: 1 });
     expect(coverage.pendingReferences[0]?.reason).toBe("La receta no está validada por el taller.");
+  });
+
+  it("admite recipe_trace con geometría congelada e identidad física solo para vista previa", () => {
+    const preliminary = pane("item-1", "glass-1", {
+      dimensionProvenance: "recipe_trace",
+      recipeStatus: "lista_para_validar",
+      validationStatus: "requires_review",
+      warnings: ["La receta no está validada por el taller."],
+    });
+
+    expect(isGlassPaneGeometryComplete(preliminary)).toBe(true);
+    expect(isGlassCoveragePaneComplete(preliminary)).toBe(false);
+    expect(getGlassPaneGeometryExclusionReason(preliminary)).toBeNull();
+  });
+
+  it("explica por qué bloquea recipe_trace sin medidas físicas suficientes o cantidad coherente", () => {
+    const missingDimensions = pane("item-1", "glass-1", {
+      dimensionProvenance: "recipe_trace", widthMm: null, heightMm: null,
+    });
+    const inconsistentQuantity = pane("item-1", "glass-2", {
+      dimensionProvenance: "recipe_trace", quantity: 3, commercialQuantity: 2,
+      paneUnitIds: ["one", "two", "three"],
+    });
+
+    expect(getGlassPaneGeometryExclusionReason(missingDimensions)).toMatch(/dimensiones rectangulares/i);
+    expect(getGlassPaneGeometryExclusionReason(inconsistentQuantity)).toMatch(/cantidad comercial/i);
+  });
+
+  it("excluye producto incompatible, conflicto técnico y snapshots legacy de la simulación", () => {
+    const productMismatch = pane("item-1", "glass-1", {
+      dimensionProvenance: "recipe_trace",
+      technicalSpec: { ...pane("item-1", "glass-1").technicalSpec!, productId: "other-product" },
+    });
+    const conflict = pane("item-1", "glass-2", {
+      dimensionProvenance: "recipe_trace",
+      technicalSpec: { ...pane("item-1", "glass-2").technicalSpec!, hasConflict: true },
+    });
+    const legacy = pane("item-1", "glass-3", { dimensionProvenance: "legacy_snapshot" });
+
+    expect(getGlassPaneGeometryExclusionReason(productMismatch)).toMatch(/no coincide exactamente/i);
+    expect(getGlassPaneGeometryExclusionReason(conflict)).toMatch(/conflicto pendiente/i);
+    expect(getGlassPaneGeometryExclusionReason(legacy)).toMatch(/snapshot histórico/i);
   });
 
   it("no declara cobertura completa cuando la normalización exige revisión aunque dimensiones y unidades estén presentes", () => {

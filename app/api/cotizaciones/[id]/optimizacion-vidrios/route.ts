@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { AuthRouteAccessError, resolveAuthenticatedRouteContext } from "@/features/auth/services/auth-route-access.service";
-import { extractNormalizedGlassPanesForOrganization } from "@/features/fabricacion/services/glass-pane-normalization.service";
-import { buildGlassDistributionCoverage, isGlassCoveragePaneComplete, isGlassPaneGeometryComplete } from "@/features/fabricacion/services/glass-distribution-coverage.service";
+import { extractNormalizedGlassPanesForOrganization, type NormalizedGlassPane } from "@/features/fabricacion/services/glass-pane-normalization.service";
+import { buildGlassDistributionCoverage, getGlassPaneGeometryExclusionReason, isGlassCoveragePaneComplete, isGlassPaneGeometryComplete, type GlassDistributionCoverage, type GlassPaneGeometryExclusion } from "@/features/fabricacion/services/glass-distribution-coverage.service";
 import { optimizeGlassCuttingBatch } from "@/features/fabricacion/services/glass-sheet-optimizer.service";
 import type { GlassCuttingProfile, GlassPanePlanningUnit } from "@/features/fabricacion/types/glass-sheet-optimizer-contracts";
 import type { GlassManualCutProcessConstraints, GlassSheetPhysicalFormat } from "@/features/fabricacion/types/glass-cutting-contracts";
@@ -158,6 +158,45 @@ async function readWorkshopProfiles(organizationId: number, productIds: Array<st
   }));
 }
 
+type QuoteGlassPane = NormalizedGlassPane & {
+  componentCode: string;
+  componentName: string | null;
+  finishOrientationKey: string;
+  orientation: NonNullable<NormalizedGlassPane["technicalSpec"]>["pieceOrientation"];
+};
+
+function buildPreviewExclusions(panes: readonly QuoteGlassPane[], coverage: GlassDistributionCoverage): GlassPaneGeometryExclusion[] {
+  const paneExclusions = panes.flatMap((pane) => {
+    const reason = getGlassPaneGeometryExclusionReason(pane);
+    if (!reason) return [];
+    return [{
+      quoteItemId: pane.quoteItemId,
+      paneId: pane.paneId,
+      componentCode: pane.componentCode,
+      componentName: pane.componentName ?? "Componente de la cotización",
+      displayName: pane.displayName,
+      reason,
+    }];
+  });
+  const eligiblePaneIds = new Set(panes.filter(isGlassPaneGeometryComplete).map((pane) => pane.paneId));
+  const knownExclusionIds = new Set(paneExclusions.map((entry) => entry.paneId));
+  const referenceExclusions = coverage.pendingReferences.flatMap((reference, index) => {
+    if (reference.paneId && (eligiblePaneIds.has(reference.paneId) || knownExclusionIds.has(reference.paneId))) return [];
+    const paneId = reference.paneId ?? `${reference.quoteItemId}:coverage-pending:${index + 1}`;
+    if (knownExclusionIds.has(paneId)) return [];
+    knownExclusionIds.add(paneId);
+    return [{
+      quoteItemId: reference.quoteItemId,
+      paneId,
+      componentCode: reference.componentCode,
+      componentName: reference.componentName,
+      displayName: reference.displayName,
+      reason: reference.reason,
+    }];
+  });
+  return [...paneExclusions, ...referenceExclusions];
+}
+
 async function auth() {
   const context = await resolveAuthenticatedRouteContext();
   return Number(context.profile.organizationId);
@@ -171,10 +210,12 @@ export async function GET(_request: Request, route: RouteContext) {
     const loaded = await loadPanes(quoteId, organizationId);
     if (!loaded) return NextResponse.json({ error: "No encontramos esta cotización." }, { status: 404 });
     const workshopProfiles = await readWorkshopProfiles(organizationId, loaded.panes.map((pane) => pane.productId));
-    return NextResponse.json({ quoteCode: loaded.quote.code, panes: loaded.panes.map(({ paneUnitIds, ...pane }) => ({
+    const previewExclusions = buildPreviewExclusions(loaded.panes, loaded.coverage);
+    const geometricPanes = loaded.panes.filter(isGlassPaneGeometryComplete);
+    return NextResponse.json({ quoteCode: loaded.quote.code, panes: loaded.panes.map((pane) => ({
       ...pane,
-      physicalUnitCount: isGlassPaneGeometryComplete({ ...pane, paneUnitIds }) ? paneUnitIds.length : null,
-    })), diagnostics: loaded.diagnostics, coverage: loaded.coverage, workshopProfiles });
+      physicalUnitCount: isGlassPaneGeometryComplete(pane) ? pane.paneUnitIds.length : null,
+    })), preliminaryPaneCount: geometricPanes.length, previewExclusions, diagnostics: loaded.diagnostics, coverage: loaded.coverage, workshopProfiles });
   } catch (error) {
     if (error instanceof AuthRouteAccessError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error("[API] optimización de vidrios read", error);
@@ -232,8 +273,9 @@ export async function POST(request: Request, route: RouteContext) {
       return NextResponse.json({ error: "La pauta operativa requiere cobertura técnica completa de vidrio.", diagnostics: loaded.coverage.diagnostics, coverage: loaded.coverage }, { status: 422 });
     }
     const completePanes = loaded.panes.filter(isGeometricRequest ? isGlassPaneGeometryComplete : isGlassCoveragePaneComplete);
+    const previewExclusions = isGeometricRequest ? buildPreviewExclusions(loaded.panes, loaded.coverage) : [];
     if (isGeometricRequest && completePanes.length === 0) {
-      return NextResponse.json({ error: "No hay paños completos para mostrar una vista previa.", diagnostics: loaded.coverage.diagnostics, coverage: loaded.coverage }, { status: 422 });
+      return NextResponse.json({ error: previewExclusions[0]?.reason ?? "No hay geometría de paños admisible para mostrar una vista previa.", diagnostics: previewExclusions.map((entry) => `${entry.componentCode} · ${entry.componentName}: ${entry.reason}`), previewExclusions, coverage: loaded.coverage }, { status: 422 });
     }
     if (!isGeometricRequest) {
       const pendingPanes = loaded.panes.filter((pane) => pane.validationStatus !== "eligible_for_manual_planning");
@@ -296,11 +338,14 @@ export async function POST(request: Request, route: RouteContext) {
     const warnings = isGeometricRequest ? [
       "Vista geométrica preliminar: separación asumida de 0 mm; no representa una regla física.",
       "El formato se usa en la orientación indicada; no se evalúa girar la plancha.",
+      ...(panesForCalculation.some((pane) => pane.dimensionProvenance === "recipe_trace")
+        ? ["Incluye geometría preliminar de recipe_trace. No está validada por el taller ni es apta para corte operativo."] : []),
+      ...(previewExclusions.length > 0 ? [`Se excluyeron ${previewExclusions.length} referencia(s) por falta de geometría o identidad técnica admisible.`] : []),
       ...(panesForCalculation.some((pane) => !pane.technicalSpec?.pieceOrientation || pane.technicalSpec.pieceOrientation === "unknown")
         ? ["La orientación no confirmada se trata como fija: los paños no se giran."] : []),
       "No es una pauta operativa ni está aprobada para fabricación.",
     ] : [];
-    return NextResponse.json({ quoteId, quoteCode: loaded.quote.code, mode, coverage: loaded.coverage, warnings, results, generatedFrom: loaded.panes.map((pane) => pane.snapshotFingerprint) });
+    return NextResponse.json({ quoteId, quoteCode: loaded.quote.code, mode, coverage: loaded.coverage, warnings, previewExclusions, preliminaryPaneCount: panesForCalculation.length, results, generatedFrom: loaded.panes.map((pane) => pane.snapshotFingerprint) });
   } catch (error) {
     if (error instanceof AuthRouteAccessError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error("[API] optimización de vidrios calculate", error);

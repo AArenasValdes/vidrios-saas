@@ -62,6 +62,10 @@ const source = {
   coverage: { status: "complete" as const, completeReferenceCount: 1, pendingReferenceCount: 0, pendingReferences: [], diagnostics: [] },
   panes: [{
     quoteItemId: "item-1",
+    paneId: "logical-1:glass-1",
+    paneUnitIds: ["logical-1:glass-1:1", "logical-1:glass-1:2"],
+    commercialQuantity: 1,
+    finishOrientationKey: "glass-1:monolitico:5:unknown",
     logicalComponentId: "logical-1",
     glassId: "glass-1",
     productId: "glass-1",
@@ -109,6 +113,55 @@ describe("GlassDistributionPanel", () => {
     expect(screen.queryByText(/dimensiones de mesa|despuntes en cuatro lados|tira mínima|procedimiento manual/i)).not.toBeInTheDocument();
   });
 
+  it("muestra simulación parcial de recipe_trace y mantiene bloqueado el PDF de proveedor", async () => {
+    const excludedPane = {
+      ...source.panes[0],
+      paneId: "logical-1:glass-missing",
+      paneUnitIds: [],
+      glassId: "glass-missing",
+      widthMm: null,
+      heightMm: null,
+      quantity: 0,
+      physicalUnitCount: null,
+      dimensionProvenance: "recipe_trace",
+      recipeStatus: "lista_para_validar",
+      validationStatus: "requires_review" as const,
+      snapshotFingerprint: "snapshot-missing",
+      warnings: ["Faltan dimensiones válidas del paño."],
+    };
+    const partialSource = {
+      ...source,
+      coverage: { status: "partial" as const, completeReferenceCount: 0, pendingReferenceCount: 2, pendingReferences: [], diagnostics: [] },
+      preliminaryPaneCount: 1,
+      previewExclusions: [{ quoteItemId: "item-1", paneId: excludedPane.paneId, componentCode: "V1", componentName: "Corredera", displayName: "Float sin medidas", reason: "Faltan dimensiones rectangulares, enteras y positivas congeladas para este paño." }],
+      panes: [
+        { ...source.panes[0]!, dimensionProvenance: "recipe_trace", recipeStatus: "lista_para_validar", validationStatus: "requires_review" as const, warnings: ["La receta no está validada por el taller."] },
+        excludedPane,
+      ],
+    };
+    const fetchMock = jest.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => partialSource })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({
+        quoteCode: "COT-QA", mode: "geometric_preview", coverage: partialSource.coverage,
+        warnings: ["Incluye geometría preliminar de recipe_trace."], preliminaryPaneCount: 1,
+        previewExclusions: partialSource.previewExclusions, results: [verifiedResult], generatedFrom: ["snapshot-1", "snapshot-missing"],
+      }) });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    render(<GlassDistributionPanel quoteId="1" quoteCode="COT-QA" clientName="Cliente QA" workName="Obra QA" enabled />);
+
+    expect(await screen.findByText(/La vista previa usa geometría congelada de una receta preliminar/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Faltan dimensiones rectangulares, enteras y positivas congeladas/)).toHaveLength(2);
+    const providerButton = screen.getByRole("button", { name: /PDF bloqueado · cobertura incompleta/ });
+    expect(providerButton).toBeDisabled();
+    expect(screen.getByText(/La vista preliminar incluye 2 unidades físicas/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ingresar medidas" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Vista previa" }));
+
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({ mode: "geometric_preview" });
+    expect(screen.getByRole("button", { name: /PDF bloqueado · cobertura incompleta/ })).toBeDisabled();
+  });
+
   it("previews the verified result and uses that same result for its PDF", async () => {
     const fetchMock = mockFetch();
     render(<GlassDistributionPanel quoteId="1" quoteCode="COT-QA" clientName="Cliente QA" workName="Obra QA" enabled />);
@@ -136,7 +189,7 @@ describe("GlassDistributionPanel", () => {
     expect(screen.getByRole("img", { name: "Distribución en plancha de 2500 por 1800 milímetros" })).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(downloadPdfBlob).not.toHaveBeenCalled();
-    expect(screen.getByText("1 referencia de paño · 2 unidades con medidas verificadas")).toBeInTheDocument();
+    expect(screen.getByText("1 referencia incluida · 2 unidades físicas para simulación")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
@@ -185,7 +238,7 @@ describe("GlassDistributionPanel", () => {
     expect(screen.getByRole("button", { name: "Compartir" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Ingresar medidas" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Ingresar medidas" })).not.toBeInTheDocument();
-    expect(screen.getByText("Para descargar el pedido completo, ingresa las medidas de vidrio pendientes.")).toBeInTheDocument();
+    expect(screen.getByText("El PDF de proveedor requiere cobertura técnica completa. Revisa arriba cada referencia pendiente.")).toBeInTheDocument();
     expect(createGlassDistributionPdf).not.toHaveBeenCalled();
     expect(downloadPdfBlob).not.toHaveBeenCalled();
   });
@@ -230,7 +283,7 @@ describe("GlassDistributionPanel", () => {
       onSaveManualGlassMeasurements={jest.fn().mockResolvedValue(undefined)}
     />);
 
-    expect(await screen.findByText("0 completas · 2 pendientes")).toBeInTheDocument();
+    expect(await screen.findByText("Cobertura operativa: 0 completas · 2 pendientes")).toBeInTheDocument();
     expect(screen.getByText("pane-1, pane-2 · 2 paños pendientes")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Ingresar medidas" }));
     await screen.findByLabelText("Posición del paño");
@@ -242,11 +295,11 @@ describe("GlassDistributionPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Guardar medidas" }));
     expect(screen.getByRole("button", { name: "Guardando…" })).toBeInTheDocument();
     expect(await screen.findByText("Actualizando paños, referencias y disponibilidad de descarga…")).toBeInTheDocument();
-    expect(screen.queryByText("0 completas · 2 pendientes")).not.toBeInTheDocument();
+    expect(screen.queryByText("Cobertura operativa: 0 completas · 2 pendientes")).not.toBeInTheDocument();
     await act(async () => { resolveUpdatedSource({ ok: true, json: async () => updatedSource }); });
 
     expect(await screen.findByText("Medidas guardadas. Cobertura actualizada.")).toBeInTheDocument();
-    expect(screen.getByText("1 completas · 1 pendientes")).toBeInTheDocument();
+    expect(screen.getByText("Cobertura operativa: 1 completas · 1 pendientes")).toBeInTheDocument();
     expect(screen.getByText("pane-2 · 1 paño pendiente")).toBeInTheDocument();
     expect(screen.getAllByText("pane-2 · 1 paño pendiente")).toHaveLength(1);
     expect(screen.getByRole("button", { name: /PDF bloqueado · cobertura incompleta/ })).toBeDisabled();
@@ -277,7 +330,7 @@ describe("GlassDistributionPanel", () => {
     const save = jest.fn().mockResolvedValue(undefined);
 
     render(<GlassDistributionPanel quoteId="1" quoteCode="COT-QA" clientName="Cliente QA" workName="Obra QA" enabled items={[item]} templates={[glassTemplate]} onSaveManualGlassMeasurements={save} />);
-    await screen.findByText("0 completas · 1 pendientes");
+    await screen.findByText("Cobertura operativa: 0 completas · 1 pendientes");
     fireEvent.click(screen.getByRole("button", { name: "Ingresar medidas" }));
     await screen.findByLabelText("Posición del paño");
     fireEvent.change(screen.getByLabelText("Posición del paño"), { target: { value: "pane-1" } });
@@ -291,7 +344,7 @@ describe("GlassDistributionPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reintentar actualización" }));
     expect(await screen.findByText("Medidas guardadas. Cobertura actualizada.")).toBeInTheDocument();
     expect(save).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("1 completas · 0 pendientes")).toBeInTheDocument();
+    expect(screen.getByText("Cobertura operativa: 1 completas · 0 pendientes")).toBeInTheDocument();
   });
 
   it("invalida el plano previo cuando cambian las medidas guardadas", async () => {
@@ -318,7 +371,7 @@ describe("GlassDistributionPanel", () => {
     } as unknown as CotizacionWorkflowItem;
 
     render(<GlassDistributionPanel quoteId="1" quoteCode="COT-QA" clientName="Cliente QA" workName="Obra QA" enabled items={[item]} templates={[glassTemplate]} onSaveManualGlassMeasurements={jest.fn().mockResolvedValue(undefined)} />);
-    await screen.findByText("1 completas · 1 pendientes");
+    await screen.findByText("Cobertura operativa: 1 completas · 1 pendientes");
     fireEvent.click(screen.getByRole("button", { name: "Vista previa" }));
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     fireEvent.keyDown(document, { key: "Escape", code: "Escape" });

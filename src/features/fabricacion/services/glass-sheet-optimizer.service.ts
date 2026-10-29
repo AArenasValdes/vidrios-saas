@@ -103,12 +103,17 @@ function validationErrors(panes: readonly GlassPanePlanningUnit[], profile: Glas
   panes.forEach((pane) => {
     const spec = pane.technicalSpec;
     if (mode === "workshop" && pane.validationStatus !== "eligible_for_manual_planning") errors.push(...pane.warnings, `El paño ${pane.paneId} requiere revisión técnica.`);
-    if (mode === "workshop" && pane.recipeStatus !== "validated") errors.push(`La receta del paño ${pane.paneId} no está validada.`);
-    if (mode === "geometric_preview" && pane.recipeStatus !== "validated" && pane.dimensionProvenance !== "manual") {
+    if (mode === "workshop" && (pane.recipeStatus !== "validated" || pane.dimensionProvenance !== "validated_recipe")) errors.push(`La receta del paño ${pane.paneId} no está validada.`);
+    const isValidatedRecipe = pane.recipeStatus === "validated" && pane.dimensionProvenance === "validated_recipe";
+    const isManualGeometry = pane.dimensionProvenance === "manual";
+    const isPreliminaryTrace = mode === "geometric_preview" && pane.dimensionProvenance === "recipe_trace";
+    if (mode === "geometric_preview" && !isValidatedRecipe && !isManualGeometry && !isPreliminaryTrace) {
       errors.push(`El paño ${pane.paneId} no tiene una receta validada ni medidas manuales.`);
     }
     if (pane.dimensionProvenance === "legacy_snapshot") errors.push(`El paño ${pane.paneId} proviene de un snapshot histórico incompleto.`);
-    if (!pane.logicalComponentId || !pane.glassId || !pane.productId || !spec) errors.push(`El paño ${pane.paneId} carece de identidad o especificación congelada.`);
+    if (!pane.logicalComponentId || !pane.glassId || !pane.productId || !pane.paneId || !pane.snapshotFingerprint || !spec) {
+      errors.push(`El paño ${pane.paneId} carece de identidad física estable o especificación congelada.`);
+    }
     if (!positiveInt(pane.widthMm) || !positiveInt(pane.heightMm)) errors.push(`El paño ${pane.paneId} tiene dimensiones inválidas.`);
     else if (!Number.isSafeInteger(pane.widthMm * pane.heightMm)) errors.push(`El área del paño ${pane.paneId} excede el rango entero seguro.`);
     if (spec && (spec.hasConflict || (mode === "workshop" && (spec.manualCutStatus !== "confirmed" || !spec.technicalReviewConfirmed && ["laminado", "dvh", "templado", "espejo", "otro"].includes(spec.category))) || (mode === "geometric_preview" && spec.manualCutStatus === "not_admitted"))) {
@@ -126,6 +131,8 @@ function validationErrors(panes: readonly GlassPanePlanningUnit[], profile: Glas
     if (pane.paneUnitIds.length !== pane.quantity || new Set(pane.paneUnitIds).size !== pane.paneUnitIds.length) {
       errors.push(`La cantidad o las identidades físicas no coinciden en ${pane.paneId}.`);
     }
+    if (!Number.isSafeInteger(pane.commercialQuantity) || Number(pane.commercialQuantity) <= 0
+      || pane.quantity % Number(pane.commercialQuantity) !== 0) errors.push(`La cantidad física de ${pane.paneId} no es coherente con su cantidad comercial.`);
     if (mode === "workshop" && pane.orientation === "unknown") errors.push(`La orientación del vidrio ${pane.paneId} está pendiente.`);
   });
   const ids = panes.flatMap((pane) => pane.paneUnitIds);
