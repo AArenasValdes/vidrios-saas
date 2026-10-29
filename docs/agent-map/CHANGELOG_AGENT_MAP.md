@@ -3180,3 +3180,9 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
 - La UI y API seleccionan geometrías con `isGlassPaneGeometryComplete`; `recipe_trace` entra solo a `geometric_preview` con rectángulos congelados, identidad física estable, unidades coherentes con la cantidad comercial y ficha de vidrio compatible. Exclusiones reciben causa visible.
 - `isGlassCoveragePaneComplete`, la cobertura operativa y la compuerta `provider_pdf` no se relajan. El optimizador y su verificador marcan estos resultados como pendientes de validación de taller. H1 refresco/invalidation y B2 reconciliación permanecen activos.
 - Matriz: `docs/fabricacion/DISTRIBUCION_PRELIMINAR_GEOMETRIA.md`. Validación local: 210 suites / 1.914 tests, TypeScript, `docs:check` y Playwright simulado móvil pasan; Playwright no accede a Supabase. Build webpack/TypeScript avanzó, pero el prerender de `/cotizaciones/nueva` se detuvo por falta de URL/clave Supabase local. Sin smoke autenticado ni validación física de taller.
+
+### Cierre focalizado PR #10/#11 — acción operativa desde simulación
+
+- `GlassDistributionPanel` ofrece vista previa geométrica y enlaza al flujo técnico de `/print/cotizaciones/[id]/fabricacion/vidrios`; ya no solicita `provider_pdf` ni muestra acciones operativas/compartir desde la vista preliminar.
+- El flujo técnico conserva el PDF de simulación y su acción operativa condicionada por `workshop_validated`. La API crea el perfil de cálculo con `workshopValidation: "unvalidated"` y rechaza `provider_pdf` si los resultados no declaran `workshop_validated`; no hay evidencia de salida operativa alcanzable desde el panel ni se debe convertir la captura manual en validación.
+- No se ejecutó el recorrido autenticado de Ventora Test en esta sesión; no se crearon producto, cotización ni descargas. Sin evidencia de persistencia remota o contenido real de PDF.

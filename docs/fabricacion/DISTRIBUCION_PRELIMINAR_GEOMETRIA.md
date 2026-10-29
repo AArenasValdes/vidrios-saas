@@ -17,8 +17,10 @@ La matriz describe contratos probados con fixtures. No certifica variantes comer
 
 ## Recorrido técnico
 
-- UI: `app/print/cotizaciones/[id]/fabricacion/vidrios/glass-distribution-panel.tsx` usa `isGlassPaneGeometryComplete` para simular y conserva `isGlassCoveragePaneComplete` para PDF de proveedor.
+- UI de resumen: `app/print/cotizaciones/[id]/fabricacion/vidrios/glass-distribution-panel.tsx` usa `isGlassPaneGeometryComplete` para vista previa geométrica y enlaza al flujo técnico; no ofrece descarga ni compartir PDF operativo desde una simulación.
+- Flujo técnico: `/print/cotizaciones/[id]/fabricacion/vidrios` conserva la captura de restricciones, la simulación PDF y la acción operativa condicionada por `hasOperationalPlan` (`calculationMode === "workshop"`, cobertura completa y todos los resultados `workshop_validated`).
 - API: `app/api/cotizaciones/[id]/optimizacion-vidrios/route.ts` entrega unidades físicas y exclusiones explicadas; `geometric_preview` calcula solo paños admisibles. `provider_pdf` conserva la compuerta de cobertura estricta.
+- Límite de disponibilidad operativa: la ruta API construye `process.workshopValidation: "unvalidated"` para los perfiles formados desde esta solicitud. El optimizador solo emite `workshop_validated` cuando el perfil tiene estado `validated`; la API rechaza `provider_pdf` si no lo obtiene. Por eso se mantiene la acción/gate en la vista técnica, pero este recorrido no demuestra que exista una salida operativa alcanzable hoy. No se convierte una confirmación manual de campos en validación del taller.
 - Elegibilidad y cobertura: `src/features/fabricacion/services/glass-distribution-coverage.service.ts` exige rectángulos enteros positivos, identidad lógica/física y snapshot, producto/especificación exactos, categoría/espesor y cantidad física coherente con cantidad comercial.
 - Optimización: `src/features/fabricacion/services/glass-sheet-optimizer.service.ts` acepta `recipe_trace` solo en `geometric_preview`; `src/features/fabricacion/services/glass-sheet-plan-verifier.service.ts` aplica la misma frontera y marca la preparación como pendiente de revisión de taller.
 - Extracción congelada: `src/features/fabricacion/services/glass-pane-normalization.service.ts` usa dimensiones de snapshots y mediciones guardadas. Las medidas exteriores comerciales no se convierten en vidrio.
@@ -29,6 +31,7 @@ La matriz describe contratos probados con fixtures. No certifica variantes comer
 - La vista preliminar asume separación/despuntes según el contrato existente de simulación; no determina reglas productivas.
 - Las referencias excluidas no se completan ni se aproximan. Se muestran su identidad disponible y la primera causa bloqueante.
 - Resultados siguen siendo temporales. El refresco e invalidación H1 y la reconciliación B2 mantienen su comportamiento.
+- El panel preliminar dirige a la página técnica para consultar sus salidas. La disponibilidad de un PDF operativo requiere una fuente de validación de taller verificable; cobertura completa y geometría factible no la sustituyen.
 - No se agregan recetas, tipologías, reglas, descuentos ni cambios de datos.
 - El smoke de navegador usa APIs simuladas; no se ejecuta persistencia autenticada contra una base QA.
 
