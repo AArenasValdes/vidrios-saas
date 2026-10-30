@@ -96,7 +96,13 @@ export function selectSupplierPriceLists(input: {
     if (preferredListId) {
       const preferred = providerLists.find((list) => list.id === preferredListId);
       if (!preferred) throw new PriceListSelectionError(`La lista preferida no pertenece al proveedor ${providerKey}.`);
-      if (!hasStarted(preferred, asOf)) throw new PriceListSelectionError(`La lista preferida del proveedor ${providerKey} todavía no es aplicable.`);
+      // Only Alumco keeps a supplier list active under Ventora's explicit policy.
+      // Other suppliers preserve the prior requirement for an effective preferred list.
+      if (isAlumco(providerKey)) {
+        if (!hasStarted(preferred, asOf)) throw new PriceListSelectionError(`La lista preferida del proveedor ${providerKey} todavía no es aplicable.`);
+      } else if (!isEffective(preferred, asOf)) {
+        throw new PriceListSelectionError(`La lista preferida del proveedor ${providerKey} no está vigente.`);
+      }
       selected.set(providerKey, withReferenceStatus(preferred, providerKey, asOf));
       continue;
     }
