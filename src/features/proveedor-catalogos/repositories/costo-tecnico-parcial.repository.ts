@@ -171,7 +171,7 @@ export async function readQuoteForTechnicalCost(input: {
       .is("eliminado_en", null)
       .maybeSingle(),
     admin.from("cotizacion_items")
-      .select("id, codigo, nombre, descripcion, color, vidrio, cantidad, observaciones, fabricacion_snapshot, manual_glass_measurements")
+      .select("id, codigo, tipo_componente, nombre, descripcion, color, vidrio, cantidad, observaciones, fabricacion_snapshot, manual_glass_measurements")
       .eq("cotizacion_id", input.quoteId)
       .eq("organization_id", input.organizationId)
       .is("eliminado_en", null),
@@ -188,6 +188,7 @@ export async function readQuoteForTechnicalCost(input: {
       id: String(item.id),
       quantity: Number(item.cantidad),
       code: String(item.codigo ?? "").trim(),
+      componentType: String(item.tipo_componente ?? "").trim(),
       name: String(item.nombre ?? decodeCotizacionItemPresentationMeta(item.observaciones).referencia ?? item.codigo ?? "").trim(),
       description: String(item.descripcion ?? item.vidrio ?? "").trim(),
       color: item.color as string | null,

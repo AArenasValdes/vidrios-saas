@@ -232,7 +232,7 @@ describe("GlassDistributionPanel", () => {
     expect(await screen.findByText("Distribución parcial")).toBeInTheDocument();
     expect(screen.getByText("V2 · Paño fijo")).toBeInTheDocument();
     expect(screen.getByText("Float · 1 paño pendiente")).toBeInTheDocument();
-    expect(screen.queryByText(/Faltan dimensiones válidas del paño/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Faltan dimensiones válidas del paño/)).toBeInTheDocument();
     expect(await screen.findByRole("img", { name: "Distribución en plancha de 2500 por 1800 milímetros" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /PDF operativo/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Compartir" })).not.toBeInTheDocument();
@@ -291,8 +291,8 @@ describe("GlassDistributionPanel", () => {
     fireEvent.change(screen.getByLabelText("Producto del catálogo"), { target: { value: "501" } });
     fireEvent.change(screen.getByLabelText("Ancho final (mm)"), { target: { value: "600" } });
     fireEvent.change(screen.getByLabelText("Alto final (mm)"), { target: { value: "1000" } });
-    fireEvent.click(screen.getByRole("button", { name: "Agregar referencia de vidrio" }));
-    fireEvent.click(screen.getByRole("button", { name: "Guardar medidas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Registrar paño" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar medidas en cotización" }));
     expect(screen.getByRole("button", { name: "Guardando…" })).toBeInTheDocument();
     expect(await screen.findByText("Actualizando paños, referencias y disponibilidad de descarga…")).toBeInTheDocument();
     expect(screen.queryByText("Cobertura operativa: 0 completas · 2 pendientes")).not.toBeInTheDocument();
@@ -337,8 +337,8 @@ describe("GlassDistributionPanel", () => {
     fireEvent.change(screen.getByLabelText("Producto del catálogo"), { target: { value: "501" } });
     fireEvent.change(screen.getByLabelText("Ancho final (mm)"), { target: { value: "600" } });
     fireEvent.change(screen.getByLabelText("Alto final (mm)"), { target: { value: "1000" } });
-    fireEvent.click(screen.getByRole("button", { name: "Agregar referencia de vidrio" }));
-    fireEvent.click(screen.getByRole("button", { name: "Guardar medidas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Registrar paño" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar medidas en cotización" }));
 
     expect(await screen.findByText(/Las medidas quedaron guardadas, pero no pudimos actualizar la cobertura/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Reintentar actualización" }));
@@ -383,8 +383,8 @@ describe("GlassDistributionPanel", () => {
     fireEvent.change(screen.getByLabelText("Producto del catálogo"), { target: { value: "501" } });
     fireEvent.change(screen.getByLabelText("Ancho final (mm)"), { target: { value: "600" } });
     fireEvent.change(screen.getByLabelText("Alto final (mm)"), { target: { value: "1000" } });
-    fireEvent.click(screen.getByRole("button", { name: "Agregar referencia de vidrio" }));
-    fireEvent.click(screen.getByRole("button", { name: "Guardar medidas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Registrar paño" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar medidas en cotización" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(await screen.findByText("Actualizando paños, referencias y disponibilidad de descarga…")).toBeInTheDocument();
     await act(async () => { resolveUpdatedSource({ ok: true, json: async () => completeSource }); });

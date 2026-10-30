@@ -4,6 +4,8 @@ import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types
 import { decodeCotizacionItemPresentationMeta, encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { buildCatalogGlassTechnicalSpec } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
 import { getCatalogGlassTechnicalFingerprint } from "@/features/cotizaciones/services/manual-glass-pane-measurements.service";
+import { resolveManualGlassPaneComponentType, resolveManualGlassPaneSlots } from "@/features/cotizaciones/services/manual-glass-pane-slots.service";
+import { buildGlassDistributionCoverage } from "@/features/fabricacion/services/glass-distribution-coverage.service";
 
 function paneItem(input: {
   recipeStatus?: string;
@@ -81,6 +83,131 @@ function paneItem(input: {
 }
 
 describe("glass-pane-normalization.service", () => {
+  it("acepta dos paños fijos manuales guardados con el tipo comercial, sin snapshot de perfiles", () => {
+    const metadata = {
+      espesor: "5",
+      espesorMm: 5,
+      categoriaTecnica: "monolitico",
+      corteManualEstado: "confirmed",
+      revisionTecnicaExplicita: false,
+      planchaAnchoMm: 4000,
+      planchaAltoMm: 2200,
+      formaCompraVidrio: "full_sheet",
+    };
+    const spec = buildCatalogGlassTechnicalSpec({ productId: "3763", metadata });
+    const componentIds = ["component-f1", "component-f2"];
+    const persistedConfigurationFingerprint = resolveManualGlassPaneSlots({
+      componentType: "Paño fijo",
+      system: "Fijo",
+      configuration: "Con perfileria",
+      sheetScheme: "1 paño",
+      fabricacionHojas: 1,
+    }).configurationFingerprint;
+    expect(persistedConfigurationFingerprint).toBe("pane-config-dcbe5cd8");
+    expect(resolveManualGlassPaneSlots({
+      componentType: "pano_fijo",
+      system: "Fijo",
+      configuration: "Con perfileria",
+      sheetScheme: "1 paño",
+      fabricacionHojas: 1,
+    }).configurationFingerprint).toBe("pane-config-dce43c04");
+    expect(resolveManualGlassPaneComponentType({ itemType: "Paño fijo", fabricationType: "pano_fijo" })).toBe("Paño fijo");
+    expect(getCatalogGlassTechnicalFingerprint(spec)).toBe(
+      '{"productId":"3763","thicknessMm":5,"category":"monolitico","manualCutStatus":"confirmed","technicalReviewConfirmed":false,"sheetWidthMm":4000,"sheetHeightMm":2200,"pieceOrientation":"unknown","purchaseMode":"full_sheet","hasConflict":false}'
+    );
+    const items = componentIds.map((logicalComponentId, index): CotizacionWorkflowItem => {
+      const itemType = "Paño fijo";
+      const system = "Fijo";
+      const configuration = "Con perfileria";
+      const sheetScheme = "1 paño";
+      const expected = resolveManualGlassPaneSlots({
+        componentType: itemType,
+        system,
+        configuration,
+        sheetScheme,
+        fabricacionHojas: 1,
+      });
+      return {
+        ...paneItem({ logicalId: logicalComponentId }),
+        id: String(index === 0 ? 4078 : 4079),
+        codigo: `F${index + 1}`,
+        tipo: itemType,
+        nombre: "Paño fijo con perfilería 1 paño",
+        descripcion: "Paño fijo de aluminio con vidrio incoloro",
+        lineaComercial: "AL-32 · Paño fijo",
+        vidrio: "QA Monolítico 5 mm",
+        cantidad: 1,
+        ancho: index === 0 ? 600 : 700,
+        alto: 1000,
+        fabricacionSnapshot: null,
+        manualGlassMeasurements: {
+          version: 2,
+          expectedPaneCount: 1,
+          configurationFingerprint: expected.configurationFingerprint,
+          entries: [{
+            id: `manual-${logicalComponentId}`,
+            source: "manual",
+            version: 2,
+            productId: "3763",
+            technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec),
+            widthMm: 600,
+            heightMm: 1000,
+            quantity: 1,
+            quantityBasis: "per_component",
+            paneSlotId: "pane-1",
+            sourcePosition: "Paño 1",
+            rectangularVerified: true,
+            recordedAt: "2026-10-30T19:10:45.934Z",
+          }],
+        },
+        observaciones: encodeCotizacionItemPresentationMeta({
+          logicalComponentId,
+          vidrioLineTemplateId: "3763",
+          glassTechnicalSpec: spec,
+          sistema: system,
+          configuracion: configuration,
+          sheetScheme,
+          fabricacionTipologia: "pano_fijo",
+          fabricacionHojas: 1,
+          fabricacionModulos: 1,
+          fabricacionApertura: "fijo",
+          fabricacionVariante: "sin_receta",
+          fabricacionConfiguracionId: "ventora:l32:pano-fijo",
+        }),
+      };
+    });
+
+    const panes = items.flatMap((item) => extractNormalizedGlassPanes({
+      organizationId: 3,
+      quoteId: 1290,
+      item,
+      catalogGlassProducts: new Map([["3763", { name: "QA Monolítico 5 mm", catalogMetadata: metadata }]]),
+    }));
+
+    expect(panes).toHaveLength(2);
+    expect(panes.map((pane) => ({
+      quoteItemId: pane.quoteItemId,
+      logicalComponentId: pane.logicalComponentId,
+      glassId: pane.glassId,
+      paneSlotId: pane.paneSlotId,
+      widthMm: pane.widthMm,
+      heightMm: pane.heightMm,
+      quantity: pane.quantity,
+      dimensionProvenance: pane.dimensionProvenance,
+      validationStatus: pane.validationStatus,
+      warnings: pane.warnings,
+    }))).toEqual([
+      { quoteItemId: "4078", logicalComponentId: "component-f1", glassId: "manual-component-f1", paneSlotId: "pane-1", widthMm: 600, heightMm: 1000, quantity: 1, dimensionProvenance: "manual", validationStatus: "eligible_for_manual_planning", warnings: [] },
+      { quoteItemId: "4079", logicalComponentId: "component-f2", glassId: "manual-component-f2", paneSlotId: "pane-1", widthMm: 600, heightMm: 1000, quantity: 1, dimensionProvenance: "manual", validationStatus: "eligible_for_manual_planning", warnings: [] },
+    ]);
+    expect(buildGlassDistributionCoverage({ items, panes })).toMatchObject({
+      status: "complete",
+      completeReferenceCount: 2,
+      pendingReferenceCount: 0,
+      pendingReferences: [],
+    });
+  });
+
   it("extrae cantidad congelada sin volver a multiplicarla por cantidad de ítem", () => {
     const [pane] = extractNormalizedGlassPanes({
       organizationId: 4,

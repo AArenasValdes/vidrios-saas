@@ -34,7 +34,7 @@ describe("ManualGlassMeasurementsEditor", () => {
     fireEvent.change(screen.getByLabelText("Ancho final (mm)"), { target: { value: "750" } });
     fireEvent.change(screen.getByLabelText("Alto final (mm)"), { target: { value: "1600" } });
     fireEvent.change(screen.getByLabelText("Cantidad por componente"), { target: { value: "2" } });
-    fireEvent.click(screen.getByRole("button", { name: "Agregar referencia de vidrio" }));
+    fireEvent.click(screen.getByRole("button", { name: "Registrar paño" }));
 
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
       version: 2,
@@ -90,7 +90,7 @@ describe("ManualGlassMeasurementsEditor", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Editar medidas de Float incoloro 5 mm" }));
     expect(screen.getByLabelText("Cantidad física total")).toHaveValue("2");
-    fireEvent.click(screen.getByRole("button", { name: "Guardar medidas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Actualizar paño" }));
 
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
       entries: [expect.objectContaining({ id: "legacy-pane", quantity: 2, quantityBasis: "total" })],
@@ -107,7 +107,7 @@ describe("ManualGlassMeasurementsEditor", () => {
     fireEvent.change(screen.getByLabelText("Producto del catálogo"), { target: { value: "501" } });
     fireEvent.change(screen.getByLabelText("Ancho final (mm)"), { target: { value: "750" } });
     fireEvent.change(screen.getByLabelText("Alto final (mm)"), { target: { value: "1600" } });
-    fireEvent.click(screen.getByRole("button", { name: "Agregar referencia de vidrio" }));
+    fireEvent.click(screen.getByRole("button", { name: "Registrar paño" }));
 
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
       entries: [expect.objectContaining({ widthMm: 750, heightMm: 1600, paneSlotId: "pane-1" })],
@@ -135,7 +135,7 @@ describe("ManualGlassMeasurementsEditor", () => {
     expect(screen.getByText(/La forma de compra de esta ficha antigua no está confirmada/i)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Ancho final (mm)"), { target: { value: "750" } });
     fireEvent.change(screen.getByLabelText("Alto final (mm)"), { target: { value: "1600" } });
-    fireEvent.click(screen.getByRole("button", { name: "Agregar referencia de vidrio" }));
+    fireEvent.click(screen.getByRole("button", { name: "Registrar paño" }));
 
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ entries: [expect.objectContaining({ widthMm: 750, heightMm: 1600 })] }));
   });
@@ -183,7 +183,7 @@ describe("ManualGlassMeasurementsEditor", () => {
 
       expect(await screen.findByLabelText("Producto del catálogo")).toHaveValue("501");
       expect(screen.getByLabelText("Ancho final (mm)")).toBeInTheDocument();
-      expect(screen.getByText(/Selecciona un paño y un vidrio, ingresa ancho, alto y cantidad/)).toBeInTheDocument();
+      expect(screen.getByText(/Registra cada paño aquí; después pulsa «Guardar medidas en cotización»/)).toBeInTheDocument();
     } finally {
       window.history.replaceState({}, "", new URL(previousUrl).pathname + new URL(previousUrl).search);
     }

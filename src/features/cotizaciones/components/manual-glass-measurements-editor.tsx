@@ -38,6 +38,7 @@ export function ManualGlassMeasurementsEditor({ value, templates, onChange, comp
       : null;
   })() || null;
   const snapshot = normalizeManualGlassPaneMeasurements(value);
+  const manualEntryCount = snapshot.entries.length;
   const paneResolution = resolveManualGlassPaneSlots({ ...(paneConfiguration ?? {}), manualPaneCount: snapshot.manualPaneCount });
   const expectedSlots = paneResolution.slots;
   const confirmationValid = snapshot.configurationFingerprint === paneResolution.configurationFingerprint;
@@ -54,7 +55,7 @@ export function ManualGlassMeasurementsEditor({ value, templates, onChange, comp
   const [editingSlotId, setEditingSlotId] = useState("");
   const [duplicateEntry, setDuplicateEntry] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(openImmediately);
+  const [isFormOpen, setIsFormOpen] = useState(openImmediately && manualEntryCount === 0);
   const [manualPaneCountDraft, setManualPaneCountDraft] = useState("");
   const selectedProduct = glassProducts.find((template) => String(template.id) === productId) ?? null;
   const selectedSpec = selectedProduct ? getCatalogGlassTechnicalSpec(selectedProduct) : null;
@@ -62,11 +63,12 @@ export function ManualGlassMeasurementsEditor({ value, templates, onChange, comp
   useEffect(() => {
     if (!openImmediately && !glassDeepLinkRequestKey) return;
     const timer = window.setTimeout(() => {
-      setIsFormOpen(true);
+      // Show saved references first instead of opening a duplicate empty form.
+      setIsFormOpen(manualEntryCount === 0);
       if (selectedGlassProductId) setProductId(selectedGlassProductId);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [selectedGlassProductId, glassDeepLinkRequestKey, openImmediately]);
+  }, [selectedGlassProductId, glassDeepLinkRequestKey, openImmediately, manualEntryCount]);
 
   useEffect(() => {
     setManualPaneCountDraft(snapshot.manualPaneCount ? String(snapshot.manualPaneCount) : "");
@@ -177,6 +179,7 @@ export function ManualGlassMeasurementsEditor({ value, templates, onChange, comp
   const availableSlots = expectedSlots.filter((slot) => !occupiedSlotIds.has(slot.id) || (!duplicateEntry && slot.id === editingSlotId));
   const canDuplicateToSlot = !paneResolution.countIsKnown
     || expectedSlots.some((slot) => !snapshot.entries.some((entry) => entry.paneSlotId === slot.id));
+  const canAddManualEntry = !paneResolution.countIsKnown || availableSlots.length > 0;
 
   const removeEntry = (id: string) => {
     onChange({ version: 2, entries: snapshot.entries.filter((entry) => entry.id !== id), configurationFingerprint: paneResolution.configurationFingerprint, expectedPaneCount: paneResolution.countIsKnown ? expectedSlots.length : null, ...(snapshot.manualPaneCount ? { manualPaneCount: snapshot.manualPaneCount } : {}), allPanesConfirmed: false });
@@ -223,7 +226,7 @@ export function ManualGlassMeasurementsEditor({ value, templates, onChange, comp
                 </div>
                 <div className={s.entryActions}>
                   <button type="button" onClick={() => beginEdit(entry)} aria-label={`Editar medidas de ${product?.nombre ?? "vidrio"}`}>Editar</button>
-                  <button type="button" onClick={() => beginDuplicate(entry)} disabled={!canDuplicateToSlot} aria-label={`Copiar medidas de ${product?.nombre ?? "vidrio"} a otro paño`}>Copiar a otro paño</button>
+                  {canDuplicateToSlot ? <button type="button" onClick={() => beginDuplicate(entry)} aria-label={`Copiar medidas de ${product?.nombre ?? "vidrio"} a otro paño`}>Copiar a otro paño</button> : null}
                   <button type="button" onClick={() => removeEntry(entry.id)} aria-label={`Quitar medidas de ${product?.nombre ?? "vidrio"}`}>Quitar</button>
                 </div>
               </li>
@@ -244,7 +247,7 @@ export function ManualGlassMeasurementsEditor({ value, templates, onChange, comp
         </div>
       )}
 
-      {snapshot.entries.length > 0 ? (
+      {snapshot.entries.length > 0 && canAddManualEntry ? (
         <button type="button" className={s.entryButton} onClick={() => setIsFormOpen((open) => !open)}>
           {isFormOpen ? "Cerrar ingreso" : "Agregar referencia"}
         </button>
@@ -286,7 +289,7 @@ export function ManualGlassMeasurementsEditor({ value, templates, onChange, comp
         <p className={s.catalogEmpty}>No hay vidrios activos en el catálogo de esta organización.</p>
       ) : isFormOpen ? (
         <form className={s.form} onSubmit={saveMeasurement}>
-          <p className={s.validationHint}>Selecciona un paño y un vidrio, ingresa ancho, alto y cantidad, y pulsa «Agregar referencia de vidrio». Al completar las posiciones, pulsa «Guardar cambios».</p>
+          <p className={s.validationHint}>Registra cada paño aquí; después pulsa «Guardar medidas en cotización» para persistir los cambios.</p>
           {expectedSlots.length > 0 ? (
             <label className={s.productField}>
               <span>Posición del paño</span>
@@ -323,7 +326,7 @@ export function ManualGlassMeasurementsEditor({ value, templates, onChange, comp
           <div className={s.formActions}>
             {editingId ? <button type="button" className={s.secondaryButton} onClick={resetForm}>Cancelar edición</button> : null}
             <button type="submit" className={s.primaryButton}>
-              {editingId && !duplicateEntry ? "Guardar medidas" : duplicateEntry ? "Guardar copia" : "Agregar referencia de vidrio"}
+              {editingId && !duplicateEntry ? "Actualizar paño" : duplicateEntry ? "Registrar copia" : "Registrar paño"}
             </button>
           </div>
         </form>

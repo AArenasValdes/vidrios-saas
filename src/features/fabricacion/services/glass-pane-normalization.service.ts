@@ -8,7 +8,7 @@ import {
   getCatalogGlassTechnicalFingerprint,
   normalizeManualGlassPaneMeasurements,
 } from "@/features/cotizaciones/services/manual-glass-pane-measurements.service";
-import { resolveManualGlassPaneSlots } from "@/features/cotizaciones/services/manual-glass-pane-slots.service";
+import { resolveManualGlassPaneComponentType, resolveManualGlassPaneSlots } from "@/features/cotizaciones/services/manual-glass-pane-slots.service";
 
 export const GLASS_PANE_NORMALIZATION_VERSION = 1 as const;
 const MAX_NORMALIZED_PHYSICAL_UNITS = 2_000;
@@ -194,7 +194,10 @@ export function extractNormalizedGlassPanes(input: ExtractInput): NormalizedGlas
   );
   const expectedSlots = manualMeasurements.entries.length > 0
     ? resolveManualGlassPaneSlots({
-      componentType: presentation.fabricacionTipologia || input.item.tipo,
+      componentType: resolveManualGlassPaneComponentType({
+        itemType: input.item.tipo,
+        fabricationType: presentation.fabricacionTipologia,
+      }),
       system: presentation.sistema,
       configuration: presentation.configuracion,
       sheetScheme: presentation.sheetScheme,

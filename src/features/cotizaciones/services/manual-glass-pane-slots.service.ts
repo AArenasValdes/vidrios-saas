@@ -39,6 +39,23 @@ function componentTypeLabel(value: string | null | undefined): string | null {
   return null;
 }
 
+/**
+ * Keeps the commercial type used by the editor when it is an alias of the
+ * technical typology. Otherwise the technical typology remains authoritative
+ * for resolving pane count (for example, a generic "Ventana" with Corredera).
+ */
+export function resolveManualGlassPaneComponentType(input: {
+  itemType?: string | null;
+  fabricationType?: string | null;
+}): string | null {
+  const itemType = input.itemType?.trim() || null;
+  const fabricationType = input.fabricationType?.trim() || null;
+  if (!fabricationType) return itemType;
+  const itemLabel = componentTypeLabel(itemType);
+  const fabricationLabel = componentTypeLabel(fabricationType);
+  return itemLabel && itemLabel === fabricationLabel ? itemType : fabricationType;
+}
+
 function fingerprint(value: unknown): string {
   const source = JSON.stringify(value);
   let hash = 2166136261;

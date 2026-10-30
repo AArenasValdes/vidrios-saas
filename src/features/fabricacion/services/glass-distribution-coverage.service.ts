@@ -1,7 +1,7 @@
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { normalizeManualGlassPaneMeasurements } from "@/features/cotizaciones/services/manual-glass-pane-measurements.service";
-import { resolveManualGlassPaneSlots } from "@/features/cotizaciones/services/manual-glass-pane-slots.service";
+import { resolveManualGlassPaneComponentType, resolveManualGlassPaneSlots } from "@/features/cotizaciones/services/manual-glass-pane-slots.service";
 
 export type GlassDistributionCoverageStatus = "complete" | "partial" | "unavailable";
 
@@ -192,7 +192,10 @@ export function buildGlassDistributionCoverage(input: {
     const savedManual = item.manualGlassMeasurements ?? presentation.manualGlassMeasurements;
     const manualSnapshot = normalizeManualGlassPaneMeasurements(savedManual);
     const expected = resolveManualGlassPaneSlots({
-      componentType: presentation.fabricacionTipologia || item.tipo,
+      componentType: resolveManualGlassPaneComponentType({
+        itemType: item.tipo,
+        fabricationType: presentation.fabricacionTipologia,
+      }),
       system: presentation.sistema,
       configuration: presentation.configuracion,
       sheetScheme: presentation.sheetScheme,

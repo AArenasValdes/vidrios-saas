@@ -6,6 +6,7 @@ import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templa
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { ManualGlassPaneMeasurementsSnapshot } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
 import { ManualGlassMeasurementsEditor } from "@/features/cotizaciones/components/manual-glass-measurements-editor";
+import { resolveManualGlassPaneComponentType } from "@/features/cotizaciones/services/manual-glass-pane-slots.service";
 import { refreshDirectGlassDistribution } from "@/features/fabricacion/hooks/use-direct-glass-distribution";
 import type { GlassDistributionCoverage } from "@/features/fabricacion/services/glass-distribution-coverage.service";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
@@ -37,7 +38,7 @@ export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [],
 
   const itemsById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
   const pendingGroups = useMemo(() => {
-    const groups = new Map<string, { itemId: string; componentCode: string; componentName: string; displayNames: string[]; count: number }>();
+    const groups = new Map<string, { itemId: string; componentCode: string; componentName: string; displayNames: string[]; reasons: string[]; count: number }>();
     for (const reference of coverage?.pendingReferences ?? []) {
       if (reference.paneId && previewablePaneIds.includes(reference.paneId)) continue;
       const key = reference.quoteItemId || `${reference.componentCode}:${reference.componentName}`;
@@ -45,12 +46,14 @@ export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [],
       if (current) {
         current.count += 1;
         if (reference.displayName && !current.displayNames.includes(reference.displayName)) current.displayNames.push(reference.displayName);
+        if (reference.reason && !current.reasons.includes(reference.reason)) current.reasons.push(reference.reason);
       } else {
         groups.set(key, {
           itemId: reference.quoteItemId,
           componentCode: reference.componentCode,
           componentName: reference.componentName,
           displayNames: reference.displayName ? [reference.displayName] : [],
+          reasons: reference.reason ? [reference.reason] : [],
           count: 1,
         });
       }
@@ -135,16 +138,20 @@ export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [],
         <ul>
           {pendingGroups.map((group) => {
             const editing = activeItemId === group.itemId;
+            const groupItem = itemsById.get(group.itemId);
+            const savedManualEntries = groupItem?.manualGlassMeasurements?.entries
+              ?? decodeCotizacionItemPresentationMeta(groupItem?.observaciones ?? "").manualGlassMeasurements.entries;
             return (
               <li key={`${group.itemId}:${group.componentCode}`}>
                 <div className={s.pendingRow}>
                   <div className={s.pendingCopy}>
                     <b>{group.componentCode} · {group.componentName}</b>
                     <small>{group.displayNames.length > 0 ? `${group.displayNames.join(", ")} · ` : ""}{group.count} {group.count === 1 ? "paño pendiente" : "paños pendientes"}</small>
+                    {group.reasons.length > 0 ? <small>{group.reasons.join(" ")}</small> : null}
                   </div>
                   {group.itemId && itemsById.has(group.itemId) ? (
                     <button type="button" className={s.editButton} onClick={() => editing ? setActiveItemId(null) : openEditor(group.itemId)}>
-                      {editing ? "Cerrar" : "Ingresar medidas"}
+                      {editing ? "Cerrar" : savedManualEntries.length > 0 ? "Editar medidas" : "Ingresar medidas"}
                     </button>
                   ) : null}
                 </div>
@@ -161,7 +168,10 @@ export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [],
                       automaticPanes={activeItem?.fabricacionSnapshot?.result?.vidrios?.map((pane) => ({ id: pane.vidrioId, name: pane.nombre, widthMm: pane.anchoMm, heightMm: pane.altoMm, quantity: pane.cantidadPiezas }))}
                       automaticRecipeStatus={activeItem?.fabricacionSnapshot?.recipeStatus}
                       paneConfiguration={{
-                        componentType: activeItem.tipo,
+                        componentType: resolveManualGlassPaneComponentType({
+                          itemType: activeItem.tipo,
+                          fabricationType: activePresentation?.fabricacionTipologia,
+                        }),
                         system: activePresentation?.sistema,
                         configuration: activePresentation?.configuracion,
                         sheetScheme: activePresentation?.sheetScheme,
@@ -175,7 +185,7 @@ export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [],
                     <div className={s.editorActions}>
                       <button type="button" className={s.cancelButton} onClick={() => { setActiveItemId(null); setDraft(null); }}>Cancelar</button>
                       <button type="button" className={s.saveButton} onClick={() => void saveMeasurements()} disabled={savingItemId !== null || draft.entries.length === 0} aria-busy={savingItemId === group.itemId}>
-                        {savingItemId === group.itemId ? "Guardando…" : "Guardar medidas"}
+                        {savingItemId === group.itemId ? "Guardando…" : "Guardar medidas en cotización"}
                       </button>
                     </div>
                   </div>
