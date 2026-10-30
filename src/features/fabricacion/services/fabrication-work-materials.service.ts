@@ -382,7 +382,11 @@ function buildProfileRows(
   const groups = new Map<string, WorkProfileMaterialRow>();
   const itemsByCode = new Map(items.map((item) => [item.codigo, item]));
   const templatesById = new Map(lineTemplates.map((template) => [String(template.id), template]));
+  const geometryOnlyItemIds = new Set(summary.items.filter((item) => item.geometryOnly).map((item) => item.itemId));
   for (const bar of source.bars) {
+    // A saved joint bar cannot be represented as an operational purchase line
+    // when it includes a component that is only structural geometry.
+    if (bar.cortes.some((cut) => geometryOnlyItemIds.has(String(cut.itemId)))) continue;
     const finishValue = finishForBar(bar, itemsByCode);
     const providerKey = providerForBar(bar, itemsByCode);
     const savedSku = providerKey === bar.supplierProviderKey?.trim().toLocaleLowerCase("es-CL")
@@ -663,15 +667,19 @@ export function buildWorkMaterialsDocument(input: {
 }): WorkMaterialsDocument {
   const items = input.items as readonly WorkItem[];
   const lineTemplates = input.lineTemplates ?? [];
+  const geometryOnlyItemIds = new Set(input.summary.items.filter((item) => item.geometryOnly).map((item) => item.itemId));
+  const contaminatedJointSnapshot = Boolean(input.summary.trabajoSnapshotHasGeometryOnly) || Boolean(input.summary.trabajoSnapshot?.bars.some((bar) =>
+    bar.cortes.some((cut) => geometryOnlyItemIds.has(String(cut.itemId)))
+  ));
   return {
-    profiles: buildProfileRows(input.summary, items, input.technicalCostSnapshot ?? null, lineTemplates),
+    profiles: contaminatedJointSnapshot ? [] : buildProfileRows(input.summary, items, input.technicalCostSnapshot ?? null, lineTemplates),
     accessories: buildAccessoryRows(items, input.technicalCostSnapshot ?? null),
     glass: buildGlassRows(items, lineTemplates),
     glassOrder: buildGlassOrderRows(items, lineTemplates),
     profilePriceReferences: [...(input.profilePriceReferences ?? [])],
     profilePriceReferencesCheckedAt: input.profilePriceReferencesCheckedAt ?? null,
     profilePriceReferencesStatus: input.profilePriceReferencesStatus ?? "not_applicable",
-    hasJointCuttingPlan: Boolean(input.summary.trabajoSnapshot),
+    hasJointCuttingPlan: Boolean(input.summary.trabajoSnapshot) && !contaminatedJointSnapshot,
     pricing: input.technicalCostSnapshot ? {
       status: input.technicalCostSnapshot.status,
       knownNetTotal: input.technicalCostSnapshot.knownNetTotal,

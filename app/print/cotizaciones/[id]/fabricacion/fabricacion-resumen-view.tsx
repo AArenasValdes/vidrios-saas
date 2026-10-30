@@ -677,8 +677,8 @@ export function FabricacionResumenView({
 
         <section className={s.desktopSummarySection} aria-label="Resumen de fabricación">
           <div className={s.desktopSummaryHeading}>
-            <h2>Componentes con pauta</h2>
-            <span>{summary.items.length} de {summary.totalItems}</span>
+            <h2>Despieces disponibles para revisión</h2>
+            <span>{summary.items.filter((row) => !row.geometryOnly).length} con pauta · {summary.items.filter((row) => row.geometryOnly).length} preliminares · {summary.totalItems} componentes</span>
           </div>
           {summary.items.length ? (
             <div className={s.desktopSummaryItems}>
@@ -697,7 +697,7 @@ export function FabricacionResumenView({
             <div><dt>Perfiles</dt><dd>{formatMl(summary.totalProfilesMl)}</dd></div>
             <div><dt>Vidrio</dt><dd>{formatM2(summary.totalGlassM2)}</dd></div>
             <div><dt>Tiras</dt><dd>{summary.totalBars ?? "—"}</dd></div>
-            <div><dt>Con pauta</dt><dd>{summary.items.length}/{summary.totalItems}</dd></div>
+            <div><dt>Con pauta completa</dt><dd>{summary.items.filter((row) => !row.geometryOnly).length}/{summary.totalItems}</dd></div>
           </dl>
         </section>
 
@@ -729,12 +729,12 @@ export function FabricacionResumenView({
             <LuLayoutGrid aria-hidden />
             <span>Componentes</span>
             <strong>
-              {summary.items.length} con pauta de {summary.totalItems}
+              {summary.items.filter((row) => !row.geometryOnly).length} con pauta completa · {summary.items.filter((row) => row.geometryOnly).length} preliminares
             </strong>
           </div>
         </section>
 
-        {summary.trabajoSnapshot ? (
+        {summary.trabajoSnapshot && !summary.trabajoSnapshotHasGeometryOnly ? (
           <section className={s.consolidatedJobBars} aria-label="Pauta conjunta guardada">
             <h2>Pauta conjunta · trabajo completo</h2>
             <p>{summary.trabajoSnapshot.totalBars} tiras · distribución referencial compartida entre partidas.</p>
@@ -752,6 +752,11 @@ export function FabricacionResumenView({
                 </li>
               ))}
             </ul>
+          </section>
+        ) : summary.trabajoSnapshotHasGeometryOnly ? (
+          <section className={s.consolidatedJobBars} aria-label="Pauta conjunta por revisar">
+            <h2>Pauta conjunta por revisar</h2>
+            <p>Incluye un componente con despiece estructural preliminar. La distribución conjunta y sus tiras no se presentan como operativas hasta completar y revisar el acristalamiento.</p>
           </section>
         ) : summary.items.length > 0 ? (
           <section className={s.consolidatedJobBars} aria-label="Pauta conjunta no guardada">
@@ -877,9 +882,9 @@ export function FabricacionResumenView({
                         type="button"
                         className={`${s.despieceCta} ${s.printHide}`}
                         onClick={() => onOpenDespiece(row.itemId)}
-                        aria-label={`Ver despiece completo de ${row.codigo}`}
+                        aria-label={`${row.geometryOnly ? "Revisar geometría preliminar de" : "Ver despiece completo de"} ${row.codigo}`}
                       >
-                        Ver despiece completo
+                        {row.geometryOnly ? "Revisar geometría preliminar" : "Ver despiece completo"}
                         <LuArrowUpRight aria-hidden />
                       </button>
                     </div>

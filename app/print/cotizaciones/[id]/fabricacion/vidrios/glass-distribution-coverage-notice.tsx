@@ -155,7 +155,7 @@ export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [],
                       openImmediately
                       automaticDimensionsAvailable={automaticDimensionsAvailable}
                       paneConfiguration={{
-                        componentType: activePresentation?.fabricacionTipologia || activeItem.tipo,
+                        componentType: activeItem.tipo,
                         system: activePresentation?.sistema,
                         configuration: activePresentation?.configuracion,
                         sheetScheme: activePresentation?.sheetScheme,

@@ -213,14 +213,14 @@ describe("FabricacionResumenMovil", () => {
     expect(screen.getByRole("heading", { name: "Resumen de fabricación" })).toBeInTheDocument();
     expect(screen.getByLabelText("Indicadores del trabajo")).toBeInTheDocument();
     expect(within(screen.getByLabelText("Indicadores del trabajo")).getByText("Perfiles")).toBeInTheDocument();
-    expect(screen.getByText("Con pauta")).toBeInTheDocument();
+    expect(screen.getByText("Con pauta completa")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Optimizar vidrios" })).not.toBeInTheDocument();
     expect(screen.getAllByRole("heading", { name: "Documentos de fabricación" }).length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Descargar PDF preliminar de distribución de planchas" })).toBeInTheDocument();
     const surface = screen.getByLabelText("Resumen y documentos").firstElementChild;
     expect(surface?.children[0]).toHaveTextContent("Documentos de fabricación");
-    expect(surface?.children[1]).toHaveTextContent("Componentes con pauta");
-    expect(surface?.children[2]).toHaveTextContent("Con pauta");
+    expect(surface?.children[1]).toHaveTextContent("Despieces para revisar");
+    expect(surface?.children[2]).toHaveTextContent("Con pauta completa");
     expect(screen.queryByTestId("cost-panel")).not.toBeInTheDocument();
     expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument();
   });
@@ -267,7 +267,7 @@ describe("FabricacionResumenMovil", () => {
 
     expect(screen.getByText("Composición por revisar")).toBeInTheDocument();
     expect(screen.getByText("La pauta queda pendiente hasta tener una receta compatible.")).toBeInTheDocument();
-    expect(screen.getByText("Con pauta")).toBeInTheDocument();
+    expect(screen.getByText("Con pauta completa")).toBeInTheDocument();
     expect(screen.getByText("0/1")).toBeInTheDocument();
   });
 

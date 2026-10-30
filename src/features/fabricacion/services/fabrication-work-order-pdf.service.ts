@@ -154,6 +154,23 @@ function drawNote(pdf: jsPDF, value: string, y: number, runningTitle: string, qu
   return y + height;
 }
 
+function drawPreliminaryWarning(pdf: jsPDF, y: number, runningTitle: string, quoteCode: string, logoDataUrl?: string | null) {
+  const message = "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN. Acristalamiento pendiente; estos cortes estructurales no constituyen una pauta operativa.";
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(9.5);
+  const lines = wrapped(pdf, message, PAGE_WIDTH - MARGIN * 2);
+  const height = lines.length * 4.4 + 8;
+  if (y + height > CONTENT_BOTTOM) y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
+  pdf.setFillColor(255, 243, 230);
+  pdf.setDrawColor(191, 82, 34);
+  pdf.roundedRect(MARGIN, y, PAGE_WIDTH - MARGIN * 2, height, 1.2, 1.2, "FD");
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(9.5);
+  pdf.setTextColor(139, 48, 17);
+  pdf.text(lines, MARGIN + 3, y + 5, { lineHeightFactor: 1.2 });
+  return y + height + 3;
+}
+
 function drawPriceSummary(pdf: jsPDF, order: FabricationWorkOrder, y: number, runningTitle: string, quoteCode: string, logoDataUrl?: string | null) {
   if (y + 19 > CONTENT_BOTTOM) y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
   const label = order.pricing.status === "complete" ? "Costo valorizado neto"
@@ -305,6 +322,31 @@ export function createFabricationWorkOrderPdf(
     ? "Remanente teórico. Confirmar kerf, despunte y condiciones del taller antes de cortar."
     : "Los largos provienen de la pauta guardada; el remanente es teórico. Confirmar kerf, despunte y condiciones del taller antes de fabricar. No representa una optimización de planchas de vidrio.",
   y, runningTitle, metadata.quoteCode, logoDataUrl);
+  if (order.preliminaryCutGroups.length > 0) {
+    y = drawPreliminaryWarning(pdf, y + 2, runningTitle, metadata.quoteCode, logoDataUrl);
+    const preliminaryCuts = order.preliminaryCutGroups.map((group): Row => {
+      const profile = `${group.technicalCode} · ${group.profileName}`;
+      const cutRows = group.cuts.length
+        ? group.cuts.map((cut) => `${cut.itemCode} · ${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n")
+        : "Sin cortes de geometría disponibles";
+      return kind === "profile-cuts"
+        ? { cells: [`${profile}\nDistribución no calculada`, cutRows, "No aplica"] }
+        : { cells: [
+            `${profile}\n${clean(group.line, "Línea pendiente")} · Color aluminio: ${clean(group.finish, "Pendiente")}\nDistribución no calculada`,
+            cutRows,
+            "No asociar a proveedor",
+            "No aplica",
+          ] };
+    });
+    const preliminaryTitle = "Despiece estructural preliminar · acristalamiento pendiente";
+    y = drawTable(pdf, preliminaryTitle, kind === "profile-cuts" ? [
+      { title: "Código / perfil", width: 56 }, { title: "Cortes por componente", width: 89 },
+      { title: "Distribución", width: 37, align: "right" },
+    ] : [
+      { title: "Perfil / línea / color", width: 50 }, { title: "Cortes geométricos", width: 80 },
+      { title: "Estado", width: 30 }, { title: "Distribución", width: 22, align: "right" },
+    ], preliminaryCuts, y, "Sin cortes geométricos", runningTitle, metadata.quoteCode, logoDataUrl);
+  }
   }
 
   if (kind === "combined" || kind === "glass-order") {
