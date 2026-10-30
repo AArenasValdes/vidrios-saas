@@ -35,13 +35,25 @@ describe("selección de lista por proveedor", () => {
     expect(selected.get("provider-b")?.id).toBe("b-current");
   });
 
-  it("mantiene una preferencia explícita aunque sea histórica y la marca", () => {
-    const selected = selectSupplierPriceLists({
+  it("rechaza una preferencia vencida de otro proveedor como antes de la integración Alumco", () => {
+    expect(() => selectSupplierPriceLists({
       lists,
       preferredListIdsByProvider: { "provider-a": "a-old" },
       asOf: new Date("2026-09-01T00:00:00Z"),
+    })).toThrow(PriceListSelectionError);
+  });
+
+  it("mantiene una preferencia Alumco activa por política Ventora aunque haya vencido la cotización fuente", () => {
+    const selected = selectSupplierPriceLists({
+      lists: [{
+        id: "alumco-source", providerKey: "alumco", revision: "2026-10-14",
+        publishedOn: "2026-10-14", validFrom: "2026-10-14", validUntil: "2026-10-21",
+        createdAt: "2026-10-14T00:00:00Z",
+      }],
+      preferredListIdsByProvider: { alumco: "alumco-source" },
+      asOf: new Date("2026-10-30T00:00:00Z"),
     });
-    expect(selected.get("provider-a")).toMatchObject({ id: "a-old", referenceStatus: "historical_reference" });
+    expect(selected.get("alumco")).toMatchObject({ id: "alumco-source", referenceStatus: "active_by_ventora_policy" });
   });
 
   it("mantiene activa en Ventora la lista Alumco importada aunque venza la cotización fuente", () => {
