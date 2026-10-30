@@ -17,6 +17,9 @@ type Props = {
   coverage: GlassDistributionCoverage | null;
   items?: readonly CotizacionWorkflowItem[];
   templates?: readonly CotizacionLineTemplate[];
+  previewablePaneIds?: readonly string[];
+  previewableUnitCount?: number;
+  excludedPreviewCount?: number;
   onSaveMeasurements?: (itemId: string, value: ManualGlassPaneMeasurementsSnapshot) => Promise<void>;
   isRefreshing?: boolean;
   isCoverageCurrent?: boolean;
@@ -24,7 +27,7 @@ type Props = {
   onRetryRefresh?: () => Promise<void>;
 };
 
-export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [], templates = [], onSaveMeasurements = async () => undefined, isRefreshing = false, isCoverageCurrent = true, refreshError = null, onRetryRefresh }: Props) {
+export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [], templates = [], previewablePaneIds = [], previewableUnitCount = 0, excludedPreviewCount = 0, onSaveMeasurements = async () => undefined, isRefreshing = false, isCoverageCurrent = true, refreshError = null, onRetryRefresh }: Props) {
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [draft, setDraft] = useState<ManualGlassPaneMeasurementsSnapshot | null>(null);
   const [savingItemId, setSavingItemId] = useState<string | null>(null);
@@ -36,6 +39,7 @@ export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [],
   const pendingGroups = useMemo(() => {
     const groups = new Map<string, { itemId: string; componentCode: string; componentName: string; displayNames: string[]; count: number }>();
     for (const reference of coverage?.pendingReferences ?? []) {
+      if (reference.paneId && previewablePaneIds.includes(reference.paneId)) continue;
       const key = reference.quoteItemId || `${reference.componentCode}:${reference.componentName}`;
       const current = groups.get(key);
       if (current) {
@@ -52,7 +56,7 @@ export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [],
       }
     }
     return [...groups.values()];
-  }, [coverage]);
+  }, [coverage, previewablePaneIds]);
 
   if (!coverage || (coverage.status === "complete" && !saveNotice && !saveError && !refreshError)) return null;
 
@@ -122,8 +126,8 @@ export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [],
   return (
     <aside className={s.notice} aria-label="Cobertura de medidas de vidrio" aria-live="polite" data-quote-id={quoteId}>
       <div className={s.summary}>
-        <strong>{coverage.status === "complete" ? "Cobertura completa" : partial ? "Distribución parcial" : "Medidas de vidrio pendientes"}</strong>
-        <span>{isRefreshing ? "Actualizando cobertura…" : !isCoverageCurrent ? "Cobertura desactualizada" : `${coverage.completeReferenceCount} completas · ${coverage.pendingReferenceCount} pendientes`}</span>
+        <strong>{coverage.status === "complete" ? "Cobertura completa" : partial ? "Distribución parcial" : previewableUnitCount > 0 ? "Simulación preliminar disponible" : "Medidas de vidrio pendientes"}</strong>
+        <span>{isRefreshing ? "Actualizando cobertura…" : !isCoverageCurrent ? "Cobertura desactualizada" : `Cobertura operativa: ${coverage.completeReferenceCount} completas · ${coverage.pendingReferenceCount} pendientes`}</span>
       </div>
       {isRefreshing ? <p role="status">Actualizando paños, referencias y disponibilidad de descarga…</p> : null}
       {!isCoverageCurrent && !isRefreshing ? <p role="status">Se ocultan los conteos anteriores hasta confirmar la cobertura vigente.</p> : null}
@@ -178,7 +182,9 @@ export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [],
             );
           })}
         </ul>
-      ) : isCoverageCurrent && coverage.status !== "complete" && !isRefreshing ? <p>Aún no hay medidas de vidrio disponibles para distribuir.</p> : null}
+      ) : isCoverageCurrent && coverage.status !== "complete" && !isRefreshing ? <p>{previewableUnitCount > 0
+        ? `La vista preliminar incluye ${previewableUnitCount} ${previewableUnitCount === 1 ? "unidad física" : "unidades físicas"}${excludedPreviewCount > 0 ? ` y excluye ${excludedPreviewCount} ${excludedPreviewCount === 1 ? "referencia" : "referencias"}` : ""}. El PDF de proveedor sigue bloqueado hasta completar la cobertura operativa.`
+        : "Aún no hay medidas de vidrio disponibles para distribuir."}</p> : null}
       {saveNotice ? <p className={s.saveNotice} role="status">{saveNotice}</p> : null}
       {saveError && !activeItemId ? <p className={s.saveError} role="alert">{saveError}</p> : null}
       {refreshError && !saveError ? <p className={s.saveError} role="alert">{refreshError}</p> : null}

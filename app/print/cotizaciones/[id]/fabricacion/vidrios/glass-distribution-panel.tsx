@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LuChevronLeft, LuChevronRight, LuDownload, LuEye, LuLayers3, LuLoaderCircle, LuShare2 } from "react-icons/lu";
+import { LuChevronLeft, LuChevronRight, LuEye, LuLayers3, LuLoaderCircle } from "react-icons/lu";
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { GlassCuttingResult } from "@/features/fabricacion/types/glass-sheet-optimizer-contracts";
@@ -9,22 +10,21 @@ import type { GlassTechnicalSpec } from "@/features/cotizaciones/line-templates/
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { ManualGlassPaneMeasurementsSnapshot } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
-import { downloadPdfBlob } from "@/utils/cotizacion-pdf";
-import { sanitizeFileNamePart } from "@/utils/sanitize-file-name";
-import { createGlassDistributionPdf } from "@/features/fabricacion/services/glass-distribution-pdf.service";
-import { mapGlassDistributionPdfPanes } from "@/features/fabricacion/services/direct-glass-distribution.service";
-import { loadVentoraPdfLogoDataUrl } from "@/features/fabricacion/services/ventora-pdf-assets.client";
 import { formatGlassDisplayName } from "@/features/fabricacion/services/glass-display-name.service";
-import { isGlassCoveragePaneComplete, type GlassDistributionCoverage } from "@/features/fabricacion/services/glass-distribution-coverage.service";
+import { getGlassPaneGeometryExclusionReason, isGlassPaneGeometryComplete, type GlassDistributionCoverage, type GlassPaneGeometryExclusion } from "@/features/fabricacion/services/glass-distribution-coverage.service";
 
 import s from "./glass-distribution-panel.module.css";
 import { GlassDistributionCoverageNotice } from "./glass-distribution-coverage-notice";
 
 type PaneInput = {
   quoteItemId: string;
+  paneId: string;
+  paneUnitIds: string[];
   logicalComponentId: string | null;
   glassId: string | null;
   productId: string | null;
+  commercialQuantity: number | null;
+  finishOrientationKey: string;
   componentCode: string;
   componentName?: string | null;
   displayName: string | null;
@@ -45,15 +45,19 @@ type PlanResponse = {
   panes: PaneInput[];
   diagnostics: string[];
   coverage: GlassDistributionCoverage;
+  preliminaryPaneCount: number;
+  previewExclusions: GlassPaneGeometryExclusion[];
 };
 
 type CalculationResponse = {
   quoteCode: string;
-  mode: "geometric_preview" | "provider_pdf";
+  mode: "geometric_preview";
   coverage: GlassDistributionCoverage;
   warnings: string[];
   results: GlassCuttingResult[];
   generatedFrom: string[];
+  preliminaryPaneCount: number;
+  previewExclusions: GlassPaneGeometryExclusion[];
 };
 
 type Props = {
@@ -85,7 +89,7 @@ function validDimension(value: unknown): value is number {
 }
 
 function isPreviewReadyPane(pane: PaneInput): pane is PaneInput & { physicalUnitCount: number } {
-  return pane.physicalUnitCount != null && isGlassCoveragePaneComplete(pane);
+  return pane.physicalUnitCount != null && isGlassPaneGeometryComplete(pane);
 }
 
 function hasSheetFormat(spec: GlassTechnicalSpec | null) {
@@ -150,7 +154,7 @@ function PlanDrawing({ result, allPlans }: { result: GlassCuttingResult; allPlan
   );
 }
 
-export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workName, enabled, autoPreview = false, preloadPreview = false, items, templates, onSaveManualGlassMeasurements }: Props) {
+export function GlassDistributionPanel({ quoteId, quoteCode, enabled, autoPreview = false, preloadPreview = false, items, templates, onSaveManualGlassMeasurements }: Props) {
   const [source, setSource] = useState<PlanResponse | null>(null);
   const [sourceQuoteId, setSourceQuoteId] = useState<string | null>(null);
   const [sourceFresh, setSourceFresh] = useState(false);
@@ -161,12 +165,11 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<GlassCuttingResult[] | null>(null);
   const [resultsQuoteId, setResultsQuoteId] = useState<string | null>(null);
-  const [generatedFrom, setGeneratedFrom] = useState<string[] | null>(null);
+  const [previewExclusions, setPreviewExclusions] = useState<GlassPaneGeometryExclusion[]>([]);
   const [sheetWidth, setSheetWidth] = useState("");
   const [sheetHeight, setSheetHeight] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedSheetIndex, setSelectedSheetIndex] = useState(0);
-  const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
   const autoPreviewFingerprint = useRef<string | null>(null);
   const sourceRequestId = useRef(0);
   const sourceController = useRef<AbortController | null>(null);
@@ -185,10 +188,9 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
     setError(null);
     setResults(null);
     setResultsQuoteId(null);
-    setGeneratedFrom(null);
+    setPreviewExclusions([]);
     setPreviewOpen(false);
     setSelectedSheetIndex(0);
-    setDownloadNotice(null);
 
     try {
       const response = await fetch(`/api/cotizaciones/${encodeURIComponent(requestQuoteId)}/optimizacion-vidrios`, {
@@ -199,6 +201,7 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
       if (!response.ok) throw new Error(body.error || "No pudimos cargar los paños guardados.");
       if (controller.signal.aborted || sourceRequestId.current !== requestId) return;
       setSource(body);
+      setPreviewExclusions(body.previewExclusions ?? []);
       setSourceQuoteId(requestQuoteId);
       setSourceFresh(true);
     } catch (cause) {
@@ -239,46 +242,17 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
   const selected = allSheets[selectedSheetIndex] ?? null;
   const currentQuoteCode = sourceForQuote?.quoteCode || quoteCode;
 
-  const downloadResult = useCallback(async (resultSet: GlassCuttingResult[], warnings: string[], generated: string[], coverage: GlassDistributionCoverage, expectedRevision: number) => {
-    if (coverage.status !== "complete" || coverage.pendingReferenceCount > 0) {
-      throw new Error("No se puede generar el PDF para el proveedor: la cobertura de vidrio está incompleta.");
-    }
-    if (!resultSet.length || resultSet.some((result) => !result.verification.passed || result.status !== "feasible" || !result.sheets.length)) {
-      throw new Error(warnings[0] || "La distribución no superó la verificación geométrica.");
-    }
-    const logoDataUrl = await loadVentoraPdfLogoDataUrl();
-    if (!logoDataUrl) throw new Error("No se pudo cargar el logotipo corporativo. Recarga la página e inténtalo otra vez.");
-    if (dataRevision.current !== expectedRevision || !sourceFresh) throw new Error("Los paños cambiaron. Actualiza la cobertura y vuelve a generar la distribución.");
-    const pdf = await createGlassDistributionPdf({
-      quoteCode: currentQuoteCode,
-      clientName,
-      workName,
-      logoDataUrl,
-      coverage,
-      panes: mapGlassDistributionPdfPanes(completePanes),
-      results: resultSet,
-    });
-    const blob = pdf.output("blob");
-    const downloadStatus = await downloadPdfBlob(blob, `distribucion-vidrios-${sanitizeFileNamePart(currentQuoteCode || "cotizacion", 32)}.pdf`);
-    if (downloadStatus === "failed") throw new Error("No pudimos descargar el PDF. Intenta nuevamente.");
-    setGeneratedFrom(generated);
-    setDownloadNotice(downloadStatus === "downloaded"
-      ? "PDF preparado. Revisa las descargas de tu navegador o dispositivo."
-      : "PDF abierto. Guárdalo desde el visor del dispositivo.");
-  }, [currentQuoteCode, clientName, workName, completePanes, sourceFresh]);
-
-  const calculate = useCallback(async (downloadAfter: boolean, openDialog = false) => {
+  const calculate = useCallback(async (openDialog = false) => {
     if (!canCalculate) return;
     const expectedRevision = dataRevision.current;
     const calculationQuoteId = quoteId;
     setBusy(true);
     setError(null);
-    setDownloadNotice(null);
     setResults(null);
     setResultsQuoteId(null);
     setPreviewOpen(false);
     try {
-      const requestBody: { mode: "geometric_preview" | "provider_pdf"; sheetWidthMm?: number; sheetHeightMm?: number } = { mode: downloadAfter ? "provider_pdf" : "geometric_preview" };
+      const requestBody: { mode: "geometric_preview"; sheetWidthMm?: number; sheetHeightMm?: number } = { mode: "geometric_preview" };
       if (formatMissing) {
         requestBody.sheetWidthMm = Number(sheetWidth);
         requestBody.sheetHeightMm = Number(sheetHeight);
@@ -291,9 +265,7 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
       const body = await response.json() as CalculationResponse & { error?: string; diagnostics?: string[] };
       if (!response.ok) throw new Error(body.error || "No pudimos preparar la distribución. Revisa las medidas de vidrio e inténtalo otra vez.");
       if (dataRevision.current !== expectedRevision || quoteId !== calculationQuoteId) throw new Error("Los paños cambiaron mientras se calculaba. Genera nuevamente la distribución.");
-      if (!body.coverage || (downloadAfter && body.coverage.status !== "complete")) {
-        throw new Error("No se puede descargar el pedido completo. Ingresa las medidas de vidrio pendientes y vuelve a intentarlo.");
-      }
+      if (!body.coverage) throw new Error("La respuesta no contiene la cobertura vigente.");
       const displayedSnapshots = panes.map((pane) => pane.snapshotFingerprint);
       if (!sameSnapshotSet(displayedSnapshots, body.generatedFrom ?? [])) {
         const latestResponse = await fetch(`/api/cotizaciones/${encodeURIComponent(quoteId)}/optimizacion-vidrios`, { cache: "no-store" });
@@ -311,122 +283,23 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
       setSource((current) => current ? { ...current, quoteCode: body.quoteCode || current.quoteCode } : current);
       setResults(body.results);
       setResultsQuoteId(calculationQuoteId);
-      setGeneratedFrom(body.generatedFrom ?? []);
+      setPreviewExclusions(body.previewExclusions ?? []);
       setSelectedSheetIndex(0);
-      if (downloadAfter) await downloadResult(body.results, body.warnings ?? [], body.generatedFrom ?? [], body.coverage, expectedRevision);
-      else setPreviewOpen(openDialog);
+      setPreviewOpen(openDialog);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No pudimos calcular la distribución.");
     } finally {
       setBusy(false);
     }
-  }, [canCalculate, formatMissing, sheetWidth, sheetHeight, quoteId, panes, downloadResult]);
+  }, [canCalculate, formatMissing, sheetWidth, sheetHeight, quoteId, panes]);
 
   useEffect(() => {
     if (!enabled || (!autoPreview && !preloadPreview) || isLoadingSource || !sourceFresh || !sourceForQuote || !canCalculate || formatMissing) return;
     const fingerprint = panes.map((pane) => pane.snapshotFingerprint).join("|");
     if (autoPreviewFingerprint.current === fingerprint) return;
     autoPreviewFingerprint.current = fingerprint;
-    void calculate(false);
+    void calculate();
   }, [enabled, autoPreview, preloadPreview, isLoadingSource, sourceFresh, sourceForQuote, canCalculate, formatMissing, panes, calculate]);
-
-  async function exportPreviewResult(action: "download" | "share") {
-    if (!visibleResults || resultsQuoteId !== quoteId || !generatedFrom || !sourceFresh || refreshingSource) return;
-    const expectedRevision = dataRevision.current;
-    const calculationQuoteId = quoteId;
-    setBusy(true);
-    setError(null);
-    setDownloadNotice(null);
-    try {
-      const response = await fetch(`/api/cotizaciones/${encodeURIComponent(quoteId)}/optimizacion-vidrios`, { cache: "no-store" });
-      const body = await response.json() as PlanResponse & { error?: string };
-      if (!response.ok) throw new Error(body.error || "No pudimos confirmar los paños actuales.");
-      if (dataRevision.current !== expectedRevision || quoteId !== calculationQuoteId) throw new Error("Los paños cambiaron. Actualiza la cobertura y vuelve a generar la distribución.");
-      if (body.coverage.status !== "complete") {
-        setSource(body);
-        setSourceQuoteId(calculationQuoteId);
-        setSourceFresh(true);
-        throw new Error("No se puede descargar el pedido completo. Ingresa las medidas de vidrio pendientes y vuelve a intentarlo.");
-      }
-      const current = body.panes.map((pane) => pane.snapshotFingerprint);
-      if (!sameSnapshotSet(current, generatedFrom)) {
-        setResults(null);
-        setPreviewOpen(false);
-        setSource(body);
-        setSourceQuoteId(calculationQuoteId);
-        setSourceFresh(true);
-        throw new Error("La cotización cambió desde el cálculo. Genera nuevamente la distribución antes de descargar.");
-      }
-      const requestBody: { mode: "provider_pdf"; sheetWidthMm?: number; sheetHeightMm?: number } = { mode: "provider_pdf" };
-      if (formatMissing) {
-        requestBody.sheetWidthMm = Number(sheetWidth);
-        requestBody.sheetHeightMm = Number(sheetHeight);
-      }
-      const calculationResponse = await fetch(`/api/cotizaciones/${encodeURIComponent(quoteId)}/optimizacion-vidrios`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-      });
-      const calculation = await calculationResponse.json() as CalculationResponse & { error?: string; diagnostics?: string[] };
-      if (!calculationResponse.ok) throw new Error(calculation.error || "No se pudo preparar el PDF. Revisa las medidas de vidrio e inténtalo otra vez.");
-      if (dataRevision.current !== expectedRevision || quoteId !== calculationQuoteId) throw new Error("Los paños cambiaron mientras se preparaba el PDF. Actualiza la cobertura y vuelve a generar.");
-      if (calculation.coverage.status !== "complete" || !sameSnapshotSet(current, calculation.generatedFrom ?? [])) {
-        setResults(null);
-        setPreviewOpen(false);
-        setSource(body);
-        throw new Error(calculation.coverage.status !== "complete"
-          ? "No se puede descargar el pedido completo. Ingresa las medidas de vidrio pendientes y vuelve a intentarlo."
-          : "Los vidrios guardados cambiaron. Vuelve a calcular la distribución antes de descargar.");
-      }
-      if (!calculation.results?.length || calculation.results.some((result) => result.status !== "feasible" || !result.verification.passed || result.sheets.length === 0)) {
-        throw new Error(calculation.results?.flatMap((result) => result.errors).filter(Boolean)[0] || "No se encontró una distribución geométrica verificable.");
-      }
-      const currentCompletePanes = body.panes.filter(isPreviewReadyPane);
-      if (action === "download") {
-        await downloadResult(calculation.results, calculation.warnings ?? [], calculation.generatedFrom ?? [], calculation.coverage, expectedRevision);
-        return;
-      }
-      const logoDataUrl = await loadVentoraPdfLogoDataUrl();
-      if (!logoDataUrl) throw new Error("No se pudo cargar el logotipo corporativo. Recarga la página e inténtalo otra vez.");
-      const pdf = await createGlassDistributionPdf({
-        quoteCode: currentQuoteCode,
-        clientName,
-        workName,
-        logoDataUrl,
-        coverage: calculation.coverage,
-        panes: mapGlassDistributionPdfPanes(currentCompletePanes),
-        results: calculation.results,
-      });
-      if (dataRevision.current !== expectedRevision || !sourceFresh || quoteId !== calculationQuoteId) {
-        throw new Error("Los paños cambiaron. Actualiza la cobertura antes de compartir el PDF.");
-      }
-      const blob = pdf.output("blob");
-      const fileName = `distribucion-vidrios-${sanitizeFileNamePart(currentQuoteCode || "cotizacion", 32)}.pdf`;
-      if (typeof File !== "undefined" && typeof navigator !== "undefined" && navigator.share && navigator.canShare) {
-        const file = new File([blob], fileName, { type: "application/pdf" });
-        if (navigator.canShare({ files: [file] })) {
-          try {
-            await navigator.share({ files: [file], title: "Distribución de vidrio", text: "Distribución preliminar para revisión con el proveedor." });
-            setDownloadNotice("PDF compartido desde el menú del dispositivo.");
-            return;
-          } catch (cause) {
-            if (cause instanceof DOMException && cause.name === "AbortError") return;
-            const fallbackStatus = await downloadPdfBlob(blob, fileName);
-            if (fallbackStatus === "failed") throw cause;
-            setDownloadNotice("No se pudo abrir el menú para compartir. El PDF quedó disponible para descargar.");
-            return;
-          }
-        }
-      }
-      const downloadStatus = await downloadPdfBlob(blob, fileName);
-      if (downloadStatus === "failed") throw new Error("No pudimos descargar el PDF. Intenta nuevamente.");
-      setDownloadNotice("Este dispositivo no permite compartir archivos. El PDF quedó disponible para descargar.");
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "No pudimos generar el PDF.");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   if (!enabled) return null;
 
@@ -436,7 +309,7 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
     <section className={s.panel} aria-labelledby="glass-distribution-title" id="glass-distribution">
       <header className={s.heading}>
         <span className={s.icon}><LuLayers3 aria-hidden /></span>
-        <div><h2 id="glass-distribution-title">Distribución de planchas</h2><p>Se usan las medidas finales guardadas para cada vidrio.</p></div>
+        <div><h2 id="glass-distribution-title">Distribución de planchas</h2><p>Usa geometría congelada; nunca estima vidrio desde las medidas exteriores.</p></div>
       </header>
 
       {isLoadingSource ? <p className={s.status}><LuLoaderCircle className={s.spinner} aria-hidden />Cargando vidrio y paños…</p> : null}
@@ -447,6 +320,9 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
           coverage={sourceForQuote.coverage}
           items={items}
           templates={templates}
+          previewablePaneIds={completePanes.map((pane) => pane.paneId)}
+          previewableUnitCount={completePanes.reduce((sum, pane) => sum + (pane.physicalUnitCount ?? 0), 0)}
+          excludedPreviewCount={previewExclusions.length}
           onSaveMeasurements={onSaveManualGlassMeasurements}
           isRefreshing={refreshingSource}
           isCoverageCurrent={sourceFresh}
@@ -461,20 +337,30 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
       {!isLoadingSource && sourceFresh && sourceForQuote && panes.length === 0 ? <p className={s.empty}>Aún no hay medidas de vidrio disponibles para distribuir.</p> : null}
 
       {panes.length > 0 ? <>
+        {completePanes.some((pane) => pane.dimensionProvenance === "recipe_trace") ? <p className={s.pdfBlockedNote} role="status">La vista previa usa geometría congelada de una receta preliminar. Requiere revisión del taller y no es apta para corte.</p> : null}
+        {previewExclusions.length > 0 ? <div className={s.pdfBlockedNote} role="status">
+          <strong>Referencias excluidas de la simulación</strong>
+          <ul>{previewExclusions.map((entry) => <li key={`${entry.quoteItemId}-${entry.paneId}`}>{entry.componentCode} · {entry.displayName ?? entry.componentName}: {entry.reason}</li>)}</ul>
+        </div> : null}
         <div className={s.glassGroups}>
           {Array.from(new Map(panes.map((pane) => {
-            const key = [pane.productId, pane.technicalSpec?.category, pane.technicalSpec?.thicknessMm, pane.technicalSpec?.sheetWidthMm, pane.technicalSpec?.sheetHeightMm].join("|");
-            const group = panes.filter((candidate) => [candidate.productId, candidate.technicalSpec?.category, candidate.technicalSpec?.thicknessMm, candidate.technicalSpec?.sheetWidthMm, candidate.technicalSpec?.sheetHeightMm].join("|") === key);
+            const key = [pane.productId, pane.technicalSpec?.category, pane.technicalSpec?.thicknessMm, pane.finishOrientationKey, pane.technicalSpec?.sheetWidthMm, pane.technicalSpec?.sheetHeightMm].join("|");
+            const group = panes.filter((candidate) => [candidate.productId, candidate.technicalSpec?.category, candidate.technicalSpec?.thicknessMm, candidate.finishOrientationKey, candidate.technicalSpec?.sheetWidthMm, candidate.technicalSpec?.sheetHeightMm].join("|") === key);
             return [key, { key, pane, group }];
           })).values()).map(({ key, pane, group }) => {
-            const spec = pane.technicalSpec;
-            const quantity = group.reduce((sum, entry) => sum + (entry.physicalUnitCount ?? 0), 0);
+            const previewableGroup = group.filter(isPreviewReadyPane);
+            const representative = previewableGroup[0] ?? pane;
+            const spec = representative.technicalSpec;
+            const quantity = previewableGroup.reduce((sum, entry) => sum + entry.physicalUnitCount, 0);
             const width = spec?.sheetWidthMm;
             const height = spec?.sheetHeightMm;
             return <div className={s.glassGroup} key={key}>
-              <div className={s.glassHeading}><strong>{formatGlassDisplayName(pane.displayName, spec?.thicknessMm)}</strong><span>{spec?.category ? CATEGORY_LABELS[spec.category] ?? spec.category : "Tipo pendiente"} · {spec?.thicknessMm ? `${spec.thicknessMm} mm` : "espesor pendiente"}</span></div>
-              <div className={s.glassMeta}><span>{group.length} {group.length === 1 ? "referencia de paño" : "referencias de paño"} · {quantity} {quantity === 1 ? "unidad con medidas verificadas" : "unidades con medidas verificadas"}</span><span>{width && height ? `Plancha ${width} × ${height} mm` : "Formato habitual pendiente"}</span></div>
-              <ul className={s.paneList}>{group.map((entry, index) => <li key={`${entry.quoteItemId}-${index}`}><span>{shortCode(entry.componentCode, index)}{entry.componentName ? ` · ${entry.componentName}` : ""} · {entry.physicalUnitCount == null ? "cantidad pendiente" : `${entry.physicalUnitCount} ${entry.physicalUnitCount === 1 ? "unidad física" : "unidades físicas"}`}</span><strong>{entry.widthMm && entry.heightMm ? `${entry.widthMm} × ${entry.heightMm} mm` : "Medidas pendientes"}</strong></li>)}</ul>
+              <div className={s.glassHeading}><strong>{formatGlassDisplayName(representative.displayName, spec?.thicknessMm)}</strong><span>{spec?.category ? CATEGORY_LABELS[spec.category] ?? spec.category : "Tipo pendiente"} · {spec?.thicknessMm ? `${spec.thicknessMm} mm` : "espesor pendiente"}</span></div>
+              <div className={s.glassMeta}><span>{previewableGroup.length} {previewableGroup.length === 1 ? "referencia incluida" : "referencias incluidas"} · {quantity} {quantity === 1 ? "unidad física" : "unidades físicas"} para simulación</span><span>{width && height ? `Plancha ${width} × ${height} mm` : "Formato habitual pendiente"}</span></div>
+              <ul className={s.paneList}>{group.map((entry, index) => {
+                const exclusion = getGlassPaneGeometryExclusionReason(entry);
+                return <li key={`${entry.quoteItemId}-${entry.paneId}`}><span>{shortCode(entry.componentCode, index)}{entry.componentName ? ` · ${entry.componentName}` : ""} · {exclusion ? `Excluido: ${exclusion}` : `${entry.physicalUnitCount} ${entry.physicalUnitCount === 1 ? "unidad física" : "unidades físicas"}`}</span><strong>{entry.widthMm && entry.heightMm ? `${entry.widthMm} × ${entry.heightMm} mm` : "Medidas pendientes"}</strong></li>;
+              })}</ul>
             </div>;
           })}
         </div>
@@ -486,17 +372,11 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
         </div> : null}
 
         <div className={s.actions}>
-          <button type="button" className={s.primaryAction} disabled={!canCalculate || busy || refreshingSource || !sourceFresh || sourceForQuote?.coverage.status !== "complete"} onClick={() => visibleResults ? void exportPreviewResult("download") : void calculate(true)}>
-            {busy ? <LuLoaderCircle className={s.spinner} aria-hidden /> : <LuDownload aria-hidden />}{busy ? autoPreview && !visibleResults ? "Calculando vista previa…" : "Preparando PDF…" : sourceForQuote?.coverage.status !== "complete" ? "PDF bloqueado · cobertura incompleta" : "Descargar distribución (PDF)"}
+          <button type="button" className={s.primaryAction} disabled={!canCalculate || busy || refreshingSource || !sourceFresh} onClick={() => visibleResults ? setPreviewOpen(true) : void calculate(true)}>
+            {busy ? <LuLoaderCircle className={s.spinner} aria-hidden /> : <LuEye aria-hidden />}{busy ? "Calculando vista previa…" : visibleResults ? "Ampliar vista previa" : "Generar vista previa"}
           </button>
-          <button type="button" className={s.secondaryAction} disabled={!canCalculate || busy || refreshingSource || !visibleResults || sourceForQuote?.coverage.status !== "complete"} onClick={() => void exportPreviewResult("share")}><LuShare2 aria-hidden /> Compartir</button>
-          <button type="button" className={s.secondaryAction} disabled={!canCalculate || busy || refreshingSource || !sourceFresh} onClick={() => visibleResults ? setPreviewOpen(true) : void calculate(false, true)}><LuEye aria-hidden /> {visibleResults ? "Ampliar vista" : "Vista previa"}</button>
+          <Link className={s.secondaryAction} href={`/print/cotizaciones/${encodeURIComponent(quoteId)}/fabricacion/vidrios?codigo=${encodeURIComponent(currentQuoteCode)}`}>Abrir revisión técnica y PDFs</Link>
         </div>
-        {sourceForQuote?.coverage.status !== "complete" ? (
-          <p className={s.pdfBlockedNote} role="status">
-            Para descargar el pedido completo, ingresa las medidas de vidrio pendientes.
-          </p>
-        ) : null}
         {autoPreview && selected ? <div className={s.inlinePreview} aria-label="Vista previa preliminar de distribución">
           <div className={s.previewSheetHeader}><strong>Vista previa · plancha {selectedSheetIndex + 1}</strong><span>{selected.sheet.rawSheet.widthMm} × {selected.sheet.rawSheet.heightMm} mm</span></div>
           <div className={s.previewDrawingWrap}><PlanDrawing result={selected.result} allPlans={allSheets} /></div>
@@ -508,10 +388,9 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
           </div> : null}
           <p className={s.previewDisclaimer}>Distribución preliminar. Confirmar medidas y tolerancias con el proveedor antes de cortar.</p>
         </div> : null}
-        {visibleResults ? <p className={s.resultNote}>{sheetCount} {sheetCount === 1 ? "plancha" : "planchas"} · {completePanes.reduce((sum, pane) => sum + (pane.physicalUnitCount ?? 0), 0)} unidades distribuidas · Despuntes y separación asumidos: 0 mm · Formato sin giro{panes.some((pane) => !pane.technicalSpec?.pieceOrientation || pane.technicalSpec.pieceOrientation === "unknown") ? " · Orientación de paños desconocida: se mantuvieron fijos" : ""}</p> : null}
+        {visibleResults ? <p className={s.resultNote}>{sheetCount} {sheetCount === 1 ? "plancha" : "planchas"} · {visibleResults.reduce((sum, result) => sum + result.summary.paneCount, 0)} unidades distribuidas · Despuntes y separación asumidos: 0 mm · Formato sin giro{panes.some((pane) => !pane.technicalSpec?.pieceOrientation || pane.technicalSpec.pieceOrientation === "unknown") ? " · Orientación de paños desconocida: se mantuvieron fijos" : ""}</p> : null}
       </> : null}
       {error ? <p className={s.error} role="alert">{error}</p> : null}
-      {downloadNotice ? <p className={s.resultNote} role="status">{downloadNotice}</p> : null}
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className={s.previewDialog}>
@@ -528,9 +407,9 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
               <span>{selectedSheetIndex + 1} / {sheetCount}</span>
               <button type="button" onClick={() => setSelectedSheetIndex((index) => Math.min(sheetCount - 1, index + 1))} disabled={selectedSheetIndex === sheetCount - 1} aria-label="Plancha siguiente"><LuChevronRight aria-hidden /></button>
             </div> : null}
-            <div className={s.previewSummary}><span>{selected.sheet.panes.length} unidades físicas · {formatArea(selected.sheet.areas.panesMm2)}</span><span>{selected.sheet.remnants.length} sobrantes geométricos · {formatArea(selected.sheet.remnants.reduce((sum, remnant) => sum + remnant.areaMm2, 0))}</span></div>
+            <div className={s.previewSummary}><span>{selected.sheet.panes.length} {selected.sheet.panes.length === 1 ? "unidad física" : "unidades físicas"} · {formatArea(selected.sheet.areas.panesMm2)}</span><span>{selected.sheet.remnants.length} sobrantes geométricos · {formatArea(selected.sheet.remnants.reduce((sum, remnant) => sum + remnant.areaMm2, 0))}</span></div>
             <p className={s.previewDisclaimer}>Despuntes y separación geométrica asumidos: 0 mm. El formato se usa sin giro y la orientación de paños no confirmada se mantiene fija. Distribución preliminar. Confirmar medidas y tolerancias con el proveedor antes de cortar.</p>
-            <button type="button" className={s.primaryAction} disabled={busy || refreshingSource || !sourceFresh || sourceForQuote?.coverage.status !== "complete"} onClick={() => void exportPreviewResult("download")}><LuDownload aria-hidden />{busy ? "Generando PDF…" : sourceForQuote?.coverage.status !== "complete" ? "PDF bloqueado · cobertura incompleta" : "Descargar PDF de esta vista"}</button>
+            <Link className={s.secondaryAction} href={`/print/cotizaciones/${encodeURIComponent(quoteId)}/fabricacion/vidrios?codigo=${encodeURIComponent(currentQuoteCode)}`}>Abrir revisión técnica y PDFs</Link>
           </> : null}
         </DialogContent>
       </Dialog>

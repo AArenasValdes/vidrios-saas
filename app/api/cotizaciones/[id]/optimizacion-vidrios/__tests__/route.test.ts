@@ -20,7 +20,7 @@ const row = {
   organizationId: 12, quoteId: 1170, quoteItemId: "item-1", logicalComponentId: "component-1", glassId: "glass-1",
   paneId: "component-1:glass-1", paneUnitIds: ["component-1:glass-1:1"], ordinal: 1, productId: "mono-4",
   displayName: "Monolítico claro", technicalSpec: { productId: "mono-4", thicknessMm: 4, category: "monolitico", sheetWidthMm: 3210, sheetHeightMm: 2250 },
-  widthMm: 700, heightMm: 900, quantity: 1, dimensionProvenance: "validated_recipe", dimensionTraceRuleIds: [],
+  widthMm: 700, heightMm: 900, quantity: 1, commercialQuantity: 1, dimensionProvenance: "validated_recipe", dimensionTraceRuleIds: [],
   recipeStatus: "validated", validationStatus: "eligible_for_manual_planning", warnings: [], snapshotVersion: 1,
   snapshotFingerprint: "snapshot-1", normalizationVersion: 1,
 };
@@ -124,6 +124,52 @@ describe("/api/cotizaciones/[id]/optimizacion-vidrios", () => {
     expect(body.panes[1].physicalUnitCount).toBeNull();
   });
 
+  it("genera vista parcial con recipe_trace geométrico y devuelve el motivo de la referencia excluida", async () => {
+    (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue({ code: "COT-1170", items: [
+      { id: "item-1", quantity: 1, code: "V1", name: "Corredera", glassDescription: "Float", observaciones: "", fabricacionSnapshot: {} },
+    ] });
+    const tracePane = {
+      ...row,
+      dimensionProvenance: "recipe_trace",
+      recipeStatus: "lista_para_validar",
+      validationStatus: "requires_review",
+      warnings: ["La receta no está validada por el taller."],
+    };
+    const missingPane = {
+      ...row,
+      glassId: "glass-missing",
+      paneId: "component-1:glass-missing",
+      paneUnitIds: [],
+      widthMm: null,
+      heightMm: null,
+      quantity: 0,
+      dimensionProvenance: "recipe_trace",
+      recipeStatus: "lista_para_validar",
+      validationStatus: "requires_review",
+      warnings: ["Faltan dimensiones válidas del paño."],
+      snapshotFingerprint: "snapshot-missing",
+    };
+    (extractNormalizedGlassPanesForOrganization as jest.Mock).mockReturnValue([tracePane, missingPane]);
+    (optimizeGlassCuttingBatch as jest.Mock).mockReturnValue([{ status: "feasible", sheets: [{ panes: [{ paneUnitId: "component-1:glass-1:1" }] }], summary: { paneCount: 1 } }]);
+
+    const response = await POST(new Request("http://localhost", { method: "POST", body: JSON.stringify({ mode: "geometric_preview" }) }), route);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(optimizeGlassCuttingBatch).toHaveBeenCalledWith(expect.objectContaining({
+      mode: "geometric_preview",
+      panes: [expect.objectContaining({ dimensionProvenance: "recipe_trace", paneId: tracePane.paneId })],
+    }));
+    expect(body.coverage.status).toBe("unavailable");
+    expect(body.preliminaryPaneCount).toBe(1);
+    expect(body.previewExclusions).toEqual([expect.objectContaining({
+      componentCode: "V1",
+      paneId: missingPane.paneId,
+      reason: expect.stringMatching(/dimensiones rectangulares/i),
+    })]);
+    expect(body.warnings.join(" ")).toMatch(/recipe_trace.*no está validada/i);
+  });
+
   it("C: marca no disponible y no inventa unidades para componentes sin dimensiones", async () => {
     (readQuoteForTechnicalCost as jest.Mock).mockResolvedValue({ code: "COT-1170", items: [
       { id: "item-1", quantity: 1, code: "V1", name: "Corredera", glassDescription: "Float", observaciones: "", fabricacionSnapshot: null },
@@ -165,10 +211,27 @@ describe("/api/cotizaciones/[id]/optimizacion-vidrios", () => {
 
     const response = await POST(new Request("http://localhost", { method: "POST", body: JSON.stringify({ mode: "provider_pdf" }) }), route);
     const body = await response.json();
-    expect(response.status).toBe(422);
-    expect(body.error).toMatch(/cobertura de vidrio está incompleta/i);
-    expect(body.coverage.pendingReferences[0].componentCode).toBe("V2");
+    expect(response.status).toBe(400);
+    expect(body.error).toMatch(/reglas físicas requeridas/i);
     expect(optimizeGlassCuttingBatch).not.toHaveBeenCalled();
+  });
+
+  it("separa provider_pdf del perfil geométrico y exige resultado de taller validado", async () => {
+    const body = {
+      mode: "provider_pdf", pieceOrientation: "fixed", confirmManualOperations: true,
+      sheetOrientation: "fixed", sheetSource: "workshop_measurement", sheetSourceReference: "medición de taller QA",
+      tableWidthMm: 3210, tableHeightMm: 2250,
+      edgeTrimMm: { top: 0, right: 0, bottom: 0, left: 0 }, separationMm: 5, minimumStripWidthMm: 10,
+      remnantMinimumWidthMm: 400, remnantMinimumHeightMm: 400, remnantOrientation: "fixed",
+      processSourceReference: "proceso de taller QA",
+    };
+    (optimizeGlassCuttingBatch as jest.Mock).mockReturnValue([{
+      status: "feasible", verification: { passed: true }, productionReadiness: "workshop_validated", sheets: [{}],
+    }]);
+    const response = await POST(new Request("http://localhost", { method: "POST", body: JSON.stringify(body) }), route);
+    expect(response.status).toBe(200);
+    expect(optimizeGlassCuttingBatch).toHaveBeenCalledWith(expect.objectContaining({ mode: "workshop" }));
+    expect((await response.json()).mode).toBe("provider_pdf");
   });
 
   it("bloquea la pauta operativa si faltan slots aunque el paño presente tenga validación individual", async () => {

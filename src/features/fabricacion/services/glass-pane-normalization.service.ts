@@ -29,6 +29,7 @@ export type NormalizedGlassPane = {
   widthMm: number | null;
   heightMm: number | null;
   quantity: number;
+  commercialQuantity: number | null;
   dimensionProvenance: "validated_recipe" | "recipe_trace" | "manual" | "legacy_snapshot" | "missing";
   dimensionTraceRuleIds: string[];
   recipeStatus: string | null;
@@ -132,6 +133,7 @@ function normalizeRow(input: {
     widthMm: input.widthMm,
     heightMm: input.heightMm,
     quantity: input.quantity,
+    commercialQuantity: positiveInteger(context.item.cantidad),
     dimensionProvenance: input.source,
     dimensionTraceRuleIds: input.dimensionTraceRuleIds,
     recipeStatus: input.recipeStatus,

@@ -22,6 +22,7 @@ export type GlassPanePlanningUnit = Pick<
   | "widthMm"
   | "heightMm"
   | "quantity"
+  | "commercialQuantity"
   | "dimensionProvenance"
   | "recipeStatus"
   | "validationStatus"
@@ -130,6 +131,8 @@ export type GlassSheetPlan = {
 };
 
 export type GlassCuttingResult = {
+  /** Describes which rule set produced this plan; required by document consumers for output gating. */
+  calculationMode?: "workshop" | "geometric_preview";
   status: "feasible" | "infeasible_piece" | "infeasible_proven" | "search_limit_reached" | "sin_plan_en_busqueda" | "requires_review" | "invalid_input";
   geometricFeasibility: "feasible" | "not_found" | "not_evaluated";
   minimumSheetCountProven: boolean;
