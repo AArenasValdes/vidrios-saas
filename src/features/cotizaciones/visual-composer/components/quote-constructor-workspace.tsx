@@ -1699,7 +1699,7 @@ export function QuoteConstructorWorkspace({
                     compact
                     value={activeForm.manualGlassMeasurements}
                     automaticDimensionsAvailable={Boolean(activeForm.fabricacionSnapshot?.result?.vidrios?.some((pane) => pane.anchoMm > 0 && pane.altoMm > 0))}
-                    paneConfiguration={{ componentType: activeForm.fabricacionTipologia || activeForm.tipo, system: activeForm.sistema, configuration: activeForm.configuracion, sheetScheme: activeForm.sheetScheme, fabricacionHojas: activeForm.fabricacionHojas, guidedVisualConfig: activeForm.guidedVisualConfig, quickCompositionAdjustment: activeForm.quickCompositionAdjustment }}
+                    paneConfiguration={{ componentType: activeForm.tipo, system: activeForm.sistema, configuration: activeForm.configuracion, sheetScheme: activeForm.sheetScheme, fabricacionHojas: activeForm.fabricacionHojas, guidedVisualConfig: activeForm.guidedVisualConfig, quickCompositionAdjustment: activeForm.quickCompositionAdjustment }}
                     templates={lineTemplates}
                     onChange={(manualGlassMeasurements) =>
                       onUpdateItem(activeItem.id, { manualGlassMeasurements })

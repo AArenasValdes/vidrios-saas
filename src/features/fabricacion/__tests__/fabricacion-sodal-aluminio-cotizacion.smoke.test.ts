@@ -10,7 +10,7 @@ const cases = [
   { key: "ventora:l20", name: "Línea 20", typology: "corredera", leaves: 2, glass: "Vidrio monolítico 5 mm" },
   { key: "ventora:l5000", name: "Línea 5000", typology: "corredera", leaves: 2, glass: "Vidrio monolítico 5 mm" },
   { key: "ventora:serie-12-shower-corredera", name: "Línea 12 · Shower", typology: "shower", leaves: 2, glass: "Vidrio templado 8 mm" },
-  { key: "ventora:l32", name: "Línea 32", typology: "proyectante", leaves: 1, glass: "Vidrio monolítico 5 mm" },
+  { key: "ventora:l32", name: "Línea 32", typology: "proyectante", leaves: 1, glass: "Vidrio monolítico 4 mm" },
   { key: "ventora:l42", name: "Línea 42", typology: "proyectante", leaves: 1, glass: "Vidrio monolítico 5 mm" },
   { key: "ventora:optima-s28-corredera-2h", name: "Óptima S-28", typology: "corredera", leaves: 2, glass: "Termopanel 4+12+4 de 20 mm" },
   { key: "ventora:optima-s28-corredera-3h", name: "Óptima S-28", typology: "corredera", leaves: 3, glass: "Termopanel 4+12+4 de 20 mm" },

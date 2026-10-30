@@ -107,6 +107,21 @@ function pdfExampleDirectory() {
 }
 
 describe("orden de fabricación y materiales", () => {
+  it("mantiene visible la advertencia de referencia Alumco histórica en resumen y PDF interno", () => {
+    const cost = savedCost();
+    const warning = "Alumco notas-2026-10-14 es una referencia histórica (publicada 2026-10-14, vigencia original hasta 2026-10-21); no es un precio vigente confirmado ni una cotización nueva del proveedor.";
+    cost.assumptions = [warning];
+    cost.lines[0]!.providerKey = "alumco";
+    cost.lines[0]!.priceReferenceStatus = "historical_reference";
+    const order = buildFabricationWorkOrder({ summary: summary(savedWork()), materials: materials(), technicalCostSnapshot: cost });
+    expect(order.pricing.assumptions).toContain(warning);
+    const text = pdfText(createFabricationWorkOrderPdf(order, {
+      companyName: "Taller", quoteCode: "COT-HIST", workName: "Ventanas", issueDate: "30 oct 2026",
+    }));
+    expect(text).toContain("Costo neto con referencia histórica");
+    expect(text).toContain("no es un precio vigente confirmado");
+  });
+
   it("usa el acabado elegido en la cotización también en la pauta PDF", () => {
     const quoteItem = {
       id: "v1", observaciones: encodeCotizacionItemPresentationMeta({
@@ -191,6 +206,59 @@ describe("orden de fabricación y materiales", () => {
     const emptyFallback = buildFabricationWorkOrder({ summary: withEmptyPauta, materials: { ...materials(), profiles: [] }, technicalCostSnapshot: null });
     expect(emptyFallback.hasJointBars).toBe(false);
     expect(emptyFallback.cutGroups[0]?.cuts[0]).toMatchObject({ quantity: 2, lengthMm: 900 });
+  });
+
+  it("separa geometría estructural preliminar de la pauta y advierte en PDF combinado y de cortes", () => {
+    const partial = summary(null);
+    partial.items = [{
+      itemId: "l32-geometry-only", codigo: "L32-1", nombre: "Proyectante Serie 32",
+      geometryOnly: true, statusLabel: "Despiece estructural preliminar · acristalamiento pendiente",
+      snapshot: { cuts: [
+        { profileCode: "3201", profileName: "Marco", label: "Marco", functionLabel: "Marco", quantity: 2, lengthMm: 1200 },
+        { profileCode: "3202", profileName: "Hoja", label: "Hoja", functionLabel: "Hoja", quantity: 2, lengthMm: 1100 },
+      ] },
+    } as FabricationQuoteSummary["items"][number]];
+    const order = buildFabricationWorkOrder({
+      summary: partial,
+      materials: { ...materials(), profiles: [], hasJointCuttingPlan: false },
+      technicalCostSnapshot: null,
+    });
+
+    expect(order.cutGroups).toEqual([]);
+    expect(order.preliminaryCutGroups.map((group) => group.technicalCode)).toEqual(["3201", "3202"]);
+    expect(order.materials.profiles).toEqual([]);
+    expect(order.pending).toContainEqual(expect.objectContaining({
+      subject: "Despiece estructural preliminar",
+      action: expect.stringContaining("no apto para fabricación"),
+    }));
+
+    const metadata = { companyName: "Taller", quoteCode: "COT-L32-PARCIAL", workName: "Serie 32", issueDate: "29 oct 2026" };
+    for (const kind of ["combined", "profile-cuts"] as const) {
+      const text = pdfText(createFabricationWorkOrderPdf(order, metadata, undefined, kind));
+      expect(text).toContain("DOCUMENTO PARCIAL");
+      expect(text).toContain("NO APTO PARA FABRICACIÓN");
+      expect(text).toContain("Despiece estructural preliminar");
+      expect(text).toContain("3201");
+      expect(text).toContain("3202");
+      expect(text).toContain("Acristalamiento pendiente");
+    }
+  });
+
+  it("invalida la presentación operativa conjunta si una tira incluye geometría preliminar", () => {
+    const mixed = summary(savedWork());
+    mixed.items = [{
+      itemId: "v1", codigo: "V1", nombre: "Proyectante Serie 32", geometryOnly: true,
+      statusLabel: "Despiece estructural preliminar · acristalamiento pendiente",
+      snapshot: { cuts: [{ profileCode: "3201", profileName: "Marco", label: "Marco", functionLabel: "Marco", quantity: 2, lengthMm: 1200 }] },
+    } as FabricationQuoteSummary["items"][number]];
+
+    const order = buildFabricationWorkOrder({ summary: mixed, materials: materials(), technicalCostSnapshot: savedCost() });
+
+    expect(order.hasJointBars).toBe(false);
+    expect(order.cutGroups).toEqual([]);
+    expect(order.preliminaryCutGroups.map((group) => group.technicalCode)).toEqual(["3201"]);
+    expect(order.materials.profiles).toEqual([]);
+    expect(order.pending.some((row) => row.key === "joint-plan-preliminary-geometry")).toBe(true);
   });
 
   it("deja pendientes tipo y espesor cuando solo el catálogo editable los aporta", () => {

@@ -746,7 +746,7 @@ export function FabricacionResumenMovil({
               </section>
 
               <section className={s.mSummarySection}>
-                <div className={s.mSummaryHeading}><h2>Componentes con pauta</h2><span>{summary.items.length} de {summary.totalItems}</span></div>
+                <div className={s.mSummaryHeading}><h2>Despieces para revisar</h2><span>{summary.items.filter((row) => !row.geometryOnly).length} con pauta · {summary.items.filter((row) => row.geometryOnly).length} preliminares</span></div>
                 {summary.items.length > 0 ? (
                   <div className={s.mCardStack}>
                     {summary.items.map((row) => <ComponentCard
@@ -763,7 +763,7 @@ export function FabricacionResumenMovil({
                 <SummaryMetricCell label="Perfiles" value={formatMl(summary.totalProfilesMl)} />
                 <SummaryMetricCell label="Vidrio" value={formatM2(summary.totalGlassM2)} />
                 <SummaryMetricCell label="Tiras" value={summary.totalBars == null ? "—" : String(summary.totalBars)} />
-                <SummaryMetricCell label="Con pauta" value={`${summary.items.length}/${summary.totalItems}`} />
+                <SummaryMetricCell label="Con pauta completa" value={`${summary.items.filter((row) => !row.geometryOnly).length}/${summary.totalItems}`} />
               </section>
             </div>
             {summary.compositionsPendingRecipe.length > 0 ? (

@@ -2287,6 +2287,138 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
     expect(resolved.formal?.result.perfiles.length).toBeGreaterThan(0);
   });
 
+  describe("Serie 32 proyectante Normal 1H separa estructura y acristalamiento", () => {
+    const definition = crearRecetaPlantillaVentoraProyectante("L32", {
+      createId: (() => { let id = 0; return () => `l32-glass-scope-${id++}`; })(),
+    });
+    const recipe = recipeRecord({
+      id: "recipe-l32-normal-glass-scope",
+      lineTemplateId: 332,
+      lineName: "Serie 32",
+      typology: "proyectante",
+      leavesCount: 1,
+      variant: "normal",
+      definition,
+    });
+
+    const resolve = (input: {
+      glassName: string;
+      category?: "monolitico" | "laminado" | "dvh";
+      thicknessMm?: number | null;
+      hasConflict?: boolean;
+    }) => {
+      const technicalSpec = input.category
+        ? {
+            version: 1 as const,
+            productId: "glass-qa",
+            thicknessMm: input.thicknessMm ?? null,
+            category: input.category,
+            manualCutStatus: "pending_validation" as const,
+            technicalReviewConfirmed: false,
+            sheetWidthMm: null,
+            sheetHeightMm: null,
+            provenance: "catalog" as const,
+            sourceProductId: "glass-qa",
+            sourceValues: null,
+            hasConflict: input.hasConflict ?? false,
+          }
+        : undefined;
+      const item: CotizacionWorkflowItem = {
+        ...quoteItem({ lineTemplateId: "332", ancho: 1200, alto: 1000 }),
+        lineaComercial: "Serie 32",
+        nombre: "Ventana proyectante",
+        vidrio: input.glassName,
+        observaciones: encodeCotizacionItemPresentationMeta({
+          lineTemplateId: "332",
+          catalogLineKey: "ventora:l32",
+          sistema: "Proyectante",
+          configuracion: "Proyectante Normal 1H",
+          fabricacionTipologia: "proyectante",
+          fabricacionApertura: "proyectante",
+          fabricacionHojas: 1,
+          fabricacionModulos: 1,
+          fabricacionVariante: "normal",
+          glassTechnicalSpec: technicalSpec ?? null,
+        }),
+      };
+      return resolveFabricacionDespieceForQuoteItem({
+        item,
+        recipes: [recipe],
+        organizationId: 1,
+      });
+    };
+
+    it("con monolítico 4 mm conserva la resolución completa documentada", () => {
+      const result = resolve({
+        glassName: "Incoloro monolítico 4 mm",
+        category: "monolitico",
+        thicknessMm: 4,
+      });
+
+      expect(result.estado).toBe("calculado");
+      expect(result.formal?.result.perfiles.map((profile) => profile.codigoPerfil)).toEqual(
+        expect.arrayContaining(["3201", "3202", "3208"]),
+      );
+      expect(result.formal?.result.vidrios).toHaveLength(1);
+    });
+
+    it.each([5, 6])("con monolítico %i mm calcula solo marco y hoja", (thicknessMm) => {
+      const result = resolve({
+        glassName: `Incoloro monolítico ${thicknessMm} mm`,
+        category: "monolitico",
+        thicknessMm,
+      });
+
+      expect(result.estado).toBe("receta_incompleta");
+      expect(result.formal).toBeNull();
+      expect(result.geometryOnly?.profiles.map((profile) => profile.codigoPerfil)).toEqual(
+        expect.arrayContaining(["3201", "3202"]),
+      );
+      expect(result.geometryOnly?.profiles.some((profile) => profile.codigoPerfil === "3208")).toBe(false);
+      expect(result.cubication?.glass).toBeNull();
+      expect(result.geometryOnly?.pendingCommercial).toEqual(["glass", "glass_bead"]);
+      expect(result.message).toMatch(/no es un despiece completo/i);
+    });
+
+    it("con espesor desconocido conserva geometría estructural sin inferir el vidrio", () => {
+      const result = resolve({ glassName: "Vidrio por definir" });
+
+      expect(result.estado).toBe("receta_incompleta");
+      expect(result.geometryOnly?.profiles).toHaveLength(4);
+      expect(result.geometryOnly?.profiles.some((profile) => profile.codigoPerfil === "3208")).toBe(false);
+      expect(result.cubication?.glass).toBeNull();
+    });
+
+    it("mantiene DVH y laminado fuera de la variante monolítica", () => {
+      for (const glazing of [
+        { glassName: "DVH 20 mm", category: "dvh" as const, thicknessMm: 20 },
+        { glassName: "Laminado 6,38 mm", category: "laminado" as const, thicknessMm: 6.38 },
+      ]) {
+        const result = resolve(glazing);
+        expect(result.estado).toBe("receta_incompleta");
+        expect(result.geometryOnly?.profiles.map((profile) => profile.codigoPerfil)).toEqual(
+          expect.arrayContaining(["3201", "3202"]),
+        );
+        expect(result.geometryOnly?.profiles.some((profile) => profile.codigoPerfil === "3208")).toBe(false);
+        expect(result.cubication?.glass).toBeNull();
+      }
+    });
+
+    it("trata una especificación contradictoria como pendiente, no como monolítico 4 mm", () => {
+      const result = resolve({
+        glassName: "DVH 20 mm",
+        category: "monolitico",
+        thicknessMm: 4,
+        hasConflict: true,
+      });
+
+      expect(result.estado).toBe("receta_incompleta");
+      expect(result.formal).toBeNull();
+      expect(result.geometryOnly?.profiles.some((profile) => profile.codigoPerfil === "3208")).toBe(false);
+      expect(result.cubication?.glass).toBeNull();
+    });
+  });
+
   it("no marca revisión de fabricación en línea comercial sin receta (Serie 20)", () => {
     const item: CotizacionWorkflowItem = {
       ...quoteItem({ lineTemplateId: "serie-20", withLine: true }),

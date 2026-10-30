@@ -166,7 +166,11 @@ function buildVentoraDefaultLine(
       ...(definition.configurationKey ? { configurationKey: definition.configurationKey } : {}),
       configurationLabel: definition.configurationLabel ?? definition.configuracion,
       ...(definition.compatibility ? { compatibility: definition.compatibility } : {}),
-      structuralArchetypeId: CATALOG_KEY_TO_ARQUETIPO[definition.profileSourceCatalogKey ?? definition.catalogKey] ?? null,
+      structuralArchetypeId:
+        definition.compatibility?.configurations?.length === 1 &&
+        definition.compatibility.configurations[0]?.typology === "pano_fijo"
+          ? null
+          : CATALOG_KEY_TO_ARQUETIPO[definition.profileSourceCatalogKey ?? definition.catalogKey] ?? null,
       ...(definition.lineSystem ? { lineSystem: definition.lineSystem } : {}),
       ...(definition.ventoraPlantillaId
         ? { ventoraPlantillaId: definition.ventoraPlantillaId }
@@ -373,6 +377,7 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
       materials: ["Aluminio"],
       configurations: [
         { id: "ventora:l32:proyectante", componentType: "Ventana", openingType: "Proyectante", label: "Ventana proyectante", typology: "proyectante", variant: "normal", leavesCounts: [1] },
+        { id: "ventora:l32:pano-fijo", componentType: "Paño fijo", openingType: "Fijo", label: "Paño fijo", typology: "pano_fijo", variant: "sin_receta", leavesCounts: [1] },
       ],
     },
     lineFamilyType: "traditional",

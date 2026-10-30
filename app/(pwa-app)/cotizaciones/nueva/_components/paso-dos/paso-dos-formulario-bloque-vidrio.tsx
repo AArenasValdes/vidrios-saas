@@ -227,7 +227,7 @@ export function PasoDosFormularioBloqueVidrio({
           value={componentForm.manualGlassMeasurements}
           automaticDimensionsAvailable={Boolean(componentForm.fabricacionSnapshot?.result?.vidrios?.some((pane) => pane.anchoMm > 0 && pane.altoMm > 0))}
           selectedGlassProductId={componentForm.vidrioLineTemplateId}
-          paneConfiguration={{ componentType: componentForm.fabricacionTipologia || componentForm.tipo, system: componentForm.sistema, configuration: componentForm.configuracion, sheetScheme: componentForm.sheetScheme, fabricacionHojas: componentForm.fabricacionHojas, guidedVisualConfig: componentForm.guidedVisualConfig, quickCompositionAdjustment: componentForm.quickCompositionAdjustment }}
+          paneConfiguration={{ componentType: componentForm.tipo, system: componentForm.sistema, configuration: componentForm.configuracion, sheetScheme: componentForm.sheetScheme, fabricacionHojas: componentForm.fabricacionHojas, guidedVisualConfig: componentForm.guidedVisualConfig, quickCompositionAdjustment: componentForm.quickCompositionAdjustment }}
           templates={glassCatalogTemplates}
           onChange={(value) => onComponentChange("manualGlassMeasurements", value)}
         />

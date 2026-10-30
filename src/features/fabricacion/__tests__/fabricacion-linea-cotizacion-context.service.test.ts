@@ -175,6 +175,47 @@ describe("fabricacion-linea-cotizacion-context.service", () => {
     expect(context?.fabricationRecipeId).toBe("rec-proyectante");
   });
 
+  it("conserva la selección comercial de paño fijo Serie 32 sin heredar la receta proyectante", () => {
+    const context = resolveFabricacionContextForLineAssignment({
+      template: {
+        id: 42,
+        catalogKey: "ventora:l32:configuration:ventora:l32:pano-fijo",
+        catalogMetadata: { lineConfiguration: "Proyectante" },
+      },
+      recipes: [buildRecipe({
+        id: "rec-proyectante",
+        lineTemplateId: 42,
+        tipologia: "proyectante",
+        hojas: 1,
+        status: "validated",
+        variante: "normal",
+        configurationId: "ventora:l32:proyectante",
+      })],
+      organizationId: 1,
+      form: {
+        tipo: "Paño fijo",
+        nombre: "Paño fijo Serie 32",
+        descripcion: "Paño fijo con perfilería",
+        sistema: "Fijo",
+        configuracion: "Fijo",
+        fabricacionHojas: 1,
+        fabricacionTipologia: "proyectante",
+        fabricacionVariante: "normal",
+        fabricacionConfiguracionId: "ventora:l32:pano-fijo",
+        fabricationRecipeId: "",
+      },
+    });
+
+    expect(context).toMatchObject({
+      fabricacionTipologia: "pano_fijo",
+      fabricacionHojas: 1,
+      fabricacionApertura: "fijo",
+      fabricacionVariante: "sin_receta",
+      fabricacionConfiguracionId: "ventora:l32:pano-fijo",
+      fabricationRecipeId: "",
+    });
+  });
+
   it("resuelve L20 universal como corredera sin heredar la variante Alumétrica fija", () => {
     const definition = crearRecetaPlantillaVentoraCorredera2H("L20");
     const context = resolveFabricacionContextForLineAssignment({

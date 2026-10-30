@@ -2,6 +2,7 @@ import {
   getLineVariantSlotsForFabricationTree,
   type LineVariantSlot,
 } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
+import { L20_CATALOG_KEY } from "@/features/fabricacion/fixtures/l20-alumetrica-variant-recipes";
 import { isSodalL25CatalogKey } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import { findRecipeForVariantSlot } from "@/features/fabricacion/services/fabricacion-line-variant.service";
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
@@ -69,6 +70,7 @@ export function lineUsesVariantProductPicker(
 ): boolean {
   if (!catalogKey) return false;
   if (isSodalL25CatalogKey(catalogKey)) return true;
+  if (catalogKey === L20_CATALOG_KEY) return true;
   return getLineVariantSlotsForFabricationTree(catalogKey).length > 1;
 }
 

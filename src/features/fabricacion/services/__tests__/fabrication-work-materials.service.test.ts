@@ -160,6 +160,22 @@ function glassSnapshot(glassId: string, name: string, width: number, height: num
 }
 
 describe("fabrication-work-materials.service", () => {
+  it("no presenta barras conjuntas asociadas a geometría preliminar como materiales de pauta", () => {
+    const snapshot = jobSnapshot();
+    const quoteItem = item({ id: "V1", code: "V1", glass: "Monolítico" });
+    const quoteSummary = summary(snapshot);
+    quoteSummary.items = [{
+      itemId: "V1", codigo: "V1", nombre: "Proyectante Serie 32", geometryOnly: true,
+      statusLabel: "Despiece estructural preliminar · acristalamiento pendiente",
+      snapshot: { cuts: [{ profileCode: "3201", profileName: "Marco", label: "Marco", functionLabel: "Marco", quantity: 2, lengthMm: 1200 }] },
+    } as FabricationQuoteSummary["items"][number]];
+
+    const document = buildWorkMaterialsDocument({ summary: quoteSummary, items: [quoteItem] });
+
+    expect(document.profiles).toEqual([]);
+    expect(document.hasJointCuttingPlan).toBe(false);
+  });
+
   it("recupera la familia desde la plantilla explícita cuando un snapshot histórico no la conservó", () => {
     const snapshot = jobSnapshot();
     snapshot.bars = [{

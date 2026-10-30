@@ -34,6 +34,8 @@ export type FabricationSummaryItem = {
   recipe: FabricationRecipe | null;
   herrajeLabel: string;
   statusLabel: string;
+  /** Geometría visible para revisión; no equivale a una pauta técnica completa. */
+  geometryOnly?: boolean;
   profilesMl: number;
   glassM2: number;
   glassThickness: string;
@@ -58,6 +60,8 @@ export type FabricationQuoteSummary = {
   /** Solo existe cuando se guardó la pauta conjunta; nunca sumar barras por pieza como sustituto. */
   totalBars: number | null;
   trabajoSnapshot: FabricacionTrabajoSnapshot | null;
+  /** El snapshot conjunto incluye una pieza cuyo estado actual es solo geométrico preliminar. */
+  trabajoSnapshotHasGeometryOnly?: boolean;
 };
 
 type QuoteItemLike = {
@@ -208,7 +212,7 @@ export function buildFabricationQuoteSummary(
         ? meta.lineTemplateId
         : meta.vidrioLineTemplateId,
     });
-    const geometryOnly = Boolean(liveResolution?.geometryOnly) && !meta.cubicationSnapshot;
+    const geometryOnly = Boolean(liveResolution?.geometryOnly) && !meta.cubicationSnapshot && !item.fabricacionSnapshot;
 
     rows.push({
       itemId: String(item.id),
@@ -227,8 +231,9 @@ export function buildFabricationQuoteSummary(
       statusLabel: snapshot.source === "manual"
         ? "Ajustada para esta cotización"
         : geometryOnly
-          ? "Preliminar · revisar en taller"
+          ? "Despiece estructural preliminar · acristalamiento pendiente"
           : formatStatusLabel(status),
+      geometryOnly,
       profilesMl: snapshot.totalProfilesLinealMm / 1000,
       glassM2: snapshot.glass?.totalM2 ?? 0,
       glassThickness: glassThickness.display,
@@ -239,14 +244,20 @@ export function buildFabricationQuoteSummary(
     });
   }
 
+  const geometryOnlyItemIds = new Set(rows.filter((row) => row.geometryOnly).map((row) => row.itemId));
+  const trabajoSnapshotHasGeometryOnly = Boolean(options?.trabajoSnapshot?.bars.some((bar) =>
+    bar.cortes.some((cut) => geometryOnlyItemIds.has(String(cut.itemId)))
+  ));
+
   return {
     items: rows,
     compositionsPendingRecipe,
     totalItems: items.length,
-    totalProfilesMl: rows.reduce((sum, row) => sum + row.profilesMl, 0),
-    totalGlassM2: rows.reduce((sum, row) => sum + row.glassM2, 0),
-    totalAccessoryUnits: rows.reduce((sum, row) => sum + row.accessoryUnits, 0),
-    totalBars: options?.trabajoSnapshot?.totalBars ?? null,
+    totalProfilesMl: rows.reduce((sum, row) => sum + (row.geometryOnly ? 0 : row.profilesMl), 0),
+    totalGlassM2: rows.reduce((sum, row) => sum + (row.geometryOnly ? 0 : row.glassM2), 0),
+    totalAccessoryUnits: rows.reduce((sum, row) => sum + (row.geometryOnly ? 0 : row.accessoryUnits), 0),
+    totalBars: trabajoSnapshotHasGeometryOnly ? null : options?.trabajoSnapshot?.totalBars ?? null,
     trabajoSnapshot: options?.trabajoSnapshot ?? null,
+    trabajoSnapshotHasGeometryOnly,
   };
 }

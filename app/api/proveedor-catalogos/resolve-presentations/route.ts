@@ -85,6 +85,7 @@ export async function POST(request: Request) {
       label: string;
       pricedProfileCount: number;
       totalProfileCount: number;
+      baseReferenceProfileCount: number;
       isReference: boolean;
       otherAvailableFinishNames?: string[];
     }>> = {};
@@ -210,6 +211,7 @@ export async function POST(request: Request) {
             label,
             pricedProfileCount: priced?.pricedProfileCount ?? 0,
             totalProfileCount: priced?.totalProfileCount ?? item.technicalCodes.length,
+            baseReferenceProfileCount: priced?.baseReferenceProfileCount ?? 0,
             isReference: priced?.isReference ?? providerKey === "arquetipo",
             otherAvailableFinishNames: [...(otherAvailableFinishNamesByProvider.get(providerKey) ?? [])],
           };

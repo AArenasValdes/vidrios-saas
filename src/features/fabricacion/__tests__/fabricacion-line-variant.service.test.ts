@@ -250,19 +250,17 @@ describe("variant tree base lines", () => {
     expect(slots.map((slot) => slot.variantSlug)).toEqual(["pierna_abierta_jamba_2009"]);
   });
 
-  it("expone árbol unificado de 5 construcciones L20 en mobile", () => {
+  it("expone en mobile solo la corredera L20 respaldada", () => {
     const groups = buildVariantTreeGroups({
       catalogKey: "ventora:l20",
       recipes: [],
     });
-    expect(groups).toHaveLength(2);
+    expect(groups).toHaveLength(1);
     expect(groups[0]?.typologyLabel).toBe("Corredera · 2 hojas");
     expect(groups[0]?.items).toHaveLength(1);
-    expect(groups[1]?.typologyLabel).toBe("Fijos · 2 hojas");
-    expect(groups[1]?.items).toHaveLength(4);
   });
 
-  it("expone 4 variantes fijas L20 en línea comercial separada", () => {
+  it("conserva las cuatro variantes fijas históricas sin ofrecer un árbol seleccionable", () => {
     const slots = getLineVariantSlots("ventora:l20-fijos");
     expect(slots).toHaveLength(4);
     expect(slots.map((slot) => slot.variantSlug)).toEqual([
@@ -275,9 +273,7 @@ describe("variant tree base lines", () => {
       catalogKey: "ventora:l20-fijos",
       recipes: [],
     });
-    expect(groups).toHaveLength(2);
-    expect(groups[1]?.typologyLabel).toBe("Fijos · 2 hojas");
-    expect(groups[1]?.items).toHaveLength(4);
+    expect(groups).toEqual([]);
   });
 
   it("prioriza la variante corredera al abrir Serie 20", () => {

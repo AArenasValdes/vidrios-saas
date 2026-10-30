@@ -37,6 +37,28 @@ function line(overrides: Partial<CotizacionLineTemplate> = {}): CotizacionLineTe
 }
 
 describe("contrato de familia y compatibilidad", () => {
+  it("publica Serie 32 para cotizar paño fijo sin afirmar disponibilidad de receta", () => {
+    const result = evaluateLineCompatibility({
+      line: line({
+        catalogKey: "ventora:l32:configuration:ventora:l32:pano-fijo",
+        nombre: "Serie 32 · Paño fijo",
+      }),
+      context: {
+        componentType: "Paño fijo",
+        openingType: "Fijo",
+        leavesCount: 1,
+        material: "Aluminio",
+      },
+    });
+
+    expect(result).toMatchObject({
+      commercial: "compatible",
+      commercialEvidence: "explicit",
+      recipe: "not_checked",
+      commercialPrice: "configured",
+    });
+  });
+
   it("agrupa familias declaradas y reúne líneas propias en un solo bloque sin reordenar", () => {
     const grouped = groupLineTemplatesByFamily([
       line({ id: 1, catalogKey: "ventora:winhouse-new-s75-doble-riel", nombre: "S75 doble" }),

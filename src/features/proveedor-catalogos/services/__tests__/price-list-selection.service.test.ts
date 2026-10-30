@@ -35,11 +35,67 @@ describe("selección de lista por proveedor", () => {
     expect(selected.get("provider-b")?.id).toBe("b-current");
   });
 
-  it("rechaza una preferencia vencida", () => {
+  it("rechaza una preferencia vencida de otro proveedor como antes de la integración Alumco", () => {
     expect(() => selectSupplierPriceLists({
       lists,
       preferredListIdsByProvider: { "provider-a": "a-old" },
       asOf: new Date("2026-09-01T00:00:00Z"),
     })).toThrow(PriceListSelectionError);
+  });
+
+  it("mantiene una preferencia Alumco activa por política Ventora aunque haya vencido la cotización fuente", () => {
+    const selected = selectSupplierPriceLists({
+      lists: [{
+        id: "alumco-source", providerKey: "alumco", revision: "2026-10-14",
+        publishedOn: "2026-10-14", validFrom: "2026-10-14", validUntil: "2026-10-21",
+        createdAt: "2026-10-14T00:00:00Z",
+      }],
+      preferredListIdsByProvider: { alumco: "alumco-source" },
+      asOf: new Date("2026-10-30T00:00:00Z"),
+    });
+    expect(selected.get("alumco")).toMatchObject({ id: "alumco-source", referenceStatus: "active_by_ventora_policy" });
+  });
+
+  it("mantiene activa en Ventora la lista Alumco importada aunque venza la cotización fuente", () => {
+    const selected = selectSupplierPriceLists({
+      lists: [
+        { id: "alumco-old", providerKey: "alumco", revision: "2026-09", publishedOn: "2026-09-01", validFrom: "2026-09-01", validUntil: "2026-09-08", createdAt: "2026-09-01T00:00:00Z" },
+        { id: "alumco-reference", providerKey: "alumco", revision: "notes-2026-10-14", publishedOn: "2026-10-14", validFrom: "2026-10-14", validUntil: "2026-10-21", createdAt: "2026-10-14T00:00:00Z" },
+        { id: "other-expired", providerKey: "provider-c", revision: "2026-09", publishedOn: "2026-09-01", validFrom: "2026-09-01", validUntil: "2026-09-08", createdAt: "2026-09-01T00:00:00Z" },
+      ],
+      asOf: new Date("2026-10-30T00:00:00Z"),
+    });
+    expect(selected.get("alumco")).toMatchObject({
+      id: "alumco-reference",
+      referenceStatus: "active_by_ventora_policy",
+    });
+    expect(selected.has("provider-c")).toBe(false);
+  });
+
+  it("usa la lista Alumco más nueva ya publicada según la política de Ventora", () => {
+    const selected = selectSupplierPriceLists({
+      lists: [
+        { id: "alumco-old", providerKey: "alumco", revision: "2026-10-14", publishedOn: "2026-10-14", validFrom: "2026-10-14", validUntil: "2026-10-21", createdAt: "2026-10-14T00:00:00Z" },
+        { id: "alumco-current", providerKey: "alumco", revision: "2026-10-29", publishedOn: "2026-10-29", validFrom: "2026-10-29", validUntil: null, createdAt: "2026-10-29T00:00:00Z" },
+      ],
+      asOf: new Date("2026-10-30T00:00:00Z"),
+    });
+    expect(selected.get("alumco")).toMatchObject({ id: "alumco-current", referenceStatus: "active_by_ventora_policy" });
+  });
+
+  it("no aplica la política activa Alumco a listas vencidas de otros proveedores", () => {
+    const selected = selectSupplierPriceLists({
+      lists: [{ id: "other-expired", providerKey: "provider-c", revision: "2026-09", publishedOn: "2026-09-01", validFrom: "2026-09-01", validUntil: "2026-09-08", createdAt: "2026-09-01T00:00:00Z" }],
+      asOf: new Date("2026-10-30T00:00:00Z"),
+    });
+    expect(selected.has("provider-c")).toBe(false);
+  });
+
+  it("no permite seleccionar automáticamente una lista futura", () => {
+    const selected = selectSupplierPriceLists({
+      lists: [{ id: "future", providerKey: "alumco", revision: "2026-11", publishedOn: "2026-11-01", validFrom: "2026-11-01", validUntil: null, createdAt: "2026-11-01T00:00:00Z" }],
+      asOf: new Date("2026-10-30T00:00:00Z"),
+    });
+    expect(selected.has("alumco")).toBe(false);
   });
 });

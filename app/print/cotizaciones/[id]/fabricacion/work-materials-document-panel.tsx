@@ -334,6 +334,16 @@ export function WorkMaterialsDocumentPanel(props: WorkMaterialsDocumentPanelProp
             {props.workOrder.cutGroups.map((group) => <li key={group.key}><strong>{group.technicalCode} · {group.profileName}</strong><span>{group.finish || "Acabado pendiente"} · {group.barIndex == null ? "Distribución por tira pendiente" : `Tira ${group.barIndex} · ${formatMm(group.commercialLengthMm)}`}</span>{group.cuts.length ? group.cuts.map((cut) => <small key={`${group.key}:${cut.itemCode}:${cut.component}:${cut.functionName}:${cut.lengthMm}`}>{cut.itemCode} · {cut.component} · {cut.functionName}: {cut.quantity} × {formatMm(cut.lengthMm)}</small>) : <small>Sin cortes guardados</small>}<b>Remanente teórico: {formatMm(group.theoreticalRemnantMm)}</b></li>)}
           </ul>
         </MaterialTable>
+        {props.workOrder.preliminaryCutGroups.length > 0 ? <section className={s.materialTableSection} aria-label="Despiece estructural preliminar">
+          <h3>Despiece estructural preliminar · acristalamiento pendiente</h3>
+          <p className={s.documentWarnings}><strong>DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN.</strong> Geometría de perfiles para revisión; no es pauta operativa ni referencia de compra.</p>
+          <div className={s.materialTableScroll}>
+            <table><thead><tr><th>Código / perfil</th><th>Partida</th><th>Cortes geométricos</th><th>Distribución</th></tr></thead>
+              <tbody>{props.workOrder.preliminaryCutGroups.map((group) => <tr key={group.key}><td><strong>{group.technicalCode}</strong><small>{group.profileName}</small></td><td>{group.cuts.map((cut) => cut.itemCode).filter((value, index, values) => values.indexOf(value) === index).join(", ")}</td><td>{group.cuts.map((cut) => `${cut.component} · ${cut.functionName}: ${cut.quantity} × ${formatMm(cut.lengthMm)}`).join("\n")}</td><td>No calculada</td></tr>)}</tbody>
+            </table>
+            <ul className={s.profileCutsMobile}>{props.workOrder.preliminaryCutGroups.map((group) => <li key={group.key}><strong>{group.technicalCode} · {group.profileName}</strong>{group.cuts.map((cut) => <small key={`${group.key}:${cut.itemCode}:${cut.functionName}:${cut.lengthMm}`}>{cut.itemCode} · {cut.component} · {cut.functionName}: {cut.quantity} × {formatMm(cut.lengthMm)}</small>)}<b>Distribución por tira no calculada.</b></li>)}</ul>
+          </div>
+        </section> : null}
         {props.workOrder.pending.filter((row) => /perfil|corte|pauta|presentaci[oó]n/i.test(`${row.subject} ${row.action}`)).length ? <ul className={s.documentWarnings}>{props.workOrder.pending.filter((row) => /perfil|corte|pauta|presentaci[oó]n/i.test(`${row.subject} ${row.action}`)).map((row) => <li key={row.key}><strong>{row.subject}:</strong> {row.action}</li>)}</ul> : null}
         <p className={s.documentNote}>El remanente es teórico y no confirma aprovechamiento. Kerf y despunte se consideran solo cuando constan en la pauta guardada; no se optimizan planchas de vidrio.</p>
       </section> : null}
