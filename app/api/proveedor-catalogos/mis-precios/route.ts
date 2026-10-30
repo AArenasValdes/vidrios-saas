@@ -74,6 +74,9 @@ export async function GET() {
         providerKey,
         providerName: providerNames.get(providerKey) ?? providerKey,
         revision: rows[0]?.priceListRevision ?? "",
+        priceListStatus: rows[0]?.priceReferenceStatus,
+        publishedOn: rows[0]?.priceListPublishedOn ?? null,
+        sourceQuotationValidUntil: providerKey === "alumco" ? rows[0]?.priceListValidUntil ?? null : null,
         percentage: adjustmentsByProvider.get(providerKey) ?? 0,
         presentations: rows.map((row) => {
           const catalogRow = catalogPresentationsById.get(row.presentationId);

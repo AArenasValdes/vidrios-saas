@@ -49,6 +49,22 @@ describe("Alumco · notas de venta 14-10-2026", () => {
       .every((row) => row.finishName === "Titanio" && row.commercialLengthMm === 6000)).toBe(true);
   });
 
+  it("mantiene las cuatro referencias L32 Titanio por código y largo de 6 m", () => {
+    const expected = [
+      ["3201", "TI3201A", 10210],
+      ["3202", "TI3202A", 18668],
+      ["3204", "TI3204A", 21187],
+      ["3208", "TI3208A", 5330],
+    ];
+    for (const [code, sku, amount] of expected) {
+      const technical = fixture.technicalInputs.find((row) => row.sourceCode === code);
+      const presentation = fixture.presentations.find((row) => row.sku === sku);
+      expect(technical?.familyKeys).toContain("universal:aluminio:l32");
+      expect(presentation).toMatchObject({ finishCode: "TI", finishName: "Titanio", purchaseUnit: "TR", commercialLengthMm: 6000, netPrice: amount });
+      expect(fixture.technicalInputs.find((row) => row.technicalKey === presentation?.technicalKey)?.sourceCode).toBe(code);
+    }
+  });
+
   it("mantiene los subtotales documentados por línea sin cruzar perfiles", () => {
     const totals = new Map<string, number>();
     for (const presentation of fixture.presentations) {
@@ -120,7 +136,74 @@ describe("Alumco · notas de venta 14-10-2026", () => {
       providerNames: new Map([["alumco", "Alumco"]]),
     });
     expect(l45).toEqual([expect.objectContaining({ technicalCode: "4522", supplierSku: "TI4502A", netPrice: 20274, status: "priced" })]);
+
+    const l32 = resolveSupplierProfilePricePreviews({
+      request: { itemId: "quote-item-32", familyKey: "universal:aluminio:l32", finishName: "Titanio", technicalCodes: [], providerKey: "alumco" },
+      references: fixture.technicalInputs.filter((row) => row.familyKeys.includes("universal:aluminio:l32")).map((row) => ({ code: row.sourceCode, name: row.name })),
+      presentations: rows.map((row) => ({ ...row, priceReferenceStatus: "active_by_ventora_policy" as const, priceListPublishedOn: "2026-10-14", priceListValidUntil: "2026-10-21" })),
+      providerNames: new Map([["alumco", "Alumco"]]),
+    });
+    const l32Expected = [
+      ["3201", "TI3201A", 10210],
+      ["3202", "TI3202A", 18668],
+      ["3204", "TI3204A", 21187],
+      ["3208", "TI3208A", 5330],
+    ];
+    expect(l32).toEqual(expect.arrayContaining(l32Expected.map(([code, sku, netPrice]) => expect.objectContaining({
+      technicalCode: code, supplierSku: sku, netPrice, commercialLengthMm: 6000,
+      priceReferenceStatus: "active_by_ventora_policy", priceListPublishedOn: "2026-10-14", priceListValidUntil: "2026-10-21",
+    }))));
   });
+
+  it.each(["Blanco", "Negro", "Negro Mate", "Nogal", "Roble Dorado", "Antracita"])(
+    "aplica el importe base Titanio a L32 %s sin atribuir el SKU Titanio",
+    (finishName) => {
+      const rows: CatalogPresentationPrice[] = fixture.presentations.map((presentation) => {
+        const technical = fixture.technicalInputs.find((row) => row.technicalKey === presentation.technicalKey)!;
+        return {
+          presentationId: presentation.sku,
+          providerKey: "alumco",
+          familyKeys: technical.familyKeys,
+          technicalCode: technical.sourceCode,
+          recipeComponentCodes: technical.recipeComponentCodes ?? [],
+          technicalName: technical.name,
+          supplierSku: presentation.sku,
+          presentationDescription: presentation.description,
+          finishCode: presentation.finishCode ?? "",
+          finishName: presentation.finishName,
+          finishResolution: presentation.finishResolution,
+          purchaseUnit: presentation.purchaseUnit,
+          commercialLengthMm: presentation.commercialLengthMm,
+          netPrice: presentation.netPrice,
+          priceBasis: "commercial_presentation",
+          currency: "CLP",
+          priceListId: "alumco-2026-10-14",
+          priceListRevision: fixture.priceListRevision,
+          priceReferenceStatus: "active_by_ventora_policy",
+          priceListPublishedOn: "2026-10-14",
+          priceListValidUntil: "2026-10-21",
+        };
+      });
+      const result = resolveSupplierProfilePricePreviews({
+        request: { itemId: `l32-${finishName}`, familyKey: "universal:aluminio:l32", finishName, technicalCodes: [], providerKey: "alumco" },
+        references: fixture.technicalInputs.filter((row) => row.familyKeys.includes("universal:aluminio:l32")).map((row) => ({ code: row.sourceCode, name: row.name })),
+        presentations: rows,
+        providerNames: new Map([["alumco", "Alumco"]]),
+        organizationPricing: {
+          adjustments: [],
+          overrides: [{ presentationId: "TI3201A", netPrice: 99999, currency: "CLP" }],
+        },
+      });
+      expect(result).toHaveLength(4);
+      expect(result).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          technicalCode: "3201", netPrice: 10210, currency: "CLP", finishPriceBasis: "base_reference_other_finish",
+          supplierSku: "", presentationId: "", priceSourceFinishName: "Titanio", priceSourceSupplierSku: "TI3201A",
+        }),
+      ]));
+      expect(result.every((price) => price.status === "priced" && price.supplierSku === "" && price.presentationId === "")).toBe(true);
+    }
+  );
 
   it("resuelve Tapa y Portafelpa aunque el acabado elegido sea de otro color", () => {
     const presentations: CatalogPresentationPrice[] = fixture.presentations.map((presentation) => {

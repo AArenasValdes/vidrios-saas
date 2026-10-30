@@ -180,9 +180,29 @@ describe("resolver explícito de presentación para pauta", () => {
     });
 
     expect(options).toEqual([
-      { providerKey: "arquetipo", pricedProfileCount: 1, totalProfileCount: 2, isReference: true },
-      { providerKey: "alumco", pricedProfileCount: 1, totalProfileCount: 2, isReference: false },
+      { providerKey: "arquetipo", pricedProfileCount: 1, totalProfileCount: 2, baseReferenceProfileCount: 0, isReference: true },
+      { providerKey: "alumco", pricedProfileCount: 1, totalProfileCount: 2, baseReferenceProfileCount: 0, isReference: false },
     ]);
+  });
+
+  it("cuenta el precio Alumco Titanio como cobertura base en otros acabados, sin reutilizarlo para otros proveedores", () => {
+    const presentation = {
+      presentationId: "alumco-3201-ti",
+      providerKey: "alumco",
+      technicalCode: "3201",
+      familyKeys: ["universal:aluminio:l32"],
+      finishName: "Titanio",
+      finishResolution: "specific" as const,
+      commercialLengthMm: 6000,
+      netPrice: 10210,
+    };
+    const result = resolveSupplierPriceProviderCoverage({
+      request: { itemId: "L32", familyKey: "universal:aluminio:l32", finishName: "Negro", technicalCodes: ["3201"] },
+      presentations: [presentation, { ...presentation, providerKey: "otro-proveedor", presentationId: "other-3201" }],
+    });
+    expect(result).toEqual([expect.objectContaining({
+      providerKey: "alumco", pricedProfileCount: 1, baseReferenceProfileCount: 1,
+    })]);
   });
 
   it("no presenta como cubierto un código con presentación ambigua o sin largo comercial", () => {
