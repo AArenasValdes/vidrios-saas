@@ -355,17 +355,18 @@ export function CompactCutsView({
 
   const fileBase = `cortes-perfiles-${sanitizeFileNamePart(quoteCode || "cotizacion", 32)}`;
   const cutGroups = workOrder.cutGroups;
+  const safeTrabajoSnapshot = summary.trabajoSnapshotHasGeometryOnly ? null : summary.trabajoSnapshot;
 
   const totalWaste =
-    summary.trabajoSnapshot?.totalWasteMm != null
-      ? formatMm(summary.trabajoSnapshot.totalWasteMm)
+    safeTrabajoSnapshot?.totalWasteMm != null
+      ? formatMm(safeTrabajoSnapshot.totalWasteMm)
       : cutGroups.some((g) => g.theoreticalRemnantMm != null)
         ? formatMm(cutGroups.reduce((acc, g) => acc + (g.theoreticalRemnantMm ?? 0), 0))
         : "—";
 
   const totalBarsCount =
-    summary.trabajoSnapshot?.totalBars != null
-      ? String(summary.trabajoSnapshot.totalBars)
+    safeTrabajoSnapshot?.totalBars != null
+      ? String(safeTrabajoSnapshot.totalBars)
       : summary.totalBars != null
         ? String(summary.totalBars)
         : "—";
@@ -373,16 +374,16 @@ export function CompactCutsView({
   const consolidated = useMemo(
     () =>
       buildConsolidatedCubicationPautaFromSnapshots(
-        summary.items.map((row) => ({
+        summary.items.filter((row) => !row.geometryOnly).map((row) => ({
           codigo: row.codigo,
           lineaComercial: row.lineName,
           nombre: row.nombre,
           snapshot: row.snapshot,
         })),
-        summary.trabajoSnapshot,
+        safeTrabajoSnapshot,
         { deriveTrabajoSnapshot: false }
       ),
-    [summary.items, summary.trabajoSnapshot]
+    [summary.items, safeTrabajoSnapshot]
   );
 
   return (
@@ -503,6 +504,20 @@ export function CompactCutsView({
             })}
           </ul>
         )}
+
+        {workOrder.preliminaryCutGroups.length > 0 ? (
+          <section aria-label="Despiece estructural preliminar">
+            <h3>Despiece estructural preliminar · acristalamiento pendiente</h3>
+            <p role="note"><strong>Documento parcial · no apto para fabricación.</strong> Estos perfiles se muestran solo para revisión geométrica; no son una pauta operativa ni una lista de compra.</p>
+            <ul className={s.mCompactList}>
+              {workOrder.preliminaryCutGroups.map((group) => <li key={group.key} className={s.mCutBarCard}>
+                <strong>{group.technicalCode} · {group.profileName}</strong>
+                {group.cuts.map((cut) => <small key={`${group.key}:${cut.itemCode}:${cut.functionName}:${cut.lengthMm}`}>{cut.itemCode} · {cut.component} · {cut.functionName}: {cut.quantity} × {formatMm(cut.lengthMm)}</small>)}
+                <span>Distribución por tira no calculada.</span>
+              </li>)}
+            </ul>
+          </section>
+        ) : null}
       </section>
 
       <details className={s.secondaryWorkshopDetails}>

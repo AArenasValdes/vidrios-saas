@@ -27,6 +27,22 @@ it("muestra proveedores primero y busca por nombre o código", () => {
   expect(screen.queryByText("Tope proveedor A")).not.toBeInTheDocument();
 });
 
+it("muestra Alumco activa en Ventora y conserva la fecha impresa de la cotización fuente", () => {
+  render(<MisPreciosContent catalog={{ providers: [{
+    providerKey: "alumco",
+    providerName: "Alumco",
+    revision: "notas-000000984-000000986-2026-10-14",
+    priceListStatus: "active_by_ventora_policy",
+    publishedOn: "2026-10-14",
+    sourceQuotationValidUntil: "2026-10-21",
+    percentage: 0,
+    presentations: [],
+  }] }} error={null} busy={false} save={jest.fn(async () => true)} refresh={async () => undefined} />);
+  expect(screen.getByText(/Lista activa en Ventora/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /Alumco/ }));
+  expect(screen.getByText(/La fecha 2026-10-21 corresponde a la vigencia impresa de la cotización fuente/)).toBeInTheDocument();
+});
+
 it("muestra el logo Kompen al abrir el catálogo Thermowin", () => {
   const { container } = render(<MisPreciosContent catalog={{ providers: [{
     providerKey: "thermowin-kompen",

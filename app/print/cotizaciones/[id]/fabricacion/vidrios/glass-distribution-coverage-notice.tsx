@@ -161,7 +161,7 @@ export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [],
                       automaticPanes={activeItem?.fabricacionSnapshot?.result?.vidrios?.map((pane) => ({ id: pane.vidrioId, name: pane.nombre, widthMm: pane.anchoMm, heightMm: pane.altoMm, quantity: pane.cantidadPiezas }))}
                       automaticRecipeStatus={activeItem?.fabricacionSnapshot?.recipeStatus}
                       paneConfiguration={{
-                        componentType: activePresentation?.fabricacionTipologia || activeItem.tipo,
+                        componentType: activeItem.tipo,
                         system: activePresentation?.sistema,
                         configuration: activePresentation?.configuracion,
                         sheetScheme: activePresentation?.sheetScheme,

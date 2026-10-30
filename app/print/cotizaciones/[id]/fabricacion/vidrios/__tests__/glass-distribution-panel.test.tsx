@@ -105,7 +105,7 @@ describe("GlassDistributionPanel", () => {
 
     expect(await screen.findByText("Float incoloro")).toBeInTheDocument();
     expect(screen.getByText("Plancha 2500 × 1800 mm")).toBeInTheDocument();
-    const technicalLink = screen.getByRole("link", { name: "Abrir revisión técnica" });
+    const technicalLink = screen.getByRole("link", { name: "Abrir revisión técnica y PDFs" });
     expect(technicalLink).toHaveAttribute("href", expect.stringContaining("/fabricacion/vidrios"));
     expect(screen.queryByRole("button", { name: /PDF operativo/i })).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -151,7 +151,7 @@ describe("GlassDistributionPanel", () => {
 
     expect(await screen.findByText(/La vista previa usa geometría congelada de una receta preliminar/)).toBeInTheDocument();
     expect(screen.getAllByText(/Faltan dimensiones rectangulares, enteras y positivas congeladas/)).toHaveLength(2);
-    expect(screen.getByRole("link", { name: "Abrir revisión técnica" })).toHaveAttribute("href", expect.stringContaining("/fabricacion/vidrios"));
+    expect(screen.getByRole("link", { name: "Abrir revisión técnica y PDFs" })).toHaveAttribute("href", expect.stringContaining("/fabricacion/vidrios"));
     expect(screen.getByText(/La vista preliminar incluye 2 unidades físicas/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Ingresar medidas" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Generar vista previa" }));
@@ -238,7 +238,7 @@ describe("GlassDistributionPanel", () => {
     expect(screen.queryByRole("button", { name: "Compartir" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ingresar medidas" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Ingresar medidas" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Abrir revisión técnica" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Abrir revisión técnica y PDFs" })).toBeInTheDocument();
     expect(createGlassDistributionPdf).not.toHaveBeenCalled();
     expect(downloadPdfBlob).not.toHaveBeenCalled();
   });
@@ -455,7 +455,7 @@ describe("GlassDistributionPanel", () => {
     render(<GlassDistributionPanel quoteId="1" quoteCode="COT-QA" clientName="Cliente QA" workName="Obra QA" enabled />);
 
     await screen.findByText("Float incoloro");
-    expect(screen.getByRole("link", { name: "Abrir revisión técnica" })).toHaveAttribute("href", expect.stringContaining("/fabricacion/vidrios"));
+    expect(screen.getByRole("link", { name: "Abrir revisión técnica y PDFs" })).toHaveAttribute("href", expect.stringContaining("/fabricacion/vidrios"));
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(downloadPdfBlob).not.toHaveBeenCalled();
@@ -476,7 +476,7 @@ describe("GlassDistributionPanel", () => {
     await screen.findByText("Falta el formato de plancha. Indica ancho y alto para esta distribución.");
     fireEvent.change(screen.getByLabelText("Ancho de plancha (mm)"), { target: { value: "2500" } });
     fireEvent.change(screen.getByLabelText("Alto de plancha (mm)"), { target: { value: "1800" } });
-    expect(screen.getByRole("link", { name: "Abrir revisión técnica" })).toHaveAttribute("href", expect.stringContaining("/fabricacion/vidrios"));
+    expect(screen.getByRole("link", { name: "Abrir revisión técnica y PDFs" })).toHaveAttribute("href", expect.stringContaining("/fabricacion/vidrios"));
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(downloadPdfBlob).not.toHaveBeenCalled();
   });

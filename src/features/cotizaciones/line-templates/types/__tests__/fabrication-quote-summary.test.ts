@@ -286,10 +286,12 @@ describe("fabrication quote summary", () => {
     expect(summary.items).toHaveLength(1);
     expect(summary.items[0]).toMatchObject({
       itemId: "7400-preliminary",
-      statusLabel: "Preliminar · revisar en taller",
+      statusLabel: "Despiece estructural preliminar · acristalamiento pendiente",
+      geometryOnly: true,
       snapshot: { estimationKind: "recipe_geometry_only" },
     });
     expect(summary.totalItems).toBe(1);
+    expect(summary.totalProfilesMl).toBe(0);
     expect(resolveDespieceMock).toHaveBeenCalledTimes(1);
   });
 

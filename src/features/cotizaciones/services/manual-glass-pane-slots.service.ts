@@ -32,9 +32,9 @@ const quickTypeLabels = { sliding: "Corredero", fixed: "Fijo", casement: "Abatib
 function componentTypeLabel(value: string | null | undefined): string | null {
   if (!value) return null;
   if (/oscilobatiente/i.test(value)) return "Oscilobatiente";
-  if (/proyectante/i.test(value)) return "Proyectante";
   if (/corredera/i.test(value)) return "Corredero";
   if (/fijo/i.test(value)) return "Fijo";
+  if (/proyectante/i.test(value)) return "Proyectante";
   if (/abatible/i.test(value)) return "Abatible";
   return null;
 }
@@ -114,10 +114,17 @@ export function resolveManualGlassPaneSlots(input: ManualGlassPaneConfiguration)
   const configurationFingerprint = fingerprint(configPayload);
   if (!count || count < 1 || count > 12) return { slots: [], configurationFingerprint, countIsKnown: false };
 
+  const explicitComponentLabel = componentTypeLabel(input.componentType);
+  const selectedConfigurationLabel = componentTypeLabel(input.configuration) ?? componentTypeLabel(input.system);
+
   const slots = Array.from({ length: count }, (_, index): ManualGlassPaneSlot => {
     const paneModule = visualModules.length === count ? visualModules[index] : undefined;
     const quickType = adjustment?.paneTypes?.[`leaf-${index + 1}`];
-    const openingType = paneModule ? moduleLabels[paneModule.type] : quickType ? quickTypeLabels[quickType] : componentTypeLabel(productShapeLabel);
+    const openingType = paneModule
+      ? moduleLabels[paneModule.type]
+      : quickType
+        ? quickTypeLabels[quickType]
+        : explicitComponentLabel ?? selectedConfigurationLabel ?? componentTypeLabel(productShapeLabel);
     const id = paneModule?.id ?? (usesManualCount ? `manual-pane:v1:${index + 1}` : `pane-${index + 1}`);
     const rectangular = (!paneModule || paneModule.glassShape.kind === "rect")
       && (input.guidedVisualConfig?.frameShape.kind ?? "rect") === "rect";

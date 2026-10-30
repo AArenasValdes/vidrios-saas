@@ -182,7 +182,7 @@ function ProviderRow({ provider, selected, onSelect }: { provider: MySupplierPri
       <SupplierLogo providerKey={provider.providerKey} providerName={provider.providerName} />
       <span className={s.providerCopy}>
         <strong>{provider.providerName}</strong>
-        <small>{supplierRevisionLabel(provider.providerKey, provider.revision)} · {provider.presentations.length} {provider.presentations.length === 1 ? "producto" : "productos"}</small>
+        <small>{supplierRevisionLabel(provider.providerKey, provider.revision)} · {provider.presentations.length} {provider.presentations.length === 1 ? "producto" : "productos"}{provider.priceListStatus === "active_by_ventora_policy" ? " · Lista activa en Ventora" : ""}</small>
         <small>{status}</small>
       </span>
       <Chevron />
@@ -555,6 +555,12 @@ export function MisPreciosContent({ catalog, error, busy, save, refresh }: Retur
                     <div className={s.settingsRow}>
                       <span className={s.settingsCopy}>
                         <strong>{supplierRevisionLabel(selectedProvider.providerKey, selectedProvider.revision)}</strong>
+                        {selectedProvider.priceListStatus === "active_by_ventora_policy" ? (
+                          <small>
+                            Lista activa en Ventora{selectedProvider.publishedOn ? ` · importada ${selectedProvider.publishedOn}` : ""}.
+                            {selectedProvider.sourceQuotationValidUntil ? ` La fecha ${selectedProvider.sourceQuotationValidUntil} corresponde a la vigencia impresa de la cotización fuente.` : ""}
+                          </small>
+                        ) : null}
                       </span>
                     </div>
                     <button className={s.settingsRow} type="button" onClick={() => openSheet({ kind: "adjustment", providerKey: selectedProvider.providerKey })}>

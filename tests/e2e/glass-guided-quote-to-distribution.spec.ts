@@ -174,7 +174,7 @@ test("Guiada simulada guarda, reabre y distribuye medidas finales sin duplicar u
 
   await expect(page.getByText("Medidas guardadas. Cobertura actualizada.")).toBeVisible();
   await expect(page.getByText("Cobertura operativa: 1 completas · 1 pendientes")).toBeVisible();
-  await expect(page.getByRole("button", { name: /PDF operativo bloqueado · cobertura incompleta/ })).toBeDisabled();
+  await expect(page.getByRole("button", { name: /PDF operativo/i })).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath("guided-glass-partial-coverage.png"), fullPage: true });
 
   await page.reload();

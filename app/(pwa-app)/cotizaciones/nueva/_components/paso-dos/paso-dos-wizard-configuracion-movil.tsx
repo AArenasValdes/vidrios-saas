@@ -1666,7 +1666,7 @@ export function PasoDosWizardConfiguracionMovil({
                 <option value="">Predeterminado · {defaultSupplierLabel}</option>
                 {supplierProviderOptions.map((option) => (
                   <option key={option.providerKey} value={option.providerKey}>
-                    {option.label} · {option.pricedProfileCount}/{option.totalProfileCount} perfiles con precio
+                    {option.label} · {option.pricedProfileCount}/{option.totalProfileCount} perfiles con precio{option.baseReferenceProfileCount ? ` · ${option.baseReferenceProfileCount} con base Titanio (presentación pendiente)` : ""}
                     {!option.pricedProfileCount && option.otherAvailableFinishNames?.length
                       ? ` · precio en ${option.otherAvailableFinishNames.slice(0, 2).join(", ")}`
                       : ""}

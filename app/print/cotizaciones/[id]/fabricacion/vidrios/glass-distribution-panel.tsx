@@ -10,13 +10,13 @@ import type { GlassTechnicalSpec } from "@/features/cotizaciones/line-templates/
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { ManualGlassPaneMeasurementsSnapshot } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
-import { downloadPdfBlob } from "@/utils/cotizacion-pdf";
-import { sanitizeFileNamePart } from "@/utils/sanitize-file-name";
-import { createGlassDistributionPdf } from "@/features/fabricacion/services/glass-distribution-pdf.service";
-import { mapGlassDistributionPdfPanes } from "@/features/fabricacion/services/direct-glass-distribution.service";
-import { loadVentoraPdfLogoDataUrl } from "@/features/fabricacion/services/ventora-pdf-assets.client";
 import { formatGlassDisplayName } from "@/features/fabricacion/services/glass-display-name.service";
 import { getGlassPaneGeometryExclusionReason, isGlassPaneGeometryComplete, type GlassDistributionCoverage, type GlassPaneGeometryExclusion } from "@/features/fabricacion/services/glass-distribution-coverage.service";
+import { mapGlassDistributionPdfPanes } from "@/features/fabricacion/services/direct-glass-distribution.service";
+import { createGlassDistributionPdf } from "@/features/fabricacion/services/glass-distribution-pdf.service";
+import { loadVentoraPdfLogoDataUrl } from "@/features/fabricacion/services/ventora-pdf-assets.client";
+import { sanitizeFileNamePart } from "@/utils/sanitize-file-name";
+import { downloadPdfBlob } from "@/utils/cotizacion-pdf";
 
 import s from "./glass-distribution-panel.module.css";
 import { GlassDistributionCoverageNotice } from "./glass-distribution-coverage-notice";
@@ -173,12 +173,12 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
   const [results, setResults] = useState<GlassCuttingResult[] | null>(null);
   const [resultsQuoteId, setResultsQuoteId] = useState<string | null>(null);
   const [generatedFrom, setGeneratedFrom] = useState<string[] | null>(null);
+  const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
   const [previewExclusions, setPreviewExclusions] = useState<GlassPaneGeometryExclusion[]>([]);
   const [sheetWidth, setSheetWidth] = useState("");
   const [sheetHeight, setSheetHeight] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedSheetIndex, setSelectedSheetIndex] = useState(0);
-  const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
   const autoPreviewFingerprint = useRef<string | null>(null);
   const sourceRequestId = useRef(0);
   const sourceController = useRef<AbortController | null>(null);
@@ -195,13 +195,13 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
     setSourceFresh(false);
     setRefreshError(null);
     setError(null);
+    setDownloadNotice(null);
     setResults(null);
     setResultsQuoteId(null);
     setGeneratedFrom(null);
     setPreviewExclusions([]);
     setPreviewOpen(false);
     setSelectedSheetIndex(0);
-    setDownloadNotice(null);
 
     try {
       const response = await fetch(`/api/cotizaciones/${encodeURIComponent(requestQuoteId)}/optimizacion-vidrios`, {
@@ -437,7 +437,8 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
             {busy ? <LuLoaderCircle className={s.spinner} aria-hidden /> : <LuEye aria-hidden />}{busy ? "Calculando vista previa…" : visibleResults ? "Ampliar vista previa" : "Generar vista previa"}
           </button>
           {visibleResults ? <button type="button" className={s.secondaryAction} disabled={busy || refreshingSource || !sourceFresh} onClick={() => void downloadSimulationPdf()}><LuDownload aria-hidden /> PDF simulación · NO APTO PARA CORTE</button> : null}
-          <Link className={s.secondaryAction} href={`/print/cotizaciones/${encodeURIComponent(quoteId)}/fabricacion/vidrios?codigo=${encodeURIComponent(currentQuoteCode)}`}>Abrir revisión técnica</Link>
+          <Link className={s.secondaryAction} href={`/print/cotizaciones/${encodeURIComponent(quoteId)}/fabricacion/vidrios?codigo=${encodeURIComponent(currentQuoteCode)}`}>Abrir revisión técnica y PDFs</Link>
+          {visibleResults ? <button type="button" className={s.secondaryAction} disabled={busy || refreshingSource || !sourceFresh} onClick={() => void downloadSimulationPdf()}><LuDownload aria-hidden /> PDF simulación · NO APTO PARA CORTE</button> : null}
         </div>
         {autoPreview && selected ? <div className={s.inlinePreview} aria-label="Vista previa preliminar de distribución">
           <div className={s.previewSheetHeader}><strong>Vista previa · plancha {selectedSheetIndex + 1}</strong><span>{selected.sheet.rawSheet.widthMm} × {selected.sheet.rawSheet.heightMm} mm</span></div>
@@ -473,7 +474,7 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
             <div className={s.previewSummary}><span>{selected.sheet.panes.length} {selected.sheet.panes.length === 1 ? "unidad física" : "unidades físicas"} · {formatArea(selected.sheet.areas.panesMm2)}</span><span>{selected.sheet.remnants.length} sobrantes geométricos · {formatArea(selected.sheet.remnants.reduce((sum, remnant) => sum + remnant.areaMm2, 0))}</span></div>
             <p className={s.previewDisclaimer}>Despuntes y separación geométrica asumidos: 0 mm. El formato se usa sin giro y la orientación de paños no confirmada se mantiene fija. Distribución preliminar. Confirmar medidas y tolerancias con el proveedor antes de cortar.</p>
             <button type="button" className={s.secondaryAction} disabled={busy || refreshingSource || !sourceFresh} onClick={() => void downloadSimulationPdf()}><LuDownload aria-hidden /> PDF simulación · NO APTO PARA CORTE</button>
-            <Link className={s.secondaryAction} href={`/print/cotizaciones/${encodeURIComponent(quoteId)}/fabricacion/vidrios?codigo=${encodeURIComponent(currentQuoteCode)}`}>Abrir revisión técnica</Link>
+            <Link className={s.secondaryAction} href={`/print/cotizaciones/${encodeURIComponent(quoteId)}/fabricacion/vidrios?codigo=${encodeURIComponent(currentQuoteCode)}`}>Abrir revisión técnica y PDFs</Link>
           </> : null}
         </DialogContent>
       </Dialog>

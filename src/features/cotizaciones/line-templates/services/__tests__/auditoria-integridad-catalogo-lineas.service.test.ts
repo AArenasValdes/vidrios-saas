@@ -4,15 +4,15 @@ import { auditarIntegridadCatalogoLineasVentora } from "@/features/cotizaciones/
 
 describe("auditoria integridad catalogo lineas", () => {
 
-  it("clasifica las 102 líneas con categorías primarias mutuamente excluyentes", () => {
+  it("clasifica las 103 líneas con categorías primarias mutuamente excluyentes", () => {
 
     const { lineas, resumen } = auditarIntegridadCatalogoLineasVentora();
 
 
 
-    expect(lineas).toHaveLength(102);
+    expect(lineas).toHaveLength(103);
 
-    expect(resumen.totalLineas).toBe(102);
+    expect(resumen.totalLineas).toBe(103);
 
 
 
@@ -24,13 +24,13 @@ describe("auditoria integridad catalogo lineas", () => {
 
     );
 
-    expect(sumaPrimaria).toBe(102);
+    expect(sumaPrimaria).toBe(103);
 
 
 
     expect(resumen.clasificacionPrimaria).toEqual({
 
-      codigos_documentados_no_validados: 10,
+      codigos_documentados_no_validados: 11,
 
       codigos_referenciales_no_ambiguos: 69,
 
@@ -46,7 +46,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
     expect(resumen.nomenclaturaAmbigua).toBe(1);
 
-    expect(resumen.conCodigosReferencialesEnFixtures).toBe(80);
+    expect(resumen.conCodigosReferencialesEnFixtures).toBe(81);
 
     expect(resumen.gateTecnico.listaParaProbar).toBe(19);
 
@@ -62,7 +62,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
     const al32 = lineas.find((line) => line.catalogKey === "ventora:l32");
 
-    expect(al32?.tipologiaComercial).toContain("Proyectante");
+    expect(al32?.tipologiaComercial).toContain("proyectante");
 
     expect(al32?.clasificacionPrimaria).toBe("codigos_documentados_no_validados");
 
@@ -211,4 +211,3 @@ describe("auditoria integridad catalogo lineas", () => {
   });
 
 });
-

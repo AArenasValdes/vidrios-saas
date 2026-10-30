@@ -179,11 +179,16 @@ export function CostoTecnicoParcialPanel({ quoteId, onSnapshotChange }: { quoteI
   </section>;
   const knownTotal = formatMoney(snapshot?.knownNetTotal ?? null, snapshot?.currency ?? null);
   const presentationDescription = (line: TechnicalCostSnapshot["lines"][number]) =>
-    line.quantity != null
+    line.priceApplicationStatus === "base_reference_other_finish"
+      ? `${line.finishName} · precio base por ${line.purchaseUnit} · presentación física pendiente`
+      : line.quantity != null
       ? `${line.finishName} · ${line.quantity} ${line.purchaseUnit}`
       : `${line.finishName} · ${((line.commercialLengthMm ?? 0) / 1000).toLocaleString("es-CL")} m · ${line.bars} ${line.bars === 1 ? "tira" : "tiras"}`;
   const origin = snapshot?.priceOrigin === "none" ? "Sin precios" : snapshot?.priceOrigin === "mixed" ? "Mixto" : snapshot?.priceOrigin === "own" ? "Mis precios" : "Referencial";
-  const status = snapshot?.status === "no_data" ? "Sin datos" : snapshot?.status === "complete" ? "Completo" : "Parcial";
+  const hasHistoricalReference = snapshot?.assumptions.some((assumption) => assumption.includes("referencia histórica")) ?? false;
+  const status = snapshot?.totalCostClassification === "commercial_estimate" ? "Estimación comercial" :
+    snapshot?.totalCostClassification === "confirmed" ? "Total calculado con precios específicos" :
+      hasHistoricalReference ? "Referencia histórica" : snapshot?.status === "no_data" ? "Sin datos" : snapshot?.status === "complete" ? "Completo" : "Parcial";
 
   return (
     <section className={styles.panel} aria-label="Costo estimado de materiales" data-testid="supplier-technical-cost-panel">
@@ -199,9 +204,15 @@ export function CostoTecnicoParcialPanel({ quoteId, onSnapshotChange }: { quoteI
         <p className={styles.empty} role="status" aria-live="polite">{busy ? "Calculando con la pauta guardada…" : message ? "Puedes volver a intentarlo cuando quieras." : canCalculate ? "El costo se calcula con los precios vigentes." : "El costo aparecerá cuando haya una pauta guardada."}</p>
       ) : (
         <>
+          {snapshot.assumptions.filter((assumption) => assumption.includes("referencia histórica")).map((assumption) => (
+            <p className={styles.pendingNote} role="note" key={assumption}>{assumption}</p>
+          ))}
+          {snapshot.assumptions.filter((assumption) => assumption.includes("Estimación comercial:")).map((assumption) => (
+            <p className={styles.pendingNote} role="note" key={assumption}>{assumption}</p>
+          ))}
           <div className={styles.summary}>
             <div>
-              <span>{snapshotIsStale ? "Costo guardado (desactualizado)" : "Total neto conocido"}</span>
+              <span>{snapshotIsStale ? "Costo guardado (desactualizado)" : snapshot.totalCostClassification === "commercial_estimate" ? "Total estimado con precio base" : "Total neto conocido"}</span>
               <strong>{knownTotal ?? "Sin monto calculable"}</strong>
               <small>{origin} · {status}</small>
             </div>
@@ -229,6 +240,14 @@ export function CostoTecnicoParcialPanel({ quoteId, onSnapshotChange }: { quoteI
                   <strong>{line.technicalName}</strong>
                   <span>{presentationDescription(line)}</span>
                   <span>Precio: {line.effectivePriceSource === "organization_override" ? "Mi precio" : line.effectivePriceSource === "provider_adjustment" ? "Mi ajuste" : "Referencial"}</span>
+                  {line.priceApplicationStatus === "base_reference_other_finish" ? (
+                    <span role="note">Precio base de {line.priceSourceFinishName} aplicado a {line.finishName}; presentación física pendiente. Sin SKU de Titanio asignado.</span>
+                  ) : line.priceReferenceStatus === "active_by_ventora_policy" ? (
+                    <span role="note">{line.priceApplicationStatus === "finish_independent" ? "Presentación independiente del acabado" : `Precio específico ${line.finishName}`} · lista Alumco activa en Ventora · fuente ${line.priceListPublishedOn ?? "14-10-2026"}.</span>
+                  ) : null}
+                  {line.priceReferenceStatus === "historical_reference" && line.effectivePriceSource === "reference" ? (
+                    <span role="note">Referencia histórica · no confirmada vigente</span>
+                  ) : null}
                 </div>
                 <strong>{formatMoney(line.lineNet, line.currency) ?? "Sin precio"}</strong>
               </div>

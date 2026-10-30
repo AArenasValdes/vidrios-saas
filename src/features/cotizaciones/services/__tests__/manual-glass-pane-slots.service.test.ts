@@ -63,6 +63,16 @@ describe("resolveManualGlassPaneSlots", () => {
       .toEqual([`Paño 1 · ${label}`]);
   });
 
+  it("etiqueta Fijo por la tipología seleccionada aunque la descripción de línea diga Proyectante", () => {
+    const result = resolveManualGlassPaneSlots({
+      componentType: "Paño fijo",
+      system: "Serie 32 Proyectante",
+      configuration: "Con perfilería",
+    });
+
+    expect(result.slots.map(({ label }) => label)).toEqual(["Paño 1 · Fijo"]);
+  });
+
   it.each([
     ["Puerta corredera", "4 hojas", 4],
     ["Corredera", "2 hojas", 2],

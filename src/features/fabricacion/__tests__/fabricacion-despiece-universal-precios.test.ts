@@ -3,6 +3,7 @@ import { parseSodalL25VariantSlug } from "@/features/fabricacion/fixtures/sodal-
 import { SODAL_L25_FORMULA_VERSION } from "@/features/fabricacion/zeta/sodal-l25-profile-roles";
 import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import { resolveUniversalPricedLineFallback, resolveUniversalPricedLineFallbacks } from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
+import { construirFabricacionTrabajoSnapshot } from "@/features/fabricacion/services/fabricacion-trabajo-snapshot.service";
 import { resolveConstructorRecipeCandidates } from "@/features/fabricacion/services/constructor-recipe-selection.service";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
@@ -404,6 +405,115 @@ describe("despiece de líneas universales con precio Arquetipo", () => {
       expect(resolved.preliminary).toBe(false);
       expect(resolved.recipe?.status).toBe("testing");
     }
+  });
+
+  it("solo ofrece el fallback de Serie 32 para proyectante Normal de una hoja", () => {
+    const base = {
+      catalogKey: "ventora:l32",
+      lineTemplateId: 208,
+      organizationId: 3,
+      lineName: "Serie 32",
+      variant: "normal",
+      configurationId: "ventora:l32:proyectante",
+      leavesCount: 1,
+      recipes: [],
+    };
+
+    const serie32Fallback = resolveUniversalPricedLineFallbacks({ ...base, typology: "proyectante" });
+    expect(serie32Fallback).toHaveLength(1);
+    expect(serie32Fallback[0]?.definition.identidad.configurationId).toBe("ventora:l32:proyectante");
+    expect(resolveUniversalPricedLineFallbacks({ ...base, typology: "pano_fijo" })).toEqual([]);
+    expect(resolveUniversalPricedLineFallbacks({ ...base, typology: "proyectante", leavesCount: 2 })).toEqual([]);
+    expect(resolveUniversalPricedLineFallbacks({ ...base, typology: "proyectante", variant: "con_camara" })).toEqual([]);
+  });
+
+  it("conserva geometría estructural de Serie 32 cuando el vidrio contradice la receta monolítica 4 mm", () => {
+    const item = itemFor(pricedLines.find((line) => line.line === "L32")!);
+    item.vidrio = "Float 10 mm";
+    item.observaciones = encodeCotizacionItemPresentationMeta({
+      lineTemplateId: "208",
+      catalogLineKey: "ventora:l32",
+      sistema: "Proyectante",
+      fabricacionTipologia: "proyectante",
+      fabricacionHojas: 1,
+      fabricacionModulos: 1,
+      fabricacionApertura: "proyectante",
+      fabricacionVariante: "normal",
+      fabricacionConfiguracionId: "ventora:l32:proyectante",
+      vidrioLineTemplateId: "3757",
+      glassTechnicalSpec: {
+        version: 1,
+        productId: "3757",
+        thicknessMm: 4.5,
+        category: "dvh",
+        manualCutStatus: "confirmed",
+        technicalReviewConfirmed: true,
+        sheetWidthMm: 2500,
+        sheetHeightMm: 1800,
+        provenance: "catalog",
+        sourceProductId: "3757",
+        sourceValues: null,
+        hasConflict: false,
+      },
+    });
+
+    const result = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 3 });
+
+    expect(result).toMatchObject({
+      estado: "receta_incompleta",
+      formal: null,
+      recipe: null,
+    });
+    expect(result.geometryOnly?.profiles.map((profile) => profile.codigoPerfil)).toEqual(
+      expect.arrayContaining(["3201", "3202"]),
+    );
+    expect(result.geometryOnly?.profiles.some((profile) => profile.codigoPerfil === "3208")).toBe(false);
+    expect(result.cubication?.glass).toBeNull();
+    expect(result.message).toMatch(/geometría estructural parcial/i);
+    const unknownGlassItem = itemFor(pricedLines.find((line) => line.line === "L32")!);
+    unknownGlassItem.vidrio = "Vidrio monolítico";
+    const unknownGlassResult = resolveFabricacionDespieceForQuoteItem({
+      item: unknownGlassItem,
+      recipes: [],
+      organizationId: 3,
+    });
+    expect(unknownGlassResult.estado).toBe("receta_incompleta");
+    expect(unknownGlassResult.formal).toBeNull();
+    expect(unknownGlassResult.geometryOnly?.profiles).toHaveLength(4);
+  });
+
+  it("mantiene identidad y cortes por ítem al consolidar una corredera y un proyectante", () => {
+    const sliding = resolveFabricacionDespieceForQuoteItem({
+      item: itemFor(pricedLines.find((line) => line.line === "L20")!),
+      recipes: [],
+      organizationId: 3,
+    });
+    const projecting = resolveFabricacionDespieceForQuoteItem({
+      item: itemFor(pricedLines.find((line) => line.line === "L32")!),
+      recipes: [],
+      organizationId: 3,
+    });
+    expect(sliding.estado).toBe("calculado");
+    expect(projecting.estado).toBe("calculado");
+
+    const summary = construirFabricacionTrabajoSnapshot({
+      capturedAt: "2026-10-29T12:00:00.000Z",
+      items: [
+        { id: "item-L20", codigo: "V1", nombre: "Ventana corredera", lineaComercial: "L20", snapshot: sliding.formal! },
+        { id: "item-L32", codigo: "V2", nombre: "Ventana proyectante", lineaComercial: "L32", snapshot: projecting.formal! },
+      ],
+    });
+
+    const cuts = summary?.bars.flatMap((bar) => bar.cortes) ?? [];
+    expect(cuts.some((cut) => cut.codigoItem === "V1")).toBe(true);
+    expect(cuts.some((cut) => cut.codigoItem === "V2")).toBe(true);
+    expect(cuts.filter((cut) => cut.codigoItem === "V2").map((cut) => cut.codigoPerfil)).toEqual(
+      expect.arrayContaining(["3201", "3202", "3208"]),
+    );
+    expect(cuts.filter((cut) => cut.codigoItem === "V2").map((cut) => cut.codigoPerfil)).not.toEqual(
+      expect.arrayContaining(["3204", "3205"]),
+    );
+    expect(cuts.every((cut) => cut.codigoItem === "V1" || cut.codigoItem === "V2")).toBe(true);
   });
 
   it("resuelve el Shower L12 de 2 hojas aunque la cotización lo llame corredera frontal", () => {

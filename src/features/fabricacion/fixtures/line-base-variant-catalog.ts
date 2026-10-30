@@ -11,6 +11,7 @@ import {
   crearRecetaL20AlumetricaVariant,
   isL20CatalogKey,
   L20_ALUMETRICA_VARIANT_LABELS,
+  L20_CATALOG_KEY,
   L20_CORREDERA_VARIANT_SLUGS,
   L20_FIJOS_CATALOG_KEY,
   L20_FIJOS_VARIANT_SLUGS,
@@ -881,24 +882,22 @@ export function getLineVariantSlots(catalogKey: string | null | undefined): Line
   return LINE_BASE_VARIANT_CATALOG[catalogKey as BaseLineCatalogKey] ?? [];
 }
 
-/** Árbol de fabricación: Serie 20 muestra corredera y fijos juntos. */
+/** Nuevas selecciones técnicas L20: solo corredera está respaldada. La clave y
+ * slots de fijos permanecen para leer recetas históricas, pero no para ofrecer
+ * una construcción nueva ni asignarle una receta de corredera por semejanza. */
 export function getLineVariantSlotsForFabricationTree(
   catalogKey: string | null | undefined
 ): LineVariantSlot[] {
-  if (isL20CatalogKey(catalogKey)) {
-    return [
-      ...l20AlumetricaSlotsForVariants(L20_CORREDERA_VARIANT_SLUGS),
-      ...l20AlumetricaSlotsForVariants(L20_FIJOS_VARIANT_SLUGS),
-    ];
-  }
+  if (catalogKey === L20_FIJOS_CATALOG_KEY) return [];
+  if (catalogKey === L20_CATALOG_KEY) return l20AlumetricaSlotsForVariants(L20_CORREDERA_VARIANT_SLUGS);
   return getLineVariantSlots(catalogKey);
 }
 
 export function shouldShowFabricationVariantGallery(
   catalogKey: string | null | undefined
 ): boolean {
-  if (isL20CatalogKey(catalogKey)) return true;
-  return getLineVariantSlots(catalogKey).length > 1;
+  if (catalogKey === L20_CATALOG_KEY) return true;
+  return getLineVariantSlotsForFabricationTree(catalogKey).length > 1;
 }
 
 export function isBaseLineCatalogKey(

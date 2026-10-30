@@ -76,6 +76,24 @@ describe("supplier profile price preview without fabrication recipe", () => {
     expect(result[0]).toMatchObject({ status: "ambiguous", netPrice: null });
   });
 
+  it("prioritizes an exact finish price over Alumco's Titanio base", () => {
+    const result = resolveSupplierProfilePricePreviews({
+      request: { ...request, familyKey: "universal:aluminio:l32", finishName: "Negro", technicalCodes: ["3201"], providerKey: "alumco" },
+      references: [{ code: "3201", name: "Marco" }],
+      presentations: [
+        presentation({ presentationId: "alumco-ti-3201", providerKey: "alumco", familyKeys: ["universal:aluminio:l32"], technicalCode: "3201", supplierSku: "TI3201A", finishName: "Titanio", netPrice: 10210 }),
+        presentation({ presentationId: "fixture-black-3201", providerKey: "alumco", familyKeys: ["universal:aluminio:l32"], technicalCode: "3201", supplierSku: "SKU-NEGRO-TEST", finishName: "Negro", netPrice: 14000 }),
+      ],
+      providerNames: new Map([["alumco", "Alumco"]]),
+    });
+    expect(result).toEqual([expect.objectContaining({
+      supplierSku: "SKU-NEGRO-TEST",
+      netPrice: 14000,
+      finishPriceBasis: "specific_finish",
+      priceSourceFinishName: "Negro",
+    })]);
+  });
+
   it("applies organization-specific provider adjustments and overrides", () => {
     const result = resolveSupplierProfilePricePreviews({
       request,
