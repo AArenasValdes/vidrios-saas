@@ -369,11 +369,12 @@ export function createFabricationWorkOrderPdf(
     row.quantity == null ? "Pendiente" : String(row.quantity),
     row.issue ? "Pendiente de revisar" : area(row.totalM2),
   ] }));
-  y = drawTable(pdf, kind === "glass-order" ? "Paños por fabricar" : "3. Orden de vidrios", [
+  y = drawTable(pdf, kind === "glass-order" ? "Paños identificados · revisar antes de distribuir o cortar" : "3. Orden de vidrios", [
     { title: "Partida / paño", width: 46 }, { title: "Tipo / espesor", width: 49 },
     { title: "Ancho × alto", width: 39 }, { title: "Cant.", width: 17, align: "right" },
     { title: "Superficie", width: 31, align: "right" },
   ], glass, y, "Sin paños guardados", runningTitle, metadata.quoteCode, logoDataUrl);
+  y = drawNote(pdf, "Referencias y medidas desde la cotización y snapshots guardados. No confirman por sí solas medidas finales ni cobertura operativa para distribuir o cortar.", y + 2, runningTitle, metadata.quoteCode, logoDataUrl);
   }
 
   if (kind === "combined") {

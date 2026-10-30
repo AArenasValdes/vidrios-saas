@@ -305,7 +305,8 @@ export function WorkMaterialsDocumentPanel(props: WorkMaterialsDocumentPanelProp
 
       {view === "all" || view === "glass-order" ? <section className={s.workDocument} data-work-document="glass-order" aria-label="Orden de vidrios">
         <Header {...props} title="Orden de vidrios" />
-        <MaterialTable title="Paños por fabricar" empty="No hay vidrio ni composición registrada para ordenar." hasRows={props.document.glassOrder.length > 0}>
+        <MaterialTable title="Paños identificados · revisar antes de distribuir o cortar" empty="No hay vidrio ni composición registrada para ordenar." hasRows={props.document.glassOrder.length > 0}>
+          <p>Las referencias y medidas provienen de la cotización y sus snapshots. No confirman por sí solas medidas finales ni cobertura operativa.</p>
           <ul className={s.glassOrderMobile} aria-label="Orden de corte de vidrios">
             {props.document.glassOrder.map((row) => <li key={row.key}>
               <div className={s.glassOrderMobileLead}><strong>{row.paneReference}</strong><span>{row.quantity ?? "Cantidad pendiente"}{row.quantity == null ? "" : row.quantity === 1 ? " paño" : " paños"}</span></div>

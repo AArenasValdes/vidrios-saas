@@ -324,6 +324,8 @@ describe("orden de fabricación y materiales", () => {
     const glassText = pdfText(glassPdf);
     expect(glassPdf.getNumberOfPages()).toBe(1);
     expect(glassText).toContain("Orden de vidrios");
+    expect(glassText).toContain("Paños identificados");
+    expect(glassText).toMatch(/No confirman por sí solas medidas finales ni cobertura operativa/i);
     expect(glassText).toContain("Espesor: 5 mm");
     expect(glassText).toContain("600 mm");
     expect(glassText).not.toContain("Plan de corte de vidrios");

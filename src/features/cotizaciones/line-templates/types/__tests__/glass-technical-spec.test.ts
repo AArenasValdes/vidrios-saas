@@ -122,6 +122,29 @@ describe("glass technical spec", () => {
     expect(isCatalogGlassPlanable(spec)).toBe(false);
   });
 
+  it("permite guardar full_sheet explícito en una ficha legacy y lo aplica al crear una selección nueva", () => {
+    const legacyMetadata = { espesor: "5 mm", categoriaTecnica: "monolitico", corteManualEstado: "confirmed", planchaAnchoMm: 4000, planchaAltoMm: 2200 };
+    const historicalSpec = buildCatalogGlassTechnicalSpec({ productId: "glass-legacy", metadata: legacyMetadata });
+    expect(historicalSpec.purchaseMode).toBeUndefined();
+    expect(isCatalogGlassPlanable(historicalSpec)).toBe(false);
+
+    const updatedMetadata = mergeLineTemplateGlassMetadata(legacyMetadata, {
+      espesor: "5 mm",
+      espesorMm: 5,
+      categoriaTecnica: "monolitico",
+      corteManualEstado: "confirmed",
+      purchaseMode: "full_sheet",
+      planchaAnchoMm: 4000,
+      planchaAltoMm: 2200,
+    });
+    const newlySelectedSpec = buildCatalogGlassTechnicalSpec({ productId: "glass-legacy", metadata: updatedMetadata });
+
+    expect(updatedMetadata).toMatchObject({ formaCompraVidrio: "full_sheet", planchaAnchoMm: 4000, planchaAltoMm: 2200 });
+    expect(newlySelectedSpec.purchaseMode).toBe("full_sheet");
+    expect(isCatalogGlassPlanable(newlySelectedSpec)).toBe(true);
+    expect(historicalSpec.purchaseMode).toBeUndefined();
+  });
+
   it("congela especificación al reabrir el mismo producto y toma metadata solo si cambia la selección", () => {
     const initial = buildCatalogGlassTechnicalSpec({
       productId: "glass-1",

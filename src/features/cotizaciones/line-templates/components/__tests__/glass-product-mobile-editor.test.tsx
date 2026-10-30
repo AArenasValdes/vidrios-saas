@@ -130,4 +130,25 @@ describe("GlassProductMobileEditor", () => {
     expect(screen.getByLabelText("Alto de plancha (mm)")).toBeInTheDocument();
     expect(screen.getByText(/La merma comercial no se usa como despunte ni como separación física/)).toBeInTheDocument();
   });
+
+  it("permite confirmar plancha completa al editar una ficha legacy sin inferirla por sus dimensiones", () => {
+    const onDraftChange = jest.fn();
+    render(<GlassProductMobileEditor
+      sheetMode="edit"
+      step={1}
+      onStepChange={jest.fn()}
+      draft={draft({ glassPurchaseMode: "legacy", planchaAnchoMm: "4000", planchaAltoMm: "2200" })}
+      onDraftChange={onDraftChange}
+      saveDisabled={false}
+      isSaving={false}
+      onSave={jest.fn()}
+      onClose={jest.fn()}
+    />);
+
+    const purchaseMode = screen.getByLabelText("Forma de compra del vidrio");
+    expect(purchaseMode).toHaveValue("legacy");
+    expect(screen.getByRole("option", { name: "Plancha completa" })).toBeInTheDocument();
+    fireEvent.change(purchaseMode, { target: { value: "full_sheet" } });
+    expect(onDraftChange).toHaveBeenCalledWith("glassPurchaseMode", "full_sheet");
+  });
 });
