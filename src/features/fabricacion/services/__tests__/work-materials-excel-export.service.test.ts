@@ -212,4 +212,28 @@ describe("buildWorkMaterialsWorkbook", () => {
     const materialWorkbook = buildWorkMaterialsWorkbook(XLSX, { ...metadata, kind: "materials", includeSupplierPriceReferences: false });
     expect(materialWorkbook.SheetNames).toEqual(["Perfiles", "Accesorios", "Vidrios"]);
   });
+
+  it("exporta geometría preliminar en una hoja separada y con advertencia de no fabricación", () => {
+    const workOrder = {
+      cutGroups: [],
+      preliminaryCutGroups: [{
+        key: "preliminary-3201", technicalCode: "3201", profileName: "Marco Serie 32",
+        barIndex: null, commercialLengthMm: null, usedMm: null, theoreticalRemnantMm: null,
+        trimMm: null, kerfMm: null,
+        cuts: [{ itemCode: "L32-1", component: "Proyectante", functionName: "Marco", quantity: 2, lengthMm: 1200 }],
+      }],
+    } as FabricationWorkOrder;
+    const workbook = buildWorkMaterialsWorkbook(XLSX, { ...metadata, kind: "profile-cuts", workOrder });
+    const operational = workbook.Sheets["Cortes perfiles"];
+    const preliminary = workbook.Sheets["Despiece preliminar"];
+
+    expect(workbook.SheetNames).toEqual(["Cortes perfiles", "Despiece preliminar"]);
+    expect(operational.A8.v).toBe("Sin datos registrados");
+    expect(JSON.stringify(operational)).not.toContain("3201");
+    expect(preliminary.A1.v).toContain("Despiece estructural preliminar");
+    expect(preliminary.A2.v).toContain("DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN");
+    expect(preliminary.A8.v).toBe("3201");
+    expect(preliminary.G8.v).toBe(1200);
+    expect(preliminary.A10.v).toContain("No representa cantidades de compra");
+  });
 });

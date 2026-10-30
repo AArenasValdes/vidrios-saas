@@ -27,12 +27,13 @@ function buildSheet(
   rows: Array<Array<string | number | null>>,
   columnWidths: number[],
   numberFormats: Record<number, string> = {},
-  note = "Cantidades según pauta conjunta y snapshots disponibles. Los datos pendientes permanecen sin valor asignado."
+  note = "Cantidades según pauta conjunta y snapshots disponibles. Los datos pendientes permanecen sin valor asignado.",
+  warning?: string
 ) {
   const populatedRows = rows.length > 0 ? rows : [["Sin datos registrados"]];
   const data: Array<Array<string | number | null>> = [
     [`VENTORA · ${title}`],
-    ["Documento interno de taller"],
+    [warning ?? "Documento interno de taller"],
     [],
     ["Empresa", input.companyName || "Empresa", "Cotización", input.quoteCode],
     ["Trabajo", input.work || "—", "Fecha", input.issueDate],
@@ -209,6 +210,23 @@ export function buildWorkMaterialsWorkbook(XLSX: typeof XLSXModule, input: Build
       { 10: "#,##0", 11: "#,##0 \"mm\"", 12: "#,##0 \"mm\"" },
       "Largos y cantidades según pauta guardada. Remanentes teóricos: no consideran condiciones de aprovechamiento del taller. No es optimización de planchas de vidrio."
     ), "Cortes perfiles");
+    const preliminaryGroups = input.workOrder?.preliminaryCutGroups ?? [];
+    if (preliminaryGroups.length > 0) {
+      XLSX.utils.book_append_sheet(workbook, buildSheet(
+        XLSX,
+        input,
+        "Despiece estructural preliminar · acristalamiento pendiente",
+        ["Código de perfil", "Perfil", "Partida", "Componente", "Función", "Cantidad", "Largo geométrico (mm)"],
+        preliminaryGroups.flatMap((group) => group.cuts.map((cut) => [
+          group.technicalCode, group.profileName, cut.itemCode, cut.component,
+          cut.functionName, cut.quantity, cut.lengthMm,
+        ])),
+        [20, 34, 17, 32, 24, 14, 25],
+        { 5: "#,##0", 6: "#,##0 \"mm\"" },
+        "Geometría de revisión separada de la pauta operativa. No representa cantidades de compra ni distribución de barras.",
+        "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN. Acristalamiento pendiente; no usar estos cortes como pauta operativa."
+      ), "Despiece preliminar");
+    }
   }
 
   return workbook;

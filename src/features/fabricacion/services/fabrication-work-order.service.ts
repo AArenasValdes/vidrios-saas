@@ -48,7 +48,10 @@ export type WorkOrderGlass = {
 };
 export type FabricationWorkOrder = {
   materials: WorkMaterialsDocument;
+  /** Cortes guardados o de snapshot técnico formal, elegibles para la pauta del trabajo. */
   cutGroups: WorkOrderCutGroup[];
+  /** Geometría de revisión separada de toda pauta operativa. */
+  preliminaryCutGroups: WorkOrderCutGroup[];
   hasJointBars: boolean;
   glass: WorkOrderGlass[];
   pending: WorkOrderPending[];
@@ -98,10 +101,19 @@ function profileNameWithoutConflictingFinish(profileName: string, selectedFinish
 function buildJointCutGroups(
   summary: FabricationQuoteSummary,
   quoteItemsById: ReadonlyMap<string, CotizacionWorkflowItem>,
-  addPending: (key: string, subject: string, action: string) => void
+  addPending: (key: string, subject: string, action: string) => void,
+  excludedItemIds: ReadonlySet<string> = new Set()
 ) {
   const bars = summary.trabajoSnapshot?.bars ?? [];
-  return bars.map((bar, barNumber): WorkOrderCutGroup => {
+  return bars.map((bar, barNumber): WorkOrderCutGroup | null => {
+    if (bar.cortes.some((cut) => excludedItemIds.has(String(cut.itemId)))) {
+      addPending(
+        `mixed-preliminary-bar:${barNumber}`,
+        `Tira ${bar.indice}: pauta conjunta`,
+        "Contiene un componente con geometría preliminar; revisar y recalcular la pauta completa antes de usar sus cortes."
+      );
+      return null;
+    }
     const cuts = new Map<string, WorkOrderCut>();
     for (const cut of bar.cortes) {
       if (!Number.isFinite(cut.largoMm) || cut.largoMm <= 0) {
@@ -142,12 +154,13 @@ function buildJointCutGroups(
       kerfMm: bar.perdidaCorteMm,
       cuts: [...cuts.values()],
     };
-  });
+  }).filter((group): group is WorkOrderCutGroup => group !== null && group.cuts.length > 0);
 }
 
-function buildHistoricCutGroups(summary: FabricationQuoteSummary) {
+function buildHistoricCutGroups(summary: FabricationQuoteSummary, geometryOnly: boolean) {
   const groups: WorkOrderCutGroup[] = [];
   for (const item of summary.items) {
+    if (Boolean(item.geometryOnly) !== geometryOnly) continue;
     const cuts = item.fabricacionSnapshot?.pauta?.length
       ? item.fabricacionSnapshot.pauta.map((cut) => ({
           technicalCode: cut.codigoPerfil,
@@ -203,14 +216,25 @@ export function buildFabricationWorkOrder(input: {
     if (!pending.has(key)) pending.set(key, { key, subject, action });
   };
 
-  for (const row of materials.profiles) {
+  const geometryOnlyItemIds = new Set(summary.items.filter((item) => item.geometryOnly).map((item) => item.itemId));
+  const contaminatedJointSnapshot = Boolean(summary.trabajoSnapshotHasGeometryOnly) || Boolean(summary.trabajoSnapshot?.bars.some((bar) =>
+    bar.cortes.some((cut) => geometryOnlyItemIds.has(String(cut.itemId)))
+  ));
+  const workMaterials = contaminatedJointSnapshot
+    ? { ...materials, profiles: [], hasJointCuttingPlan: false }
+    : materials;
+  if (contaminatedJointSnapshot) {
+    addPending("joint-plan-preliminary-geometry", "Pauta conjunta por revisar", "Incluye geometría estructural preliminar; recalcular la pauta completa antes de comprar o fabricar.");
+  }
+
+  for (const row of workMaterials.profiles) {
     const code = row.code === "—" ? "sin código" : row.code;
     if (row.finish === "Acabado sin definir") addPending(`finish:${row.key}`, `Perfil ${code}: acabado`, "Definir el acabado antes de comprar.");
     if (!row.supplierSku && (!row.price || !row.price.isWorkshopCode) && !row.price?.sku) addPending(`sku:${row.key}`, `Perfil ${code}: SKU proveedor`, "Seleccionar una presentación con SKU.");
     if (!row.price) addPending(`price:${row.key}`, `Perfil ${code}: precio`, "Configurar el precio de compra por presentación.");
     if (!(row.commercialLengthMm > 0)) addPending(`length:${row.key}`, `Perfil ${code}: largo`, "Definir el largo comercial de la tira.");
   }
-  for (const row of materials.accessories) {
+  for (const row of workMaterials.accessories) {
     if (!row.code && !row.price?.sku) addPending(`accessory-code:${row.key}`, `${row.description}: código`, "Completar código del accesorio.");
     if (!row.price) addPending(`accessory-price:${row.key}`, `${row.description}: precio`, "Configurar el precio de compra.");
     if (row.finish === "Acabado sin definir") addPending(`accessory-finish:${row.key}`, `${row.description}: acabado`, "Definir el acabado.");
@@ -219,7 +243,7 @@ export function buildFabricationWorkOrder(input: {
     addPending(`presentation:${missing.itemId}:${missing.technicalCode}`, `Perfil ${missing.technicalCode}: presentación`, missing.reason || "Seleccionar presentación y largo comercial.");
   }
   for (const missing of cost?.missing ?? []) {
-    const alreadyListed = [...materials.profiles, ...materials.accessories].some((row) =>
+    const alreadyListed = [...workMaterials.profiles, ...workMaterials.accessories].some((row) =>
       !row.price && (
         (missing.technicalCode != null && row.code === missing.technicalCode) ||
         row.description.trim().toLocaleLowerCase("es-CL") === missing.description.trim().toLocaleLowerCase("es-CL")
@@ -229,13 +253,19 @@ export function buildFabricationWorkOrder(input: {
     addPending(`cost:${missing.technicalCode ?? missing.description}:${missing.reason}`, `${missing.description}: precio`, missing.reason || "Completar precio de compra.");
   }
 
-  const hasJointBars = Boolean(summary.trabajoSnapshot?.bars.length);
+  const hasJointBars = Boolean(summary.trabajoSnapshot?.bars.length) && !contaminatedJointSnapshot;
   const quoteItemsById = new Map((input.quoteItems ?? []).map((item) => [String(item.id), item]));
-  const rawCutGroups = hasJointBars ? buildJointCutGroups(summary, quoteItemsById, addPending) : buildHistoricCutGroups(summary);
+  const rawCutGroups = hasJointBars
+    ? buildJointCutGroups(summary, quoteItemsById, addPending, geometryOnlyItemIds)
+    : buildHistoricCutGroups(summary, false);
+  const preliminaryCutGroups = buildHistoricCutGroups(summary, true);
+  if (preliminaryCutGroups.length > 0) {
+    addPending("structural-geometry", "Despiece estructural preliminar", "Acristalamiento pendiente. Revisar los cortes por separado; no apto para fabricación.");
+  }
   const cutGroups = rawCutGroups.map((group) => {
     const groupItemCodes = [...new Set(group.cuts.map((cut) => cut.itemCode))];
     if (!group.finish || !group.commercialLengthMm || groupItemCodes.length === 0) return group;
-    const candidates = materials.profiles.filter((profile) =>
+    const candidates = workMaterials.profiles.filter((profile) =>
       profile.code === group.technicalCode &&
       (!group.familyKey || profile.familyKey === group.familyKey) &&
       (!group.supplierProviderKey || profile.supplierProviderKey === group.supplierProviderKey) &&
@@ -248,7 +278,7 @@ export function buildFabricationWorkOrder(input: {
     if (candidates.length !== 1) return group;
     const [profile] = candidates;
     if (!profile) return group;
-    const reference = resolveProfileSupplierPrice(profile, materials.profilePriceReferences);
+    const reference = resolveProfileSupplierPrice(profile, workMaterials.profilePriceReferences);
     return {
       ...group,
       line: profile.line,
@@ -289,21 +319,22 @@ export function buildFabricationWorkOrder(input: {
   });
   if (glass.length === 0) addPending("glass-order", "Orden de vidrios", "Revisar si el trabajo requiere paños de vidrio.");
 
-  const pricedRows = [...materials.profiles, ...materials.accessories].filter((row) => row.price);
+  const pricedRows = [...workMaterials.profiles, ...workMaterials.accessories].filter((row) => row.price);
   const visibleSubtotal = pricedRows.reduce((sum, row) => sum + (row.price?.subtotal ?? 0), 0);
   const savedSubtotal = cost?.lines.reduce((sum, line) => sum + line.lineNet, 0) ?? null;
   const savedTotal = cost?.knownNetTotal ?? null;
   const totalsAgree = savedTotal != null && savedSubtotal != null && Math.abs(savedTotal - savedSubtotal) <= 1 && Math.abs(savedTotal - visibleSubtotal) <= 1;
   if (savedTotal != null && !totalsAgree) addPending("price-total", "Costo valorizado", "Revisar diferencia entre subtotales y total guardado.");
   if (!cost) addPending("price-snapshot", "Costo de materiales", "Calcular y guardar el costo técnico para mostrar precios.");
-  const unpricedVisibleCount = [...materials.profiles, ...materials.accessories].filter((row) => !row.price).length;
+  const unpricedVisibleCount = [...workMaterials.profiles, ...workMaterials.accessories].filter((row) => !row.price).length;
   const pendingPriceCount = Math.max(cost?.missing.length ?? 0, unpricedVisibleCount);
   const status = !totalsAgree || cost?.status === "no_data" ? "pending"
     : pendingPriceCount > 0 || cost?.status !== "complete" ? "partial" : "complete";
 
   return {
-    materials,
+    materials: workMaterials,
     cutGroups,
+    preliminaryCutGroups,
     hasJointBars,
     glass,
     pending: [...pending.values()],

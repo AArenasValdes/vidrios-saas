@@ -256,7 +256,7 @@ describe("FabricacionResumenView", () => {
     const article = screen.getByRole("tabpanel");
     expect(article).toHaveAttribute("data-active-tab", "resumen");
     expect(screen.getByRole("button", { name: "Descargar PDF preliminar de distribución de planchas" })).toBeInTheDocument();
-    expect(screen.getByText("Documentos de fabricación").compareDocumentPosition(screen.getByText("Componentes con pauta")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByText("Documentos de fabricación").compareDocumentPosition(screen.getByText("Despieces disponibles para revisión")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     fireEvent.click(screen.getByRole("tab", { name: "Costos" }));
     expect(article).toHaveAttribute("data-active-tab", "costos");
     expect(costPanel).toBeInTheDocument();
