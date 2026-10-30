@@ -1,4 +1,5 @@
 import { crearRecetaL20AlumetricaVariant } from "@/features/fabricacion/fixtures/l20-alumetrica-variant-recipes";
+import { getLineVariantSlots, getLineVariantSlotsForFabricationTree, shouldShowFabricationVariantGallery } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
 import {
   buildLineVariantPickerModel,
   describeLineVariantCoverage,
@@ -37,14 +38,14 @@ function recipeFromDefinition(
 }
 
 describe("line-variant-picker.service", () => {
-  it("marca L20 y L25 como líneas con picker de variaciones", () => {
+  it("solo expone un picker cuando hay varias construcciones respaldadas", () => {
     expect(lineUsesVariantProductPicker("ventora:l20")).toBe(true);
-    expect(lineUsesVariantProductPicker("ventora:l20-fijos")).toBe(true);
+    expect(lineUsesVariantProductPicker("ventora:l20-fijos")).toBe(false);
     expect(lineUsesVariantProductPicker("ventora:l25")).toBe(true);
     expect(lineUsesVariantProductPicker("ventora:l5000")).toBe(false);
   });
 
-  it("expone apertura y construcción para Serie 20", () => {
+  it("mantiene la galería para la corredera documentada sin mostrar una opción Fijos", () => {
     const corredera = recipeFromDefinition(
       crearRecetaL20AlumetricaVariant({
         variant: "pierna_abierta_jamba_2009",
@@ -58,20 +59,18 @@ describe("line-variant-picker.service", () => {
       recipe: corredera.definition,
     });
 
-    expect(model?.axes.map((axis) => axis.id)).toEqual(["apertura", "construccion"]);
-    expect(model?.selection.apertura).toBe("corredera");
-    expect(model?.axes.find((axis) => axis.id === "apertura")?.options.map((option) => option.label)).toEqual([
-      "Corredera",
-      "Fijos",
-    ]);
+    expect(model).toBeNull();
+    expect(shouldShowFabricationVariantGallery("ventora:l20")).toBe(true);
+    expect(shouldShowFabricationVariantGallery("ventora:l20-fijos")).toBe(false);
   });
 
-  it("resume 1 corredera y 4 fijos", () => {
-    const coverage = describeLineVariantCoverage({
-      catalogKey: "ventora:l20",
-      recipes: [],
-    });
-    expect(coverage?.totalCount).toBe(5);
-    expect(coverage?.subtitle).toBe("1 corredera y 4 fijos");
+  it("retira Fijos del árbol seleccionable y conserva sus referencias históricas", () => {
+    expect(getLineVariantSlotsForFabricationTree("ventora:l20").map((slot) => slot.apertura)).toEqual(["corredera"]);
+    expect(getLineVariantSlotsForFabricationTree("ventora:l20-fijos")).toEqual([]);
+    expect(getLineVariantSlots("ventora:l20-fijos")).toHaveLength(4);
+    expect(buildLineVariantPickerModel({ catalogKey: "ventora:l20-fijos", recipes: [], recipe: null })).toBeNull();
+    expect(describeLineVariantCoverage({ catalogKey: "ventora:l20-fijos", recipes: [] })).toBeNull();
+    expect(describeLineVariantCoverage({ catalogKey: "ventora:l20", recipes: [] })).toBeNull();
+    expect(describeLineVariantCoverage({ catalogKey: "ventora:l20-fijos", recipes: [] })).toBeNull();
   });
 });

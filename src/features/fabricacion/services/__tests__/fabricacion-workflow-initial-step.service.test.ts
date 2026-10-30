@@ -127,7 +127,7 @@ describe("resolveInitialFabricationStepForTemplate", () => {
     );
   });
 
-  it("mantiene el paso de producto en líneas con un selector de variantes independiente", () => {
+  it("mantiene el paso de producto para seleccionar la única construcción L20 respaldada", () => {
     expect(
       resolveInitialFabricationStepForTemplate(
         { catalogKey: "ventora:l20" },
@@ -224,7 +224,7 @@ describe("resolveMobileVariantTreeEntryStep", () => {
     });
 
     expect(
-      resolveMobileVariantTreeEntryStep({ catalogKey: "ventora:l20-fijos" }, recipe)
+      resolveMobileVariantTreeEntryStep({ catalogKey: "ventora:l20" }, recipe)
     ).toBe("base");
   });
 });
