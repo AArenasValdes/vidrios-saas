@@ -42,6 +42,10 @@ export type SupplierProfilePricePreview = {
   netPrice: number | null;
   currency: string | null;
   priceSource: "reference" | "provider_adjustment" | "organization_override" | "workshop" | null;
+  priceListRevision?: string | null;
+  priceListPublishedOn?: string | null;
+  priceListValidUntil?: string | null;
+  priceReferenceStatus?: CatalogPresentationPrice["priceReferenceStatus"];
   status: "priced" | "missing_price" | "ambiguous";
 };
 export type SupplierPriceCoveragePresentation = {
@@ -160,6 +164,10 @@ export function resolveSupplierProfilePricePreviews(input: {
         netPrice: price?.unitNetPrice ?? null,
         currency: price?.currency ?? null,
         priceSource: presentation.origin === "workshop" ? "workshop" : price?.source ?? null,
+        priceListRevision: presentation.priceListRevision ?? null,
+        priceListPublishedOn: presentation.priceListPublishedOn ?? null,
+        priceListValidUntil: presentation.priceListValidUntil ?? null,
+        priceReferenceStatus: presentation.priceReferenceStatus,
         status: price ? "priced" : "missing_price",
       });
     }

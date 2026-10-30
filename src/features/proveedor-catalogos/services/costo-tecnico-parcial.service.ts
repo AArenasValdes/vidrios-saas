@@ -1,6 +1,7 @@
 import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
 import { resolvePurchasePrice, summarizePriceSources, type OrganizationPurchasePricing, type PriceSource } from "./precio-compra.service";
 import { resolveSupplierFinishName } from "./supplier-presentation-resolution.service";
+import type { SupplierPriceListReferenceStatus } from "./price-list-selection.service";
 import {
   normalizeUniversalAluminumFamilyKey,
   resolveUniversalAluminumLineKey,
@@ -31,6 +32,9 @@ export type CatalogPresentationPrice = {
   currency: string | null;
   priceListId: string;
   priceListRevision: string;
+  priceListPublishedOn?: string | null;
+  priceListValidUntil?: string | null;
+  priceReferenceStatus?: SupplierPriceListReferenceStatus;
 };
 
 export type SupplierQuoteItemColor = {
@@ -73,6 +77,9 @@ type CostLine = {
   currency: string;
   priceListId: string;
   priceListRevision: string;
+  priceListPublishedOn?: string | null;
+  priceListValidUntil?: string | null;
+  priceReferenceStatus?: SupplierPriceListReferenceStatus;
   cuts: Array<{ itemCode: string; cutLengthMm: number }>;
   quantity?: number;
 };
@@ -497,6 +504,9 @@ export function buildPartialTechnicalCostSnapshot(input: {
         currency: resolved.currency,
         priceListId: selected.priceListId,
         priceListRevision: selected.priceListRevision,
+              priceListPublishedOn: selected.priceListPublishedOn,
+              priceListValidUntil: selected.priceListValidUntil,
+              priceReferenceStatus: selected.priceReferenceStatus,
         cuts: group.map((cut) => ({ itemCode: cut.itemCode, cutLengthMm: cut.cutLengthMm })),
       });
       continue;
@@ -554,6 +564,9 @@ export function buildPartialTechnicalCostSnapshot(input: {
       currency: resolved.currency,
       priceListId: presentation.priceListId,
       priceListRevision: presentation.priceListRevision,
+      priceListPublishedOn: presentation.priceListPublishedOn,
+      priceListValidUntil: presentation.priceListValidUntil,
+      priceReferenceStatus: presentation.priceReferenceStatus,
       cuts: acceptedCuts.map((cut) => ({ itemCode: cut.itemCode, cutLengthMm: cut.cutLengthMm })),
     });
   }
@@ -611,6 +624,9 @@ export function buildPartialTechnicalCostSnapshot(input: {
               currency: resolved.currency,
               priceListId: presentation.priceListId,
               priceListRevision: presentation.priceListRevision,
+              priceListPublishedOn: presentation.priceListPublishedOn,
+              priceListValidUntil: presentation.priceListValidUntil,
+              priceReferenceStatus: presentation.priceReferenceStatus,
               cuts: [],
             });
           }
@@ -630,9 +646,12 @@ export function buildPartialTechnicalCostSnapshot(input: {
 
   const currencies = [...new Set(lines.map((line) => line.currency))];
   const total = Math.round(lines.reduce((sum, line) => sum + line.lineNet, 0) * 100) / 100;
+  const hasUnconfirmedHistoricalReference = lines.some((line) =>
+    line.priceReferenceStatus === "historical_reference" && line.effectivePriceSource === "reference"
+  );
   return {
     schemaVersion: 2,
-    status: lines.length === 0 ? "no_data" : missing.size === 0 ? "complete" : "partial",
+    status: lines.length === 0 ? "no_data" : missing.size === 0 && !hasUnconfirmedHistoricalReference ? "complete" : "partial",
     priceOrigin: summarizePriceSources(lines.map((line) => line.effectivePriceSource ?? "reference")),
     calculatedAt,
     currency: currencies.length === 1 ? currencies[0] : null,
@@ -640,7 +659,11 @@ export function buildPartialTechnicalCostSnapshot(input: {
     lines,
     missing: [...missing.values()],
     // Currency and price basis have administrator-confirmed provenance in import evidence.
-    assumptions: [],
+    assumptions: [...new Set(lines.flatMap((line) =>
+      line.priceReferenceStatus === "historical_reference" && line.effectivePriceSource === "reference"
+        ? [`${line.providerKey} ${line.priceListRevision} es una referencia histórica (publicada ${line.priceListPublishedOn ?? "sin fecha"}, vigencia original hasta ${line.priceListValidUntil ?? "sin fecha"}); no es un precio vigente confirmado ni una cotización nueva del proveedor.`]
+        : []
+    ))],
     sourcePautaCapturedAt: snapshot.capturedAt,
   };
 }

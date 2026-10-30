@@ -183,7 +183,8 @@ export function CostoTecnicoParcialPanel({ quoteId, onSnapshotChange }: { quoteI
       ? `${line.finishName} · ${line.quantity} ${line.purchaseUnit}`
       : `${line.finishName} · ${((line.commercialLengthMm ?? 0) / 1000).toLocaleString("es-CL")} m · ${line.bars} ${line.bars === 1 ? "tira" : "tiras"}`;
   const origin = snapshot?.priceOrigin === "none" ? "Sin precios" : snapshot?.priceOrigin === "mixed" ? "Mixto" : snapshot?.priceOrigin === "own" ? "Mis precios" : "Referencial";
-  const status = snapshot?.status === "no_data" ? "Sin datos" : snapshot?.status === "complete" ? "Completo" : "Parcial";
+  const hasHistoricalReference = snapshot?.assumptions.some((assumption) => assumption.includes("referencia histórica")) ?? false;
+  const status = hasHistoricalReference ? "Referencia histórica" : snapshot?.status === "no_data" ? "Sin datos" : snapshot?.status === "complete" ? "Completo" : "Parcial";
 
   return (
     <section className={styles.panel} aria-label="Costo estimado de materiales" data-testid="supplier-technical-cost-panel">
@@ -199,6 +200,9 @@ export function CostoTecnicoParcialPanel({ quoteId, onSnapshotChange }: { quoteI
         <p className={styles.empty} role="status" aria-live="polite">{busy ? "Calculando con la pauta guardada…" : message ? "Puedes volver a intentarlo cuando quieras." : canCalculate ? "El costo se calcula con los precios vigentes." : "El costo aparecerá cuando haya una pauta guardada."}</p>
       ) : (
         <>
+          {snapshot.assumptions.filter((assumption) => assumption.includes("referencia histórica")).map((assumption) => (
+            <p className={styles.pendingNote} role="note" key={assumption}>{assumption}</p>
+          ))}
           <div className={styles.summary}>
             <div>
               <span>{snapshotIsStale ? "Costo guardado (desactualizado)" : "Total neto conocido"}</span>
@@ -229,6 +233,9 @@ export function CostoTecnicoParcialPanel({ quoteId, onSnapshotChange }: { quoteI
                   <strong>{line.technicalName}</strong>
                   <span>{presentationDescription(line)}</span>
                   <span>Precio: {line.effectivePriceSource === "organization_override" ? "Mi precio" : line.effectivePriceSource === "provider_adjustment" ? "Mi ajuste" : "Referencial"}</span>
+                  {line.priceReferenceStatus === "historical_reference" && line.effectivePriceSource === "reference" ? (
+                    <span role="note">Referencia histórica · no confirmada vigente</span>
+                  ) : null}
                 </div>
                 <strong>{formatMoney(line.lineNet, line.currency) ?? "Sin precio"}</strong>
               </div>

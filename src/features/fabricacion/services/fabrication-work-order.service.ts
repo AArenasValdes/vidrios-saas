@@ -61,6 +61,7 @@ export type FabricationWorkOrder = {
     currency: string;
     pricedCount: number;
     pendingCount: number;
+    assumptions?: string[];
   };
 };
 
@@ -344,6 +345,7 @@ export function buildFabricationWorkOrder(input: {
       currency: cost?.currency ?? "CLP",
       pricedCount: cost?.lines.length ?? 0,
       pendingCount: pendingPriceCount,
+      assumptions: cost?.assumptions ?? [],
     },
   };
 }

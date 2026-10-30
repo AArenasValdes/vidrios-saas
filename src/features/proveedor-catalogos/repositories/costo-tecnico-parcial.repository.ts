@@ -331,6 +331,9 @@ export async function readSupplierPresentationPrices(input: {
       currency: price?.moneda ?? listMetadata?.moneda ?? null,
       priceListId: String(selectedList.id),
       priceListRevision: String(selectedList.revision),
+      priceListPublishedOn: listMetadata?.publicado_en == null ? null : String(listMetadata.publicado_en),
+      priceListValidUntil: listMetadata?.vigente_hasta == null ? null : String(listMetadata.vigente_hasta),
+      priceReferenceStatus: selectedList.referenceStatus,
     }];
   });
 }

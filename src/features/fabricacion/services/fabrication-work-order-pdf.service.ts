@@ -172,8 +172,12 @@ function drawPreliminaryWarning(pdf: jsPDF, y: number, runningTitle: string, quo
 }
 
 function drawPriceSummary(pdf: jsPDF, order: FabricationWorkOrder, y: number, runningTitle: string, quoteCode: string, logoDataUrl?: string | null) {
-  if (y + 19 > CONTENT_BOTTOM) y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
-  const label = order.pricing.status === "complete" ? "Costo valorizado neto"
+  const historicalWarnings = (order.pricing.assumptions ?? []).filter((assumption) => assumption.includes("referencia histórica"));
+  const warningLines = historicalWarnings.flatMap((warning) => wrapped(pdf, warning, PAGE_WIDTH - MARGIN * 2 - 6));
+  const warningHeight = warningLines.length ? warningLines.length * 4 + 5 : 0;
+  if (y + 19 + warningHeight > CONTENT_BOTTOM) y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
+  const label = historicalWarnings.length ? "Costo neto con referencia histórica"
+    : order.pricing.status === "complete" ? "Costo valorizado neto"
     : order.pricing.status === "partial" ? "Costo valorizado parcial (neto)"
     : "Costo de compra pendiente de revisión";
   pdf.setFillColor(245, 248, 252);
@@ -187,7 +191,15 @@ function drawPriceSummary(pdf: jsPDF, order: FabricationWorkOrder, y: number, ru
   pdf.setFontSize(9);
   pdf.setTextColor(...MUTED);
   pdf.text(`${order.pricing.pricedCount} insumos con precio · ${order.pricing.pendingCount} pendientes de precio`, MARGIN + 3, y + 12.5);
-  return y + 17;
+  y += 19;
+  if (warningLines.length) {
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(139, 48, 17);
+    pdf.text(warningLines, MARGIN + 2, y + 3, { lineHeightFactor: 1.15 });
+    y += warningHeight;
+  }
+  return y;
 }
 
 export function createFabricationWorkOrderPdf(

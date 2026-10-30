@@ -168,6 +168,35 @@ describe("buildPartialTechnicalCostSnapshot", () => {
     ]);
   });
 
+  it("advierte referencias Alumco históricas y conserva precedencia de precio propio", () => {
+    const workSnapshot = pauta([{ code: "3201", item: "L32", length: 1200 }]);
+    workSnapshot.bars[0]!.supplierProviderKey = "alumco";
+    workSnapshot.bars[0]!.acabadoKey = "Titanio";
+    workSnapshot.bars[0]!.largoComercialMm = 6000;
+    const historical = price({
+      presentationId: "alumco-3201", providerKey: "alumco", familyKeys: ["universal:aluminio:l32"],
+      technicalCode: "3201", recipeComponentCodes: ["3201"], finishCode: "TI", finishName: "Titanio",
+      finishResolution: "specific", netPrice: 10210, commercialLengthMm: 6000, purchaseUnit: "TR",
+      supplierSku: "TI3201A", priceReferenceStatus: "historical_reference",
+      priceListRevision: "notas-2026-10-14", priceListPublishedOn: "2026-10-14", priceListValidUntil: "2026-10-21",
+    });
+    const quoteItems = [{ code: "L32", color: "Titanio", catalogLineKey: "ventora:l32", supplierFamilyKey: "universal:aluminio:l32" }];
+    const result = buildPartialTechnicalCostSnapshot({ workSnapshot, quoteItems, availablePrices: [historical] });
+
+    expect(result?.lines[0]).toMatchObject({
+      providerKey: "alumco", supplierSku: "TI3201A", netPricePerPresentation: 10210,
+      priceReferenceStatus: "historical_reference", priceListPublishedOn: "2026-10-14", priceListValidUntil: "2026-10-21",
+    });
+    expect(result?.assumptions.join(" ")).toContain("no es un precio vigente confirmado ni una cotización nueva del proveedor");
+
+    const ownPrice = buildPartialTechnicalCostSnapshot({
+      workSnapshot, quoteItems, availablePrices: [historical],
+      organizationPricing: { adjustments: [], overrides: [{ presentationId: "alumco-3201", netPrice: 12000, currency: "CLP" }] },
+    });
+    expect(ownPrice?.lines[0]).toMatchObject({ effectivePriceSource: "organization_override", netPricePerPresentation: 12000 });
+    expect(ownPrice?.assumptions).toEqual([]);
+  });
+
   it.each([
     ["2509", "Jamba cerrada", 18234],
     ["2510", "Pierna cerrada", 18809],

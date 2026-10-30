@@ -89,4 +89,24 @@ describe("SupplierProfilePricePreview price entry", () => {
     expect(screen.queryByLabelText("Precio neto KOM 802")).not.toBeInTheDocument();
     expect(saveQuotePresentationPrice).not.toHaveBeenCalled();
   });
+
+  it("marca una lista histórica como referencia, no como precio vigente confirmado", () => {
+    render(<SupplierProfilePricePreview prices={[{
+      ...missingPrice,
+      providerKey: "alumco",
+      providerLabel: "Alumco",
+      status: "priced",
+      netPrice: 10210,
+      priceSource: "reference",
+      priceReferenceStatus: "historical_reference",
+      priceListRevision: "notas-000000984-000000986-2026-10-14",
+      priceListPublishedOn: "2026-10-14",
+      priceListValidUntil: "2026-10-21",
+    }]} providerKey="alumco" />);
+
+    fireEvent.click(screen.getByText("Ver precios de 1 perfiles"));
+    expect(screen.getByText("$10.210")).toBeInTheDocument();
+    expect(screen.getByRole("note")).toHaveTextContent("Referencia histórica");
+    expect(screen.getByRole("note")).toHaveTextContent("No confirmada vigente");
+  });
 });

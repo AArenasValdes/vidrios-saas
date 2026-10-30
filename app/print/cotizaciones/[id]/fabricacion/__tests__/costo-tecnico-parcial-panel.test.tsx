@@ -85,6 +85,21 @@ describe("CostoTecnicoParcialPanel", () => {
     expect(screen.getAllByText("$2.152")).toHaveLength(2);
   });
 
+  it("identifica arriba una referencia de compra histórica como no vigente confirmado", async () => {
+    const warning = "Alumco notas-2026-10-14 es una referencia histórica; no es un precio vigente confirmado ni una cotización nueva del proveedor.";
+    jest.spyOn(global, "fetch").mockResolvedValue({ ok: true, status: 200, json: async () => ({
+      enabled: true, canCalculate: false,
+      snapshot: {
+        schemaVersion: 2, status: "complete", priceOrigin: "reference", currency: "CLP", knownNetTotal: 10210,
+        lines: [{ technicalCode: "3201", technicalName: "Marco", supplierSku: "TI3201A", finishCode: "TI", finishName: "Titanio", commercialLengthMm: 6000, purchaseUnit: "TR", bars: 1, netPricePerPresentation: 10210, sourcePrice: 10210, effectivePriceSource: "reference", priceReferenceStatus: "historical_reference", priceBasis: "commercial_presentation", lineNet: 10210, currency: "CLP", priceListId: "list", priceListRevision: "notas-2026-10-14", cuts: [] }],
+        missing: [], assumptions: [warning], calculatedAt: "2026-10-30T12:00:00Z", sourcePautaCapturedAt: "2026-10-30T11:00:00Z",
+      },
+    }) } as Response);
+    render(<CostoTecnicoParcialPanel quoteId="qa-alumco-history" />);
+    expect(await screen.findByRole("note")).toHaveTextContent("no es un precio vigente confirmado");
+    expect(screen.getByText(/Referencia histórica/)).toBeInTheDocument();
+  });
+
   it("calcula automáticamente una vez el costo cuando hay pauta guardada y no existe snapshot", async () => {
     const fetchMock = jest.spyOn(global, "fetch")
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ enabled: true, canCalculate: true, snapshot: null }) } as Response)

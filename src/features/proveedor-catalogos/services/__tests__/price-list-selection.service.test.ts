@@ -35,11 +35,47 @@ describe("selección de lista por proveedor", () => {
     expect(selected.get("provider-b")?.id).toBe("b-current");
   });
 
-  it("rechaza una preferencia vencida", () => {
-    expect(() => selectSupplierPriceLists({
+  it("mantiene una preferencia explícita aunque sea histórica y la marca", () => {
+    const selected = selectSupplierPriceLists({
       lists,
       preferredListIdsByProvider: { "provider-a": "a-old" },
       asOf: new Date("2026-09-01T00:00:00Z"),
-    })).toThrow(PriceListSelectionError);
+    });
+    expect(selected.get("provider-a")).toMatchObject({ id: "a-old", referenceStatus: "historical_reference" });
+  });
+
+  it("usa automáticamente la última referencia histórica Alumco si no existe una lista vigente", () => {
+    const selected = selectSupplierPriceLists({
+      lists: [
+        { id: "alumco-old", providerKey: "alumco", revision: "2026-09", publishedOn: "2026-09-01", validFrom: "2026-09-01", validUntil: "2026-09-08", createdAt: "2026-09-01T00:00:00Z" },
+        { id: "alumco-reference", providerKey: "alumco", revision: "notes-2026-10-14", publishedOn: "2026-10-14", validFrom: "2026-10-14", validUntil: "2026-10-21", createdAt: "2026-10-14T00:00:00Z" },
+        { id: "other-expired", providerKey: "provider-c", revision: "2026-09", publishedOn: "2026-09-01", validFrom: "2026-09-01", validUntil: "2026-09-08", createdAt: "2026-09-01T00:00:00Z" },
+      ],
+      asOf: new Date("2026-10-30T00:00:00Z"),
+    });
+    expect(selected.get("alumco")).toMatchObject({
+      id: "alumco-reference",
+      referenceStatus: "historical_reference",
+    });
+    expect(selected.has("provider-c")).toBe(false);
+  });
+
+  it("prefiere la referencia Alumco vigente a cualquier lista histórica", () => {
+    const selected = selectSupplierPriceLists({
+      lists: [
+        { id: "alumco-old", providerKey: "alumco", revision: "2026-10-14", publishedOn: "2026-10-14", validFrom: "2026-10-14", validUntil: "2026-10-21", createdAt: "2026-10-14T00:00:00Z" },
+        { id: "alumco-current", providerKey: "alumco", revision: "2026-10-29", publishedOn: "2026-10-29", validFrom: "2026-10-29", validUntil: null, createdAt: "2026-10-29T00:00:00Z" },
+      ],
+      asOf: new Date("2026-10-30T00:00:00Z"),
+    });
+    expect(selected.get("alumco")).toMatchObject({ id: "alumco-current", referenceStatus: "within_stated_validity" });
+  });
+
+  it("no permite seleccionar automáticamente una lista futura", () => {
+    const selected = selectSupplierPriceLists({
+      lists: [{ id: "future", providerKey: "alumco", revision: "2026-11", publishedOn: "2026-11-01", validFrom: "2026-11-01", validUntil: null, createdAt: "2026-11-01T00:00:00Z" }],
+      asOf: new Date("2026-10-30T00:00:00Z"),
+    });
+    expect(selected.has("alumco")).toBe(false);
   });
 });

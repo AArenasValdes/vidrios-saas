@@ -49,6 +49,22 @@ describe("Alumco · notas de venta 14-10-2026", () => {
       .every((row) => row.finishName === "Titanio" && row.commercialLengthMm === 6000)).toBe(true);
   });
 
+  it("mantiene las cuatro referencias L32 Titanio por código y largo de 6 m", () => {
+    const expected = [
+      ["3201", "TI3201A", 10210],
+      ["3202", "TI3202A", 18668],
+      ["3204", "TI3204A", 21187],
+      ["3208", "TI3208A", 5330],
+    ];
+    for (const [code, sku, amount] of expected) {
+      const technical = fixture.technicalInputs.find((row) => row.sourceCode === code);
+      const presentation = fixture.presentations.find((row) => row.sku === sku);
+      expect(technical?.familyKeys).toContain("universal:aluminio:l32");
+      expect(presentation).toMatchObject({ finishCode: "TI", finishName: "Titanio", purchaseUnit: "TR", commercialLengthMm: 6000, netPrice: amount });
+      expect(fixture.technicalInputs.find((row) => row.technicalKey === presentation?.technicalKey)?.sourceCode).toBe(code);
+    }
+  });
+
   it("mantiene los subtotales documentados por línea sin cruzar perfiles", () => {
     const totals = new Map<string, number>();
     for (const presentation of fixture.presentations) {
@@ -120,6 +136,23 @@ describe("Alumco · notas de venta 14-10-2026", () => {
       providerNames: new Map([["alumco", "Alumco"]]),
     });
     expect(l45).toEqual([expect.objectContaining({ technicalCode: "4522", supplierSku: "TI4502A", netPrice: 20274, status: "priced" })]);
+
+    const l32 = resolveSupplierProfilePricePreviews({
+      request: { itemId: "quote-item-32", familyKey: "universal:aluminio:l32", finishName: "Titanio", technicalCodes: [], providerKey: "alumco" },
+      references: fixture.technicalInputs.filter((row) => row.familyKeys.includes("universal:aluminio:l32")).map((row) => ({ code: row.sourceCode, name: row.name })),
+      presentations: rows.map((row) => ({ ...row, priceReferenceStatus: "historical_reference" as const, priceListPublishedOn: "2026-10-14", priceListValidUntil: "2026-10-21" })),
+      providerNames: new Map([["alumco", "Alumco"]]),
+    });
+    const l32Expected = [
+      ["3201", "TI3201A", 10210],
+      ["3202", "TI3202A", 18668],
+      ["3204", "TI3204A", 21187],
+      ["3208", "TI3208A", 5330],
+    ];
+    expect(l32).toEqual(expect.arrayContaining(l32Expected.map(([code, sku, netPrice]) => expect.objectContaining({
+      technicalCode: code, supplierSku: sku, netPrice, commercialLengthMm: 6000,
+      priceReferenceStatus: "historical_reference", priceListPublishedOn: "2026-10-14", priceListValidUntil: "2026-10-21",
+    }))));
   });
 
   it("resuelve Tapa y Portafelpa aunque el acabado elegido sea de otro color", () => {

@@ -107,6 +107,21 @@ function pdfExampleDirectory() {
 }
 
 describe("orden de fabricación y materiales", () => {
+  it("mantiene visible la advertencia de referencia Alumco histórica en resumen y PDF interno", () => {
+    const cost = savedCost();
+    const warning = "Alumco notas-2026-10-14 es una referencia histórica (publicada 2026-10-14, vigencia original hasta 2026-10-21); no es un precio vigente confirmado ni una cotización nueva del proveedor.";
+    cost.assumptions = [warning];
+    cost.lines[0]!.providerKey = "alumco";
+    cost.lines[0]!.priceReferenceStatus = "historical_reference";
+    const order = buildFabricationWorkOrder({ summary: summary(savedWork()), materials: materials(), technicalCostSnapshot: cost });
+    expect(order.pricing.assumptions).toContain(warning);
+    const text = pdfText(createFabricationWorkOrderPdf(order, {
+      companyName: "Taller", quoteCode: "COT-HIST", workName: "Ventanas", issueDate: "30 oct 2026",
+    }));
+    expect(text).toContain("Costo neto con referencia histórica");
+    expect(text).toContain("no es un precio vigente confirmado");
+  });
+
   it("usa el acabado elegido en la cotización también en la pauta PDF", () => {
     const quoteItem = {
       id: "v1", observaciones: encodeCotizacionItemPresentationMeta({

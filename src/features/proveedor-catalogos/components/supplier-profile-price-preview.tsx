@@ -70,6 +70,14 @@ export function SupplierProfilePricePreview({
                 ? <><strong>{formatPrice(price.netPrice, price.currency)}</strong><small>por {price.purchaseUnit}{price.commercialLengthMm ? ` · ${price.commercialLengthMm.toLocaleString("es-CL")} mm` : ""}</small></>
                 : <strong className={s.pending}>{price.status === "ambiguous" ? "Presentación ambigua" : "Sin precio"}</strong>}
               <small>{price.priceSource === "organization_override" ? "Precio ingresado por tu taller" : price.providerLabel}</small>
+              {price.priceSource === "reference" && price.priceReferenceStatus === "historical_reference" ? (
+                <small role="note">
+                  Referencia histórica · {price.priceListRevision ?? "lista sin revisión"}
+                  {price.priceListPublishedOn ? ` · publicada ${price.priceListPublishedOn}` : ""}
+                  {price.priceListValidUntil ? ` · vigencia original hasta ${price.priceListValidUntil}` : ""}.
+                  No confirmada vigente ni cotización nueva del proveedor.
+                </small>
+              ) : null}
               {canManagePrice && Boolean(providerKey) && price.providerKey === providerKey && price.status === "missing_price" && price.presentationId && price.providerKey &&
               familyKey && finishName && price.currency ? (
                 <span className={s.priceEntry}>
