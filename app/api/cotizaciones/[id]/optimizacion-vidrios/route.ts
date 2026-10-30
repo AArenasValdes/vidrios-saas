@@ -55,7 +55,7 @@ async function loadPanes(quoteId: number, organizationId: number) {
   const items: CotizacionWorkflowItem[] = quote.items.map((item) => ({
     id: item.id,
     codigo: item.code,
-    tipo: "componente",
+    tipo: item.componentType || "componente",
     lineaComercial: "",
     vidrio: item.glassDescription ?? "",
     nombre: item.name,

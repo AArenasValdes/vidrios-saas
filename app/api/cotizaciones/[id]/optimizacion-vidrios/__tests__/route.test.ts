@@ -19,7 +19,7 @@ const route = { params: Promise.resolve({ id: "1170" }) };
 const row = {
   organizationId: 12, quoteId: 1170, quoteItemId: "item-1", logicalComponentId: "component-1", glassId: "glass-1",
   paneId: "component-1:glass-1", paneUnitIds: ["component-1:glass-1:1"], ordinal: 1, productId: "mono-4",
-  displayName: "Monolítico claro", technicalSpec: { productId: "mono-4", thicknessMm: 4, category: "monolitico", sheetWidthMm: 3210, sheetHeightMm: 2250 },
+  displayName: "Monolítico claro", technicalSpec: { productId: "mono-4", thicknessMm: 4, category: "monolitico", sheetWidthMm: 3210, sheetHeightMm: 2250, purchaseMode: "full_sheet" },
   widthMm: 700, heightMm: 900, quantity: 1, commercialQuantity: 1, dimensionProvenance: "validated_recipe", dimensionTraceRuleIds: [],
   recipeStatus: "validated", validationStatus: "eligible_for_manual_planning", warnings: [], snapshotVersion: 1,
   snapshotFingerprint: "snapshot-1", normalizationVersion: 1,

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LuChevronLeft, LuChevronRight, LuEye, LuLayers3, LuLoaderCircle } from "react-icons/lu";
+import { LuChevronLeft, LuChevronRight, LuDownload, LuEye, LuLayers3, LuLoaderCircle } from "react-icons/lu";
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { GlassCuttingResult } from "@/features/fabricacion/types/glass-sheet-optimizer-contracts";
@@ -12,6 +12,11 @@ import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotiz
 import type { ManualGlassPaneMeasurementsSnapshot } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
 import { formatGlassDisplayName } from "@/features/fabricacion/services/glass-display-name.service";
 import { getGlassPaneGeometryExclusionReason, isGlassPaneGeometryComplete, type GlassDistributionCoverage, type GlassPaneGeometryExclusion } from "@/features/fabricacion/services/glass-distribution-coverage.service";
+import { mapGlassDistributionPdfPanes } from "@/features/fabricacion/services/direct-glass-distribution.service";
+import { createGlassDistributionPdf } from "@/features/fabricacion/services/glass-distribution-pdf.service";
+import { loadVentoraPdfLogoDataUrl } from "@/features/fabricacion/services/ventora-pdf-assets.client";
+import { sanitizeFileNamePart } from "@/utils/sanitize-file-name";
+import { downloadPdfBlob } from "@/utils/cotizacion-pdf";
 
 import s from "./glass-distribution-panel.module.css";
 import { GlassDistributionCoverageNotice } from "./glass-distribution-coverage-notice";
@@ -92,6 +97,8 @@ function isPreviewReadyPane(pane: PaneInput): pane is PaneInput & { physicalUnit
   return pane.physicalUnitCount != null && isGlassPaneGeometryComplete(pane);
 }
 
+
+
 function hasSheetFormat(spec: GlassTechnicalSpec | null) {
   return Boolean(spec && validDimension(spec.sheetWidthMm) && validDimension(spec.sheetHeightMm));
 }
@@ -154,7 +161,7 @@ function PlanDrawing({ result, allPlans }: { result: GlassCuttingResult; allPlan
   );
 }
 
-export function GlassDistributionPanel({ quoteId, quoteCode, enabled, autoPreview = false, preloadPreview = false, items, templates, onSaveManualGlassMeasurements }: Props) {
+export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workName, enabled, autoPreview = false, preloadPreview = false, items, templates, onSaveManualGlassMeasurements }: Props) {
   const [source, setSource] = useState<PlanResponse | null>(null);
   const [sourceQuoteId, setSourceQuoteId] = useState<string | null>(null);
   const [sourceFresh, setSourceFresh] = useState(false);
@@ -165,6 +172,8 @@ export function GlassDistributionPanel({ quoteId, quoteCode, enabled, autoPrevie
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<GlassCuttingResult[] | null>(null);
   const [resultsQuoteId, setResultsQuoteId] = useState<string | null>(null);
+  const [generatedFrom, setGeneratedFrom] = useState<string[] | null>(null);
+  const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
   const [previewExclusions, setPreviewExclusions] = useState<GlassPaneGeometryExclusion[]>([]);
   const [sheetWidth, setSheetWidth] = useState("");
   const [sheetHeight, setSheetHeight] = useState("");
@@ -186,8 +195,10 @@ export function GlassDistributionPanel({ quoteId, quoteCode, enabled, autoPrevie
     setSourceFresh(false);
     setRefreshError(null);
     setError(null);
+    setDownloadNotice(null);
     setResults(null);
     setResultsQuoteId(null);
+    setGeneratedFrom(null);
     setPreviewExclusions([]);
     setPreviewOpen(false);
     setSelectedSheetIndex(0);
@@ -242,12 +253,61 @@ export function GlassDistributionPanel({ quoteId, quoteCode, enabled, autoPrevie
   const selected = allSheets[selectedSheetIndex] ?? null;
   const currentQuoteCode = sourceForQuote?.quoteCode || quoteCode;
 
+  const downloadSimulationPdf = useCallback(async () => {
+    if (!visibleResults || resultsQuoteId !== quoteId || !generatedFrom || !sourceFresh || refreshingSource) return;
+    const expectedRevision = dataRevision.current;
+    const calculationQuoteId = quoteId;
+    setBusy(true);
+    setError(null);
+    setDownloadNotice(null);
+    try {
+      const response = await fetch(`/api/cotizaciones/${encodeURIComponent(quoteId)}/optimizacion-vidrios`, { cache: "no-store" });
+      const latest = await response.json() as PlanResponse & { error?: string };
+      if (!response.ok) throw new Error(latest.error || "No pudimos confirmar los paños actuales.");
+      if (dataRevision.current !== expectedRevision || quoteId !== calculationQuoteId) throw new Error("Los paños cambiaron. Actualiza la cobertura y vuelve a simular.");
+      if (!sameSnapshotSet(latest.panes.map((pane) => pane.snapshotFingerprint), generatedFrom)) {
+        setResults(null);
+        setPreviewOpen(false);
+        setSource(latest);
+        setSourceQuoteId(calculationQuoteId);
+        setSourceFresh(true);
+        throw new Error("La cotización cambió desde la simulación. Genera una vista previa nueva antes de descargar.");
+      }
+      const simulationPanes = latest.panes.filter(isPreviewReadyPane);
+      const pdf = await createGlassDistributionPdf({
+        mode: "simulation",
+        quoteCode: latest.quoteCode || currentQuoteCode,
+        clientName,
+        workName,
+        logoDataUrl: await loadVentoraPdfLogoDataUrl(),
+        coverage: latest.coverage,
+        panes: mapGlassDistributionPdfPanes(simulationPanes),
+        results: visibleResults,
+        simulationWarnings: [
+          "Despuntes y separación física asumidos: 0 mm; no representa kerf ni reglas del taller.",
+          ...(simulationPanes.some((pane) => pane.dimensionProvenance === "recipe_trace") ? ["Incluye geometría de receta preliminar, no validada por taller."] : []),
+          ...(simulationPanes.some((pane) => pane.technicalSpec?.pieceOrientation === "unknown") ? ["Orientación del vidrio no confirmada; los paños se mantuvieron fijos."] : []),
+        ],
+        previewExclusions: latest.previewExclusions,
+      });
+      if (dataRevision.current !== expectedRevision || !sourceFresh || quoteId !== calculationQuoteId) throw new Error("Los paños cambiaron. Actualiza la cobertura antes de descargar la simulación.");
+      const downloadStatus = await downloadPdfBlob(pdf.output("blob"), `simulacion-vidrios-no-apto-corte-${sanitizeFileNamePart(latest.quoteCode || "cotizacion", 32)}.pdf`);
+      if (downloadStatus === "failed") throw new Error("No pudimos descargar la simulación. Intenta nuevamente.");
+      setDownloadNotice(downloadStatus === "downloaded" ? "PDF de simulación descargado · NO APTO PARA CORTE." : "PDF de simulación abierto · NO APTO PARA CORTE.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No pudimos generar la simulación.");
+    } finally {
+      setBusy(false);
+    }
+  }, [visibleResults, resultsQuoteId, quoteId, generatedFrom, sourceFresh, refreshingSource, currentQuoteCode, clientName, workName]);
+
   const calculate = useCallback(async (openDialog = false) => {
     if (!canCalculate) return;
     const expectedRevision = dataRevision.current;
     const calculationQuoteId = quoteId;
     setBusy(true);
     setError(null);
+    setDownloadNotice(null);
     setResults(null);
     setResultsQuoteId(null);
     setPreviewOpen(false);
@@ -283,6 +343,7 @@ export function GlassDistributionPanel({ quoteId, quoteCode, enabled, autoPrevie
       setSource((current) => current ? { ...current, quoteCode: body.quoteCode || current.quoteCode } : current);
       setResults(body.results);
       setResultsQuoteId(calculationQuoteId);
+      setGeneratedFrom(body.generatedFrom ?? []);
       setPreviewExclusions(body.previewExclusions ?? []);
       setSelectedSheetIndex(0);
       setPreviewOpen(openDialog);
@@ -375,7 +436,9 @@ export function GlassDistributionPanel({ quoteId, quoteCode, enabled, autoPrevie
           <button type="button" className={s.primaryAction} disabled={!canCalculate || busy || refreshingSource || !sourceFresh} onClick={() => visibleResults ? setPreviewOpen(true) : void calculate(true)}>
             {busy ? <LuLoaderCircle className={s.spinner} aria-hidden /> : <LuEye aria-hidden />}{busy ? "Calculando vista previa…" : visibleResults ? "Ampliar vista previa" : "Generar vista previa"}
           </button>
+          {visibleResults ? <button type="button" className={s.secondaryAction} disabled={busy || refreshingSource || !sourceFresh} onClick={() => void downloadSimulationPdf()}><LuDownload aria-hidden /> PDF simulación · NO APTO PARA CORTE</button> : null}
           <Link className={s.secondaryAction} href={`/print/cotizaciones/${encodeURIComponent(quoteId)}/fabricacion/vidrios?codigo=${encodeURIComponent(currentQuoteCode)}`}>Abrir revisión técnica y PDFs</Link>
+          {visibleResults ? <button type="button" className={s.secondaryAction} disabled={busy || refreshingSource || !sourceFresh} onClick={() => void downloadSimulationPdf()}><LuDownload aria-hidden /> PDF simulación · NO APTO PARA CORTE</button> : null}
         </div>
         {autoPreview && selected ? <div className={s.inlinePreview} aria-label="Vista previa preliminar de distribución">
           <div className={s.previewSheetHeader}><strong>Vista previa · plancha {selectedSheetIndex + 1}</strong><span>{selected.sheet.rawSheet.widthMm} × {selected.sheet.rawSheet.heightMm} mm</span></div>
@@ -391,6 +454,7 @@ export function GlassDistributionPanel({ quoteId, quoteCode, enabled, autoPrevie
         {visibleResults ? <p className={s.resultNote}>{sheetCount} {sheetCount === 1 ? "plancha" : "planchas"} · {visibleResults.reduce((sum, result) => sum + result.summary.paneCount, 0)} unidades distribuidas · Despuntes y separación asumidos: 0 mm · Formato sin giro{panes.some((pane) => !pane.technicalSpec?.pieceOrientation || pane.technicalSpec.pieceOrientation === "unknown") ? " · Orientación de paños desconocida: se mantuvieron fijos" : ""}</p> : null}
       </> : null}
       {error ? <p className={s.error} role="alert">{error}</p> : null}
+      {downloadNotice ? <p className={s.resultNote} role="status">{downloadNotice}</p> : null}
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className={s.previewDialog}>
@@ -409,6 +473,7 @@ export function GlassDistributionPanel({ quoteId, quoteCode, enabled, autoPrevie
             </div> : null}
             <div className={s.previewSummary}><span>{selected.sheet.panes.length} {selected.sheet.panes.length === 1 ? "unidad física" : "unidades físicas"} · {formatArea(selected.sheet.areas.panesMm2)}</span><span>{selected.sheet.remnants.length} sobrantes geométricos · {formatArea(selected.sheet.remnants.reduce((sum, remnant) => sum + remnant.areaMm2, 0))}</span></div>
             <p className={s.previewDisclaimer}>Despuntes y separación geométrica asumidos: 0 mm. El formato se usa sin giro y la orientación de paños no confirmada se mantiene fija. Distribución preliminar. Confirmar medidas y tolerancias con el proveedor antes de cortar.</p>
+            <button type="button" className={s.secondaryAction} disabled={busy || refreshingSource || !sourceFresh} onClick={() => void downloadSimulationPdf()}><LuDownload aria-hidden /> PDF simulación · NO APTO PARA CORTE</button>
             <Link className={s.secondaryAction} href={`/print/cotizaciones/${encodeURIComponent(quoteId)}/fabricacion/vidrios?codigo=${encodeURIComponent(currentQuoteCode)}`}>Abrir revisión técnica y PDFs</Link>
           </> : null}
         </DialogContent>

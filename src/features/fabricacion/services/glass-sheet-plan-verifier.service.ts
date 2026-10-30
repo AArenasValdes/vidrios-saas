@@ -221,6 +221,7 @@ export function verifyGlassSheetPlans(input: {
           || !Number.isSafeInteger(source.commercialQuantity) || Number(source.commercialQuantity) <= 0
           || source.quantity % Number(source.commercialQuantity) !== 0
           || source.dimensionProvenance === "legacy_snapshot" || source.technicalSpec?.hasConflict
+          || source.technicalSpec?.purchaseMode === "supplier_cut" || source.technicalSpec?.purchaseMode === "undecided"
           || (mode === "geometric_preview" && source.technicalSpec?.manualCutStatus === "not_admitted")) {
           findings.push(`La unidad ${pane.paneUnitId} no tiene admisión técnica vigente para corte manual.`);
         }

@@ -8,7 +8,7 @@ import {
   getCatalogGlassTechnicalFingerprint,
   normalizeManualGlassPaneMeasurements,
 } from "@/features/cotizaciones/services/manual-glass-pane-measurements.service";
-import { resolveManualGlassPaneSlots } from "@/features/cotizaciones/services/manual-glass-pane-slots.service";
+import { resolveManualGlassPaneComponentType, resolveManualGlassPaneSlots } from "@/features/cotizaciones/services/manual-glass-pane-slots.service";
 
 export const GLASS_PANE_NORMALIZATION_VERSION = 1 as const;
 const MAX_NORMALIZED_PHYSICAL_UNITS = 2_000;
@@ -92,6 +92,9 @@ function normalizeRow(input: {
   if (input.spec && (input.spec.sheetWidthMm == null || input.spec.sheetHeightMm == null)) {
     warnings.push("Falta el formato físico de plancha de vidrio.");
   }
+  if (input.spec?.purchaseMode === undefined) warnings.push("La forma de compra no está confirmada en esta ficha antigua.");
+  else if (input.spec.purchaseMode === "undecided") warnings.push("Confirma si este vidrio se compra por plancha antes de distribuirlo.");
+  else if (input.spec.purchaseMode === "supplier_cut") warnings.push("Este vidrio se compra cortado por proveedor; no corresponde distribuirlo como plancha del taller.");
   if (input.spec?.manualCutStatus !== "confirmed") warnings.push("El corte manual no está confirmado para este producto.");
   if (input.spec?.category === "pendiente") warnings.push("La categoría técnica del vidrio está pendiente.");
   if (input.additionalWarnings?.includes("non_rectangular")) warnings.push("La geometría del paño no es rectangular y no se puede enviar como corte rectangular verificado.");
@@ -191,13 +194,17 @@ export function extractNormalizedGlassPanes(input: ExtractInput): NormalizedGlas
   );
   const expectedSlots = manualMeasurements.entries.length > 0
     ? resolveManualGlassPaneSlots({
-      componentType: presentation.fabricacionTipologia || input.item.tipo,
+      componentType: resolveManualGlassPaneComponentType({
+        itemType: input.item.tipo,
+        fabricationType: presentation.fabricacionTipologia,
+      }),
       system: presentation.sistema,
       configuration: presentation.configuracion,
       sheetScheme: presentation.sheetScheme,
       fabricacionHojas: presentation.fabricacionHojas,
       guidedVisualConfig: presentation.guidedVisualConfig,
       quickCompositionAdjustment: presentation.quickCompositionAdjustment,
+      manualPaneCount: manualMeasurements.manualPaneCount,
     })
     : null;
   const validSlotIds = expectedSlots?.countIsKnown

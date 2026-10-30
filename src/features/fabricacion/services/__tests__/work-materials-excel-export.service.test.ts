@@ -182,6 +182,8 @@ describe("buildWorkMaterialsWorkbook", () => {
     expect(sheet.G8.v).toBe(1222);
     expect(sheet.H8.v).toBe(2);
     expect(sheet.I8.z).toContain("m²");
+    expect(sheet.A2.v).toContain("Referencias de paños para revisión");
+    expect(sheet.A10.v).toContain("no confirman dimensiones finales ni cobertura operativa");
   });
 
   it("exporta cortes agrupados desde la pauta guardada, sin mezclar materiales ni precios alternativos", () => {

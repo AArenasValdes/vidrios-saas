@@ -17,6 +17,7 @@ export type ManualGlassPaneConfiguration = {
   fabricacionHojas?: number | null;
   guidedVisualConfig?: GuidedVisualConfig | null;
   quickCompositionAdjustment?: QuickCompositionAdjustment | null;
+  manualPaneCount?: number | null;
 };
 
 const moduleLabels: Partial<Record<GuidedModuleType, string>> = {
@@ -36,6 +37,23 @@ function componentTypeLabel(value: string | null | undefined): string | null {
   if (/proyectante/i.test(value)) return "Proyectante";
   if (/abatible/i.test(value)) return "Abatible";
   return null;
+}
+
+/**
+ * Keeps the commercial type used by the editor when it is an alias of the
+ * technical typology. Otherwise the technical typology remains authoritative
+ * for resolving pane count (for example, a generic "Ventana" with Corredera).
+ */
+export function resolveManualGlassPaneComponentType(input: {
+  itemType?: string | null;
+  fabricationType?: string | null;
+}): string | null {
+  const itemType = input.itemType?.trim() || null;
+  const fabricationType = input.fabricationType?.trim() || null;
+  if (!fabricationType) return itemType;
+  const itemLabel = componentTypeLabel(itemType);
+  const fabricationLabel = componentTypeLabel(fabricationType);
+  return itemLabel && itemLabel === fabricationLabel ? itemType : fabricationType;
 }
 
 function fingerprint(value: unknown): string {
@@ -75,17 +93,23 @@ export function resolveManualGlassPaneSlots(input: ManualGlassPaneConfiguration)
     && visualModules[0]?.type !== "corredera"
     && visualModules[0]?.type !== "puerta_corredera"
     && visualModules[0]?.type !== "shower_corredera";
-  const count = adjustment?.paneCount
+  const inferredCount = adjustment?.paneCount
     ?? structuralModuleCount
     ?? configuredSlidingCount
     ?? (!hasInternalDivisions && simpleSinglePaneType ? 1 : null)
     ?? (!hasInternalDivisions && canInferSingleModule ? 1 : null);
+  const usesManualCount = inferredCount == null
+    && Number.isSafeInteger(input.manualPaneCount)
+    && Number(input.manualPaneCount) > 0
+    && Number(input.manualPaneCount) <= 12;
+  const count = inferredCount ?? (usesManualCount ? Number(input.manualPaneCount) : null);
   const configPayload = {
     componentType: input.componentType ?? null,
     system: input.system ?? null,
     configuration: input.configuration ?? null,
     sheetScheme: input.sheetScheme ?? null,
     fabricacionHojas: input.fabricacionHojas ?? null,
+    manualPaneCount: usesManualCount ? input.manualPaneCount : null,
     quick: adjustment ? {
       paneCount: adjustment.paneCount ?? null,
       paneTypes: adjustment.paneTypes ?? {},
@@ -118,7 +142,7 @@ export function resolveManualGlassPaneSlots(input: ManualGlassPaneConfiguration)
       : quickType
         ? quickTypeLabels[quickType]
         : explicitComponentLabel ?? selectedConfigurationLabel ?? componentTypeLabel(productShapeLabel);
-    const id = paneModule?.id ?? `pane-${index + 1}`;
+    const id = paneModule?.id ?? (usesManualCount ? `manual-pane:v1:${index + 1}` : `pane-${index + 1}`);
     const rectangular = (!paneModule || paneModule.glassShape.kind === "rect")
       && (input.guidedVisualConfig?.frameShape.kind ?? "rect") === "rect";
     return {

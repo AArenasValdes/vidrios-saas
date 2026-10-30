@@ -24,5 +24,7 @@ export type ManualGlassPaneMeasurementsSnapshot = {
   /** Stable hash of pane-count/type/shape inputs; a mismatch invalidates confirmation. */
   configurationFingerprint?: string | null;
   expectedPaneCount?: number | null;
+  /** Explicit count for components whose commercial composition has no resolvable pane slots. */
+  manualPaneCount?: number;
   allPanesConfirmed?: boolean;
 };

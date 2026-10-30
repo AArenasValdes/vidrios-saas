@@ -412,6 +412,8 @@ export function CuadernoConstructorMovil({
                           componentId={item.id}
                           value={form.manualGlassMeasurements}
                           automaticDimensionsAvailable={Boolean(form.fabricacionSnapshot?.result?.vidrios?.some((pane) => pane.anchoMm > 0 && pane.altoMm > 0))}
+                          automaticPanes={form.fabricacionSnapshot?.result?.vidrios?.map((pane) => ({ id: pane.vidrioId, name: pane.nombre, widthMm: pane.anchoMm, heightMm: pane.altoMm, quantity: pane.cantidadPiezas }))}
+                          automaticRecipeStatus={form.fabricacionSnapshot?.recipeStatus}
                           selectedGlassProductId={form.vidrioLineTemplateId}
                           paneConfiguration={{ componentType: form.tipo, system: form.sistema, configuration: form.configuracion, sheetScheme: form.sheetScheme, fabricacionHojas: form.fabricacionHojas, guidedVisualConfig: form.guidedVisualConfig, quickCompositionAdjustment: form.quickCompositionAdjustment }}
                           templates={lineTemplates}

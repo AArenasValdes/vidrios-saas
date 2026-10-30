@@ -194,7 +194,9 @@ export function buildWorkMaterialsWorkbook(XLSX: typeof XLSXModule, input: Build
         row.totalM2,
       ]),
       [30, 30, 38, 20, 15, 20, 20, 14, 18, 18],
-      { 5: "#,##0 \"mm\"", 6: "#,##0 \"mm\"", 7: "#,##0.##", 8: "#,##0.0000 \"m²\"", 9: "#,##0.0000 \"m²\"" }
+      { 5: "#,##0 \"mm\"", 6: "#,##0 \"mm\"", 7: "#,##0.##", 8: "#,##0.0000 \"m²\"", 9: "#,##0.0000 \"m²\"" },
+      "Las medidas y cantidades reflejan la cotización y sus snapshots; no confirman dimensiones finales ni cobertura operativa para distribuir o cortar.",
+      "Referencias de paños para revisión; no es una pauta operativa de corte."
     ), "Orden de vidrios");
   } else {
     const groups = input.workOrder?.cutGroups ?? [];
