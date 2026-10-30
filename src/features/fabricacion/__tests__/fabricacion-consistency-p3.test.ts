@@ -88,11 +88,11 @@ describe("P3 — semántica única de referencias, reglas y cortes", () => {
     expect(buildFabricationRecipeSummary(notSelected).activeRuleCount).toBe(0);
   });
 
-  it("audita exactamente las 103 líneas canónicas sin inventar una discrepancia por variantes", () => {
+  it("audita exactamente las 104 configuraciones canónicas sin mezclar variantes", () => {
     const rows = auditCanonicalFabricationLines();
 
-    expect(rows).toHaveLength(103);
-    expect(new Set(rows.map((row) => row.catalogKey)).size).toBe(103);
+    expect(rows).toHaveLength(104);
+    expect(new Set(rows.map((row) => row.catalogKey)).size).toBe(104);
     expect(rows.find((row) => row.catalogKey === "ventora:serie-4600-puerta-vaiven")).toMatchObject({
       referenciasSistema: ["4601", "4603", "4604", "4602"],
       variantesReceta: expect.arrayContaining([

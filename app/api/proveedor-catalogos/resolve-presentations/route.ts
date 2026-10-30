@@ -20,8 +20,20 @@ import {
 import { canManageSupplierCatalog } from "@/features/proveedor-catalogos/services/supplier-catalog-access.service";
 import { normalizeUniversalAluminumFamilyKey, VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import { getLineTemplateWorkshopProfiles } from "@/features/cotizaciones/line-templates/types/line-profile-references";
+import { getVentoraProfileReferencesForCatalogKey } from "@/features/cotizaciones/line-templates/fixtures/ventora-profile-references";
 
 export const dynamic = "force-dynamic";
+
+function findLineConfiguration(line: (typeof VENTORA_DEFAULT_LINE_CATALOG)[number], configurationKey: string | null) {
+  if (!configurationKey) return null;
+  const compatibility = line.catalogMetadata?.compatibility;
+  if (!compatibility || typeof compatibility !== "object" || Array.isArray(compatibility)) return null;
+  const configurations = (compatibility as Record<string, unknown>).configurations;
+  if (!Array.isArray(configurations)) return null;
+  return configurations.find((configuration): configuration is Record<string, unknown> =>
+    Boolean(configuration) && typeof configuration === "object" && !Array.isArray(configuration) && configuration.id === configurationKey
+  ) ?? null;
+}
 
 const requestSchema = z.object({
   items: z.array(z.object({
@@ -42,14 +54,29 @@ export async function POST(request: Request) {
     const supportedCatalogLineKeys = getSupplierCatalogQuoteLineKeys();
     const parsed = requestSchema.safeParse(await request.json());
     if (!parsed.success) return NextResponse.json({ error: "La solicitud de presentaciones no es válida." }, { status: 400 });
-    const familyByCatalogLineKey = new Map(VENTORA_DEFAULT_LINE_CATALOG.flatMap((line) => {
+    const lineIdentityByCatalogKey = new Map(VENTORA_DEFAULT_LINE_CATALOG.flatMap((line) => {
       const familyKey = line.catalogMetadata?.familyKey;
-      return line.catalogKey && typeof familyKey === "string" ? [[line.catalogKey, familyKey] as const] : [];
+      const metadata = line.catalogMetadata;
+      if (!line.catalogKey || !metadata || typeof familyKey !== "string") return [];
+      const metadataConfigurationKey = metadata.configurationKey;
+      const compatibility = metadata.compatibility;
+      const configurations = compatibility && typeof compatibility === "object" && !Array.isArray(compatibility)
+        ? (compatibility as Record<string, unknown>).configurations
+        : null;
+      const firstConfiguration = Array.isArray(configurations) ? configurations[0] : null;
+      const declaredConfiguration = firstConfiguration && typeof firstConfiguration === "object" && !Array.isArray(firstConfiguration)
+        ? (firstConfiguration as Record<string, unknown>).id
+        : null;
+      const configurationKey = typeof metadataConfigurationKey === "string"
+        ? metadataConfigurationKey
+        : typeof declaredConfiguration === "string" ? declaredConfiguration : null;
+      return [[line.catalogKey, { line, familyKey, configurationKey }] as const];
     }));
     const itemErrors: Record<string, string> = {};
     const validItems = parsed.data.items.filter((item) => {
+      const identity = lineIdentityByCatalogKey.get(item.catalogLineKey);
       const isSupported = supportedCatalogLineKeys.has(item.catalogLineKey) &&
-        familyByCatalogLineKey.get(item.catalogLineKey) === item.familyKey;
+        identity?.familyKey === item.familyKey;
       if (!isSupported) {
         itemErrors[item.itemId] = "Esta línea todavía no tiene una familia de compra configurada.";
       }
@@ -87,9 +114,11 @@ export async function POST(request: Request) {
       totalProfileCount: number;
       baseReferenceProfileCount: number;
       isReference: boolean;
+      coverageMessage?: string;
       otherAvailableFinishNames?: string[];
     }>> = {};
     let profilePrices: Record<string, ReturnType<typeof resolveSupplierProfilePricePreviews>> = {};
+    const supplierTechnicalCodesByItemId = new Map<string, string[]>();
     if (parsed.data.includeProviderOptions) {
       const priceRows = [...catalogPrices, ...workshopPrices];
       const providerKeys = [...new Set([
@@ -99,19 +128,34 @@ export async function POST(request: Request) {
       ])];
       const lineByKey = new Map(VENTORA_DEFAULT_LINE_CATALOG.map((line) => [line.catalogKey, line]));
       const candidateItems = validItems.map((item) => {
-        const line = lineByKey.get(item.catalogLineKey);
+        const identity = lineIdentityByCatalogKey.get(item.catalogLineKey);
+        const line = identity?.line ?? lineByKey.get(item.catalogLineKey);
         const metadata = line?.catalogMetadata;
-        const refs = getLineTemplateWorkshopProfiles(metadata)?.profiles ?? [];
+        const configuration = line ? findLineConfiguration(line, identity?.configurationKey ?? null) : null;
+        const fixedL32WithoutBom = item.catalogLineKey === "ventora:l32:configuration:ventora:l32:pano-fijo";
+        const refs = fixedL32WithoutBom
+          ? []
+          : configuration
+            ? getVentoraProfileReferencesForCatalogKey(item.catalogLineKey)?.profiles ?? []
+            : getLineTemplateWorkshopProfiles(metadata)?.profiles ?? [];
         return {
           item,
+          configurationKey: identity?.configurationKey ?? metadata?.configurationKey as string | undefined,
+          fixedL32WithoutBom,
+          effectiveCodes: fixedL32WithoutBom
+            ? []
+            : item.technicalCodes.length > 0
+              ? item.technicalCodes
+              : refs.filter((profile) => profile.codeStatus === "catalog_reference" && profile.code?.trim()).map((profile) => profile.code!),
           refs: refs.filter((profile) => profile.codeStatus === "catalog_reference" && profile.code?.trim())
             .map((profile) => ({ code: profile.code!, name: profile.name })),
         };
       });
-      const codeSet = new Set(candidateItems.flatMap(({ item, refs }) => [
-        ...item.technicalCodes.map((code) => code.trim().toLocaleUpperCase("en-US")),
+      const codeSet = new Set(candidateItems.flatMap(({ effectiveCodes, refs }) => [
+        ...effectiveCodes.map((code) => code.trim().toLocaleUpperCase("en-US")),
         ...refs.map((profile) => profile.code.trim().toLocaleUpperCase("en-US")),
       ]));
+      for (const candidate of candidateItems) supplierTechnicalCodesByItemId.set(candidate.item.itemId, candidate.effectiveCodes);
       const relevantPriceRows = priceRows.filter((row) =>
         Boolean(row.technicalCode && codeSet.has(row.technicalCode.trim().toLocaleUpperCase("en-US"))) ||
         (row.recipeComponentCodes ?? []).some((code) => codeSet.has(code.trim().toLocaleUpperCase("en-US")))
@@ -138,11 +182,12 @@ export async function POST(request: Request) {
             ? "Alumco · 2026"
             : (providerNames.get(providerKey) ?? providerKey).replace(/^Distribuidora\s+/i, "").trim(),
       ] as const));
-      profilePrices = includeProfilePrices ? Object.fromEntries(candidateItems.map(({ item, refs }) => {
-        const line = lineByKey.get(item.catalogLineKey);
+      profilePrices = includeProfilePrices ? Object.fromEntries(candidateItems.map(({ item, refs, configurationKey, fixedL32WithoutBom, effectiveCodes }) => {
+        const line = lineIdentityByCatalogKey.get(item.catalogLineKey)?.line ?? lineByKey.get(item.catalogLineKey);
         const requestItem = {
           ...item,
-          configurationKey: line?.catalogMetadata?.configurationKey as string | undefined,
+          technicalCodes: effectiveCodes,
+          configurationKey: configurationKey ?? line?.catalogMetadata?.configurationKey as string | undefined,
         };
         return [item.itemId, resolveSupplierProfilePricePreviews({
           request: requestItem,
@@ -153,14 +198,20 @@ export async function POST(request: Request) {
         })] as const;
       })) : {};
       providerOptions = Object.fromEntries(validItems.map((item) => {
-        const configurationKey = VENTORA_DEFAULT_LINE_CATALOG.find((line) => line.catalogKey === item.catalogLineKey)?.catalogMetadata?.configurationKey as string | undefined;
+        const identity = lineIdentityByCatalogKey.get(item.catalogLineKey);
+        const line = identity?.line;
+        const configurationKey = identity?.configurationKey ?? line?.catalogMetadata?.configurationKey as string | undefined;
+        const fixedL32WithoutBom = item.catalogLineKey === "ventora:l32:configuration:ventora:l32:pano-fijo";
+        const candidate = candidateItems.find((entry) => entry.item.itemId === item.itemId);
+        const technicalCodes = candidate?.effectiveCodes ?? item.technicalCodes;
+        const requestedCodes = new Set(technicalCodes.map((code) => code.trim().toLocaleUpperCase("en-US")));
+        const coverageRequest = { ...item, technicalCodes, configurationKey };
         const coverage = resolveSupplierPriceProviderCoverage({
-          request: { ...item, configurationKey },
+          request: coverageRequest,
           presentations: relevantPriceRows,
         });
         const normalizedCurrentFinish = item.finishName?.trim().toLocaleLowerCase("es-CL") ?? "";
         const normalizedFamilyKey = (normalizeUniversalAluminumFamilyKey(item.familyKey) ?? item.familyKey).toLocaleLowerCase("es-CL");
-        const requestedCodes = new Set(item.technicalCodes.map((code) => code.trim().toLocaleUpperCase("en-US")));
         const finishNames = [...new Set(relevantPriceRows.flatMap((row) => {
           const familyMatches = (row.familyKeys ?? []).some((familyKey) =>
             (normalizeUniversalAluminumFamilyKey(familyKey) ?? familyKey).toLocaleLowerCase("es-CL") === normalizedFamilyKey
@@ -175,7 +226,7 @@ export async function POST(request: Request) {
         const otherAvailableFinishNamesByProvider = new Map<string, Set<string>>();
         for (const finishName of finishNames) {
           const finishCoverage = resolveSupplierPriceProviderCoverage({
-            request: { ...item, configurationKey, finishName },
+            request: { ...coverageRequest, finishName },
             presentations: relevantPriceRows,
           });
           for (const finishOption of finishCoverage) {
@@ -209,29 +260,45 @@ export async function POST(request: Request) {
           return {
             providerKey,
             label,
-            pricedProfileCount: priced?.pricedProfileCount ?? 0,
-            totalProfileCount: priced?.totalProfileCount ?? item.technicalCodes.length,
+            pricedProfileCount: fixedL32WithoutBom ? 0 : priced?.pricedProfileCount ?? 0,
+            totalProfileCount: fixedL32WithoutBom ? 0 : priced?.totalProfileCount ?? technicalCodes.length,
             baseReferenceProfileCount: priced?.baseReferenceProfileCount ?? 0,
             isReference: priced?.isReference ?? providerKey === "arquetipo",
+            ...(fixedL32WithoutBom ? { coverageMessage: "Precios de familia disponibles; materiales del fijo pendientes." } : {}),
             otherAvailableFinishNames: [...(otherAvailableFinishNamesByProvider.get(providerKey) ?? [])],
           };
         }).sort((left, right) => Number(right.isReference) - Number(left.isReference) || left.label.localeCompare(right.label, "es-CL"));
         return [item.itemId, options] as const;
       }));
     }
-    const selections = Object.fromEntries(validItems.map((item) => [item.itemId,
-      resolveSupplierPresentationsForQuoteItem({
+    const selections = Object.fromEntries(validItems.map((item) => {
+      const identity = lineIdentityByCatalogKey.get(item.catalogLineKey);
+      const fixedL32WithoutBom = item.catalogLineKey === "ventora:l32:configuration:ventora:l32:pano-fijo";
+      const canonicalReferenceCodes = identity?.configurationKey
+        ? getVentoraProfileReferencesForCatalogKey(item.catalogLineKey)?.profiles
+            .filter((profile) => profile.codeStatus === "catalog_reference" && profile.code?.trim())
+            .map((profile) => profile.code!) ?? []
+        : [];
+      const technicalCodes = fixedL32WithoutBom
+        ? []
+        : supplierTechnicalCodesByItemId.get(item.itemId)
+          ?? (item.technicalCodes.length > 0 ? item.technicalCodes : canonicalReferenceCodes);
+      return [item.itemId,
+        resolveSupplierPresentationsForQuoteItem({
         request: {
           ...item,
           providerKey: resolveEffectiveSupplierProviderKey({
             explicitProviderKey: item.providerKey,
             familyPreferenceProviderKey: preferenceByFamily.get(item.familyKey),
           }),
-          configurationKey: VENTORA_DEFAULT_LINE_CATALOG.find((line) => line.catalogKey === item.catalogLineKey)?.catalogMetadata?.configurationKey as string | undefined,
+          configurationKey: identity?.configurationKey
+            ?? identity?.line.catalogMetadata?.configurationKey as string | undefined,
+          technicalCodes,
         },
         presentations,
       }),
-    ]));
+      ];
+    }));
     return NextResponse.json({
       enabled: true,
       selections,
