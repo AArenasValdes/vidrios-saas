@@ -475,7 +475,8 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     compatibility: {
       materials: ["Aluminio"],
       configurations: [
-        { id: "ventora:l42:proyectante", componentType: "Ventana", openingType: "Proyectante", label: "Ventana proyectante", typology: "proyectante", variant: "normal", leavesCounts: [1] },
+        { id: "ventora:l42:proyectante", componentType: "Ventana", openingType: "Proyectante", label: "Proyectante", typology: "proyectante", variant: "normal", leavesCounts: [1] },
+        { id: "ventora:l42:pano-fijo", componentType: "Paño fijo", openingType: "Fijo", label: "Paño fijo", typology: "pano_fijo", variant: "sin_receta", leavesCounts: [1], source: "catalog" },
       ],
     },
     lineFamilyType: "traditional",
@@ -1482,7 +1483,7 @@ function expandLineConfigurations(
         configuracion: configuration.label,
         configurationKey: configuration.id,
         configurationLabel: configuration.label,
-        profileSourceCatalogKey: definition.profileSourceCatalogKey ?? definition.catalogKey,
+        profileSourceCatalogKey: definition.profileSourceCatalogKey ?? catalogKey,
         compatibility,
       };
     });

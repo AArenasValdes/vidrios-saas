@@ -4,9 +4,9 @@ import {
 } from "@/features/cotizaciones/line-templates/services/auditoria-catalogo-lineas-ventora.service";
 
 describe("auditoria-catalogo-lineas-ventora.service", () => {
-  it("audita las 103 líneas canónicas del catálogo Ventora", () => {
+  it("audita las 104 configuraciones canónicas del catálogo Ventora", () => {
     const rows = auditarCatalogoLineasVentora();
-    expect(rows).toHaveLength(103);
+    expect(rows).toHaveLength(104);
     expect(rows.every((row) => row.cotizacionComercial)).toBe(true);
   });
 
@@ -23,6 +23,21 @@ describe("auditoria-catalogo-lineas-ventora.service", () => {
     });
     expect(row?.bloqueosProbar).toContain("Sin receta técnica de referencia");
     expect(row?.perfilesTotales).toBe(0);
+  });
+
+  it("mantiene AL-42 Fijo cotizable como geometría pendiente, separada del proyectante", () => {
+    const row = auditarCatalogoLineasVentora().find(
+      (candidate) => candidate.catalogKey === "ventora:l42:configuration:ventora:l42:pano-fijo"
+    );
+
+    expect(row).toMatchObject({
+      tipologia: "pano_fijo",
+      cotizacionComercial: true,
+      fabricacionEstado: "fabricacion_pendiente",
+      listaParaProbar: false,
+    });
+    expect(row?.codigosConfigurados).toEqual(["4209", "4229"]);
+    expect(row?.bloqueosProbar).toContain("Sin receta técnica de referencia");
   });
   it("incluye Veratec 7400 con pauta documentada, sin validación ni precio asignado", () => {
     const row = auditarCatalogoLineasVentora().find(

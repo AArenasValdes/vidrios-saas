@@ -82,6 +82,7 @@ function selectFinishCandidates<T extends FinishCandidate>(candidates: readonly 
     candidate.providerKey?.trim().toLocaleLowerCase("es-CL") === "alumco" &&
     candidate.finishResolution === "specific" &&
     normalize(candidate.finishName) === "titanio" &&
+    Boolean(finishName?.trim()) &&
     normalize(finishName) !== "titanio"
   );
   return { candidates: alumcoTitanioBase, basis: "base_reference_other_finish" as const };

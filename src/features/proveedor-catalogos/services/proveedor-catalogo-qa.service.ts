@@ -29,9 +29,7 @@ export function getSupplierCatalogQaConfig(env: NodeJS.ProcessEnv = process.env)
 export function getSupplierCatalogQuoteLineKeys(): ReadonlySet<string> {
   return new Set(
     VENTORA_DEFAULT_LINE_CATALOG.flatMap((line) =>
-      line.catalogKey && typeof line.catalogMetadata?.familyKey === "string"
-        ? [line.catalogKey]
-        : []
+      line.catalogKey && typeof line.catalogMetadata?.familyKey === "string" ? [line.catalogKey] : []
     )
   );
 }
