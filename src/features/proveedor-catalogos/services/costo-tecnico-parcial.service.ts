@@ -35,6 +35,10 @@ export type CatalogPresentationPrice = {
   priceListPublishedOn?: string | null;
   priceListValidUntil?: string | null;
   priceReferenceStatus?: SupplierPriceListReferenceStatus;
+  priceApplicationStatus?: "specific_finish" | "finish_independent" | "base_reference_other_finish";
+  priceSourcePresentationId?: string | null;
+  priceSourceSupplierSku?: string | null;
+  priceSourceFinishName?: string | null;
 };
 
 export type SupplierQuoteItemColor = {
@@ -80,6 +84,10 @@ type CostLine = {
   priceListPublishedOn?: string | null;
   priceListValidUntil?: string | null;
   priceReferenceStatus?: SupplierPriceListReferenceStatus;
+  priceApplicationStatus?: "specific_finish" | "finish_independent" | "base_reference_other_finish";
+  priceSourcePresentationId?: string | null;
+  priceSourceSupplierSku?: string | null;
+  priceSourceFinishName?: string | null;
   cuts: Array<{ itemCode: string; cutLengthMm: number }>;
   quantity?: number;
 };
@@ -87,6 +95,7 @@ type CostLine = {
 export type TechnicalCostSnapshot = {
   schemaVersion: 1 | 2;
   status: "no_data" | "partial" | "complete";
+  totalCostClassification?: "confirmed" | "commercial_estimate" | "incomplete";
   priceOrigin?: "reference" | "own" | "mixed" | "none";
   calculatedAt: string;
   currency: string | null;
@@ -289,13 +298,38 @@ function resolvedPrice(entry: CatalogPresentationPrice, organizationPricing?: Or
   }
   return resolvePurchasePrice({
     providerKey: entry.providerKey ?? "",
-    presentationId: entry.presentationId ?? entry.supplierSku,
+    presentationId: entry.priceApplicationStatus === "base_reference_other_finish"
+      ? ""
+      : entry.presentationId ?? entry.supplierSku,
     referenceNetPrice: entry.netPrice,
     referenceBasis: entry.priceBasis,
     referenceCurrency: entry.currency,
     commercialLengthMm: entry.commercialLengthMm,
-    organizationPricing,
+    organizationPricing: entry.priceApplicationStatus === "base_reference_other_finish"
+      ? {
+          adjustments: organizationPricing?.adjustments ?? [],
+          // Do not carry an override for the source finish onto another color.
+          overrides: (organizationPricing?.overrides ?? []).filter((row) => row.presentationId !== entry.priceSourcePresentationId),
+        }
+      : organizationPricing,
   });
+}
+
+function alumcoBasePriceForFinish(
+  entry: CatalogPresentationPrice,
+  finishName: string | null | undefined
+): CatalogPresentationPrice {
+  return {
+    ...entry,
+    presentationId: undefined,
+    supplierSku: "",
+    finishCode: "",
+    finishName: finishName ?? "Acabado pendiente",
+    priceApplicationStatus: "base_reference_other_finish",
+    priceSourcePresentationId: entry.presentationId ?? null,
+    priceSourceSupplierSku: entry.supplierSku,
+    priceSourceFinishName: entry.finishName,
+  };
 }
 
 function accessoryPurchaseUnitMatches(recipeUnit: string, purchaseUnit: string) {
@@ -363,15 +397,36 @@ export function buildPartialTechnicalCostSnapshot(input: {
         continue;
       }
 
-      const matchingPresentations = input.availablePrices.filter((entry) =>
+      const compatiblePresentations = input.availablePrices.filter((entry) =>
         (!entry.configurationKey || entry.configurationKey === quoteItem?.configurationKey) &&
         matchesCatalogFamily(entry, quoteItem?.catalogLineKey, quoteItem?.supplierFamilyKey) &&
-        matchesRecipeComponent(entry, cut.codigoPerfil) &&
-        matchesSelectedPresentation(entry, selectedPresentationForBar(bar, quoteItem)) && (
-          entry.finishResolution === "finish_independent" ||
-          entry.finishResolution === "specific" && normalizeFinish(entry.finishName) === normalizeFinish(finishName)
-        )
+        matchesRecipeComponent(entry, cut.codigoPerfil)
       );
+      const selectedForBar = selectedPresentationForBar(bar, quoteItem);
+      const exactFinish = compatiblePresentations.filter((entry) =>
+        matchesSelectedPresentation(entry, selectedForBar) && entry.finishResolution === "specific" && normalizeFinish(entry.finishName) === normalizeFinish(finishName)
+      );
+      const finishIndependent = compatiblePresentations.filter((entry) =>
+        matchesSelectedPresentation(entry, selectedForBar) && entry.finishResolution === "finish_independent"
+      );
+      let matchingPresentations = exactFinish.length > 0 ? exactFinish : finishIndependent;
+      const selectedPresentationForItem = selectedForBar;
+      if (matchingPresentations.length === 0 &&
+          (!selectedPresentationForItem.providerKey || selectedPresentationForItem.providerKey === "alumco") &&
+          !selectedPresentationForItem.presentationId && !selectedPresentationForItem.supplierSku &&
+          normalizeFinish(finishName) !== "titanio") {
+        matchingPresentations = compatiblePresentations
+          .filter((entry) => entry.providerKey === "alumco" && entry.finishResolution === "specific" && normalizeFinish(entry.finishName) === "titanio")
+          .map((entry) => alumcoBasePriceForFinish(entry, finishName));
+        if (matchingPresentations.length > 0) {
+          const key = `${cut.codigoPerfil}|${finishName}|physical-presentation`;
+          missing.set(key, {
+            technicalCode: cut.codigoPerfil,
+            description: cut.funcion || cut.codigoPerfil,
+            reason: `Se usa el precio de Titanio solo como base comercial para ${finishName}; faltan el precio específico y la presentación física de ese acabado. No se asigna SKU Titanio.`,
+          });
+        }
+      }
       const candidates = matchingPresentations.filter((entry) =>
         entry.commercialLengthMm != null && resolvedPrice(entry, input.organizationPricing) != null
       );
@@ -426,7 +481,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
 
   const lines: CostLine[] = [];
   for (const group of cutsByGroup.values()) {
-    const candidates = input.availablePrices.filter((entry) =>
+    let candidates = input.availablePrices.filter((entry) =>
       (!entry.configurationKey || entry.configurationKey === group[0].configurationKey) &&
         matchesCatalogFamily(entry, group[0].catalogLineKey, itemColors.get(group[0].itemCode)?.supplierFamilyKey) &&
       matchesRecipeComponent(entry, group[0].technicalCode) &&
@@ -437,6 +492,9 @@ export function buildPartialTechnicalCostSnapshot(input: {
           entry.finishResolution === "specific" && normalizeFinish(entry.finishName) === normalizeFinish(group[0].finishKey)) &&
       resolvedPrice(entry, input.organizationPricing) != null
     );
+    if (candidates.length === 0 && group[0].presentation.priceApplicationStatus === "base_reference_other_finish") {
+      candidates = [group[0].presentation];
+    }
     const fittingCandidates = candidates.flatMap((candidate) => {
       const candidateLength = candidate.commercialLengthMm;
       const price = resolvedPrice(candidate, input.organizationPricing);
@@ -504,9 +562,9 @@ export function buildPartialTechnicalCostSnapshot(input: {
         currency: resolved.currency,
         priceListId: selected.priceListId,
         priceListRevision: selected.priceListRevision,
-              priceListPublishedOn: selected.priceListPublishedOn,
-              priceListValidUntil: selected.priceListValidUntil,
-              priceReferenceStatus: selected.priceReferenceStatus,
+        priceListPublishedOn: selected.priceListPublishedOn,
+        priceListValidUntil: selected.priceListValidUntil,
+        priceReferenceStatus: selected.priceReferenceStatus,
         cuts: group.map((cut) => ({ itemCode: cut.itemCode, cutLengthMm: cut.cutLengthMm })),
       });
       continue;
@@ -542,13 +600,15 @@ export function buildPartialTechnicalCostSnapshot(input: {
     const barCount = bars.filter((bar) => bar.cuts.length > 0).length;
     lines.push({
       familyKey: group[0].familyKey,
-      presentationId: presentation.presentationId,
+      ...(presentation.priceApplicationStatus === "base_reference_other_finish"
+        ? { priceSourcePresentationId: presentation.priceSourcePresentationId }
+        : { presentationId: presentation.presentationId }),
       providerKey: presentation.providerKey,
       technicalCode: acceptedCuts[0].technicalCode,
       ...(presentation.technicalCode !== acceptedCuts[0].technicalCode ? { supplierTechnicalCode: presentation.technicalCode } : {}),
       technicalName: acceptedCuts[0].technicalName,
-      supplierSku: presentation.supplierSku,
-      finishCode: presentation.finishCode,
+      supplierSku: presentation.priceApplicationStatus === "base_reference_other_finish" ? "" : presentation.supplierSku,
+      finishCode: presentation.priceApplicationStatus === "base_reference_other_finish" ? "" : presentation.finishCode,
       finishName: presentation.finishName ?? "Sin acabado específico",
       commercialLengthMm: presentation.commercialLengthMm,
       purchaseUnit: presentation.purchaseUnit,
@@ -567,6 +627,10 @@ export function buildPartialTechnicalCostSnapshot(input: {
       priceListPublishedOn: presentation.priceListPublishedOn,
       priceListValidUntil: presentation.priceListValidUntil,
       priceReferenceStatus: presentation.priceReferenceStatus,
+      priceApplicationStatus: presentation.priceApplicationStatus ??
+        (presentation.finishResolution === "finish_independent" ? "finish_independent" : "specific_finish"),
+      priceSourceSupplierSku: presentation.priceSourceSupplierSku ?? null,
+      priceSourceFinishName: presentation.priceSourceFinishName ?? null,
       cuts: acceptedCuts.map((cut) => ({ itemCode: cut.itemCode, cutLengthMm: cut.cutLengthMm })),
     });
   }
@@ -649,9 +713,13 @@ export function buildPartialTechnicalCostSnapshot(input: {
   const hasUnconfirmedHistoricalReference = lines.some((line) =>
     line.priceReferenceStatus === "historical_reference" && line.effectivePriceSource === "reference"
   );
+  const hasCommercialEstimate = lines.some((line) => line.priceApplicationStatus === "base_reference_other_finish");
   return {
     schemaVersion: 2,
     status: lines.length === 0 ? "no_data" : missing.size === 0 && !hasUnconfirmedHistoricalReference ? "complete" : "partial",
+    totalCostClassification: hasCommercialEstimate
+      ? "commercial_estimate"
+      : missing.size > 0 || lines.length === 0 ? "incomplete" : "confirmed",
     priceOrigin: summarizePriceSources(lines.map((line) => line.effectivePriceSource ?? "reference")),
     calculatedAt,
     currency: currencies.length === 1 ? currencies[0] : null,
@@ -659,11 +727,16 @@ export function buildPartialTechnicalCostSnapshot(input: {
     lines,
     missing: [...missing.values()],
     // Currency and price basis have administrator-confirmed provenance in import evidence.
-    assumptions: [...new Set(lines.flatMap((line) =>
-      line.priceReferenceStatus === "historical_reference" && line.effectivePriceSource === "reference"
-        ? [`${line.providerKey} ${line.priceListRevision} es una referencia histórica (publicada ${line.priceListPublishedOn ?? "sin fecha"}, vigencia original hasta ${line.priceListValidUntil ?? "sin fecha"}); no es un precio vigente confirmado ni una cotización nueva del proveedor.`]
-        : []
-    ))],
+    assumptions: [...new Set(lines.flatMap((line) => {
+      const assumptions: string[] = [];
+      if (line.priceReferenceStatus === "historical_reference" && line.effectivePriceSource === "reference") {
+        assumptions.push(`${line.providerKey} ${line.priceListRevision} es una referencia histórica (publicada ${line.priceListPublishedOn ?? "sin fecha"}, vigencia original hasta ${line.priceListValidUntil ?? "sin fecha"}); no es un precio vigente confirmado ni una cotización nueva del proveedor.`);
+      }
+      if (line.priceApplicationStatus === "base_reference_other_finish") {
+        assumptions.push(`Estimación comercial: se aplicó como base a ${line.finishName} el importe Alumco de Titanio (${line.priceListRevision}); precio y presentación física del acabado elegido pendientes. El SKU ${line.priceSourceSupplierSku ?? "Titanio"} se conserva solo como origen del importe y no identifica el producto físico cotizado.`);
+      }
+      return assumptions;
+    }))],
     sourcePautaCapturedAt: snapshot.capturedAt,
   };
 }

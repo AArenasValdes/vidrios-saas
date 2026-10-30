@@ -19,6 +19,9 @@ export type MySupplierPrices = {
   providerKey: string;
   providerName: string;
   revision: string;
+  priceListStatus?: "within_stated_validity" | "active_by_ventora_policy" | "historical_reference" | "not_yet_valid";
+  publishedOn?: string | null;
+  sourceQuotationValidUntil?: string | null;
   percentage: number;
   presentations: MyPresentationPrice[];
 };

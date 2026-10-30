@@ -168,7 +168,7 @@ describe("buildPartialTechnicalCostSnapshot", () => {
     ]);
   });
 
-  it("advierte referencias Alumco históricas y conserva precedencia de precio propio", () => {
+  it("calcula un precio Alumco específico de Titanio y conserva precedencia de precio propio", () => {
     const workSnapshot = pauta([{ code: "3201", item: "L32", length: 1200 }]);
     workSnapshot.bars[0]!.supplierProviderKey = "alumco";
     workSnapshot.bars[0]!.acabadoKey = "Titanio";
@@ -177,7 +177,7 @@ describe("buildPartialTechnicalCostSnapshot", () => {
       presentationId: "alumco-3201", providerKey: "alumco", familyKeys: ["universal:aluminio:l32"],
       technicalCode: "3201", recipeComponentCodes: ["3201"], finishCode: "TI", finishName: "Titanio",
       finishResolution: "specific", netPrice: 10210, commercialLengthMm: 6000, purchaseUnit: "TR",
-      supplierSku: "TI3201A", priceReferenceStatus: "historical_reference",
+      supplierSku: "TI3201A", priceReferenceStatus: "active_by_ventora_policy",
       priceListRevision: "notas-2026-10-14", priceListPublishedOn: "2026-10-14", priceListValidUntil: "2026-10-21",
     });
     const quoteItems = [{ code: "L32", color: "Titanio", catalogLineKey: "ventora:l32", supplierFamilyKey: "universal:aluminio:l32" }];
@@ -185,9 +185,9 @@ describe("buildPartialTechnicalCostSnapshot", () => {
 
     expect(result?.lines[0]).toMatchObject({
       providerKey: "alumco", supplierSku: "TI3201A", netPricePerPresentation: 10210,
-      priceReferenceStatus: "historical_reference", priceListPublishedOn: "2026-10-14", priceListValidUntil: "2026-10-21",
+      priceReferenceStatus: "active_by_ventora_policy", priceListPublishedOn: "2026-10-14", priceListValidUntil: "2026-10-21",
     });
-    expect(result?.assumptions.join(" ")).toContain("no es un precio vigente confirmado ni una cotización nueva del proveedor");
+    expect(result?.totalCostClassification).toBe("incomplete");
 
     const ownPrice = buildPartialTechnicalCostSnapshot({
       workSnapshot, quoteItems, availablePrices: [historical],
@@ -195,6 +195,37 @@ describe("buildPartialTechnicalCostSnapshot", () => {
     });
     expect(ownPrice?.lines[0]).toMatchObject({ effectivePriceSource: "organization_override", netPricePerPresentation: 12000 });
     expect(ownPrice?.assumptions).toEqual([]);
+  });
+
+  it("usa Alumco Titanio como estimación para otro color sin asignarle SKU ni precio propio de Titanio", () => {
+    const workSnapshot = pauta([{ code: "3201", item: "L32-negro", length: 1200 }]);
+    workSnapshot.bars[0]!.supplierProviderKey = "alumco";
+    workSnapshot.bars[0]!.acabadoKey = "negro";
+    workSnapshot.bars[0]!.largoComercialMm = 6000;
+    const sourcePrice = price({
+      presentationId: "alumco-3201-titanium", providerKey: "alumco", familyKeys: ["universal:aluminio:l32"],
+      technicalCode: "3201", finishCode: "TI", finishName: "Titanio", finishResolution: "specific",
+      netPrice: 10210, commercialLengthMm: 6000, purchaseUnit: "TR", supplierSku: "TI3201A",
+      priceReferenceStatus: "active_by_ventora_policy", priceListPublishedOn: "2026-10-14", priceListValidUntil: "2026-10-21",
+    });
+    const result = buildPartialTechnicalCostSnapshot({
+      workSnapshot,
+      quoteItems: [{ code: "L32-negro", color: "Negro", finishName: "Negro", catalogLineKey: "ventora:l32", supplierFamilyKey: "universal:aluminio:l32", supplierProviderKey: "alumco" }],
+      availablePrices: [sourcePrice],
+      organizationPricing: { adjustments: [], overrides: [{ presentationId: "alumco-3201-titanium", netPrice: 99999, currency: "CLP" }] },
+    });
+
+    expect(result?.lines).toEqual([expect.objectContaining({
+      providerKey: "alumco", technicalCode: "3201", finishName: "Negro", supplierSku: "",
+      priceApplicationStatus: "base_reference_other_finish", priceSourcePresentationId: "alumco-3201-titanium",
+      priceSourceSupplierSku: "TI3201A", priceSourceFinishName: "Titanio", netPricePerPresentation: 10210,
+    })]);
+    expect(result?.totalCostClassification).toBe("commercial_estimate");
+    expect(result?.status).toBe("partial");
+    expect(result?.assumptions.join(" ")).toContain("no identifica el producto físico cotizado");
+    expect(result?.missing).toEqual(expect.arrayContaining([
+      expect.objectContaining({ reason: expect.stringContaining("presentación física") }),
+    ]));
   });
 
   it.each([

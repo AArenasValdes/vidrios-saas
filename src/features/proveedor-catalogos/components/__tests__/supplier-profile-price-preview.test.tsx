@@ -90,7 +90,7 @@ describe("SupplierProfilePricePreview price entry", () => {
     expect(saveQuotePresentationPrice).not.toHaveBeenCalled();
   });
 
-  it("marca una lista histórica como referencia, no como precio vigente confirmado", () => {
+  it("marca la lista Alumco como activa en Ventora y aclara la fecha de la cotización fuente", () => {
     render(<SupplierProfilePricePreview prices={[{
       ...missingPrice,
       providerKey: "alumco",
@@ -98,7 +98,7 @@ describe("SupplierProfilePricePreview price entry", () => {
       status: "priced",
       netPrice: 10210,
       priceSource: "reference",
-      priceReferenceStatus: "historical_reference",
+      priceReferenceStatus: "active_by_ventora_policy",
       priceListRevision: "notas-000000984-000000986-2026-10-14",
       priceListPublishedOn: "2026-10-14",
       priceListValidUntil: "2026-10-21",
@@ -106,7 +106,29 @@ describe("SupplierProfilePricePreview price entry", () => {
 
     fireEvent.click(screen.getByText("Ver precios de 1 perfiles"));
     expect(screen.getByText("$10.210")).toBeInTheDocument();
-    expect(screen.getByRole("note")).toHaveTextContent("Referencia histórica");
-    expect(screen.getByRole("note")).toHaveTextContent("No confirmada vigente");
+    expect(screen.getByRole("note")).toHaveTextContent("lista activa en Ventora");
+    expect(screen.getByRole("note")).toHaveTextContent("vigencia impresa de la cotización fuente");
+  });
+
+  it("separa el precio base Titanio del SKU y presentación del acabado cotizado", () => {
+    render(<SupplierProfilePricePreview prices={[{
+      ...missingPrice,
+      providerKey: "alumco",
+      providerLabel: "Alumco",
+      status: "priced",
+      netPrice: 10210,
+      priceSource: "reference",
+      priceReferenceStatus: "active_by_ventora_policy",
+      finishPriceBasis: "base_reference_other_finish",
+      priceSourceFinishName: "Titanio",
+      priceSourceSupplierSku: "TI3201A",
+      priceListPublishedOn: "2026-10-14",
+    }]} providerKey="alumco" finishName="Negro" />);
+
+    fireEvent.click(screen.getByText("Ver precios de 1 perfiles"));
+    expect(screen.getByText("$10.210")).toBeInTheDocument();
+    expect(screen.getByRole("note")).toHaveTextContent("Base comercial Alumco Titanio aplicada a Negro");
+    expect(screen.getByRole("note")).toHaveTextContent("no se asigna SKU Titanio");
+    expect(screen.queryByText(/TI3201A/)).not.toBeInTheDocument();
   });
 });

@@ -44,7 +44,7 @@ describe("selección de lista por proveedor", () => {
     expect(selected.get("provider-a")).toMatchObject({ id: "a-old", referenceStatus: "historical_reference" });
   });
 
-  it("usa automáticamente la última referencia histórica Alumco si no existe una lista vigente", () => {
+  it("mantiene activa en Ventora la lista Alumco importada aunque venza la cotización fuente", () => {
     const selected = selectSupplierPriceLists({
       lists: [
         { id: "alumco-old", providerKey: "alumco", revision: "2026-09", publishedOn: "2026-09-01", validFrom: "2026-09-01", validUntil: "2026-09-08", createdAt: "2026-09-01T00:00:00Z" },
@@ -55,12 +55,12 @@ describe("selección de lista por proveedor", () => {
     });
     expect(selected.get("alumco")).toMatchObject({
       id: "alumco-reference",
-      referenceStatus: "historical_reference",
+      referenceStatus: "active_by_ventora_policy",
     });
     expect(selected.has("provider-c")).toBe(false);
   });
 
-  it("prefiere la referencia Alumco vigente a cualquier lista histórica", () => {
+  it("usa la lista Alumco más nueva ya publicada según la política de Ventora", () => {
     const selected = selectSupplierPriceLists({
       lists: [
         { id: "alumco-old", providerKey: "alumco", revision: "2026-10-14", publishedOn: "2026-10-14", validFrom: "2026-10-14", validUntil: "2026-10-21", createdAt: "2026-10-14T00:00:00Z" },
@@ -68,7 +68,15 @@ describe("selección de lista por proveedor", () => {
       ],
       asOf: new Date("2026-10-30T00:00:00Z"),
     });
-    expect(selected.get("alumco")).toMatchObject({ id: "alumco-current", referenceStatus: "within_stated_validity" });
+    expect(selected.get("alumco")).toMatchObject({ id: "alumco-current", referenceStatus: "active_by_ventora_policy" });
+  });
+
+  it("no aplica la política activa Alumco a listas vencidas de otros proveedores", () => {
+    const selected = selectSupplierPriceLists({
+      lists: [{ id: "other-expired", providerKey: "provider-c", revision: "2026-09", publishedOn: "2026-09-01", validFrom: "2026-09-01", validUntil: "2026-09-08", createdAt: "2026-09-01T00:00:00Z" }],
+      asOf: new Date("2026-10-30T00:00:00Z"),
+    });
+    expect(selected.has("provider-c")).toBe(false);
   });
 
   it("no permite seleccionar automáticamente una lista futura", () => {

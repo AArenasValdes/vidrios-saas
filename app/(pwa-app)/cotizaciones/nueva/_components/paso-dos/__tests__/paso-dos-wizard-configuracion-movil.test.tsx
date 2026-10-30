@@ -16,7 +16,7 @@ jest.mock("@/features/proveedor-catalogos/hooks/use-supplier-presentation-resolu
     result: {
       providerOptions: {
         "guided-line-provider-preview": [
-          { providerKey: "alumco", label: "Alumco · 2026", pricedProfileCount: 0, totalProfileCount: 7, isReference: false, otherAvailableFinishNames: ["Titanio"] },
+          { providerKey: "alumco", label: "Alumco · 2026", pricedProfileCount: 4, totalProfileCount: 7, baseReferenceProfileCount: 4, isReference: false, otherAvailableFinishNames: ["Titanio"] },
         ],
       },
       familyPreferences: {},
@@ -215,7 +215,7 @@ describe("PasoDosWizardConfiguracionMovil", () => {
       target: { value: "alumco" },
     });
     expect(onSupplierProviderKeyChange).toHaveBeenCalledWith("alumco");
-    expect(screen.getByRole("option", { name: /Alumco · 2026 · 0\/7 perfiles con precio · precio en Titanio/i })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /Alumco · 2026 · 4\/7 perfiles con precio · 4 con base Titanio \(presentación pendiente\)/i })).toBeInTheDocument();
   });
 
   it("permite abrir Ajustar composición cuando el sistema ya está elegido y aún no hay esquema de hojas", () => {

@@ -67,9 +67,22 @@ export function SupplierProfilePricePreview({
             </span>
             <span className={s.amount}>
               {price.status === "priced" && price.netPrice != null && price.currency
-                ? <><strong>{formatPrice(price.netPrice, price.currency)}</strong><small>por {price.purchaseUnit}{price.commercialLengthMm ? ` · ${price.commercialLengthMm.toLocaleString("es-CL")} mm` : ""}</small></>
+                ? <><strong>{formatPrice(price.netPrice, price.currency)}</strong><small>{price.finishPriceBasis === "base_reference_other_finish" ? "base comercial" : "por"} {price.purchaseUnit}{price.commercialLengthMm ? ` · ${price.commercialLengthMm.toLocaleString("es-CL")} mm${price.finishPriceBasis === "base_reference_other_finish" ? " de la referencia" : ""}` : ""}</small></>
                 : <strong className={s.pending}>{price.status === "ambiguous" ? "Presentación ambigua" : "Sin precio"}</strong>}
               <small>{price.priceSource === "organization_override" ? "Precio ingresado por tu taller" : price.providerLabel}</small>
+              {price.finishPriceBasis === "base_reference_other_finish" ? (
+                <small role="note">
+                  Base comercial Alumco Titanio aplicada a {finishName || "otro acabado"}. Precio específico y presentación física de este acabado pendientes; no se asigna SKU Titanio.
+                  {price.priceListPublishedOn ? ` Lista de Ventora importada ${price.priceListPublishedOn}.` : ""}
+                </small>
+              ) : null}
+              {price.finishPriceBasis !== "base_reference_other_finish" && price.priceReferenceStatus === "active_by_ventora_policy" ? (
+                <small role="note">
+                  {price.finishPriceBasis === "finish_independent" ? "Presentación independiente del acabado" : `Precio específico ${price.priceSourceFinishName || finishName || "acabado seleccionado"}`} · lista activa en Ventora
+                  {price.priceListPublishedOn ? ` · importada ${price.priceListPublishedOn}` : ""}.
+                  {price.priceListValidUntil ? ` La fecha ${price.priceListValidUntil} es la vigencia impresa de la cotización fuente.` : ""}
+                </small>
+              ) : null}
               {price.priceSource === "reference" && price.priceReferenceStatus === "historical_reference" ? (
                 <small role="note">
                   Referencia histórica · {price.priceListRevision ?? "lista sin revisión"}

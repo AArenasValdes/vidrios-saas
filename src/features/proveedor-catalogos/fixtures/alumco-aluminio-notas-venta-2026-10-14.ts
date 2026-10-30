@@ -120,11 +120,11 @@ const presentations: SupplierCatalogImport["presentations"] = rows.map(([sku, co
     currency: "CLP",
     associationEvidence: evidence(
       source,
-      `SKU ${sku}, código ${code}, descripción y unidad TR observados en la nota de venta ${invoice} (14-10-2026). Se vinculó solo a ${familyKey}. ${code === "2509" || code === "2510" ? "El titular precisa en el catálogo Alumco que 2509 es Jamba cerrada y 2510 Pierna cerrada; solo corresponden a las variantes L25 cerradas que usan esos códigos. No se aplican a pierna abierta (2503/2506)." : ""} ${finishIndependent ? "El titular confirma que Tapa y Portafelpa (RO3506P/RO3507P) no dependen del color; se registran independientes del acabado y no como perfiles de color." : "El prefijo TI identifica acabado Titanio; este precio no se extiende a otros colores."} Largo de 6.000 mm confirmado por el titular. No se deduce ningún sistema de despiece.`,
+      `SKU ${sku}, código ${code}, descripción y unidad TR observados en la nota de venta ${invoice} (14-10-2026). Se vinculó solo a ${familyKey}. ${code === "2509" || code === "2510" ? "El titular precisa en el catálogo Alumco que 2509 es Jamba cerrada y 2510 Pierna cerrada; solo corresponden a las variantes L25 cerradas que usan esos códigos. No se aplican a pierna abierta (2503/2506)." : ""} ${finishIndependent ? "El titular confirma que Tapa y Portafelpa (RO3506P/RO3507P) no dependen del color; se registran independientes del acabado y no como perfiles de color." : "El prefijo TI identifica la presentación física cotizada en Titanio. Por instrucción del titular, su importe puede usarse como base comercial para otros acabados si no existe precio específico, sin atribuirles este SKU ni una presentación física."} Largo de 6.000 mm confirmado por el titular. No se deduce ningún sistema de despiece.`,
     ),
     priceEvidence: evidence(
       source,
-      `Precio por tira transcrito de la columna PRECIO de la nota ${invoice} del 14-10-2026: CLP netos ${netPrice}${finishIndependent ? ", independiente del color por confirmación del titular" : ", acabado Titanio (TI)"}. La suma de filas del documento coincide con su NETO. No se aplica otro descuento de pronto pago; la nota incluye una condición de pronto pago, pero no un segundo precio unitario. Vigencia impresa: 7 días desde emisión.`,
+      `Precio por tira transcrito de la columna PRECIO de la nota ${invoice} del 14-10-2026: CLP netos ${netPrice}${finishIndependent ? ", independiente del color por confirmación del titular" : ", importe de la presentación física Titanio (TI), utilizable como base comercial para otros acabados por instrucción del titular, sin equivalencia de SKU ni presentación"}. La suma de filas del documento coincide con su NETO. No se aplica otro descuento de pronto pago; la nota incluye una condición de pronto pago, pero no un segundo precio unitario. La vigencia impresa de 7 días corresponde a la cotización fuente; Ventora mantiene activa esta lista de referencia.`,
     ),
   };
 });
@@ -146,7 +146,7 @@ export const ALUMCO_ALUMINIO_NOTAS_VENTA_2026_10_14: SupplierCatalogImport = {
   priceListRevision: "notas-000000984-000000986-2026-10-14",
   priceListPublishedOn: "2026-10-14",
   priceListValidUntil: "2026-10-21",
-  priceListSourceReference: `${sourceByInvoice["000000984"]}; ${sourceByInvoice["000000986"]}. La vigencia impresa es de 7 días. Los SKU TI corresponden a Titanio; Tapa y Portafelpa (RO3506P/RO3507P) son independientes del color por confirmación del titular. El descuento de pronto pago es condicional y no se vuelve a aplicar a los importes por fila.`,
+  priceListSourceReference: `${sourceByInvoice["000000984"]}; ${sourceByInvoice["000000986"]}. La fecha de vigencia impresa de 7 días corresponde a las cotizaciones fuente; por decisión del titular, Ventora mantiene activa esta lista importada. Los SKU TI identifican físicamente Titanio. Sus importes pueden servir como base comercial para otros acabados sin atribuir SKU/presentación; Tapa y Portafelpa (RO3506P/RO3507P) son independientes del color. El descuento de pronto pago es condicional y no se vuelve a aplicar a los importes por fila.`,
   priceListPriceBasis: "commercial_presentation",
   priceListCurrency: "CLP",
   technicalInputs,

@@ -46,6 +46,9 @@ export type SupplierProfilePricePreview = {
   priceListPublishedOn?: string | null;
   priceListValidUntil?: string | null;
   priceReferenceStatus?: CatalogPresentationPrice["priceReferenceStatus"];
+  finishPriceBasis?: "specific_finish" | "finish_independent" | "base_reference_other_finish";
+  priceSourceFinishName?: string | null;
+  priceSourceSupplierSku?: string | null;
   status: "priced" | "missing_price" | "ambiguous";
 };
 export type SupplierPriceCoveragePresentation = {
@@ -60,6 +63,29 @@ export type SupplierPriceCoveragePresentation = {
   configurationKey?: string | null;
   netPrice: number | null;
 };
+
+type FinishCandidate = {
+  providerKey?: string;
+  finishName: string | null;
+  finishResolution: "specific" | "finish_independent";
+};
+
+function selectFinishCandidates<T extends FinishCandidate>(candidates: readonly T[], finishName: string | null | undefined) {
+  const exact = candidates.filter((candidate) => candidate.finishResolution === "specific" &&
+    Boolean(finishName && candidate.finishName && normalize(candidate.finishName) === normalize(finishName)));
+  if (exact.length > 0) return { candidates: exact, basis: "specific_finish" as const };
+
+  const independent = candidates.filter((candidate) => candidate.finishResolution === "finish_independent");
+  if (independent.length > 0) return { candidates: independent, basis: "finish_independent" as const };
+
+  const alumcoTitanioBase = candidates.filter((candidate) =>
+    candidate.providerKey?.trim().toLocaleLowerCase("es-CL") === "alumco" &&
+    candidate.finishResolution === "specific" &&
+    normalize(candidate.finishName) === "titanio" &&
+    normalize(finishName) !== "titanio"
+  );
+  return { candidates: alumcoTitanioBase, basis: "base_reference_other_finish" as const };
+}
 
 /** Recipe codes win when a recipe is resolved; otherwise use only published line references. */
 export function resolveSupplierTechnicalCodesForQuote(input: {
@@ -90,18 +116,16 @@ export function resolveSupplierProfilePricePreviews(input: {
   }
   const output: SupplierProfilePricePreview[] = [];
   for (const [code, reference] of refsByCode) {
-    const candidates = input.presentations.filter((entry) =>
+    const codeCandidates = input.presentations.filter((entry) =>
       entry.providerKey && entry.presentationId &&
       (entry.familyKeys ?? []).some((key) =>
         (normalizeUniversalAluminumFamilyKey(key) ?? key).toLocaleLowerCase("es-CL") === familyKey
       ) &&
       (!entry.configurationKey || entry.configurationKey === input.request.configurationKey) &&
-      (normalizeCode(entry.technicalCode) === code || (entry.recipeComponentCodes ?? []).some((linked) => normalizeCode(linked) === code)) &&
-      (entry.finishResolution === "finish_independent" ||
-        Boolean(input.request.finishName && entry.finishName && normalize(entry.finishName) === normalize(input.request.finishName)))
+      (normalizeCode(entry.technicalCode) === code || (entry.recipeComponentCodes ?? []).some((linked) => normalizeCode(linked) === code))
     );
     const byProvider = new Map<string, CatalogPresentationPrice[]>();
-    for (const candidate of candidates) {
+    for (const candidate of codeCandidates) {
       const providerKey = candidate.providerKey!;
       byProvider.set(providerKey, [...(byProvider.get(providerKey) ?? []), candidate]);
     }
@@ -123,8 +147,28 @@ export function resolveSupplierProfilePricePreviews(input: {
       });
     }
     for (const [providerKey, providerCandidates] of byProvider) {
-      const [presentation] = providerCandidates;
-      if (providerCandidates.length !== 1 || !presentation?.presentationId) {
+      const selectedByFinish = selectFinishCandidates(providerCandidates, input.request.finishName);
+      const selectedCandidates = selectedByFinish.candidates;
+      const [presentation] = selectedCandidates;
+      if (selectedCandidates.length === 0) {
+        output.push({
+          technicalCode: reference.code,
+          profileName: reference.name,
+          providerKey,
+          providerLabel: input.providerNames.get(providerKey) ?? providerKey,
+          presentationId: "",
+          supplierSku: "",
+          presentationDescription: reference.name,
+          purchaseUnit: "",
+          commercialLengthMm: null,
+          netPrice: null,
+          currency: null,
+          priceSource: null,
+          status: "missing_price",
+        });
+        continue;
+      }
+      if (selectedCandidates.length > 1 || !presentation?.presentationId) {
         output.push({
           technicalCode: reference.code,
           profileName: reference.name,
@@ -142,23 +186,34 @@ export function resolveSupplierProfilePricePreviews(input: {
         });
         continue;
       }
+      const isBaseForOtherFinish = selectedByFinish.basis === "base_reference_other_finish";
+      const pricing = isBaseForOtherFinish
+        ? {
+            adjustments: input.organizationPricing?.adjustments ?? [],
+            // A Titanio-specific override must never become the selected
+            // workshop price for another physical finish.
+            overrides: (input.organizationPricing?.overrides ?? []).filter((row) => row.presentationId !== presentation.presentationId),
+          }
+        : input.organizationPricing;
       const price = resolvePurchasePrice({
         providerKey,
-        presentationId: presentation.presentationId,
+        presentationId: isBaseForOtherFinish ? "" : presentation.presentationId,
         referenceNetPrice: presentation.netPrice,
         referenceBasis: presentation.priceBasis,
         referenceCurrency: presentation.currency,
         commercialLengthMm: presentation.commercialLengthMm,
-        organizationPricing: input.organizationPricing,
+        organizationPricing: pricing,
       });
       output.push({
         technicalCode: reference.code,
         profileName: reference.name,
         providerKey,
         providerLabel: input.providerNames.get(providerKey) ?? providerKey,
-        presentationId: presentation.presentationId,
-        supplierSku: presentation.supplierSku,
-        presentationDescription: presentation.presentationDescription,
+        presentationId: isBaseForOtherFinish ? "" : presentation.presentationId,
+        supplierSku: isBaseForOtherFinish ? "" : presentation.supplierSku,
+        presentationDescription: isBaseForOtherFinish
+          ? `${presentation.technicalName} · precio base Alumco Titanio`
+          : presentation.presentationDescription,
         purchaseUnit: presentation.purchaseUnit,
         commercialLengthMm: presentation.commercialLengthMm,
         netPrice: price?.unitNetPrice ?? null,
@@ -168,6 +223,9 @@ export function resolveSupplierProfilePricePreviews(input: {
         priceListPublishedOn: presentation.priceListPublishedOn ?? null,
         priceListValidUntil: presentation.priceListValidUntil ?? null,
         priceReferenceStatus: presentation.priceReferenceStatus,
+        finishPriceBasis: selectedByFinish.basis,
+        priceSourceFinishName: presentation.finishName,
+        priceSourceSupplierSku: isBaseForOtherFinish ? presentation.supplierSku : null,
         status: price ? "priced" : "missing_price",
       });
     }
@@ -196,7 +254,13 @@ function normalizeCode(value: string) {
 export function resolveSupplierPriceProviderCoverage(input: {
   request: SupplierPresentationResolutionRequest;
   presentations: readonly SupplierPriceCoveragePresentation[];
-}): Array<{ providerKey: string; pricedProfileCount: number; totalProfileCount: number; isReference: boolean }> {
+}): Array<{
+  providerKey: string;
+  pricedProfileCount: number;
+  totalProfileCount: number;
+  baseReferenceProfileCount: number;
+  isReference: boolean;
+}> {
   const { request } = input;
   const requestedCodes = [...new Set(request.technicalCodes.map(normalizeCode).filter(Boolean))];
   const candidatesByProviderAndCode = new Map<string, Map<string, Map<string, SupplierPriceCoveragePresentation>>>();
@@ -207,9 +271,7 @@ export function resolveSupplierPriceProviderCoverage(input: {
       (normalizeUniversalAluminumFamilyKey(request.familyKey) ?? request.familyKey).toLocaleLowerCase("es-CL")
     );
     const configurationMatches = !entry.configurationKey || entry.configurationKey === request.configurationKey;
-    const finishMatches = entry.finishResolution === "finish_independent" ||
-      Boolean(request.finishName && entry.finishName && normalize(entry.finishName) === normalize(request.finishName));
-    if (!familyMatches || !configurationMatches || !finishMatches) continue;
+    if (!familyMatches || !configurationMatches) continue;
     const linkedCodes = new Set([entry.technicalCode, ...(entry.recipeComponentCodes ?? [])].map(normalizeCode));
     for (const requestedCode of requestedCodes) {
       if (!linkedCodes.has(requestedCode)) continue;
@@ -224,12 +286,13 @@ export function resolveSupplierPriceProviderCoverage(input: {
     }
   }
   const coveredByProvider = [...candidatesByProviderAndCode.entries()].flatMap(([providerKey, byCode]) => {
-    const covered = new Set([...byCode.entries()].flatMap(([code, presentations]) => {
-      if (presentations.size !== 1) return [];
-      const [presentation] = presentations.values();
+    const covered = new Map([...byCode.entries()].flatMap(([code, presentations]) => {
+      const selected = selectFinishCandidates([...presentations.values()], request.finishName);
+      if (selected.candidates.length !== 1) return [];
+      const [presentation] = selected.candidates;
       if (!presentation || presentation.netPrice == null || presentation.netPrice <= 0 ||
         presentation.commercialLengthMm == null || presentation.commercialLengthMm <= 0) return [];
-      return [code];
+      return [[code, selected.basis] as const];
     }));
     return covered.size > 0 ? [[providerKey, covered] as const] : [];
   });
@@ -237,6 +300,7 @@ export function resolveSupplierPriceProviderCoverage(input: {
     providerKey,
     pricedProfileCount: covered.size,
     totalProfileCount: requestedCodes.length,
+    baseReferenceProfileCount: [...covered.values()].filter((basis) => basis === "base_reference_other_finish").length,
     isReference: providerKey === "arquetipo",
   })).sort((left, right) => Number(right.isReference) - Number(left.isReference) || left.providerKey.localeCompare(right.providerKey, "es-CL"));
 }
