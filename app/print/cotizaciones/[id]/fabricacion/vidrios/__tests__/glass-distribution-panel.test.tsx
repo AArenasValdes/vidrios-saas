@@ -173,8 +173,8 @@ describe("GlassDistributionPanel", () => {
     expect(screen.queryByRole("button", { name: /PDF operativo/i })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(screen.getAllByRole("button", { name: /PDF simulación · NO APTO PARA CORTE/ })).toHaveLength(1);
-    fireEvent.click(screen.getByRole("button", { name: /PDF simulación · NO APTO PARA CORTE/ }));
+    expect(screen.getAllByRole("button", { name: "PDF preliminar" })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "PDF preliminar" }));
 
     await waitFor(() => expect(downloadPdfBlob).toHaveBeenCalled());
     expect(fetchMock).toHaveBeenCalledTimes(3);

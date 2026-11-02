@@ -225,8 +225,8 @@ describe("createGlassDistributionPdf", () => {
     });
     const text = pdfText(pdf);
     expect(pdf.getNumberOfPages()).toBe(1);
-    expect(text).toContain("SIMULACIÓN GEOMÉTRICA · NO OPERATIVA");
-    expect(text).toContain("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE");
+    expect(text).toContain("PRELIMINAR");
+    expect(text).not.toContain("NO APTO PARA CORTE");
     expect(text).toContain("COT-301026-002");
     expect(text).toContain("02 nov 2026");
     expect(text).toContain("Cotización creada: 30 oct 2026 · PDF generado: 02 nov 2026");
@@ -300,7 +300,7 @@ describe("createGlassDistributionPdf", () => {
     expect(text).toContain("dimensión especial");
     expect(text).toContain("seguridad para acceso lateral");
     expect(pdf.getNumberOfPages()).toBeGreaterThanOrEqual(2);
-    expect(pdf.internal.pages.slice(1).every((page) => page.join(" ").includes("NO APTO PARA CORTE"))).toBe(true);
+    expect(pdf.internal.pages.slice(1).every((page) => page.join(" ").includes("PRELIMINAR"))).toBe(true);
     if (process.env.VENTORA_PDF_PAGINATION_EXAMPLE === "1") {
       const outputDirectory = pdfExampleDirectory();
       mkdirSync(outputDirectory, { recursive: true });
@@ -395,7 +395,7 @@ describe("createGlassDistributionPdf", () => {
     await expect(createGlassDistributionPdf(input)).rejects.toThrow(/cobertura de vidrio está incompleta/i);
   });
 
-  it("permite un PDF de simulación parcial marcado NO APTO PARA CORTE y conserva las exclusiones", async () => {
+  it("permite un PDF de simulación preliminar parcial y conserva las exclusiones", async () => {
     const results = optimizeGlassCuttingBatch({ panes: [pane("1"), pane("2")], profiles: [profile], mode: "geometric_preview" });
     const input = {
       mode: "simulation" as const,
@@ -418,8 +418,9 @@ describe("createGlassDistributionPdf", () => {
     expect(validateGlassDistributionPdfInput(input)).toBeNull();
     const pdf = await createGlassDistributionPdf(input);
     const text = pdfText(pdf);
-    expect(text).toContain("SIMULACIÓN GEOMÉTRICA");
-    expect(text).toContain("NO APTO PARA CORTE");
+    expect(text).toContain("Simulación de planchas de vidrio");
+    expect(text).toContain("PRELIMINAR");
+    expect(text).not.toContain("NO APTO PARA CORTE");
     expect(text).toContain("2 unidades físicas incluidas");
     expect(text).toContain("Paño 2: Faltan medidas finales.");
     expect(text).toContain("Separación asumida de 0 mm");
@@ -472,9 +473,10 @@ describe("createGlassDistributionPdf", () => {
     const pages = pdf.internal.pages.slice(1);
 
     expect(pages.length).toBeGreaterThan(1);
-    expect(pages.every((page) => page.join(" ").includes("NO APTO PARA CORTE"))).toBe(true);
+    expect(pages.every((page) => page.join(" ").includes("PRELIMINAR"))).toBe(true);
     expect(text).toContain("Separación física sin confirmar");
-    for (const exclusion of exclusions) expect(text).toContain(exclusion.displayName);
+    expect(text.match(/de los paños indicados/g)).toHaveLength(1);
+    expect(text).toContain("V2-V23");
     if (process.env.VENTORA_PDF_PAGINATION_EXAMPLE === "1") {
       const outputDirectory = pdfExampleDirectory();
       mkdirSync(outputDirectory, { recursive: true });

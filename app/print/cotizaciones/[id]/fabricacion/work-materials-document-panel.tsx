@@ -193,7 +193,7 @@ export function WorkMaterialsDocumentPanel(props: WorkMaterialsDocumentPanelProp
           {props.quoteId ? (
             <article>
               <h3>Distribución de planchas de vidrio</h3>
-              <p>Simulación geométrica para revisión · NO APTO PARA CORTE. No sustituye la pauta operativa del taller.</p>
+              <p>Simulación geométrica preliminar. La pauta operativa del taller se revisa por separado.</p>
               <div className={s.materialDocActions}>
                 <button
                   type="button"
@@ -219,7 +219,7 @@ export function WorkMaterialsDocumentPanel(props: WorkMaterialsDocumentPanelProp
           ) : props.distributionHref ? (
             <article>
               <h3>Distribución de planchas de vidrio</h3>
-              <p>Simulación geométrica para revisión · NO APTO PARA CORTE. No sustituye la pauta operativa del taller.</p>
+              <p>Simulación geométrica preliminar. La pauta operativa del taller se revisa por separado.</p>
               <div className={s.materialDocActions}>
                 <Link href={props.distributionHref} aria-label="Preparar PDF preliminar de distribución de planchas">
                   <LuFileText aria-hidden />PDF

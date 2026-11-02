@@ -291,9 +291,9 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
         previewExclusions: latest.previewExclusions,
       });
       if (dataRevision.current !== expectedRevision || !sourceFresh || quoteId !== calculationQuoteId) throw new Error("Los paños cambiaron. Actualiza la cobertura antes de descargar la simulación.");
-      const downloadStatus = await downloadPdfBlob(pdf.output("blob"), `simulacion-vidrios-no-apto-corte-${sanitizeFileNamePart(latest.quoteCode || "cotizacion", 32)}.pdf`);
+      const downloadStatus = await downloadPdfBlob(pdf.output("blob"), `simulacion-preliminar-vidrios-${sanitizeFileNamePart(latest.quoteCode || "cotizacion", 32)}.pdf`);
       if (downloadStatus === "failed") throw new Error("No pudimos descargar la simulación. Intenta nuevamente.");
-      setDownloadNotice(downloadStatus === "downloaded" ? "PDF de simulación descargado · NO APTO PARA CORTE." : "PDF de simulación abierto · NO APTO PARA CORTE.");
+      setDownloadNotice(downloadStatus === "downloaded" ? "PDF preliminar descargado." : "PDF preliminar abierto.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No pudimos generar la simulación.");
     } finally {
@@ -436,7 +436,7 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
           <button type="button" className={s.primaryAction} disabled={!canCalculate || busy || refreshingSource || !sourceFresh} onClick={() => visibleResults ? setPreviewOpen(true) : void calculate(true)}>
             {busy ? <LuLoaderCircle className={s.spinner} aria-hidden /> : <LuEye aria-hidden />}{busy ? "Calculando vista previa…" : visibleResults ? "Ampliar vista previa" : "Generar vista previa"}
           </button>
-          {visibleResults ? <button type="button" className={s.secondaryAction} disabled={busy || refreshingSource || !sourceFresh} onClick={() => void downloadSimulationPdf()}><LuDownload aria-hidden /> PDF simulación · NO APTO PARA CORTE</button> : null}
+          {visibleResults ? <button type="button" className={s.secondaryAction} disabled={busy || refreshingSource || !sourceFresh} onClick={() => void downloadSimulationPdf()}><LuDownload aria-hidden /> PDF preliminar</button> : null}
           <Link className={s.secondaryAction} href={`/print/cotizaciones/${encodeURIComponent(quoteId)}/fabricacion/vidrios?codigo=${encodeURIComponent(currentQuoteCode)}`}>Abrir revisión técnica y PDFs</Link>
         </div>
         {autoPreview && selected ? <div className={s.inlinePreview} aria-label="Vista previa preliminar de distribución">

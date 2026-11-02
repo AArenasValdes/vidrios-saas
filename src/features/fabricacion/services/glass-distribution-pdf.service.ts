@@ -228,15 +228,8 @@ function drawSimulationHeader(pdf: jsPDF, source: GlassDistributionPdfSource) {
     "Simulación de planchas de vidrio",
     source.logoDataUrl,
     "Cliente",
-    "SIMULACIÓN GEOMÉTRICA · NO OPERATIVA"
+    "PRELIMINAR"
   );
-}
-
-function drawSimulationPageWarning(pdf: jsPDF) {
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(8.5);
-  pdf.setTextColor(176, 25, 25);
-  pdf.text("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE", PAGE_MARGIN_MM, 278, { maxWidth: CONTENT_WIDTH_MM });
 }
 
 function simulationMetrics(source: GlassDistributionPdfSource, entries: VerifiedPaneEntry[], sheets: GlassSheetPlan[]) {
@@ -318,8 +311,8 @@ function addSimulationContinuationPage(pdf: jsPDF, source: GlassDistributionPdfS
   const y = drawFabricationPdfContinuationHeader(pdf, "Simulación de planchas de vidrio", source.quoteCode, source.logoDataUrl);
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(8.5);
-  pdf.setTextColor(176, 25, 25);
-  pdf.text("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE", PAGE_MARGIN_MM, y, { maxWidth: CONTENT_WIDTH_MM });
+  pdf.setTextColor(...MUTED);
+  pdf.text("PRELIMINAR", PAGE_MARGIN_MM, y, { maxWidth: CONTENT_WIDTH_MM });
   return sectionTitle ? drawFabricationPdfSectionTitle(pdf, sectionTitle, y + 7) + 3 : y + 7;
 }
 
@@ -329,6 +322,29 @@ function simulationProvenanceLabel(source: PaneSource) {
   if (source.dimensionProvenance === "recipe_trace") return "Receta preliminar · revisar";
   if (source.dimensionProvenance === "legacy_snapshot") return "Snapshot histórico · revisar";
   return "Procedencia pendiente";
+}
+
+function compactSimulationReferences(labels: string[]) {
+  const codes = labels.map((label) => label.match(/^([A-Za-z]+)(\d+)$/));
+  if (codes.length > 1 && codes.every((match) => match && match[1] === codes[0]?.[1])) {
+    const prefix = codes[0]![1]!;
+    const numbers = codes.map((match) => Number(match![2]));
+    const ranges: string[] = [];
+    let start = numbers[0]!;
+    let previous = start;
+    for (const current of numbers.slice(1)) {
+      if (current === previous + 1) {
+        previous = current;
+        continue;
+      }
+      ranges.push(start === previous ? `${prefix}${start}` : `${prefix}${start}-${prefix}${previous}`);
+      start = current;
+      previous = current;
+    }
+    ranges.push(start === previous ? `${prefix}${start}` : `${prefix}${start}-${prefix}${previous}`);
+    return ranges.join(", ");
+  }
+  return labels.join(", ");
 }
 
 function drawSimulationDetailHeader(pdf: jsPDF, y: number) {
@@ -486,9 +502,19 @@ function drawSimulationSheet(
 }
 
 function drawSimulationNotes(pdf: jsPDF, source: GlassDistributionPdfSource, startY: number) {
+  const exclusionsByReason = new Map<string, { reason: string; references: string[] }>();
+  for (const entry of source.previewExclusions ?? []) {
+    const reasonKey = entry.reason.replace(/\bdel paño\s+\d+\b/gi, "del paño");
+    const reasonLabel = entry.reason.replace(/\bdel paño\s+\d+\b/gi, "de los paños indicados");
+    const group = exclusionsByReason.get(reasonKey) ?? { reason: reasonLabel, references: [] };
+    const label = entry.displayName || entry.componentName;
+    const genericLabel = label && /^(paño pendiente|componente excluido)\s+\d+$/i.test(label);
+    group.references.push(label && !genericLabel ? `${entry.componentCode} · ${label}` : entry.componentCode);
+    exclusionsByReason.set(reasonKey, group);
+  }
   const notices = [
     ...(source.simulationWarnings ?? []),
-    ...(source.previewExclusions ?? []).map((entry) => `${entry.componentCode}${entry.displayName ? ` · ${entry.displayName}` : entry.componentName ? ` · ${entry.componentName}` : ""}: ${entry.reason}`),
+    ...[...exclusionsByReason.values()].map(({ reason, references }) => `${compactSimulationReferences(references)}: ${reason}`),
   ];
   if (!notices.length) return startY;
   let y = startY;
@@ -515,10 +541,6 @@ async function createSimulationPdf(input: GlassDistributionPdfSource) {
     y = drawSimulationSheet(pdf, sheet, index + 1, input, sheetEntries, y);
   }
   y = drawSimulationNotes(pdf, input, y + 4);
-  for (let page = 1; page <= pdf.getNumberOfPages(); page += 1) {
-    pdf.setPage(page);
-    drawSimulationPageWarning(pdf);
-  }
   drawFabricationPdfFooters(pdf, input.quoteCode, "SIMULACIÓN DE PLANCHAS");
   return pdf;
 }
@@ -537,14 +559,14 @@ function drawSimulationNotices(pdf: jsPDF, source: GlassDistributionPdfSource, n
     let lines = pdf.splitTextToSize(`- ${notice}`, CONTENT_WIDTH_MM) as string[];
     while (lines.length > 0) {
       if (y + lineHeightMm > CONTENT_BOTTOM_MM) {
-        y = addSimulationContinuationPage(pdf, source, "Advertencias de simulación · continuación");
+        y = addSimulationContinuationPage(pdf, source, "Pendientes y supuestos · continuación");
       }
       const availableLines = Math.max(1, Math.floor((CONTENT_BOTTOM_MM - y - 2) / lineHeightMm));
       const pageLines = lines.slice(0, availableLines);
       lines = lines.slice(availableLines);
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(7.4);
-      pdf.setTextColor(176, 25, 25);
+      pdf.setTextColor(...MUTED);
       pdf.text(pageLines, PAGE_MARGIN_MM, y, { lineHeightFactor: 1 });
       y += pageLines.length * lineHeightMm + 0.2;
     }
@@ -566,8 +588,8 @@ function drawSummaryPage(pdf: jsPDF, source: GlassDistributionPdfSource, entries
   if (simulation) {
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(11);
-    pdf.setTextColor(176, 25, 25);
-    pdf.text("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE", PAGE_MARGIN_MM, y - 6, { maxWidth: CONTENT_WIDTH_MM });
+    pdf.setTextColor(...MUTED);
+    pdf.text("PRELIMINAR", PAGE_MARGIN_MM, y - 6, { maxWidth: CONTENT_WIDTH_MM });
     y += 5;
   }
   pdf.setFont("helvetica", "bold");
@@ -621,10 +643,10 @@ function drawSummaryPage(pdf: jsPDF, source: GlassDistributionPdfSource, entries
 function drawPreliminaryWarning(pdf: jsPDF, simulation = false) {
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(simulation ? 9 : 8);
-  if (simulation) pdf.setTextColor(176, 25, 25);
+  if (simulation) pdf.setTextColor(...MUTED);
   else pdf.setTextColor(...INK);
   pdf.text(simulation
-    ? "SIMULACIÓN GEOMÉTRICA — NO APTO PARA CORTE. No representa reglas físicas del taller."
+    ? "Referencia geométrica preliminar. La pauta operativa se revisa por separado."
     : "Distribución preliminar. Confirmar medidas y tolerancias con el proveedor antes de cortar.", PAGE_MARGIN_MM, 277, {
     maxWidth: CONTENT_WIDTH_MM,
   });

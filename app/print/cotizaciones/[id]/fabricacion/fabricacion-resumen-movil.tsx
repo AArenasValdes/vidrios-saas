@@ -713,7 +713,7 @@ export function FabricacionResumenMovil({
                   <div className={s.mDocumentRow}>
                     <span className={s.mDocumentCopy}>
                       <strong>Distribución de planchas de vidrio</strong>
-                      <small>Simulación · NO APTO PARA CORTE</small>
+                      <small>Simulación preliminar</small>
                     </span>
                     <button
                       type="button"

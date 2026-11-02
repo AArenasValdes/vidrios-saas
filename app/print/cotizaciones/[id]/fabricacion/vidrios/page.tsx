@@ -255,17 +255,17 @@ export default function GlassSheetOptimizationPage() {
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const groups = results.filter((result) => result.status === "feasible");
     if (calculationMode === "geometric_preview") {
-      doc.setFont("helvetica", "bold"); doc.setFontSize(18); doc.text("Simulación geométrica de vidrios", 16, 20);
-      doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("NO APTO PARA CORTE · NO APROBADA PARA FABRICACIÓN", 16, 28);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(18); doc.text("Simulación preliminar de planchas", 16, 20);
+      doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(91, 113, 138); doc.text("PRELIMINAR · REFERENCIA GEOMÉTRICA", 16, 28); doc.setTextColor(20, 30, 45);
       doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.text(`${companyName || "Ventora"} · ${quoteCode}`, 16, 35);
       const orientationNote = panes.some((pane) => !pane.technicalSpec?.pieceOrientation || pane.technicalSpec.pieceOrientation === "unknown")
         ? " · orientación pendiente tratada como fija, sin giro" : "";
-      doc.text(`Distribución geométrica calculada · separación asumida: 0 mm · corte físico pendiente${orientationNote}`, 16, 42, { maxWidth: 178 });
+      doc.text(`Referencia geométrica · separación física asumida: 0 mm${orientationNote}`, 16, 42, { maxWidth: 178 });
       let top = 54;
       for (const [sheetIndex, { sheet, result }] of allSheets.entries()) {
         if (sheetIndex > 0) { doc.addPage(); top = 20; }
         const groupPane = panes.find((pane) => pane.productId === sheet.panes[0]?.productId);
-        doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.text(`${calculationMode === "geometric_preview" ? "SIMULACIÓN · NO APTO PARA CORTE · " : ""}Plancha ${sheetIndex + 1}`, 16, top);
+        doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.text(`Plancha ${sheetIndex + 1}`, 16, top);
         doc.setFont("helvetica", "normal"); doc.setFontSize(9);
           doc.text(`${glassLabel(groupPane?.displayName ?? "Vidrio", groupPane?.technicalSpec?.thicknessMm ?? null)} · ${groupPane?.technicalSpec?.thicknessMm ?? "Espesor pendiente"} mm · ${sheet.rawSheet.widthMm} × ${sheet.rawSheet.heightMm} mm`, 16, top + 7);
         const area = { x: 22, y: top + 14, w: 166, h: 138 };
@@ -287,7 +287,7 @@ export default function GlassSheetOptimizationPage() {
             doc.text(`${pane.rect.widthMm} × ${pane.rect.heightMm} mm`, centerX, centerY + 2, { align: "center" });
           }
         }
-        doc.setDrawColor(190, 52, 43); doc.setLineWidth(0.35); doc.setLineDashPattern([1.5, 1], 0);
+        doc.setDrawColor(123, 143, 164); doc.setLineWidth(0.3); doc.setLineDashPattern([1.5, 1], 0);
         for (const step of sheet.cutSequence) {
           const line = resolveGlassCutLineGeometry(step);
           doc.line(ox + line.x1Mm * scale, oy + line.y1Mm * scale, ox + line.x2Mm * scale, oy + line.y2Mm * scale);
@@ -306,7 +306,7 @@ export default function GlassSheetOptimizationPage() {
           const lines = doc.splitTextToSize(detail, 178);
           if (detailsY + lines.length * 3.5 > 285) {
             doc.addPage();
-            doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.text("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE", 16, 14);
+            doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(91, 113, 138); doc.text("PRELIMINAR · REFERENCIA GEOMÉTRICA", 16, 14); doc.setTextColor(20, 30, 45);
             detailsY = 22;
           }
           doc.text(lines, 16, detailsY);
@@ -518,11 +518,11 @@ export default function GlassSheetOptimizationPage() {
       </details>
     </> : null}
     {results ? <section className={s.section}>
-      <div className={s.sectionHead}><div><p className={s.eyebrow}>{calculationMode === "geometric_preview" ? "Distribución geométrica" : "Pauta operativa preliminar"}</p><h2>Resultado por tipo de vidrio</h2></div><button type="button" onClick={() => void downloadPdf()} className={s.primary} disabled={calculationMode === "geometric_preview" ? !hasCompletePlan : !hasOperationalPlan}>{calculationMode === "geometric_preview" ? "Descargar simulación PDF · NO APTO PARA CORTE" : hasOperationalPlan ? "Descargar pauta operativa para proveedor" : "PDF operativo bloqueado · taller pendiente"}</button></div>
+      <div className={s.sectionHead}><div><p className={s.eyebrow}>{calculationMode === "geometric_preview" ? "Vista preliminar" : "Pauta operativa preliminar"}</p><h2>Resultado por tipo de vidrio</h2></div><button type="button" onClick={() => void downloadPdf()} className={s.primary} disabled={calculationMode === "geometric_preview" ? !hasCompletePlan : !hasOperationalPlan}>{calculationMode === "geometric_preview" ? "Descargar PDF preliminar" : hasOperationalPlan ? "Descargar pauta operativa para proveedor" : "PDF operativo bloqueado · taller pendiente"}</button></div>
       {results.map((result) => <article key={result.inputFingerprint} className={s.result}>
         <h3>{glassLabel(panes.find((pane) => pane.productId === result.sheets[0]?.panes[0]?.productId)?.displayName ?? panes.find((pane) => pane.productId === result.sheets[0]?.panes[0]?.productId)?.productId ?? "Grupo de vidrio", panes.find((pane) => pane.productId === result.sheets[0]?.panes[0]?.productId)?.technicalSpec?.thicknessMm ?? null)} · {result.sheets[0]?.rawSheet.widthMm ?? "?"} × {result.sheets[0]?.rawSheet.heightMm ?? "?"} mm</h3>
         {result.status === "feasible" ? <><div className={s.metrics}><div><span>Paños</span><strong>{result.summary.paneCount}</strong></div><div><span>Planchas</span><strong>{result.summary.sheetCount}</strong></div><div><span>Vidrio</span><strong>{fmt(result.summary.paneAreaMm2)} m²</strong></div><div><span>Aprovechamiento útil</span><strong>{result.summary.usableSheetAreaMm2 ? `${(result.summary.paneAreaMm2 / result.summary.usableSheetAreaMm2 * 100).toFixed(1)}%` : "—"}</strong></div><div><span>Superficie restante</span><strong>{fmt(result.summary.rawSheetAreaMm2 - result.summary.paneAreaMm2)} m²</strong></div>{calculationMode === "workshop" ? <><div><span>Retazos candidatos</span><strong>{fmt(result.summary.reusableRemnantsMm2)} m²</strong></div><div><span>Desperdicio estimado</span><strong>{fmt(result.summary.wasteMm2)} m²</strong></div></> : null}</div>
-          <p className={s.pending}>{calculationMode === "geometric_preview" ? "Vista geométrica informativa · NO APTO PARA CORTE" : hasOperationalPlan ? "Proceso validado para salida operativa" : "Resultado preliminar · taller pendiente; no es pauta para proveedor"}</p>
+          <p className={s.pending}>{calculationMode === "geometric_preview" ? "Referencia geométrica preliminar · revisar antes de usar en taller" : hasOperationalPlan ? "Proceso validado para salida operativa" : "Resultado preliminar · taller pendiente; no es pauta para proveedor"}</p>
           {calculationWarnings.length > 0 ? <ul className={s.previewWarnings}>{calculationWarnings.map((warning) => <li key={warning}>{warning}</li>)}</ul> : null}
           {!result.minimumSheetCountProven ? <p className={s.help}>El número de planchas es una propuesta heurística; no es una prueba de mínimo matemático.</p> : null}
           <div className={s.sheetNav} role="tablist" aria-label="Planchas"><span>Plancha:</span>{allSheets.filter((entry) => entry.result.inputFingerprint === result.inputFingerprint).map(({ sheet }, index) => <button type="button" role="tab" aria-selected={selected?.result.inputFingerprint === result.inputFingerprint && selected.sheet.sheetId === sheet.sheetId} onClick={() => setSelectedSheet(allSheets.findIndex((entry) => entry.result.inputFingerprint === result.inputFingerprint && entry.sheet.sheetId === sheet.sheetId))} key={sheet.sheetId}>{index + 1}</button>)}</div>

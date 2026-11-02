@@ -212,7 +212,7 @@ describe("direct-glass-distribution.service", () => {
     expect(createGlassDistributionPdf).toHaveBeenCalledWith(expect.objectContaining({
       mode: "simulation", quoteCode: "COT-1248", panes: expect.arrayContaining([expect.objectContaining({ componentCode: "V1", quantity: 2 })]),
     }));
-    expect(downloadPdfBlob).toHaveBeenCalledWith(expect.any(Blob), expect.stringContaining("simulacion-vidrios-no-apto-corte"));
+    expect(downloadPdfBlob).toHaveBeenCalledWith(expect.any(Blob), expect.stringContaining("simulacion-preliminar-vidrios"));
   });
 
   it("genera simulación parcial sin convertir piezas pendientes en instrucciones de corte", async () => {

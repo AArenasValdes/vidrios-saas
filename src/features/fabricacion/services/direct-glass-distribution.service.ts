@@ -210,7 +210,7 @@ export async function runDirectGlassDistributionDownload(input: {
   });
 
   const blob = pdf.output("blob");
-  const fileName = `simulacion-vidrios-no-apto-corte-${sanitizeFileNamePart(
+  const fileName = `simulacion-preliminar-vidrios-${sanitizeFileNamePart(
     calcBody.quoteCode || currentQuoteCode || "cotizacion",
     32
   )}.pdf`;
