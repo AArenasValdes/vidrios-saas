@@ -713,14 +713,14 @@ export function FabricacionResumenMovil({
                   <div className={s.mDocumentRow}>
                     <span className={s.mDocumentCopy}>
                       <strong>Distribución de planchas de vidrio</strong>
-                      <small>PDF preliminar</small>
+                      <small>Simulación · NO APTO PARA CORTE</small>
                     </span>
                     <button
                       type="button"
                       className={s.mDocumentAction}
                       onClick={glassDistribution.startDownload}
-                      disabled={glassDistribution.isGenerating || glassDistribution.isCoverageLoading || glassDistribution.coverage?.status !== "complete"}
-                      aria-label="Descargar PDF preliminar de distribución de planchas"
+                      disabled={glassDistribution.isGenerating || glassDistribution.isCoverageLoading || glassDistribution.preliminaryPaneCount === 0}
+                      aria-label="Descargar PDF de simulación geométrica no apta para corte"
                       aria-busy={glassDistribution.isGenerating}
                     >
                       {glassDistribution.isGenerating ? "Generando…" : "PDF"}
