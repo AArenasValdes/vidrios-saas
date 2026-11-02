@@ -9,7 +9,7 @@ import { resolveGlassCutLineGeometry } from "@/features/fabricacion/services/gla
 import type { GlassDistributionCoverage } from "@/features/fabricacion/services/glass-distribution-coverage.service";
 import s from "./page.module.css";
 
-type PanePreview = Omit<GlassPanePlanningUnit, "paneUnitIds" | "orientation"> & { displayName: string | null; physicalUnitCount: number; paneUnitIds?: never; orientation?: never };
+type PanePreview = Omit<GlassPanePlanningUnit, "paneUnitIds" | "orientation"> & { displayName: string | null; physicalUnitCount: number | null; paneUnitIds?: never; orientation?: never };
 type PaneDiagnostic = string;
 type Settings = {
   pieceOrientation: "" | "fixed" | "rotatable" | "grain_or_coating_directional"; sheetOrientation: "" | "fixed" | "rotatable" | "grain_or_coating_directional"; confirmManualOperations: boolean;
@@ -72,6 +72,8 @@ export default function GlassSheetOptimizationPage() {
   const companyName = search.get("empresa") || "";
   const [panes, setPanes] = useState<PanePreview[]>([]);
   const [coverage, setCoverage] = useState<GlassDistributionCoverage | null>(null);
+  // Geometric eligibility is resolved by the server, independently of fabrication recipes.
+  const [preliminaryPaneCount, setPreliminaryPaneCount] = useState(0);
   const [diagnostics, setDiagnostics] = useState<PaneDiagnostic[]>([]);
   const [calculationWarnings, setCalculationWarnings] = useState<string[]>([]);
   const [workshopProfiles, setWorkshopProfiles] = useState<Record<string, Record<string, unknown>>>({});
@@ -115,6 +117,7 @@ export default function GlassSheetOptimizationPage() {
 
   const refresh = useCallback(async () => {
     setLoading(true); setError(null); setResults(null); setResultSourceFingerprint(null); setDiagnostics([]); setCalculationWarnings([]);
+    setPreliminaryPaneCount(0);
     try {
       const response = await fetch(`/api/cotizaciones/${encodeURIComponent(id)}/optimizacion-vidrios`, { cache: "no-store" });
       const body = await response.json();
@@ -122,6 +125,7 @@ export default function GlassSheetOptimizationPage() {
       if (typeof body.quoteCode === "string") setResolvedQuoteCode(body.quoteCode);
       setPanes(body.panes as PanePreview[]);
       setCoverage(body.coverage as GlassDistributionCoverage);
+      setPreliminaryPaneCount(Number.isSafeInteger(body.preliminaryPaneCount) && body.preliminaryPaneCount > 0 ? body.preliminaryPaneCount : 0);
       setDiagnostics(Array.isArray(body.diagnostics) ? body.diagnostics.filter((item: unknown): item is string => typeof item === "string") : []);
       applyWorkshopProfiles(body.workshopProfiles, body.panes);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "No pudimos cargar los paños."); }
@@ -138,6 +142,7 @@ export default function GlassSheetOptimizationPage() {
           if (typeof body.quoteCode === "string") setResolvedQuoteCode(body.quoteCode);
           setPanes(body.panes as PanePreview[]);
           setCoverage(body.coverage as GlassDistributionCoverage);
+          setPreliminaryPaneCount(Number.isSafeInteger(body.preliminaryPaneCount) && body.preliminaryPaneCount > 0 ? body.preliminaryPaneCount : 0);
           setDiagnostics(Array.isArray(body.diagnostics) ? body.diagnostics.filter((item: unknown): item is string => typeof item === "string") : []);
           applyWorkshopProfiles(body.workshopProfiles, body.panes);
         }
@@ -174,17 +179,16 @@ export default function GlassSheetOptimizationPage() {
     && !loading && coverage?.status === "complete"
     && results?.every((result) => result.productionReadiness === "workshop_validated"));
   const selected = allSheets[Math.min(selectedSheet, Math.max(0, allSheets.length - 1))];
-  const physicalCount = panes.reduce((sum, pane) => sum + pane.physicalUnitCount, 0);
+  const eligiblePreviewPanes = panes.filter((pane) => pane.physicalUnitCount != null && pane.physicalUnitCount > 0);
+  const physicalCount = panes.reduce((sum, pane) => sum + (pane.physicalUnitCount ?? 0), 0);
   const profileProductIds = [...new Set(panes.flatMap((pane) => pane.productId ? [pane.productId] : []))];
-  const formatMissing = panes.some((pane) => !Number.isSafeInteger(pane.technicalSpec?.sheetWidthMm) || Number(pane.technicalSpec?.sheetWidthMm) <= 0
+  const formatMissing = eligiblePreviewPanes.some((pane) => !Number.isSafeInteger(pane.technicalSpec?.sheetWidthMm) || Number(pane.technicalSpec?.sheetWidthMm) <= 0
     || !Number.isSafeInteger(pane.technicalSpec?.sheetHeightMm) || Number(pane.technicalSpec?.sheetHeightMm) <= 0);
   const previewDimensionsValid = !formatMissing || (Number.isSafeInteger(Number(settings.previewSheetWidthMm)) && Number(settings.previewSheetWidthMm) > 0
     && Number.isSafeInteger(Number(settings.previewSheetHeightMm)) && Number(settings.previewSheetHeightMm) > 0);
-  const previewReady = panes.length > 0 && previewDimensionsValid && panes.every((pane) => Boolean(pane.logicalComponentId && pane.glassId && pane.productId
-    && pane.technicalSpec && !pane.technicalSpec.hasConflict && pane.technicalSpec.thicknessMm && pane.technicalSpec.category
-    && Number.isSafeInteger(pane.widthMm) && Number(pane.widthMm) > 0 && Number.isSafeInteger(pane.heightMm) && Number(pane.heightMm) > 0
-    && pane.quantity === pane.physicalUnitCount && pane.recipeStatus === "validated" && pane.dimensionProvenance !== "legacy_snapshot"
-    && pane.technicalSpec.manualCutStatus !== "not_admitted" && pane.technicalSpec.category !== "pendiente"));
+  // The GET response counts panes that passed the server-side geometric safeguards.
+  // Frozen manual measurements do not require a validated profile fabrication recipe.
+  const previewReady = preliminaryPaneCount > 0 && previewDimensionsValid;
   const configurationReady = settings.confirmManualOperations && settings.sheetSourceReference.trim() && settings.processSourceReference.trim()
     && settings.sheetOrientation !== "" && settings.pieceOrientation !== ""
     && [settings.tableWidthMm, settings.tableHeightMm, settings.top, settings.right, settings.bottom, settings.left, settings.separationMm,
@@ -465,7 +469,7 @@ export default function GlassSheetOptimizationPage() {
         <div className={s.summaryLine}><span>Formato de plancha</span><strong>{[...new Set(panes.map((pane) => pane.technicalSpec?.sheetWidthMm && pane.technicalSpec.sheetHeightMm ? `${pane.technicalSpec.sheetWidthMm} × ${pane.technicalSpec.sheetHeightMm} mm` : "Pendiente"))].join(" · ")}</strong></div>
         {formatMissing ? <div className={s.missingFormat}><p>Falta el formato en el snapshot. Ingresa ancho y alto solo para esta vista previa; no se guardarán ni modificarán los datos de la cotización.</p><label>Ancho (mm)<input inputMode="numeric" type="number" min="1" value={settings.previewSheetWidthMm} onChange={(event) => update("previewSheetWidthMm", event.target.value)} /></label><label>Alto (mm)<input inputMode="numeric" type="number" min="1" value={settings.previewSheetHeightMm} onChange={(event) => update("previewSheetHeightMm", event.target.value)} /></label></div> : null}
         {diagnostics.length > 0 ? <div className={s.reviewAction} role="status">{diagnostics.map((diagnostic) => <p key={diagnostic}>{diagnostic}</p>)}</div> : null}
-        {!previewReady ? <div className={s.reviewAction}><p>{panes.some((pane) => pane.recipeStatus !== "validated") ? "La receta debe estar validada y guardada antes de distribuir los paños." : "Falta una identidad técnica, medida congelada o existe un conflicto de especificación. Revisa la cotización; los datos comerciales no se usarán como medidas de vidrio."}</p><Link href={`/cotizaciones/${encodeURIComponent(id)}`} className={s.smallButton}>Revisar cotización</Link></div> : null}
+        {!previewReady ? <div className={s.reviewAction}><p>{preliminaryPaneCount === 0 ? "No hay paños con geometría válida para simular. Revisa las advertencias de identidad, medidas o especificación; una receta de perfiles no es necesaria para medidas manuales completas." : "Confirma un formato de plancha válido para los paños admitidos antes de generar la simulación."}</p><Link href={`/cotizaciones/${encodeURIComponent(id)}`} className={s.smallButton}>Revisar cotización</Link></div> : null}
         {error ? <p className={s.error} role="alert">{error}</p> : null}
         <button type="button" className={s.primary} onClick={() => void calculate("geometric_preview")} disabled={!previewReady || busy || loading}>{busy ? "Calculando distribución…" : "Generar distribución"}</button>
       </section>
