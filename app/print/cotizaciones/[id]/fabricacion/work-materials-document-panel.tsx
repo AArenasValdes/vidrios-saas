@@ -193,14 +193,14 @@ export function WorkMaterialsDocumentPanel(props: WorkMaterialsDocumentPanelProp
           {props.quoteId ? (
             <article>
               <h3>Distribución de planchas de vidrio</h3>
-              <p>Preparar PDF preliminar para revisar o enviar al proveedor.</p>
+              <p>Simulación geométrica para revisión · NO APTO PARA CORTE. No sustituye la pauta operativa del taller.</p>
               <div className={s.materialDocActions}>
                 <button
                   type="button"
                   onClick={glassDistribution.startDownload}
-                  disabled={glassDistribution.isGenerating || glassDistribution.isCoverageLoading || glassDistribution.coverage?.status !== "complete"}
+                  disabled={glassDistribution.isGenerating || glassDistribution.isCoverageLoading || glassDistribution.preliminaryPaneCount === 0}
                   aria-busy={glassDistribution.isGenerating}
-                  aria-label="Descargar PDF preliminar de distribución de planchas"
+                  aria-label="Descargar PDF de simulación geométrica no apta para corte"
                 >
                   {glassDistribution.isGenerating ? <LuDownload aria-hidden /> : <LuFileText aria-hidden />}
                   {glassDistribution.isGenerating ? "Generando…" : "PDF"}
@@ -219,7 +219,7 @@ export function WorkMaterialsDocumentPanel(props: WorkMaterialsDocumentPanelProp
           ) : props.distributionHref ? (
             <article>
               <h3>Distribución de planchas de vidrio</h3>
-              <p>Preparar PDF preliminar para revisar o enviar al proveedor.</p>
+              <p>Simulación geométrica para revisión · NO APTO PARA CORTE. No sustituye la pauta operativa del taller.</p>
               <div className={s.materialDocActions}>
                 <Link href={props.distributionHref} aria-label="Preparar PDF preliminar de distribución de planchas">
                   <LuFileText aria-hidden />PDF
