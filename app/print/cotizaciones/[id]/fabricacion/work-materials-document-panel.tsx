@@ -306,12 +306,14 @@ export function WorkMaterialsDocumentPanel(props: WorkMaterialsDocumentPanelProp
       {view === "all" || view === "glass-order" ? <section className={s.workDocument} data-work-document="glass-order" aria-label="Orden de vidrios">
         <Header {...props} title="Orden de vidrios" />
         <MaterialTable title="Paños identificados · revisar antes de distribuir o cortar" empty="No hay vidrio ni composición registrada para ordenar." hasRows={props.document.glassOrder.length > 0}>
-          <p>Las referencias y medidas provienen de la cotización y sus snapshots. No confirman por sí solas medidas finales ni cobertura operativa.</p>
-          <ul className={s.glassOrderMobile} aria-label="Orden de corte de vidrios">
+          <p>Las medidas finales manuales se muestran con su origen. No equivalen a aprobación física de corte ni a cobertura operativa.</p>
+          <ul className={s.glassOrderMobile} aria-label="Paños de vidrio">
             {props.document.glassOrder.map((row) => <li key={row.key}>
               <div className={s.glassOrderMobileLead}><strong>{row.paneReference}</strong><span>{row.quantity ?? "Cantidad pendiente"}{row.quantity == null ? "" : row.quantity === 1 ? " paño" : " paños"}</span></div>
               <strong className={s.glassOrderMobileType}>{row.description}</strong>
               <p>{row.measuresPending ? "Medidas pendientes" : `${formatMm(row.widthMm)} × ${formatMm(row.heightMm)}`}</p>
+              <small>{row.validationLabel}</small>
+              {row.validationWarnings.map((warning) => <small key={warning}>{warning}</small>)}
               <small>{row.thickness ? `Espesor ${row.thickness}` : "Espesor pendiente"}{row.finish ? ` · ${row.finish}` : ""}{row.composition ? ` · ${row.composition}` : ""}</small>
               {row.thicknessWarning ? <small>{row.thicknessWarning}</small> : null}
               <small>{row.componentCode} · {row.componentName}{row.code ? ` · Código vidrio ${row.code}` : ""}</small>
@@ -320,10 +322,10 @@ export function WorkMaterialsDocumentPanel(props: WorkMaterialsDocumentPanelProp
           </ul>
           <table>
             <thead><tr><th>Referencia del paño</th><th>Tipo de vidrio</th><th>Código</th><th>Ancho × alto</th><th>Cantidad</th><th>m² / paño</th><th>m² total</th></tr></thead>
-            <tbody>{props.document.glassOrder.map((row, index, rows) => <Fragment key={row.key}>{index === 0 || rows[index - 1]?.groupKey !== row.groupKey ? <tr><th colSpan={7}>{row.groupLabel}</th></tr> : null}<tr><td><strong>{row.paneReference}</strong><small>{row.componentCode} · {row.componentName}</small></td><td><strong>{row.description}</strong><small>{row.thickness ? `Espesor ${row.thickness}` : "Espesor pendiente"}{row.finish ? ` · ${row.finish}` : ""}{row.composition ? ` · ${row.composition}` : ""}</small>{row.thicknessWarning ? <small>{row.thicknessWarning}</small> : null}</td><td>{row.code ?? "—"}</td><td><strong>{row.measuresPending ? "Medidas pendientes" : `${formatMm(row.widthMm)} × ${formatMm(row.heightMm)}`}</strong></td><td><strong>{row.quantity ?? "Pendiente"}</strong></td><td>{formatM2(row.areaEachM2)}</td><td>{formatM2(row.totalM2)}</td></tr></Fragment>)}</tbody>
+            <tbody>{props.document.glassOrder.map((row, index, rows) => <Fragment key={row.key}>{index === 0 || rows[index - 1]?.groupKey !== row.groupKey ? <tr><th colSpan={7}>{row.groupLabel}</th></tr> : null}<tr><td><strong>{row.paneReference}</strong><small>{row.componentCode} · {row.componentName}</small></td><td><strong>{row.description}</strong><small>{row.validationLabel}</small>{row.validationWarnings.map((warning) => <small key={warning}>{warning}</small>)}<small>{row.thickness ? `Espesor ${row.thickness}` : "Espesor pendiente"}{row.finish ? ` · ${row.finish}` : ""}{row.composition ? ` · ${row.composition}` : ""}</small>{row.thicknessWarning ? <small>{row.thicknessWarning}</small> : null}</td><td>{row.code ?? "—"}</td><td><strong>{row.measuresPending ? "Medidas pendientes" : `${formatMm(row.widthMm)} × ${formatMm(row.heightMm)}`}</strong></td><td><strong>{row.quantity ?? "Pendiente"}</strong></td><td>{formatM2(row.areaEachM2)}</td><td>{formatM2(row.totalM2)}</td></tr></Fragment>)}</tbody>
           </table>
         </MaterialTable>
-        <p className={s.documentNote}>Las medidas provienen del snapshot técnico. No se deducen desde el vano ni se asignan paños a planchas.</p>
+        <p className={s.documentNote}>Las medidas provienen del snapshot indicado o del ingreso manual final. No se deducen desde el vano ni se asignan paños a planchas.</p>
       </section> : null}
       {view === "all" || view === "profile-cuts" ? <section className={s.workDocument} data-work-document="profile-cuts" aria-label="Pauta de cortes de perfiles">
         <Header {...props} title="Pauta de cortes de perfiles" />

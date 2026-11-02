@@ -180,7 +180,7 @@ export function buildWorkMaterialsWorkbook(XLSX: typeof XLSXModule, input: Build
       XLSX,
       input,
       "Orden de vidrios",
-      ["Grupo de vidrio", "Referencia del paño", "Tipo de vidrio", "Espesor confirmado", "Código", "Ancho (mm)", "Alto (mm)", "Cantidad", "m² por paño", "m² totales"],
+      ["Grupo de vidrio", "Referencia del paño", "Tipo de vidrio", "Espesor confirmado", "Código", "Ancho (mm)", "Alto (mm)", "Cantidad", "m² por paño", "m² totales", "Origen de medidas", "Estado y advertencias"],
       input.document.glassOrder.map((row) => [
         row.groupLabel,
         `${row.paneReference} · ${row.componentName}`,
@@ -192,10 +192,12 @@ export function buildWorkMaterialsWorkbook(XLSX: typeof XLSXModule, input: Build
         row.quantity ?? "Pendiente",
         row.areaEachM2,
         row.totalM2,
+        row.dimensionProvenance === "manual" ? "Ingreso manual final" : row.dimensionProvenance === "validated_recipe" ? "Snapshot formal de receta" : row.dimensionProvenance === "recipe_trace" ? "Geometría preliminar de receta" : row.dimensionProvenance === "legacy_snapshot" ? "Snapshot histórico" : "Pendiente",
+        [row.validationLabel, ...row.validationWarnings].filter(Boolean).join(" · "),
       ]),
-      [30, 30, 38, 20, 15, 20, 20, 14, 18, 18],
+      [30, 30, 38, 20, 15, 20, 20, 14, 18, 18, 24, 46],
       { 5: "#,##0 \"mm\"", 6: "#,##0 \"mm\"", 7: "#,##0.##", 8: "#,##0.0000 \"m²\"", 9: "#,##0.0000 \"m²\"" },
-      "Las medidas y cantidades reflejan la cotización y sus snapshots; no confirman dimensiones finales ni cobertura operativa para distribuir o cortar.",
+      "Las filas identifican snapshots técnicos o medidas finales ingresadas manualmente. El ingreso manual no es aprobación física de corte ni cobertura operativa.",
       "Referencias de paños para revisión; no es una pauta operativa de corte."
     ), "Orden de vidrios");
   } else {

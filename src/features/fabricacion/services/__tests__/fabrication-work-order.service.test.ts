@@ -71,6 +71,8 @@ function materials(): WorkMaterialsDocument {
       componentCode: "V1", componentName: "Ventana 1", paneReference: "V1 · Paño 1",
       description: "Incoloro monolítico", thickness: "5 mm", glassType: "Incoloro monolítico", snapshotThickness: "5 mm", finish: "Incoloro", composition: "monolítico",
       widthMm: 600, heightMm: 1000, quantity: 2, areaEachM2: 0.6, totalM2: 1.2, measuresPending: false,
+      dimensionProvenance: "validated_recipe", validationStatus: "eligible_for_manual_planning",
+      validationLabel: "Snapshot formal · receta validada; revisar medidas en taller", validationWarnings: [],
     }],
     hasJointCuttingPlan: true,
     pricing: { status: "partial", knownNetTotal: 11500, currency: "CLP", pricedMaterialCount: 2, pendingMaterialCount: 1, calculatedAt: "2026-10-06T10:00:00.000Z" },
@@ -107,6 +109,25 @@ function pdfExampleDirectory() {
 }
 
 describe("orden de fabricación y materiales", () => {
+  it("muestra medidas manuales en orden interna sin promoverlas a corte aprobado", () => {
+    const workMaterials = materials();
+    workMaterials.glassOrder[0] = {
+      ...workMaterials.glassOrder[0]!,
+      dimensionProvenance: "manual",
+      validationLabel: "Medida manual final · pendiente de validación de taller",
+      validationWarnings: [],
+    };
+    const order = buildFabricationWorkOrder({ summary: summary(savedWork()), materials: workMaterials, technicalCostSnapshot: savedCost() });
+    const pdf = pdfText(createFabricationWorkOrderPdf(order, {
+      companyName: "Taller", quoteCode: "COT-MANUAL", workName: "Paños fijos", issueDate: "30 oct 2026",
+    }));
+
+    expect(order.glass[0]).toMatchObject({ widthMm: 600, heightMm: 1000, quantity: 2, issue: expect.stringContaining("no es aprobación física de corte") });
+    expect(pdf).toContain("600 mm × 1.000 mm");
+    expect(pdf).toContain("Medida manual final · pendiente de validación de taller");
+    expect(pdf).toContain("no es aprobación física de corte");
+  });
+
   it("mantiene visible la advertencia de referencia Alumco histórica en resumen y PDF interno", () => {
     const cost = savedCost();
     const warning = "Alumco notas-2026-10-14 es una referencia histórica (publicada 2026-10-14, vigencia original hasta 2026-10-21); no es un precio vigente confirmado ni una cotización nueva del proveedor.";
@@ -325,7 +346,7 @@ describe("orden de fabricación y materiales", () => {
     expect(glassPdf.getNumberOfPages()).toBe(1);
     expect(glassText).toContain("Orden de vidrios");
     expect(glassText).toContain("Paños identificados");
-    expect(glassText).toMatch(/No confirman por sí solas medidas finales ni cobertura operativa/i);
+    expect(glassText).toMatch(/medidas manuales no equivalen a aprobación física del corte/i);
     expect(glassText).toContain("Espesor: 5 mm");
     expect(glassText).toContain("600 mm");
     expect(glassText).not.toContain("Plan de corte de vidrios");

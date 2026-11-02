@@ -45,6 +45,9 @@ export type WorkOrderGlass = {
   quantity: number | null;
   totalM2: number | null;
   issue: string | null;
+  dimensionProvenance?: WorkMaterialsDocument["glassOrder"][number]["dimensionProvenance"];
+  validationLabel?: string;
+  validationWarnings?: string[];
 };
 export type FabricationWorkOrder = {
   materials: WorkMaterialsDocument;
@@ -294,9 +297,12 @@ export function buildFabricationWorkOrder(input: {
     const dimensionsValid = !row.measuresPending && row.widthMm != null && row.heightMm != null && row.quantity != null && row.widthMm > 0 && row.heightMm > 0 && row.quantity > 0;
     const expectedM2 = dimensionsValid ? (row.widthMm! * row.heightMm! * row.quantity!) / 1_000_000 : null;
     const areaValid = row.totalM2 != null && Number.isFinite(row.totalM2) && row.totalM2 > 0 && expectedM2 != null && Math.abs(row.totalM2 - expectedM2) <= 0.00015;
-    const issues: string[] = [];
+    const issues: string[] = [...row.validationWarnings];
     if (!dimensionsValid) issues.push("medidas o cantidad pendientes");
     if (dimensionsValid && !areaValid) issues.push("superficie contradictoria");
+    if (row.dimensionProvenance === "manual" && dimensionsValid) {
+      issues.push("medida final ingresada manualmente; no es aprobación física de corte");
+    }
     const thickness = row.snapshotThickness === undefined ? row.thickness.trim() : row.snapshotThickness?.trim() ?? "";
     if (!thickness) issues.push("espesor pendiente");
     if (row.thicknessWarning) issues.push("conflicto de espesor");
@@ -316,6 +322,9 @@ export function buildFabricationWorkOrder(input: {
       quantity: dimensionsValid ? row.quantity : null,
       totalM2: areaValid ? row.totalM2 : null,
       issue: issues.length ? issues.join(", ") : null,
+      dimensionProvenance: row.dimensionProvenance,
+      validationLabel: row.validationLabel,
+      validationWarnings: row.validationWarnings,
     };
   });
   if (glass.length === 0) addPending("glass-order", "Orden de vidrios", "Revisar si el trabajo requiere paños de vidrio.");

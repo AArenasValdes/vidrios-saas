@@ -255,8 +255,8 @@ export default function GlassSheetOptimizationPage() {
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const groups = results.filter((result) => result.status === "feasible");
     if (calculationMode === "geometric_preview") {
-      doc.setFont("helvetica", "bold"); doc.setFontSize(18); doc.text("Plan de corte de vidrios", 16, 20);
-      doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("NO APROBADA PARA FABRICACIÓN", 16, 28);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(18); doc.text("Simulación geométrica de vidrios", 16, 20);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("NO APTO PARA CORTE · NO APROBADA PARA FABRICACIÓN", 16, 28);
       doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.text(`${companyName || "Ventora"} · ${quoteCode}`, 16, 35);
       const orientationNote = panes.some((pane) => !pane.technicalSpec?.pieceOrientation || pane.technicalSpec.pieceOrientation === "unknown")
         ? " · orientación pendiente tratada como fija, sin giro" : "";
@@ -265,7 +265,7 @@ export default function GlassSheetOptimizationPage() {
       for (const [sheetIndex, { sheet, result }] of allSheets.entries()) {
         if (sheetIndex > 0) { doc.addPage(); top = 20; }
         const groupPane = panes.find((pane) => pane.productId === sheet.panes[0]?.productId);
-        doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.text(`Plancha ${sheetIndex + 1}`, 16, top);
+        doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.text(`${calculationMode === "geometric_preview" ? "SIMULACIÓN · NO APTO PARA CORTE · " : ""}Plancha ${sheetIndex + 1}`, 16, top);
         doc.setFont("helvetica", "normal"); doc.setFontSize(9);
           doc.text(`${glassLabel(groupPane?.displayName ?? "Vidrio", groupPane?.technicalSpec?.thicknessMm ?? null)} · ${groupPane?.technicalSpec?.thicknessMm ?? "Espesor pendiente"} mm · ${sheet.rawSheet.widthMm} × ${sheet.rawSheet.heightMm} mm`, 16, top + 7);
         const area = { x: 22, y: top + 14, w: 166, h: 138 };
@@ -304,16 +304,20 @@ export default function GlassSheetOptimizationPage() {
         doc.setFontSize(7); doc.setTextColor(20, 32, 50);
         for (const detail of details) {
           const lines = doc.splitTextToSize(detail, 178);
-          if (detailsY + lines.length * 3.5 > 285) { doc.addPage(); detailsY = 20; }
+          if (detailsY + lines.length * 3.5 > 285) {
+            doc.addPage();
+            doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.text("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE", 16, 14);
+            detailsY = 22;
+          }
           doc.text(lines, 16, detailsY);
           detailsY += lines.length * 3.5;
         }
       }
-      doc.save(`plan-corte-vidrios-${sanitizeFileNamePart(quoteCode, 36)}.pdf`);
+      doc.save(`simulacion-geometrica-vidrios-${sanitizeFileNamePart(quoteCode, 36)}.pdf`);
       return;
     }
     const plannedRotation = new Map(results.flatMap((result) => result.sheets.flatMap((sheet) => sheet.panes.map((pane) => [pane.paneUnitId, pane.rotated] as const))));
-    doc.setFont("helvetica", "bold"); doc.setFontSize(22); doc.text("Plan de corte de vidrios", 16, 23);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(22); doc.text("Propuesta operativa de vidrios", 16, 23);
     doc.setFont("helvetica", "normal"); doc.setFontSize(11); doc.text(`${companyName || "Ventora"} · ${quoteCode}`, 16, 32);
     doc.setFontSize(10); doc.text("SIMULACIÓN - PENDIENTE DE VALIDACIÓN DEL TALLER", 16, 43);
     let y = 58;
@@ -445,7 +449,7 @@ export default function GlassSheetOptimizationPage() {
         y += lines.length * 4.5 + 2;
       }
     }
-    doc.save(`plan-corte-vidrios-${sanitizeFileNamePart(quoteCode, 36)}.pdf`);
+    doc.save(`propuesta-operativa-vidrios-${sanitizeFileNamePart(quoteCode, 36)}.pdf`);
   }
 
   return <main className={s.page}>
@@ -460,7 +464,7 @@ export default function GlassSheetOptimizationPage() {
     {diagnostics.length > 0 && panes.length > 0 ? <section className={s.reviewAction} role="status">{diagnostics.map((diagnostic) => <p key={diagnostic}>{diagnostic}</p>)}</section> : null}
     {panes.length > 0 ? <>
       <section className={`${s.section} ${s.overview}`}>
-        <div className={s.sectionHead}><div><p className={s.eyebrow}>Cotización · {quoteCode}</p><h2>{physicalCount} {physicalCount === 1 ? "paño" : "paños"}</h2></div><button type="button" onClick={() => void refresh()} className={s.smallButton}>Actualizar</button></div>
+        <div className={s.sectionHead}><div><p className={s.eyebrow}>Simulación de planchas · {quoteCode}</p><h2>{physicalCount} {physicalCount === 1 ? "paño" : "paños"}</h2></div><button type="button" onClick={() => void refresh()} className={s.smallButton}>Actualizar</button></div>
         <ul className={s.paneList}>{panes.map((pane, paneIndex) => <li key={`mobile-${pane.paneId}`}>
           <div><strong>{pane.componentCode} · paño {paneIndex + 1}</strong><span>{pane.widthMm ?? "?"} × {pane.heightMm ?? "?"} mm × {pane.quantity}</span></div>
           <p>{glassLabel(pane.displayName ?? pane.productId ?? "Vidrio sin identidad", pane.technicalSpec?.thicknessMm ?? null)} · {pane.technicalSpec?.thicknessMm ?? "Espesor pendiente"} mm</p>
@@ -474,7 +478,7 @@ export default function GlassSheetOptimizationPage() {
         <button type="button" className={s.primary} onClick={() => void calculate("geometric_preview")} disabled={!previewReady || busy || loading}>{busy ? "Calculando distribución…" : "Generar distribución"}</button>
       </section>
       <details className={s.advanced}>
-        <summary>Opciones avanzadas del taller</summary>
+        <summary>Preparación operativa del taller · opciones avanzadas</summary>
         <p>Estas reglas físicas no se requieren para la vista geométrica. Solo generan una propuesta operativa pendiente de revisión del taller.</p>
       <form className={s.section} onSubmit={(event) => void calculateWorkshop(event)}>
         <div className={s.sectionHead}><div><p className={s.eyebrow}>Pauta operativa</p><h2>Reglas físicas del taller</h2></div></div>

@@ -66,6 +66,10 @@ const document: WorkMaterialsDocument = {
     areaEachM2: 0.7466,
     totalM2: 1.4933,
     measuresPending: false,
+    dimensionProvenance: "manual",
+    validationStatus: "eligible_for_manual_planning",
+    validationLabel: "Medida manual final · pendiente de validación de taller",
+    validationWarnings: [],
   }],
   hasJointCuttingPlan: true,
 };
@@ -79,6 +83,17 @@ const metadata = {
 };
 
 describe("buildWorkMaterialsWorkbook", () => {
+  it("incluye origen manual y estado no operativo en la hoja Orden de vidrios", () => {
+    const workbook = buildWorkMaterialsWorkbook(XLSX, { ...metadata, kind: "glass-order" });
+    const sheet = workbook.Sheets["Orden de vidrios"]!;
+
+    expect(sheet.K8.v).toBe("Ingreso manual final");
+    expect(sheet.L8.v).toBe("Medida manual final · pendiente de validación de taller");
+    expect(sheet.F8.v).toBe(611);
+    expect(sheet.G8.v).toBe(1222);
+    expect(sheet.A10.v).toMatch(/no es aprobación física de corte ni cobertura operativa/i);
+  });
+
   it("separa la lista de materiales en hojas claras y conserva barras conjuntas", () => {
     const workbook = buildWorkMaterialsWorkbook(XLSX, { ...metadata, kind: "materials" });
 
@@ -183,7 +198,7 @@ describe("buildWorkMaterialsWorkbook", () => {
     expect(sheet.H8.v).toBe(2);
     expect(sheet.I8.z).toContain("m²");
     expect(sheet.A2.v).toContain("Referencias de paños para revisión");
-    expect(sheet.A10.v).toContain("no confirman dimensiones finales ni cobertura operativa");
+    expect(sheet.A10.v).toContain("no es aprobación física de corte ni cobertura operativa");
   });
 
   it("exporta cortes agrupados desde la pauta guardada, sin mezclar materiales ni precios alternativos", () => {

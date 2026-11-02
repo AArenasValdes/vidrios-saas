@@ -212,7 +212,12 @@ describe("/api/cotizaciones/[id]/optimizacion-vidrios", () => {
     const response = await POST(new Request("http://localhost", { method: "POST", body: JSON.stringify({ mode: "provider_pdf" }) }), route);
     const body = await response.json();
     expect(response.status).toBe(400);
-    expect(body.error).toMatch(/reglas físicas requeridas/i);
+    expect(body.error).toMatch(/modalidad operativa/i);
+    expect(body.diagnostics).toEqual(expect.arrayContaining([
+      expect.stringMatching(/orientación de los paños/i),
+      expect.stringMatching(/ancho de mesa/i),
+      expect.stringMatching(/fuente de las reglas físicas/i),
+    ]));
     expect(optimizeGlassCuttingBatch).not.toHaveBeenCalled();
   });
 
@@ -303,6 +308,7 @@ describe("/api/cotizaciones/[id]/optimizacion-vidrios", () => {
     const response = await POST(new Request("http://localhost", { method: "POST", body: JSON.stringify({ mode: "geometric_preview" }) }), route);
     const body = await response.json();
     expect(response.status).toBe(200);
+    expect(body.error).toBeUndefined();
     expect(body.mode).toBe("geometric_preview");
     expect(body.warnings).toContain("La orientación no confirmada se trata como fija: los paños no se giran.");
     expect(optimizeGlassCuttingBatch).toHaveBeenCalledWith(expect.objectContaining({
@@ -310,6 +316,19 @@ describe("/api/cotizaciones/[id]/optimizacion-vidrios", () => {
       panes: [expect.objectContaining({ orientation: "fixed", validationStatus: "requires_review" })],
       profiles: [expect.objectContaining({ sheet: expect.objectContaining({ orientation: "unknown" }), process: expect.objectContaining({ kerfOrSeparationMm: 0, supportedOperations: [] }) })],
     }));
+  });
+
+  it("explica el formato geométrico incompleto sin pedir reglas físicas del taller", async () => {
+    const response = await POST(new Request("http://localhost", {
+      method: "POST", body: JSON.stringify({ mode: "geometric_preview", sheetWidthMm: 3200 }),
+    }), route);
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toMatch(/formato indicado para la simulación geométrica/i);
+    expect(body.diagnostics).toContain("Indica ancho y alto del formato juntos.");
+    expect(body.error).not.toMatch(/reglas físicas/i);
+    expect(optimizeGlassCuttingBatch).not.toHaveBeenCalled();
   });
 
   it("permite una vista previa geométrica informativa con cobertura parcial y solo incluye geometría completa", async () => {
