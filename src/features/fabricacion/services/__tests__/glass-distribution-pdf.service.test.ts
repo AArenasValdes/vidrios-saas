@@ -145,6 +145,9 @@ describe("createGlassDistributionPdf", () => {
     expect(text).toContain("3 sobrantes geométricos");
     expect(text).toContain("Despuntes y separación asumidos: 0 mm · plancha sin giro.");
     expect(text).toContain("Confirmar medidas y tolerancias con el proveedor antes de cortar.");
+    expect(text).toContain("Documento de fabricación");
+    expect(text).toContain("Emisión");
+    expect(text).toContain("VENTORA · FABRICACIÓN · COT-QA-001");
     expect(text).not.toContain("unit-1");
     expect(text).not.toContain("logical-v1");
     expect(pdf.internal.pages.slice(1).every((page) => page.join(" ").includes("Do"))).toBe(true);
@@ -152,6 +155,155 @@ describe("createGlassDistributionPdf", () => {
       const outputDirectory = pdfExampleDirectory();
       mkdirSync(outputDirectory, { recursive: true });
       writeFileSync(path.join(outputDirectory, "qa-distribucion-1-plancha.pdf"), Buffer.from(pdf.output("arraybuffer")));
+    }
+  });
+
+  it("genera la simulación QA 1290 compacta en una página y distingue referencias, unidades y superficies", async () => {
+    const qaProfile: GlassCuttingProfile = {
+      ...profile,
+      productId: "3763",
+      sheet: { ...profile.sheet, widthMm: 4000, heightMm: 2200, orientation: "fixed", sourceReference: "Formato QA 4000 × 2200 mm" },
+      process: { ...profile.process, tableWidthMm: 4000, tableHeightMm: 2200, kerfOrSeparationMm: 0, edgeTrimMm: { top: 0, right: 0, bottom: 0, left: 0 } },
+    };
+    const panes: GlassPanePlanningUnit[] = ["F1", "F2"].map((code) => ({
+      ...pane(code),
+      quoteItemId: code === "F1" ? "4078" : "4079",
+      logicalComponentId: `${code}-logical-component`,
+      glassId: `${code}-glass`,
+      paneId: `${code}-pane-1`,
+      paneUnitIds: [`${code}-unit-1`],
+      componentCode: code,
+      componentName: "Paño fijo",
+      productId: "3763",
+      widthMm: 600,
+      heightMm: 1000,
+      quantity: 1,
+      commercialQuantity: 1,
+      technicalSpec: {
+        ...pane(code).technicalSpec,
+        productId: "3763",
+        thicknessMm: 5,
+        category: "monolitico",
+        sheetWidthMm: 4000,
+        sheetHeightMm: 2200,
+      },
+      dimensionProvenance: "manual",
+      recipeStatus: "manual",
+    }));
+    const results = optimizeGlassCuttingBatch({ panes, profiles: [qaProfile], mode: "geometric_preview" });
+    expect(results).toHaveLength(1);
+    expect(results[0]?.sheets).toHaveLength(1);
+    expect(results[0]?.calculationMode).toBe("geometric_preview");
+    expect(results[0]?.verification.passed).toBe(true);
+
+    const pdf = await createGlassDistributionPdf({
+      mode: "simulation",
+      quoteCode: "COT-301026-002",
+      clientName: "Cliente QA",
+      workName: "F1 + F2 · Paño fijo",
+      generatedAt: "2026-11-02T12:00:00-03:00",
+      logoDataUrl: await officialLogoDataUrl(),
+      coverage: { ...completeCoverage, completeReferenceCount: 2 },
+      panes: panes.map((item) => ({
+        quoteItemId: item.quoteItemId,
+        paneId: item.paneId,
+        componentCode: item.componentCode,
+        componentName: item.componentName,
+        productId: item.productId,
+        displayName: "Monolítico incoloro",
+        thicknessMm: 5,
+        category: "monolitico",
+        widthMm: 600,
+        heightMm: 1000,
+        quantity: 1,
+        physicalUnitCount: 1,
+        dimensionProvenance: "manual",
+      })),
+      results,
+      simulationWarnings: ["Despuntes y separación asumidos: 0 mm.", "Sobrantes geométricos; no representan retazos físicamente reutilizables."],
+    });
+    const text = pdfText(pdf);
+    expect(pdf.getNumberOfPages()).toBe(1);
+    expect(text).toContain("SIMULACIÓN GEOMÉTRICA · NO OPERATIVA");
+    expect(text).toContain("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE");
+    expect(text).toContain("COT-301026-002");
+    expect(text).toContain("02 nov 2026");
+    expect(text).toContain("La fecha indicada corresponde a la generación del PDF");
+    expect(text).toContain("2 de 2");
+    expect(text).toContain("Unidades físicas");
+    expect(text).toContain("4.000 × 2.200 mm");
+    expect(text).toContain("1,20 m²");
+    expect(text).toContain("13,6 %");
+    expect(text).toContain("7,60 m²");
+    expect(text).toContain("F1 · 1");
+    expect(text).toContain("F2 · 1");
+    expect(text).toContain("600 × 1.000 mm");
+    expect(text).toContain("Medida manual final");
+    expect(text).toContain("Sobrantes geométricos");
+    expect(text).not.toContain("Documento de fabricación");
+    if (process.env.VENTORA_PDF_QA1290 === "1") {
+      const outputDirectory = pdfExampleDirectory();
+      mkdirSync(outputDirectory, { recursive: true });
+      writeFileSync(path.join(outputDirectory, "qa-1290-simulacion-planchas.pdf"), Buffer.from(pdf.output("arraybuffer")));
+    }
+  });
+
+  it("mantiene separadas especificaciones de vidrio y conserva referencias y nombres largos", async () => {
+    const laminatedProfile: GlassCuttingProfile = {
+      ...profile,
+      profileId: "qa-laminated-profile",
+      productId: "qa-laminated-4mm",
+      thicknessMm: 4,
+      category: "laminado",
+      finishOrientationKey: "laminado-claro",
+      process: { ...profile.process, supportedCategories: ["laminado"], supportedThicknessesMm: [4] },
+    };
+    const monolithic = { ...pane("long-mono"), paneId: "pane-long-mono", componentCode: "VENTANA-REFERENCIA-QA-EXTENSA-001", componentName: "Paño fijo de acceso principal con dimensión especial de prueba" };
+    const laminated: GlassPanePlanningUnit = {
+      ...pane("long-laminated"),
+      quoteItemId: "item-laminated",
+      paneId: "pane-long-laminated",
+      componentCode: "PUERTA-VIDRIADA-REFERENCIA-QA-EXTENSA-002",
+      componentName: "Puerta vidriada laminada de seguridad para acceso lateral de prueba",
+      productId: "qa-laminated-4mm",
+      finishOrientationKey: "laminado-claro",
+      technicalSpec: { ...pane("long-laminated").technicalSpec, productId: "qa-laminated-4mm", thicknessMm: 4, category: "laminado" },
+    };
+    const results = optimizeGlassCuttingBatch({ panes: [monolithic, laminated], profiles: [profile, laminatedProfile], mode: "geometric_preview" });
+    expect(results).toHaveLength(2);
+    expect(results.every((result) => result.verification.passed)).toBe(true);
+    const pdf = await createGlassDistributionPdf({
+      mode: "simulation",
+      quoteCode: "COT-QA-TIPOS",
+      clientName: "Cliente QA",
+      workName: "Vidrios con especificaciones distintas",
+      generatedAt: "2026-11-02T12:00:00-03:00",
+      logoDataUrl: await officialLogoDataUrl(),
+      coverage: { ...completeCoverage, completeReferenceCount: 2 },
+      panes: [
+        { quoteItemId: monolithic.quoteItemId, paneId: monolithic.paneId, componentCode: monolithic.componentCode, componentName: monolithic.componentName, productId: monolithic.productId, displayName: "Vidrio monolítico QA", thicknessMm: 5, category: "monolitico", widthMm: monolithic.widthMm, heightMm: monolithic.heightMm, quantity: 1, physicalUnitCount: 1, dimensionProvenance: "manual" },
+        { quoteItemId: laminated.quoteItemId, paneId: laminated.paneId, componentCode: laminated.componentCode, componentName: laminated.componentName, productId: laminated.productId, displayName: "Vidrio laminado QA", thicknessMm: 4, category: "laminado", widthMm: laminated.widthMm, heightMm: laminated.heightMm, quantity: 1, physicalUnitCount: 1, dimensionProvenance: "manual" },
+      ],
+      results,
+    });
+    const text = pdfText(pdf);
+    const compactText = text.replace(/\s+/g, "");
+    expect(text).toContain("Monolítico");
+    expect(text).toContain("5 mm");
+    expect(text).toContain("Laminado");
+    expect(text).toContain("4 mm");
+    expect(text).toContain("VENTANA-REFERE");
+    expect(compactText).toContain("EXTENSA-001");
+    expect(text).toContain("PUERTA-VIDRIADA");
+    expect(compactText).toContain("EXTENSA-002");
+    expect(text).toContain("dimensión especial");
+    expect(text).toContain("seguridad para acceso lateral");
+    expect(pdf.getNumberOfPages()).toBeGreaterThanOrEqual(2);
+    expect(pdf.internal.pages.slice(1).every((page) => page.join(" ").includes("NO APTO PARA CORTE"))).toBe(true);
+    if (process.env.VENTORA_PDF_PAGINATION_EXAMPLE === "1") {
+      const outputDirectory = pdfExampleDirectory();
+      mkdirSync(outputDirectory, { recursive: true });
+      writeFileSync(path.join(outputDirectory, "qa-pdf-tipos-y-espesores.pdf"), Buffer.from(pdf.output("arraybuffer")));
     }
   });
 
@@ -286,6 +438,7 @@ describe("createGlassDistributionPdf", () => {
       quoteCode: "COT-QA-PAGINADO",
       clientName: "Cliente QA",
       workName: "Simulación de varias planchas",
+      logoDataUrl: await officialLogoDataUrl(),
       coverage: {
         status: "partial" as const,
         completeReferenceCount: 4,
@@ -317,10 +470,15 @@ describe("createGlassDistributionPdf", () => {
     const text = pdfText(pdf);
     const pages = pdf.internal.pages.slice(1);
 
-    expect(pages.length).toBeGreaterThan(2);
+    expect(pages.length).toBeGreaterThan(1);
     expect(pages.every((page) => page.join(" ").includes("NO APTO PARA CORTE"))).toBe(true);
     expect(text).toContain("Separación física sin confirmar");
     for (const exclusion of exclusions) expect(text).toContain(exclusion.displayName);
+    if (process.env.VENTORA_PDF_PAGINATION_EXAMPLE === "1") {
+      const outputDirectory = pdfExampleDirectory();
+      mkdirSync(outputDirectory, { recursive: true });
+      writeFileSync(path.join(outputDirectory, "qa-pdf-paginacion-extensa.pdf"), Buffer.from(pdf.output("arraybuffer")));
+    }
   });
 
   it("rechaza en el generador PDF un resultado geométrico aunque la cobertura esté completa", async () => {

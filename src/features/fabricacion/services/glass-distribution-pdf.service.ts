@@ -16,6 +16,8 @@ export type GlassDistributionPdfSource = {
   quoteCode: string;
   clientName: string;
   workName: string;
+  generatedAt?: Date | string;
+  quoteCreatedAt?: Date | string | null;
   logoDataUrl?: string | null;
   coverage: GlassDistributionCoverage;
   simulationWarnings?: string[];
@@ -34,6 +36,7 @@ export type GlassDistributionPdfSource = {
     heightMm?: number | null;
     quantity?: number | null;
     physicalUnitCount?: number | null;
+    dimensionProvenance?: string | null;
   }>;
   results: GlassCuttingResult[];
 };
@@ -66,7 +69,7 @@ type SheetRow = { reference: string; component: string; dimensions: string; quan
 
 function shortComponentCode(value: string, index: number) {
   const clean = value.trim();
-  return clean && clean.length <= 22 && !/^[0-9a-f-]{28,}$/i.test(clean) ? clean : `Componente ${index + 1}`;
+  return clean && !/^[0-9a-f-]{28,}$/i.test(clean) ? clean : `Componente ${index + 1}`;
 }
 
 function sourceForPlannedPane(pane: GlassPlannedPane, sources: PaneSource[]) {
@@ -185,12 +188,339 @@ function buildTypeGroups(input: GlassDistributionPdfSource, entries: VerifiedPan
   return [...groups.values()];
 }
 
-export function calculateGlassDistributionPlanSize(sheetWidthMm: number, sheetHeightMm: number, maxWidthMm = CONTENT_WIDTH_MM) {
+export function calculateGlassDistributionPlanSize(
+  sheetWidthMm: number,
+  sheetHeightMm: number,
+  maxWidthMm = CONTENT_WIDTH_MM,
+  maxHeightMm = GLASS_DISTRIBUTION_MAX_PLAN_HEIGHT_MM
+) {
   if (!Number.isFinite(sheetWidthMm) || !Number.isFinite(sheetHeightMm) || sheetWidthMm <= 0 || sheetHeightMm <= 0) {
     return { widthMm: 0, heightMm: 0, scale: 0 };
   }
-  const scale = Math.min(maxWidthMm / sheetWidthMm, GLASS_DISTRIBUTION_MAX_PLAN_HEIGHT_MM / sheetHeightMm);
+  const scale = Math.min(maxWidthMm / sheetWidthMm, maxHeightMm / sheetHeightMm);
   return { widthMm: sheetWidthMm * scale, heightMm: sheetHeightMm * scale, scale };
+}
+
+function dateLabel(value: Date | string | null | undefined, fallback: string) {
+  const date = value instanceof Date ? value : value ? new Date(value) : null;
+  if (!date || !Number.isFinite(date.getTime())) return fallback;
+  return new Intl.DateTimeFormat("es-CL", { day: "2-digit", month: "short", year: "numeric" }).format(date);
+}
+
+function formatAreaM2(value: number) {
+  return new Intl.NumberFormat("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+}
+
+function simulationMetadata(source: GlassDistributionPdfSource) {
+  return {
+    companyName: source.clientName || "Cliente",
+    quoteCode: source.quoteCode,
+    workName: source.workName,
+    issueDate: dateLabel(source.generatedAt ?? new Date(), "No disponible"),
+    issueDateLabel: "PDF generado",
+  };
+}
+
+function drawSimulationHeader(pdf: jsPDF, source: GlassDistributionPdfSource) {
+  return drawFabricationPdfHeader(
+    pdf,
+    simulationMetadata(source),
+    "Simulación de planchas de vidrio",
+    source.logoDataUrl,
+    "Cliente",
+    "SIMULACIÓN GEOMÉTRICA · NO OPERATIVA"
+  );
+}
+
+function drawSimulationPageWarning(pdf: jsPDF) {
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(8.5);
+  pdf.setTextColor(176, 25, 25);
+  pdf.text("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE", PAGE_MARGIN_MM, 278, { maxWidth: CONTENT_WIDTH_MM });
+}
+
+function simulationMetrics(source: GlassDistributionPdfSource, entries: VerifiedPaneEntry[], sheets: GlassSheetPlan[]) {
+  const includedReferences = new Set(entries.map((entry) => paneSourceKey(entry.source))).size;
+  const totalReferences = source.coverage.completeReferenceCount + source.coverage.pendingReferenceCount;
+  const usedAreaMm2 = entries.reduce((sum, entry) => sum + entry.planned.rect.widthMm * entry.planned.rect.heightMm, 0);
+  const sheetAreaMm2 = sheets.reduce((sum, sheet) => sum + sheet.rawSheet.widthMm * sheet.rawSheet.heightMm, 0);
+  const remainderMm2 = Math.max(0, sheetAreaMm2 - usedAreaMm2);
+  return {
+    includedReferences,
+    totalReferences,
+    units: entries.length,
+    sheetCount: sheets.length,
+    usedAreaMm2,
+    sheetAreaMm2,
+    utilizationPct: sheetAreaMm2 > 0 ? (usedAreaMm2 / sheetAreaMm2) * 100 : 0,
+    remainderMm2,
+  };
+}
+
+function drawSimulationOverview(
+  pdf: jsPDF,
+  source: GlassDistributionPdfSource,
+  entries: VerifiedPaneEntry[],
+  sheets: GlassSheetPlan[]
+) {
+  let y = drawSimulationHeader(pdf, source);
+  const metrics = simulationMetrics(source, entries, sheets);
+  const columns = [PAGE_MARGIN_MM, PAGE_MARGIN_MM + CONTENT_WIDTH_MM / 3, PAGE_MARGIN_MM + (CONTENT_WIDTH_MM * 2) / 3];
+  const values = [
+    ["Referencias incluidas", `${metrics.includedReferences} de ${metrics.totalReferences}`],
+    ["Unidades físicas", formatNumber(metrics.units, 0)],
+    ["Planchas en propuesta", formatNumber(metrics.sheetCount, 0)],
+    ["Vidrio solicitado", `${formatAreaM2(metrics.usedAreaMm2 / 1_000_000)} m²`],
+    ["Aprovechamiento geométrico", `${formatNumber(metrics.utilizationPct, 1)} %`],
+    ["Restante geométrico estimado", `${formatAreaM2(metrics.remainderMm2 / 1_000_000)} m²`],
+  ];
+
+  pdf.setDrawColor(...RULE);
+  pdf.setLineWidth(0.25);
+  pdf.line(PAGE_MARGIN_MM, y, PAGE_WIDTH_MM - PAGE_MARGIN_MM, y);
+  y += 4;
+  values.forEach(([label, value], index) => {
+    const row = index < 3 ? 0 : 1;
+    const column = index % 3;
+    const x = columns[column]! + 2;
+    const top = y + row * 13;
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(7.2);
+    pdf.setTextColor(...MUTED);
+    pdf.text(label!, x, top + 3);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9.2);
+    pdf.setTextColor(...INK);
+    pdf.text(value!, x, top + 9);
+  });
+  y += 27;
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(7.2);
+  pdf.setTextColor(...MUTED);
+  const dateNote = source.quoteCreatedAt
+    ? `Cotización creada: ${dateLabel(source.quoteCreatedAt, "fecha no disponible")} · PDF generado: ${dateLabel(source.generatedAt ?? new Date(), "fecha no disponible")}`
+    : `La fecha indicada corresponde a la generación del PDF, no a la fecha de creación de la cotización.`;
+  pdf.text(dateNote, PAGE_MARGIN_MM, y, { maxWidth: CONTENT_WIDTH_MM });
+  y += 4;
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(7.2);
+  pdf.setTextColor(...MUTED);
+  const excludedCount = source.previewExclusions?.length ?? 0;
+  pdf.text(`Simulación: ${metrics.units} unidades físicas incluidas · ${excludedCount} referencias excluidas de ${metrics.totalReferences}.`, PAGE_MARGIN_MM, y, { maxWidth: CONTENT_WIDTH_MM });
+  y += 4;
+  pdf.setDrawColor(...RULE);
+  pdf.line(PAGE_MARGIN_MM, y, PAGE_WIDTH_MM - PAGE_MARGIN_MM, y);
+  return y + 4;
+}
+
+function addSimulationContinuationPage(pdf: jsPDF, source: GlassDistributionPdfSource, sectionTitle?: string) {
+  pdf.addPage("a4", "portrait");
+  const y = drawFabricationPdfContinuationHeader(pdf, "Simulación de planchas de vidrio", source.quoteCode, source.logoDataUrl);
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(8.5);
+  pdf.setTextColor(176, 25, 25);
+  pdf.text("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE", PAGE_MARGIN_MM, y, { maxWidth: CONTENT_WIDTH_MM });
+  return sectionTitle ? drawFabricationPdfSectionTitle(pdf, sectionTitle, y + 7) + 3 : y + 7;
+}
+
+function simulationProvenanceLabel(source: PaneSource) {
+  if (source.dimensionProvenance === "manual") return "Medida manual final";
+  if (source.dimensionProvenance === "validated_recipe") return "Geometría de receta · revisar";
+  if (source.dimensionProvenance === "recipe_trace") return "Receta preliminar · revisar";
+  if (source.dimensionProvenance === "legacy_snapshot") return "Snapshot histórico · revisar";
+  return "Procedencia pendiente";
+}
+
+function drawSimulationDetailHeader(pdf: jsPDF, y: number) {
+  const columns = { reference: PAGE_MARGIN_MM + 1, component: 41, glass: 83, dimensions: 119, units: 156, origin: 171 };
+  pdf.setFillColor(...PALE);
+  pdf.rect(PAGE_MARGIN_MM, y, CONTENT_WIDTH_MM, 7, "F");
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(7.1);
+  pdf.setTextColor(...INK);
+  pdf.text("Ref.", columns.reference, y + 4.8);
+  pdf.text("Componente", columns.component, y + 4.8);
+  pdf.text("Vidrio", columns.glass, y + 4.8);
+  pdf.text("Medidas finales", columns.dimensions, y + 4.8);
+  pdf.text("Unid.", columns.units, y + 4.8);
+  pdf.text("Procedencia", columns.origin, y + 4.8);
+  return y + 7;
+}
+
+function drawSimulationDetailRows(
+  pdf: jsPDF,
+  entries: VerifiedPaneEntry[],
+  startY: number,
+  sheetNumber: number,
+  source: GlassDistributionPdfSource
+) {
+  const columns = { reference: PAGE_MARGIN_MM + 1, component: 41, glass: 83, dimensions: 119, units: 156, origin: 171 };
+  let y = drawSimulationDetailHeader(pdf, startY);
+  for (const [index, entry] of entries.entries()) {
+    const pane = entry.source;
+    const reference = `${shortComponentCode(pane.componentCode, index)} · ${entry.ordinal}`;
+    const component = pane.componentName ? `${shortComponentCode(pane.componentCode, index)} · ${pane.componentName}` : shortComponentCode(pane.componentCode, index);
+    const category = pane.category ? CATEGORY_LABELS[pane.category] ?? pane.category : "Tipo pendiente";
+    const glass = `${formatGlassDisplayName(pane.displayName, pane.thicknessMm)} · ${category}${pane.thicknessMm == null ? "" : ` · ${formatNumber(pane.thicknessMm, 0)} mm`}`;
+    const dimensions = `${formatNumber(entry.planned.rect.widthMm, 0)} × ${formatNumber(entry.planned.rect.heightMm, 0)} mm`;
+    const origin = simulationProvenanceLabel(pane);
+    const cellLines = [
+      pdf.splitTextToSize(reference, 24) as string[],
+      pdf.splitTextToSize(component, 40) as string[],
+      pdf.splitTextToSize(glass, 34) as string[],
+      [dimensions],
+      ["1"],
+      pdf.splitTextToSize(origin, 24) as string[],
+    ];
+    const rowHeight = Math.max(8.5, Math.max(...cellLines.map((lines) => lines.length)) * 3.4 + 3);
+    if (y + rowHeight > CONTENT_BOTTOM_MM) {
+      y = addSimulationContinuationPage(pdf, source, `Plancha ${sheetNumber} · detalle de paños`);
+      y = drawSimulationDetailHeader(pdf, y);
+    }
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(7.2);
+    pdf.setTextColor(...INK);
+    const xs = [columns.reference, columns.component, columns.glass, columns.dimensions, columns.units, columns.origin];
+    cellLines.forEach((lines, cellIndex) => pdf.text(lines, xs[cellIndex]!, y + 4.1, { lineHeightFactor: 1.05, maxWidth: cellIndex === 4 ? 10 : undefined }));
+    pdf.setDrawColor(...RULE);
+    pdf.line(PAGE_MARGIN_MM, y + rowHeight, PAGE_WIDTH_MM - PAGE_MARGIN_MM, y + rowHeight);
+    y += rowHeight;
+  }
+  return y;
+}
+
+function drawSimulationSheet(
+  pdf: jsPDF,
+  sheet: GlassSheetPlan,
+  sheetNumber: number,
+  source: GlassDistributionPdfSource,
+  entries: VerifiedPaneEntry[],
+  startY: number
+) {
+  const metaSpace = 34 + Math.min(entries.length, 5) * 9;
+  const availablePlanHeight = Math.max(42, Math.min(GLASS_DISTRIBUTION_MAX_PLAN_HEIGHT_MM, CONTENT_BOTTOM_MM - startY - metaSpace));
+  const drawing = calculateGlassDistributionPlanSize(sheet.rawSheet.widthMm, sheet.rawSheet.heightMm, CONTENT_WIDTH_MM, availablePlanHeight);
+  const estimated = 12 + drawing.heightMm + 16 + Math.min(entries.length, 5) * 9;
+  let y = startY;
+  if (y + estimated > CONTENT_BOTTOM_MM && y > PAGE_CONTENT_TOP_MM + 10) {
+    y = addSimulationContinuationPage(pdf, source);
+    return drawSimulationSheet(pdf, sheet, sheetNumber, source, entries, y);
+  }
+
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(9.1);
+  pdf.setTextColor(...INK);
+  pdf.text(`Plancha ${sheetNumber} · ${formatNumber(sheet.rawSheet.widthMm, 0)} × ${formatNumber(sheet.rawSheet.heightMm, 0)} mm`, PAGE_MARGIN_MM, y + 4);
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(7.5);
+  pdf.setTextColor(...MUTED);
+  pdf.text("Ubicación geométrica; no indica secuencia de corte.", PAGE_WIDTH_MM - PAGE_MARGIN_MM, y + 4, { align: "right" });
+  y += 8;
+
+  const planX = (PAGE_WIDTH_MM - drawing.widthMm) / 2;
+  const planY = y;
+  pdf.setFillColor(250, 251, 253);
+  pdf.setDrawColor(...INK);
+  pdf.setLineWidth(0.5);
+  pdf.rect(planX, planY, drawing.widthMm, drawing.heightMm, "FD");
+  for (const [index, remnant] of sheet.remnants.entries()) {
+    const x = planX + remnant.rect.xMm * drawing.scale;
+    const top = planY + remnant.rect.yMm * drawing.scale;
+    const width = remnant.rect.widthMm * drawing.scale;
+    const height = remnant.rect.heightMm * drawing.scale;
+    const shade = index % 2 === 0 ? 235 : 226;
+    pdf.setFillColor(shade, shade, shade);
+    pdf.setDrawColor(135, 147, 160);
+    pdf.setLineWidth(0.3);
+    pdf.rect(x, top, width, height, "FD");
+  }
+  for (const [index, planned] of sheet.panes.entries()) {
+    const x = planX + planned.rect.xMm * drawing.scale;
+    const top = planY + planned.rect.yMm * drawing.scale;
+    const width = planned.rect.widthMm * drawing.scale;
+    const height = planned.rect.heightMm * drawing.scale;
+    pdf.setFillColor(index % 2 === 0 ? 225 : 235, index % 2 === 0 ? 237 : 243, index % 2 === 0 ? 249 : 251);
+    pdf.setDrawColor(...INK);
+    pdf.setLineWidth(0.4);
+    pdf.rect(x, top, width, height, "FD");
+    if (width >= 20 && height >= 18) {
+      const entry = entries[index];
+      const rawCode = entry ? shortComponentCode(entry.source.componentCode, index) : `Paño ${index + 1}`;
+      const displayCode = rawCode.length > 12 ? `${rawCode.slice(0, 10)}…` : rawCode;
+      const label = entry ? `${displayCode} · ${entry.ordinal}` : displayCode;
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(6.6);
+      pdf.setTextColor(...INK);
+      pdf.text(label, x + width / 2, top + height / 2 - 1, { align: "center", maxWidth: width - 2 });
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(5.8);
+      pdf.text(`${formatNumber(planned.rect.widthMm, 0)} × ${formatNumber(planned.rect.heightMm, 0)}`, x + width / 2, top + height / 2 + 3, { align: "center", maxWidth: width - 2 });
+    }
+  }
+  y = planY + drawing.heightMm + 4;
+  const usedMm2 = sheet.areas.panesMm2;
+  const remnantMm2 = Math.max(0, sheet.rawSheet.widthMm * sheet.rawSheet.heightMm - usedMm2);
+  pdf.setFillColor(225, 237, 249);
+  pdf.setDrawColor(...INK);
+  pdf.rect(PAGE_MARGIN_MM, y, 3, 3, "FD");
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(6.9);
+  pdf.setTextColor(...MUTED);
+  pdf.text("Vidrio solicitado", PAGE_MARGIN_MM + 4, y + 2.6);
+  pdf.setFillColor(235, 235, 235);
+  pdf.setDrawColor(135, 147, 160);
+  pdf.rect(PAGE_MARGIN_MM + 34, y, 3, 3, "FD");
+  pdf.text("Sobrante geométrico estimado", PAGE_MARGIN_MM + 38, y + 2.6);
+  y += 5;
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(7.8);
+  pdf.setTextColor(...INK);
+  pdf.text(`${formatAreaM2(usedMm2 / 1_000_000)} m² de vidrio solicitado`, PAGE_MARGIN_MM, y + 3);
+  pdf.setFont("helvetica", "normal");
+  pdf.setTextColor(...MUTED);
+  pdf.text(`${formatAreaM2(remnantMm2 / 1_000_000)} m² restantes estimados`, PAGE_WIDTH_MM - PAGE_MARGIN_MM, y + 3, { align: "right" });
+  y += 7;
+  const sheetEntries = entries.filter((entry) => sheet.panes.some((planned) => planned.paneUnitId === entry.planned.paneUnitId));
+  y = drawSimulationDetailRows(pdf, sheetEntries, y, sheetNumber, source);
+  return y;
+}
+
+function drawSimulationNotes(pdf: jsPDF, source: GlassDistributionPdfSource, startY: number) {
+  const notices = [
+    ...(source.simulationWarnings ?? []),
+    ...(source.previewExclusions ?? []).map((entry) => `${entry.componentCode}${entry.displayName ? ` · ${entry.displayName}` : entry.componentName ? ` · ${entry.componentName}` : ""}: ${entry.reason}`),
+  ];
+  if (!notices.length) return startY;
+  let y = startY;
+  const headingHeight = 9;
+  if (y + headingHeight > CONTENT_BOTTOM_MM) y = addSimulationContinuationPage(pdf, source, "Supuestos y exclusiones");
+  else {
+    y = drawFabricationPdfSectionTitle(pdf, "Supuestos y exclusiones", y + 2);
+  }
+  return drawSimulationNotices(pdf, source, notices, y);
+}
+
+async function createSimulationPdf(input: GlassDistributionPdfSource) {
+  const validationError = validateGlassDistributionPdfInput(input);
+  if (validationError) throw new Error(validationError);
+  const { jsPDF } = await import("jspdf");
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const sheets = input.results.flatMap((result) => result.sheets);
+  const entries = buildVerifiedEntries(input);
+  let y = drawSimulationOverview(pdf, input, entries, sheets);
+  for (const [index, sheet] of sheets.entries()) {
+    const sheetEntries = entries.filter((entry) => sheet.panes.some((pane) => pane.paneUnitId === entry.planned.paneUnitId));
+    const est = 13 + calculateGlassDistributionPlanSize(sheet.rawSheet.widthMm, sheet.rawSheet.heightMm).heightMm + Math.min(sheetEntries.length, 5) * 9 + 18;
+    if (y + est > CONTENT_BOTTOM_MM) y = addSimulationContinuationPage(pdf, input);
+    y = drawSimulationSheet(pdf, sheet, index + 1, input, sheetEntries, y);
+  }
+  y = drawSimulationNotes(pdf, input, y + 4);
+  for (let page = 1; page <= pdf.getNumberOfPages(); page += 1) {
+    pdf.setPage(page);
+    drawSimulationPageWarning(pdf);
+  }
+  drawFabricationPdfFooters(pdf, input.quoteCode, "SIMULACIÓN DE PLANCHAS");
+  return pdf;
 }
 
 function addContinuationPage(pdf: jsPDF, title: string, quoteCode: string, logoDataUrl?: string | null, sectionTitle?: string) {
@@ -200,27 +530,23 @@ function addContinuationPage(pdf: jsPDF, title: string, quoteCode: string, logoD
   return y;
 }
 
-function drawSimulationNotices(pdf: jsPDF, source: GlassDistributionPdfSource, notices: string[], startY: number, pageTitle: string) {
+function drawSimulationNotices(pdf: jsPDF, source: GlassDistributionPdfSource, notices: string[], startY: number) {
   let y = startY;
+  const lineHeightMm = 3.35;
   for (const notice of notices) {
     let lines = pdf.splitTextToSize(`- ${notice}`, CONTENT_WIDTH_MM) as string[];
     while (lines.length > 0) {
-      if (y + 4 > CONTENT_BOTTOM_MM) {
-        y = addContinuationPage(pdf, pageTitle, source.quoteCode, source.logoDataUrl, "Advertencias de simulación · continuación");
-        pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(9);
-        pdf.setTextColor(176, 25, 25);
-        pdf.text("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE", PAGE_MARGIN_MM, y, { maxWidth: CONTENT_WIDTH_MM });
-        y += 5;
+      if (y + lineHeightMm > CONTENT_BOTTOM_MM) {
+        y = addSimulationContinuationPage(pdf, source, "Advertencias de simulación · continuación");
       }
-      const availableLines = Math.max(1, Math.floor((CONTENT_BOTTOM_MM - y - 2) / 3.8));
+      const availableLines = Math.max(1, Math.floor((CONTENT_BOTTOM_MM - y - 2) / lineHeightMm));
       const pageLines = lines.slice(0, availableLines);
       lines = lines.slice(availableLines);
       pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(8);
+      pdf.setFontSize(7.4);
       pdf.setTextColor(176, 25, 25);
-      pdf.text(pageLines, PAGE_MARGIN_MM, y, { lineHeightFactor: 1.05 });
-      y += pageLines.length * 3.8 + 1;
+      pdf.text(pageLines, PAGE_MARGIN_MM, y, { lineHeightFactor: 1 });
+      y += pageLines.length * lineHeightMm + 0.2;
     }
   }
   pdf.setTextColor(...INK);
@@ -266,9 +592,9 @@ function drawSummaryPage(pdf: jsPDF, source: GlassDistributionPdfSource, entries
   if (simulation) {
     const notices = [
       ...(source.simulationWarnings ?? []),
-      ...(source.previewExclusions ?? []).map((entry) => `${entry.componentCode}${entry.displayName ? ` · ${entry.displayName}` : ""}: ${entry.reason}`),
+    ...(source.previewExclusions ?? []).map((entry) => `${entry.componentCode}${entry.displayName ? ` · ${entry.displayName}` : entry.componentName ? ` · ${entry.componentName}` : ""}: ${entry.reason}`),
     ];
-    y = drawSimulationNotices(pdf, source, notices, y, pageTitle);
+    y = drawSimulationNotices(pdf, source, notices, y);
   }
   const groups = buildTypeGroups(source, entries);
   pdf.setFont("helvetica", "normal");
@@ -500,6 +826,10 @@ function estimateSheetContentHeight(sheet: GlassSheetPlan) {
 
 export async function createGlassDistributionPdf(input: GlassDistributionPdfSource) {
   if (!input.mode) input = { ...input, mode: "provider" };
+  if (input.mode === "simulation") {
+    input = { ...input, generatedAt: input.generatedAt ?? new Date() };
+    return createSimulationPdf(input);
+  }
   const validationError = validateGlassDistributionPdfInput(input);
   if (validationError) throw new Error(validationError);
   const { jsPDF } = await import("jspdf");
@@ -525,12 +855,6 @@ export async function createGlassDistributionPdf(input: GlassDistributionPdfSour
     pdf.addPage("a4", "portrait");
     drawSheet(pdf, sheet, index + 1, sheets.length, input, paneOrdinals);
   });
-  if (input.mode === "simulation") {
-    for (let page = 1; page <= pdf.getNumberOfPages(); page += 1) {
-      pdf.setPage(page);
-      drawPreliminaryWarning(pdf, true);
-    }
-  }
   drawFabricationPdfFooters(pdf, input.quoteCode);
   return pdf;
 }

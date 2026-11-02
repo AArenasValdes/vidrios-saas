@@ -61,6 +61,7 @@ export function mapGlassDistributionPdfPanes(panes: GlassDistributionPane[]): Gl
     heightMm: pane.heightMm,
     quantity: pane.quantity,
     physicalUnitCount: pane.physicalUnitCount,
+    dimensionProvenance: pane.dimensionProvenance,
   }));
 }
 
