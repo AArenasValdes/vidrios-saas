@@ -62,7 +62,7 @@ describe("GlassSheetOptimizationPage: geometría manual sin receta", () => {
     const fetchMock = mockQuote([manualPane("F1"), manualPane("F2")], 2);
     render(<GlassSheetOptimizationPage />);
 
-    const preview = screen.getByRole("button", { name: "Generar distribución" });
+    const preview = await screen.findByRole("button", { name: "Generar distribución" });
     await waitFor(() => expect(preview).toBeEnabled());
     expect(screen.getByText("1,2 m²")).toBeInTheDocument();
     expect(screen.queryByText(/La receta debe estar validada y guardada/)).not.toBeInTheDocument();
