@@ -192,7 +192,7 @@ describe("direct-glass-distribution.service", () => {
       generatedFrom: ["fingerprint-1"],
       results: [{ status: "feasible", verification: { passed: true }, sheets: [{ panes: [{ paneUnitId: "unit-1" }, { paneUnitId: "unit-2" }] }] }],
     };
-    const fetchMock = jest.fn(async () => ({ ok: true, json: async () => response }));
+    const fetchMock = jest.fn(async (_url: string, _init?: RequestInit) => ({ ok: true, json: async () => response }));
     global.fetch = fetchMock as unknown as typeof fetch;
     return fetchMock;
   }
