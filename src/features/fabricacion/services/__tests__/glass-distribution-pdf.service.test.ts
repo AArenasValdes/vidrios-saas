@@ -202,6 +202,7 @@ describe("createGlassDistributionPdf", () => {
       clientName: "Cliente QA",
       workName: "F1 + F2 · Paño fijo",
       generatedAt: "2026-11-02T12:00:00-03:00",
+      quoteCreatedAt: "2026-10-30T09:00:00-03:00",
       logoDataUrl: await officialLogoDataUrl(),
       coverage: { ...completeCoverage, completeReferenceCount: 2 },
       panes: panes.map((item) => ({
@@ -228,7 +229,7 @@ describe("createGlassDistributionPdf", () => {
     expect(text).toContain("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE");
     expect(text).toContain("COT-301026-002");
     expect(text).toContain("02 nov 2026");
-    expect(text).toContain("La fecha indicada corresponde a la generación del PDF");
+    expect(text).toContain("Cotización creada: 30 oct 2026 · PDF generado: 02 nov 2026");
     expect(text).toContain("2 de 2");
     expect(text).toContain("Unidades físicas");
     expect(text).toContain("4.000 × 2.200 mm");
