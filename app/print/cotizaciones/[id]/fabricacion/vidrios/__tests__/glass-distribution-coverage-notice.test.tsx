@@ -49,6 +49,36 @@ const coverage = {
 };
 
 describe("GlassDistributionCoverageNotice", () => {
+  it("separa geometría completa de cobertura operativa pendiente", () => {
+    const operationalPending = {
+      ...coverage,
+      status: "partial" as const,
+      completeReferenceCount: 0,
+      pendingReferenceCount: 1,
+      pendingReferences: [{
+        quoteItemId: "item-1",
+        paneId: "logical-f1:glass-1",
+        componentCode: "F1",
+        componentName: "Paño fijo",
+        displayName: "Float 5 mm",
+        reason: "Falta validación técnica para taller.",
+      }],
+    };
+    render(<GlassDistributionCoverageNotice
+      quoteId="quote-1"
+      coverage={operationalPending}
+      previewablePaneIds={["item-1|logical-f1:glass-1"]}
+      previewableUnitCount={1}
+    />);
+
+    expect(screen.getByText("Simulación geométrica completa")).toBeInTheDocument();
+    expect(screen.getByText("1 referencia incluida · 1 unidad física")).toBeInTheDocument();
+    expect(screen.getByText("Preparación operativa del taller")).toBeInTheDocument();
+    expect(screen.getByText("0 referencias con cobertura completa · 1 pendiente")).toBeInTheDocument();
+    expect(screen.queryByText(/referencia requiere medidas o revisión/)).not.toBeInTheDocument();
+    expect(screen.getByText(/no habilita documentos operativos/)).toBeInTheDocument();
+  });
+
   it("abre el editor en la misma pantalla, agrupa paños por componente y guarda las medidas", async () => {
     const onSaveMeasurements = jest.fn().mockResolvedValue(undefined);
     render(
@@ -61,7 +91,7 @@ describe("GlassDistributionCoverageNotice", () => {
       />
     );
 
-    expect(screen.getByText("3 paños pendientes")).toBeInTheDocument();
+    expect(screen.getByText("3 referencias con cobertura pendiente")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Ingresar medidas" })).toHaveLength(1);
     expect(screen.queryByRole("link", { name: "Ingresar medidas" })).not.toBeInTheDocument();
 

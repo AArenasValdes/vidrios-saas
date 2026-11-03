@@ -32,6 +32,7 @@ const plan = {
     logicalComponentId: "logical-1",
     componentCode: "V1",
     paneId: `pane-${index}`,
+    paneSlotId: `pane-${index}`,
     productId: "glass-1",
     snapshotFingerprint: "snapshot-1",
     rect: { xMm: (index - 1) * 750, yMm: 0, widthMm: 750, heightMm: 1600 },
@@ -152,7 +153,7 @@ describe("GlassDistributionPanel", () => {
     expect(await screen.findByText(/La vista previa usa geometría congelada de una receta preliminar/)).toBeInTheDocument();
     expect(screen.getAllByText(/Faltan dimensiones rectangulares, enteras y positivas congeladas/)).toHaveLength(2);
     expect(screen.getByRole("link", { name: "Abrir revisión técnica y PDFs" })).toHaveAttribute("href", expect.stringContaining("/fabricacion/vidrios"));
-    expect(screen.getByText(/La vista preliminar incluye 2 unidades físicas/)).toBeInTheDocument();
+    expect(screen.getByText("1 referencia incluida · 2 unidades físicas")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Ingresar medidas" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Generar vista previa" }));
 
@@ -183,6 +184,43 @@ describe("GlassDistributionPanel", () => {
     expect(createGlassDistributionPdf).toHaveBeenLastCalledWith(expect.objectContaining({ mode: "simulation", coverage: source.coverage, results: [verifiedResult] }));
   });
 
+  it("usa referencias estables y ajusta el texto al tamaño real del dibujo al cambiar el viewport", async () => {
+    const originalWidth = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1280 });
+    const narrowPane = {
+      ...plan.panes[0],
+      paneUnitId: "unit-private-identifier-long",
+      paneId: "logical-component-7:glass-technical-reference-long",
+      paneSlotId: "pane-1",
+      componentCode: "V1",
+      rect: { xMm: 0, yMm: 0, widthMm: 300, heightMm: 1000 },
+    };
+    const narrowResult = {
+      ...verifiedResult,
+      sheets: [{ ...plan, panes: [narrowPane], remnants: [] }],
+      summary: { ...verifiedResult.summary, paneCount: 1 },
+    } as unknown as GlassCuttingResult;
+    const fetchMock = jest.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => source })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ quoteCode: "COT-QA", mode: "geometric_preview", coverage: source.coverage, warnings: [], results: [narrowResult], generatedFrom: ["snapshot-1"] }) });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    try {
+      render(<GlassDistributionPanel quoteId="1" quoteCode="COT-QA" clientName="Cliente QA" workName="Obra QA" enabled autoPreview />);
+      expect(await screen.findByLabelText("Vista previa preliminar de distribución")).toBeInTheDocument();
+      expect(screen.getByText("V1 · Paño 1")).toBeInTheDocument();
+      expect(screen.getByText("300 × 1000 mm")).toBeInTheDocument();
+      expect(screen.queryByText(/logical-component-7|glass-technical-reference-long|unit-private-identifier-long/)).not.toBeInTheDocument();
+
+      Object.defineProperty(window, "innerWidth", { configurable: true, value: 320 });
+      fireEvent(window, new Event("resize"));
+      await waitFor(() => expect(screen.queryByText("V1 · Paño 1")).not.toBeInTheDocument());
+      expect(screen.queryByText(/logical-component-7|glass-technical-reference-long|unit-private-identifier-long/)).not.toBeInTheDocument();
+    } finally {
+      Object.defineProperty(window, "innerWidth", { configurable: true, value: originalWidth });
+      fireEvent(window, new Event("resize"));
+    }
+  });
+
   it("muestra una vista previa en la pestaña sin iniciar una descarga", async () => {
     const fetchMock = mockFetch();
     render(<GlassDistributionPanel quoteId="1" quoteCode="COT-QA" clientName="Cliente QA" workName="Obra QA" enabled autoPreview />);
@@ -211,13 +249,21 @@ describe("GlassDistributionPanel", () => {
       status: "partial" as const,
       completeReferenceCount: 1,
       pendingReferenceCount: 1,
-      pendingReferences: [{ quoteItemId: "item-2", componentCode: "V2", componentName: "Paño fijo", displayName: "Float", reason: "Faltan dimensiones válidas del paño." }],
+      pendingReferences: [{ quoteItemId: "item-2", paneId: "item-2:pane-1", componentCode: "V2", componentName: "Paño fijo", displayName: "Float", reason: "Faltan dimensiones válidas del paño." }],
       diagnostics: ["V2 · Paño fijo: Faltan dimensiones válidas del paño."],
     };
-    const partialSource = { ...source, coverage: partialCoverage };
+    const partialExclusions = [{
+      quoteItemId: "item-2",
+      paneId: "item-2:pane-1",
+      componentCode: "V2",
+      componentName: "Paño fijo",
+      displayName: "Float",
+      reason: "Faltan dimensiones válidas del paño.",
+    }];
+    const partialSource = { ...source, coverage: partialCoverage, previewExclusions: partialExclusions };
     const fetchMock = jest.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => partialSource })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ quoteCode: "COT-QA", mode: "geometric_preview", coverage: partialCoverage, warnings: [], results: [verifiedResult], generatedFrom: ["snapshot-1"] }) });
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ quoteCode: "COT-QA", mode: "geometric_preview", coverage: partialCoverage, warnings: [], previewExclusions: partialExclusions, results: [verifiedResult], generatedFrom: ["snapshot-1"] }) });
     global.fetch = fetchMock as unknown as typeof fetch;
 
     render(<GlassDistributionPanel
@@ -232,9 +278,11 @@ describe("GlassDistributionPanel", () => {
       onSaveManualGlassMeasurements={jest.fn().mockResolvedValue(undefined)}
     />);
 
-    expect(await screen.findByText("Distribución parcial")).toBeInTheDocument();
+    expect(await screen.findByText("Simulación parcial")).toBeInTheDocument();
+    expect(screen.getByText("1 referencia incluida · 2 unidades físicas")).toBeInTheDocument();
+    expect(screen.getByText("Preparación operativa del taller")).toBeInTheDocument();
     expect(screen.getByText("V2 · Paño fijo")).toBeInTheDocument();
-    expect(screen.getByText("Float · 1 paño pendiente")).toBeInTheDocument();
+    expect(screen.getByText("Float · 1 referencia excluida de la simulación")).toBeInTheDocument();
     expect(screen.getByText(/Faltan dimensiones válidas del paño/)).toBeInTheDocument();
     expect(await screen.findByRole("img", { name: "Distribución en plancha de 2500 por 1800 milímetros" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /PDF operativo/i })).not.toBeInTheDocument();
@@ -286,8 +334,8 @@ describe("GlassDistributionPanel", () => {
       onSaveManualGlassMeasurements={jest.fn().mockResolvedValue(undefined)}
     />);
 
-    expect(await screen.findByText("Cobertura operativa: 0 completas · 2 pendientes")).toBeInTheDocument();
-    expect(screen.getByText("pane-1, pane-2 · 2 paños pendientes")).toBeInTheDocument();
+    expect(await screen.findByText("0 referencias con cobertura completa · 2 pendientes")).toBeInTheDocument();
+    expect(screen.getByText("pane-1, pane-2 · 2 referencias con cobertura pendiente")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Ingresar medidas" }));
     await screen.findByLabelText("Posición del paño");
     fireEvent.change(screen.getByLabelText("Posición del paño"), { target: { value: "pane-1" } });
@@ -298,13 +346,13 @@ describe("GlassDistributionPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Guardar medidas en cotización" }));
     expect(screen.getByRole("button", { name: "Guardando…" })).toBeInTheDocument();
     expect(await screen.findByText("Actualizando paños, referencias y disponibilidad de descarga…")).toBeInTheDocument();
-    expect(screen.queryByText("Cobertura operativa: 0 completas · 2 pendientes")).not.toBeInTheDocument();
+    expect(screen.queryByText("0 referencias con cobertura completa · 2 pendientes")).not.toBeInTheDocument();
     await act(async () => { resolveUpdatedSource({ ok: true, json: async () => updatedSource }); });
 
     expect(await screen.findByText("Medidas guardadas. Cobertura actualizada.")).toBeInTheDocument();
-    expect(screen.getByText("Cobertura operativa: 1 completas · 1 pendientes")).toBeInTheDocument();
-    expect(screen.getByText("pane-2 · 1 paño pendiente")).toBeInTheDocument();
-    expect(screen.getAllByText("pane-2 · 1 paño pendiente")).toHaveLength(1);
+    expect(screen.getByText("1 referencia con cobertura completa · 1 pendiente")).toBeInTheDocument();
+    expect(screen.getByText("pane-2 · 1 referencia con cobertura pendiente")).toBeInTheDocument();
+    expect(screen.getAllByText("pane-2 · 1 referencia con cobertura pendiente")).toHaveLength(1);
     expect(screen.queryByRole("button", { name: /PDF operativo/i })).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
@@ -333,7 +381,7 @@ describe("GlassDistributionPanel", () => {
     const save = jest.fn().mockResolvedValue(undefined);
 
     render(<GlassDistributionPanel quoteId="1" quoteCode="COT-QA" clientName="Cliente QA" workName="Obra QA" enabled items={[item]} templates={[glassTemplate]} onSaveManualGlassMeasurements={save} />);
-    await screen.findByText("Cobertura operativa: 0 completas · 1 pendientes");
+    await screen.findByText("0 referencias con cobertura completa · 1 pendiente");
     fireEvent.click(screen.getByRole("button", { name: "Ingresar medidas" }));
     await screen.findByLabelText("Posición del paño");
     fireEvent.change(screen.getByLabelText("Posición del paño"), { target: { value: "pane-1" } });
@@ -347,7 +395,7 @@ describe("GlassDistributionPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reintentar actualización" }));
     expect(await screen.findByText("Medidas guardadas. Cobertura actualizada.")).toBeInTheDocument();
     expect(save).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("Cobertura operativa: 1 completas · 0 pendientes")).toBeInTheDocument();
+    expect(screen.getByText("1 referencia con cobertura completa · 0 pendientes")).toBeInTheDocument();
   });
 
   it("invalida el plano previo cuando cambian las medidas guardadas", async () => {
@@ -374,7 +422,7 @@ describe("GlassDistributionPanel", () => {
     } as unknown as CotizacionWorkflowItem;
 
     render(<GlassDistributionPanel quoteId="1" quoteCode="COT-QA" clientName="Cliente QA" workName="Obra QA" enabled items={[item]} templates={[glassTemplate]} onSaveManualGlassMeasurements={jest.fn().mockResolvedValue(undefined)} />);
-    await screen.findByText("Cobertura operativa: 1 completas · 1 pendientes");
+    await screen.findByText("1 referencia con cobertura completa · 1 pendiente");
     fireEvent.click(screen.getByRole("button", { name: "Generar vista previa" }));
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     fireEvent.keyDown(document, { key: "Escape", code: "Escape" });
@@ -392,7 +440,7 @@ describe("GlassDistributionPanel", () => {
     expect(await screen.findByText("Actualizando paños, referencias y disponibilidad de descarga…")).toBeInTheDocument();
     await act(async () => { resolveUpdatedSource({ ok: true, json: async () => completeSource }); });
 
-    expect(await screen.findByText("Cobertura completa")).toBeInTheDocument();
+    expect(await screen.findByText("Simulación geométrica completa")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Generar vista previa" })).toBeEnabled();
     expect(screen.queryByLabelText("Vista previa preliminar de distribución")).not.toBeInTheDocument();

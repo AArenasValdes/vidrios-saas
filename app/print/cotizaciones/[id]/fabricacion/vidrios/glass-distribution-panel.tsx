@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { LuChevronLeft, LuChevronRight, LuDownload, LuEye, LuLayers3, LuLoaderCircle } from "react-icons/lu";
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -105,13 +105,35 @@ function hasSheetFormat(spec: GlassTechnicalSpec | null) {
   return Boolean(spec && validDimension(spec.sheetWidthMm) && validDimension(spec.sheetHeightMm));
 }
 
-function shortCode(code: string, index: number) {
-  return code && code.length < 26 && !/^[0-9a-f-]{28,}$/i.test(code) ? code : `Componente ${index + 1}`;
+function isHumanReference(value: string | null | undefined, maxLength = 18): value is string {
+  const normalized = value?.trim();
+  return Boolean(normalized && normalized.length <= maxLength && !/^[0-9a-f-]{20,}$/i.test(normalized) && !/^(?:logical|pane|item|glass|unit|quote)[-_:]/i.test(normalized) && !normalized.includes(":"));
 }
 
-function panePositionLabel(pane: PaneInput, fallbackIndex: number) {
+function shortCode(code: string, componentName?: string | null) {
+  if (isHumanReference(code, 14)) return code.trim();
+  if (isHumanReference(componentName, 18)) return componentName.trim();
+  return null;
+}
+
+function panePositionLabel(pane: Pick<PaneInput, "paneSlotId" | "sourcePosition">) {
   const slotOrdinal = pane.paneSlotId?.match(/(?:pane|leaf)[^0-9]*(\d+)/i)?.[1];
-  return pane.sourcePosition?.trim() || (slotOrdinal ? `Paño ${slotOrdinal}` : `Referencia ${fallbackIndex + 1}`);
+  if (slotOrdinal) return `Paño ${slotOrdinal}`;
+  const sourcePosition = pane.sourcePosition?.trim();
+  const positionOrdinal = sourcePosition?.match(/^(?:pane|paño|pano|leaf)[\s_-]*([0-9]+)$/i)?.[1];
+  if (positionOrdinal) return `Paño ${positionOrdinal}`;
+  return isHumanReference(sourcePosition, 22) ? sourcePosition : null;
+}
+
+function paneVisualReference(pane: Pick<PaneInput, "componentCode" | "componentName" | "paneSlotId" | "sourcePosition">) {
+  const component = shortCode(pane.componentCode, pane.componentName);
+  const position = panePositionLabel(pane);
+  if (!position) return null;
+  return [component, position].filter(Boolean).join(" · ");
+}
+
+function estimateLabelWidthPx(value: string, fontSizePx: number) {
+  return Array.from(value).reduce((width, char) => width + (" il.,·".includes(char) ? 0.28 : "MW@".includes(char) ? 0.86 : 0.56), 0) * fontSizePx;
 }
 
 function formatArea(areaMm2: number) {
@@ -130,38 +152,80 @@ function sameSnapshotSet(left: readonly string[], right: readonly string[]) {
 
 function PlanDrawing({ result, allPlans }: { result: GlassCuttingResult; allPlans: Array<{ result: GlassCuttingResult; sheet: GlassCuttingResult["sheets"][number] }> }) {
   const sheet = result.sheets[0];
+  const widthMm = sheet?.rawSheet.widthMm ?? 1;
+  const heightMm = sheet?.rawSheet.heightMm ?? 1;
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [svgWidthPx, setSvgWidthPx] = useState(0);
+  const instanceId = useId().replace(/:/g, "");
+  useLayoutEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const updateWidth = () => {
+      const measuredWidth = svg.getBoundingClientRect().width;
+      const fallbackWidth = Math.max(0, Math.min(760, window.innerWidth - 48));
+      setSvgWidthPx(measuredWidth > 0 ? measuredWidth : fallbackWidth);
+    };
+    updateWidth();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateWidth);
+    observer?.observe(svg);
+    window.addEventListener("resize", updateWidth);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", updateWidth);
+    };
+  }, [widthMm]);
+  const pxPerMm = svgWidthPx > 0 ? svgWidthPx / widthMm : 0;
   if (!sheet) return null;
-  const { widthMm, heightMm } = { widthMm: sheet.rawSheet.widthMm, heightMm: sheet.rawSheet.heightMm };
   const physicalUnitCounts = new Map<string, number>();
   for (const entry of allPlans) for (const pane of entry.sheet.panes) {
     const key = `${pane.quoteItemId}|${pane.paneId}`;
     physicalUnitCounts.set(key, (physicalUnitCounts.get(key) ?? 0) + 1);
   }
   return (
-    <svg className={s.planDrawing} viewBox={`0 0 ${widthMm} ${heightMm}`} role="img" aria-label={`Distribución en plancha de ${widthMm} por ${heightMm} milímetros`}>
+    <svg ref={svgRef} className={s.planDrawing} viewBox={`0 0 ${widthMm} ${heightMm}`} role="img" aria-label={`Distribución en plancha de ${widthMm} por ${heightMm} milímetros`}>
       <rect x="0" y="0" width={widthMm} height={heightMm} className={s.sheet} />
       {sheet.remnants.map((remnant) => {
         const { xMm, yMm, widthMm, heightMm } = remnant.rect;
+        const label = `${widthMm} × ${heightMm} mm`;
+        const fontSizePx = 8;
+        const fitsRemnantLabel = pxPerMm > 0
+          && widthMm * pxPerMm >= estimateLabelWidthPx(label, fontSizePx) + 8
+          && heightMm * pxPerMm >= fontSizePx + 8;
+        const clipId = `${instanceId}-remnant-${remnant.remnantId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
         return <g key={remnant.remnantId}>
           <rect x={xMm} y={yMm} width={widthMm} height={heightMm} className={s.remnant} />
-          {widthMm > 360 && heightMm > 220 ? <text x={xMm + widthMm / 2} y={yMm + heightMm / 2} textAnchor="middle" className={s.remnantLabel}>{widthMm} × {heightMm} mm</text> : null}
+          {fitsRemnantLabel ? <>
+            <defs><clipPath id={clipId}><rect x={xMm + 2} y={yMm + 2} width={Math.max(0, widthMm - 4)} height={Math.max(0, heightMm - 4)} /></clipPath></defs>
+            <text x={xMm + widthMm / 2} y={yMm + heightMm / 2} textAnchor="middle" fontSize={fontSizePx / pxPerMm} clipPath={`url(#${clipId})`} className={s.remnantLabel}>{label}</text>
+          </> : null}
         </g>;
       })}
-      {sheet.panes.map((pane, index) => {
-        const labelSize = Math.max(38, Math.min(widthMm, heightMm) / 36);
-        const slotOrdinal = pane.paneSlotId?.match(/(?:pane|leaf)[^0-9]*(\d+)/i)?.[1];
-        const position = pane.sourcePosition?.trim() || (slotOrdinal ? `Paño ${slotOrdinal}` : `Ref. ${pane.paneId}`);
+      {sheet.panes.map((pane) => {
+        const reference = paneVisualReference(pane);
         const unitOrdinal = pane.paneUnitId.startsWith(`${pane.paneId}:`) ? pane.paneUnitId.slice(pane.paneId.length + 1) : "";
-        const repeatedUnit = (physicalUnitCounts.get(`${pane.quoteItemId}|${pane.paneId}`) ?? 0) > 1 && unitOrdinal ? ` · unidad ${unitOrdinal}` : "";
-        const title = `${shortCode(pane.componentCode, index)} · ${position}${repeatedUnit}`;
-        const dimensionSize = Math.min(Math.max(64, labelSize * 1.35), pane.rect.widthMm / 12);
+        const repeatedUnit = (physicalUnitCounts.get(`${pane.quoteItemId}|${pane.paneId}`) ?? 0) > 1 && /^\d+$/.test(unitOrdinal) ? ` · U${unitOrdinal}` : "";
+        const title = reference ? `${reference}${repeatedUnit}` : null;
+        const referenceFontPx = 10;
+        const dimensionFontPx = 8;
+        const availableWidthPx = pane.rect.widthMm * pxPerMm - 12;
+        const availableHeightPx = pane.rect.heightMm * pxPerMm - 10;
+        const fitsReference = Boolean(title && pxPerMm > 0
+          && availableWidthPx >= estimateLabelWidthPx(title, referenceFontPx)
+          && availableHeightPx >= referenceFontPx + 4);
+        const dimensions = `${pane.rect.widthMm} × ${pane.rect.heightMm} mm`;
+        const fitsDimensions = fitsReference && availableWidthPx >= estimateLabelWidthPx(dimensions, dimensionFontPx)
+          && availableHeightPx >= referenceFontPx + dimensionFontPx + 9;
+        const clipId = `${instanceId}-pane-${pane.paneUnitId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
         return (
           <g key={pane.paneUnitId}>
             <rect x={pane.rect.xMm} y={pane.rect.yMm} width={pane.rect.widthMm} height={pane.rect.heightMm} className={s.pane} />
-            {pane.rect.widthMm > labelSize * 3 && pane.rect.heightMm > labelSize * 2.2 ? <g className={s.paneLabel}>
-              <text x={pane.rect.xMm + pane.rect.widthMm / 2} y={pane.rect.yMm + pane.rect.heightMm / 2 - labelSize * 0.2} textAnchor="middle" fontSize={labelSize}>{title}</text>
-              <text x={pane.rect.xMm + pane.rect.widthMm / 2} y={pane.rect.yMm + pane.rect.heightMm / 2 + labelSize * 0.9} textAnchor="middle" fontSize={dimensionSize} fontWeight={650}>{pane.rect.widthMm} × {pane.rect.heightMm} mm</text>
-            </g> : null}
+            {fitsReference && title ? <>
+              <defs><clipPath id={clipId}><rect x={pane.rect.xMm + 4} y={pane.rect.yMm + 4} width={Math.max(0, pane.rect.widthMm - 8)} height={Math.max(0, pane.rect.heightMm - 8)} /></clipPath></defs>
+              <g className={s.paneLabel} clipPath={`url(#${clipId})`}>
+                <text x={pane.rect.xMm + pane.rect.widthMm / 2} y={pane.rect.yMm + pane.rect.heightMm / 2 + (fitsDimensions ? -2 : referenceFontPx / 2) / pxPerMm} textAnchor="middle" fontSize={referenceFontPx / pxPerMm}>{title}</text>
+                {fitsDimensions ? <text x={pane.rect.xMm + pane.rect.widthMm / 2} y={pane.rect.yMm + pane.rect.heightMm / 2 + (referenceFontPx / 2 + dimensionFontPx + 1) / pxPerMm} textAnchor="middle" fontSize={dimensionFontPx / pxPerMm} fontWeight={650}>{dimensions}</text> : null}
+              </g>
+            </> : null}
           </g>
         );
       })}
@@ -389,9 +453,9 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
           coverage={sourceForQuote.coverage}
           items={items}
           templates={templates}
-          previewablePaneIds={completePanes.map((pane) => pane.paneId)}
+          previewablePaneIds={completePanes.map((pane) => `${pane.quoteItemId}|${pane.paneId}`)}
           previewableUnitCount={completePanes.reduce((sum, pane) => sum + (pane.physicalUnitCount ?? 0), 0)}
-          excludedPreviewCount={previewExclusions.length}
+          previewExclusions={previewExclusions}
           onSaveMeasurements={onSaveManualGlassMeasurements}
           isRefreshing={refreshingSource}
           isCoverageCurrent={sourceFresh}
@@ -407,10 +471,6 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
 
       {panes.length > 0 ? <>
         {completePanes.some((pane) => pane.dimensionProvenance === "recipe_trace") ? <p className={s.pdfBlockedNote} role="status">La vista previa usa geometría congelada de una receta preliminar. Requiere revisión del taller y no es apta para corte.</p> : null}
-        {previewExclusions.length > 0 ? <div className={s.pdfBlockedNote} role="status">
-          <strong>Referencias excluidas de la simulación</strong>
-          <ul>{previewExclusions.map((entry) => <li key={`${entry.quoteItemId}-${entry.paneId}`}>{entry.componentCode} · {entry.displayName ?? entry.componentName}: {entry.reason}</li>)}</ul>
-        </div> : null}
         <div className={s.glassGroups}>
           {Array.from(new Map(panes.map((pane) => {
             const key = [pane.productId, pane.technicalSpec?.category, pane.technicalSpec?.thicknessMm, pane.finishOrientationKey, pane.technicalSpec?.sheetWidthMm, pane.technicalSpec?.sheetHeightMm].join("|");
@@ -426,9 +486,11 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
             return <div className={s.glassGroup} key={key}>
               <div className={s.glassHeading}><strong>{formatGlassDisplayName(representative.displayName, spec?.thicknessMm)}</strong><span>{spec?.category ? CATEGORY_LABELS[spec.category] ?? spec.category : "Tipo pendiente"} · {spec?.thicknessMm ? `${spec.thicknessMm} mm` : "espesor pendiente"}</span></div>
               <div className={s.glassMeta}><span>{previewableGroup.length} {previewableGroup.length === 1 ? "referencia incluida" : "referencias incluidas"} · {quantity} {quantity === 1 ? "unidad física" : "unidades físicas"} para simulación</span><span>{width && height ? `Plancha ${width} × ${height} mm` : "Formato habitual pendiente"}</span></div>
-              <ul className={s.paneList}>{group.map((entry, index) => {
+              <ul className={s.paneList}>{group.map((entry) => {
                 const exclusion = getGlassPaneGeometryExclusionReason(entry);
-                return <li key={`${entry.quoteItemId}-${entry.paneId}`}><span>{shortCode(entry.componentCode, index)} · {panePositionLabel(entry, index)}{entry.componentName ? ` · ${entry.componentName}` : ""} · {exclusion ? `Excluido: ${exclusion}` : `${entry.physicalUnitCount} ${entry.physicalUnitCount === 1 ? "unidad física" : "unidades físicas"}`}</span><strong>{entry.widthMm && entry.heightMm ? `${entry.widthMm} × ${entry.heightMm} mm` : "Medidas pendientes"}</strong></li>;
+                const component = shortCode(entry.componentCode, entry.componentName) ?? "Componente";
+                const position = panePositionLabel(entry) ?? "Paño";
+                return <li key={`${entry.quoteItemId}-${entry.paneId}`}><span>{component} · {position}{entry.componentName && component !== entry.componentName ? ` · ${entry.componentName}` : ""} · {exclusion ? `Excluido: ${exclusion}` : `${entry.physicalUnitCount} ${entry.physicalUnitCount === 1 ? "unidad física" : "unidades físicas"}`}</span><strong>{entry.widthMm && entry.heightMm ? `${entry.widthMm} × ${entry.heightMm} mm` : "Medidas pendientes"}</strong></li>;
               })}</ul>
             </div>;
           })}

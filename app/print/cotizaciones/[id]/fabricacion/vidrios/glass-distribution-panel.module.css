@@ -53,7 +53,7 @@
 .planDrawing { display: block; width: min(100%, 760px); max-height: 52dvh; height: auto; border: 1px solid #aebdd0; background: #f5f8fc; }
 .sheet { fill: #f5f8fc; stroke: #7288a5; stroke-width: 5; vector-effect: non-scaling-stroke; }
 .remnant { fill: #e6edf6; stroke: #d0dae7; stroke-width: 3; vector-effect: non-scaling-stroke; }
-.remnantLabel { fill: #26374a; font-family: system-ui, sans-serif; font-size: 74px; font-weight: 700; }
+.remnantLabel { fill: #26374a; font-family: system-ui, sans-serif; font-weight: 700; }
 .pane { fill: #cde5fa; stroke: #2876c7; stroke-width: 5; vector-effect: non-scaling-stroke; }
 .paneLabel { fill: #16345c; font-family: system-ui, sans-serif; font-weight: 650; }
 .sheetNavigation { display: flex; align-items: center; justify-content: center; gap: 20px; color: #344e70; }
