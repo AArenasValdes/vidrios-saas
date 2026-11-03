@@ -3,6 +3,29 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import GlassSheetOptimizationPage from "../page";
 
+const mockPdfTextByPage: string[][] = [];
+
+jest.mock("jspdf", () => ({
+  jsPDF: jest.fn().mockImplementation(() => {
+    mockPdfTextByPage.push([]);
+    let currentPage = 1;
+    const base = {
+      addPage: () => { mockPdfTextByPage.push([]); currentPage = mockPdfTextByPage.length; },
+      getNumberOfPages: () => mockPdfTextByPage.length,
+      setPage: (page: number) => { currentPage = page; },
+      splitTextToSize: (value: string) => [value],
+      text: (value: string | string[]) => { mockPdfTextByPage[currentPage - 1]?.push(Array.isArray(value) ? value.join(" ") : value); },
+      save: jest.fn(),
+    };
+    return new Proxy(base, {
+      get(target, key: string) {
+        if (key in target) return target[key as keyof typeof target];
+        return () => undefined;
+      },
+    });
+  }),
+}));
+
 jest.mock("next/navigation", () => ({
   useParams: () => ({ id: "1290" }),
   useSearchParams: () => new URLSearchParams("codigo=COT-301026-002"),
@@ -85,5 +108,61 @@ describe("GlassSheetOptimizationPage: geometría manual sin receta", () => {
     render(<GlassSheetOptimizationPage />);
     await waitFor(() => expect(screen.getByText(/No hay paños con geometría válida para simular/)).toBeInTheDocument());
     expect(screen.getByRole("button", { name: "Generar distribución" })).toBeDisabled();
+  });
+
+  it("marca todas las páginas del PDF de la ruta técnica como simulación geométrica", async () => {
+    mockPdfTextByPage.splice(0, mockPdfTextByPage.length);
+    const pane = (paneUnitId: string, componentCode: string) => ({
+      paneUnitId,
+      quoteItemId: "4078",
+      paneId: `pane-${paneUnitId}`,
+      productId: "3763",
+      componentCode,
+      rotated: false,
+      rect: { xMm: 0, yMm: 0, widthMm: 600, heightMm: 1000 },
+    });
+    const sheet = (sheetId: string, paneUnitId: string, componentCode: string) => ({
+      sheetId,
+      rawSheet: { widthMm: 4000, heightMm: 2200 },
+      panes: [pane(paneUnitId, componentCode)],
+      remnants: [],
+      cutSequence: [],
+    });
+    const results = [{
+      status: "feasible",
+      inputFingerprint: "qa-fingerprint",
+      minimumSheetCountProven: false,
+      summary: { paneCount: 2, sheetCount: 2, paneAreaMm2: 1_200_000, usableSheetAreaMm2: 8_800_000, rawSheetAreaMm2: 17_600_000, reusableRemnantsMm2: 0, wasteMm2: 0 },
+      sheets: [sheet("sheet-1", "unit-1", "F1"), sheet("sheet-2", "unit-2", "F2")],
+    }];
+    const payload = {
+      quoteCode: "COT-301026-002",
+      panes: [manualPane("F1"), manualPane("F2")],
+      preliminaryPaneCount: 2,
+      previewExclusions: [{ componentCode: "F3", reason: "Faltan medidas finales." }],
+      diagnostics: [],
+      coverage: { status: "partial", completeReferenceCount: 2, pendingReferenceCount: 1, pendingReferences: [], diagnostics: [] },
+      workshopProfiles: {},
+    };
+    global.fetch = jest.fn(async (_url: string, init?: RequestInit) => ({
+      ok: true,
+      json: async () => init?.method === "POST"
+        ? { quoteCode: payload.quoteCode, mode: "geometric_preview", results, warnings: [], generatedFrom: payload.panes.map((item) => item.snapshotFingerprint), previewExclusions: payload.previewExclusions }
+        : payload,
+    })) as unknown as typeof fetch;
+
+    render(<GlassSheetOptimizationPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Generar distribución" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Descargar PDF preliminar" }));
+
+    await waitFor(() => expect(mockPdfTextByPage).toHaveLength(2));
+    for (const pageText of mockPdfTextByPage) {
+      expect(pageText.join(" ")).toContain("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE");
+      expect(pageText.join(" ")).toContain("Despuntes y separación asumidos: 0 mm");
+      expect(pageText.join(" ")).toContain("sin secuencia de corte");
+      expect(pageText.join(" ")).toContain("no necesariamente reutilizable");
+    }
+    expect(mockPdfTextByPage[0]?.join(" ")).toContain("1 referencias excluidas");
+    expect(mockPdfTextByPage[0]?.join(" ")).toContain("Referencias excluidas: F3");
   });
 });

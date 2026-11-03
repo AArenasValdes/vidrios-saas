@@ -226,11 +226,15 @@ describe("createGlassDistributionPdf", () => {
     const text = pdfText(pdf);
     expect(pdf.getNumberOfPages()).toBe(1);
     expect(text).toContain("PRELIMINAR");
-    expect(text).not.toContain("NO APTO PARA CORTE");
+    expect(text).toContain("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE");
+    expect(text).toContain("Despuntes y separación asumidos: 0 mm");
+    expect(text).toContain("sin secuencia de corte");
+    expect(text).toContain("sobrante geométrico no necesariamente reutilizable");
     expect(text).toContain("COT-301026-002");
     expect(text).toContain("02 nov 2026");
     expect(text).toContain("Cotización creada: 30 oct 2026 · PDF generado: 02 nov 2026");
     expect(text).toContain("2 de 2");
+    expect(text).toContain("0 referencias excluidas de 2");
     expect(text).toContain("Unidades físicas");
     expect(text).toContain("4.000 × 2.200 mm");
     expect(text).toContain("1,20 m²");
@@ -240,7 +244,8 @@ describe("createGlassDistributionPdf", () => {
     expect(text).toContain("F2 · 1");
     expect(text).toContain("600 × 1.000 mm");
     expect(text).toContain("Medida manual final");
-    expect(text).toContain("Sobrantes geométricos");
+    expect(text).toContain("Sobrante geométrico estimado");
+    expect(text).not.toContain("Supuestos y exclusiones");
     expect(text).not.toContain("Documento de fabricación");
     if (process.env.VENTORA_PDF_QA1290 === "1") {
       const outputDirectory = pdfExampleDirectory();
@@ -420,10 +425,14 @@ describe("createGlassDistributionPdf", () => {
     const text = pdfText(pdf);
     expect(text).toContain("Simulación de planchas de vidrio");
     expect(text).toContain("PRELIMINAR");
-    expect(text).not.toContain("NO APTO PARA CORTE");
+    expect(text).toContain("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE");
+    expect(text).toContain("Despuntes y separación asumidos: 0 mm");
+    expect(text).toContain("sin secuencia de corte");
+    expect(text).toContain("sobrante geométrico no necesariamente reutilizable");
     expect(text).toContain("2 unidades físicas incluidas");
-    expect(text).toContain("Paño 2: Faltan medidas finales.");
-    expect(text).toContain("Separación asumida de 0 mm");
+    expect(text).toContain("1 referencias excluidas de 2");
+    expect(text).toContain("Referencias excluidas: V2");
+    expect(text).not.toContain("Supuestos y exclusiones");
   });
 
   it("pagina todas las advertencias y exclusiones en una simulación de varias planchas", async () => {
@@ -473,10 +482,16 @@ describe("createGlassDistributionPdf", () => {
     const pages = pdf.internal.pages.slice(1);
 
     expect(pages.length).toBeGreaterThan(1);
-    expect(pages.every((page) => page.join(" ").includes("PRELIMINAR"))).toBe(true);
-    expect(text).toContain("Separación física sin confirmar");
-    expect(text.match(/de los paños indicados/g)).toHaveLength(1);
-    expect(text).toContain("V2-V23");
+    expect(pages.every((page) => {
+      const pageText = page.join(" ");
+      return pageText.includes("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE")
+        && pageText.includes("Despuntes y separación asumidos: 0 mm")
+        && pageText.includes("sin secuencia de corte")
+        && pageText.includes("no necesariamente reutilizable");
+    })).toBe(true);
+    expect(text).toContain("22 referencias excluidas de 26");
+    expect(text).toContain("Referencias excluidas: V2-V23");
+    expect(text).not.toContain("Supuestos y exclusiones");
     if (process.env.VENTORA_PDF_PAGINATION_EXAMPLE === "1") {
       const outputDirectory = pdfExampleDirectory();
       mkdirSync(outputDirectory, { recursive: true });

@@ -6,7 +6,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import type { GlassPanePlanningUnit, GlassCuttingResult, GlassSheetPlan } from "@/features/fabricacion/types/glass-sheet-optimizer-contracts";
 import { resolveGlassCutLineGeometry } from "@/features/fabricacion/services/glass-sheet-cut-geometry.service";
-import type { GlassDistributionCoverage } from "@/features/fabricacion/services/glass-distribution-coverage.service";
+import { drawGeometricSimulationDisclaimer } from "@/features/fabricacion/services/fabrication-pdf-document-style.service";
+import type { GlassDistributionCoverage, GlassPaneGeometryExclusion } from "@/features/fabricacion/services/glass-distribution-coverage.service";
 import s from "./page.module.css";
 
 type PanePreview = Omit<GlassPanePlanningUnit, "paneUnitIds" | "orientation"> & { displayName: string | null; physicalUnitCount: number | null; paneUnitIds?: never; orientation?: never };
@@ -72,6 +73,7 @@ export default function GlassSheetOptimizationPage() {
   const companyName = search.get("empresa") || "";
   const [panes, setPanes] = useState<PanePreview[]>([]);
   const [coverage, setCoverage] = useState<GlassDistributionCoverage | null>(null);
+  const [previewExclusions, setPreviewExclusions] = useState<GlassPaneGeometryExclusion[]>([]);
   // Geometric eligibility is resolved by the server, independently of fabrication recipes.
   const [preliminaryPaneCount, setPreliminaryPaneCount] = useState(0);
   const [diagnostics, setDiagnostics] = useState<PaneDiagnostic[]>([]);
@@ -125,6 +127,7 @@ export default function GlassSheetOptimizationPage() {
       if (typeof body.quoteCode === "string") setResolvedQuoteCode(body.quoteCode);
       setPanes(body.panes as PanePreview[]);
       setCoverage(body.coverage as GlassDistributionCoverage);
+      setPreviewExclusions(Array.isArray(body.previewExclusions) ? body.previewExclusions as GlassPaneGeometryExclusion[] : []);
       setPreliminaryPaneCount(Number.isSafeInteger(body.preliminaryPaneCount) && body.preliminaryPaneCount > 0 ? body.preliminaryPaneCount : 0);
       setDiagnostics(Array.isArray(body.diagnostics) ? body.diagnostics.filter((item: unknown): item is string => typeof item === "string") : []);
       applyWorkshopProfiles(body.workshopProfiles, body.panes);
@@ -142,6 +145,7 @@ export default function GlassSheetOptimizationPage() {
           if (typeof body.quoteCode === "string") setResolvedQuoteCode(body.quoteCode);
           setPanes(body.panes as PanePreview[]);
           setCoverage(body.coverage as GlassDistributionCoverage);
+          setPreviewExclusions(Array.isArray(body.previewExclusions) ? body.previewExclusions as GlassPaneGeometryExclusion[] : []);
           setPreliminaryPaneCount(Number.isSafeInteger(body.preliminaryPaneCount) && body.preliminaryPaneCount > 0 ? body.preliminaryPaneCount : 0);
           setDiagnostics(Array.isArray(body.diagnostics) ? body.diagnostics.filter((item: unknown): item is string => typeof item === "string") : []);
           applyWorkshopProfiles(body.workshopProfiles, body.panes);
@@ -221,6 +225,7 @@ export default function GlassSheetOptimizationPage() {
       }
       if (typeof body.quoteCode === "string") setResolvedQuoteCode(body.quoteCode);
       setCalculationWarnings(Array.isArray(body.warnings) ? body.warnings.filter((item: unknown): item is string => typeof item === "string") : []);
+      setPreviewExclusions(Array.isArray(body.previewExclusions) ? body.previewExclusions as GlassPaneGeometryExclusion[] : []);
       setResults(body.results as GlassCuttingResult[]);
       setResultSourceFingerprint(JSON.stringify((body.generatedFrom as string[]).sort()));
       setSelectedSheet(0);
@@ -260,8 +265,12 @@ export default function GlassSheetOptimizationPage() {
       doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.text(`${companyName || "Ventora"} · ${quoteCode}`, 16, 35);
       const orientationNote = panes.some((pane) => !pane.technicalSpec?.pieceOrientation || pane.technicalSpec.pieceOrientation === "unknown")
         ? " · orientación pendiente tratada como fija, sin giro" : "";
-      doc.text(`Referencia geométrica · separación física asumida: 0 mm${orientationNote}`, 16, 42, { maxWidth: 178 });
-      let top = 54;
+      doc.text(`Geometría preliminar · ${preliminaryPaneCount} unidades físicas incluidas · ${previewExclusions.length} referencias excluidas${orientationNote}`, 16, 42, { maxWidth: 178 });
+      const excludedReferenceLines = previewExclusions.length > 0
+        ? doc.splitTextToSize(`Referencias excluidas: ${compactExclusionReferences(previewExclusions.map((entry) => entry.componentCode))}`, 178)
+        : [];
+      if (excludedReferenceLines.length > 0) doc.text(excludedReferenceLines, 16, 48);
+      let top = 54 + excludedReferenceLines.length * 3.5;
       for (const [sheetIndex, { sheet, result }] of allSheets.entries()) {
         if (sheetIndex > 0) { doc.addPage(); top = 20; }
         const groupPane = panes.find((pane) => pane.productId === sheet.panes[0]?.productId);
@@ -274,7 +283,7 @@ export default function GlassSheetOptimizationPage() {
         const oy = area.y + (area.h - sheet.rawSheet.heightMm * scale) / 2;
         doc.setDrawColor(16, 42, 81); doc.rect(ox, oy, sheet.rawSheet.widthMm * scale, sheet.rawSheet.heightMm * scale);
         for (const remnant of sheet.remnants) {
-          doc.setFillColor(...(remnant.classification === "reusable_candidate" ? [226, 240, 255] as [number, number, number] : [241, 243, 246] as [number, number, number]));
+          doc.setFillColor(241, 243, 246);
           doc.setDrawColor(130, 148, 169); doc.rect(ox + remnant.rect.xMm * scale, oy + remnant.rect.yMm * scale, remnant.rect.widthMm * scale, remnant.rect.heightMm * scale, "FD");
         }
         for (const pane of sheet.panes) {
@@ -298,7 +307,6 @@ export default function GlassSheetOptimizationPage() {
         const details = [
           ...sheet.panes.map((pane) => `PAÑO ${pane.componentCode} · ${pane.rect.widthMm} × ${pane.rect.heightMm} mm · posición x=${pane.rect.xMm}, y=${pane.rect.yMm} mm${pane.rotated ? " · girado 90°" : ""}`),
           ...sheet.remnants.map((remnant, remnantIndex) => `ÁREA RESTANTE ESTIMADA ${remnantIndex + 1} · ${remnant.rect.widthMm} × ${remnant.rect.heightMm} mm · posición x=${remnant.rect.xMm}, y=${remnant.rect.yMm} mm`),
-          ...sheet.cutSequence.map((step) => `SEPARACIÓN GEOMÉTRICA ${step.ordinal} · ${step.axis === "x" ? "vertical" : "horizontal"} · posición ${step.absolutePositionMm} mm · tramo ${step.fromMm}–${step.toMm} mm`),
         ];
         let detailsY = oy + area.h + 15;
         doc.setFontSize(7); doc.setTextColor(20, 32, 50);
@@ -313,6 +321,7 @@ export default function GlassSheetOptimizationPage() {
           detailsY += lines.length * 3.5;
         }
       }
+      drawGeometricSimulationDisclaimer(doc);
       doc.save(`simulacion-geometrica-vidrios-${sanitizeFileNamePart(quoteCode, 36)}.pdf`);
       return;
     }
@@ -538,6 +547,31 @@ function xRotate(rotated: boolean) { return rotated ? " · girado 90°" : ""; }
 function glassLabel(name: string, thickness: number | null) {
   if (!thickness) return name;
   return name.replace(new RegExp(`\\b${thickness}\\s*mm\\b`, "ig"), "").replace(/\s*[·|,-]\s*/g, " ").replace(/\s{2,}/g, " ").trim();
+}
+
+function compactExclusionReferences(codes: string[]) {
+  const labels = [...new Set(codes.map((code) => code.trim()).filter(Boolean))];
+  const matches = labels.map((label) => label.match(/^([A-Za-z]+)(\d+)$/));
+  if (matches.length > 1 && matches.every((match) => match && match[1] === matches[0]?.[1])) {
+    const prefix = matches[0]![1]!;
+    const numbers = matches.map((match) => Number(match![2])).sort((a, b) => a - b);
+    const ranges: string[] = [];
+    let start = numbers[0]!;
+    let previous = start;
+    for (const current of numbers.slice(1)) {
+      if (current === previous) continue;
+      if (current === previous + 1) {
+        previous = current;
+        continue;
+      }
+      ranges.push(start === previous ? `${prefix}${start}` : `${prefix}${start}-${prefix}${previous}`);
+      start = current;
+      previous = current;
+    }
+    ranges.push(start === previous ? `${prefix}${start}` : `${prefix}${start}-${prefix}${previous}`);
+    return ranges.join(", ");
+  }
+  return labels.join(", ");
 }
 
 function buildWorkshopInput(settings: Settings) {

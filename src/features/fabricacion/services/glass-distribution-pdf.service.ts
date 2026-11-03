@@ -2,6 +2,7 @@ import type { jsPDF } from "jspdf";
 
 import type { GlassCuttingResult, GlassPlannedPane, GlassSheetPlan } from "@/features/fabricacion/types/glass-sheet-optimizer-contracts";
 import {
+  drawGeometricSimulationDisclaimer,
   drawFabricationPdfContinuationHeader,
   drawFabricationPdfFooters,
   drawFabricationPdfHeader,
@@ -250,6 +251,29 @@ function simulationMetrics(source: GlassDistributionPdfSource, entries: Verified
   };
 }
 
+function compactSimulationReferences(labels: string[]) {
+  const codes = labels.map((label) => label.match(/^([A-Za-z]+)(\d+)$/));
+  if (codes.length > 1 && codes.every((match) => match && match[1] === codes[0]?.[1])) {
+    const prefix = codes[0]![1]!;
+    const numbers = codes.map((match) => Number(match![2]));
+    const ranges: string[] = [];
+    let start = numbers[0]!;
+    let previous = start;
+    for (const current of numbers.slice(1)) {
+      if (current === previous + 1) {
+        previous = current;
+        continue;
+      }
+      ranges.push(start === previous ? `${prefix}${start}` : `${prefix}${start}-${prefix}${previous}`);
+      start = current;
+      previous = current;
+    }
+    ranges.push(start === previous ? `${prefix}${start}` : `${prefix}${start}-${prefix}${previous}`);
+    return ranges.join(", ");
+  }
+  return labels.join(", ");
+}
+
 function drawSimulationOverview(
   pdf: jsPDF,
   source: GlassDistributionPdfSource,
@@ -301,6 +325,12 @@ function drawSimulationOverview(
   const excludedCount = source.previewExclusions?.length ?? 0;
   pdf.text(`Simulación: ${metrics.units} unidades físicas incluidas · ${excludedCount} referencias excluidas de ${metrics.totalReferences}.`, PAGE_MARGIN_MM, y, { maxWidth: CONTENT_WIDTH_MM });
   y += 4;
+  const excludedReferences = [...new Set((source.previewExclusions ?? []).map((entry) => entry.componentCode.trim()).filter(Boolean))];
+  if (excludedReferences.length > 0) {
+    const referenceLines = pdf.splitTextToSize(`Referencias excluidas: ${compactSimulationReferences(excludedReferences)}`, CONTENT_WIDTH_MM) as string[];
+    pdf.text(referenceLines, PAGE_MARGIN_MM, y, { maxWidth: CONTENT_WIDTH_MM });
+    y += referenceLines.length * 3.2 + 1;
+  }
   pdf.setDrawColor(...RULE);
   pdf.line(PAGE_MARGIN_MM, y, PAGE_WIDTH_MM - PAGE_MARGIN_MM, y);
   return y + 4;
@@ -322,29 +352,6 @@ function simulationProvenanceLabel(source: PaneSource) {
   if (source.dimensionProvenance === "recipe_trace") return "Receta preliminar · revisar";
   if (source.dimensionProvenance === "legacy_snapshot") return "Snapshot histórico · revisar";
   return "Procedencia pendiente";
-}
-
-function compactSimulationReferences(labels: string[]) {
-  const codes = labels.map((label) => label.match(/^([A-Za-z]+)(\d+)$/));
-  if (codes.length > 1 && codes.every((match) => match && match[1] === codes[0]?.[1])) {
-    const prefix = codes[0]![1]!;
-    const numbers = codes.map((match) => Number(match![2]));
-    const ranges: string[] = [];
-    let start = numbers[0]!;
-    let previous = start;
-    for (const current of numbers.slice(1)) {
-      if (current === previous + 1) {
-        previous = current;
-        continue;
-      }
-      ranges.push(start === previous ? `${prefix}${start}` : `${prefix}${start}-${prefix}${previous}`);
-      start = current;
-      previous = current;
-    }
-    ranges.push(start === previous ? `${prefix}${start}` : `${prefix}${start}-${prefix}${previous}`);
-    return ranges.join(", ");
-  }
-  return labels.join(", ");
 }
 
 function drawSimulationDetailHeader(pdf: jsPDF, y: number) {
@@ -501,31 +508,6 @@ function drawSimulationSheet(
   return y;
 }
 
-function drawSimulationNotes(pdf: jsPDF, source: GlassDistributionPdfSource, startY: number) {
-  const exclusionsByReason = new Map<string, { reason: string; references: string[] }>();
-  for (const entry of source.previewExclusions ?? []) {
-    const reasonKey = entry.reason.replace(/\bdel paño\s+\d+\b/gi, "del paño");
-    const reasonLabel = entry.reason.replace(/\bdel paño\s+\d+\b/gi, "de los paños indicados");
-    const group = exclusionsByReason.get(reasonKey) ?? { reason: reasonLabel, references: [] };
-    const label = entry.displayName || entry.componentName;
-    const genericLabel = label && /^(paño pendiente|componente excluido)\s+\d+$/i.test(label);
-    group.references.push(label && !genericLabel ? `${entry.componentCode} · ${label}` : entry.componentCode);
-    exclusionsByReason.set(reasonKey, group);
-  }
-  const notices = [
-    ...(source.simulationWarnings ?? []),
-    ...[...exclusionsByReason.values()].map(({ reason, references }) => `${compactSimulationReferences(references)}: ${reason}`),
-  ];
-  if (!notices.length) return startY;
-  let y = startY;
-  const headingHeight = 9;
-  if (y + headingHeight > CONTENT_BOTTOM_MM) y = addSimulationContinuationPage(pdf, source, "Supuestos y exclusiones");
-  else {
-    y = drawFabricationPdfSectionTitle(pdf, "Supuestos y exclusiones", y + 2);
-  }
-  return drawSimulationNotices(pdf, source, notices, y);
-}
-
 async function createSimulationPdf(input: GlassDistributionPdfSource) {
   const validationError = validateGlassDistributionPdfInput(input);
   if (validationError) throw new Error(validationError);
@@ -540,7 +522,7 @@ async function createSimulationPdf(input: GlassDistributionPdfSource) {
     if (y + est > CONTENT_BOTTOM_MM) y = addSimulationContinuationPage(pdf, input);
     y = drawSimulationSheet(pdf, sheet, index + 1, input, sheetEntries, y);
   }
-  y = drawSimulationNotes(pdf, input, y + 4);
+  drawGeometricSimulationDisclaimer(pdf);
   drawFabricationPdfFooters(pdf, input.quoteCode, "SIMULACIÓN DE PLANCHAS");
   return pdf;
 }
@@ -549,29 +531,6 @@ function addContinuationPage(pdf: jsPDF, title: string, quoteCode: string, logoD
   pdf.addPage("a4", "portrait");
   let y = drawFabricationPdfContinuationHeader(pdf, title, quoteCode, logoDataUrl);
   if (sectionTitle) y = drawFabricationPdfSectionTitle(pdf, sectionTitle, y);
-  return y;
-}
-
-function drawSimulationNotices(pdf: jsPDF, source: GlassDistributionPdfSource, notices: string[], startY: number) {
-  let y = startY;
-  const lineHeightMm = 3.35;
-  for (const notice of notices) {
-    let lines = pdf.splitTextToSize(`- ${notice}`, CONTENT_WIDTH_MM) as string[];
-    while (lines.length > 0) {
-      if (y + lineHeightMm > CONTENT_BOTTOM_MM) {
-        y = addSimulationContinuationPage(pdf, source, "Pendientes y supuestos · continuación");
-      }
-      const availableLines = Math.max(1, Math.floor((CONTENT_BOTTOM_MM - y - 2) / lineHeightMm));
-      const pageLines = lines.slice(0, availableLines);
-      lines = lines.slice(availableLines);
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(7.4);
-      pdf.setTextColor(...MUTED);
-      pdf.text(pageLines, PAGE_MARGIN_MM, y, { lineHeightFactor: 1 });
-      y += pageLines.length * lineHeightMm + 0.2;
-    }
-  }
-  pdf.setTextColor(...INK);
   return y;
 }
 
@@ -611,13 +570,6 @@ function drawSummaryPage(pdf: jsPDF, source: GlassDistributionPdfSource, entries
   y += 6;
 
   y = drawFabricationPdfSectionTitle(pdf, "Resumen por tipo y espesor", y);
-  if (simulation) {
-    const notices = [
-      ...(source.simulationWarnings ?? []),
-    ...(source.previewExclusions ?? []).map((entry) => `${entry.componentCode}${entry.displayName ? ` · ${entry.displayName}` : entry.componentName ? ` · ${entry.componentName}` : ""}: ${entry.reason}`),
-    ];
-    y = drawSimulationNotices(pdf, source, notices, y);
-  }
   const groups = buildTypeGroups(source, entries);
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(9.2);

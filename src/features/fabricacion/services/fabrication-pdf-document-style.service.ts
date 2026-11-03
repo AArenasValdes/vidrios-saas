@@ -131,6 +131,26 @@ export function drawFabricationPdfFooters(pdf: jsPDF, quoteCode: string, documen
   }
 }
 
+/** Repeats the geometric-only status and its physical assumptions on every simulation page. */
+export function drawGeometricSimulationDisclaimer(pdf: jsPDF) {
+  const pageCount = pdf.getNumberOfPages();
+  for (let page = 1; page <= pageCount; page += 1) {
+    pdf.setPage(page);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(7.4);
+    pdf.setTextColor(...FABRICATION_PDF_COLORS.muted);
+    pdf.text("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE", MARGIN, 273, { maxWidth: CONTENT_WIDTH });
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(6.5);
+    pdf.text(
+      "Despuntes y separación asumidos: 0 mm · sin secuencia de corte · sobrante geométrico no necesariamente reutilizable.",
+      MARGIN,
+      277,
+      { maxWidth: CONTENT_WIDTH }
+    );
+  }
+}
+
 export function drawFabricationPdfSectionTitle(pdf: jsPDF, title: string, y: number) {
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(12);
