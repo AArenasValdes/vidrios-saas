@@ -555,6 +555,203 @@ describe("createGlassDistributionPdf", () => {
     }
   });
 
+  it("mantiene juntas en una página las seis unidades de 1309 cuando hay espacio legible", async () => {
+    const sourceSlots = [
+      { slot: "pane-1", widthMm: 600, heightMm: 1000 },
+      { slot: "pane-2", widthMm: 600, heightMm: 1000 },
+      { slot: "pane-3", widthMm: 600, heightMm: 1100 },
+      { slot: "pane-4", widthMm: 600, heightMm: 1100 },
+    ];
+    const firstComponent = sourceSlots.map(({ slot, widthMm, heightMm }) => ({
+      ...pane(slot),
+      quoteItemId: "item-v1",
+      logicalComponentId: "logical-v1",
+      glassId: `glass-${slot}`,
+      paneId: `pane-id-${slot}`,
+      paneSlotId: slot,
+      paneUnitIds: [`unit-${slot}`],
+      componentCode: "V1",
+      componentName: "Corredera V1",
+      widthMm,
+      heightMm,
+      technicalSpec: { ...pane(slot).technicalSpec, sheetWidthMm: 4000, sheetHeightMm: 2200 },
+    }));
+    const secondComponent = {
+      ...pane("v2"),
+      quoteItemId: "item-v2",
+      logicalComponentId: "logical-v2",
+      glassId: "glass-v2",
+      paneId: "pane-id-v2",
+      paneSlotId: "pane-1",
+      paneUnitIds: ["unit-v2-1", "unit-v2-2"],
+      componentCode: "V2",
+      componentName: "Corredera V2",
+      widthMm: 900,
+      heightMm: 1000,
+      quantity: 2,
+      commercialQuantity: 1,
+      technicalSpec: { ...pane("v2").technicalSpec, sheetWidthMm: 4000, sheetHeightMm: 2200 },
+    };
+    const planningPanes = [...firstComponent, secondComponent];
+    const results = optimizeGlassCuttingBatch({
+      panes: planningPanes,
+      profiles: [{
+        ...profile,
+        sheet: { ...profile.sheet, widthMm: 4000, heightMm: 2200 },
+        process: { ...profile.process, tableWidthMm: 4000, tableHeightMm: 2200, edgeTrimMm: { top: 0, right: 0, bottom: 0, left: 0 }, kerfOrSeparationMm: 0, minimumStripWidthMm: 0 },
+      }],
+      mode: "geometric_preview",
+    });
+    expect(results[0]?.sheets).toHaveLength(1);
+
+    const sourcePanes = [
+      ...firstComponent.map((item) => ({
+        quoteItemId: item.quoteItemId,
+        paneId: item.paneId,
+        paneSlotId: item.paneSlotId,
+        paneUnitIds: item.paneUnitIds,
+        componentCode: item.componentCode,
+        componentName: item.componentName,
+        productId: item.productId,
+        displayName: "Float QA",
+        thicknessMm: 5,
+        category: "monolitico" as const,
+        widthMm: item.widthMm,
+        heightMm: item.heightMm,
+        quantity: 1,
+        physicalUnitCount: 1,
+        dimensionProvenance: "manual" as const,
+      })),
+      {
+        quoteItemId: secondComponent.quoteItemId,
+        paneId: secondComponent.paneId,
+        paneSlotId: secondComponent.paneSlotId,
+        paneUnitIds: secondComponent.paneUnitIds,
+        componentCode: secondComponent.componentCode,
+        componentName: secondComponent.componentName,
+        productId: secondComponent.productId,
+        displayName: "Float QA",
+        thicknessMm: 5,
+        category: "monolitico" as const,
+        widthMm: secondComponent.widthMm,
+        heightMm: secondComponent.heightMm,
+        quantity: 2,
+        physicalUnitCount: 2,
+        dimensionProvenance: "manual" as const,
+      },
+    ];
+    const pdf = await createGlassDistributionPdf({
+      mode: "simulation",
+      quoteCode: "COT-QA-1309",
+      clientName: "Cliente QA",
+      workName: "Correderas V1 y V2",
+      logoDataUrl: await officialLogoDataUrl(),
+      coverage: { ...completeCoverage, completeReferenceCount: 5 },
+      panes: sourcePanes,
+      results,
+    });
+
+    expect(pdf.getNumberOfPages()).toBe(1);
+    const pageText = pdf.internal.pages[1]?.join(" ") ?? "";
+    for (const reference of ["V1 · 1", "V1 · 2", "V1 · 3", "V1 · 4", "V2 · 1 · unidad 1", "V2 · 1 · unidad 2"]) {
+      expect(pageText).toContain(reference);
+    }
+    expect(pageText).toContain("4,32 m²");
+    expect(pageText).toContain("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE");
+  });
+
+  it("evita filas huérfanas en una simulación representativa de dos planchas y once unidades", async () => {
+    const plan = Array.from({ length: 9 }, (_, index) => {
+      const quoteItemId = `item-1315-${index + 1}`;
+      const unitCount = index < 2 ? 2 : 1;
+      const unitIds = Array.from({ length: unitCount }, (_, unitIndex) => `unit-1315-${index + 1}-${unitIndex + 1}`);
+      const widthMm = index === 8 ? 630 : 800;
+      const planningPane: GlassPanePlanningUnit = {
+        ...pane(`1315-${index + 1}`),
+        quoteItemId,
+        paneId: `pane-1315-${index + 1}`,
+        paneSlotId: "pane-1",
+        paneUnitIds: unitIds,
+        componentCode: `V${index + 1}`,
+        widthMm,
+        heightMm: 1000,
+        quantity: unitCount,
+        commercialQuantity: 1,
+        technicalSpec: {
+          ...pane("1315").technicalSpec,
+          sheetWidthMm: 4000,
+          sheetHeightMm: 2200,
+          edgeTrimMm: { top: 0, right: 0, bottom: 0, left: 0 },
+          kerfOrSeparationMm: 0,
+          minimumStripWidthMm: 0,
+        },
+      };
+      return {
+        planningPane,
+        sourcePane: {
+          quoteItemId,
+          paneId: planningPane.paneId,
+          paneSlotId: planningPane.paneSlotId,
+          paneUnitIds: unitIds,
+          componentCode: `V${index + 1}`,
+          componentName: `Componente QA ${index + 1} con descripción extendida para revisar el ajuste de filas`,
+          productId: planningPane.productId,
+          displayName: "Float QA",
+          thicknessMm: 5,
+          category: "monolitico" as const,
+          widthMm,
+          heightMm: 1000,
+          quantity: unitCount,
+          physicalUnitCount: unitCount,
+          dimensionProvenance: "manual" as const,
+        },
+      };
+    });
+    const multiSheetProfile: GlassCuttingProfile = {
+      ...profile,
+      sheet: { ...profile.sheet, widthMm: 4000, heightMm: 2200 },
+      process: {
+        ...profile.process,
+        tableWidthMm: 4000,
+        tableHeightMm: 2200,
+        edgeTrimMm: { top: 0, right: 0, bottom: 0, left: 0 },
+        kerfOrSeparationMm: 0,
+        minimumStripWidthMm: 0,
+      },
+    };
+    const results = optimizeGlassCuttingBatch({
+      panes: plan.map((item) => item.planningPane),
+      profiles: [multiSheetProfile],
+      mode: "geometric_preview",
+    });
+    expect(results[0]?.summary.sheetCount).toBe(2);
+    expect(results[0]?.sheets.flatMap((sheet) => sheet.panes)).toHaveLength(11);
+
+    const pdf = await createGlassDistributionPdf({
+      mode: "simulation",
+      quoteCode: "COT-QA-1315-PAGINACION",
+      clientName: "Cliente QA",
+      workName: "Fixture de paginación · 9 referencias y 11 unidades",
+      logoDataUrl: await officialLogoDataUrl(),
+      coverage: { ...completeCoverage, completeReferenceCount: 9 },
+      panes: plan.map((item) => item.sourcePane),
+      results,
+    });
+    const pages = pdf.internal.pages.slice(1).map((page) => page?.join(" ") ?? "");
+    const manualRowCounts = pages.map((page) => page.match(/Medida manual final/g)?.length ?? 0);
+
+    expect(pdf.getNumberOfPages()).toBeGreaterThanOrEqual(2);
+    expect(pages.reduce((sum, page) => sum + (page.match(/Medida manual final/g)?.length ?? 0), 0)).toBe(11);
+    expect(pages.filter((page) => page.includes("detalle de paños")).every((page) => (page.match(/Medida manual final/g)?.length ?? 0) >= 2)).toBe(true);
+    expect(manualRowCounts.reduce((sum, count) => sum + count, 0)).toBe(11);
+    expect(pages.every((page) => page.includes("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE"))).toBe(true);
+    if (process.env.VENTORA_PDF_PAGINATION_EXAMPLE === "1") {
+      const outputDirectory = pdfExampleDirectory();
+      mkdirSync(outputDirectory, { recursive: true });
+      writeFileSync(path.join(outputDirectory, "qa-cot-1315-paginacion-representativa.pdf"), Buffer.from(pdf.output("arraybuffer")));
+    }
+  });
+
   it("mantiene separadas especificaciones de vidrio y conserva referencias y nombres largos", async () => {
     const laminatedProfile: GlassCuttingProfile = {
       ...profile,

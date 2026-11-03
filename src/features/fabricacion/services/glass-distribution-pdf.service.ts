@@ -463,11 +463,6 @@ function simulationRemnantRows(remnants: SimulationRemnant[], ledger: Simulation
   return rows;
 }
 
-function simulationRemnantBlockHeight(sheet: GlassSheetPlan) {
-  // Heading + rows, including the total used to reconcile the displayed areas.
-  return 5 + simulationRemnantRows(orderedSimulationRemnants(sheet), sheetAreaLedger(sheet)).length * 3.8;
-}
-
 function sheetPhysicalParameters(sheet: GlassSheetPlan) {
   const separations = [...new Set(sheet.cutSequence.map((step) => step.separationMm))].sort((left, right) => left - right);
   const separationLabel = separations.length === 0 ? "0" : separations.join("/");
@@ -507,16 +502,16 @@ function drawSimulationDetailHeader(pdf: jsPDF, y: number) {
   return y + 7;
 }
 
-function drawSimulationDetailRows(
-  pdf: jsPDF,
-  entries: VerifiedPaneEntry[],
-  startY: number,
-  sheetNumber: number,
-  source: GlassDistributionPdfSource
-) {
-  const columns = { reference: PAGE_MARGIN_MM + 1, component: 41, glass: 83, dimensions: 119, units: 156, origin: 171 };
-  let y = drawSimulationDetailHeader(pdf, startY);
-  for (const [index, entry] of entries.entries()) {
+type SimulationDetailRow = {
+  entry: VerifiedPaneEntry;
+  cellLines: string[][];
+  heightMm: number;
+};
+
+function buildSimulationDetailRows(pdf: jsPDF, entries: VerifiedPaneEntry[]): SimulationDetailRow[] {
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(7.2);
+  return entries.map((entry, index) => {
     const pane = entry.source;
     const reference = paneReferenceLabel(entry, index);
     const component = pane.componentName ? `${shortComponentCode(pane.componentCode, index)} · ${pane.componentName}` : shortComponentCode(pane.componentCode, index);
@@ -532,19 +527,55 @@ function drawSimulationDetailRows(
       ["1"],
       pdf.splitTextToSize(origin, 24) as string[],
     ];
-    const rowHeight = Math.max(8.5, Math.max(...cellLines.map((lines) => lines.length)) * 3.4 + 3);
-    if (y + rowHeight > CONTENT_BOTTOM_MM) {
-      y = addSimulationContinuationPage(pdf, source, `Plancha ${sheetNumber} · detalle de paños`);
-      y = drawSimulationDetailHeader(pdf, y);
+    const lineCount = Math.max(...cellLines.map((lines) => lines.length));
+    return { entry, cellLines, heightMm: Math.max(8.5, lineCount * 3.4 + 3) };
+  });
+}
+
+function drawSimulationDetailRow(pdf: jsPDF, row: SimulationDetailRow, y: number) {
+  const columns = { reference: PAGE_MARGIN_MM + 1, component: 41, glass: 83, dimensions: 119, units: 156, origin: 171 };
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(7.2);
+  pdf.setTextColor(...INK);
+  const xs = [columns.reference, columns.component, columns.glass, columns.dimensions, columns.units, columns.origin];
+  row.cellLines.forEach((lines, cellIndex) => pdf.text(lines, xs[cellIndex]!, y + 4.1, { lineHeightFactor: 1.05, maxWidth: cellIndex === 4 ? 10 : undefined }));
+  pdf.setDrawColor(...RULE);
+  pdf.line(PAGE_MARGIN_MM, y + row.heightMm, PAGE_WIDTH_MM - PAGE_MARGIN_MM, y + row.heightMm);
+  return y + row.heightMm;
+}
+
+function drawSimulationDetailRows(
+  pdf: jsPDF,
+  rows: SimulationDetailRow[],
+  startY: number,
+  sheetNumber: number,
+  source: GlassDistributionPdfSource
+) {
+  let remaining = [...rows];
+  let y = startY;
+  let sectionTitle: string | undefined;
+  while (remaining.length > 0) {
+    if (y + 7 + remaining[0]!.heightMm > CONTENT_BOTTOM_MM) {
+      sectionTitle = `Plancha ${sheetNumber} · detalle de paños`;
+      y = addSimulationContinuationPage(pdf, source, sectionTitle);
     }
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(7.2);
-    pdf.setTextColor(...INK);
-    const xs = [columns.reference, columns.component, columns.glass, columns.dimensions, columns.units, columns.origin];
-    cellLines.forEach((lines, cellIndex) => pdf.text(lines, xs[cellIndex]!, y + 4.1, { lineHeightFactor: 1.05, maxWidth: cellIndex === 4 ? 10 : undefined }));
-    pdf.setDrawColor(...RULE);
-    pdf.line(PAGE_MARGIN_MM, y + rowHeight, PAGE_WIDTH_MM - PAGE_MARGIN_MM, y + rowHeight);
-    y += rowHeight;
+    y = drawSimulationDetailHeader(pdf, y);
+    const available = CONTENT_BOTTOM_MM - y;
+    let fittingCount = 0;
+    let usedHeight = 0;
+    while (fittingCount < remaining.length && usedHeight + remaining[fittingCount]!.heightMm <= available) {
+      usedHeight += remaining[fittingCount]!.heightMm;
+      fittingCount += 1;
+    }
+    if (fittingCount === 0) fittingCount = 1;
+    // Do not strand a single final row when it can travel with the next page.
+    if (remaining.length - fittingCount === 1 && fittingCount > 1) fittingCount -= 1;
+    for (const row of remaining.slice(0, fittingCount)) y = drawSimulationDetailRow(pdf, row, y);
+    remaining = remaining.slice(fittingCount);
+    if (remaining.length > 0) {
+      sectionTitle = `Plancha ${sheetNumber} · detalle de paños`;
+      y = addSimulationContinuationPage(pdf, source, sectionTitle);
+    }
   }
   return y;
 }
@@ -558,14 +589,22 @@ function drawSimulationSheet(
   startY: number
 ) {
   const remnants = orderedSimulationRemnants(sheet);
-  // Reserve room for every physical unit row; the planner may expand a
-  // commercial reference into several units after optimization.
-  const metaSpace = 31 + simulationRemnantBlockHeight(sheet) + entries.length * 10;
+  const sheetEntries = entries.filter((entry) => sheet.panes.some((planned) => planned.paneUnitId === entry.planned.paneUnitId));
+  const detailRows = buildSimulationDetailRows(pdf, sheetEntries);
+  const detailRowsHeight = detailRows.reduce((sum, row) => sum + row.heightMm, 0) + (detailRows.length > 0 ? 7 : 0);
+  // Reserve the exact rendered row heights, including multiline cells, before
+  // sizing the plan. This keeps the drawing and its table in the same layout budget.
+  const nonTableMetaSpace = 37.5 + simulationRemnantRows(remnants, sheetAreaLedger(sheet)).length * 3.8;
+  const metaSpace = nonTableMetaSpace + detailRowsHeight;
   const availablePlanHeight = Math.max(42, Math.min(GLASS_DISTRIBUTION_MAX_PLAN_HEIGHT_MM, CONTENT_BOTTOM_MM - startY - metaSpace));
   const drawing = calculateGlassDistributionPlanSize(sheet.rawSheet.widthMm, sheet.rawSheet.heightMm, CONTENT_WIDTH_MM, availablePlanHeight);
   const estimated = metaSpace + drawing.heightMm;
   let y = startY;
-  if (y + estimated > CONTENT_BOTTOM_MM && y > PAGE_CONTENT_TOP_MM + 10) {
+  const firstRowsHeight = detailRows.slice(0, 2).reduce((sum, row) => sum + row.heightMm, 0);
+  const minimumReadableBlockHeight = nonTableMetaSpace + 42 + (detailRows.length > 0 ? 7 + firstRowsHeight : 0);
+  if (y + estimated > CONTENT_BOTTOM_MM
+    && y > PAGE_CONTENT_TOP_MM + 10
+    && CONTENT_BOTTOM_MM - y < minimumReadableBlockHeight) {
     y = addSimulationContinuationPage(pdf, source);
     return drawSimulationSheet(pdf, sheet, sheetNumber, source, entries, y);
   }
@@ -667,8 +706,7 @@ function drawSimulationSheet(
   const remnantRows = simulationRemnantRows(remnants, ledger);
   pdf.text(remnantRows, PAGE_MARGIN_MM, y + 2.8, { lineHeightFactor: 1.05, maxWidth: CONTENT_WIDTH_MM });
   y += remnantRows.length * 3.8 + 2;
-  const sheetEntries = entries.filter((entry) => sheet.panes.some((planned) => planned.paneUnitId === entry.planned.paneUnitId));
-  y = drawSimulationDetailRows(pdf, sheetEntries, y, sheetNumber, source);
+  y = drawSimulationDetailRows(pdf, detailRows, y, sheetNumber, source);
   return y;
 }
 
