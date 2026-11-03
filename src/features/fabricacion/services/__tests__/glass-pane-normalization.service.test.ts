@@ -386,9 +386,11 @@ describe("glass-pane-normalization.service", () => {
     item.fabricacionSnapshot = null;
     item.observaciones = encodeCotizacionItemPresentationMeta({
       logicalComponentId: "logical-component-1",
-      manualGlassMeasurements: { version: 1, entries: [
-        { id: "manual-a", source: "manual", version: 1, productId: "501", technicalFingerprint: getCatalogGlassTechnicalFingerprint(specA), widthMm: 600, heightMm: 1000, quantity: 2, recordedAt: "2026-10-25T12:00:00Z" },
-        { id: "manual-b", source: "manual", version: 1, productId: "502", technicalFingerprint: getCatalogGlassTechnicalFingerprint(specB), widthMm: 500, heightMm: 900, quantity: 1, recordedAt: "2026-10-25T12:00:00Z" },
+      fabricacionTipologia: "Corredera",
+      sheetScheme: "2 hojas",
+      manualGlassMeasurements: { version: 2, manualPaneCount: 2, entries: [
+        { id: "manual-a", source: "manual", version: 2, productId: "501", technicalFingerprint: getCatalogGlassTechnicalFingerprint(specA), widthMm: 600, heightMm: 1000, quantity: 2, paneSlotId: "pane-1", sourcePosition: "Paño 1", rectangularVerified: true, recordedAt: "2026-10-25T12:00:00Z" },
+        { id: "manual-b", source: "manual", version: 2, productId: "502", technicalFingerprint: getCatalogGlassTechnicalFingerprint(specB), widthMm: 500, heightMm: 900, quantity: 1, paneSlotId: "pane-2", sourcePosition: "Paño 2", rectangularVerified: true, recordedAt: "2026-10-25T12:00:00Z" },
       ] },
     });
 
@@ -408,14 +410,16 @@ describe("glass-pane-normalization.service", () => {
     ]);
   });
 
-  it("prioriza una receta automática válida sin borrar la medida manual persistida", () => {
+  it("usa las mediciones manuales con posición definida y no mezcla el snapshot sin posición", () => {
     const item = paneItem();
     const metadata = { espesor: "5 mm", categoriaTecnica: "monolitico", revisionTecnicaExplicita: true, corteManualEstado: "confirmed", formaCompraVidrio: "full_sheet", planchaAnchoMm: 2500, planchaAltoMm: 1800 };
     const spec = buildCatalogGlassTechnicalSpec({ productId: "glass-5mm", metadata });
     item.observaciones = encodeCotizacionItemPresentationMeta({
       logicalComponentId: "logical-component-1",
-      manualGlassMeasurements: { version: 1, entries: [
-        { id: "manual-fallback", source: "manual", version: 1, productId: "glass-5mm", technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec), widthMm: 620, heightMm: 1010, quantity: 1, recordedAt: "2026-10-25T12:00:00Z" },
+      fabricacionTipologia: "Corredera",
+      sheetScheme: "2 hojas",
+      manualGlassMeasurements: { version: 2, manualPaneCount: 2, entries: [
+        { id: "manual-fallback", source: "manual", version: 2, productId: "glass-5mm", technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec), widthMm: 620, heightMm: 1010, quantity: 1, quantityBasis: "per_component", paneSlotId: "pane-1", sourcePosition: "Paño 1", rectangularVerified: true, recordedAt: "2026-10-25T12:00:00Z" },
       ] },
     });
 
@@ -427,7 +431,7 @@ describe("glass-pane-normalization.service", () => {
     });
 
     expect(panes).toHaveLength(1);
-    expect(panes[0]).toMatchObject({ glassId: "sash-glass", widthMm: 690, heightMm: 1390, dimensionProvenance: "validated_recipe" });
+    expect(panes[0]).toMatchObject({ glassId: "manual-fallback", widthMm: 620, heightMm: 1010, paneSlotId: "pane-1", dimensionProvenance: "manual", validationStatus: "eligible_for_manual_planning" });
     expect(JSON.stringify(decodeCotizacionItemPresentationMeta(item.observaciones).manualGlassMeasurements)).toContain("manual-fallback");
   });
 
@@ -441,8 +445,9 @@ describe("glass-pane-normalization.service", () => {
     const spec = buildCatalogGlassTechnicalSpec({ productId: "glass-5mm", metadata });
     item.observaciones = encodeCotizacionItemPresentationMeta({
       logicalComponentId: "logical-component-1",
-      manualGlassMeasurements: { version: 1, entries: [
-        { id: "manual-fallback", source: "manual", version: 1, productId: "glass-5mm", technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec), widthMm: 620, heightMm: 1010, quantity: 1, recordedAt: "2026-10-25T12:00:00Z" },
+      fabricacionTipologia: "Paño fijo",
+      manualGlassMeasurements: { version: 2, manualPaneCount: 1, entries: [
+        { id: "manual-fallback", source: "manual", version: 2, productId: "glass-5mm", technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec), widthMm: 620, heightMm: 1010, quantity: 1, paneSlotId: "pane-1", sourcePosition: "Paño 1", rectangularVerified: true, recordedAt: "2026-10-25T12:00:00Z" },
       ] },
     });
 
@@ -463,6 +468,8 @@ describe("glass-pane-normalization.service", () => {
     const spec = buildCatalogGlassTechnicalSpec({ productId: "glass-5mm", metadata });
     item.observaciones = encodeCotizacionItemPresentationMeta({
       logicalComponentId: "logical-component-1",
+      fabricacionTipologia: "Corredera",
+      sheetScheme: "2 hojas",
       manualGlassMeasurements: { version: 2, expectedPaneCount: 2, configurationFingerprint: "two-panes", entries: [1, 2].map((index) => ({
         id: `manual-slot-${index}`, source: "manual" as const, version: 2 as const, productId: "glass-5mm",
         technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec), widthMm: 600 + index, heightMm: 1000,
@@ -487,8 +494,8 @@ describe("glass-pane-normalization.service", () => {
     const spec = buildCatalogGlassTechnicalSpec({ productId: "502", metadata });
     manual.observaciones = encodeCotizacionItemPresentationMeta({
       logicalComponentId: "logical-component-v2",
-      manualGlassMeasurements: { version: 1, entries: [
-        { id: "manual-fixed", source: "manual", version: 1, productId: "502", technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec), widthMm: 750, heightMm: 1600, quantity: 1, recordedAt: "2026-10-25T12:00:00Z" },
+      manualGlassMeasurements: { version: 2, manualPaneCount: 1, entries: [
+        { id: "manual-fixed", source: "manual", version: 2, productId: "502", technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec), widthMm: 750, heightMm: 1600, quantity: 1, paneSlotId: "manual-pane:v1:1", sourcePosition: "Paño 1", rectangularVerified: true, recordedAt: "2026-10-25T12:00:00Z" },
       ] },
     });
 
@@ -510,9 +517,12 @@ describe("glass-pane-normalization.service", () => {
     item.fabricacionSnapshot = null;
     const metadata = { espesor: "5 mm", categoriaTecnica: "monolitico", revisionTecnicaExplicita: true, corteManualEstado: "confirmed", formaCompraVidrio: "full_sheet", planchaAnchoMm: 2500, planchaAltoMm: 1800 };
     const spec = buildCatalogGlassTechnicalSpec({ productId: "501", metadata });
+    const slotResolution = resolveManualGlassPaneSlots({ componentType: "Corredera", sheetScheme: "3 hojas" });
     item.observaciones = encodeCotizacionItemPresentationMeta({
       logicalComponentId: "logical-component-1",
-      manualGlassMeasurements: { version: 2, expectedPaneCount: 3, configurationFingerprint: "fixture", entries: [1, 2, 3].map((index) => ({
+      fabricacionTipologia: "Corredera",
+      sheetScheme: "3 hojas",
+      manualGlassMeasurements: { version: 2, manualPaneCount: 3, expectedPaneCount: 3, configurationFingerprint: slotResolution.configurationFingerprint, entries: [1, 2, 3].map((index) => ({
         id: `manual-${index}`, source: "manual" as const, version: 2 as const, productId: "501",
         technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec), widthMm: 600 + index,
         heightMm: 1000, quantity: 1, quantityBasis: "per_component" as const,
@@ -536,29 +546,35 @@ describe("glass-pane-normalization.service", () => {
     const spec = buildCatalogGlassTechnicalSpec({ productId: "501", metadata });
     item.observaciones = encodeCotizacionItemPresentationMeta({
       logicalComponentId: "logical-component-1",
-      manualGlassMeasurements: { version: 1, entries: [{
-        id: "manual-total",
-        source: "manual",
-        version: 1,
+      fabricacionTipologia: "Corredera",
+      sheetScheme: "2 hojas",
+      manualGlassMeasurements: { version: 2, manualPaneCount: 2, expectedPaneCount: 2, entries: [1, 2].map((index) => ({
+        id: `manual-total-${index}`,
+        source: "manual" as const,
+        version: 2 as const,
         productId: "501",
         technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec),
         widthMm: 600,
         heightMm: 1000,
-        quantity: 6,
-        quantityBasis: "total",
+        quantity: 3,
+        quantityBasis: "total" as const,
+        paneSlotId: `pane-${index}`,
+        sourcePosition: `Paño ${index}`,
+        rectangularVerified: true,
         recordedAt: "2026-10-25T12:00:00Z",
-      }] },
+      })) },
     });
 
-    const [pane] = extractNormalizedGlassPanes({
+    const panes = extractNormalizedGlassPanes({
       organizationId: 4,
       quoteId: 1248,
       item,
       catalogGlassProducts: new Map([["501", { name: "Float 5 mm", catalogMetadata: metadata }]]),
     });
 
-    expect(pane).toMatchObject({ quantity: 6, validationStatus: "eligible_for_manual_planning" });
-    expect(pane?.paneUnitIds).toHaveLength(6);
+    expect(panes.map((pane) => pane.quantity)).toEqual([3, 3]);
+    expect(panes.every((pane) => pane.validationStatus === "eligible_for_manual_planning")).toBe(true);
+    expect(panes.flatMap((pane) => pane.paneUnitIds)).toHaveLength(6);
   });
 
   it("no sustituye por una unidad la cantidad comercial inválida en una medición por componente", () => {

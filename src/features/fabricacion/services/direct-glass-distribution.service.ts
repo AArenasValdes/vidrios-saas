@@ -10,6 +10,8 @@ import { isGlassPaneGeometryComplete } from "./glass-distribution-coverage.servi
 export type GlassDistributionPane = {
   quoteItemId: string;
   paneId?: string;
+  paneSlotId?: string;
+  sourcePosition?: string;
   paneUnitIds?: string[];
   commercialQuantity?: number | null;
   logicalComponentId: string | null;
@@ -50,6 +52,9 @@ export function mapGlassDistributionPdfPanes(panes: GlassDistributionPane[]): Gl
   return panes.map((pane) => ({
     quoteItemId: pane.quoteItemId,
     paneId: pane.paneId,
+    paneSlotId: pane.paneSlotId,
+    sourcePosition: pane.sourcePosition,
+    paneUnitIds: pane.paneUnitIds,
     componentCode: pane.componentCode,
     componentName: pane.componentName ?? null,
     productId: pane.productId,

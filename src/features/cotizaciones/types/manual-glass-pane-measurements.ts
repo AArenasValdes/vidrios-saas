@@ -1,4 +1,6 @@
 export const MANUAL_GLASS_PANE_MEASUREMENTS_VERSION = 2 as const;
+/** Shared safety ceiling for manual pane slots and physical units in one planning group. */
+export const MAX_MANUAL_GLASS_PANE_COUNT = 2_000;
 
 /** User-entered final cut sizes. The catalog remains the technical source of truth. */
 export type ManualGlassPaneMeasurement = {

@@ -57,6 +57,19 @@ describe("ManualGlassMeasurementsEditor", () => {
     expect(screen.getByRole("status")).toHaveTextContent("3 paños identificados");
   });
 
+  it("permite declarar más de doce posiciones sin exceder el límite seguro", () => {
+    const onChange = jest.fn();
+    const view = render(<ManualGlassMeasurementsEditor templates={[glassTemplate]} onChange={onChange} />);
+    const count = screen.getByLabelText("Cantidad de paños del componente");
+    expect(count).toHaveAttribute("max", "2000");
+    fireEvent.change(count, { target: { value: "13" } });
+    fireEvent.click(screen.getByRole("button", { name: "Crear posiciones de paño" }));
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ manualPaneCount: 13, expectedPaneCount: 13 }));
+
+    view.rerender(<ManualGlassMeasurementsEditor templates={[glassTemplate]} value={{ version: 2, entries: [], manualPaneCount: 13 }} onChange={onChange} />);
+    expect(screen.getByRole("status")).toHaveTextContent("13 paños identificados");
+  });
+
   it("muestra geometría congelada del snapshot con el estado de la receta", () => {
     render(<ManualGlassMeasurementsEditor
       templates={[glassTemplate]}

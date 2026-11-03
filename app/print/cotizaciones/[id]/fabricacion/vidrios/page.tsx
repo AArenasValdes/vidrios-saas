@@ -7,10 +7,13 @@ import type { FormEvent } from "react";
 import type { GlassPanePlanningUnit, GlassCuttingResult, GlassSheetPlan } from "@/features/fabricacion/types/glass-sheet-optimizer-contracts";
 import { resolveGlassCutLineGeometry } from "@/features/fabricacion/services/glass-sheet-cut-geometry.service";
 import { drawGeometricSimulationDisclaimer } from "@/features/fabricacion/services/fabrication-pdf-document-style.service";
+import { buildGlassSimulationPhysicalAssumptions } from "@/features/fabricacion/services/glass-distribution-pdf.service";
+import { downloadPdfBlob } from "@/utils/cotizacion-pdf";
 import type { GlassDistributionCoverage, GlassPaneGeometryExclusion } from "@/features/fabricacion/services/glass-distribution-coverage.service";
 import s from "./page.module.css";
 
 type PanePreview = Omit<GlassPanePlanningUnit, "paneUnitIds" | "orientation"> & { displayName: string | null; physicalUnitCount: number | null; paneUnitIds?: never; orientation?: never };
+type PaneReferenceLike = { componentCode: string; paneId: string; paneSlotId?: string; sourcePosition?: string; paneUnitId?: string };
 type PaneDiagnostic = string;
 type Settings = {
   pieceOrientation: "" | "fixed" | "rotatable" | "grain_or_coating_directional"; sheetOrientation: "" | "fixed" | "rotatable" | "grain_or_coating_directional"; confirmManualOperations: boolean;
@@ -46,10 +49,10 @@ function SheetDrawing({ sheet, selectedId, onSelect, showCutLines = true, showUs
       return <g key={pane.paneUnitId} onClick={() => onSelect?.(pane.paneUnitId)} className={onSelect ? s.paneTarget : undefined}>
         <rect x={pane.rect.xMm} y={pane.rect.yMm} width={pane.rect.widthMm} height={pane.rect.heightMm} fill={active ? "#c9e0ff" : "#dcecff"} stroke={active ? "#0875ed" : "#32699f"} strokeWidth={Math.max(scaleX, scaleY) / (active ? 650 : 900)} />
         {showLabels ? <text x={pane.rect.xMm + pane.rect.widthMm / 2} y={pane.rect.yMm + pane.rect.heightMm / 2} textAnchor="middle" dominantBaseline="middle" fill="#102a51" fontSize={Math.max(scaleX, scaleY) / 40}>
-          <tspan x={pane.rect.xMm + pane.rect.widthMm / 2}>{pane.componentCode}</tspan>
+          <tspan x={pane.rect.xMm + pane.rect.widthMm / 2}>{paneReferenceLabel(pane)}</tspan>
           <tspan x={pane.rect.xMm + pane.rect.widthMm / 2} dy={Math.max(scaleX, scaleY) / 30}>{mm(pane.rect.widthMm)} × {mm(pane.rect.heightMm)}</tspan>
         </text> : null}
-        <title>{pane.componentCode} · {mm(pane.rect.widthMm)} × {mm(pane.rect.heightMm)} mm{pane.rotated ? " · girado 90°" : ""}</title>
+        <title>{paneReferenceLabel(pane)} · {mm(pane.rect.widthMm)} × {mm(pane.rect.heightMm)} mm{pane.rotated ? " · girado 90°" : ""}</title>
       </g>;
     })}
     {showCutLines ? <g className={s.cutLines} aria-label={cutLineLabel === "Corte propuesto" ? "Cortes propuestos" : "Separaciones geométricas estimadas"}>
@@ -62,6 +65,12 @@ function SheetDrawing({ sheet, selectedId, onSelect, showCutLines = true, showUs
     </g> : null}
     {showUsableOutline ? <rect className={s.usableOutline} x={sheet.usableSheet.xMm} y={sheet.usableSheet.yMm} width={sheet.usableSheet.widthMm} height={sheet.usableSheet.heightMm} /> : null}
   </svg>;
+}
+
+function paneReferenceLabel(pane: PaneReferenceLike) {
+  const slotOrdinal = pane.paneSlotId?.match(/(?:pane|leaf)[^0-9]*(\d+)/i)?.[1];
+  const position = pane.sourcePosition?.trim() || (slotOrdinal ? `Paño ${slotOrdinal}` : `Ref. ${pane.paneId}`);
+  return `${pane.componentCode} · ${position}`;
 }
 
 export default function GlassSheetOptimizationPage() {
@@ -256,6 +265,9 @@ export default function GlassSheetOptimizationPage() {
 
   async function downloadPdf() {
     if (!results || !hasCompletePlan || (calculationMode === "workshop" && !hasOperationalPlan)) return;
+    setBusy(true);
+    setError(null);
+    try {
     const [{ jsPDF }, { sanitizeFileNamePart }] = await Promise.all([import("jspdf"), import("@/utils/sanitize-file-name")]);
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const groups = results.filter((result) => result.status === "feasible");
@@ -292,7 +304,7 @@ export default function GlassSheetOptimizationPage() {
           if (pane.rect.widthMm * scale > 18 && pane.rect.heightMm * scale > 10) {
             const centerX = ox + (pane.rect.xMm + pane.rect.widthMm / 2) * scale;
             const centerY = oy + (pane.rect.yMm + pane.rect.heightMm / 2) * scale;
-            doc.setFontSize(6); doc.setTextColor(16, 42, 81); doc.text(pane.componentCode, centerX, centerY - 1.5, { align: "center" });
+            doc.setFontSize(6); doc.setTextColor(16, 42, 81); doc.text(paneReferenceLabel(pane), centerX, centerY - 1.5, { align: "center" });
             doc.text(`${pane.rect.widthMm} × ${pane.rect.heightMm} mm`, centerX, centerY + 2, { align: "center" });
           }
         }
@@ -305,7 +317,7 @@ export default function GlassSheetOptimizationPage() {
         const summary = `${sheet.panes.length} ${sheet.panes.length === 1 ? "paño" : "paños"} · ${fmt(result.summary.paneAreaMm2)} m² de vidrio · posición y separación geométricas; sin kerf ni validación física`;
         doc.setFontSize(8); doc.setTextColor(20, 32, 50); doc.text(summary, 16, oy + area.h + 8, { maxWidth: 178 });
         const details = [
-          ...sheet.panes.map((pane) => `PAÑO ${pane.componentCode} · ${pane.rect.widthMm} × ${pane.rect.heightMm} mm · posición x=${pane.rect.xMm}, y=${pane.rect.yMm} mm${pane.rotated ? " · girado 90°" : ""}`),
+          ...sheet.panes.map((pane) => `PAÑO ${paneReferenceLabel(pane)} · ${pane.rect.widthMm} × ${pane.rect.heightMm} mm · posición x=${pane.rect.xMm}, y=${pane.rect.yMm} mm${pane.rotated ? " · girado 90°" : ""}`),
           ...sheet.remnants.map((remnant, remnantIndex) => `ÁREA RESTANTE ESTIMADA ${remnantIndex + 1} · ${remnant.rect.widthMm} × ${remnant.rect.heightMm} mm · posición x=${remnant.rect.xMm}, y=${remnant.rect.yMm} mm`),
         ];
         let detailsY = oy + area.h + 15;
@@ -321,8 +333,12 @@ export default function GlassSheetOptimizationPage() {
           detailsY += lines.length * 3.5;
         }
       }
-      drawGeometricSimulationDisclaimer(doc);
-      doc.save(`simulacion-geometrica-vidrios-${sanitizeFileNamePart(quoteCode, 36)}.pdf`);
+      drawGeometricSimulationDisclaimer(doc, buildGlassSimulationPhysicalAssumptions(allSheets.map(({ sheet }) => sheet)));
+      const downloadStatus = await downloadPdfBlob(
+        doc.output("blob"),
+        `simulacion-geometrica-vidrios-${sanitizeFileNamePart(quoteCode, 36)}.pdf`
+      );
+      if (downloadStatus === "failed") throw new Error("El navegador no pudo iniciar la descarga del PDF preliminar. Permite las descargas para este sitio e inténtalo otra vez.");
       return;
     }
     const plannedRotation = new Map(results.flatMap((result) => result.sheets.flatMap((sheet) => sheet.panes.map((pane) => [pane.paneUnitId, pane.rotated] as const))));
@@ -397,7 +413,7 @@ export default function GlassSheetOptimizationPage() {
           const centerX = ox + (pane.rect.xMm + pane.rect.widthMm / 2) * scale;
           const centerY = oy + (pane.rect.yMm + pane.rect.heightMm / 2) * scale;
           doc.setFontSize(6); doc.setTextColor(16, 42, 81);
-          doc.text(pane.componentCode, centerX, centerY - 1.5, { align: "center" });
+          doc.text(paneReferenceLabel(pane), centerX, centerY - 1.5, { align: "center" });
           doc.text(`${pane.rect.widthMm} × ${pane.rect.heightMm} mm`, centerX, centerY + 2, { align: "center" });
         }
       }
@@ -448,7 +464,7 @@ export default function GlassSheetOptimizationPage() {
       };
       doc.addPage(); writeSheetDetailsHeader();
       const detailRows = [
-        ...sheet.panes.map((pane) => `PAÑO · ${pane.componentCode} · ${pane.rect.widthMm} × ${pane.rect.heightMm} mm${pane.rotated ? " · girado 90°" : ""}`),
+        ...sheet.panes.map((pane) => `PAÑO · ${paneReferenceLabel(pane)} · ${pane.rect.widthMm} × ${pane.rect.heightMm} mm${pane.rotated ? " · girado 90°" : ""}`),
         ...sheet.remnants.map((remnant, index) => `${remnant.classification === "reusable_candidate" ? "RETAZO CANDIDATO" : "DESPERDICIO"} ${index + 1} · ${remnant.rect.widthMm} × ${remnant.rect.heightMm} mm · desde x=${remnant.rect.xMm}, y=${remnant.rect.yMm} mm`),
       ];
       for (const detail of detailRows) {
@@ -458,7 +474,16 @@ export default function GlassSheetOptimizationPage() {
         y += lines.length * 4.5 + 2;
       }
     }
-    doc.save(`propuesta-operativa-vidrios-${sanitizeFileNamePart(quoteCode, 36)}.pdf`);
+    const downloadStatus = await downloadPdfBlob(
+      doc.output("blob"),
+      `propuesta-operativa-vidrios-${sanitizeFileNamePart(quoteCode, 36)}.pdf`
+    );
+    if (downloadStatus === "failed") throw new Error("El navegador no pudo iniciar la descarga de la pauta. Revisa los permisos de descarga e inténtalo otra vez.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No pudimos preparar o descargar el PDF.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return <main className={s.page}>
@@ -521,7 +546,6 @@ export default function GlassSheetOptimizationPage() {
           <label className={s.confirm}><input type="checkbox" checked={settings.confirmManualOperations} onChange={(e) => update("confirmManualOperations", e.target.checked)} />Confirmo que el proceso es corte manual con rayado recto y quiebre.</label>
           {profileProductIds.length === 1 ? <div className={s.profileSave}><p>La configuración confirmada se puede reutilizar en esta organización para {panes[0]?.displayName ?? "este vidrio"}. Solo se guarda en los metadatos técnicos de su ficha.</p><button type="button" className={s.smallButton} disabled={!configurationReady || busy} onClick={() => void saveWorkshopProfile()}>{profileSaved ? "Perfil del taller guardado" : workshopProfiles[profileProductId] ? "Actualizar perfil reutilizable" : "Guardar para este vidrio"}</button></div> : profileProductIds.length > 1 ? <p className={s.help}>Esta cotización mezcla varios vidrios. No guardamos una regla única para materiales distintos.</p> : null}
         </details>
-        {error ? <p className={s.error} role="alert">{error}</p> : null}
         <button className={s.primary} type="submit" disabled={!configurationReady || busy || loading}>{busy ? "Calculando y verificando…" : "Generar propuesta de corte"}</button>
       </form>
       </details>

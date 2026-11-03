@@ -1,6 +1,7 @@
 /** @jest-environment jsdom */
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { downloadPdfBlob } from "@/utils/cotizacion-pdf";
 import GlassSheetOptimizationPage from "../page";
 
 const mockPdfTextByPage: string[][] = [];
@@ -15,7 +16,7 @@ jest.mock("jspdf", () => ({
       setPage: (page: number) => { currentPage = page; },
       splitTextToSize: (value: string) => [value],
       text: (value: string | string[]) => { mockPdfTextByPage[currentPage - 1]?.push(Array.isArray(value) ? value.join(" ") : value); },
-      save: jest.fn(),
+      output: () => new Blob(["pdf"], { type: "application/pdf" }),
     };
     return new Proxy(base, {
       get(target, key: string) {
@@ -25,6 +26,8 @@ jest.mock("jspdf", () => ({
     });
   }),
 }));
+
+jest.mock("@/utils/cotizacion-pdf", () => ({ downloadPdfBlob: jest.fn(async () => "downloaded") }));
 
 jest.mock("next/navigation", () => ({
   useParams: () => ({ id: "1290" }),
@@ -124,6 +127,7 @@ describe("GlassSheetOptimizationPage: geometría manual sin receta", () => {
     const sheet = (sheetId: string, paneUnitId: string, componentCode: string) => ({
       sheetId,
       rawSheet: { widthMm: 4000, heightMm: 2200 },
+      usableSheet: { xMm: 0, yMm: 0, widthMm: 4000, heightMm: 2200 },
       panes: [pane(paneUnitId, componentCode)],
       remnants: [],
       cutSequence: [],
@@ -158,11 +162,55 @@ describe("GlassSheetOptimizationPage: geometría manual sin receta", () => {
     await waitFor(() => expect(mockPdfTextByPage).toHaveLength(2));
     for (const pageText of mockPdfTextByPage) {
       expect(pageText.join(" ")).toContain("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE");
-      expect(pageText.join(" ")).toContain("Despuntes y separación asumidos: 0 mm");
-      expect(pageText.join(" ")).toContain("sin secuencia de corte");
-      expect(pageText.join(" ")).toContain("no necesariamente reutilizable");
+      expect(pageText.join(" ")).toContain("Separación usada 0 mm");
+      expect(pageText.join(" ")).toContain("Sin secuencia de corte");
+      expect(pageText.join(" ")).toContain("zonas libres no necesariamente reutilizables");
     }
     expect(mockPdfTextByPage[0]?.join(" ")).toContain("1 referencias excluidas");
     expect(mockPdfTextByPage[0]?.join(" ")).toContain("Referencias excluidas: F3");
+    const [pdfBlob, fileName] = (downloadPdfBlob as jest.Mock).mock.calls.at(-1) ?? [];
+    expect(pdfBlob).toBeDefined();
+    expect(fileName).toBe("simulacion-geometrica-vidrios-cot-301026-002.pdf");
+  });
+
+  it("muestra un error útil cuando el navegador no inicia la descarga preliminar", async () => {
+    const payload = {
+      quoteCode: "COT-301026-002",
+      panes: [manualPane("F1")],
+      preliminaryPaneCount: 1,
+      previewExclusions: [],
+      diagnostics: [],
+      coverage: { status: "complete", completeReferenceCount: 1, pendingReferenceCount: 0, pendingReferences: [], diagnostics: [] },
+      workshopProfiles: {},
+    };
+    const result = {
+      status: "feasible",
+      productionReadiness: "requires_workshop_validation",
+      verification: { passed: true, findings: [] },
+      inputFingerprint: "qa-fingerprint",
+      minimumSheetCountProven: false,
+      summary: { paneCount: 1, sheetCount: 1, paneAreaMm2: 600_000, usableSheetAreaMm2: 8_800_000, rawSheetAreaMm2: 8_800_000, reusableRemnantsMm2: 0, wasteMm2: 0 },
+      sheets: [{
+        sheetId: "sheet-1",
+        rawSheet: { widthMm: 4000, heightMm: 2200 },
+        usableSheet: { xMm: 0, yMm: 0, widthMm: 4000, heightMm: 2200 },
+        panes: [{ paneUnitId: "unit-1", quoteItemId: "4078", paneId: "pane-1", productId: "3763", componentCode: "F1", rotated: false, rect: { xMm: 0, yMm: 0, widthMm: 600, heightMm: 1000 } }],
+        remnants: [],
+        cutSequence: [],
+      }],
+    };
+    global.fetch = jest.fn(async (_url: string, init?: RequestInit) => ({
+      ok: true,
+      json: async () => init?.method === "POST"
+        ? { quoteCode: payload.quoteCode, mode: "geometric_preview", results: [result], warnings: [], generatedFrom: ["fingerprint-F1"] }
+        : payload,
+    })) as unknown as typeof fetch;
+    (downloadPdfBlob as jest.Mock).mockResolvedValueOnce("failed");
+
+    render(<GlassSheetOptimizationPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Generar distribución" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Descargar PDF preliminar" }));
+
+    expect(await screen.findByText(/El navegador no pudo iniciar la descarga del PDF preliminar/)).toBeInTheDocument();
   });
 });

@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
-import type { ManualGlassPaneMeasurement, ManualGlassPaneMeasurementsSnapshot } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
+import { MAX_MANUAL_GLASS_PANE_COUNT, type ManualGlassPaneMeasurement, type ManualGlassPaneMeasurementsSnapshot } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
 import {
   createManualGlassPaneMeasurement,
   getCatalogGlassTechnicalSpec,
@@ -71,7 +71,10 @@ export function ManualGlassMeasurementsEditor({ value, templates, onChange, comp
   }, [selectedGlassProductId, glassDeepLinkRequestKey, openImmediately, manualEntryCount]);
 
   useEffect(() => {
-    setManualPaneCountDraft(snapshot.manualPaneCount ? String(snapshot.manualPaneCount) : "");
+    const timer = window.setTimeout(() => {
+      setManualPaneCountDraft(snapshot.manualPaneCount ? String(snapshot.manualPaneCount) : "");
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [snapshot.manualPaneCount]);
 
   const resetForm = () => {
@@ -159,7 +162,7 @@ export function ManualGlassMeasurementsEditor({ value, templates, onChange, comp
 
   const createManualSlots = () => {
     const count = Number(manualPaneCountDraft);
-    if (!Number.isSafeInteger(count) || count < 1 || count > 12) return;
+    if (!Number.isSafeInteger(count) || count < 1 || count > MAX_MANUAL_GLASS_PANE_COUNT) return;
     const resolution = resolveManualGlassPaneSlots({ ...(paneConfiguration ?? {}), manualPaneCount: count });
     if (!resolution.countIsKnown) return;
     onChange({
@@ -257,12 +260,10 @@ export function ManualGlassMeasurementsEditor({ value, templates, onChange, comp
         <div className={s.form}>
           <label className={s.productField}>
             <span>¿Cuántos paños rectangulares tiene el componente?</span>
-            <select aria-label="Cantidad de paños del componente" value={manualPaneCountDraft} onChange={(event) => setManualPaneCountDraft(event.target.value)}>
-              <option value="">Indicar cantidad</option>
-              {Array.from({ length: 12 }, (_, index) => index + 1).map((count) => <option key={count} value={count}>{count} {count === 1 ? "paño" : "paños"}</option>)}
-            </select>
+            <input aria-label="Cantidad de paños del componente" type="number" min={1} max={MAX_MANUAL_GLASS_PANE_COUNT} step={1} inputMode="numeric" value={manualPaneCountDraft} onChange={(event) => setManualPaneCountDraft(event.target.value)} />
           </label>
-          <button type="button" className={s.entryButton} onClick={createManualSlots} disabled={!manualPaneCountDraft}>Crear posiciones de paño</button>
+          <p className={s.validationHint}>{paneResolution.reason ?? `Indica cuántos paños rectangulares medidos tiene el componente (máximo ${MAX_MANUAL_GLASS_PANE_COUNT.toLocaleString("es-CL")}).`}</p>
+          <button type="button" className={s.entryButton} onClick={createManualSlots} disabled={!Number.isSafeInteger(Number(manualPaneCountDraft)) || Number(manualPaneCountDraft) < 1 || Number(manualPaneCountDraft) > MAX_MANUAL_GLASS_PANE_COUNT}>Crear posiciones de paño</button>
           {snapshot.entries.length > 0 && snapshot.manualPaneCount == null ? <p className={s.validationHint}>Las medidas anteriores no tenían posiciones identificadas. Confirma la cantidad y vuelve a asociarlas para distribuirlas sin duplicar.</p> : null}
         </div>
       ) : null}

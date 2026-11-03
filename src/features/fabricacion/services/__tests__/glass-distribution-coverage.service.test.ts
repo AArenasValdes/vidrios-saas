@@ -178,7 +178,7 @@ describe("buildGlassDistributionCoverage", () => {
     expect(coverage.pendingReferences[0]?.reason).toContain("múltiplo de la cantidad comercial");
   });
 
-  it("acepta una referencia agrupada con seis piezas para dos slots y cantidad comercial tres", () => {
+  it("no infiere posiciones de receta por coincidencia entre seis unidades y dos slots", () => {
     const component = item("item-1", "V1");
     component.cantidad = 3;
     component.observaciones = encodeCotizacionItemPresentationMeta({ fabricacionTipologia: "Corredera", sheetScheme: "2 hojas" });
@@ -191,7 +191,9 @@ describe("buildGlassDistributionCoverage", () => {
       })],
     });
 
-    expect(coverage).toMatchObject({ status: "complete", completeReferenceCount: 1, pendingReferenceCount: 0 });
+    expect(coverage.status).not.toBe("complete");
+    expect(coverage.completeReferenceCount).toBe(0);
+    expect(coverage.pendingReferences[0]?.reason).toMatch(/no identifica la posición física/i);
   });
 
   it("acepta referencias separadas de tres unidades por slot con cantidad comercial tres", () => {
@@ -202,8 +204,8 @@ describe("buildGlassDistributionCoverage", () => {
     const coverage = buildGlassDistributionCoverage({
       items: [component],
       panes: [
-        pane("item-1", "glass-1", { quantity: 3, paneUnitIds: ["a1", "a2", "a3"] }),
-        pane("item-1", "glass-2", { quantity: 3, paneUnitIds: ["b1", "b2", "b3"] }),
+        pane("item-1", "glass-1", { paneSlotId: "pane-1", sourcePosition: "Paño 1", quantity: 3, paneUnitIds: ["a1", "a2", "a3"] }),
+        pane("item-1", "glass-2", { paneSlotId: "pane-2", sourcePosition: "Paño 2", quantity: 3, paneUnitIds: ["b1", "b2", "b3"] }),
       ],
     });
 
@@ -302,7 +304,7 @@ describe("buildGlassDistributionCoverage", () => {
     expect(coverage.pendingReferences.every((reference) => reference.quoteItemId === "item-1")).toBe(true);
   });
 
-  it("exige confirmación para una composición sin conteo confiable y la invalida al cambiar divisiones", () => {
+  it("mantiene un paño físico cuando solo cambia la decoración y la invalida al cambiar la configuración", () => {
     let visual = createDefaultGuidedVisualConfig({ widthMm: 1500, heightMm: 1800 });
     const moduleId = listLeafModules(visual.root)[0]!.id;
     const resolveFingerprint = (config: typeof visual) => {
@@ -324,7 +326,8 @@ describe("buildGlassDistributionCoverage", () => {
     visual = applyPalilloPresetToModule(visual, moduleId, "v1");
     const currentResolution = resolveFingerprint(visual);
     const currentFingerprint = currentResolution.configurationFingerprint;
-    expect(currentResolution.countIsKnown).toBe(false);
+    expect(currentResolution.countIsKnown).toBe(true);
+    expect(currentResolution.slots).toHaveLength(1);
     const component = item("item-1", "V1", "Float 5 mm");
     const measurement = {
       id: "manual-unknown-layout",
@@ -362,7 +365,7 @@ describe("buildGlassDistributionCoverage", () => {
         fabricacionHojas: decoded.fabricacionHojas,
         guidedVisualConfig: decoded.guidedVisualConfig,
         quickCompositionAdjustment: decoded.quickCompositionAdjustment,
-      })).toMatchObject({ countIsKnown: false });
+      })).toMatchObject({ countIsKnown: true, slots: [{ id: currentResolution.slots[0]?.id }] });
       return buildGlassDistributionCoverage({
         items: [component],
         panes: [pane("item-1", measurement.id, { dimensionProvenance: "manual", recipeStatus: null })],
@@ -373,6 +376,6 @@ describe("buildGlassDistributionCoverage", () => {
     const confirmedCoverage = makeCoverage(currentFingerprint);
     expect(confirmedCoverage.completeReferenceCount).toBe(1);
     expect(confirmedCoverage.pendingReferences).toEqual([]);
-    expect(makeCoverage(oldResolution.configurationFingerprint)).toMatchObject({ status: "partial", pendingReferenceCount: 1 });
+    expect(makeCoverage(oldResolution.configurationFingerprint)).toMatchObject({ status: "unavailable", pendingReferenceCount: 1 });
   });
 });

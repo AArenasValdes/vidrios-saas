@@ -24,6 +24,8 @@ import { GlassDistributionCoverageNotice } from "./glass-distribution-coverage-n
 type PaneInput = {
   quoteItemId: string;
   paneId: string;
+  paneSlotId?: string;
+  sourcePosition?: string;
   paneUnitIds: string[];
   logicalComponentId: string | null;
   glassId: string | null;
@@ -107,6 +109,11 @@ function shortCode(code: string, index: number) {
   return code && code.length < 26 && !/^[0-9a-f-]{28,}$/i.test(code) ? code : `Componente ${index + 1}`;
 }
 
+function panePositionLabel(pane: PaneInput, fallbackIndex: number) {
+  const slotOrdinal = pane.paneSlotId?.match(/(?:pane|leaf)[^0-9]*(\d+)/i)?.[1];
+  return pane.sourcePosition?.trim() || (slotOrdinal ? `Paño ${slotOrdinal}` : `Referencia ${fallbackIndex + 1}`);
+}
+
 function formatArea(areaMm2: number) {
   return `${(areaMm2 / 1_000_000).toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m²`;
 }
@@ -125,13 +132,10 @@ function PlanDrawing({ result, allPlans }: { result: GlassCuttingResult; allPlan
   const sheet = result.sheets[0];
   if (!sheet) return null;
   const { widthMm, heightMm } = { widthMm: sheet.rawSheet.widthMm, heightMm: sheet.rawSheet.heightMm };
-  const ordinals = new Map<string, number>();
-  const counts = new Map<string, number>();
+  const physicalUnitCounts = new Map<string, number>();
   for (const entry of allPlans) for (const pane of entry.sheet.panes) {
-    const key = `${pane.quoteItemId}|${pane.logicalComponentId}`;
-    const next = (counts.get(key) ?? 0) + 1;
-    counts.set(key, next);
-    ordinals.set(pane.paneUnitId, next);
+    const key = `${pane.quoteItemId}|${pane.paneId}`;
+    physicalUnitCounts.set(key, (physicalUnitCounts.get(key) ?? 0) + 1);
   }
   return (
     <svg className={s.planDrawing} viewBox={`0 0 ${widthMm} ${heightMm}`} role="img" aria-label={`Distribución en plancha de ${widthMm} por ${heightMm} milímetros`}>
@@ -145,7 +149,11 @@ function PlanDrawing({ result, allPlans }: { result: GlassCuttingResult; allPlan
       })}
       {sheet.panes.map((pane, index) => {
         const labelSize = Math.max(38, Math.min(widthMm, heightMm) / 36);
-        const title = `${shortCode(pane.componentCode, index)} · paño ${ordinals.get(pane.paneUnitId) ?? index + 1}`;
+        const slotOrdinal = pane.paneSlotId?.match(/(?:pane|leaf)[^0-9]*(\d+)/i)?.[1];
+        const position = pane.sourcePosition?.trim() || (slotOrdinal ? `Paño ${slotOrdinal}` : `Ref. ${pane.paneId}`);
+        const unitOrdinal = pane.paneUnitId.startsWith(`${pane.paneId}:`) ? pane.paneUnitId.slice(pane.paneId.length + 1) : "";
+        const repeatedUnit = (physicalUnitCounts.get(`${pane.quoteItemId}|${pane.paneId}`) ?? 0) > 1 && unitOrdinal ? ` · unidad ${unitOrdinal}` : "";
+        const title = `${shortCode(pane.componentCode, index)} · ${position}${repeatedUnit}`;
         const dimensionSize = Math.min(Math.max(64, labelSize * 1.35), pane.rect.widthMm / 12);
         return (
           <g key={pane.paneUnitId}>
@@ -420,7 +428,7 @@ export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workNam
               <div className={s.glassMeta}><span>{previewableGroup.length} {previewableGroup.length === 1 ? "referencia incluida" : "referencias incluidas"} · {quantity} {quantity === 1 ? "unidad física" : "unidades físicas"} para simulación</span><span>{width && height ? `Plancha ${width} × ${height} mm` : "Formato habitual pendiente"}</span></div>
               <ul className={s.paneList}>{group.map((entry, index) => {
                 const exclusion = getGlassPaneGeometryExclusionReason(entry);
-                return <li key={`${entry.quoteItemId}-${entry.paneId}`}><span>{shortCode(entry.componentCode, index)}{entry.componentName ? ` · ${entry.componentName}` : ""} · {exclusion ? `Excluido: ${exclusion}` : `${entry.physicalUnitCount} ${entry.physicalUnitCount === 1 ? "unidad física" : "unidades físicas"}`}</span><strong>{entry.widthMm && entry.heightMm ? `${entry.widthMm} × ${entry.heightMm} mm` : "Medidas pendientes"}</strong></li>;
+                return <li key={`${entry.quoteItemId}-${entry.paneId}`}><span>{shortCode(entry.componentCode, index)} · {panePositionLabel(entry, index)}{entry.componentName ? ` · ${entry.componentName}` : ""} · {exclusion ? `Excluido: ${exclusion}` : `${entry.physicalUnitCount} ${entry.physicalUnitCount === 1 ? "unidad física" : "unidades físicas"}`}</span><strong>{entry.widthMm && entry.heightMm ? `${entry.widthMm} × ${entry.heightMm} mm` : "Medidas pendientes"}</strong></li>;
               })}</ul>
             </div>;
           })}

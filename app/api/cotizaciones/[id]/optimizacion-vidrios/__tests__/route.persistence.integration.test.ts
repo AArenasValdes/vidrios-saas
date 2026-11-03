@@ -145,6 +145,147 @@ function mockPersistedQuote(input: {
 }
 
 describe("glass coverage API from persisted quote data", () => {
+  it("reconciles four confirmed manual panes on a no-recipe item with two panes from a validated item snapshot", async () => {
+    const quoteId = 1309;
+    const organizationId = 3;
+    const qaMetadata = {
+      espesor: "5",
+      espesorMm: 5,
+      categoriaTecnica: "monolitico",
+      revisionTecnicaExplicita: false,
+      corteManualEstado: "confirmed",
+      formaCompraVidrio: "full_sheet",
+      planchaAnchoMm: 4000,
+      planchaAltoMm: 2200,
+    };
+    const qaSpec = buildCatalogGlassTechnicalSpec({ productId: "3763", metadata: qaMetadata });
+    const v1ObservationFields = {
+      logicalComponentId: "ca143e8f-aa7f-4a3b-a844-632421cf0a7d",
+      vidrioLineTemplateId: "3763",
+      glassTechnicalSpec: qaSpec,
+      sistema: "Corredera",
+      sheetScheme: "4 hojas",
+      fabricacionTipologia: "corredera",
+      fabricacionHojas: 4,
+    };
+    const expectedV1Fingerprint = resolveManualGlassPaneSlots({
+      componentType: "corredera",
+      system: "Corredera",
+      configuration: "",
+      sheetScheme: "4 hojas",
+      fabricacionHojas: 4,
+    }).configurationFingerprint;
+    expect(expectedV1Fingerprint).toBe("pane-config-5460b18a");
+    const v1Measurements = {
+      version: 2,
+      expectedPaneCount: 4,
+      configurationFingerprint: "pane-config-5460b18a",
+      entries: [
+        { id: "manual-v1-1", source: "manual", version: 2, productId: "3763", technicalFingerprint: getCatalogGlassTechnicalFingerprint(qaSpec), widthMm: 600, heightMm: 1000, quantity: 1, quantityBasis: "per_component", paneSlotId: "pane-1", sourcePosition: "Paño 1", rectangularVerified: true, recordedAt: "2026-11-03T03:37:46.997Z" },
+        { id: "manual-v1-2", source: "manual", version: 2, productId: "3763", technicalFingerprint: getCatalogGlassTechnicalFingerprint(qaSpec), widthMm: 600, heightMm: 1000, quantity: 1, quantityBasis: "per_component", paneSlotId: "pane-2", sourcePosition: "Paño 2", rectangularVerified: true, recordedAt: "2026-11-03T03:37:55.516Z" },
+        { id: "manual-v1-3", source: "manual", version: 2, productId: "3763", technicalFingerprint: getCatalogGlassTechnicalFingerprint(qaSpec), widthMm: 600, heightMm: 1100, quantity: 1, quantityBasis: "per_component", paneSlotId: "pane-3", sourcePosition: "Paño 3", rectangularVerified: true, recordedAt: "2026-11-03T03:38:08.230Z" },
+        { id: "manual-v1-4", source: "manual", version: 2, productId: "3763", technicalFingerprint: getCatalogGlassTechnicalFingerprint(qaSpec), widthMm: 600, heightMm: 1100, quantity: 1, quantityBasis: "per_component", paneSlotId: "pane-4", sourcePosition: "Paño 4", rectangularVerified: true, recordedAt: "2026-11-03T03:38:18.357Z" },
+      ],
+    };
+    const v2LogicalId = "fcd58fe1-6303-4bcc-ae48-181e34b19354";
+    const v2Snapshot = {
+      schemaVersion: 1,
+      recipeStatus: "validated",
+      glassSelection: { productId: "3763", displayName: "QA Monolítico 5 mm", technicalSpec: qaSpec },
+      result: { vidrios: [{ vidrioId: "v2-glass", nombre: "Vidrio principal", anchoMm: 900, altoMm: 1000, cantidadPiezas: 2, trazabilidad: [] }] },
+    };
+    const items = [
+      {
+        id: "4187", codigo: "V1", tipo_componente: "Ventana", nombre: "Ventana corredera 4 hojas, 2 móviles + 2 fijas",
+        descripcion: "Ventana corredera 4 hojas", cantidad: 1, vidrio: "QA Monolítico 5 mm",
+        observaciones: encodeCotizacionItemPresentationMeta(v1ObservationFields),
+        manual_glass_measurements: v1Measurements,
+        fabricacion_snapshot: null,
+      },
+      {
+        id: "4188", codigo: "V2", tipo_componente: "Ventana", nombre: "Ventana corredera 2 hojas, 2 móviles",
+        descripcion: "Ventana corredera 2 hojas", cantidad: 1, vidrio: "QA Monolítico 5 mm",
+        observaciones: encodeCotizacionItemPresentationMeta({
+          logicalComponentId: v2LogicalId,
+          vidrioLineTemplateId: "3763",
+          glassTechnicalSpec: qaSpec,
+          sistema: "Corredera",
+          sheetScheme: "2 hojas",
+          fabricacionTipologia: "corredera",
+          fabricacionHojas: 2,
+        }),
+        manual_glass_measurements: { version: 2, entries: [] },
+        fabricacion_snapshot: v2Snapshot,
+      },
+    ];
+    mockPersistedQuote({
+      quoteId,
+      organizationId,
+      quoteNumber: "COT-031126-001",
+      items,
+      catalogRows: [{ id: 3763, nombre: "QA Monolítico 5 mm", catalog_metadata: qaMetadata }],
+    });
+
+    const qaRoute = { params: Promise.resolve({ id: String(quoteId) }) };
+    const response = await GET(new Request("http://localhost"), qaRoute);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.panes).toHaveLength(5);
+    expect(body.panes.map((pane: { quoteItemId: string; paneSlotId?: string; quantity: number; physicalUnitCount: number | null; widthMm: number | null; heightMm: number | null }) => ({
+      quoteItemId: pane.quoteItemId,
+      paneSlotId: pane.paneSlotId,
+      quantity: pane.quantity,
+      physicalUnitCount: pane.physicalUnitCount,
+      widthMm: pane.widthMm,
+      heightMm: pane.heightMm,
+    }))).toEqual([
+      { quoteItemId: "4187", paneSlotId: "pane-1", quantity: 1, physicalUnitCount: 1, widthMm: 600, heightMm: 1000 },
+      { quoteItemId: "4187", paneSlotId: "pane-2", quantity: 1, physicalUnitCount: 1, widthMm: 600, heightMm: 1000 },
+      { quoteItemId: "4187", paneSlotId: "pane-3", quantity: 1, physicalUnitCount: 1, widthMm: 600, heightMm: 1100 },
+      { quoteItemId: "4187", paneSlotId: "pane-4", quantity: 1, physicalUnitCount: 1, widthMm: 600, heightMm: 1100 },
+      { quoteItemId: "4188", paneSlotId: undefined, quantity: 2, physicalUnitCount: 2, widthMm: 900, heightMm: 1000 },
+    ]);
+    expect(new Set(body.panes.map((pane: { paneId: string }) => pane.paneId)).size).toBe(5);
+    expect(body.coverage).toMatchObject({ status: "complete", completeReferenceCount: 5, pendingReferenceCount: 0 });
+    expect(body.panes.reduce((sum: number, pane: { physicalUnitCount: number | null }) => sum + (pane.physicalUnitCount ?? 0), 0)).toBe(6);
+    expect(body.panes.reduce((sum: number, pane: { widthMm: number | null; heightMm: number | null; physicalUnitCount: number | null }) =>
+      sum + ((pane.widthMm ?? 0) * (pane.heightMm ?? 0) * (pane.physicalUnitCount ?? 0)) / 1_000_000, 0)).toBeCloseTo(4.32);
+
+    const actualOptimizer = jest.requireActual<typeof import("@/features/fabricacion/services/glass-sheet-optimizer.service")>(
+      "@/features/fabricacion/services/glass-sheet-optimizer.service"
+    ).optimizeGlassCuttingBatch;
+    (optimizeGlassCuttingBatch as jest.Mock).mockImplementationOnce((input) => actualOptimizer(input));
+    const calculationResponse = await POST(new Request("http://localhost", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "geometric_preview" }),
+    }), qaRoute);
+    const calculation = await calculationResponse.json();
+
+    expect(calculationResponse.status).toBe(200);
+    expect(calculation.mode).toBe("geometric_preview");
+    expect(calculation.coverage).toMatchObject({ completeReferenceCount: 5, pendingReferenceCount: 0 });
+    expect(calculation.results).toHaveLength(1);
+    const optimized = calculation.results[0];
+    expect(optimized.status).toBe("feasible");
+    expect(optimized.verification.passed).toBe(true);
+    expect(optimized.summary.paneCount).toBe(6);
+    expect(optimized.summary.paneAreaMm2).toBe(4_320_000);
+    expect(optimized.summary.sheetCount).toBe(optimized.sheets.length);
+    expect(optimized.summary.sheetCount).toBeGreaterThan(0);
+    const placedUnits = optimized.sheets.flatMap((sheet: { panes: Array<{ paneUnitId: string; rect: { xMm: number; yMm: number; widthMm: number; heightMm: number } }>; rawSheet: { widthMm: number; heightMm: number } }) =>
+      sheet.panes.map((pane) => ({ ...pane, rawSheet: sheet.rawSheet })));
+    expect(placedUnits).toHaveLength(6);
+    expect(new Set(placedUnits.map((pane: { paneUnitId: string }) => pane.paneUnitId)).size).toBe(6);
+    for (const pane of placedUnits) {
+      expect(pane.rect.xMm).toBeGreaterThanOrEqual(0);
+      expect(pane.rect.yMm).toBeGreaterThanOrEqual(0);
+      expect(pane.rect.xMm + pane.rect.widthMm).toBeLessThanOrEqual(pane.rawSheet.widthMm);
+      expect(pane.rect.yMm + pane.rect.heightMm).toBeLessThanOrEqual(pane.rawSheet.heightMm);
+    }
+  });
+
   it("reopens two persisted fixed panes without a fabrication snapshot and exposes them to preliminary distribution", async () => {
     const quoteId = 1290;
     const organizationId = 3;

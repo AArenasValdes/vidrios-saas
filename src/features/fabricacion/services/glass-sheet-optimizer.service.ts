@@ -9,6 +9,7 @@ import type {
   GlassRect,
   GlassSheetPlan,
 } from "@/features/fabricacion/types/glass-sheet-optimizer-contracts";
+import { MAX_MANUAL_GLASS_PANE_COUNT } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
 import { verifyGlassSheetPlans } from "@/features/fabricacion/services/glass-sheet-plan-verifier.service";
 
 type Unit = GlassPanePlanningUnit & { paneUnitId: string; widthMm: number; heightMm: number };
@@ -20,7 +21,7 @@ const DEFAULT_SEARCH_NODE_LIMIT = 45_000;
 // The exact partition search grows exponentially; larger lots use the verified constructor first.
 const MAX_EXACT_UNITS = 8;
 // Bound the physical-unit expansion before allocating unit IDs or search state.
-const MAX_PHYSICAL_UNITS = 2_000;
+const MAX_PHYSICAL_UNITS = MAX_MANUAL_GLASS_PANE_COUNT;
 const positiveInt = (value: number | null | undefined): value is number => Number.isSafeInteger(value) && Number(value) > 0;
 const positiveThickness = (value: number | null | undefined): value is number => typeof value === "number" && Number.isFinite(value) && value > 0;
 const nonNegativeInt = (value: number) => Number.isSafeInteger(value) && value >= 0;
@@ -597,6 +598,8 @@ function listTreeLeaves(node: InternalTree, panes: GlassPlannedPane[], remnants:
       logicalComponentId: unit.logicalComponentId ?? "",
       componentCode: unit.componentCode,
       paneId: unit.paneId,
+      ...(unit.paneSlotId ? { paneSlotId: unit.paneSlotId } : {}),
+      ...(unit.sourcePosition ? { sourcePosition: unit.sourcePosition } : {}),
       productId: unit.productId ?? "",
       snapshotFingerprint: unit.snapshotFingerprint,
       rect: node.rect,

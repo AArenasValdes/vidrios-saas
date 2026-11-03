@@ -43,6 +43,7 @@ Si la tarea toca dashboard Fase 5 o su contrato de datos, leer tambien `docs/des
 17. **`../fabricacion/BASE_COMUN_LINEAS_SISTEMAS_COMPOSICIONES.md`** - Diagnóstico y contrato común de sistemas, composiciones, perfiles y recetas; implementación parcial e inventario de 73 entradas.
 18. **`../fabricacion/MAPA_CONEXIONES_LINEA.md`** - Recorrido comprobable de una línea desde catálogo/precios hasta cotización, proveedor, snapshot y PDF/Excel; guía del agente `.cursor/agents/ventora-line-integration-guardian.md`.
 19. **`ANTIGRAVITY_PROJECT_CONTEXT.md`** - Handoff autocontenido para Antigravity/Gemini 4 Argon con contexto de producto, arquitectura, límites, worktree, validación y prompt reusable.
+20. **`MATRIZ_GEOMETRIA_PANOS.csv`** - Inventario generado desde configuraciones comerciales, configuraciones exactas del catálogo técnico y módulos del Constructor; distingue posiciones identificables, inferencias y medidas finales pendientes.
 
 ## Foco actual
 
@@ -105,4 +106,5 @@ docs/
     TOKEN_SAVING_RULES.md     <- Reglas para ahorrar tokens
     CHANGELOG_AGENT_MAP.md    <- Historial de cambios
     ACTIVATION_ONBOARDING.md  <- Onboarding /activacion (primera cotizacion)
+    MATRIZ_GEOMETRIA_PANOS.csv <- Inventario trazable de posiciones de vidrio y límites de geometría
 ```

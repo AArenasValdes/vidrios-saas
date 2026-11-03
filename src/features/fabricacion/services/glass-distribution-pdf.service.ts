@@ -26,6 +26,9 @@ export type GlassDistributionPdfSource = {
   panes: Array<{
     quoteItemId: string;
     paneId?: string;
+    paneSlotId?: string;
+    sourcePosition?: string;
+    paneUnitIds?: string[];
     componentCode: string;
     productId: string | null;
     displayName: string | null;
@@ -74,19 +77,25 @@ function shortComponentCode(value: string, index: number) {
 }
 
 function sourceForPlannedPane(pane: GlassPlannedPane, sources: PaneSource[]) {
+  const byPhysicalUnit = sources.filter((source) =>
+    source.quoteItemId === pane.quoteItemId && source.paneUnitIds?.includes(pane.paneUnitId)
+  );
+  if (byPhysicalUnit.length === 1) return byPhysicalUnit[0] ?? null;
+  if (byPhysicalUnit.length > 1) return null;
+  if (pane.paneSlotId) {
+    const bySlot = sources.filter((source) => source.quoteItemId === pane.quoteItemId && source.paneSlotId === pane.paneSlotId);
+    if (bySlot.length === 1) return bySlot[0] ?? null;
+    if (bySlot.length > 1) return null;
+  }
   const exactPane = sources.find((source) => source.quoteItemId === pane.quoteItemId && source.paneId === pane.paneId);
-  if (exactPane) return exactPane;
-  const matchingProduct = sources.filter((source) => source.quoteItemId === pane.quoteItemId && source.productId === pane.productId);
-  if (matchingProduct.length === 1) return matchingProduct[0] ?? null;
-  const matchingItem = sources.filter((source) => source.quoteItemId === pane.quoteItemId);
-  return matchingItem.length === 1 ? matchingItem[0] ?? null : null;
+  return exactPane ?? null;
 }
 
 function paneSourceKey(source: PaneSource) {
   return `${source.quoteItemId}|${source.paneId ?? source.productId ?? "glass-reference"}`;
 }
 
-type VerifiedPaneEntry = { planned: GlassPlannedPane; source: PaneSource; ordinal: number };
+type VerifiedPaneEntry = { planned: GlassPlannedPane; source: PaneSource; ordinal: number; unitOrdinal: number; sourceUnitCount: number };
 
 export function validateGlassDistributionPdfInput(input: GlassDistributionPdfSource): string | null {
   const simulation = input.mode === "simulation";
@@ -149,14 +158,43 @@ export function validateGlassDistributionPdfInput(input: GlassDistributionPdfSou
 }
 
 function buildVerifiedEntries(input: GlassDistributionPdfSource): VerifiedPaneEntry[] {
-  const ordinals = new Map<string, number>();
+  const fallbackOrdinals = new Map<string, number>();
+  const sourceByUnit = new Map<string, { source: PaneSource; ordinal: number; unitOrdinal: number; sourceUnitCount: number }>();
+  const sourceOrdinalByReference = new Map<PaneSource, number>();
+  for (const source of input.panes) {
+    const itemKey = source.quoteItemId;
+    const unitIds = source.paneUnitIds ?? [];
+    const slotOrdinal = source.paneSlotId?.match(/(?:pane|leaf)[^0-9]*(\d+)/i)?.[1]
+      ?? source.sourcePosition?.match(/(\d+)/)?.[1];
+    const firstOrdinal = slotOrdinal ? Number(slotOrdinal) : (fallbackOrdinals.get(itemKey) ?? 0) + 1;
+    sourceOrdinalByReference.set(source, firstOrdinal);
+    for (const [index, unitId] of unitIds.entries()) {
+      sourceByUnit.set(`${itemKey}|${unitId}`, {
+        source,
+        ordinal: firstOrdinal,
+        unitOrdinal: index + 1,
+        sourceUnitCount: unitIds.length,
+      });
+      fallbackOrdinals.set(itemKey, Math.max(fallbackOrdinals.get(itemKey) ?? 0, firstOrdinal));
+    }
+    if (unitIds.length === 0) fallbackOrdinals.set(itemKey, Math.max(fallbackOrdinals.get(itemKey) ?? 0, firstOrdinal));
+  }
   return input.results.flatMap((result) => result.sheets.flatMap((sheet) => sheet.panes)).map((planned) => {
     const source = sourceForPlannedPane(planned, input.panes)!;
-    const key = `${source.quoteItemId}|${source.productId}`;
-    const ordinal = (ordinals.get(key) ?? 0) + 1;
-    ordinals.set(key, ordinal);
-    return { planned, source, ordinal };
+    const physical = sourceByUnit.get(`${planned.quoteItemId}|${planned.paneUnitId}`);
+    if (physical && physical.source === source) {
+      return { planned, source, ordinal: physical.ordinal, unitOrdinal: physical.unitOrdinal, sourceUnitCount: physical.sourceUnitCount };
+    }
+    const ordinal = source.paneSlotId?.match(/(?:pane|leaf)[^0-9]*(\d+)/i)?.[1]
+      ?? source.sourcePosition?.match(/(\d+)/)?.[1];
+    return { planned, source, ordinal: ordinal ? Number(ordinal) : sourceOrdinalByReference.get(source) ?? 1, unitOrdinal: 1, sourceUnitCount: 1 };
   });
+}
+
+function paneReferenceLabel(entry: VerifiedPaneEntry, fallbackIndex: number) {
+  const code = shortComponentCode(entry.source.componentCode, fallbackIndex);
+  const label = `${code} · ${entry.ordinal}`;
+  return entry.sourceUnitCount > 1 ? `${label} · unidad ${entry.unitOrdinal}` : label;
 }
 
 function formatNumber(value: number, maximumFractionDigits = 2) {
@@ -233,12 +271,48 @@ function drawSimulationHeader(pdf: jsPDF, source: GlassDistributionPdfSource) {
   );
 }
 
+type SimulationAreaLedger = {
+  rawSheetMm2: number;
+  panesMm2: number;
+  zonesMm2: number;
+  edgeTrimMm2: number;
+  separationLossMm2: number;
+  unclassifiedMm2: number;
+};
+
+function sheetAreaLedger(sheet: GlassSheetPlan): SimulationAreaLedger {
+  const rawSheetMm2 = sheet.rawSheet.widthMm * sheet.rawSheet.heightMm;
+  const panesMm2 = sheet.panes.reduce((sum, pane) => sum + pane.rect.widthMm * pane.rect.heightMm, 0);
+  const zonesMm2 = sheet.remnants.reduce((sum, remnant) => sum + remnant.rect.widthMm * remnant.rect.heightMm, 0);
+  const edgeTrimMm2 = sheet.rawSheet.widthMm * sheet.rawSheet.heightMm
+    - sheet.usableSheet.widthMm * sheet.usableSheet.heightMm;
+  const separationLossMm2 = sheet.cutSequence.reduce((sum, step) =>
+    sum + step.separationMm * (step.toMm - step.fromMm), 0);
+  const unclassifiedMm2 = rawSheetMm2 - panesMm2 - zonesMm2 - edgeTrimMm2 - separationLossMm2;
+  return { rawSheetMm2, panesMm2, zonesMm2, edgeTrimMm2, separationLossMm2, unclassifiedMm2 };
+}
+
+function simulationAreaLedger(sheets: GlassSheetPlan[]): SimulationAreaLedger {
+  return sheets.reduce((total, sheet) => {
+    const row = sheetAreaLedger(sheet);
+    return {
+      rawSheetMm2: total.rawSheetMm2 + row.rawSheetMm2,
+      panesMm2: total.panesMm2 + row.panesMm2,
+      zonesMm2: total.zonesMm2 + row.zonesMm2,
+      edgeTrimMm2: total.edgeTrimMm2 + row.edgeTrimMm2,
+      separationLossMm2: total.separationLossMm2 + row.separationLossMm2,
+      unclassifiedMm2: total.unclassifiedMm2 + row.unclassifiedMm2,
+    };
+  }, { rawSheetMm2: 0, panesMm2: 0, zonesMm2: 0, edgeTrimMm2: 0, separationLossMm2: 0, unclassifiedMm2: 0 });
+}
+
 function simulationMetrics(source: GlassDistributionPdfSource, entries: VerifiedPaneEntry[], sheets: GlassSheetPlan[]) {
   const includedReferences = new Set(entries.map((entry) => paneSourceKey(entry.source))).size;
   const totalReferences = source.coverage.completeReferenceCount + source.coverage.pendingReferenceCount;
-  const usedAreaMm2 = entries.reduce((sum, entry) => sum + entry.planned.rect.widthMm * entry.planned.rect.heightMm, 0);
-  const sheetAreaMm2 = sheets.reduce((sum, sheet) => sum + sheet.rawSheet.widthMm * sheet.rawSheet.heightMm, 0);
-  const remainderMm2 = Math.max(0, sheetAreaMm2 - usedAreaMm2);
+  const areaLedger = simulationAreaLedger(sheets);
+  const usedAreaMm2 = areaLedger.panesMm2;
+  const sheetAreaMm2 = areaLedger.rawSheetMm2;
+  const remainderMm2 = areaLedger.zonesMm2;
   return {
     includedReferences,
     totalReferences,
@@ -354,6 +428,69 @@ function simulationProvenanceLabel(source: PaneSource) {
   return "Procedencia pendiente";
 }
 
+type SimulationRemnant = GlassSheetPlan["remnants"][number] & { displayId: string };
+
+function remnantRectAreaMm2(remnant: GlassSheetPlan["remnants"][number]) {
+  return remnant.rect.widthMm * remnant.rect.heightMm;
+}
+
+function orderedSimulationRemnants(sheet: GlassSheetPlan): SimulationRemnant[] {
+  return [...sheet.remnants]
+    .sort((left, right) =>
+      remnantRectAreaMm2(right) - remnantRectAreaMm2(left)
+      || left.rect.yMm - right.rect.yMm
+      || left.rect.xMm - right.rect.xMm
+      || left.remnantId.localeCompare(right.remnantId)
+    )
+    .map((remnant, index) => ({ ...remnant, displayId: `Zona ${index + 1}` }));
+}
+
+function simulationRemnantRows(remnants: SimulationRemnant[], ledger: SimulationAreaLedger) {
+  const rows: string[] = [];
+  if (remnants.length === 0) rows.push("No hay zonas geométricas libres registradas.");
+  const visible = remnants.slice(0, 3);
+  rows.push(...visible.map((remnant) =>
+    `${remnant.displayId} · ${formatNumber(remnant.rect.widthMm, 0)} × ${formatNumber(remnant.rect.heightMm, 0)} mm · ${formatAreaM2(remnantRectAreaMm2(remnant) / 1_000_000)} m²`
+  ));
+  const remaining = remnants.slice(3);
+  if (remaining.length > 0) {
+    const remainingAreaMm2 = remaining.reduce((sum, remnant) => sum + remnantRectAreaMm2(remnant), 0);
+    rows.push(`${remaining.length} ${remaining.length === 1 ? "zona restante" : "zonas restantes"} · ${formatAreaM2(remainingAreaMm2 / 1_000_000)} m² en conjunto`);
+  }
+  const totalAreaMm2 = remnants.reduce((sum, remnant) => sum + remnantRectAreaMm2(remnant), 0);
+  rows.push(`Superficie total de zonas libres: ${formatAreaM2(totalAreaMm2 / 1_000_000)} m²`);
+  rows.push(`Fuera de zonas: despuntes ${formatAreaM2(ledger.edgeTrimMm2 / 1_000_000)} m² · separación ${formatAreaM2(ledger.separationLossMm2 / 1_000_000)} m² · no clasificada ${formatAreaM2(ledger.unclassifiedMm2 / 1_000_000)} m²`);
+  return rows;
+}
+
+function simulationRemnantBlockHeight(sheet: GlassSheetPlan) {
+  // Heading + rows, including the total used to reconcile the displayed areas.
+  return 5 + simulationRemnantRows(orderedSimulationRemnants(sheet), sheetAreaLedger(sheet)).length * 3.8;
+}
+
+function sheetPhysicalParameters(sheet: GlassSheetPlan) {
+  const separations = [...new Set(sheet.cutSequence.map((step) => step.separationMm))].sort((left, right) => left - right);
+  const separationLabel = separations.length === 0 ? "0" : separations.join("/");
+  const top = sheet.usableSheet.yMm - sheet.rawSheet.yMm;
+  const left = sheet.usableSheet.xMm - sheet.rawSheet.xMm;
+  const right = sheet.rawSheet.xMm + sheet.rawSheet.widthMm - sheet.usableSheet.xMm - sheet.usableSheet.widthMm;
+  const bottom = sheet.rawSheet.yMm + sheet.rawSheet.heightMm - sheet.usableSheet.yMm - sheet.usableSheet.heightMm;
+  return `Separación usada ${separationLabel} mm · despuntes sup/der/inf/izq ${top}/${right}/${bottom}/${left} mm`;
+}
+
+export function buildGlassSimulationPhysicalAssumptions(sheets: GlassSheetPlan[]) {
+  const groups = new Map<string, number[]>();
+  sheets.forEach((sheet, index) => {
+    const signature = sheetPhysicalParameters(sheet);
+    groups.set(signature, [...(groups.get(signature) ?? []), index + 1]);
+  });
+  const rows = [...groups.entries()];
+  if (rows.length === 0) return ["Parámetros usados: sin planchas."];
+  if (rows.length === 1) return [`Parámetros usados: ${rows[0]![0]}.`];
+  if (rows.length <= 2) return rows.map(([signature, sheetNumbers]) => `Planchas ${sheetNumbers.join(",")}: ${signature}.`);
+  return ["Parámetros varían por plancha; cada dibujo indica separación y despuntes usados."];
+}
+
 function drawSimulationDetailHeader(pdf: jsPDF, y: number) {
   const columns = { reference: PAGE_MARGIN_MM + 1, component: 41, glass: 83, dimensions: 119, units: 156, origin: 171 };
   pdf.setFillColor(...PALE);
@@ -381,7 +518,7 @@ function drawSimulationDetailRows(
   let y = drawSimulationDetailHeader(pdf, startY);
   for (const [index, entry] of entries.entries()) {
     const pane = entry.source;
-    const reference = `${shortComponentCode(pane.componentCode, index)} · ${entry.ordinal}`;
+    const reference = paneReferenceLabel(entry, index);
     const component = pane.componentName ? `${shortComponentCode(pane.componentCode, index)} · ${pane.componentName}` : shortComponentCode(pane.componentCode, index);
     const category = pane.category ? CATEGORY_LABELS[pane.category] ?? pane.category : "Tipo pendiente";
     const glass = `${formatGlassDisplayName(pane.displayName, pane.thicknessMm)} · ${category}${pane.thicknessMm == null ? "" : ` · ${formatNumber(pane.thicknessMm, 0)} mm`}`;
@@ -420,10 +557,13 @@ function drawSimulationSheet(
   entries: VerifiedPaneEntry[],
   startY: number
 ) {
-  const metaSpace = 34 + Math.min(entries.length, 5) * 9;
+  const remnants = orderedSimulationRemnants(sheet);
+  // Reserve room for every physical unit row; the planner may expand a
+  // commercial reference into several units after optimization.
+  const metaSpace = 31 + simulationRemnantBlockHeight(sheet) + entries.length * 10;
   const availablePlanHeight = Math.max(42, Math.min(GLASS_DISTRIBUTION_MAX_PLAN_HEIGHT_MM, CONTENT_BOTTOM_MM - startY - metaSpace));
   const drawing = calculateGlassDistributionPlanSize(sheet.rawSheet.widthMm, sheet.rawSheet.heightMm, CONTENT_WIDTH_MM, availablePlanHeight);
-  const estimated = 12 + drawing.heightMm + 16 + Math.min(entries.length, 5) * 9;
+  const estimated = metaSpace + drawing.heightMm;
   let y = startY;
   if (y + estimated > CONTENT_BOTTOM_MM && y > PAGE_CONTENT_TOP_MM + 10) {
     y = addSimulationContinuationPage(pdf, source);
@@ -437,7 +577,7 @@ function drawSimulationSheet(
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(7.5);
   pdf.setTextColor(...MUTED);
-  pdf.text("Ubicación geométrica; no indica secuencia de corte.", PAGE_WIDTH_MM - PAGE_MARGIN_MM, y + 4, { align: "right" });
+  pdf.text(sheetPhysicalParameters(sheet), PAGE_WIDTH_MM - PAGE_MARGIN_MM, y + 4, { align: "right", maxWidth: CONTENT_WIDTH_MM });
   y += 8;
 
   const planX = (PAGE_WIDTH_MM - drawing.widthMm) / 2;
@@ -446,17 +586,27 @@ function drawSimulationSheet(
   pdf.setDrawColor(...INK);
   pdf.setLineWidth(0.5);
   pdf.rect(planX, planY, drawing.widthMm, drawing.heightMm, "FD");
-  for (const [index, remnant] of sheet.remnants.entries()) {
+  for (const remnant of remnants) {
     const x = planX + remnant.rect.xMm * drawing.scale;
     const top = planY + remnant.rect.yMm * drawing.scale;
     const width = remnant.rect.widthMm * drawing.scale;
     const height = remnant.rect.heightMm * drawing.scale;
-    const shade = index % 2 === 0 ? 235 : 226;
+    const shade = (Number(remnant.displayId.match(/\d+/)?.[0] ?? 1) - 1) % 2 === 0 ? 235 : 226;
     pdf.setFillColor(shade, shade, shade);
     pdf.setDrawColor(135, 147, 160);
     pdf.setLineWidth(0.3);
     pdf.rect(x, top, width, height, "FD");
+    if (width >= 29 && height >= 13) {
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(5.4);
+      pdf.setTextColor(...INK);
+      pdf.text(remnant.displayId, x + width / 2, top + height / 2 - 1.7, { align: "center", maxWidth: width - 2 });
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(5.1);
+      pdf.text(`${formatNumber(remnant.rect.widthMm, 0)} × ${formatNumber(remnant.rect.heightMm, 0)} mm`, x + width / 2, top + height / 2 + 2, { align: "center", maxWidth: width - 2 });
+    }
   }
+  const entriesByUnit = new Map(entries.map((entry) => [entry.planned.paneUnitId, entry]));
   for (const [index, planned] of sheet.panes.entries()) {
     const x = planX + planned.rect.xMm * drawing.scale;
     const top = planY + planned.rect.yMm * drawing.scale;
@@ -466,23 +616,26 @@ function drawSimulationSheet(
     pdf.setDrawColor(...INK);
     pdf.setLineWidth(0.4);
     pdf.rect(x, top, width, height, "FD");
-    if (width >= 20 && height >= 18) {
-      const entry = entries[index];
+    if (width >= 13 && height >= 18) {
+      const entry = entriesByUnit.get(planned.paneUnitId);
       const rawCode = entry ? shortComponentCode(entry.source.componentCode, index) : `Paño ${index + 1}`;
       const displayCode = rawCode.length > 12 ? `${rawCode.slice(0, 10)}…` : rawCode;
-      const label = entry ? `${displayCode} · ${entry.ordinal}` : displayCode;
+      const label = entry ? paneReferenceLabel(entry, index).replace(rawCode, displayCode) : displayCode;
       pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(6.6);
+      pdf.setFontSize(width < 23 ? 5.5 : 6.6);
       pdf.setTextColor(...INK);
       pdf.text(label, x + width / 2, top + height / 2 - 1, { align: "center", maxWidth: width - 2 });
       pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(5.8);
+      pdf.setFontSize(width < 23 ? 5 : 5.8);
       pdf.text(`${formatNumber(planned.rect.widthMm, 0)} × ${formatNumber(planned.rect.heightMm, 0)}`, x + width / 2, top + height / 2 + 3, { align: "center", maxWidth: width - 2 });
     }
   }
   y = planY + drawing.heightMm + 4;
   const usedMm2 = sheet.areas.panesMm2;
-  const remnantMm2 = Math.max(0, sheet.rawSheet.widthMm * sheet.rawSheet.heightMm - usedMm2);
+  // Free surface is the sum of the optimizer's verified rectangular zones;
+  // it excludes gaps and losses that are not themselves free rectangles.
+  const ledger = sheetAreaLedger(sheet);
+  const remnantMm2 = ledger.zonesMm2;
   pdf.setFillColor(225, 237, 249);
   pdf.setDrawColor(...INK);
   pdf.rect(PAGE_MARGIN_MM, y, 3, 3, "FD");
@@ -503,6 +656,17 @@ function drawSimulationSheet(
   pdf.setTextColor(...MUTED);
   pdf.text(`${formatAreaM2(remnantMm2 / 1_000_000)} m² restantes estimados`, PAGE_WIDTH_MM - PAGE_MARGIN_MM, y + 3, { align: "right" });
   y += 7;
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(7.4);
+  pdf.setTextColor(...INK);
+  pdf.text("Zonas geométricas libres", PAGE_MARGIN_MM, y + 2.8);
+  y += 4.5;
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(6.8);
+  pdf.setTextColor(...MUTED);
+  const remnantRows = simulationRemnantRows(remnants, ledger);
+  pdf.text(remnantRows, PAGE_MARGIN_MM, y + 2.8, { lineHeightFactor: 1.05, maxWidth: CONTENT_WIDTH_MM });
+  y += remnantRows.length * 3.8 + 2;
   const sheetEntries = entries.filter((entry) => sheet.panes.some((planned) => planned.paneUnitId === entry.planned.paneUnitId));
   y = drawSimulationDetailRows(pdf, sheetEntries, y, sheetNumber, source);
   return y;
@@ -518,11 +682,9 @@ async function createSimulationPdf(input: GlassDistributionPdfSource) {
   let y = drawSimulationOverview(pdf, input, entries, sheets);
   for (const [index, sheet] of sheets.entries()) {
     const sheetEntries = entries.filter((entry) => sheet.panes.some((pane) => pane.paneUnitId === entry.planned.paneUnitId));
-    const est = 13 + calculateGlassDistributionPlanSize(sheet.rawSheet.widthMm, sheet.rawSheet.heightMm).heightMm + Math.min(sheetEntries.length, 5) * 9 + 18;
-    if (y + est > CONTENT_BOTTOM_MM) y = addSimulationContinuationPage(pdf, input);
     y = drawSimulationSheet(pdf, sheet, index + 1, input, sheetEntries, y);
   }
-  drawGeometricSimulationDisclaimer(pdf);
+  drawGeometricSimulationDisclaimer(pdf, buildGlassSimulationPhysicalAssumptions(sheets));
   drawFabricationPdfFooters(pdf, input.quoteCode, "SIMULACIÓN DE PLANCHAS");
   return pdf;
 }
@@ -607,14 +769,14 @@ function drawPreliminaryWarning(pdf: jsPDF, simulation = false) {
 function buildSheetRows(
   sheet: GlassSheetPlan,
   paneSources: PaneSource[],
-  paneOrdinals: ReadonlyMap<string, number>
+  paneEntries: ReadonlyMap<string, VerifiedPaneEntry>
 ): SheetRow[] {
   return sheet.panes.map((plannedPane, index) => {
-    const source = sourceForPlannedPane(plannedPane, paneSources);
-    const ordinal = paneOrdinals.get(plannedPane.paneUnitId) ?? index + 1;
-    const code = shortComponentCode(source?.componentCode ?? plannedPane.componentCode, ordinal - 1);
+    const entry = paneEntries.get(plannedPane.paneUnitId);
+    const source = entry?.source ?? sourceForPlannedPane(plannedPane, paneSources);
+    const code = shortComponentCode(source?.componentCode ?? plannedPane.componentCode, index);
     return {
-      reference: `${code} · Paño ${ordinal}`,
+      reference: entry ? paneReferenceLabel(entry, index) : `${code} · ${index + 1}`,
       component: source?.componentName ? `${code} · ${source.componentName}` : code,
       dimensions: `${formatNumber(plannedPane.rect.widthMm, 0)} × ${formatNumber(plannedPane.rect.heightMm, 0)} mm`,
       quantity: "1",
@@ -667,7 +829,7 @@ function drawSheet(
   pageIndex: number,
   totalSheets: number,
   source: GlassDistributionPdfSource,
-  paneOrdinals: ReadonlyMap<string, number>,
+  paneEntries: ReadonlyMap<string, VerifiedPaneEntry>,
   startY?: number
 ) {
   const metadata = {
@@ -742,12 +904,13 @@ function drawSheet(
     pdf.rect(x, paneY, width, height, "FD");
     if (width >= 17 && height >= 14) {
       const sourcePane = sourceForPlannedPane(planned, source.panes);
-      const ordinal = paneOrdinals.get(planned.paneUnitId) ?? paneIndex + 1;
-      const code = shortComponentCode(sourcePane?.componentCode ?? planned.componentCode, ordinal - 1);
+      const entry = paneEntries.get(planned.paneUnitId);
+      const code = shortComponentCode(sourcePane?.componentCode ?? planned.componentCode, paneIndex);
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(Math.min(7.2, Math.max(6, Math.min(width, height) * 0.18)));
       pdf.setTextColor(...INK);
-      pdf.text(`${code} · ${ordinal}`, x + width / 2, paneY + height / 2 - 1.2, { align: "center", maxWidth: width - 2 });
+      const label = entry ? paneReferenceLabel(entry, paneIndex) : `${code} · ${paneIndex + 1}`;
+      pdf.text(label, x + width / 2, paneY + height / 2 - 1.2, { align: "center", maxWidth: width - 2 });
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(6.4);
       pdf.text(`${formatNumber(rect.widthMm, 0)} × ${formatNumber(rect.heightMm, 0)}`, x + width / 2, paneY + height / 2 + 3, { align: "center", maxWidth: width - 2 });
@@ -787,7 +950,7 @@ function drawSheet(
   pdf.text(assumptions, PAGE_MARGIN_MM, y);
   y += 6;
 
-  const rows = buildSheetRows(sheet, source.panes, paneOrdinals);
+  const rows = buildSheetRows(sheet, source.panes, paneEntries);
   drawSheetRows(pdf, rows, y, pageIndex + 1, source);
   if (source.mode !== "simulation") drawPreliminaryWarning(pdf);
   return y;
@@ -810,24 +973,18 @@ export async function createGlassDistributionPdf(input: GlassDistributionPdfSour
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const sheets = input.results.flatMap((result) => result.sheets);
   const entries = buildVerifiedEntries(input);
-  const paneOrdinals = new Map<string, number>();
-  const componentCounts = new Map<string, number>();
-  for (const pane of sheets.flatMap((sheet) => sheet.panes)) {
-    const count = (componentCounts.get(pane.quoteItemId) ?? 0) + 1;
-    componentCounts.set(pane.quoteItemId, count);
-    paneOrdinals.set(pane.paneUnitId, count);
-  }
+  const paneEntries = new Map(entries.map((entry) => [entry.planned.paneUnitId, entry]));
   const summaryBottom = drawSummaryPage(pdf, input, entries, sheets.length);
   const firstSheet = sheets[0];
   if (firstSheet && summaryBottom + estimateSheetContentHeight(firstSheet) <= CONTENT_BOTTOM_MM - 2) {
-    drawSheet(pdf, firstSheet, 0, sheets.length, input, paneOrdinals, summaryBottom + 4);
+    drawSheet(pdf, firstSheet, 0, sheets.length, input, paneEntries, summaryBottom + 4);
   } else if (firstSheet) {
     pdf.addPage("a4", "portrait");
-    drawSheet(pdf, firstSheet, 0, sheets.length, input, paneOrdinals);
+    drawSheet(pdf, firstSheet, 0, sheets.length, input, paneEntries);
   }
   sheets.slice(1).forEach((sheet, index) => {
     pdf.addPage("a4", "portrait");
-    drawSheet(pdf, sheet, index + 1, sheets.length, input, paneOrdinals);
+    drawSheet(pdf, sheet, index + 1, sheets.length, input, paneEntries);
   });
   drawFabricationPdfFooters(pdf, input.quoteCode);
   return pdf;

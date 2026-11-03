@@ -5,6 +5,7 @@ import {
 } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
 import {
   MANUAL_GLASS_PANE_MEASUREMENTS_VERSION,
+  MAX_MANUAL_GLASS_PANE_COUNT,
   type ManualGlassPaneMeasurement,
   type ManualGlassPaneMeasurementsSnapshot,
 } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
@@ -54,7 +55,7 @@ export function normalizeManualGlassPaneMeasurements(value: unknown): ManualGlas
       ? { configurationFingerprint: candidate.configurationFingerprint as string | null } : {}),
     ...(typeof candidate.expectedPaneCount === "number" && Number.isSafeInteger(candidate.expectedPaneCount) && candidate.expectedPaneCount > 0
       ? { expectedPaneCount: candidate.expectedPaneCount } : {}),
-    ...(typeof candidate.manualPaneCount === "number" && Number.isSafeInteger(candidate.manualPaneCount) && candidate.manualPaneCount > 0 && candidate.manualPaneCount <= 12
+    ...(typeof candidate.manualPaneCount === "number" && Number.isSafeInteger(candidate.manualPaneCount) && candidate.manualPaneCount > 0 && candidate.manualPaneCount <= MAX_MANUAL_GLASS_PANE_COUNT
       ? { manualPaneCount: candidate.manualPaneCount } : {}),
     ...(candidate.allPanesConfirmed === true ? { allPanesConfirmed: true } : {}),
   };
