@@ -30,6 +30,7 @@ const glassTemplate = {
     categoriaTecnica: "monolitico",
     revisionTecnicaExplicita: true,
     corteManualEstado: "confirmed",
+    formaCompraVidrio: "full_sheet",
     planchaAnchoMm: 2500,
     planchaAltoMm: 1800,
   },

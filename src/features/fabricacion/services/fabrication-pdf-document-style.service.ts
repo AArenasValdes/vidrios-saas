@@ -5,6 +5,7 @@ export type FabricationPdfMetadata = {
   quoteCode: string;
   workName: string;
   issueDate: string;
+  issueDateLabel?: string;
 };
 
 export const FABRICATION_PDF_COLORS = {
@@ -45,14 +46,15 @@ export function drawFabricationPdfHeader(
   metadata: FabricationPdfMetadata,
   title: string,
   logoDataUrl?: string | null,
-  clientLabel = "Empresa"
+  clientLabel = "Empresa",
+  documentLabel = "Documento de fabricación"
 ) {
   const logoBottom = drawLogo(pdf, logoDataUrl, 9);
   const labelY = Math.max(22, logoBottom + 4);
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(8.5);
   pdf.setTextColor(...FABRICATION_PDF_COLORS.muted);
-  pdf.text("Documento de fabricación", MARGIN, labelY);
+  pdf.text(documentLabel, MARGIN, labelY);
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(18);
@@ -70,7 +72,7 @@ export function drawFabricationPdfHeader(
     { label: "Cotización", value: clean(metadata.quoteCode) },
     { label: clientLabel, value: clean(metadata.companyName, clientLabel) },
     { label: "Trabajo", value: clean(metadata.workName, "Sin nombre") },
-    { label: "Emisión", value: clean(metadata.issueDate) },
+    { label: metadata.issueDateLabel ?? "Emisión", value: clean(metadata.issueDate) },
   ];
   const top = ruleY + 4;
   const columnWidth = CONTENT_WIDTH / values.length;
@@ -114,7 +116,7 @@ export function drawFabricationPdfContinuationHeader(pdf: jsPDF, title: string, 
   return 33;
 }
 
-export function drawFabricationPdfFooters(pdf: jsPDF, quoteCode: string) {
+export function drawFabricationPdfFooters(pdf: jsPDF, quoteCode: string, documentLabel = "FABRICACIÓN") {
   const pageCount = pdf.getNumberOfPages();
   for (let page = 1; page <= pageCount; page += 1) {
     pdf.setPage(page);
@@ -124,8 +126,24 @@ export function drawFabricationPdfFooters(pdf: jsPDF, quoteCode: string) {
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(8);
     pdf.setTextColor(...FABRICATION_PDF_COLORS.muted);
-    pdf.text(`VENTORA · FABRICACIÓN · ${clean(quoteCode)}`, MARGIN, 288);
+    pdf.text(`VENTORA · ${documentLabel} · ${clean(quoteCode)}`, MARGIN, 288);
     pdf.text(`Página ${page} de ${pageCount}`, PAGE_WIDTH - MARGIN, 288, { align: "right" });
+  }
+}
+
+/** Repeats the geometric-only status and its physical assumptions on every simulation page. */
+export function drawGeometricSimulationDisclaimer(pdf: jsPDF, physicalAssumptions: string[]) {
+  const pageCount = pdf.getNumberOfPages();
+  for (let page = 1; page <= pageCount; page += 1) {
+    pdf.setPage(page);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(7.4);
+    pdf.setTextColor(...FABRICATION_PDF_COLORS.muted);
+    pdf.text("SIMULACIÓN GEOMÉTRICA · NO APTO PARA CORTE", MARGIN, 270, { maxWidth: CONTENT_WIDTH });
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(6.5);
+    pdf.text(physicalAssumptions.slice(0, 2), MARGIN, 273, { maxWidth: CONTENT_WIDTH, lineHeightFactor: 1 });
+    pdf.text("Sin secuencia de corte · zonas libres no necesariamente reutilizables.", MARGIN, 279, { maxWidth: CONTENT_WIDTH });
   }
 }
 

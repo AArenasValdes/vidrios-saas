@@ -36,11 +36,12 @@ export function useDirectGlassDistribution({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [formatDialogOpen, setFormatDialogOpen] = useState(false);
-  const [coverageState, setCoverageState] = useState<{ quoteId: string; coverage: GlassDistributionCoverage } | null>(null);
+  const [coverageState, setCoverageState] = useState<{ quoteId: string; coverage: GlassDistributionCoverage; preliminaryPaneCount: number } | null>(null);
 
   const inFlightRef = useRef(false);
   const isCoverageLoading = coverageState?.quoteId !== quoteId;
   const coverage = coverageState?.quoteId === quoteId ? coverageState.coverage : null;
+  const preliminaryPaneCount = coverageState?.quoteId === quoteId ? coverageState.preliminaryPaneCount : 0;
 
   useEffect(() => {
     if (!quoteId) return;
@@ -51,7 +52,7 @@ export function useDirectGlassDistribution({
       controller = requestController;
       void fetchGlassDistributionData(quoteId, requestController.signal)
         .then((data) => {
-          if (!requestController.signal.aborted) setCoverageState({ quoteId, coverage: data.coverage });
+          if (!requestController.signal.aborted) setCoverageState({ quoteId, coverage: data.coverage, preliminaryPaneCount: data.preliminaryPaneCount ?? 0 });
         })
         .catch(() => {
           if (!requestController.signal.aborted) setCoverageState({
@@ -63,6 +64,7 @@ export function useDirectGlassDistribution({
             pendingReferences: [],
             diagnostics: ["No se pudo comprobar la cobertura técnica de vidrio."],
           },
+          preliminaryPaneCount: 0,
         });
         });
     };
@@ -103,7 +105,7 @@ export function useDirectGlassDistribution({
 
       try {
         const loadedData: DirectGlassDistributionLoadResult = await fetchGlassDistributionData(quoteId);
-        setCoverageState({ quoteId, coverage: loadedData.coverage });
+        setCoverageState({ quoteId, coverage: loadedData.coverage, preliminaryPaneCount: loadedData.preliminaryPaneCount ?? 0 });
         const result = await runDirectGlassDistributionDownload({
           quoteId,
           quoteCode,
@@ -173,6 +175,7 @@ export function useDirectGlassDistribution({
     notice,
     formatDialogOpen,
     coverage,
+    preliminaryPaneCount,
     isCoverageLoading,
     setFormatDialogOpen,
     startDownload,

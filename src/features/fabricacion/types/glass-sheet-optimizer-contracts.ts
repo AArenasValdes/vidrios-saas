@@ -16,6 +16,8 @@ export type GlassPanePlanningUnit = Pick<
   | "logicalComponentId"
   | "glassId"
   | "paneId"
+  | "paneSlotId"
+  | "sourcePosition"
   | "paneUnitIds"
   | "productId"
   | "technicalSpec"
@@ -96,6 +98,9 @@ export type GlassPlannedPane = {
   logicalComponentId: string;
   componentCode: string;
   paneId: string;
+  /** Original physical position in the component; packing must never rewrite it. */
+  paneSlotId?: string;
+  sourcePosition?: string;
   productId: string;
   snapshotFingerprint: string;
   rect: GlassRect;

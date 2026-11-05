@@ -2,16 +2,17 @@ import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotiz
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import type { FabricacionVidrioResultado } from "@/features/fabricacion/types/fabricacion-domain";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
+import { MAX_MANUAL_GLASS_PANE_COUNT } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
 import type { GlassTechnicalSpec } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
 import { buildCatalogGlassTechnicalSpec } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
 import {
   getCatalogGlassTechnicalFingerprint,
   normalizeManualGlassPaneMeasurements,
 } from "@/features/cotizaciones/services/manual-glass-pane-measurements.service";
-import { resolveManualGlassPaneSlots } from "@/features/cotizaciones/services/manual-glass-pane-slots.service";
+import { resolveManualGlassPaneComponentType, resolveManualGlassPaneSlots } from "@/features/cotizaciones/services/manual-glass-pane-slots.service";
 
 export const GLASS_PANE_NORMALIZATION_VERSION = 1 as const;
-const MAX_NORMALIZED_PHYSICAL_UNITS = 2_000;
+const MAX_NORMALIZED_PHYSICAL_UNITS = MAX_MANUAL_GLASS_PANE_COUNT;
 
 export type NormalizedGlassPane = {
   organizationId: string | number;
@@ -21,6 +22,7 @@ export type NormalizedGlassPane = {
   glassId: string | null;
   paneId: string;
   paneSlotId?: string;
+  sourcePosition?: string;
   paneUnitIds: string[];
   ordinal: number;
   productId: string | null;
@@ -72,6 +74,7 @@ function normalizeRow(input: {
   heightMm: number | null;
   quantity: number;
   paneSlotId?: string;
+  sourcePosition?: string;
   dimensionTraceRuleIds: string[];
   recipeStatus: string | null;
   snapshotVersion: number;
@@ -92,6 +95,9 @@ function normalizeRow(input: {
   if (input.spec && (input.spec.sheetWidthMm == null || input.spec.sheetHeightMm == null)) {
     warnings.push("Falta el formato físico de plancha de vidrio.");
   }
+  if (input.spec?.purchaseMode === undefined) warnings.push("La forma de compra no está confirmada en esta ficha antigua.");
+  else if (input.spec.purchaseMode === "undecided") warnings.push("Confirma si este vidrio se compra por plancha antes de distribuirlo.");
+  else if (input.spec.purchaseMode === "supplier_cut") warnings.push("Este vidrio se compra cortado por proveedor; no corresponde distribuirlo como plancha del taller.");
   if (input.spec?.manualCutStatus !== "confirmed") warnings.push("El corte manual no está confirmado para este producto.");
   if (input.spec?.category === "pendiente") warnings.push("La categoría técnica del vidrio está pendiente.");
   if (input.additionalWarnings?.includes("non_rectangular")) warnings.push("La geometría del paño no es rectangular y no se puede enviar como corte rectangular verificado.");
@@ -125,6 +131,7 @@ function normalizeRow(input: {
     glassId: input.glassId,
     paneId,
     ...(input.paneSlotId ? { paneSlotId: input.paneSlotId } : {}),
+    ...(input.sourcePosition ? { sourcePosition: input.sourcePosition } : {}),
     paneUnitIds,
     ordinal: 1,
     productId: input.productId,
@@ -142,6 +149,14 @@ function normalizeRow(input: {
     snapshotVersion: input.snapshotVersion,
     snapshotFingerprint: fingerprint(input.rawSnapshot),
     normalizationVersion: GLASS_PANE_NORMALIZATION_VERSION,
+  };
+}
+
+function requirePositionReview(pane: NormalizedGlassPane, reason: string): NormalizedGlassPane {
+  return {
+    ...pane,
+    validationStatus: "requires_review",
+    warnings: [...new Set([...pane.warnings, reason])],
   };
 }
 
@@ -174,6 +189,8 @@ export function extractNormalizedGlassPanes(input: ExtractInput): NormalizedGlas
         spec,
         widthMm: positiveInteger(glass.anchoMm),
         heightMm: positiveInteger(glass.altoMm),
+        ...(typeof glass.paneSlotId === "string" ? { paneSlotId: glass.paneSlotId } : {}),
+        ...(typeof glass.sourcePosition === "string" ? { sourcePosition: glass.sourcePosition } : {}),
         // FabricacionVidrioResultado quantity already includes quote-item quantity.
         quantity: positiveInteger(glass.cantidadPiezas) ?? 0,
         dimensionTraceRuleIds,
@@ -191,13 +208,17 @@ export function extractNormalizedGlassPanes(input: ExtractInput): NormalizedGlas
   );
   const expectedSlots = manualMeasurements.entries.length > 0
     ? resolveManualGlassPaneSlots({
-      componentType: presentation.fabricacionTipologia || input.item.tipo,
+      componentType: resolveManualGlassPaneComponentType({
+        itemType: input.item.tipo,
+        fabricationType: presentation.fabricacionTipologia,
+      }),
       system: presentation.sistema,
       configuration: presentation.configuracion,
       sheetScheme: presentation.sheetScheme,
       fabricacionHojas: presentation.fabricacionHojas,
       guidedVisualConfig: presentation.guidedVisualConfig,
       quickCompositionAdjustment: presentation.quickCompositionAdjustment,
+      manualPaneCount: manualMeasurements.manualPaneCount,
     })
     : null;
   const validSlotIds = expectedSlots?.countIsKnown
@@ -232,11 +253,11 @@ export function extractNormalizedGlassPanes(input: ExtractInput): NormalizedGlas
         ? ["La ficha técnica del vidrio cambió desde que se ingresaron estas medidas; revisa y vuelve a guardar la referencia."]
         : [];
     const slotWarnings: string[] = [];
+    const resolvedSlotId = entry.paneSlotId
+      ?? (expectedSlots?.countIsKnown && expectedSlots.slots.length === 1 && manualMeasurements.entries.length === 1
+        ? expectedSlots.slots[0]?.id
+        : undefined);
     if (expectedSlots?.countIsKnown && validSlotIds) {
-      const resolvedSlotId = entry.paneSlotId
-        ?? (expectedSlots.slots.length === 1 && manualMeasurements.entries.length === 1
-          ? expectedSlots.slots[0]?.id
-          : undefined);
       if (manualSnapshotStale) {
         slotWarnings.push("La configuración del componente cambió desde que se registraron las medidas manuales; revisa y vuelve a confirmar cada paño.");
       } else if (!resolvedSlotId || !validSlotIds.has(resolvedSlotId)) {
@@ -244,6 +265,8 @@ export function extractNormalizedGlassPanes(input: ExtractInput): NormalizedGlas
       } else if ((manualSlotClaimCounts.get(resolvedSlotId) ?? 0) > 1) {
         slotWarnings.push("Existen múltiples mediciones manuales asignadas a la misma posición de paño.");
       }
+    } else if (!resolvedSlotId) {
+      slotWarnings.push("Indica la cantidad de paños y asocia esta medición a una posición física antes de distribuirla.");
     }
     return [normalizeRow({
       context: input,
@@ -257,7 +280,10 @@ export function extractNormalizedGlassPanes(input: ExtractInput): NormalizedGlas
       quantity: entry.quantityBasis === "per_component"
         ? (positiveInteger(entry.quantity) ?? 0) * (positiveInteger(input.item.cantidad) ?? 0)
         : positiveInteger(entry.quantity) ?? 0,
-      ...(entry.paneSlotId ? { paneSlotId: entry.paneSlotId } : {}),
+      ...(resolvedSlotId ? { paneSlotId: resolvedSlotId } : {}),
+      ...((entry.sourcePosition ?? expectedSlots?.slots.find((slot) => slot.id === resolvedSlotId)?.position)
+        ? { sourcePosition: entry.sourcePosition ?? expectedSlots?.slots.find((slot) => slot.id === resolvedSlotId)?.position }
+        : {}),
       dimensionTraceRuleIds: [],
       recipeStatus: null,
       snapshotVersion: entry.version,
@@ -267,38 +293,31 @@ export function extractNormalizedGlassPanes(input: ExtractInput): NormalizedGlas
     })];
   });
 
+  if (recipePanes.length > 0 && manual.length > 0) {
+    const everySourceHasPosition = [...recipePanes, ...manual].every((pane) => pane.paneSlotId);
+    if (!everySourceHasPosition) {
+      // Explicit manual positions remain usable as final measurements. The
+      // unpositioned recipe rows are not merged; coverage leaves other slots pending.
+      return manual;
+    }
+
+    const byPosition = new Map<string, NormalizedGlassPane[]>();
+    for (const pane of [...recipePanes, ...manual]) {
+      const slotId = pane.paneSlotId!;
+      byPosition.set(slotId, [...(byPosition.get(slotId) ?? []), pane]);
+    }
+    return [...byPosition.entries()].map(([slotId, sources]) => {
+      if (sources.length === 1) return sources[0]!;
+      const chosen = sources.find((pane) => pane.dimensionProvenance === "manual") ?? sources[0]!;
+      return requirePositionReview(
+        chosen,
+        `Hay más de una fuente para la posición ${slotId}; revisa la medida congelada antes de distribuir.`,
+      );
+    });
+  }
+
   if (recipePanes.length > 0) {
-    // Prefer the validated recipe when it covers at least as many physical panes
-    // for that catalog product. If it resolves only part of the reference and the
-    // maestro has a fuller manual backup, use that backup instead of duplicating
-    // unmatchable recipe/manual panes.
-    const validAutomaticProducts = new Set(recipePanes
-      .filter((pane) => pane.validationStatus === "eligible_for_manual_planning")
-      .map((pane) => pane.productId)
-      .filter((id): id is string => Boolean(id)));
-    const itemQuantity = positiveInteger(input.item.cantidad);
-    const automaticCounts = new Map<string, number>();
-    const manualCounts = new Map<string, number>();
-    for (const pane of recipePanes) {
-      if (pane.validationStatus !== "eligible_for_manual_planning" || !pane.productId) continue;
-      if (itemQuantity) automaticCounts.set(pane.productId, (automaticCounts.get(pane.productId) ?? 0) + pane.quantity / itemQuantity);
-    }
-    for (const pane of manual) {
-      if (!pane.productId) continue;
-      if (itemQuantity) manualCounts.set(pane.productId, (manualCounts.get(pane.productId) ?? 0) + pane.quantity / itemQuantity);
-    }
-    const manualFallbackProducts = new Set([...manualCounts]
-      .filter(([productId, count]) => validAutomaticProducts.has(productId) && count > (automaticCounts.get(productId) ?? 0))
-      .map(([productId]) => productId));
-    const manualPanes = manual.filter((pane) => pane.productId == null
-      || !validAutomaticProducts.has(pane.productId)
-      || manualFallbackProducts.has(pane.productId));
-    const retainedRecipePanes = recipePanes.filter((pane) =>
-      pane.validationStatus === "eligible_for_manual_planning"
-        ? !pane.productId || !manualFallbackProducts.has(pane.productId)
-        : !manualPanes.some((manualPane) => !pane.productId || !manualPane.productId || manualPane.productId === pane.productId)
-    );
-    return [...retainedRecipePanes, ...manualPanes];
+    return recipePanes;
   }
 
   if (manual.length > 0) return manual;

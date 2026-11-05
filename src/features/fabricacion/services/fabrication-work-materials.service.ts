@@ -13,6 +13,7 @@ import {
 } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import { resolveFrozenGlassThickness } from "@/features/fabricacion/services/glass-thickness-resolution.service";
 import { formatGlassDisplayName } from "@/features/fabricacion/services/glass-display-name.service";
+import { extractNormalizedGlassPanes, type NormalizedGlassPane } from "@/features/fabricacion/services/glass-pane-normalization.service";
 
 export type WorkProfileMaterialRow = {
   key: string;
@@ -96,6 +97,10 @@ export type WorkGlassOrderRow = {
   areaEachM2: number | null;
   totalM2: number | null;
   measuresPending: boolean;
+  dimensionProvenance: NormalizedGlassPane["dimensionProvenance"] | null;
+  validationStatus: NormalizedGlassPane["validationStatus"] | null;
+  validationLabel: string;
+  validationWarnings: string[];
 };
 
 /** Precio unitario consultado para una referencia de línea; no expresa consumo ni costo por pieza. */
@@ -180,31 +185,55 @@ function fullGlassDescription(item: WorkItem, thickness: string, finish: string,
   ]).filter((value) => value !== "Vidrio").join(" · ") || "Vidrio";
 }
 
-function snapshotGlassRows(item: WorkItem) {
-  const snapshot = item.fabricacionSnapshot;
-  if (snapshot?.vidrios.length) {
-    return snapshot.vidrios.map((glass, index) => ({
-      // The UUID remains an internal identity. Document references are stable and readable.
-      reference: `${item.codigo || "Componente"} · Paño ${index + 1}`,
-      name: glass.nombre,
-      width: glass.anchoMm,
-      height: glass.altoMm,
-      quantity: glass.cantidadPiezas,
-      totalM2: glass.totalM2,
-    }));
-  }
+function glassValidationLabel(pane: NormalizedGlassPane) {
+  if (pane.validationStatus === "requires_review") return "Pendiente de revisión";
+  if (pane.dimensionProvenance === "manual") return "Medida manual final · pendiente de validación de taller";
+  if (pane.dimensionProvenance === "validated_recipe") return "Snapshot formal · receta validada; revisar medidas en taller";
+  if (pane.dimensionProvenance === "recipe_trace") return "Medida preliminar de receta · requiere revisión";
+  if (pane.dimensionProvenance === "legacy_snapshot") return "Snapshot histórico · requiere revisión";
+  return "Medidas pendientes";
+}
 
-  const legacyGlass = presentationFor(item).cubicationSnapshot?.glass;
-  return legacyGlass
-    ? [{
-        reference: "Paño según snapshot histórico",
-        name: item.vidrio ?? "",
-        width: legacyGlass.widthMm,
-        height: legacyGlass.heightMm,
-        quantity: legacyGlass.quantity,
-        totalM2: legacyGlass.totalM2,
-      }]
-    : [];
+function hasInvalidatedGlassMeasurement(pane: NormalizedGlassPane) {
+  return (pane.dimensionProvenance === "manual" && pane.validationStatus !== "eligible_for_manual_planning")
+    || pane.warnings.some((warning) =>
+    /ficha técnica del vidrio cambió|configuración del componente cambió|asociarse explícitamente|múltiples mediciones manuales|especificación manual difiere|producto congelado no coincide|ya no está disponible/i.test(warning)
+  );
+}
+
+function snapshotGlassRows(item: WorkItem, templates: readonly CotizacionLineTemplate[]) {
+  const catalogGlassProducts = new Map(templates
+    .filter((template) => template.categoria === "vidrio" && template.isActive && !template.eliminadoEn)
+    .map((template) => [String(template.id), {
+      name: template.nombre,
+      catalogMetadata: template.catalogMetadata as Record<string, unknown>,
+    }]));
+  const snapshot = item.fabricacionSnapshot;
+  const hasNormalizedRecipePanes = Array.isArray(snapshot?.result?.vidrios) && snapshot.result.vidrios.length > 0;
+  const itemForNormalization = snapshot?.vidrios.length && !hasNormalizedRecipePanes
+    ? { ...item, fabricacionSnapshot: { ...snapshot, result: { ...snapshot.result, vidrios: snapshot.vidrios } } }
+    : item;
+  const panes = extractNormalizedGlassPanes({
+    organizationId: "work-materials",
+    quoteId: "work-materials",
+    item: itemForNormalization,
+    catalogGlassProducts,
+  });
+  return panes.map((pane, index) => ({
+    reference: `${item.codigo || "Componente"} · ${pane.paneSlotId?.replace(/^pane-/, "Paño ") ?? `Paño ${index + 1}`}`,
+    name: pane.displayName ?? item.vidrio ?? "",
+    width: pane.widthMm ?? 0,
+    height: pane.heightMm ?? 0,
+    quantity: pane.quantity,
+    totalM2: !hasInvalidatedGlassMeasurement(pane) && pane.widthMm != null && pane.heightMm != null && pane.quantity > 0
+      ? (pane.widthMm * pane.heightMm * pane.quantity) / 1_000_000
+      : 0,
+    dimensionProvenance: pane.dimensionProvenance,
+    validationStatus: pane.validationStatus,
+    validationLabel: glassValidationLabel(pane),
+    validationWarnings: pane.warnings,
+    measurementInvalidated: hasInvalidatedGlassMeasurement(pane),
+  }));
 }
 
 function lineNamesForBar(
@@ -565,7 +594,7 @@ function buildGlassRows(items: readonly WorkItem[], templates: readonly Cotizaci
     const line = item.lineaComercial.trim() || `Línea ${item.fabricacionSnapshot?.lineTemplateId ?? "sin identificar"}`;
     const lineIdentity = item.fabricacionSnapshot?.lineTemplateId ?? line;
     const key = [code, item.vidrio?.trim(), thickness, finish, composition, lineIdentity].join("|");
-    const totalM2 = snapshotGlassRows(item).reduce((sum, glass) => sum + glass.totalM2, 0);
+    const totalM2 = snapshotGlassRows(item, templates).reduce((sum, glass) => sum + glass.totalM2, 0);
     if (totalM2 <= 0) continue;
     const existing = groups.get(key);
     if (existing) {
@@ -595,7 +624,7 @@ function buildGlassOrderRows(items: readonly WorkItem[], templates: readonly Cot
     const finish = presentation.catalogTerminacion.trim();
     const composition = presentation.fabricacionGlazing.trim();
     const code = resolveGlassCatalogCode(item, templates);
-    const glassRows = snapshotGlassRows(item);
+    const glassRows = snapshotGlassRows(item, templates);
     if (glassRows.length === 0) {
       if (!item.vidrio?.trim() && !resolvedThickness.thicknessMm && !item.fabricacionSnapshot?.glassSelection?.productId && !composition) continue;
       rows.push({
@@ -619,12 +648,16 @@ function buildGlassOrderRows(items: readonly WorkItem[], templates: readonly Cot
         areaEachM2: null,
         totalM2: null,
         measuresPending: true,
+        dimensionProvenance: null,
+        validationStatus: "requires_review",
+        validationLabel: "Medidas pendientes",
+        validationWarnings: [],
       });
       continue;
     }
 
     glassRows.forEach((glass, index) => {
-      const hasMeasures = glass.width > 0 && glass.height > 0 && glass.quantity > 0;
+      const hasMeasures = glass.width > 0 && glass.height > 0 && glass.quantity > 0 && !glass.measurementInvalidated;
       rows.push({
         key: `${item.id}|${glass.reference}|${index}`,
         groupKey: [item.vidrio?.trim(), thickness, finish, composition].join("|"),
@@ -646,6 +679,10 @@ function buildGlassOrderRows(items: readonly WorkItem[], templates: readonly Cot
         areaEachM2: hasMeasures ? roundM2((glass.width * glass.height) / 1_000_000) : null,
         totalM2: hasMeasures ? roundM2(glass.totalM2) : null,
         measuresPending: !hasMeasures,
+        dimensionProvenance: glass.dimensionProvenance,
+        validationStatus: glass.validationStatus,
+        validationLabel: glass.validationLabel,
+        validationWarnings: glass.validationWarnings,
       });
     });
   }

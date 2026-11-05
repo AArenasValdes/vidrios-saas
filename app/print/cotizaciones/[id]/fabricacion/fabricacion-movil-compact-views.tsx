@@ -695,6 +695,9 @@ export function CompactGlassView({
               {document.glassOrder.length} {document.glassOrder.length === 1 ? "tipo de paño" : "tipos de paño"}
               {physicalPaneCount > 0 ? ` · ${physicalPaneCount} unidades físicas` : " · cantidad física pendiente"}
             </p>
+            <p className={s.mCompactSectionSubtitle}>
+              Referencias desde la cotización y sus snapshots. El conteo no confirma medidas finales ni cobertura operativa para distribuir o cortar.
+            </p>
           </div>
           <WorkDocumentExportActions
             kind="glass-order"

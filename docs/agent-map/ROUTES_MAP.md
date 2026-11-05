@@ -791,3 +791,10 @@ Generado desde app/ y verificado por pnpm docs:check. El detalle funcional de ca
 - **Archivos**: `app/e2e-glass-distribution/page.tsx`, `app/e2e-glass-distribution/panel-fixture.tsx`, `tests/e2e/glass-distribution-panel.smoke.spec.ts`.
 - **Uso**: monta el panel real con una cotización sintética; Playwright controla las respuestas de cobertura y el endpoint de guardado simulado. No consulta Supabase ni crea datos.
 - **Límite**: sirve para validar el DOM y flujo del panel en Chromium; no es smoke autenticado ni persistencia E2E de Ventora.
+
+## Ruta de soporte E2E: `/e2e-glass-guided`
+
+- **Tipo**: ruta de prueba local; devuelve 404 en producción y cuando `VENTORA_E2E_TEST_HARNESS` no es exactamente `1`.
+- **Archivos**: `app/e2e-glass-guided/page.tsx`, `app/e2e-glass-guided/fixture.tsx`, `tests/e2e/glass-guided-quote-to-distribution.spec.ts`.
+- **Uso**: monta el editor `ManualGlassMeasurementsEditor` por medio del panel de cobertura y el `GlassDistributionPanel` reales; el test intercepta el guardado y API de cotización, conserva reapertura en localStorage de prueba y llama al optimizador geométrico real con fixture QA. Incluye tres componentes comerciales y valida seis unidades físicas de vidrio en una plancha dentro de límites.
+- **Límite**: no crea sesión ni escribe Supabase; no prueba el repository/API de persistencia real ni fabricación/taller.

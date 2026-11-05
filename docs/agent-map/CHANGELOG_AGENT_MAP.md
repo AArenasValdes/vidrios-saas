@@ -2,6 +2,21 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-11-03 - Identidad y matriz de geometría de paños
+
+- Se registra una matriz CSV regenerable desde catálogo comercial, configuraciones técnicas exactas y módulos del Constructor. Los conteos son posiciones identificables o inferidas; no confirman medidas finales ni validación de taller.
+- La posición original (`paneSlotId` / `sourcePosition`) acompaña a cada unidad planificada y el PDF la enlaza por identidad, aunque el optimizador cambie el orden de acomodo.
+- La reconciliación entre receta y medidas manuales exige posiciones físicas explícitas; un snapshot agregado o histórico sin posición queda pendiente y no se asigna por producto ni coincidencia de cantidades.
+- La primera plancha se ubica usando el espacio disponible medido por el renderizador; el generador ya no desplaza la plancha por una segunda estimación conservadora.
+
+## 2026-10-29 - Asistente móvil y simulación de vidrio (dependiente de PR #10)
+
+- Se documenta el flujo de ficha de vidrio: compra explícita, campos técnicos sin deducción por nombre, datos comerciales opcionales y formato físico único compatible con metadata actual.
+- Se documenta la reutilización del snapshot manual por paño y `resolveManualGlassPaneSlots`; medidas congeladas conservan origen y las manuales no se calculan desde el vano. Formatos múltiples quedan como límite del modelo actual.
+- El PDF geométrico de simulación se separa del PDF para proveedor y lleva `NO APTO PARA CORTE`; la cobertura operativa sigue su propio gate.
+- Se documenta el nuevo harness Playwright móvil, con API/guardado simulados y optimizador real; no acredita persistencia autenticada.
+- El PDF ahora resuelve el origen por identidad `paneId`, corrigiendo el caso de dos medidas distintas en el mismo componente/producto.
+
 ## 2026-10-19 - Handoff Antigravity / Gemini 4 Argon
 
 - Se creó `docs/agent-map/ANTIGRAVITY_PROJECT_CONTEXT.md` como contexto autocontenido para otro agente de código.

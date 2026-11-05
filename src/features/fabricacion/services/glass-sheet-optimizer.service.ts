@@ -9,6 +9,7 @@ import type {
   GlassRect,
   GlassSheetPlan,
 } from "@/features/fabricacion/types/glass-sheet-optimizer-contracts";
+import { MAX_MANUAL_GLASS_PANE_COUNT } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
 import { verifyGlassSheetPlans } from "@/features/fabricacion/services/glass-sheet-plan-verifier.service";
 
 type Unit = GlassPanePlanningUnit & { paneUnitId: string; widthMm: number; heightMm: number };
@@ -20,7 +21,7 @@ const DEFAULT_SEARCH_NODE_LIMIT = 45_000;
 // The exact partition search grows exponentially; larger lots use the verified constructor first.
 const MAX_EXACT_UNITS = 8;
 // Bound the physical-unit expansion before allocating unit IDs or search state.
-const MAX_PHYSICAL_UNITS = 2_000;
+const MAX_PHYSICAL_UNITS = MAX_MANUAL_GLASS_PANE_COUNT;
 const positiveInt = (value: number | null | undefined): value is number => Number.isSafeInteger(value) && Number(value) > 0;
 const positiveThickness = (value: number | null | undefined): value is number => typeof value === "number" && Number.isFinite(value) && value > 0;
 const nonNegativeInt = (value: number) => Number.isSafeInteger(value) && value >= 0;
@@ -116,6 +117,11 @@ function validationErrors(panes: readonly GlassPanePlanningUnit[], profile: Glas
     }
     if (!positiveInt(pane.widthMm) || !positiveInt(pane.heightMm)) errors.push(`El paño ${pane.paneId} tiene dimensiones inválidas.`);
     else if (!Number.isSafeInteger(pane.widthMm * pane.heightMm)) errors.push(`El área del paño ${pane.paneId} excede el rango entero seguro.`);
+    if (spec && spec.purchaseMode !== "full_sheet") {
+      errors.push(spec.purchaseMode === "supplier_cut"
+        ? `El vidrio ${pane.paneId} se compra cortado por proveedor; no se distribuye como plancha del taller.`
+        : `La forma de compra del vidrio ${pane.paneId} no está confirmada; selecciona plancha completa para distribuirlo.`);
+    }
     if (spec && (spec.hasConflict || (mode === "workshop" && (spec.manualCutStatus !== "confirmed" || !spec.technicalReviewConfirmed && ["laminado", "dvh", "templado", "espejo", "otro"].includes(spec.category))) || (mode === "geometric_preview" && spec.manualCutStatus === "not_admitted"))) {
       errors.push(`El vidrio del paño ${pane.paneId} no tiene especificación compatible para esta modalidad.`);
     }
@@ -592,6 +598,8 @@ function listTreeLeaves(node: InternalTree, panes: GlassPlannedPane[], remnants:
       logicalComponentId: unit.logicalComponentId ?? "",
       componentCode: unit.componentCode,
       paneId: unit.paneId,
+      ...(unit.paneSlotId ? { paneSlotId: unit.paneSlotId } : {}),
+      ...(unit.sourcePosition ? { sourcePosition: unit.sourcePosition } : {}),
       productId: unit.productId ?? "",
       snapshotFingerprint: unit.snapshotFingerprint,
       rect: node.rect,

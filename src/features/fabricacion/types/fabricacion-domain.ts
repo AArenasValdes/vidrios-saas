@@ -353,6 +353,9 @@ export type FabricacionFilaPauta = {
 
 export type FabricacionVidrioResultado = {
   vidrioId: string;
+  /** Stable physical composition identity when the recipe can prove its position. */
+  paneSlotId?: string;
+  sourcePosition?: string;
   nombre: string;
   anchoMm: number;
   altoMm: number;

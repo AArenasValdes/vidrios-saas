@@ -10,6 +10,8 @@ export const GLASS_TECHNICAL_CATEGORIES = [
 
 export type GlassTechnicalCategory = (typeof GLASS_TECHNICAL_CATEGORIES)[number];
 export type GlassManualCutStatus = "confirmed" | "not_admitted" | "pending_validation";
+/** How the organization normally acquires this glass product. Missing means legacy/undecided. */
+export type GlassPurchaseMode = "undecided" | "full_sheet" | "supplier_cut";
 export type GlassTechnicalProvenance = "catalog" | "manual_override" | "legacy" | "unknown";
 export type GlassPaneOrientation = "fixed" | "rotatable" | "grain_or_coating_directional" | "unknown";
 
@@ -25,6 +27,7 @@ export type GlassTechnicalSpec = {
   sheetWidthMm: number | null;
   sheetHeightMm: number | null;
   pieceOrientation?: GlassPaneOrientation;
+  purchaseMode?: GlassPurchaseMode;
   provenance: GlassTechnicalProvenance;
   sourceProductId: string | null;
   sourceValues: {
@@ -35,6 +38,7 @@ export type GlassTechnicalSpec = {
     sheetWidthMm: number | null;
     sheetHeightMm: number | null;
     pieceOrientation?: GlassPaneOrientation;
+    purchaseMode?: GlassPurchaseMode;
   } | null;
   hasConflict: boolean;
 };
@@ -48,6 +52,7 @@ export type GlassTechnicalCatalogMetadata = {
   planchaAnchoMm?: unknown;
   planchaAltoMm?: unknown;
   orientacionCorte?: unknown;
+  formaCompraVidrio?: unknown;
 };
 
 const categorySet = new Set<string>(GLASS_TECHNICAL_CATEGORIES);
@@ -94,6 +99,10 @@ function paneOrientation(value: unknown): GlassPaneOrientation {
     : "unknown";
 }
 
+function glassPurchaseMode(value: unknown): GlassPurchaseMode | undefined {
+  return value === "undecided" || value === "full_sheet" || value === "supplier_cut" ? value : undefined;
+}
+
 export function parseExplicitGlassThicknessMm(value: unknown): number | null {
   if (typeof value === "number") return positiveThickness(value);
   if (typeof value !== "string") return null;
@@ -137,6 +146,7 @@ export function normalizeGlassTechnicalSpec(value: unknown): GlassTechnicalSpec 
     sheetWidthMm: positiveInteger(candidate.sheetWidthMm),
     sheetHeightMm: positiveInteger(candidate.sheetHeightMm),
     pieceOrientation: paneOrientation(candidate.pieceOrientation),
+    ...(glassPurchaseMode(candidate.purchaseMode) ? { purchaseMode: glassPurchaseMode(candidate.purchaseMode) } : {}),
     provenance,
     sourceProductId: typeof candidate.sourceProductId === "string" ? candidate.sourceProductId : null,
     sourceValues: sourceValues ? {
@@ -149,6 +159,9 @@ export function normalizeGlassTechnicalSpec(value: unknown): GlassTechnicalSpec 
       sheetWidthMm: positiveInteger(sourceValues.sheetWidthMm),
       sheetHeightMm: positiveInteger(sourceValues.sheetHeightMm),
       pieceOrientation: paneOrientation(sourceValues.pieceOrientation),
+      ...(sourceValues.purchaseMode === "undecided" || sourceValues.purchaseMode === "full_sheet" || sourceValues.purchaseMode === "supplier_cut"
+        ? { purchaseMode: sourceValues.purchaseMode }
+        : {}),
     } : null,
     hasConflict: candidate.hasConflict === true,
   };
@@ -176,6 +189,7 @@ export function buildCatalogGlassTechnicalSpec(input: {
     sheetWidthMm: positiveInteger(metadata.planchaAnchoMm),
     sheetHeightMm: positiveInteger(metadata.planchaAltoMm),
     pieceOrientation: paneOrientation(metadata.orientacionCorte),
+    ...(glassPurchaseMode(metadata.formaCompraVidrio) ? { purchaseMode: glassPurchaseMode(metadata.formaCompraVidrio) } : {}),
     provenance: "catalog",
     sourceProductId: input.productId,
     sourceValues: null,
@@ -210,6 +224,7 @@ export function applyGlassTechnicalOverride(input: {
       sheetWidthMm: source.sheetWidthMm,
       sheetHeightMm: source.sheetHeightMm,
       pieceOrientation: source.pieceOrientation ?? "unknown",
+      ...(source.purchaseMode ? { purchaseMode: source.purchaseMode } : {}),
     },
     hasConflict,
   };

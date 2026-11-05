@@ -146,6 +146,28 @@ describe("cotizacion-pdf utils", () => {
     ).toBe(true);
   });
 
+  it("descarga el PDF como Blob en Microsoft Edge de escritorio", async () => {
+    Object.defineProperty(window.URL, "createObjectURL", {
+      value: jest.fn(() => "blob:ventora-pdf"),
+      configurable: true,
+    });
+    Object.defineProperty(window.URL, "revokeObjectURL", {
+      value: jest.fn(),
+      configurable: true,
+    });
+    const clickSpy = jest.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+
+    const result = await downloadPdfBlob(new Blob(["pdf"], { type: "application/pdf" }), "simulacion.pdf", {
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0",
+    });
+
+    const link = clickSpy.mock.contexts[0] as HTMLAnchorElement;
+    expect(result).toBe("downloaded");
+    expect(link.download).toBe("simulacion.pdf");
+    expect(link.href).toBe("blob:ventora-pdf");
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+  });
+
   it("debe abrir el PDF publico en iPhone cuando existe fallbackUrl", async () => {
     const openSpy = jest.spyOn(window, "open").mockReturnValue(null);
     Object.defineProperty(window.URL, "createObjectURL", {

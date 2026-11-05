@@ -18,6 +18,29 @@
   gap: 10px;
 }
 
+.geometrySection {
+  display: grid;
+  gap: 5px;
+}
+
+.operationalSection {
+  display: grid;
+  gap: 3px;
+  padding-top: 8px;
+  border-top: 1px solid #e4eaf1;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.operationalSection strong {
+  color: #33445d;
+  font-size: 12px;
+}
+
+.operationalSection p {
+  color: #64748b;
+}
+
 .summary strong {
   color: #263a55;
   font-size: 14px;

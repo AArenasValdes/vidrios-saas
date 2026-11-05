@@ -216,7 +216,7 @@ describe("FabricacionResumenMovil", () => {
     expect(screen.getByText("Con pauta completa")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Optimizar vidrios" })).not.toBeInTheDocument();
     expect(screen.getAllByRole("heading", { name: "Documentos de fabricación" }).length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: "Descargar PDF preliminar de distribución de planchas" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Descargar PDF de simulación geométrica no apta para corte" })).toBeInTheDocument();
     const surface = screen.getByLabelText("Resumen y documentos").firstElementChild;
     expect(surface?.children[0]).toHaveTextContent("Documentos de fabricación");
     expect(surface?.children[1]).toHaveTextContent("Despieces para revisar");

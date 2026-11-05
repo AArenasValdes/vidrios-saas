@@ -97,11 +97,7 @@ export function GlassProductMobileEditor({
           <h2 id="mobile-glass-editor-title">
             {sheetMode === "edit" ? "Editar vidrio" : "Nuevo vidrio"}
           </h2>
-          <p>
-            {activeStep === 1
-              ? "Producto compartido; lo asignas a cada componente al cotizar"
-              : "Formato de plancha y costo de compra"}
-          </p>
+          <p>{activeStep === 1 ? "Identificación y compra" : "Formato físico para distribuir"}</p>
         </div>
         <span className={s.stepCount}>{activeStep} de 2</span>
       </header>
@@ -123,7 +119,7 @@ export function GlassProductMobileEditor({
           aria-current={activeStep === 2 ? "step" : undefined}
         >
           <span>2</span>
-          Formato y costo
+          Plancha
         </button>
       </nav>
 
@@ -166,104 +162,86 @@ export function GlassProductMobileEditor({
             </label>
 
             <label className={s.field}>
-              <span>Corte manual</span>
+              <span>Forma de compra</span>
               <select
-                value={draft.corteManualEstado}
-                onChange={(event) => onDraftChange("corteManualEstado", event.target.value as GlassManualCutStatus)}
-                aria-label="Aptitud del producto para corte manual"
+                value={draft.glassPurchaseMode}
+                onChange={(event) => onDraftChange("glassPurchaseMode", event.target.value as LineTemplateFormDraft["glassPurchaseMode"])}
+                aria-label="Forma de compra del vidrio"
               >
-                {Object.entries(MANUAL_CUT_STATUS_LABELS).map(([value, label]) => (
-                  <option
-                    key={value}
-                    value={value}
-                    disabled={value !== "pending_validation" && manualCutDecisionBlocked}
-                  >
-                    {label}
-                  </option>
-                ))}
+                <option value="undecided">Por definir</option>
+                <option value="full_sheet">Plancha completa</option>
+                <option value="supplier_cut">Pieza cortada por proveedor</option>
+                {draft.glassPurchaseMode === "legacy" ? <option value="legacy">Ficha antigua · compra por confirmar</option> : null}
               </select>
-              <small>La aptitud no sustituye las medidas ni la receta validada.</small>
+              <small>Se guarda por separado del precio de venta y no se deduce del nombre.</small>
             </label>
-
-            {requiresTechnicalReview ? (
-              <label className={s.activeRow}>
-                <span>
-                  <strong>Revisión técnica especial</strong>
-                  <small>Confirma que revisaste las restricciones de {GLASS_CATEGORY_LABELS[draft.categoriaTecnica].toLocaleLowerCase("es-CL")}.</small>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={draft.revisionTecnicaExplicita}
-                  onChange={(event) => onDraftChange("revisionTecnicaExplicita", event.target.checked)}
-                  aria-label="Confirmo que realicé la revisión técnica especial"
-                />
-              </label>
-            ) : null}
-
-            <div className={s.moneyGrid}>
-              <label className={s.field}>
-                <span>Precio de venta por m²</span>
-                <div className={`${s.moneyInput} ${s.moneyInputWithSuffix}`}>
-                  <span className={s.moneyPrefix}>$</span>
-                  <input
-                    inputMode="numeric"
-                    value={moneyValue(draft.precioM2Sugerido)}
-                    onChange={(event) =>
-                      onDraftChange(
-                        "precioM2Sugerido",
-                        event.target.value.replace(/[^\d]/g, "")
-                      )
-                    }
-                    placeholder="0"
-                  />
-                  <span className={s.moneySuffix}>/ m²</span>
-                </div>
-              </label>
-              <label className={s.field}>
-                <span>Mínimo cobrable (opcional)</span>
-                <div className={s.moneyInput}>
-                  <span className={s.moneyPrefix}>$</span>
-                  <input
-                    inputMode="numeric"
-                    value={moneyValue(draft.minimoCobrable)}
-                    onChange={(event) =>
-                      onDraftChange(
-                        "minimoCobrable",
-                        event.target.value.replace(/[^\d]/g, "")
-                      )
-                    }
-                    placeholder="0"
-                  />
-                </div>
-              </label>
-            </div>
 
             <details className={s.details}>
               <summary>
-                Más información
-                <span>Proveedor y redondeo</span>
+                Datos técnicos avanzados
+                <span>Aptitud de corte y terminación</span>
               </summary>
               <div className={s.detailsBody}>
                 <label className={s.field}>
-                  <span>Proveedor (opcional)</span>
-                  <input
-                    value={draft.proveedor}
-                    onChange={(event) => onDraftChange("proveedor", event.target.value)}
-                    placeholder="Ej. Vidrios del Sur"
-                  />
+                  <span>Terminación o descripción</span>
+                  <input value={draft.terminacion} onChange={(event) => onDraftChange("terminacion", event.target.value)} placeholder="Ej. Low-E, satinado" />
+                </label>
+                <label className={s.field}>
+                  <span>Aptitud para corte manual en taller</span>
+                  <select
+                    value={draft.corteManualEstado}
+                    onChange={(event) => onDraftChange("corteManualEstado", event.target.value as GlassManualCutStatus)}
+                    aria-label="Aptitud del producto para corte manual"
+                  >
+                    {Object.entries(MANUAL_CUT_STATUS_LABELS).map(([value, label]) => (
+                      <option key={value} value={value} disabled={value !== "pending_validation" && manualCutDecisionBlocked}>{label}</option>
+                    ))}
+                  </select>
+                  <small>La aptitud se confirma para el material y proceso; no se asigna por nombre.</small>
+                </label>
+                {requiresTechnicalReview ? (
+                  <label className={s.activeRow}>
+                    <span>
+                      <strong>Revisión técnica especial</strong>
+                      <small>Confirma que revisaste las restricciones de {GLASS_CATEGORY_LABELS[draft.categoriaTecnica].toLocaleLowerCase("es-CL")}.</small>
+                    </span>
+                    <input type="checkbox" checked={draft.revisionTecnicaExplicita} onChange={(event) => onDraftChange("revisionTecnicaExplicita", event.target.checked)} aria-label="Confirmo que realicé la revisión técnica especial" />
+                  </label>
+                ) : null}
+              </div>
+            </details>
+
+            <details className={s.details}>
+              <summary>Datos comerciales y de compra<span>Opcionales; no habilitan el corte</span></summary>
+              <div className={s.detailsBody}>
+                <label className={s.field}>
+                  <span>Precio de venta por m² (opcional)</span>
+                  <div className={`${s.moneyInput} ${s.moneyInputWithSuffix}`}>
+                    <span className={s.moneyPrefix}>$</span>
+                    <input inputMode="numeric" value={moneyValue(draft.precioM2Sugerido)} onChange={(event) => onDraftChange("precioM2Sugerido", event.target.value.replace(/[^\d]/g, ""))} placeholder="Sin precio" />
+                    <span className={s.moneySuffix}>/ m²</span>
+                  </div>
+                </label>
+                <label className={s.field}>
+                  <span>Mínimo cobrable (opcional)</span>
+                  <div className={s.moneyInput}><span className={s.moneyPrefix}>$</span><input inputMode="numeric" value={moneyValue(draft.minimoCobrable)} onChange={(event) => onDraftChange("minimoCobrable", event.target.value.replace(/[^\d]/g, ""))} placeholder="Sin mínimo" /></div>
                 </label>
                 <label className={s.field}>
                   <span>Redondeo del precio</span>
-                  <select
-                    value={draft.redondeoPrecio}
-                    onChange={(event) => onDraftChange("redondeoPrecio", event.target.value)}
-                  >
-                    {ROUNDING_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                  <select value={draft.redondeoPrecio} onChange={(event) => onDraftChange("redondeoPrecio", event.target.value)}>{ROUNDING_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
+                </label>
+                <label className={s.field}>
+                  <span>Costo de compra (opcional)</span>
+                  <div className={s.moneyInput}><span className={s.moneyPrefix}>$</span><input inputMode="numeric" value={moneyValue(draft.costoBase)} onChange={(event) => onDraftChange("costoBase", event.target.value.replace(/[^\d]/g, ""))} placeholder="Sin costo" /></div>
+                </label>
+                <label className={s.field}>
+                  <span>Proveedor (opcional)</span>
+                  <input value={draft.proveedor} onChange={(event) => onDraftChange("proveedor", event.target.value)} placeholder="Ej. Vidrios del Sur" />
+                </label>
+                <label className={s.field}>
+                  <span>Merma comercial (%)</span>
+                  <input inputMode="decimal" value={draft.mermaPct} onChange={(event) => onDraftChange("mermaPct", event.target.value)} placeholder="0" />
+                  <small>No cambia los despuntes ni la separación física de la simulación.</small>
                 </label>
               </div>
             </details>
@@ -280,14 +258,26 @@ export function GlassProductMobileEditor({
               />
             </label>
           </form>
+        ) : draft.glassPurchaseMode === "supplier_cut" ? (
+          <div className={s.usageContent}>
+            <div className={s.explainer}>
+              <LuInfo aria-hidden />
+              <p>Este producto se compra cortado por proveedor. Puedes guardarlo y cotizarlo; no se distribuirá como plancha de corte del taller.</p>
+            </div>
+          </div>
+        ) : draft.glassPurchaseMode === "undecided" ? (
+          <div className={s.usageContent}>
+            <div className={s.explainer}>
+              <LuInfo aria-hidden />
+              <p>Elige si compras el vidrio por plancha o ya cortado. Puedes guardar la ficha incompleta y definirlo después.</p>
+            </div>
+          </div>
         ) : (
           <div className={s.usageContent}>
             <div className={s.explainer}>
               <LuInfo aria-hidden />
               <p>
-                Ventora usa estos datos para calcular aprovechamiento, desperdicio y costo
-                real del vidrio. Puedes guardar el producto aunque todavía no tengas el
-                formato de plancha.
+                Ingresa el formato físico. Puedes guardar el producto antes de tenerlo; la distribución lo solicitará conservando las medidas finales de los paños.
               </p>
             </div>
 
@@ -300,7 +290,7 @@ export function GlassProductMobileEditor({
                   <option value="rotatable">Se puede girar 90°</option>
                   <option value="grain_or_coating_directional">Direccional; no se gira</option>
                 </select>
-                <small>Se guarda en la ficha técnica y define si se puede rotar cada paño.</small>
+                <small>Define el giro de los paños. No cambia las dimensiones finales que ingresaste.</small>
               </label>
               <div className={s.moneyGrid}>
                 <label className={s.field}>
@@ -322,40 +312,9 @@ export function GlassProductMobileEditor({
                   />
                 </label>
               </div>
-
-              <label className={s.field}>
-                <span>Costo de compra de la plancha completa</span>
-                <div className={s.moneyInput}>
-                  <span className={s.moneyPrefix}>$</span>
-                  <input
-                    inputMode="numeric"
-                    value={moneyValue(draft.costoBase)}
-                    onChange={(event) =>
-                      onDraftChange("costoBase", event.target.value.replace(/[^\d]/g, ""))
-                    }
-                    placeholder="0"
-                  />
-                </div>
-              </label>
-
-              <label className={s.field}>
-                <span>Merma % (opcional)</span>
-                <input
-                  inputMode="decimal"
-                  value={draft.mermaPct}
-                  onChange={(event) => onDraftChange("mermaPct", event.target.value)}
-                  placeholder="5"
-                />
-              </label>
-
-              <label className={s.field}>
-                <span>Proveedor de compra (opcional)</span>
-                <input
-                  value={draft.proveedor}
-                  onChange={(event) => onDraftChange("proveedor", event.target.value)}
-                  placeholder="Ej. Planta de vidrio"
-                />
-              </label>
+              <p className={s.validationHint} role="status">
+                Capacidad de corte: se calculará con las medidas finales de cada paño y este formato. La merma comercial no se usa como despunte ni como separación física.
+              </p>
             </form>
           </div>
         )}
@@ -370,7 +329,7 @@ export function GlassProductMobileEditor({
               disabled={saveDisabled}
               onClick={() => onStepChange(2)}
             >
-              Formato y costo (opcional)
+              Formato de plancha
               <LuChevronRight aria-hidden />
             </button>
             <button
@@ -384,7 +343,7 @@ export function GlassProductMobileEditor({
                 boxShadow: "none",
               }}
             >
-              {isSaving ? "Guardando…" : "Guardar sin formato"}
+              {isSaving ? "Guardando…" : "Guardar producto"}
             </button>
           </>
         ) : (

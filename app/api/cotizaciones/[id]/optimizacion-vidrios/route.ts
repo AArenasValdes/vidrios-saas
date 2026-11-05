@@ -44,6 +44,38 @@ const saveWorkshopProfileSchema = inputSchema.extend({
   productId: z.string().trim().min(1).max(80),
 });
 
+const workshopFieldLabels: Record<string, string> = {
+  pieceOrientation: "Orientación de los paños",
+  confirmManualOperations: "Confirmación del proceso manual",
+  sheetOrientation: "Orientación de la plancha",
+  sheetSource: "Origen del formato de plancha",
+  sheetSourceReference: "Referencia del formato de plancha",
+  tableWidthMm: "Ancho de mesa",
+  tableHeightMm: "Alto de mesa",
+  edgeTrimMm: "Despuntes",
+  separationMm: "Separación operativa",
+  minimumStripWidthMm: "Ancho mínimo manipulable",
+  remnantMinimumWidthMm: "Ancho mínimo de retazo",
+  remnantMinimumHeightMm: "Alto mínimo de retazo",
+  remnantOrientation: "Orientación del retazo",
+  processSourceReference: "Fuente de las reglas físicas",
+  sheetWidthMm: "Ancho de plancha",
+  sheetHeightMm: "Alto de plancha",
+};
+
+function validationDiagnostics(error: z.ZodError) {
+  return error.issues.map((issue) => {
+    if (issue.code === "unrecognized_keys") return `Campos no reconocidos: ${issue.keys.join(", ")}.`;
+    const path = issue.path.map(String).join(".");
+    const field = workshopFieldLabels[path] ?? workshopFieldLabels[path.split(".")[0] ?? ""] ?? path;
+    if (path === "confirmManualOperations") {
+      return "Confirma que el proceso indicado corresponde al corte manual del taller.";
+    }
+    if (issue.message === "Required") return `${field ? `${field}: ` : ""}completa este dato.`;
+    return `${field ? `${field}: ` : ""}${issue.message}`;
+  });
+}
+
 function parseQuoteId(value: string) {
   const id = Number(value);
   return Number.isSafeInteger(id) && id > 0 ? id : null;
@@ -55,7 +87,7 @@ async function loadPanes(quoteId: number, organizationId: number) {
   const items: CotizacionWorkflowItem[] = quote.items.map((item) => ({
     id: item.id,
     codigo: item.code,
-    tipo: "componente",
+    tipo: item.componentType || "componente",
     lineaComercial: "",
     vidrio: item.glassDescription ?? "",
     nombre: item.name,
@@ -232,7 +264,18 @@ export async function POST(request: Request, route: RouteContext) {
   const providerRequest = providerPdfSchema.safeParse(payload);
   const saveProfile = saveWorkshopProfileSchema.safeParse(payload);
   const parsed = geometricRequest.success || providerRequest.success || saveProfile.success ? null : inputSchema.safeParse(payload);
-  if (!geometricRequest.success && !providerRequest.success && !saveProfile.success && !parsed?.success) return NextResponse.json({ error: "Completa las reglas físicas requeridas para esta modalidad.", details: parsed && !parsed.success ? parsed.error.flatten() : undefined }, { status: 400 });
+  if (payload && typeof payload === "object" && "mode" in payload && payload.mode === "geometric_preview" && !geometricRequest.success) {
+    const diagnostics = validationDiagnostics(geometricRequest.error);
+    return NextResponse.json({ error: "Revisa el formato indicado para la simulación geométrica.", diagnostics, details: geometricRequest.error.flatten() }, { status: 400 });
+  }
+  if (!geometricRequest.success && !providerRequest.success && !saveProfile.success && !parsed?.success) {
+    const validation = parsed && !parsed.success ? parsed.error : providerRequest.error;
+    return NextResponse.json({
+      error: "No se pudo preparar la modalidad operativa. Revisa los datos físicos requeridos.",
+      diagnostics: validationDiagnostics(validation),
+      details: validation.flatten(),
+    }, { status: 400 });
+  }
   const mode = geometricRequest.success ? geometricRequest.data.mode : providerRequest.success ? providerRequest.data.mode : "workshop";
   const isGeometricRequest = geometricRequest.success;
   const workshopInput = providerRequest.success

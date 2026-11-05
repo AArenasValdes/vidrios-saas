@@ -19,7 +19,7 @@ import {
   GLASS_OPTIONS,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionLineTemplateCuttingPreview } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
-import type { GlassManualCutStatus, GlassPaneOrientation, GlassTechnicalCategory } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
+import type { GlassManualCutStatus, GlassPaneOrientation, GlassPurchaseMode, GlassTechnicalCategory } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
 import {
   type CotizacionLineTemplateCubicationStatus,
   type CotizacionLineTemplateCubicationSystem,
@@ -65,6 +65,7 @@ export type LineTemplateFormDraft = {
   unidadCobro: CotizacionLineTemplateUnidadCobro | "";
   material: CotizacionLineTemplateMaterial | "";
   espesor: string;
+  glassPurchaseMode: GlassPurchaseMode | "legacy";
   categoriaTecnica: GlassTechnicalCategory;
   corteManualEstado: GlassManualCutStatus;
   revisionTecnicaExplicita: boolean;

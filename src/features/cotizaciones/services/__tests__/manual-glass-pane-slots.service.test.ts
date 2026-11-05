@@ -42,6 +42,16 @@ describe("resolveManualGlassPaneSlots", () => {
     expect(resolveManualGlassPaneSlots({ componentType: "Corredera" })).toMatchObject({ countIsKnown: false, slots: [] });
   });
 
+  it("crea posiciones manuales estables, versionadas y sensibles al conteo explícito", () => {
+    const two = resolveManualGlassPaneSlots({ componentType: "Ventana especial", manualPaneCount: 2 });
+    const twoAgain = resolveManualGlassPaneSlots({ componentType: "Ventana especial", manualPaneCount: 2 });
+    const three = resolveManualGlassPaneSlots({ componentType: "Ventana especial", manualPaneCount: 3 });
+
+    expect(two.slots.map((slot) => slot.id)).toEqual(["manual-pane:v1:1", "manual-pane:v1:2"]);
+    expect(two.configurationFingerprint).toBe(twoAgain.configurationFingerprint);
+    expect(two.configurationFingerprint).not.toBe(three.configurationFingerprint);
+  });
+
   it.each([
     ["Paño fijo", "Fijo"],
     ["Proyectante", "Proyectante"],
@@ -81,7 +91,7 @@ describe("resolveManualGlassPaneSlots", () => {
     expect(result.slots.map(({ id }) => id)).toEqual(listLeafModules(visual.root).map(({ id }) => id));
   });
 
-  it("no infiere cuántos paños hay a partir de divisiones visuales internas y cambia la huella", () => {
+  it("mantiene un solo paño cuando sus palillos son decorativos y cambia la huella", () => {
     let visual = createDefaultGuidedVisualConfig({ widthMm: 1800, heightMm: 1400 });
     const moduleId = listLeafModules(visual.root)[0]!.id;
     const before = resolveManualGlassPaneSlots({ componentType: "Paño fijo", guidedVisualConfig: visual });
@@ -89,8 +99,36 @@ describe("resolveManualGlassPaneSlots", () => {
     const after = resolveManualGlassPaneSlots({ componentType: "Paño fijo", guidedVisualConfig: visual });
 
     expect(before).toMatchObject({ countIsKnown: true, slots: [{ rectangular: true }] });
-    expect(after).toMatchObject({ countIsKnown: false, slots: [] });
+    expect(after).toMatchObject({ countIsKnown: true, slots: [{ id: expect.any(String), label: "Paño 1 · Fijo" }] });
     expect(after.configurationFingerprint).not.toBe(before.configurationFingerprint);
+  });
+
+  it("cuenta módulos explícitos aunque cada módulo tenga palillos decorativos", () => {
+    let visual = createDefaultGuidedVisualConfig({ widthMm: 1800, heightMm: 1400 });
+    visual = splitModule(visual, listLeafModules(visual.root)[0]!.id, "vertical", 0.5);
+    for (const module of listLeafModules(visual.root)) visual = applyPalilloPresetToModule(visual, module.id, "v1");
+
+    const result = resolveManualGlassPaneSlots({ componentType: "Paño fijo", guidedVisualConfig: visual });
+
+    expect(result.slots).toHaveLength(2);
+    expect(result.slots.map(({ id }) => id)).toEqual(listLeafModules(visual.root).map(({ id }) => id));
+  });
+
+  it("acepta cantidades manuales sobre el antiguo límite 12 y explica el límite seguro", () => {
+    expect(resolveManualGlassPaneSlots({ componentType: "Composición especial", manualPaneCount: 13 })).toMatchObject({
+      countIsKnown: true,
+      slots: expect.arrayContaining([expect.objectContaining({ id: "manual-pane:v1:13" })]),
+    });
+    expect(resolveManualGlassPaneSlots({ componentType: "Composición especial", manualPaneCount: 2_001 })).toMatchObject({
+      countIsKnown: false,
+      slots: [],
+      reason: expect.stringContaining("2.000"),
+    });
+  });
+
+  it("no interpreta fijo superior agregado como un solo paño", () => {
+    expect(resolveManualGlassPaneSlots({ componentType: "Puerta", configuration: "2 hojas + fijo superior" }))
+      .toMatchObject({ countIsKnown: false, slots: [] });
   });
 
   it("marca las geometrías no rectangulares y cambios de forma alteran la huella", () => {

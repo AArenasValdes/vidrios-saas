@@ -3,6 +3,8 @@ import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotiz
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
 import type { TechnicalCostSnapshot } from "@/features/proveedor-catalogos/services/costo-tecnico-parcial.service";
+import { buildCatalogGlassTechnicalSpec } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
+import { getCatalogGlassTechnicalFingerprint } from "@/features/cotizaciones/services/manual-glass-pane-measurements.service";
 import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 import { buildWorkMaterialsDocument } from "../fabrication-work-materials.service";
@@ -578,6 +580,118 @@ describe("fabrication-work-materials.service", () => {
     const materials = buildWorkMaterialsDocument({ summary: summary(null), items: [noThickness] });
 
     expect(materials.glassOrder[0].thickness).toBe("Pendiente");
+  });
+
+  it("incluye mediciones manuales finales vigentes en Orden de vidrios sin declararlas aprobadas para corte", () => {
+    const metadata = {
+      espesor: "5 mm", categoriaTecnica: "monolitico", revisionTecnicaExplicita: true,
+      corteManualEstado: "confirmed", formaCompraVidrio: "full_sheet", planchaAnchoMm: 4000,
+      planchaAltoMm: 2200,
+    };
+    const spec = buildCatalogGlassTechnicalSpec({ productId: "3763", metadata });
+    const manualItem = (id: string, code: string) => {
+      const value = item({ id, code, glass: "Monolítico 5 mm", glassTemplateId: "3763" });
+      value.tipo = "Paño fijo";
+      value.observaciones = encodeCotizacionItemPresentationMeta({
+        logicalComponentId: `logical-${id}`,
+        fabricacionTipologia: "Paño fijo",
+        vidrioLineTemplateId: "3763",
+        manualGlassMeasurements: { version: 2, expectedPaneCount: 1, entries: [{
+          id: `manual-${id}`, source: "manual", version: 2, productId: "3763",
+          technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec), widthMm: 600, heightMm: 1000,
+          quantity: 1, quantityBasis: "per_component", paneSlotId: "pane-1",
+          rectangularVerified: true, recordedAt: "2026-10-29T12:00:00Z",
+        }] },
+      });
+      return value;
+    };
+    const glassTemplate = {
+      id: 3763, organizationId: 1, catalogKey: null, nombre: "Monolítico 5 mm", categoria: "vidrio",
+      unidadCobro: "m2", material: "Cristal", vidrioPrincipalRecomendado: null, costoBase: 0,
+      precioM2Sugerido: 0, minimoCobrable: 0, redondeoPrecio: 0, mermaPct: 0,
+      margenObjetivoPct: null, proveedor: null, vigenciaDesde: null, vigenciaHasta: null,
+      catalogMetadata: metadata, isActive: true, sortOrder: 1,
+      creadoEn: null, actualizadoEn: null, eliminadoEn: null,
+    } as CotizacionLineTemplate;
+    const materials = buildWorkMaterialsDocument({
+      summary: summary(null), items: [manualItem("4078", "F1"), manualItem("4079", "F2")], lineTemplates: [glassTemplate],
+    });
+
+    expect(materials.glassOrder).toHaveLength(2);
+    expect(materials.glassOrder.map((row) => [row.paneReference, row.widthMm, row.heightMm, row.quantity])).toEqual([
+      ["F1 · Paño 1", 600, 1000, 1], ["F2 · Paño 1", 600, 1000, 1],
+    ]);
+    expect(materials.glassOrder.every((row) => row.dimensionProvenance === "manual" && row.measuresPending === false)).toBe(true);
+    expect(materials.glassOrder.every((row) => row.validationLabel === "Medida manual final · pendiente de validación de taller")).toBe(true);
+    expect(materials.glassOrder.reduce((sum, row) => sum + (row.totalM2 ?? 0), 0)).toBe(1.2);
+  });
+
+  it("conserva pendiente el motivo de una medición manual desactualizada y evita duplicarla con snapshot", () => {
+    const metadata = {
+      espesor: "5 mm", categoriaTecnica: "monolitico", revisionTecnicaExplicita: true,
+      corteManualEstado: "confirmed", formaCompraVidrio: "full_sheet", planchaAnchoMm: 4000,
+      planchaAltoMm: 2200,
+    };
+    const currentSpec = buildCatalogGlassTechnicalSpec({ productId: "3763", metadata });
+    const stale = item({ id: "4078", code: "F1", glass: "Monolítico 5 mm", glassTemplateId: "3763", snapshot: glassSnapshot("manual-F1", "Vidrio", 600, 1000, 1) });
+    stale.tipo = "Paño fijo";
+    stale.observaciones = encodeCotizacionItemPresentationMeta({
+      logicalComponentId: "logical-F1", fabricacionTipologia: "Paño fijo", vidrioLineTemplateId: "3763",
+      manualGlassMeasurements: { version: 2, expectedPaneCount: 1, entries: [{
+        id: "manual-F1", source: "manual", version: 2, productId: "3763",
+        technicalFingerprint: "old-technical-fingerprint", widthMm: 600, heightMm: 1000, quantity: 1,
+        quantityBasis: "per_component", paneSlotId: "pane-1", rectangularVerified: true,
+        recordedAt: "2026-10-29T12:00:00Z",
+      }] },
+    });
+    const glassTemplate = {
+      id: 3763, organizationId: 1, catalogKey: null, nombre: "Monolítico 5 mm", categoria: "vidrio",
+      unidadCobro: "m2", material: "Cristal", vidrioPrincipalRecomendado: null, costoBase: 0,
+      precioM2Sugerido: 0, minimoCobrable: 0, redondeoPrecio: 0, mermaPct: 0, margenObjetivoPct: null,
+      proveedor: null, vigenciaDesde: null, vigenciaHasta: null, catalogMetadata: metadata, isActive: true,
+      sortOrder: 1, creadoEn: null, actualizadoEn: null, eliminadoEn: null,
+    } as CotizacionLineTemplate;
+    expect(getCatalogGlassTechnicalFingerprint(currentSpec)).not.toBe("old-technical-fingerprint");
+    const materials = buildWorkMaterialsDocument({ summary: summary(null), items: [stale], lineTemplates: [glassTemplate] });
+
+    expect(materials.glassOrder).toHaveLength(1);
+    expect(materials.glassOrder[0]).toMatchObject({
+      paneReference: "F1 · Paño 1", dimensionProvenance: "manual", validationStatus: "requires_review",
+      measuresPending: true, validationLabel: "Pendiente de revisión",
+    });
+    expect(materials.glassOrder[0]?.validationWarnings).toContain("La ficha técnica del vidrio cambió desde que se ingresaron estas medidas; revisa y vuelve a guardar la referencia.");
+  });
+
+  it("multiplica quantityBasis per_component por la cantidad comercial una sola vez en la orden", () => {
+    const metadata = {
+      espesor: "5 mm", categoriaTecnica: "monolitico", revisionTecnicaExplicita: true,
+      corteManualEstado: "confirmed", formaCompraVidrio: "full_sheet", planchaAnchoMm: 4000,
+      planchaAltoMm: 2200,
+    };
+    const spec = buildCatalogGlassTechnicalSpec({ productId: "3763", metadata });
+    const component = item({ id: "4080", code: "V3", glass: "Monolítico 5 mm", glassTemplateId: "3763" });
+    component.cantidad = 3;
+    component.observaciones = encodeCotizacionItemPresentationMeta({
+      logicalComponentId: "logical-V3", fabricacionTipologia: "Paño fijo", vidrioLineTemplateId: "3763",
+      manualGlassMeasurements: { version: 2, expectedPaneCount: 1, entries: [{
+        id: "manual-V3", source: "manual", version: 2, productId: "3763",
+        technicalFingerprint: getCatalogGlassTechnicalFingerprint(spec), widthMm: 600, heightMm: 1000,
+        quantity: 2, quantityBasis: "per_component", paneSlotId: "pane-1", rectangularVerified: true,
+        recordedAt: "2026-10-29T12:00:00Z",
+      }] },
+    });
+    const glassTemplate = {
+      id: 3763, organizationId: 1, catalogKey: null, nombre: "Monolítico 5 mm", categoria: "vidrio",
+      unidadCobro: "m2", material: "Cristal", vidrioPrincipalRecomendado: null, costoBase: 0,
+      precioM2Sugerido: 0, minimoCobrable: 0, redondeoPrecio: 0, mermaPct: 0, margenObjetivoPct: null,
+      proveedor: null, vigenciaDesde: null, vigenciaHasta: null, catalogMetadata: metadata, isActive: true,
+      sortOrder: 1, creadoEn: null, actualizadoEn: null, eliminadoEn: null,
+    } as CotizacionLineTemplate;
+
+    const materials = buildWorkMaterialsDocument({ summary: summary(null), items: [component], lineTemplates: [glassTemplate] });
+
+    expect(materials.glassOrder).toHaveLength(1);
+    expect(materials.glassOrder[0]).toMatchObject({ quantity: 6, widthMm: 600, heightMm: 1000, totalM2: 3.6 });
   });
 
   it("usa el espesor técnico congelado del snapshot en materiales y orden de vidrios", () => {

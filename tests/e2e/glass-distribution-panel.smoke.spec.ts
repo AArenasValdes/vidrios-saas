@@ -54,6 +54,7 @@ const updatedSource = {
       category: "monolitico",
       manualCutStatus: "confirmed",
       technicalReviewConfirmed: false,
+      purchaseMode: "full_sheet",
       sheetWidthMm: 2500,
       sheetHeightMm: 1800,
       pieceOrientation: "unknown",
@@ -102,7 +103,7 @@ test("actualiza la cobertura del panel tras guardar una medición simulada, sin 
   await page.goto("/e2e-glass-distribution");
   await expect(page.getByRole("heading", { name: "Smoke QA H1 · cotización simulada" })).toBeVisible();
   await expect(page.getByText("0 completas · 2 pendientes")).toBeVisible();
-  await expect(page.getByRole("button", { name: /PDF bloqueado · cobertura incompleta/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /PDF operativo bloqueado · cobertura incompleta/ })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Ingresar medidas" }).click();
   await page.getByLabel("Posición del paño").selectOption("pane-1");
@@ -115,7 +116,7 @@ test("actualiza la cobertura del panel tras guardar una medición simulada, sin 
   await expect(page.getByText("Medidas guardadas. Cobertura actualizada.")).toBeVisible();
   await expect(page.getByText("1 completas · 1 pendientes")).toBeVisible();
   await expect(page.getByText("pane-2 · 1 paño pendiente")).toHaveCount(1);
-  await expect(page.getByRole("button", { name: /PDF bloqueado · cobertura incompleta/ })).toBeDisabled();
+  await expect(page.getByRole("button", { name: /PDF operativo/i })).toHaveCount(0);
   expect(sourceReads).toBe(2);
   expect(simulatedSaves).toBe(1);
   expect(databaseRequests).toEqual([]);
@@ -124,7 +125,7 @@ test("actualiza la cobertura del panel tras guardar una medición simulada, sin 
   await expect(page.getByText("1 completas · 1 pendientes")).toBeVisible();
   await expect(page.getByText("600 × 1000 mm")).toBeVisible();
   await expect(page.getByText(/Corredera QA · 1 unidad física/)).toBeVisible();
-  await expect(page.getByRole("button", { name: /PDF bloqueado · cobertura incompleta/ })).toBeDisabled();
+  await expect(page.getByRole("button", { name: /PDF operativo/i })).toHaveCount(0);
   expect(sourceReads).toBe(3);
   expect(simulatedSaves).toBe(1);
   expect(databaseRequests).toEqual([]);
@@ -150,6 +151,7 @@ test("muestra geometría recipe_trace parcial con exclusiones y bloquea proveedo
       category: "monolitico",
       manualCutStatus: "pending_validation",
       technicalReviewConfirmed: false,
+      purchaseMode: "full_sheet",
       sheetWidthMm: 2500,
       sheetHeightMm: 1800,
       pieceOrientation: "unknown",
@@ -247,7 +249,7 @@ test("muestra geometría recipe_trace parcial con exclusiones y bloquea proveedo
   await page.getByRole("button", { name: "Vista previa" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await expect(page.getByRole("dialog").getByText("1 unidad física · 0,60 m²")).toBeVisible();
-  await expect(page.getByRole("dialog").getByRole("button", { name: /PDF bloqueado · cobertura incompleta/ })).toBeDisabled();
+  await expect(page.getByRole("dialog").getByRole("button", { name: /PDF operativo/i })).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath("recipe-trace-partial-preview.png"), fullPage: true });
   expect(databaseRequests).toEqual([]);
 });

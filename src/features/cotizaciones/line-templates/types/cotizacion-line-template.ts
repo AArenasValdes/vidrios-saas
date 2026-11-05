@@ -7,6 +7,7 @@ import {
   glassCategoryRequiresTechnicalReview,
   parseExplicitGlassThicknessMm,
   type GlassManualCutStatus,
+  type GlassPurchaseMode,
   type GlassPaneOrientation,
   type GlassTechnicalCategory,
 } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
@@ -122,6 +123,7 @@ export type CotizacionGlassProductMetadata = {
   planchaAnchoMm: number | null;
   planchaAltoMm: number | null;
   pieceOrientation: GlassPaneOrientation;
+  purchaseMode?: GlassPurchaseMode;
 };
 
 export type CotizacionLineTemplateSystemMetadata = {
@@ -354,6 +356,9 @@ export function getLineTemplateGlassMetadata(
     pieceOrientation: metadata?.orientacionCorte === "fixed" || metadata?.orientacionCorte === "rotatable" || metadata?.orientacionCorte === "grain_or_coating_directional"
       ? metadata.orientacionCorte
       : "unknown",
+    ...(metadata?.formaCompraVidrio === "undecided" || metadata?.formaCompraVidrio === "full_sheet" || metadata?.formaCompraVidrio === "supplier_cut"
+      ? { purchaseMode: metadata.formaCompraVidrio }
+      : {}),
   };
 }
 
@@ -401,6 +406,13 @@ export function mergeLineTemplateGlassMetadata(
   if (input.pieceOrientation !== undefined) {
     if (input.pieceOrientation === "unknown") delete next.orientacionCorte;
     else next.orientacionCorte = input.pieceOrientation;
+  }
+  if (input.purchaseMode !== undefined) {
+    if (input.purchaseMode === "undecided" || input.purchaseMode === "full_sheet" || input.purchaseMode === "supplier_cut") {
+      next.formaCompraVidrio = input.purchaseMode;
+    } else {
+      delete next.formaCompraVidrio;
+    }
   }
   if (input.revisionTecnicaExplicita !== undefined) next.revisionTecnicaExplicita = input.revisionTecnicaExplicita;
   if (input.corteManualEstado !== undefined) next.corteManualEstado = input.corteManualEstado;

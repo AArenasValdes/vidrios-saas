@@ -255,7 +255,7 @@ describe("FabricacionResumenView", () => {
     const materialsHeading = screen.getByRole("heading", { name: "Lista de materiales del trabajo" });
     const article = screen.getByRole("tabpanel");
     expect(article).toHaveAttribute("data-active-tab", "resumen");
-    expect(screen.getByRole("button", { name: "Descargar PDF preliminar de distribución de planchas" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Descargar PDF de simulación geométrica no apta para corte" })).toBeInTheDocument();
     expect(screen.getByText("Documentos de fabricación").compareDocumentPosition(screen.getByText("Despieces disponibles para revisión")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     fireEvent.click(screen.getByRole("tab", { name: "Costos" }));
     expect(article).toHaveAttribute("data-active-tab", "costos");

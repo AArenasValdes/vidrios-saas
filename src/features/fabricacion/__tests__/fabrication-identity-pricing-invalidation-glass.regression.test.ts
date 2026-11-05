@@ -906,6 +906,7 @@ describe("Escenario 3: conteo y reconciliación de vidrios con recipe_trace, slo
     categoriaTecnica: "monolitico",
     revisionTecnicaExplicita: true,
     corteManualEstado: "confirmed",
+    formaCompraVidrio: "full_sheet",
     planchaAnchoMm: 2500,
     planchaAltoMm: 1800,
   };
@@ -914,6 +915,7 @@ describe("Escenario 3: conteo y reconciliación de vidrios con recipe_trace, slo
     categoriaTecnica: "laminado",
     revisionTecnicaExplicita: true,
     corteManualEstado: "confirmed",
+    formaCompraVidrio: "full_sheet",
     planchaAnchoMm: 3210,
     planchaAltoMm: 2250,
   };
@@ -1249,7 +1251,7 @@ describe("Escenario 3: conteo y reconciliación de vidrios con recipe_trace, slo
     expect(coverage.pendingReferenceCount).toBe(2);
   });
 
-  it("3F: snapshot histórico válido conserva cobertura completa y snapshot legacy [cub:] permanece pendiente sin duplicarse contra slots", () => {
+  it("3F: snapshot histórico sin posición física queda pendiente y snapshot legacy [cub:] permanece pendiente sin duplicarse contra slots", () => {
     const { item: baseItem, snapshot: baseSnapshot } = buildVeratecDraft2HItem();
     const spec4mm = buildCatalogGlassTechnicalSpec({
       productId: "glass-prod-4mm",
@@ -1292,10 +1294,11 @@ describe("Escenario 3: conteo y reconciliación de vidrios con recipe_trace, slo
       panes: validPanes,
     });
     expect(validCoverage).toMatchObject({
-      status: "complete",
-      completeReferenceCount: 1,
-      pendingReferenceCount: 0,
+      status: "unavailable",
+      completeReferenceCount: 0,
+      pendingReferenceCount: 1,
     });
+    expect(validCoverage.pendingReferences[0]?.reason).toMatch(/no identifica la posición física/i);
 
     // Legacy [cub:] snapshot en corredera 2H con quantity = 2 no debe duplicarse a 3 pendientes
     const legacyCubItem: CotizacionWorkflowItem = {
@@ -1384,8 +1387,8 @@ describe("Escenario 3: conteo y reconciliación de vidrios con recipe_trace, slo
         result: {
           ...baseSnapshot.result,
           vidrios: [
-            { ...firstGlass, vidrioId: "hoja-a", nombre: "Hoja A", cantidadPiezas: 1 },
-            { ...firstGlass, vidrioId: "hoja-b", nombre: "Hoja B", cantidadPiezas: 1 },
+            { ...firstGlass, vidrioId: "hoja-a", paneSlotId: "pane-1", sourcePosition: "Paño 1", nombre: "Hoja A", cantidadPiezas: 1 },
+            { ...firstGlass, vidrioId: "hoja-b", paneSlotId: "pane-2", sourcePosition: "Paño 2", nombre: "Hoja B", cantidadPiezas: 1 },
           ],
         },
       },

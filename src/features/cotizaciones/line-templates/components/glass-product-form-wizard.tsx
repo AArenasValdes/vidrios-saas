@@ -217,7 +217,7 @@ export function GlassProductFormWizard({
               <p>
                 {openStep === 1
                   ? "Paso 1: tipo de vidrio y precio de venta por m²."
-                  : "Paso 2: formato de plancha y costo de compra (opcional)."}
+                  : "Paso 2: formato físico de plancha (opcional)."}
               </p>
             </div>
             <button type="button" className={s.sheetClose} onClick={onClose} aria-label="Cerrar">
@@ -247,7 +247,7 @@ export function GlassProductFormWizard({
           <nav className={s.wizardProgress} aria-label="Progreso del asistente de vidrio">
             {[
               { id: 1, label: "Datos del vidrio" },
-              { id: 2, label: "Formato y costo" },
+              { id: 2, label: "Formato de plancha" },
             ].map((step) => {
               const isActive = openStep === step.id;
               const isDone = openStep > step.id;
@@ -338,6 +338,17 @@ export function GlassProductFormWizard({
                         </label>
 
                         <label className={`${s.fieldBlock} ${s.fieldSpan2}`}>
+                          <span className={s.fieldLabel}>Forma de compra</span>
+                          <select className={s.textInput} value={draft.glassPurchaseMode} onChange={(event) => onDraftChange("glassPurchaseMode", event.target.value as LineTemplateFormDraft["glassPurchaseMode"])} aria-label="Forma de compra del vidrio">
+                            <option value="undecided">Por definir</option>
+                            <option value="full_sheet">Plancha completa</option>
+                            <option value="supplier_cut">Pieza cortada por proveedor</option>
+                            {draft.glassPurchaseMode === "legacy" ? <option value="legacy">Ficha antigua · compra por confirmar</option> : null}
+                          </select>
+                          <span className={s.pricingFieldHelp}>No se deduce del nombre del producto.</span>
+                        </label>
+
+                        <label className={`${s.fieldBlock} ${s.fieldSpan2}`}>
                           <span className={s.fieldLabel}>Corte manual</span>
                           <select
                             className={s.textInput}
@@ -376,14 +387,11 @@ export function GlassProductFormWizard({
                       </div>
                     </section>
 
-                    <section className={s.wizardStep1Section}>
-                      <div className={s.wizardFieldGroupHead}>
+                    <details className={s.wizardStep1Section}>
+                      <summary className={s.wizardFieldGroupHead}>
                         <LuBadgeDollarSign aria-hidden />
-                        <div>
-                          <strong>Precio comercial</strong>
-                          <span>Lo que cobrarás al cliente por metro cuadrado</span>
-                        </div>
-                      </div>
+                        <span><strong>Datos comerciales opcionales</strong><small>Precio, mínimo, redondeo, proveedor y costo</small></span>
+                      </summary>
 
                       <div className={`${s.pricingFieldsStack} ${s.pricingFieldsWide}`}>
                         <label
@@ -433,7 +441,28 @@ export function GlassProductFormWizard({
                           </div>
                         </label>
                       </div>
-                    </section>
+                      <div className={s.formSectionGrid}>
+                        <label className={s.fieldBlock}>
+                          <span className={s.fieldLabel}>Redondeo del precio</span>
+                          <select className={s.textInput} value={draft.redondeoPrecio} onChange={(event) => onDraftChange("redondeoPrecio", event.target.value)}>{ROUNDING_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
+                        </label>
+                        <label className={s.fieldBlock}>
+                          <span className={s.fieldLabel}>Proveedor opcional</span>
+                          <input className={s.textInput} value={draft.proveedor} onChange={(event) => onDraftChange("proveedor", event.target.value)} placeholder="Ej. Vidrios del Sur" />
+                        </label>
+                      </div>
+                      <div className={s.formSectionGrid}>
+                        <label className={s.fieldBlock}>
+                          <span className={s.fieldLabel}>Costo de compra (opcional)</span>
+                          <div className={s.moneyWrap}><span className={s.moneyPrefix}>$</span><input className={s.moneyInput} inputMode="numeric" value={formatMoneyDigits(draft.costoBase)} onChange={(event) => onDraftChange("costoBase", getDigits(event.target.value))} placeholder="Sin costo" /></div>
+                        </label>
+                        <label className={s.fieldBlock}>
+                          <span className={s.fieldLabel}>Merma comercial (%)</span>
+                          <input className={s.textInput} inputMode="decimal" value={draft.mermaPct} onChange={(event) => onDraftChange("mermaPct", event.target.value)} placeholder="0" />
+                          <span className={s.pricingFieldHelp}>No cambia despuntes ni separación física.</span>
+                        </label>
+                      </div>
+                    </details>
                   </div>
 
                   <div className={`${s.activeCard} ${s.activeCardInline} ${s.wizardStep1ActiveRow}`}>
@@ -561,8 +590,8 @@ export function GlassProductFormWizard({
             {openStep !== 2
               ? renderStepHeader(
                   2,
-                  "Formato y costo",
-                  "Plancha, costo de compra y merma para optimización",
+                  "Formato de plancha",
+                  "Dimensiones físicas para la simulación",
                   step2Summary,
                   false
                 )
@@ -572,19 +601,22 @@ export function GlassProductFormWizard({
                 <div className={s.wizardFieldGroupHead}>
                   <LuLayers aria-hidden />
                   <div>
-                    <strong>Optimización de plancha (opcional)</strong>
+                    <strong>Formato físico de plancha</strong>
                     <span>
-                      Ventora usa estos datos para calcular aprovechamiento, desperdicio y
-                      costo real del vidrio.
+                      Se usa junto a las medidas finales de los paños que ingresas en la cotización.
                     </span>
                   </div>
                 </div>
 
                 <p className={s.fieldHint}>
-                  El precio de venta por m² se define en el paso anterior. Aquí registras el
-                  costo de compra de la plancha completa, distinto al precio comercial.
+                  Puedes guardar la ficha sin formato y definirlo antes de distribuir. No se calculan paños desde las dimensiones exteriores.
                 </p>
 
+                {draft.glassPurchaseMode === "supplier_cut" ? (
+                  <p className={s.fieldHint} role="status">Este vidrio se recibe cortado por proveedor. No se distribuirá como plancha del taller.</p>
+                ) : draft.glassPurchaseMode === "undecided" ? (
+                  <p className={s.fieldHint} role="status">Confirma primero si compras este producto por plancha o cortado por proveedor.</p>
+                ) : (
                 <div className={s.formSectionGrid}>
                   <label className={`${s.fieldBlock} ${s.fieldSpan2}`}>
                     <span className={s.fieldLabel}>Orientación de corte del vidrio</span>
@@ -622,53 +654,10 @@ export function GlassProductFormWizard({
                     />
                   </label>
 
-                  <label className={`${s.fieldBlock} ${s.fieldSpan2}`}>
-                    <span className={s.fieldLabel}>
-                      Costo de compra de la plancha completa
-                      <em className={s.optionalMark}>Opcional</em>
-                    </span>
-                    <span className={s.pricingFieldHelp}>
-                      Precio que pagas por la plancha entera al proveedor, no por m².
-                    </span>
-                    <div className={s.moneyWrap}>
-                      <span className={s.moneyPrefix}>$</span>
-                      <input
-                        className={s.moneyInput}
-                        inputMode="numeric"
-                        value={formatMoneyDigits(draft.costoBase)}
-                        onChange={(event) =>
-                          onDraftChange("costoBase", getDigits(event.target.value))
-                        }
-                        placeholder="Ej: 180.000"
-                      />
-                    </div>
-                  </label>
-
-                  <label className={s.fieldBlock}>
-                    <span className={s.fieldLabel}>
-                      Merma % <em className={s.optionalMark}>opcional</em>
-                    </span>
-                    <input
-                      className={s.textInput}
-                      inputMode="decimal"
-                      value={draft.mermaPct}
-                      onChange={(event) => onDraftChange("mermaPct", event.target.value)}
-                      placeholder="5"
-                    />
-                  </label>
-
-                  <label className={s.fieldBlock}>
-                    <span className={s.fieldLabel}>
-                      Proveedor de compra <em className={s.optionalMark}>opcional</em>
-                    </span>
-                    <input
-                      className={s.textInput}
-                      value={draft.proveedor}
-                      onChange={(event) => onDraftChange("proveedor", event.target.value)}
-                      placeholder="Ej: Planta de vidrio"
-                    />
-                  </label>
                 </div>
+                )}
+                {draft.glassPurchaseMode === "legacy" && (draft.planchaAnchoMm || draft.planchaAltoMm) ? <p className={s.fieldHint} role="status">Ficha antigua: el formato existente se conserva. Confirma la forma de compra en el paso anterior cuando puedas.</p> : null}
+                {draft.glassPurchaseMode === "full_sheet" && draft.planchaAnchoMm && draft.planchaAltoMm ? <p className={s.fieldHint} role="status">Plancha {draft.planchaAnchoMm} × {draft.planchaAltoMm} mm. La capacidad se calculará con las medidas finales de cada paño y la orientación seleccionada.</p> : null}
               </div>
             ) : (
               <p className={s.wizardStepSummary}>{step2Summary}</p>
@@ -702,7 +691,7 @@ export function GlassProductFormWizard({
                   onClick={handleNext}
                   disabled={saveDisabled}
                 >
-                  Formato y costo (opcional)
+                  Formato de plancha
                 </button>
               </>
             ) : (

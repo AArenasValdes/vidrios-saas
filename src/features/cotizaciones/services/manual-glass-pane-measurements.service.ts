@@ -5,6 +5,7 @@ import {
 } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
 import {
   MANUAL_GLASS_PANE_MEASUREMENTS_VERSION,
+  MAX_MANUAL_GLASS_PANE_COUNT,
   type ManualGlassPaneMeasurement,
   type ManualGlassPaneMeasurementsSnapshot,
 } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
@@ -54,6 +55,8 @@ export function normalizeManualGlassPaneMeasurements(value: unknown): ManualGlas
       ? { configurationFingerprint: candidate.configurationFingerprint as string | null } : {}),
     ...(typeof candidate.expectedPaneCount === "number" && Number.isSafeInteger(candidate.expectedPaneCount) && candidate.expectedPaneCount > 0
       ? { expectedPaneCount: candidate.expectedPaneCount } : {}),
+    ...(typeof candidate.manualPaneCount === "number" && Number.isSafeInteger(candidate.manualPaneCount) && candidate.manualPaneCount > 0 && candidate.manualPaneCount <= MAX_MANUAL_GLASS_PANE_COUNT
+      ? { manualPaneCount: candidate.manualPaneCount } : {}),
     ...(candidate.allPanesConfirmed === true ? { allPanesConfirmed: true } : {}),
   };
 }
@@ -78,6 +81,7 @@ export function getCatalogGlassTechnicalFingerprint(spec: GlassTechnicalSpec): s
     sheetWidthMm: spec.sheetWidthMm,
     sheetHeightMm: spec.sheetHeightMm,
     pieceOrientation: spec.pieceOrientation ?? "unknown",
+    purchaseMode: spec.purchaseMode ?? null,
     hasConflict: spec.hasConflict,
   });
 }
@@ -92,6 +96,7 @@ export function getCatalogGlassTechnicalSpec(template: CotizacionLineTemplate): 
 export function isCatalogGlassPlanable(spec: GlassTechnicalSpec): boolean {
   return Boolean(
     spec.productId &&
+    spec.purchaseMode === "full_sheet" &&
     spec.category !== "pendiente" &&
     Number.isFinite(spec.thicknessMm) && Number(spec.thicknessMm) > 0 &&
     Number.isSafeInteger(spec.sheetWidthMm) && Number(spec.sheetWidthMm) > 0 &&
@@ -113,9 +118,8 @@ export function validateManualGlassPaneMeasurementInput(input: {
   if (!Number.isSafeInteger(input.widthMm) || input.widthMm <= 0) return "Ingresa un ancho final mayor que cero, en milímetros.";
   if (!Number.isSafeInteger(input.heightMm) || input.heightMm <= 0) return "Ingresa un alto final mayor que cero, en milímetros.";
   if (!Number.isSafeInteger(input.quantity) || input.quantity <= 0) return "Ingresa una cantidad física mayor que cero.";
-  if (!isCatalogGlassPlanable(getCatalogGlassTechnicalSpec(input.product))) {
-    return "La ficha de este vidrio necesita espesor, categoría, formato de plancha y corte manual confirmados.";
-  }
+  // Final pane dimensions are quote data and may be saved before the sheet format
+  // or workshop eligibility is known. Planning applies the stricter catalog gate.
   return null;
 }
 

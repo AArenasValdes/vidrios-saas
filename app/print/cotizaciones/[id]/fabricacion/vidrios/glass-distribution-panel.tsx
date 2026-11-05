@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LuChevronLeft, LuChevronRight, LuEye, LuLayers3, LuLoaderCircle } from "react-icons/lu";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { LuChevronLeft, LuChevronRight, LuDownload, LuEye, LuLayers3, LuLoaderCircle } from "react-icons/lu";
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { GlassCuttingResult } from "@/features/fabricacion/types/glass-sheet-optimizer-contracts";
@@ -12,6 +12,11 @@ import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotiz
 import type { ManualGlassPaneMeasurementsSnapshot } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
 import { formatGlassDisplayName } from "@/features/fabricacion/services/glass-display-name.service";
 import { getGlassPaneGeometryExclusionReason, isGlassPaneGeometryComplete, type GlassDistributionCoverage, type GlassPaneGeometryExclusion } from "@/features/fabricacion/services/glass-distribution-coverage.service";
+import { mapGlassDistributionPdfPanes } from "@/features/fabricacion/services/direct-glass-distribution.service";
+import { createGlassDistributionPdf } from "@/features/fabricacion/services/glass-distribution-pdf.service";
+import { loadVentoraPdfLogoDataUrl } from "@/features/fabricacion/services/ventora-pdf-assets.client";
+import { sanitizeFileNamePart } from "@/utils/sanitize-file-name";
+import { downloadPdfBlob } from "@/utils/cotizacion-pdf";
 
 import s from "./glass-distribution-panel.module.css";
 import { GlassDistributionCoverageNotice } from "./glass-distribution-coverage-notice";
@@ -19,6 +24,8 @@ import { GlassDistributionCoverageNotice } from "./glass-distribution-coverage-n
 type PaneInput = {
   quoteItemId: string;
   paneId: string;
+  paneSlotId?: string;
+  sourcePosition?: string;
   paneUnitIds: string[];
   logicalComponentId: string | null;
   glassId: string | null;
@@ -92,12 +99,41 @@ function isPreviewReadyPane(pane: PaneInput): pane is PaneInput & { physicalUnit
   return pane.physicalUnitCount != null && isGlassPaneGeometryComplete(pane);
 }
 
+
+
 function hasSheetFormat(spec: GlassTechnicalSpec | null) {
   return Boolean(spec && validDimension(spec.sheetWidthMm) && validDimension(spec.sheetHeightMm));
 }
 
-function shortCode(code: string, index: number) {
-  return code && code.length < 26 && !/^[0-9a-f-]{28,}$/i.test(code) ? code : `Componente ${index + 1}`;
+function isHumanReference(value: string | null | undefined, maxLength = 18): value is string {
+  const normalized = value?.trim();
+  return Boolean(normalized && normalized.length <= maxLength && !/^[0-9a-f-]{20,}$/i.test(normalized) && !/^(?:logical|pane|item|glass|unit|quote)[-_:]/i.test(normalized) && !normalized.includes(":"));
+}
+
+function shortCode(code: string, componentName?: string | null) {
+  if (isHumanReference(code, 14)) return code.trim();
+  if (isHumanReference(componentName, 18)) return componentName.trim();
+  return null;
+}
+
+function panePositionLabel(pane: Pick<PaneInput, "paneSlotId" | "sourcePosition">) {
+  const slotOrdinal = pane.paneSlotId?.match(/(?:pane|leaf)[^0-9]*(\d+)/i)?.[1];
+  if (slotOrdinal) return `Paño ${slotOrdinal}`;
+  const sourcePosition = pane.sourcePosition?.trim();
+  const positionOrdinal = sourcePosition?.match(/^(?:pane|paño|pano|leaf)[\s_-]*([0-9]+)$/i)?.[1];
+  if (positionOrdinal) return `Paño ${positionOrdinal}`;
+  return isHumanReference(sourcePosition, 22) ? sourcePosition : null;
+}
+
+function paneVisualReference(pane: Pick<PaneInput, "componentCode" | "componentName" | "paneSlotId" | "sourcePosition">) {
+  const component = shortCode(pane.componentCode, pane.componentName);
+  const position = panePositionLabel(pane);
+  if (!position) return null;
+  return [component, position].filter(Boolean).join(" · ");
+}
+
+function estimateLabelWidthPx(value: string, fontSizePx: number) {
+  return Array.from(value).reduce((width, char) => width + (" il.,·".includes(char) ? 0.28 : "MW@".includes(char) ? 0.86 : 0.56), 0) * fontSizePx;
 }
 
 function formatArea(areaMm2: number) {
@@ -116,37 +152,80 @@ function sameSnapshotSet(left: readonly string[], right: readonly string[]) {
 
 function PlanDrawing({ result, allPlans }: { result: GlassCuttingResult; allPlans: Array<{ result: GlassCuttingResult; sheet: GlassCuttingResult["sheets"][number] }> }) {
   const sheet = result.sheets[0];
+  const widthMm = sheet?.rawSheet.widthMm ?? 1;
+  const heightMm = sheet?.rawSheet.heightMm ?? 1;
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [svgWidthPx, setSvgWidthPx] = useState(0);
+  const instanceId = useId().replace(/:/g, "");
+  useLayoutEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const updateWidth = () => {
+      const measuredWidth = svg.getBoundingClientRect().width;
+      const fallbackWidth = Math.max(0, Math.min(760, window.innerWidth - 48));
+      setSvgWidthPx(measuredWidth > 0 ? measuredWidth : fallbackWidth);
+    };
+    updateWidth();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateWidth);
+    observer?.observe(svg);
+    window.addEventListener("resize", updateWidth);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", updateWidth);
+    };
+  }, [widthMm]);
+  const pxPerMm = svgWidthPx > 0 ? svgWidthPx / widthMm : 0;
   if (!sheet) return null;
-  const { widthMm, heightMm } = { widthMm: sheet.rawSheet.widthMm, heightMm: sheet.rawSheet.heightMm };
-  const ordinals = new Map<string, number>();
-  const counts = new Map<string, number>();
+  const physicalUnitCounts = new Map<string, number>();
   for (const entry of allPlans) for (const pane of entry.sheet.panes) {
-    const key = `${pane.quoteItemId}|${pane.logicalComponentId}`;
-    const next = (counts.get(key) ?? 0) + 1;
-    counts.set(key, next);
-    ordinals.set(pane.paneUnitId, next);
+    const key = `${pane.quoteItemId}|${pane.paneId}`;
+    physicalUnitCounts.set(key, (physicalUnitCounts.get(key) ?? 0) + 1);
   }
   return (
-    <svg className={s.planDrawing} viewBox={`0 0 ${widthMm} ${heightMm}`} role="img" aria-label={`Distribución en plancha de ${widthMm} por ${heightMm} milímetros`}>
+    <svg ref={svgRef} className={s.planDrawing} viewBox={`0 0 ${widthMm} ${heightMm}`} role="img" aria-label={`Distribución en plancha de ${widthMm} por ${heightMm} milímetros`}>
       <rect x="0" y="0" width={widthMm} height={heightMm} className={s.sheet} />
       {sheet.remnants.map((remnant) => {
         const { xMm, yMm, widthMm, heightMm } = remnant.rect;
+        const label = `${widthMm} × ${heightMm} mm`;
+        const fontSizePx = 8;
+        const fitsRemnantLabel = pxPerMm > 0
+          && widthMm * pxPerMm >= estimateLabelWidthPx(label, fontSizePx) + 8
+          && heightMm * pxPerMm >= fontSizePx + 8;
+        const clipId = `${instanceId}-remnant-${remnant.remnantId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
         return <g key={remnant.remnantId}>
           <rect x={xMm} y={yMm} width={widthMm} height={heightMm} className={s.remnant} />
-          {widthMm > 360 && heightMm > 220 ? <text x={xMm + widthMm / 2} y={yMm + heightMm / 2} textAnchor="middle" className={s.remnantLabel}>{widthMm} × {heightMm} mm</text> : null}
+          {fitsRemnantLabel ? <>
+            <defs><clipPath id={clipId}><rect x={xMm + 2} y={yMm + 2} width={Math.max(0, widthMm - 4)} height={Math.max(0, heightMm - 4)} /></clipPath></defs>
+            <text x={xMm + widthMm / 2} y={yMm + heightMm / 2} textAnchor="middle" fontSize={fontSizePx / pxPerMm} clipPath={`url(#${clipId})`} className={s.remnantLabel}>{label}</text>
+          </> : null}
         </g>;
       })}
-      {sheet.panes.map((pane, index) => {
-        const labelSize = Math.max(38, Math.min(widthMm, heightMm) / 36);
-        const title = `${shortCode(pane.componentCode, index)} · paño ${ordinals.get(pane.paneUnitId) ?? index + 1}`;
-        const dimensionSize = Math.min(Math.max(64, labelSize * 1.35), pane.rect.widthMm / 12);
+      {sheet.panes.map((pane) => {
+        const reference = paneVisualReference(pane);
+        const unitOrdinal = pane.paneUnitId.startsWith(`${pane.paneId}:`) ? pane.paneUnitId.slice(pane.paneId.length + 1) : "";
+        const repeatedUnit = (physicalUnitCounts.get(`${pane.quoteItemId}|${pane.paneId}`) ?? 0) > 1 && /^\d+$/.test(unitOrdinal) ? ` · U${unitOrdinal}` : "";
+        const title = reference ? `${reference}${repeatedUnit}` : null;
+        const referenceFontPx = 10;
+        const dimensionFontPx = 8;
+        const availableWidthPx = pane.rect.widthMm * pxPerMm - 12;
+        const availableHeightPx = pane.rect.heightMm * pxPerMm - 10;
+        const fitsReference = Boolean(title && pxPerMm > 0
+          && availableWidthPx >= estimateLabelWidthPx(title, referenceFontPx)
+          && availableHeightPx >= referenceFontPx + 4);
+        const dimensions = `${pane.rect.widthMm} × ${pane.rect.heightMm} mm`;
+        const fitsDimensions = fitsReference && availableWidthPx >= estimateLabelWidthPx(dimensions, dimensionFontPx)
+          && availableHeightPx >= referenceFontPx + dimensionFontPx + 9;
+        const clipId = `${instanceId}-pane-${pane.paneUnitId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
         return (
           <g key={pane.paneUnitId}>
             <rect x={pane.rect.xMm} y={pane.rect.yMm} width={pane.rect.widthMm} height={pane.rect.heightMm} className={s.pane} />
-            {pane.rect.widthMm > labelSize * 3 && pane.rect.heightMm > labelSize * 2.2 ? <g className={s.paneLabel}>
-              <text x={pane.rect.xMm + pane.rect.widthMm / 2} y={pane.rect.yMm + pane.rect.heightMm / 2 - labelSize * 0.2} textAnchor="middle" fontSize={labelSize}>{title}</text>
-              <text x={pane.rect.xMm + pane.rect.widthMm / 2} y={pane.rect.yMm + pane.rect.heightMm / 2 + labelSize * 0.9} textAnchor="middle" fontSize={dimensionSize} fontWeight={650}>{pane.rect.widthMm} × {pane.rect.heightMm} mm</text>
-            </g> : null}
+            {fitsReference && title ? <>
+              <defs><clipPath id={clipId}><rect x={pane.rect.xMm + 4} y={pane.rect.yMm + 4} width={Math.max(0, pane.rect.widthMm - 8)} height={Math.max(0, pane.rect.heightMm - 8)} /></clipPath></defs>
+              <g className={s.paneLabel} clipPath={`url(#${clipId})`}>
+                <text x={pane.rect.xMm + pane.rect.widthMm / 2} y={pane.rect.yMm + pane.rect.heightMm / 2 + (fitsDimensions ? -2 : referenceFontPx / 2) / pxPerMm} textAnchor="middle" fontSize={referenceFontPx / pxPerMm}>{title}</text>
+                {fitsDimensions ? <text x={pane.rect.xMm + pane.rect.widthMm / 2} y={pane.rect.yMm + pane.rect.heightMm / 2 + (referenceFontPx / 2 + dimensionFontPx + 1) / pxPerMm} textAnchor="middle" fontSize={dimensionFontPx / pxPerMm} fontWeight={650}>{dimensions}</text> : null}
+              </g>
+            </> : null}
           </g>
         );
       })}
@@ -154,7 +233,7 @@ function PlanDrawing({ result, allPlans }: { result: GlassCuttingResult; allPlan
   );
 }
 
-export function GlassDistributionPanel({ quoteId, quoteCode, enabled, autoPreview = false, preloadPreview = false, items, templates, onSaveManualGlassMeasurements }: Props) {
+export function GlassDistributionPanel({ quoteId, quoteCode, clientName, workName, enabled, autoPreview = false, preloadPreview = false, items, templates, onSaveManualGlassMeasurements }: Props) {
   const [source, setSource] = useState<PlanResponse | null>(null);
   const [sourceQuoteId, setSourceQuoteId] = useState<string | null>(null);
   const [sourceFresh, setSourceFresh] = useState(false);
@@ -165,6 +244,8 @@ export function GlassDistributionPanel({ quoteId, quoteCode, enabled, autoPrevie
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<GlassCuttingResult[] | null>(null);
   const [resultsQuoteId, setResultsQuoteId] = useState<string | null>(null);
+  const [generatedFrom, setGeneratedFrom] = useState<string[] | null>(null);
+  const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
   const [previewExclusions, setPreviewExclusions] = useState<GlassPaneGeometryExclusion[]>([]);
   const [sheetWidth, setSheetWidth] = useState("");
   const [sheetHeight, setSheetHeight] = useState("");
@@ -186,8 +267,10 @@ export function GlassDistributionPanel({ quoteId, quoteCode, enabled, autoPrevie
     setSourceFresh(false);
     setRefreshError(null);
     setError(null);
+    setDownloadNotice(null);
     setResults(null);
     setResultsQuoteId(null);
+    setGeneratedFrom(null);
     setPreviewExclusions([]);
     setPreviewOpen(false);
     setSelectedSheetIndex(0);
@@ -242,12 +325,61 @@ export function GlassDistributionPanel({ quoteId, quoteCode, enabled, autoPrevie
   const selected = allSheets[selectedSheetIndex] ?? null;
   const currentQuoteCode = sourceForQuote?.quoteCode || quoteCode;
 
+  const downloadSimulationPdf = useCallback(async () => {
+    if (!visibleResults || resultsQuoteId !== quoteId || !generatedFrom || !sourceFresh || refreshingSource) return;
+    const expectedRevision = dataRevision.current;
+    const calculationQuoteId = quoteId;
+    setBusy(true);
+    setError(null);
+    setDownloadNotice(null);
+    try {
+      const response = await fetch(`/api/cotizaciones/${encodeURIComponent(quoteId)}/optimizacion-vidrios`, { cache: "no-store" });
+      const latest = await response.json() as PlanResponse & { error?: string };
+      if (!response.ok) throw new Error(latest.error || "No pudimos confirmar los paños actuales.");
+      if (dataRevision.current !== expectedRevision || quoteId !== calculationQuoteId) throw new Error("Los paños cambiaron. Actualiza la cobertura y vuelve a simular.");
+      if (!sameSnapshotSet(latest.panes.map((pane) => pane.snapshotFingerprint), generatedFrom)) {
+        setResults(null);
+        setPreviewOpen(false);
+        setSource(latest);
+        setSourceQuoteId(calculationQuoteId);
+        setSourceFresh(true);
+        throw new Error("La cotización cambió desde la simulación. Genera una vista previa nueva antes de descargar.");
+      }
+      const simulationPanes = latest.panes.filter(isPreviewReadyPane);
+      const pdf = await createGlassDistributionPdf({
+        mode: "simulation",
+        quoteCode: latest.quoteCode || currentQuoteCode,
+        clientName,
+        workName,
+        logoDataUrl: await loadVentoraPdfLogoDataUrl(),
+        coverage: latest.coverage,
+        panes: mapGlassDistributionPdfPanes(simulationPanes),
+        results: visibleResults,
+        simulationWarnings: [
+          "Despuntes y separación física asumidos: 0 mm; no representa kerf ni reglas del taller.",
+          ...(simulationPanes.some((pane) => pane.dimensionProvenance === "recipe_trace") ? ["Incluye geometría de receta preliminar, no validada por taller."] : []),
+          ...(simulationPanes.some((pane) => pane.technicalSpec?.pieceOrientation === "unknown") ? ["Orientación del vidrio no confirmada; los paños se mantuvieron fijos."] : []),
+        ],
+        previewExclusions: latest.previewExclusions,
+      });
+      if (dataRevision.current !== expectedRevision || !sourceFresh || quoteId !== calculationQuoteId) throw new Error("Los paños cambiaron. Actualiza la cobertura antes de descargar la simulación.");
+      const downloadStatus = await downloadPdfBlob(pdf.output("blob"), `simulacion-preliminar-vidrios-${sanitizeFileNamePart(latest.quoteCode || "cotizacion", 32)}.pdf`);
+      if (downloadStatus === "failed") throw new Error("No pudimos descargar la simulación. Intenta nuevamente.");
+      setDownloadNotice(downloadStatus === "downloaded" ? "PDF preliminar descargado." : "PDF preliminar abierto.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No pudimos generar la simulación.");
+    } finally {
+      setBusy(false);
+    }
+  }, [visibleResults, resultsQuoteId, quoteId, generatedFrom, sourceFresh, refreshingSource, currentQuoteCode, clientName, workName]);
+
   const calculate = useCallback(async (openDialog = false) => {
     if (!canCalculate) return;
     const expectedRevision = dataRevision.current;
     const calculationQuoteId = quoteId;
     setBusy(true);
     setError(null);
+    setDownloadNotice(null);
     setResults(null);
     setResultsQuoteId(null);
     setPreviewOpen(false);
@@ -283,6 +415,7 @@ export function GlassDistributionPanel({ quoteId, quoteCode, enabled, autoPrevie
       setSource((current) => current ? { ...current, quoteCode: body.quoteCode || current.quoteCode } : current);
       setResults(body.results);
       setResultsQuoteId(calculationQuoteId);
+      setGeneratedFrom(body.generatedFrom ?? []);
       setPreviewExclusions(body.previewExclusions ?? []);
       setSelectedSheetIndex(0);
       setPreviewOpen(openDialog);
@@ -320,9 +453,9 @@ export function GlassDistributionPanel({ quoteId, quoteCode, enabled, autoPrevie
           coverage={sourceForQuote.coverage}
           items={items}
           templates={templates}
-          previewablePaneIds={completePanes.map((pane) => pane.paneId)}
+          previewablePaneIds={completePanes.map((pane) => `${pane.quoteItemId}|${pane.paneId}`)}
           previewableUnitCount={completePanes.reduce((sum, pane) => sum + (pane.physicalUnitCount ?? 0), 0)}
-          excludedPreviewCount={previewExclusions.length}
+          previewExclusions={previewExclusions}
           onSaveMeasurements={onSaveManualGlassMeasurements}
           isRefreshing={refreshingSource}
           isCoverageCurrent={sourceFresh}
@@ -338,10 +471,6 @@ export function GlassDistributionPanel({ quoteId, quoteCode, enabled, autoPrevie
 
       {panes.length > 0 ? <>
         {completePanes.some((pane) => pane.dimensionProvenance === "recipe_trace") ? <p className={s.pdfBlockedNote} role="status">La vista previa usa geometría congelada de una receta preliminar. Requiere revisión del taller y no es apta para corte.</p> : null}
-        {previewExclusions.length > 0 ? <div className={s.pdfBlockedNote} role="status">
-          <strong>Referencias excluidas de la simulación</strong>
-          <ul>{previewExclusions.map((entry) => <li key={`${entry.quoteItemId}-${entry.paneId}`}>{entry.componentCode} · {entry.displayName ?? entry.componentName}: {entry.reason}</li>)}</ul>
-        </div> : null}
         <div className={s.glassGroups}>
           {Array.from(new Map(panes.map((pane) => {
             const key = [pane.productId, pane.technicalSpec?.category, pane.technicalSpec?.thicknessMm, pane.finishOrientationKey, pane.technicalSpec?.sheetWidthMm, pane.technicalSpec?.sheetHeightMm].join("|");
@@ -357,9 +486,11 @@ export function GlassDistributionPanel({ quoteId, quoteCode, enabled, autoPrevie
             return <div className={s.glassGroup} key={key}>
               <div className={s.glassHeading}><strong>{formatGlassDisplayName(representative.displayName, spec?.thicknessMm)}</strong><span>{spec?.category ? CATEGORY_LABELS[spec.category] ?? spec.category : "Tipo pendiente"} · {spec?.thicknessMm ? `${spec.thicknessMm} mm` : "espesor pendiente"}</span></div>
               <div className={s.glassMeta}><span>{previewableGroup.length} {previewableGroup.length === 1 ? "referencia incluida" : "referencias incluidas"} · {quantity} {quantity === 1 ? "unidad física" : "unidades físicas"} para simulación</span><span>{width && height ? `Plancha ${width} × ${height} mm` : "Formato habitual pendiente"}</span></div>
-              <ul className={s.paneList}>{group.map((entry, index) => {
+              <ul className={s.paneList}>{group.map((entry) => {
                 const exclusion = getGlassPaneGeometryExclusionReason(entry);
-                return <li key={`${entry.quoteItemId}-${entry.paneId}`}><span>{shortCode(entry.componentCode, index)}{entry.componentName ? ` · ${entry.componentName}` : ""} · {exclusion ? `Excluido: ${exclusion}` : `${entry.physicalUnitCount} ${entry.physicalUnitCount === 1 ? "unidad física" : "unidades físicas"}`}</span><strong>{entry.widthMm && entry.heightMm ? `${entry.widthMm} × ${entry.heightMm} mm` : "Medidas pendientes"}</strong></li>;
+                const component = shortCode(entry.componentCode, entry.componentName) ?? "Componente";
+                const position = panePositionLabel(entry) ?? "Paño";
+                return <li key={`${entry.quoteItemId}-${entry.paneId}`}><span>{component} · {position}{entry.componentName && component !== entry.componentName ? ` · ${entry.componentName}` : ""} · {exclusion ? `Excluido: ${exclusion}` : `${entry.physicalUnitCount} ${entry.physicalUnitCount === 1 ? "unidad física" : "unidades físicas"}`}</span><strong>{entry.widthMm && entry.heightMm ? `${entry.widthMm} × ${entry.heightMm} mm` : "Medidas pendientes"}</strong></li>;
               })}</ul>
             </div>;
           })}
@@ -375,6 +506,7 @@ export function GlassDistributionPanel({ quoteId, quoteCode, enabled, autoPrevie
           <button type="button" className={s.primaryAction} disabled={!canCalculate || busy || refreshingSource || !sourceFresh} onClick={() => visibleResults ? setPreviewOpen(true) : void calculate(true)}>
             {busy ? <LuLoaderCircle className={s.spinner} aria-hidden /> : <LuEye aria-hidden />}{busy ? "Calculando vista previa…" : visibleResults ? "Ampliar vista previa" : "Generar vista previa"}
           </button>
+          {visibleResults ? <button type="button" className={s.secondaryAction} disabled={busy || refreshingSource || !sourceFresh} onClick={() => void downloadSimulationPdf()}><LuDownload aria-hidden /> PDF preliminar</button> : null}
           <Link className={s.secondaryAction} href={`/print/cotizaciones/${encodeURIComponent(quoteId)}/fabricacion/vidrios?codigo=${encodeURIComponent(currentQuoteCode)}`}>Abrir revisión técnica y PDFs</Link>
         </div>
         {autoPreview && selected ? <div className={s.inlinePreview} aria-label="Vista previa preliminar de distribución">
@@ -391,6 +523,7 @@ export function GlassDistributionPanel({ quoteId, quoteCode, enabled, autoPrevie
         {visibleResults ? <p className={s.resultNote}>{sheetCount} {sheetCount === 1 ? "plancha" : "planchas"} · {visibleResults.reduce((sum, result) => sum + result.summary.paneCount, 0)} unidades distribuidas · Despuntes y separación asumidos: 0 mm · Formato sin giro{panes.some((pane) => !pane.technicalSpec?.pieceOrientation || pane.technicalSpec.pieceOrientation === "unknown") ? " · Orientación de paños desconocida: se mantuvieron fijos" : ""}</p> : null}
       </> : null}
       {error ? <p className={s.error} role="alert">{error}</p> : null}
+      {downloadNotice ? <p className={s.resultNote} role="status">{downloadNotice}</p> : null}
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className={s.previewDialog}>

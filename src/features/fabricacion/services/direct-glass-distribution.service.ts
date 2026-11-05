@@ -5,9 +5,15 @@ import { downloadPdfBlob } from "@/utils/cotizacion-pdf";
 import { sanitizeFileNamePart } from "@/utils/sanitize-file-name";
 import { loadVentoraPdfLogoDataUrl } from "./ventora-pdf-assets.client";
 import type { GlassDistributionCoverage } from "./glass-distribution-coverage.service";
+import { isGlassPaneGeometryComplete } from "./glass-distribution-coverage.service";
 
 export type GlassDistributionPane = {
   quoteItemId: string;
+  paneId?: string;
+  paneSlotId?: string;
+  sourcePosition?: string;
+  paneUnitIds?: string[];
+  commercialQuantity?: number | null;
   logicalComponentId: string | null;
   glassId: string | null;
   productId: string | null;
@@ -20,7 +26,7 @@ export type GlassDistributionPane = {
   quantity: number;
   physicalUnitCount: number | null;
   dimensionProvenance: string;
-  recipeStatus: string;
+  recipeStatus: string | null;
   validationStatus?: "eligible_for_manual_planning" | "requires_review";
   warnings: string[];
   snapshotFingerprint: string;
@@ -31,6 +37,8 @@ export type DirectGlassDistributionLoadResult = {
   panes: GlassDistributionPane[];
   diagnostics: string[];
   coverage: GlassDistributionCoverage;
+  preliminaryPaneCount?: number;
+  previewExclusions?: GlassDistributionPdfSource["previewExclusions"];
   workshopProfiles?: Record<string, unknown>;
 };
 
@@ -43,6 +51,10 @@ export type DirectGlassDistributionExecutionResult =
 export function mapGlassDistributionPdfPanes(panes: GlassDistributionPane[]): GlassDistributionPdfSource["panes"] {
   return panes.map((pane) => ({
     quoteItemId: pane.quoteItemId,
+    paneId: pane.paneId,
+    paneSlotId: pane.paneSlotId,
+    sourcePosition: pane.sourcePosition,
+    paneUnitIds: pane.paneUnitIds,
     componentCode: pane.componentCode,
     componentName: pane.componentName ?? null,
     productId: pane.productId,
@@ -54,31 +66,13 @@ export function mapGlassDistributionPdfPanes(panes: GlassDistributionPane[]): Gl
     heightMm: pane.heightMm,
     quantity: pane.quantity,
     physicalUnitCount: pane.physicalUnitCount,
+    dimensionProvenance: pane.dimensionProvenance,
   }));
 }
 
-export function isPaneEligibleForDistribution(pane: GlassDistributionPane): pane is GlassDistributionPane & { physicalUnitCount: number } {
-  const spec = pane.technicalSpec;
-  return Boolean(
-    pane.logicalComponentId &&
-      pane.glassId &&
-      pane.productId &&
-      spec &&
-      !spec.hasConflict &&
-      Number.isFinite(spec.thicknessMm) &&
-      Number(spec.thicknessMm) > 0 &&
-      spec.category !== "pendiente" &&
-      Number.isSafeInteger(pane.widthMm) &&
-      Number(pane.widthMm) > 0 &&
-      Number.isSafeInteger(pane.heightMm) &&
-      Number(pane.heightMm) > 0 &&
-      Number.isSafeInteger(pane.quantity) &&
-      pane.quantity > 0 &&
-      pane.quantity === pane.physicalUnitCount &&
-      pane.validationStatus === "eligible_for_manual_planning" &&
-      (pane.recipeStatus === "validated" || pane.dimensionProvenance === "manual") &&
-      pane.dimensionProvenance !== "legacy_snapshot"
-  );
+/** Shared geometry contract: a geometric simulation never implies workshop validation. */
+export function isPaneEligibleForDistribution(pane: GlassDistributionPane): boolean {
+  return isGlassPaneGeometryComplete(pane);
 }
 
 export function paneHasSheetFormat(spec: GlassTechnicalSpec | null): boolean {
@@ -123,35 +117,17 @@ export async function runDirectGlassDistributionDownload(input: {
   const panes = data.panes ?? [];
   const currentQuoteCode = data.quoteCode || input.quoteCode;
 
-  if (data.coverage.status !== "complete") {
-    const reason = data.coverage.diagnostics.join(" ") || "La cotización no tiene cobertura técnica completa de vidrio.";
-    return { status: "blocked", reason: `No se puede generar un PDF completo para el proveedor. ${reason}`, diagnostics: data.coverage.diagnostics };
-  }
-
   if (panes.length === 0) {
-    const reason =
-      data.diagnostics?.[0] ||
-      "Esta cotización no tiene paños técnicos congelados. Revisa la receta y guarda la cubicación antes de generar la distribución.";
-    return { status: "blocked", reason, diagnostics: data.diagnostics };
+    return { status: "blocked", reason: data.diagnostics?.[0] || "No hay paños de vidrio registrados para distribuir.", diagnostics: data.diagnostics };
   }
 
-  const blocked = panes.filter((p) => !isPaneEligibleForDistribution(p));
-  if (blocked.length > 0) {
-    const uniqueWarnings = Array.from(
-      new Set(
-        blocked.flatMap((p) =>
-          p.warnings.length
-            ? p.warnings
-            : [`El componente ${p.componentCode} requiere receta validada o medidas completas.`]
-        )
-      )
-    );
-    const reason =
-      uniqueWarnings.join(". ") ||
-      "Algunos paños técnicos requieren receta validada o medidas completas antes de calcular el corte.";
-    return { status: "blocked", reason, diagnostics: uniqueWarnings };
+  // GET marks physicalUnitCount only for panes admitted by the geometric contract.
+  // Recheck with the shared validator to avoid a second, inconsistent eligibility policy.
+  const eligiblePanes = panes.filter((pane) => pane.physicalUnitCount != null && pane.physicalUnitCount > 0 && isPaneEligibleForDistribution(pane));
+  if (eligiblePanes.length === 0) {
+    const diagnostics = data.previewExclusions?.map((entry) => `${entry.componentCode}: ${entry.reason}`) ?? data.diagnostics ?? [];
+    return { status: "blocked", reason: diagnostics.join(" ") || "No hay paños con geometría válida para simular.", diagnostics };
   }
-  const eligiblePanes = panes.filter(isPaneEligibleForDistribution);
 
   const formatMissing = eligiblePanes.some((p) => !paneHasSheetFormat(p.technicalSpec));
   const hasCustomFormat =
@@ -165,8 +141,8 @@ export async function runDirectGlassDistributionDownload(input: {
       return { status: "needs_format", panes: eligiblePanes, quoteCode: currentQuoteCode };
   }
 
-  const requestBody: { mode: "provider_pdf"; sheetWidthMm?: number; sheetHeightMm?: number } = {
-    mode: "provider_pdf",
+  const requestBody: { mode: "geometric_preview"; sheetWidthMm?: number; sheetHeightMm?: number } = {
+    mode: "geometric_preview",
   };
   if (hasCustomFormat) {
     requestBody.sheetWidthMm = input.sheetFormat!.widthMm;
@@ -190,6 +166,10 @@ export async function runDirectGlassDistributionDownload(input: {
     error?: string;
     diagnostics?: string[];
     coverage?: GlassDistributionCoverage;
+    mode?: string;
+    previewExclusions?: GlassDistributionPdfSource["previewExclusions"];
+    generatedFrom?: string[];
+    preliminaryPaneCount?: number;
   };
 
   if (!calcRes.ok) {
@@ -197,8 +177,14 @@ export async function runDirectGlassDistributionDownload(input: {
     return { status: "error", message: errorMsg || "No pudimos calcular la distribución geométrica." };
   }
 
-  if (!calcBody.coverage || calcBody.coverage.status !== "complete") {
-    return { status: "blocked", reason: "No se puede generar un PDF completo para el proveedor: la cobertura técnica cambió o está incompleta.", diagnostics: calcBody.coverage?.diagnostics };
+  if (calcBody.mode !== "geometric_preview" || !calcBody.coverage) {
+    return { status: "error", message: "El servidor no devolvió una simulación geométrica. No se descargó ningún PDF." };
+  }
+  const sourceFingerprints = panes.map((pane) => pane.snapshotFingerprint).sort();
+  const returnedFingerprints = [...(calcBody.generatedFrom ?? [])].sort();
+  if (JSON.stringify(sourceFingerprints) !== JSON.stringify(returnedFingerprints)
+    || calcBody.preliminaryPaneCount !== eligiblePanes.length) {
+    return { status: "blocked", reason: "Las medidas o referencias cambiaron durante la descarga. Actualiza la distribución y vuelve a intentarlo." };
   }
 
   const results = calcBody.results ?? [];
@@ -216,17 +202,20 @@ export async function runDirectGlassDistributionDownload(input: {
   const logoDataUrl = await loadVentoraPdfLogoDataUrl();
   if (!logoDataUrl) return { status: "error", message: "No se pudo cargar el logotipo corporativo. Recarga la página e inténtalo otra vez." };
   const pdf = await createGlassDistributionPdf({
+    mode: "simulation",
     quoteCode: calcBody.quoteCode || currentQuoteCode,
     clientName,
     workName,
     logoDataUrl,
     coverage: calcBody.coverage,
+    simulationWarnings: calcBody.warnings ?? [],
+    previewExclusions: calcBody.previewExclusions ?? [],
     panes: mapGlassDistributionPdfPanes(eligiblePanes),
     results,
   });
 
   const blob = pdf.output("blob");
-  const fileName = `distribucion-vidrios-${sanitizeFileNamePart(
+  const fileName = `simulacion-preliminar-vidrios-${sanitizeFileNamePart(
     calcBody.quoteCode || currentQuoteCode || "cotizacion",
     32
   )}.pdf`;

@@ -364,16 +364,17 @@ export function createFabricationWorkOrderPdf(
   if (kind === "combined" || kind === "glass-order") {
   const glass = order.glass.map((row): Row => ({ cells: [
     `${clean(row.itemCode, "Partida pendiente")}\n${row.paneReference}`,
-    `${clean(row.type)}\nEspesor: ${clean(row.thickness)}`,
+    `${clean(row.type)}\nEspesor: ${clean(row.thickness)}\n${clean(row.validationLabel, "Origen de medida pendiente")}`,
     row.widthMm != null && row.heightMm != null ? `${mm(row.widthMm)} × ${mm(row.heightMm)}` : "Medidas pendientes",
     row.quantity == null ? "Pendiente" : String(row.quantity),
-    row.issue ? "Pendiente de revisar" : area(row.totalM2),
+    row.issue ? `Pendiente de revisar\n${clean(row.issue)}` : area(row.totalM2),
   ] }));
-  y = drawTable(pdf, kind === "glass-order" ? "Paños por fabricar" : "3. Orden de vidrios", [
+  y = drawTable(pdf, kind === "glass-order" ? "Paños identificados · revisar antes de distribuir o cortar" : "3. Orden de vidrios", [
     { title: "Partida / paño", width: 46 }, { title: "Tipo / espesor", width: 49 },
     { title: "Ancho × alto", width: 39 }, { title: "Cant.", width: 17, align: "right" },
     { title: "Superficie", width: 31, align: "right" },
   ], glass, y, "Sin paños guardados", runningTitle, metadata.quoteCode, logoDataUrl);
+  y = drawNote(pdf, "Cada fila muestra si la medida viene de un snapshot o de un ingreso manual final. Las medidas manuales no equivalen a aprobación física del corte ni a cobertura operativa.", y + 2, runningTitle, metadata.quoteCode, logoDataUrl);
   }
 
   if (kind === "combined") {

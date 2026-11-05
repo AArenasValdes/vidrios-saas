@@ -26,7 +26,7 @@ function pane(quoteItemId: string, glassId: string, overrides: Partial<Normalize
       version: 1, productId: `product-${glassId}`, category: "monolitico", thicknessMm: 5,
       sheetWidthMm: 2500, sheetHeightMm: 1800, pieceOrientation: "unknown", hasConflict: false,
       manualCutStatus: "confirmed", provenance: "catalog", sourceProductId: `product-${glassId}`, sourceValues: null,
-      technicalReviewConfirmed: true,
+      technicalReviewConfirmed: true, purchaseMode: "full_sheet",
     },
     widthMm: 600, heightMm: 1000, quantity: 1, commercialQuantity: 1, dimensionProvenance: "validated_recipe", dimensionTraceRuleIds: [],
     recipeStatus: "validated", validationStatus: "eligible_for_manual_planning", warnings: [], snapshotVersion: 1,
@@ -98,6 +98,42 @@ describe("buildGlassDistributionCoverage", () => {
     expect(getGlassPaneGeometryExclusionReason(preliminary)).toBeNull();
   });
 
+  it("expone cobertura geométrica separada de revisión operativa para recipe_trace", () => {
+    const component = item("item-1", "V1");
+    const preliminary = pane("item-1", "glass-1", {
+      dimensionProvenance: "recipe_trace",
+      recipeStatus: "lista_para_validar",
+      validationStatus: "requires_review",
+      warnings: ["La receta no está validada por el taller."],
+    });
+
+    const coverage = buildGlassDistributionCoverage({ items: [component], panes: [preliminary] });
+
+    expect(coverage).toMatchObject({
+      status: "unavailable",
+      completeReferenceCount: 0,
+      pendingReferenceCount: 1,
+      geometricReferenceCount: 1,
+      geometricUnitCount: 1,
+      geometricPendingReferenceCount: 0,
+      pendingReferences: [{ geometryStatus: "complete", reason: "La receta no está validada por el taller." }],
+    });
+  });
+
+  it("clasifica dimensiones y conflictos técnicos por separado de la cobertura operativa", () => {
+    const coverage = buildGlassDistributionCoverage({
+      items: [item("item-1", "V1"), item("item-2", "V2")],
+      panes: [
+        pane("item-1", "glass-missing", { widthMm: null, heightMm: null, validationStatus: "requires_review" }),
+        pane("item-2", "glass-conflict", { technicalSpec: { ...pane("item-2", "glass-conflict").technicalSpec!, hasConflict: true } }),
+      ],
+    });
+
+    expect(coverage.geometricReferenceCount).toBe(0);
+    expect(coverage.geometricPendingReferenceCount).toBe(2);
+    expect(coverage.pendingReferences.map((reference) => reference.geometryStatus)).toEqual(["missing_dimensions", "review_required"]);
+  });
+
   it("explica por qué bloquea recipe_trace sin medidas físicas suficientes o cantidad coherente", () => {
     const missingDimensions = pane("item-1", "glass-1", {
       dimensionProvenance: "recipe_trace", widthMm: null, heightMm: null,
@@ -127,17 +163,38 @@ describe("buildGlassDistributionCoverage", () => {
     expect(getGlassPaneGeometryExclusionReason(legacy)).toMatch(/snapshot histórico/i);
   });
 
+  it("no distribuye productos supplier-cut, undecided ni fichas legacy sin purchaseMode", () => {
+    const supplierCut = pane("item-1", "supplier-cut", {
+      technicalSpec: { ...pane("item-1", "supplier-cut").technicalSpec!, purchaseMode: "supplier_cut" },
+    });
+    const undecided = pane("item-1", "undecided", {
+      technicalSpec: { ...pane("item-1", "undecided").technicalSpec!, purchaseMode: "undecided" },
+    });
+    const legacy = pane("item-1", "legacy", {
+      technicalSpec: { ...pane("item-1", "legacy").technicalSpec!, purchaseMode: undefined },
+    });
+
+    expect(getGlassPaneGeometryExclusionReason(supplierCut)).toMatch(/cortado por proveedor/i);
+    expect(getGlassPaneGeometryExclusionReason(undecided)).toMatch(/compra por plancha/i);
+    expect(getGlassPaneGeometryExclusionReason(legacy)).toMatch(/ficha antigua.*forma de compra/i);
+    expect(isGlassPaneGeometryComplete(supplierCut)).toBe(false);
+    expect(isGlassPaneGeometryComplete(undecided)).toBe(false);
+    expect(isGlassPaneGeometryComplete(legacy)).toBe(false);
+    expect(isGlassCoveragePaneComplete(legacy)).toBe(false);
+  });
+
   it("no declara cobertura completa cuando la normalización exige revisión aunque dimensiones y unidades estén presentes", () => {
     const coverage = buildGlassDistributionCoverage({
       items: [item("item-1", "V1")],
       panes: [pane("item-1", "glass-1", {
         validationStatus: "requires_review",
-        warnings: ["La ficha técnica cambió desde que se guardó la medición."],
+        warnings: ["La ficha técnica del vidrio cambió desde que se guardó la medición."],
       })],
     });
 
     expect(coverage).toMatchObject({ status: "unavailable", completeReferenceCount: 0, pendingReferenceCount: 1 });
-    expect(coverage.pendingReferences[0]?.reason).toContain("La ficha técnica cambió");
+    expect(coverage.pendingReferences[0]?.reason).toContain("La ficha técnica del vidrio cambió");
+    expect(coverage.pendingReferences[0]?.geometryStatus).toBe("review_required");
   });
 
   it("no redondea cinco piezas para cubrir dos slots cuando la cantidad comercial es tres", () => {
@@ -158,7 +215,7 @@ describe("buildGlassDistributionCoverage", () => {
     expect(coverage.pendingReferences[0]?.reason).toContain("múltiplo de la cantidad comercial");
   });
 
-  it("acepta una referencia agrupada con seis piezas para dos slots y cantidad comercial tres", () => {
+  it("no infiere posiciones de receta por coincidencia entre seis unidades y dos slots", () => {
     const component = item("item-1", "V1");
     component.cantidad = 3;
     component.observaciones = encodeCotizacionItemPresentationMeta({ fabricacionTipologia: "Corredera", sheetScheme: "2 hojas" });
@@ -171,7 +228,9 @@ describe("buildGlassDistributionCoverage", () => {
       })],
     });
 
-    expect(coverage).toMatchObject({ status: "complete", completeReferenceCount: 1, pendingReferenceCount: 0 });
+    expect(coverage.status).not.toBe("complete");
+    expect(coverage.completeReferenceCount).toBe(0);
+    expect(coverage.pendingReferences[0]?.reason).toMatch(/no identifica la posición física/i);
   });
 
   it("acepta referencias separadas de tres unidades por slot con cantidad comercial tres", () => {
@@ -182,8 +241,8 @@ describe("buildGlassDistributionCoverage", () => {
     const coverage = buildGlassDistributionCoverage({
       items: [component],
       panes: [
-        pane("item-1", "glass-1", { quantity: 3, paneUnitIds: ["a1", "a2", "a3"] }),
-        pane("item-1", "glass-2", { quantity: 3, paneUnitIds: ["b1", "b2", "b3"] }),
+        pane("item-1", "glass-1", { paneSlotId: "pane-1", sourcePosition: "Paño 1", quantity: 3, paneUnitIds: ["a1", "a2", "a3"] }),
+        pane("item-1", "glass-2", { paneSlotId: "pane-2", sourcePosition: "Paño 2", quantity: 3, paneUnitIds: ["b1", "b2", "b3"] }),
       ],
     });
 
@@ -282,7 +341,7 @@ describe("buildGlassDistributionCoverage", () => {
     expect(coverage.pendingReferences.every((reference) => reference.quoteItemId === "item-1")).toBe(true);
   });
 
-  it("exige confirmación para una composición sin conteo confiable y la invalida al cambiar divisiones", () => {
+  it("mantiene un paño físico cuando solo cambia la decoración y la invalida al cambiar la configuración", () => {
     let visual = createDefaultGuidedVisualConfig({ widthMm: 1500, heightMm: 1800 });
     const moduleId = listLeafModules(visual.root)[0]!.id;
     const resolveFingerprint = (config: typeof visual) => {
@@ -304,7 +363,8 @@ describe("buildGlassDistributionCoverage", () => {
     visual = applyPalilloPresetToModule(visual, moduleId, "v1");
     const currentResolution = resolveFingerprint(visual);
     const currentFingerprint = currentResolution.configurationFingerprint;
-    expect(currentResolution.countIsKnown).toBe(false);
+    expect(currentResolution.countIsKnown).toBe(true);
+    expect(currentResolution.slots).toHaveLength(1);
     const component = item("item-1", "V1", "Float 5 mm");
     const measurement = {
       id: "manual-unknown-layout",
@@ -342,7 +402,7 @@ describe("buildGlassDistributionCoverage", () => {
         fabricacionHojas: decoded.fabricacionHojas,
         guidedVisualConfig: decoded.guidedVisualConfig,
         quickCompositionAdjustment: decoded.quickCompositionAdjustment,
-      })).toMatchObject({ countIsKnown: false });
+      })).toMatchObject({ countIsKnown: true, slots: [{ id: currentResolution.slots[0]?.id }] });
       return buildGlassDistributionCoverage({
         items: [component],
         panes: [pane("item-1", measurement.id, { dimensionProvenance: "manual", recipeStatus: null })],
@@ -353,6 +413,6 @@ describe("buildGlassDistributionCoverage", () => {
     const confirmedCoverage = makeCoverage(currentFingerprint);
     expect(confirmedCoverage.completeReferenceCount).toBe(1);
     expect(confirmedCoverage.pendingReferences).toEqual([]);
-    expect(makeCoverage(oldResolution.configurationFingerprint)).toMatchObject({ status: "partial", pendingReferenceCount: 1 });
+    expect(makeCoverage(oldResolution.configurationFingerprint)).toMatchObject({ status: "unavailable", pendingReferenceCount: 1 });
   });
 });
