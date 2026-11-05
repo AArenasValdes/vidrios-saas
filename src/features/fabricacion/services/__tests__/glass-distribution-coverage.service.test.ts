@@ -98,6 +98,42 @@ describe("buildGlassDistributionCoverage", () => {
     expect(getGlassPaneGeometryExclusionReason(preliminary)).toBeNull();
   });
 
+  it("expone cobertura geométrica separada de revisión operativa para recipe_trace", () => {
+    const component = item("item-1", "V1");
+    const preliminary = pane("item-1", "glass-1", {
+      dimensionProvenance: "recipe_trace",
+      recipeStatus: "lista_para_validar",
+      validationStatus: "requires_review",
+      warnings: ["La receta no está validada por el taller."],
+    });
+
+    const coverage = buildGlassDistributionCoverage({ items: [component], panes: [preliminary] });
+
+    expect(coverage).toMatchObject({
+      status: "unavailable",
+      completeReferenceCount: 0,
+      pendingReferenceCount: 1,
+      geometricReferenceCount: 1,
+      geometricUnitCount: 1,
+      geometricPendingReferenceCount: 0,
+      pendingReferences: [{ geometryStatus: "complete", reason: "La receta no está validada por el taller." }],
+    });
+  });
+
+  it("clasifica dimensiones y conflictos técnicos por separado de la cobertura operativa", () => {
+    const coverage = buildGlassDistributionCoverage({
+      items: [item("item-1", "V1"), item("item-2", "V2")],
+      panes: [
+        pane("item-1", "glass-missing", { widthMm: null, heightMm: null, validationStatus: "requires_review" }),
+        pane("item-2", "glass-conflict", { technicalSpec: { ...pane("item-2", "glass-conflict").technicalSpec!, hasConflict: true } }),
+      ],
+    });
+
+    expect(coverage.geometricReferenceCount).toBe(0);
+    expect(coverage.geometricPendingReferenceCount).toBe(2);
+    expect(coverage.pendingReferences.map((reference) => reference.geometryStatus)).toEqual(["missing_dimensions", "review_required"]);
+  });
+
   it("explica por qué bloquea recipe_trace sin medidas físicas suficientes o cantidad coherente", () => {
     const missingDimensions = pane("item-1", "glass-1", {
       dimensionProvenance: "recipe_trace", widthMm: null, heightMm: null,
@@ -152,12 +188,13 @@ describe("buildGlassDistributionCoverage", () => {
       items: [item("item-1", "V1")],
       panes: [pane("item-1", "glass-1", {
         validationStatus: "requires_review",
-        warnings: ["La ficha técnica cambió desde que se guardó la medición."],
+        warnings: ["La ficha técnica del vidrio cambió desde que se guardó la medición."],
       })],
     });
 
     expect(coverage).toMatchObject({ status: "unavailable", completeReferenceCount: 0, pendingReferenceCount: 1 });
-    expect(coverage.pendingReferences[0]?.reason).toContain("La ficha técnica cambió");
+    expect(coverage.pendingReferences[0]?.reason).toContain("La ficha técnica del vidrio cambió");
+    expect(coverage.pendingReferences[0]?.geometryStatus).toBe("review_required");
   });
 
   it("no redondea cinco piezas para cubrir dos slots cuando la cantidad comercial es tres", () => {

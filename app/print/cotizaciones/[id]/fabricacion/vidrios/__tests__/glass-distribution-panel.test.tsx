@@ -282,7 +282,7 @@ describe("GlassDistributionPanel", () => {
     expect(screen.getByText("1 referencia incluida · 2 unidades físicas")).toBeInTheDocument();
     expect(screen.getByText("Preparación operativa del taller")).toBeInTheDocument();
     expect(screen.getByText("V2 · Paño fijo")).toBeInTheDocument();
-    expect(screen.getByText("Float · 1 referencia excluida de la simulación")).toBeInTheDocument();
+    expect(screen.getByText("Float · 1 referencia necesita medidas finales")).toBeInTheDocument();
     expect(screen.getByText(/Faltan dimensiones válidas del paño/)).toBeInTheDocument();
     expect(await screen.findByRole("img", { name: "Distribución en plancha de 2500 por 1800 milímetros" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /PDF operativo/i })).not.toBeInTheDocument();
@@ -335,7 +335,7 @@ describe("GlassDistributionPanel", () => {
     />);
 
     expect(await screen.findByText("0 referencias con cobertura completa · 2 pendientes")).toBeInTheDocument();
-    expect(screen.getByText("pane-1, pane-2 · 2 referencias con cobertura pendiente")).toBeInTheDocument();
+    expect(screen.getByText("pane-1, pane-2 · 2 referencias necesitan medidas finales")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Ingresar medidas" }));
     await screen.findByLabelText("Posición del paño");
     fireEvent.change(screen.getByLabelText("Posición del paño"), { target: { value: "pane-1" } });
@@ -351,8 +351,8 @@ describe("GlassDistributionPanel", () => {
 
     expect(await screen.findByText("Medidas guardadas. Cobertura actualizada.")).toBeInTheDocument();
     expect(screen.getByText("1 referencia con cobertura completa · 1 pendiente")).toBeInTheDocument();
-    expect(screen.getByText("pane-2 · 1 referencia con cobertura pendiente")).toBeInTheDocument();
-    expect(screen.getAllByText("pane-2 · 1 referencia con cobertura pendiente")).toHaveLength(1);
+    expect(screen.getByText("pane-2 · 1 referencia necesita medidas finales")).toBeInTheDocument();
+    expect(screen.getAllByText("pane-2 · 1 referencia necesita medidas finales")).toHaveLength(1);
     expect(screen.queryByRole("button", { name: /PDF operativo/i })).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });

@@ -8,7 +8,7 @@ import type { ManualGlassPaneMeasurementsSnapshot } from "@/features/cotizacione
 import { ManualGlassMeasurementsEditor } from "@/features/cotizaciones/components/manual-glass-measurements-editor";
 import { resolveManualGlassPaneComponentType } from "@/features/cotizaciones/services/manual-glass-pane-slots.service";
 import { refreshDirectGlassDistribution } from "@/features/fabricacion/hooks/use-direct-glass-distribution";
-import type { GlassDistributionCoverage, GlassPaneGeometryExclusion } from "@/features/fabricacion/services/glass-distribution-coverage.service";
+import { classifyGlassPaneGeometryReason, type GlassDistributionCoverage, type GlassDistributionGeometryStatus, type GlassPaneGeometryExclusion } from "@/features/fabricacion/services/glass-distribution-coverage.service";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 import s from "./glass-distribution-coverage-notice.module.css";
@@ -28,7 +28,18 @@ type Props = {
   onRetryRefresh?: () => Promise<void>;
 };
 
-export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [], templates = [], previewablePaneIds = [], previewableUnitCount = 0, previewExclusions = [], onSaveMeasurements = async () => undefined, isRefreshing = false, isCoverageCurrent = true, refreshError = null, onRetryRefresh }: Props) {
+type ReferenceGroup = {
+  itemId: string;
+  componentCode: string;
+  componentName: string;
+  displayNames: string[];
+  reasons: string[];
+  referenceKeys: Set<string>;
+  geometryStatuses: Set<GlassDistributionGeometryStatus>;
+  count: number;
+};
+
+export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [], templates = [], previewablePaneIds, previewableUnitCount, previewExclusions, onSaveMeasurements = async () => undefined, isRefreshing = false, isCoverageCurrent = true, refreshError = null, onRetryRefresh }: Props) {
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [draft, setDraft] = useState<ManualGlassPaneMeasurementsSnapshot | null>(null);
   const [savingItemId, setSavingItemId] = useState<string | null>(null);
@@ -38,10 +49,12 @@ export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [],
 
   const itemsById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
   const pendingGroups = useMemo(() => {
-    const groups = new Map<string, { itemId: string; componentCode: string; componentName: string; displayNames: string[]; reasons: string[]; referenceKeys: Set<string>; count: number }>();
-    const previewable = new Set(previewablePaneIds);
-    const excluded = new Set(previewExclusions.map((entry) => `${entry.quoteItemId}|${entry.paneId}`));
-    const addReference = (reference: { quoteItemId: string; paneId?: string | null; componentCode: string; componentName: string; displayName?: string | null; reason: string }) => {
+    const groups = new Map<string, ReferenceGroup>();
+    const previewable = new Set(previewablePaneIds ?? []);
+    const excluded = new Set((previewExclusions ?? []).map((entry) => `${entry.quoteItemId}|${entry.paneId}`));
+    const addReference = (reference: { quoteItemId: string; paneId?: string | null; componentCode: string; componentName: string; displayName?: string | null; reason: string; geometryStatus?: GlassDistributionGeometryStatus }) => {
+      const geometryStatus = reference.geometryStatus ?? classifyGlassPaneGeometryReason(reference.reason);
+      if (geometryStatus !== "complete") return;
       const key = reference.quoteItemId || `${reference.componentCode}:${reference.componentName}`;
       const group = groups.get(key) ?? {
         itemId: reference.quoteItemId,
@@ -50,8 +63,10 @@ export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [],
         displayNames: [],
         reasons: [],
         referenceKeys: new Set<string>(),
+        geometryStatuses: new Set<GlassDistributionGeometryStatus>(),
         count: 0,
       };
+      group.geometryStatuses.add(geometryStatus);
       const referenceKey = reference.paneId ? `${reference.quoteItemId}|${reference.paneId}` : null;
       if (referenceKey) {
         if (!group.referenceKeys.has(referenceKey)) group.count += 1;
@@ -70,27 +85,57 @@ export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [],
     return [...groups.values()];
   }, [coverage, previewablePaneIds, previewExclusions]);
   const exclusionGroups = useMemo(() => {
-    const groups = new Map<string, { itemId: string; componentCode: string; componentName: string; displayNames: string[]; reasons: string[]; referenceKeys: Set<string> }>();
-    for (const exclusion of previewExclusions) {
-      const key = exclusion.quoteItemId || `${exclusion.componentCode}:${exclusion.componentName}`;
-      const group = groups.get(key) ?? { itemId: exclusion.quoteItemId, componentCode: exclusion.componentCode, componentName: exclusion.componentName, displayNames: [], reasons: [], referenceKeys: new Set<string>() };
-      group.referenceKeys.add(`${exclusion.quoteItemId}|${exclusion.paneId}`);
-      if (exclusion.displayName && !group.displayNames.includes(exclusion.displayName)) group.displayNames.push(exclusion.displayName);
-      if (exclusion.reason && !group.reasons.includes(exclusion.reason)) group.reasons.push(exclusion.reason);
+    const groups = new Map<string, ReferenceGroup>();
+    const addReference = (reference: { quoteItemId: string; paneId?: string | null; componentCode: string; componentName: string; displayName?: string | null; reason: string; geometryStatus?: GlassDistributionGeometryStatus }) => {
+      const geometryStatus = reference.geometryStatus ?? classifyGlassPaneGeometryReason(reference.reason);
+      if (geometryStatus === "complete") return;
+      const key = reference.quoteItemId || `${reference.componentCode}:${reference.componentName}`;
+      const group = groups.get(key) ?? {
+        itemId: reference.quoteItemId,
+        componentCode: reference.componentCode,
+        componentName: reference.componentName,
+        displayNames: [],
+        reasons: [],
+        referenceKeys: new Set<string>(),
+        geometryStatuses: new Set<GlassDistributionGeometryStatus>(),
+        count: 0,
+      };
+      group.geometryStatuses.add(geometryStatus);
+      const referenceKey = reference.paneId ? `${reference.quoteItemId}|${reference.paneId}` : null;
+      if (referenceKey) {
+        if (!group.referenceKeys.has(referenceKey)) group.count += 1;
+        group.referenceKeys.add(referenceKey);
+      } else {
+        group.count += 1;
+      }
+      if (reference.displayName && !group.displayNames.includes(reference.displayName)) group.displayNames.push(reference.displayName);
+      if (reference.reason && !group.reasons.includes(reference.reason)) group.reasons.push(reference.reason);
       groups.set(key, group);
+    };
+    for (const reference of coverage?.pendingReferences ?? []) {
+      addReference(reference);
     }
-    return [...groups.values()].map((group) => ({ ...group, count: group.referenceKeys.size }));
-  }, [previewExclusions]);
+    for (const exclusion of previewExclusions ?? []) {
+      addReference(exclusion);
+    }
+    return [...groups.values()];
+  }, [coverage, previewExclusions]);
 
   if (!coverage) return null;
 
-  const previewableReferenceCount = new Set(previewablePaneIds).size;
-  const excludedReferenceCount = new Set(previewExclusions.map((entry) => `${entry.quoteItemId}|${entry.paneId}`)).size;
+  const hasPreviewReferences = previewablePaneIds !== undefined;
+  const previewableReferenceCount = hasPreviewReferences
+    ? new Set(previewablePaneIds).size
+    : coverage.geometricReferenceCount ?? 0;
+  const displayedUnitCount = hasPreviewReferences ? previewableUnitCount ?? 0 : coverage.geometricUnitCount ?? 0;
+  const excludedReferenceCount = hasPreviewReferences
+    ? new Set((previewExclusions ?? []).map((entry) => `${entry.quoteItemId}|${entry.paneId}`)).size
+    : coverage.geometricPendingReferenceCount ?? 0;
   const geometricStatus = previewableReferenceCount > 0 && excludedReferenceCount === 0
     ? "Simulación geométrica completa"
     : previewableReferenceCount > 0
       ? "Simulación parcial"
-      : "Sin geometría disponible todavía";
+      : "Geometría pendiente";
   const activeItem = activeItemId ? itemsById.get(activeItemId) : undefined;
   const activePresentation = activeItem ? decodeCotizacionItemPresentationMeta(activeItem.observaciones) : null;
   const automaticDimensionsAvailable = Boolean(activeItem?.fabricacionSnapshot?.result?.vidrios?.some(
@@ -153,25 +198,34 @@ export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [],
     }
   };
 
-  const renderReferenceGroup = (group: { itemId: string; componentCode: string; componentName: string; displayNames: string[]; reasons: string[]; count: number }, kind: "excluded" | "coverage") => {
+  const renderReferenceGroup = (group: ReferenceGroup, kind: "excluded" | "coverage") => {
     const editing = activeItemId === group.itemId;
     const groupItem = itemsById.get(group.itemId);
     const savedManualEntries = groupItem?.manualGlassMeasurements?.entries
       ?? decodeCotizacionItemPresentationMeta(groupItem?.observaciones ?? "").manualGlassMeasurements.entries;
-    const measurementsMayResolve = group.reasons.some((reason) => /medid|dimensi|paño|pano|registrar/i.test(reason));
+    const missingDimensions = group.geometryStatuses.has("missing_dimensions");
+    const needsTechnicalReview = group.geometryStatuses.has("review_required");
+    const actionLabel = missingDimensions
+      ? savedManualEntries.length > 0 ? "Completar medidas" : "Ingresar medidas"
+      : needsTechnicalReview && savedManualEntries.length > 0 ? "Revisar datos técnicos" : null;
+    const groupStatusLabel = missingDimensions
+        ? `${group.count} ${group.count === 1 ? "referencia necesita medidas finales" : "referencias necesitan medidas finales"}`
+        : needsTechnicalReview
+          ? `${group.count} ${group.count === 1 ? "referencia requiere revisar datos técnicos" : "referencias requieren revisar datos técnicos"}`
+          : kind === "excluded"
+            ? `${group.count} ${group.count === 1 ? "referencia excluida" : "referencias excluidas"} de la simulación`
+            : `${group.count} ${group.count === 1 ? "referencia con revisión operativa pendiente" : "referencias con revisión operativa pendiente"}`;
     return (
       <li key={`${kind}:${group.itemId}:${group.componentCode}`}>
         <div className={s.pendingRow}>
           <div className={s.pendingCopy}>
             <b>{group.componentCode} · {group.componentName}</b>
-            <small>{group.displayNames.length > 0 ? `${group.displayNames.join(", ")} · ` : ""}{kind === "excluded"
-              ? `${group.count} ${group.count === 1 ? "referencia excluida" : "referencias excluidas"} de la simulación`
-              : `${group.count} ${group.count === 1 ? "referencia con cobertura pendiente" : "referencias con cobertura pendiente"}`}</small>
+            <small>{group.displayNames.length > 0 ? `${group.displayNames.join(", ")} · ` : ""}{groupStatusLabel}</small>
             {group.reasons.map((reason) => <small key={reason}>{reason}</small>)}
           </div>
-          {measurementsMayResolve && group.itemId && itemsById.has(group.itemId) ? (
+          {actionLabel && group.itemId && itemsById.has(group.itemId) ? (
             <button type="button" className={s.editButton} onClick={() => editing ? setActiveItemId(null) : openEditor(group.itemId)}>
-              {editing ? "Cerrar" : savedManualEntries.length > 0 ? "Editar medidas" : "Ingresar medidas"}
+              {editing ? "Cerrar" : actionLabel}
             </button>
           ) : null}
         </div>
@@ -219,7 +273,7 @@ export function GlassDistributionCoverageNotice({ quoteId, coverage, items = [],
       <section className={s.geometrySection} aria-labelledby="glass-geometry-status">
         <div className={s.summary}>
           <strong id="glass-geometry-status">{isRefreshing || !isCoverageCurrent ? "Actualizando simulación" : geometricStatus}</strong>
-          <span>{`${previewableReferenceCount} ${previewableReferenceCount === 1 ? "referencia incluida" : "referencias incluidas"} · ${previewableUnitCount} ${previewableUnitCount === 1 ? "unidad física" : "unidades físicas"}`}</span>
+          <span>{`${previewableReferenceCount} ${previewableReferenceCount === 1 ? "referencia incluida" : "referencias incluidas"} · ${displayedUnitCount} ${displayedUnitCount === 1 ? "unidad física" : "unidades físicas"}`}</span>
         </div>
         {excludedReferenceCount > 0 ? <p>{`${excludedReferenceCount} ${excludedReferenceCount === 1 ? "referencia excluida" : "referencias excluidas"} de la simulación; revisa el motivo indicado.`}</p> : null}
         {exclusionGroups.length > 0 ? <ul className={s.exclusionList} aria-label="Motivos de exclusión geométrica">

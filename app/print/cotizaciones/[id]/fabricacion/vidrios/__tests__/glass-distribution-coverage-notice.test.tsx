@@ -38,12 +38,16 @@ const coverage = {
   status: "unavailable" as const,
   completeReferenceCount: 0,
   pendingReferenceCount: 3,
+  geometricReferenceCount: 0,
+  geometricUnitCount: 0,
+  geometricPendingReferenceCount: 3,
   pendingReferences: [1, 2, 3].map(() => ({
     quoteItemId: "item-1",
     componentCode: "V1",
     componentName: "Corredera 3 hojas",
     displayName: null,
     reason: "Falta registrar uno o más paños.",
+    geometryStatus: "missing_dimensions" as const,
   })),
   diagnostics: [],
 };
@@ -62,21 +66,54 @@ describe("GlassDistributionCoverageNotice", () => {
         componentName: "Paño fijo",
         displayName: "Float 5 mm",
         reason: "Falta validación técnica para taller.",
+        geometryStatus: "complete" as const,
       }],
+      geometricReferenceCount: 1,
+      geometricUnitCount: 1,
+      geometricPendingReferenceCount: 0,
     };
     render(<GlassDistributionCoverageNotice
       quoteId="quote-1"
       coverage={operationalPending}
-      previewablePaneIds={["item-1|logical-f1:glass-1"]}
-      previewableUnitCount={1}
     />);
 
     expect(screen.getByText("Simulación geométrica completa")).toBeInTheDocument();
     expect(screen.getByText("1 referencia incluida · 1 unidad física")).toBeInTheDocument();
     expect(screen.getByText("Preparación operativa del taller")).toBeInTheDocument();
     expect(screen.getByText("0 referencias con cobertura completa · 1 pendiente")).toBeInTheDocument();
-    expect(screen.queryByText(/referencia requiere medidas o revisión/)).not.toBeInTheDocument();
+    expect(screen.getByText(/1 referencia con revisión operativa pendiente/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ingresar medidas" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Editar medidas" })).not.toBeInTheDocument();
     expect(screen.getByText(/no habilita documentos operativos/)).toBeInTheDocument();
+  });
+
+  it.each([
+    [1309, 5, 6],
+    [1315, 9, 11],
+  ])("no pide medidas de nuevo para la cotización %i con geometría ya disponible", (quoteId, references, units) => {
+    const operationalPending = {
+      ...coverage,
+      completeReferenceCount: 0,
+      pendingReferenceCount: references,
+      pendingReferences: Array.from({ length: references }, (_, index) => ({
+        quoteItemId: "item-1",
+        paneId: `pane-${index + 1}`,
+        componentCode: "V1",
+        componentName: "Corredera QA",
+        displayName: "Float 5 mm",
+        reason: "La receta requiere revisión técnica del taller.",
+        geometryStatus: "complete" as const,
+      })),
+      geometricReferenceCount: references,
+      geometricUnitCount: units,
+      geometricPendingReferenceCount: 0,
+    };
+    render(<GlassDistributionCoverageNotice quoteId={String(quoteId)} coverage={operationalPending} items={[item]} />);
+
+    expect(screen.getByText("Simulación geométrica completa")).toBeInTheDocument();
+    expect(screen.getByText(`${references} referencias incluidas · ${units} unidades físicas`)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`${references} referencias con revisión operativa pendiente`))).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /medidas/i })).not.toBeInTheDocument();
   });
 
   it("abre el editor en la misma pantalla, agrupa paños por componente y guarda las medidas", async () => {
@@ -91,7 +128,7 @@ describe("GlassDistributionCoverageNotice", () => {
       />
     );
 
-    expect(screen.getByText("3 referencias con cobertura pendiente")).toBeInTheDocument();
+    expect(screen.getByText("3 referencias necesitan medidas finales")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Ingresar medidas" })).toHaveLength(1);
     expect(screen.queryByRole("link", { name: "Ingresar medidas" })).not.toBeInTheDocument();
 
@@ -158,12 +195,18 @@ describe("GlassDistributionCoverageNotice", () => {
         componentName: "Paño fijo F1",
         displayName: "Float incoloro 5 mm",
         reason: "La ficha técnica del vidrio cambió desde que se ingresaron estas medidas; revisa y vuelve a guardar la referencia.",
+        geometryStatus: "review_required" as const,
       }],
+      geometricReferenceCount: 0,
+      geometricUnitCount: 0,
+      geometricPendingReferenceCount: 1,
     };
     render(<GlassDistributionCoverageNotice quoteId="quote-1" coverage={pending} items={[savedItem]} templates={[glassTemplate]} />);
 
     expect(screen.getByText(/La ficha técnica del vidrio cambió/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Editar medidas" }));
+    expect(screen.getByRole("button", { name: "Revisar datos técnicos" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ingresar medidas" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Revisar datos técnicos" }));
     expect(await screen.findByText("600 × 1000 mm · 1 unidad")).toBeInTheDocument();
     expect(screen.queryByLabelText("Ancho final (mm)")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Agregar referencia" })).not.toBeInTheDocument();
@@ -171,5 +214,27 @@ describe("GlassDistributionCoverageNotice", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Editar medidas de Float incoloro 5 mm" }));
     expect(screen.getByLabelText("Ancho final (mm)")).toHaveValue("600");
+  });
+
+  it("no solicita medidas para conflictos de producto o cantidad", () => {
+    const technicalIssue = {
+      ...coverage,
+      pendingReferenceCount: 1,
+      pendingReferences: [{
+        quoteItemId: "item-1",
+        paneId: "pane-1",
+        componentCode: "V1",
+        componentName: "Corredera 3 hojas",
+        displayName: "Float 5 mm",
+        reason: "La especificación técnica del vidrio tiene un conflicto pendiente.",
+        geometryStatus: "review_required" as const,
+      }],
+      geometricPendingReferenceCount: 1,
+    };
+    render(<GlassDistributionCoverageNotice quoteId="quote-1" coverage={technicalIssue} items={[item]} />);
+
+    expect(screen.getByText(/La especificación técnica.*conflicto pendiente/)).toBeInTheDocument();
+    expect(screen.getByText(/1 referencia requiere revisar datos técnicos/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /medidas/i })).not.toBeInTheDocument();
   });
 });

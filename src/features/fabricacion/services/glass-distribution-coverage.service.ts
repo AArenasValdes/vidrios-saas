@@ -4,6 +4,7 @@ import { normalizeManualGlassPaneMeasurements } from "@/features/cotizaciones/se
 import { resolveManualGlassPaneComponentType, resolveManualGlassPaneSlots } from "@/features/cotizaciones/services/manual-glass-pane-slots.service";
 
 export type GlassDistributionCoverageStatus = "complete" | "partial" | "unavailable";
+export type GlassDistributionGeometryStatus = "complete" | "missing_dimensions" | "review_required";
 
 export type GlassDistributionReference = {
   quoteItemId: string;
@@ -15,6 +16,8 @@ export type GlassDistributionReference = {
   componentName: string;
   displayName: string | null;
   reason: string;
+  /** Geometric readiness is independent of workshop coverage. */
+  geometryStatus?: GlassDistributionGeometryStatus;
 };
 
 export type GlassDistributionCoverage = {
@@ -23,6 +26,10 @@ export type GlassDistributionCoverage = {
   pendingReferenceCount: number;
   pendingReferences: GlassDistributionReference[];
   diagnostics: string[];
+  /** References and units eligible for geometric preview, regardless of workshop validation. */
+  geometricReferenceCount?: number;
+  geometricUnitCount?: number;
+  geometricPendingReferenceCount?: number;
 };
 
 export type GlassPaneGeometryCandidate = {
@@ -151,6 +158,24 @@ export function getGlassPaneGeometryExclusionReason(pane: GlassPaneGeometryCandi
 /** Safe for an informative geometric preview; it does not grant coverage or workshop eligibility. */
 export function isGlassPaneGeometryComplete(pane: GlassPaneGeometryCandidate): boolean {
   return getGlassPaneGeometryExclusionReason(pane) === null;
+}
+
+export function classifyGlassPaneGeometryReason(reason: string | null): GlassDistributionGeometryStatus {
+  if (!reason) return "complete";
+  if (/^(?:faltan dimensiones rectangulares|faltan dimensiones válidas del paño|no hay dimensiones congeladas|falta registrar uno o más paños)/i.test(reason)) return "missing_dimensions";
+  return "review_required";
+}
+
+function getPaneGeometryStatus(pane: GlassPaneGeometryCandidate): GlassDistributionGeometryStatus {
+  return classifyGlassPaneGeometryReason(getGlassPaneGeometryExclusionReason(pane));
+}
+
+function getReferenceGeometryStatus(reference: { panes: GlassPaneGeometryCandidate[] }): GlassDistributionGeometryStatus {
+  if (reference.panes.length === 0) return "missing_dimensions";
+  const statuses = reference.panes.map(getPaneGeometryStatus);
+  if (statuses.every((status) => status === "complete")) return "complete";
+  if (statuses.includes("missing_dimensions")) return "missing_dimensions";
+  return "review_required";
 }
 
 function referenceKey(pane: GlassPaneGeometryCandidate): string {
@@ -379,8 +404,24 @@ export function buildGlassDistributionCoverage(input: {
       componentName: pane?.componentName ?? item?.nombre ?? "Componente de la cotización",
       displayName: pane?.displayName ?? item?.vidrio ?? null,
       reason,
+      geometryStatus: getReferenceGeometryStatus(reference),
     });
   }
+
+  const geometricReferenceIds = new Set<string>();
+  const geometricPendingReferenceIds = new Set<string>();
+  const geometricUnitIds = new Set<string>();
+  for (const [index, pane] of input.panes.entries()) {
+    const referenceId = `${pane.quoteItemId}|${pane.paneId ?? pane.glassId ?? `unidentified-${index}`}`;
+    if (isGlassPaneGeometryComplete(pane)) {
+      geometricReferenceIds.add(referenceId);
+      for (const unitId of pane.paneUnitIds ?? []) geometricUnitIds.add(`${pane.quoteItemId}|${unitId}`);
+    } else {
+      geometricPendingReferenceIds.add(referenceId);
+    }
+  }
+  const emptyGeometryReferences = [...refs.values()].filter((reference) => reference.panes.length === 0).length;
+  const geometricPendingReferenceCount = geometricPendingReferenceIds.size + emptyGeometryReferences;
 
   const status: GlassDistributionCoverageStatus = completeReferenceCount === 0
     ? "unavailable"
@@ -396,5 +437,8 @@ export function buildGlassDistributionCoverage(input: {
     pendingReferenceCount: pendingReferences.length,
     pendingReferences,
     diagnostics,
+    geometricReferenceCount: geometricReferenceIds.size,
+    geometricUnitCount: geometricUnitIds.size,
+    geometricPendingReferenceCount,
   };
 }
