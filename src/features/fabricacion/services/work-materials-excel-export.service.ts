@@ -31,9 +31,16 @@ function buildSheet(
   warning?: string
 ) {
   const populatedRows = rows.length > 0 ? rows : [["Sin datos registrados"]];
+  const partialLabel = input.workOrder?.documentStatus?.state === "partial"
+    ? input.workOrder.documentStatus.label
+    : null;
+  const warningAlreadyHasPartialLabel = Boolean(warning?.includes("DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN"));
+  const documentWarning = partialLabel && !warningAlreadyHasPartialLabel
+    ? `${partialLabel}${warning ? ` · ${warning}` : ""}`
+    : warning ?? partialLabel ?? "Documento interno de taller";
   const data: Array<Array<string | number | null>> = [
     [`VENTORA · ${title}`],
-    [warning ?? "Documento interno de taller"],
+    [documentWarning],
     [],
     ["Empresa", input.companyName || "Empresa", "Cotización", input.quoteCode],
     ["Trabajo", input.work || "—", "Fecha", input.issueDate],
@@ -230,6 +237,37 @@ export function buildWorkMaterialsWorkbook(XLSX: typeof XLSXModule, input: Build
         "Geometría de revisión separada de la pauta operativa. No representa cantidades de compra ni distribución de barras.",
         "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN. Acristalamiento pendiente; no usar estos cortes como pauta operativa."
       ), "Despiece preliminar");
+    }
+    const reviewGroups = input.workOrder?.reviewCutGroups ?? [];
+    if (reviewGroups.length > 0) {
+      XLSX.utils.book_append_sheet(workbook, buildSheet(
+        XLSX,
+        input,
+        "Revisión técnica · cortes históricos",
+        ["Código de perfil", "Perfil", "Partida", "Componente", "Función", "Cantidad", "Largo guardado (mm)"],
+        reviewGroups.flatMap((group) => group.cuts.map((cut) => [
+          group.technicalCode, group.profileName, cut.itemCode, cut.component,
+          cut.functionName, cut.quantity, cut.lengthMm,
+        ])),
+        [20, 34, 17, 32, 24, 14, 25],
+        { 5: "#,##0", 6: "#,##0 \"mm\"" },
+        "Snapshot histórico conservado para consulta. No constituye una pauta operativa.",
+        "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN. Revisar identidad y estado técnico antes de cualquier uso."
+      ), "Revisión histórica");
+    }
+    const pendingComponents = input.workOrder?.documentStatus?.pendingComponents ?? [];
+    if (pendingComponents.length > 0) {
+      XLSX.utils.book_append_sheet(workbook, buildSheet(
+        XLSX,
+        input,
+        "Componentes pendientes",
+        ["Partida", "Componente", "Motivo pendiente"],
+        pendingComponents.map((component) => [component.codigo, component.nombre, component.reason]),
+        [18, 42, 76],
+        {},
+        "Las partidas pendientes no se incluyen en la pauta operativa.",
+        "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN. Revisar los motivos antes de usar cortes o materiales."
+      ), "Componentes pendientes");
     }
   }
 

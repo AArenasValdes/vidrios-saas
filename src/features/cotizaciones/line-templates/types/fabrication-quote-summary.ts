@@ -20,6 +20,15 @@ import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-pr
 import { hasQuickCompositionStructuralChanges } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import { isVeratec7400FourMobileComposition } from "@/features/fabricacion/services/veratec-quote-composition.service";
 import { resolveFrozenGlassThickness } from "@/features/fabricacion/services/glass-thickness-resolution.service";
+import { hasPivotanteSlidingRecipeConflict } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
+
+export type FabricationProfileCoverageItem = {
+  itemId: string;
+  codigo: string;
+  nombre: string;
+  state: "ready" | "missing_snapshot" | "unvalidated" | "incompatible" | "preliminary" | "not_required";
+  reason: string | null;
+};
 
 export type FabricationSummaryItem = {
   itemId: string;
@@ -43,6 +52,7 @@ export type FabricationSummaryItem = {
   accessoryUnits: number;
   barCount: number;
   fabricacionSnapshot: FabricacionCotizacionSnapshot | null;
+  operationalStatus?: FabricationProfileCoverageItem["state"];
 };
 
 export type FabricationQuoteSummary = {
@@ -62,6 +72,14 @@ export type FabricationQuoteSummary = {
   trabajoSnapshot: FabricacionTrabajoSnapshot | null;
   /** El snapshot conjunto incluye una pieza cuyo estado actual es solo geométrico preliminar. */
   trabajoSnapshotHasGeometryOnly?: boolean;
+  profileCoverage?: {
+    status: "complete" | "partial";
+    jointPlanStatus: "ready" | "pending" | "blocked" | "not_required";
+    requiredCount: number;
+    readyCount: number;
+    pendingCount: number;
+    items: FabricationProfileCoverageItem[];
+  };
 };
 
 type QuoteItemLike = {
@@ -170,6 +188,7 @@ export function buildFabricationQuoteSummary(
 ): FabricationQuoteSummary {
   const rows: FabricationSummaryItem[] = [];
   const compositionsPendingRecipe: FabricationQuoteSummary["compositionsPendingRecipe"] = [];
+  const profileCoverageItems: FabricationProfileCoverageItem[] = [];
 
   for (const item of items) {
     const meta = decodeCotizacionItemPresentationMeta(item.observaciones ?? "");
@@ -199,6 +218,45 @@ export function buildFabricationQuoteSummary(
       options,
       structuralCompositionChanged || hasManualSnapshot ? null : liveResolution
     );
+    const formalIdentity = item.fabricacionSnapshot?.recipeIdentity;
+    const identityConflict = hasPivotanteSlidingRecipeConflict({
+      commercialType: item.tipo ?? item.tipoItem,
+      commercialSystem: meta.sistema,
+      commercialConfiguration: meta.configuracion,
+      commercialName: item.nombre,
+      technicalTypology: formalIdentity?.tipologia ?? meta.fabricacionTipologia,
+      technicalOpening: formalIdentity?.apertura ?? meta.fabricacionApertura,
+    });
+    const normalizedType = `${item.tipo ?? item.tipoItem ?? ""} ${item.nombre ?? ""}`
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CL");
+    const explicitlyNonProfile = item.tipoItem === "item_libre_con_valor" || meta.displayMode === "item_libre" ||
+      /vidrio|cristal|espejo|cubierta de mesa/.test(normalizedType);
+    const requiresProfiles = !explicitlyNonProfile && (
+      Boolean(meta.lineTemplateId || meta.catalogLineKey || item.fabricacionSnapshot || meta.cubicationSnapshot) ||
+      /ventana|puerta|pano fijo|vitrina|shower|mampara|cierre/.test(normalizedType)
+    );
+    const hasCuts = Boolean(snapshot?.cuts.length);
+    const sourceStatus = item.fabricacionSnapshot?.recipeStatus ?? meta.cubicationSnapshot?.status;
+    const operationalStatus: FabricationProfileCoverageItem["state"] = !requiresProfiles
+      ? "not_required"
+      : identityConflict
+        ? "incompatible"
+        : !hasCuts
+          ? "missing_snapshot"
+          : Boolean(liveResolution?.geometryOnly)
+            ? "preliminary"
+            : sourceStatus === "validated" || sourceStatus === "validada"
+              ? "ready"
+              : "unvalidated";
+    const reason = operationalStatus === "missing_snapshot" ? "No existe snapshot técnico con cortes guardados."
+      : operationalStatus === "unvalidated" ? "La receta guardada no está validada para pauta operativa."
+        : operationalStatus === "incompatible" ? "La identidad comercial contradice la tipología del snapshot técnico."
+          : operationalStatus === "preliminary" ? "El despiece es preliminar y requiere revisión técnica."
+            : null;
+    profileCoverageItems.push({
+      itemId: String(item.id), codigo: (item.codigo ?? "").trim() || "-",
+      nombre: (item.nombre ?? "").trim() || "Componente", state: operationalStatus, reason,
+    });
     if (!snapshot || snapshot.cuts.length === 0) continue;
 
     const recipe = snapshot.recipe ?? null;
@@ -228,12 +286,15 @@ export function buildFabricationQuoteSummary(
       herrajeLabel: recipe
         ? herrajeDisplayLabel(recipe.herrajeTipo, recipe.herrajeLabel)
         : (item.fabricacionSnapshot?.recipeIdentity.herraje ?? "-"),
-      statusLabel: snapshot.source === "manual"
+      statusLabel: identityConflict
+        ? "Identidad incompatible · revisar snapshot histórico"
+        : snapshot.source === "manual"
         ? "Ajustada para esta cotización"
         : geometryOnly
           ? "Despiece estructural preliminar · acristalamiento pendiente"
           : formatStatusLabel(status),
       geometryOnly,
+      operationalStatus,
       profilesMl: snapshot.totalProfilesLinealMm / 1000,
       glassM2: snapshot.glass?.totalM2 ?? 0,
       glassThickness: glassThickness.display,
@@ -248,16 +309,53 @@ export function buildFabricationQuoteSummary(
   const trabajoSnapshotHasGeometryOnly = Boolean(options?.trabajoSnapshot?.bars.some((bar) =>
     bar.cortes.some((cut) => geometryOnlyItemIds.has(String(cut.itemId)))
   ));
+  const requiredCoverage = profileCoverageItems.filter((item) => item.state !== "not_required");
+  const readyCount = requiredCoverage.filter((item) => item.state === "ready").length;
+  const hasSavedJointBars = Boolean(options?.trabajoSnapshot?.bars.length);
+  const readyItemIds = new Set(requiredCoverage.filter((item) => item.state === "ready").map((item) => item.itemId));
+  const readyItemCodes = new Map<string, number>();
+  for (const item of requiredCoverage.filter((entry) => entry.state === "ready")) {
+    readyItemCodes.set(item.codigo, (readyItemCodes.get(item.codigo) ?? 0) + 1);
+  }
+  const jointCutsMatchReadyItems = (options?.trabajoSnapshot?.bars ?? []).every((bar) =>
+    bar.cortes.every((cut) => readyItemIds.has(String(cut.itemId)) || (
+      Boolean(cut.codigoItem) && readyItemCodes.get(cut.codigoItem) === 1 &&
+      requiredCoverage.some((item) => item.state === "ready" && item.codigo === cut.codigoItem)
+    ))
+  );
+  const jointPlanStatus: NonNullable<FabricationQuoteSummary["profileCoverage"]>["jointPlanStatus"] = requiredCoverage.length === 0
+    ? "not_required"
+    : readyCount === 0
+      ? "blocked"
+      : !hasSavedJointBars
+      ? "pending"
+      : requiredCoverage.some((item) => item.state !== "ready") ||
+          (options?.trabajoSnapshot?.itemCountWithPauta ?? 0) !== readyCount ||
+          !jointCutsMatchReadyItems
+        ? "blocked"
+        : "ready";
+  const profileCoverageStatus = requiredCoverage.some((item) => item.state !== "ready") ||
+    (readyCount > 0 && jointPlanStatus !== "ready") ? "partial" : "complete";
 
   return {
     items: rows,
     compositionsPendingRecipe,
     totalItems: items.length,
-    totalProfilesMl: rows.reduce((sum, row) => sum + (row.geometryOnly ? 0 : row.profilesMl), 0),
+    totalProfilesMl: rows.reduce((sum, row) => sum + (row.operationalStatus === "ready" ? row.profilesMl : 0), 0),
     totalGlassM2: rows.reduce((sum, row) => sum + (row.geometryOnly ? 0 : row.glassM2), 0),
     totalAccessoryUnits: rows.reduce((sum, row) => sum + (row.geometryOnly ? 0 : row.accessoryUnits), 0),
-    totalBars: trabajoSnapshotHasGeometryOnly ? null : options?.trabajoSnapshot?.totalBars ?? null,
+    totalBars: profileCoverageStatus === "complete" && jointPlanStatus === "ready" && !trabajoSnapshotHasGeometryOnly
+      ? options?.trabajoSnapshot?.totalBars ?? null
+      : null,
     trabajoSnapshot: options?.trabajoSnapshot ?? null,
     trabajoSnapshotHasGeometryOnly,
+    profileCoverage: {
+      status: profileCoverageStatus,
+      jointPlanStatus,
+      requiredCount: requiredCoverage.length,
+      readyCount,
+      pendingCount: requiredCoverage.length - readyCount,
+      items: profileCoverageItems,
+    },
   };
 }

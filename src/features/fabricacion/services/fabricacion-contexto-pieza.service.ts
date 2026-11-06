@@ -45,3 +45,22 @@ export function inferirTipologiaFabricacionPieza(input: {
   }
   return null;
 }
+
+/**
+ * Detecta un conflicto explícito conocido sin intentar convertir una tipología
+ * comercial desconocida en otra receta. Pivotante no es equivalente a corredera.
+ */
+export function hasPivotanteSlidingRecipeConflict(input: {
+  commercialType?: string | null;
+  commercialSystem?: string | null;
+  commercialConfiguration?: string | null;
+  commercialName?: string | null;
+  technicalTypology?: string | null;
+  technicalOpening?: string | null;
+}): boolean {
+  const commercial = [input.commercialType, input.commercialSystem, input.commercialConfiguration, input.commercialName]
+    .filter(Boolean).join(" ").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CL");
+  const technical = [input.technicalTypology, input.technicalOpening]
+    .filter(Boolean).join(" ").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CL");
+  return commercial.includes("pivotante") && /corredera/.test(technical);
+}

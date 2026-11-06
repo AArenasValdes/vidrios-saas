@@ -113,9 +113,31 @@ function tableRow(pdf: jsPDF, row: Row, columns: Column[], y: number, height: nu
 function drawTable(pdf: jsPDF, title: string, columns: Column[], values: Row[], startY: number, empty: string, runningTitle: string, quoteCode: string, logoDataUrl?: string | null) {
   const rows = values.length ? values : [{ cells: [empty, ...columns.slice(1).map(() => "—")] }];
   let y = startY + 4;
-  if (y + 5 + 9 + 11 > CONTENT_BOTTOM) y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
+  const firstRowHeight = rowHeight(pdf, rows[0]!, columns);
+  const firstRowFitsOnFreshPage = 33 + 5 + 9 + firstRowHeight <= CONTENT_BOTTOM;
+  const minimumFragmentHeight = 13;
+  if (y + 5 + 9 + firstRowHeight > CONTENT_BOTTOM && firstRowFitsOnFreshPage) {
+    y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
+  } else if (y + 5 + 9 + minimumFragmentHeight > CONTENT_BOTTOM) {
+    y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
+  }
   y = tableHead(pdf, columns, sectionTitle(pdf, title, y));
   rows.forEach((row, index) => {
+    const wholeRowHeight = rowHeight(pdf, row, columns);
+    if (y + wholeRowHeight > CONTENT_BOTTOM) {
+      // Give a complete row first refusal on a fresh page. Only exceptionally
+      // tall rows continue in fragments after the repeated table heading.
+      const fitsOnFreshPage = 33 + 5 + 9 + wholeRowHeight <= CONTENT_BOTTOM;
+      const linesAvailable = Math.floor((CONTENT_BOTTOM - y - 4) / 4.05);
+      if (fitsOnFreshPage || linesAvailable < 2) {
+        y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
+        y = tableHead(pdf, columns, sectionTitle(pdf, `${title} · continuación`, y));
+      }
+    }
+    if (y + wholeRowHeight <= CONTENT_BOTTOM) {
+      y = tableRow(pdf, row, columns, y, wholeRowHeight, index);
+      return;
+    }
     const cellLines = row.cells.map((cell, cellIndex) => wrapped(pdf, cell, columns[cellIndex]!.width));
     const totalLines = Math.max(...cellLines.map((lines) => lines.length));
     let lineOffset = 0;
@@ -171,6 +193,21 @@ function drawPreliminaryWarning(pdf: jsPDF, y: number, runningTitle: string, quo
   return y + height + 3;
 }
 
+function drawDocumentPartialWarning(pdf: jsPDF, y: number, runningTitle: string, quoteCode: string, logoDataUrl?: string | null) {
+  const message = "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN. Hay componentes sin pauta completa o con identidad técnica por revisar.";
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(9.5);
+  const lines = wrapped(pdf, message, PAGE_WIDTH - MARGIN * 2);
+  const height = lines.length * 4.4 + 8;
+  if (y + height > CONTENT_BOTTOM) y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
+  pdf.setFillColor(255, 243, 230);
+  pdf.setDrawColor(191, 82, 34);
+  pdf.roundedRect(MARGIN, y, PAGE_WIDTH - MARGIN * 2, height, 1.2, 1.2, "FD");
+  pdf.setTextColor(139, 48, 17);
+  pdf.text(lines, MARGIN + 3, y + 5, { lineHeightFactor: 1.2 });
+  return y + height;
+}
+
 function drawPriceSummary(pdf: jsPDF, order: FabricationWorkOrder, y: number, runningTitle: string, quoteCode: string, logoDataUrl?: string | null) {
   const historicalWarnings = (order.pricing.assumptions ?? []).filter((assumption) => assumption.includes("referencia histórica"));
   const warningLines = historicalWarnings.flatMap((warning) => wrapped(pdf, warning, PAGE_WIDTH - MARGIN * 2 - 6));
@@ -213,6 +250,9 @@ export function createFabricationWorkOrderPdf(
   pdf.setCharSpace(0);
   let y = drawFabricationPdfHeader(pdf, metadata, title, logoDataUrl);
   const runningTitle = title;
+  if (order.documentStatus.state === "partial") {
+    y = drawDocumentPartialWarning(pdf, y + 2, runningTitle, metadata.quoteCode, logoDataUrl);
+  }
   if (kind === "combined") y = drawPriceSummary(pdf, order, y, runningTitle, metadata.quoteCode, logoDataUrl);
   if (kind === "combined") {
   const profiles = order.materials.profiles.map((row): Row => {
@@ -359,6 +399,18 @@ export function createFabricationWorkOrderPdf(
       { title: "Estado", width: 30 }, { title: "Distribución", width: 22, align: "right" },
     ], preliminaryCuts, y, "Sin cortes geométricos", runningTitle, metadata.quoteCode, logoDataUrl);
   }
+  if (order.reviewCutGroups.length > 0) {
+    const reviewCuts = order.reviewCutGroups.map((group): Row => ({ cells: [
+      `${group.technicalCode} · ${group.profileName}\n${group.cuts[0]?.itemCode ?? "Partida pendiente"} · ${group.cuts[0]?.component ?? "Componente pendiente"}`,
+      group.cuts.map((cut) => `${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n"),
+      "Snapshot histórico · no operativo",
+      "Revisión pendiente",
+    ] }));
+    y = drawTable(pdf, "Revisión técnica · cortes históricos", [
+      { title: "Perfil / componente", width: 50 }, { title: "Cortes conservados", width: 80 },
+      { title: "Estado", width: 30 }, { title: "Uso", width: 22, align: "right" },
+    ], reviewCuts, y, "Sin cortes históricos por revisar", runningTitle, metadata.quoteCode, logoDataUrl);
+  }
   }
 
   if (kind === "combined" || kind === "glass-order") {
@@ -377,12 +429,16 @@ export function createFabricationWorkOrderPdf(
   y = drawNote(pdf, "Cada fila muestra si la medida viene de un snapshot o de un ingreso manual final. Las medidas manuales no equivalen a aprobación física del corte ni a cobertura operativa.", y + 2, runningTitle, metadata.quoteCode, logoDataUrl);
   }
 
-  if (kind === "combined") {
+  if (kind === "combined" || kind === "profile-cuts") {
     const pending = order.pending.map((row): Row => ({ cells: [row.subject, row.action] }));
-    drawTable(pdf, "4. Pendientes para el maestro", [
+    drawTable(pdf, kind === "combined" ? "4. Pendientes para el maestro" : "Pendientes de fabricación", [
       { title: "Dato", width: 70 }, { title: "Acción", width: 112 },
     ], pending, y, "Sin pendientes detectados", runningTitle, metadata.quoteCode, logoDataUrl);
   }
-  drawFabricationPdfFooters(pdf, metadata.quoteCode);
+  drawFabricationPdfFooters(
+    pdf,
+    metadata.quoteCode,
+    order.documentStatus.state === "partial" ? order.documentStatus.label : "FABRICACIÓN",
+  );
   return pdf;
 }

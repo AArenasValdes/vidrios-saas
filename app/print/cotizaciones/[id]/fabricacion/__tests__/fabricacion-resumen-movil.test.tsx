@@ -13,6 +13,7 @@ import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/v
 import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
 import { buildWorkMaterialsDocument, type WorkMaterialPrice, type WorkProfilePriceReferenceRow } from "@/features/fabricacion/services/fabrication-work-materials.service";
 import { buildFabricationWorkOrder } from "@/features/fabricacion/services/fabrication-work-order.service";
+import { encodeCotizacionItemCubicationOverride, encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 jest.mock("../vidrios/glass-distribution-panel", () => ({
   GlassDistributionPanel: () => <section aria-label="Distribución de planchas" />,
@@ -389,5 +390,25 @@ describe("FabricacionResumenMovil", () => {
     expect(screen.getByLabelText("L25")).toBeInTheDocument();
     expect(screen.getByLabelText("Vidrio consolidado")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Ocultar detalle/i })).not.toBeInTheDocument();
+  });
+
+  it("separa el snapshot conjunto bloqueado y conserva el componente válido visible", () => {
+    const pivot = {
+      ...items[0]!, tipo: "Puerta", nombre: "Puerta", descripcion: "",
+      observaciones: encodeCotizacionItemCubicationOverride(encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "205", catalogLineKey: "ventora:l5000", configuracion: "1 hoja pivotante",
+        fabricacionTipologia: "corredera", fabricacionApertura: "corredera",
+      }), snapshot()),
+    };
+    render(<ViewHarness extraItems={[pivot, items[1]!]} trabajoSnapshot={sharedWorkSnapshot} />);
+
+    fireEvent.click(screen.getByRole("tab", { name: "Cortes" }));
+    fireEvent.click(screen.getByText("Ver pauta, cortes y sobrantes"));
+
+    expect(screen.queryByRole("heading", { name: "Pauta conjunta · trabajo completo" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pauta conjunta histórica · solo revisión" })).toBeInTheDocument();
+    expect(screen.getByText("Histórico · excluido de la pauta operativa")).toBeInTheDocument();
+    expect(screen.getByText("V2 · Riel superior · 2.800 mm")).toBeInTheDocument();
+    expect(screen.getAllByText("Tiras").some((label) => label.parentElement?.textContent?.includes("—"))).toBe(true);
   });
 });

@@ -46,6 +46,34 @@ function buildRecipe(input: {
 }
 
 describe("fabricacion-linea-cotizacion-context.service", () => {
+  it("no asigna contexto técnico L5000 corredera a una puerta pivotante", () => {
+    const context = resolveFabricacionContextForLineAssignment({
+      template: { id: 205, catalogKey: "ventora:l5000", catalogMetadata: { lineConfiguration: "Corredera 2 hojas" } },
+      recipes: [], organizationId: 1,
+      form: {
+        tipo: "Puerta", nombre: "Puerta pivotante 1 hoja", descripcion: "", sistema: "Pivotante",
+        configuracion: "", fabricacionHojas: 1, fabricacionTipologia: "", fabricationRecipeId: "",
+        fabricacionApertura: "", fabricacionVariante: "",
+      } as never,
+    });
+
+    expect(context).toBeNull();
+  });
+
+  it("rechaza L5000 corredera cuando la configuración explícita dice 1 hoja pivotante", () => {
+    const context = resolveFabricacionContextForLineAssignment({
+      template: { id: 205, catalogKey: "ventora:l5000", catalogMetadata: { lineConfiguration: "Corredera 2 hojas" } },
+      recipes: [], organizationId: 1,
+      form: {
+        tipo: "Puerta", nombre: "Puerta", descripcion: "", sistema: "",
+        configuracion: "1 hoja pivotante", fabricacionHojas: 1, fabricacionTipologia: "",
+        fabricationRecipeId: "", fabricacionApertura: "", fabricacionVariante: "",
+      } as never,
+    });
+
+    expect(context).toBeNull();
+  });
+
   it("usa la variante Normal confirmada al asignar L42 sin selección explícita", () => {
     const catalogMetadata = { lineConfiguration: "Proyectante 1 hoja" };
     const catalog = resolveFabricacionContextFromLineCatalog({

@@ -55,6 +55,13 @@ export type FabricationWorkOrder = {
   cutGroups: WorkOrderCutGroup[];
   /** Geometría de revisión separada de toda pauta operativa. */
   preliminaryCutGroups: WorkOrderCutGroup[];
+  /** Snapshots históricos draft/incompatibles conservados solo para revisión. */
+  reviewCutGroups: WorkOrderCutGroup[];
+  documentStatus: {
+    state: "complete" | "partial";
+    label: "DOCUMENTO INTERNO · REVISIÓN" | "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN";
+    pendingComponents: Array<{ itemId: string; codigo: string; nombre: string; reason: string }>;
+  };
   hasJointBars: boolean;
   glass: WorkOrderGlass[];
   pending: WorkOrderPending[];
@@ -161,10 +168,14 @@ function buildJointCutGroups(
   }).filter((group): group is WorkOrderCutGroup => group !== null && group.cuts.length > 0);
 }
 
-function buildHistoricCutGroups(summary: FabricationQuoteSummary, geometryOnly: boolean) {
+function buildHistoricCutGroups(summary: FabricationQuoteSummary, kind: "ready" | "preliminary" | "review") {
   const groups: WorkOrderCutGroup[] = [];
   for (const item of summary.items) {
-    if (Boolean(item.geometryOnly) !== geometryOnly) continue;
+    const state = item.operationalStatus ?? (item.geometryOnly ? "preliminary" : "ready");
+    const include = kind === "preliminary" ? state === "preliminary"
+      : kind === "review" ? state === "incompatible" || state === "unvalidated"
+        : state === "ready";
+    if (!include) continue;
     const cuts = item.fabricacionSnapshot?.pauta?.length
       ? item.fabricacionSnapshot.pauta.map((cut) => ({
           technicalCode: cut.codigoPerfil,
@@ -224,11 +235,32 @@ export function buildFabricationWorkOrder(input: {
   const contaminatedJointSnapshot = Boolean(summary.trabajoSnapshotHasGeometryOnly) || Boolean(summary.trabajoSnapshot?.bars.some((bar) =>
     bar.cortes.some((cut) => geometryOnlyItemIds.has(String(cut.itemId)))
   ));
-  const workMaterials = contaminatedJointSnapshot
+  const coverage = summary.profileCoverage;
+  const pendingComponents = (coverage?.items ?? [])
+    .filter((item) => item.state !== "ready" && item.state !== "not_required")
+    .map((item) => ({
+      itemId: item.itemId, codigo: item.codigo, nombre: item.nombre,
+      reason: item.reason ?? "Componente pendiente de revisión técnica.",
+    }));
+  const coverageIsPartial = coverage?.status === "partial";
+  const workMaterials = contaminatedJointSnapshot || coverageIsPartial
     ? { ...materials, profiles: [], hasJointCuttingPlan: false }
     : materials;
   if (contaminatedJointSnapshot) {
     addPending("joint-plan-preliminary-geometry", "Pauta conjunta por revisar", "Incluye geometría estructural preliminar; recalcular la pauta completa antes de comprar o fabricar.");
+  }
+  for (const component of pendingComponents) {
+    const subject = component.reason.includes("incompatible") || component.reason.includes("contradice")
+      ? `${component.codigo}: identidad técnica`
+      : component.reason.includes("validada") || component.reason.includes("borrador")
+        ? `${component.codigo}: receta`
+        : `${component.codigo}: despiece`;
+    addPending(`coverage:${component.itemId}`, subject, component.reason);
+  }
+  if (coverage?.jointPlanStatus === "pending") {
+    addPending("coverage-joint-plan", "Pauta conjunta", "Los cortes por componente no sustituyen la distribución de barras del trabajo.");
+  } else if (coverage?.jointPlanStatus === "blocked") {
+    addPending("coverage-joint-plan-blocked", "Pauta conjunta", "La cobertura de componentes está incompleta; revisar todos los pendientes antes de usar una pauta operativa.");
   }
 
   for (const row of workMaterials.profiles) {
@@ -257,12 +289,16 @@ export function buildFabricationWorkOrder(input: {
     addPending(`cost:${missing.technicalCode ?? missing.description}:${missing.reason}`, `${missing.description}: precio`, missing.reason || "Completar precio de compra.");
   }
 
-  const hasJointBars = Boolean(summary.trabajoSnapshot?.bars.length) && !contaminatedJointSnapshot;
+  const coverageAllowsJointPlan = !coverage || (
+    coverage.status === "complete" && (coverage.jointPlanStatus === "ready" || coverage.jointPlanStatus === "not_required")
+  );
+  const hasJointBars = Boolean(summary.trabajoSnapshot?.bars.length) && !contaminatedJointSnapshot && coverageAllowsJointPlan;
   const quoteItemsById = new Map((input.quoteItems ?? []).map((item) => [String(item.id), item]));
   const rawCutGroups = hasJointBars
     ? buildJointCutGroups(summary, quoteItemsById, addPending, geometryOnlyItemIds)
-    : buildHistoricCutGroups(summary, false);
-  const preliminaryCutGroups = buildHistoricCutGroups(summary, true);
+    : buildHistoricCutGroups(summary, "ready");
+  const preliminaryCutGroups = buildHistoricCutGroups(summary, "preliminary");
+  const reviewCutGroups = buildHistoricCutGroups(summary, "review");
   if (preliminaryCutGroups.length > 0) {
     addPending("structural-geometry", "Despiece estructural preliminar", "Acristalamiento pendiente. Revisar los cortes por separado; no apto para fabricación.");
   }
@@ -291,7 +327,12 @@ export function buildFabricationWorkOrder(input: {
     };
   });
   if (!hasJointBars && cutGroups.length > 0) addPending("bar-distribution", "Distribución por tira", "Revisar pauta conjunta pendiente; estos cortes pertenecen a snapshots por pieza.");
-  if (cutGroups.length === 0) addPending("cut-plan", "Pauta de corte", "Guardar una pauta técnica para este trabajo.");
+  if (cutGroups.length === 0 && (!coverage || coverage.requiredCount > 0)) {
+    addPending("cut-plan", "Pauta de corte", "Guardar una pauta técnica para este trabajo.");
+  }
+  if (reviewCutGroups.length > 0) {
+    addPending("historical-cuts-review", "Cortes históricos por revisar", "Los snapshots draft o incompatibles se conservan para consulta y se excluyen de la pauta operativa.");
+  }
 
   const glass = materials.glassOrder.map((row): WorkOrderGlass => {
     const dimensionsValid = !row.measuresPending && row.widthMm != null && row.heightMm != null && row.quantity != null && row.widthMm > 0 && row.heightMm > 0 && row.quantity > 0;
@@ -345,6 +386,14 @@ export function buildFabricationWorkOrder(input: {
     materials: workMaterials,
     cutGroups,
     preliminaryCutGroups,
+    reviewCutGroups,
+    documentStatus: {
+      state: coverageIsPartial || contaminatedJointSnapshot ? "partial" : "complete",
+      label: coverageIsPartial || contaminatedJointSnapshot
+        ? "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN"
+        : "DOCUMENTO INTERNO · REVISIÓN",
+      pendingComponents,
+    },
     hasJointBars,
     glass,
     pending: [...pending.values()],

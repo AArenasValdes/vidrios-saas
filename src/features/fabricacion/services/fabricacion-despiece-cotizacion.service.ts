@@ -4,7 +4,7 @@
  * No usa el preview genérico Marco/Hoja/Junquillo.
  */
 
-import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
+import { hasPivotanteSlidingRecipeConflict, inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
 import { isFabricacionRecipeReadyForSnapshot } from "@/features/fabricacion/services/fabricacion-line-variant.service";
 import { buildFabricationRecipeSummary } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import { resolveFabricacionHojasForRecipeMatch } from "@/features/fabricacion/services/fabricacion-hojas-resolver.service";
@@ -502,6 +502,24 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     descripcion: input.item.descripcion,
     sistema: presentation.sistema,
   });
+  if (hasPivotanteSlidingRecipeConflict({
+    commercialType: input.item.tipo,
+    commercialSystem: presentation.sistema,
+    commercialConfiguration: presentation.configuracion,
+    commercialName: input.item.nombre,
+    technicalTypology: presentation.fabricacionTipologia,
+    technicalOpening: presentation.fabricacionApertura,
+  })) {
+    return {
+      estado: "sin_receta",
+      formal: null,
+      cubication: null,
+      recipe: null,
+      barsAvailable: false,
+      preliminary: false,
+      message: "La identidad comercial indica puerta pivotante, pero la selección técnica guardada corresponde a corredera. No se aplicó esa receta; revisa la configuración y asigna una receta compatible.",
+    };
+  }
   const isBaharExteriorLine = catalogKey === `${VERATEC_BAHAR_5200_CATALOG_KEY_PREFIX}-ventana-exterior`;
   const tipologia =
     (catalogKey === "ventora:serie-12-shower-corredera"

@@ -165,6 +165,49 @@ function quoteItem(input: {
 }
 
 describe("despiece cotización ← motor fabricación (fuente única)", () => {
+  it("rechaza una Puerta pivotante etiquetada técnicamente como corredera antes de aplicar L5000 2H", () => {
+    const item = quoteItem({ id: "p1-pivotante", ancho: 1800, alto: 1500 });
+    item.tipo = "Puerta";
+    item.nombre = "Puerta pivotante 1 hoja";
+    item.descripcion = "Pivotante";
+    item.observaciones = encodeCotizacionItemPresentationMeta({
+      lineTemplateId: "205", catalogLineKey: "ventora:l5000", sistema: "Pivotante",
+      fabricacionTipologia: "corredera", fabricacionApertura: "corredera",
+      fabricacionHojas: 2, fabricacionModulos: 2, fabricacionVariante: "estandar",
+      fabricationRecipeId: "ventora:universal:l5000:estandar",
+    });
+    const recipe = recipeRecord({ lineTemplateId: 205, id: "ventora:universal:l5000:estandar" });
+
+    const result = resolveFabricacionDespieceForQuoteItem({ item, recipes: [recipe], organizationId: 1 });
+
+    expect(result).toMatchObject({
+      estado: "sin_receta",
+      formal: null,
+      recipe: null,
+      message: expect.stringContaining("puerta pivotante"),
+    });
+  });
+
+  it("rechaza L5000 2H cuando solo la configuración guardada identifica una pivotante 1H", () => {
+    const item = quoteItem({ id: "pivot-config-only", ancho: 1800, alto: 2100 });
+    item.tipo = "Puerta";
+    item.nombre = "Puerta";
+    item.descripcion = "";
+    item.observaciones = encodeCotizacionItemPresentationMeta({
+      lineTemplateId: "205", catalogLineKey: "ventora:l5000", sistema: "",
+      configuracion: "1 hoja pivotante", fabricacionTipologia: "corredera",
+      fabricacionApertura: "corredera", fabricacionHojas: 2, fabricacionModulos: 2,
+      fabricacionVariante: "estandar", fabricationRecipeId: "ventora:universal:l5000:estandar",
+    });
+
+    const result = resolveFabricacionDespieceForQuoteItem({
+      item, recipes: [recipeRecord({ lineTemplateId: 205, id: "ventora:universal:l5000:estandar" })], organizationId: 1,
+    });
+
+    expect(result).toMatchObject({ estado: "sin_receta", formal: null, recipe: null });
+    expect(result.message).toContain("identidad comercial");
+  });
+
   it("mantiene paridad comercial y técnica entre Guiada y Constructor para Veratec 7400 2H", () => {
     const template: CotizacionLineTemplate = {
       id: 1396,

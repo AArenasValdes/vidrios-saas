@@ -83,6 +83,19 @@ const metadata = {
 };
 
 describe("buildWorkMaterialsWorkbook", () => {
+  it("propaga el estado parcial a los documentos Excel internos", () => {
+    const workOrder = {
+      documentStatus: {
+        state: "partial", label: "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN", pendingComponents: [],
+      },
+    } as FabricationWorkOrder;
+    const workbook = buildWorkMaterialsWorkbook(XLSX, {
+      ...metadata, kind: "materials", workOrder,
+    });
+
+    expect(workbook.Sheets.Perfiles?.A2?.v).toContain("DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN");
+  });
+
   it("incluye origen manual y estado no operativo en la hoja Orden de vidrios", () => {
     const workbook = buildWorkMaterialsWorkbook(XLSX, { ...metadata, kind: "glass-order" });
     const sheet = workbook.Sheets["Orden de vidrios"]!;
@@ -252,5 +265,23 @@ describe("buildWorkMaterialsWorkbook", () => {
     expect(preliminary.A8.v).toBe("3201");
     expect(preliminary.G8.v).toBe(1200);
     expect(preliminary.A10.v).toContain("No representa cantidades de compra");
+  });
+
+  it("incluye causas de componentes pendientes en Excel de cortes, además del rótulo parcial", () => {
+    const workOrder = {
+      cutGroups: [], preliminaryCutGroups: [], reviewCutGroups: [],
+      documentStatus: {
+        state: "partial", label: "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN",
+        pendingComponents: [{ itemId: "v9", codigo: "V9", nombre: "Ventana sin snapshot", reason: "No existe snapshot técnico con cortes guardados." }],
+      },
+    } as unknown as FabricationWorkOrder;
+    const workbook = buildWorkMaterialsWorkbook(XLSX, { ...metadata, kind: "profile-cuts", workOrder });
+    const pending = workbook.Sheets["Componentes pendientes"];
+
+    expect(workbook.SheetNames).toContain("Componentes pendientes");
+    expect(pending.A2.v).toContain("DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN");
+    expect(pending.A8.v).toBe("V9");
+    expect(pending.B8.v).toBe("Ventana sin snapshot");
+    expect(pending.C8.v).toBe("No existe snapshot técnico con cortes guardados.");
   });
 });

@@ -678,8 +678,17 @@ export function FabricacionResumenView({
         <section className={s.desktopSummarySection} aria-label="Resumen de fabricación">
           <div className={s.desktopSummaryHeading}>
             <h2>Despieces disponibles para revisión</h2>
-            <span>{summary.items.filter((row) => !row.geometryOnly).length} con pauta · {summary.items.filter((row) => row.geometryOnly).length} preliminares · {summary.totalItems} componentes</span>
+            <span>{summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).length} con pauta · {summary.items.filter((row) => row.geometryOnly).length} preliminares · {workOrder.documentStatus.pendingComponents.length} pendientes · {summary.totalItems} componentes</span>
           </div>
+          {workOrder.documentStatus.state === "partial" ? (
+            <section className={s.compositionReviewNotice} aria-label="Estado del documento de fabricación">
+              <strong>{workOrder.documentStatus.label}</strong>
+              <p>El documento incluye solo los despieces compatibles disponibles; los pendientes se conservan para revisión.</p>
+              {workOrder.documentStatus.pendingComponents.length ? <ul>{workOrder.documentStatus.pendingComponents.map((item) => (
+                <li key={item.itemId}>{item.codigo} · {item.nombre}: {item.reason}</li>
+              ))}</ul> : null}
+            </section>
+          ) : null}
           {summary.items.length ? (
             <div className={s.desktopSummaryItems}>
               {summary.items.map((row) => (
@@ -697,7 +706,7 @@ export function FabricacionResumenView({
             <div><dt>Perfiles</dt><dd>{formatMl(summary.totalProfilesMl)}</dd></div>
             <div><dt>Vidrio</dt><dd>{formatM2(summary.totalGlassM2)}</dd></div>
             <div><dt>Tiras</dt><dd>{summary.totalBars ?? "—"}</dd></div>
-            <div><dt>Con pauta completa</dt><dd>{summary.items.filter((row) => !row.geometryOnly).length}/{summary.totalItems}</dd></div>
+            <div><dt>Con pauta completa</dt><dd>{summary.profileCoverage?.readyCount ?? summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).length}/{summary.profileCoverage?.requiredCount ?? summary.totalItems}</dd></div>
           </dl>
         </section>
 
@@ -729,12 +738,12 @@ export function FabricacionResumenView({
             <LuLayoutGrid aria-hidden />
             <span>Componentes</span>
             <strong>
-              {summary.items.filter((row) => !row.geometryOnly).length} con pauta completa · {summary.items.filter((row) => row.geometryOnly).length} preliminares
+              {summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).length} con pauta completa · {summary.items.filter((row) => row.geometryOnly).length} preliminares · {workOrder.documentStatus.pendingComponents.length} pendientes
             </strong>
           </div>
         </section>
 
-        {summary.trabajoSnapshot && !summary.trabajoSnapshotHasGeometryOnly ? (
+        {summary.trabajoSnapshot && summary.totalBars != null ? (
           <section className={s.consolidatedJobBars} aria-label="Pauta conjunta guardada">
             <h2>Pauta conjunta · trabajo completo</h2>
             <p>{summary.trabajoSnapshot.totalBars} tiras · distribución referencial compartida entre partidas.</p>
@@ -753,10 +762,19 @@ export function FabricacionResumenView({
               ))}
             </ul>
           </section>
-        ) : summary.trabajoSnapshotHasGeometryOnly ? (
-          <section className={s.consolidatedJobBars} aria-label="Pauta conjunta por revisar">
-            <h2>Pauta conjunta por revisar</h2>
-            <p>Incluye un componente con despiece estructural preliminar. La distribución conjunta y sus tiras no se presentan como operativas hasta completar y revisar el acristalamiento.</p>
+        ) : summary.trabajoSnapshot ? (
+          <section className={s.consolidatedJobBars} aria-label="Pauta conjunta histórica por revisar">
+            <h2>Pauta conjunta histórica · solo revisión</h2>
+            <p>El snapshot se conserva para consulta, pero la cobertura actual no autoriza usar estas barras como pauta operativa.</p>
+            <ul>
+              {summary.trabajoSnapshot.bars.map((bar) => (
+                <li key={`${bar.materialKey}-${bar.acabadoKey}-${bar.largoComercialMm}-${bar.indice}`}>
+                  <strong>{bar.codigoPerfil} · Tira {bar.indice} · {formatMm(bar.largoComercialMm)}</strong>
+                  <span>Histórico · excluido de la pauta operativa</span>
+                  <span>{bar.cortes.map((cut) => `${cut.codigoItem}: ${cut.funcion} ${formatMm(cut.largoMm)}`).join(" · ")}</span>
+                </li>
+              ))}
+            </ul>
           </section>
         ) : summary.items.length > 0 ? (
           <section className={s.consolidatedJobBars} aria-label="Pauta conjunta no guardada">
@@ -882,9 +900,9 @@ export function FabricacionResumenView({
                         type="button"
                         className={`${s.despieceCta} ${s.printHide}`}
                         onClick={() => onOpenDespiece(row.itemId)}
-                        aria-label={`${row.geometryOnly ? "Revisar geometría preliminar de" : "Ver despiece completo de"} ${row.codigo}`}
+                        aria-label={`${row.geometryOnly ? "Revisar geometría preliminar de" : row.operationalStatus === "incompatible" || row.operationalStatus === "unvalidated" ? "Revisar snapshot histórico de" : "Ver despiece completo de"} ${row.codigo}`}
                       >
-                        {row.geometryOnly ? "Revisar geometría preliminar" : "Ver despiece completo"}
+                        {row.geometryOnly ? "Revisar geometría preliminar" : row.operationalStatus === "incompatible" || row.operationalStatus === "unvalidated" ? "Revisar cortes históricos" : "Ver despiece completo"}
                         <LuArrowUpRight aria-hidden />
                       </button>
                     </div>
