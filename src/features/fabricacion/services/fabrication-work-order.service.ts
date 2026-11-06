@@ -17,6 +17,8 @@ export type WorkOrderCut = {
 };
 export type WorkOrderCutGroup = {
   key: string;
+  /** Identidad estable de la partida cuando el grupo proviene de un snapshot por pieza. */
+  itemId?: string;
   technicalCode: string;
   profileName: string;
   finish?: string | null;
@@ -199,7 +201,7 @@ function buildHistoricCutGroups(summary: FabricationQuoteSummary, kind: "ready" 
       let group = byProfile.get(key);
       if (!group) {
         group = {
-          key, technicalCode: code, profileName: cut.profileName,
+          key, itemId: item.itemId, technicalCode: code, profileName: cut.profileName,
           barIndex: null, commercialLengthMm: null, usedMm: null,
           theoreticalRemnantMm: null, trimMm: null, kerfMm: null, cuts: [],
         };

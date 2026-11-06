@@ -20,6 +20,24 @@ export type FabricationWorkOrderPdfMetadata = {
 
 type Column = { title: string; width: number; align?: "left" | "right" | "center" };
 type Row = { cells: string[] };
+
+const PROFILE_CUT_TECHNICAL_PENDING_PREFIXES = [
+  "coverage:",
+  "coverage-joint-plan",
+  "joint-plan-preliminary-geometry",
+  "structural-geometry",
+  "historical-cuts-review",
+  "mixed-preliminary-bar:",
+  "bar-distribution",
+  "cut-plan",
+  "cut:",
+  "presentation:",
+  "length:",
+] as const;
+
+function isProfileCutTechnicalPending(key: string): boolean {
+  return PROFILE_CUT_TECHNICAL_PENDING_PREFIXES.some((prefix) => key.startsWith(prefix));
+}
 export type FabricationWorkOrderPdfKind = "combined" | "glass-order" | "profile-cuts";
 
 const PAGE_WIDTH = 210;
@@ -345,7 +363,9 @@ export function createFabricationWorkOrderPdf(
   const cuts = order.cutGroups.map((group): Row => {
     const profile = `${group.technicalCode} · ${group.profileName}`;
     const cutRows = group.cuts.length
-      ? group.cuts.map((cut) => `${cut.itemCode} · ${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n")
+      ? group.cuts.map((cut) => kind === "profile-cuts"
+        ? `${cut.itemCode} · ${cut.component}\n${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`
+        : `${cut.itemCode} · ${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n")
       : "Sin cortes guardados";
     const presentation = group.barIndex == null
       ? "Distribución por tira pendiente"
@@ -379,7 +399,9 @@ export function createFabricationWorkOrderPdf(
     const preliminaryCuts = order.preliminaryCutGroups.map((group): Row => {
       const profile = `${group.technicalCode} · ${group.profileName}`;
       const cutRows = group.cuts.length
-        ? group.cuts.map((cut) => `${cut.itemCode} · ${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n")
+        ? group.cuts.map((cut) => kind === "profile-cuts"
+          ? `${cut.itemCode} · ${cut.component}\n${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`
+          : `${cut.itemCode} · ${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n")
         : "Sin cortes de geometría disponibles";
       return kind === "profile-cuts"
         ? { cells: [`${profile}\nDistribución no calculada`, cutRows, "No aplica"] }
@@ -401,12 +423,17 @@ export function createFabricationWorkOrderPdf(
   }
   if (order.reviewCutGroups.length > 0) {
     const reviewCuts = order.reviewCutGroups.map((group): Row => ({ cells: [
-      `${group.technicalCode} · ${group.profileName}\n${group.cuts[0]?.itemCode ?? "Partida pendiente"} · ${group.cuts[0]?.component ?? "Componente pendiente"}`,
+      `${group.technicalCode} · ${group.profileName}\n${[...new Set(group.cuts.map((cut) => `${cut.itemCode} · ${cut.component}`))].join("\n") || "Componente pendiente"}`,
       group.cuts.map((cut) => `${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n"),
-      "Snapshot histórico · no operativo",
-      "Revisión pendiente",
+      kind === "profile-cuts" ? "Snapshot incompatible · no operativo" : "Snapshot histórico · no operativo",
+      kind === "profile-cuts"
+        ? order.documentStatus.pendingComponents.find((component) => component.itemId === group.itemId)?.reason ?? "Revisar identidad y receta antes de usar estos cortes."
+        : "Revisión pendiente",
     ] }));
-    y = drawTable(pdf, "Revisión técnica · cortes históricos", [
+    y = drawTable(pdf, "Revisión técnica · cortes históricos", kind === "profile-cuts" ? [
+      { title: "Perfil y componente", width: 43 }, { title: "Cortes conservados", width: 67 },
+      { title: "Estado", width: 31 }, { title: "Causa / uso", width: 41 },
+    ] : [
       { title: "Perfil / componente", width: 50 }, { title: "Cortes conservados", width: 80 },
       { title: "Estado", width: 30 }, { title: "Uso", width: 22, align: "right" },
     ], reviewCuts, y, "Sin cortes históricos por revisar", runningTitle, metadata.quoteCode, logoDataUrl);
@@ -430,10 +457,24 @@ export function createFabricationWorkOrderPdf(
   }
 
   if (kind === "combined" || kind === "profile-cuts") {
-    const pending = order.pending.map((row): Row => ({ cells: [row.subject, row.action] }));
-    drawTable(pdf, kind === "combined" ? "4. Pendientes para el maestro" : "Pendientes de fabricación", [
-      { title: "Dato", width: 70 }, { title: "Acción", width: 112 },
-    ], pending, y, "Sin pendientes detectados", runningTitle, metadata.quoteCode, logoDataUrl);
+    const hasJointCoveragePending = order.pending.some((row) =>
+      row.key === "coverage-joint-plan" || row.key === "coverage-joint-plan-blocked"
+    );
+    const technicalPending = kind === "combined"
+      ? order.pending
+      : order.pending.filter((row) => {
+          if (!isProfileCutTechnicalPending(row.key)) return false;
+          if (row.key === "bar-distribution" && hasJointCoveragePending) return false;
+          if (row.key === "structural-geometry" && order.preliminaryCutGroups.length > 0) return false;
+          if (row.key === "historical-cuts-review" && order.reviewCutGroups.length > 0) return false;
+          return true;
+        });
+    if (kind === "combined" || technicalPending.length > 0) {
+      const pending = technicalPending.map((row): Row => ({ cells: [row.subject, row.action] }));
+      drawTable(pdf, kind === "combined" ? "4. Pendientes para el maestro" : "Estado técnico · pendientes de corte", [
+        { title: "Dato", width: 70 }, { title: "Acción", width: 112 },
+      ], pending, y, "Sin pendientes técnicos de corte", runningTitle, metadata.quoteCode, logoDataUrl);
+    }
   }
   drawFabricationPdfFooters(
     pdf,
