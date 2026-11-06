@@ -1,4 +1,5 @@
 import type { WorkMaterialsDocument } from "../fabrication-work-materials.service";
+import type { FabricationWorkOrder } from "../fabrication-work-order.service";
 import { createWorkMaterialsPdf } from "../work-materials-pdf-export.service";
 import { calculateProfileReferenceTotal } from "../work-materials-price-reference.service";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -57,6 +58,22 @@ function pdfExampleDirectory() {
 }
 
 describe("work-materials-pdf-export.service", () => {
+  it("marca como parcial el listado interno cuando la cobertura de perfiles está incompleta", () => {
+    const partialOrder = {
+      documentStatus: {
+        state: "partial", label: "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN",
+        pendingComponents: [{ itemId: "v1", codigo: "V1", nombre: "Corredera", reason: "No existe snapshot técnico." }],
+      },
+    } as FabricationWorkOrder;
+    const pdf = createWorkMaterialsPdf(sampleDocument(), {
+      companyName: "Taller", quoteCode: "COT-PARCIAL", workName: "QA", issueDate: "5 nov 2026",
+    }, null, partialOrder);
+    const text = extractPdfText(pdf);
+
+    expect(text).toContain("DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN");
+    expect(text).toContain("DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN · COT-PARCIAL");
+  });
+
   it("genera una lista A4 vectorial, legible y con accesorios incompletos identificados", () => {
     const pdf = createWorkMaterialsPdf(sampleDocument(), {
       companyName: "Vidrios Gonzalez",

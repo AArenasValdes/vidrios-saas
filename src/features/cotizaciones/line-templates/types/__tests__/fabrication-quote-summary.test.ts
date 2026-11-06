@@ -9,6 +9,8 @@ import {
 } from "@/utils/cotizacion-item-presentation";
 import { VERATEC_7400_4H_CATALOG_KEY } from "@/features/fabricacion/fixtures/veratec-preliminary-recipes";
 import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
+import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import {
   crearRecetaVeratec7400Corredera,
   VERATEC_7400_CATALOG_KEY,
@@ -66,6 +68,155 @@ function snapshot(
 }
 
 describe("fabrication quote summary", () => {
+  it("incluye en cobertura los componentes activos con perfilería aunque no tengan snapshot", () => {
+    const result = buildFabricationQuoteSummary([{
+      id: "v1", codigo: "V1", tipo: "Ventana", nombre: "Corredera 4 hojas",
+      lineaComercial: "Serie 5000", ancho: 1800, alto: 1500, cantidad: 1,
+      observaciones: encodeCotizacionItemPresentationMeta({ lineTemplateId: "205", catalogLineKey: "ventora:l5000" }),
+    }]);
+
+    expect(result.profileCoverage).toMatchObject({
+      status: "partial", jointPlanStatus: "blocked", requiredCount: 1, readyCount: 0,
+      items: [{ itemId: "v1", state: "missing_snapshot", reason: expect.stringContaining("snapshot") }],
+    });
+  });
+
+  it("no convierte un servicio libre llamado Instalación de ventanas en componente sin snapshot", () => {
+    const freeItem = {
+      id: "service-1", tipoItem: "item_libre_con_valor", tipo: "Item libre",
+      codigo: "S1", nombre: "Instalación de ventanas", descripcion: "Servicio por total",
+      ancho: null, alto: null, cantidad: 1, observaciones: "",
+    };
+    const windowItem = {
+      id: "window-1", tipoItem: "componente", tipo: "Ventana", codigo: "V1",
+      nombre: "Corredera 2 hojas", lineaComercial: "L5000", ancho: 1200, alto: 1000,
+      cantidad: 1,
+      observaciones: encodeCotizacionItemCubicationOverride(
+        encodeCotizacionItemPresentationMeta({ lineTemplateId: "205", catalogLineKey: "ventora:l5000" }),
+        snapshot({ status: "validada" })
+      ),
+    };
+
+    const result = buildFabricationQuoteSummary([freeItem, windowItem]);
+
+    expect(result.profileCoverage).toMatchObject({
+      status: "partial", jointPlanStatus: "pending", requiredCount: 1, readyCount: 1, pendingCount: 0,
+      items: [
+        { itemId: "service-1", state: "not_required" },
+        { itemId: "window-1", state: "ready" },
+      ],
+    });
+  });
+
+  it("detecta pivotante guardado solo en configuración contra identidad técnica corredera", () => {
+    const result = buildFabricationQuoteSummary([{
+      id: "pivot-config", codigo: "P1", tipo: "Puerta", nombre: "Puerta",
+      lineaComercial: "Serie 5000", ancho: 1800, alto: 2100, cantidad: 1,
+      observaciones: encodeCotizacionItemCubicationOverride(encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "205", catalogLineKey: "ventora:l5000", sistema: "",
+        configuracion: "1 hoja pivotante", fabricacionTipologia: "corredera", fabricacionApertura: "corredera",
+      }), snapshot({ status: "validada" })),
+    }]);
+
+    expect(result.profileCoverage?.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ itemId: "pivot-config", state: "incompatible" }),
+    ]));
+    expect(result.items[0]?.statusLabel).toContain("Identidad incompatible");
+  });
+
+  it("conserva un snapshot histórico pivotante/corredera para revisión y lo marca incompatible", () => {
+    const frozen = snapshot({ system: "corredera_2_hojas" });
+    const result = buildFabricationQuoteSummary([{
+      id: "p1", codigo: "P1", tipo: "Puerta", nombre: "Puerta pivotante 1 hoja",
+      lineaComercial: "Serie 5000", ancho: 1800, alto: 1500, cantidad: 1,
+      observaciones: encodeCotizacionItemCubicationOverride(encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "205", catalogLineKey: "ventora:l5000", sistema: "Pivotante",
+        fabricacionTipologia: "corredera", fabricacionApertura: "corredera",
+      }), frozen),
+    }]);
+
+    expect(result.items[0]).toMatchObject({
+      statusLabel: "Identidad incompatible · revisar snapshot histórico",
+      operationalStatus: "incompatible",
+      snapshot: { cuts: [{ functionLabel: "Riel superior" }] },
+    });
+    expect(result.profileCoverage?.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ itemId: "p1", state: "incompatible" }),
+    ]));
+    expect(frozen.cuts[0]).toMatchObject({ lengthMm: 1200, quantity: 1 });
+  });
+
+  it("detecta la incompatibilidad desde la identidad del snapshot formal persistido", () => {
+    const formal = {
+      schemaVersion: 1, tipo: "fabricacion_receta_snapshot", recipeId: "ventora:universal:l5000:estandar",
+      recipeDefinitionId: "l5000-estandar", recipeVersion: 1, recipeStatus: "validated", recipeScope: "global",
+      lineTemplateId: 205, recipeIdentity: { recetaId: "l5000", codigo: "L5000-2H", nombre: "L5000 base corredera", tipologia: "corredera", hojas: 2, modulos: 2, apertura: "corredera", herraje: null, variante: "estandar" },
+      input: { anchoTotalMm: 1800, altoTotalMm: 1500, cantidad: 1 }, selectedVariant: "estandar",
+      result: { accesorios: [], totalLinealMm: 1000 }, pauta: [{ codigoPerfil: "5001", nombrePerfil: "Riel", funcion: "Riel", cantidadPiezas: 2, medidaMm: 1800, totalLinealMm: 3600, trazabilidad: [] }],
+      vidrios: [], advertencias: [], calculatedAt: "2026-10-31T00:00:00.000Z",
+    } as unknown as FabricacionCotizacionSnapshot;
+    const result = buildFabricationQuoteSummary([{
+      id: "4216", codigo: "P1", tipo: "Puerta", nombre: "Puerta pivotante 1 hoja",
+      lineaComercial: "Serie 5000", ancho: 1800, alto: 1500, cantidad: 1,
+      fabricacionSnapshot: formal,
+      observaciones: encodeCotizacionItemPresentationMeta({ lineTemplateId: "205", catalogLineKey: "ventora:l5000", sistema: "Pivotante" }),
+    }]);
+
+    expect(result.items[0]).toMatchObject({ operationalStatus: "incompatible", statusLabel: "Identidad incompatible · revisar snapshot histórico" });
+    expect(result.profileCoverage?.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ itemId: "4216", state: "incompatible" }),
+    ]));
+  });
+
+  it("distingue cortes válidos por componente de la distribución conjunta pendiente", () => {
+    const rows = ["v1", "v2"].map((id) => ({
+      id, codigo: id.toUpperCase(), tipo: "Ventana", nombre: "Corredera 2 hojas",
+      lineaComercial: "L25", ancho: 1200, alto: 1000, cantidad: 1,
+      observaciones: encodeCotizacionItemCubicationOverride(encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "135", catalogLineKey: "ventora:l25", fabricacionTipologia: "corredera",
+      }), snapshot({ lineTemplateId: "135", status: "validada" })),
+    }));
+    const result = buildFabricationQuoteSummary(rows);
+
+    expect(result.profileCoverage).toMatchObject({ status: "partial", jointPlanStatus: "pending" });
+    expect(result.profileCoverage?.items.map((item) => item.state)).toEqual(["ready", "ready"]);
+  });
+
+  it("reconcilia un ID histórico de corte por código solo si identifica una partida única", () => {
+    const row = {
+      id: "persisted-v1", codigo: "V1", tipo: "Ventana", nombre: "Corredera 2 hojas",
+      lineaComercial: "L5000", ancho: 1200, alto: 1000, cantidad: 1,
+      observaciones: encodeCotizacionItemCubicationOverride(encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "135", fabricacionTipologia: "corredera",
+      }), snapshot({ status: "validada" })),
+    };
+    const work: FabricacionTrabajoSnapshot = {
+      schemaVersion: 1, tipo: "fabricacion_trabajo_snapshot", packing: "first_fit_decreasing_sugerido",
+      capturedAt: "2026-10-01T00:00:00.000Z", itemCountWithPauta: 1, totalBars: 1,
+      totalProfilesLinealMm: 1200, totalWasteMm: 4800, sourcePresentations: [],
+      bars: [{ materialKey: "5001", presentationKey: "6m", codigoPerfil: "5001", nombrePerfil: "Riel", acabadoKey: "mate", lineaIds: [135], largoComercialMm: 6000, indice: 1, despunteInicialMm: 0, perdidaCorteMm: 0, usadoMm: 1200, sobranteMm: 4800, cortes: [{ itemId: "legacy-origin-id", codigoItem: "V1", nombreItem: "Corredera", componenteId: "riel", codigoPerfil: "5001", funcion: "Riel", corte: null, largoMm: 1200 }] }],
+    };
+
+    const unique = buildFabricationQuoteSummary([row], { trabajoSnapshot: work });
+    const ambiguous = buildFabricationQuoteSummary([row, { ...row, id: "other-v1" }], { trabajoSnapshot: work });
+
+    expect(unique.profileCoverage).toMatchObject({ status: "complete", jointPlanStatus: "ready" });
+    expect(ambiguous.profileCoverage).toMatchObject({ status: "partial", jointPlanStatus: "blocked" });
+  });
+
+  it("clasifica como revisión un snapshot con cortes guardados en estado draft", () => {
+    const result = buildFabricationQuoteSummary([{
+      id: "draft-item", codigo: "V1", tipo: "Ventana", nombre: "Corredera 2 hojas",
+      lineaComercial: "L5000", ancho: 1200, alto: 1000, cantidad: 1,
+      observaciones: encodeCotizacionItemCubicationOverride(encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "135", catalogLineKey: "ventora:l5000", fabricacionTipologia: "corredera",
+      }), snapshot({ status: "draft" })),
+    }]);
+
+    expect(result.items[0]).toMatchObject({ operationalStatus: "unvalidated", snapshot: { cuts: expect.any(Array) } });
+    expect(result.profileCoverage).toMatchObject({ status: "partial", items: [{ itemId: "draft-item", state: "unvalidated" }] });
+  });
+
   it("no materializa pauta con recetas actuales cuando la cotización guardada no tiene snapshots", () => {
     const summary = buildFabricationQuoteSummary([
       {

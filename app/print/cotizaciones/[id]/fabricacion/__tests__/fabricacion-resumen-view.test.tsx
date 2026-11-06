@@ -19,6 +19,8 @@ import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types
 import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import { buildWorkMaterialsDocument } from "@/features/fabricacion/services/fabrication-work-materials.service";
 import { buildFabricationWorkOrder } from "@/features/fabricacion/services/fabrication-work-order.service";
+import { encodeCotizacionItemCubicationOverride, encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
 
 jest.mock("../vidrios/glass-distribution-panel", () => ({
   GlassDistributionPanel: () => <section aria-label="Distribución de planchas" />,
@@ -198,11 +200,12 @@ function ViewHarness(props: {
   expandedItemId?: string | null;
   onOpenDespiece?: (itemId: string) => void;
   extraItems?: CotizacionWorkflowItem[];
+  trabajoSnapshot?: FabricacionTrabajoSnapshot | null;
   technicalCostPanel?: ReactNode;
 }) {
   const documentRef = useRef<HTMLElement | null>(null);
   const items = props.extraItems ?? sourceItems;
-  const viewSummary = buildFabricationQuoteSummary(items);
+  const viewSummary = buildFabricationQuoteSummary(items, { trabajoSnapshot: props.trabajoSnapshot });
   const [expandedItemId, setExpandedItemId] = useState<string | null>(
     props.expandedItemId === undefined ? viewSummary.items[0]?.itemId ?? null : props.expandedItemId
   );
@@ -296,6 +299,31 @@ describe("FabricacionResumenView", () => {
     const cubicacion = screen.getByLabelText(/Cubicación de V1/i);
     expect(within(cubicacion).queryByText(/Sobra/i)).not.toBeInTheDocument();
     expect(screen.getAllByText(/Sobra/i).length).toBeGreaterThan(0);
+  });
+
+  it("no presenta como completa una pauta conjunta con una puerta pivotante incompatible", () => {
+    const pivot = {
+      ...sourceItems[0]!, tipo: "Puerta", nombre: "Puerta", descripcion: "",
+      observaciones: encodeCotizacionItemCubicationOverride(encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "205", catalogLineKey: "ventora:l5000", configuracion: "1 hoja pivotante",
+        fabricacionTipologia: "corredera", fabricacionApertura: "corredera",
+      }), snapshot()),
+    };
+    const work: FabricacionTrabajoSnapshot = {
+      schemaVersion: 1, tipo: "fabricacion_trabajo_snapshot", packing: "first_fit_decreasing_sugerido",
+      capturedAt: "2026-10-30T00:00:00.000Z", itemCountWithPauta: 2, totalBars: 1,
+      totalProfilesLinealMm: 3600, totalWasteMm: 2400, sourcePresentations: [],
+      bars: [{ materialKey: "5001", presentationKey: "6m", codigoPerfil: "5001", nombrePerfil: "Riel", acabadoKey: "mate", lineaIds: [205], largoComercialMm: 6000, indice: 1, despunteInicialMm: 0, perdidaCorteMm: 0, usadoMm: 3600, sobranteMm: 2400, cortes: [
+        { itemId: pivot.id, codigoItem: pivot.codigo, nombreItem: pivot.nombre, componenteId: "riel", codigoPerfil: "5001", funcion: "Riel", corte: null, largoMm: 1800 },
+        { itemId: sourceItems[1]!.id, codigoItem: "V2", nombreItem: "Ventana corredera", componenteId: "riel", codigoPerfil: "5001", funcion: "Riel", corte: null, largoMm: 1800 },
+      ] }],
+    };
+    render(<ViewHarness extraItems={[pivot, sourceItems[1]!]} trabajoSnapshot={work} />);
+
+    expect(screen.queryByRole("heading", { name: "Pauta conjunta · trabajo completo" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pauta conjunta histórica · solo revisión" })).toBeInTheDocument();
+    expect(screen.getByText(/V2: Riel/)).toBeInTheDocument();
+    expect(screen.getByText("Histórico · excluido de la pauta operativa")).toBeInTheDocument();
   });
 
   it("informa pauta pendiente para composición estructural sin reutilizar cortes previos", () => {

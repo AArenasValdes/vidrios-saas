@@ -141,7 +141,7 @@ export function WorkDocumentExportActions({
       if (!logoDataUrl) throw new Error("No se pudo cargar el logotipo corporativo. Recarga la página e inténtalo otra vez.");
       if (kind === "materials") {
         const { createWorkMaterialsPdf } = await import("@/features/fabricacion/services/work-materials-pdf-export.service");
-        createWorkMaterialsPdf(document, { companyName, quoteCode, workName: work, issueDate }, logoDataUrl).save(`${fileBase}.pdf`);
+        createWorkMaterialsPdf(document, { companyName, quoteCode, workName: work, issueDate }, logoDataUrl, workOrder).save(`${fileBase}.pdf`);
       } else {
         const { createFabricationWorkOrderPdf } = await import("@/features/fabricacion/services/fabrication-work-order-pdf.service");
         createFabricationWorkOrderPdf(workOrder, { companyName, quoteCode, workName: work, issueDate }, logoDataUrl, kind).save(`${fileBase}.pdf`);

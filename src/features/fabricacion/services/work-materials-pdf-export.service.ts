@@ -203,11 +203,23 @@ function drawSection(
 export function createWorkMaterialsPdf(
   document: WorkMaterialsDocument,
   metadata: WorkMaterialsPdfMetadata,
-  logoDataUrl?: string | null
+  logoDataUrl?: string | null,
+  workOrder?: import("./fabrication-work-order.service").FabricationWorkOrder
 ) {
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: false });
   let y = drawFabricationPdfHeader(pdf, metadata, "Lista de materiales", logoDataUrl);
   const pageContext: PageContext = { metadata, logoDataUrl };
+
+  if (workOrder?.documentStatus.state === "partial") {
+    pdf.setFillColor(255, 243, 230);
+    pdf.setDrawColor(191, 82, 34);
+    pdf.roundedRect(MARGIN, y, PAGE_WIDTH - MARGIN * 2, 12, 1.5, 1.5, "FD");
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9.5);
+    pdf.setTextColor(139, 48, 17);
+    pdf.text(workOrder.documentStatus.label, MARGIN + 3, y + 7.5);
+    y += 15;
+  }
 
   if (document.pricing) {
     pdf.setFillColor(245, 248, 252);
@@ -347,7 +359,11 @@ export function createWorkMaterialsPdf(
   y = drawSection(pdf, "Accesorios", accessoryColumns, accessoryRows, y, "Sin accesorios registrados", pageContext, glassSectionHeight);
   drawSection(pdf, "Vidrios", glassColumns, glassRows, y, "Sin vidrios registrados", pageContext);
 
-  drawFabricationPdfFooters(pdf, metadata.quoteCode);
+  drawFabricationPdfFooters(
+    pdf,
+    metadata.quoteCode,
+    workOrder?.documentStatus?.state === "partial" ? workOrder.documentStatus.label : "FABRICACIÓN",
+  );
 
   return pdf;
 }

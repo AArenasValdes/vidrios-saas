@@ -26,6 +26,7 @@ import {
 } from "@/features/fabricacion/services/winhouse-s60-quote-config.service";
 import { resolveWinHouseNewS75QuoteVariant } from "@/features/fabricacion/services/winhouse-new-s75-quote-config.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
+import { hasPivotanteSlidingRecipeConflict } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
 import { countLeafModules } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 
 export type FabricacionLineaCotizacionContext = {
@@ -245,6 +246,14 @@ export function resolveFabricacionContextForLineAssignment(input: {
   >;
 }): FabricacionLineaCotizacionContext | null {
   const catalogContext = resolveFabricacionContextFromLineCatalog(input.template);
+  if (hasPivotanteSlidingRecipeConflict({
+    commercialType: input.form.tipo,
+    commercialSystem: input.form.sistema,
+    commercialConfiguration: input.form.configuracion,
+    commercialName: input.form.nombre,
+    technicalTypology: catalogContext?.fabricacionTipologia,
+    technicalOpening: catalogContext?.fabricacionApertura,
+  })) return null;
   const lineTemplateId = normalizeLineTemplateId(input.template.id);
   if (!lineTemplateId) {
     return catalogContext;

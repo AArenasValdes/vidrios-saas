@@ -412,23 +412,23 @@ function ConsolidadoView({
   const consolidated = useMemo(
     () =>
       buildConsolidatedCubicationPautaFromSnapshots(
-        summary.items.map((row) => ({
+        summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).map((row) => ({
           codigo: row.codigo,
           lineaComercial: row.lineName,
           nombre: row.nombre,
           snapshot: row.snapshot,
         })),
-        summary.trabajoSnapshot,
+        summary.totalBars != null ? summary.trabajoSnapshot : null,
         { deriveTrabajoSnapshot: false }
       ),
-    [summary.items, summary.trabajoSnapshot]
+    [summary.items, summary.totalBars, summary.trabajoSnapshot]
   );
 
   return (
     <div className={s.mStack}>
       <details className={s.secondaryWorkshopDetails}>
         <summary>Ver pauta, cortes y sobrantes</summary>
-        {consolidated.lineGroups.length === 0 ? (
+        {consolidated.lineGroups.length === 0 && !summary.trabajoSnapshot ? (
           <p className={s.mEmpty}>Todavía no hay despiece consolidable. Revisa piezas con línea, medidas y cortes.</p>
         ) : (
           <>
@@ -436,13 +436,13 @@ function ConsolidadoView({
         <h3>Qué necesito fabricar</h3>
         <div className={s.mNeedGrid}>
           <MetricCell label="Largo usado en cortes" value={formatMl(summary.totalProfilesMl)} />
-          <MetricCell label="Tiras" value={summary.trabajoSnapshot ? String(summary.trabajoSnapshot.totalBars) : "—"} />
+          <MetricCell label="Tiras" value={summary.totalBars == null ? "—" : String(summary.totalBars)} />
           <MetricCell label="Largos disponibles según pauta" value={formatMm(consolidated.totalWasteMm)} />
           <MetricCell label="Vidrio" value={formatM2(consolidated.totalGlassM2)} />
         </div>
       </section>
 
-      {summary.trabajoSnapshot ? (
+      {summary.trabajoSnapshot && summary.totalBars != null ? (
         <section className={s.mGroup} aria-label="Tiras compartidas del trabajo">
           <h3>Pauta conjunta · trabajo completo</h3>
           <p className={s.mGroupNote}>{summary.trabajoSnapshot.totalBars} tiras compartidas entre partidas.</p>
@@ -461,6 +461,22 @@ function ConsolidadoView({
                     {cut.codigoItem} · {cut.funcion} · {formatMm(cut.largoMm)}
                   </em>
                 ))}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : summary.trabajoSnapshot ? (
+        <section className={s.mGroup} aria-label="Pauta conjunta histórica por revisar">
+          <h3>Pauta conjunta histórica · solo revisión</h3>
+          <p className={s.mGroupNote}>El snapshot se conserva para consulta; la cobertura actual no autoriza usar estas barras como pauta operativa.</p>
+          <ul className={s.mDespieceList}>
+            {summary.trabajoSnapshot.bars.map((bar) => (
+              <li key={`${bar.materialKey}-${bar.acabadoKey}-${bar.largoComercialMm}-${bar.indice}`}>
+                <strong>{bar.codigoPerfil} · Tira #{bar.indice} · {formatMm(bar.largoComercialMm)}</strong>
+                <span>Histórico · excluido de la pauta operativa</span>
+                {bar.cortes.map((cut, index) => <em className={s.mBarTrace} key={`${cut.itemId}-${cut.componenteId}-${index}`}>
+                  {cut.codigoItem} · {cut.funcion} · {formatMm(cut.largoMm)}
+                </em>)}
               </li>
             ))}
           </ul>
@@ -746,7 +762,16 @@ export function FabricacionResumenMovil({
               </section>
 
               <section className={s.mSummarySection}>
-                <div className={s.mSummaryHeading}><h2>Despieces para revisar</h2><span>{summary.items.filter((row) => !row.geometryOnly).length} con pauta · {summary.items.filter((row) => row.geometryOnly).length} preliminares</span></div>
+                <div className={s.mSummaryHeading}><h2>Despieces para revisar</h2><span>{summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).length} con pauta · {summary.items.filter((row) => row.geometryOnly).length} preliminares · {workOrder.documentStatus.pendingComponents.length} pendientes</span></div>
+                {workOrder.documentStatus.state === "partial" ? (
+                  <section className={s.compositionReviewNotice} aria-label="Estado del documento de fabricación">
+                    <strong>{workOrder.documentStatus.label}</strong>
+                    <p>Hay componentes pendientes o una pauta conjunta por revisar.</p>
+                    {workOrder.documentStatus.pendingComponents.length ? <ul>{workOrder.documentStatus.pendingComponents.map((item) => (
+                      <li key={item.itemId}>{item.codigo} · {item.nombre}: {item.reason}</li>
+                    ))}</ul> : null}
+                  </section>
+                ) : null}
                 {summary.items.length > 0 ? (
                   <div className={s.mCardStack}>
                     {summary.items.map((row) => <ComponentCard
@@ -763,7 +788,7 @@ export function FabricacionResumenMovil({
                 <SummaryMetricCell label="Perfiles" value={formatMl(summary.totalProfilesMl)} />
                 <SummaryMetricCell label="Vidrio" value={formatM2(summary.totalGlassM2)} />
                 <SummaryMetricCell label="Tiras" value={summary.totalBars == null ? "—" : String(summary.totalBars)} />
-                <SummaryMetricCell label="Con pauta completa" value={`${summary.items.filter((row) => !row.geometryOnly).length}/${summary.totalItems}`} />
+                <SummaryMetricCell label="Con pauta completa" value={`${summary.profileCoverage?.readyCount ?? summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).length}/${summary.profileCoverage?.requiredCount ?? summary.totalItems}`} />
               </section>
             </div>
             {summary.compositionsPendingRecipe.length > 0 ? (

@@ -355,7 +355,7 @@ export function CompactCutsView({
 
   const fileBase = `cortes-perfiles-${sanitizeFileNamePart(quoteCode || "cotizacion", 32)}`;
   const cutGroups = workOrder.cutGroups;
-  const safeTrabajoSnapshot = summary.trabajoSnapshotHasGeometryOnly ? null : summary.trabajoSnapshot;
+  const safeTrabajoSnapshot = summary.totalBars == null ? null : summary.trabajoSnapshot;
 
   const totalWaste =
     safeTrabajoSnapshot?.totalWasteMm != null
@@ -374,7 +374,7 @@ export function CompactCutsView({
   const consolidated = useMemo(
     () =>
       buildConsolidatedCubicationPautaFromSnapshots(
-        summary.items.filter((row) => !row.geometryOnly).map((row) => ({
+        summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).map((row) => ({
           codigo: row.codigo,
           lineaComercial: row.lineName,
           nombre: row.nombre,
@@ -518,11 +518,25 @@ export function CompactCutsView({
             </ul>
           </section>
         ) : null}
+        {workOrder.reviewCutGroups.length > 0 ? (
+          <section aria-label="Cortes históricos excluidos">
+            <h3>Snapshots históricos · solo revisión</h3>
+            <p>Estos cortes se conservan para consulta; no forman parte de la pauta operativa.</p>
+            <ul className={s.mCompactList}>
+              {workOrder.reviewCutGroups.map((group) => <li key={group.key} className={s.mCutBarCard}>
+                <strong>{group.technicalCode} · {group.profileName}</strong>
+                {group.cuts.map((cut, index) => <small key={`${group.key}:${cut.itemCode}:${index}`}>
+                  {cut.itemCode} · {cut.component} · {cut.functionName}: {cut.quantity} × {formatMm(cut.lengthMm)}
+                </small>)}
+              </li>)}
+            </ul>
+          </section>
+        ) : null}
       </section>
 
       <details className={s.secondaryWorkshopDetails}>
         <summary>Ver pauta, cortes y sobrantes</summary>
-        {consolidated.lineGroups.length === 0 ? (
+        {consolidated.lineGroups.length === 0 && !summary.trabajoSnapshot ? (
           <p className={s.mEmpty}>
             Todavía no hay despiece consolidable. Revisa piezas con línea, medidas y cortes.
           </p>
@@ -538,7 +552,7 @@ export function CompactCutsView({
                 <div className={s.mMetric}>
                   <span>Tiras</span>
                   <strong>
-                    {summary.trabajoSnapshot ? String(summary.trabajoSnapshot.totalBars) : "—"}
+                    {summary.totalBars == null ? "—" : String(summary.totalBars)}
                   </strong>
                 </div>
                 <div className={s.mMetric}>
@@ -552,7 +566,7 @@ export function CompactCutsView({
               </div>
             </section>
 
-            {summary.trabajoSnapshot ? (
+            {summary.trabajoSnapshot && summary.totalBars != null ? (
               <section className={s.mGroup} aria-label="Tiras compartidas del trabajo">
                 <h3>Pauta conjunta · trabajo completo</h3>
                 <p className={s.mGroupNote}>
@@ -585,6 +599,22 @@ export function CompactCutsView({
                           {cut.codigoItem} · {cut.funcion} · {formatMm(cut.largoMm)}
                         </em>
                       ))}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : summary.trabajoSnapshot ? (
+              <section className={s.mGroup} aria-label="Pauta conjunta histórica por revisar">
+                <h3>Pauta conjunta histórica · solo revisión</h3>
+                <p className={s.mGroupNote}>El snapshot se conserva para consulta; no autoriza estas barras para fabricación.</p>
+                <ul className={s.mDespieceList}>
+                  {summary.trabajoSnapshot.bars.map((bar) => (
+                    <li key={`${bar.materialKey}-${bar.acabadoKey}-${bar.largoComercialMm}-${bar.indice}`}>
+                      <strong>{bar.codigoPerfil} · Tira #{bar.indice} · {formatMm(bar.largoComercialMm)}</strong>
+                      <span>Histórico · excluido de la pauta operativa</span>
+                      {bar.cortes.map((cut, index) => <em className={s.mBarTrace} key={`${cut.itemId}-${cut.componenteId}-${index}`}>
+                        {cut.codigoItem} · {cut.funcion} · {formatMm(cut.largoMm)}
+                      </em>)}
                     </li>
                   ))}
                 </ul>

@@ -20,6 +20,24 @@ export type FabricationWorkOrderPdfMetadata = {
 
 type Column = { title: string; width: number; align?: "left" | "right" | "center" };
 type Row = { cells: string[] };
+
+const PROFILE_CUT_TECHNICAL_PENDING_PREFIXES = [
+  "coverage:",
+  "coverage-joint-plan",
+  "joint-plan-preliminary-geometry",
+  "structural-geometry",
+  "historical-cuts-review",
+  "mixed-preliminary-bar:",
+  "bar-distribution",
+  "cut-plan",
+  "cut:",
+  "presentation:",
+  "length:",
+] as const;
+
+function isProfileCutTechnicalPending(key: string): boolean {
+  return PROFILE_CUT_TECHNICAL_PENDING_PREFIXES.some((prefix) => key.startsWith(prefix));
+}
 export type FabricationWorkOrderPdfKind = "combined" | "glass-order" | "profile-cuts";
 
 const PAGE_WIDTH = 210;
@@ -113,9 +131,31 @@ function tableRow(pdf: jsPDF, row: Row, columns: Column[], y: number, height: nu
 function drawTable(pdf: jsPDF, title: string, columns: Column[], values: Row[], startY: number, empty: string, runningTitle: string, quoteCode: string, logoDataUrl?: string | null) {
   const rows = values.length ? values : [{ cells: [empty, ...columns.slice(1).map(() => "—")] }];
   let y = startY + 4;
-  if (y + 5 + 9 + 11 > CONTENT_BOTTOM) y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
+  const firstRowHeight = rowHeight(pdf, rows[0]!, columns);
+  const firstRowFitsOnFreshPage = 33 + 5 + 9 + firstRowHeight <= CONTENT_BOTTOM;
+  const minimumFragmentHeight = 13;
+  if (y + 5 + 9 + firstRowHeight > CONTENT_BOTTOM && firstRowFitsOnFreshPage) {
+    y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
+  } else if (y + 5 + 9 + minimumFragmentHeight > CONTENT_BOTTOM) {
+    y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
+  }
   y = tableHead(pdf, columns, sectionTitle(pdf, title, y));
   rows.forEach((row, index) => {
+    const wholeRowHeight = rowHeight(pdf, row, columns);
+    if (y + wholeRowHeight > CONTENT_BOTTOM) {
+      // Give a complete row first refusal on a fresh page. Only exceptionally
+      // tall rows continue in fragments after the repeated table heading.
+      const fitsOnFreshPage = 33 + 5 + 9 + wholeRowHeight <= CONTENT_BOTTOM;
+      const linesAvailable = Math.floor((CONTENT_BOTTOM - y - 4) / 4.05);
+      if (fitsOnFreshPage || linesAvailable < 2) {
+        y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
+        y = tableHead(pdf, columns, sectionTitle(pdf, `${title} · continuación`, y));
+      }
+    }
+    if (y + wholeRowHeight <= CONTENT_BOTTOM) {
+      y = tableRow(pdf, row, columns, y, wholeRowHeight, index);
+      return;
+    }
     const cellLines = row.cells.map((cell, cellIndex) => wrapped(pdf, cell, columns[cellIndex]!.width));
     const totalLines = Math.max(...cellLines.map((lines) => lines.length));
     let lineOffset = 0;
@@ -171,6 +211,21 @@ function drawPreliminaryWarning(pdf: jsPDF, y: number, runningTitle: string, quo
   return y + height + 3;
 }
 
+function drawDocumentPartialWarning(pdf: jsPDF, y: number, runningTitle: string, quoteCode: string, logoDataUrl?: string | null) {
+  const message = "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN. Hay componentes sin pauta completa o con identidad técnica por revisar.";
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(9.5);
+  const lines = wrapped(pdf, message, PAGE_WIDTH - MARGIN * 2);
+  const height = lines.length * 4.4 + 8;
+  if (y + height > CONTENT_BOTTOM) y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
+  pdf.setFillColor(255, 243, 230);
+  pdf.setDrawColor(191, 82, 34);
+  pdf.roundedRect(MARGIN, y, PAGE_WIDTH - MARGIN * 2, height, 1.2, 1.2, "FD");
+  pdf.setTextColor(139, 48, 17);
+  pdf.text(lines, MARGIN + 3, y + 5, { lineHeightFactor: 1.2 });
+  return y + height;
+}
+
 function drawPriceSummary(pdf: jsPDF, order: FabricationWorkOrder, y: number, runningTitle: string, quoteCode: string, logoDataUrl?: string | null) {
   const historicalWarnings = (order.pricing.assumptions ?? []).filter((assumption) => assumption.includes("referencia histórica"));
   const warningLines = historicalWarnings.flatMap((warning) => wrapped(pdf, warning, PAGE_WIDTH - MARGIN * 2 - 6));
@@ -213,6 +268,9 @@ export function createFabricationWorkOrderPdf(
   pdf.setCharSpace(0);
   let y = drawFabricationPdfHeader(pdf, metadata, title, logoDataUrl);
   const runningTitle = title;
+  if (order.documentStatus.state === "partial") {
+    y = drawDocumentPartialWarning(pdf, y + 2, runningTitle, metadata.quoteCode, logoDataUrl);
+  }
   if (kind === "combined") y = drawPriceSummary(pdf, order, y, runningTitle, metadata.quoteCode, logoDataUrl);
   if (kind === "combined") {
   const profiles = order.materials.profiles.map((row): Row => {
@@ -305,7 +363,9 @@ export function createFabricationWorkOrderPdf(
   const cuts = order.cutGroups.map((group): Row => {
     const profile = `${group.technicalCode} · ${group.profileName}`;
     const cutRows = group.cuts.length
-      ? group.cuts.map((cut) => `${cut.itemCode} · ${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n")
+      ? group.cuts.map((cut) => kind === "profile-cuts"
+        ? `${cut.itemCode} · ${cut.component}\n${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`
+        : `${cut.itemCode} · ${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n")
       : "Sin cortes guardados";
     const presentation = group.barIndex == null
       ? "Distribución por tira pendiente"
@@ -339,7 +399,9 @@ export function createFabricationWorkOrderPdf(
     const preliminaryCuts = order.preliminaryCutGroups.map((group): Row => {
       const profile = `${group.technicalCode} · ${group.profileName}`;
       const cutRows = group.cuts.length
-        ? group.cuts.map((cut) => `${cut.itemCode} · ${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n")
+        ? group.cuts.map((cut) => kind === "profile-cuts"
+          ? `${cut.itemCode} · ${cut.component}\n${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`
+          : `${cut.itemCode} · ${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n")
         : "Sin cortes de geometría disponibles";
       return kind === "profile-cuts"
         ? { cells: [`${profile}\nDistribución no calculada`, cutRows, "No aplica"] }
@@ -359,6 +421,23 @@ export function createFabricationWorkOrderPdf(
       { title: "Estado", width: 30 }, { title: "Distribución", width: 22, align: "right" },
     ], preliminaryCuts, y, "Sin cortes geométricos", runningTitle, metadata.quoteCode, logoDataUrl);
   }
+  if (order.reviewCutGroups.length > 0) {
+    const reviewCuts = order.reviewCutGroups.map((group): Row => ({ cells: [
+      `${group.technicalCode} · ${group.profileName}\n${[...new Set(group.cuts.map((cut) => `${cut.itemCode} · ${cut.component}`))].join("\n") || "Componente pendiente"}`,
+      group.cuts.map((cut) => `${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n"),
+      kind === "profile-cuts" ? "Snapshot incompatible · no operativo" : "Snapshot histórico · no operativo",
+      kind === "profile-cuts"
+        ? order.documentStatus.pendingComponents.find((component) => component.itemId === group.itemId)?.reason ?? "Revisar identidad y receta antes de usar estos cortes."
+        : "Revisión pendiente",
+    ] }));
+    y = drawTable(pdf, "Revisión técnica · cortes históricos", kind === "profile-cuts" ? [
+      { title: "Perfil y componente", width: 43 }, { title: "Cortes conservados", width: 67 },
+      { title: "Estado", width: 31 }, { title: "Causa / uso", width: 41 },
+    ] : [
+      { title: "Perfil / componente", width: 50 }, { title: "Cortes conservados", width: 80 },
+      { title: "Estado", width: 30 }, { title: "Uso", width: 22, align: "right" },
+    ], reviewCuts, y, "Sin cortes históricos por revisar", runningTitle, metadata.quoteCode, logoDataUrl);
+  }
   }
 
   if (kind === "combined" || kind === "glass-order") {
@@ -377,12 +456,30 @@ export function createFabricationWorkOrderPdf(
   y = drawNote(pdf, "Cada fila muestra si la medida viene de un snapshot o de un ingreso manual final. Las medidas manuales no equivalen a aprobación física del corte ni a cobertura operativa.", y + 2, runningTitle, metadata.quoteCode, logoDataUrl);
   }
 
-  if (kind === "combined") {
-    const pending = order.pending.map((row): Row => ({ cells: [row.subject, row.action] }));
-    drawTable(pdf, "4. Pendientes para el maestro", [
-      { title: "Dato", width: 70 }, { title: "Acción", width: 112 },
-    ], pending, y, "Sin pendientes detectados", runningTitle, metadata.quoteCode, logoDataUrl);
+  if (kind === "combined" || kind === "profile-cuts") {
+    const hasJointCoveragePending = order.pending.some((row) =>
+      row.key === "coverage-joint-plan" || row.key === "coverage-joint-plan-blocked"
+    );
+    const technicalPending = kind === "combined"
+      ? order.pending
+      : order.pending.filter((row) => {
+          if (!isProfileCutTechnicalPending(row.key)) return false;
+          if (row.key === "bar-distribution" && hasJointCoveragePending) return false;
+          if (row.key === "structural-geometry" && order.preliminaryCutGroups.length > 0) return false;
+          if (row.key === "historical-cuts-review" && order.reviewCutGroups.length > 0) return false;
+          return true;
+        });
+    if (kind === "combined" || technicalPending.length > 0) {
+      const pending = technicalPending.map((row): Row => ({ cells: [row.subject, row.action] }));
+      drawTable(pdf, kind === "combined" ? "4. Pendientes para el maestro" : "Estado técnico · pendientes de corte", [
+        { title: "Dato", width: 70 }, { title: "Acción", width: 112 },
+      ], pending, y, "Sin pendientes técnicos de corte", runningTitle, metadata.quoteCode, logoDataUrl);
+    }
   }
-  drawFabricationPdfFooters(pdf, metadata.quoteCode);
+  drawFabricationPdfFooters(
+    pdf,
+    metadata.quoteCode,
+    order.documentStatus.state === "partial" ? order.documentStatus.label : "FABRICACIÓN",
+  );
   return pdf;
 }

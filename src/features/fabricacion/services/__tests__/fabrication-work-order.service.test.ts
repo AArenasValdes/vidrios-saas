@@ -104,6 +104,11 @@ function pdfText(pdf: ReturnType<typeof createFabricationWorkOrderPdf>) {
   return [...raw.matchAll(/\(((?:\\.|[^\\)])*)\)\s*Tj/g)].map((match) => match[1]!.replace(/\\([\\()])/g, "$1")).join(" ");
 }
 
+function pdfPagesText(pdf: ReturnType<typeof createFabricationWorkOrderPdf>) {
+  return pdf.internal.pages.slice(1).map((page) => [...page.join(" ").matchAll(/\(((?:\\.|[^\\)])*)\)\s*Tj/g)]
+    .map((match) => match[1]!.replace(/\\([\\()])/g, "$1")).join(" "));
+}
+
 function pdfExampleDirectory() {
   return process.env.VENTORA_PDF_OUTPUT_DIR || path.join(process.cwd(), "tmp", "pdfs");
 }
@@ -141,6 +146,139 @@ describe("orden de fabricación y materiales", () => {
     }));
     expect(text).toContain("Costo neto con referencia histórica");
     expect(text).toContain("no es un precio vigente confirmado");
+  });
+
+  it("marca cobertura parcial y separa cortes draft o incompatibles de la pauta operativa", () => {
+    const partial = summary(savedWork());
+    partial.items = [{
+      itemId: "p1", codigo: "P1", nombre: "Puerta pivotante", statusLabel: "Identidad incompatible · revisar snapshot histórico",
+      operationalStatus: "incompatible", snapshot: { cuts: [{ profileCode: "5001", profileName: "Riel", label: "Riel", functionLabel: "Riel", quantity: 2, lengthMm: 1800 }] },
+    }, {
+      itemId: "v2", codigo: "V2", nombre: "Corredera", statusLabel: "Borrador",
+      operationalStatus: "unvalidated", snapshot: { cuts: [{ profileCode: "5002", profileName: "Hoja", label: "Hoja", functionLabel: "Hoja", quantity: 2, lengthMm: 900 }] },
+    }] as FabricationQuoteSummary["items"];
+    partial.profileCoverage = {
+      status: "partial", jointPlanStatus: "blocked", items: [
+        { itemId: "p1", codigo: "P1", nombre: "Puerta pivotante", state: "incompatible", reason: "La identidad comercial pivotante contradice el snapshot de corredera." },
+        { itemId: "v2", codigo: "V2", nombre: "Corredera", state: "unvalidated", reason: "La receta está en borrador." },
+      ],
+    };
+
+    const order = buildFabricationWorkOrder({ summary: partial, materials: materials(), technicalCostSnapshot: savedCost() });
+
+    expect(order.documentStatus).toMatchObject({ state: "partial", label: "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN" });
+    expect(order.cutGroups).toEqual([]);
+    expect(order.reviewCutGroups.map((group) => group.cuts[0]?.itemCode)).toEqual(["P1", "V2"]);
+    expect(order.pending.map((row) => row.subject)).toEqual(expect.arrayContaining(["P1: identidad técnica", "V2: receta"]));
+    const pdf = pdfText(createFabricationWorkOrderPdf(order, {
+      companyName: "Taller", quoteCode: "COT-PARCIAL", workName: "QA", issueDate: "5 nov 2026",
+    }));
+    expect(pdf).toContain("DOCUMENTO PARCIAL");
+    expect(pdf).toContain("NO APTO PARA FABRICACIÓN");
+    expect(pdf).toContain("Revisión técnica · cortes históricos");
+    expect(pdf).toContain("Puerta pivotante");
+  });
+
+  it("no bloquea perfiles válidos por un ítem libre y no exige pauta cuando ningún ítem requiere perfiles", () => {
+    const complete = summary(savedWork());
+    complete.items = [{
+      itemId: "v1", codigo: "V1", nombre: "Corredera", statusLabel: "Validada",
+      operationalStatus: "ready", snapshot: { cuts: [{ profileCode: "5001", profileName: "Riel", label: "Riel", functionLabel: "Riel", quantity: 2, lengthMm: 1800 }] },
+    }] as FabricationQuoteSummary["items"];
+    complete.profileCoverage = {
+      status: "complete", jointPlanStatus: "ready", requiredCount: 1, readyCount: 1, pendingCount: 0,
+      items: [
+        { itemId: "v1", codigo: "V1", nombre: "Corredera", state: "ready", reason: null },
+        { itemId: "service-1", codigo: "S1", nombre: "Instalación de ventanas", state: "not_required", reason: null },
+      ],
+    };
+    const orderWithFreeItem = buildFabricationWorkOrder({ summary: complete, materials: materials(), technicalCostSnapshot: savedCost() });
+
+    expect(orderWithFreeItem.documentStatus.state).toBe("complete");
+    expect(orderWithFreeItem.hasJointBars).toBe(true);
+    expect(orderWithFreeItem.materials.profiles).toHaveLength(1);
+    expect(orderWithFreeItem.pending.some((row) => row.subject.includes("Instalación"))).toBe(false);
+
+    const noProfileSummary = summary(null);
+    noProfileSummary.profileCoverage = {
+      status: "complete", jointPlanStatus: "not_required", requiredCount: 0, readyCount: 0, pendingCount: 0,
+      items: [{ itemId: "service-1", codigo: "S1", nombre: "Instalación de ventanas", state: "not_required", reason: null }],
+    };
+    const noProfileMaterials = materials();
+    noProfileMaterials.profiles = [];
+    noProfileMaterials.accessories = [];
+    noProfileMaterials.glass = [];
+    noProfileMaterials.glassOrder = [];
+    const noProfileOrder = buildFabricationWorkOrder({ summary: noProfileSummary, materials: noProfileMaterials });
+
+    expect(noProfileOrder.documentStatus.state).toBe("complete");
+    expect(noProfileOrder.pending.some((row) => row.subject === "Pauta de corte")).toBe(false);
+  });
+
+  it("muestra pendientes de componentes también en el PDF independiente de cortes", () => {
+    const order = buildFabricationWorkOrder({ summary: summary(null), materials: materials(), technicalCostSnapshot: savedCost() });
+    order.documentStatus = {
+      state: "partial", label: "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN",
+      pendingComponents: [{ itemId: "v9", codigo: "V9", nombre: "Ventana sin snapshot", reason: "No existe snapshot técnico con cortes guardados." }],
+    };
+    order.pending = [{ key: "coverage:v9", subject: "V9: despiece", action: "No existe snapshot técnico con cortes guardados." }];
+
+    const pages = pdfPagesText(createFabricationWorkOrderPdf(order, {
+      companyName: "Taller", quoteCode: "COT-PENDIENTE", workName: "QA", issueDate: "6 nov 2026",
+    }, null, "profile-cuts"));
+
+    expect(pages.join(" ")).toContain("V9: despiece");
+    expect(pages.join(" ")).toContain("No existe snapshot técnico con cortes guardados.");
+    expect(pages.every((page) => page.includes("DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN"))).toBe(true);
+  });
+
+  it("mueve una fila multilínea completa a la página siguiente cuando cabe allí", () => {
+    const workMaterials = materials();
+    workMaterials.accessories = Array.from({ length: 18 }, (_, index) => ({
+      key: `acc-${index}`, code: `A${index}`, description: `Accesorio largo ${index}`,
+      quantity: index + 1, unit: "unidad", line: "Serie 5000", finish: "Aluminio mate",
+      configuredFinish: "Aluminio mate", itemCodes: ["V1"], price: null,
+    }));
+    const baseOrder = buildFabricationWorkOrder({ summary: summary(savedWork()), materials: workMaterials, technicalCostSnapshot: savedCost() });
+    baseOrder.cutGroups = [{
+      key: "3201", technicalCode: "3201", profileName: "Marco 3201", barIndex: 1,
+      commercialLengthMm: 6000, usedMm: 5000, theoreticalRemnantMm: 1000,
+      trimMm: 0, kerfMm: 0,
+      cuts: Array.from({ length: 7 }, (_, index) => ({
+        itemCode: "V1", component: "Paño fijo", functionName: `Corte de perfil ${index + 1}`,
+        quantity: 1, lengthMm: 900 + index,
+      })),
+    }];
+    const pages = pdfPagesText(createFabricationWorkOrderPdf(baseOrder, {
+      companyName: "Taller", quoteCode: "COT-PAGINACION", workName: "QA", issueDate: "5 nov 2026",
+    }));
+
+    expect(pages.some((page) => page.includes("Corte de perfil 1") && page.includes("Corte de perfil 7"))).toBe(true);
+  });
+
+  it("continúa una fila excepcionalmente larga de 3201 sin perder cortes ni páginas de advertencia", () => {
+    const baseOrder = buildFabricationWorkOrder({ summary: summary(savedWork()), materials: materials(), technicalCostSnapshot: savedCost() });
+    baseOrder.documentStatus = {
+      state: "partial", label: "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN", pendingComponents: [],
+    };
+    baseOrder.cutGroups = [{
+      key: "3201", technicalCode: "3201", profileName: "Marco 3201", barIndex: 1,
+      commercialLengthMm: 6000, usedMm: 5000, theoreticalRemnantMm: 1000, trimMm: 0, kerfMm: 0,
+      cuts: Array.from({ length: 38 }, (_, index) => ({
+        itemCode: "V1", component: "Ventana", functionName: `Corte 3201 QA ${String(index + 1).padStart(2, "0")}`,
+        quantity: 1, lengthMm: 900 + index,
+      })),
+    }];
+    const pages = pdfPagesText(createFabricationWorkOrderPdf(baseOrder, {
+      companyName: "Taller", quoteCode: "COT-1092-REGRESION", workName: "Paginación perfil 3201", issueDate: "6 nov 2026",
+    }, null, "profile-cuts"));
+
+    expect(pages.length).toBeGreaterThan(1);
+    for (let index = 1; index <= 38; index += 1) {
+      expect(pages.join(" ")).toContain(`Corte 3201 QA ${String(index).padStart(2, "0")}`);
+    }
+    expect(pages.every((page) => page.includes("DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN"))).toBe(true);
+    expect(pages.every((page) => page.trim().length > 120)).toBe(true);
   });
 
   it("usa el acabado elegido en la cotización también en la pauta PDF", () => {
@@ -356,7 +494,7 @@ describe("orden de fabricación y materiales", () => {
     const cutsPdf = createFabricationWorkOrderPdf(order, metadata, logoDataUrl, "profile-cuts");
     const cutsText = pdfText(cutsPdf);
     expect(cutsText).toContain("Pauta de cortes de perfiles");
-    expect(cutsText).toContain("V1 · Riel superior");
+    expect(cutsText).toContain("V1 · Ventana corredera 2 hojas Riel superior");
     expect(cutsText).toContain("3.391 mm");
     expect(cutsText).toMatch(/remanente teórico/i);
     expect(cutsText).not.toContain("Orden de vidrios");
@@ -367,6 +505,74 @@ describe("orden de fabricación y materiales", () => {
       mkdirSync(outputDirectory, { recursive: true });
       writeFileSync(path.join(outputDirectory, "qa-orden-vidrios.pdf"), Buffer.from(glassPdf.output("arraybuffer")));
       writeFileSync(path.join(outputDirectory, "qa-pauta-perfiles.pdf"), Buffer.from(cutsPdf.output("arraybuffer")));
+    }
+  });
+
+  it("reduce el PDF de cortes a pendientes técnicos y mantiene los pendientes comerciales en el combinado", () => {
+    const order = buildFabricationWorkOrder({ summary: summary(savedWork()), materials: materials(), technicalCostSnapshot: savedCost() });
+    order.documentStatus = {
+      state: "partial", label: "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN",
+      pendingComponents: [{ itemId: "p1", codigo: "P1", nombre: "Puerta", reason: "La configuración pivotante contradice la receta corredera." }],
+    };
+    order.cutGroups = [{
+      key: "5001", technicalCode: "5001", profileName: "Riel superior", barIndex: 1,
+      commercialLengthMm: 6000, usedMm: 2600, theoreticalRemnantMm: 3391, trimMm: 0, kerfMm: 9,
+      cuts: [{ itemCode: "V2", component: "Ventana corredera", functionName: "Riel superior", quantity: 2, lengthMm: 1300 }],
+    }];
+    order.preliminaryCutGroups = [{
+      key: "l32|3201", technicalCode: "3201", profileName: "Marco", barIndex: null,
+      commercialLengthMm: null, usedMm: null, theoreticalRemnantMm: null, trimMm: null, kerfMm: null,
+      cuts: [{ itemCode: "F1", component: "Paño fijo", functionName: "Marco", quantity: 2, lengthMm: 1200 }],
+    }];
+    order.reviewCutGroups = [{
+      key: "p1|5002|Hoja", itemId: "p1", technicalCode: "5002", profileName: "Hoja", barIndex: null,
+      commercialLengthMm: null, usedMm: null, theoreticalRemnantMm: null, trimMm: null, kerfMm: null,
+      cuts: [{ itemCode: "P1", component: "Puerta pivotante 1 hoja", functionName: "Hoja móvil", quantity: 1, lengthMm: 1800 }],
+    }];
+    order.pending = [
+      { key: "price:5001", subject: "Perfil 5001: precio", action: "Configurar precio de compra por presentación." },
+      { key: "sku:5001", subject: "Perfil 5001: SKU proveedor", action: "Seleccionar una presentación con SKU." },
+      { key: "accessory-price:acc-1", subject: "Tornillos: precio", action: "Configurar precio de compra." },
+      { key: "glass:pane-1", subject: "V2 · Paño 1: vidrio", action: "Revisar medida manual sin aprobación física." },
+      { key: "coverage:v9", subject: "V1: despiece", action: "No existe snapshot técnico con cortes guardados." },
+      { key: "coverage-joint-plan", subject: "Pauta conjunta", action: "Los cortes por componente no sustituyen la distribución de barras del trabajo." },
+      { key: "presentation:v2:5002", subject: "Perfil 5002: presentación", action: "Seleccionar presentación física y largo comercial." },
+      { key: "bar-distribution", subject: "Distribución por tira", action: "Revisar pauta conjunta pendiente." },
+      { key: "structural-geometry", subject: "Despiece estructural preliminar", action: "Acristalamiento pendiente; no apto para fabricación." },
+      { key: "historical-cuts-review", subject: "Cortes históricos por revisar", action: "Snapshots incompatibles excluidos de pauta operativa." },
+    ];
+    const beforeCuts = JSON.stringify(order.cutGroups);
+    const metadata = { companyName: "Taller", quoteCode: "COT-PDF-RECORTADO", workName: "QA", issueDate: "6 nov 2026" };
+    const cutsPdf = createFabricationWorkOrderPdf(order, metadata, null, "profile-cuts");
+    const cutsText = pdfText(cutsPdf);
+    const combinedText = pdfText(createFabricationWorkOrderPdf(order, metadata));
+
+    expect(cutsText).toContain("V2 · Ventana corredera Riel superior");
+    expect(cutsText).toContain("2 × 1.300 mm");
+    expect(cutsText).toContain("3.391 mm");
+    expect(cutsText).toContain("Pauta conjunta");
+    expect(cutsText).toContain("presentación física y largo comercial");
+    expect(cutsText).toContain("Despiece estructural preliminar");
+    expect(cutsText).toContain("Revisión técnica · cortes históricos");
+    expect(cutsText).toContain("Puerta pivotante 1 hoja");
+    expect(cutsText).toContain("configuración pivotante contradice la receta corredera");
+    expect(cutsText).not.toContain("Perfil 5001: precio");
+    expect(cutsText).not.toContain("Perfil 5001: SKU proveedor");
+    expect(cutsText).not.toContain("Tornillos: precio");
+    expect(cutsText).not.toContain("Paño 1: vidrio");
+    expect(combinedText).toContain("Perfil 5001: precio");
+    expect(combinedText).toContain("Tornillos: precio");
+    expect(combinedText).toContain("Paño 1: vidrio");
+    expect(JSON.stringify(order.cutGroups)).toBe(beforeCuts);
+    const combinedPdf = createFabricationWorkOrderPdf(order, metadata);
+    expect(cutsPdf.getNumberOfPages()).toBe(1);
+    expect(cutsPdf.getNumberOfPages()).toBeLessThan(combinedPdf.getNumberOfPages());
+
+    if (process.env.VENTORA_PDF_EXAMPLE === "1") {
+      const outputDirectory = pdfExampleDirectory();
+      mkdirSync(outputDirectory, { recursive: true });
+      writeFileSync(path.join(outputDirectory, "qa-pauta-cortes-pr17.pdf"), Buffer.from(cutsPdf.output("arraybuffer")));
+      writeFileSync(path.join(outputDirectory, "qa-pdf-combinado-pr17.pdf"), Buffer.from(combinedPdf.output("arraybuffer")));
     }
   });
 
