@@ -473,6 +473,26 @@ const AL32_PROJECTING_PROFILES: LineProfileReference[] = [
 /** AL-42: las tres entradas del catálogo usan la misma referencia técnica, con variante de marco en receta. */
 const AL42_PROJECTING_PROFILES = SERIE_42_PROYECTANTE_PROFILES;
 
+/** Referencias del fijo AL-42 documentadas por separado en Alumétrica. No son una receta. */
+const AL42_FIXED_PROFILES: LineProfileReference[] = [
+  catalogRef({
+    code: "4209",
+    name: "Marco perimetral",
+    role: "Marco",
+    provider: "Alumétrica",
+    source: "https://alumetrica.comunaclic.cl/Catalogo/Tipologias/Editar/9c02bf64-530c-48b6-b5c5-cdc2bd0391c6",
+    description: "Marco perimetral de Fijo Línea 42; referencia documental, fórmula pendiente de integración y prueba.",
+  }),
+  catalogRef({
+    code: "4229",
+    name: "Junquillo monolítico",
+    role: "Junquillo",
+    provider: "Alumétrica",
+    source: "https://alumetrica.comunaclic.cl/Catalogo/Tipologias/Editar/9c02bf64-530c-48b6-b5c5-cdc2bd0391c6",
+    description: "Junquillo monolítico de Fijo Línea 42; referencia documental, fórmula pendiente de integración y prueba.",
+  }),
+];
+
 /** Óptima S-28: nombres útiles del estudio, códigos SODAL aún pendientes. */
 const OPTIMA_S28_2H_PROFILES: LineProfileReference[] = [
   pendingStudyRef({
@@ -1051,7 +1071,9 @@ const CATALOG_KEY_PROFILE_SETS: Record<string, LineProfileReference[]> = {
   "ventora:serie-3200-puerta-abatible-1h": PUERTA_3200_PROFILES,
   "ventora:serie-4600-puerta-vaiven": PUERTA_4600_PROFILES,
   "ventora:l32": AL32_PROJECTING_PROFILES,
+  "ventora:l32:configuration:ventora:l32:pano-fijo": [],
   "ventora:l42": AL42_PROJECTING_PROFILES,
+  "ventora:l42:configuration:ventora:l42:pano-fijo": AL42_FIXED_PROFILES,
   "ventora:optima-s28-corredera-2h": OPTIMA_S28_2H_PROFILES,
   "ventora:optima-s28-corredera-3h": OPTIMA_S28_3H_PROFILES,
   "ventora:winhouse-new-s75-doble-riel": WINHOUSE_NEW_S75_DOUBLE_RAIL_PROFILES,

@@ -4,15 +4,15 @@ import { auditarIntegridadCatalogoLineasVentora } from "@/features/cotizaciones/
 
 describe("auditoria integridad catalogo lineas", () => {
 
-  it("clasifica las 103 líneas con categorías primarias mutuamente excluyentes", () => {
+  it("clasifica las 104 configuraciones con categorías primarias mutuamente excluyentes", () => {
 
     const { lineas, resumen } = auditarIntegridadCatalogoLineasVentora();
 
 
 
-    expect(lineas).toHaveLength(103);
+    expect(lineas).toHaveLength(104);
 
-    expect(resumen.totalLineas).toBe(103);
+    expect(resumen.totalLineas).toBe(104);
 
 
 
@@ -24,7 +24,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
     );
 
-    expect(sumaPrimaria).toBe(103);
+    expect(sumaPrimaria).toBe(104);
 
 
 
@@ -36,7 +36,7 @@ describe("auditoria integridad catalogo lineas", () => {
 
       codigos_referenciales_ambiguos: 1,
 
-      sin_codigos_tecnicos_en_fixtures: 22,
+      sin_codigos_tecnicos_en_fixtures: 23,
 
       solo_comercial: 0,
 
@@ -136,11 +136,13 @@ describe("auditoria integridad catalogo lineas", () => {
 
 
 
-    expect(sinCodigos).toHaveLength(22);
+    expect(sinCodigos).toHaveLength(23);
 
     expect(sinCodigos.map((line) => line.catalogKey).sort()).toEqual(
 
       [
+
+        "ventora:l32:configuration:ventora:l32:pano-fijo",
 
 
 

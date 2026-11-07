@@ -110,6 +110,55 @@ describe("/api/proveedor-catalogos/resolve-presentations", () => {
     expect(readOrganizationPurchasePricing).not.toHaveBeenCalled();
   });
 
+  it("no atribuye los perfiles de proyectante a L32 Fijo y explica la lista comercial pendiente", async () => {
+    (readSupplierPresentationPrices as jest.Mock).mockResolvedValue([]);
+    (readWorkshopPresentationPrices as jest.Mock).mockResolvedValue([]);
+    (readSupplierNames as jest.Mock).mockResolvedValue(new Map([["alumco", "Alumco"]]));
+
+    const response = await POST(new Request("http://localhost/api/proveedor-catalogos/resolve-presentations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        includeProviderOptions: true,
+        items: [{
+          itemId: "l32-fixed",
+          catalogLineKey: "ventora:l32:configuration:ventora:l32:pano-fijo",
+          familyKey: "universal:aluminio:l32",
+          finishName: "Titanio",
+          technicalCodes: ["3201", "3202", "3204", "3205", "3208"],
+          providerKey: "alumco",
+        }],
+      }),
+    }));
+
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.itemErrors).not.toHaveProperty("l32-fixed");
+    expect(body.selections["l32-fixed"]).toEqual([]);
+    expect(body.providerOptions["l32-fixed"]).toContainEqual(expect.objectContaining({
+      providerKey: "alumco",
+      pricedProfileCount: 0,
+      totalProfileCount: 0,
+      coverageMessage: "Precios de familia disponibles; materiales del fijo pendientes.",
+    }));
+  });
+
+  it("resuelve AL-42 Fijo con sus referencias documentales exactas y no hereda perfiles de proyectante", async () => {
+    const response = await POST(req([{
+      itemId: "l42-fixed",
+      catalogLineKey: "ventora:l42:configuration:ventora:l42:pano-fijo",
+      familyKey: "universal:aluminio:l42",
+      finishName: "Titanio",
+      technicalCodes: [],
+      providerKey: "alumco",
+    }]));
+
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.itemErrors).not.toHaveProperty("l42-fixed");
+    expect(body.selections["l42-fixed"].map((entry: { technicalCode: string }) => entry.technicalCode)).toEqual(["4209", "4229"]);
+  });
+
   it("devuelve precios de perfiles Kompen por referencias de línea aunque no haya receta", async () => {
     const line = VENTORA_DEFAULT_LINE_CATALOG.find((entry) => entry.catalogKey === "ventora:kompen-form-line-800");
     expect(line?.catalogMetadata?.familyKey).toBe("thermowin:kom-800");

@@ -16,6 +16,7 @@ export type SupplierPriceProviderOption = {
   pricedProfileCount: number;
   totalProfileCount: number;
   baseReferenceProfileCount?: number;
+  coverageMessage?: string;
   isReference: boolean;
   /** Other explicitly priced finishes for this line/code set, never applied silently. */
   otherAvailableFinishNames?: string[];
