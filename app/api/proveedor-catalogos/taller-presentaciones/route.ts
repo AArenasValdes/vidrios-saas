@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -8,6 +9,7 @@ import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templ
 import { getVentoraProfileReferencesForCatalogKey } from "@/features/cotizaciones/line-templates/fixtures/ventora-profile-references";
 import { canManageSupplierCatalog } from "@/features/proveedor-catalogos/services/supplier-catalog-access.service";
 import { createWorkshopPresentation, listOfficialTechnicalInputsForFamily, listWorkshopPresentations, updateWorkshopPresentationPurchase, WorkshopPresentationsSchemaMissingError } from "@/features/proveedor-catalogos/repositories/workshop-presentations.repository";
+import { INTERNAL_WORKSHOP_PRESENTATION_KEY_PREFIX, isGeneratedWorkshopPresentationKey } from "@/features/proveedor-catalogos/services/workshop-presentation-identity.service";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +19,7 @@ const inputSchema = z.object({
   technicalCode: z.string().trim().max(100).nullable(),
   recipeCode: z.string().trim().max(100).nullable(),
   profileName: z.string().trim().max(160).nullable(),
-  workshopSku: z.string().trim().min(1).max(100),
+  workshopSku: z.string().trim().min(1).max(100).nullable().optional(),
   description: z.string().trim().min(1).max(240),
   finishName: z.string().trim().max(100).nullable(),
   purchaseUnit: z.enum(["M", "UN", "KG", "PAR"]),
@@ -39,7 +41,7 @@ const updateSchema = z.object({
   commercialLengthMm: z.number().int().positive().nullable(),
   netPrice: z.number().positive().nullable(),
   currency: z.enum(["CLP"]).nullable(),
-  preferred: z.boolean(),
+  preferred: z.boolean().optional(),
 }).strict().refine((row) => (row.netPrice === null) === (row.currency === null), {
   message: "El precio y la moneda deben completarse juntos.",
 });
@@ -59,7 +61,8 @@ async function authorize(lineTemplateId: number) {
   const familyKey = definition?.catalogMetadata?.familyKey;
   const configurationKey = definition?.catalogMetadata?.configurationKey;
   if (!line || !definition || typeof familyKey !== "string" ||
-    (!familyKey.startsWith("veratec:") && !familyKey.startsWith("thermowin:"))) return null;
+    (!familyKey.startsWith("veratec:") && !familyKey.startsWith("thermowin:") &&
+      !(definition.catalogKey === "ventora:l25" && familyKey === "universal:aluminio:l25"))) return null;
   return { organizationId, familyKey, catalogKey: definition.catalogKey, configurationKey: typeof configurationKey === "string" ? configurationKey : null, userId: auth.user.id };
 }
 
@@ -85,7 +88,15 @@ export async function GET(request: Request) {
           .filter((profile) => profile.code && profile.codeStatus === "catalog_reference")
           .map((profile) => ({ code: profile.code, name: profile.name, role: profile.role })) ?? []
       : [];
-    return NextResponse.json({ familyKey: access.familyKey, officialInputs, catalogProfiles, ownPresentations }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({
+      familyKey: access.familyKey,
+      officialInputs,
+      catalogProfiles,
+      ownPresentations: ownPresentations.map((row) => ({
+        ...row,
+        sku_taller: isGeneratedWorkshopPresentationKey(String(row.sku_taller)) ? null : row.sku_taller,
+      })),
+    }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return errorResponse(error); }
 }
 
@@ -95,6 +106,17 @@ export async function POST(request: Request) {
     if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Datos inválidos." }, { status: 400 });
     const access = await authorize(parsed.data.lineTemplateId);
     if (!access) return NextResponse.json({ error: "No disponible." }, { status: 404 });
+    if (access.catalogKey === "ventora:l25" && !parsed.data.officialInputId) {
+      const existing = await listWorkshopPresentations(access.organizationId, access.familyKey);
+      const normalize = (value: string | null | undefined) => (value ?? "").trim().normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CL");
+      const duplicate = existing.some((row) =>
+        String(row.configuration_key ?? "") === (access.configurationKey ?? "") &&
+        String(row.codigo_tecnico).trim().toLocaleUpperCase("en-US") === parsed.data.technicalCode?.trim().toLocaleUpperCase("en-US") &&
+        normalize(String(row.acabado_nombre ?? "")) === normalize(parsed.data.finishName)
+      );
+      if (duplicate) return NextResponse.json({ error: "Ya existe un costo privado para este perfil y acabado. Edita esa referencia para evitar duplicados." }, { status: 409 });
+    }
     const row = await createWorkshopPresentation({
       organizationId: access.organizationId,
       familyKey: access.familyKey,
@@ -103,7 +125,7 @@ export async function POST(request: Request) {
       technicalCode: parsed.data.technicalCode,
       recipeCode: parsed.data.recipeCode,
       profileName: parsed.data.profileName,
-      workshopSku: parsed.data.workshopSku,
+      workshopSku: parsed.data.workshopSku?.trim() || `${INTERNAL_WORKSHOP_PRESENTATION_KEY_PREFIX}${randomUUID()}`,
       description: parsed.data.description,
       finishName: parsed.data.finishName,
       purchaseUnit: parsed.data.purchaseUnit,
@@ -113,7 +135,9 @@ export async function POST(request: Request) {
       preferred: parsed.data.preferred,
       userId: access.userId,
     });
-    return NextResponse.json({ row }, { status: 201, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({
+      row: { ...row, sku_taller: isGeneratedWorkshopPresentationKey(String(row.sku_taller)) ? null : row.sku_taller },
+    }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) { return errorResponse(error); }
 }
 
@@ -129,7 +153,7 @@ export async function PATCH(request: Request) {
       expectedRevision: parsed.data.expectedRevision, purchaseUnit: parsed.data.purchaseUnit,
       commercialLengthMm: parsed.data.commercialLengthMm, netPrice: parsed.data.netPrice,
       currency: parsed.data.currency,
-      preferred: parsed.data.preferred,
+      ...(parsed.data.preferred === undefined ? {} : { preferred: parsed.data.preferred }),
     });
     return NextResponse.json({ row }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return errorResponse(error); }
