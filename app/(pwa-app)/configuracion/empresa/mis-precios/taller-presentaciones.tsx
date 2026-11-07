@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { isGeneratedWorkshopPresentationKey } from "@/features/proveedor-catalogos/services/workshop-presentation-identity.service";
 import s from "./taller-presentaciones.module.css";
 
 type OfficialInput = { id: string; codigo_fuente: string; nombre: string };
 type CatalogProfile = { code: string; name: string; role: string };
 type WorkshopRow = {
-  id: string; revision: number; codigo_tecnico: string; nombre_perfil: string; sku_taller: string;
+  id: string; revision: number; codigo_tecnico: string; nombre_perfil: string; sku_taller: string | null;
   acabado_nombre: string | null; largo_comercial_mm: number | null;
   precio_neto: number | null; moneda: string | null; unidad_compra: string;
   preferida: boolean;
@@ -92,7 +93,7 @@ export function TallerPresentaciones({ lineTemplateId, familyKey }: { lineTempla
       <button type="button" onClick={() => { setEditingRow(null); setPreferred(false); setOpen((value) => !value); }}>{open ? "Cerrar" : "Agregar presentación"}</button></div>
     {error ? <p className={s.error} role="alert">{error}</p> : null}
     {payload.ownPresentations.length ? <div className={s.rows}>{payload.ownPresentations.map((row) => <div className={s.row} key={row.id}>
-      <strong>{row.codigo_tecnico} · {row.nombre_perfil}</strong><span>{row.sku_taller}{row.acabado_nombre ? ` · ${row.acabado_nombre}` : " · Acabado independiente"}</span>
+      <strong>{row.codigo_tecnico} · {row.nombre_perfil}</strong><span>{row.sku_taller && !isGeneratedWorkshopPresentationKey(row.sku_taller) ? row.sku_taller : "Referencia privada del taller"}{row.acabado_nombre ? ` · ${row.acabado_nombre}` : " · Acabado independiente"}</span>
       <small>{row.largo_comercial_mm ? `${row.largo_comercial_mm.toLocaleString("es-CL")} mm` : "Largo pendiente"} · {row.precio_neto ? `${new Intl.NumberFormat("es-CL", { style: "currency", currency: row.moneda || "CLP" }).format(row.precio_neto)} neto` : "Costo pendiente"} · {row.preferida ? "Elegida para esta configuración" : "Sin elegir"} · Revisión {row.revision}</small>
       <button type="button" className={s.editButton} onClick={() => { setEditingRow(row); setUnit(row.unidad_compra as typeof unit); setLength(row.largo_comercial_mm?.toString() ?? ""); setPrice(row.precio_neto?.toString() ?? ""); setPreferred(row.preferida); setOpen(true); }}>Editar presentación</button>
     </div>)}</div> : <p className={s.empty}>Aún no hay presentaciones privadas para esta familia.</p>}
@@ -111,8 +112,8 @@ export function TallerPresentaciones({ lineTemplateId, familyKey }: { lineTempla
       {!officialInputId ? <div className={s.pair}><label>Código privado<input value={technicalCode} onChange={(event) => setTechnicalCode(event.target.value)} required maxLength={100} /></label><label>Nombre del perfil<input value={profileName} onChange={(event) => setProfileName(event.target.value)} required maxLength={160} /></label></div> : null}
       <label>Código en tu receta, si es diferente<input value={recipeCode} onChange={(event) => setRecipeCode(event.target.value)} maxLength={100} placeholder="Solo con asociación comprobada por tu taller" /></label>
       <div className={s.pair}><label>SKU o código de compra privado<input value={sku} onChange={(event) => setSku(event.target.value)} required maxLength={100} /></label><label>Descripción de compra<input value={description} onChange={(event) => setDescription(event.target.value)} required maxLength={240} /></label></div>
-      <label>Acabado<input value={finish} onChange={(event) => setFinish(event.target.value)} placeholder="Vacío si es independiente" maxLength={100} /></label></> : <strong>Completar {editingRow.sku_taller}</strong>}
-      <label>Unidad de compra<select value={unit} onChange={(event) => setUnit(event.target.value as typeof unit)}><option value="M">Metro / tira</option><option value="UN">Unidad</option><option value="KG">Kg</option><option value="PAR">Par</option></select></label>
+      <label>Acabado<input value={finish} onChange={(event) => setFinish(event.target.value)} placeholder="Vacío si es independiente" maxLength={100} /></label></> : <strong>Editar costo de {editingRow.codigo_tecnico}</strong>}
+      <label>Unidad de compra<select value={unit} onChange={(event) => setUnit(event.target.value as typeof unit)}><option value="M">Metro</option><option value="UN">Unidad / tira</option><option value="KG">Kg</option><option value="PAR">Par</option></select></label>
       <div className={s.pair}><label>Largo comercial (mm)<input type="number" min={1} step={1} value={length} onChange={(event) => setLength(event.target.value)} placeholder="Pendiente" /></label><label>Costo neto de compra CLP<input type="number" min={1} step="0.01" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Pendiente" /></label></div>
       <label className={s.preferredChoice}><input type="checkbox" checked={preferred} onChange={(event) => setPreferred(event.target.checked)} /> Elegir esta presentación para la configuración</label>
       <p className={s.hint}>Si falta largo o costo, se conserva como pendiente. No se utiliza $0 ni se asume 5.800 mm.</p>

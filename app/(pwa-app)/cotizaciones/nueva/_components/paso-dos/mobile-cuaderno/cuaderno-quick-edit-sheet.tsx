@@ -45,6 +45,7 @@ import { resolveSupplierPresentationsForQuote, type SupplierPriceProviderOption 
 import type { SupplierProfilePricePreview } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 import { getLineTemplateWorkshopProfiles } from "@/features/cotizaciones/line-templates/types/line-profile-references";
 import { SupplierProfilePricePreview as SupplierProfilePricePreviewComponent } from "@/features/proveedor-catalogos/components/supplier-profile-price-preview";
+import { QuoteProfileCosts } from "@/features/proveedor-catalogos/components/quote-profile-costs";
 import {
   measureDimensionFieldLabel,
   measureDimensionPlaceholder,
@@ -967,26 +968,59 @@ export function CuadernoQuickEditSheet({
                       ) : null}
                     </div>
                   ) : null}
-                  <SupplierProfilePricePreviewComponent
-                    prices={supplierProfilePrices}
-                    providerKey={selectedSupplierProviderKey || effectiveFamilyPreference || "arquetipo"}
-                    familyKey={supplierResolutionRequest.familyKey}
-                    finishName={supplierResolutionRequest.finishName}
-                    canManagePrice={supplierProviderResolution?.key === supplierResolutionKey && supplierProviderResolution.canManageSupplierPrices}
-                    onPriceSaved={async () => {
-                      if (!supplierResolutionRequest) return;
-                      const result = await resolveSupplierPresentationsForQuote([supplierResolutionRequest], { includeProviderOptions: true });
-                      setSupplierProviderResolution({
-                        key: supplierResolutionKey,
-                        options: result?.providerOptions?.[String(item.id)] ?? [],
-                        profilePrices: result?.profilePrices?.[String(item.id)] ?? [],
-                        familyPreferenceProviderKey: result?.familyPreferences?.[String(supplierResolutionRequest.familyKey)] ?? null,
-                        canManageFamilyPreferences: result?.canManageFamilyPreferences === true,
-                        canManageSupplierPrices: result?.canManageSupplierPrices === true,
-                        error: result?.itemErrors?.[String(item.id)] ?? null,
-                      });
-                    }}
-                  />
+                  {selectedLineIsSodalL25 && supplierResolutionRequest.familyKey === "universal:aluminio:l25" ? (
+                    <QuoteProfileCosts
+                      lineTemplateId={Number(lineTemplateId)}
+                      familyKey={supplierResolutionRequest.familyKey}
+                      providerKey={selectedSupplierProviderKey || effectiveFamilyPreference || "arquetipo"}
+                      finishName={supplierResolutionRequest.finishName}
+                      references={[
+                        ...(supplierRecipe?.definition.perfiles ?? []).map((profile) => ({
+                          technicalCode: profile.codigoPerfil,
+                          profileName: profile.nombrePerfil,
+                        })),
+                        ...(getLineTemplateWorkshopProfiles(supplierLineTemplate?.catalogMetadata)?.profiles ?? [])
+                          .filter((profile) => profile.codeStatus === "catalog_reference" && profile.code?.trim())
+                          .map((profile) => ({ technicalCode: profile.code!, profileName: profile.name })),
+                      ]}
+                      prices={supplierProfilePrices}
+                      canManagePrice={supplierProviderResolution?.key === supplierResolutionKey && supplierProviderResolution.canManageSupplierPrices}
+                      onPricesSaved={async () => {
+                        if (!supplierResolutionRequest) return;
+                        const result = await resolveSupplierPresentationsForQuote([supplierResolutionRequest], { includeProviderOptions: true });
+                        setSupplierProviderResolution({
+                          key: supplierResolutionKey,
+                          options: result?.providerOptions?.[String(item.id)] ?? [],
+                          profilePrices: result?.profilePrices?.[String(item.id)] ?? [],
+                          familyPreferenceProviderKey: result?.familyPreferences?.[String(supplierResolutionRequest.familyKey)] ?? null,
+                          canManageFamilyPreferences: result?.canManageFamilyPreferences === true,
+                          canManageSupplierPrices: result?.canManageSupplierPrices === true,
+                          error: result?.itemErrors?.[String(item.id)] ?? null,
+                        });
+                      }}
+                    />
+                  ) : (
+                    <SupplierProfilePricePreviewComponent
+                      prices={supplierProfilePrices}
+                      providerKey={selectedSupplierProviderKey || effectiveFamilyPreference || "arquetipo"}
+                      familyKey={supplierResolutionRequest.familyKey}
+                      finishName={supplierResolutionRequest.finishName}
+                      canManagePrice={supplierProviderResolution?.key === supplierResolutionKey && supplierProviderResolution.canManageSupplierPrices}
+                      onPriceSaved={async () => {
+                        if (!supplierResolutionRequest) return;
+                        const result = await resolveSupplierPresentationsForQuote([supplierResolutionRequest], { includeProviderOptions: true });
+                        setSupplierProviderResolution({
+                          key: supplierResolutionKey,
+                          options: result?.providerOptions?.[String(item.id)] ?? [],
+                          profilePrices: result?.profilePrices?.[String(item.id)] ?? [],
+                          familyPreferenceProviderKey: result?.familyPreferences?.[String(supplierResolutionRequest.familyKey)] ?? null,
+                          canManageFamilyPreferences: result?.canManageFamilyPreferences === true,
+                          canManageSupplierPrices: result?.canManageSupplierPrices === true,
+                          error: result?.itemErrors?.[String(item.id)] ?? null,
+                        });
+                      }}
+                    />
+                  )}
                 {isLoadingSupplierOptions ? <span className={s.variantSourceHint}>Buscando listas de precios compatibles…</span> : null}
                 {supplierProviderResolution?.key === supplierResolutionKey && supplierProviderResolution.error ? (
                   <span className={s.preferenceError} role="status">{supplierProviderResolution.error}</span>

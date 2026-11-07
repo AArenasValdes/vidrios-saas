@@ -101,11 +101,24 @@ export async function POST(request: Request) {
       const candidateItems = validItems.map((item) => {
         const line = lineByKey.get(item.catalogLineKey);
         const metadata = line?.catalogMetadata;
-        const refs = getLineTemplateWorkshopProfiles(metadata)?.profiles ?? [];
+        const documentedProfiles = getLineTemplateWorkshopProfiles(metadata)?.profiles ?? [];
+        const refs = documentedProfiles
+          .filter((profile) => profile.codeStatus === "catalog_reference" && profile.code?.trim())
+          .map((profile) => ({ code: profile.code!, name: profile.name }));
+        if (item.catalogLineKey === "ventora:l25") {
+          const namesByCode = new Map(refs.map((reference) => [reference.code.trim().toLocaleUpperCase("en-US"), reference]));
+          for (const code of item.technicalCodes) {
+            const normalized = code.trim().toLocaleUpperCase("en-US");
+            if (normalized && !namesByCode.has(normalized)) {
+              const reference = { code: code.trim(), name: code.trim() };
+              refs.push(reference);
+              namesByCode.set(normalized, reference);
+            }
+          }
+        }
         return {
           item,
-          refs: refs.filter((profile) => profile.codeStatus === "catalog_reference" && profile.code?.trim())
-            .map((profile) => ({ code: profile.code!, name: profile.name })),
+          refs,
         };
       });
       const codeSet = new Set(candidateItems.flatMap(({ item, refs }) => [
