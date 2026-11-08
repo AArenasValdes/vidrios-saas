@@ -32,6 +32,7 @@ export function QuoteProfileCosts({
   prices,
   canManagePrice,
   onPricesSaved,
+  onUseWorkshopCost,
 }: {
   lineTemplateId: number;
   familyKey: string;
@@ -41,6 +42,7 @@ export function QuoteProfileCosts({
   prices: readonly PriceRow[];
   canManagePrice: boolean;
   onPricesSaved?: () => Promise<void> | void;
+  onUseWorkshopCost?: (providerKey: string) => void;
 }) {
   const [editingCode, setEditingCode] = useState<string | null>(null);
   const [draftCost, setDraftCost] = useState("");
@@ -85,7 +87,9 @@ export function QuoteProfileCosts({
         priceSource: null,
         status: "missing_price" as const,
       };
-      const display = own ?? selected ?? fallback;
+      // The selected supplier is the effective purchase source. A saved own
+      // cost remains visible as a separate option, but must not look applied.
+      const display = selected ?? own ?? fallback;
       return {
         technicalCode: reference.technicalCode,
         profileName: reference.profileName || display.profileName || display.presentationDescription || reference.technicalCode,
@@ -96,8 +100,8 @@ export function QuoteProfileCosts({
       };
     });
   }, [prices, providerKey, references]);
-  const pricedCount = rows.filter((row) => row.display?.status === "priced" && row.display.netPrice != null &&
-    row.display.finishPriceBasis !== "base_reference_other_finish").length;
+  const pricedCount = rows.filter((row) => row.selected?.status === "priced" && row.selected.netPrice != null &&
+    row.selected.finishPriceBasis !== "base_reference_other_finish").length;
   if (rows.length === 0) return null;
 
   function openEditor(row: ProfileCost) {
@@ -177,6 +181,7 @@ export function QuoteProfileCosts({
             row.selected.finishPriceBasis !== "base_reference_other_finish");
           const cannotUseAmbiguous = row.conflict;
           const existingOwn = Boolean(row.workshop?.presentationId);
+          const workshopIsSelected = Boolean(row.workshop && row.workshop.providerKey === providerKey);
           const canEditPrivate = existingOwn && revisionFromPreview(row.workshop) !== null;
           const canSave = canManagePrice && !cannotUseAmbiguous && (existingOwn ? canEditPrivate : true);
 
@@ -192,10 +197,29 @@ export function QuoteProfileCosts({
                 <strong>{hasCost ? formatNetPrice(current.netPrice!, current.currency!) : current?.status === "ambiguous" ? "Revisar presentación" : "Sin precio"}</strong>
                 <small>{current?.finishPriceBasis === "base_reference_other_finish"
                   ? `Base comercial ${current.priceSourceFinishName || "de otro acabado"}; costo físico de ${finishName || "este acabado"} pendiente.`
-                  : current?.priceSource === "workshop" || current?.priceSource === "organization_override"
-                  ? "Costo guardado por tu empresa"
+                  : workshopIsSelected && current?.priceSource === "workshop"
+                  ? "Costo privado aplicado a esta pieza"
+                  : current?.priceSource === "organization_override"
+                  ? "Costo propio guardado para esta presentación"
                   : current?.providerLabel || "Referencia de compra pendiente"}</small>
               </div>
+              {row.workshop && !workshopIsSelected ? (
+                <div className={s.pending}>
+                  <small>Costo privado guardado: {row.workshop.netPrice != null && row.workshop.currency
+                    ? formatNetPrice(row.workshop.netPrice, row.workshop.currency)
+                    : "sin precio"} · {row.workshop.commercialLengthMm
+                    ? `${row.workshop.commercialLengthMm.toLocaleString("es-CL")} mm por tira`
+                    : "largo pendiente"}. No está aplicado; proveedor seleccionado: {providerKey}.</small>
+                  {onUseWorkshopCost ? (
+                    <button className={s.action} type="button" onClick={() => onUseWorkshopCost(row.workshop!.providerKey)}>
+                      Usar costo propio en esta pieza
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+              {row.workshop && workshopIsSelected ? (
+                <small className={s.pending}>Costo privado de tu empresa seleccionado para esta pieza.</small>
+              ) : null}
               {canManagePrice ? (
                 cannotUseAmbiguous ? <small className={s.pending}>Hay más de una referencia compatible. Revisa la presentación antes de guardar otro costo.</small> :
                   <button className={s.action} type="button" disabled={!canSave || Boolean(savingCode)} onClick={() => openEditor(row)}>

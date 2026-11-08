@@ -5,12 +5,12 @@ import { QuoteProfileCosts } from "../quote-profile-costs";
 
 const basePrice = {
   technicalCode: "2503",
-  profileName: "Riel inferior",
+  profileName: "Jamba abierta",
   providerKey: "arquetipo",
   providerLabel: "Arquetipo",
   presentationId: "f14599eb-5ec8-480d-a919-779329ab8590",
   supplierSku: "2503",
-  presentationDescription: "Riel inferior · Blanco · tira",
+  presentationDescription: "Jamba abierta · Blanco · tira",
   purchaseUnit: "TR",
   commercialLengthMm: 6000,
   netPrice: null,
@@ -23,10 +23,11 @@ const shared = {
   lineTemplateId: 75,
   familyKey: "universal:aluminio:l25",
   providerKey: "arquetipo",
-  references: [{ technicalCode: "2503", profileName: "Riel inferior" }],
+  references: [{ technicalCode: "2503", profileName: "Jamba abierta" }],
   finishName: "Blanco",
   canManagePrice: true,
   onPricesSaved: jest.fn().mockResolvedValue(undefined),
+  onUseWorkshopCost: jest.fn(),
 };
 
 describe("QuoteProfileCosts", () => {
@@ -85,8 +86,11 @@ describe("QuoteProfileCosts", () => {
       purchaseUnit: "UN", commercialLengthMm: 6000, netPrice: 27500, currency: "CLP",
       priceSource: "workshop", priceListRevision: "taller-v3", status: "priced",
     }]} />);
-    expect(screen.getByText("1 de 1 perfiles con costo")).toBeInTheDocument();
+    expect(screen.getByText("0 de 1 perfiles con costo")).toBeInTheDocument();
+    expect(screen.getByText(/Costo privado guardado:.*No está aplicado; proveedor seleccionado: arquetipo/i)).toBeInTheDocument();
     expect(screen.queryByText(/ventora-internal/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Usar costo propio en esta pieza" }));
+    expect(shared.onUseWorkshopCost).toHaveBeenCalledWith("taller:941");
     fireEvent.click(screen.getByRole("button", { name: "Editar costo" }));
     fireEvent.change(screen.getByRole("spinbutton", { name: "Costo neto por tira 2503 (CLP)" }), { target: { value: "28000" } });
     fireEvent.click(screen.getByRole("button", { name: "Guardar costo 2503" }));
@@ -97,6 +101,24 @@ describe("QuoteProfileCosts", () => {
     })));
     const request = (global.fetch as jest.Mock).mock.calls[0][1];
     expect(JSON.parse(request.body)).not.toHaveProperty("preferred");
+  });
+
+  it("distingue el costo privado guardado del precio Arquetipo que sigue aplicado", () => {
+    render(<QuoteProfileCosts {...shared} prices={[
+      { ...basePrice, technicalCode: "2511R", profileName: "Refuerzo pierna abierta", status: "priced", netPrice: 18000, priceSource: "reference" },
+      {
+        ...basePrice, providerKey: "taller:941", providerLabel: "Precio propio del taller",
+        presentationId: "private-2511r", supplierSku: "", technicalCode: "2511R",
+        profileName: "Refuerzo pierna abierta", purchaseUnit: "UN", netPrice: 45000,
+        commercialLengthMm: 6000, priceSource: "workshop", priceListRevision: "taller-v2",
+        status: "priced",
+      },
+    ]} references={[{ technicalCode: "2511R", profileName: "Refuerzo pierna abierta" }]} />);
+
+    expect(screen.getByText("1 de 1 perfiles con costo")).toBeInTheDocument();
+    expect(screen.getByText("$18.000")).toBeInTheDocument();
+    expect(screen.getByText(/Costo privado guardado:.*\$45\.000.*No está aplicado; proveedor seleccionado: arquetipo/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Usar costo propio en esta pieza" })).toBeInTheDocument();
   });
 
   it("no reutiliza una referencia de Titanio como costo físico para Blanco", () => {

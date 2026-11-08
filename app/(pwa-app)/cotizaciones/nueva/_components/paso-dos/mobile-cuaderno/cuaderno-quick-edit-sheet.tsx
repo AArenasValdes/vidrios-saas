@@ -425,8 +425,11 @@ export function CuadernoQuickEditSheet({
       familyKey: supplierFamilyKey,
       finishName: resolveSupplierFinishName(form.catalogTerminacion, colorHexDraft ?? form.colorHex),
       technicalCodes,
+      providerKey: supplierProviderKeyDraft !== null
+        ? supplierProviderKeyDraft || null
+        : form.supplierProviderKey?.trim() || null,
     };
-  }, [colorHexDraft, form.catalogTerminacion, form.colorHex, item.id, selectedCatalogLineKey, supplierFamilyKey, supplierLineTemplate?.catalogMetadata, supplierRecipe]);
+  }, [colorHexDraft, form.catalogTerminacion, form.colorHex, form.supplierProviderKey, item.id, selectedCatalogLineKey, supplierFamilyKey, supplierLineTemplate?.catalogMetadata, supplierProviderKeyDraft, supplierRecipe]);
   const supplierResolutionKey = JSON.stringify(supplierResolutionRequest);
   useEffect(() => {
     if (!supplierResolutionRequest) return;
@@ -985,6 +988,7 @@ export function CuadernoQuickEditSheet({
                       ]}
                       prices={supplierProfilePrices}
                       canManagePrice={supplierProviderResolution?.key === supplierResolutionKey && supplierProviderResolution.canManageSupplierPrices}
+                      onUseWorkshopCost={(providerKey) => setSupplierProviderKeyDraft(providerKey)}
                       onPricesSaved={async () => {
                         if (!supplierResolutionRequest) return;
                         const result = await resolveSupplierPresentationsForQuote([supplierResolutionRequest], { includeProviderOptions: true });

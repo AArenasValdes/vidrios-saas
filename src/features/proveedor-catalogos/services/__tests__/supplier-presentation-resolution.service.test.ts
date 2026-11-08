@@ -205,6 +205,24 @@ describe("resolver explícito de presentación para pauta", () => {
     })]);
   });
 
+  it("no ofrece el precio base Titanio si el acabado cotizado aún no está identificado", () => {
+    const presentation = {
+      presentationId: "alumco-3201-ti",
+      providerKey: "alumco",
+      technicalCode: "3201",
+      familyKeys: ["universal:aluminio:l32"],
+      finishName: "Titanio",
+      finishResolution: "specific" as const,
+      commercialLengthMm: 6000,
+      netPrice: 10210,
+    };
+
+    expect(resolveSupplierPriceProviderCoverage({
+      request: { itemId: "L32", familyKey: "universal:aluminio:l32", finishName: null, technicalCodes: ["3201"] },
+      presentations: [presentation],
+    })).toEqual([]);
+  });
+
   it("no presenta como cubierto un código con presentación ambigua o sin largo comercial", () => {
     const base = {
       technicalCode: "2501",
