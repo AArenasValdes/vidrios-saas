@@ -215,7 +215,7 @@ describe("PasoDosWizardConfiguracionMovil", () => {
       target: { value: "alumco" },
     });
     expect(onSupplierProviderKeyChange).toHaveBeenCalledWith("alumco");
-    expect(screen.getByRole("option", { name: /Alumco · 2026 · 4\/7 perfiles con precio · 4 con base Titanio \(presentación pendiente\)/i })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /Alumco · 2026 · precios de familia; perfiles pendientes de determinar · 4 con base Titanio \(presentación pendiente\)/i })).toBeInTheDocument();
   });
 
   it("permite abrir Ajustar composición cuando el sistema ya está elegido y aún no hay esquema de hojas", () => {

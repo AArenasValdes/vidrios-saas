@@ -1880,6 +1880,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
       fabricacionLeg: value.fabricacionLeg,
       fabricacionReinforcement: value.fabricacionReinforcement,
       fabricacionVariante: value.fabricacionVariante,
+      fabricationRecipeId: "",
       fabricacionSnapshot: null,
       cubicationSnapshot: null,
     }));

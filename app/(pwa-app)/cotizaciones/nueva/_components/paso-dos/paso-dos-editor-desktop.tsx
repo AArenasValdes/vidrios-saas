@@ -1105,6 +1105,9 @@ function TabDespiece({
             onComponentChange("fabricacionLeg", value.fabricacionLeg);
             onComponentChange("fabricacionReinforcement", value.fabricacionReinforcement);
             onComponentChange("fabricacionVariante", value.fabricacionVariante);
+            onComponentChange("fabricationRecipeId", "");
+            onComponentChange("fabricacionSnapshot", null);
+            onComponentChange("cubicationSnapshot", null);
           }}
           onSupplierProviderKeyChange={(providerKey) =>
             onComponentChange("supplierProviderKey", providerKey)

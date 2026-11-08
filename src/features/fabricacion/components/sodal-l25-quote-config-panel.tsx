@@ -6,7 +6,11 @@ import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templa
 import { resolveComponentFabricacionHojas } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import { FabricationVariantSelector } from "@/features/fabricacion/components/fabrication-variant-selector";
-import { SODAL_L25_CATALOG_KEY } from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
+import {
+  buildSodalL25VariantSlug,
+  isValidSodalL25Combination,
+  SODAL_L25_CATALOG_KEY,
+} from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import {
   mergeSodalL25WorkspaceRecipes,
@@ -198,23 +202,35 @@ export function SodalL25QuoteConfigPanel({
           (componentForm.fabricacionReinforcement as "" | "normal" | "reinforced") ?? ""
         }
         onLegChange={(value) => {
+          const reinforcement = componentForm.fabricacionReinforcement as "" | "normal" | "reinforced";
+          const variantSlug = reinforcement && isValidSodalL25Combination({
+            glazing: sodalConfig.glazing,
+            leg: value,
+            reinforcement,
+          })
+            ? buildSodalL25VariantSlug({ glazing: sodalConfig.glazing, leg: value, reinforcement })
+            : "";
           onFabricacionL25ConfigChange?.({
             catalogLineKey: SODAL_L25_CATALOG_KEY,
             fabricacionGlazing: sodalConfig.glazing,
             fabricacionLeg: value,
-            fabricacionReinforcement: componentForm.fabricacionReinforcement ?? "",
-            fabricacionVariante: componentForm.fabricacionVariante ?? "",
+            fabricacionReinforcement: reinforcement,
+            fabricacionVariante: variantSlug,
           });
         }}
         onReinforcementChange={(value) => {
-          const variantSlug =
-            componentForm.fabricacionLeg && value
-              ? `${sodalConfig.glazing}_${componentForm.fabricacionLeg}_${value}`
-              : componentForm.fabricacionVariante ?? "";
+          const leg = componentForm.fabricacionLeg as "" | "open" | "closed";
+          const variantSlug = leg && isValidSodalL25Combination({
+            glazing: sodalConfig.glazing,
+            leg,
+            reinforcement: value,
+          })
+            ? buildSodalL25VariantSlug({ glazing: sodalConfig.glazing, leg, reinforcement: value })
+            : "";
           onFabricacionL25ConfigChange?.({
             catalogLineKey: SODAL_L25_CATALOG_KEY,
             fabricacionGlazing: sodalConfig.glazing,
-            fabricacionLeg: componentForm.fabricacionLeg ?? "",
+            fabricacionLeg: leg,
             fabricacionReinforcement: value,
             fabricacionVariante: variantSlug,
           });

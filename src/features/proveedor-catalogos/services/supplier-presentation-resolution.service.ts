@@ -97,6 +97,34 @@ export function resolveSupplierTechnicalCodesForQuote(input: {
   return [...new Set(selected.map((code) => code.trim()).filter(Boolean))];
 }
 
+export type QuoteSupplierProfileReference = {
+  technicalCode: string;
+  profileName: string;
+};
+
+/**
+ * Recipe profiles define the component's required materials. Catalog references
+ * are only a fallback for lines without an exact recipe; L25 must stay pending
+ * when its exact validated variant has not resolved.
+ */
+export function resolveQuoteSupplierProfileReferences(input: {
+  recipeProfiles: readonly { code: string; name: string }[];
+  documentedProfiles: readonly { code: string; name: string }[];
+  requireExactRecipe?: boolean;
+}): QuoteSupplierProfileReference[] {
+  const source = input.recipeProfiles.length > 0 || input.requireExactRecipe
+    ? input.recipeProfiles
+    : input.documentedProfiles;
+  const seen = new Set<string>();
+  return source.flatMap((profile) => {
+    const technicalCode = profile.code.trim();
+    const key = normalizeCode(technicalCode);
+    if (!key || seen.has(key)) return [];
+    seen.add(key);
+    return [{ technicalCode, profileName: profile.name.trim() || technicalCode }];
+  });
+}
+
 /**
  * Shows exact catalog/price evidence for documented line references. This is
  * deliberately independent of a recipe: it never estimates cut quantities or

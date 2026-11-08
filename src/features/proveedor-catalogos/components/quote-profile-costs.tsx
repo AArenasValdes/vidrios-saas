@@ -102,6 +102,7 @@ export function QuoteProfileCosts({
   }, [prices, providerKey, references]);
   const pricedCount = rows.filter((row) => row.selected?.status === "priced" && row.selected.netPrice != null &&
     row.selected.finishPriceBasis !== "base_reference_other_finish").length;
+  const hasUnappliedPrivateCost = rows.some((row) => row.workshop && row.workshop.providerKey !== providerKey);
   if (rows.length === 0) return null;
 
   function openEditor(row: ProfileCost) {
@@ -172,6 +173,11 @@ export function QuoteProfileCosts({
       <header className={s.heading}>
         <div><h3>Mis costos de perfiles</h3><p>{pricedCount} de {rows.length} perfiles con costo</p></div>
       </header>
+      {hasUnappliedPrivateCost ? (
+        <p className={s.scopeNotice}>
+          Elegir costo propio cambia el proveedor de toda esta pieza. Perfiles sin costo propio quedarán pendientes.
+        </p>
+      ) : null}
       <ul className={s.list}>
         {rows.map((row) => {
           const current = row.display;
@@ -189,19 +195,24 @@ export function QuoteProfileCosts({
             <li className={s.row} key={row.technicalCode}>
               <div className={s.identity}>
                 <strong>{row.technicalCode} · {row.profileName}</strong>
-                <small>Acabado cotizado: {finishName || "pendiente"} · {current?.commercialLengthMm
+                <small>Código técnico de receta · Acabado cotizado: {finishName || "pendiente"} · {current?.commercialLengthMm
                   ? `${current.commercialLengthMm.toLocaleString("es-CL")} mm por tira`
                   : "largo de compra pendiente"}</small>
               </div>
               <div className={s.cost}>
-                <strong>{hasCost ? formatNetPrice(current.netPrice!, current.currency!) : current?.status === "ambiguous" ? "Revisar presentación" : "Sin precio"}</strong>
+                <strong className={current?.finishPriceBasis === "base_reference_other_finish" ? s.referencePrice : undefined}>
+                  {hasCost ? formatNetPrice(current.netPrice!, current.currency!) : current?.status === "ambiguous" ? "Revisar presentación" : "Sin precio"}
+                </strong>
                 <small>{current?.finishPriceBasis === "base_reference_other_finish"
-                  ? `Base comercial ${current.priceSourceFinishName || "de otro acabado"}; costo físico de ${finishName || "este acabado"} pendiente.`
+                  ? `Referencia ${current.priceSourceFinishName || "de otro acabado"}; no confirma costo físico para ${finishName || "este acabado"}.`
                   : workshopIsSelected && current?.priceSource === "workshop"
                   ? "Costo privado aplicado a esta pieza"
                   : current?.priceSource === "organization_override"
                   ? "Costo propio guardado para esta presentación"
                   : current?.providerLabel || "Referencia de compra pendiente"}</small>
+                {hasCost && current?.supplierSku && current.finishPriceBasis !== "base_reference_other_finish" ? (
+                  <small className={s.sku}>SKU proveedor: {current.supplierSku}</small>
+                ) : null}
               </div>
               {row.workshop && !workshopIsSelected ? (
                 <div className={s.pending}>

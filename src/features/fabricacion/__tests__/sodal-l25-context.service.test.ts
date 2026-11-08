@@ -118,6 +118,8 @@ describe("sodal-l25-context.service", () => {
         fabricacionLeg: "open",
         fabricacionReinforcement: "normal",
         fabricacionVariante: "monolithic_open_normal",
+        fabricacionHojas: 2,
+        sheetScheme: "2 hojas",
       },
       "DVH 4+12+4"
     );
