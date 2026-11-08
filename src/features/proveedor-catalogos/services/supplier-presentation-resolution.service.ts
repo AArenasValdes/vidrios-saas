@@ -372,8 +372,11 @@ export function resolveSupplierPresentationFamilyKeys(input: {
 export function resolveSupplierFinishName(value: string | null | undefined, colorHex?: string | null) {
   const normalized = normalize(value);
   const labels: Record<string, string> = {
+    "aluminio mate": "Aluminio Mate",
     blanco: "Blanco",
+    "blanco hueso": "Blanco Hueso",
     nogal: "Nogal",
+    madera: "Madera",
     "roble dorado": "Roble Dorado",
     antracita: "Antracita",
     negro: "Negro",
@@ -384,12 +387,15 @@ export function resolveSupplierFinishName(value: string | null | undefined, colo
   const labelsByExactHex: Record<string, string> = {
     "#ffffff": "Blanco",
     "#f0eeeb": "Blanco",
+    "#dfd5c4": "Blanco Hueso",
+    "#a8a8a8": "Aluminio Mate",
     "#2a2a2a": "Negro",
     "#444444": "Negro Mate",
     "#6f4a34": "Nogal",
     "#b7834a": "Roble Dorado",
     "#4f555d": "Antracita",
     "#7d8791": "Titanio",
+    "#8b5e3c": "Madera",
   };
   return labelsByExactHex[(colorHex ?? "").trim().toLowerCase()] ?? null;
 }

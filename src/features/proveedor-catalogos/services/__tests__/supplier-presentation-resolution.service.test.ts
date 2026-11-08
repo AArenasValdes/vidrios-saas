@@ -57,7 +57,9 @@ describe("resolver explícito de presentación para pauta", () => {
     expect(resolveSupplierFinishName("Ventana", "#2a2a2a")).toBe("Negro");
     expect(resolveSupplierFinishName("Titanio", "#7d8791")).toBe("Titanio");
     expect(resolveSupplierFinishName(null, "#7d8791")).toBe("Titanio");
-    expect(resolveSupplierFinishName("Aluminio mate", "#a8a8a8")).toBeNull();
+    expect(resolveSupplierFinishName("Aluminio mate", "#a8a8a8")).toBe("Aluminio Mate");
+    expect(resolveSupplierFinishName("Blanco hueso", "#dfd5c4")).toBe("Blanco Hueso");
+    expect(resolveSupplierFinishName("Madera", "#8b5e3c")).toBe("Madera");
     expect(resolveSupplierFinishName("gris nuevo", "#123456")).toBeNull();
   });
 

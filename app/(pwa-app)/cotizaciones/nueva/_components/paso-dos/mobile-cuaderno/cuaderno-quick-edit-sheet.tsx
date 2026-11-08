@@ -161,6 +161,8 @@ export function CuadernoQuickEditSheet({
     key: string;
     options: SupplierPriceProviderOption[];
     profilePrices: SupplierProfilePricePreview[];
+    optionsByFinish: Record<string, SupplierPriceProviderOption[]>;
+    profilePricesByFinish: Record<string, SupplierProfilePricePreview[]>;
     familyPreferenceProviderKey: string | null;
     canManageFamilyPreferences: boolean;
     canManageSupplierPrices: boolean;
@@ -483,6 +485,13 @@ export function CuadernoQuickEditSheet({
       requireExactRecipe: selectedLineIsSodalL25,
     });
   }, [effectiveSupplierRecipe, selectedLineIsSodalL25, supplierLineTemplate?.catalogMetadata]);
+  const activeSupplierFinishName = resolveSupplierFinishName(form.catalogTerminacion, colorHexDraft ?? form.colorHex);
+  const supplierPreviewFinishNames = useMemo(() => {
+    if (!selectedLineIsSodalL25) return [];
+    return [...new Set(ALUMINUM_COLOR_OPTIONS.map((option) => resolveSupplierFinishName(option.label, option.hex))
+      .filter((finishName): finishName is string => Boolean(finishName)))];
+  }, [selectedLineIsSodalL25]);
+  const supplierResolutionFinishName = selectedLineIsSodalL25 ? null : activeSupplierFinishName;
   // The resolver response includes profile price previews for every compatible
   // provider. Selecting Arquetipo/Alumco is presentation state, so it must not
   // invalidate this request and repeat the full catalog resolution.
@@ -500,10 +509,13 @@ export function CuadernoQuickEditSheet({
       itemId: String(item.id),
       catalogLineKey: selectedCatalogLineKey,
       familyKey: supplierFamilyKey,
-      finishName: resolveSupplierFinishName(form.catalogTerminacion, colorHexDraft ?? form.colorHex),
+      // Fetch provider and finish options once. Color selection is local display
+      // state; it must not invalidate the catalog request or flash an empty list.
+      finishName: supplierResolutionFinishName,
+      previewFinishNames: supplierPreviewFinishNames,
       technicalCodes,
     };
-  }, [colorHexDraft, form.catalogTerminacion, form.colorHex, item.id, selectedCatalogLineKey, selectedLineIsSodalL25, supplierFamilyKey, supplierLineTemplate?.catalogMetadata, supplierProfileReferences]);
+  }, [item.id, selectedCatalogLineKey, selectedLineIsSodalL25, supplierFamilyKey, supplierLineTemplate?.catalogMetadata, supplierPreviewFinishNames, supplierProfileReferences, supplierResolutionFinishName]);
   const supplierResolutionKey = JSON.stringify(supplierResolutionRequest);
   useEffect(() => {
     if (!supplierResolutionRequest) return;
@@ -513,6 +525,8 @@ export function CuadernoQuickEditSheet({
         key: supplierResolutionKey,
         options: result?.providerOptions?.[String(item.id)] ?? [],
         profilePrices: result?.profilePrices?.[String(item.id)] ?? [],
+        optionsByFinish: result?.providerOptionsByFinish?.[String(item.id)] ?? {},
+        profilePricesByFinish: result?.profilePricesByFinish?.[String(item.id)] ?? {},
         familyPreferenceProviderKey: result?.familyPreferences?.[String(supplierResolutionRequest.familyKey)] ?? null,
         canManageFamilyPreferences: result?.canManageFamilyPreferences === true,
         canManageSupplierPrices: result?.canManageSupplierPrices === true,
@@ -524,10 +538,10 @@ export function CuadernoQuickEditSheet({
     return () => { active = false; };
   }, [item.id, supplierResolutionKey, supplierResolutionRequest]);
   const supplierOptions = supplierProviderResolution?.key === supplierResolutionKey
-    ? supplierProviderResolution.options
+    ? supplierProviderResolution.optionsByFinish[activeSupplierFinishName ?? ""] ?? supplierProviderResolution.options
     : [];
   const supplierProfilePrices = supplierProviderResolution?.key === supplierResolutionKey
-    ? supplierProviderResolution.profilePrices
+    ? supplierProviderResolution.profilePricesByFinish[activeSupplierFinishName ?? ""] ?? supplierProviderResolution.profilePrices
     : [];
   const isLoadingSupplierOptions = Boolean(supplierResolutionRequest && supplierProviderResolution?.key !== supplierResolutionKey);
   const storedSupplierProviderKey = supplierProviderKeyDraft ?? form.supplierProviderKey;
@@ -1085,7 +1099,7 @@ export function CuadernoQuickEditSheet({
                       lineTemplateId={Number(lineTemplateId)}
                       familyKey={supplierResolutionRequest.familyKey}
                       providerKey={selectedSupplierProviderKey || effectiveFamilyPreference || "arquetipo"}
-                      finishName={supplierResolutionRequest.finishName}
+                      finishName={activeSupplierFinishName}
                       references={supplierProfileReferences}
                       prices={supplierProfilePrices}
                       canManagePrice={supplierProviderResolution?.key === supplierResolutionKey && supplierProviderResolution.canManageSupplierPrices}
@@ -1097,6 +1111,8 @@ export function CuadernoQuickEditSheet({
                           key: supplierResolutionKey,
                           options: result?.providerOptions?.[String(item.id)] ?? [],
                           profilePrices: result?.profilePrices?.[String(item.id)] ?? [],
+                          optionsByFinish: result?.providerOptionsByFinish?.[String(item.id)] ?? {},
+                          profilePricesByFinish: result?.profilePricesByFinish?.[String(item.id)] ?? {},
                           familyPreferenceProviderKey: result?.familyPreferences?.[String(supplierResolutionRequest.familyKey)] ?? null,
                           canManageFamilyPreferences: result?.canManageFamilyPreferences === true,
                           canManageSupplierPrices: result?.canManageSupplierPrices === true,
@@ -1109,7 +1125,7 @@ export function CuadernoQuickEditSheet({
                       prices={supplierProfilePrices}
                       providerKey={selectedSupplierProviderKey || effectiveFamilyPreference || "arquetipo"}
                       familyKey={supplierResolutionRequest.familyKey}
-                      finishName={supplierResolutionRequest.finishName}
+                      finishName={activeSupplierFinishName}
                       canManagePrice={supplierProviderResolution?.key === supplierResolutionKey && supplierProviderResolution.canManageSupplierPrices}
                       onPriceSaved={async () => {
                         if (!supplierResolutionRequest) return;
@@ -1118,6 +1134,8 @@ export function CuadernoQuickEditSheet({
                           key: supplierResolutionKey,
                           options: result?.providerOptions?.[String(item.id)] ?? [],
                           profilePrices: result?.profilePrices?.[String(item.id)] ?? [],
+                          optionsByFinish: result?.providerOptionsByFinish?.[String(item.id)] ?? {},
+                          profilePricesByFinish: result?.profilePricesByFinish?.[String(item.id)] ?? {},
                           familyPreferenceProviderKey: result?.familyPreferences?.[String(supplierResolutionRequest.familyKey)] ?? null,
                           canManageFamilyPreferences: result?.canManageFamilyPreferences === true,
                           canManageSupplierPrices: result?.canManageSupplierPrices === true,

@@ -236,7 +236,7 @@ describe("/api/proveedor-catalogos/resolve-presentations", () => {
     ]));
     (readOrganizationPurchasePricing as jest.Mock).mockResolvedValue({ adjustments: [], overrides: [] });
 
-    const post = (finishName: string | null) => POST(new Request("http://localhost/api/proveedor-catalogos/resolve-presentations", {
+    const post = (finishName: string | null, previewFinishNames: string[] = []) => POST(new Request("http://localhost/api/proveedor-catalogos/resolve-presentations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -246,6 +246,7 @@ describe("/api/proveedor-catalogos/resolve-presentations", () => {
           catalogLineKey: line.catalogKey,
           familyKey: line.catalogMetadata!.familyKey,
           finishName,
+          previewFinishNames,
           technicalCodes: codes,
           providerKey: "alumco",
         }],
@@ -275,6 +276,21 @@ describe("/api/proveedor-catalogos/resolve-presentations", () => {
     expect(titanioBody.providerOptions["alumco-l5000"]).toContainEqual(expect.objectContaining({
       providerKey: "arquetipo",
       label: "Arquetipo · junio 2026",
+    }));
+    const multiFinishResponse = await post(null, ["Titanio", "Negro", "Blanco Hueso", "Aluminio Mate"]);
+    expect(multiFinishResponse.status).toBe(200);
+    const multiFinishBody = await multiFinishResponse.json();
+    expect(multiFinishBody.profilePricesByFinish["alumco-l5000"].Titanio).toContainEqual(expect.objectContaining({
+      technicalCode: "5001", netPrice: 12000, finishPriceBasis: "specific_finish", supplierSku: "TI5001A", status: "priced",
+    }));
+    expect(multiFinishBody.profilePricesByFinish["alumco-l5000"].Negro).toContainEqual(expect.objectContaining({
+      technicalCode: "5001", netPrice: 12000, finishPriceBasis: "base_reference_other_finish", presentationId: "", supplierSku: "", status: "priced",
+    }));
+    expect(multiFinishBody.providerOptionsByFinish["alumco-l5000"].Negro).toContainEqual(expect.objectContaining({
+      providerKey: "alumco", pricedProfileCount: 7, totalProfileCount: 7, baseReferenceProfileCount: 7,
+    }));
+    expect(multiFinishBody.providerOptionsByFinish["alumco-l5000"].Titanio).toContainEqual(expect.objectContaining({
+      providerKey: "alumco", pricedProfileCount: 7, totalProfileCount: 7, baseReferenceProfileCount: 0,
     }));
     expect(readSupplierPresentationPrices).toHaveBeenCalledWith({
       familyKeys: expect.arrayContaining(["universal:aluminio:l5000", "arquetipo:l5000"]),

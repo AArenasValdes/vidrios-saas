@@ -29,6 +29,7 @@ const requestSchema = z.object({
     catalogLineKey: z.string().trim().min(1).max(180),
     familyKey: z.string().trim().min(1).max(180),
     finishName: z.string().trim().max(100).nullable(),
+    previewFinishNames: z.array(z.string().trim().min(1).max(100)).max(20).optional(),
     technicalCodes: z.array(z.string().trim().min(1).max(100)).max(100),
     providerKey: z.string().trim().min(1).max(100).nullable().optional(),
   })).max(100),
@@ -90,6 +91,8 @@ export async function POST(request: Request) {
       otherAvailableFinishNames?: string[];
     }>> = {};
     let profilePrices: Record<string, ReturnType<typeof resolveSupplierProfilePricePreviews>> = {};
+    let profilePricesByFinish: Record<string, Record<string, ReturnType<typeof resolveSupplierProfilePricePreviews>>> = {};
+    let providerOptionsByFinish: Record<string, Record<string, typeof providerOptions[string]>> = {};
     if (parsed.data.includeProviderOptions) {
       const priceRows = [...catalogPrices, ...workshopPrices];
       const providerKeys = [...new Set([
@@ -165,6 +168,22 @@ export async function POST(request: Request) {
           organizationPricing,
         })] as const;
       })) : {};
+      profilePricesByFinish = includeProfilePrices ? Object.fromEntries(candidateItems.map(({ item, refs }) => {
+        const line = lineByKey.get(item.catalogLineKey);
+        const configurationKey = line?.catalogMetadata?.configurationKey as string | undefined;
+        const finishNames = [...new Set([item.finishName, ...(item.previewFinishNames ?? [])]
+          .map((finishName) => finishName?.trim())
+          .filter((finishName): finishName is string => Boolean(finishName)))];
+        return [item.itemId, Object.fromEntries(finishNames.map((finishName) => [finishName,
+          resolveSupplierProfilePricePreviews({
+            request: { ...item, finishName, configurationKey },
+            references: refs,
+            presentations: profilePriceCandidates,
+            providerNames: new Map([...displayProviderNames, ...[...providerKeys].filter((key) => key.startsWith("taller:")).map((key) => [key, "Precio propio del taller"] as const)]),
+            organizationPricing,
+          }),
+        ]))] as const;
+      })) : {};
       providerOptions = Object.fromEntries(validItems.map((item) => {
         const configurationKey = VENTORA_DEFAULT_LINE_CATALOG.find((line) => line.catalogKey === item.catalogLineKey)?.catalogMetadata?.configurationKey as string | undefined;
         const coverage = resolveSupplierPriceProviderCoverage({
@@ -231,6 +250,57 @@ export async function POST(request: Request) {
         }).sort((left, right) => Number(right.isReference) - Number(left.isReference) || left.label.localeCompare(right.label, "es-CL"));
         return [item.itemId, options] as const;
       }));
+      providerOptionsByFinish = Object.fromEntries(validItems.map((item) => {
+        const line = lineByKey.get(item.catalogLineKey);
+        const configurationKey = line?.catalogMetadata?.configurationKey as string | undefined;
+        const finishNames = [...new Set([item.finishName, ...(item.previewFinishNames ?? [])]
+          .map((finishName) => finishName?.trim())
+          .filter((finishName): finishName is string => Boolean(finishName)))];
+        const baseOptions = providerOptions[item.itemId] ?? [];
+        return [item.itemId, Object.fromEntries(finishNames.map((finishName) => {
+          const requestForFinish = { ...item, configurationKey, finishName };
+          const coverageByProvider = new Map(resolveSupplierPriceProviderCoverage({
+            request: requestForFinish,
+            presentations: relevantPriceRows,
+          }).map((coverage) => [coverage.providerKey, coverage]));
+          const possibleOtherFinishes = [...new Set(relevantPriceRows.flatMap((row) => {
+            const familyMatches = (row.familyKeys ?? []).some((familyKey) =>
+              (normalizeUniversalAluminumFamilyKey(familyKey) ?? familyKey).toLocaleLowerCase("es-CL") ===
+              (normalizeUniversalAluminumFamilyKey(item.familyKey) ?? item.familyKey).toLocaleLowerCase("es-CL")
+            );
+            const configurationMatches = !row.configurationKey || row.configurationKey === configurationKey;
+            const requestedCodes = new Set(item.technicalCodes.map((code) => code.trim().toLocaleUpperCase("en-US")));
+            const codeMatches = Boolean(row.technicalCode && requestedCodes.has(row.technicalCode.trim().toLocaleUpperCase("en-US"))) ||
+              (row.recipeComponentCodes ?? []).some((code) => requestedCodes.has(code.trim().toLocaleUpperCase("en-US")));
+            return familyMatches && configurationMatches && codeMatches && row.finishResolution === "specific" && row.finishName?.trim()
+              ? [row.finishName.trim()]
+              : [];
+          }))].filter((otherFinishName) => otherFinishName.toLocaleLowerCase("es-CL") !== finishName.toLocaleLowerCase("es-CL"));
+          const availableOtherFinishesByProvider = new Map<string, string[]>();
+          for (const otherFinishName of possibleOtherFinishes) {
+            const otherCoverage = resolveSupplierPriceProviderCoverage({
+              request: { ...requestForFinish, finishName: otherFinishName },
+              presentations: relevantPriceRows,
+            });
+            for (const option of otherCoverage) {
+              if (option.pricedProfileCount === 0) continue;
+              const names = availableOtherFinishesByProvider.get(option.providerKey) ?? [];
+              if (!names.includes(otherFinishName)) names.push(otherFinishName);
+              availableOtherFinishesByProvider.set(option.providerKey, names);
+            }
+          }
+          return [finishName, baseOptions.map((option) => {
+            const coverage = coverageByProvider.get(option.providerKey);
+            return {
+              ...option,
+              pricedProfileCount: coverage?.pricedProfileCount ?? 0,
+              totalProfileCount: coverage?.totalProfileCount ?? item.technicalCodes.length,
+              baseReferenceProfileCount: coverage?.baseReferenceProfileCount ?? 0,
+              otherAvailableFinishNames: availableOtherFinishesByProvider.get(option.providerKey) ?? [],
+            };
+          })];
+        }))] as const;
+      }));
     }
     const selections = Object.fromEntries(validItems.map((item) => [item.itemId,
       resolveSupplierPresentationsForQuoteItem({
@@ -250,6 +320,8 @@ export async function POST(request: Request) {
       selections,
       providerOptions,
       profilePrices,
+      providerOptionsByFinish,
+      profilePricesByFinish,
       familyPreferences,
       itemErrors,
       canManageFamilyPreferences: canManageSupplierCatalog(auth.profile.rol),
