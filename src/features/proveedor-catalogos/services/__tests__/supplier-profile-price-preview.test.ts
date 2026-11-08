@@ -107,6 +107,23 @@ describe("supplier profile price preview without fabrication recipe", () => {
     })]);
   });
 
+  it("returns compatible prices for each provider in one response for local provider switching", () => {
+    const result = resolveSupplierProfilePricePreviews({
+      request: { ...request, providerKey: "arquetipo" },
+      references: [{ code: "KOM 802", name: "Marco monorriel" }],
+      presentations: [
+        presentation({ providerKey: "arquetipo", presentationId: "arquetipo-802", netPrice: 34900 }),
+        presentation({ providerKey: "alumco", presentationId: "alumco-802", netPrice: 36500 }),
+      ],
+      providerNames: new Map([["arquetipo", "Arquetipo"], ["alumco", "Alumco"]]),
+    });
+
+    expect(result).toEqual(expect.arrayContaining([
+      expect.objectContaining({ providerKey: "arquetipo", netPrice: 34900, status: "priced" }),
+      expect.objectContaining({ providerKey: "alumco", netPrice: 36500, status: "priced" }),
+    ]));
+  });
+
   it("does not choose between duplicate confirmed presentations", () => {
     const result = resolveSupplierProfilePricePreviews({
       request,

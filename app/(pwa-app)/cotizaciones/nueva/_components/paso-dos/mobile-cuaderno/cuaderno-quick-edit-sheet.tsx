@@ -483,6 +483,9 @@ export function CuadernoQuickEditSheet({
       requireExactRecipe: selectedLineIsSodalL25,
     });
   }, [effectiveSupplierRecipe, selectedLineIsSodalL25, supplierLineTemplate?.catalogMetadata]);
+  // The resolver response includes profile price previews for every compatible
+  // provider. Selecting Arquetipo/Alumco is presentation state, so it must not
+  // invalidate this request and repeat the full catalog resolution.
   const supplierResolutionRequest = useMemo(() => {
     const documentedCodes = getLineTemplateWorkshopProfiles(supplierLineTemplate?.catalogMetadata)?.profiles
       .filter((profile) => profile.codeStatus === "catalog_reference" && profile.code?.trim())
@@ -499,11 +502,8 @@ export function CuadernoQuickEditSheet({
       familyKey: supplierFamilyKey,
       finishName: resolveSupplierFinishName(form.catalogTerminacion, colorHexDraft ?? form.colorHex),
       technicalCodes,
-      providerKey: supplierProviderKeyDraft !== null
-        ? supplierProviderKeyDraft || null
-        : form.supplierProviderKey?.trim() || null,
     };
-  }, [colorHexDraft, form.catalogTerminacion, form.colorHex, form.supplierProviderKey, item.id, selectedCatalogLineKey, selectedLineIsSodalL25, supplierFamilyKey, supplierLineTemplate?.catalogMetadata, supplierProfileReferences, supplierProviderKeyDraft]);
+  }, [colorHexDraft, form.catalogTerminacion, form.colorHex, item.id, selectedCatalogLineKey, selectedLineIsSodalL25, supplierFamilyKey, supplierLineTemplate?.catalogMetadata, supplierProfileReferences]);
   const supplierResolutionKey = JSON.stringify(supplierResolutionRequest);
   useEffect(() => {
     if (!supplierResolutionRequest) return;

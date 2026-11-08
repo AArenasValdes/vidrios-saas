@@ -133,4 +133,35 @@ describe("QuoteProfileCosts", () => {
     fireEvent.click(screen.getByRole("button", { name: "Agregar costo" }));
     expect(screen.getByLabelText("Acabado del perfil")).toHaveValue("Blanco");
   });
+
+  it("cambia de proveedor con las vistas ya cargadas sin perder el precio seguro del acabado", () => {
+    const prices = [
+      {
+        ...basePrice,
+        status: "priced" as const,
+        netPrice: 22000,
+        priceSource: "reference" as const,
+      },
+      {
+        ...basePrice,
+        providerKey: "alumco",
+        providerLabel: "Alumco · 2026",
+        presentationId: "alumco-2503",
+        status: "priced" as const,
+        netPrice: 31000,
+        priceSource: "reference" as const,
+        finishPriceBasis: "base_reference_other_finish" as const,
+        priceSourceFinishName: "Titanio",
+        priceSourceSupplierSku: "TI2503",
+      },
+    ];
+    const { rerender } = render(<QuoteProfileCosts {...shared} prices={prices} />);
+
+    expect(screen.getByText("$22.000")).toBeInTheDocument();
+    rerender(<QuoteProfileCosts {...shared} providerKey="alumco" prices={prices} />);
+
+    expect(screen.getByText("$31.000")).toBeInTheDocument();
+    expect(screen.getByText(/Referencia Titanio; no confirma costo físico para Blanco/)).toBeInTheDocument();
+    expect(screen.queryByText("TI2503")).not.toBeInTheDocument();
+  });
 });
