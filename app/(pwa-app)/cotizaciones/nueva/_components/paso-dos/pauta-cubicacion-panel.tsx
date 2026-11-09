@@ -1752,7 +1752,7 @@ export function PautaCubicacionPanel({
                 ) : null}
                 {supplierProviderOptions.map((option) => (
                   <option key={option.providerKey} value={option.providerKey}>
-                    {option.label}{option.isReference ? " · Referencia" : ""} · {option.pricedProfileCount}/{option.totalProfileCount} perfiles con precio{option.baseReferenceProfileCount ? ` · ${option.baseReferenceProfileCount} con base Titanio (presentación pendiente)` : ""}{option.otherAvailableFinishNames?.length ? ` · precio en ${option.otherAvailableFinishNames.slice(0, 2).join(", ")}` : ""}
+                    {option.label}{option.isReference ? " · Referencia" : ""} · {option.coverageMessage ?? `${option.pricedProfileCount}/${option.totalProfileCount} perfiles con precio${option.baseReferenceProfileCount ? ` · ${option.baseReferenceProfileCount} con base Titanio (presentación pendiente)` : ""}`}{option.otherAvailableFinishNames?.length ? ` · precio en ${option.otherAvailableFinishNames.slice(0, 2).join(", ")}` : ""}
                   </option>
                 ))}
               </select>

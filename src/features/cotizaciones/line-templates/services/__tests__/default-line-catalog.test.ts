@@ -142,7 +142,7 @@ describe("seedDefaultLineCatalog", () => {
       "ventora:kompen-star-line-500",
       "ventora:thermowin-americana-s70",
     ]));
-    expect(catalogSize).toBe(103);
+    expect(catalogSize).toBe(104);
   });
 
   it("expone cada configuración VEKA como una línea cotizable independiente y mantiene sus fórmulas pendientes", () => {
@@ -325,6 +325,14 @@ describe("seedDefaultLineCatalog", () => {
     ]);
     expect(variants.every((line) => line.catalogMetadata?.familyLabel === "Sliding 7400")).toBe(true);
     expect(variants[0].vidrioPrincipalRecomendado).toBe("Incoloro monolítico 4mm");
+  });
+
+  it("declara AL-42 Fijo como configuración comercial separada y sin receta", () => {
+    const fixed = VENTORA_DEFAULT_LINE_CATALOG.find((candidate) => candidate.catalogKey === "ventora:l42:configuration:ventora:l42:pano-fijo");
+    const projecting = VENTORA_DEFAULT_LINE_CATALOG.find((candidate) => candidate.catalogKey === "ventora:l42");
+
+    expect(fixed?.catalogMetadata?.compatibility?.configurations?.[0]).toMatchObject({ componentType: "Paño fijo", openingType: "Fijo", typology: "pano_fijo", variant: "sin_receta", leavesCounts: [1], source: "catalog" });
+    expect(projecting?.catalogMetadata?.compatibility?.configurations?.[0]).toMatchObject({ typology: "proyectante", variant: "normal" });
   });
 
   it("incluye las configuraciones de Elevadora sin inventar perfiles ni recetas", () => {

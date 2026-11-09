@@ -76,13 +76,16 @@ function readMetadata(
 ) {
   const metadata = (line.catalogMetadata ?? {}) as Record<string, unknown>;
   const compatibility = metadata.compatibility as
-    | { configurations?: Array<{ typology?: unknown }> }
+    | { configurations?: Array<{ typology?: unknown; variant?: unknown }> }
     | undefined;
   const declaredTypologies = compatibility?.configurations
     ?.map((configuration) => configuration.typology)
     .filter((typology): typology is string => typeof typology === "string");
   return {
     declaredTypology: declaredTypologies?.length === 1 ? declaredTypologies[0] : null,
+    declaredVariant: compatibility?.configurations?.length === 1 && typeof compatibility.configurations[0]?.variant === "string"
+      ? compatibility.configurations[0].variant
+      : null,
     lineConfiguration:
       typeof metadata.lineConfiguration === "string" ? metadata.lineConfiguration : null,
     lineSystem: typeof metadata.lineSystem === "string" ? metadata.lineSystem : null,
@@ -113,7 +116,7 @@ function resolveReferenceRecipe(
   line: Omit<CreateCotizacionLineTemplateInput, "organizationId">
 ): FabricacionReceta | null {
   const meta = readMetadata(line);
-  if (line.catalogKey === "ventora:l32:configuration:ventora:l32:pano-fijo" && meta.declaredTypology === "pano_fijo") return null;
+  if (meta.declaredTypology === "pano_fijo" && meta.declaredVariant === "sin_receta") return null;
   if (line.catalogKey === VERATEC_7400_CATALOG_KEY) {
     return crearRecetaVeratec7400Corredera({
       lineName: line.nombre,
@@ -170,7 +173,9 @@ function classifyFabricacionEstado(input: {
   recipe: FabricacionReceta | null;
   listaParaProbar: boolean;
   workshopCodes: string[];
+  recipePending: boolean;
 }): LineaFabricacionEstadoCatalogo {
+  if (!input.recipe && input.recipePending) return "fabricacion_pendiente";
   if (!input.recipe && input.workshopCodes.length === 0) {
     return "cotizacion_comercial";
   }
@@ -284,6 +289,7 @@ export function auditarLineaCatalogoVentora(
     recipe,
     listaParaProbar: probar.listaParaProbar,
     workshopCodes,
+    recipePending: meta.declaredTypology === "pano_fijo" && meta.declaredVariant === "sin_receta",
   });
   const isVeratec7400 = line.catalogKey === VERATEC_7400_CATALOG_KEY;
   const operationalStatus = deriveLineOperationalStatus({
@@ -323,9 +329,7 @@ export function auditarLineaCatalogoVentora(
     material: line.material,
     sistema: meta.lineSystem ?? meta.ventoraPlantillaId,
     tipologia:
-      (line.catalogKey === "ventora:l32:configuration:ventora:l32:pano-fijo" && meta.declaredTypology === "pano_fijo"
-        ? "pano_fijo"
-        : null) ??
+      (meta.declaredTypology === "pano_fijo" && meta.declaredVariant === "sin_receta" && !recipe ? "pano_fijo" : null) ??
       recipe?.identidad.tipologia ??
       archetype?.tipologia ??
       meta.lineConfiguration ??
