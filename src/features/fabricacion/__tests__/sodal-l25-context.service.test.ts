@@ -5,11 +5,15 @@ import {
   listSodalL25ReinforcementOptions,
   mergeSodalL25WorkspaceRecipes,
   resolveSodalL25QuoteConfig,
+  selectSodalL25LineRecipes,
   summarizeSodalL25LineCoverage,
 } from "@/features/fabricacion/services/sodal-l25-context.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
-function l25Recipe(hojas: 2 | 3 | 4): FabricationRecipeRecord {
+function l25Recipe(
+  hojas: 2 | 3 | 4,
+  variant = "dvh_open_reinforced"
+): FabricationRecipeRecord {
   return {
     id: `r${hojas}`,
     organizationId: 1,
@@ -19,7 +23,7 @@ function l25Recipe(hojas: 2 | 3 | 4): FabricationRecipeRecord {
     lineName: "L25",
     typology: "corredera",
     leavesCount: hojas,
-    variant: "dvh_open_reinforced",
+    variant,
     version: 1,
     status: "validated",
     definition: {
@@ -31,7 +35,7 @@ function l25Recipe(hojas: 2 | 3 | 4): FabricationRecipeRecord {
         apertura: "corredera",
         hojas,
         modulos: 2,
-        variante: "dvh_open_reinforced",
+        variante: variant,
         herraje: null,
       },
       perfiles: [],
@@ -109,6 +113,25 @@ describe("sodal-l25-context.service", () => {
     });
   });
 
+  it("vacía el slug cuando la combinación L25 seleccionada no está soportada", () => {
+    const config = resolveSodalL25QuoteConfig({
+      catalogKey: "ventora:l25",
+      presentation: {
+        fabricacionGlazing: "monolithic",
+        fabricacionLeg: "closed",
+        fabricacionReinforcement: "reinforced",
+        fabricacionVariante: "monolithic_open_normal",
+        fabricacionHojas: 5,
+        sheetScheme: "5 hojas",
+      },
+      vidrio: "Monolítico 4 mm",
+      fabricacionHojas: 5,
+      sheetScheme: "5 hojas",
+    });
+
+    expect(config).toMatchObject({ complete: false, variantSlug: "" });
+  });
+
   it("sincroniza glazing y variante al cambiar el vidrio en el formulario", () => {
     const next = applySodalL25VidrioToForm(
       {
@@ -166,5 +189,56 @@ describe("sodal-l25-context.service", () => {
         reinforcement: "reinforced",
       })?.id
     ).toBe("o2-custom");
+  });
+
+  it("incluye una receta L25 compartida sin lineTemplateId y excluye otras líneas", () => {
+    const sharedRecipe = { ...l25Recipe(2), id: "shared-l25", scope: "ventora" as const, lineTemplateId: null };
+    const unrelatedRecipe = { ...l25Recipe(2), id: "other-line", scope: "ventora" as const, lineTemplateId: 999, lineName: "Línea 5000" };
+    const selected = selectSodalL25LineRecipes({
+      recipes: [sharedRecipe, unrelatedRecipe],
+      lineTemplateId: 207,
+      lineName: "L25",
+    });
+
+    expect(selected.map((recipe) => recipe.id)).toEqual(["shared-l25"]);
+  });
+
+  it.each([
+    ["monolithic_open_normal", "open", "normal"],
+    ["monolithic_closed_normal", "closed", "normal"],
+    ["monolithic_open_reinforced", "open", "reinforced"],
+  ] as const)("resuelve la variante exacta L25 de dos hojas: %s", (variant, leg, reinforcement) => {
+    const recipe = {
+      ...l25Recipe(2, variant),
+      id: variant,
+      scope: "ventora" as const,
+      lineTemplateId: null,
+    };
+    const selected = selectSodalL25LineRecipes({
+      recipes: [recipe],
+      lineTemplateId: 207,
+      lineName: "L25",
+    });
+
+    expect(findSodalL25LineRecipe(selected, {
+      hojas: 2,
+      glazing: "monolithic",
+      leg,
+      reinforcement,
+    })?.id).toBe(variant);
+  });
+
+  it("no resuelve una variante L25 no documentada y no cae en otra receta", () => {
+    const selected = selectSodalL25LineRecipes({
+      recipes: [l25Recipe(2, "monolithic_open_normal")],
+      lineTemplateId: 207,
+      lineName: "L25",
+    });
+    expect(findSodalL25LineRecipe(selected, {
+      hojas: 2,
+      glazing: "monolithic",
+      leg: "closed",
+      reinforcement: "reinforced",
+    })).toBeNull();
   });
 });

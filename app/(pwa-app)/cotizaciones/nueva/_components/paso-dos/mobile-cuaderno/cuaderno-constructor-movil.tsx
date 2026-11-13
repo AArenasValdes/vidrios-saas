@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuChevronDown, LuChevronLeft, LuEllipsis, LuPencilRuler } from "react-icons/lu";
 
 import { LineTemplatePicker } from "@/features/cotizaciones/line-templates/components/line-template-picker";
@@ -10,6 +10,14 @@ import {
   buildPieceDomainView,
   getPiecePresentationMeta,
 } from "@/features/cotizaciones/new-quote/quote-piece-domain";
+import {
+  buildFabricacionSnapshotSyncKey,
+  fabricacionSnapshotMatchesCalculatedOutput,
+} from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
+import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
+import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import { resolveSupplierFamilyKeyForLineTemplate } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
+import { isSodalL25CatalogKey, resolveEffectiveSodalL25CatalogKey } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import {
   applyGlassSelectionToComponentForm,
   COLOR_OPTIONS,
@@ -72,6 +80,75 @@ const SECTIONS: { id: SectionId; title: string }[] = [
   { id: "precio", title: "Precio" },
 ];
 
+function SodalL25SnapshotSynchronizer({
+  item,
+  lineTemplates,
+  onUpdateItem,
+  resolutionKey,
+  onResolutionSettled,
+}: {
+  item: CotizacionWorkflowItem;
+  lineTemplates: CotizacionLineTemplate[];
+  onUpdateItem: Props["onUpdateItem"];
+  resolutionKey: string;
+  onResolutionSettled: (key: string, settled: boolean) => void;
+}) {
+  const form = useMemo(() => mapItemToForm(item), [item]);
+  const presentationMeta = useMemo(() => getPiecePresentationMeta(item), [item]);
+  const selectedLineTemplate = lineTemplates.find(
+    (template) => String(template.id) === form.lineTemplateId
+  ) ?? null;
+  const catalogLineKey = resolveEffectiveSodalL25CatalogKey({
+    catalogLineKey: presentationMeta.catalogLineKey,
+    catalogKey: selectedLineTemplate?.catalogKey,
+    nombre: selectedLineTemplate?.nombre ?? item.lineaComercial,
+  });
+  const isSodalL25Item = isSodalL25CatalogKey(catalogLineKey);
+  const lineTemplateId = Number(form.lineTemplateId || presentationMeta.lineTemplateId);
+  const { organizationId, recipes, isLoading, error } = useFabricationRecipes({
+    enabled: isSodalL25Item,
+    skipStructuralSeed: true,
+  });
+  const isResolving = !error && (!organizationId || isLoading);
+  const resolution = useMemo(() => {
+    if (!isSodalL25Item || !Number.isInteger(lineTemplateId) || lineTemplateId <= 0) return null;
+    return resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes,
+      organizationId,
+      lineTemplateId,
+      lineCatalogKey: catalogLineKey,
+      supplierFamilyKey: resolveSupplierFamilyKeyForLineTemplate(selectedLineTemplate),
+    });
+  }, [isSodalL25Item, item, recipes, organizationId, lineTemplateId, catalogLineKey, selectedLineTemplate]);
+  const lastSyncedKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    onResolutionSettled(resolutionKey, !isResolving);
+  }, [isResolving, onResolutionSettled, resolutionKey]);
+
+  useEffect(() => {
+    if (!resolution || resolution.estado !== "calculado" || !resolution.formal) {
+      lastSyncedKeyRef.current = null;
+      return;
+    }
+    const snapshot = resolution.formal;
+    if (fabricacionSnapshotMatchesCalculatedOutput(item.fabricacionSnapshot, snapshot)) {
+      lastSyncedKeyRef.current = null;
+      return;
+    }
+    const syncKey = buildFabricacionSnapshotSyncKey(item.id, snapshot);
+    if (lastSyncedKeyRef.current === syncKey) return;
+    lastSyncedKeyRef.current = syncKey;
+    onUpdateItem(item.id, {
+      fabricacionSnapshot: snapshot,
+      cubicationSnapshot: resolution.cubication,
+    });
+  }, [resolution, item, onUpdateItem]);
+
+  return null;
+}
+
 function sectionStatus(
   sectionId: SectionId,
   item: CotizacionWorkflowItem,
@@ -130,6 +207,42 @@ export function CuadernoConstructorMovil({
   const [compositionOpen, setCompositionOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const form = useMemo(() => mapItemToForm(item), [item]);
+  const presentationMeta = useMemo(() => getPiecePresentationMeta(item), [item]);
+  const selectedLineTemplate = lineTemplates.find(
+    (template) => String(template.id) === form.lineTemplateId
+  ) ?? null;
+  const resolvedCatalogLineKey = resolveEffectiveSodalL25CatalogKey({
+    catalogLineKey: presentationMeta.catalogLineKey,
+    catalogKey: selectedLineTemplate?.catalogKey,
+    nombre: selectedLineTemplate?.nombre ?? item.lineaComercial,
+  });
+  const isSodalL25Item = isSodalL25CatalogKey(resolvedCatalogLineKey);
+  const l25ResolutionKey = [
+    item.id,
+    form.lineTemplateId,
+    resolvedCatalogLineKey,
+    form.fabricacionHojas,
+    form.fabricacionGlazing,
+    form.fabricacionLeg,
+    form.fabricacionReinforcement,
+    form.fabricacionVariante,
+    form.vidrio,
+    item.ancho,
+    item.alto,
+    item.cantidad,
+  ].join("|");
+  const [l25ResolutionState, setL25ResolutionState] = useState<{
+    key: string;
+    settled: boolean;
+  } | null>(null);
+  const handleL25ResolutionSettled = useCallback((key: string, settled: boolean) => {
+    setL25ResolutionState((current) =>
+      current?.key === key && current.settled === settled ? current : { key, settled }
+    );
+  }, []);
+  const l25ResolutionIsSettled = Boolean(item.fabricacionSnapshot) || (
+    l25ResolutionState?.key === l25ResolutionKey && l25ResolutionState.settled
+  );
   const config = useMemo(() => {
     const existing = getQuoteConstructorItemConfig(item);
     if (existing) {
@@ -200,6 +313,15 @@ export function CuadernoConstructorMovil({
 
   return (
     <div className={s.fullScreen} role="dialog" aria-modal="true" aria-label="Constructor">
+      {isSodalL25Item ? (
+        <SodalL25SnapshotSynchronizer
+          item={item}
+          lineTemplates={lineTemplates}
+          onUpdateItem={onUpdateItem}
+          resolutionKey={l25ResolutionKey}
+          onResolutionSettled={handleL25ResolutionSettled}
+        />
+      ) : null}
       <div className={s.fsHeader}>
         <button type="button" className={s.iconBtn} aria-label="Volver" onClick={onClose}>
           <LuChevronLeft size={20} />
@@ -494,6 +616,11 @@ export function CuadernoConstructorMovil({
                         <p className={s.emptyHelp} style={{ textAlign: "left", margin: 0 }}>
                           {cubicacionDomain.technicalLabel}
                         </p>
+                        {isSodalL25Item && !item.fabricacionSnapshot ? (
+                          <p className={s.emptyHelp} role="status" style={{ textAlign: "left" }}>
+                            Al confirmar la pieza se calculará el despiece si esta combinación tiene receta validada.
+                          </p>
+                        ) : null}
                         {cubicacionDomain.technicalSummary.hasSnapshot ? (
                           <dl className={s.despieceMobileMetrics}>
                             <div>
@@ -581,12 +708,13 @@ export function CuadernoConstructorMovil({
         <button
           type="button"
           className={s.primaryBtn}
+          disabled={isSodalL25Item && !l25ResolutionIsSettled}
           onClick={() => {
             onSaved();
             onClose();
           }}
         >
-          Guardar pieza
+          {isSodalL25Item && !l25ResolutionIsSettled ? "Resolviendo receta…" : "Guardar pieza"}
         </button>
       </div>
     </div>

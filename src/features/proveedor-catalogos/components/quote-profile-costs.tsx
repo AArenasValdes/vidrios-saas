@@ -47,6 +47,7 @@ export function QuoteProfileCosts({
   const [editingCode, setEditingCode] = useState<string | null>(null);
   const [draftCost, setDraftCost] = useState("");
   const [draftLength, setDraftLength] = useState("");
+  const [suggestedL25Length, setSuggestedL25Length] = useState(false);
   const [draftFinish, setDraftFinish] = useState(finishName ?? "");
   const [savingCode, setSavingCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -112,7 +113,18 @@ export function QuoteProfileCosts({
     setDraftCost(current?.priceSource === "organization_override" || current?.priceSource === "workshop"
       ? String(current.netPrice ?? "")
       : "");
-    setDraftLength(current?.priceSource === "workshop" ? String(current.commercialLengthMm ?? "") : "");
+    const hasConfirmedFinishLength = Boolean(
+      current?.commercialLengthMm && current.commercialLengthMm > 0 &&
+      current.finishPriceBasis !== "base_reference_other_finish"
+    );
+    const suggestL25Length = familyKey === "universal:aluminio:l25" &&
+      !row.workshop && !hasConfirmedFinishLength;
+    setSuggestedL25Length(suggestL25Length);
+    setDraftLength(row.workshop?.commercialLengthMm
+      ? String(row.workshop.commercialLengthMm)
+      : hasConfirmedFinishLength
+        ? String(current?.commercialLengthMm)
+        : suggestL25Length ? "6000" : "");
     setDraftFinish(finishName ?? "");
   }
 
@@ -160,6 +172,7 @@ export function QuoteProfileCosts({
       setEditingCode(null);
       setDraftCost("");
       setDraftLength("");
+      setSuggestedL25Length(false);
       await onPricesSaved?.();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No pudimos guardar el costo del perfil.");
@@ -248,6 +261,7 @@ export function QuoteProfileCosts({
                     <label>Largo de la tira {row.technicalCode} (mm)
                       <input type="number" inputMode="numeric" min="1" step="1" value={draftLength}
                         onChange={(event) => setDraftLength(event.target.value)} placeholder="Pendiente" />
+                      {suggestedL25Length ? <small>Sugerido para Línea 25. Puedes cambiarlo.</small> : null}
                     </label>
                   ) : null}
                   <label>Costo neto por tira {row.technicalCode} (CLP)
@@ -256,7 +270,7 @@ export function QuoteProfileCosts({
                   </label>
                   {!hasSelectedPresentation && !row.workshop ? <small>Se guardará como referencia privada de tu empresa, sin SKU de proveedor.</small> : null}
                   <div className={s.editorActions}>
-                    <button type="button" onClick={() => { setEditingCode(null); setError(null); }}>Cancelar</button>
+                    <button type="button" onClick={() => { setEditingCode(null); setError(null); setSuggestedL25Length(false); }}>Cancelar</button>
                     <button type="button" disabled={Boolean(savingCode) || !draftCost} onClick={() => void save(row)}>
                       {savingCode === row.technicalCode ? "Guardando…" : `Guardar costo ${row.technicalCode}`}
                     </button>

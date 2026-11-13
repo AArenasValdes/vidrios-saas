@@ -63,7 +63,7 @@ describe("QuoteProfileCosts", () => {
     }]} />);
     fireEvent.click(screen.getByRole("button", { name: "Agregar costo" }));
     fireEvent.change(screen.getByRole("spinbutton", { name: "Costo neto por tira 2511R (CLP)" }), { target: { value: "45000" } });
-    fireEvent.change(screen.getByRole("spinbutton", { name: "Largo de la tira 2511R (mm)" }), { target: { value: "6000" } });
+    fireEvent.change(screen.getByRole("spinbutton", { name: /Largo de la tira 2511R \(mm\)/ }), { target: { value: "6000" } });
     fireEvent.click(screen.getByRole("button", { name: "Guardar costo 2511R" }));
 
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/proveedor-catalogos/taller-presentaciones", expect.objectContaining({
@@ -77,6 +77,38 @@ describe("QuoteProfileCosts", () => {
       netPrice: 45000, currency: "CLP", preferred: false, workshopSku: null,
     }));
     expect(screen.queryByText(/ventora-internal:/i)).not.toBeInTheDocument();
+  });
+
+  it("sugiere 6000 mm para una referencia L25 nueva sin largo confirmado", async () => {
+    render(<QuoteProfileCosts {...shared} references={[{ technicalCode: "2511R", profileName: "Refuerzo pierna abierta" }]} prices={[{
+      ...basePrice, technicalCode: "2511R", profileName: "Refuerzo pierna abierta",
+      providerKey: "", providerLabel: "Sin presentación", presentationId: "", supplierSku: "",
+      commercialLengthMm: null,
+    }]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Agregar costo" }));
+
+    const length = screen.getByRole("spinbutton", { name: /Largo de la tira 2511R \(mm\)/ });
+    expect(length).toHaveValue(6000);
+    expect(screen.getByText("Sugerido para Línea 25. Puedes cambiarlo.")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Costo neto por tira 2511R (CLP)" }), { target: { value: "45000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar costo 2511R" }));
+
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/proveedor-catalogos/taller-presentaciones", expect.objectContaining({
+      method: "POST",
+      body: expect.stringContaining('"commercialLengthMm":6000'),
+    })));
+  });
+
+  it("no sugiere el largo Ventora L25 a otras familias", () => {
+    render(<QuoteProfileCosts {...shared} familyKey="universal:aluminio:l20" references={[{ technicalCode: "2001", profileName: "Perfil L20" }]} prices={[{
+      ...basePrice, technicalCode: "2001", profileName: "Perfil L20",
+      providerKey: "", providerLabel: "Sin presentación", presentationId: "", supplierSku: "",
+      commercialLengthMm: null,
+    }]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Agregar costo" }));
+
+    expect(screen.getByRole("spinbutton", { name: "Largo de la tira 2001 (mm)" })).toHaveValue(null);
+    expect(screen.queryByText("Sugerido para Línea 25. Puedes cambiarlo.")).not.toBeInTheDocument();
   });
 
   it("edita una presentación privada propia con su revisión, sin pasar su clave interna a la UI", async () => {

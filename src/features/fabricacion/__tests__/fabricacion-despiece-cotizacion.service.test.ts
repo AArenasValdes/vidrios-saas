@@ -3161,4 +3161,112 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
       expect(resolved.estado).toBe("calculado");
     });
   });
+
+  describe("L25 Constructor móvil 2H por identidad exacta", () => {
+    beforeEach(() => {
+      resetZetaConfirmedCacheForTests();
+      resetEvidenceSidecarCacheForTests();
+      resetSodalL25RecipeCacheForTests();
+    });
+
+    it.each([
+      ["monolitico_pierna_abierta_2h_1800x1500", "monolithic_open_normal", "open", "normal"],
+      ["monolitico_pierna_cerrada_2h_1800x1500", "monolithic_closed_normal", "closed", "normal"],
+      ["monolitico_pierna_abierta_reforzada_2h_1800x1500", "monolithic_open_reinforced", "open", "reinforced"],
+    ] as const)("calcula snapshot formal para %s", (recipeId, variant, leg, reinforcement) => {
+      const bundle = buildAllSodalL25Recipes().find((entry) => entry.recipeId === recipeId);
+      expect(bundle).toBeDefined();
+      const recipe = recipeRecord({
+        id: recipeId,
+        lineTemplateId: 10,
+        lineName: "L25 SODAL",
+        scope: "ventora",
+        typology: "corredera",
+        leavesCount: 2,
+        variant,
+        status: "validated",
+        definition: bundle!.definition,
+        sourceReference: bundle!.sourceReference,
+        sourceType: "manufacturer",
+        sourceName: "SODAL",
+        sourceRevision: SODAL_L25_FORMULA_VERSION,
+      });
+      const item: CotizacionWorkflowItem = {
+        ...quoteItem({ lineTemplateId: "10", ancho: 1800, alto: 1500 }),
+        lineaComercial: "L25 SODAL",
+        descripcion: "Corredera 2 hojas",
+        vidrio: "Monolítico 4 mm",
+        observaciones: encodeCotizacionItemPresentationMeta({
+          lineTemplateId: "10",
+          catalogLineKey: "ventora:l25",
+          sistema: "Corredera",
+          fabricacionTipologia: "corredera",
+          fabricacionHojas: 2,
+          fabricacionModulos: 2,
+          fabricacionGlazing: "monolithic",
+          fabricacionLeg: leg,
+          fabricacionReinforcement: reinforcement,
+          fabricacionVariante: variant,
+        }),
+      };
+
+      const result = resolveFabricacionDespieceForQuoteItem({
+        item,
+        recipes: [recipe],
+        organizationId: 1,
+        lineTemplateId: 10,
+        lineCatalogKey: "ventora:l25",
+      });
+
+      expect(result.estado).toBe("calculado");
+      expect(result.formal?.recipeId).toBe(recipeId);
+      expect(result.formal?.result.calculable).toBe(true);
+      expect(result.formal?.result.perfiles.length).toBeGreaterThan(0);
+    });
+
+    it("no cae a una receta distinta cuando la pierna y refuerzo no tienen variante compatible", () => {
+      const bundle = buildAllSodalL25Recipes().find(
+        (entry) => entry.recipeId === "monolitico_pierna_abierta_2h_1800x1500"
+      );
+      const onlyOpenRecipe = recipeRecord({
+        id: "l25-open-only",
+        lineTemplateId: 10,
+        lineName: "L25 SODAL",
+        scope: "ventora",
+        status: "validated",
+        variant: "monolithic_open_normal",
+        definition: bundle!.definition,
+        sourceReference: bundle!.sourceReference,
+        sourceType: "manufacturer",
+        sourceName: "SODAL",
+        sourceRevision: SODAL_L25_FORMULA_VERSION,
+      });
+      const item: CotizacionWorkflowItem = {
+        ...quoteItem({ lineTemplateId: "10" }),
+        lineaComercial: "L25 SODAL",
+        observaciones: encodeCotizacionItemPresentationMeta({
+          lineTemplateId: "10",
+          catalogLineKey: "ventora:l25",
+          fabricacionTipologia: "corredera",
+          fabricacionHojas: 2,
+          fabricacionModulos: 2,
+          fabricacionGlazing: "monolithic",
+          fabricacionLeg: "closed",
+          fabricacionReinforcement: "reinforced",
+          fabricacionVariante: "monolithic_closed_reinforced",
+        }),
+      };
+
+      const result = resolveFabricacionDespieceForQuoteItem({
+        item,
+        recipes: [onlyOpenRecipe],
+        organizationId: 1,
+        lineTemplateId: 10,
+        lineCatalogKey: "ventora:l25",
+      });
+
+      expect(result.formal).toBeNull();
+      expect(result.estado).not.toBe("calculado");
+    });
+  });
 });

@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 jest.mock("@/features/auth/hooks/useAuth", () => ({
   useAuth: () => ({ organizacionId: "org-1", userId: "user-1" }),
@@ -10,6 +10,18 @@ jest.mock("@/features/organization-profile/hooks/use-organization-measure-unit",
 }));
 jest.mock("../../../../_hooks/use-mobile-viewport-stability", () => ({
   useMobileViewportStability: () => undefined,
+}));
+
+const mockResolveFabrication = jest.fn();
+jest.mock("@/features/fabricacion/hooks/use-fabrication-recipes", () => ({
+  useFabricationRecipes: () => ({ organizationId: 1, recipes: [], isLoading: false }),
+}));
+jest.mock("@/features/fabricacion/services/fabricacion-despiece-cotizacion.service", () => ({
+  resolveFabricacionDespieceForQuoteItem: (...args: unknown[]) => mockResolveFabrication(...args),
+}));
+jest.mock("@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service", () => ({
+  buildFabricacionSnapshotSyncKey: () => "l25-snapshot-sync-key",
+  fabricacionSnapshotMatchesCalculatedOutput: () => false,
 }));
 
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
@@ -148,6 +160,10 @@ function openCatalog() {
 }
 
 describe("CuadernoConstructorMovil glass identity", () => {
+  beforeEach(() => {
+    mockResolveFabrication.mockReset();
+  });
+
   it("selects catalog product 3643 by ID and emits its frozen technical specification", () => {
     const onUpdateItem = jest.fn();
     renderConstructor(baseItem({ vidrio: "Vidrio anterior" }), onUpdateItem);
@@ -248,5 +264,49 @@ describe("CuadernoConstructorMovil glass identity", () => {
     expect(decodeCotizacionItemPresentationMeta(rebuilt.observaciones).logicalComponentId).toBe("logical-window-1");
     expect([rebuilt]).toHaveLength(1);
     expect(rebuilt.cantidad).toBe(3);
+  });
+
+  it("syncs the exact L25 fabrication snapshot into the mobile quote draft", async () => {
+    const formalSnapshot = { recipeId: "l25-exact-recipe" } as never;
+    const cubication = { status: "calculable" } as never;
+    mockResolveFabrication.mockReturnValue({
+      estado: "calculado",
+      formal: formalSnapshot,
+      cubication,
+      recipe: { id: "l25-exact-recipe" },
+      barsAvailable: true,
+      preliminary: false,
+      message: null,
+    });
+    const item = baseItem({
+      lineaComercial: "L25 SODAL",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        logicalComponentId: "logical-window-1",
+        lineTemplateId: "75",
+        catalogLineKey: "ventora:l25",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 2,
+        fabricacionModulos: 2,
+        fabricacionGlazing: "monolithic",
+        fabricacionLeg: "open",
+        fabricacionReinforcement: "normal",
+        fabricacionVariante: "monolithic_open_normal",
+      }),
+      fabricacionSnapshot: null,
+    });
+    const onUpdateItem = jest.fn();
+
+    renderConstructor(item, onUpdateItem);
+
+    await waitFor(() => expect(onUpdateItem).toHaveBeenCalledWith("row-1", expect.objectContaining({
+      fabricacionSnapshot: formalSnapshot,
+      cubicationSnapshot: cubication,
+    })));
+    expect(mockResolveFabrication).toHaveBeenCalledWith(expect.objectContaining({
+      item,
+      organizationId: 1,
+      lineTemplateId: 75,
+      lineCatalogKey: "ventora:l25",
+    }));
   });
 });

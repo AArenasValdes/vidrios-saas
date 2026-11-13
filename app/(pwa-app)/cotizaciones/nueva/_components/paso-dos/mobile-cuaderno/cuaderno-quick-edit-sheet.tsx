@@ -43,6 +43,7 @@ import {
   findSodalL25LineRecipe,
   inferSodalL25GlazingFromGlass,
   resolveSodalL25QuoteConfig,
+  selectSodalL25LineRecipes,
 } from "@/features/fabricacion/services/sodal-l25-context.service";
 import { isSodalL25CatalogKey, resolveEffectiveSodalL25CatalogKey } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
@@ -263,9 +264,26 @@ export function CuadernoQuickEditSheet({
     isLoading: isLoadingSelectedLineRecipes,
   } = useFabricationRecipes({
     enabled: canLoadSelectedLineRecipes,
-    lineTemplateId: canLoadSelectedLineRecipes ? selectedRecipeLineTemplateId : undefined,
+    // L25's confirmed Zeta recipes can be shared with line_template_id NULL.
+    // Query the full scoped set and apply the same family filter as its panel.
+    lineTemplateId: canLoadSelectedLineRecipes && !selectedLineIsSodalL25
+      ? selectedRecipeLineTemplateId
+      : undefined,
     skipStructuralSeed: true,
   });
+  const effectiveSelectedLineRecipes = useMemo(() => selectedLineIsSodalL25
+    ? selectSodalL25LineRecipes({
+        recipes: selectedLineRecipes,
+        lineTemplateId: selectedRecipeLineTemplateId,
+        lineName: selectedLineTemplate?.nombre ?? form.referencia ?? "L25",
+      })
+    : selectedLineRecipes, [
+      form.referencia,
+      selectedLineIsSodalL25,
+      selectedLineRecipes,
+      selectedLineTemplate?.nombre,
+      selectedRecipeLineTemplateId,
+    ]);
   const effectiveSodalL25Config = useMemo(() => selectedLineIsSodalL25
     ? resolveSodalL25QuoteConfig({
         catalogKey: selectedCatalogLineKey,
@@ -296,14 +314,14 @@ export function CuadernoQuickEditSheet({
     ]);
   const exactSodalL25Recipe = useMemo(() => {
     if (!effectiveSodalL25Config?.complete) return null;
-    const candidate = findSodalL25LineRecipe(selectedLineRecipes, {
+    const candidate = findSodalL25LineRecipe(effectiveSelectedLineRecipes, {
       hojas: effectiveSodalL25Config.hojas,
       glazing: effectiveSodalL25Config.glazing,
       leg: effectiveSodalL25Config.leg,
       reinforcement: effectiveSodalL25Config.reinforcement,
     });
     return candidate && isSodalL25ZetaValidatedRecipe(candidate) ? candidate : null;
-  }, [effectiveSodalL25Config, selectedLineRecipes]);
+  }, [effectiveSodalL25Config, effectiveSelectedLineRecipes]);
   const inlineRecipeResolution = useMemo(() => {
     if (
       !canLoadSelectedLineRecipes ||
@@ -318,7 +336,7 @@ export function CuadernoQuickEditSheet({
     const variant = selectedLineIsSodalL25
       ? l25Variant || null
       : (sodalL25ConfigDraft?.fabricacionVariante ?? form.fabricacionVariante) || null;
-    const exactResolution = resolveFabricationRecipe(selectedLineRecipes, {
+    const exactResolution = resolveFabricationRecipe(effectiveSelectedLineRecipes, {
       organizationId: recipeOrganizationId,
       lineTemplateId: selectedRecipeLineTemplateId,
       catalogKey: selectedCatalogLineKey,
@@ -367,7 +385,7 @@ export function CuadernoQuickEditSheet({
     isLoadingSelectedLineRecipes,
     recipeOrganizationId,
     selectedCatalogLineKey,
-    selectedLineRecipes,
+    effectiveSelectedLineRecipes,
     selectedLineIsSodalL25,
     selectedRecipeLeaves,
     selectedRecipeLineTemplateId,
@@ -409,7 +427,7 @@ export function CuadernoQuickEditSheet({
       typology: selectedRecipeTypology,
       glassName: vidrioDraft ?? form.vidrio,
       includeDocumentedVariants: true,
-      recipes: selectedLineRecipes,
+      recipes: effectiveSelectedLineRecipes,
     });
   }, [
     canLoadSelectedLineRecipes,
@@ -420,7 +438,7 @@ export function CuadernoQuickEditSheet({
     recipeOrganizationId,
     selectedCatalogLineKey,
     selectedLineTemplate?.nombre,
-    selectedLineRecipes,
+    effectiveSelectedLineRecipes,
     selectedRecipeLeaves,
     selectedRecipeLineTemplateId,
     selectedRecipeTypology,
@@ -468,6 +486,8 @@ export function CuadernoQuickEditSheet({
   const effectiveSupplierRecipe = selectedLineIsSodalL25
     ? exactSodalL25Recipe
     : supplierRecipe;
+  const isResolvingL25Recipe = selectedLineIsSodalL25 &&
+    (isLoadingSelectedLineRecipes || !recipeOrganizationId);
   const supplierLineTemplate = selectedLineTemplate ??
     VENTORA_DEFAULT_LINE_CATALOG.find((line) => line.catalogKey === selectedCatalogLineKey) ?? null;
   const supplierFamilyKey = resolveSupplierFamilyKeyForLineTemplate(supplierLineTemplate);
@@ -499,11 +519,12 @@ export function CuadernoQuickEditSheet({
     const documentedCodes = getLineTemplateWorkshopProfiles(supplierLineTemplate?.catalogMetadata)?.profiles
       .filter((profile) => profile.codeStatus === "catalog_reference" && profile.code?.trim())
       .map((profile) => profile.code!.trim()) ?? [];
-    // Generic references may load provider choices, but only exact recipe
-    // references are rendered or counted as materials required by an L25 item.
+    // L25 costs describe exact recipe requirements, not general catalog
+    // references. Do not request or display a definitive list without a recipe.
+    if (selectedLineIsSodalL25 && !effectiveSupplierRecipe) return null;
     const technicalCodes = supplierProfileReferences.length > 0
       ? supplierProfileReferences.map((profile) => profile.technicalCode)
-      : selectedLineIsSodalL25 ? documentedCodes : [];
+      : documentedCodes;
     if (!selectedCatalogLineKey || !supplierFamilyKey || technicalCodes.length === 0) return null;
     return {
       itemId: String(item.id),
@@ -515,7 +536,7 @@ export function CuadernoQuickEditSheet({
       previewFinishNames: supplierPreviewFinishNames,
       technicalCodes,
     };
-  }, [item.id, selectedCatalogLineKey, selectedLineIsSodalL25, supplierFamilyKey, supplierLineTemplate?.catalogMetadata, supplierPreviewFinishNames, supplierProfileReferences, supplierResolutionFinishName]);
+  }, [effectiveSupplierRecipe, item.id, selectedCatalogLineKey, selectedLineIsSodalL25, supplierFamilyKey, supplierLineTemplate?.catalogMetadata, supplierPreviewFinishNames, supplierProfileReferences, supplierResolutionFinishName]);
   const supplierResolutionKey = JSON.stringify(supplierResolutionRequest);
   useEffect(() => {
     if (!supplierResolutionRequest) return;
@@ -715,6 +736,24 @@ export function CuadernoQuickEditSheet({
           cubicationSnapshot: null,
         });
       }
+    }
+    if (selectedLineIsSodalL25) {
+      const config = effectiveSodalL25Config;
+      Object.assign(patch, {
+        catalogLineKey: "ventora:l25",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: sodalL25Leaves,
+        fabricacionModulos: form.fabricacionModulos ?? sodalL25Leaves,
+        fabricacionApertura: "corredera",
+        fabricacionHerraje: "",
+        fabricacionGlazing: config?.glazing ?? sodalL25ConfigDraft?.fabricacionGlazing ?? form.fabricacionGlazing ?? "",
+        fabricacionLeg: config?.leg ?? sodalL25ConfigDraft?.fabricacionLeg ?? form.fabricacionLeg ?? "",
+        fabricacionReinforcement: config?.reinforcement ?? sodalL25ConfigDraft?.fabricacionReinforcement ?? form.fabricacionReinforcement ?? "",
+        fabricacionVariante: exactSodalL25Recipe ? config?.variantSlug ?? "" : "",
+        fabricationRecipeId: exactSodalL25Recipe?.id ?? "",
+        fabricacionSnapshot: null,
+        cubicationSnapshot: null,
+      });
     }
     if (precio.trim()) {
       patch.costoProveedorUnitario = precio.trim();
@@ -1155,9 +1194,19 @@ export function CuadernoQuickEditSheet({
                 </div>
               </details>
             ) : null}
-            {selectedLineIsSodalL25 && !effectiveSupplierRecipe ? (
+            {selectedLineIsSodalL25 && isResolvingL25Recipe ? (
+              <p className={s.variantSourceHint} role="status">Resolviendo receta exacta L25…</p>
+            ) : selectedLineIsSodalL25 && !effectiveSodalL25Config?.complete ? (
               <p className={s.supplierPending} role="status">
-                Perfiles pendientes de determinar. No hay una receta validada para esta combinación de vidrio, hojas y variante.
+                Elige vidrio, pierna y refuerzo para resolver la receta exacta.
+              </p>
+            ) : selectedLineIsSodalL25 && !effectiveSupplierRecipe ? (
+              <p className={s.supplierPending} role="status">
+                Esta combinación aún no tiene receta validada.
+              </p>
+            ) : selectedLineIsSodalL25 && effectiveSupplierRecipe ? (
+              <p className={s.variantSourceHint} role="status">
+                Receta L25 resuelta · versión {effectiveSupplierRecipe.version} · {effectiveSupplierRecipe.definition.identidad.variante}.
               </p>
             ) : effectiveSupplierRecipe?.definition.perfiles.length && !supplierFamilyKey ? (
               <p className={s.variantSourceHint} role="status">

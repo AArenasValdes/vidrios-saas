@@ -161,13 +161,15 @@ export function resolveSodalL25QuoteConfig(input: {
     isValidSodalL25Combination({ glazing, leg: leg as SodalL25LegSlug, reinforcement: reinforcement as SodalL25ReinforcementSlug });
 
   const variantSlug =
-    leg && reinforcement
+    complete
       ? buildSodalL25VariantSlug({
           glazing,
           leg: leg as SodalL25LegSlug,
           reinforcement: reinforcement as SodalL25ReinforcementSlug,
         })
-      : parsedVariant?.variantSlug ?? "";
+      : leg || reinforcement
+        ? ""
+        : parsedVariant?.variantSlug ?? "";
 
   return {
     catalogKey: SODAL_L25_CATALOG_KEY,
@@ -209,6 +211,29 @@ export function mergeSodalL25WorkspaceRecipes(input: {
       "es-CL"
     );
   });
+}
+
+/**
+ * L25 Zeta recipes may be shared (line_template_id NULL) or attached to the
+ * canonical line. Keep organization recipes scoped to the selected template.
+ */
+export function selectSodalL25LineRecipes(input: {
+  recipes: FabricationRecipeRecord[];
+  lineTemplateId: number;
+  lineName: string;
+}): FabricationRecipeRecord[] {
+  const normalizedLineName = input.lineName.trim().toLocaleLowerCase("es-CL");
+  const organization = input.recipes.filter(
+    (recipe) => recipe.scope === "organization" && recipe.lineTemplateId === input.lineTemplateId
+  );
+  const ventora = input.recipes.filter(
+    (recipe) => recipe.scope === "ventora" && (
+      recipe.lineTemplateId === input.lineTemplateId ||
+      recipe.lineTemplateId === null ||
+      recipe.lineName.trim().toLocaleLowerCase("es-CL") === normalizedLineName
+    )
+  );
+  return mergeSodalL25WorkspaceRecipes({ organization, ventora });
 }
 
 export function findSodalL25LineRecipe(
