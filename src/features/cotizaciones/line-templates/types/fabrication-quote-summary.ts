@@ -23,6 +23,7 @@ import { resolveFrozenGlassThickness } from "@/features/fabricacion/services/gla
 import { hasPivotanteSlidingRecipeConflict } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
 import { getSodalL25VisualCompositionIssue, isSodalL25CatalogKey } from "@/features/fabricacion/services/sodal-l25-context.service";
 import { resolveEffectiveSodalL25CatalogKey } from "@/features/fabricacion/services/sodal-l25-presentation.service";
+import { evaluarPautaFisicaTrabajo } from "@/features/fabricacion/services/fabricacion-pauta-fisica.service";
 
 export type FabricationProfileCoverageItem = {
   itemId: string;
@@ -76,7 +77,7 @@ export type FabricationQuoteSummary = {
   trabajoSnapshotHasGeometryOnly?: boolean;
   profileCoverage?: {
     status: "complete" | "partial";
-    jointPlanStatus: "ready" | "pending" | "blocked" | "not_required";
+    jointPlanStatus: "ready" | "theoretical" | "pending" | "blocked" | "not_required";
     requiredCount: number;
     readyCount: number;
     pendingCount: number;
@@ -317,6 +318,7 @@ export function buildFabricationQuoteSummary(
   const requiredCoverage = profileCoverageItems.filter((item) => item.state !== "not_required");
   const readyCount = requiredCoverage.filter((item) => item.state === "ready").length;
   const hasSavedJointBars = Boolean(options?.trabajoSnapshot?.bars.length);
+  const physicalStatus = evaluarPautaFisicaTrabajo(options?.trabajoSnapshot);
   const readyItemIds = new Set(requiredCoverage.filter((item) => item.state === "ready").map((item) => item.itemId));
   const readyItemCodes = new Map<string, number>();
   for (const item of requiredCoverage.filter((entry) => entry.state === "ready")) {
@@ -328,6 +330,26 @@ export function buildFabricationQuoteSummary(
       requiredCoverage.some((item) => item.state === "ready" && item.codigo === cut.codigoItem)
     ))
   );
+  const expectedCuts = new Map<string, number>();
+  const actualCuts = new Map<string, number>();
+  const addCut = (map: Map<string, number>, itemId: string, cut: { componenteId: string; codigoPerfil: string; funcion: string; largoMm: number }) => {
+    const key = JSON.stringify([itemId, cut.componenteId, cut.codigoPerfil, cut.funcion, cut.largoMm]);
+    map.set(key, (map.get(key) ?? 0) + 1);
+  };
+  let completeCutEvidence = true;
+  for (const row of rows.filter((entry) => entry.operationalStatus === "ready")) {
+    const bars = row.fabricacionSnapshot?.pautaBarras?.barras;
+    if (!bars?.length) { completeCutEvidence = false; continue; }
+    for (const bar of bars) for (const cut of bar.cortes) addCut(expectedCuts, row.itemId, cut);
+  }
+  for (const bar of options?.trabajoSnapshot?.bars ?? []) for (const cut of bar.cortes) {
+    const itemId = readyItemIds.has(String(cut.itemId)) ? String(cut.itemId)
+      : requiredCoverage.find((item) => item.state === "ready" && item.codigo === cut.codigoItem && readyItemCodes.get(item.codigo) === 1)?.itemId;
+    if (itemId) addCut(actualCuts, itemId, cut);
+  }
+  const jointCutsReconciled = !completeCutEvidence || (
+    expectedCuts.size === actualCuts.size && [...expectedCuts].every(([key, count]) => actualCuts.get(key) === count)
+  );
   const jointPlanStatus: NonNullable<FabricationQuoteSummary["profileCoverage"]>["jointPlanStatus"] = requiredCoverage.length === 0
     ? "not_required"
     : readyCount === 0
@@ -336,8 +358,12 @@ export function buildFabricationQuoteSummary(
       ? "pending"
       : requiredCoverage.some((item) => item.state !== "ready") ||
           (options?.trabajoSnapshot?.itemCountWithPauta ?? 0) !== readyCount ||
-          !jointCutsMatchReadyItems
+          !jointCutsMatchReadyItems || !jointCutsReconciled
         ? "blocked"
+        : physicalStatus === "incompatible"
+          ? "blocked"
+          : physicalStatus === "teorica" || !completeCutEvidence
+            ? "theoretical"
         : "ready";
   const profileCoverageStatus = requiredCoverage.some((item) => item.state !== "ready") ||
     (readyCount > 0 && jointPlanStatus !== "ready") ? "partial" : "complete";

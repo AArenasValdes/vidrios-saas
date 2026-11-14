@@ -1,4 +1,4 @@
-import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
+import type { FabricacionCotizacionSnapshot, FabricacionParametrosFisicos } from "@/features/fabricacion/types/fabricacion-snapshot";
 
 export const FABRICACION_TRABAJO_SNAPSHOT_VERSION = 1 as const;
 
@@ -61,6 +61,8 @@ export type FabricacionTrabajoBarra = {
   indice: number;
   despunteInicialMm: number;
   perdidaCorteMm: number;
+  /** Ausente en históricos: no acredita parámetros físicos. */
+  parametrosFisicos?: FabricacionParametrosFisicos;
   usadoMm: number;
   sobranteMm: number;
   cortes: FabricacionTrabajoCorte[];

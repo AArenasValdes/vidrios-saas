@@ -14,6 +14,16 @@ import type {
 
 export const FABRICACION_COTIZACION_SNAPSHOT_SCHEMA_VERSION = 1 as const;
 
+/** Los null son valores desconocidos, no una confirmación de cero. */
+export type FabricacionParametrosFisicos = {
+  estado: "confirmado" | "pendiente";
+  perdidaCorteMm: number | null;
+  despunteInicialMm: number | null;
+  procedimiento: "por_pieza" | null;
+  fuente: string | null;
+  largosComercialesConfirmados: boolean;
+};
+
 export type FabricacionCorteBarra = {
   componenteId: string;
   codigoPerfil: string;
@@ -39,6 +49,8 @@ export type FabricacionBarraPauta = {
 
 export type FabricacionPautaBarras = {
   calculable: boolean;
+  /** Ausente en snapshots históricos: parámetros físicos no acreditados. */
+  parametrosFisicos?: FabricacionParametrosFisicos;
   barras: FabricacionBarraPauta[];
   advertencias: FabricacionAdvertencia[];
   totalUsadoMm: number;

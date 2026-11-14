@@ -200,7 +200,7 @@ describe("fabrication quote summary", () => {
     const unique = buildFabricationQuoteSummary([row], { trabajoSnapshot: work });
     const ambiguous = buildFabricationQuoteSummary([row, { ...row, id: "other-v1" }], { trabajoSnapshot: work });
 
-    expect(unique.profileCoverage).toMatchObject({ status: "complete", jointPlanStatus: "ready" });
+    expect(unique.profileCoverage).toMatchObject({ status: "partial", jointPlanStatus: "theoretical" });
     expect(ambiguous.profileCoverage).toMatchObject({ status: "partial", jointPlanStatus: "blocked" });
   });
 

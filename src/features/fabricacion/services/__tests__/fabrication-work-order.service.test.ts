@@ -20,7 +20,9 @@ function savedWork(): FabricacionTrabajoSnapshot {
       materialKey: "perfil-5001", presentationKey: "barra-6m", codigoPerfil: "5001",
       nombrePerfil: "Riel superior", acabadoKey: "Aluminio mate", lineaIds: [1],
       largoComercialMm: 6000, supplierSku: "SKU-5001", indice: 1,
-      despunteInicialMm: 0, perdidaCorteMm: 9, usadoMm: 2609, sobranteMm: 3391,
+      despunteInicialMm: 0, perdidaCorteMm: 3, usadoMm: 2609, sobranteMm: 3391,
+      parametrosFisicos: { estado: "confirmado", perdidaCorteMm: 3, despunteInicialMm: 0,
+        procedimiento: "por_pieza", fuente: "Prueba de taller", largosComercialesConfirmados: true },
       cortes: [
         { itemId: "v1", codigoItem: "V1", nombreItem: "Ventana corredera 2 hojas", componenteId: "rail", codigoPerfil: "5001", funcion: "Riel superior", corte: null, largoMm: 1000 },
         { itemId: "v1", codigoItem: "V1", nombreItem: "Ventana corredera 2 hojas", componenteId: "rail", codigoPerfil: "5001", funcion: "Riel superior", corte: null, largoMm: 1000 },
@@ -114,6 +116,49 @@ function pdfExampleDirectory() {
 }
 
 describe("orden de fabricación y materiales", () => {
+  it("imprime remanente cero y advierte en cada página si faltan parámetros físicos", () => {
+    const work = savedWork();
+    const bar = work.bars[0]!;
+    bar.codigoPerfil = "2503";
+    bar.nombrePerfil = "Jamba";
+    bar.usadoMm = 6000;
+    bar.sobranteMm = 0;
+    bar.perdidaCorteMm = 0;
+    delete bar.parametrosFisicos;
+    bar.cortes = ["V1", "V1", "V3", "V3"].map((code) => ({
+      itemId: code.toLowerCase(), codigoItem: code, nombreItem: "Ventana", componenteId: "jamba",
+      codigoPerfil: "2503", funcion: "Jamba", corte: null, largoMm: 1500,
+    }));
+    work.totalProfilesLinealMm = 6000;
+    work.totalWasteMm = 0;
+    const order = buildFabricationWorkOrder({ summary: summary(work), materials: materials() });
+    expect(order.cutPlanPhysicalState).toBe("teorica");
+    expect(order.documentStatus.state).toBe("partial");
+    expect(order.cutGroups[0]?.theoreticalRemnantMm).toBe(0);
+    const metadata = { companyName: "Taller QA", quoteCode: "COT-QA-1388", workName: "Pauta teórica", issueDate: "14 nov 2026" };
+    const pdf = createFabricationWorkOrderPdf(order, metadata, null, "profile-cuts");
+    expect(pdfText(pdf)).toContain("0 mm");
+    expect(pdfText(pdf)).toContain("2 × 1.500 mm");
+    const pendingPdf = createFabricationWorkOrderPdf({
+      ...order, cutGroups: [{ ...order.cutGroups[0]!, theoreticalRemnantMm: null }],
+    }, metadata, null, "profile-cuts");
+    expect(pdfText(pendingPdf)).toContain("Pendiente");
+    const aviso = "PAUTA TEÓRICA · VALIDAR CORTE Y DESPUNTE ANTES DE FABRICAR";
+    expect(pdfPagesText(pdf).every((page) => page.includes(aviso))).toBe(true);
+    const longOrder = { ...order, cutGroups: Array.from({ length: 25 }, (_, index) => ({
+      ...order.cutGroups[0]!, key: `bar-${index}`, barIndex: index + 1,
+    })) };
+    const longPdf = createFabricationWorkOrderPdf(longOrder, metadata, null, "profile-cuts");
+    expect(longPdf.getNumberOfPages()).toBeGreaterThan(1);
+    expect(pdfPagesText(longPdf).every((page) => page.includes(aviso))).toBe(true);
+    if (process.env.VENTORA_PDF_EXAMPLE === "1") {
+      const outputDirectory = pdfExampleDirectory();
+      mkdirSync(outputDirectory, { recursive: true });
+      writeFileSync(path.join(outputDirectory, "qa-1388-pauta-teorica.pdf"), Buffer.from(pdf.output("arraybuffer")));
+      writeFileSync(path.join(outputDirectory, "qa-pauta-remanente-pendiente.pdf"), Buffer.from(pendingPdf.output("arraybuffer")));
+      writeFileSync(path.join(outputDirectory, "qa-pauta-teorica-multipagina.pdf"), Buffer.from(longPdf.output("arraybuffer")));
+    }
+  });
   it("muestra medidas manuales en orden interna sin promoverlas a corte aprobado", () => {
     const workMaterials = materials();
     workMaterials.glassOrder[0] = {

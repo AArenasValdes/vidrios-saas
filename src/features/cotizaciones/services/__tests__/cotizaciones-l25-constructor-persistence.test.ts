@@ -136,7 +136,8 @@ describe("guardado y relectura L25 desde Constructor", () => {
       expect(reopened?.fabricacionTrabajoSnapshot?.itemCountWithPauta).toBe(3);
       const summary = buildFabricationQuoteSummary(reopened!.items, { trabajoSnapshot: reopened!.fabricacionTrabajoSnapshot });
       expect(summary.items).toHaveLength(3);
-      expect(summary.profileCoverage?.jointPlanStatus).toBe("ready");
+      expect(summary.profileCoverage?.jointPlanStatus).toBe("theoretical");
+      expect(summary.totalBars).toBeNull();
       expect(new Set(reopened!.fabricacionTrabajoSnapshot!.bars.flatMap((bar) => bar.cortes.map((cut) => cut.codigoItem))))
         .toEqual(new Set(["V1", "V2", "V3"]));
       const singleSliding = createQuoteConstructorPresetConfig("corredera");

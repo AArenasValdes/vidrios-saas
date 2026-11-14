@@ -678,11 +678,12 @@ export function FabricacionResumenView({
         <section className={s.desktopSummarySection} aria-label="Resumen de fabricación">
           <div className={s.desktopSummaryHeading}>
             <h2>Despieces disponibles para revisión</h2>
-            <span>{summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).length} con pauta · {summary.items.filter((row) => row.geometryOnly).length} preliminares · {workOrder.documentStatus.pendingComponents.length} pendientes · {summary.totalItems} componentes</span>
+            <span>{summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).length} con despiece · {summary.items.filter((row) => row.geometryOnly).length} preliminares · {workOrder.documentStatus.pendingComponents.length} pendientes · {summary.totalItems} componentes</span>
           </div>
           {workOrder.documentStatus.state === "partial" ? (
             <section className={s.compositionReviewNotice} aria-label="Estado del documento de fabricación">
               <strong>{workOrder.documentStatus.label}</strong>
+              {workOrder.cutPlanPhysicalState === "teorica" ? <p>PAUTA TEÓRICA · VALIDAR CORTE Y DESPUNTE ANTES DE FABRICAR</p> : null}
               <p>El documento incluye solo los despieces compatibles disponibles; los pendientes se conservan para revisión.</p>
               {workOrder.documentStatus.pendingComponents.length ? <ul>{workOrder.documentStatus.pendingComponents.map((item) => (
                 <li key={item.itemId}>{item.codigo} · {item.nombre}: {item.reason}</li>
@@ -738,14 +739,15 @@ export function FabricacionResumenView({
             <LuLayoutGrid aria-hidden />
             <span>Componentes</span>
             <strong>
-              {summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).length} con pauta completa · {summary.items.filter((row) => row.geometryOnly).length} preliminares · {workOrder.documentStatus.pendingComponents.length} pendientes
+              {summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).length} con despiece · {summary.items.filter((row) => row.geometryOnly).length} preliminares · {workOrder.documentStatus.pendingComponents.length} pendientes
             </strong>
           </div>
         </section>
 
-        {summary.trabajoSnapshot && summary.totalBars != null ? (
+        {summary.trabajoSnapshot && (summary.totalBars != null || summary.profileCoverage?.jointPlanStatus === "theoretical") ? (
           <section className={s.consolidatedJobBars} aria-label="Pauta conjunta guardada">
-            <h2>Pauta conjunta · trabajo completo</h2>
+            <h2>{summary.profileCoverage?.jointPlanStatus === "theoretical" ? "Pauta conjunta · teórica" : "Pauta conjunta · trabajo completo"}</h2>
+            {summary.profileCoverage?.jointPlanStatus === "theoretical" ? <p role="status">PAUTA TEÓRICA · VALIDAR CORTE Y DESPUNTE ANTES DE FABRICAR</p> : null}
             <p>{summary.trabajoSnapshot.totalBars} tiras · distribución referencial compartida entre partidas.</p>
             {summary.trabajoSnapshot.missingPresentations?.map((missing, index) => (
               <p key={`${missing.itemId}-${missing.technicalCode}-${missing.finishKey}-${index}`}>

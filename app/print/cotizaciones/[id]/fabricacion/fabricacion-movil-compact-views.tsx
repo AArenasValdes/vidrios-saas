@@ -395,7 +395,7 @@ export function CompactCutsView({
             <p className={s.mCompactSectionSubtitle}>
               {cutGroups.length}{" "}
               {cutGroups.length === 1 ? "tira o perfil" : "tiras o perfiles"} ·{" "}
-              {workOrder.hasJointBars ? "Pauta conjunta" : "Por componente"}
+              {workOrder.hasJointBars ? workOrder.cutPlanPhysicalState === "teorica" ? "Pauta teórica" : "Pauta conjunta" : "Por componente"}
             </p>
           </div>
           <WorkDocumentExportActions
@@ -411,6 +411,8 @@ export function CompactCutsView({
             onStatus={setExportStatus}
           />
         </header>
+
+        {workOrder.cutPlanPhysicalState === "teorica" ? <p role="status">PAUTA TEÓRICA · VALIDAR CORTE Y DESPUNTE ANTES DE FABRICAR</p> : null}
 
         {exportError ? (
           <p role="alert" className={s.exportNotice}>
@@ -566,9 +568,10 @@ export function CompactCutsView({
               </div>
             </section>
 
-            {summary.trabajoSnapshot && summary.totalBars != null ? (
+            {summary.trabajoSnapshot && (summary.totalBars != null || summary.profileCoverage?.jointPlanStatus === "theoretical") ? (
               <section className={s.mGroup} aria-label="Tiras compartidas del trabajo">
-                <h3>Pauta conjunta · trabajo completo</h3>
+                <h3>{summary.profileCoverage?.jointPlanStatus === "theoretical" ? "Pauta conjunta · teórica" : "Pauta conjunta · trabajo completo"}</h3>
+                {summary.profileCoverage?.jointPlanStatus === "theoretical" ? <p role="status">PAUTA TEÓRICA · VALIDAR CORTE Y DESPUNTE ANTES DE FABRICAR</p> : null}
                 <p className={s.mGroupNote}>
                   {summary.trabajoSnapshot.totalBars} tiras compartidas entre partidas.
                 </p>

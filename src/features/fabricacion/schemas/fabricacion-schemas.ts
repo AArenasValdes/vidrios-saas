@@ -154,6 +154,7 @@ export const fabricacionConfiguracionCorteSchema = z
     perdidaCorteMm: integerNonNegativeSchema.nullable(),
     despunteInicialMm: integerNonNegativeSchema.nullable(),
     sobranteMinimoAprovechableMm: integerNonNegativeSchema.nullable(),
+    confirmacionFisica: z.object({ procedimiento: z.literal("por_pieza"), fuente: z.string().trim().min(1), largosComercialesConfirmados: z.literal(true) }).strict().optional(),
     largoComercialDefaultMm: integerPositiveSchema.nullable().optional(),
   })
   .strict();

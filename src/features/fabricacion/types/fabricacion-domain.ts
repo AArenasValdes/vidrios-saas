@@ -224,6 +224,8 @@ export type FabricacionConfiguracionCorte = {
   perdidaCorteMm: number | null;
   despunteInicialMm: number | null;
   sobranteMinimoAprovechableMm: number | null;
+  /** Confirmación explícita de los parámetros y del procedimiento del taller. */
+  confirmacionFisica?: { procedimiento: "por_pieza"; fuente: string; largosComercialesConfirmados: true };
   /** Largo comercial habitual de la receta (tira estándar del taller). */
   largoComercialDefaultMm?: number | null;
 };

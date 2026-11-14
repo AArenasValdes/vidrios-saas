@@ -442,9 +442,10 @@ function ConsolidadoView({
         </div>
       </section>
 
-      {summary.trabajoSnapshot && summary.totalBars != null ? (
+      {summary.trabajoSnapshot && (summary.totalBars != null || summary.profileCoverage?.jointPlanStatus === "theoretical") ? (
         <section className={s.mGroup} aria-label="Tiras compartidas del trabajo">
-          <h3>Pauta conjunta · trabajo completo</h3>
+          <h3>{summary.profileCoverage?.jointPlanStatus === "theoretical" ? "Pauta conjunta · teórica" : "Pauta conjunta · trabajo completo"}</h3>
+          {summary.profileCoverage?.jointPlanStatus === "theoretical" ? <p role="status">PAUTA TEÓRICA · VALIDAR CORTE Y DESPUNTE ANTES DE FABRICAR</p> : null}
           <p className={s.mGroupNote}>{summary.trabajoSnapshot.totalBars} tiras compartidas entre partidas.</p>
           {summary.trabajoSnapshot.missingPresentations?.map((missing, index) => (
             <p className={s.mGroupNote} key={`${missing.itemId}-${missing.technicalCode}-${missing.finishKey}-${index}`}>
@@ -762,11 +763,12 @@ export function FabricacionResumenMovil({
               </section>
 
               <section className={s.mSummarySection}>
-                <div className={s.mSummaryHeading}><h2>Despieces para revisar</h2><span>{summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).length} con pauta · {summary.items.filter((row) => row.geometryOnly).length} preliminares · {workOrder.documentStatus.pendingComponents.length} pendientes</span></div>
+                <div className={s.mSummaryHeading}><h2>Despieces para revisar</h2><span>{summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).length} con despiece · {summary.items.filter((row) => row.geometryOnly).length} preliminares · {workOrder.documentStatus.pendingComponents.length} pendientes</span></div>
                 {workOrder.documentStatus.state === "partial" ? (
                   <section className={s.compositionReviewNotice} aria-label="Estado del documento de fabricación">
                     <strong>{workOrder.documentStatus.label}</strong>
                     <p>Hay componentes pendientes o una pauta conjunta por revisar.</p>
+                    {workOrder.cutPlanPhysicalState === "teorica" ? <p>PAUTA TEÓRICA · VALIDAR CORTE Y DESPUNTE ANTES DE FABRICAR</p> : null}
                     {workOrder.documentStatus.pendingComponents.length ? <ul>{workOrder.documentStatus.pendingComponents.map((item) => (
                       <li key={item.itemId}>{item.codigo} · {item.nombre}: {item.reason}</li>
                     ))}</ul> : null}

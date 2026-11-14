@@ -2,6 +2,7 @@ import { jsPDF } from "jspdf";
 
 import type { FabricationWorkOrder } from "./fabrication-work-order.service";
 import { workOrderPriceSource } from "./fabrication-work-order.service";
+import { PAUTA_TEORICA_AVISO } from "./fabricacion-pauta-fisica.service";
 import { calculateProfileReferenceTotal, resolveProfileSupplierPrice } from "./work-materials-price-reference.service";
 import {
   drawFabricationPdfContinuationHeader,
@@ -31,6 +32,7 @@ const PROFILE_CUT_TECHNICAL_PENDING_PREFIXES = [
   "bar-distribution",
   "cut-plan",
   "cut:",
+  "cut-physics",
   "presentation:",
   "length:",
 ] as const;
@@ -53,7 +55,7 @@ function clean(value: string | null | undefined, fallback = "Pendiente") {
 }
 
 function mm(value: number | null | undefined) {
-  return value != null && Number.isFinite(value) && value > 0
+  return value != null && Number.isFinite(value) && value >= 0
     ? `${new Intl.NumberFormat("es-CL", { maximumFractionDigits: 0 }).format(value)} mm`
     : "Pendiente";
 }
@@ -211,8 +213,10 @@ function drawPreliminaryWarning(pdf: jsPDF, y: number, runningTitle: string, quo
   return y + height + 3;
 }
 
-function drawDocumentPartialWarning(pdf: jsPDF, y: number, runningTitle: string, quoteCode: string, logoDataUrl?: string | null) {
-  const message = "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN. Hay componentes sin pauta completa o con identidad técnica por revisar.";
+function drawDocumentPartialWarning(pdf: jsPDF, y: number, runningTitle: string, quoteCode: string, logoDataUrl?: string | null, physicalOnly = false) {
+  const message = physicalOnly
+    ? "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN. Falta confirmar los parámetros físicos de corte y despunte."
+    : "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN. Hay componentes sin pauta completa o con identidad técnica por revisar.";
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(9.5);
   const lines = wrapped(pdf, message, PAGE_WIDTH - MARGIN * 2);
@@ -269,7 +273,11 @@ export function createFabricationWorkOrderPdf(
   let y = drawFabricationPdfHeader(pdf, metadata, title, logoDataUrl);
   const runningTitle = title;
   if (order.documentStatus.state === "partial") {
-    y = drawDocumentPartialWarning(pdf, y + 2, runningTitle, metadata.quoteCode, logoDataUrl);
+    y = drawDocumentPartialWarning(pdf, y + 2, runningTitle, metadata.quoteCode, logoDataUrl,
+      order.cutPlanPhysicalState === "teorica" && order.documentStatus.pendingComponents.length === 0);
+  }
+  if (kind !== "glass-order" && order.cutPlanPhysicalState === "teorica") {
+    y = drawNote(pdf, PAUTA_TEORICA_AVISO, y, runningTitle, metadata.quoteCode, logoDataUrl);
   }
   if (kind === "combined") y = drawPriceSummary(pdf, order, y, runningTitle, metadata.quoteCode, logoDataUrl);
   if (kind === "combined") {
@@ -474,6 +482,15 @@ export function createFabricationWorkOrderPdf(
       drawTable(pdf, kind === "combined" ? "4. Pendientes para el maestro" : "Estado técnico · pendientes de corte", [
         { title: "Dato", width: 70 }, { title: "Acción", width: 112 },
       ], pending, y, "Sin pendientes técnicos de corte", runningTitle, metadata.quoteCode, logoDataUrl);
+    }
+  }
+  if (kind !== "glass-order" && order.cutPlanPhysicalState === "teorica") {
+    for (let page = 1; page <= pdf.getNumberOfPages(); page += 1) {
+      pdf.setPage(page);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(7);
+      pdf.setTextColor(...MUTED);
+      pdf.text(PAUTA_TEORICA_AVISO, MARGIN, 280, { maxWidth: PAGE_WIDTH - MARGIN * 2 });
     }
   }
   drawFabricationPdfFooters(

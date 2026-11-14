@@ -51,6 +51,28 @@ const input = {
 };
 
 describe("pauta referencial de barras", () => {
+  it("distingue kerf desconocido de cero confirmado para 4 cortes de 1500 mm", () => {
+    const definition = recipe(1500);
+    definition.perfiles[0]!.reglaCantidad = { tipo: "fija", cantidad: 4 };
+    definition.configuracionCorte = { perdidaCorteMm: null, despunteInicialMm: null, sobranteMinimoAprovechableMm: null };
+    const resultado = calcularCubicacionYPauta(definition, input);
+    const teorica = construirPautaBarrasFabricacion({ receta: definition, resultado });
+    expect(teorica.barras).toHaveLength(1);
+    expect(teorica.barras[0]?.sobranteMm).toBe(0);
+    expect(teorica.parametrosFisicos).toMatchObject({ estado: "pendiente", perdidaCorteMm: null, despunteInicialMm: null });
+    definition.configuracionCorte = {
+      perdidaCorteMm: 3, despunteInicialMm: 0, sobranteMinimoAprovechableMm: null,
+      confirmacionFisica: { procedimiento: "por_pieza", fuente: "Prueba de taller", largosComercialesConfirmados: true },
+    };
+    const confirmada = construirPautaBarrasFabricacion({ receta: definition, resultado });
+    expect(confirmada.parametrosFisicos).toMatchObject({ estado: "confirmado", perdidaCorteMm: 3 });
+    expect(confirmada.barras).toHaveLength(2);
+    expect(confirmada.barras.flatMap((bar) => bar.cortes)).toHaveLength(4);
+    definition.configuracionCorte.perdidaCorteMm = 0;
+    const cero = construirPautaBarrasFabricacion({ receta: definition, resultado });
+    expect(cero.parametrosFisicos).toMatchObject({ estado: "confirmado", perdidaCorteMm: 0 });
+    expect(cero.barras[0]?.sobranteMm).toBe(0);
+  });
   it("aplica FFD con perdida por corte y despunte inicial", () => {
     const definition = recipe();
     const result = construirPautaBarrasFabricacion({
