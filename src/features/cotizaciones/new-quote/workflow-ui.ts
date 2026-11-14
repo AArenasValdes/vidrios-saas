@@ -29,6 +29,7 @@ import {
 import { VERATEC_7400_CATALOG_KEY } from "@/features/fabricacion/fixtures/veratec-7400-corredera-recipe";
 import {
   inferSodalL25GlazingFromGlass,
+  getSodalL25VisualCompositionIssue,
   resolveSodalL25FabricacionSnapshot,
   resolveSodalL25QuoteConfig,
 } from "@/features/fabricacion/services/sodal-l25-context.service";
@@ -3208,7 +3209,10 @@ export function buildItemFromForm(
     quickCompositionAdjustment: syncedForm.quickCompositionAdjustment,
   });
   const quickCompositionAdjusted =
-    structuralCompositionChanged && !supportedVeratec7400FourMobileBase;
+    (structuralCompositionChanged && !supportedVeratec7400FourMobileBase) ||
+    (resolveEffectiveSodalL25CatalogKey({ catalogLineKey: syncedForm.catalogLineKey, nombre: syncedForm.referencia }) === SODAL_L25_CATALOG_KEY && Boolean(
+      getSodalL25VisualCompositionIssue({ guidedVisualConfig, fabricacionHojas: syncedForm.fabricacionHojas, sheetScheme, sheetVariant })
+    ));
   const cubicationSnapshot = resolveCubicationSnapshotForSave({
     lineTemplateId: syncedForm.lineTemplateId,
     widthMm: syncedForm.ancho ? Number(syncedForm.ancho) : null,

@@ -43,6 +43,35 @@ export type SodalL25VariantOption<T extends string> = {
 
 export { isSodalL25CatalogKey };
 
+/** A drawing may represent one sliding assembly, but never supplies its sash count. */
+export function getSodalL25VisualCompositionIssue(input: {
+  guidedVisualConfig?: CotizacionItemPresentationMeta["guidedVisualConfig"];
+  fabricacionHojas?: number | null;
+  sheetScheme?: string | null;
+  sheetVariant?: string | null;
+}): string | null {
+  const visual = input.guidedVisualConfig;
+  if (!visual) return null;
+  if (visual.root.kind !== "module" || visual.root.type !== "corredera" || visual.root.renderAsSingleLeaf) {
+    return "La composición incluye módulos que la receta L25 no identifica. Revisa la configuración antes de calcular el despiece.";
+  }
+  if (visual.frameShape.kind !== "rect" || visual.root.glassShape.kind !== "rect") {
+    return "La receta L25 requiere un marco y vidrio rectangulares. La forma seleccionada necesita revisión técnica.";
+  }
+  const schemeMatch = input.sheetScheme?.trim().match(/^(\d+)\s*hojas?$/i);
+  const schemeLeaves = schemeMatch ? Number(schemeMatch[1]) : null;
+  if (schemeLeaves && input.fabricacionHojas && schemeLeaves !== input.fabricacionHojas) {
+    return "La cantidad de hojas comercial no coincide con la selección técnica de L25.";
+  }
+  if (/\bfij[ao]s?\b/i.test(input.sheetVariant ?? "")) {
+    return "La configuración seleccionada incluye una hoja fija y necesita una receta L25 compatible.";
+  }
+  if ((input.fabricacionHojas ?? schemeLeaves ?? 0) < 2) {
+    return "Selecciona explícitamente la cantidad de hojas de la corredera para resolver la receta L25.";
+  }
+  return null;
+}
+
 export function inferSodalL25GlazingFromGlass(input: {
   vidrio?: string | null;
   catalogEspesor?: string | null;
@@ -161,13 +190,15 @@ export function resolveSodalL25QuoteConfig(input: {
     isValidSodalL25Combination({ glazing, leg: leg as SodalL25LegSlug, reinforcement: reinforcement as SodalL25ReinforcementSlug });
 
   const variantSlug =
-    leg && reinforcement
+    complete
       ? buildSodalL25VariantSlug({
           glazing,
           leg: leg as SodalL25LegSlug,
           reinforcement: reinforcement as SodalL25ReinforcementSlug,
         })
-      : parsedVariant?.variantSlug ?? "";
+      : leg || reinforcement
+        ? ""
+        : parsedVariant?.variantSlug ?? "";
 
   return {
     catalogKey: SODAL_L25_CATALOG_KEY,
@@ -209,6 +240,29 @@ export function mergeSodalL25WorkspaceRecipes(input: {
       "es-CL"
     );
   });
+}
+
+/**
+ * L25 Zeta recipes may be shared (line_template_id NULL) or attached to the
+ * canonical line. Keep organization recipes scoped to the selected template.
+ */
+export function selectSodalL25LineRecipes(input: {
+  recipes: FabricationRecipeRecord[];
+  lineTemplateId: number;
+  lineName: string;
+}): FabricationRecipeRecord[] {
+  const normalizedLineName = input.lineName.trim().toLocaleLowerCase("es-CL");
+  const organization = input.recipes.filter(
+    (recipe) => recipe.scope === "organization" && recipe.lineTemplateId === input.lineTemplateId
+  );
+  const ventora = input.recipes.filter(
+    (recipe) => recipe.scope === "ventora" && (
+      recipe.lineTemplateId === input.lineTemplateId ||
+      recipe.lineTemplateId === null ||
+      recipe.lineName.trim().toLocaleLowerCase("es-CL") === normalizedLineName
+    )
+  );
+  return mergeSodalL25WorkspaceRecipes({ organization, ventora });
 }
 
 export function findSodalL25LineRecipe(

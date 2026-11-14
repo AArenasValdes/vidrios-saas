@@ -3003,6 +3003,7 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
       expect(resolved.recipe?.id).toBe(`ventora-preview:226:${variant}`);
       expect(resolved.formal?.result.perfiles.find((row) => row.funcion === "Marco horizontal")?.medidaMm).toBe(1205);
     });
+
   });
 
   it("no calcula despiece de un borrador que aún no está listo para probar", () => {
@@ -3159,6 +3160,174 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
       });
 
       expect(resolved.estado).toBe("calculado");
+    });
+  });
+
+  describe("L25 Constructor móvil 2H por identidad exacta", () => {
+    it("resuelve la identidad visual y técnica guardada en Constructor QA 1386", () => {
+      const bundle = buildAllSodalL25Recipes().find(
+        (entry) => entry.recipeId === "monolitico_pierna_abierta_2h_1800x1500"
+      )!;
+      const recipe = recipeRecord({
+        id: "89210caf-d06b-4891-8c94-e28e77374bb2",
+        organizationId: 3,
+        lineTemplateId: 207,
+        lineName: "Serie 25",
+        scope: "organization",
+        variant: "monolithic_open_normal",
+        status: "validated",
+        definition: bundle.definition,
+        sourceReference: bundle.sourceReference,
+        sourceType: "manufacturer",
+        sourceName: "SODAL",
+        sourceRevision: SODAL_L25_FORMULA_VERSION,
+      });
+      const item = {
+        ...quoteItem({ lineTemplateId: "207", ancho: 1800, alto: 1500 }),
+        lineaComercial: "L25",
+        descripcion: "Ventana de aluminio con vidrio incoloro.",
+        vidrio: "QA Monolitico 5mm fix1",
+        observaciones: encodeCotizacionItemPresentationMeta({
+          lineTemplateId: "207", catalogLineKey: "ventora:l25", sistema: "Personalizado",
+          configuracion: "Personalizado", hojasBase: 1,
+          guidedVisualConfig: createQuoteConstructorPresetConfig("corredera", { widthMm: 1800, heightMm: 1500 }),
+          fabricacionTipologia: "corredera", fabricacionHojas: 2, fabricacionModulos: 2,
+          fabricacionApertura: "corredera", fabricacionGlazing: "monolithic",
+          fabricacionLeg: "open", fabricacionReinforcement: "normal",
+          fabricacionVariante: "monolithic_open_normal", fabricationRecipeId: recipe.id,
+        }),
+      };
+      const result = resolveFabricacionDespieceForQuoteItem({
+        item, recipes: [recipe], organizationId: 3, lineTemplateId: 207, lineCatalogKey: "ventora:l25",
+      });
+      expect(result.estado).toBe("calculado");
+      expect(result.formal?.recipeId).toBe(recipe.id);
+      const rebuilt = buildItemFromForm(mapItemToForm(item), [item], item.id, {
+        fabricationRecipes: [recipe], organizationId: 3,
+      });
+      expect(rebuilt.fabricacionSnapshot?.recipeId).toBe(recipe.id);
+      const incompatible = {
+        ...item,
+        observaciones: encodeCotizacionItemPresentationMeta({
+          ...decodeCotizacionItemPresentationMeta(item.observaciones),
+          guidedVisualConfig: createQuoteConstructorPresetConfig("fijo", { widthMm: 1800, heightMm: 1500 }),
+        }),
+      };
+      const rejected = resolveFabricacionDespieceForQuoteItem({
+        item: incompatible, recipes: [recipe], organizationId: 3, lineTemplateId: 207, lineCatalogKey: "ventora:l25",
+      });
+      expect(rejected.estado).toBe("composicion_sin_receta");
+      expect(rejected.message).toContain("composición");
+      expect(rejected.formal).toBeNull();
+      expect(buildItemFromForm(mapItemToForm(incompatible), [incompatible], incompatible.id, {
+        fabricationRecipes: [recipe], organizationId: 3,
+      }).fabricacionSnapshot).toBeNull();
+    });
+
+    beforeEach(() => {
+      resetZetaConfirmedCacheForTests();
+      resetEvidenceSidecarCacheForTests();
+      resetSodalL25RecipeCacheForTests();
+    });
+
+    it.each([
+      ["monolitico_pierna_abierta_2h_1800x1500", "monolithic_open_normal", "open", "normal"],
+      ["monolitico_pierna_cerrada_2h_1800x1500", "monolithic_closed_normal", "closed", "normal"],
+      ["monolitico_pierna_abierta_reforzada_2h_1800x1500", "monolithic_open_reinforced", "open", "reinforced"],
+    ] as const)("calcula snapshot formal para %s", (recipeId, variant, leg, reinforcement) => {
+      const bundle = buildAllSodalL25Recipes().find((entry) => entry.recipeId === recipeId);
+      expect(bundle).toBeDefined();
+      const recipe = recipeRecord({
+        id: recipeId,
+        lineTemplateId: 10,
+        lineName: "L25 SODAL",
+        scope: "ventora",
+        typology: "corredera",
+        leavesCount: 2,
+        variant,
+        status: "validated",
+        definition: bundle!.definition,
+        sourceReference: bundle!.sourceReference,
+        sourceType: "manufacturer",
+        sourceName: "SODAL",
+        sourceRevision: SODAL_L25_FORMULA_VERSION,
+      });
+      const item: CotizacionWorkflowItem = {
+        ...quoteItem({ lineTemplateId: "10", ancho: 1800, alto: 1500 }),
+        lineaComercial: "L25 SODAL",
+        descripcion: "Corredera 2 hojas",
+        vidrio: "Monolítico 4 mm",
+        observaciones: encodeCotizacionItemPresentationMeta({
+          lineTemplateId: "10",
+          catalogLineKey: "ventora:l25",
+          sistema: "Corredera",
+          fabricacionTipologia: "corredera",
+          fabricacionHojas: 2,
+          fabricacionModulos: 2,
+          fabricacionGlazing: "monolithic",
+          fabricacionLeg: leg,
+          fabricacionReinforcement: reinforcement,
+          fabricacionVariante: variant,
+        }),
+      };
+
+      const result = resolveFabricacionDespieceForQuoteItem({
+        item,
+        recipes: [recipe],
+        organizationId: 1,
+        lineTemplateId: 10,
+        lineCatalogKey: "ventora:l25",
+      });
+
+      expect(result.estado).toBe("calculado");
+      expect(result.formal?.recipeId).toBe(recipeId);
+      expect(result.formal?.result.calculable).toBe(true);
+      expect(result.formal?.result.perfiles.length).toBeGreaterThan(0);
+    });
+
+    it("no cae a una receta distinta cuando la pierna y refuerzo no tienen variante compatible", () => {
+      const bundle = buildAllSodalL25Recipes().find(
+        (entry) => entry.recipeId === "monolitico_pierna_abierta_2h_1800x1500"
+      );
+      const onlyOpenRecipe = recipeRecord({
+        id: "l25-open-only",
+        lineTemplateId: 10,
+        lineName: "L25 SODAL",
+        scope: "ventora",
+        status: "validated",
+        variant: "monolithic_open_normal",
+        definition: bundle!.definition,
+        sourceReference: bundle!.sourceReference,
+        sourceType: "manufacturer",
+        sourceName: "SODAL",
+        sourceRevision: SODAL_L25_FORMULA_VERSION,
+      });
+      const item: CotizacionWorkflowItem = {
+        ...quoteItem({ lineTemplateId: "10" }),
+        lineaComercial: "L25 SODAL",
+        observaciones: encodeCotizacionItemPresentationMeta({
+          lineTemplateId: "10",
+          catalogLineKey: "ventora:l25",
+          fabricacionTipologia: "corredera",
+          fabricacionHojas: 2,
+          fabricacionModulos: 2,
+          fabricacionGlazing: "monolithic",
+          fabricacionLeg: "closed",
+          fabricacionReinforcement: "reinforced",
+          fabricacionVariante: "monolithic_closed_reinforced",
+        }),
+      };
+
+      const result = resolveFabricacionDespieceForQuoteItem({
+        item,
+        recipes: [onlyOpenRecipe],
+        organizationId: 1,
+        lineTemplateId: 10,
+        lineCatalogKey: "ventora:l25",
+      });
+
+      expect(result.formal).toBeNull();
+      expect(result.estado).not.toBe("calculado");
     });
   });
 });

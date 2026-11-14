@@ -27,11 +27,10 @@ import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabricat
 import {
   resolveConstructorRecipeCandidates,
 } from "@/features/fabricacion/services/constructor-recipe-selection.service";
-import { resolveFabricationRecipe } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
+import { isSodalL25ZetaValidatedRecipe, resolveFabricationRecipe } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
 import { resolveUniversalPricedLineFallbacks } from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
 import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
 import { getLineVariantSlots } from "@/features/fabricacion/fixtures/line-base-variant-catalog";
-import { isSodalL25CatalogKey } from "@/features/fabricacion/services/sodal-l25-context.service";
 import type {
   SodalL25GlazingSlug,
   SodalL25LegSlug,
@@ -65,8 +64,13 @@ import type { QuickCompositionAdjustment } from "@/features/cotizaciones/visual-
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 import { resolveSupplierFamilyKeyForLineTemplate } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
 import { getLineTemplateWorkshopProfiles } from "@/features/cotizaciones/line-templates/types/line-profile-references";
-import { resolveSupplierFinishName, resolveSupplierTechnicalCodesForQuote } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
+import { resolveQuoteSupplierProfileReferences, resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 import { useSupplierPresentationResolution } from "@/features/proveedor-catalogos/hooks/use-supplier-presentation-resolution";
+import {
+  findSodalL25LineRecipe,
+  isSodalL25CatalogKey,
+  resolveSodalL25QuoteConfig,
+} from "@/features/fabricacion/services/sodal-l25-context.service";
 import {
   formatMeasurePairFromMm,
   measureDimensionFieldLabel,
@@ -420,13 +424,20 @@ export function PasoDosWizardConfiguracionMovil({
     Number.isInteger(selectedRecipeLineTemplateId) &&
     selectedRecipeLineTemplateId > 0
   );
+  const canLoadL25SupplierRecipe = Boolean(
+    selectedLineIsSodalL25 &&
+    Number.isInteger(selectedRecipeLineTemplateId) &&
+    selectedRecipeLineTemplateId > 0
+  );
   const {
     organizationId: recipeOrganizationId,
     recipes: selectedLineRecipes,
     isLoading: isLoadingSelectedLineRecipes,
   } = useFabricationRecipes({
-    enabled: canLoadInlineRecipeVariants,
-    lineTemplateId: canLoadInlineRecipeVariants ? selectedRecipeLineTemplateId : undefined,
+    enabled: canLoadInlineRecipeVariants || canLoadL25SupplierRecipe,
+    lineTemplateId: canLoadInlineRecipeVariants || canLoadL25SupplierRecipe
+      ? selectedRecipeLineTemplateId
+      : undefined,
     skipStructuralSeed: true,
   });
   const selectedRecipeTypology = draft.fabricacionTipologia || inferirTipologiaFabricacionPieza({
@@ -552,14 +563,51 @@ export function PasoDosWizardConfiguracionMovil({
   const supplierFamilyKey = resolveSupplierFamilyKeyForLineTemplate(selectedLineTemplate);
   const supplierRecipe = inlineRecipeCandidates.find((candidate) => candidate.id === draft.fabricationRecipeId)
     ?? (inlineRecipeCandidates.length === 1 ? inlineRecipeCandidates[0] : inlineRecipeResolution?.receta ?? null);
+  const sodalL25SupplierConfig = selectedLineIsSodalL25
+    ? resolveSodalL25QuoteConfig({
+        catalogKey: selectedCatalogLineKey,
+        presentation: {
+          fabricacionGlazing: draft.fabricacionGlazing ?? "",
+          fabricacionLeg: draft.fabricacionLeg ?? "",
+          fabricacionReinforcement: draft.fabricacionReinforcement ?? "",
+          fabricacionVariante: draft.fabricacionVariante ?? "",
+          fabricacionHojas: selectedRecipeLeaves,
+          sheetScheme: draft.sheetScheme,
+        },
+        vidrio: draft.vidrio,
+        fabricacionHojas: selectedRecipeLeaves,
+        sheetScheme: draft.sheetScheme,
+      })
+    : null;
+  const exactL25SupplierRecipe = sodalL25SupplierConfig?.complete
+    ? findSodalL25LineRecipe(selectedLineRecipes, {
+        hojas: sodalL25SupplierConfig.hojas,
+        glazing: sodalL25SupplierConfig.glazing,
+        leg: sodalL25SupplierConfig.leg,
+        reinforcement: sodalL25SupplierConfig.reinforcement,
+      })
+    : null;
+  const effectiveSupplierRecipe = selectedLineIsSodalL25
+    ? exactL25SupplierRecipe && isSodalL25ZetaValidatedRecipe(exactL25SupplierRecipe)
+      ? exactL25SupplierRecipe
+      : null
+    : supplierRecipe;
   const supplierPresentationRequests = useMemo(() => {
-    const recipeCodes = supplierRecipe?.definition.perfiles
-      .map((profile) => profile.codigoPerfil.trim())
-      .filter(Boolean) ?? [];
-    const documentedCodes = getLineTemplateWorkshopProfiles(selectedLineTemplate?.catalogMetadata)?.profiles
+    const recipeProfiles = (effectiveSupplierRecipe?.definition.perfiles ?? []).map((profile) => ({
+      code: profile.codigoPerfil,
+      name: profile.nombrePerfil,
+    }));
+    const documentedProfiles = getLineTemplateWorkshopProfiles(selectedLineTemplate?.catalogMetadata)?.profiles
       .filter((profile) => profile.codeStatus === "catalog_reference" && profile.code?.trim())
-      .map((profile) => profile.code!.trim()) ?? [];
-    const technicalCodes = resolveSupplierTechnicalCodesForQuote({ recipeCodes, documentedCodes });
+      .map((profile) => ({ code: profile.code!, name: profile.name })) ?? [];
+    const references = resolveQuoteSupplierProfileReferences({
+      recipeProfiles,
+      documentedProfiles,
+      requireExactRecipe: selectedLineIsSodalL25,
+    });
+    const technicalCodes = references.length > 0
+      ? references.map((profile) => profile.technicalCode)
+      : selectedLineIsSodalL25 ? documentedProfiles.map((profile) => profile.code) : [];
     if (!selectedLineTemplate?.catalogKey || !supplierFamilyKey || technicalCodes.length === 0) return [];
     return [{
       itemId: "guided-line-provider-preview",
@@ -568,7 +616,7 @@ export function PasoDosWizardConfiguracionMovil({
       finishName: resolveSupplierFinishName(draft.catalogTerminacion, draft.colorHex),
       technicalCodes,
     }];
-  }, [draft.catalogTerminacion, draft.colorHex, selectedLineTemplate, supplierFamilyKey, supplierRecipe]);
+  }, [draft.catalogTerminacion, draft.colorHex, selectedLineTemplate, supplierFamilyKey, effectiveSupplierRecipe, selectedLineIsSodalL25]);
   const supplierPresentationResolution = useSupplierPresentationResolution(supplierPresentationRequests, {
     includeProviderOptions: true,
     includeProfilePrices: false,
@@ -1666,7 +1714,9 @@ export function PasoDosWizardConfiguracionMovil({
                 <option value="">Predeterminado · {defaultSupplierLabel}</option>
                 {supplierProviderOptions.map((option) => (
                   <option key={option.providerKey} value={option.providerKey}>
-                    {option.label} · {option.pricedProfileCount}/{option.totalProfileCount} perfiles con precio{option.baseReferenceProfileCount ? ` · ${option.baseReferenceProfileCount} con base Titanio (presentación pendiente)` : ""}
+                    {option.label} · {selectedLineIsSodalL25 && !effectiveSupplierRecipe
+                      ? "precios de familia; perfiles pendientes de determinar"
+                      : `${option.pricedProfileCount}/${option.totalProfileCount} perfiles con precio`}{option.baseReferenceProfileCount ? ` · ${option.baseReferenceProfileCount} con base Titanio (presentación pendiente)` : ""}
                     {!option.pricedProfileCount && option.otherAvailableFinishNames?.length
                       ? ` · precio en ${option.otherAvailableFinishNames.slice(0, 2).join(", ")}`
                       : ""}

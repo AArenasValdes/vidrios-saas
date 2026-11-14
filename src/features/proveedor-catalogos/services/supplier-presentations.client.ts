@@ -6,6 +6,8 @@ export type SupplierPresentationQuoteItemRequest = {
   catalogLineKey: string;
   familyKey: string;
   finishName: string | null;
+  /** Finishes whose previews should be resolved in the same catalog read. */
+  previewFinishNames?: string[];
   technicalCodes: string[];
   providerKey?: string | null;
 };
@@ -27,6 +29,8 @@ export type SupplierPresentationResolutionResponse = {
   itemErrors?: Record<string, string>;
   providerOptions?: Record<string, SupplierPriceProviderOption[]>;
   profilePrices?: Record<string, SupplierProfilePricePreview[]>;
+  providerOptionsByFinish?: Record<string, Record<string, SupplierPriceProviderOption[]>>;
+  profilePricesByFinish?: Record<string, Record<string, SupplierProfilePricePreview[]>>;
   familyPreferences?: Record<string, string>;
   canManageFamilyPreferences?: boolean;
   canManageSupplierPrices?: boolean;

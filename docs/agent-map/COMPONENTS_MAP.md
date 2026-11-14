@@ -259,7 +259,7 @@ Los archivos descritos aquí deben seguir siendo reutilizables y coherentes con 
 ### Componente: CuadernoQuickEditSheet
 
 - **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/mobile-cuaderno/cuaderno-quick-edit-sheet.tsx`
-- **Proposito**: Bottom sheet de edicion mobile de una pieza. Reordena el flujo como datos base -> material/color -> linea/precio -> vidrio -> forma/apertura. Permite elegir Aluminio/PVC, color visible compacto, linea de perfil o Cristal, duplicar/eliminar y guardar cambios.
+- **Proposito**: Bottom sheet de edicion mobile de una pieza. Reordena el flujo como datos base -> material/color -> linea/precio -> vidrio -> forma/apertura. Permite elegir Aluminio/PVC, color visible compacto, linea de perfil o Cristal, duplicar/eliminar y guardar cambios. En L25 muestra costos privados de compra por perfil en contexto; el guardado reutiliza las APIs de Mis precios y no modifica precio comercial ni proveedor elegido.
 - **Usado en**: `PasoDosCuadernoMovil`.
 - **Dependencias**: `mapItemToForm`, `LineTemplatePicker`, `COLOR_OPTIONS`, `ALUMINUM_COLOR_OPTIONS`, `PVC_COLOR_OPTIONS`, `encodeCotizacionItemPresentationMeta`.
 - **Riesgos**: Es transaccional: línea, vidrio, material, color y precio se mantienen locales hasta **Guardar cambios**; cerrar no puede persistir cambios parciales. Cambios confirmados de material/color deben previsualizarse con `colorHex` en miniatura y no conservar una línea incompatible. Las líneas se filtran por material preferido pero deben permitir Cristal cuando el usuario lo elige.

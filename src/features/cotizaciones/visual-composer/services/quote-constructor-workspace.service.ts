@@ -101,17 +101,23 @@ export type QuoteConstructorItemPatch = Partial<
 };
 
 /**
- * A resolver-produced snapshot is an explicit technical update. Preserve it
- * after commercial form hydration, which can otherwise reject a valid
- * universal/fallback recipe because the editor still carries an older recipe ID.
+ * Preserve an explicit resolver result after rebuilding the form. A null patch
+ * invalidates the old snapshot before rebuilding. Keep a newly calculated L25
+ * snapshot only if it belongs to the explicitly selected recipe.
  */
 export function preserveExplicitFabricationSnapshot<T extends CotizacionWorkflowItem>(
   rebuiltItem: T,
   explicitSnapshot: FabricacionCotizacionSnapshot | null | undefined
 ): T {
-  return explicitSnapshot === undefined
-    ? rebuiltItem
-    : { ...rebuiltItem, fabricacionSnapshot: explicitSnapshot };
+  if (explicitSnapshot === undefined) return rebuiltItem;
+  if (explicitSnapshot === null && rebuiltItem.fabricacionSnapshot) {
+    const meta = decodeCotizacionItemPresentationMeta(rebuiltItem.observaciones);
+    if (meta.catalogLineKey === "ventora:l25" && meta.fabricationRecipeId &&
+        meta.fabricationRecipeId === rebuiltItem.fabricacionSnapshot.recipeId) {
+      return rebuiltItem;
+    }
+  }
+  return { ...rebuiltItem, fabricacionSnapshot: explicitSnapshot };
 }
 
 export function createQuoteConstructorPresetConfig(

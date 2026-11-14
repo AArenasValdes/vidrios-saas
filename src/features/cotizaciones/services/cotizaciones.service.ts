@@ -574,8 +574,10 @@ type FabricationRecipeQuoteRow = {
   version: number;
   status: "draft" | "testing" | "validated" | "review_required" | "archived";
   definition: unknown;
-  source_type: "manual" | "copied" | "imported_ai" | "legacy";
+  source_type: FabricationRecipeRecord["sourceType"];
   source_reference: string | null;
+  source_name: string | null;
+  source_revision: string | null;
   parent_recipe_id: string | null;
   validated_at: string | null;
   created_at: string;
@@ -618,6 +620,8 @@ function mapFabricationRecipeQuoteRow(
     definition: row.definition,
     sourceType: row.source_type,
     sourceReference: row.source_reference,
+    sourceName: row.source_name,
+    sourceRevision: row.source_revision,
     parentRecipeId: row.parent_recipe_id,
     validatedAt: row.validated_at,
     validatedBy: null,
@@ -637,7 +641,7 @@ async function listFabricationRecipeCandidatesForQuote(input: {
   let query = supabase
     .from("fabrication_recipes")
     .select(
-      "id, organization_id, line_template_id, scope, provider_name, line_name, typology, leaves_count, variant, version, status, definition, source_type, source_reference, parent_recipe_id, validated_at, created_at, updated_at, eliminado_en"
+      "id, organization_id, line_template_id, scope, provider_name, line_name, typology, leaves_count, variant, version, status, definition, source_type, source_reference, source_name, source_revision, parent_recipe_id, validated_at, created_at, updated_at, eliminado_en"
     )
     .in("line_template_id", [...new Set(input.lineTemplateIds)])
     .in("status", ["draft", "testing", "validated", "review_required"])

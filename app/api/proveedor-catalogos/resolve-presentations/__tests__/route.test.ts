@@ -28,6 +28,7 @@ import {
 import { listSupplierFamilyPreferences } from "@/features/proveedor-catalogos/repositories/supplier-family-preferences.repository";
 import { getSupplierCatalogQuoteLineKeys } from "@/features/proveedor-catalogos/services/proveedor-catalogo-qa.service";
 import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
+import { buildPartialTechnicalCostSnapshot, type CatalogPresentationPrice } from "@/features/proveedor-catalogos/services/costo-tecnico-parcial.service";
 
 const req = (items: unknown[]) => new Request("http://localhost/api/proveedor-catalogos/resolve-presentations", {
   method: "POST",
@@ -235,7 +236,7 @@ describe("/api/proveedor-catalogos/resolve-presentations", () => {
     ]));
     (readOrganizationPurchasePricing as jest.Mock).mockResolvedValue({ adjustments: [], overrides: [] });
 
-    const post = (finishName: string | null) => POST(new Request("http://localhost/api/proveedor-catalogos/resolve-presentations", {
+    const post = (finishName: string | null, previewFinishNames: string[] = []) => POST(new Request("http://localhost/api/proveedor-catalogos/resolve-presentations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -245,6 +246,7 @@ describe("/api/proveedor-catalogos/resolve-presentations", () => {
           catalogLineKey: line.catalogKey,
           familyKey: line.catalogMetadata!.familyKey,
           finishName,
+          previewFinishNames,
           technicalCodes: codes,
           providerKey: "alumco",
         }],
@@ -275,9 +277,137 @@ describe("/api/proveedor-catalogos/resolve-presentations", () => {
       providerKey: "arquetipo",
       label: "Arquetipo · junio 2026",
     }));
+    const multiFinishResponse = await post(null, ["Titanio", "Negro", "Blanco Hueso", "Aluminio Mate"]);
+    expect(multiFinishResponse.status).toBe(200);
+    const multiFinishBody = await multiFinishResponse.json();
+    expect(multiFinishBody.profilePricesByFinish["alumco-l5000"].Titanio).toContainEqual(expect.objectContaining({
+      technicalCode: "5001", netPrice: 12000, finishPriceBasis: "specific_finish", supplierSku: "TI5001A", status: "priced",
+    }));
+    expect(multiFinishBody.profilePricesByFinish["alumco-l5000"].Negro).toContainEqual(expect.objectContaining({
+      technicalCode: "5001", netPrice: 12000, finishPriceBasis: "base_reference_other_finish", presentationId: "", supplierSku: "", status: "priced",
+    }));
+    expect(multiFinishBody.providerOptionsByFinish["alumco-l5000"].Negro).toContainEqual(expect.objectContaining({
+      providerKey: "alumco", pricedProfileCount: 7, totalProfileCount: 7, baseReferenceProfileCount: 7,
+    }));
+    expect(multiFinishBody.providerOptionsByFinish["alumco-l5000"].Titanio).toContainEqual(expect.objectContaining({
+      providerKey: "alumco", pricedProfileCount: 7, totalProfileCount: 7, baseReferenceProfileCount: 0,
+    }));
     expect(readSupplierPresentationPrices).toHaveBeenCalledWith({
       familyKeys: expect.arrayContaining(["universal:aluminio:l5000", "arquetipo:l5000"]),
     });
+  });
+
+  it("solo aplica el costo privado L25 persistido cuando se elige para la pieza", async () => {
+    const line = VENTORA_DEFAULT_LINE_CATALOG.find((entry) => entry.catalogKey === "ventora:l25");
+    expect(line?.catalogMetadata?.familyKey).toBe("universal:aluminio:l25");
+    if (!line?.catalogKey || !line.catalogMetadata?.familyKey) throw new Error("Falta L25 en el catálogo canónico.");
+
+    // Represents the row returned by readWorkshopPresentationPrices after the
+    // 2511R / Blanco / 6000 mm / CLP 45,000 record was saved for organization 7.
+    const persistedWorkshopPrice: CatalogPresentationPrice = {
+      presentationId: "private-2511r-white-org-7",
+      providerKey: "taller:7",
+      familyKeys: ["universal:aluminio:l25"],
+      configurationKey: null,
+      technicalCode: "2511R",
+      recipeComponentCodes: ["2511R"],
+      technicalName: "Refuerzo pierna abierta",
+      supplierSku: "",
+      presentationDescription: "Refuerzo pierna abierta · Blanco · taller",
+      finishCode: "",
+      finishName: "Blanco",
+      finishResolution: "specific",
+      purchaseUnit: "UN",
+      commercialLengthMm: 6000,
+      netPrice: 45000,
+      priceBasis: "commercial_presentation",
+      currency: "CLP",
+      priceListId: "taller:7",
+      priceListRevision: "taller-v2",
+      origin: "workshop",
+    };
+    (readConfirmedSupplierPresentations as jest.Mock).mockResolvedValue([{
+      presentationId: persistedWorkshopPrice.presentationId,
+      providerKey: persistedWorkshopPrice.providerKey,
+      supplierSku: "",
+      technicalCode: "2511R",
+      recipeComponentCodes: ["2511R"],
+      familyKeys: persistedWorkshopPrice.familyKeys,
+      configurationKey: null,
+      finishCode: null,
+      finishName: "Blanco",
+      finishResolution: "specific",
+      commercialLengthMm: 6000,
+      preferred: false,
+    }]);
+    (readSupplierPresentationPrices as jest.Mock).mockResolvedValue([]);
+    (readWorkshopPresentationPrices as jest.Mock).mockResolvedValue([persistedWorkshopPrice]);
+    (listSupplierFamilyPreferences as jest.Mock).mockResolvedValue([{
+      familyKey: "universal:aluminio:l25", providerKey: "arquetipo",
+    }]);
+    (readSupplierNames as jest.Mock).mockResolvedValue(new Map());
+    (readOrganizationPurchasePricing as jest.Mock).mockResolvedValue({ adjustments: [], overrides: [] });
+
+    const post = (providerKey?: string) => POST(new Request("http://localhost/api/proveedor-catalogos/resolve-presentations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        includeProviderOptions: true,
+        items: [{
+          itemId: "piece-2511r", catalogLineKey: line.catalogKey!, familyKey: line.catalogMetadata!.familyKey as string,
+          finishName: "Blanco", technicalCodes: ["2511R"], providerKey: providerKey ?? null,
+        }],
+      }),
+    }));
+
+    const defaultResponse = await post();
+    expect(defaultResponse.status).toBe(200);
+    const defaultBody = await defaultResponse.json();
+    expect(defaultBody.selections["piece-2511r"][0]).toMatchObject({ status: "missing", providerKey: "arquetipo" });
+    expect(defaultBody.profilePrices["piece-2511r"]).toContainEqual(expect.objectContaining({
+      providerKey: "taller:7", netPrice: 45000, commercialLengthMm: 6000, status: "priced",
+    }));
+
+    const selectedResponse = await post("taller:7");
+    expect(selectedResponse.status).toBe(200);
+    const selectedBody = await selectedResponse.json();
+    const [selection] = selectedBody.selections["piece-2511r"];
+    expect(selection).toMatchObject({
+      status: "resolved", providerKey: "taller:7", presentationId: persistedWorkshopPrice.presentationId,
+      commercialLengthMm: 6000,
+    });
+
+    const calculated = buildPartialTechnicalCostSnapshot({
+      workSnapshot: {
+        schemaVersion: 1, tipo: "fabricacion_trabajo_snapshot", packing: "first_fit_decreasing_sugerido",
+        capturedAt: "2026-11-07T12:00:00.000Z", itemCountWithPauta: 1, totalBars: 1,
+        totalProfilesLinealMm: 4200, totalWasteMm: 1800, sourcePresentations: [],
+        bars: [{
+          materialKey: "ventora:l25:2511R", presentationKey: "private-2511r-white-org-7|Blanco|6000",
+          codigoPerfil: "2511R", nombrePerfil: "Refuerzo pierna abierta", acabadoKey: "Blanco",
+          lineaIds: [75], largoComercialMm: 6000, indice: 1, despunteInicialMm: 0,
+          perdidaCorteMm: 0, usadoMm: 4200, sobranteMm: 1800,
+          supplierPresentationId: selection.presentationId, supplierProviderKey: selection.providerKey,
+          supplierSku: selection.supplierSku, supplierFinishName: selection.finishName,
+          cortes: [{
+            itemId: "piece-2511r", codigoItem: "piece-2511r", nombreItem: "L25 Blanco",
+            componenteId: "refuerzo", codigoPerfil: "2511R", funcion: "Refuerzo pierna abierta",
+            corte: "90° / 90°", largoMm: 4200,
+          }],
+        }],
+      },
+      quoteItems: [{
+        code: "piece-2511r", color: "Blanco", finishName: "Blanco", catalogLineKey: "ventora:l25",
+        supplierFamilyKey: "universal:aluminio:l25", supplierProviderKey: selection.providerKey,
+      }],
+      availablePrices: [persistedWorkshopPrice],
+      calculatedAt: "2026-11-07T12:00:00.000Z",
+    });
+
+    expect(calculated?.lines).toEqual(expect.arrayContaining([expect.objectContaining({
+      technicalCode: "2511R", providerKey: "taller:7", commercialLengthMm: 6000,
+      bars: 1, netPricePerPresentation: 45000, lineNet: 45000,
+    })]));
   });
 });
 

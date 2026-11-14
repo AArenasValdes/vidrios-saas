@@ -82,6 +82,7 @@ function selectFinishCandidates<T extends FinishCandidate>(candidates: readonly 
     candidate.providerKey?.trim().toLocaleLowerCase("es-CL") === "alumco" &&
     candidate.finishResolution === "specific" &&
     normalize(candidate.finishName) === "titanio" &&
+    Boolean(finishName?.trim()) &&
     normalize(finishName) !== "titanio"
   );
   return { candidates: alumcoTitanioBase, basis: "base_reference_other_finish" as const };
@@ -94,6 +95,34 @@ export function resolveSupplierTechnicalCodesForQuote(input: {
 }): string[] {
   const selected = input.recipeCodes.length > 0 ? input.recipeCodes : input.documentedCodes;
   return [...new Set(selected.map((code) => code.trim()).filter(Boolean))];
+}
+
+export type QuoteSupplierProfileReference = {
+  technicalCode: string;
+  profileName: string;
+};
+
+/**
+ * Recipe profiles define the component's required materials. Catalog references
+ * are only a fallback for lines without an exact recipe; L25 must stay pending
+ * when its exact validated variant has not resolved.
+ */
+export function resolveQuoteSupplierProfileReferences(input: {
+  recipeProfiles: readonly { code: string; name: string }[];
+  documentedProfiles: readonly { code: string; name: string }[];
+  requireExactRecipe?: boolean;
+}): QuoteSupplierProfileReference[] {
+  const source = input.recipeProfiles.length > 0 || input.requireExactRecipe
+    ? input.recipeProfiles
+    : input.documentedProfiles;
+  const seen = new Set<string>();
+  return source.flatMap((profile) => {
+    const technicalCode = profile.code.trim();
+    const key = normalizeCode(technicalCode);
+    if (!key || seen.has(key)) return [];
+    seen.add(key);
+    return [{ technicalCode, profileName: profile.name.trim() || technicalCode }];
+  });
 }
 
 /**
@@ -343,8 +372,11 @@ export function resolveSupplierPresentationFamilyKeys(input: {
 export function resolveSupplierFinishName(value: string | null | undefined, colorHex?: string | null) {
   const normalized = normalize(value);
   const labels: Record<string, string> = {
+    "aluminio mate": "Aluminio Mate",
     blanco: "Blanco",
+    "blanco hueso": "Blanco Hueso",
     nogal: "Nogal",
+    madera: "Madera",
     "roble dorado": "Roble Dorado",
     antracita: "Antracita",
     negro: "Negro",
@@ -355,12 +387,15 @@ export function resolveSupplierFinishName(value: string | null | undefined, colo
   const labelsByExactHex: Record<string, string> = {
     "#ffffff": "Blanco",
     "#f0eeeb": "Blanco",
+    "#dfd5c4": "Blanco Hueso",
+    "#a8a8a8": "Aluminio Mate",
     "#2a2a2a": "Negro",
     "#444444": "Negro Mate",
     "#6f4a34": "Nogal",
     "#b7834a": "Roble Dorado",
     "#4f555d": "Antracita",
     "#7d8791": "Titanio",
+    "#8b5e3c": "Madera",
   };
   return labelsByExactHex[(colorHex ?? "").trim().toLowerCase()] ?? null;
 }

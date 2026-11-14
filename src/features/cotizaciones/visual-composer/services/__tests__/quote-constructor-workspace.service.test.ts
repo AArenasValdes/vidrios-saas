@@ -51,6 +51,12 @@ describe("quote constructor workspace service", () => {
     expect(preserveExplicitFabricationSnapshot(rebuilt, resolvedSnapshot).fabricacionSnapshot)
       .toBe(resolvedSnapshot);
     expect(preserveExplicitFabricationSnapshot(rebuilt, null).fabricacionSnapshot).toBeNull();
+    const recalculated = item({ fabricacionSnapshot: resolvedSnapshot, observaciones: encodeCotizacionItemPresentationMeta({
+      catalogLineKey: "ventora:l25", fabricationRecipeId: resolvedSnapshot.recipeId,
+    }) });
+    expect(preserveExplicitFabricationSnapshot(recalculated, null).fabricacionSnapshot).toBe(resolvedSnapshot);
+    const cleared = { ...recalculated, observaciones: encodeCotizacionItemPresentationMeta({ catalogLineKey: "ventora:l25" }) };
+    expect(preserveExplicitFabricationSnapshot(cleared, null).fabricacionSnapshot).toBeNull();
     expect(preserveExplicitFabricationSnapshot(rebuilt, undefined)).toBe(rebuilt);
   });
 
