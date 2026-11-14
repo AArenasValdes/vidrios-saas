@@ -168,6 +168,44 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
     expect(selected.fabricacionVariante).toBe("normal");
     expect(selected.fabricationRecipeId).toBe("");
   });
+  it("guarda y reabre la última variante L25 elegida sin conservar una receta anterior", () => {
+    const selected = applyLineTemplateToGrupoDraft(createDraft(), {
+      id: 207,
+      nombre: "Serie 25",
+      categoria: "aluminio",
+      material: "Aluminio",
+      catalogKey: "ventora:l25",
+      catalogMetadata: { lineConfiguration: "Corredera 2 hojas" },
+      vidrioPrincipalRecomendado: null,
+      precioM2Sugerido: 80000,
+      minimoCobrable: 35000,
+      redondeoPrecio: 1000,
+    });
+    const form = buildPasoDosGrupoComponentForm({
+      items: [],
+      pricingMode: "precio_directo",
+      provider: "",
+      draft: {
+        ...selected,
+        fabricacionGlazing: "monolithic",
+        fabricacionLeg: "closed",
+        fabricacionReinforcement: "normal",
+        fabricacionVariante: "monolithic_closed_normal",
+        fabricationRecipeId: "stale-recipe-id",
+        fabricacionSnapshot: null,
+        cubicationSnapshot: null,
+      },
+    });
+
+    const saved = buildItemFromForm({ ...form, fabricationRecipeId: "" }, [], null);
+    const reopened = mapItemToForm(saved);
+
+    expect(reopened.fabricacionVariante).toBe("monolithic_closed_normal");
+    expect(reopened.fabricacionLeg).toBe("closed");
+    expect(reopened.fabricacionReinforcement).toBe("normal");
+    expect(reopened.fabricationRecipeId).toBe("");
+    expect(reopened.fabricacionSnapshot).toBeNull();
+  });
   it("preserva el contexto de fabricación de las líneas WinHouse al agregarlas a una cotización", () => {
     const s60 = applyLineTemplateToGrupoDraft(createDraft(), {
       id: 225,

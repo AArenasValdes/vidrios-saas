@@ -19,6 +19,7 @@ import {
 import { resolveSupplierPresentationFamilyKeys, type ConfirmedSupplierPresentation } from "../services/supplier-presentation-resolution.service";
 import { listWorkshopPresentations, WorkshopPresentationsSchemaMissingError } from "./workshop-presentations.repository";
 import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
+import { isGeneratedWorkshopPresentationKey } from "../services/workshop-presentation-identity.service";
 
 function getClient() {
   return createAdminClient() as unknown as SupabaseClient<SupplierCatalogDatabase>;
@@ -45,7 +46,7 @@ export async function readConfirmedSupplierPresentations(
     .map((row) => ({
       presentationId: String(row.id),
       providerKey: `taller:${organizationId}`,
-      supplierSku: String(row.sku_taller),
+      supplierSku: isGeneratedWorkshopPresentationKey(String(row.sku_taller)) ? "" : String(row.sku_taller),
       technicalCode: String(row.codigo_tecnico),
       recipeComponentCodes: row.codigo_receta ? [String(row.codigo_receta)] : [],
       familyKeys: [String(row.family_key)],
@@ -117,7 +118,7 @@ export async function readWorkshopPresentationPrices(organizationId: number): Pr
     technicalCode: String(row.codigo_tecnico),
     recipeComponentCodes: row.codigo_receta ? [String(row.codigo_receta)] : [],
     technicalName: String(row.nombre_perfil),
-    supplierSku: String(row.sku_taller),
+    supplierSku: isGeneratedWorkshopPresentationKey(String(row.sku_taller)) ? "" : String(row.sku_taller),
     presentationDescription: String(row.descripcion),
     finishCode: "",
     finishName: row.acabado_nombre ? String(row.acabado_nombre) : null,

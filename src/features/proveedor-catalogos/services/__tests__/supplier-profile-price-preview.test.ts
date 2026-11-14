@@ -1,5 +1,10 @@
-import { resolveSupplierProfilePricePreviews, resolveSupplierTechnicalCodesForQuote } from "../supplier-presentation-resolution.service";
+import {
+  resolveQuoteSupplierProfileReferences,
+  resolveSupplierProfilePricePreviews,
+  resolveSupplierTechnicalCodesForQuote,
+} from "../supplier-presentation-resolution.service";
 import type { CatalogPresentationPrice } from "../costo-tecnico-parcial.service";
+import { buildSodalL25Recipe } from "@/features/fabricacion/fixtures/sodal-l25-zeta-recipes";
 
 const request = {
   itemId: "item-1",
@@ -34,6 +39,43 @@ function presentation(overrides: Partial<CatalogPresentationPrice> = {}): Catalo
 }
 
 describe("supplier profile price preview without fabrication recipe", () => {
+  it.each([
+    ["monolitico_pierna_abierta_2h_1800x1500", ["2503", "2506", "2507"], ["2509", "2510", "2511R", "2512R"]],
+    ["monolitico_pierna_cerrada_2h_1800x1500", ["2509", "2510", "2507"], ["2503", "2511R", "2512R"]],
+    ["monolitico_pierna_abierta_reforzada_2h_1800x1500", ["2503", "2512R", "2511R"], ["2509", "2510"]],
+  ] as const)("uses only the exact L25 recipe profiles for %s", (recipeId, expectedCodes, staleCodes) => {
+    const recipe = buildSodalL25Recipe(recipeId);
+    const references = resolveQuoteSupplierProfileReferences({
+      recipeProfiles: recipe.definition.perfiles.map((profile) => ({
+        code: profile.codigoPerfil,
+        name: profile.nombrePerfil,
+      })),
+      documentedProfiles: [
+        { code: "2509", name: "Referencia de catálogo no requerida" },
+        { code: "2511R", name: "Referencia complementaria" },
+      ],
+      requireExactRecipe: true,
+    });
+
+    const recipeCodes = [...new Set(recipe.definition.perfiles.map((profile) => profile.codigoPerfil))];
+    expect(references.map((profile) => profile.technicalCode).sort()).toEqual(recipeCodes.sort());
+    expect(expectedCodes.every((code) => recipeCodes.includes(code))).toBe(true);
+    staleCodes.forEach((code) => {
+      expect(references.map((profile) => profile.technicalCode)).not.toContain(code);
+    });
+  });
+
+  it("does not substitute general references when an exact L25 recipe is unavailable", () => {
+    expect(resolveQuoteSupplierProfileReferences({
+      recipeProfiles: [],
+      documentedProfiles: [
+        { code: "2503", name: "Jamba" },
+        { code: "2506", name: "Marco" },
+      ],
+      requireExactRecipe: true,
+    })).toEqual([]);
+  });
+
   it("uses documented line codes when no recipe is selected and prefers recipe codes otherwise", () => {
     expect(resolveSupplierTechnicalCodesForQuote({
       recipeCodes: [],
@@ -63,6 +105,23 @@ describe("supplier profile price preview without fabrication recipe", () => {
       commercialLengthMm: 6000,
       status: "priced",
     })]);
+  });
+
+  it("returns compatible prices for each provider in one response for local provider switching", () => {
+    const result = resolveSupplierProfilePricePreviews({
+      request: { ...request, providerKey: "arquetipo" },
+      references: [{ code: "KOM 802", name: "Marco monorriel" }],
+      presentations: [
+        presentation({ providerKey: "arquetipo", presentationId: "arquetipo-802", netPrice: 34900 }),
+        presentation({ providerKey: "alumco", presentationId: "alumco-802", netPrice: 36500 }),
+      ],
+      providerNames: new Map([["arquetipo", "Arquetipo"], ["alumco", "Alumco"]]),
+    });
+
+    expect(result).toEqual(expect.arrayContaining([
+      expect.objectContaining({ providerKey: "arquetipo", netPrice: 34900, status: "priced" }),
+      expect.objectContaining({ providerKey: "alumco", netPrice: 36500, status: "priced" }),
+    ]));
   });
 
   it("does not choose between duplicate confirmed presentations", () => {

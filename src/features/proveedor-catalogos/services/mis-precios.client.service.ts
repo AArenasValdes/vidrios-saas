@@ -67,3 +67,53 @@ export async function saveQuotePresentationPrice(change: {
   const payload = await response.json() as { error?: string };
   if (!response.ok) throw new Error(payload.error || "No pudimos guardar el precio.");
 }
+
+export async function saveQuickWorkshopProfileCost(change:
+  | {
+      kind: "create";
+      lineTemplateId: number;
+      technicalCode: string;
+      profileName: string;
+      finishName: string;
+      commercialLengthMm: number | null;
+      netPrice: number;
+    }
+  | {
+      kind: "update";
+      lineTemplateId: number;
+      presentationId: string;
+      expectedRevision: number;
+      commercialLengthMm: number | null;
+      netPrice: number;
+    }
+) {
+  const response = await fetch("/api/proveedor-catalogos/taller-presentaciones", {
+    method: change.kind === "create" ? "POST" : "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(change.kind === "create" ? {
+      lineTemplateId: change.lineTemplateId,
+      officialInputId: null,
+      technicalCode: change.technicalCode,
+      recipeCode: null,
+      profileName: change.profileName,
+      workshopSku: null,
+      description: `Perfil ${change.technicalCode} · ${change.finishName}`,
+      finishName: change.finishName,
+      purchaseUnit: "UN",
+      commercialLengthMm: change.commercialLengthMm,
+      netPrice: change.netPrice,
+      currency: "CLP",
+      preferred: false,
+    } : {
+      lineTemplateId: change.lineTemplateId,
+      presentationId: change.presentationId,
+      expectedRevision: change.expectedRevision,
+      purchaseUnit: "UN",
+      commercialLengthMm: change.commercialLengthMm,
+      netPrice: change.netPrice,
+      currency: "CLP",
+    }),
+  });
+  const payload = await response.json() as { error?: string };
+  if (!response.ok) throw new Error(payload.error || "No pudimos guardar el costo del perfil.");
+}

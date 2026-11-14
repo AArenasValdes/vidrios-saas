@@ -10,6 +10,7 @@ import {
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { createDefaultGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import { createEmptyQuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import { setQuickPaneDecoration } from "@/features/cotizaciones/visual-composer/services/quick-composition-adjustment.service";
 import { prepareFabricacionSnapshotsForQuoteSave } from "@/features/cotizaciones/services/fabricacion-trabajo-snapshot-lifecycle.service";
@@ -396,7 +397,7 @@ function buildScenarioOneFixtures() {
     fabricacionAnchoHojaAMm: 750,
     fabricationRecipeId: sodalRecipe.id,
     supplierProviderKey: "sodal",
-    guidedVisualConfig,
+    guidedVisualConfig: createQuoteConstructorPresetConfig("corredera", { widthMm: 1800, heightMm: 1500 }),
     quickCompositionAdjustment,
   };
 

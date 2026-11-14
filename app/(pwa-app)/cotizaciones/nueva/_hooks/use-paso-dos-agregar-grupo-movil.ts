@@ -727,6 +727,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
       fabricacionLeg: value.fabricacionLeg,
       fabricacionReinforcement: value.fabricacionReinforcement,
       fabricacionVariante: value.fabricacionVariante,
+      fabricationRecipeId: "",
       fabricacionSnapshot: null,
       cubicationSnapshot: null,
     }));

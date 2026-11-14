@@ -114,7 +114,7 @@ export async function updateWorkshopPresentationPurchase(input: {
   commercialLengthMm: number | null;
   netPrice: number | null;
   currency: string | null;
-  preferred: boolean;
+  preferred?: boolean;
 }) {
   let query = client().from("organizacion_presentaciones_taller")
     .update({
@@ -122,7 +122,7 @@ export async function updateWorkshopPresentationPurchase(input: {
       largo_comercial_mm: input.commercialLengthMm,
       precio_neto: input.netPrice,
       moneda: input.currency,
-      preferida: input.preferred,
+      ...(input.preferred === undefined ? {} : { preferida: input.preferred }),
       revision: input.expectedRevision + 1,
       actualizado_en: new Date().toISOString(),
     })

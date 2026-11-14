@@ -57,7 +57,9 @@ describe("resolver explícito de presentación para pauta", () => {
     expect(resolveSupplierFinishName("Ventana", "#2a2a2a")).toBe("Negro");
     expect(resolveSupplierFinishName("Titanio", "#7d8791")).toBe("Titanio");
     expect(resolveSupplierFinishName(null, "#7d8791")).toBe("Titanio");
-    expect(resolveSupplierFinishName("Aluminio mate", "#a8a8a8")).toBeNull();
+    expect(resolveSupplierFinishName("Aluminio mate", "#a8a8a8")).toBe("Aluminio Mate");
+    expect(resolveSupplierFinishName("Blanco hueso", "#dfd5c4")).toBe("Blanco Hueso");
+    expect(resolveSupplierFinishName("Madera", "#8b5e3c")).toBe("Madera");
     expect(resolveSupplierFinishName("gris nuevo", "#123456")).toBeNull();
   });
 
@@ -203,6 +205,24 @@ describe("resolver explícito de presentación para pauta", () => {
     expect(result).toEqual([expect.objectContaining({
       providerKey: "alumco", pricedProfileCount: 1, baseReferenceProfileCount: 1,
     })]);
+  });
+
+  it("no ofrece el precio base Titanio si el acabado cotizado aún no está identificado", () => {
+    const presentation = {
+      presentationId: "alumco-3201-ti",
+      providerKey: "alumco",
+      technicalCode: "3201",
+      familyKeys: ["universal:aluminio:l32"],
+      finishName: "Titanio",
+      finishResolution: "specific" as const,
+      commercialLengthMm: 6000,
+      netPrice: 10210,
+    };
+
+    expect(resolveSupplierPriceProviderCoverage({
+      request: { itemId: "L32", familyKey: "universal:aluminio:l32", finishName: null, technicalCodes: ["3201"] },
+      presentations: [presentation],
+    })).toEqual([]);
   });
 
   it("no presenta como cubierto un código con presentación ambigua o sin largo comercial", () => {
