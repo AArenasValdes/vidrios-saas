@@ -580,6 +580,84 @@ describe("orden de fabricación y materiales", () => {
     }
   });
 
+  it("presenta las tres variantes L25 con etiquetas técnicas legibles en el bloque Componentes", () => {
+    const variants = [
+      ["monolithic_open_normal", "Monolítico · pierna abierta · refuerzo normal"],
+      ["monolithic_closed_normal", "Monolítico · pierna cerrada · refuerzo normal"],
+      ["monolithic_open_reinforced", "Monolítico · pierna abierta · refuerzo reforzado"],
+    ] as const;
+    const work = savedWork();
+    delete work.bars[0]!.parametrosFisicos;
+    const quoteSummary = summary(work);
+    quoteSummary.items = variants.map(([variant], index) => ({
+      itemId: `l25-${index + 1}`,
+      codigo: `V${index + 1}`,
+      nombre: "Corredera L25 2 hojas",
+      lineName: "L25",
+      material: "Aluminio",
+      widthMm: 1800,
+      heightMm: 1500,
+      quantity: 1,
+      snapshot: { cuts: [] },
+      recipe: null,
+      herrajeLabel: "-",
+      statusLabel: "Receta validada",
+      geometryOnly: false,
+      profilesMl: 0,
+      glassM2: 0,
+      glassThickness: "5 mm",
+      glassThicknessWarning: null,
+      accessoryUnits: 0,
+      barCount: 0,
+      operationalStatus: "ready",
+      fabricacionSnapshot: {
+        selectedVariant: variant,
+        recipeIdentity: { variante: variant },
+      },
+    } as unknown as FabricationQuoteSummary["items"][number]));
+    const order = buildFabricationWorkOrder({
+      summary: quoteSummary,
+      materials: materials(),
+      quoteItems: variants.map((_, index) => ({
+        id: `l25-${index + 1}`,
+        observaciones: encodeCotizacionItemPresentationMeta({
+          referencia: "L25",
+          configuracion: "Corredera 2 hojas",
+        }),
+      } as unknown as CotizacionWorkflowItem)),
+    });
+    const pdf = createFabricationWorkOrderPdf(order, {
+      companyName: "Taller QA",
+      quoteCode: "COT-QA-1388 · EJEMPLO SINTÉTICO",
+      workName: "Variantes L25",
+      issueDate: "14 nov 2026",
+    }, null, "profile-cuts");
+    const text = pdfText(pdf);
+
+    for (const [, label] of variants) expect(text).toContain(label);
+    for (const [variant] of variants) expect(text).not.toContain(variant);
+    expect(text).toContain("V1");
+    expect(text).toContain("V2");
+    expect(text).toContain("V3");
+    expect(text).toContain("1.800 × 1.500 mm");
+    expect(text).toContain("5001");
+    expect(text).toContain("Perfil / tira");
+    expect(text).toContain("Cortes");
+    expect(text).toContain("Sobrante");
+    expect(text).toContain("Tira 1 · 6.000 mm");
+    expect(text).toContain("V1: 2 × 1.000 mm");
+    expect(text).toContain("V2: 1 × 600 mm");
+    expect(text).toContain("3.391 mm");
+    expect(text).toContain("Distribución referencial");
+    expect(text).toContain("Confirmar parámetros del taller antes de cortar");
+
+    if (process.env.VENTORA_PDF_EXAMPLE === "1") {
+      const outputDirectory = pdfExampleDirectory();
+      mkdirSync(outputDirectory, { recursive: true });
+      writeFileSync(path.join(outputDirectory, "qa-1388-variantes-l25-sintetico.pdf"), Buffer.from(pdf.output("arraybuffer")));
+    }
+  });
+
   it("reduce el PDF de cortes a pendientes técnicos y mantiene los pendientes comerciales en el combinado", () => {
     const order = buildFabricationWorkOrder({ summary: summary(savedWork()), materials: materials(), technicalCostSnapshot: savedCost() });
     order.documentStatus = {

@@ -263,6 +263,43 @@ function resolveRealVariantLabel(parts: Array<string | null | undefined>, exclud
   return chosen.length ? chosen.join(" · ") : null;
 }
 
+const L25_VARIANT_LABELS: Readonly<Record<string, string>> = {
+  monolithic_open_normal: "Monolítico · pierna abierta · refuerzo normal",
+  monolithic_closed_normal: "Monolítico · pierna cerrada · refuerzo normal",
+  monolithic_open_reinforced: "Monolítico · pierna abierta · refuerzo reforzado",
+};
+
+function isInternalVariantIdentifier(value: string): boolean {
+  return /^[a-z0-9]+(?:[_-][a-z0-9]+)+$/i.test(value);
+}
+
+function resolveComponentVariantLabel(input: {
+  snapshotVariant?: string | null;
+  recipeVariant?: string | null;
+  otherLabels: Array<string | null | undefined>;
+  excludedTexts: Array<string | null | undefined>;
+}): string | null {
+  const technicalVariants = [input.snapshotVariant, input.recipeVariant]
+    .map((value) => cleanOptionalText(value))
+    .filter((value): value is string => Boolean(value));
+  const allVariants = [...technicalVariants, ...input.otherLabels.map((value) => cleanOptionalText(value)).filter((value): value is string => Boolean(value))];
+  for (const variant of allVariants) {
+    const l25Label = L25_VARIANT_LABELS[variant];
+    if (l25Label) return l25Label;
+  }
+
+  const readableTechnicalVariant = technicalVariants
+    .map((value) => cleanOptionalText(value))
+    .filter((value): value is string => value !== null)
+    .find((value) => !isInternalVariantIdentifier(value));
+  if (readableTechnicalVariant) return readableTechnicalVariant;
+  const readableLabels = input.otherLabels.filter((value) => {
+    const cleaned = cleanOptionalText(value);
+    return Boolean(cleaned) && !isInternalVariantIdentifier(cleaned!);
+  });
+  return resolveRealVariantLabel(readableLabels, input.excludedTexts);
+}
+
 function buildComponentSummaries(input: {
   summary: FabricationQuoteSummary;
   quoteItemsById: ReadonlyMap<string, CotizacionWorkflowItem>;
@@ -301,16 +338,19 @@ function buildComponentSummaries(input: {
       ?? cleanOptionalText(quoteItem?.lineaComercial);
     const finishRaw = meta ? resolveComponentColorName(meta.colorHex) : null;
     const finish = finishRaw && finishRaw !== "Color a definir" ? finishRaw : null;
-    const variant = resolveRealVariantLabel([
-      row.fabricacionSnapshot?.selectedVariant,
-      row.fabricacionSnapshot?.recipeIdentity?.variante,
-      meta?.fabricacionVariante,
-      meta?.configuracion,
-      meta?.sheetVariant,
-      meta?.sheetScheme,
-      meta?.fabricacionApertura,
-      row.herrajeLabel,
-    ], [name, line]);
+    const variant = resolveComponentVariantLabel({
+      snapshotVariant: row.fabricacionSnapshot?.selectedVariant,
+      recipeVariant: row.fabricacionSnapshot?.recipeIdentity?.variante,
+      otherLabels: [
+        meta?.fabricacionVariante,
+        meta?.configuracion,
+        meta?.sheetVariant,
+        meta?.sheetScheme,
+        meta?.fabricacionApertura,
+        row.herrajeLabel,
+      ],
+      excludedTexts: [name, line],
+    });
     const widthMm = row.widthMm > 0 ? row.widthMm : (quoteItem?.ancho && quoteItem.ancho > 0 ? quoteItem.ancho : null);
     const heightMm = row.heightMm > 0 ? row.heightMm : (quoteItem?.alto && quoteItem.alto > 0 ? quoteItem.alto : null);
     const quantity = row.quantity > 0 ? row.quantity : (quoteItem?.cantidad && quoteItem.cantidad > 0 ? quoteItem.cantidad : null);
