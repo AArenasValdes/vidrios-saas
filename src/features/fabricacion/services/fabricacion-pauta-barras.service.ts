@@ -24,7 +24,7 @@ type CorteExpandido = {
   largoComercialMm: number;
 };
 
-/** Sin valores explícitos: el ajuste mm de cada perfil ya descuenta la sierra. */
+/** Valores usados solo para mostrar una distribución teórica cuando faltan datos. */
 export const FABRICACION_CORTE_POR_DEFECTO: FabricacionConfiguracionCorte = {
   perdidaCorteMm: 0,
   despunteInicialMm: 0,
@@ -61,6 +61,22 @@ export function construirPautaBarrasFabricacion(input: {
   );
 
   const advertencias: FabricacionAdvertencia[] = [];
+  const perdidaConocida = input.receta.configuracionCorte?.perdidaCorteMm ?? null;
+  const despunteConocido = input.receta.configuracionCorte?.despunteInicialMm ?? null;
+  const confirmacion = input.receta.configuracionCorte?.confirmacionFisica;
+  const parametrosFisicos: NonNullable<FabricacionPautaBarras["parametrosFisicos"]> = {
+    estado: perdidaConocida != null && despunteConocido != null &&
+      confirmacion?.procedimiento === "por_pieza" && confirmacion.largosComercialesConfirmados === true && Boolean(confirmacion.fuente?.trim())
+      ? "confirmado" : "pendiente",
+    perdidaCorteMm: perdidaConocida,
+    despunteInicialMm: despunteConocido,
+    procedimiento: confirmacion?.procedimiento ?? null,
+    fuente: confirmacion?.fuente?.trim() || null,
+    largosComercialesConfirmados: confirmacion?.largosComercialesConfirmados === true,
+  };
+  if (parametrosFisicos.estado === "pendiente") {
+    advertencias.push({ codigo: "PAUTA_FISICA_PENDIENTE", nivel: "advertencia", mensaje: "PAUTA TEÓRICA · VALIDAR CORTE Y DESPUNTE ANTES DE FABRICAR" });
+  }
   const cortes: CorteExpandido[] = [];
   const perfilesConAviso = new Set<string>();
 
@@ -128,6 +144,8 @@ export function construirPautaBarrasFabricacion(input: {
     const existente = barras.find(
       (barra) =>
         (barra.materialKey ?? barra.codigoPerfil) === corte.materialKey &&
+        barra.codigoPerfil === corte.codigoPerfil &&
+        (Boolean(corte.codigoPerfil) || barra.cortes[0]?.componenteId === corte.componenteId) &&
         barra.largoComercialMm === corte.largoComercialMm &&
         barra.usadoMm + consumo <= barra.largoComercialMm
     );
@@ -170,6 +188,7 @@ export function construirPautaBarrasFabricacion(input: {
   return {
     calculable:
       barras.length > 0 && !advertencias.some((entry) => entry.nivel === "error"),
+    parametrosFisicos,
     barras,
     advertencias,
     totalUsadoMm: barras.reduce((sum, barra) => sum + barra.usadoMm, 0),

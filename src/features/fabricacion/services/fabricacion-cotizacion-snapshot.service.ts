@@ -66,6 +66,7 @@ export function fabricacionSnapshotMatchesCalculatedOutput(
     pautaBarras: snapshot.pautaBarras
       ? {
           calculable: snapshot.pautaBarras.calculable,
+          parametrosFisicos: snapshot.pautaBarras.parametrosFisicos ?? null,
           barras: ordered(snapshot.pautaBarras.barras, (barra) => ({
             materialKey: barra.materialKey ?? "",
             codigoPerfil: barra.codigoPerfil,
@@ -130,6 +131,7 @@ export function buildFabricacionSnapshotSyncKey(
       quantity: profile.cantidadPiezas,
       totalMm: profile.totalLinealMm,
     })),
+    parametrosFisicos: snapshot.pautaBarras?.parametrosFisicos ?? null,
     bars: snapshot.pautaBarras ? ordered(snapshot.pautaBarras.barras, (bar) => ({
       materialKey: bar.materialKey ?? null,
       code: bar.codigoPerfil,
