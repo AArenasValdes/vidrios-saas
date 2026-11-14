@@ -137,8 +137,14 @@ describe("orden de fabricación y materiales", () => {
     expect(order.cutGroups[0]?.theoreticalRemnantMm).toBe(0);
     const metadata = { companyName: "Taller QA", quoteCode: "COT-QA-1388", workName: "Pauta teórica", issueDate: "14 nov 2026" };
     const pdf = createFabricationWorkOrderPdf(order, metadata, null, "profile-cuts");
+    expect(pdf.getNumberOfPages()).toBe(1);
+    expect(pdfText(pdf)).toContain("Componentes");
+    expect(pdfText(pdf)).toContain("Perfil / tira");
+    expect(pdfText(pdf)).toContain("Sobrante");
     expect(pdfText(pdf)).toContain("0 mm");
-    expect(pdfText(pdf)).toContain("2 × 1.500 mm");
+    expect(pdfText(pdf)).toContain("Teórico");
+    expect(pdfText(pdf)).toContain("V1: 2 × 1.500 mm");
+    expect(pdfText(pdf)).toContain("V3: 2 × 1.500 mm");
     const pendingPdf = createFabricationWorkOrderPdf({
       ...order, cutGroups: [{ ...order.cutGroups[0]!, theoreticalRemnantMm: null }],
     }, metadata, null, "profile-cuts");
@@ -319,7 +325,7 @@ describe("orden de fabricación y materiales", () => {
     baseOrder.cutGroups = [{
       key: "3201", technicalCode: "3201", profileName: "Marco 3201", barIndex: 1,
       commercialLengthMm: 6000, usedMm: 5000, theoreticalRemnantMm: 1000, trimMm: 0, kerfMm: 0,
-      cuts: Array.from({ length: 38 }, (_, index) => ({
+      cuts: Array.from({ length: 80 }, (_, index) => ({
         itemCode: "V1", component: "Ventana", functionName: `Corte 3201 QA ${String(index + 1).padStart(2, "0")}`,
         quantity: 1, lengthMm: 900 + index,
       })),
@@ -329,7 +335,7 @@ describe("orden de fabricación y materiales", () => {
     }, null, "profile-cuts"));
 
     expect(pages.length).toBeGreaterThan(1);
-    for (let index = 1; index <= 38; index += 1) {
+    for (let index = 1; index <= 80; index += 1) {
       expect(pages.join(" ")).toContain(`Corte 3201 QA ${String(index).padStart(2, "0")}`);
     }
     expect(pages.every((page) => page.includes("Distribución referencial · Confirmar parámetros del taller antes de cortar"))).toBe(true);
@@ -551,10 +557,18 @@ describe("orden de fabricación y materiales", () => {
 
     const cutsPdf = createFabricationWorkOrderPdf(order, metadata, logoDataUrl, "profile-cuts");
     const cutsText = pdfText(cutsPdf);
+    expect(cutsPdf.getNumberOfPages()).toBe(1);
     expect(cutsText).toContain("Pauta de cortes de perfiles");
-    expect(cutsText).toContain("V1 · Ventana corredera 2 hojas Riel superior");
+    expect(cutsText).toContain("Componentes");
+    expect(cutsText).toContain("V1 Ventana corredera 2 hojas");
+    expect(cutsText).toContain("Perfil / tira");
+    expect(cutsText).toContain("Cortes");
+    expect(cutsText).toContain("Sobrante");
+    expect(cutsText).toContain("V1: 2 × 1.000 mm");
+    expect(cutsText).toContain("V2: 1 × 600 mm");
     expect(cutsText).toContain("3.391 mm");
-    expect(cutsText).toMatch(/remanente teórico/i);
+    expect(cutsText).toContain("Confirmado");
+    expect(cutsText).not.toContain("Remanente teórico");
     expect(cutsText).not.toContain("Orden de vidrios");
     expect(cutsText).not.toContain("11.500");
 
@@ -605,8 +619,8 @@ describe("orden de fabricación y materiales", () => {
     const cutsText = pdfText(cutsPdf);
     const combinedText = pdfText(createFabricationWorkOrderPdf(order, metadata));
 
-    expect(cutsText).toContain("V2 · Ventana corredera Riel superior");
-    expect(cutsText).toContain("2 × 1.300 mm");
+    expect(cutsText).toContain("V2: 2 × 1.300 mm");
+    expect(cutsText).not.toContain("V2 · Ventana corredera Riel superior");
     expect(cutsText).toContain("3.391 mm");
     expect(cutsText).toContain("Pauta conjunta");
     expect(cutsText).toContain("presentación física y largo comercial");
@@ -672,5 +686,144 @@ describe("orden de fabricación y materiales", () => {
     expect(text).toContain("Propio del taller");
     expect(text).toContain("Accesorios · continuación");
     expect(text).toContain("Accesorio 41");
+  });
+
+  it("identifica V1, V2 y V3 una sola vez, omite funciones repetidas, conserva barras/acabados y prioriza 1 página", async () => {
+    const base = savedWork();
+    base.itemCountWithPauta = 3;
+    base.totalBars = 4;
+    base.totalProfilesLinealMm = 13200;
+    base.totalWasteMm = 10800;
+    base.bars = [
+      {
+        materialKey: "5001|mate", presentationKey: "6m", codigoPerfil: "5001",
+        nombrePerfil: "Riel superior L5000", acabadoKey: "Aluminio mate", lineaIds: [1],
+        largoComercialMm: 6000, supplierSku: null, indice: 1,
+        despunteInicialMm: 0, perdidaCorteMm: 0, usadoMm: 5400, sobranteMm: 600,
+        cortes: [
+          { itemId: "v1", codigoItem: "V1", nombreItem: "Ventana corredera", componenteId: "riel", codigoPerfil: "5001", funcion: "Riel superior", corte: null, largoMm: 1800 },
+          { itemId: "v1", codigoItem: "V1", nombreItem: "Ventana corredera", componenteId: "riel", codigoPerfil: "5001", funcion: "Riel superior", corte: null, largoMm: 1800 },
+          { itemId: "v2", codigoItem: "V2", nombreItem: "Ventana corredera", componenteId: "riel", codigoPerfil: "5001", funcion: "Riel superior", corte: null, largoMm: 1800 },
+        ],
+      },
+      {
+        materialKey: "5001|mate", presentationKey: "6m", codigoPerfil: "5001",
+        nombrePerfil: "Riel superior L5000", acabadoKey: "Aluminio mate", lineaIds: [1],
+        largoComercialMm: 6000, supplierSku: null, indice: 2,
+        despunteInicialMm: 0, perdidaCorteMm: 0, usadoMm: 2400, sobranteMm: 3600,
+        cortes: [
+          { itemId: "v2", codigoItem: "V2", nombreItem: "Ventana corredera", componenteId: "riel", codigoPerfil: "5001", funcion: "Riel superior", corte: null, largoMm: 2400 },
+        ],
+      },
+      {
+        materialKey: "5002|mate", presentationKey: "6m", codigoPerfil: "5002",
+        nombrePerfil: "Zócalo / cabezal reforzado para hoja corredera perimetral", acabadoKey: "Aluminio mate", lineaIds: [1],
+        largoComercialMm: 6000, supplierSku: null, indice: 1,
+        despunteInicialMm: 0, perdidaCorteMm: 0, usadoMm: 3600, sobranteMm: 2400,
+        cortes: [
+          { itemId: "v1", codigoItem: "V1", nombreItem: "Ventana corredera", componenteId: "zocalo", codigoPerfil: "5002", funcion: "Zócalo", corte: null, largoMm: 900 },
+          { itemId: "v1", codigoItem: "V1", nombreItem: "Ventana corredera", componenteId: "zocalo", codigoPerfil: "5002", funcion: "Zócalo", corte: null, largoMm: 900 },
+          { itemId: "v2", codigoItem: "V2", nombreItem: "Ventana corredera", componenteId: "cabezal", codigoPerfil: "5002", funcion: "Cabezal", corte: null, largoMm: 900 },
+          { itemId: "v2", codigoItem: "V2", nombreItem: "Ventana corredera", componenteId: "cabezal", codigoPerfil: "5002", funcion: "Cabezal", corte: null, largoMm: 900 },
+        ],
+      },
+      {
+        materialKey: "5001|blanco", presentationKey: "6m", codigoPerfil: "5001",
+        nombrePerfil: "Riel superior L5000", acabadoKey: "Blanco", lineaIds: [1],
+        largoComercialMm: 6000, supplierSku: null, indice: 1,
+        despunteInicialMm: 0, perdidaCorteMm: 0, usadoMm: 1800, sobranteMm: 4200,
+        cortes: [
+          { itemId: "v3", codigoItem: "V3", nombreItem: "Ventana corredera", componenteId: "riel", codigoPerfil: "5001", funcion: "Riel superior", corte: null, largoMm: 1800 },
+        ],
+      },
+    ];
+    const workSummary = summary(base);
+    workSummary.items = [
+      {
+        itemId: "v1", codigo: "V1", nombre: "Ventana corredera", lineName: "Línea 5000",
+        material: "Aluminio", widthMm: 1800, heightMm: 1200, quantity: 1,
+        snapshot: { recipeId: "r1", recipeName: "L5000", formulaLabel: "F", profiles: [], glassPanes: [], accessories: [], cuts: [], warnings: [], totalProfilesMl: 0, totalGlassM2: 0 },
+        recipe: null, herrajeLabel: "Normal", statusLabel: "Lista",
+        profilesMl: 0, glassM2: 0, glassThickness: "4 mm", glassThicknessWarning: null,
+        accessoryUnits: 0, barCount: 0, fabricacionSnapshot: null,
+      },
+      {
+        itemId: "v2", codigo: "V2", nombre: "Ventana corredera", lineName: "Línea 5000",
+        material: "Aluminio", widthMm: 1800, heightMm: 1200, quantity: 2,
+        snapshot: { recipeId: "r1", recipeName: "L5000", formulaLabel: "F", profiles: [], glassPanes: [], accessories: [], cuts: [], warnings: [], totalProfilesMl: 0, totalGlassM2: 0 },
+        recipe: null, herrajeLabel: "Normal", statusLabel: "Lista",
+        profilesMl: 0, glassM2: 0, glassThickness: "4 mm", glassThicknessWarning: null,
+        accessoryUnits: 0, barCount: 0, fabricacionSnapshot: null,
+      },
+      {
+        itemId: "v3", codigo: "V3", nombre: "Ventana corredera", lineName: "Línea 5000",
+        material: "Aluminio", widthMm: 2400, heightMm: 1500, quantity: 1,
+        snapshot: { recipeId: "r1", recipeName: "L5000", formulaLabel: "F", profiles: [], glassPanes: [], accessories: [], cuts: [], warnings: [], totalProfilesMl: 0, totalGlassM2: 0 },
+        recipe: null, herrajeLabel: "3 hojas", statusLabel: "Lista",
+        profilesMl: 0, glassM2: 0, glassThickness: "5 mm", glassThicknessWarning: null,
+        accessoryUnits: 0, barCount: 0, fabricacionSnapshot: null,
+      },
+    ];
+    const quoteItems = [
+      { id: "v1", observaciones: encodeCotizacionItemPresentationMeta({ fabricacionVariante: "2 hojas" }) },
+      { id: "v2", observaciones: encodeCotizacionItemPresentationMeta({ fabricacionVariante: "2 hojas" }) },
+      { id: "v3", observaciones: encodeCotizacionItemPresentationMeta({ colorHex: "#ffffff", fabricacionVariante: "3 hojas" }) },
+    ] as CotizacionWorkflowItem[];
+
+    const order = buildFabricationWorkOrder({ summary: workSummary, materials: materials(), quoteItems });
+    const svg = readFileSync(path.join(process.cwd(), "public", "brand", "ventora-logo-compact-on-light.svg"));
+    const png = await sharp(svg, { density: 300 }).resize({ width: 1000, height: 212, fit: "contain" }).png().toBuffer();
+    const logoDataUrl = `data:image/png;base64,${png.toString("base64")}`;
+    const pdf = createFabricationWorkOrderPdf(order, {
+      companyName: "Maestranza Norte", quoteCode: "COT-1388-MULTI", workName: "Casa Sur", issueDate: "14 nov 2026",
+    }, logoDataUrl, "profile-cuts");
+    const text = pdfText(pdf);
+
+    expect(pdf.getNumberOfPages()).toBe(1);
+    expect(text.split("Ventana corredera").length - 1).toBe(3);
+    expect(text).toContain("V1");
+    expect(text).toContain("V2");
+    expect(text).toContain("V3");
+    expect(text).toContain("1.800 × 1.200 mm");
+    expect(text).toContain("2 u.");
+    expect(text).toContain("V1: 2 × 1.800 mm");
+    expect(text).toContain("V2: 1 × 2.400 mm");
+    expect(text).toContain("V3: 1 × 1.800 mm");
+    expect(text).toContain("Tira 1 · 6.000 mm · Aluminio mate");
+    expect(text).toContain("Tira 2 · 6.000 mm · Aluminio mate");
+    expect(text).toContain("Tira 1 · 6.000 mm · Blanco");
+    expect(text).toContain("V1: 2 × 900 mm · Zócalo");
+    expect(text).toContain("V2: 2 × 900 mm · Cabezal");
+    expect(text).not.toContain("1.800 mm · Riel superior");
+    expect(text).toContain("600 mm Teórico");
+
+    if (process.env.VENTORA_PDF_EXAMPLE === "1") {
+      const outputDirectory = pdfExampleDirectory();
+      mkdirSync(outputDirectory, { recursive: true });
+      writeFileSync(path.join(outputDirectory, "qa-multipieza-pauta-teorica.pdf"), Buffer.from(pdf.output("arraybuffer")));
+    }
+  });
+
+  it("distingue sobrante teórico, confirmado y pendiente en el PDF de cortes", () => {
+    const order = buildFabricationWorkOrder({ summary: summary(savedWork()), materials: materials() });
+    const confirmedPdf = createFabricationWorkOrderPdf({ ...order, cutPlanPhysicalState: "confirmada" }, {
+      companyName: "Taller", quoteCode: "COT-CONF", workName: "Obra", issueDate: "14 nov 2026",
+    }, null, "profile-cuts");
+    expect(pdfText(confirmedPdf)).toContain("3.391 mm Confirmado");
+    expect(pdfText(confirmedPdf)).not.toContain("Teórico");
+
+    const theoreticalPdf = createFabricationWorkOrderPdf({ ...order, cutPlanPhysicalState: "teorica" }, {
+      companyName: "Taller", quoteCode: "COT-TEO", workName: "Obra", issueDate: "14 nov 2026",
+    }, null, "profile-cuts");
+    expect(pdfText(theoreticalPdf)).toContain("3.391 mm Teórico");
+    expect(pdfText(theoreticalPdf)).not.toContain("Confirmado");
+
+    const pendingPdf = createFabricationWorkOrderPdf({
+      ...order,
+      cutGroups: [{ ...order.cutGroups[0]!, barIndex: null, theoreticalRemnantMm: null }],
+    }, { companyName: "Taller", quoteCode: "COT-PEND", workName: "Obra", issueDate: "14 nov 2026" }, null, "profile-cuts");
+    expect(pdfText(pendingPdf)).toContain("Pendiente");
+    expect(pdfText(pendingPdf)).not.toContain("Teórico");
+    expect(pdfText(pendingPdf)).not.toContain("Confirmado");
   });
 });

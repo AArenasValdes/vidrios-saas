@@ -52,8 +52,19 @@ export type WorkOrderGlass = {
   validationLabel?: string;
   validationWarnings?: string[];
 };
+export type WorkOrderComponentSummary = {
+  code: string;
+  name: string | null;
+  line: string | null;
+  variant: string | null;
+  dimensionsMm: { widthMm: number; heightMm: number } | null;
+  quantity: number | null;
+  finish: string | null;
+};
 export type FabricationWorkOrder = {
   materials: WorkMaterialsDocument;
+  /** Identificación consolidada de componentes con sus variantes y datos disponibles. */
+  components?: WorkOrderComponentSummary[];
   /** Cortes guardados o de snapshot técnico formal, elegibles para la pauta del trabajo. */
   cutGroups: WorkOrderCutGroup[];
   /** Geometría de revisión separada de toda pauta operativa. */
@@ -220,6 +231,135 @@ function buildHistoricCutGroups(summary: FabricationQuoteSummary, kind: "ready" 
     groups.push(...byProfile.values());
   }
   return groups;
+}
+
+function cleanOptionalText(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+function isGenericComponentLabel(value: string | null | undefined): boolean {
+  const normalized = normalizeFinish(value);
+  return !normalized
+    || normalized === "-"
+    || normalized === "componente"
+    || normalized === "pieza"
+    || normalized === "componente pendiente"
+    || normalized === "partida pendiente";
+}
+
+function resolveRealVariantLabel(parts: Array<string | null | undefined>, excludedTexts: Array<string | null | undefined>): string | null {
+  const normalizedExcluded = excludedTexts.map((text) => normalizeFinish(text)).filter(Boolean);
+  const chosen: string[] = [];
+  for (const part of parts) {
+    const cleaned = cleanOptionalText(part);
+    if (!cleaned) continue;
+    const norm = normalizeFinish(cleaned);
+    if (norm === "-" || norm === "sin herraje" || norm === "sin herraje especifico") continue;
+    if (normalizedExcluded.some((existing) => existing === norm || existing.includes(norm))) continue;
+    if (chosen.some((existing) => normalizeFinish(existing) === norm || normalizeFinish(existing).includes(norm))) continue;
+    chosen.push(cleaned);
+  }
+  return chosen.length ? chosen.join(" · ") : null;
+}
+
+function buildComponentSummaries(input: {
+  summary: FabricationQuoteSummary;
+  quoteItemsById: ReadonlyMap<string, CotizacionWorkflowItem>;
+  cutGroups: readonly WorkOrderCutGroup[];
+  preliminaryCutGroups: readonly WorkOrderCutGroup[];
+  reviewCutGroups: readonly WorkOrderCutGroup[];
+  pendingComponents: readonly { itemId: string; codigo: string; nombre: string; reason: string }[];
+}): WorkOrderComponentSummary[] {
+  const byCode = new Map<string, WorkOrderComponentSummary>();
+  const register = (entry: WorkOrderComponentSummary) => {
+    const existing = byCode.get(entry.code);
+    if (!existing) {
+      byCode.set(entry.code, entry);
+      return;
+    }
+    byCode.set(entry.code, {
+      code: existing.code,
+      name: existing.name ?? entry.name,
+      line: existing.line ?? entry.line,
+      variant: existing.variant ?? entry.variant,
+      dimensionsMm: existing.dimensionsMm ?? entry.dimensionsMm,
+      quantity: existing.quantity ?? entry.quantity,
+      finish: existing.finish ?? entry.finish,
+    });
+  };
+
+  for (const row of input.summary.items) {
+    if (row.operationalStatus === "not_required") continue;
+    const code = cleanOptionalText(row.codigo);
+    if (!code || code === "-") continue;
+    const quoteItem = input.quoteItemsById.get(String(row.itemId));
+    const meta = quoteItem ? decodeCotizacionItemPresentationMeta(quoteItem.observaciones ?? "") : null;
+    const rawName = cleanOptionalText(row.nombre) ?? cleanOptionalText(quoteItem?.nombre);
+    const name = isGenericComponentLabel(rawName) ? null : rawName;
+    const line = cleanOptionalText(row.lineName)
+      ?? cleanOptionalText(quoteItem?.lineaComercial);
+    const finishRaw = meta ? resolveComponentColorName(meta.colorHex) : null;
+    const finish = finishRaw && finishRaw !== "Color a definir" ? finishRaw : null;
+    const variant = resolveRealVariantLabel([
+      row.fabricacionSnapshot?.selectedVariant,
+      row.fabricacionSnapshot?.recipeIdentity?.variante,
+      meta?.fabricacionVariante,
+      meta?.configuracion,
+      meta?.sheetVariant,
+      meta?.sheetScheme,
+      meta?.fabricacionApertura,
+      row.herrajeLabel,
+    ], [name, line]);
+    const widthMm = row.widthMm > 0 ? row.widthMm : (quoteItem?.ancho && quoteItem.ancho > 0 ? quoteItem.ancho : null);
+    const heightMm = row.heightMm > 0 ? row.heightMm : (quoteItem?.alto && quoteItem.alto > 0 ? quoteItem.alto : null);
+    const quantity = row.quantity > 0 ? row.quantity : (quoteItem?.cantidad && quoteItem.cantidad > 0 ? quoteItem.cantidad : null);
+    register({
+      code,
+      name,
+      line,
+      variant,
+      dimensionsMm: widthMm && heightMm ? { widthMm, heightMm } : null,
+      quantity,
+      finish,
+    });
+  }
+
+  for (const pendingItem of input.pendingComponents) {
+    const code = cleanOptionalText(pendingItem.codigo);
+    if (!code || code === "-") continue;
+    const quoteItem = input.quoteItemsById.get(String(pendingItem.itemId));
+    const rawName = cleanOptionalText(pendingItem.nombre) ?? cleanOptionalText(quoteItem?.nombre);
+    register({
+      code,
+      name: isGenericComponentLabel(rawName) ? null : rawName,
+      line: cleanOptionalText(quoteItem?.lineaComercial),
+      variant: null,
+      dimensionsMm: quoteItem?.ancho && quoteItem?.alto && quoteItem.ancho > 0 && quoteItem.alto > 0
+        ? { widthMm: quoteItem.ancho, heightMm: quoteItem.alto }
+        : null,
+      quantity: quoteItem?.cantidad && quoteItem.cantidad > 0 ? quoteItem.cantidad : null,
+      finish: null,
+    });
+  }
+
+  for (const group of [...input.cutGroups, ...input.preliminaryCutGroups, ...input.reviewCutGroups]) {
+    for (const cut of group.cuts) {
+      const code = cleanOptionalText(cut.itemCode);
+      if (!code || code === "Partida pendiente") continue;
+      register({
+        code,
+        name: isGenericComponentLabel(cut.component) ? null : cleanOptionalText(cut.component),
+        line: null,
+        variant: null,
+        dimensionsMm: null,
+        quantity: null,
+        finish: null,
+      });
+    }
+  }
+
+  return [...byCode.values()];
 }
 
 export function buildFabricationWorkOrder(input: {
@@ -390,11 +530,21 @@ export function buildFabricationWorkOrder(input: {
   if (!cost) addPending("price-snapshot", "Costo de materiales", "Calcular y guardar el costo técnico para mostrar precios.");
   const unpricedVisibleCount = [...workMaterials.profiles, ...workMaterials.accessories].filter((row) => !row.price).length;
   const pendingPriceCount = Math.max(cost?.missing.length ?? 0, unpricedVisibleCount);
+  const components = buildComponentSummaries({
+    summary,
+    quoteItemsById,
+    cutGroups,
+    preliminaryCutGroups,
+    reviewCutGroups,
+    pendingComponents,
+  });
+
   const status = !totalsAgree || cost?.status === "no_data" ? "pending"
     : pendingPriceCount > 0 || cost?.status !== "complete" ? "partial" : "complete";
 
   return {
     materials: workMaterials,
+    components,
     cutGroups,
     preliminaryCutGroups,
     reviewCutGroups,
