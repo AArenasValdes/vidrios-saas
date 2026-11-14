@@ -2,7 +2,12 @@ import { jsPDF } from "jspdf";
 
 import type { FabricationWorkOrder } from "./fabrication-work-order.service";
 import { workOrderPriceSource } from "./fabrication-work-order.service";
-import { PAUTA_TEORICA_AVISO } from "./fabricacion-pauta-fisica.service";
+import {
+  DISTRIBUCION_REFERENCIAL_LABEL,
+  DISTRIBUCION_REFERENCIAL_NOTA,
+  DISTRIBUCION_REFERENCIAL_PIE,
+  isReferentialOnlyWorkOrder,
+} from "./fabricacion-aviso-presentacion.service";
 import { calculateProfileReferenceTotal, resolveProfileSupplierPrice } from "./work-materials-price-reference.service";
 import {
   drawFabricationPdfContinuationHeader,
@@ -213,10 +218,8 @@ function drawPreliminaryWarning(pdf: jsPDF, y: number, runningTitle: string, quo
   return y + height + 3;
 }
 
-function drawDocumentPartialWarning(pdf: jsPDF, y: number, runningTitle: string, quoteCode: string, logoDataUrl?: string | null, physicalOnly = false) {
-  const message = physicalOnly
-    ? "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN. Falta confirmar los parámetros físicos de corte y despunte."
-    : "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN. Hay componentes sin pauta completa o con identidad técnica por revisar.";
+function drawDocumentPartialWarning(pdf: jsPDF, y: number, runningTitle: string, quoteCode: string, logoDataUrl?: string | null) {
+  const message = "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN. Hay componentes sin pauta completa o con identidad técnica por revisar.";
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(9.5);
   const lines = wrapped(pdf, message, PAGE_WIDTH - MARGIN * 2);
@@ -272,12 +275,13 @@ export function createFabricationWorkOrderPdf(
   pdf.setCharSpace(0);
   let y = drawFabricationPdfHeader(pdf, metadata, title, logoDataUrl);
   const runningTitle = title;
-  if (order.documentStatus.state === "partial") {
-    y = drawDocumentPartialWarning(pdf, y + 2, runningTitle, metadata.quoteCode, logoDataUrl,
-      order.cutPlanPhysicalState === "teorica" && order.documentStatus.pendingComponents.length === 0);
+  const referentialDistribution = kind !== "glass-order" && order.cutPlanPhysicalState === "teorica";
+  const referentialOnly = referentialDistribution && isReferentialOnlyWorkOrder(order);
+  if (order.documentStatus.state === "partial" && !referentialOnly) {
+    y = drawDocumentPartialWarning(pdf, y + 2, runningTitle, metadata.quoteCode, logoDataUrl);
   }
-  if (kind !== "glass-order" && order.cutPlanPhysicalState === "teorica") {
-    y = drawNote(pdf, PAUTA_TEORICA_AVISO, y, runningTitle, metadata.quoteCode, logoDataUrl);
+  if (referentialDistribution) {
+    y = drawNote(pdf, `${DISTRIBUCION_REFERENCIAL_LABEL}. ${DISTRIBUCION_REFERENCIAL_NOTA}`, y, runningTitle, metadata.quoteCode, logoDataUrl);
   }
   if (kind === "combined") y = drawPriceSummary(pdf, order, y, runningTitle, metadata.quoteCode, logoDataUrl);
   if (kind === "combined") {
@@ -469,8 +473,9 @@ export function createFabricationWorkOrderPdf(
       row.key === "coverage-joint-plan" || row.key === "coverage-joint-plan-blocked"
     );
     const technicalPending = kind === "combined"
-      ? order.pending
+      ? order.pending.filter((row) => !(referentialDistribution && row.key === "cut-physics"))
       : order.pending.filter((row) => {
+          if (referentialDistribution && row.key === "cut-physics") return false;
           if (!isProfileCutTechnicalPending(row.key)) return false;
           if (row.key === "bar-distribution" && hasJointCoveragePending) return false;
           if (row.key === "structural-geometry" && order.preliminaryCutGroups.length > 0) return false;
@@ -484,19 +489,11 @@ export function createFabricationWorkOrderPdf(
       ], pending, y, "Sin pendientes técnicos de corte", runningTitle, metadata.quoteCode, logoDataUrl);
     }
   }
-  if (kind !== "glass-order" && order.cutPlanPhysicalState === "teorica") {
-    for (let page = 1; page <= pdf.getNumberOfPages(); page += 1) {
-      pdf.setPage(page);
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(7);
-      pdf.setTextColor(...MUTED);
-      pdf.text(PAUTA_TEORICA_AVISO, MARGIN, 280, { maxWidth: PAGE_WIDTH - MARGIN * 2 });
-    }
-  }
   drawFabricationPdfFooters(
     pdf,
     metadata.quoteCode,
-    order.documentStatus.state === "partial" ? order.documentStatus.label : "FABRICACIÓN",
+    "FABRICACIÓN",
+    referentialDistribution ? DISTRIBUCION_REFERENCIAL_PIE : undefined,
   );
   return pdf;
 }

@@ -8,6 +8,10 @@ import type { ReactNode } from "react";
 
 import type { WorkMaterialsDocument } from "@/features/fabricacion/services/fabrication-work-materials.service";
 import type { FabricationWorkOrder } from "@/features/fabricacion/services/fabrication-work-order.service";
+import {
+  DISTRIBUCION_REFERENCIAL_LABEL,
+  DISTRIBUCION_REFERENCIAL_NOTA,
+} from "@/features/fabricacion/services/fabricacion-aviso-presentacion.service";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { ManualGlassPaneMeasurementsSnapshot } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
@@ -347,7 +351,8 @@ export function WorkMaterialsDocumentPanel(props: WorkMaterialsDocumentPanelProp
             <ul className={s.profileCutsMobile}>{props.workOrder.preliminaryCutGroups.map((group) => <li key={group.key}><strong>{group.technicalCode} · {group.profileName}</strong>{group.cuts.map((cut) => <small key={`${group.key}:${cut.itemCode}:${cut.functionName}:${cut.lengthMm}`}>{cut.itemCode} · {cut.component} · {cut.functionName}: {cut.quantity} × {formatMm(cut.lengthMm)}</small>)}<b>Distribución por tira no calculada.</b></li>)}</ul>
           </div>
         </section> : null}
-        {props.workOrder.pending.filter((row) => /perfil|corte|pauta|presentaci[oó]n/i.test(`${row.subject} ${row.action}`)).length ? <ul className={s.documentWarnings}>{props.workOrder.pending.filter((row) => /perfil|corte|pauta|presentaci[oó]n/i.test(`${row.subject} ${row.action}`)).map((row) => <li key={row.key}><strong>{row.subject}:</strong> {row.action}</li>)}</ul> : null}
+        {props.workOrder.cutPlanPhysicalState === "teorica" ? <p className={s.documentNote} role="status"><strong>{DISTRIBUCION_REFERENCIAL_LABEL}.</strong> {DISTRIBUCION_REFERENCIAL_NOTA}</p> : null}
+        {props.workOrder.pending.filter((row) => !(props.workOrder.cutPlanPhysicalState === "teorica" && row.key === "cut-physics") && /perfil|corte|pauta|presentaci[oó]n/i.test(`${row.subject} ${row.action}`)).length ? <ul className={s.documentWarnings}>{props.workOrder.pending.filter((row) => !(props.workOrder.cutPlanPhysicalState === "teorica" && row.key === "cut-physics") && /perfil|corte|pauta|presentaci[oó]n/i.test(`${row.subject} ${row.action}`)).map((row) => <li key={row.key}><strong>{row.subject}:</strong> {row.action}</li>)}</ul> : null}
         <p className={s.documentNote}>El remanente es teórico y no confirma aprovechamiento. Kerf y despunte se consideran solo cuando constan en la pauta guardada; no se optimizan planchas de vidrio.</p>
       </section> : null}
     </div>

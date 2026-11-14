@@ -40,6 +40,11 @@ import {
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import type { WorkMaterialsDocument } from "@/features/fabricacion/services/fabrication-work-materials.service";
 import type { FabricationWorkOrder } from "@/features/fabricacion/services/fabrication-work-order.service";
+import {
+  DISTRIBUCION_REFERENCIAL_LABEL,
+  DISTRIBUCION_REFERENCIAL_NOTA,
+  isReferentialOnlyWorkOrder,
+} from "@/features/fabricacion/services/fabricacion-aviso-presentacion.service";
 import { WorkMaterialsDocumentPanel } from "./work-materials-document-panel";
 import { CompactMaterialsView, CompactCutsView, CompactGlassView } from "./fabricacion-movil-compact-views";
 import { GlassDistributionPanel } from "./vidrios/glass-distribution-panel";
@@ -444,8 +449,7 @@ function ConsolidadoView({
 
       {summary.trabajoSnapshot && (summary.totalBars != null || summary.profileCoverage?.jointPlanStatus === "theoretical") ? (
         <section className={s.mGroup} aria-label="Tiras compartidas del trabajo">
-          <h3>{summary.profileCoverage?.jointPlanStatus === "theoretical" ? "Pauta conjunta · teórica" : "Pauta conjunta · trabajo completo"}</h3>
-          {summary.profileCoverage?.jointPlanStatus === "theoretical" ? <p role="status">PAUTA TEÓRICA · VALIDAR CORTE Y DESPUNTE ANTES DE FABRICAR</p> : null}
+          <h3>{summary.profileCoverage?.jointPlanStatus === "theoretical" ? "Pauta conjunta · distribución referencial" : "Pauta conjunta · trabajo completo"}</h3>
           <p className={s.mGroupNote}>{summary.trabajoSnapshot.totalBars} tiras compartidas entre partidas.</p>
           {summary.trabajoSnapshot.missingPresentations?.map((missing, index) => (
             <p className={s.mGroupNote} key={`${missing.itemId}-${missing.technicalCode}-${missing.finishKey}-${index}`}>
@@ -766,9 +770,9 @@ export function FabricacionResumenMovil({
                 <div className={s.mSummaryHeading}><h2>Despieces para revisar</h2><span>{summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).length} con despiece · {summary.items.filter((row) => row.geometryOnly).length} preliminares · {workOrder.documentStatus.pendingComponents.length} pendientes</span></div>
                 {workOrder.documentStatus.state === "partial" ? (
                   <section className={s.compositionReviewNotice} aria-label="Estado del documento de fabricación">
-                    <strong>{workOrder.documentStatus.label}</strong>
-                    <p>Hay componentes pendientes o una pauta conjunta por revisar.</p>
-                    {workOrder.cutPlanPhysicalState === "teorica" ? <p>PAUTA TEÓRICA · VALIDAR CORTE Y DESPUNTE ANTES DE FABRICAR</p> : null}
+                    <strong>{isReferentialOnlyWorkOrder(workOrder) ? DISTRIBUCION_REFERENCIAL_LABEL : workOrder.documentStatus.label}</strong>
+                    {!isReferentialOnlyWorkOrder(workOrder) ? <p>Hay componentes pendientes o una pauta conjunta por revisar.</p> : null}
+                    {workOrder.cutPlanPhysicalState === "teorica" ? <p>{DISTRIBUCION_REFERENCIAL_NOTA}</p> : null}
                     {workOrder.documentStatus.pendingComponents.length ? <ul>{workOrder.documentStatus.pendingComponents.map((item) => (
                       <li key={item.itemId}>{item.codigo} · {item.nombre}: {item.reason}</li>
                     ))}</ul> : null}

@@ -44,6 +44,11 @@ import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/s
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import type { WorkMaterialsDocument } from "@/features/fabricacion/services/fabrication-work-materials.service";
 import type { FabricationWorkOrder } from "@/features/fabricacion/services/fabrication-work-order.service";
+import {
+  DISTRIBUCION_REFERENCIAL_LABEL,
+  DISTRIBUCION_REFERENCIAL_NOTA,
+  isReferentialOnlyWorkOrder,
+} from "@/features/fabricacion/services/fabricacion-aviso-presentacion.service";
 
 import s from "./page.module.css";
 import { WorkMaterialsDocumentPanel } from "./work-materials-document-panel";
@@ -682,9 +687,9 @@ export function FabricacionResumenView({
           </div>
           {workOrder.documentStatus.state === "partial" ? (
             <section className={s.compositionReviewNotice} aria-label="Estado del documento de fabricación">
-              <strong>{workOrder.documentStatus.label}</strong>
-              {workOrder.cutPlanPhysicalState === "teorica" ? <p>PAUTA TEÓRICA · VALIDAR CORTE Y DESPUNTE ANTES DE FABRICAR</p> : null}
-              <p>El documento incluye solo los despieces compatibles disponibles; los pendientes se conservan para revisión.</p>
+              <strong>{isReferentialOnlyWorkOrder(workOrder) ? DISTRIBUCION_REFERENCIAL_LABEL : workOrder.documentStatus.label}</strong>
+              {workOrder.cutPlanPhysicalState === "teorica" ? <p>{DISTRIBUCION_REFERENCIAL_NOTA}</p> : null}
+              {!isReferentialOnlyWorkOrder(workOrder) ? <p>El documento incluye solo los despieces compatibles disponibles; los pendientes se conservan para revisión.</p> : null}
               {workOrder.documentStatus.pendingComponents.length ? <ul>{workOrder.documentStatus.pendingComponents.map((item) => (
                 <li key={item.itemId}>{item.codigo} · {item.nombre}: {item.reason}</li>
               ))}</ul> : null}
@@ -746,9 +751,8 @@ export function FabricacionResumenView({
 
         {summary.trabajoSnapshot && (summary.totalBars != null || summary.profileCoverage?.jointPlanStatus === "theoretical") ? (
           <section className={s.consolidatedJobBars} aria-label="Pauta conjunta guardada">
-            <h2>{summary.profileCoverage?.jointPlanStatus === "theoretical" ? "Pauta conjunta · teórica" : "Pauta conjunta · trabajo completo"}</h2>
-            {summary.profileCoverage?.jointPlanStatus === "theoretical" ? <p role="status">PAUTA TEÓRICA · VALIDAR CORTE Y DESPUNTE ANTES DE FABRICAR</p> : null}
-            <p>{summary.trabajoSnapshot.totalBars} tiras · distribución referencial compartida entre partidas.</p>
+            <h2>{summary.profileCoverage?.jointPlanStatus === "theoretical" ? "Pauta conjunta · distribución referencial" : "Pauta conjunta · trabajo completo"}</h2>
+            <p>{summary.trabajoSnapshot.totalBars} tiras compartidas entre partidas.</p>
             {summary.trabajoSnapshot.missingPresentations?.map((missing, index) => (
               <p key={`${missing.itemId}-${missing.technicalCode}-${missing.finishKey}-${index}`}>
                 Presentación pendiente · {missing.technicalCode}: {missing.reason}

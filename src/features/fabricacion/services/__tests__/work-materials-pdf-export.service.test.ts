@@ -2,6 +2,7 @@ import type { WorkMaterialsDocument } from "../fabrication-work-materials.servic
 import type { FabricationWorkOrder } from "../fabrication-work-order.service";
 import { createWorkMaterialsPdf } from "../work-materials-pdf-export.service";
 import { calculateProfileReferenceTotal } from "../work-materials-price-reference.service";
+import { DISTRIBUCION_REFERENCIAL_NOTA, DISTRIBUCION_REFERENCIAL_PIE } from "../fabricacion-aviso-presentacion.service";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
@@ -49,6 +50,10 @@ function extractPdfText(pdf: ReturnType<typeof createWorkMaterialsPdf>) {
     .join(" ");
 }
 
+function extractPdfPages(pdf: ReturnType<typeof createWorkMaterialsPdf>) {
+  return pdf.internal.pages.slice(1).map((page) => page!.join(" "));
+}
+
 function compactPdfText(value: string) {
   return value.replace(/\s+/g, "");
 }
@@ -71,7 +76,38 @@ describe("work-materials-pdf-export.service", () => {
     const text = extractPdfText(pdf);
 
     expect(text).toContain("DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN");
-    expect(text).toContain("DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN · COT-PARCIAL");
+    expect(text.split("DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN").length - 1).toBe(1);
+    expect(text).toContain("VENTORA · FABRICACIÓN · COT-PARCIAL");
+  });
+
+  it("presenta como referencial el listado con parámetros físicos pendientes sin repetir el estado en cada pie", () => {
+    const document = sampleDocument();
+    document.profiles = Array.from({ length: 45 }, (_, index) => ({
+      ...document.profiles[index % document.profiles.length]!,
+      key: `profile-${index}`,
+      code: `${5000 + index}`,
+      description: `Perfil de prueba ${index + 1}`,
+    }));
+    const theoreticalOrder = {
+      documentStatus: { state: "partial", label: "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN", pendingComponents: [] },
+      cutPlanPhysicalState: "teorica",
+      hasJointBars: true,
+      cutGroups: [{ key: "qa-bar", technicalCode: "5001", profileName: "Riel", cuts: [] }],
+      preliminaryCutGroups: [],
+      reviewCutGroups: [],
+      pending: [{ key: "cut-physics", subject: "Pauta teórica", action: "Parámetros físicos pendientes." }],
+    } as unknown as FabricationWorkOrder;
+    const pdf = createWorkMaterialsPdf(document, {
+      companyName: "Taller", quoteCode: "COT-TEORICA", workName: "QA", issueDate: "14 nov 2026",
+    }, null, theoreticalOrder);
+    const text = extractPdfText(pdf);
+
+    expect(pdf.getNumberOfPages()).toBeGreaterThan(1);
+    expect(text).toContain("Distribución referencial");
+    expect(text).toContain(DISTRIBUCION_REFERENCIAL_NOTA);
+    expect(text.split(DISTRIBUCION_REFERENCIAL_NOTA).length - 1).toBe(1);
+    expect(text).not.toContain("DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN");
+    expect(extractPdfPages(pdf).every((page) => page.includes(DISTRIBUCION_REFERENCIAL_PIE))).toBe(true);
   });
 
   it("genera una lista A4 vectorial, legible y con accesorios incompletos identificados", () => {

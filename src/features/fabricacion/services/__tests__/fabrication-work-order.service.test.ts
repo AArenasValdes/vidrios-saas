@@ -143,14 +143,21 @@ describe("orden de fabricación y materiales", () => {
       ...order, cutGroups: [{ ...order.cutGroups[0]!, theoreticalRemnantMm: null }],
     }, metadata, null, "profile-cuts");
     expect(pdfText(pendingPdf)).toContain("Pendiente");
-    const aviso = "PAUTA TEÓRICA · VALIDAR CORTE Y DESPUNTE ANTES DE FABRICAR";
-    expect(pdfPagesText(pdf).every((page) => page.includes(aviso))).toBe(true);
+    const aviso = "Los cortes están calculados. Antes de cortar, confirma la pérdida de sierra y el despunte para ajustar la distribución de barras";
+    expect(pdfText(pdf)).toContain("Distribución referencial");
+    expect(pdfText(pdf)).toContain(aviso);
+    expect(pdfText(pdf).split(aviso).length - 1).toBe(1);
+    expect(pdfText(pdf)).not.toContain("DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN");
+    expect(pdfPagesText(pdf).every((page) => page.includes("Distribución referencial · Confirmar parámetros del taller antes de cortar"))).toBe(true);
+    expect(pdfPagesText(pdf).every((page) => !page.includes("PAUTA TEÓRICA · VALIDAR CORTE Y DESPUNTE ANTES DE FABRICAR"))).toBe(true);
     const longOrder = { ...order, cutGroups: Array.from({ length: 25 }, (_, index) => ({
       ...order.cutGroups[0]!, key: `bar-${index}`, barIndex: index + 1,
     })) };
     const longPdf = createFabricationWorkOrderPdf(longOrder, metadata, null, "profile-cuts");
     expect(longPdf.getNumberOfPages()).toBeGreaterThan(1);
-    expect(pdfPagesText(longPdf).every((page) => page.includes(aviso))).toBe(true);
+    expect(pdfPagesText(longPdf).every((page) => page.includes("Distribución referencial · Confirmar parámetros del taller antes de cortar"))).toBe(true);
+    expect(pdfText(longPdf).split(aviso).length - 1).toBe(1);
+    expect(pdfPagesText(longPdf).every((page) => !page.includes("DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN"))).toBe(true);
     if (process.env.VENTORA_PDF_EXAMPLE === "1") {
       const outputDirectory = pdfExampleDirectory();
       mkdirSync(outputDirectory, { recursive: true });
@@ -274,7 +281,8 @@ describe("orden de fabricación y materiales", () => {
 
     expect(pages.join(" ")).toContain("V9: despiece");
     expect(pages.join(" ")).toContain("No existe snapshot técnico con cortes guardados.");
-    expect(pages.every((page) => page.includes("DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN"))).toBe(true);
+    expect(pages[0]).toContain("DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN");
+    expect(pages.join(" ")).toContain("No existe snapshot técnico con cortes guardados.");
   });
 
   it("mueve una fila multilínea completa a la página siguiente cuando cabe allí", () => {
@@ -306,6 +314,8 @@ describe("orden de fabricación y materiales", () => {
     baseOrder.documentStatus = {
       state: "partial", label: "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN", pendingComponents: [],
     };
+    baseOrder.cutPlanPhysicalState = "teorica";
+    baseOrder.pending = [{ key: "cut-physics", subject: "Pauta teórica", action: "Parámetros físicos pendientes." }];
     baseOrder.cutGroups = [{
       key: "3201", technicalCode: "3201", profileName: "Marco 3201", barIndex: 1,
       commercialLengthMm: 6000, usedMm: 5000, theoreticalRemnantMm: 1000, trimMm: 0, kerfMm: 0,
@@ -322,7 +332,10 @@ describe("orden de fabricación y materiales", () => {
     for (let index = 1; index <= 38; index += 1) {
       expect(pages.join(" ")).toContain(`Corte 3201 QA ${String(index).padStart(2, "0")}`);
     }
-    expect(pages.every((page) => page.includes("DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN"))).toBe(true);
+    expect(pages.every((page) => page.includes("Distribución referencial · Confirmar parámetros del taller antes de cortar"))).toBe(true);
+    expect(pages.join(" ")).toContain("Distribución referencial");
+    expect(pages.join(" ")).toContain("Los cortes están calculados.");
+    expect(pages.join(" ")).not.toContain("DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN");
     expect(pages.every((page) => page.trim().length > 120)).toBe(true);
   });
 
