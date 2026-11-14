@@ -28,6 +28,7 @@ type CortePendiente = FabricacionTrabajoCorte & {
   largoComercialMm: number;
   despunteInicialMm: number;
   perdidaCorteMm: number;
+  parametrosFisicos: NonNullable<FabricacionTrabajoBarra["parametrosFisicos"]>;
   supplierPresentationId: string | null;
   supplierProviderKey: string | null;
   supplierSku: string | null;
@@ -81,7 +82,19 @@ export function construirFabricacionTrabajoSnapshot(input: {
 
     for (const bar of pauta.barras) {
       if (bar.cortes.length === 0) continue;
-      const kerf = Math.round(bar.perdidaCortesMm / bar.cortes.length);
+      if (!Number.isInteger(bar.despunteInicialMm) || bar.despunteInicialMm < 0) return null;
+      const kerf = bar.perdidaCortesMm / bar.cortes.length;
+      if (!Number.isInteger(kerf) || kerf < 0) return null;
+      const parametrosFisicos = pauta.parametrosFisicos ?? {
+        estado: "pendiente" as const, perdidaCorteMm: null, despunteInicialMm: null,
+        procedimiento: null, fuente: null, largosComercialesConfirmados: false,
+      };
+      if (parametrosFisicos.estado === "confirmado" && (
+        parametrosFisicos.perdidaCorteMm !== kerf ||
+        parametrosFisicos.despunteInicialMm !== bar.despunteInicialMm ||
+        parametrosFisicos.procedimiento !== "por_pieza" ||
+        !parametrosFisicos.fuente?.trim() || !parametrosFisicos.largosComercialesConfirmados
+      )) return null;
       const materialKey = bar.materialKey?.trim()
         ? bar.materialKey.trim()
         : stableKey([item.snapshot?.lineTemplateId ?? "sin-linea", bar.codigoPerfil]);
@@ -90,8 +103,8 @@ export function construirFabricacionTrabajoSnapshot(input: {
       const catalogLineKey = item.catalogLineKey?.trim() || null;
 
       for (const cut of bar.cortes) {
-        const length = Math.round(cut.largoMm);
-        if (length <= 0) continue;
+        const length = cut.largoMm;
+        if (!Number.isFinite(length) || length <= 0) return null;
         const selection = item.supplierPresentationSelections?.find(
           (entry) => entry.technicalCode.trim() === cut.codigoPerfil.trim()
         );
@@ -111,8 +124,9 @@ export function construirFabricacionTrabajoSnapshot(input: {
         }
         const usableSelection = selectedPresentationIsUsable ? selection : null;
         const commercialLength = usableSelection
-          ? Math.round(usableSelection.commercialLengthMm ?? 0)
-          : Math.round(bar.largoComercialMm);
+          ? usableSelection.commercialLengthMm ?? 0
+          : bar.largoComercialMm;
+        if (!Number.isInteger(commercialLength)) return null;
         if (commercialLength <= 0) {
           missingPresentations.push({
             itemId: item.id,
@@ -167,6 +181,7 @@ export function construirFabricacionTrabajoSnapshot(input: {
           largoComercialMm: commercialLength,
           despunteInicialMm: Math.round(bar.despunteInicialMm),
           perdidaCorteMm: kerf,
+          parametrosFisicos,
           supplierPresentationId: usableSelection?.presentationId ?? null,
           supplierProviderKey: usableSelection?.providerKey ?? selection?.providerKey ?? item.supplierProviderKey ?? null,
           supplierSku: usableSelection?.supplierSku ?? null,
@@ -183,11 +198,14 @@ export function construirFabricacionTrabajoSnapshot(input: {
   for (const cut of pending) {
     const key = stableKey([
       cut.materialKey,
+      cut.codigoPerfil,
+      cut.codigoPerfil ? "" : `${cut.itemId}:${cut.componenteId}`,
       cut.presentationKey,
       cut.acabadoKey,
       cut.largoComercialMm,
       cut.despunteInicialMm,
       cut.perdidaCorteMm,
+      JSON.stringify(cut.parametrosFisicos),
       cut.supplierPresentationId ?? "sin-sku",
     ]);
     const group = groups.get(key) ?? [];
@@ -208,11 +226,14 @@ export function construirFabricacionTrabajoSnapshot(input: {
 
       const existing = bars.find((bar) =>
         bar.materialKey === cut.materialKey &&
+        bar.codigoPerfil === cut.codigoPerfil &&
+        (Boolean(cut.codigoPerfil) || (bar.cortes[0]?.itemId === cut.itemId && bar.cortes[0]?.componenteId === cut.componenteId)) &&
         bar.presentationKey === cut.presentationKey &&
         bar.acabadoKey === cut.acabadoKey &&
         bar.largoComercialMm === cut.largoComercialMm &&
         bar.despunteInicialMm === cut.despunteInicialMm &&
         bar.perdidaCorteMm === cut.perdidaCorteMm &&
+        JSON.stringify(bar.parametrosFisicos) === JSON.stringify(cut.parametrosFisicos) &&
         bar.usadoMm + consumed <= bar.largoComercialMm
       );
       const target = existing ?? createBar(cut, bars);
@@ -277,6 +298,7 @@ function createBar(cut: CortePendiente, bars: FabricacionTrabajoBarra[]): Fabric
     indice: bars.filter((bar) => stableKey([bar.materialKey, bar.acabadoKey, bar.largoComercialMm]) === key).length + 1,
     despunteInicialMm: cut.despunteInicialMm,
     perdidaCorteMm: cut.perdidaCorteMm,
+    parametrosFisicos: cut.parametrosFisicos,
     usadoMm: cut.despunteInicialMm,
     sobranteMm: cut.largoComercialMm - cut.despunteInicialMm,
     cortes: [],

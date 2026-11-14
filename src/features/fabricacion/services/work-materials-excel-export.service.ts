@@ -2,6 +2,7 @@ import type * as XLSXModule from "xlsx";
 
 import type { WorkMaterialsDocument } from "./fabrication-work-materials.service";
 import type { FabricationWorkOrder } from "./fabrication-work-order.service";
+import { PAUTA_TEORICA_AVISO } from "./fabricacion-pauta-fisica.service";
 import { calculateProfileReferenceTotal, formatProfilePriceBasis, resolveProfileSupplierPrice } from "./work-materials-price-reference.service";
 
 export type WorkMaterialsExcelKind = "materials" | "glass-order" | "profile-cuts";
@@ -35,9 +36,11 @@ function buildSheet(
     ? input.workOrder.documentStatus.label
     : null;
   const warningAlreadyHasPartialLabel = Boolean(warning?.includes("DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN"));
-  const documentWarning = partialLabel && !warningAlreadyHasPartialLabel
+  const baseWarning = partialLabel && !warningAlreadyHasPartialLabel
     ? `${partialLabel}${warning ? ` · ${warning}` : ""}`
     : warning ?? partialLabel ?? "Documento interno de taller";
+  const documentWarning = input.workOrder?.cutPlanPhysicalState === "teorica"
+    ? `${baseWarning} · ${PAUTA_TEORICA_AVISO}` : baseWarning;
   const data: Array<Array<string | number | null>> = [
     [`VENTORA · ${title}`],
     [documentWarning],
