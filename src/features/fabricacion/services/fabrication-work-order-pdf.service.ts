@@ -1,11 +1,6 @@
 import { jsPDF } from "jspdf";
 
-import type {
-  FabricationWorkOrder,
-  WorkOrderComponentSummary,
-  WorkOrderCut,
-  WorkOrderCutGroup,
-} from "./fabrication-work-order.service";
+import type { FabricationWorkOrder, WorkOrderCut, WorkOrderCutGroup } from "./fabrication-work-order.service";
 import { workOrderPriceSource } from "./fabrication-work-order.service";
 import {
   DISTRIBUCION_REFERENCIAL_LABEL,
@@ -31,12 +26,6 @@ export type FabricationWorkOrderPdfMetadata = {
 
 type Column = { title: string; width: number; align?: "left" | "right" | "center" };
 type Row = { cells: string[] };
-type TableStyleOptions = {
-  compact?: boolean;
-  boldFirstLineColumns?: number[];
-  mutedSecondaryColumns?: number[];
-};
-type StyledLine = { text: string; bold: boolean; muted: boolean };
 
 const PROFILE_CUT_TECHNICAL_PENDING_PREFIXES = [
   "coverage:",
@@ -76,6 +65,17 @@ function mm(value: number | null | undefined) {
     : "Pendiente";
 }
 
+function normalizeCutFunction(value: string): string {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CL").trim();
+}
+
+function formatProfileCutLine(cut: WorkOrderCut, group: WorkOrderCutGroup): string {
+  const line = `${clean(cut.itemCode, "Partida pendiente")} · ${cut.quantity} × ${mm(cut.lengthMm)}`;
+  const functions = new Set(group.cuts.map((entry) => normalizeCutFunction(entry.functionName)).filter(Boolean));
+  if (functions.size <= 1 || !cut.functionName.trim()) return line;
+  return `${line} · ${cut.functionName.trim()}`;
+}
+
 function money(value: number | null | undefined, currency: string) {
   return value != null && Number.isFinite(value)
     ? new Intl.NumberFormat("es-CL", { style: "currency", currency, maximumFractionDigits: 0 }).format(value)
@@ -97,208 +97,110 @@ function newPage(pdf: jsPDF, title: string, quoteCode: string, logoDataUrl?: str
   return drawFabricationPdfContinuationHeader(pdf, title, quoteCode, logoDataUrl);
 }
 
-type ResolvedTableMetrics = {
-  compact: boolean;
-  fontSize: number;
-  headHeight: number;
-  headFontSize: number;
-  lineStep: number;
-  minRowHeight: number;
-  verticalPad: number;
-  firstBaseline: number;
-  topGap: number;
-  sectionStep: number;
-  sectionFontSize: number;
-  boldFirstLineColumns: Set<number>;
-  mutedSecondaryColumns: Set<number>;
-};
-
-function resolveTableMetrics(style?: TableStyleOptions): ResolvedTableMetrics {
-  const compact = Boolean(style?.compact);
-  return {
-    compact,
-    fontSize: compact ? 8.2 : 9.2,
-    headHeight: compact ? 7.2 : 9,
-    headFontSize: compact ? 8.1 : 9,
-    lineStep: compact ? 3.55 : 4.05,
-    minRowHeight: compact ? 8 : 11,
-    verticalPad: compact ? 3 : 4,
-    firstBaseline: compact ? 4 : 4.7,
-    topGap: compact ? 2.2 : 4,
-    sectionStep: compact ? 4.2 : 5,
-    sectionFontSize: compact ? 10 : 11.5,
-    boldFirstLineColumns: new Set(style?.boldFirstLineColumns ?? []),
-    mutedSecondaryColumns: new Set(style?.mutedSecondaryColumns ?? []),
-  };
+function sectionTitle(pdf: jsPDF, title: string, y: number) {
+  return drawFabricationPdfSectionTitle(pdf, title, y);
 }
 
-function sectionTitle(pdf: jsPDF, title: string, y: number, metrics?: ResolvedTableMetrics) {
-  if (!metrics?.compact) {
-    return drawFabricationPdfSectionTitle(pdf, title, y);
-  }
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(metrics.sectionFontSize);
-  pdf.setTextColor(...INK);
-  pdf.text(title, MARGIN, y + 2.8);
-  return y + metrics.sectionStep;
-}
-
-function tableHead(pdf: jsPDF, columns: Column[], y: number, metrics: ResolvedTableMetrics) {
+function tableHead(pdf: jsPDF, columns: Column[], y: number) {
   pdf.setFillColor(...HEADER);
-  pdf.roundedRect(MARGIN, y, PAGE_WIDTH - MARGIN * 2, metrics.headHeight, 1.2, 1.2, "F");
+  pdf.roundedRect(MARGIN, y, PAGE_WIDTH - MARGIN * 2, 9, 1.2, 1.2, "F");
   pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(metrics.headFontSize);
+  pdf.setFontSize(9);
   pdf.setTextColor(...INK);
-  const textY = y + (metrics.compact ? 4.8 : 5.8);
   let x = MARGIN;
   for (const column of columns) {
-    pdf.text(column.title, column.align === "right" ? x + column.width - 2 : x + 2, textY, {
+    pdf.text(column.title, column.align === "right" ? x + column.width - 2 : x + 2, y + 5.8, {
       align: column.align === "right" ? "right" : "left",
     });
     x += column.width;
   }
-  return y + metrics.headHeight;
+  return y + 9;
 }
 
-function wrapStyledCellLines(
-  pdf: jsPDF,
-  cell: string,
-  columnWidth: number,
-  fontSize: number,
-  boldFirstLine: boolean,
-  mutedSecondary: boolean
-): StyledLine[] {
-  const maxWidth = Math.max(8, columnWidth - 4);
-  const rawLines = (cell || "—").split("\n");
-  const styled: StyledLine[] = [];
-  rawLines.forEach((rawLine, rawIndex) => {
-    const isFirst = rawIndex === 0;
-    const bold = boldFirstLine && isFirst;
-    const muted = mutedSecondary && !isFirst;
-    pdf.setFont("helvetica", bold ? "bold" : "normal");
-    pdf.setFontSize(fontSize);
-    const parts = pdf.splitTextToSize(rawLine || " ", maxWidth) as string[];
-    for (const part of parts) {
-      styled.push({ text: part, bold, muted });
-    }
-  });
-  return styled.length > 0 ? styled : [{ text: "—", bold: boldFirstLine, muted: false }];
+function rowHeight(pdf: jsPDF, row: Row, columns: Column[]) {
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9.2);
+  return Math.max(11, ...row.cells.map((cell, index) => wrapped(pdf, cell, columns[index]!.width).length * 4.05 + 4));
 }
 
-function measureStyledRowHeight(cellLines: StyledLine[][], metrics: ResolvedTableMetrics): number {
-  const maxLines = Math.max(1, ...cellLines.map((lines) => lines.length));
-  return Math.max(metrics.minRowHeight, maxLines * metrics.lineStep + metrics.verticalPad);
-}
-
-function drawStyledTableRow(
-  pdf: jsPDF,
-  cellLines: StyledLine[][],
-  columns: Column[],
-  y: number,
-  height: number,
-  index: number,
-  metrics: ResolvedTableMetrics
-) {
+function tableRow(pdf: jsPDF, row: Row, columns: Column[], y: number, height: number, index: number) {
   if (index % 2 === 1) {
     pdf.setFillColor(248, 250, 253);
     pdf.rect(MARGIN, y, PAGE_WIDTH - MARGIN * 2, height, "F");
   }
   pdf.setDrawColor(...RULE);
-  pdf.setLineWidth(0.2);
   pdf.line(MARGIN, y + height, PAGE_WIDTH - MARGIN, y + height);
-  pdf.setFontSize(metrics.fontSize);
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9.2);
+  pdf.setTextColor(...INK);
   let x = MARGIN;
   for (let i = 0; i < columns.length; i += 1) {
     const column = columns[i]!;
-    const lines = cellLines[i] ?? [];
-    const xPos = column.align === "right" ? x + column.width - 2 : x + 2;
-    const align = column.align === "right" ? "right" : "left";
-    lines.forEach((line, lineIndex) => {
-      pdf.setFont("helvetica", line.bold ? "bold" : "normal");
-      pdf.setTextColor(...(line.muted ? MUTED : INK));
-      pdf.text(line.text, xPos, y + metrics.firstBaseline + lineIndex * metrics.lineStep, { align });
+    const lines = wrapped(pdf, row.cells[i] ?? "—", column.width);
+    pdf.text(lines, column.align === "right" ? x + column.width - 2 : x + 2, y + 4.7, {
+      align: column.align === "right" ? "right" : "left",
+      lineHeightFactor: 1.18,
     });
     x += column.width;
   }
   return y + height;
 }
 
-function drawTable(
-  pdf: jsPDF,
-  title: string,
-  columns: Column[],
-  values: Row[],
-  startY: number,
-  empty: string,
-  runningTitle: string,
-  quoteCode: string,
-  logoDataUrl?: string | null,
-  style?: TableStyleOptions
-) {
-  const metrics = resolveTableMetrics(style);
+function drawTable(pdf: jsPDF, title: string, columns: Column[], values: Row[], startY: number, empty: string, runningTitle: string, quoteCode: string, logoDataUrl?: string | null) {
   const rows = values.length ? values : [{ cells: [empty, ...columns.slice(1).map(() => "—")] }];
-  const wrappedRows = rows.map((row) =>
-    columns.map((column, colIndex) =>
-      wrapStyledCellLines(
-        pdf,
-        row.cells[colIndex] ?? "—",
-        column.width,
-        metrics.fontSize,
-        metrics.boldFirstLineColumns.has(colIndex),
-        metrics.mutedSecondaryColumns.has(colIndex)
-      )
-    )
-  );
-  let y = startY + metrics.topGap;
-  const firstRowHeight = measureStyledRowHeight(wrappedRows[0]!, metrics);
-  const firstRowFitsOnFreshPage = 33 + metrics.sectionStep + metrics.headHeight + firstRowHeight <= CONTENT_BOTTOM;
-  const minimumFragmentHeight = metrics.compact ? 10 : 13;
-  if (y + metrics.sectionStep + metrics.headHeight + firstRowHeight > CONTENT_BOTTOM && firstRowFitsOnFreshPage) {
+  let y = startY + 4;
+  const firstRowHeight = rowHeight(pdf, rows[0]!, columns);
+  const firstRowFitsOnFreshPage = 33 + 5 + 9 + firstRowHeight <= CONTENT_BOTTOM;
+  const minimumFragmentHeight = 13;
+  if (y + 5 + 9 + firstRowHeight > CONTENT_BOTTOM && firstRowFitsOnFreshPage) {
     y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
-  } else if (y + metrics.sectionStep + metrics.headHeight + minimumFragmentHeight > CONTENT_BOTTOM) {
+  } else if (y + 5 + 9 + minimumFragmentHeight > CONTENT_BOTTOM) {
     y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
   }
-  y = tableHead(pdf, columns, sectionTitle(pdf, title, y, metrics), metrics);
-  wrappedRows.forEach((cellLines, index) => {
-    const wholeRowHeight = measureStyledRowHeight(cellLines, metrics);
+  y = tableHead(pdf, columns, sectionTitle(pdf, title, y));
+  rows.forEach((row, index) => {
+    const wholeRowHeight = rowHeight(pdf, row, columns);
     if (y + wholeRowHeight > CONTENT_BOTTOM) {
-      const fitsOnFreshPage = 33 + metrics.sectionStep + metrics.headHeight + wholeRowHeight <= CONTENT_BOTTOM;
-      const linesAvailable = Math.floor((CONTENT_BOTTOM - y - metrics.verticalPad) / metrics.lineStep);
+      // Give a complete row first refusal on a fresh page. Only exceptionally
+      // tall rows continue in fragments after the repeated table heading.
+      const fitsOnFreshPage = 33 + 5 + 9 + wholeRowHeight <= CONTENT_BOTTOM;
+      const linesAvailable = Math.floor((CONTENT_BOTTOM - y - 4) / 4.05);
       if (fitsOnFreshPage || linesAvailable < 2) {
         y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
-        y = tableHead(pdf, columns, sectionTitle(pdf, `${title} · continuación`, y, metrics), metrics);
+        y = tableHead(pdf, columns, sectionTitle(pdf, `${title} · continuación`, y));
       }
     }
     if (y + wholeRowHeight <= CONTENT_BOTTOM) {
-      y = drawStyledTableRow(pdf, cellLines, columns, y, wholeRowHeight, index, metrics);
+      y = tableRow(pdf, row, columns, y, wholeRowHeight, index);
       return;
     }
+    const cellLines = row.cells.map((cell, cellIndex) => wrapped(pdf, cell, columns[cellIndex]!.width));
     const totalLines = Math.max(...cellLines.map((lines) => lines.length));
     let lineOffset = 0;
     while (lineOffset < totalLines) {
-      const linesAvailable = Math.floor((CONTENT_BOTTOM - y - metrics.verticalPad) / metrics.lineStep);
+      const linesAvailable = Math.floor((CONTENT_BOTTOM - y - 4) / 4.05);
       if (linesAvailable < 2) {
         y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
-        y = tableHead(pdf, columns, sectionTitle(pdf, `${title} · continuación`, y, metrics), metrics);
+        y = tableHead(pdf, columns, sectionTitle(pdf, `${title} · continuación`, y));
         continue;
       }
       const lineCount = Math.min(totalLines - lineOffset, linesAvailable);
-      const fragment = cellLines.map((lines) => {
-        const sliced = lines.slice(lineOffset, lineOffset + lineCount);
-        return sliced.length > 0 ? sliced : [{ text: " ", bold: false, muted: false }];
-      });
-      const height = measureStyledRowHeight(fragment, metrics);
+      const fragment: Row = {
+        cells: cellLines.map((lines) => lines.slice(lineOffset, lineOffset + lineCount).join("\n") || " "),
+      };
+      const height = rowHeight(pdf, fragment, columns);
       if (y + height > CONTENT_BOTTOM) {
         y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
-        y = tableHead(pdf, columns, sectionTitle(pdf, `${title} · continuación`, y, metrics), metrics);
+        y = tableHead(pdf, columns, sectionTitle(pdf, `${title} · continuación`, y));
         continue;
       }
-      y = drawStyledTableRow(pdf, fragment, columns, y, height, index, metrics);
+      y = tableRow(pdf, fragment, columns, y, height, index);
       lineOffset += lineCount;
     }
   });
   return y;
 }
+
 function drawNote(pdf: jsPDF, value: string, y: number, runningTitle: string, quoteCode: string, logoDataUrl?: string | null) {
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(9.2);
@@ -342,227 +244,6 @@ function drawDocumentPartialWarning(pdf: jsPDF, y: number, runningTitle: string,
   return y + height;
 }
 
-function normalizeComparisonText(value: string | null | undefined): string {
-  return (value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-function shouldShowProfileCutFunction(profileName: string, functionName: string): boolean {
-  const fnNorm = normalizeComparisonText(functionName);
-  if (!fnNorm || fnNorm === "pendiente") return false;
-  const profileNorm = normalizeComparisonText(profileName);
-  if (!profileNorm) return true;
-  if (fnNorm === profileNorm) return false;
-  if (profileName.includes("/")) return true;
-  if (profileNorm.includes(fnNorm)) return false;
-  const fnWords = fnNorm.split(" ").filter((word) => word.length >= 3);
-  if (fnWords.length > 0 && fnWords.every((word) => profileNorm.includes(word))) {
-    return false;
-  }
-  return true;
-}
-
-function formatProfileCutLine(cut: WorkOrderCut, profileName: string): string {
-  const base = `${clean(cut.itemCode, "Sin ítem")}: ${cut.quantity} × ${mm(cut.lengthMm)}`;
-  return shouldShowProfileCutFunction(profileName, cut.functionName)
-    ? `${base} · ${cut.functionName.trim()}`
-    : base;
-}
-
-function formatProfileCutGroupBarCell(
-  group: WorkOrderCutGroup,
-  pendingBarLabel = "Distribución por tira pendiente"
-): string {
-  const code = clean(group.technicalCode, "Código pendiente");
-  const name = clean(group.profileName, "Perfil");
-  const header = name.toLowerCase().startsWith(code.toLowerCase()) ? name : `${code} · ${name}`;
-  const finish = group.finish?.trim();
-  const showFinish = Boolean(
-    finish &&
-    normalizeComparisonText(finish) !== "pendiente" &&
-    !normalizeComparisonText(name).includes(normalizeComparisonText(finish))
-  );
-  const barLabel = group.barIndex == null
-    ? pendingBarLabel
-    : `Tira ${group.barIndex} · ${mm(group.commercialLengthMm)}`;
-  return `${header}\n${showFinish ? `${barLabel} · ${finish}` : barLabel}`;
-}
-
-function formatProfileCutRemnantCell(
-  group: WorkOrderCutGroup,
-  cutPlanPhysicalState: FabricationWorkOrder["cutPlanPhysicalState"]
-): string {
-  if (group.barIndex == null || group.theoreticalRemnantMm == null) {
-    return "Pendiente";
-  }
-  const stateLabel = cutPlanPhysicalState === "confirmada" ? "Confirmado" : "Teórico";
-  return `${mm(group.theoreticalRemnantMm)}\n${stateLabel}`;
-}
-
-function resolveComponentsForProfileCuts(order: FabricationWorkOrder): WorkOrderComponentSummary[] {
-  const existing = order.components ?? [];
-  const knownCodes = new Set(existing.map((component) => component.code));
-  const byCode = new Map<string, { code: string; name: string | null; line: string | null; finish: string | null; ambiguousFinish?: boolean }>();
-  const groups = [...order.cutGroups, ...order.preliminaryCutGroups, ...order.reviewCutGroups];
-  for (const group of groups) {
-    const finishRaw = group.finish?.trim();
-    const finish = finishRaw && normalizeComparisonText(finishRaw) !== "pendiente" ? finishRaw : null;
-    const lineRaw = group.line?.trim();
-    const line = lineRaw && normalizeComparisonText(lineRaw) !== "pendiente" && normalizeComparisonText(lineRaw) !== "linea pendiente" ? lineRaw : null;
-    for (const cut of group.cuts) {
-      const code = cut.itemCode?.trim();
-      if (!code || knownCodes.has(code)) continue;
-      const nameRaw = cut.component?.trim();
-      const name = nameRaw && normalizeComparisonText(nameRaw) !== "componente pendiente" ? nameRaw : null;
-      const existing = byCode.get(code);
-      if (!existing) {
-        byCode.set(code, { code, name, line, finish });
-      } else {
-        if (!existing.name && name) existing.name = name;
-        if (!existing.line && line) existing.line = line;
-        if (finish && existing.finish && existing.finish !== finish) {
-          existing.ambiguousFinish = true;
-        } else if (finish && !existing.finish && !existing.ambiguousFinish) {
-          existing.finish = finish;
-        }
-      }
-    }
-  }
-  return [
-    ...existing,
-    ...Array.from(byCode.values()).map((entry) => ({
-      code: entry.code,
-      name: entry.name,
-      line: entry.line,
-      variant: null,
-      dimensionsMm: null,
-      quantity: null,
-      finish: entry.ambiguousFinish ? null : entry.finish,
-    })),
-  ];
-}
-
-function formatDimensionNumber(value: number): string {
-  return new Intl.NumberFormat("es-CL", { maximumFractionDigits: 0 }).format(value);
-}
-
-function formatComponentDetails(component: WorkOrderComponentSummary): string {
-  const parts: string[] = [];
-  const pushUnique = (value: string | null | undefined) => {
-    const trimmed = value?.trim();
-    if (!trimmed) return;
-    const norm = normalizeComparisonText(trimmed);
-    if (!norm || norm === "pendiente") return;
-    const currentNorm = normalizeComparisonText(parts.join(" "));
-    if (currentNorm.includes(norm)) return;
-    parts.push(trimmed);
-  };
-  pushUnique(component.name);
-  pushUnique(component.variant);
-  pushUnique(component.line);
-  if (component.dimensionsMm) {
-    parts.push(`${formatDimensionNumber(component.dimensionsMm.widthMm)} × ${formatDimensionNumber(component.dimensionsMm.heightMm)} mm`);
-  }
-  if (component.quantity != null && component.quantity > 1) {
-    parts.push(`${component.quantity} u.`);
-  }
-  pushUnique(component.finish);
-  return parts.join(" · ") || "Componente por confirmar";
-}
-
-function drawDiscreteReferentialNote(
-  pdf: jsPDF,
-  y: number,
-  runningTitle: string,
-  quoteCode: string,
-  logoDataUrl?: string | null
-) {
-  const label = `${DISTRIBUCION_REFERENCIAL_LABEL}: `;
-  const body = DISTRIBUCION_REFERENCIAL_NOTA;
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(8.1);
-  const lines = pdf.splitTextToSize(`${label}${body}`, PAGE_WIDTH - MARGIN * 2 - 7) as string[];
-  const height = lines.length * 3.45 + 3;
-  if (y + height > CONTENT_BOTTOM) y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
-  pdf.setFillColor(...HEADER);
-  pdf.setDrawColor(...RULE);
-  pdf.setLineWidth(0.25);
-  pdf.roundedRect(MARGIN, y, PAGE_WIDTH - MARGIN * 2, height, 1, 1, "FD");
-  const startY = y + 4.1;
-  if (lines[0]?.startsWith(label)) {
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(8.1);
-    pdf.setTextColor(...INK);
-    pdf.text(label, MARGIN + 2.5, startY);
-    const labelWidth = pdf.getTextWidth(label);
-    pdf.setFont("helvetica", "normal");
-    pdf.setTextColor(...MUTED);
-    pdf.text(lines[0].slice(label.length), MARGIN + 2.5 + labelWidth, startY);
-    lines.slice(1).forEach((line, index) => {
-      pdf.text(line, MARGIN + 2.5, startY + (index + 1) * 3.45);
-    });
-  } else {
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(8.1);
-    pdf.setTextColor(...MUTED);
-    lines.forEach((line, index) => {
-      pdf.text(line, MARGIN + 2.5, startY + index * 3.45);
-    });
-  }
-  return y + height + 1.8;
-}
-
-function drawProfileCutsComponentsBlock(
-  pdf: jsPDF,
-  components: WorkOrderComponentSummary[],
-  startY: number,
-  runningTitle: string,
-  quoteCode: string,
-  logoDataUrl?: string | null
-) {
-  if (components.length === 0) return startY;
-  const compactMetrics = resolveTableMetrics({ compact: true });
-  const rows = components.map((component) => {
-    const code = clean(component.code, "—");
-    const details = formatComponentDetails(component);
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(8.2);
-    const lines = pdf.splitTextToSize(details, PAGE_WIDTH - MARGIN * 2 - 20) as string[];
-    const height = Math.max(5.8, lines.length * 3.45 + 2.2);
-    return { code, lines, height };
-  });
-  let y = startY + 1.2;
-  if (y + compactMetrics.sectionStep + rows[0]!.height > CONTENT_BOTTOM) {
-    y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
-  }
-  y = sectionTitle(pdf, "Componentes", y, compactMetrics);
-  rows.forEach((row, index) => {
-    if (y + row.height > CONTENT_BOTTOM) {
-      y = newPage(pdf, runningTitle, quoteCode, logoDataUrl);
-      y = sectionTitle(pdf, "Componentes · continuación", y, compactMetrics);
-    }
-    if (index % 2 === 0) {
-      pdf.setFillColor(248, 250, 253);
-      pdf.rect(MARGIN, y, PAGE_WIDTH - MARGIN * 2, row.height, "F");
-    }
-    pdf.setDrawColor(...RULE);
-    pdf.setLineWidth(0.2);
-    pdf.line(MARGIN, y + row.height, PAGE_WIDTH - MARGIN, y + row.height);
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(8.2);
-    pdf.setTextColor(...INK);
-    pdf.text(row.code, MARGIN + 2, y + 3.9);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(row.lines, MARGIN + 16, y + 3.9, { lineHeightFactor: 1.15 });
-    y += row.height;
-  });
-  return y + 1.5;
-}
-
 function drawPriceSummary(pdf: jsPDF, order: FabricationWorkOrder, y: number, runningTitle: string, quoteCode: string, logoDataUrl?: string | null) {
   const historicalWarnings = (order.pricing.assumptions ?? []).filter((assumption) => assumption.includes("referencia histórica"));
   const warningLines = historicalWarnings.flatMap((warning) => wrapped(pdf, warning, PAGE_WIDTH - MARGIN * 2 - 6));
@@ -603,8 +284,7 @@ export function createFabricationWorkOrderPdf(
   const title = kind === "glass-order" ? "Orden de vidrios" : kind === "profile-cuts" ? "Pauta de cortes de perfiles" : "Orden de fabricación y materiales";
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: false });
   pdf.setCharSpace(0);
-  const isProfileCuts = kind === "profile-cuts";
-  let y = drawFabricationPdfHeader(pdf, metadata, title, logoDataUrl, "Empresa", "FABRICACIÓN", isProfileCuts ? { compact: true } : undefined);
+  let y = drawFabricationPdfHeader(pdf, metadata, title, logoDataUrl);
   const runningTitle = title;
   const referentialDistribution = kind !== "glass-order" && order.cutPlanPhysicalState === "teorica";
   const referentialOnly = referentialDistribution && isReferentialOnlyWorkOrder(order);
@@ -612,19 +292,7 @@ export function createFabricationWorkOrderPdf(
     y = drawDocumentPartialWarning(pdf, y + 2, runningTitle, metadata.quoteCode, logoDataUrl);
   }
   if (referentialDistribution) {
-    y = isProfileCuts
-      ? drawDiscreteReferentialNote(pdf, y, runningTitle, metadata.quoteCode, logoDataUrl)
-      : drawNote(pdf, `${DISTRIBUCION_REFERENCIAL_LABEL}. ${DISTRIBUCION_REFERENCIAL_NOTA}`, y, runningTitle, metadata.quoteCode, logoDataUrl);
-  }
-  if (isProfileCuts) {
-    y = drawProfileCutsComponentsBlock(
-      pdf,
-      resolveComponentsForProfileCuts(order),
-      y,
-      runningTitle,
-      metadata.quoteCode,
-      logoDataUrl
-    );
+    y = drawNote(pdf, `${DISTRIBUCION_REFERENCIAL_LABEL}. ${DISTRIBUCION_REFERENCIAL_NOTA}`, y, runningTitle, metadata.quoteCode, logoDataUrl);
   }
   if (kind === "combined") y = drawPriceSummary(pdf, order, y, runningTitle, metadata.quoteCode, logoDataUrl);
   if (kind === "combined") {
@@ -714,17 +382,12 @@ export function createFabricationWorkOrderPdf(
   ], accessories, y, "Sin accesorios registrados", runningTitle, metadata.quoteCode, logoDataUrl);
   }
 
-  if (kind === "combined" || isProfileCuts) {
-  const profileCutsStyle: TableStyleOptions = {
-    compact: true,
-    boldFirstLineColumns: [0, 2],
-    mutedSecondaryColumns: [0, 2],
-  };
+  if (kind === "combined" || kind === "profile-cuts") {
   const cuts = order.cutGroups.map((group): Row => {
     const profile = `${group.technicalCode} · ${group.profileName}`;
     const cutRows = group.cuts.length
-      ? group.cuts.map((cut) => isProfileCuts
-        ? formatProfileCutLine(cut, group.profileName)
+      ? group.cuts.map((cut) => kind === "profile-cuts"
+        ? formatProfileCutLine(cut, group)
         : `${cut.itemCode} · ${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n")
       : "Sin cortes guardados";
     const presentation = group.barIndex == null
@@ -732,16 +395,10 @@ export function createFabricationWorkOrderPdf(
       : `Tira ${group.barIndex} · ${mm(group.commercialLengthMm)}`;
 
     // The standalone profile-cut sheet is for the person cutting the bars:
-    // keep bar identity, cut specs by component ID, and remnant state without repeated prose.
+    // keep only the profile identity, saved cuts, and theoretical remnant.
     // The combined work order retains its purchase context in its own section.
-    return isProfileCuts
-      ? {
-          cells: [
-            formatProfileCutGroupBarCell(group),
-            cutRows,
-            formatProfileCutRemnantCell(group, order.cutPlanPhysicalState),
-          ],
-        }
+    return kind === "profile-cuts"
+      ? { cells: [`${profile}\n${presentation}`, cutRows, group.barIndex == null ? "Pendiente" : mm(group.theoreticalRemnantMm)] }
       : { cells: [
           `${profile}\n${clean(group.line, "Línea pendiente")} · Color aluminio: ${clean(group.finish, "Pendiente")}\n${presentation}`,
           cutRows,
@@ -749,27 +406,28 @@ export function createFabricationWorkOrderPdf(
           group.barIndex == null ? "Pendiente" : mm(group.theoreticalRemnantMm),
         ] };
   });
-  y = drawTable(pdf, isProfileCuts ? "Cortes por tira" : "2. Pauta de corte", isProfileCuts ? [
-    { title: "Perfil / tira", width: 64 }, { title: "Cortes", width: 82 },
-    { title: "Sobrante", width: 36, align: "right" },
+  y = drawTable(pdf, kind === "profile-cuts" ? "Cortes agrupados" : "2. Pauta de corte", kind === "profile-cuts" ? [
+    { title: "Código / perfil", width: 56 }, { title: "Cortes por componente", width: 89 },
+    { title: "Remanente", width: 37, align: "right" },
   ] : [
     { title: "Perfil / línea / color", width: 50 }, { title: "Cortes agrupados", width: 80 },
     { title: "Proveedor / SKU", width: 30 }, { title: "Remanente teórico", width: 22, align: "right" },
-  ], cuts, y, "Pauta de corte pendiente", runningTitle, metadata.quoteCode, logoDataUrl, isProfileCuts ? profileCutsStyle : undefined);
-  if (!isProfileCuts) {
-    y = drawNote(pdf, "Los largos provienen de la pauta guardada; el remanente es teórico. Confirmar kerf, despunte y condiciones del taller antes de fabricar. No representa una optimización de planchas de vidrio.", y, runningTitle, metadata.quoteCode, logoDataUrl);
-  }
+  ], cuts, y, "Pauta de corte pendiente", runningTitle, metadata.quoteCode, logoDataUrl);
+  y = drawNote(pdf, kind === "profile-cuts"
+    ? "Remanente teórico. Confirmar kerf, despunte y condiciones del taller antes de cortar."
+    : "Los largos provienen de la pauta guardada; el remanente es teórico. Confirmar kerf, despunte y condiciones del taller antes de fabricar. No representa una optimización de planchas de vidrio.",
+  y, runningTitle, metadata.quoteCode, logoDataUrl);
   if (order.preliminaryCutGroups.length > 0) {
     y = drawPreliminaryWarning(pdf, y + 2, runningTitle, metadata.quoteCode, logoDataUrl);
     const preliminaryCuts = order.preliminaryCutGroups.map((group): Row => {
       const profile = `${group.technicalCode} · ${group.profileName}`;
       const cutRows = group.cuts.length
-        ? group.cuts.map((cut) => isProfileCuts
-          ? formatProfileCutLine(cut, group.profileName)
+        ? group.cuts.map((cut) => kind === "profile-cuts"
+          ? formatProfileCutLine(cut, group)
           : `${cut.itemCode} · ${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n")
         : "Sin cortes de geometría disponibles";
-      return isProfileCuts
-        ? { cells: [formatProfileCutGroupBarCell(group, "Distribución no calculada"), cutRows, "No aplica"] }
+      return kind === "profile-cuts"
+        ? { cells: [`${profile}\nDistribución no calculada`, cutRows, "No aplica"] }
         : { cells: [
             `${profile}\n${clean(group.line, "Línea pendiente")} · Color aluminio: ${clean(group.finish, "Pendiente")}\nDistribución no calculada`,
             cutRows,
@@ -778,32 +436,38 @@ export function createFabricationWorkOrderPdf(
           ] };
     });
     const preliminaryTitle = "Despiece estructural preliminar · acristalamiento pendiente";
-    y = drawTable(pdf, preliminaryTitle, isProfileCuts ? [
-      { title: "Perfil / tira", width: 64 }, { title: "Cortes", width: 82 },
-      { title: "Sobrante", width: 36, align: "right" },
+    y = drawTable(pdf, preliminaryTitle, kind === "profile-cuts" ? [
+      { title: "Código / perfil", width: 56 }, { title: "Cortes por componente", width: 89 },
+      { title: "Distribución", width: 37, align: "right" },
     ] : [
       { title: "Perfil / línea / color", width: 50 }, { title: "Cortes geométricos", width: 80 },
       { title: "Estado", width: 30 }, { title: "Distribución", width: 22, align: "right" },
-    ], preliminaryCuts, y, "Sin cortes geométricos", runningTitle, metadata.quoteCode, logoDataUrl, isProfileCuts ? profileCutsStyle : undefined);
+    ], preliminaryCuts, y, "Sin cortes geométricos", runningTitle, metadata.quoteCode, logoDataUrl);
   }
   if (order.reviewCutGroups.length > 0) {
-    const reviewCuts = order.reviewCutGroups.map((group): Row => ({ cells: [
-`${group.technicalCode} · ${group.profileName}\n${[...new Set(group.cuts.map((cut) => `${cut.itemCode} · ${cut.component}`))].join("\n") || "Componente pendiente"}`,
-      group.cuts.map((cut) => isProfileCuts
-        ? formatProfileCutLine(cut, group.profileName)
-        : `${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n"),
-      isProfileCuts ? "Snapshot incompatible · no operativo" : "Snapshot histórico · no operativo",
-      isProfileCuts
-        ? order.documentStatus.pendingComponents.find((component) => component.itemId === group.itemId)?.reason ?? "Revisar identidad y receta antes de usar estos cortes."
-        : "Revisión pendiente",
-    ] }));
-    y = drawTable(pdf, "Revisión técnica · cortes históricos", isProfileCuts ? [
-      { title: "Perfil / componente", width: 43 }, { title: "Cortes conservados", width: 67 },
+    const reviewCuts = order.reviewCutGroups.map((group): Row => {
+      const componentCell = kind === "profile-cuts"
+        ? [...new Set(group.cuts.map((cut) => cut.itemCode))].join(", ") || "Componente pendiente"
+        : [...new Set(group.cuts.map((cut) => `${cut.itemCode} · ${cut.component}`))].join("\n") || "Componente pendiente";
+      const cutsCell = group.cuts.map((cut) => kind === "profile-cuts"
+        ? formatProfileCutLine(cut, group)
+        : `${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n");
+      return { cells: [
+        `${group.technicalCode} · ${group.profileName}\n${componentCell}`,
+        cutsCell,
+        kind === "profile-cuts" ? "Snapshot incompatible · no operativo" : "Snapshot histórico · no operativo",
+        kind === "profile-cuts"
+          ? order.documentStatus.pendingComponents.find((component) => component.itemId === group.itemId)?.reason ?? "Revisar identidad y receta antes de usar estos cortes."
+          : "Revisión pendiente",
+      ] };
+    });
+    y = drawTable(pdf, "Revisión técnica · cortes históricos", kind === "profile-cuts" ? [
+      { title: "Perfil y componente", width: 43 }, { title: "Cortes conservados", width: 67 },
       { title: "Estado", width: 31 }, { title: "Causa / uso", width: 41 },
     ] : [
       { title: "Perfil / componente", width: 50 }, { title: "Cortes conservados", width: 80 },
       { title: "Estado", width: 30 }, { title: "Uso", width: 22, align: "right" },
-    ], reviewCuts, y, "Sin cortes históricos por revisar", runningTitle, metadata.quoteCode, logoDataUrl, isProfileCuts ? { compact: true, boldFirstLineColumns: [0], mutedSecondaryColumns: [0] } : undefined);
+    ], reviewCuts, y, "Sin cortes históricos por revisar", runningTitle, metadata.quoteCode, logoDataUrl);
   }
   }
 
@@ -841,7 +505,7 @@ export function createFabricationWorkOrderPdf(
       const pending = technicalPending.map((row): Row => ({ cells: [row.subject, row.action] }));
       drawTable(pdf, kind === "combined" ? "4. Pendientes para el maestro" : "Estado técnico · pendientes de corte", [
         { title: "Dato", width: 70 }, { title: "Acción", width: 112 },
-      ], pending, y, "Sin pendientes técnicos de corte", runningTitle, metadata.quoteCode, logoDataUrl, isProfileCuts ? { compact: true } : undefined);
+      ], pending, y, "Sin pendientes técnicos de corte", runningTitle, metadata.quoteCode, logoDataUrl);
     }
   }
   drawFabricationPdfFooters(

@@ -25,11 +25,11 @@ function clean(value: string | null | undefined, fallback = "Pendiente") {
   return value?.trim() || fallback;
 }
 
-function drawLogo(pdf: jsPDF, logoDataUrl?: string | null, y = 10, maxWidth = 42, maxHeight = 9) {
+function drawLogo(pdf: jsPDF, logoDataUrl?: string | null, y = 10) {
   if (logoDataUrl) {
     try {
       const image = pdf.getImageProperties(logoDataUrl);
-      const scale = Math.min(maxWidth / image.width, maxHeight / image.height);
+      const scale = Math.min(42 / image.width, 9 / image.height);
       const width = image.width * scale;
       const height = image.height * scale;
       pdf.addImage(logoDataUrl, "PNG", MARGIN, y, width, height, undefined, "FAST");
@@ -47,59 +47,8 @@ export function drawFabricationPdfHeader(
   title: string,
   logoDataUrl?: string | null,
   clientLabel = "Empresa",
-  documentLabel = "Documento de fabricación",
-  options?: { compact?: boolean }
+  documentLabel = "Documento de fabricación"
 ) {
-  if (options?.compact) {
-    const logoBottom = drawLogo(pdf, logoDataUrl, 8, 34, 7);
-    const titleX = logoDataUrl ? MARGIN + 38 : MARGIN;
-    const titleMaxWidth = PAGE_WIDTH - MARGIN - titleX;
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(7.5);
-    pdf.setTextColor(...FABRICATION_PDF_COLORS.muted);
-    pdf.text(documentLabel, titleX, 10.5);
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(14);
-    pdf.setTextColor(...FABRICATION_PDF_COLORS.ink);
-    const titleLines = pdf.splitTextToSize(title, titleMaxWidth) as string[];
-    const titleY = 16;
-    pdf.text(titleLines, titleX, titleY, { lineHeightFactor: 1.1 });
-    const titleBottom = titleY + Math.max(0, titleLines.length - 1) * 5.2 + 2;
-    const ruleY = Math.max(logoBottom + 2, titleBottom + 1.5);
-    pdf.setDrawColor(...FABRICATION_PDF_COLORS.blue);
-    pdf.setLineWidth(0.4);
-    pdf.line(MARGIN, ruleY, PAGE_WIDTH - MARGIN, ruleY);
-
-    const values = [
-      { label: "Cotización", value: clean(metadata.quoteCode) },
-      { label: clientLabel, value: clean(metadata.companyName, clientLabel) },
-      { label: "Trabajo", value: clean(metadata.workName, "Sin nombre") },
-      { label: metadata.issueDateLabel ?? "Emisión", value: clean(metadata.issueDate) },
-    ];
-    const top = ruleY + 2.5;
-    const columnWidth = CONTENT_WIDTH / values.length;
-    let metadataHeight = 11.5;
-    const prepared = values.map((value) => {
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(8.2);
-      const lines = pdf.splitTextToSize(value.value, columnWidth - 4) as string[];
-      metadataHeight = Math.max(metadataHeight, 6.2 + lines.length * 3.4);
-      return { ...value, lines };
-    });
-    pdf.setFillColor(...FABRICATION_PDF_COLORS.pale);
-    pdf.roundedRect(MARGIN, top, CONTENT_WIDTH, metadataHeight, 1, 1, "F");
-    prepared.forEach((value, index) => {
-      const x = MARGIN + index * columnWidth + 2.5;
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(7);
-      pdf.setTextColor(...FABRICATION_PDF_COLORS.muted);
-      pdf.text(value.label, x, top + 3.8);
-      pdf.setFontSize(8.2);
-      pdf.setTextColor(...FABRICATION_PDF_COLORS.ink);
-      pdf.text(value.lines, x, top + 8.1, { lineHeightFactor: 1.1 });
-    });
-    return top + metadataHeight + 3;
-  }
   const logoBottom = drawLogo(pdf, logoDataUrl, 9);
   const labelY = Math.max(22, logoBottom + 4);
   pdf.setFont("helvetica", "normal");

@@ -138,13 +138,14 @@ describe("orden de fabricación y materiales", () => {
     const metadata = { companyName: "Taller QA", quoteCode: "COT-QA-1388", workName: "Pauta teórica", issueDate: "14 nov 2026" };
     const pdf = createFabricationWorkOrderPdf(order, metadata, null, "profile-cuts");
     expect(pdf.getNumberOfPages()).toBe(1);
-    expect(pdfText(pdf)).toContain("Componentes");
-    expect(pdfText(pdf)).toContain("Perfil / tira");
-    expect(pdfText(pdf)).toContain("Sobrante");
+    expect(pdfText(pdf)).toContain("Cortes agrupados");
+    expect(pdfText(pdf)).toContain("Código / perfil");
+    expect(pdfText(pdf)).toContain("Cortes por componente");
+    expect(pdfText(pdf)).toContain("Remanente");
     expect(pdfText(pdf)).toContain("0 mm");
-    expect(pdfText(pdf)).toContain("Teórico");
-    expect(pdfText(pdf)).toContain("V1: 2 × 1.500 mm");
-    expect(pdfText(pdf)).toContain("V3: 2 × 1.500 mm");
+    expect(pdfText(pdf)).toContain("V1 · 2 × 1.500 mm");
+    expect(pdfText(pdf)).toContain("V3 · 2 × 1.500 mm");
+    expect(pdfText(pdf)).not.toContain("Ventana");
     const pendingPdf = createFabricationWorkOrderPdf({
       ...order, cutGroups: [{ ...order.cutGroups[0]!, theoreticalRemnantMm: null }],
     }, metadata, null, "profile-cuts");
@@ -559,16 +560,18 @@ describe("orden de fabricación y materiales", () => {
     const cutsText = pdfText(cutsPdf);
     expect(cutsPdf.getNumberOfPages()).toBe(1);
     expect(cutsText).toContain("Pauta de cortes de perfiles");
-    expect(cutsText).toContain("Componentes");
-    expect(cutsText).toContain("V1 Ventana corredera 2 hojas");
-    expect(cutsText).toContain("Perfil / tira");
-    expect(cutsText).toContain("Cortes");
-    expect(cutsText).toContain("Sobrante");
-    expect(cutsText).toContain("V1: 2 × 1.000 mm");
-    expect(cutsText).toContain("V2: 1 × 600 mm");
+    expect(cutsText).toContain("Cortes agrupados");
+    expect(cutsText).toContain("Código / perfil");
+    expect(cutsText).toContain("Cortes por componente");
+    expect(cutsText).toContain("Remanente");
+    expect(cutsText).toContain("5001 · Riel superior");
+    expect(cutsText).toContain("Tira 1 · 6.000 mm");
+    expect(cutsText).toContain("V1 · 2 × 1.000 mm");
+    expect(cutsText).toContain("V2 · 1 × 600 mm");
     expect(cutsText).toContain("3.391 mm");
-    expect(cutsText).toContain("Confirmado");
-    expect(cutsText).not.toContain("Remanente teórico");
+    expect(cutsText).not.toContain("Ventana corredera");
+    expect(cutsText).not.toContain("Riel superior\n");
+    expect(cutsText).toContain("Remanente teórico. Confirmar kerf, despunte y condiciones del taller antes de cortar.");
     expect(cutsText).not.toContain("Orden de vidrios");
     expect(cutsText).not.toContain("11.500");
 
@@ -580,82 +583,72 @@ describe("orden de fabricación y materiales", () => {
     }
   });
 
-  it("presenta las tres variantes L25 con etiquetas técnicas legibles en el bloque Componentes", () => {
-    const variants = [
-      ["monolithic_open_normal", "Monolítico · pierna abierta · refuerzo normal"],
-      ["monolithic_closed_normal", "Monolítico · pierna cerrada · refuerzo normal"],
-      ["monolithic_open_reinforced", "Monolítico · pierna abierta · refuerzo reforzado"],
-    ] as const;
+  it("limpia texto repetido sin perder cortes, referencias ni funciones ambiguas", () => {
+    const variants = ["monolithic_open_normal", "monolithic_closed_normal", "monolithic_open_reinforced"] as const;
+    const quoteSummary = summary(savedWork());
+    quoteSummary.items = variants.map((variant, index) => ({
+      itemId: `l25-${index + 1}`, codigo: `V${index + 1}`, nombre: "Corredera L25 2 hojas",
+      lineName: "L25", material: "Aluminio", widthMm: 1800, heightMm: 1500, quantity: 1,
+      snapshot: { cuts: [] }, recipe: null, herrajeLabel: "-", statusLabel: "Receta validada",
+      geometryOnly: false, profilesMl: 0, glassM2: 0, glassThickness: "5 mm", glassThicknessWarning: null,
+      accessoryUnits: 0, barCount: 0, operationalStatus: "ready",
+      fabricacionSnapshot: { selectedVariant: variant, recipeIdentity: { variante: variant } },
+    } as unknown as FabricationQuoteSummary["items"][number]));
     const work = savedWork();
     delete work.bars[0]!.parametrosFisicos;
-    const quoteSummary = summary(work);
-    quoteSummary.items = variants.map(([variant], index) => ({
-      itemId: `l25-${index + 1}`,
-      codigo: `V${index + 1}`,
-      nombre: "Corredera L25 2 hojas",
-      lineName: "L25",
-      material: "Aluminio",
-      widthMm: 1800,
-      heightMm: 1500,
-      quantity: 1,
-      snapshot: { cuts: [] },
-      recipe: null,
-      herrajeLabel: "-",
-      statusLabel: "Receta validada",
-      geometryOnly: false,
-      profilesMl: 0,
-      glassM2: 0,
-      glassThickness: "5 mm",
-      glassThicknessWarning: null,
-      accessoryUnits: 0,
-      barCount: 0,
-      operationalStatus: "ready",
-      fabricacionSnapshot: {
-        selectedVariant: variant,
-        recipeIdentity: { variante: variant },
-      },
-    } as unknown as FabricationQuoteSummary["items"][number]));
     const order = buildFabricationWorkOrder({
-      summary: quoteSummary,
+      summary: { ...quoteSummary, trabajoSnapshot: work },
       materials: materials(),
       quoteItems: variants.map((_, index) => ({
         id: `l25-${index + 1}`,
-        observaciones: encodeCotizacionItemPresentationMeta({
-          referencia: "L25",
-          configuracion: "Corredera 2 hojas",
-        }),
+        observaciones: encodeCotizacionItemPresentationMeta({ referencia: "L25", configuracion: "Corredera 2 hojas" }),
       } as unknown as CotizacionWorkflowItem)),
     });
     const pdf = createFabricationWorkOrderPdf(order, {
-      companyName: "Taller QA",
-      quoteCode: "COT-QA-1388 · EJEMPLO SINTÉTICO",
-      workName: "Variantes L25",
-      issueDate: "14 nov 2026",
+      companyName: "Taller QA", quoteCode: "COT-QA-1388 · EJEMPLO SINTÉTICO", workName: "Tres variantes L25", issueDate: "14 nov 2026",
     }, null, "profile-cuts");
     const text = pdfText(pdf);
 
-    for (const [, label] of variants) expect(text).toContain(label);
-    for (const [variant] of variants) expect(text).not.toContain(variant);
-    expect(text).toContain("V1");
-    expect(text).toContain("V2");
-    expect(text).toContain("V3");
-    expect(text).toContain("1.800 × 1.500 mm");
-    expect(text).toContain("5001");
-    expect(text).toContain("Perfil / tira");
-    expect(text).toContain("Cortes");
-    expect(text).toContain("Sobrante");
+    expect(text).toContain("Cortes agrupados");
+    expect(text).toContain("Código / perfil");
+    expect(text).toContain("Cortes por componente");
+    expect(text).toContain("Remanente");
+    expect(text).toContain("5001 · Riel superior");
     expect(text).toContain("Tira 1 · 6.000 mm");
-    expect(text).toContain("V1: 2 × 1.000 mm");
-    expect(text).toContain("V2: 1 × 600 mm");
+    expect(text).toContain("V1 · 2 × 1.000 mm");
+    expect(text).toContain("V2 · 1 × 600 mm");
     expect(text).toContain("3.391 mm");
+    expect(text).not.toContain("Ventana corredera");
+    expect(text).not.toContain("monolithic_open_normal");
+    expect(text).not.toContain("monolithic_closed_normal");
+    expect(text).not.toContain("monolithic_open_reinforced");
     expect(text).toContain("Distribución referencial");
     expect(text).toContain("Confirmar parámetros del taller antes de cortar");
 
     if (process.env.VENTORA_PDF_EXAMPLE === "1") {
       const outputDirectory = pdfExampleDirectory();
       mkdirSync(outputDirectory, { recursive: true });
-      writeFileSync(path.join(outputDirectory, "qa-1388-variantes-l25-sintetico.pdf"), Buffer.from(pdf.output("arraybuffer")));
+      writeFileSync(path.join(outputDirectory, "qa-1388-variantes-l25-restaurado-sintetico.pdf"), Buffer.from(pdf.output("arraybuffer")));
     }
+  });
+
+  it("conserva la función del corte cuando un mismo perfil tiene usos distintos", () => {
+    const order = buildFabricationWorkOrder({ summary: summary(savedWork()), materials: materials() });
+    order.cutGroups = [{
+      key: "shared-profile", technicalCode: "2500", profileName: "Perfil compartido", barIndex: 1,
+      commercialLengthMm: 6000, usedMm: 1200, theoreticalRemnantMm: 4800, trimMm: null, kerfMm: null,
+      cuts: [
+        { itemCode: "V1", component: "Ventana corredera", functionName: "Marco", quantity: 1, lengthMm: 600 },
+        { itemCode: "V2", component: "Ventana corredera", functionName: "Montante", quantity: 1, lengthMm: 600 },
+      ],
+    }];
+    const text = pdfText(createFabricationWorkOrderPdf(order, {
+      companyName: "Taller QA", quoteCode: "COT-QA-FUNCIONES", workName: "Perfil compartido", issueDate: "14 nov 2026",
+    }, null, "profile-cuts"));
+
+    expect(text).toContain("V1 · 1 × 600 mm · Marco");
+    expect(text).toContain("V2 · 1 × 600 mm · Montante");
+    expect(text).not.toContain("Ventana corredera");
   });
 
   it("reduce el PDF de cortes a pendientes técnicos y mantiene los pendientes comerciales en el combinado", () => {
@@ -697,14 +690,15 @@ describe("orden de fabricación y materiales", () => {
     const cutsText = pdfText(cutsPdf);
     const combinedText = pdfText(createFabricationWorkOrderPdf(order, metadata));
 
-    expect(cutsText).toContain("V2: 2 × 1.300 mm");
-    expect(cutsText).not.toContain("V2 · Ventana corredera Riel superior");
+    expect(cutsText).toContain("V2 · 2 × 1.300 mm");
+    expect(cutsText).not.toContain("Ventana corredera");
     expect(cutsText).toContain("3.391 mm");
     expect(cutsText).toContain("Pauta conjunta");
     expect(cutsText).toContain("presentación física y largo comercial");
     expect(cutsText).toContain("Despiece estructural preliminar");
     expect(cutsText).toContain("Revisión técnica · cortes históricos");
-    expect(cutsText).toContain("Puerta pivotante 1 hoja");
+    expect(cutsText).toContain("P1");
+    expect(cutsText).not.toContain("Ventana corredera");
     expect(cutsText).toContain("configuración pivotante contradice la receta corredera");
     expect(cutsText).not.toContain("Perfil 5001: precio");
     expect(cutsText).not.toContain("Perfil 5001: SKU proveedor");
@@ -858,22 +852,18 @@ describe("orden de fabricación y materiales", () => {
     const text = pdfText(pdf);
 
     expect(pdf.getNumberOfPages()).toBe(1);
-    expect(text.split("Ventana corredera").length - 1).toBe(3);
+    expect(text).not.toContain("Ventana corredera");
     expect(text).toContain("V1");
     expect(text).toContain("V2");
     expect(text).toContain("V3");
-    expect(text).toContain("1.800 × 1.200 mm");
-    expect(text).toContain("2 u.");
-    expect(text).toContain("V1: 2 × 1.800 mm");
-    expect(text).toContain("V2: 1 × 2.400 mm");
-    expect(text).toContain("V3: 1 × 1.800 mm");
-    expect(text).toContain("Tira 1 · 6.000 mm · Aluminio mate");
-    expect(text).toContain("Tira 2 · 6.000 mm · Aluminio mate");
-    expect(text).toContain("Tira 1 · 6.000 mm · Blanco");
-    expect(text).toContain("V1: 2 × 900 mm · Zócalo");
-    expect(text).toContain("V2: 2 × 900 mm · Cabezal");
+    expect(text).toContain("V1 · 2 × 1.800 mm");
+    expect(text).toContain("V2 · 1 × 2.400 mm");
+    expect(text).toContain("V3 · 1 × 1.800 mm");
+    expect(text).toContain("Tira 1 · 6.000 mm");
+    expect(text).toContain("V1 · 2 × 900 mm");
+    expect(text).toContain("V2 · 2 × 900 mm");
     expect(text).not.toContain("1.800 mm · Riel superior");
-    expect(text).toContain("600 mm Teórico");
+    expect(text).toContain("600 mm");
 
     if (process.env.VENTORA_PDF_EXAMPLE === "1") {
       const outputDirectory = pdfExampleDirectory();
@@ -887,21 +877,20 @@ describe("orden de fabricación y materiales", () => {
     const confirmedPdf = createFabricationWorkOrderPdf({ ...order, cutPlanPhysicalState: "confirmada" }, {
       companyName: "Taller", quoteCode: "COT-CONF", workName: "Obra", issueDate: "14 nov 2026",
     }, null, "profile-cuts");
-    expect(pdfText(confirmedPdf)).toContain("3.391 mm Confirmado");
-    expect(pdfText(confirmedPdf)).not.toContain("Teórico");
+    expect(pdfText(confirmedPdf)).toContain("3.391 mm");
+    expect(pdfText(confirmedPdf)).not.toContain("Distribución referencial");
 
     const theoreticalPdf = createFabricationWorkOrderPdf({ ...order, cutPlanPhysicalState: "teorica" }, {
       companyName: "Taller", quoteCode: "COT-TEO", workName: "Obra", issueDate: "14 nov 2026",
     }, null, "profile-cuts");
-    expect(pdfText(theoreticalPdf)).toContain("3.391 mm Teórico");
-    expect(pdfText(theoreticalPdf)).not.toContain("Confirmado");
+    expect(pdfText(theoreticalPdf)).toContain("3.391 mm");
+    expect(pdfText(theoreticalPdf)).toContain("Distribución referencial");
 
     const pendingPdf = createFabricationWorkOrderPdf({
       ...order,
       cutGroups: [{ ...order.cutGroups[0]!, barIndex: null, theoreticalRemnantMm: null }],
     }, { companyName: "Taller", quoteCode: "COT-PEND", workName: "Obra", issueDate: "14 nov 2026" }, null, "profile-cuts");
     expect(pdfText(pendingPdf)).toContain("Pendiente");
-    expect(pdfText(pendingPdf)).not.toContain("Teórico");
-    expect(pdfText(pendingPdf)).not.toContain("Confirmado");
+    expect(pdfText(pendingPdf)).toContain("Remanente teórico");
   });
 });
