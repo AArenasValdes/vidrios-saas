@@ -33,6 +33,7 @@ import {
 } from "@/features/fabricacion/fixtures/l20-alumetrica-variant-recipes";
 import {
   describeSodalL25PautaMessage,
+  getSodalL25VisualCompositionIssue,
   isSodalL25CatalogKey,
   resolveSodalL25QuoteConfig,
 } from "@/features/fabricacion/services/sodal-l25-context.service";
@@ -256,6 +257,18 @@ export function resolveFabricacionDespieceForQuoteItem(input: {
   const presentation = resolveQuotePresentationForFabrication(input.item);
   const compositionCatalogKey =
     input.lineCatalogKey?.trim() || presentation.catalogLineKey?.trim() || null;
+  const l25CompositionIssue = isSodalL25CatalogKey(resolveEffectiveSodalL25CatalogKey({
+    catalogLineKey: compositionCatalogKey,
+    nombre: input.item.lineaComercial,
+  }))
+    ? getSodalL25VisualCompositionIssue(presentation)
+    : null;
+  if (l25CompositionIssue) {
+    return {
+      estado: "composicion_sin_receta", formal: null, cubication: null, recipe: null,
+      barsAvailable: false, preliminary: false, message: l25CompositionIssue,
+    };
+  }
   const veratec7400FourMobileBaseSelected = isVeratec7400FourMobileComposition(
     presentation,
     compositionCatalogKey

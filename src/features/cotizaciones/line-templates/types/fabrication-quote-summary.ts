@@ -21,6 +21,8 @@ import { hasQuickCompositionStructuralChanges } from "@/features/cotizaciones/vi
 import { isVeratec7400FourMobileComposition } from "@/features/fabricacion/services/veratec-quote-composition.service";
 import { resolveFrozenGlassThickness } from "@/features/fabricacion/services/glass-thickness-resolution.service";
 import { hasPivotanteSlidingRecipeConflict } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
+import { getSodalL25VisualCompositionIssue, isSodalL25CatalogKey } from "@/features/fabricacion/services/sodal-l25-context.service";
+import { resolveEffectiveSodalL25CatalogKey } from "@/features/fabricacion/services/sodal-l25-presentation.service";
 
 export type FabricationProfileCoverageItem = {
   itemId: string;
@@ -219,7 +221,10 @@ export function buildFabricationQuoteSummary(
       structuralCompositionChanged || hasManualSnapshot ? null : liveResolution
     );
     const formalIdentity = item.fabricacionSnapshot?.recipeIdentity;
-    const identityConflict = hasPivotanteSlidingRecipeConflict({
+    const l25CompositionIssue = isSodalL25CatalogKey(resolveEffectiveSodalL25CatalogKey({
+      catalogLineKey: meta.catalogLineKey, nombre: item.lineaComercial,
+    })) ? getSodalL25VisualCompositionIssue(meta) : null;
+    const identityConflict = Boolean(l25CompositionIssue) || hasPivotanteSlidingRecipeConflict({
       commercialType: item.tipo ?? item.tipoItem,
       commercialSystem: meta.sistema,
       commercialConfiguration: meta.configuracion,
@@ -250,7 +255,7 @@ export function buildFabricationQuoteSummary(
               : "unvalidated";
     const reason = operationalStatus === "missing_snapshot" ? "No existe snapshot técnico con cortes guardados."
       : operationalStatus === "unvalidated" ? "La receta guardada no está validada para pauta operativa."
-        : operationalStatus === "incompatible" ? "La identidad comercial contradice la tipología del snapshot técnico."
+        : operationalStatus === "incompatible" ? l25CompositionIssue ?? "La identidad comercial contradice la tipología del snapshot técnico."
           : operationalStatus === "preliminary" ? "El despiece es preliminar y requiere revisión técnica."
             : null;
     profileCoverageItems.push({

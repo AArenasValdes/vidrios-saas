@@ -91,7 +91,7 @@ function SodalL25SnapshotSynchronizer({
   lineTemplates: CotizacionLineTemplate[];
   onUpdateItem: Props["onUpdateItem"];
   resolutionKey: string;
-  onResolutionSettled: (key: string, settled: boolean) => void;
+  onResolutionSettled: (key: string, settled: boolean, message: string | null) => void;
 }) {
   const form = useMemo(() => mapItemToForm(item), [item]);
   const presentationMeta = useMemo(() => getPiecePresentationMeta(item), [item]);
@@ -124,8 +124,13 @@ function SodalL25SnapshotSynchronizer({
   const lastSyncedKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    onResolutionSettled(resolutionKey, !isResolving);
-  }, [isResolving, onResolutionSettled, resolutionKey]);
+    onResolutionSettled(
+      resolutionKey,
+      !isResolving,
+      error ? "No se pudieron cargar las recetas; el despiece queda pendiente." :
+        resolution && resolution.estado !== "calculado" ? resolution.message : null,
+    );
+  }, [error, isResolving, onResolutionSettled, resolution, resolutionKey]);
 
   useEffect(() => {
     if (!resolution || resolution.estado !== "calculado" || !resolution.formal) {
@@ -234,10 +239,12 @@ export function CuadernoConstructorMovil({
   const [l25ResolutionState, setL25ResolutionState] = useState<{
     key: string;
     settled: boolean;
+    message: string | null;
   } | null>(null);
-  const handleL25ResolutionSettled = useCallback((key: string, settled: boolean) => {
+  const handleL25ResolutionSettled = useCallback((key: string, settled: boolean, message: string | null) => {
     setL25ResolutionState((current) =>
-      current?.key === key && current.settled === settled ? current : { key, settled }
+      current?.key === key && current.settled === settled && current.message === message
+        ? current : { key, settled, message }
     );
   }, []);
   const l25ResolutionIsSettled = Boolean(item.fabricacionSnapshot) || (
@@ -618,7 +625,9 @@ export function CuadernoConstructorMovil({
                         </p>
                         {isSodalL25Item && !item.fabricacionSnapshot ? (
                           <p className={s.emptyHelp} role="status" style={{ textAlign: "left" }}>
-                            Al confirmar la pieza se calculará el despiece si esta combinación tiene receta validada.
+                            {l25ResolutionState?.key === l25ResolutionKey && l25ResolutionState.message
+                              ? l25ResolutionState.message
+                              : "Al confirmar la pieza se calculará el despiece si esta combinación tiene receta validada."}
                           </p>
                         ) : null}
                         {cubicacionDomain.technicalSummary.hasSnapshot ? (

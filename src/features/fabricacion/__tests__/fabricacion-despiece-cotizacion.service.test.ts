@@ -3003,6 +3003,7 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
       expect(resolved.recipe?.id).toBe(`ventora-preview:226:${variant}`);
       expect(resolved.formal?.result.perfiles.find((row) => row.funcion === "Marco horizontal")?.medidaMm).toBe(1205);
     });
+
   });
 
   it("no calcula despiece de un borrador que aún no está listo para probar", () => {
@@ -3163,6 +3164,66 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
   });
 
   describe("L25 Constructor móvil 2H por identidad exacta", () => {
+    it("resuelve la identidad visual y técnica guardada en Constructor QA 1386", () => {
+      const bundle = buildAllSodalL25Recipes().find(
+        (entry) => entry.recipeId === "monolitico_pierna_abierta_2h_1800x1500"
+      )!;
+      const recipe = recipeRecord({
+        id: "89210caf-d06b-4891-8c94-e28e77374bb2",
+        organizationId: 3,
+        lineTemplateId: 207,
+        lineName: "Serie 25",
+        scope: "organization",
+        variant: "monolithic_open_normal",
+        status: "validated",
+        definition: bundle.definition,
+        sourceReference: bundle.sourceReference,
+        sourceType: "manufacturer",
+        sourceName: "SODAL",
+        sourceRevision: SODAL_L25_FORMULA_VERSION,
+      });
+      const item = {
+        ...quoteItem({ lineTemplateId: "207", ancho: 1800, alto: 1500 }),
+        lineaComercial: "L25",
+        descripcion: "Ventana de aluminio con vidrio incoloro.",
+        vidrio: "QA Monolitico 5mm fix1",
+        observaciones: encodeCotizacionItemPresentationMeta({
+          lineTemplateId: "207", catalogLineKey: "ventora:l25", sistema: "Personalizado",
+          configuracion: "Personalizado", hojasBase: 1,
+          guidedVisualConfig: createQuoteConstructorPresetConfig("corredera", { widthMm: 1800, heightMm: 1500 }),
+          fabricacionTipologia: "corredera", fabricacionHojas: 2, fabricacionModulos: 2,
+          fabricacionApertura: "corredera", fabricacionGlazing: "monolithic",
+          fabricacionLeg: "open", fabricacionReinforcement: "normal",
+          fabricacionVariante: "monolithic_open_normal", fabricationRecipeId: recipe.id,
+        }),
+      };
+      const result = resolveFabricacionDespieceForQuoteItem({
+        item, recipes: [recipe], organizationId: 3, lineTemplateId: 207, lineCatalogKey: "ventora:l25",
+      });
+      expect(result.estado).toBe("calculado");
+      expect(result.formal?.recipeId).toBe(recipe.id);
+      const rebuilt = buildItemFromForm(mapItemToForm(item), [item], item.id, {
+        fabricationRecipes: [recipe], organizationId: 3,
+      });
+      expect(rebuilt.fabricacionSnapshot?.recipeId).toBe(recipe.id);
+      const incompatible = {
+        ...item,
+        observaciones: encodeCotizacionItemPresentationMeta({
+          ...decodeCotizacionItemPresentationMeta(item.observaciones),
+          guidedVisualConfig: createQuoteConstructorPresetConfig("fijo", { widthMm: 1800, heightMm: 1500 }),
+        }),
+      };
+      const rejected = resolveFabricacionDespieceForQuoteItem({
+        item: incompatible, recipes: [recipe], organizationId: 3, lineTemplateId: 207, lineCatalogKey: "ventora:l25",
+      });
+      expect(rejected.estado).toBe("composicion_sin_receta");
+      expect(rejected.message).toContain("composición");
+      expect(rejected.formal).toBeNull();
+      expect(buildItemFromForm(mapItemToForm(incompatible), [incompatible], incompatible.id, {
+        fabricationRecipes: [recipe], organizationId: 3,
+      }).fabricacionSnapshot).toBeNull();
+    });
+
     beforeEach(() => {
       resetZetaConfirmedCacheForTests();
       resetEvidenceSidecarCacheForTests();

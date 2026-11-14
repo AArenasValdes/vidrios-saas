@@ -43,6 +43,35 @@ export type SodalL25VariantOption<T extends string> = {
 
 export { isSodalL25CatalogKey };
 
+/** A drawing may represent one sliding assembly, but never supplies its sash count. */
+export function getSodalL25VisualCompositionIssue(input: {
+  guidedVisualConfig?: CotizacionItemPresentationMeta["guidedVisualConfig"];
+  fabricacionHojas?: number | null;
+  sheetScheme?: string | null;
+  sheetVariant?: string | null;
+}): string | null {
+  const visual = input.guidedVisualConfig;
+  if (!visual) return null;
+  if (visual.root.kind !== "module" || visual.root.type !== "corredera" || visual.root.renderAsSingleLeaf) {
+    return "La composición incluye módulos que la receta L25 no identifica. Revisa la configuración antes de calcular el despiece.";
+  }
+  if (visual.frameShape.kind !== "rect" || visual.root.glassShape.kind !== "rect") {
+    return "La receta L25 requiere un marco y vidrio rectangulares. La forma seleccionada necesita revisión técnica.";
+  }
+  const schemeMatch = input.sheetScheme?.trim().match(/^(\d+)\s*hojas?$/i);
+  const schemeLeaves = schemeMatch ? Number(schemeMatch[1]) : null;
+  if (schemeLeaves && input.fabricacionHojas && schemeLeaves !== input.fabricacionHojas) {
+    return "La cantidad de hojas comercial no coincide con la selección técnica de L25.";
+  }
+  if (/\bfij[ao]s?\b/i.test(input.sheetVariant ?? "")) {
+    return "La configuración seleccionada incluye una hoja fija y necesita una receta L25 compatible.";
+  }
+  if ((input.fabricacionHojas ?? schemeLeaves ?? 0) < 2) {
+    return "Selecciona explícitamente la cantidad de hojas de la corredera para resolver la receta L25.";
+  }
+  return null;
+}
+
 export function inferSodalL25GlazingFromGlass(input: {
   vidrio?: string | null;
   catalogEspesor?: string | null;

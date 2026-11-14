@@ -309,4 +309,25 @@ describe("CuadernoConstructorMovil glass identity", () => {
       lineCatalogKey: "ventora:l25",
     }));
   });
+
+  it("explains why an incompatible L25 composition remains pending", async () => {
+    const message = "La composición incluye módulos que la receta L25 no identifica.";
+    mockResolveFabrication.mockReturnValue({
+      estado: "composicion_sin_receta", formal: null, cubication: null, recipe: null,
+      barsAvailable: false, preliminary: false, message,
+    });
+    const item = baseItem({
+      lineaComercial: "L25",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "75", catalogLineKey: "ventora:l25", fabricacionHojas: 2,
+        guidedVisualConfig: createQuoteConstructorPresetConfig("fijo"),
+      }),
+      fabricacionSnapshot: null,
+    });
+    const onUpdateItem = jest.fn();
+    renderConstructor(item, onUpdateItem);
+    fireEvent.click(screen.getByRole("button", { name: /Cubicación y despiece/i }));
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(onUpdateItem).not.toHaveBeenCalled();
+  });
 });

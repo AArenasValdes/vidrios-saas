@@ -1,6 +1,7 @@
 import {
   applySodalL25VidrioToForm,
   findSodalL25LineRecipe,
+  getSodalL25VisualCompositionIssue,
   listSodalL25LegOptions,
   listSodalL25ReinforcementOptions,
   mergeSodalL25WorkspaceRecipes,
@@ -9,6 +10,7 @@ import {
   summarizeSodalL25LineCoverage,
 } from "@/features/fabricacion/services/sodal-l25-context.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
+import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 
 function l25Recipe(
   hojas: 2 | 3 | 4,
@@ -56,6 +58,14 @@ function l25Recipe(
 }
 
 describe("sodal-l25-context.service", () => {
+  it("acepta el esquema histórico explícito y rechaza hojas comerciales contradictorias", () => {
+    const guidedVisualConfig = createQuoteConstructorPresetConfig("corredera");
+    expect(getSodalL25VisualCompositionIssue({ guidedVisualConfig, sheetScheme: "2 hojas" })).toBeNull();
+    expect(getSodalL25VisualCompositionIssue({ guidedVisualConfig, sheetScheme: "3 hojas", fabricacionHojas: 2 }))
+      .toContain("no coincide");
+    expect(getSodalL25VisualCompositionIssue({ guidedVisualConfig, sheetScheme: "2 hojas", sheetVariant: "1 fija + 1 móvil" }))
+      .toContain("hoja fija");
+  });
   it("mantiene disponibles las variantes canónicas L25 aunque la consulta persistida esté vacía", () => {
     const legs = listSodalL25LegOptions({
       recipes: [],
