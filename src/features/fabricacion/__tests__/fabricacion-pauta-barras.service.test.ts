@@ -1,5 +1,8 @@
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
 import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
+import { resolveFabricacionParametrosCorte } from "@/features/fabricacion/services/fabricacion-parametros-corte.service";
+import { construirSnapshotFabricacionCotizacion, recalcularPautaSnapshotConParametrosCorte } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
+import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import { crearRecetaPlantillaVentoraCorredera2H } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
 
@@ -73,6 +76,100 @@ describe("pauta referencial de barras", () => {
     expect(cero.parametrosFisicos).toMatchObject({ estado: "confirmado", perdidaCorteMm: 0 });
     expect(cero.barras[0]?.sobranteMm).toBe(0);
   });
+  it("usa parámetros confirmados del taller en una receta sin reglas de sierra y conserva la receta", () => {
+    const definition = recipe(1500);
+    definition.perfiles[0]!.reglaCantidad = { tipo: "fija", cantidad: 4 };
+    definition.configuracionCorte = {
+      perdidaCorteMm: null,
+      despunteInicialMm: null,
+      sobranteMinimoAprovechableMm: 450,
+    };
+    const original = JSON.stringify(definition);
+    const applied = resolveFabricacionParametrosCorte({
+      recipeConfiguration: definition.configuracionCorte,
+      organizationSettings: {
+        perdidaCorteMm: 3,
+        despunteInicialMm: 12,
+        procedimiento: "por_pieza",
+        fuente: "Parámetros de corte confirmados por el taller.",
+        largosComercialesConfirmados: false,
+        confirmedBy: "user-1",
+        confirmedAt: "2026-11-14T12:00:00.000Z",
+        organizationId: 8,
+      },
+    });
+    const result = construirPautaBarrasFabricacion({
+      receta: definition,
+      resultado: calcularCubicacionYPauta(definition, input),
+      parametrosCorte: applied,
+    });
+
+    expect(result.barras).toHaveLength(2);
+    expect(result.barras.flatMap((bar) => bar.cortes)).toHaveLength(4);
+    expect(result.parametrosFisicos).toMatchObject({
+      estado: "pendiente",
+      perdidaCorteMm: 3,
+      despunteInicialMm: 12,
+      origenParametros: "organizacion",
+      confirmadoPor: "user-1",
+      organizacionId: 8,
+    });
+    expect(JSON.stringify(definition)).toBe(original);
+
+    const recipeRecord: FabricationRecipeRecord = {
+      id: "recipe-org-settings", organizationId: 8, lineTemplateId: 25, scope: "ventora", providerName: "Ventora",
+      lineName: "L25", typology: "corredera", leavesCount: 2, variant: "estandar", version: 1,
+      status: "validated", definition, sourceType: "manual", sourceReference: null, parentRecipeId: null,
+      validatedAt: null, validatedBy: null, createdAt: "2026-11-01T00:00:00.000Z", updatedAt: "2026-11-01T00:00:00.000Z", eliminadoEn: null,
+    };
+    const snapshot = construirSnapshotFabricacionCotizacion({
+      recipe: recipeRecord,
+      entrada: input,
+      organizationCutSettings: {
+        perdidaCorteMm: 3, despunteInicialMm: 12, procedimiento: "por_pieza",
+        fuente: "Parámetros de corte confirmados por el taller.", largosComercialesConfirmados: false,
+        confirmedBy: "user-1", confirmedAt: "2026-11-14T12:00:00.000Z", organizationId: 8,
+      },
+    });
+    expect(snapshot.pautaBarras?.barras).toHaveLength(2);
+    expect(snapshot.pautaBarras?.parametrosFisicos).toMatchObject({ origenParametros: "organizacion", estado: "pendiente", organizacionId: 8 });
+  });
+  it("recalcula un snapshot solo con su receta exacta y conserva las longitudes congeladas", () => {
+    const definition = recipe(1500);
+    definition.perfiles[0]!.reglaCantidad = { tipo: "fija", cantidad: 4 };
+    definition.configuracionCorte = { perdidaCorteMm: null, despunteInicialMm: null, sobranteMinimoAprovechableMm: null };
+    const record: FabricationRecipeRecord = {
+      id: "recipe-1", organizationId: 8, lineTemplateId: 25, scope: "ventora", providerName: "Ventora",
+      lineName: "L25", typology: "corredera", leavesCount: 2, variant: "estandar", version: 1,
+      status: "validated", definition, sourceType: "manual", sourceReference: null, parentRecipeId: null,
+      validatedAt: null, validatedBy: null, createdAt: "2026-11-01T00:00:00.000Z", updatedAt: "2026-11-01T00:00:00.000Z", eliminadoEn: null,
+    };
+    const snapshot = construirSnapshotFabricacionCotizacion({ recipe: record, entrada: input });
+    const recalculated = recalcularPautaSnapshotConParametrosCorte({
+      snapshot,
+      recipe: record,
+      parameters: {
+        perdidaCorteMm: 3, despunteInicialMm: 12, procedimiento: "por_pieza",
+        fuente: "Ajuste confirmado solo para este trabajo.", largosComercialesConfirmados: false,
+        confirmedBy: "user-1", confirmedAt: "2026-11-14T12:00:00.000Z", organizationId: 8,
+      },
+    });
+
+    expect(snapshot.pautaBarras?.barras).toHaveLength(1);
+    expect(recalculated?.pautaBarras?.barras).toHaveLength(2);
+    expect(recalculated?.pautaBarras?.barras.flatMap((bar) => bar.cortes)).toHaveLength(4);
+    expect(recalculated?.result).toEqual(snapshot.result);
+    expect(recalculated?.pauta).toEqual(snapshot.pauta);
+    expect(recalculated?.pautaBarras?.parametrosFisicos).toMatchObject({ origenParametros: "trabajo", estado: "pendiente", organizacionId: 8 });
+    expect(recalcularPautaSnapshotConParametrosCorte({
+      snapshot,
+      recipe: { ...record, version: 2 },
+      parameters: {
+        perdidaCorteMm: 3, despunteInicialMm: 12, procedimiento: "por_pieza",
+        fuente: "Ajuste de prueba", largosComercialesConfirmados: false,
+      },
+    })).toBeNull();
+  });
   it("aplica FFD con perdida por corte y despunte inicial", () => {
     const definition = recipe();
     const result = construirPautaBarrasFabricacion({
@@ -136,6 +233,30 @@ describe("pauta referencial de barras", () => {
     expect(
       result.advertencias.some((entry) => entry.codigo === "PAUTA_BARRAS_INCOMPLETA")
     ).toBe(false);
+  });
+
+  it("no mezcla perfiles de la misma identidad si sus largos comerciales son distintos", () => {
+    const definition = recipe(2000);
+    definition.configuracionCorte = {
+      perdidaCorteMm: 0,
+      despunteInicialMm: 0,
+      sobranteMinimoAprovechableMm: 0,
+    };
+    definition.perfiles[0]!.reglaCantidad = { tipo: "fija", cantidad: 2 };
+    definition.perfiles.push({
+      ...definition.perfiles[0]!,
+      id: "perfil-b",
+      largoComercialMm: 3000,
+    });
+
+    const result = construirPautaBarrasFabricacion({
+      receta: definition,
+      resultado: calcularCubicacionYPauta(definition, input),
+    });
+
+    expect(result.barras).toHaveLength(3);
+    expect(result.barras.map((bar) => bar.largoComercialMm).sort((a, b) => a - b)).toEqual([3000, 3000, 6000]);
+    expect(result.barras.map((bar) => bar.cortes.length).sort((a, b) => a - b)).toEqual([1, 1, 2]);
   });
 
   it("mantiene el código comercial de receta aunque use una identidad interna de taller", () => {

@@ -1,5 +1,10 @@
 # Data Model Map - Ventora
 
+## Parámetros de corte por organización (2026-11-14, migración local pendiente)
+
+- Tabla `organization_fabrication_cut_settings`: kerf, despunte inicial, procedimiento `por_pieza` y trazabilidad de confirmación/actualización. No contiene largo por barra.
+- Acceso y aislamiento: `GET/PUT /api/configuracion/fabricacion/parametros-corte`; la organización y el actor proceden de la sesión. La API hace las escrituras mediante `service_role`; `authenticated` solo lee la fila de su organización. Ver migración y políticas en `supabase/docs/database_map.md`.
+
 Estado: vigente
 Actualizado: 2026-10-15
 Responsable: ingeniería + Supabase

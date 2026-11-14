@@ -487,6 +487,7 @@ Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las
 - **Acciones principales**: Actualizar perfil, subir logo
 - **Archivos a tocar para modificar**: `app/(pwa-app)/configuracion/empresa/page.tsx`, `src/features/organization-profile/hooks/useOrganizationProfile.ts`, `src/features/organization-profile/services/organization-profile.service.ts`, `src/features/organization-profile/repositories/organization-profile.repository.ts`
 - **Riesgos**: No cambiar slug sin actualizar indice unico. No romper upload de logo (requiere bucket `organization-assets`) ni la marca manual de `channel_ready` al copiar link. El bloque **Catálogo privado** enlaza a `/configuracion/empresa/lineas-precios` e importación XLSX/CSV.
+- **Fabricación**: el acordeón `FabricationCutSettingsSection` configura por organización pérdida por corte, despunte inicial y confirmación del procedimiento `por_pieza`; usa `GET/PUT /api/configuracion/fabricacion/parametros-corte`. La migración `20261114120000_organization_fabrication_cut_settings.sql` es local a esta rama y no se ha aplicado remotamente.
 
 ---
 
@@ -626,6 +627,7 @@ Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las
 | Ruta | Metodo | Proposito | Archivo |
 |---|---|---|---|
 | `/api/cotizaciones/[id]/costo-tecnico-parcial` | GET/POST | Lee/guarda el costo neto interno; POST idempotente por defecto y `{ refresh: true }` recalcula explícitamente con precios vigentes solo para admin/tecnico y la organización de la cotización | `app/api/cotizaciones/[id]/costo-tecnico-parcial/route.ts` |
+| `/api/configuracion/fabricacion/parametros-corte` | GET/PUT | Lee y guarda parámetros confirmados de corte para la organización de la sesión; PUT solo admin/tecnico, procedimiento `por_pieza`, `organization_id` y actor nunca se aceptan del cliente | `app/api/configuracion/fabricacion/parametros-corte/route.ts`; tabla `organization_fabrication_cut_settings` |
 | `/api/cotizaciones/[id]/optimizacion-vidrios` | GET/POST | Lee snapshots por organización, informa geometrías admisibles/exclusiones; `geometric_preview` acepta `recipe_trace` trazable, mientras `provider_pdf` conserva cobertura estricta | `app/api/cotizaciones/[id]/optimizacion-vidrios/route.ts`; matriz `docs/fabricacion/DISTRIBUCION_PRELIMINAR_GEOMETRIA.md` |
 | `/api/solicitud/[empresa]` | POST | Crear solicitud publica (rate limited) | `app/api/solicitud/[empresa]/route.ts` |
 | `/api/solicitudes/resumen` | GET | Resumen solicitudes por org (auth) | `app/api/solicitudes/resumen/route.ts` |

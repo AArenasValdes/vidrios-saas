@@ -10,6 +10,7 @@ import type {
 } from "@/features/fabricacion/types/fabricacion-snapshot";
 import { resolvePerfilMaterialKey } from "@/features/fabricacion/services/taller-perfiles.service";
 import { resolveLargoComercialMm } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
+import type { FabricacionParametrosCorteAplicados } from "@/features/fabricacion/services/fabricacion-parametros-corte.service";
 
 type CorteExpandido = {
   componenteId: string;
@@ -55,24 +56,61 @@ export function resolveConfiguracionCorteParaPauta(
 export function construirPautaBarrasFabricacion(input: {
   receta: FabricacionReceta;
   resultado: FabricacionResultadoCubicacion;
+  parametrosCorte?: FabricacionParametrosCorteAplicados | null;
+  /** Preserva longitudes ya congeladas al recalcular solo parámetros físicos. */
+  largosComercialesPorComponenteId?: Readonly<Record<string, number>>;
 }): FabricacionPautaBarras {
-  const configuracion = resolveConfiguracionCorteParaPauta(
-    input.receta.configuracionCorte
-  );
+  const parametroCorte = input.parametrosCorte;
+  const configuracion = parametroCorte
+    ? {
+        perdidaCorteMm: parametroCorte.perdidaCorteMm ?? 0,
+        despunteInicialMm: parametroCorte.despunteInicialMm ?? 0,
+        sobranteMinimoAprovechableMm:
+          parametroCorte.sobranteMinimoAprovechableMm ?? 0,
+      }
+    : resolveConfiguracionCorteParaPauta(input.receta.configuracionCorte);
 
   const advertencias: FabricacionAdvertencia[] = [];
-  const perdidaConocida = input.receta.configuracionCorte?.perdidaCorteMm ?? null;
-  const despunteConocido = input.receta.configuracionCorte?.despunteInicialMm ?? null;
+  const perdidaConocida = parametroCorte
+    ? parametroCorte.perdidaCorteMm
+    : input.receta.configuracionCorte?.perdidaCorteMm ?? null;
+  const despunteConocido = parametroCorte
+    ? parametroCorte.despunteInicialMm
+    : input.receta.configuracionCorte?.despunteInicialMm ?? null;
   const confirmacion = input.receta.configuracionCorte?.confirmacionFisica;
+  const procedimiento = parametroCorte
+    ? parametroCorte.procedure
+    : confirmacion?.procedimiento ?? null;
+  const largosComercialesConfirmados = parametroCorte
+    ? parametroCorte.largosComercialesConfirmados
+    : confirmacion?.largosComercialesConfirmados === true;
   const parametrosFisicos: NonNullable<FabricacionPautaBarras["parametrosFisicos"]> = {
     estado: perdidaConocida != null && despunteConocido != null &&
-      confirmacion?.procedimiento === "por_pieza" && confirmacion.largosComercialesConfirmados === true && Boolean(confirmacion.fuente?.trim())
+      procedimiento === "por_pieza" && largosComercialesConfirmados &&
+      Boolean((parametroCorte?.sourceLabel ?? confirmacion?.fuente)?.trim())
       ? "confirmado" : "pendiente",
     perdidaCorteMm: perdidaConocida,
     despunteInicialMm: despunteConocido,
-    procedimiento: confirmacion?.procedimiento ?? null,
-    fuente: confirmacion?.fuente?.trim() || null,
-    largosComercialesConfirmados: confirmacion?.largosComercialesConfirmados === true,
+    procedimiento,
+    fuente: parametroCorte?.sourceLabel?.trim() || confirmacion?.fuente?.trim() || null,
+    largosComercialesConfirmados,
+    ...(parametroCorte
+      ? {
+          origenParametros:
+            parametroCorte.source === "job_override"
+              ? "trabajo"
+              : parametroCorte.source === "unknown"
+                ? "desconocido"
+                : parametroCorte.source === "organization"
+                  ? "organizacion"
+                  : parametroCorte.source === "recipe"
+                    ? "receta"
+                    : "desconocido",
+          confirmadoPor: parametroCorte.confirmedBy,
+          confirmadoEn: parametroCorte.confirmedAt,
+          organizacionId: parametroCorte.organizationId,
+        }
+      : { origenParametros: confirmacion ? "receta" as const : "desconocido" as const }),
   };
   if (parametrosFisicos.estado === "pendiente") {
     advertencias.push({ codigo: "PAUTA_FISICA_PENDIENTE", nivel: "advertencia", mensaje: "PAUTA TEÓRICA · VALIDAR CORTE Y DESPUNTE ANTES DE FABRICAR" });
@@ -84,8 +122,11 @@ export function construirPautaBarrasFabricacion(input: {
     const perfil = input.receta.perfiles.find(
       (componente) => componente.id === fila.componenteId
     );
+    const frozenLength = input.largosComercialesPorComponenteId?.[fila.componenteId];
     const largoComercialMm = perfil
-      ? resolveLargoComercialMm(perfil, input.receta)
+      ? (typeof frozenLength === "number" && Number.isFinite(frozenLength) && frozenLength > 0
+          ? frozenLength
+          : resolveLargoComercialMm(perfil, input.receta))
       : 0;
     const keyAviso = perfil
       ? `${resolvePerfilMaterialKey(perfil)}::${perfil.codigoPerfil.trim()}::${fila.funcion}`

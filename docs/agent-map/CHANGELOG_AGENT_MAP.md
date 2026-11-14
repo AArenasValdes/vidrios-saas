@@ -3193,3 +3193,10 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
 - `GlassDistributionPanel` ofrece vista previa geométrica y enlaza al flujo técnico de `/print/cotizaciones/[id]/fabricacion/vidrios`; ya no solicita `provider_pdf` ni muestra acciones operativas/compartir desde la vista preliminar.
 - El flujo técnico conserva el PDF de simulación y su acción operativa condicionada por `workshop_validated`. La API crea el perfil de cálculo con `workshopValidation: "unvalidated"` y rechaza `provider_pdf` si los resultados no declaran `workshop_validated`; no hay evidencia de salida operativa alcanzable desde el panel ni se debe convertir la captura manual en validación.
 - No se ejecutó el recorrido autenticado de Ventora Test en esta sesión; no se crearon producto, cotización ni descargas. Sin evidencia de persistencia remota o contenido real de PDF.
+
+## 2026-11-14 — Parámetros de corte por taller (rama dependiente de PR #20)
+
+- Se documenta `organization_fabrication_cut_settings`, su API autenticada y el acordeón compacto de configuración; la migración no se ha aplicado remotamente.
+- En cotizaciones nuevas de aluminio, la precedencia es ajuste confirmado del trabajo → parámetros confirmados de organización → valores aplicables documentados por receta → teórico/desconocido.
+- Cotizaciones existentes conservan snapshots; el resumen interno exige previsualización y confirmación explícita para aplicar parámetros solo a ese trabajo o guardarlos como predeterminados del taller.
+- El largo de barra sigue resolviéndose desde receta/perfil/presentación; kerf o despunte confirmados no confirman largos comerciales ni validación física de taller.

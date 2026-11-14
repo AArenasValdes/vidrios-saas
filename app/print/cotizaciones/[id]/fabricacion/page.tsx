@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import { mapRecordToDraft } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { ManualGlassPaneMeasurementsSnapshot } from "@/features/cotizaciones/types/manual-glass-pane-measurements";
@@ -18,6 +19,7 @@ import type { TechnicalCostSnapshot } from "@/features/proveedor-catalogos/servi
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import { getDefaultLineCatalogMetadata } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
+import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import { getLineTemplateWorkshopProfiles } from "@/features/cotizaciones/line-templates/types/line-profile-references";
 import { resolveSupplierPresentationsForQuote, type SupplierPresentationResolutionResponse, type SupplierPresentationQuoteItemRequest } from "@/features/proveedor-catalogos/services/supplier-presentations.client";
 import type { WorkProfilePriceReferenceRow } from "@/features/fabricacion/services/fabrication-work-materials.service";
@@ -30,10 +32,13 @@ import {
 } from "@/utils/cotizacion-item-presentation";
 import { resolveComponentColorName } from "@/constants/component-colors";
 import { loadVentoraPdfLogoDataUrl } from "@/features/fabricacion/services/ventora-pdf-assets.client";
+import { recalcularPautaSnapshotConParametrosCorte } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
+import type { FabricacionParametrosCorteConfirmados } from "@/features/fabricacion/services/fabricacion-parametros-corte.service";
 
 import { FabricacionResumenMovil } from "./fabricacion-resumen-movil";
 import { FabricacionResumenView } from "./fabricacion-resumen-view";
 import { CostoTecnicoParcialPanel } from "./costo-tecnico-parcial-panel";
+import { ParametrosCortePanel } from "./parametros-corte-panel";
 import s from "./page.module.css";
 
 const EMPTY_QUOTE_ITEMS: CotizacionWorkflowItem[] = [];
@@ -44,17 +49,34 @@ const EMPTY_QUOTE_ITEMS: CotizacionWorkflowItem[] = [];
  */
 export default function CotizacionFabricacionPrintPage() {
   const params = useParams<{ id: string }>();
+  const { user } = useAuth({ passive: true });
   const { getCotizacionById, loadCotizacionById, isReady, saveWorkflow, isSaving } = useCotizacionesStore({
     autoLoadSummary: false,
   });
   const cotizacion = getCotizacionById(params.id);
-  const [editedItems, setEditedItems] = useState<CotizacionWorkflowItem[] | null>(null);
+  const [editedItems, setEditedItems] = useState<{ revision: string; items: CotizacionWorkflowItem[] } | null>(null);
   const editedItemsRef = useRef<CotizacionWorkflowItem[] | null>(null);
+  const quoteRevision = cotizacion ? `${cotizacion.id}:${cotizacion.updatedAt}` : null;
+  const pendingCutSettingsPreviewRef = useRef<{
+    quoteId: string;
+    updatedAt: string;
+    baseItemsKey: string;
+    items: CotizacionWorkflowItem[];
+    updated: number;
+  } | null>(null);
   useEffect(() => {
     editedItemsRef.current = null;
-    setEditedItems(null);
+    pendingCutSettingsPreviewRef.current = null;
   }, [cotizacion?.id, cotizacion?.updatedAt]);
-  const items = editedItems ?? cotizacion?.items ?? EMPTY_QUOTE_ITEMS;
+  const items = editedItems?.revision === quoteRevision
+    ? editedItems.items
+    : cotizacion?.items ?? EMPTY_QUOTE_ITEMS;
+  const setQuoteItems = useCallback((nextItems: CotizacionWorkflowItem[], quoteId?: number | string, updatedAt?: string) => {
+    const id = quoteId ?? cotizacion?.id;
+    const revision = updatedAt ?? cotizacion?.updatedAt;
+    if (id == null || !revision) return;
+    setEditedItems({ revision: `${id}:${revision}`, items: nextItems });
+  }, [cotizacion?.id, cotizacion?.updatedAt]);
   const { templates: lineTemplates } = useCotizacionLineTemplates({ activeOnly: true });
   const { profile: organizationProfile } = useOrganizationProfile();
   const { recipes, organizationId: fabricationOrganizationId } = useFabricationRecipes({ readOnly: true });
@@ -284,8 +306,8 @@ export default function CotizacionFabricacionPrintPage() {
       };
     });
     editedItemsRef.current = nextItems;
-    setEditedItems(nextItems);
-  }, [cotizacion?.items]);
+    setQuoteItems(nextItems);
+  }, [cotizacion?.items, setQuoteItems]);
 
   const handleSaveFabricationItem = useCallback(async (
     itemId: string,
@@ -304,7 +326,7 @@ export default function CotizacionFabricacionPrintPage() {
         }
       : item);
     editedItemsRef.current = nextItems;
-    setEditedItems(nextItems);
+    setQuoteItems(nextItems);
     const draft = mapRecordToDraft(cotizacion);
     // mapRecordToDraft reconciles commercial prices; replace those items with
     // the same saved quote items so an explicit manual cut override is retained.
@@ -318,8 +340,8 @@ export default function CotizacionFabricacionPrintPage() {
       existingProjectId: cotizacion.projectId,
     });
     editedItemsRef.current = record.items;
-    setEditedItems(record.items);
-  }, [cotizacion, saveWorkflow]);
+    setQuoteItems(record.items, record.id, record.updatedAt);
+  }, [cotizacion, saveWorkflow, setQuoteItems]);
 
   const handleSaveManualGlassMeasurements = useCallback(async (
     itemId: string,
@@ -333,7 +355,7 @@ export default function CotizacionFabricacionPrintPage() {
     if (!nextItems.some((item) => item.id === itemId)) throw new Error("No encontramos el componente seleccionado.");
 
     editedItemsRef.current = nextItems;
-    setEditedItems(nextItems);
+    setQuoteItems(nextItems);
     const draft = mapRecordToDraft(cotizacion);
     draft.items = nextItems;
     const record = await saveWorkflow({
@@ -345,8 +367,94 @@ export default function CotizacionFabricacionPrintPage() {
       existingProjectId: cotizacion.projectId,
     });
     editedItemsRef.current = record.items;
-    setEditedItems(record.items);
-  }, [cotizacion, saveWorkflow]);
+    setQuoteItems(record.items, record.id, record.updatedAt);
+  }, [cotizacion, saveWorkflow, setQuoteItems]);
+
+  const eligibleCutSettingsItemCount = useMemo(() => items.filter((item) => {
+    const snapshot = item.fabricacionSnapshot;
+    if (!snapshot) return false;
+    const metadata = decodeCotizacionItemPresentationMeta(item.observaciones);
+    const catalogKey = metadata.catalogLineKey || lineTemplates.find((template) => String(template.id) === metadata.lineTemplateId)?.catalogKey;
+    const catalogLine = VENTORA_DEFAULT_LINE_CATALOG.find((line) => line.catalogKey === catalogKey);
+    return catalogLine?.material === "Aluminio" && recipes.some((recipe) => recipe.id === snapshot.recipeId && recipe.version === snapshot.recipeVersion);
+  }).length, [items, lineTemplates, recipes]);
+
+  const handlePreviewCutSettingsForThisJob = useCallback(async (
+    parameters: FabricacionParametrosCorteConfirmados
+  ) => {
+    if (!cotizacion) throw new Error("No encontramos la cotización actual.");
+    if (!user?.id) throw new Error("No pudimos identificar la sesión para registrar quién confirmó el ajuste.");
+    const currentItems = editedItemsRef.current ?? cotizacion.items;
+    let updated = 0;
+    const nextItems = currentItems.map((item) => {
+      const snapshot = item.fabricacionSnapshot;
+      if (!snapshot) return item;
+      const metadata = decodeCotizacionItemPresentationMeta(item.observaciones);
+      const template = lineTemplates.find((entry) => String(entry.id) === metadata.lineTemplateId);
+      const catalogKey = metadata.catalogLineKey || template?.catalogKey;
+      const catalogLine = VENTORA_DEFAULT_LINE_CATALOG.find((line) => line.catalogKey === catalogKey);
+      if (catalogLine?.material !== "Aluminio") return item;
+      const recipe = recipes.find((entry) => entry.id === snapshot.recipeId && entry.version === snapshot.recipeVersion);
+      if (!recipe) return item;
+      const recalculated = recalcularPautaSnapshotConParametrosCorte({
+        snapshot,
+        recipe,
+        parameters: { ...parameters, confirmedBy: user.id, organizationId: fabricationOrganizationId },
+      });
+      if (!recalculated) return item;
+      updated += 1;
+      return { ...item, fabricacionSnapshot: recalculated };
+    });
+    if (updated === 0) {
+      pendingCutSettingsPreviewRef.current = null;
+      return { updated: 0, skipped: eligibleCutSettingsItemCount, bars: 0, cuts: 0, physicalPending: 0 };
+    }
+    const updatedSnapshots = nextItems.flatMap((item, index) =>
+      item.fabricacionSnapshot !== currentItems[index]?.fabricacionSnapshot && item.fabricacionSnapshot
+        ? [item.fabricacionSnapshot]
+        : []
+    );
+    const bars = updatedSnapshots.reduce((total, snapshot) => total + (snapshot.pautaBarras?.barras.length ?? 0), 0);
+    const cuts = updatedSnapshots.reduce((total, snapshot) => total + (snapshot.pautaBarras?.barras.reduce((sum, bar) => sum + bar.cortes.length, 0) ?? 0), 0);
+    const physicalPending = updatedSnapshots.filter((snapshot) => snapshot.pautaBarras?.parametrosFisicos?.estado !== "confirmado").length;
+    pendingCutSettingsPreviewRef.current = {
+      quoteId: String(cotizacion.id),
+      updatedAt: cotizacion.updatedAt,
+      baseItemsKey: JSON.stringify(currentItems.map((item) => [item.id, item.fabricacionSnapshot ?? null])),
+      items: nextItems,
+      updated,
+    };
+    return { updated, skipped: currentItems.length - updated, bars, cuts, physicalPending };
+  }, [cotizacion, eligibleCutSettingsItemCount, fabricationOrganizationId, lineTemplates, recipes, user]);
+
+  const handleSaveCutSettingsPreview = useCallback(async () => {
+    if (!cotizacion) throw new Error("No encontramos la cotización actual.");
+    const preview = pendingCutSettingsPreviewRef.current;
+    if (!preview || preview.quoteId !== String(cotizacion.id)) {
+      throw new Error("La vista previa ya no está disponible. Calcula nuevamente antes de guardar.");
+    }
+    const currentItems = editedItemsRef.current ?? cotizacion.items;
+    const currentItemsKey = JSON.stringify(currentItems.map((item) => [item.id, item.fabricacionSnapshot ?? null]));
+    if (preview.updatedAt !== cotizacion.updatedAt || preview.baseItemsKey !== currentItemsKey) {
+      pendingCutSettingsPreviewRef.current = null;
+      throw new Error("La cotización cambió después de la vista previa. Calcula nuevamente antes de guardar.");
+    }
+    editedItemsRef.current = preview.items;
+    setQuoteItems(preview.items);
+    const draft = mapRecordToDraft(cotizacion);
+    draft.items = preview.items;
+    const record = await saveWorkflow({
+      draft,
+      estado: cotizacion.estado,
+      existingId: cotizacion.id,
+      existingCode: cotizacion.codigo,
+      existingClientId: cotizacion.clientId,
+      existingProjectId: cotizacion.projectId,
+    });
+    editedItemsRef.current = record.items;
+    setQuoteItems(record.items, record.id, record.updatedAt);
+    pendingCutSettingsPreviewRef.current = null;
+  }, [cotizacion, saveWorkflow, setQuoteItems]);
 
   const handlePrint = useCallback(() => {
     window.print();
@@ -407,6 +515,13 @@ export default function CotizacionFabricacionPrintPage() {
         <p role="status" data-testid="fabricacion-historica-ausente">
           Esta cotización no conserva una pauta técnica histórica.
         </p>
+      ) : null}
+      {cotizacion ? (
+        <ParametrosCortePanel
+          eligibleItemCount={eligibleCutSettingsItemCount}
+          onPreviewThisJob={handlePreviewCutSettingsForThisJob}
+          onSaveJobPreview={handleSaveCutSettingsPreview}
+        />
       ) : null}
       <div className={s.workspace}>
         <div className={s.desktopFabricacion} data-testid="fabricacion-desktop">

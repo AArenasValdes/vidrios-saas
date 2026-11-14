@@ -1,0 +1,49 @@
+.section {
+  overflow: hidden;
+  border: 1px solid #d9e0ea;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(36, 59, 107, 0.045);
+}
+
+.trigger {
+  width: 100%;
+  min-height: 78px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 0;
+  background: transparent;
+  color: #17243d;
+  text-align: left;
+  cursor: pointer;
+}
+
+.icon { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 13px; background: #edf4ff; color: #2869ca; font-size: 19px; }
+.triggerCopy { min-width: 0; display: grid; gap: 3px; }
+.triggerCopy small { color: #71819b; font-size: 11px; }
+.triggerCopy strong { font-size: 15px; font-weight: 750; }
+.triggerCopy span { color: #71819b; font-size: 12px; line-height: 1.35; }
+.chevron { color: #687892; transition: transform 160ms ease; }
+.chevronOpen { transform: rotate(180deg); }
+.panel { display: grid; gap: 14px; padding: 0 16px 18px; }
+.intro, .muted, .confirmed, .error { margin: 0; font-size: 13px; line-height: 1.45; }
+.intro, .muted { color: #687892; }
+.confirmed { color: #18724c; font-weight: 650; }
+.error { color: #b42318; }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.fields label { display: grid; gap: 7px; color: #34445d; font-size: 13px; font-weight: 650; }
+.fields input { width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid #cfd8e6; border-radius: 12px; color: #152541; font: inherit; font-size: 18px; }
+.fields input:focus { outline: 3px solid rgba(30, 136, 255, .18); border-color: #1e88ff; }
+.confirm { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: start; gap: 10px; color: #34445d; font-size: 13px; line-height: 1.45; }
+.confirm input { width: 20px; height: 20px; margin: 0; accent-color: #1e70d8; }
+.save { min-height: 48px; border: 0; border-radius: 12px; background: #155fc2; color: #fff; font: inherit; font-weight: 750; cursor: pointer; }
+.save:disabled { opacity: .55; cursor: not-allowed; }
+
+@media (max-width: 540px) {
+  .fields { grid-template-columns: minmax(0, 1fr); }
+  .trigger { padding-inline: 13px; }
+  .panel { padding-inline: 13px; }
+}
