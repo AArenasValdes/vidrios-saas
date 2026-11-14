@@ -116,18 +116,22 @@ export function drawFabricationPdfContinuationHeader(pdf: jsPDF, title: string, 
   return 33;
 }
 
-export function drawFabricationPdfFooters(pdf: jsPDF, quoteCode: string, documentLabel = "FABRICACIÓN") {
+export function drawFabricationPdfFooters(pdf: jsPDF, quoteCode: string, documentLabel = "FABRICACIÓN", footerNote?: string) {
   const pageCount = pdf.getNumberOfPages();
   for (let page = 1; page <= pageCount; page += 1) {
     pdf.setPage(page);
     pdf.setDrawColor(...FABRICATION_PDF_COLORS.rule);
     pdf.setLineWidth(0.25);
-    pdf.line(MARGIN, 283, PAGE_WIDTH - MARGIN, 283);
+    pdf.line(MARGIN, footerNote ? 280 : 283, PAGE_WIDTH - MARGIN, footerNote ? 280 : 283);
     pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(8);
+    pdf.setFontSize(footerNote ? 7 : 8);
     pdf.setTextColor(...FABRICATION_PDF_COLORS.muted);
-    pdf.text(`VENTORA · ${documentLabel} · ${clean(quoteCode)}`, MARGIN, 288);
-    pdf.text(`Página ${page} de ${pageCount}`, PAGE_WIDTH - MARGIN, 288, { align: "right" });
+    pdf.text(`VENTORA · ${documentLabel} · ${clean(quoteCode)}`, MARGIN, footerNote ? 284 : 288);
+    pdf.text(`Página ${page} de ${pageCount}`, PAGE_WIDTH - MARGIN, footerNote ? 284 : 288, { align: "right" });
+    if (footerNote) {
+      pdf.setFontSize(7);
+      pdf.text(footerNote, MARGIN, 290, { maxWidth: PAGE_WIDTH - MARGIN * 2 });
+    }
   }
 }
 
