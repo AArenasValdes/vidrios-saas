@@ -32,6 +32,7 @@
 .intro, .muted, .confirmed, .error { margin: 0; font-size: 13px; line-height: 1.45; }
 .intro, .muted { color: #687892; }
 .confirmed { color: #18724c; font-weight: 650; }
+.savedNotice { margin: 0; padding: 0 16px 12px; color: #18724c; font-size: 13px; font-weight: 650; line-height: 1.45; }
 .error { color: #b42318; }
 .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .fields label { display: grid; gap: 7px; color: #34445d; font-size: 13px; font-weight: 650; }
