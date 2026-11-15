@@ -11,6 +11,10 @@ import type {
 } from "@/features/fabricacion/services/fabrication-work-materials.service";
 import { calculateProfileReferenceTotal, resolveProfileSupplierPrice } from "@/features/fabricacion/services/work-materials-price-reference.service";
 import type { FabricationWorkOrder } from "@/features/fabricacion/services/fabrication-work-order.service";
+import {
+  DISTRIBUCION_REFERENCIAL_LABEL,
+  DISTRIBUCION_REFERENCIAL_NOTA,
+} from "@/features/fabricacion/services/fabricacion-aviso-presentacion.service";
 import { sanitizeFileNamePart } from "@/utils/sanitize-file-name";
 import { WorkDocumentExportActions } from "./work-materials-document-panel";
 import { formatM2, formatMl, formatMm } from "./fabricacion-resumen-view";
@@ -395,7 +399,7 @@ export function CompactCutsView({
             <p className={s.mCompactSectionSubtitle}>
               {cutGroups.length}{" "}
               {cutGroups.length === 1 ? "tira o perfil" : "tiras o perfiles"} ·{" "}
-              {workOrder.hasJointBars ? workOrder.cutPlanPhysicalState === "teorica" ? "Pauta teórica" : "Pauta conjunta" : "Por componente"}
+              {workOrder.hasJointBars ? workOrder.cutPlanPhysicalState === "teorica" ? DISTRIBUCION_REFERENCIAL_LABEL : "Pauta conjunta" : "Por componente"}
             </p>
           </div>
           <WorkDocumentExportActions
@@ -412,7 +416,7 @@ export function CompactCutsView({
           />
         </header>
 
-        {workOrder.cutPlanPhysicalState === "teorica" ? <p role="status">PAUTA TEÓRICA · VALIDAR CORTE Y DESPUNTE ANTES DE FABRICAR</p> : null}
+        {workOrder.cutPlanPhysicalState === "teorica" ? <p role="status">{DISTRIBUCION_REFERENCIAL_NOTA}</p> : null}
 
         {exportError ? (
           <p role="alert" className={s.exportNotice}>
@@ -570,8 +574,7 @@ export function CompactCutsView({
 
             {summary.trabajoSnapshot && (summary.totalBars != null || summary.profileCoverage?.jointPlanStatus === "theoretical") ? (
               <section className={s.mGroup} aria-label="Tiras compartidas del trabajo">
-                <h3>{summary.profileCoverage?.jointPlanStatus === "theoretical" ? "Pauta conjunta · teórica" : "Pauta conjunta · trabajo completo"}</h3>
-                {summary.profileCoverage?.jointPlanStatus === "theoretical" ? <p role="status">PAUTA TEÓRICA · VALIDAR CORTE Y DESPUNTE ANTES DE FABRICAR</p> : null}
+                <h3>{summary.profileCoverage?.jointPlanStatus === "theoretical" ? "Pauta conjunta · distribución referencial" : "Pauta conjunta · trabajo completo"}</h3>
                 <p className={s.mGroupNote}>
                   {summary.trabajoSnapshot.totalBars} tiras compartidas entre partidas.
                 </p>

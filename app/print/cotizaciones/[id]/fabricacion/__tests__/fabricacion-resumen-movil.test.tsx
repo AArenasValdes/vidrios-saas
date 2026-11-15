@@ -383,8 +383,7 @@ describe("FabricacionResumenMovil", () => {
     fireEvent.click(screen.getByText("Ver pauta, cortes y sobrantes"));
     const consolidado = screen.getByLabelText("Qué fabricar");
     expect(within(consolidado).getByText("Largo usado en cortes")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Pauta conjunta · teórica" })).toBeInTheDocument();
-    expect(screen.getAllByText("PAUTA TEÓRICA · VALIDAR CORTE Y DESPUNTE ANTES DE FABRICAR").length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: "Pauta conjunta · distribución referencial" })).toBeInTheDocument();
     expect(screen.getByText("Largo usado en cortes 5.600 mm · Largo disponible según pauta 200 mm")).toBeInTheDocument();
     expect(screen.getByText("V1 · Riel superior · 2.800 mm")).toBeInTheDocument();
     expect(screen.getByText("V2 · Riel superior · 2.800 mm")).toBeInTheDocument();

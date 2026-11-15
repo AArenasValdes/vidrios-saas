@@ -1,6 +1,12 @@
 import { jsPDF } from "jspdf";
 
 import type { WorkMaterialsDocument } from "./fabrication-work-materials.service";
+import {
+  DISTRIBUCION_REFERENCIAL_LABEL,
+  DISTRIBUCION_REFERENCIAL_NOTA,
+  DISTRIBUCION_REFERENCIAL_PIE,
+  isReferentialOnlyWorkOrder,
+} from "./fabricacion-aviso-presentacion.service";
 import { calculateProfileReferenceTotal, formatProfilePriceBasis, resolveProfileSupplierPrice } from "./work-materials-price-reference.service";
 import {
   drawFabricationPdfContinuationHeader,
@@ -210,7 +216,8 @@ export function createWorkMaterialsPdf(
   let y = drawFabricationPdfHeader(pdf, metadata, "Lista de materiales", logoDataUrl);
   const pageContext: PageContext = { metadata, logoDataUrl };
 
-  if (workOrder?.documentStatus.state === "partial") {
+  const referentialDistribution = workOrder?.cutPlanPhysicalState === "teorica";
+  if (workOrder?.documentStatus.state === "partial" && !isReferentialOnlyWorkOrder(workOrder)) {
     pdf.setFillColor(255, 243, 230);
     pdf.setDrawColor(191, 82, 34);
     pdf.roundedRect(MARGIN, y, PAGE_WIDTH - MARGIN * 2, 12, 1.5, 1.5, "FD");
@@ -219,6 +226,20 @@ export function createWorkMaterialsPdf(
     pdf.setTextColor(139, 48, 17);
     pdf.text(workOrder.documentStatus.label, MARGIN + 3, y + 7.5);
     y += 15;
+  }
+  if (referentialDistribution) {
+    const note = `${DISTRIBUCION_REFERENCIAL_LABEL}. ${DISTRIBUCION_REFERENCIAL_NOTA}`;
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    const lines = pdf.splitTextToSize(note, PAGE_WIDTH - MARGIN * 2) as string[];
+    const height = lines.length * 4 + 3;
+    if (y + height > CONTENT_BOTTOM) {
+      pdf.addPage("a4", "portrait");
+      y = drawFabricationPdfContinuationHeader(pdf, "Lista de materiales", metadata.quoteCode, logoDataUrl);
+    }
+    pdf.setTextColor(...COLORS.muted);
+    pdf.text(lines, MARGIN, y + 4, { lineHeightFactor: 1.2 });
+    y += height;
   }
 
   if (document.pricing) {
@@ -362,7 +383,8 @@ export function createWorkMaterialsPdf(
   drawFabricationPdfFooters(
     pdf,
     metadata.quoteCode,
-    workOrder?.documentStatus?.state === "partial" ? workOrder.documentStatus.label : "FABRICACIÓN",
+    "FABRICACIÓN",
+    referentialDistribution ? DISTRIBUCION_REFERENCIAL_PIE : undefined,
   );
 
   return pdf;

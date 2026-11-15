@@ -1,8 +1,13 @@
 import { jsPDF } from "jspdf";
 
-import type { FabricationWorkOrder } from "./fabrication-work-order.service";
+import type { FabricationWorkOrder, WorkOrderCut, WorkOrderCutGroup } from "./fabrication-work-order.service";
 import { workOrderPriceSource } from "./fabrication-work-order.service";
-import { PAUTA_TEORICA_AVISO } from "./fabricacion-pauta-fisica.service";
+import {
+  DISTRIBUCION_REFERENCIAL_LABEL,
+  DISTRIBUCION_REFERENCIAL_NOTA,
+  DISTRIBUCION_REFERENCIAL_PIE,
+  isReferentialOnlyWorkOrder,
+} from "./fabricacion-aviso-presentacion.service";
 import { calculateProfileReferenceTotal, resolveProfileSupplierPrice } from "./work-materials-price-reference.service";
 import {
   drawFabricationPdfContinuationHeader,
@@ -58,6 +63,17 @@ function mm(value: number | null | undefined) {
   return value != null && Number.isFinite(value) && value >= 0
     ? `${new Intl.NumberFormat("es-CL", { maximumFractionDigits: 0 }).format(value)} mm`
     : "Pendiente";
+}
+
+function normalizeCutFunction(value: string): string {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CL").trim();
+}
+
+function formatProfileCutLine(cut: WorkOrderCut, group: WorkOrderCutGroup): string {
+  const line = `${clean(cut.itemCode, "Partida pendiente")} · ${cut.quantity} × ${mm(cut.lengthMm)}`;
+  const functions = new Set(group.cuts.map((entry) => normalizeCutFunction(entry.functionName)).filter(Boolean));
+  if (functions.size <= 1 || !cut.functionName.trim()) return line;
+  return `${line} · ${cut.functionName.trim()}`;
 }
 
 function money(value: number | null | undefined, currency: string) {
@@ -213,10 +229,8 @@ function drawPreliminaryWarning(pdf: jsPDF, y: number, runningTitle: string, quo
   return y + height + 3;
 }
 
-function drawDocumentPartialWarning(pdf: jsPDF, y: number, runningTitle: string, quoteCode: string, logoDataUrl?: string | null, physicalOnly = false) {
-  const message = physicalOnly
-    ? "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN. Falta confirmar los parámetros físicos de corte y despunte."
-    : "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN. Hay componentes sin pauta completa o con identidad técnica por revisar.";
+function drawDocumentPartialWarning(pdf: jsPDF, y: number, runningTitle: string, quoteCode: string, logoDataUrl?: string | null) {
+  const message = "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN. Hay componentes sin pauta completa o con identidad técnica por revisar.";
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(9.5);
   const lines = wrapped(pdf, message, PAGE_WIDTH - MARGIN * 2);
@@ -272,12 +286,13 @@ export function createFabricationWorkOrderPdf(
   pdf.setCharSpace(0);
   let y = drawFabricationPdfHeader(pdf, metadata, title, logoDataUrl);
   const runningTitle = title;
-  if (order.documentStatus.state === "partial") {
-    y = drawDocumentPartialWarning(pdf, y + 2, runningTitle, metadata.quoteCode, logoDataUrl,
-      order.cutPlanPhysicalState === "teorica" && order.documentStatus.pendingComponents.length === 0);
+  const referentialDistribution = kind !== "glass-order" && order.cutPlanPhysicalState === "teorica";
+  const referentialOnly = referentialDistribution && isReferentialOnlyWorkOrder(order);
+  if (order.documentStatus.state === "partial" && !referentialOnly) {
+    y = drawDocumentPartialWarning(pdf, y + 2, runningTitle, metadata.quoteCode, logoDataUrl);
   }
-  if (kind !== "glass-order" && order.cutPlanPhysicalState === "teorica") {
-    y = drawNote(pdf, PAUTA_TEORICA_AVISO, y, runningTitle, metadata.quoteCode, logoDataUrl);
+  if (referentialDistribution) {
+    y = drawNote(pdf, `${DISTRIBUCION_REFERENCIAL_LABEL}. ${DISTRIBUCION_REFERENCIAL_NOTA}`, y, runningTitle, metadata.quoteCode, logoDataUrl);
   }
   if (kind === "combined") y = drawPriceSummary(pdf, order, y, runningTitle, metadata.quoteCode, logoDataUrl);
   if (kind === "combined") {
@@ -372,7 +387,7 @@ export function createFabricationWorkOrderPdf(
     const profile = `${group.technicalCode} · ${group.profileName}`;
     const cutRows = group.cuts.length
       ? group.cuts.map((cut) => kind === "profile-cuts"
-        ? `${cut.itemCode} · ${cut.component}\n${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`
+        ? formatProfileCutLine(cut, group)
         : `${cut.itemCode} · ${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n")
       : "Sin cortes guardados";
     const presentation = group.barIndex == null
@@ -408,7 +423,7 @@ export function createFabricationWorkOrderPdf(
       const profile = `${group.technicalCode} · ${group.profileName}`;
       const cutRows = group.cuts.length
         ? group.cuts.map((cut) => kind === "profile-cuts"
-          ? `${cut.itemCode} · ${cut.component}\n${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`
+          ? formatProfileCutLine(cut, group)
           : `${cut.itemCode} · ${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n")
         : "Sin cortes de geometría disponibles";
       return kind === "profile-cuts"
@@ -430,14 +445,22 @@ export function createFabricationWorkOrderPdf(
     ], preliminaryCuts, y, "Sin cortes geométricos", runningTitle, metadata.quoteCode, logoDataUrl);
   }
   if (order.reviewCutGroups.length > 0) {
-    const reviewCuts = order.reviewCutGroups.map((group): Row => ({ cells: [
-      `${group.technicalCode} · ${group.profileName}\n${[...new Set(group.cuts.map((cut) => `${cut.itemCode} · ${cut.component}`))].join("\n") || "Componente pendiente"}`,
-      group.cuts.map((cut) => `${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n"),
-      kind === "profile-cuts" ? "Snapshot incompatible · no operativo" : "Snapshot histórico · no operativo",
-      kind === "profile-cuts"
-        ? order.documentStatus.pendingComponents.find((component) => component.itemId === group.itemId)?.reason ?? "Revisar identidad y receta antes de usar estos cortes."
-        : "Revisión pendiente",
-    ] }));
+    const reviewCuts = order.reviewCutGroups.map((group): Row => {
+      const componentCell = kind === "profile-cuts"
+        ? [...new Set(group.cuts.map((cut) => cut.itemCode))].join(", ") || "Componente pendiente"
+        : [...new Set(group.cuts.map((cut) => `${cut.itemCode} · ${cut.component}`))].join("\n") || "Componente pendiente";
+      const cutsCell = group.cuts.map((cut) => kind === "profile-cuts"
+        ? formatProfileCutLine(cut, group)
+        : `${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n");
+      return { cells: [
+        `${group.technicalCode} · ${group.profileName}\n${componentCell}`,
+        cutsCell,
+        kind === "profile-cuts" ? "Snapshot incompatible · no operativo" : "Snapshot histórico · no operativo",
+        kind === "profile-cuts"
+          ? order.documentStatus.pendingComponents.find((component) => component.itemId === group.itemId)?.reason ?? "Revisar identidad y receta antes de usar estos cortes."
+          : "Revisión pendiente",
+      ] };
+    });
     y = drawTable(pdf, "Revisión técnica · cortes históricos", kind === "profile-cuts" ? [
       { title: "Perfil y componente", width: 43 }, { title: "Cortes conservados", width: 67 },
       { title: "Estado", width: 31 }, { title: "Causa / uso", width: 41 },
@@ -469,8 +492,9 @@ export function createFabricationWorkOrderPdf(
       row.key === "coverage-joint-plan" || row.key === "coverage-joint-plan-blocked"
     );
     const technicalPending = kind === "combined"
-      ? order.pending
+      ? order.pending.filter((row) => !(referentialDistribution && row.key === "cut-physics"))
       : order.pending.filter((row) => {
+          if (referentialDistribution && row.key === "cut-physics") return false;
           if (!isProfileCutTechnicalPending(row.key)) return false;
           if (row.key === "bar-distribution" && hasJointCoveragePending) return false;
           if (row.key === "structural-geometry" && order.preliminaryCutGroups.length > 0) return false;
@@ -484,19 +508,11 @@ export function createFabricationWorkOrderPdf(
       ], pending, y, "Sin pendientes técnicos de corte", runningTitle, metadata.quoteCode, logoDataUrl);
     }
   }
-  if (kind !== "glass-order" && order.cutPlanPhysicalState === "teorica") {
-    for (let page = 1; page <= pdf.getNumberOfPages(); page += 1) {
-      pdf.setPage(page);
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(7);
-      pdf.setTextColor(...MUTED);
-      pdf.text(PAUTA_TEORICA_AVISO, MARGIN, 280, { maxWidth: PAGE_WIDTH - MARGIN * 2 });
-    }
-  }
   drawFabricationPdfFooters(
     pdf,
     metadata.quoteCode,
-    order.documentStatus.state === "partial" ? order.documentStatus.label : "FABRICACIÓN",
+    "FABRICACIÓN",
+    referentialDistribution ? DISTRIBUCION_REFERENCIAL_PIE : undefined,
   );
   return pdf;
 }

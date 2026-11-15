@@ -201,6 +201,7 @@ function ViewHarness(props: {
   onOpenDespiece?: (itemId: string) => void;
   extraItems?: CotizacionWorkflowItem[];
   trabajoSnapshot?: FabricacionTrabajoSnapshot | null;
+  workOrder?: ReturnType<typeof buildFabricationWorkOrder>;
   technicalCostPanel?: ReactNode;
 }) {
   const documentRef = useRef<HTMLElement | null>(null);
@@ -223,7 +224,7 @@ function ViewHarness(props: {
       summary={viewSummary}
       items={items}
       materialsDocument={materialsDocument}
-      workOrder={buildFabricationWorkOrder({ summary: viewSummary, materials: materialsDocument, quoteItems: items })}
+      workOrder={props.workOrder ?? buildFabricationWorkOrder({ summary: viewSummary, materials: materialsDocument, quoteItems: items })}
       companyName="Ventora QA"
       issueDate="4 oct 2026"
       technicalCostPanel={props.technicalCostPanel}
@@ -240,6 +241,28 @@ function ViewHarness(props: {
 }
 
 describe("FabricacionResumenView", () => {
+  it("presenta parámetros físicos pendientes como distribución referencial, sin alerta parcial", () => {
+    const emptySummary = buildFabricationQuoteSummary([], { trabajoSnapshot: null });
+    const emptyMaterials = buildWorkMaterialsDocument({ summary: emptySummary, items: [] });
+    const workOrder = buildFabricationWorkOrder({ summary: emptySummary, materials: emptyMaterials });
+    workOrder.cutPlanPhysicalState = "teorica";
+    workOrder.hasJointBars = true;
+    workOrder.cutGroups = [{
+      key: "qa-bar", technicalCode: "5001", profileName: "Riel", barIndex: 1,
+      commercialLengthMm: 6000, usedMm: 1800, theoreticalRemnantMm: 4200,
+      trimMm: 0, kerfMm: 0,
+      cuts: [{ itemCode: "V1", component: "Ventana", functionName: "Riel", quantity: 1, lengthMm: 1800 }],
+    }];
+    workOrder.documentStatus = { state: "partial", label: "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN", pendingComponents: [] };
+
+    render(<ViewHarness workOrder={workOrder} />);
+
+    const status = screen.getByLabelText("Estado del documento de fabricación");
+    expect(within(status).getByText("Distribución referencial")).toBeInTheDocument();
+    expect(within(status).getByText("Los cortes están calculados. Antes de cortar, confirma la pérdida de sierra y el despunte para ajustar la distribución de barras")).toBeInTheDocument();
+    expect(within(status).queryByText("DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN")).not.toBeInTheDocument();
+  });
+
   it("ofrece descargas PDF y Excel independientes para los tres documentos de fabricación", () => {
     render(<ViewHarness />);
 
