@@ -1,6 +1,7 @@
 import {
   resolveFabricacionParametrosCorte,
   debeAplicarParametrosDeTaller,
+  filtrarParametrosCortePorOrganizacion,
   type FabricacionParametrosCorteConfirmados,
 } from "@/features/fabricacion/services/fabricacion-parametros-corte.service";
 
@@ -21,6 +22,11 @@ describe("resolveFabricacionParametrosCorte", () => {
     expect(debeAplicarParametrosDeTaller({ isNewQuote: true, catalogMaterial: "PVC" })).toBe(false);
     expect(debeAplicarParametrosDeTaller({ isNewQuote: false, catalogMaterial: "Aluminio" })).toBe(false);
     expect(debeAplicarParametrosDeTaller({ isNewQuote: true, catalogMaterial: null })).toBe(false);
+  });
+  it("no aplica parámetros cargados para otra organización", () => {
+    expect(filtrarParametrosCortePorOrganizacion(organization, 41)).toBe(organization);
+    expect(filtrarParametrosCortePorOrganizacion(organization, 42)).toBeNull();
+    expect(filtrarParametrosCortePorOrganizacion(organization, null)).toBeNull();
   });
   it("prioriza el ajuste confirmado para el trabajo sobre taller y receta", () => {
     const result = resolveFabricacionParametrosCorte({

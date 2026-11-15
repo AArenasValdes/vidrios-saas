@@ -25,6 +25,15 @@ export type FabricacionParametrosCorteAplicados = {
   largosComercialesConfirmados: boolean;
 };
 
+export function filtrarParametrosCortePorOrganizacion(
+  settings: FabricacionParametrosCorteConfirmados | null | undefined,
+  organizationId: number | null | undefined
+): FabricacionParametrosCorteConfirmados | null {
+  if (!settings || typeof organizationId !== "number" || !Number.isSafeInteger(organizationId) || organizationId <= 0 ||
+      settings.organizationId !== organizationId) return null;
+  return settings;
+}
+
 export function debeAplicarParametrosDeTaller(input: {
   isNewQuote: boolean;
   catalogMaterial?: string | null;

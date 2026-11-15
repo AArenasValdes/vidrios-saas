@@ -35,4 +35,20 @@ describe("ParametrosCortePanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Confirmar y usar solo aquí" }));
     await waitFor(() => expect(onSaveJobPreview).toHaveBeenCalledTimes(1));
   });
+
+  it("no interpreta valores vacíos como cero confirmado en ajustes del trabajo", async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ settings: null }) }) as typeof fetch;
+    const onPreviewThisJob = jest.fn();
+    const onSaveJobPreview = jest.fn();
+    render(<ParametrosCortePanel eligibleItemCount={1} onPreviewThisJob={onPreviewThisJob} onSaveJobPreview={onSaveJobPreview} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Configurar cortes" }));
+    await screen.findByText(/Solo para perfiles de aluminio/i);
+    fireEvent.click(screen.getByLabelText(/Confirmo que estos valores/i));
+    fireEvent.click(screen.getByRole("button", { name: "Previsualizar en este trabajo" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Ingresa ambos valores/i);
+    expect(onPreviewThisJob).not.toHaveBeenCalled();
+    expect(onSaveJobPreview).not.toHaveBeenCalled();
+  });
 });

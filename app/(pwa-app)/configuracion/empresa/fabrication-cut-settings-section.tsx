@@ -59,6 +59,10 @@ export function FabricationCutSettingsSection() {
   };
 
   const save = useCallback(async () => {
+    if (!kerf.trim() || !trim.trim()) {
+      setError("Ingresa ambos valores en milímetros. Usa 0 solo si el taller confirmó que no hay pérdida o despunte.");
+      return;
+    }
     const perdidaCorteMm = Number(kerf);
     const despunteInicialMm = Number(trim);
     if (!Number.isInteger(perdidaCorteMm) || perdidaCorteMm < 0 || perdidaCorteMm > 20 ||

@@ -43,7 +43,7 @@ import { buildQuoteStudioFinancialSummary } from "@/features/cotizaciones/servic
 import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
-import { debeAplicarParametrosDeTaller, type FabricacionParametrosCorteConfirmados } from "@/features/fabricacion/services/fabricacion-parametros-corte.service";
+import { debeAplicarParametrosDeTaller, filtrarParametrosCortePorOrganizacion, type FabricacionParametrosCorteConfirmados } from "@/features/fabricacion/services/fabricacion-parametros-corte.service";
 import { fetchFabricacionParametrosCorteDelTaller } from "@/features/fabricacion/services/fabricacion-parametros-corte.client";
 import { resolveSupplierPresentationsForQuote } from "@/features/proveedor-catalogos/services/supplier-presentations.client";
 import { resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
@@ -541,6 +541,10 @@ function buildFabricacionSnapshotForItem(input: {
     typeof catalogLine?.catalogMetadata?.familyKey === "string"
       ? catalogLine.catalogMetadata.familyKey
       : null;
+  const cutSettingsForQuote = filtrarParametrosCortePorOrganizacion(
+    input.organizationCutSettings,
+    input.organizationId
+  );
 
   const resolution = resolveFabricacionDespieceForQuoteItem({
     item: input.item,
@@ -551,10 +555,10 @@ function buildFabricacionSnapshotForItem(input: {
     supplierFamilyKey,
     organizationCutSettings:
       debeAplicarParametrosDeTaller({
-        isNewQuote: input.organizationCutSettings != null,
+        isNewQuote: cutSettingsForQuote != null,
         catalogMaterial: catalogLine?.material,
       })
-        ? input.organizationCutSettings ?? null
+        ? cutSettingsForQuote
         : null,
   });
 

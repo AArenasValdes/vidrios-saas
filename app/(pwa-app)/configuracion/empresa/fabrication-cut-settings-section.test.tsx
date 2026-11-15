@@ -40,4 +40,18 @@ describe("FabricationCutSettingsSection", () => {
       body: JSON.stringify({ perdidaCorteMm: 3, despunteInicialMm: 12, procedimiento: "por_pieza", confirmacionExplicita: true }),
     }));
   });
+
+  it("no interpreta campos vacíos como cero confirmado", async () => {
+    const fetchMock = jest.fn().mockResolvedValueOnce({ ok: true, json: async () => ({ settings: null }) });
+    global.fetch = fetchMock as typeof fetch;
+
+    render(<FabricationCutSettingsSection />);
+    fireEvent.click(screen.getByRole("button", { name: /Parámetros de corte/i }));
+    await screen.findByText(/Solo para corte de aluminio/i);
+    fireEvent.click(screen.getByLabelText(/Confirmo que estos valores/i));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar para mi taller" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Ingresa ambos valores/i);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });

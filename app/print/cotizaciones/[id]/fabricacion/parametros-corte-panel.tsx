@@ -58,6 +58,9 @@ export function ParametrosCortePanel({ eligibleItemCount, onPreviewThisJob, onSa
   }, []);
 
   const readValues = () => {
+    if (!kerf.trim() || !trim.trim()) {
+      throw new Error("Ingresa ambos valores en milímetros. Usa 0 solo si el taller confirmó que no hay pérdida o despunte.");
+    }
     const kerfMm = Number(kerf);
     const initialTrimMm = Number(trim);
     if (!Number.isInteger(kerfMm) || kerfMm < 0 || kerfMm > 20 || !Number.isInteger(initialTrimMm) || initialTrimMm < 0 || initialTrimMm > 1000) {
