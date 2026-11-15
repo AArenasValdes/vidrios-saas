@@ -43,7 +43,7 @@ import { buildQuoteStudioFinancialSummary } from "@/features/cotizaciones/servic
 import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
-import { debeAplicarParametrosDeTaller, filtrarParametrosCortePorOrganizacion, type FabricacionParametrosCorteConfirmados } from "@/features/fabricacion/services/fabricacion-parametros-corte.service";
+import { debeAplicarParametrosDeTaller, filtrarParametrosCortePorOrganizacion, resolveFabricationMaterialForQuoteItem, type FabricacionParametrosCorteConfirmados } from "@/features/fabricacion/services/fabricacion-parametros-corte.service";
 import { fetchFabricacionParametrosCorteDelTaller } from "@/features/fabricacion/services/fabricacion-parametros-corte.client";
 import { resolveSupplierPresentationsForQuote } from "@/features/proveedor-catalogos/services/supplier-presentations.client";
 import { resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
@@ -320,7 +320,7 @@ function mapDatabaseItemToWorkflowItem(
     item.subtotal !== null && item.subtotal !== undefined ? Number(item.subtotal) : null;
 
   if (
-    presentation.precioAjustadoManual &&
+    (presentation.precioAjustadoManual || presentation.origenPrecio === "manual") &&
     storedPrecioUnitario !== null &&
     Number.isFinite(storedPrecioUnitario) &&
     storedSubtotal !== null &&
@@ -556,7 +556,10 @@ function buildFabricacionSnapshotForItem(input: {
     organizationCutSettings:
       debeAplicarParametrosDeTaller({
         isNewQuote: cutSettingsForQuote != null,
-        catalogMaterial: catalogLine?.material,
+        catalogMaterial: resolveFabricationMaterialForQuoteItem({
+          catalogMaterial: catalogLine?.material,
+          observations: input.item.observaciones,
+        }),
       })
         ? cutSettingsForQuote
         : null,

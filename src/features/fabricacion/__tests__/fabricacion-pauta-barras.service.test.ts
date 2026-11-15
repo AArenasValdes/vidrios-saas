@@ -134,6 +134,68 @@ describe("pauta referencial de barras", () => {
     expect(snapshot.pautaBarras?.barras).toHaveLength(2);
     expect(snapshot.pautaBarras?.parametrosFisicos).toMatchObject({ origenParametros: "organizacion", estado: "pendiente", organizacionId: 8 });
   });
+
+  it("aplica el ajuste negativo de la receta una sola vez y reserva sierra/despunte para distribuir barras", () => {
+    const definition = recipe();
+    definition.perfiles[0]!.reglaMedida = {
+      base: "ancho_total",
+      multiplicador: 1,
+      ajusteMm: -20,
+    };
+    definition.perfiles[0]!.reglaCantidad = { tipo: "fija", cantidad: 1 };
+    definition.configuracionCorte = {
+      perdidaCorteMm: null,
+      despunteInicialMm: null,
+      sobranteMinimoAprovechableMm: null,
+    };
+    const inputWithTwoWindows = { ...input, anchoTotalMm: 1200, cantidad: 2 };
+    const record: FabricationRecipeRecord = {
+      id: "recipe-negative-adjustment", organizationId: 8, lineTemplateId: 25,
+      scope: "organization", providerName: "Taller", lineName: "L25 personalizada",
+      typology: "corredera", leavesCount: 2, variant: "estandar", version: 1,
+      status: "validated", definition, sourceType: "manual", sourceReference: "taller:personalizada:l25",
+      sourceName: null, sourceRevision: null, parentRecipeId: null, validatedAt: null,
+      validatedBy: null, createdAt: "2026-11-01T00:00:00.000Z", updatedAt: "2026-11-01T00:00:00.000Z",
+      eliminadoEn: null,
+    };
+    const settings: FabricacionParametrosCorteConfirmados = {
+      perdidaCorteMm: 3,
+      despunteInicialMm: 12,
+      procedimiento: "por_pieza",
+      fuente: "Parámetros confirmados del taller QA.",
+      largosComercialesConfirmados: false,
+      confirmedBy: "user-1",
+      confirmedAt: "2026-11-14T12:00:00.000Z",
+      organizationId: 8,
+    };
+    const snapshotWithoutShopSettings = construirSnapshotFabricacionCotizacion({
+      recipe: record,
+      entrada: inputWithTwoWindows,
+    });
+    const snapshotWithShopSettings = construirSnapshotFabricacionCotizacion({
+      recipe: record,
+      entrada: inputWithTwoWindows,
+      organizationCutSettings: settings,
+    });
+
+    expect(snapshotWithShopSettings.result.perfiles).toHaveLength(1);
+    expect(snapshotWithShopSettings.result.perfiles[0]).toMatchObject({ medidaMm: 1180, cantidadPiezas: 2 });
+    expect(snapshotWithShopSettings.pauta).toHaveLength(1);
+    expect(snapshotWithShopSettings.pauta[0]).toMatchObject({ medidaMm: 1180, cantidadPiezas: 2 });
+    expect(snapshotWithShopSettings.result).toEqual(snapshotWithoutShopSettings.result);
+    expect(snapshotWithShopSettings.pauta).toEqual(snapshotWithoutShopSettings.pauta);
+    expect(snapshotWithShopSettings.pautaBarras?.parametrosFisicos).toMatchObject({
+      perdidaCorteMm: 3,
+      despunteInicialMm: 12,
+      origenParametros: "organizacion",
+    });
+    expect(snapshotWithShopSettings.pautaBarras?.barras.flatMap((bar) => bar.cortes.map((cut) => cut.largoMm)))
+      .toEqual([1180, 1180]);
+    expect(snapshotWithShopSettings.pautaBarras?.barras.reduce((sum, bar) => sum + bar.despunteInicialMm, 0))
+      .toBe(12);
+    expect(snapshotWithShopSettings.pautaBarras?.totalPerdidaCortesMm).toBe(6);
+  });
+
   it("recalcula un snapshot solo con su receta exacta y conserva las longitudes congeladas", () => {
     const definition = recipe(1500);
     definition.perfiles[0]!.reglaCantidad = { tipo: "fija", cantidad: 4 };
@@ -160,6 +222,23 @@ describe("pauta referencial de barras", () => {
     expect(recalculated?.pautaBarras?.barras.flatMap((bar) => bar.cortes)).toHaveLength(4);
     expect(recalculated?.result).toEqual(snapshot.result);
     expect(recalculated?.pauta).toEqual(snapshot.pauta);
+    expect(recalculated).toMatchObject({
+      schemaVersion: snapshot.schemaVersion,
+      tipo: snapshot.tipo,
+      recipeId: snapshot.recipeId,
+      recipeDefinitionId: snapshot.recipeDefinitionId,
+      recipeVersion: snapshot.recipeVersion,
+      recipeStatus: snapshot.recipeStatus,
+      recipeScope: snapshot.recipeScope,
+      lineTemplateId: snapshot.lineTemplateId,
+      recipeIdentity: snapshot.recipeIdentity,
+      input: snapshot.input,
+      selectedVariant: snapshot.selectedVariant,
+      vidrios: snapshot.vidrios,
+      formulaVersion: snapshot.formulaVersion,
+    });
+    expect(recalculated?.pautaBarras?.barras.flatMap((bar) => bar.cortes.map((cut) => [cut.componenteId, cut.codigoPerfil, cut.largoMm])))
+      .toEqual(snapshot.pautaBarras?.barras.flatMap((bar) => bar.cortes.map((cut) => [cut.componenteId, cut.codigoPerfil, cut.largoMm])));
     expect(recalculated?.pautaBarras?.parametrosFisicos).toMatchObject({ origenParametros: "trabajo", estado: "pendiente", organizacionId: 8 });
     expect(recalcularPautaSnapshotConParametrosCorte({
       snapshot,

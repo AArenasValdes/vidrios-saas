@@ -25,6 +25,20 @@ export type FabricacionParametrosCorteAplicados = {
   largosComercialesConfirmados: boolean;
 };
 
+/**
+ * Resolves a quote item's material without treating the presentation decoder's
+ * legacy Aluminio default as explicit evidence for a private line.
+ */
+export function resolveFabricationMaterialForQuoteItem(input: {
+  catalogMaterial?: string | null;
+  observations?: string | null;
+}): string | null {
+  if (input.catalogMaterial?.trim()) return input.catalogMaterial.trim();
+
+  const explicitMaterial = input.observations?.match(/\[m:(Aluminio|PVC|Cristal)\]/)?.[1];
+  return explicitMaterial ?? null;
+}
+
 export function filtrarParametrosCortePorOrganizacion(
   settings: FabricacionParametrosCorteConfirmados | null | undefined,
   organizationId: number | null | undefined

@@ -2,6 +2,7 @@ import {
   resolveFabricacionParametrosCorte,
   debeAplicarParametrosDeTaller,
   filtrarParametrosCortePorOrganizacion,
+  resolveFabricationMaterialForQuoteItem,
   type FabricacionParametrosCorteConfirmados,
 } from "@/features/fabricacion/services/fabricacion-parametros-corte.service";
 
@@ -27,6 +28,25 @@ describe("resolveFabricacionParametrosCorte", () => {
     expect(filtrarParametrosCortePorOrganizacion(organization, 41)).toBe(organization);
     expect(filtrarParametrosCortePorOrganizacion(organization, 42)).toBeNull();
     expect(filtrarParametrosCortePorOrganizacion(organization, null)).toBeNull();
+  });
+
+  it("resuelve el material explícito de una línea privada sin asumir aluminio en metadata legacy", () => {
+    expect(resolveFabricationMaterialForQuoteItem({
+      catalogMaterial: null,
+      observations: "[m:Aluminio][lti:927][lck:custom:linea-aluminio]",
+    })).toBe("Aluminio");
+    expect(resolveFabricationMaterialForQuoteItem({
+      catalogMaterial: null,
+      observations: "[m:PVC][lti:928][lck:custom:linea-pvc]",
+    })).toBe("PVC");
+    expect(resolveFabricationMaterialForQuoteItem({
+      catalogMaterial: null,
+      observations: "[lti:929][lck:custom:linea-legacy]",
+    })).toBeNull();
+    expect(resolveFabricationMaterialForQuoteItem({
+      catalogMaterial: "PVC",
+      observations: "[m:Aluminio]",
+    })).toBe("PVC");
   });
   it("prioriza el ajuste confirmado para el trabajo sobre taller y receta", () => {
     const result = resolveFabricacionParametrosCorte({

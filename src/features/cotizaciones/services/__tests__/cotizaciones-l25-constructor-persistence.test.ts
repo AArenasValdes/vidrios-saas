@@ -1,14 +1,18 @@
 import { createCotizacionesAppService } from "../cotizaciones.service";
 import { createCotizacionesRepository } from "../../repositories/cotizaciones-repository";
-import { buildItemFromForm, createEmptyComponentForm, mapItemToForm } from "../../new-quote/workflow-ui";
+import { buildItemFromForm, createEmptyComponentForm, mapItemToForm, mapRecordToDraft, reconcileWorkflowItemsPricing } from "../../new-quote/workflow-ui";
 import { createQuoteConstructorPresetConfig, preserveExplicitFabricationSnapshot } from "../../visual-composer/services/quote-constructor-workspace.service";
 import { splitModule } from "../../visual-composer/types/guided-visual-config";
 import { buildFabricationQuoteSummary } from "@/features/cotizaciones/line-templates/types/fabrication-quote-summary";
 import { buildAllSodalL25Recipes } from "@/features/fabricacion/fixtures/sodal-l25-zeta-recipes";
+import { crearRecetaPlantillaVentoraCorredera2H } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
 import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import type { CotizacionWorkflowDraft } from "../../types/cotizacion-workflow";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import { createClient } from "@/lib/supabase/client";
+import { decodeCotizacionItemPresentationMeta, encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { recalcularPautaSnapshotConParametrosCorte } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
+import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
 jest.mock("@/lib/supabase/client", () => ({ createClient: jest.fn() }));
 jest.mock("@/features/proveedor-catalogos/services/supplier-presentations.client", () => ({
@@ -31,6 +35,7 @@ function createMemoryDatabase(recipeRows: Row[]) {
     from(table: string) {
       let selection = "*";
       let inserted: Row | null = null;
+      let updated: Row | null = null;
       const filters: Array<(row: Row) => boolean> = [];
       const execute = (single: boolean) => {
         if (inserted) {
@@ -39,6 +44,10 @@ function createMemoryDatabase(recipeRows: Row[]) {
           return { data: structuredClone(row), error: null };
         }
         let rows = (tables[table] ?? []).filter((row) => filters.every((filter) => filter(row)));
+        if (updated) {
+          rows.forEach((row) => Object.assign(row, structuredClone(updated)));
+          return { data: structuredClone(single ? rows[0] ?? null : rows), error: null };
+        }
         if (table === "fabrication_recipes" && selection !== "*") {
           const columns = selection.split(",").map((column) => column.trim());
           rows = rows.map((row) => Object.fromEntries(columns.filter((column) => column in row).map((column) => [column, row[column]])));
@@ -48,6 +57,7 @@ function createMemoryDatabase(recipeRows: Row[]) {
       const query = {
         select(value: string) { selection = value; return query; },
         insert(value: Row) { inserted = value; return query; },
+        update(value: Row) { updated = value; return query; },
         eq(key: string, value: unknown) { filters.push((row) => String(row[key]) === String(value)); return query; },
         is(key: string, value: unknown) { filters.push((row) => (row[key] ?? null) === value); return query; },
         in(key: string, values: unknown[]) { filters.push((row) => values.includes(row[key])); return query; },
@@ -102,6 +112,7 @@ describe("guardado y relectura L25 desde Constructor", () => {
       const service = createCotizacionesAppService({
         cotizacionesRepository: repository,
         organizationProfileRepository: { getByOrganizationId: async () => ({ countryCode: "CL" }) } as never,
+        readFabricationCutSettings: async () => null,
       });
       const items = variants.map(([, variant, leg, reinforcement], index) => {
         const form = {
@@ -166,6 +177,256 @@ describe("guardado y relectura L25 desde Constructor", () => {
       expect(guidedReopened?.fabricacionTrabajoSnapshot?.itemCountWithPauta).toBe(3);
       expect(guidedReopened?.items.map((item) => item.fabricacionSnapshot?.result.perfiles))
         .toEqual(reopened?.items.map((item) => item.fabricacionSnapshot?.result.perfiles));
+    } finally {
+      if (originalUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL; else process.env.NEXT_PUBLIC_SUPABASE_URL = originalUrl;
+      if (originalKey === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY; else process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = originalKey;
+    }
+  });
+
+  it("aplica parámetros solo a una receta privada de aluminio con metadata explícita, y filtra otra organización", async () => {
+    const originalUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const originalKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.invalid";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test";
+    try {
+      const definition = crearRecetaPlantillaVentoraCorredera2H("L5000");
+      definition.identidad = {
+        ...definition.identidad,
+        recetaId: "org-custom-aluminum-2h",
+        codigo: "CUSTOM-AL-927",
+        nombre: "Corredera privada de aluminio",
+        hojas: 2,
+        modulos: 2,
+        apertura: "corredera",
+        variante: "org-2h-normal",
+      };
+      definition.perfiles = [{
+        ...definition.perfiles[0]!,
+        id: "custom-profile",
+        codigoPerfil: "CUSTOM-2503",
+        nombrePerfil: "Jamba personalizada",
+        funcion: "Jamba",
+        largoComercialMm: 6000,
+        reglaMedida: { base: "ancho_total", multiplicador: 1, ajusteMm: -20 },
+        reglaCantidad: { tipo: "fija", cantidad: 1 },
+        requerido: true,
+      }];
+      definition.vidrios = [];
+      definition.accesorios = [];
+      definition.configuracionCorte = {
+        perdidaCorteMm: null,
+        despunteInicialMm: null,
+        sobranteMinimoAprovechableMm: null,
+      };
+      const customRecipe: FabricationRecipeRecord = {
+        id: "recipe-org-custom-927", organizationId: 3, lineTemplateId: 927,
+        scope: "organization", providerName: "Taller QA", lineName: "Aluminio privado",
+        typology: "corredera", leavesCount: 2, variant: "org-2h-normal", version: 1,
+        status: "validated", definition, sourceType: "manual",
+        sourceReference: "taller:personalizada:qa-927", sourceName: "Taller QA",
+        sourceRevision: null, parentRecipeId: null, validatedAt: null, validatedBy: null,
+        createdAt: "2026-11-01T00:00:00Z", updatedAt: "2026-11-01T00:00:00Z", eliminadoEn: null,
+      };
+      const recipeRow = {
+        id: customRecipe.id, organization_id: customRecipe.organizationId,
+        line_template_id: customRecipe.lineTemplateId, scope: customRecipe.scope,
+        provider_name: customRecipe.providerName, line_name: customRecipe.lineName,
+        typology: customRecipe.typology, leaves_count: customRecipe.leavesCount,
+        variant: customRecipe.variant, version: customRecipe.version, status: customRecipe.status,
+        definition: customRecipe.definition, source_type: customRecipe.sourceType,
+        source_reference: customRecipe.sourceReference, source_name: customRecipe.sourceName,
+        source_revision: customRecipe.sourceRevision, parent_recipe_id: customRecipe.parentRecipeId,
+        validated_at: customRecipe.validatedAt, created_at: customRecipe.createdAt,
+        updated_at: customRecipe.updatedAt, eliminado_en: customRecipe.eliminadoEn,
+      };
+      const memory = createMemoryDatabase([recipeRow]);
+      jest.mocked(createClient).mockReturnValue(memory.client as never);
+      const repository = createCotizacionesRepository({ clientFactory: memory.client as never });
+      const settings = (organizationId: number) => ({
+        perdidaCorteMm: 3,
+        despunteInicialMm: 12,
+        procedimiento: "por_pieza" as const,
+        fuente: "Parámetros de corte confirmados por Taller QA.",
+        largosComercialesConfirmados: false,
+        confirmedBy: "qa-user",
+        confirmedAt: "2026-11-14T12:00:00.000Z",
+        organizationId,
+      });
+      let currentSettings = settings(3);
+      const service = createCotizacionesAppService({
+        cotizacionesRepository: repository,
+        organizationProfileRepository: { getByOrganizationId: async () => ({ countryCode: "CL" }) } as never,
+        readFabricationCutSettings: async () => currentSettings,
+      });
+      const makeItem = (id: string): CotizacionWorkflowDraft["items"][number] => ({
+        id,
+        codigo: "V1",
+        tipo: "Ventana",
+        lineaComercial: "Línea privada 927",
+        vidrio: "Monolítico 5 mm",
+        nombre: "Corredera privada QA",
+        descripcion: "2 hojas",
+        ancho: 1200,
+        alto: 1000,
+        cantidad: 2,
+        unidad: "unidad",
+        areaM2: 1.2,
+        costoProveedorUnitario: 0,
+        costoProveedorTotal: 0,
+        margenPct: 0,
+        precioUnitario: 150000,
+        precioTotal: 300000,
+        precioPorM2: 125000,
+        minimoCobrable: null,
+        redondeoPrecio: null,
+        precioPlantillaSugerido: null,
+        precioAjustadoManual: false,
+        origenPrecio: "manual",
+        observaciones: encodeCotizacionItemPresentationMeta({
+          material: "Aluminio",
+          catalogCategoria: "aluminio",
+          lineTemplateId: "927",
+          catalogLineKey: "taller:aluminio:927",
+          precioAjustadoManual: false,
+          origenPrecio: "manual",
+          precioPorM2: 125000,
+          sistema: "Corredera",
+          fabricacionTipologia: "corredera",
+          fabricacionHojas: 2,
+          fabricacionModulos: 2,
+          fabricacionApertura: "corredera",
+          fabricacionVariante: "org-2h-normal",
+        }),
+      });
+      const makeDraft = (item: CotizacionWorkflowDraft["items"][number]): CotizacionWorkflowDraft => ({
+        clienteNombre: "Cliente", clienteTelefono: "", obra: "", direccion: "", validez: "",
+        descuentoPct: 10, flete: 5000, observaciones: "", items: [item], quotePricingMode: "por_item",
+        quoteCreationSurface: "mobile_constructor",
+      });
+
+      const autoPricedItem = makeItem("private-auto-priced");
+      autoPricedItem.precioAjustadoManual = false;
+      autoPricedItem.origenPrecio = "margen";
+      autoPricedItem.observaciones = encodeCotizacionItemPresentationMeta({
+        ...decodeCotizacionItemPresentationMeta(autoPricedItem.observaciones),
+        fabricationRecipeId: "recipe-org-custom-927",
+        origenPrecio: "margen",
+      });
+      const repricedItem = reconcileWorkflowItemsPricing([autoPricedItem])[0]!;
+      expect(decodeCotizacionItemPresentationMeta(repricedItem.observaciones).fabricationRecipeId)
+        .toBe("recipe-org-custom-927");
+
+      const ownItem = makeItem("private-own");
+      expect(VENTORA_DEFAULT_LINE_CATALOG.some((line) => line.catalogKey === "taller:aluminio:927")).toBe(false);
+      const directResolution = resolveFabricacionDespieceForQuoteItem({
+        item: ownItem,
+        recipes: [customRecipe],
+        organizationId: 3,
+        lineTemplateId: 927,
+        lineCatalogKey: "taller:aluminio:927",
+      });
+      expect(directResolution.estado).toBe("calculado");
+      expect(directResolution.formal?.recipeId).toBe(customRecipe.id);
+
+      const savedWithOwnSettings = await service.saveWorkflow({
+        organizationId: 3, existingCode: "COT-QA-PRIVATE-OWN", draft: makeDraft(ownItem), estado: "creada",
+      });
+      const ownSnapshot = savedWithOwnSettings.items[0]?.fabricacionSnapshot;
+      expect(ownSnapshot?.recipeId).toBe("recipe-org-custom-927");
+      expect(ownSnapshot?.result.perfiles).toHaveLength(1);
+      expect(ownSnapshot?.result.perfiles[0]).toMatchObject({ medidaMm: 1180, cantidadPiezas: 2 });
+      expect(ownSnapshot?.pautaBarras?.barras.flatMap((bar) => bar.cortes.map((cut) => cut.largoMm)))
+        .toEqual([1180, 1180]);
+      expect(ownSnapshot?.pautaBarras?.parametrosFisicos).toMatchObject({
+        origenParametros: "organizacion", organizacionId: 3, perdidaCorteMm: 3, despunteInicialMm: 12,
+      });
+      expect(memory.tables.cotizacion_items?.find((row) => row.codigo === "V1")?.fabricacion_snapshot).toEqual(ownSnapshot);
+      const reopened = await service.getWorkflowById(savedWithOwnSettings.id, 3, { ensureApprovalToken: false });
+      expect(reopened?.items[0]?.fabricacionSnapshot).toEqual(ownSnapshot);
+
+      const oldSnapshot = reopened?.items[0]?.fabricacionSnapshot;
+      expect(oldSnapshot).toBeTruthy();
+      const recalculatedSnapshot = recalcularPautaSnapshotConParametrosCorte({
+        snapshot: oldSnapshot!,
+        recipe: customRecipe,
+        parameters: {
+          ...settings(3),
+          perdidaCorteMm: 5,
+          despunteInicialMm: 15,
+          fuente: "Ajuste explícito de esta cotización QA.",
+        },
+      });
+      expect(recalculatedSnapshot).toBeTruthy();
+      const beforeCommercial = {
+        item: reopened!.items[0]!,
+        discountPct: reopened!.descuentoPct,
+        subtotal: reopened!.subtotal,
+        discount: reopened!.descuentoValor,
+        net: reopened!.neto,
+        vat: reopened!.iva,
+        total: reopened!.total,
+      };
+      expect(beforeCommercial.item).toMatchObject({
+        ancho: 1200,
+        alto: 1000,
+        cantidad: 2,
+        precioUnitario: 150000,
+        precioTotal: 300000,
+        precioPorM2: 125000,
+      });
+      expect(beforeCommercial.discountPct).toBe(10);
+      const recalculatedItem = {
+        ...reopened!.items[0]!,
+        fabricacionSnapshot: recalculatedSnapshot,
+      };
+      const recalcDraft = mapRecordToDraft(reopened!);
+      recalcDraft.items = [recalculatedItem];
+      await service.saveWorkflow({
+        organizationId: 3,
+        existingId: reopened!.id,
+        existingCode: reopened!.codigo,
+        existingClientId: reopened!.clientId,
+        existingProjectId: reopened!.projectId,
+        draft: recalcDraft,
+        estado: reopened!.estado,
+      });
+      const afterRecalc = await service.getWorkflowById(reopened!.id, 3, { ensureApprovalToken: false });
+      expect(afterRecalc?.items[0]?.fabricacionSnapshot?.pautaBarras).toEqual(recalculatedSnapshot?.pautaBarras);
+      expect(afterRecalc?.items[0]?.fabricacionSnapshot?.input).toEqual(oldSnapshot?.input);
+      expect(afterRecalc?.items[0]?.fabricacionSnapshot?.result).toEqual(oldSnapshot?.result);
+      expect(afterRecalc?.items[0]?.fabricacionSnapshot?.pauta).toEqual(oldSnapshot?.pauta);
+      expect(afterRecalc?.items[0]?.fabricacionSnapshot?.recipeIdentity).toEqual(oldSnapshot?.recipeIdentity);
+      expect(afterRecalc?.items[0]).toMatchObject({
+        ancho: beforeCommercial.item.ancho,
+        alto: beforeCommercial.item.alto,
+        cantidad: beforeCommercial.item.cantidad,
+        vidrio: beforeCommercial.item.vidrio,
+        precioUnitario: beforeCommercial.item.precioUnitario,
+        precioTotal: beforeCommercial.item.precioTotal,
+        precioPorM2: beforeCommercial.item.precioPorM2,
+        observaciones: beforeCommercial.item.observaciones,
+      });
+      expect(afterRecalc).toMatchObject({
+        descuentoPct: beforeCommercial.discountPct,
+        subtotal: beforeCommercial.subtotal,
+        descuentoValor: beforeCommercial.discount,
+        neto: beforeCommercial.net,
+        iva: beforeCommercial.vat,
+        total: beforeCommercial.total,
+      });
+
+      currentSettings = settings(99);
+      const savedWithForeignSettings = await service.saveWorkflow({
+        organizationId: 3, existingCode: "COT-QA-PRIVATE-FOREIGN", draft: makeDraft(makeItem("private-foreign")), estado: "creada",
+      });
+      const foreignSnapshot = savedWithForeignSettings.items[0]?.fabricacionSnapshot;
+      expect(foreignSnapshot?.recipeId).toBe("recipe-org-custom-927");
+      expect(foreignSnapshot?.result.perfiles).toHaveLength(1);
+      expect(foreignSnapshot?.result.perfiles[0]).toMatchObject({ medidaMm: 1180, cantidadPiezas: 2 });
+      expect(foreignSnapshot?.pautaBarras?.parametrosFisicos).not.toMatchObject({
+        origenParametros: "organizacion", organizacionId: 99,
+      });
+      expect(foreignSnapshot?.pautaBarras?.parametrosFisicos?.organizacionId).not.toBe(99);
     } finally {
       if (originalUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL; else process.env.NEXT_PUBLIC_SUPABASE_URL = originalUrl;
       if (originalKey === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY; else process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = originalKey;

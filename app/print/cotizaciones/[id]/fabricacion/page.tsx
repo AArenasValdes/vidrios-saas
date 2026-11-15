@@ -33,7 +33,7 @@ import {
 import { resolveComponentColorName } from "@/constants/component-colors";
 import { loadVentoraPdfLogoDataUrl } from "@/features/fabricacion/services/ventora-pdf-assets.client";
 import { recalcularPautaSnapshotConParametrosCorte } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
-import type { FabricacionParametrosCorteConfirmados } from "@/features/fabricacion/services/fabricacion-parametros-corte.service";
+import { resolveFabricationMaterialForQuoteItem, type FabricacionParametrosCorteConfirmados } from "@/features/fabricacion/services/fabricacion-parametros-corte.service";
 
 import { FabricacionResumenMovil } from "./fabricacion-resumen-movil";
 import { FabricacionResumenView } from "./fabricacion-resumen-view";
@@ -376,7 +376,7 @@ export default function CotizacionFabricacionPrintPage() {
     const metadata = decodeCotizacionItemPresentationMeta(item.observaciones);
     const catalogKey = metadata.catalogLineKey || lineTemplates.find((template) => String(template.id) === metadata.lineTemplateId)?.catalogKey;
     const catalogLine = VENTORA_DEFAULT_LINE_CATALOG.find((line) => line.catalogKey === catalogKey);
-    return catalogLine?.material === "Aluminio" && recipes.some((recipe) => recipe.id === snapshot.recipeId && recipe.version === snapshot.recipeVersion);
+    return resolveFabricationMaterialForQuoteItem({ catalogMaterial: catalogLine?.material, observations: item.observaciones }) === "Aluminio" && recipes.some((recipe) => recipe.id === snapshot.recipeId && recipe.version === snapshot.recipeVersion);
   }).length, [items, lineTemplates, recipes]);
 
   const handlePreviewCutSettingsForThisJob = useCallback(async (
@@ -393,7 +393,7 @@ export default function CotizacionFabricacionPrintPage() {
       const template = lineTemplates.find((entry) => String(entry.id) === metadata.lineTemplateId);
       const catalogKey = metadata.catalogLineKey || template?.catalogKey;
       const catalogLine = VENTORA_DEFAULT_LINE_CATALOG.find((line) => line.catalogKey === catalogKey);
-      if (catalogLine?.material !== "Aluminio") return item;
+      if (resolveFabricationMaterialForQuoteItem({ catalogMaterial: catalogLine?.material, observations: item.observaciones }) !== "Aluminio") return item;
       const recipe = recipes.find((entry) => entry.id === snapshot.recipeId && entry.version === snapshot.recipeVersion);
       if (!recipe) return item;
       const recalculated = recalcularPautaSnapshotConParametrosCorte({
