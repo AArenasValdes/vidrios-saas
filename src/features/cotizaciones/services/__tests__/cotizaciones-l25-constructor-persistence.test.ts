@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 import { decodeCotizacionItemPresentationMeta, encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { recalcularPautaSnapshotConParametrosCorte } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
+import { resolveUniversalPricedLineFallback } from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
 
 jest.mock("@/lib/supabase/client", () => ({ createClient: jest.fn() }));
 jest.mock("@/features/proveedor-catalogos/services/supplier-presentations.client", () => ({
@@ -29,7 +30,13 @@ type Row = Record<string, unknown>;
 
 // Models the fields requested from PostgREST and stores the actual serialized rows.
 function createMemoryDatabase(recipeRows: Row[]) {
-  const tables: Record<string, Row[]> = { fabrication_recipes: recipeRows, cotizaciones: [], cotizacion_items: [] };
+  const tables: Record<string, Row[]> = {
+    fabrication_recipes: recipeRows,
+    cotizaciones: [],
+    cotizacion_items: [],
+    clients: [],
+    projects: [],
+  };
   let nextId = 1;
   const client = {
     from(table: string) {
@@ -431,5 +438,222 @@ describe("guardado y relectura L25 desde Constructor", () => {
       if (originalUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL; else process.env.NEXT_PUBLIC_SUPABASE_URL = originalUrl;
       if (originalKey === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY; else process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = originalKey;
     }
+  });
+});
+
+describe("guardado móvil L42 con configuración de catálogo exacta", () => {
+  it("mantiene paridad, snapshot y reapertura en Guiada y Constructor para dos dimensiones", async () => {
+    const originalUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const originalKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.invalid";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test";
+    try {
+      const universal = resolveUniversalPricedLineFallback({
+        catalogKey: "ventora:l42",
+        lineTemplateId: 210,
+        organizationId: 3,
+        lineName: "Serie 42",
+        variant: "normal",
+        leavesCount: 1,
+        recipes: [],
+      })!;
+      const organizationDraft: FabricationRecipeRecord = {
+        ...universal,
+        id: "qa-l42-normal-draft",
+        scope: "organization",
+        organizationId: 3,
+        status: "draft",
+        sourceType: "manual",
+        sourceReference: "ventora-serie-42:normal:catalogo-2026-09-13",
+      };
+      const recipeRow = {
+        id: organizationDraft.id,
+        organization_id: 3,
+        line_template_id: 210,
+        scope: "organization",
+        provider_name: "Ventora Test",
+        line_name: "Serie 42",
+        typology: "proyectante",
+        leaves_count: 1,
+        variant: "normal",
+        version: 1,
+        status: "draft",
+        definition: organizationDraft.definition,
+        source_type: "manual",
+        source_reference: organizationDraft.sourceReference,
+        source_name: null,
+        source_revision: null,
+        parent_recipe_id: null,
+        validated_at: null,
+        created_at: "2026-09-13T00:00:00.000Z",
+        updated_at: "2026-09-13T00:00:00.000Z",
+        eliminado_en: null,
+      };
+      const outcomes = new Map<string, Array<{ width: number; height: number; profiles: unknown }>>();
+
+      for (const [surface, system] of [
+        ["mobile_guiada", "Proyectante"],
+        ["mobile_constructor", "Personalizado"],
+      ] as const) {
+        const modeOutcomes: Array<{ width: number; height: number; profiles: unknown }> = [];
+        for (const [width, height] of [[1200, 1000], [1800, 1200]] as const) {
+          const memory = createMemoryDatabase([recipeRow]);
+          jest.mocked(createClient).mockReturnValue(memory.client as never);
+          const repository = createCotizacionesRepository({ clientFactory: memory.client as never });
+          const service = createCotizacionesAppService({
+            cotizacionesRepository: repository,
+            organizationProfileRepository: { getByOrganizationId: async () => ({ countryCode: "CL" }) } as never,
+            readFabricationCutSettings: async () => null,
+          });
+          const item = buildItemFromForm({
+            ...createEmptyComponentForm(),
+            codigo: "V1",
+            tipo: "Ventana",
+            referencia: "Serie 42",
+            sistema: system,
+            configuracion: system === "Personalizado" ? "Personalizado" : "",
+            hojasBase: 1,
+            ancho: String(width),
+            alto: String(height),
+            cantidad: "2",
+            lineTemplateId: "210",
+            catalogLineKey: "ventora:l42",
+            vidrio: "Incoloro monolítico 4mm",
+            fabricacionTipologia: "proyectante",
+            fabricacionHojas: 1,
+            fabricacionModulos: 1,
+            fabricacionApertura: "proyectante",
+            fabricacionVariante: "normal",
+            fabricacionConfiguracionId: surface === "mobile_guiada" ? "ventora:l42:proyectante" : "",
+            fabricationRecipeId: surface === "mobile_constructor" ? universal.id : "",
+          }, [], `${surface}-${width}`);
+          expect(item.fabricacionSnapshot).toBeNull();
+          const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
+          if (surface === "mobile_guiada") {
+            expect(presentation.fabricacionConfiguracionId).toBe("ventora:l42:proyectante");
+            expect(presentation.fabricationRecipeId).toBeFalsy();
+          } else {
+            expect(presentation.fabricacionConfiguracionId).toBeFalsy();
+            expect(presentation.fabricationRecipeId).toBe("ventora:universal:l42:normal");
+          }
+          const expected = resolveFabricacionDespieceForQuoteItem({
+            item,
+            recipes: [organizationDraft],
+            organizationId: 3,
+          });
+          expect(expected.estado).toBe("calculado");
+
+          const draft: CotizacionWorkflowDraft = {
+            clienteNombre: "Cliente QA",
+            clienteTelefono: "",
+            obra: "PRUEBA QA L42",
+            direccion: "",
+            validez: "",
+            descuentoPct: 0,
+            flete: 0,
+            observaciones: "",
+            items: [item],
+            quotePricingMode: "por_item",
+            quoteCreationSurface: surface,
+          };
+          const saved = await service.saveWorkflow({
+            organizationId: 3,
+            existingCode: `COT-QA-${surface}-${width}`,
+            estado: "creada",
+            draft,
+          });
+          const persistedItem = memory.tables.cotizacion_items?.[0];
+          expect(persistedItem?.organization_id).toBe(3);
+          expect(persistedItem?.fabricacion_snapshot).toMatchObject({
+            recipeId: "ventora:universal:l42:normal",
+            recipeStatus: "validated",
+            lineTemplateId: 210,
+          });
+          const reopened = await service.getWorkflowById(saved.id, 3, { ensureApprovalToken: false });
+          const reopenedSnapshot = reopened?.items[0]?.fabricacionSnapshot;
+          expect(reopenedSnapshot?.recipeId).toBe("ventora:universal:l42:normal");
+          expect(reopenedSnapshot?.input).toMatchObject({
+            anchoTotalMm: width,
+            altoTotalMm: height,
+            cantidad: 2,
+          });
+          expect(reopened?.fabricacionTrabajoSnapshot?.itemCountWithPauta).toBe(1);
+          const canonicalProfiles = (profiles: NonNullable<typeof reopenedSnapshot>['result']['perfiles']) => profiles
+            .map(({ codigoPerfil, funcion, medidaMm, cantidadPiezas, totalLinealMm }) => ({
+              codigoPerfil, funcion, medidaMm, cantidadPiezas, totalLinealMm,
+            }));
+          expect(canonicalProfiles(reopenedSnapshot!.result.perfiles))
+            .toEqual(canonicalProfiles(expected.formal!.result.perfiles));
+          modeOutcomes.push({
+            width,
+            height,
+            profiles: canonicalProfiles(reopenedSnapshot!.result.perfiles),
+          });
+        }
+        outcomes.set(surface, modeOutcomes);
+      }
+
+      expect(outcomes.get("mobile_guiada")).toEqual(outcomes.get("mobile_constructor"));
+      expect(outcomes.get("mobile_guiada")).toHaveLength(2);
+      expect(outcomes.get("mobile_guiada")?.[0]?.profiles)
+        .not.toEqual(outcomes.get("mobile_guiada")?.[1]?.profiles);
+    } finally {
+      if (originalUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+      else process.env.NEXT_PUBLIC_SUPABASE_URL = originalUrl;
+      if (originalKey === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      else process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = originalKey;
+    }
+  });
+
+  it("no genera snapshot cuando la identidad L42 no coincide con la tipología", () => {
+    const universal = resolveUniversalPricedLineFallback({
+      catalogKey: "ventora:l42",
+      lineTemplateId: 210,
+      organizationId: 3,
+      lineName: "Serie 42",
+      variant: "normal",
+      leavesCount: 1,
+      recipes: [],
+    })!;
+    const incompatible = buildItemFromForm({
+      ...createEmptyComponentForm(),
+      tipo: "Ventana",
+      referencia: "Serie 42",
+      sistema: "Proyectante",
+      ancho: "1200",
+      alto: "1000",
+      cantidad: "1",
+      lineTemplateId: "210",
+      catalogLineKey: "ventora:l42",
+      fabricacionConfiguracionId: "ventora:l42:proyectante",
+      fabricacionTipologia: "corredera",
+      fabricacionHojas: 1,
+      fabricacionModulos: 1,
+      fabricacionApertura: "proyectante",
+      fabricacionVariante: "normal",
+      fabricationRecipeId: "",
+    }, [], "l42-incompatible");
+    incompatible.observaciones = encodeCotizacionItemPresentationMeta({
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      lineTemplateId: "210",
+      catalogLineKey: "ventora:l42",
+      fabricacionConfiguracionId: "ventora:l42:proyectante",
+      fabricacionTipologia: "corredera",
+      fabricacionHojas: 1,
+      fabricacionModulos: 1,
+      fabricacionApertura: "proyectante",
+      fabricacionVariante: "normal",
+    });
+
+    const result = resolveFabricacionDespieceForQuoteItem({
+      item: incompatible,
+      recipes: [],
+      organizationId: 3,
+    });
+
+    expect(universal).toBeTruthy();
+    expect(result.estado).toBe("sin_receta");
+    expect(result.formal).toBeNull();
   });
 });
