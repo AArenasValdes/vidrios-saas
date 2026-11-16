@@ -244,6 +244,9 @@ export async function POST(request: Request) {
             pricedProfileCount: priced?.pricedProfileCount ?? 0,
             totalProfileCount: priced?.totalProfileCount ?? item.technicalCodes.length,
             baseReferenceProfileCount: priced?.baseReferenceProfileCount ?? 0,
+            coveredTechnicalCodes: priced?.coveredTechnicalCodes ?? [],
+            pendingTechnicalCodes: priced?.pendingTechnicalCodes ?? item.technicalCodes,
+            baseReferenceTechnicalCodes: priced?.baseReferenceTechnicalCodes ?? [],
             isReference: priced?.isReference ?? providerKey === "arquetipo",
             otherAvailableFinishNames: [...(otherAvailableFinishNamesByProvider.get(providerKey) ?? [])],
           };
@@ -296,6 +299,9 @@ export async function POST(request: Request) {
               pricedProfileCount: coverage?.pricedProfileCount ?? 0,
               totalProfileCount: coverage?.totalProfileCount ?? item.technicalCodes.length,
               baseReferenceProfileCount: coverage?.baseReferenceProfileCount ?? 0,
+              coveredTechnicalCodes: coverage?.coveredTechnicalCodes ?? [],
+              pendingTechnicalCodes: coverage?.pendingTechnicalCodes ?? item.technicalCodes,
+              baseReferenceTechnicalCodes: coverage?.baseReferenceTechnicalCodes ?? [],
               otherAvailableFinishNames: availableOtherFinishesByProvider.get(option.providerKey) ?? [],
             };
           })];

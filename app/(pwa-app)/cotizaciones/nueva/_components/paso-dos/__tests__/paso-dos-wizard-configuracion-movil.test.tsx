@@ -211,17 +211,15 @@ describe("PasoDosWizardConfiguracionMovil", () => {
     const lineButton = screen.getByRole("button", { name: /Serie 25.*80\.000/i });
     expect(lineButton).toHaveAttribute("aria-pressed", "true");
     expect(screen.queryByText("Base: $80.000/m2")).not.toBeInTheDocument();
-    const disclosure = screen.getByText("Costos y proveedores").closest("details");
-    expect(disclosure).not.toHaveAttribute("open");
-    expect(disclosure?.querySelector("summary")).toHaveTextContent("Alumco · 2026");
-    expect(disclosure?.querySelector("summary")).toHaveTextContent("Hay perfiles sin costo de compra");
-    fireEvent.click(screen.getByText("Costos y proveedores"));
+    const supplierSection = screen.getByRole("region", { name: "Costos y proveedores" });
+    expect(supplierSection).toHaveTextContent("Alumco · 2026");
+    expect(supplierSection).toHaveTextContent("Configuración técnica pendiente; cobertura por perfil sin confirmar.");
     fireEvent.change(screen.getByRole("combobox", { name: "Proveedor de compra para esta línea" }), {
       target: { value: "alumco" },
     });
     expect(onSupplierProviderKeyChange).toHaveBeenCalledWith("alumco");
     expect(baseProps.onPrecioChange).not.toHaveBeenCalled();
-    expect(screen.getByRole("option", { name: /Alumco · 2026 · precios de familia; perfiles pendientes de determinar · 4 con base Titanio \(presentación pendiente\)/i })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Alumco · 2026" })).toBeInTheDocument();
   });
 
   it("permite abrir Ajustar composición cuando el sistema ya está elegido y aún no hay esquema de hojas", () => {

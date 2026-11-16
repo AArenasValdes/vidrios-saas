@@ -1,27 +1,27 @@
 "use client";
 
-import { forwardRef, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import styles from "./quote-supplier-disclosure.module.css";
 
 type Props = {
   summary: string;
+  coverage?: string | null;
   warning?: string | null;
   children: ReactNode;
   className?: string;
   bodyClassName?: string;
 };
 
-export const QuoteSupplierDisclosure = forwardRef<HTMLDetailsElement, Props>(function QuoteSupplierDisclosure(
-  { summary, warning, children, className, bodyClassName }, ref,
-) {
+export function QuoteSupplierDisclosure({ summary, coverage, warning, children, className, bodyClassName }: Props) {
   return (
-    <details ref={ref} className={[styles.root, className].filter(Boolean).join(" ")}>
-      <summary>
-        <span className={styles.label}>Costos y proveedores</span>
+    <section className={[styles.root, className].filter(Boolean).join(" ")} aria-label="Costos y proveedores">
+      <div className={styles.heading}>
+        <span>Costos y proveedores</span>
         <strong>{summary}</strong>
-        {warning ? <span className={styles.warning}>{warning}</span> : null}
-      </summary>
+        {coverage ? <span className={styles.coverage}>{coverage}</span> : null}
+        {warning ? <span className={styles.warning} role="status">{warning}</span> : null}
+      </div>
       <div className={bodyClassName}>{children}</div>
-    </details>
+    </section>
   );
-});
+}

@@ -66,7 +66,7 @@ import type { QuickCompositionAdjustment } from "@/features/cotizaciones/visual-
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 import { resolveSupplierFamilyKeyForLineTemplate } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
 import { getLineTemplateWorkshopProfiles } from "@/features/cotizaciones/line-templates/types/line-profile-references";
-import { resolveQuoteSupplierProfileReferences, resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
+import { formatSupplierProfileCoverageNotice, resolveQuoteSupplierProfileReferences, resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 import { useSupplierPresentationResolution } from "@/features/proveedor-catalogos/hooks/use-supplier-presentation-resolution";
 import {
   findSodalL25LineRecipe,
@@ -625,6 +625,19 @@ export function PasoDosWizardConfiguracionMovil({
   });
   const supplierProviderOptions = supplierPresentationResolution.result?.providerOptions?.["guided-line-provider-preview"] ?? [];
   const familyPreferenceProviderKey = supplierPresentationResolution.result?.familyPreferences?.[supplierFamilyKey ?? ""] ?? null;
+  const activeSupplierProviderKey = draft.supplierProviderKey || familyPreferenceProviderKey ||
+    supplierProviderOptions.find((option) => option.providerKey === "arquetipo")?.providerKey || supplierProviderOptions[0]?.providerKey || null;
+  const activeSupplierOption = supplierProviderOptions.find((option) => option.providerKey === activeSupplierProviderKey) ?? null;
+  const guidedCoverageCodes = supplierPresentationRequests[0]?.technicalCodes ?? [];
+  const guidedSupplierCoverage = effectiveSupplierRecipe
+    ? {
+        totalCount: guidedCoverageCodes.length,
+        pendingCodes: activeSupplierOption?.pendingTechnicalCodes ?? guidedCoverageCodes,
+      }
+    : null;
+  const guidedSupplierCoverageNotice = effectiveSupplierRecipe
+    ? formatSupplierProfileCoverageNotice(guidedSupplierCoverage?.pendingCodes ?? guidedCoverageCodes)
+    : supplierPresentationRequests.length > 0 ? "Configuración técnica pendiente; cobertura por perfil sin confirmar." : null;
   const defaultSupplierLabel = supplierProviderOptions.find((option) => option.providerKey === familyPreferenceProviderKey)?.label
     ?? supplierProviderOptions.find((option) => option.providerKey === "arquetipo")?.label
     ?? "Automático";
@@ -1703,41 +1716,6 @@ export function PasoDosWizardConfiguracionMovil({
             </button>
           </div>
         ) : null}
-        {supplierPresentationRequests.length > 0 && onSupplierProviderKeyChange ? (
-          <QuoteSupplierDisclosure
-            className={s.stepTwoMobileSupplierPicker}
-            summary={supplierPresentationResolution.isResolving ? "Cargando proveedores…" : supplierProviderOptions.find((option) => option.providerKey === (draft.supplierProviderKey || familyPreferenceProviderKey))?.label ?? ((draft.supplierProviderKey || familyPreferenceProviderKey) ? "Proveedor guardado · revisar cobertura" : supplierProviderOptions.length === 0 ? "Sin proveedor compatible" : defaultSupplierLabel)}
-            warning={!supplierPresentationResolution.isResolving && (supplierProviderOptions.length === 0 || ((draft.supplierProviderKey || familyPreferenceProviderKey) && !supplierProviderOptions.some((option) => option.providerKey === (draft.supplierProviderKey || familyPreferenceProviderKey)))) ? "Proveedor sin cobertura compatible. Revisa la selección." : supplierProviderOptions.some((option) => option.providerKey === (draft.supplierProviderKey || familyPreferenceProviderKey) && option.pricedProfileCount < option.totalProfileCount) ? "Hay perfiles sin costo de compra. Revisa la cobertura." : null}
-          >
-            <label className={s.stepTwoMobileSupplierField}>
-              <span>Proveedor de compra</span>
-              <select
-                aria-label="Proveedor de compra para esta línea"
-                value={draft.supplierProviderKey ?? ""}
-                onChange={(event) => onSupplierProviderKeyChange(event.target.value)}
-                disabled={supplierPresentationResolution.isResolving && supplierProviderOptions.length === 0}
-              >
-                <option value="">Predeterminado · {defaultSupplierLabel}</option>
-                {draft.supplierProviderKey && !supplierProviderOptions.some((option) => option.providerKey === draft.supplierProviderKey) ? <option value={draft.supplierProviderKey}>Proveedor guardado · sin cobertura compatible</option> : null}
-                {supplierProviderOptions.map((option) => (
-                  <option key={option.providerKey} value={option.providerKey}>
-                    {option.label} · {selectedLineIsSodalL25 && !effectiveSupplierRecipe
-                      ? "precios de familia; perfiles pendientes de determinar"
-                      : `${option.pricedProfileCount}/${option.totalProfileCount} perfiles con precio`}{option.baseReferenceProfileCount ? ` · ${option.baseReferenceProfileCount} con base Titanio (presentación pendiente)` : ""}
-                    {!option.pricedProfileCount && option.otherAvailableFinishNames?.length
-                      ? ` · precio en ${option.otherAvailableFinishNames.slice(0, 2).join(", ")}`
-                      : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <small>
-              {supplierPresentationResolution.isResolving
-                ? "Cargando proveedores…"
-                : "Puedes cambiar el proveedor para esta pieza. El precio de venta de la línea se mantiene."}
-            </small>
-          </QuoteSupplierDisclosure>
-        ) : null}
         {showInlineRecipeVariants ? (
           <QuoteFabricationVariantPicker
             title="Fabricación"
@@ -1756,6 +1734,42 @@ export function PasoDosWizardConfiguracionMovil({
               variant
             )}
           />
+        ) : null}
+        {supplierFamilyKey && onSupplierProviderKeyChange ? (
+          <QuoteSupplierDisclosure
+            className={s.stepTwoMobileSupplierPicker}
+            summary={supplierPresentationRequests.length === 0 ? "Configuración pendiente" : supplierPresentationResolution.isResolving ? "Cargando proveedores…" : supplierProviderOptions.find((option) => option.providerKey === (draft.supplierProviderKey || familyPreferenceProviderKey))?.label ?? ((draft.supplierProviderKey || familyPreferenceProviderKey) ? "Proveedor guardado · revisar cobertura" : supplierProviderOptions.length === 0 ? "Sin proveedor compatible" : defaultSupplierLabel)}
+            coverage={!supplierPresentationResolution.isResolving && effectiveSupplierRecipe && guidedSupplierCoverage
+              ? `Cobertura de compra: ${guidedSupplierCoverage.totalCount - guidedSupplierCoverage.pendingCodes.length}/${guidedSupplierCoverage.totalCount} perfiles`
+              : !supplierPresentationResolution.isResolving && supplierPresentationRequests.length > 0 && !effectiveSupplierRecipe ? "Cobertura por perfil pendiente de configuración técnica."
+                : supplierPresentationRequests.length === 0 ? "Perfiles de compra pendientes de identificar." : null}
+            warning={supplierPresentationRequests.length === 0 ? "Completa la configuración técnica para identificar perfiles y proveedores compatibles." : supplierPresentationResolution.isResolving ? null : supplierProviderOptions.length === 0
+              ? `Sin proveedor compatible${guidedCoverageCodes.length ? ` para ${guidedCoverageCodes.slice(0, 3).join(", ")}` : ""}.`
+              : activeSupplierProviderKey && !activeSupplierOption
+                ? `Proveedor guardado sin cobertura compatible${supplierPresentationRequests[0]?.technicalCodes.length ? ` para ${supplierPresentationRequests[0].technicalCodes.slice(0, 3).join(", ")}` : ""}.`
+                : guidedSupplierCoverageNotice}
+          >
+            {supplierPresentationRequests.length > 0 ? (
+              <>
+                <label className={s.stepTwoMobileSupplierField}>
+                  <span>Proveedor de compra</span>
+                  <select
+                    aria-label="Proveedor de compra para esta línea"
+                    value={draft.supplierProviderKey ?? ""}
+                    onChange={(event) => onSupplierProviderKeyChange(event.target.value)}
+                    disabled={supplierPresentationResolution.isResolving && supplierProviderOptions.length === 0}
+                  >
+                    <option value="">Predeterminado · {defaultSupplierLabel}</option>
+                    {draft.supplierProviderKey && !supplierProviderOptions.some((option) => option.providerKey === draft.supplierProviderKey) ? <option value={draft.supplierProviderKey}>Proveedor guardado · sin cobertura compatible</option> : null}
+                    {supplierProviderOptions.map((option) => (
+                      <option key={option.providerKey} value={option.providerKey}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <small>{supplierPresentationResolution.isResolving ? "Cargando proveedores…" : "Puedes cambiar el proveedor para esta pieza. El precio de venta de la línea se mantiene."}</small>
+              </>
+            ) : <small>Resuelve la configuración de fabricación antes de consultar costos por perfil.</small>}
+          </QuoteSupplierDisclosure>
         ) : null}
         {selectedLineIsSodalL25 && requiresProfileMaterial ? (
           <div className={s.stepTwoMobileBlockSecundario}>

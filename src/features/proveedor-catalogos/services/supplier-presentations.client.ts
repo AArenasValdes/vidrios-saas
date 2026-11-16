@@ -18,6 +18,9 @@ export type SupplierPriceProviderOption = {
   pricedProfileCount: number;
   totalProfileCount: number;
   baseReferenceProfileCount?: number;
+  coveredTechnicalCodes?: string[];
+  pendingTechnicalCodes?: string[];
+  baseReferenceTechnicalCodes?: string[];
   isReference: boolean;
   /** Other explicitly priced finishes for this line/code set, never applied silently. */
   otherAvailableFinishNames?: string[];
