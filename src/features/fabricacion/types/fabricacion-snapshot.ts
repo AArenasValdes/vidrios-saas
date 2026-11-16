@@ -22,6 +22,11 @@ export type FabricacionParametrosFisicos = {
   procedimiento: "por_pieza" | null;
   fuente: string | null;
   largosComercialesConfirmados: boolean;
+  /** Origen explícito de los parámetros sin alterar la receta almacenada. */
+  origenParametros?: "trabajo" | "organizacion" | "receta" | "desconocido";
+  confirmadoPor?: string | null;
+  confirmadoEn?: string | null;
+  organizacionId?: number | null;
 };
 
 export type FabricacionCorteBarra = {

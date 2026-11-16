@@ -174,6 +174,43 @@ describe("fabricacion-trabajo-snapshot lifecycle", () => {
     })).toBe(false);
   });
 
+  it("guardar parámetros del taller no reescribe snapshots históricos al abrir, recargar y persistir datos comerciales", () => {
+    const frozenItem = workflowItem({ fabricacionSnapshot: itemSnapshot });
+    const frozenWorkSnapshot = existingGlobalSnapshot;
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({
+      existingId: "cotizacion-historica",
+      existingItems: [frozenItem],
+      items: [{ ...frozenItem }],
+    });
+    const workSnapshotAfterSave = resolveFabricacionTrabajoSnapshotForQuoteSave({
+      existingId: "cotizacion-historica",
+      existingSnapshot: frozenWorkSnapshot,
+      capturedAt: "2026-11-15T12:00:00.000Z",
+      items: [{ ...carrier, snapshot: prepared.items[0]?.fabricacionSnapshot ?? null }],
+    });
+
+    expect(prepared.itemIdsToResolve.size).toBe(0);
+    expect(prepared.items[0]?.fabricacionSnapshot).toEqual(itemSnapshot);
+    expect(workSnapshotAfterSave).toBe(frozenWorkSnapshot);
+
+    // Reopening/rehydration reads the persisted values; it does not resolve current recipes.
+    const reloadedItem = workflowItem({ fabricacionSnapshot: structuredClone(prepared.items[0]?.fabricacionSnapshot) });
+    expect(reloadedItem.fabricacionSnapshot).toEqual(itemSnapshot);
+    expect(reloadedItem).toMatchObject({
+      ancho: frozenItem.ancho,
+      alto: frozenItem.alto,
+      cantidad: frozenItem.cantidad,
+      vidrio: frozenItem.vidrio,
+      precioUnitario: frozenItem.precioUnitario,
+      precioTotal: frozenItem.precioTotal,
+    });
+    expect(shouldResolveFabricationRecipesForQuoteSave({
+      existingId: "cotizacion-historica",
+      existingStatus: "creada",
+      nextStatus: "creada",
+    })).toBe(false);
+  });
+
   it("histórica con snapshot por ítem y global NULL no crea un snapshot global al guardar", () => {
     const result = resolveFabricacionTrabajoSnapshotForQuoteSave({
       existingId: "cotizacion-historica",

@@ -9,6 +9,7 @@ import { isFabricacionRecipeReadyForSnapshot } from "@/features/fabricacion/serv
 import { buildFabricationRecipeSummary } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import { resolveFabricacionHojasForRecipeMatch } from "@/features/fabricacion/services/fabricacion-hojas-resolver.service";
 import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
+import type { FabricacionParametrosCorteConfirmados } from "@/features/fabricacion/services/fabricacion-parametros-corte.service";
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
 import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
 import { resolveFabricationRecipe } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
@@ -253,6 +254,7 @@ export function resolveFabricacionDespieceForQuoteItem(input: {
   lineCatalogKey?: string | null;
   /** Familia explícita del catálogo; permite resolver presentaciones del mismo sistema. */
   supplierFamilyKey?: string | null;
+  organizationCutSettings?: FabricacionParametrosCorteConfirmados | null;
 }): FabricacionDespieceCotizacionResult {
   const presentation = resolveQuotePresentationForFabrication(input.item);
   const compositionCatalogKey =
@@ -466,6 +468,7 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   lineTemplateId?: string | number | null;
   lineCatalogKey?: string | null;
   supplierFamilyKey?: string | null;
+  organizationCutSettings?: FabricacionParametrosCorteConfirmados | null;
 }): FabricacionDespieceCotizacionResult {
   const presentation = resolveQuotePresentationForFabrication(input.item);
   const baharFoldingVariant = inferVeratecBahar5200FoldingVariant(input.item, presentation);
@@ -1154,6 +1157,7 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
       ? l20PreliminaryRecipe(recipe)
       : recipe,
     supplierFamilyKey: input.supplierFamilyKey,
+    organizationCutSettings: input.organizationCutSettings,
     entrada: {
       anchoTotalMm: ancho,
       anchoHojaAMm: presentation.fabricacionAnchoHojaAMm,

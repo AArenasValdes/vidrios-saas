@@ -679,7 +679,12 @@ describe("orden de fabricación y materiales", () => {
       { key: "glass:pane-1", subject: "V2 · Paño 1: vidrio", action: "Revisar medida manual sin aprobación física." },
       { key: "coverage:v9", subject: "V1: despiece", action: "No existe snapshot técnico con cortes guardados." },
       { key: "coverage-joint-plan", subject: "Pauta conjunta", action: "Los cortes por componente no sustituyen la distribución de barras del trabajo." },
-      { key: "presentation:v2:5002", subject: "Perfil 5002: presentación", action: "Seleccionar presentación física y largo comercial." },
+      ...["5001", "5002", "5003", "5006", "5007", "5005", "5004"]
+        .map((code) => ({
+          key: `presentation:v2:${code}`,
+          subject: `Perfil ${code}: presentación`,
+          action: "Seleccionar presentación física y largo comercial.",
+        })),
       { key: "bar-distribution", subject: "Distribución por tira", action: "Revisar pauta conjunta pendiente." },
       { key: "structural-geometry", subject: "Despiece estructural preliminar", action: "Acristalamiento pendiente; no apto para fabricación." },
       { key: "historical-cuts-review", subject: "Cortes históricos por revisar", action: "Snapshots incompatibles excluidos de pauta operativa." },
@@ -694,7 +699,9 @@ describe("orden de fabricación y materiales", () => {
     expect(cutsText).not.toContain("Ventana corredera");
     expect(cutsText).toContain("3.391 mm");
     expect(cutsText).toContain("Pauta conjunta");
-    expect(cutsText).toContain("presentación física y largo comercial");
+    expect(cutsText).toContain("Presentaciones de compra pendientes para 7 perfiles. Verificar largos comerciales antes de cortar");
+    expect(cutsText).not.toContain("Perfil 5001: presentación");
+    expect(cutsText).not.toContain("Seleccionar presentación física y largo comercial");
     expect(cutsText).toContain("Despiece estructural preliminar");
     expect(cutsText).toContain("Revisión técnica · cortes históricos");
     expect(cutsText).toContain("P1");
@@ -705,6 +712,8 @@ describe("orden de fabricación y materiales", () => {
     expect(cutsText).not.toContain("Tornillos: precio");
     expect(cutsText).not.toContain("Paño 1: vidrio");
     expect(combinedText).toContain("Perfil 5001: precio");
+    expect(combinedText).toContain("Perfil 5001: presentación");
+    expect(combinedText).toContain("Seleccionar presentación física y largo comercial");
     expect(combinedText).toContain("Tornillos: precio");
     expect(combinedText).toContain("Paño 1: vidrio");
     expect(JSON.stringify(order.cutGroups)).toBe(beforeCuts);
@@ -718,6 +727,90 @@ describe("orden de fabricación y materiales", () => {
       writeFileSync(path.join(outputDirectory, "qa-pauta-cortes-pr17.pdf"), Buffer.from(cutsPdf.output("arraybuffer")));
       writeFileSync(path.join(outputDirectory, "qa-pdf-combinado-pr17.pdf"), Buffer.from(combinedPdf.output("arraybuffer")));
     }
+  });
+
+  it("condensa las asociaciones de compra de COT-161126-001 y conserva parámetros congelados", () => {
+    const work = savedWork();
+    const codes = ["5001", "5002", "5003", "5006", "5007", "5005", "5004"];
+    const cutsByCode: Record<string, number[]> = {
+      "5001": [1800],
+      "5002": [1800],
+      "5003": [1497, 1497],
+      "5004": [898, 898],
+      "5005": [898, 898],
+      "5006": [1482, 1482],
+      "5007": [1482, 1482],
+    };
+    work.bars = codes.map((code) => {
+      const cutLengths = cutsByCode[code]!;
+      const count = cutLengths.length;
+      const usedMm = cutLengths.reduce((sum, length) => sum + length, 0) + 12 + count * 4;
+      return {
+        ...savedWork().bars[0]!,
+        materialKey: `perfil-${code}`,
+        presentationKey: `barra-${code}`,
+        codigoPerfil: code,
+        nombrePerfil: `Perfil ${code}`,
+        indice: 1,
+        despunteInicialMm: 12,
+        perdidaCorteMm: 4,
+        usadoMm: usedMm,
+        sobranteMm: 6000 - usedMm,
+        parametrosFisicos: {
+          estado: "pendiente" as const,
+          perdidaCorteMm: 4,
+          despunteInicialMm: 12,
+          procedimiento: "por_pieza" as const,
+          fuente: "Parámetros confirmados de organización QA",
+          largosComercialesConfirmados: false,
+          origenParametros: "organizacion" as const,
+          organizacionId: 3,
+        },
+        cortes: cutLengths.map((length, cutIndex) => ({
+          ...savedWork().bars[0]!.cortes[cutIndex % savedWork().bars[0]!.cortes.length]!,
+          codigoPerfil: code,
+          largoMm: length,
+        })),
+      };
+    });
+    work.itemCountWithPauta = 1;
+    work.totalBars = 7;
+    work.totalProfilesLinealMm = work.bars.reduce((sum, bar) => sum + bar.cortes.reduce((cutsTotal, cut) => cutsTotal + cut.largoMm, 0), 0);
+    work.totalWasteMm = work.bars.reduce((sum, bar) => sum + bar.sobranteMm, 0);
+    work.missingPresentations = ["5001", "5002", "5003", "5003", "5006", "5006", "5007", "5007", "5005", "5005", "5004", "5004"]
+      .map((technicalCode) => ({
+        itemId: "item-v1-qa",
+        technicalCode,
+        finishKey: "#a8a8a8",
+        supplierSku: null,
+        reason: "No existe una asociación confirmada para este perfil, familia y acabado.",
+      }));
+    const order = buildFabricationWorkOrder({ summary: summary(work), materials: materials(), technicalCostSnapshot: savedCost() });
+
+    expect(order.cutPlanPhysicalState).toBe("teorica");
+    expect(order.cutGroups).toHaveLength(7);
+    expect(order.pending.filter((row) => row.key.startsWith("presentation:")).map((row) => row.key)).toHaveLength(7);
+    expect(order.cutGroups.map(({ technicalCode, kerfMm, trimMm }) => ({ technicalCode, kerfMm, trimMm })))
+      .toEqual(codes.map((technicalCode) => ({ technicalCode, kerfMm: 4, trimMm: 12 })));
+    expect(order.cutGroups.map(({ technicalCode, cuts }) => ({
+      technicalCode,
+      cuts: cuts.map(({ lengthMm, quantity }) => ({ lengthMm, quantity })),
+    }))).toEqual(codes.map((technicalCode) => {
+      const grouped = new Map<number, number>();
+      for (const length of cutsByCode[technicalCode]!) grouped.set(length, (grouped.get(length) ?? 0) + 1);
+      return { technicalCode, cuts: [...grouped].map(([lengthMm, quantity]) => ({ lengthMm, quantity })) };
+    }));
+
+    const pdf = createFabricationWorkOrderPdf(order, {
+      companyName: "Taller QA", quoteCode: "COT-161126-001", workName: "Ventana", issueDate: "16 nov 2026",
+    }, null, "profile-cuts");
+    const text = pdfText(pdf);
+
+    expect(pdf.getNumberOfPages()).toBe(1);
+    expect(text.match(/Presentaciones de compra pendientes para 7 perfiles/g)).toHaveLength(1);
+    expect(text).toContain("Distribución referencial");
+    expect(text).toContain("Confirmar parámetros del taller antes de cortar");
+    expect(text).not.toContain("Seleccionar presentación física y largo comercial");
   });
 
   it("muestra unitarios de perfiles aunque no haya pauta, sin sumarlos como costo de fabricación", () => {

@@ -15,6 +15,10 @@ import {
   SODAL_L25_FORMULA_VERSION,
 } from "@/features/fabricacion/zeta/sodal-l25-profile-roles";
 import { isZetaConfirmedSourceReference } from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
+import {
+  resolveFabricacionParametrosCorte,
+  type FabricacionParametrosCorteConfirmados,
+} from "@/features/fabricacion/services/fabricacion-parametros-corte.service";
 
 function cloneReceta(receta: FabricacionReceta): FabricacionReceta {
   return JSON.parse(JSON.stringify(receta)) as FabricacionReceta;
@@ -151,6 +155,8 @@ export function construirSnapshotFabricacionCotizacion(input: {
   recipe: FabricationRecipeRecord;
   entrada: FabricacionEntradaCalculo;
   supplierFamilyKey?: string | null;
+  organizationCutSettings?: FabricacionParametrosCorteConfirmados | null;
+  jobCutSettings?: FabricacionParametrosCorteConfirmados | null;
   calculatedAt?: string;
 }): FabricacionCotizacionSnapshot {
   const definition = enriquecerCodigosPerfilRecetaFabricacion({
@@ -160,9 +166,15 @@ export function construirSnapshotFabricacionCotizacion(input: {
     lineName: input.recipe.lineName,
   });
   const result = calcularCubicacionYPauta(definition, input.entrada);
+  const parametrosCorte = resolveFabricacionParametrosCorte({
+    recipeConfiguration: definition.configuracionCorte,
+    organizationSettings: input.organizationCutSettings,
+    jobOverride: input.jobCutSettings,
+  });
   const pautaBarras = construirPautaBarrasFabricacion({
     receta: definition,
     resultado: result,
+    parametrosCorte: parametrosCorte.source === "unknown" ? null : parametrosCorte,
   });
 
   return {
@@ -188,6 +200,82 @@ export function construirSnapshotFabricacionCotizacion(input: {
     pautaBarras,
     formulaVersion: resolveSnapshotFormulaVersion(input.recipe, definition.identidad),
     calculatedAt: input.calculatedAt ?? new Date().toISOString(),
+  };
+}
+
+/** Recalcula únicamente barras desde geometría congelada y una receta con versión exacta. */
+export function recalcularPautaSnapshotConParametrosCorte(input: {
+  snapshot: FabricacionCotizacionSnapshot;
+  recipe: FabricationRecipeRecord;
+  parameters: FabricacionParametrosCorteConfirmados;
+}): FabricacionCotizacionSnapshot | null {
+  if (
+    input.recipe.id !== input.snapshot.recipeId ||
+    input.recipe.version !== input.snapshot.recipeVersion ||
+    input.recipe.definition.identidad.recetaId !== input.snapshot.recipeDefinitionId ||
+    !input.snapshot.result.calculable ||
+    input.snapshot.pauta.length === 0
+  ) {
+    return null;
+  }
+
+  const lengthsByComponent: Record<string, number> = {};
+  for (const bar of input.snapshot.pautaBarras?.barras ?? []) {
+    for (const cut of bar.cortes) {
+      const previous = lengthsByComponent[cut.componenteId];
+      if (previous !== undefined && previous !== bar.largoComercialMm) return null;
+      lengthsByComponent[cut.componenteId] = bar.largoComercialMm;
+    }
+  }
+  const requiredProfileIds = new Set(
+    input.snapshot.result.perfiles.map((profile) => profile.componenteId)
+  );
+  // No reinterpretamos longitudes históricas si el snapshot no las conserva.
+  if ([...requiredProfileIds].some((id) => !Number.isFinite(lengthsByComponent[id]))) {
+    return null;
+  }
+
+  const definition = enriquecerCodigosPerfilRecetaFabricacion({
+    receta: cloneReceta(input.recipe.definition),
+    sourceType: input.recipe.sourceType,
+    sourceReference: input.recipe.sourceReference,
+    lineName: input.recipe.lineName,
+  });
+  const snapshotIdentity = input.snapshot.recipeIdentity;
+  const recipeIdentity = definition.identidad;
+  if (
+    snapshotIdentity.codigo !== recipeIdentity.codigo ||
+    snapshotIdentity.tipologia !== recipeIdentity.tipologia ||
+    snapshotIdentity.hojas !== recipeIdentity.hojas ||
+    snapshotIdentity.modulos !== recipeIdentity.modulos ||
+    snapshotIdentity.apertura !== recipeIdentity.apertura ||
+    snapshotIdentity.herraje !== recipeIdentity.herraje ||
+    snapshotIdentity.variante !== recipeIdentity.variante ||
+    snapshotIdentity.configurationId !== recipeIdentity.configurationId ||
+    snapshotIdentity.compositionId !== recipeIdentity.compositionId ||
+    input.snapshot.result.perfiles.some((row) => {
+      const profile = definition.perfiles.find((entry) => entry.id === row.componenteId);
+      return !profile || profile.codigoPerfil.trim() !== row.codigoPerfil.trim();
+    })
+  ) return null;
+  const parametrosCorte = resolveFabricacionParametrosCorte({
+    recipeConfiguration: definition.configuracionCorte,
+    jobOverride: input.parameters,
+  });
+  const pautaBarras = construirPautaBarrasFabricacion({
+    receta: definition,
+    resultado: input.snapshot.result,
+    parametrosCorte,
+    largosComercialesPorComponenteId: lengthsByComponent,
+  });
+  return {
+    ...input.snapshot,
+    pautaBarras,
+    advertencias: [
+      ...input.snapshot.result.advertencias,
+      ...pautaBarras.advertencias,
+    ],
+    calculatedAt: new Date().toISOString(),
   };
 }
 

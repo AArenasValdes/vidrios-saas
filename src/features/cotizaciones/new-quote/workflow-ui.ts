@@ -2729,7 +2729,12 @@ export function reconcileWorkflowItemPricing(
   }
 
   const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
-  if (item.precioAjustadoManual || presentation.precioAjustadoManual) {
+  if (
+    item.precioAjustadoManual ||
+    presentation.precioAjustadoManual ||
+    item.origenPrecio === "manual" ||
+    presentation.origenPrecio === "manual"
+  ) {
     return item;
   }
 
@@ -2740,11 +2745,19 @@ export function reconcileWorkflowItemPricing(
       lineTemplates: options?.lineTemplates,
       lineTemplateCatalogMetadata: options?.lineTemplateCatalogMetadata,
     });
+    const originalPresentation = decodeCotizacionItemPresentationMeta(item.observaciones);
+    const repricedPresentation = decodeCotizacionItemPresentationMeta(repriced.observaciones);
     // Repricing does not edit fabrication. The saved snapshot may have been
     // calculated from a confirmed fallback while the form still references an
     // older draft recipe ID; rebuilding the form must not discard that snapshot.
     return {
       ...repriced,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        ...repricedPresentation,
+        fabricationRecipeId:
+          originalPresentation.fabricationRecipeId || repricedPresentation.fabricationRecipeId,
+        raw: repricedPresentation.raw,
+      }),
       fabricacionSnapshot: item.fabricacionSnapshot ?? null,
     };
   } catch {

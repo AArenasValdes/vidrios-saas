@@ -32,6 +32,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
+import { FabricationCutSettingsSection } from "./fabrication-cut-settings-section";
 import type { MeasureUnit } from "@/features/organization-profile/types/measure-unit";
 import { COUNTRY_PRESET_OPTIONS } from "@/features/organization-region/config/country-presets";
 import { getCountryPreset } from "@/features/organization-region/services/organization-region.service";
@@ -1257,6 +1258,8 @@ export default function ConfiguracionEmpresaPage() {
             </div>
           </div>
         </section>
+
+        <FabricationCutSettingsSection />
 
         <section className={`${s.accordion} ${openSection === "comercial" ? s.accordionOpen : ""}`}>
           <button ref={commercialAccordionTriggerRef} type="button" className={`${s.accordionTrigger} ${s.saveReturnAccordionTrigger}`} onClick={() => setOpenSection((current) => (current === "comercial" ? null : "comercial"))} aria-expanded={openSection === "comercial"}>

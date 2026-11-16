@@ -332,6 +332,12 @@
       "source": "app/api/clientes/resumen/route.ts"
     },
     {
+      "path": "/api/configuracion/fabricacion/parametros-corte",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/configuracion/fabricacion/parametros-corte/route.ts"
+    },
+    {
       "path": "/api/cotizaciones/[id]/costo-tecnico-parcial",
       "type": "api",
       "area": "api",

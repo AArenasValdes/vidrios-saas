@@ -43,6 +43,8 @@ import { buildQuoteStudioFinancialSummary } from "@/features/cotizaciones/servic
 import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
+import { debeAplicarParametrosDeTaller, filtrarParametrosCortePorOrganizacion, resolveFabricationMaterialForQuoteItem, type FabricacionParametrosCorteConfirmados } from "@/features/fabricacion/services/fabricacion-parametros-corte.service";
+import { fetchFabricacionParametrosCorteDelTaller } from "@/features/fabricacion/services/fabricacion-parametros-corte.client";
 import { resolveSupplierPresentationsForQuote } from "@/features/proveedor-catalogos/services/supplier-presentations.client";
 import { resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 import {
@@ -70,6 +72,7 @@ type CotizacionesAppServiceDeps = {
   projectsRepository?: ProjectsRepository;
   cotizacionesRepository?: CotizacionesRepository;
   organizationProfileRepository?: OrganizationProfileRepository;
+  readFabricationCutSettings?: () => Promise<FabricacionParametrosCorteConfirmados | null>;
 };
 
 type EnsuredEntity<T> = {
@@ -317,7 +320,7 @@ function mapDatabaseItemToWorkflowItem(
     item.subtotal !== null && item.subtotal !== undefined ? Number(item.subtotal) : null;
 
   if (
-    presentation.precioAjustadoManual &&
+    (presentation.precioAjustadoManual || presentation.origenPrecio === "manual") &&
     storedPrecioUnitario !== null &&
     Number.isFinite(storedPrecioUnitario) &&
     storedSubtotal !== null &&
@@ -525,6 +528,7 @@ function buildFabricacionSnapshotForItem(input: {
   item: CotizacionWorkflowItem;
   recipes: FabricationRecipeRecord[];
   organizationId: number | null;
+  organizationCutSettings?: FabricacionParametrosCorteConfirmados | null;
 }): FabricacionCotizacionSnapshot | null {
   if (input.item.tipoItem === "item_libre_con_valor") return null;
   if (!input.item.ancho || !input.item.alto || input.item.cantidad <= 0) return null;
@@ -537,6 +541,10 @@ function buildFabricacionSnapshotForItem(input: {
     typeof catalogLine?.catalogMetadata?.familyKey === "string"
       ? catalogLine.catalogMetadata.familyKey
       : null;
+  const cutSettingsForQuote = filtrarParametrosCortePorOrganizacion(
+    input.organizationCutSettings,
+    input.organizationId
+  );
 
   const resolution = resolveFabricacionDespieceForQuoteItem({
     item: input.item,
@@ -545,6 +553,16 @@ function buildFabricacionSnapshotForItem(input: {
     lineTemplateId: presentation.lineTemplateId,
     lineCatalogKey: presentation.catalogLineKey,
     supplierFamilyKey,
+    organizationCutSettings:
+      debeAplicarParametrosDeTaller({
+        isNewQuote: cutSettingsForQuote != null,
+        catalogMaterial: resolveFabricationMaterialForQuoteItem({
+          catalogMaterial: catalogLine?.material,
+          observations: input.item.observaciones,
+        }),
+      })
+        ? cutSettingsForQuote
+        : null,
   });
 
   // Congela en cotizaciones nuevas las recetas validadas y las preliminares
@@ -1158,6 +1176,18 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
       const organizationIdForFabricacion = normalizeOrganizationIdForFabricacion(
         input.organizationId
       );
+      let organizationCutSettings: FabricacionParametrosCorteConfirmados | null = null;
+      // Organization defaults apply automatically only while creating new
+      // quotations. Existing snapshots require an explicit recalculation.
+      if (!input.existingId) {
+        try {
+          organizationCutSettings = await (
+            deps.readFabricationCutSettings ?? fetchFabricacionParametrosCorteDelTaller
+          )();
+        } catch (settingsError) {
+          console.warn("No se pudieron consultar los parámetros de corte del taller; la pauta seguirá teórica.", settingsError);
+        }
+      }
       const recipeLineTemplateIds = getFabricationRecipeLineTemplateIdsForSnapshotResolution({
         items: normalizedItems,
         itemIdsToResolve: snapshotPreparation.itemIdsToResolve,
@@ -1181,6 +1211,7 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
           item,
           recipes,
           organizationId: organizationIdForFabricacion,
+          organizationCutSettings,
         }),
         onItemError: (item, itemError) => {
           console.error(

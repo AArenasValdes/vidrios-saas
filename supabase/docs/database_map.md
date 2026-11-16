@@ -1,5 +1,14 @@
 # Database Map - Ventora
 
+## Addendum 2026-11-14 - Parámetros habituales de corte
+
+- `organization_fabrication_cut_settings` guarda una única confirmación por organización: pérdida por corte, despunte inicial por tira y procedimiento `por_pieza`.
+- `confirmed_by`, `confirmed_at` y `updated_by` dejan trazabilidad de quién confirmó y cuándo; los parámetros no incluyen ni sustituyen el largo comercial por perfil/presentación.
+- RLS activa: `authenticated` puede hacer `SELECT` solo de su organización mediante `get_org_id()`; no tiene permisos ni policies de escritura. `anon`/`public` no tienen acceso y la API escribe mediante `service_role` tras comprobar rol y derivar organización/actor de la sesión.
+- Migración: `20261114120000_organization_fabrication_cut_settings.sql`. Esta rama solo agrega la migración al repositorio; no la ejecuta en Supabase.
+- Regresión pgTAP: `supabase/tests/organization_fabrication_cut_settings_security.test.sql`; no se asume ejecutada mientras no haya servicio local de base de datos disponible.
+- En cotizaciones nuevas, los valores se aplican a recetas compatibles de aluminio cuando la receta no declara ambos parámetros. Cotizaciones históricas no se recalculan; la pauta solo cambia mediante previsualización y confirmación explícita.
+
 ## Addendum 2026-10-15 - Preferencia de proveedor por familia
 
 - `organization_supplier_family_preferences` guarda un proveedor habitual por `(organization_id, family_key)`; `provider_key` es identidad estable, no un SKU ni nombre de pantalla.

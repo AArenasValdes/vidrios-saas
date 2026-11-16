@@ -1,0 +1,23 @@
+.panel { display: grid; gap: 0; border: 1px solid #d8e1ed; border-radius: 16px; background: #fff; color: #192943; }
+.summary { min-height: 66px; display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 13px; }
+.icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: #eef4fc; color: #315f9f; }
+.summaryCopy { min-width: 0; display: grid; gap: 3px; }
+.summaryCopy strong { font-size: 14px; }
+.summaryCopy span { color: #66758c; font-size: 12px; line-height: 1.35; }
+.open { min-height: 36px; padding: 0 12px; border: 1px solid #c7d5e8; border-radius: 10px; background: #fff; color: #245a9c; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.form { display: grid; gap: 13px; padding: 0 14px 14px; }
+.muted, .error, .notice { margin: 0; font-size: 12px; line-height: 1.45; }
+.muted { color: #6b7890; }
+.error { color: #b42318; }
+.notice { color: #176b48; font-weight: 650; }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.fields label { display: grid; gap: 6px; color: #37465e; font-size: 12px; font-weight: 650; }
+.fields input { width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid #cbd6e5; border-radius: 10px; color: #14233d; font: inherit; font-size: 17px; }
+.confirm { display: grid; grid-template-columns: 20px minmax(0, 1fr); align-items: start; gap: 9px; color: #40506a; font-size: 12px; line-height: 1.4; }
+.confirm input { width: 18px; height: 18px; margin: 0; accent-color: #216ec9; }
+.actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.actions button { min-height: 42px; padding: 7px 10px; border: 0; border-radius: 10px; background: #155fc2; color: #fff; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.actions .secondary { border: 1px solid #cbd6e5; background: #f7f9fc; color: #26466f; }
+.actions button:disabled { opacity: .52; cursor: not-allowed; }
+@media (max-width: 540px) { .summary { grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; padding-inline: 10px; } .fields, .actions { grid-template-columns: minmax(0, 1fr); } .open { padding-inline: 9px; } }
+@media print { .panel { display: none; } }
