@@ -1,5 +1,7 @@
 "use client";
 
+import { QuoteSupplierDisclosure } from "@/features/proveedor-catalogos/components/quote-supplier-disclosure";
+
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { LuChevronLeft, LuPencil, LuSearch, LuX } from "react-icons/lu";
@@ -1702,7 +1704,11 @@ export function PasoDosWizardConfiguracionMovil({
           </div>
         ) : null}
         {supplierPresentationRequests.length > 0 && onSupplierProviderKeyChange ? (
-          <div className={s.stepTwoMobileSupplierPicker}>
+          <QuoteSupplierDisclosure
+            className={s.stepTwoMobileSupplierPicker}
+            summary={supplierPresentationResolution.isResolving ? "Cargando proveedores…" : supplierProviderOptions.find((option) => option.providerKey === (draft.supplierProviderKey || familyPreferenceProviderKey))?.label ?? ((draft.supplierProviderKey || familyPreferenceProviderKey) ? "Proveedor guardado · revisar cobertura" : supplierProviderOptions.length === 0 ? "Sin proveedor compatible" : defaultSupplierLabel)}
+            warning={!supplierPresentationResolution.isResolving && (supplierProviderOptions.length === 0 || ((draft.supplierProviderKey || familyPreferenceProviderKey) && !supplierProviderOptions.some((option) => option.providerKey === (draft.supplierProviderKey || familyPreferenceProviderKey)))) ? "Proveedor sin cobertura compatible. Revisa la selección." : supplierProviderOptions.some((option) => option.providerKey === (draft.supplierProviderKey || familyPreferenceProviderKey) && option.pricedProfileCount < option.totalProfileCount) ? "Hay perfiles sin costo de compra. Revisa la cobertura." : null}
+          >
             <label className={s.stepTwoMobileSupplierField}>
               <span>Proveedor de compra</span>
               <select
@@ -1712,6 +1718,7 @@ export function PasoDosWizardConfiguracionMovil({
                 disabled={supplierPresentationResolution.isResolving && supplierProviderOptions.length === 0}
               >
                 <option value="">Predeterminado · {defaultSupplierLabel}</option>
+                {draft.supplierProviderKey && !supplierProviderOptions.some((option) => option.providerKey === draft.supplierProviderKey) ? <option value={draft.supplierProviderKey}>Proveedor guardado · sin cobertura compatible</option> : null}
                 {supplierProviderOptions.map((option) => (
                   <option key={option.providerKey} value={option.providerKey}>
                     {option.label} · {selectedLineIsSodalL25 && !effectiveSupplierRecipe
@@ -1729,7 +1736,7 @@ export function PasoDosWizardConfiguracionMovil({
                 ? "Cargando proveedores…"
                 : "Puedes cambiar el proveedor para esta pieza. El precio de venta de la línea se mantiene."}
             </small>
-          </div>
+          </QuoteSupplierDisclosure>
         ) : null}
         {showInlineRecipeVariants ? (
           <QuoteFabricationVariantPicker

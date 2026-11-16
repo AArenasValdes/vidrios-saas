@@ -1,5 +1,7 @@
 "use client";
 
+import { QuoteSupplierDisclosure } from "@/features/proveedor-catalogos/components/quote-supplier-disclosure";
+
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { LuArrowRight, LuInfo, LuStar, LuX } from "react-icons/lu";
 
@@ -1062,15 +1064,13 @@ export function CuadernoQuickEditSheet({
             ) : null}
 
             {supplierResolutionRequest ? (
-              <details ref={supplierDisclosureRef} className={s.supplierDisclosure}>
-                <summary>
-                  <span>Proveedor de compra</span>
-                  <strong>
-                    {selectedSupplierOption?.label ??
-                      (selectedSupplierProviderKey ? "Proveedor guardado · revisar cobertura" : `${automaticSupplierLabel} · predeterminado`)}
-                  </strong>
-                </summary>
-                <div className={s.supplierDisclosureBody}>
+              <QuoteSupplierDisclosure
+                ref={supplierDisclosureRef}
+                className={s.supplierDisclosure}
+                bodyClassName={s.supplierDisclosureBody}
+                summary={isLoadingSupplierOptions ? "Cargando proveedores…" : selectedSupplierOption?.label ?? (selectedSupplierProviderKey ? "Proveedor guardado · revisar cobertura" : supplierOptions.length === 0 ? "Sin proveedor compatible" : `${automaticSupplierLabel} · predeterminado`)}
+                warning={!isLoadingSupplierOptions && (supplierOptions.length === 0 || (selectedSupplierProviderKey && !selectedSupplierOption)) ? "Proveedor sin cobertura compatible. Revisa la selección." : selectedSupplierOption && selectedSupplierOption.pricedProfileCount < selectedSupplierOption.totalProfileCount ? "Hay perfiles sin costo de compra. Revisa la cobertura." : null}
+              >
                   <label className={s.field}>
                     <span className={s.fieldLabel}>Proveedor para esta pieza</span>
                     <select
@@ -1191,8 +1191,7 @@ export function CuadernoQuickEditSheet({
                   <span className={s.variantSourceHint}>No hay precios compatibles para los perfiles de esta composición.</span>
                 ) : null}
                   {familyPreferenceError ? <span className={s.preferenceError} role="status">{familyPreferenceError}</span> : null}
-                </div>
-              </details>
+              </QuoteSupplierDisclosure>
             ) : null}
             {selectedLineIsSodalL25 && isResolvingL25Recipe ? (
               <p className={s.variantSourceHint} role="status">Resolviendo receta exacta L25…</p>
