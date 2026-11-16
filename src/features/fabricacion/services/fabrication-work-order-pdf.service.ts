@@ -491,10 +491,14 @@ export function createFabricationWorkOrderPdf(
     const hasJointCoveragePending = order.pending.some((row) =>
       row.key === "coverage-joint-plan" || row.key === "coverage-joint-plan-blocked"
     );
+    const presentationPending = kind === "profile-cuts"
+      ? order.pending.filter((row) => row.key.startsWith("presentation:"))
+      : [];
     const technicalPending = kind === "combined"
       ? order.pending.filter((row) => !(referentialDistribution && row.key === "cut-physics"))
       : order.pending.filter((row) => {
           if (referentialDistribution && row.key === "cut-physics") return false;
+          if (row.key.startsWith("presentation:")) return false;
           if (!isProfileCutTechnicalPending(row.key)) return false;
           if (row.key === "bar-distribution" && hasJointCoveragePending) return false;
           if (row.key === "structural-geometry" && order.preliminaryCutGroups.length > 0) return false;
@@ -503,9 +507,21 @@ export function createFabricationWorkOrderPdf(
         });
     if (kind === "combined" || technicalPending.length > 0) {
       const pending = technicalPending.map((row): Row => ({ cells: [row.subject, row.action] }));
-      drawTable(pdf, kind === "combined" ? "4. Pendientes para el maestro" : "Estado técnico · pendientes de corte", [
+      y = drawTable(pdf, kind === "combined" ? "4. Pendientes para el maestro" : "Estado técnico · pendientes de corte", [
         { title: "Dato", width: 70 }, { title: "Acción", width: 112 },
       ], pending, y, "Sin pendientes técnicos de corte", runningTitle, metadata.quoteCode, logoDataUrl);
+    }
+    if (kind === "profile-cuts" && presentationPending.length > 0) {
+      // buildFabricationWorkOrder deduplicates these by item and technical code.
+      // Keep purchase detail in the combined document; the cuts-only sheet needs one compact reminder.
+      drawNote(
+        pdf,
+        `Presentaciones de compra pendientes para ${presentationPending.length} perfiles. Verificar largos comerciales antes de cortar.`,
+        y,
+        runningTitle,
+        metadata.quoteCode,
+        logoDataUrl,
+      );
     }
   }
   drawFabricationPdfFooters(
