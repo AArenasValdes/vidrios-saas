@@ -207,4 +207,21 @@ describe("QuoteProfileCosts", () => {
     rerender(<QuoteProfileCosts {...shared} familyKey="universal:aluminio:l42" references={[{ technicalCode: "4201", profileName: "Marco" }]} prices={[supplier, { ...own, netPrice: null, commercialLengthMm: null }]} allowMixedWorkshopCosts />);
     expect(screen.getByText("$24.375")).toBeInTheDocument();
   });
+
+  it("limita L42 a los códigos de la receta exacta aunque lleguen precios de otros perfiles", () => {
+    const required = { ...basePrice, technicalCode: "4201", profileName: "Marco", status: "priced" as const, netPrice: 24375 };
+    const unrelated = { ...basePrice, technicalCode: "4209", profileName: "Marco Sin Cámara", status: "priced" as const, netPrice: 19000 };
+    render(<QuoteProfileCosts
+      {...shared}
+      familyKey="universal:aluminio:l42"
+      references={[{ technicalCode: "4201", profileName: "Marco" }]}
+      prices={[required, unrelated]}
+      allowMixedWorkshopCosts
+    />);
+
+    expect(screen.getByText("1 de 1 perfiles con costo")).toBeInTheDocument();
+    expect(screen.getByText(/4201 · Marco/)).toBeInTheDocument();
+    expect(screen.queryByText(/4209/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Marco Sin Cámara")).not.toBeInTheDocument();
+  });
 });

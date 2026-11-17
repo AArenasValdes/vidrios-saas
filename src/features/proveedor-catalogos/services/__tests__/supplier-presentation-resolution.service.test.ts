@@ -1,4 +1,4 @@
-import { resolveEffectiveSupplierProviderKey, resolveSupplierFinishName, resolveSupplierPresentationsForQuoteItem, resolveSupplierPresentationFamilyKeys, resolveSupplierPriceProviderCoverage, type ConfirmedSupplierPresentation } from "../supplier-presentation-resolution.service";
+import { buildSupplierProfilePriceCacheKey, isEffectiveSupplierProfilePrice, resolveEffectiveSupplierProviderKey, resolveSupplierFinishName, resolveSupplierPresentationsForQuoteItem, resolveSupplierPresentationFamilyKeys, resolveSupplierPriceProviderCoverage, type ConfirmedSupplierPresentation } from "../supplier-presentation-resolution.service";
 
 const variants: Array<[string, string, string, number]> = [
   ["67401VER000", "000", "Blanco", 5800],
@@ -181,6 +181,48 @@ describe("resolver explícito de presentación para pauta", () => {
     expect(resolveSupplierPresentationsForQuoteItem({ request: { ...req, providerKey: "alumco" }, presentations: [alumco, arq] })[0]).toMatchObject({ status: "resolved", providerKey: "alumco" });
     expect(resolveSupplierPresentationsForQuoteItem({ request: { ...req, finishName: "Negro" }, presentations: [{ ...own, providerKey: "taller:3" , commercialLengthMm: null }] })[0]).toMatchObject({ status: "missing" });
     expect(resolveSupplierPresentationsForQuoteItem({ request: { ...req, allowOwnProfileCosts: false }, presentations: [{ ...own, providerKey: "taller:3" }, arq] })[0]).toMatchObject({ status: "resolved", providerKey: "arquetipo" });
+  });
+
+  it("no deja que un costo privado L42 incompleto desplace una presentación compatible del proveedor", () => {
+    const arq: ConfirmedSupplierPresentation = {
+      presentationId: "arq-4201", providerKey: "arquetipo", supplierSku: "ARQ-4201",
+      technicalCode: "4201", recipeComponentCodes: [], familyKeys: ["universal:aluminio:l42"],
+      finishCode: null, finishName: null, finishResolution: "finish_independent", commercialLengthMm: 6000,
+    };
+    const own: ConfirmedSupplierPresentation = {
+      ...arq, presentationId: "own-4201", providerKey: "taller:3", supplierSku: "",
+      commercialLengthMm: null, preferred: true,
+    };
+    const [resolved] = resolveSupplierPresentationsForQuoteItem({
+      request: {
+        itemId: "L42", familyKey: "ventora:l42", finishName: "Blanco", technicalCodes: ["4201"],
+        providerKey: "arquetipo", organizationId: 3, allowOwnProfileCosts: true,
+        eligibleOwnPresentationIds: [],
+      },
+      presentations: [own, arq],
+    });
+
+    expect(resolved).toMatchObject({ status: "resolved", providerKey: "arquetipo", presentationId: "arq-4201" });
+    const [defaultResolved] = resolveSupplierPresentationsForQuoteItem({
+      request: { itemId: "L42", familyKey: "ventora:l42", finishName: "Blanco", technicalCodes: ["4201"], organizationId: 3, allowOwnProfileCosts: true, eligibleOwnPresentationIds: [] },
+      presentations: [own, arq],
+    });
+    expect(defaultResolved).toMatchObject({ status: "resolved", providerKey: "arquetipo", presentationId: "arq-4201" });
+  });
+
+  it("invalida la clave de precios guiados cuando cambia receta, perfil, acabado o configuración", () => {
+    const base = {
+      requests: [{ itemId: "guided", catalogLineKey: "ventora:l42", familyKey: "universal:aluminio:l42", finishName: "Blanco", technicalCodes: ["4201", "4202", "4229"] }],
+      recipeId: "recipe-normal", recipeVersion: 1, recipeVariant: "normal",
+      catalogKey: "ventora:l42", configurationKey: "l42:proyectante",
+    };
+    const key = buildSupplierProfilePriceCacheKey(base);
+    expect(buildSupplierProfilePriceCacheKey(base)).toBe(key);
+    expect(buildSupplierProfilePriceCacheKey({ ...base, recipeId: "recipe-sin-camara" })).not.toBe(key);
+    expect(buildSupplierProfilePriceCacheKey({ ...base, requests: [{ ...base.requests[0]!, finishName: "Negro" }] })).not.toBe(key);
+    expect(buildSupplierProfilePriceCacheKey({ ...base, configurationKey: "l42:puerta" })).not.toBe(key);
+    expect(isEffectiveSupplierProfilePrice({ presentationId: "own", status: "priced", netPrice: 18000, commercialLengthMm: 6000, currency: "CLP" })).toBe(true);
+    expect(isEffectiveSupplierProfilePrice({ presentationId: "own", status: "priced", netPrice: 18000, commercialLengthMm: null, currency: "CLP" })).toBe(false);
   });
 
   it("muestra cobertura de precio por proveedor solo para familia, código, configuración y acabado compatibles", () => {

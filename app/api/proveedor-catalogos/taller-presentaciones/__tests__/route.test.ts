@@ -10,13 +10,16 @@ jest.mock("@/features/proveedor-catalogos/repositories/workshop-presentations.re
   listWorkshopPresentations: jest.fn(), createWorkshopPresentation: jest.fn(),
   updateWorkshopPresentationPurchase: jest.fn(), listOfficialTechnicalInputsForFamily: jest.fn(),
   WorkshopPresentationsSchemaMissingError: class extends Error {},
+  WorkshopPresentationConflictError: class extends Error {
+    constructor() { super("Ya existe una presentación privada para este perfil y acabado. Recarga y edita la referencia existente."); }
+  },
 }));
 
 import { GET, PATCH, POST } from "../route";
 import { resolveAuthenticatedRouteContext } from "@/features/auth/services/auth-route-access.service";
 import { canManageSupplierCatalog } from "@/features/proveedor-catalogos/services/supplier-catalog-access.service";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createWorkshopPresentation, listOfficialTechnicalInputsForFamily, listWorkshopPresentations, updateWorkshopPresentationPurchase } from "@/features/proveedor-catalogos/repositories/workshop-presentations.repository";
+import { createWorkshopPresentation, listOfficialTechnicalInputsForFamily, listWorkshopPresentations, updateWorkshopPresentationPurchase, WorkshopPresentationConflictError } from "@/features/proveedor-catalogos/repositories/workshop-presentations.repository";
 
 const endpoint = "http://localhost/api/proveedor-catalogos/taller-presentaciones";
 const request = (method: string, body: unknown) => new Request(endpoint, { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -59,6 +62,17 @@ describe("costos privados L42", () => {
     expect(createWorkshopPresentation).not.toHaveBeenCalled();
     (canManageSupplierCatalog as jest.Mock).mockReturnValue(false);
     expect((await POST(request("POST", input))).status).toBe(403);
+  });
+
+  it("devuelve conflicto recuperable si la restricción única detecta una inserción simultánea", async () => {
+    (createWorkshopPresentation as jest.Mock).mockRejectedValueOnce(new WorkshopPresentationConflictError());
+
+    const response = await POST(request("POST", input));
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: "Ya existe una presentación privada para este perfil y acabado. Recarga y edita la referencia existente.",
+    });
   });
 
   it("mantiene habilitada L25 y rechaza otras familias universales", async () => {

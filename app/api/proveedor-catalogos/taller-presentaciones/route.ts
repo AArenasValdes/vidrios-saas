@@ -8,7 +8,7 @@ import { AuthRouteAccessError, resolveAuthenticatedRouteContext } from "@/featur
 import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import { getVentoraProfileReferencesForCatalogKey } from "@/features/cotizaciones/line-templates/fixtures/ventora-profile-references";
 import { canManageSupplierCatalog } from "@/features/proveedor-catalogos/services/supplier-catalog-access.service";
-import { createWorkshopPresentation, listOfficialTechnicalInputsForFamily, listWorkshopPresentations, updateWorkshopPresentationPurchase, WorkshopPresentationsSchemaMissingError } from "@/features/proveedor-catalogos/repositories/workshop-presentations.repository";
+import { createWorkshopPresentation, listOfficialTechnicalInputsForFamily, listWorkshopPresentations, updateWorkshopPresentationPurchase, WorkshopPresentationConflictError, WorkshopPresentationsSchemaMissingError } from "@/features/proveedor-catalogos/repositories/workshop-presentations.repository";
 import { INTERNAL_WORKSHOP_PRESENTATION_KEY_PREFIX, isGeneratedWorkshopPresentationKey } from "@/features/proveedor-catalogos/services/workshop-presentation-identity.service";
 
 export const dynamic = "force-dynamic";
@@ -70,6 +70,7 @@ async function authorize(lineTemplateId: number) {
 function errorResponse(error: unknown) {
   if (error instanceof AuthRouteAccessError) return NextResponse.json({ error: error.message }, { status: error.status });
   if (error instanceof WorkshopPresentationsSchemaMissingError) return NextResponse.json({ error: error.message }, { status: 503 });
+  if (error instanceof WorkshopPresentationConflictError) return NextResponse.json({ error: error.message }, { status: 409 });
   console.error("[API] presentaciones del taller", error);
   return NextResponse.json({ error: "No pudimos cargar las presentaciones del taller." }, { status: 500 });
 }

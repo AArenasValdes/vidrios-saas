@@ -30,6 +30,10 @@ export class WorkshopPresentationsSchemaMissingError extends Error {
   constructor() { super("Falta aplicar la migración de presentaciones privadas del taller."); }
 }
 
+export class WorkshopPresentationConflictError extends Error {
+  constructor() { super("Ya existe una presentación privada para este perfil y acabado. Recarga y edita la referencia existente."); }
+}
+
 export async function listWorkshopPresentations(organizationId: number, familyKey?: string) {
   let query = client().from("organizacion_presentaciones_taller")
     .select("id, organization_id, family_key, configuration_key, insumo_oficial_id, codigo_tecnico, codigo_receta, nombre_perfil, sku_taller, descripcion, modo_acabado, acabado_nombre, unidad_compra, largo_comercial_mm, precio_neto, moneda, preferida, revision, creado_en")
@@ -84,7 +88,9 @@ export async function createWorkshopPresentation(input: WorkshopPresentationInpu
     creado_por: input.userId,
   }).select("id, organization_id, family_key, configuration_key, insumo_oficial_id, codigo_tecnico, codigo_receta, nombre_perfil, sku_taller, descripcion, modo_acabado, acabado_nombre, unidad_compra, largo_comercial_mm, precio_neto, moneda, preferida, revision, creado_en").single();
   if (error) {
-    if (error.code === "23505") throw new Error("Ya existe ese SKU o una presentación elegida para el mismo perfil y acabado.");
+    if (error.code === "23505" && error.message.includes("organizacion_presentaciones_taller_l42_identity_uq")) {
+      throw new WorkshopPresentationConflictError();
+    }
     throw new Error(error.message);
   }
   return data;

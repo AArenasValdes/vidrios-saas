@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { SupplierProfilePricePreview as PriceRow } from "../services/supplier-presentation-resolution.service";
+import { isEffectiveSupplierProfilePrice, type SupplierProfilePricePreview as PriceRow } from "../services/supplier-presentation-resolution.service";
 import { saveQuickWorkshopProfileCost, saveQuotePresentationPrice } from "../services/mis-precios.client.service";
 import s from "./quote-profile-costs.module.css";
 
@@ -66,9 +66,11 @@ export function QuoteProfileCosts({
       const code = reference.technicalCode.trim().toLocaleUpperCase("en-US");
       if (code) referencesByCode.set(code, reference);
     }
-    for (const [code, candidates] of grouped) {
-      const row = candidates[0];
-      if (!referencesByCode.has(code) && row) referencesByCode.set(code, { technicalCode: row.technicalCode, profileName: row.profileName });
+    if (!allowMixedWorkshopCosts) {
+      for (const [code, candidates] of grouped) {
+        const row = candidates[0];
+        if (!referencesByCode.has(code) && row) referencesByCode.set(code, { technicalCode: row.technicalCode, profileName: row.profileName });
+      }
     }
     return [...referencesByCode.entries()].map(([code, reference]) => {
       const candidates = grouped.get(code) ?? [];
@@ -92,12 +94,11 @@ export function QuoteProfileCosts({
       };
       // The selected supplier is the effective purchase source. A saved own
       // cost remains visible as a separate option, but must not look applied.
-      const ownIsUsable = own?.status === "priced" && own.netPrice != null && own.netPrice > 0 &&
-        own.commercialLengthMm != null && own.commercialLengthMm > 0 && own.finishPriceBasis !== "base_reference_other_finish";
+      const ownIsUsable = own ? isEffectiveSupplierProfilePrice(own) : false;
       const display = allowMixedWorkshopCosts && ownIsUsable ? own : selected ?? own ?? fallback;
       return {
         technicalCode: reference.technicalCode,
-        profileName: reference.profileName || display.profileName || display.presentationDescription || reference.technicalCode,
+        profileName: reference.profileName || display?.profileName || display?.presentationDescription || reference.technicalCode,
         workshop: own,
         selected,
         display,
@@ -106,10 +107,10 @@ export function QuoteProfileCosts({
     });
   }, [allowMixedWorkshopCosts, prices, providerKey, references]);
   const pricedCount = rows.filter((row) => {
-    const effective = allowMixedWorkshopCosts && row.workshop?.status === "priced" && row.workshop.netPrice != null &&
-      row.workshop.commercialLengthMm != null && row.workshop.finishPriceBasis !== "base_reference_other_finish"
-      ? row.workshop : row.selected;
-    return effective?.status === "priced" && effective.netPrice != null && effective.finishPriceBasis !== "base_reference_other_finish";
+    const effective = allowMixedWorkshopCosts && row.workshop && isEffectiveSupplierProfilePrice(row.workshop)
+      ? row.workshop
+      : row.selected;
+    return effective ? isEffectiveSupplierProfilePrice(effective) : false;
   }).length;
   const hasUnappliedPrivateCost = !allowMixedWorkshopCosts && rows.some((row) => row.workshop && row.workshop.providerKey !== providerKey);
   if (rows.length === 0) return null;

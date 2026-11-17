@@ -30,6 +30,8 @@ export type SupplierPresentationResolutionRequest = {
   /** L42 may complete a selected supplier's profile set with this organization's own exact costs. */
   organizationId?: number;
   allowOwnProfileCosts?: boolean;
+  /** When supplied, only private presentations with a complete saved price may override the selected supplier. */
+  eligibleOwnPresentationIds?: readonly string[];
 };
 
 export type SupplierProfilePricePreview = {
@@ -54,6 +56,33 @@ export type SupplierProfilePricePreview = {
   priceSourceSupplierSku?: string | null;
   status: "priced" | "missing_price" | "ambiguous";
 };
+
+/** A profile price is effective only when identity, amount, length and finish are complete. */
+export function isEffectiveSupplierProfilePrice(input: {
+  presentationId?: string | null;
+  status?: SupplierProfilePricePreview["status"];
+  netPrice?: number | null;
+  commercialLengthMm?: number | null;
+  currency?: string | null;
+  finishPriceBasis?: SupplierProfilePricePreview["finishPriceBasis"];
+}): boolean {
+  return Boolean(input.presentationId?.trim()) && input.status === "priced" &&
+    input.netPrice != null && Number.isFinite(input.netPrice) && input.netPrice > 0 &&
+    input.commercialLengthMm != null && Number.isSafeInteger(input.commercialLengthMm) && input.commercialLengthMm > 0 &&
+    Boolean(input.currency?.trim()) &&
+    input.finishPriceBasis !== "base_reference_other_finish";
+}
+
+export function buildSupplierProfilePriceCacheKey(input: {
+  requests: readonly unknown[];
+  recipeId?: string | null;
+  recipeVersion?: number | null;
+  recipeVariant?: string | null;
+  catalogKey?: string | null;
+  configurationKey?: string | null;
+}): string {
+  return JSON.stringify(input);
+}
 
 export function resolveSupplierProfileCoverage(input: {
   technicalCodes: readonly string[];
@@ -485,18 +514,22 @@ export function resolveSupplierPresentationsForQuoteItem(input: {
     );
 
     const universalAluminumFamily = normalizeUniversalAluminumFamilyKey(request.familyKey);
+    const isEligibleOwnCost = (entry: ConfirmedSupplierPresentation) =>
+      request.allowOwnProfileCosts !== true || !request.eligibleOwnPresentationIds ||
+      request.eligibleOwnPresentationIds.includes(entry.presentationId);
     const ownCandidates = candidates.filter((entry) => entry.providerKey.startsWith("taller:") &&
       request.allowOwnProfileCosts === true &&
       (universalAluminumFamily ?? request.familyKey) === "universal:aluminio:l42" &&
-      Number.isSafeInteger(request.organizationId) && entry.providerKey === `taller:${request.organizationId}`);
+      Number.isSafeInteger(request.organizationId) && entry.providerKey === `taller:${request.organizationId}` &&
+      isEligibleOwnCost(entry));
     const preferredWorkshopCandidates = candidates.filter((entry) =>
-      entry.providerKey.startsWith("taller:") && entry.preferred === true
+      entry.providerKey.startsWith("taller:") && entry.preferred === true && isEligibleOwnCost(entry)
     );
     const arquetipoCandidates = candidates.filter((entry) => entry.providerKey === "arquetipo");
     const preferredCandidates = candidates.filter((entry) => entry.preferred === true);
     const effectiveCandidates = universalAluminumFamily
       ? request.providerKey
-        ? ownCandidates.length > 0 ? ownCandidates : candidates
+        ? ownCandidates.length > 0 ? ownCandidates : candidates.filter((entry) => entry.providerKey === request.providerKey)
         : preferredWorkshopCandidates.length > 0
         ? preferredWorkshopCandidates
         : arquetipoCandidates

@@ -68,7 +68,7 @@ import type { QuickCompositionAdjustment } from "@/features/cotizaciones/visual-
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 import { resolveSupplierFamilyKeyForLineTemplate } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
 import { getLineTemplateWorkshopProfiles } from "@/features/cotizaciones/line-templates/types/line-profile-references";
-import { formatSupplierProfileCoverageNotice, resolveQuoteSupplierProfileReferences, resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
+import { buildSupplierProfilePriceCacheKey, formatSupplierProfileCoverageNotice, isEffectiveSupplierProfilePrice, resolveQuoteSupplierProfileReferences, resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 import { useSupplierPresentationResolution } from "@/features/proveedor-catalogos/hooks/use-supplier-presentation-resolution";
 import {
   findSodalL25LineRecipe,
@@ -622,7 +622,17 @@ export function PasoDosWizardConfiguracionMovil({
     }];
   }, [draft.catalogTerminacion, draft.colorHex, selectedLineTemplate, supplierFamilyKey, effectiveSupplierRecipe, selectedLineIsSodalL25]);
   const [guidedProfilePrices, setGuidedProfilePrices] = useState<import("@/features/proveedor-catalogos/services/supplier-presentation-resolution.service").SupplierProfilePricePreview[]>([]);
-  const [guidedProfilePricesLoading, setGuidedProfilePricesLoading] = useState(false);
+  const [guidedProfilePricesKey, setGuidedProfilePricesKey] = useState<string | null>(null);
+  const [guidedProfilePricesLoadingKey, setGuidedProfilePricesLoadingKey] = useState<string | null>(null);
+  const guidedProfilePricesRequestKey = buildSupplierProfilePriceCacheKey({
+    requests: supplierPresentationRequests,
+    recipeId: effectiveSupplierRecipe?.id ?? null,
+    recipeVersion: effectiveSupplierRecipe?.version ?? null,
+    recipeVariant: effectiveSupplierRecipe?.variant ?? null,
+    catalogKey: selectedLineTemplate?.catalogKey ?? null,
+    configurationKey: typeof selectedLineTemplate?.catalogMetadata?.configurationKey === "string"
+      ? selectedLineTemplate.catalogMetadata.configurationKey : null,
+  });
   const supplierPresentationResolution = useSupplierPresentationResolution(supplierPresentationRequests, {
     includeProviderOptions: true,
     includeProfilePrices: false,
@@ -634,10 +644,18 @@ export function PasoDosWizardConfiguracionMovil({
     supplierProviderOptions.find((option) => option.providerKey === "arquetipo")?.providerKey || supplierProviderOptions[0]?.providerKey || null;
   const activeSupplierOption = supplierProviderOptions.find((option) => option.providerKey === activeSupplierProviderKey) ?? null;
   const guidedCoverageCodes = supplierPresentationRequests[0]?.technicalCodes ?? [];
+  const currentGuidedProfilePrices = guidedProfilePricesKey === guidedProfilePricesRequestKey ? guidedProfilePrices : [];
+  const supplierPendingCodes = activeSupplierOption?.pendingTechnicalCodes ?? guidedCoverageCodes;
+  const guidedEffectivePendingCodes = selectedLineTemplate?.catalogKey === "ventora:l42"
+    ? supplierPendingCodes.filter((code) => !currentGuidedProfilePrices.some((price) =>
+        price.technicalCode.trim().toLocaleUpperCase("en-US") === code.trim().toLocaleUpperCase("en-US") &&
+        price.providerKey.startsWith("taller:") && isEffectiveSupplierProfilePrice(price)
+      ))
+    : supplierPendingCodes;
   const guidedSupplierCoverage = effectiveSupplierRecipe
     ? {
         totalCount: guidedCoverageCodes.length,
-        pendingCodes: activeSupplierOption?.pendingTechnicalCodes ?? guidedCoverageCodes,
+        pendingCodes: guidedEffectivePendingCodes,
       }
     : null;
   const guidedSupplierCoverageNotice = effectiveSupplierRecipe
@@ -1773,28 +1791,36 @@ export function PasoDosWizardConfiguracionMovil({
                 </label>
                 <small>{supplierPresentationResolution.isResolving ? "Cargando proveedores…" : "Puedes cambiar el proveedor para esta pieza. El precio de venta de la línea se mantiene."}</small>
                 {effectiveSupplierRecipe && (selectedLineTemplate?.catalogKey === "ventora:l42" || selectedLineIsSodalL25) ? (
-                  <details onToggle={(event) => {
-                    if (!(event.currentTarget as HTMLDetailsElement).open || guidedProfilePrices.length || guidedProfilePricesLoading || !supplierPresentationRequests[0]) return;
-                    setGuidedProfilePricesLoading(true);
+                  <details key={guidedProfilePricesRequestKey} onToggle={(event) => {
+                    if (!(event.currentTarget as HTMLDetailsElement).open ||
+                      guidedProfilePricesKey === guidedProfilePricesRequestKey || guidedProfilePricesLoadingKey === guidedProfilePricesRequestKey || !supplierPresentationRequests[0]) return;
+                    const requestedKey = guidedProfilePricesRequestKey;
+                    setGuidedProfilePricesLoadingKey(requestedKey);
                     void resolveSupplierPresentationsForQuote(supplierPresentationRequests, { includeProviderOptions: true, includeProfilePrices: true })
-                      .then((result) => setGuidedProfilePrices(result?.profilePrices?.["guided-line-provider-preview"] ?? []))
-                      .finally(() => setGuidedProfilePricesLoading(false));
+                      .then((result) => {
+                        if (!result) return;
+                        setGuidedProfilePrices(result.profilePrices?.["guided-line-provider-preview"] ?? []);
+                        setGuidedProfilePricesKey(requestedKey);
+                      })
+                      .finally(() => setGuidedProfilePricesLoadingKey((current) => current === requestedKey ? null : current));
                   }}>
                     <summary>Ver costos de perfiles</summary>
-                    {guidedProfilePricesLoading ? <small role="status">Cargando costos…</small> : (
+                    {guidedProfilePricesLoadingKey === guidedProfilePricesRequestKey ? <small role="status">Cargando costos…</small> : (
                       <QuoteProfileCosts
                         lineTemplateId={Number(draft.lineTemplateId)}
                         familyKey={supplierFamilyKey ?? ""}
                         providerKey={activeSupplierProviderKey ?? familyPreferenceProviderKey ?? "arquetipo"}
                         finishName={supplierPresentationRequests[0]?.finishName ?? null}
                         references={(effectiveSupplierRecipe.definition.perfiles ?? []).map((profile) => ({ technicalCode: profile.codigoPerfil, profileName: profile.nombrePerfil }))}
-                        prices={guidedProfilePrices}
+                        prices={currentGuidedProfilePrices}
                         canManagePrice={canManageGuidedProfilePrices}
                         allowMixedWorkshopCosts={selectedLineTemplate?.catalogKey === "ventora:l42"}
                         onPricesSaved={async () => {
                           if (!supplierPresentationRequests[0]) return;
                           const result = await resolveSupplierPresentationsForQuote(supplierPresentationRequests, { includeProviderOptions: true, includeProfilePrices: true });
-                          setGuidedProfilePrices(result?.profilePrices?.["guided-line-provider-preview"] ?? []);
+                          if (!result) return;
+                          setGuidedProfilePrices(result.profilePrices?.["guided-line-provider-preview"] ?? []);
+                          setGuidedProfilePricesKey(guidedProfilePricesRequestKey);
                         }}
                       />
                     )}

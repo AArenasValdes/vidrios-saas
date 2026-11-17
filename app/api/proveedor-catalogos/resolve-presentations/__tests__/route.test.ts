@@ -45,6 +45,7 @@ describe("/api/proveedor-catalogos/resolve-presentations", () => {
     });
     (readConfirmedSupplierPresentations as jest.Mock).mockResolvedValue([]);
     (listSupplierFamilyPreferences as jest.Mock).mockResolvedValue([]);
+    (readWorkshopPresentationPrices as jest.Mock).mockResolvedValue([]);
   });
 
   it("resuelve las líneas admitidas aunque otra pieza aún no tenga familia de compra", async () => {
@@ -413,6 +414,50 @@ describe("/api/proveedor-catalogos/resolve-presentations", () => {
       technicalCode: "2511R", providerKey: "taller:7", commercialLengthMm: 6000,
       bars: 1, netPricePerPresentation: 45000, lineNet: 45000,
     })]));
+  });
+
+  it("mantiene la presentación del proveedor cuando el costo propio L42 no tiene precio o largo completos", async () => {
+    const line = VENTORA_DEFAULT_LINE_CATALOG.find((entry) => entry.catalogKey === "ventora:l42");
+    if (!line?.catalogKey || typeof line.catalogMetadata?.familyKey !== "string") throw new Error("Falta L42 en el catálogo canónico.");
+    const supplierPrice: CatalogPresentationPrice = {
+      presentationId: "arq-4201", providerKey: "arquetipo", familyKeys: ["universal:aluminio:l42"],
+      technicalCode: "4201", recipeComponentCodes: [], technicalName: "Marco L42", supplierSku: "ARQ-4201",
+      presentationDescription: "Marco L42 · Blanco", finishCode: "BL", finishName: "Blanco", finishResolution: "specific",
+      purchaseUnit: "TR", commercialLengthMm: 6000, netPrice: 24375, priceBasis: "commercial_presentation",
+      currency: "CLP", priceListId: "arq-list", priceListRevision: "2026",
+    };
+    const incompleteOwnPrice: CatalogPresentationPrice = {
+      ...supplierPrice, presentationId: "own-4201", providerKey: "taller:7",
+      familyKeys: ["universal:aluminio:l42"], supplierSku: "", netPrice: null, commercialLengthMm: null,
+      priceListId: "taller:7", priceListRevision: "taller-v1", origin: "workshop",
+    };
+    (readConfirmedSupplierPresentations as jest.Mock).mockResolvedValue([
+      { ...supplierPrice, recipeComponentCodes: [], preferred: true },
+      { ...incompleteOwnPrice, recipeComponentCodes: [], preferred: false },
+    ]);
+    (readSupplierPresentationPrices as jest.Mock).mockResolvedValue([supplierPrice]);
+    (readWorkshopPresentationPrices as jest.Mock).mockResolvedValue([incompleteOwnPrice]);
+    (listSupplierFamilyPreferences as jest.Mock).mockResolvedValue([{ familyKey: "universal:aluminio:l42", providerKey: "arquetipo" }]);
+    (readSupplierNames as jest.Mock).mockResolvedValue(new Map());
+    (readOrganizationPurchasePricing as jest.Mock).mockResolvedValue({ adjustments: [], overrides: [] });
+
+    const response = await POST(new Request("http://localhost/api/proveedor-catalogos/resolve-presentations", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        includeProviderOptions: true,
+        items: [{ itemId: "l42-normal", catalogLineKey: line.catalogKey, familyKey: line.catalogMetadata.familyKey,
+          finishName: "Blanco", technicalCodes: ["4201"], providerKey: "arquetipo" }],
+      }),
+    }));
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.selections["l42-normal"][0]).toMatchObject({
+      status: "resolved", providerKey: "arquetipo", presentationId: "arq-4201", commercialLengthMm: 6000,
+    });
+    expect(body.profilePrices["l42-normal"]).toContainEqual(expect.objectContaining({
+      providerKey: "taller:7", status: "missing_price", netPrice: null, commercialLengthMm: null,
+    }));
   });
 });
 
