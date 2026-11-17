@@ -379,6 +379,51 @@ describe("despiece de líneas universales con precio Arquetipo", () => {
     expect(normal.formal?.pauta.length).toBeGreaterThan(0);
   });
 
+  it("resuelve L42 Guiada con el configurationId exacto junto al borrador de la organización", () => {
+    const universal = resolveUniversalPricedLineFallback({
+      catalogKey: "ventora:l42",
+      lineTemplateId: 210,
+      organizationId: 3,
+      lineName: "Serie 42",
+      variant: "normal",
+      leavesCount: 1,
+      recipes: [],
+    })!;
+    const organizationDraft: FabricationRecipeRecord = {
+      ...universal,
+      id: "qa-l42-normal-draft",
+      scope: "organization",
+      organizationId: 3,
+      status: "draft",
+      sourceType: "manual",
+      sourceReference: "ventora-serie-42:normal:catalogo-2026-09-13",
+    };
+    const item = {
+      ...itemFor(pricedLines.find((line) => line.line === "L42")!),
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "210",
+        catalogLineKey: "ventora:l42",
+        fabricacionConfiguracionId: "ventora:l42:proyectante",
+        sistema: "Proyectante",
+        fabricacionTipologia: "proyectante",
+        fabricacionHojas: 1,
+        fabricacionModulos: 1,
+        fabricacionApertura: "proyectante",
+        fabricacionVariante: "normal",
+      }),
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [organizationDraft],
+      organizationId: 3,
+    });
+
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.formal?.recipeId).toBe("ventora:universal:l42:normal");
+    expect(resolved.formal?.recipeIdentity.configurationId).toBe("ventora:l42:proyectante");
+  });
+
   it.each(pricedLines)("calcula $line con una referencia compatible", (line) => {
     const item = itemFor(line);
     const resolved = resolveFabricacionDespieceForQuoteItem({

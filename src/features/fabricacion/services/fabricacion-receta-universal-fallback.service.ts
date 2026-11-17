@@ -387,6 +387,21 @@ function buildReferenceRecipe(input: UniversalFallbackInput): FabricationRecipeR
     };
   }
 
+  if (
+    line === "L42" &&
+    input.configurationId === "ventora:l42:proyectante"
+  ) {
+    // Preserve the exact commercial configuration in the canonical fallback
+    // identity so the strict recipe resolver can match Guiada's catalog ID.
+    definition = {
+      ...definition,
+      identidad: {
+        ...definition.identidad,
+        configurationId: "ventora:l42:proyectante",
+      },
+    };
+  }
+
   if (workshopValidated) {
     definition = markUserConfirmedProfileCutRecipe(definition);
     sourceType = "workshop";
