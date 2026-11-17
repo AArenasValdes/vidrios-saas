@@ -154,6 +154,35 @@ describe("resolver explícito de presentación para pauta", () => {
     })[0]).toMatchObject({ status: "missing", providerKey: "sodal", supplierSku: null });
   });
 
+  it("completa L42 por perfil con costo propio de la organización y conserva referencias del proveedor", () => {
+    const arq = (technicalCode: string, price: number): CatalogPresentationPrice => ({
+      presentationId: `arq-${technicalCode}`, providerKey: "arquetipo", technicalCode, recipeComponentCodes: [],
+      familyKeys: ["universal:aluminio:l42"], configurationKey: "ventora:l42:proyectante", technicalName: technicalCode,
+      supplierSku: `A-${technicalCode}`, presentationDescription: technicalCode, finishCode: "BL",
+      finishName: "Blanco", finishResolution: "specific", purchaseUnit: "UN", commercialLengthMm: 6000,
+      netPrice: price, priceBasis: "commercial_presentation", currency: "CLP", priceListId: "arq-list",
+      priceListRevision: "2026", priceListPublishedOn: null,
+    });
+    const own: CatalogPresentationPrice = { ...arq("4201", 18000), presentationId: "own-4201", providerKey: "taller:3", origin: "workshop", supplierSku: "internal:4201" };
+    const request = { itemId: "L42", familyKey: "ventora:l42", configurationKey: "ventora:l42:proyectante", finishName: "Blanco", technicalCodes: ["4201", "4202", "4229"], providerKey: "arquetipo", organizationId: 3, allowOwnProfileCosts: true };
+    expect(resolveSupplierPresentationsForQuoteItem({ request, presentations: [own, arq("4202", 24375), arq("4229", 6510)] })).toMatchObject([
+      { status: "resolved", providerKey: "taller:3", presentationId: "own-4201", commercialLengthMm: 6000 },
+      { status: "resolved", providerKey: "arquetipo", presentationId: "arq-4202", commercialLengthMm: 6000 },
+      { status: "resolved", providerKey: "arquetipo", presentationId: "arq-4229", commercialLengthMm: 6000 },
+    ]);
+  });
+
+  it("cambia el fallback de proveedor y excluye costo propio de otra organización, acabado o largo ausente", () => {
+    const arq: ConfirmedSupplierPresentation = { presentationId: "arq-4201", providerKey: "arquetipo", supplierSku: "ARQ", technicalCode: "4201", recipeComponentCodes: [], familyKeys: ["universal:aluminio:l42"], finishCode: null, finishName: null, finishResolution: "finish_independent", commercialLengthMm: 6000 };
+    const alumco: ConfirmedSupplierPresentation = { ...arq, presentationId: "alumco-4201", providerKey: "alumco", supplierSku: "AL", preferred: false };
+    const own: ConfirmedSupplierPresentation = { ...arq, presentationId: "own-4201", providerKey: "taller:4", supplierSku: "internal", finishResolution: "specific", finishName: "Negro", commercialLengthMm: 6000 };
+    const req = { itemId: "L42", familyKey: "ventora:l42", finishName: "Blanco", technicalCodes: ["4201"], providerKey: "arquetipo", organizationId: 3, allowOwnProfileCosts: true };
+    expect(resolveSupplierPresentationsForQuoteItem({ request: req, presentations: [own, alumco, arq] })[0]).toMatchObject({ status: "resolved", providerKey: "arquetipo" });
+    expect(resolveSupplierPresentationsForQuoteItem({ request: { ...req, providerKey: "alumco" }, presentations: [alumco, arq] })[0]).toMatchObject({ status: "resolved", providerKey: "alumco" });
+    expect(resolveSupplierPresentationsForQuoteItem({ request: { ...req, finishName: "Negro" }, presentations: [{ ...own, providerKey: "taller:3" , commercialLengthMm: null }] })[0]).toMatchObject({ status: "missing" });
+    expect(resolveSupplierPresentationsForQuoteItem({ request: { ...req, allowOwnProfileCosts: false }, presentations: [{ ...own, providerKey: "taller:3" }, arq] })[0]).toMatchObject({ status: "resolved", providerKey: "arquetipo" });
+  });
+
   it("muestra cobertura de precio por proveedor solo para familia, código, configuración y acabado compatibles", () => {
     const base = {
       presentationId: "presentation-4201",

@@ -317,6 +317,8 @@ export async function POST(request: Request) {
             familyPreferenceProviderKey: preferenceByFamily.get(item.familyKey),
           }),
           configurationKey: VENTORA_DEFAULT_LINE_CATALOG.find((line) => line.catalogKey === item.catalogLineKey)?.catalogMetadata?.configurationKey as string | undefined,
+          organizationId,
+          allowOwnProfileCosts: item.catalogLineKey === "ventora:l42",
         },
         presentations,
       }),

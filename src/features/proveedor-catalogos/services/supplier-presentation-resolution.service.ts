@@ -27,6 +27,9 @@ export type SupplierPresentationResolutionRequest = {
   configurationKey?: string | null;
   /** Explicit purchase-price provider selected for this quote item. */
   providerKey?: string | null;
+  /** L42 may complete a selected supplier's profile set with this organization's own exact costs. */
+  organizationId?: number;
+  allowOwnProfileCosts?: boolean;
 };
 
 export type SupplierProfilePricePreview = {
@@ -466,7 +469,10 @@ export function resolveSupplierPresentationsForQuoteItem(input: {
   const { request } = input;
   return [...new Set(request.technicalCodes.map(normalizeCode).filter(Boolean))].map((technicalCode) => {
     const candidates = input.presentations.filter((entry) =>
-      (!request.providerKey || entry.providerKey === request.providerKey) &&
+      ((!request.providerKey || entry.providerKey === request.providerKey) ||
+        (request.allowOwnProfileCosts === true &&
+          (normalizeUniversalAluminumFamilyKey(request.familyKey) ?? request.familyKey) === "universal:aluminio:l42" &&
+          Number.isSafeInteger(request.organizationId) && entry.providerKey === `taller:${request.organizationId}`)) &&
       entry.familyKeys.some((familyKey) =>
         (normalizeUniversalAluminumFamilyKey(familyKey) ?? familyKey) ===
         (normalizeUniversalAluminumFamilyKey(request.familyKey) ?? request.familyKey)
@@ -479,6 +485,10 @@ export function resolveSupplierPresentationsForQuoteItem(input: {
     );
 
     const universalAluminumFamily = normalizeUniversalAluminumFamilyKey(request.familyKey);
+    const ownCandidates = candidates.filter((entry) => entry.providerKey.startsWith("taller:") &&
+      request.allowOwnProfileCosts === true &&
+      (universalAluminumFamily ?? request.familyKey) === "universal:aluminio:l42" &&
+      Number.isSafeInteger(request.organizationId) && entry.providerKey === `taller:${request.organizationId}`);
     const preferredWorkshopCandidates = candidates.filter((entry) =>
       entry.providerKey.startsWith("taller:") && entry.preferred === true
     );
@@ -486,7 +496,7 @@ export function resolveSupplierPresentationsForQuoteItem(input: {
     const preferredCandidates = candidates.filter((entry) => entry.preferred === true);
     const effectiveCandidates = universalAluminumFamily
       ? request.providerKey
-        ? candidates
+        ? ownCandidates.length > 0 ? ownCandidates : candidates
         : preferredWorkshopCandidates.length > 0
         ? preferredWorkshopCandidates
         : arquetipoCandidates
