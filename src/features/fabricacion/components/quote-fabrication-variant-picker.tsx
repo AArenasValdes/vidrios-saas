@@ -3,13 +3,13 @@
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import {
   getConstructorRecipeProfileCodeLabel,
-  getConstructorRecipeSourceLabel,
 } from "@/features/fabricacion/services/constructor-recipe-option-label.service";
 import { getRecipeTechnicalHint } from "@/features/fabricacion/services/constructor-recipe-selection.service";
 import {
   formatTypologyLeavesLabel,
   formatVariantDisplayLabel,
 } from "@/features/fabricacion/services/fabricacion-line-variant.service";
+import { parseSodalL25VariantSlug } from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
 
 import styles from "./quote-fabrication-variant-picker.module.css";
 
@@ -34,9 +34,21 @@ function openLabel(value: string | null | undefined) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+function shortVariantLabel(recipe: FabricationRecipeRecord) {
+  const identity = recipe.definition.identidad;
+  const l25 = parseSodalL25VariantSlug(identity.variante);
+  if (l25) {
+    const glazing = l25.glazing === "dvh" ? "DVH" : "Monolítico";
+    const leg = l25.leg === "open" ? "Abierta" : "Cerrada";
+    const reinforcement = l25.reinforcement === "reinforced" ? "Reforzada" : "Normal";
+    return `${leg} · ${identity.hojas}H · ${glazing} · ${reinforcement}`;
+  }
+  return recipe.variant === "arquetipo_sin_camara_monolitico"
+    ? "Sin cámara"
+    : formatVariantDisplayLabel(recipe).replace(/^Arquetipo\s*·\s*/i, "");
+}
+
 function recipeLabels(candidates: readonly FabricationRecipeRecord[]) {
-  const variantLabels = new Set(candidates.map(formatVariantDisplayLabel));
-  const sourceLabels = new Set(candidates.map(getConstructorRecipeSourceLabel));
   const codeLabels = new Set(candidates.map((recipe) => getConstructorRecipeProfileCodeLabel(recipe) ?? ""));
   const technicalHints = new Set(candidates.map(getRecipeTechnicalHint));
   const openings = new Set(candidates.map((recipe) => openLabel(recipe.definition.identidad.apertura)).filter(Boolean));
@@ -44,14 +56,14 @@ function recipeLabels(candidates: readonly FabricationRecipeRecord[]) {
 
   return candidates.map((recipe) => {
     const identity = recipe.definition.identidad;
-    const variant = formatVariantDisplayLabel(recipe);
+    const variant = shortVariantLabel(recipe);
     const typology = formatTypologyLeavesLabel({ typology: identity.tipologia, leavesCount: identity.hojas });
-    const baseLabel = variantLabels.size > 1 ? `${variant} · ${typology}` : typology;
+    const baseLabel = variant;
     const details: string[] = [];
 
     if (openings.size > 1 && identity.apertura) details.push(`Apertura ${openLabel(identity.apertura)}`);
-    if (sourceLabels.size > 1) {
-      details.push(getConstructorRecipeSourceLabel(recipe));
+    if (new Set(candidates.map((candidate) => candidate.definition.identidad.hojas)).size > 1) {
+      details.push(typology);
     }
     if (codeLabels.size > 1) {
       const codeLabel = getConstructorRecipeProfileCodeLabel(recipe);
@@ -67,10 +79,11 @@ function recipeLabels(candidates: readonly FabricationRecipeRecord[]) {
       details.push(revision ? `Revisión ${revision}` : `Registro ${priorCount + 1} · v${recipe.version}`);
     }
 
+    const state = recipe.status === "validated" ? "Despiece disponible" : recipe.status === "testing" ? "En prueba" : "Configuración pendiente";
     return {
       recipe,
       title: baseLabel,
-      detail: details.join(" · "),
+      detail: [state, ...details].join(" · "),
     };
   }).sort((left, right) =>
     left.title.localeCompare(right.title, "es-CL", { numeric: true }) ||
@@ -99,7 +112,7 @@ export function QuoteFabricationVariantPicker({
         <h3 className={styles.heading}>{title}</h3>
         <p className={styles.autoChoice}>
           <span>{option.title}</span>
-          <small>{getConstructorRecipeSourceLabel(option.recipe)} · se aplica automáticamente</small>
+          <small>{option.detail}</small>
         </p>
       </section>
     );

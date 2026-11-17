@@ -51,6 +51,46 @@ export type SupplierProfilePricePreview = {
   priceSourceSupplierSku?: string | null;
   status: "priced" | "missing_price" | "ambiguous";
 };
+
+export function resolveSupplierProfileCoverage(input: {
+  technicalCodes: readonly string[];
+  prices: readonly SupplierProfilePricePreview[];
+  providerKey: string | null | undefined;
+}): { totalCount: number; coveredCount: number; pendingCodes: string[] } {
+  const codes = [...new Map(input.technicalCodes
+    .map((code) => code.trim())
+    .filter(Boolean)
+    .map((code) => [normalizeCode(code), code] as const)).values()];
+  if (!codes.length) return { totalCount: 0, coveredCount: 0, pendingCodes: [] };
+
+  const pending = codes.flatMap((code) => {
+    const rows = input.prices.filter((price) =>
+      normalizeCode(price.technicalCode) === normalizeCode(code) && price.providerKey === input.providerKey,
+    );
+    if (rows.some((price) => price.status === "priced" && price.netPrice != null && price.netPrice > 0 &&
+      Boolean(price.presentationId) && price.commercialLengthMm != null && price.commercialLengthMm > 0 &&
+      price.finishPriceBasis !== "base_reference_other_finish")) return [];
+    return [code];
+  });
+  return { totalCount: codes.length, coveredCount: codes.length - pending.length, pendingCodes: pending };
+}
+
+/** Reports gaps only for the exact profile codes supplied by the active recipe. */
+export function buildSupplierProfileCoverageNotice(input: {
+  technicalCodes: readonly string[];
+  prices: readonly SupplierProfilePricePreview[];
+  providerKey: string | null | undefined;
+}): string | null {
+  const coverage = resolveSupplierProfileCoverage(input);
+  return formatSupplierProfileCoverageNotice(coverage.pendingCodes);
+}
+
+export function formatSupplierProfileCoverageNotice(pendingCodes: readonly string[]): string | null {
+  if (!pendingCodes.length) return null;
+  const visibleCodes = pendingCodes.slice(0, 3).join(", ");
+  const more = pendingCodes.length > 3 ? ` y ${pendingCodes.length - 3} más` : "";
+  return `Precio o presentación pendiente para ${visibleCodes}${more}.`;
+}
 export type SupplierPriceCoveragePresentation = {
   presentationId?: string;
   providerKey?: string;
@@ -288,6 +328,9 @@ export function resolveSupplierPriceProviderCoverage(input: {
   pricedProfileCount: number;
   totalProfileCount: number;
   baseReferenceProfileCount: number;
+  coveredTechnicalCodes: string[];
+  pendingTechnicalCodes: string[];
+  baseReferenceTechnicalCodes: string[];
   isReference: boolean;
 }> {
   const { request } = input;
@@ -325,13 +368,25 @@ export function resolveSupplierPriceProviderCoverage(input: {
     }));
     return covered.size > 0 ? [[providerKey, covered] as const] : [];
   });
-  return coveredByProvider.map(([providerKey, covered]) => ({
-    providerKey,
-    pricedProfileCount: covered.size,
-    totalProfileCount: requestedCodes.length,
-    baseReferenceProfileCount: [...covered.values()].filter((basis) => basis === "base_reference_other_finish").length,
-    isReference: providerKey === "arquetipo",
-  })).sort((left, right) => Number(right.isReference) - Number(left.isReference) || left.providerKey.localeCompare(right.providerKey, "es-CL"));
+  return coveredByProvider.map(([providerKey, covered]) => {
+    const baseReferenceTechnicalCodes = [...covered.entries()]
+      .filter(([, basis]) => basis === "base_reference_other_finish")
+      .map(([code]) => code);
+    const coveredTechnicalCodes = [...covered.entries()]
+      .filter(([, basis]) => basis !== "base_reference_other_finish")
+      .map(([code]) => code);
+    const coveredSet = new Set([...coveredTechnicalCodes, ...baseReferenceTechnicalCodes]);
+    return {
+      providerKey,
+      pricedProfileCount: covered.size,
+      totalProfileCount: requestedCodes.length,
+      baseReferenceProfileCount: baseReferenceTechnicalCodes.length,
+      coveredTechnicalCodes,
+      pendingTechnicalCodes: requestedCodes.filter((code) => !coveredSet.has(code) || baseReferenceTechnicalCodes.includes(code)),
+      baseReferenceTechnicalCodes,
+      isReference: providerKey === "arquetipo",
+    };
+  }).sort((left, right) => Number(right.isReference) - Number(left.isReference) || left.providerKey.localeCompare(right.providerKey, "es-CL"));
 }
 
 export function isSupplierProviderCompatibleWithFamily(input: {

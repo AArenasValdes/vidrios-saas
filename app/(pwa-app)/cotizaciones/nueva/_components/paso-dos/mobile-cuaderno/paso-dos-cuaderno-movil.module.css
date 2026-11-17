@@ -1216,44 +1216,27 @@
 }
 
 .supplierDisclosure {
-  border: 1px solid var(--cq-border);
-  border-radius: var(--cq-radius-sm);
-  background: #fff;
-}
-
-.supplierDisclosure summary {
-  display: flex;
-  min-height: 2.9rem;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.65rem 0.78rem;
-  color: var(--cq-navy);
-  font-size: 0.78rem;
-  font-weight: 750;
-  cursor: pointer;
-  list-style-position: inside;
-}
-
-.supplierDisclosure summary strong {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--cq-muted);
-  font-size: 0.73rem;
-  font-weight: 650;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.supplierDisclosure[open] summary {
-  border-bottom: 1px solid var(--cq-border);
+  margin-top: 0.6rem;
 }
 
 .supplierDisclosureBody {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
-  padding: 0.75rem;
+}
+
+.supplierCostDetails {
+  min-width: 0;
+  padding-top: 0.3rem;
+  border-top: 1px solid var(--cq-border);
+}
+
+.supplierCostDetails > summary {
+  padding: 0.35rem 0;
+  color: var(--cq-muted);
+  font-size: 0.74rem;
+  font-weight: 650;
+  cursor: pointer;
 }
 
 .preferenceError {

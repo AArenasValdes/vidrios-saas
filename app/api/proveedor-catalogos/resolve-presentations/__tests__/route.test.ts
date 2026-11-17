@@ -260,6 +260,7 @@ describe("/api/proveedor-catalogos/resolve-presentations", () => {
       providerKey: "alumco",
       pricedProfileCount: 0,
       totalProfileCount: 7,
+      pendingTechnicalCodes: expect.arrayContaining(["5001"]),
       otherAvailableFinishNames: ["Titanio"],
     }));
 
@@ -271,6 +272,8 @@ describe("/api/proveedor-catalogos/resolve-presentations", () => {
       label: "Alumco · 2026",
       pricedProfileCount: 7,
       totalProfileCount: 7,
+      coveredTechnicalCodes: expect.arrayContaining(["5001"]),
+      pendingTechnicalCodes: [],
       otherAvailableFinishNames: [],
     }));
     expect(titanioBody.providerOptions["alumco-l5000"]).toContainEqual(expect.objectContaining({
@@ -288,9 +291,11 @@ describe("/api/proveedor-catalogos/resolve-presentations", () => {
     }));
     expect(multiFinishBody.providerOptionsByFinish["alumco-l5000"].Negro).toContainEqual(expect.objectContaining({
       providerKey: "alumco", pricedProfileCount: 7, totalProfileCount: 7, baseReferenceProfileCount: 7,
+      coveredTechnicalCodes: [], pendingTechnicalCodes: expect.arrayContaining(["5001"]), baseReferenceTechnicalCodes: expect.arrayContaining(["5001"]),
     }));
     expect(multiFinishBody.providerOptionsByFinish["alumco-l5000"].Titanio).toContainEqual(expect.objectContaining({
       providerKey: "alumco", pricedProfileCount: 7, totalProfileCount: 7, baseReferenceProfileCount: 0,
+      coveredTechnicalCodes: expect.arrayContaining(["5001"]), pendingTechnicalCodes: [], baseReferenceTechnicalCodes: [],
     }));
     expect(readSupplierPresentationPrices).toHaveBeenCalledWith({
       familyKeys: expect.arrayContaining(["universal:aluminio:l5000", "arquetipo:l5000"]),

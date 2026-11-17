@@ -182,8 +182,8 @@ describe("resolver explícito de presentación para pauta", () => {
     });
 
     expect(options).toEqual([
-      { providerKey: "arquetipo", pricedProfileCount: 1, totalProfileCount: 2, baseReferenceProfileCount: 0, isReference: true },
-      { providerKey: "alumco", pricedProfileCount: 1, totalProfileCount: 2, baseReferenceProfileCount: 0, isReference: false },
+      { providerKey: "arquetipo", pricedProfileCount: 1, totalProfileCount: 2, baseReferenceProfileCount: 0, coveredTechnicalCodes: ["4202"], pendingTechnicalCodes: ["4201"], baseReferenceTechnicalCodes: [], isReference: true },
+      { providerKey: "alumco", pricedProfileCount: 1, totalProfileCount: 2, baseReferenceProfileCount: 0, coveredTechnicalCodes: ["4201"], pendingTechnicalCodes: ["4202"], baseReferenceTechnicalCodes: [], isReference: false },
     ]);
   });
 
@@ -204,6 +204,7 @@ describe("resolver explícito de presentación para pauta", () => {
     });
     expect(result).toEqual([expect.objectContaining({
       providerKey: "alumco", pricedProfileCount: 1, baseReferenceProfileCount: 1,
+      coveredTechnicalCodes: [], pendingTechnicalCodes: ["3201"], baseReferenceTechnicalCodes: ["3201"],
     })]);
   });
 
