@@ -196,4 +196,15 @@ describe("QuoteProfileCosts", () => {
     expect(screen.getByText(/Referencia Titanio; no confirma costo físico para Blanco/)).toBeInTheDocument();
     expect(screen.queryByText("TI2503")).not.toBeInTheDocument();
   });
+
+  it("aplica el costo propio completo por perfil sin cambiar Arquetipo y no deja que uno incompleto lo desplace", () => {
+    const supplier = { ...basePrice, technicalCode: "4201", profileName: "Marco", status: "priced" as const, netPrice: 24375, priceSource: "reference" as const };
+    const own = { ...supplier, providerKey: "taller:941", providerLabel: "Precio propio", presentationId: "own-4201", netPrice: 18000, priceSource: "workshop" as const, commercialLengthMm: 6000, priceListRevision: "taller-v1" };
+    const { rerender } = render(<QuoteProfileCosts {...shared} familyKey="universal:aluminio:l42" references={[{ technicalCode: "4201", profileName: "Marco" }]} prices={[supplier, own]} allowMixedWorkshopCosts />);
+    expect(screen.getByText("$18.000")).toBeInTheDocument();
+    expect(screen.getAllByText(/Costo propio aplicado a este perfil/)).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "Usar costo propio en esta pieza" })).not.toBeInTheDocument();
+    rerender(<QuoteProfileCosts {...shared} familyKey="universal:aluminio:l42" references={[{ technicalCode: "4201", profileName: "Marco" }]} prices={[supplier, { ...own, netPrice: null, commercialLengthMm: null }]} allowMixedWorkshopCosts />);
+    expect(screen.getByText("$24.375")).toBeInTheDocument();
+  });
 });

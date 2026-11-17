@@ -31,6 +31,7 @@ export function QuoteProfileCosts({
   references,
   prices,
   canManagePrice,
+  allowMixedWorkshopCosts = false,
   onPricesSaved,
   onUseWorkshopCost,
 }: {
@@ -41,6 +42,7 @@ export function QuoteProfileCosts({
   references: readonly { technicalCode: string; profileName: string }[];
   prices: readonly PriceRow[];
   canManagePrice: boolean;
+  allowMixedWorkshopCosts?: boolean;
   onPricesSaved?: () => Promise<void> | void;
   onUseWorkshopCost?: (providerKey: string) => void;
 }) {
@@ -90,7 +92,9 @@ export function QuoteProfileCosts({
       };
       // The selected supplier is the effective purchase source. A saved own
       // cost remains visible as a separate option, but must not look applied.
-      const display = selected ?? own ?? fallback;
+      const ownIsUsable = own?.status === "priced" && own.netPrice != null && own.netPrice > 0 &&
+        own.commercialLengthMm != null && own.commercialLengthMm > 0 && own.finishPriceBasis !== "base_reference_other_finish";
+      const display = allowMixedWorkshopCosts && ownIsUsable ? own : selected ?? own ?? fallback;
       return {
         technicalCode: reference.technicalCode,
         profileName: reference.profileName || display.profileName || display.presentationDescription || reference.technicalCode,
@@ -100,14 +104,18 @@ export function QuoteProfileCosts({
         conflict: ownRows.length > 1 || display?.status === "ambiguous",
       };
     });
-  }, [prices, providerKey, references]);
-  const pricedCount = rows.filter((row) => row.selected?.status === "priced" && row.selected.netPrice != null &&
-    row.selected.finishPriceBasis !== "base_reference_other_finish").length;
-  const hasUnappliedPrivateCost = rows.some((row) => row.workshop && row.workshop.providerKey !== providerKey);
+  }, [allowMixedWorkshopCosts, prices, providerKey, references]);
+  const pricedCount = rows.filter((row) => {
+    const effective = allowMixedWorkshopCosts && row.workshop?.status === "priced" && row.workshop.netPrice != null &&
+      row.workshop.commercialLengthMm != null && row.workshop.finishPriceBasis !== "base_reference_other_finish"
+      ? row.workshop : row.selected;
+    return effective?.status === "priced" && effective.netPrice != null && effective.finishPriceBasis !== "base_reference_other_finish";
+  }).length;
+  const hasUnappliedPrivateCost = !allowMixedWorkshopCosts && rows.some((row) => row.workshop && row.workshop.providerKey !== providerKey);
   if (rows.length === 0) return null;
 
   function openEditor(row: ProfileCost) {
-    const current = row.display;
+    const current = row.workshop ?? row.display;
     setError(null);
     setEditingCode(row.technicalCode);
     setDraftCost(current?.priceSource === "organization_override" || current?.priceSource === "workshop"
@@ -155,7 +163,7 @@ export function QuoteProfileCosts({
           kind: "update", lineTemplateId, presentationId: row.workshop.presentationId,
           expectedRevision, commercialLengthMm: length, netPrice: cost,
         });
-      } else if (row.selected?.presentationId && row.selected.providerKey === providerKey &&
+      } else if (!allowMixedWorkshopCosts && row.selected?.presentationId && row.selected.providerKey === providerKey &&
         row.selected.finishPriceBasis !== "base_reference_other_finish" &&
         row.selected.commercialLengthMm != null && row.selected.commercialLengthMm > 0) {
         await saveQuotePresentationPrice({
@@ -200,7 +208,7 @@ export function QuoteProfileCosts({
             row.selected.finishPriceBasis !== "base_reference_other_finish");
           const cannotUseAmbiguous = row.conflict;
           const existingOwn = Boolean(row.workshop?.presentationId);
-          const workshopIsSelected = Boolean(row.workshop && row.workshop.providerKey === providerKey);
+          const workshopIsSelected = Boolean(row.workshop && (allowMixedWorkshopCosts || row.workshop.providerKey === providerKey));
           const canEditPrivate = existingOwn && revisionFromPreview(row.workshop) !== null;
           const canSave = canManagePrice && !cannotUseAmbiguous && (existingOwn ? canEditPrivate : true);
 
@@ -219,7 +227,7 @@ export function QuoteProfileCosts({
                 <small>{current?.finishPriceBasis === "base_reference_other_finish"
                   ? `Referencia ${current.priceSourceFinishName || "de otro acabado"}; no confirma costo físico para ${finishName || "este acabado"}.`
                   : workshopIsSelected && current?.priceSource === "workshop"
-                  ? "Costo privado aplicado a esta pieza"
+                  ? allowMixedWorkshopCosts ? "Costo propio aplicado a este perfil" : "Costo privado aplicado a esta pieza"
                   : current?.priceSource === "organization_override"
                   ? "Costo propio guardado para esta presentación"
                   : current?.providerLabel || "Referencia de compra pendiente"}</small>
@@ -227,7 +235,7 @@ export function QuoteProfileCosts({
                   <small className={s.sku}>SKU proveedor: {current.supplierSku}</small>
                 ) : null}
               </div>
-              {row.workshop && !workshopIsSelected ? (
+      {row.workshop && !workshopIsSelected && !allowMixedWorkshopCosts ? (
                 <div className={s.pending}>
                   <small>Costo privado guardado: {row.workshop.netPrice != null && row.workshop.currency
                     ? formatNetPrice(row.workshop.netPrice, row.workshop.currency)
@@ -242,7 +250,7 @@ export function QuoteProfileCosts({
                 </div>
               ) : null}
               {row.workshop && workshopIsSelected ? (
-                <small className={s.pending}>Costo privado de tu empresa seleccionado para esta pieza.</small>
+                <small className={s.pending}>{allowMixedWorkshopCosts ? "Costo propio aplicado a este perfil; los demás conservan su origen." : "Costo privado de tu empresa seleccionado para esta pieza."}</small>
               ) : null}
               {canManagePrice ? (
                 cannotUseAmbiguous ? <small className={s.pending}>Hay más de una referencia compatible. Revisa la presentación antes de guardar otro costo.</small> :

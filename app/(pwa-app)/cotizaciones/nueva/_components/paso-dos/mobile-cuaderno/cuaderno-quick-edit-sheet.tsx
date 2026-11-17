@@ -1153,7 +1153,8 @@ export function CuadernoQuickEditSheet({
                       ) : null}
                     </div>
                   ) : null}
-                  {supplierResolutionRequest ? selectedLineIsSodalL25 && supplierResolutionRequest.familyKey === "universal:aluminio:l25" ? (
+                  {supplierResolutionRequest ? ((selectedLineIsSodalL25 && supplierResolutionRequest.familyKey === "universal:aluminio:l25") ||
+                    (selectedCatalogLineKey === "ventora:l42" && Boolean(effectiveSupplierRecipe))) ? (
                     <details className={s.supplierCostDetails}>
                     <summary>Ver costos de perfiles</summary>
                     <QuoteProfileCosts
@@ -1164,6 +1165,7 @@ export function CuadernoQuickEditSheet({
                       references={supplierProfileReferences}
                       prices={supplierProfilePrices}
                       canManagePrice={supplierProviderResolution?.key === supplierResolutionKey && supplierProviderResolution.canManageSupplierPrices}
+                      allowMixedWorkshopCosts={selectedCatalogLineKey === "ventora:l42"}
                       onUseWorkshopCost={(providerKey) => setSupplierProviderKeyDraft(providerKey)}
                       onPricesSaved={async () => {
                         if (!supplierResolutionRequest) return;

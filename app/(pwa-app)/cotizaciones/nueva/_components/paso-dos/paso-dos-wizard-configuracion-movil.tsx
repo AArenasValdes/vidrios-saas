@@ -1,6 +1,8 @@
 "use client";
 
 import { QuoteSupplierDisclosure } from "@/features/proveedor-catalogos/components/quote-supplier-disclosure";
+import { QuoteProfileCosts } from "@/features/proveedor-catalogos/components/quote-profile-costs";
+import { resolveSupplierPresentationsForQuote } from "@/features/proveedor-catalogos/services/supplier-presentations.client";
 
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -619,11 +621,14 @@ export function PasoDosWizardConfiguracionMovil({
       technicalCodes,
     }];
   }, [draft.catalogTerminacion, draft.colorHex, selectedLineTemplate, supplierFamilyKey, effectiveSupplierRecipe, selectedLineIsSodalL25]);
+  const [guidedProfilePrices, setGuidedProfilePrices] = useState<import("@/features/proveedor-catalogos/services/supplier-presentation-resolution.service").SupplierProfilePricePreview[]>([]);
+  const [guidedProfilePricesLoading, setGuidedProfilePricesLoading] = useState(false);
   const supplierPresentationResolution = useSupplierPresentationResolution(supplierPresentationRequests, {
     includeProviderOptions: true,
     includeProfilePrices: false,
   });
   const supplierProviderOptions = supplierPresentationResolution.result?.providerOptions?.["guided-line-provider-preview"] ?? [];
+  const canManageGuidedProfilePrices = supplierPresentationResolution.result?.canManageSupplierPrices === true;
   const familyPreferenceProviderKey = supplierPresentationResolution.result?.familyPreferences?.[supplierFamilyKey ?? ""] ?? null;
   const activeSupplierProviderKey = draft.supplierProviderKey || familyPreferenceProviderKey ||
     supplierProviderOptions.find((option) => option.providerKey === "arquetipo")?.providerKey || supplierProviderOptions[0]?.providerKey || null;
@@ -1767,6 +1772,34 @@ export function PasoDosWizardConfiguracionMovil({
                   </select>
                 </label>
                 <small>{supplierPresentationResolution.isResolving ? "Cargando proveedores…" : "Puedes cambiar el proveedor para esta pieza. El precio de venta de la línea se mantiene."}</small>
+                {effectiveSupplierRecipe && (selectedLineTemplate?.catalogKey === "ventora:l42" || selectedLineIsSodalL25) ? (
+                  <details onToggle={(event) => {
+                    if (!(event.currentTarget as HTMLDetailsElement).open || guidedProfilePrices.length || guidedProfilePricesLoading || !supplierPresentationRequests[0]) return;
+                    setGuidedProfilePricesLoading(true);
+                    void resolveSupplierPresentationsForQuote(supplierPresentationRequests, { includeProviderOptions: true, includeProfilePrices: true })
+                      .then((result) => setGuidedProfilePrices(result?.profilePrices?.["guided-line-provider-preview"] ?? []))
+                      .finally(() => setGuidedProfilePricesLoading(false));
+                  }}>
+                    <summary>Ver costos de perfiles</summary>
+                    {guidedProfilePricesLoading ? <small role="status">Cargando costos…</small> : (
+                      <QuoteProfileCosts
+                        lineTemplateId={Number(draft.lineTemplateId)}
+                        familyKey={supplierFamilyKey ?? ""}
+                        providerKey={activeSupplierProviderKey ?? familyPreferenceProviderKey ?? "arquetipo"}
+                        finishName={supplierPresentationRequests[0]?.finishName ?? null}
+                        references={(effectiveSupplierRecipe.definition.perfiles ?? []).map((profile) => ({ technicalCode: profile.codigoPerfil, profileName: profile.nombrePerfil }))}
+                        prices={guidedProfilePrices}
+                        canManagePrice={canManageGuidedProfilePrices}
+                        allowMixedWorkshopCosts={selectedLineTemplate?.catalogKey === "ventora:l42"}
+                        onPricesSaved={async () => {
+                          if (!supplierPresentationRequests[0]) return;
+                          const result = await resolveSupplierPresentationsForQuote(supplierPresentationRequests, { includeProviderOptions: true, includeProfilePrices: true });
+                          setGuidedProfilePrices(result?.profilePrices?.["guided-line-provider-preview"] ?? []);
+                        }}
+                      />
+                    )}
+                  </details>
+                ) : null}
               </>
             ) : <small>Resuelve la configuración de fabricación antes de consultar costos por perfil.</small>}
           </QuoteSupplierDisclosure>
