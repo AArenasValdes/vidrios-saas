@@ -62,7 +62,8 @@ async function authorize(lineTemplateId: number) {
   const configurationKey = definition?.catalogMetadata?.configurationKey;
   if (!line || !definition || typeof familyKey !== "string" ||
     (!familyKey.startsWith("veratec:") && !familyKey.startsWith("thermowin:") &&
-      !(definition.catalogKey === "ventora:l25" && familyKey === "universal:aluminio:l25"))) return null;
+      !(definition.catalogKey === "ventora:l25" && familyKey === "universal:aluminio:l25") &&
+      !(definition.catalogKey === "ventora:l42" && familyKey === "universal:aluminio:l42"))) return null;
   return { organizationId, familyKey, catalogKey: definition.catalogKey, configurationKey: typeof configurationKey === "string" ? configurationKey : null, userId: auth.user.id };
 }
 
@@ -106,7 +107,7 @@ export async function POST(request: Request) {
     if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Datos inválidos." }, { status: 400 });
     const access = await authorize(parsed.data.lineTemplateId);
     if (!access) return NextResponse.json({ error: "No disponible." }, { status: 404 });
-    if (access.catalogKey === "ventora:l25" && !parsed.data.officialInputId) {
+    if ((access.catalogKey === "ventora:l25" || access.catalogKey === "ventora:l42") && !parsed.data.officialInputId) {
       const existing = await listWorkshopPresentations(access.organizationId, access.familyKey);
       const normalize = (value: string | null | undefined) => (value ?? "").trim().normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CL");
