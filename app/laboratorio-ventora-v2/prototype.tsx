@@ -31,4 +31,3 @@ export default function Lab() {
  {pdf && <div className={s.overlay}><section className={s.pdf} role="dialog" aria-modal="true" aria-label="Vista previa de cotización"><div className={s.sheetHead}><div><h2>Vista previa comercial</h2><p>Ejemplo · documento simulado</p></div><button aria-label="Cerrar" onClick={()=>setPdf(false)}><X size={20}/></button></div><div className={s.paper}><strong>VENTORA</strong><h2>Cotización</h2><p>{displayClient} · {project}</p><hr/>{pieces.map((p,i)=><div className={s.pdfRow} key={p.id}><span>{i+1}. {p.type}<small>{p.width} × {p.height} mm · {p.qty} un.</small></span><b>{money(p.price*p.qty)}</b></div>)}<div className={s.pdfTotal}>Total <b>{money(total)}</b></div><p>Gracias por confiar en nuestro trabajo.</p></div></section></div>}
  {notice&&<div className={s.toast} role="status">{notice}<button onClick={()=>setNotice('')} aria-label="Cerrar aviso"><X size={16}/></button></div>}</div>;
 }
-
