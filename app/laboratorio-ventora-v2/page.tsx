@@ -1,2 +1,5 @@
-import Lab from './prototype';
-export default function Page() { return <Lab />; }
+import { redirect } from "next/navigation";
+
+export default function ExperimentalLabRedirect() {
+  redirect("/cotizaciones/nueva?v2=1");
+}
