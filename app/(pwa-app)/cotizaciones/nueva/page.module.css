@@ -8233,6 +8233,31 @@
   box-shadow: 0 12px 22px rgba(23, 34, 56, 0.06);
 }
 
+.stepTwoMobileQuantityInline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.stepTwoMobileQuantityInlineStepper {
+  display: grid;
+  grid-template-columns: 2.5rem 4rem 2.5rem;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.stepTwoMobileQuantityInlineStepper .stepTwoMobileQuantityStepperButton,
+.stepTwoMobileQuantityInlineStepper .stepTwoMobileQuantityValueInput {
+  min-height: 2.5rem;
+  border-radius: 0.7rem;
+}
+
+.stepTwoMobileQuantityInlineStepper .stepTwoMobileQuantityValueInput {
+  padding-inline: 0.35rem;
+  font-size: 1rem;
+}
+
 .stepTwoMobileQuantityStepper {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr) 52px;

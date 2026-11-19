@@ -4,7 +4,7 @@ import { QuoteSupplierDisclosure } from "@/features/proveedor-catalogos/componen
 
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { LuChevronLeft, LuPencil, LuSearch, LuX } from "react-icons/lu";
+import { LuChevronLeft, LuMinus, LuPencil, LuPlus, LuSearch, LuX } from "react-icons/lu";
 
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
@@ -129,6 +129,7 @@ function createQuickLineFormState(
 
 type Props = {
   activePricingMode: PricingMode;
+  cantidadDisplayValue: string;
   colorOptions: readonly { label: string; hex: string }[];
   displayConfigurationOptions: readonly string[];
   displaySystemOptions: readonly string[];
@@ -142,6 +143,8 @@ type Props = {
   lineTemplateOptions: readonly CotizacionLineTemplate[];
   onAltoChange: (value: string) => void;
   onAnchoChange: (value: string) => void;
+  onCantidadChange: (value: string) => void;
+  onSelectCantidad: (cantidad: number) => void;
   onApplyCreatedLineTemplate: (template: CotizacionLineTemplate) => void;
   onCreateLineTemplate: (
     input: Omit<CreateCotizacionLineTemplateInput, "organizationId">
@@ -216,8 +219,52 @@ type Props = {
   ) => void;
 };
 
+type CantidadInlineProps = {
+  cantidad: number;
+  value: string;
+  onChange: (value: string) => void;
+  onSelect: (cantidad: number) => void;
+};
+
+function CantidadInlineMovil({ cantidad, value, onChange, onSelect }: CantidadInlineProps) {
+  const currentValue = Math.max(1, Number.parseInt(value || "", 10) || cantidad || 1);
+
+  return (
+    <div className={s.stepTwoMobileQuantityInline}>
+      <span className={s.stepTwoMobileBlockLabel}>Cantidad</span>
+      <div className={s.stepTwoMobileQuantityInlineStepper}>
+        <button
+          className={s.stepTwoMobileQuantityStepperButton}
+          onClick={() => onSelect(Math.max(1, currentValue - 1))}
+          type="button"
+          aria-label="Restar una unidad"
+        >
+          <LuMinus aria-hidden />
+        </button>
+        <input
+          aria-label="Cantidad del grupo"
+          className={s.stepTwoMobileQuantityValueInput}
+          inputMode="numeric"
+          type="text"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <button
+          className={s.stepTwoMobileQuantityStepperButton}
+          onClick={() => onSelect(currentValue + 1)}
+          type="button"
+          aria-label="Sumar una unidad"
+        >
+          <LuPlus aria-hidden />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function PasoDosWizardConfiguracionMovil({
   activePricingMode,
+  cantidadDisplayValue,
   colorOptions,
   displayConfigurationOptions,
   displaySystemOptions,
@@ -232,6 +279,8 @@ export function PasoDosWizardConfiguracionMovil({
   lineTemplateOptions,
   onAltoChange,
   onAnchoChange,
+  onCantidadChange,
+  onSelectCantidad,
   onApplyCreatedLineTemplate,
   onCreateLineTemplate,
   onMargenChange,
@@ -990,6 +1039,13 @@ export function PasoDosWizardConfiguracionMovil({
           </span>
         </div>
 
+        <CantidadInlineMovil
+          cantidad={draft.cantidad}
+          value={cantidadDisplayValue}
+          onChange={onCantidadChange}
+          onSelect={onSelectCantidad}
+        />
+
         <div className={s.stepTwoMobileBlockHero}>
           <div className={s.stepTwoMobileBlockLabel}>NOMBRE DEL ITEM</div>
           <label className={s.stepTwoMobileInlineField}>
@@ -1310,6 +1366,13 @@ export function PasoDosWizardConfiguracionMovil({
             : "Mismas medidas, mismo sistema y mismo valor inicial."}
         </span>
       </div>
+
+      <CantidadInlineMovil
+        cantidad={draft.cantidad}
+        value={cantidadDisplayValue}
+        onChange={onCantidadChange}
+        onSelect={onSelectCantidad}
+      />
 
       {isTrabajoPersonalizado ? (
         <div className={s.stepTwoMobileBlockHero}>

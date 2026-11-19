@@ -6,7 +6,6 @@ import { LuX } from "react-icons/lu";
 
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
-import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import type { QuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type {
@@ -53,7 +52,6 @@ import type { PasoDosGrupoPasoMovil } from "../../_hooks/use-paso-dos-agregar-gr
 import {
   getSubtypeOptionsForCategory,
   shouldHideFreeNotebookCategoryInWizard,
-  shouldSkipCantidadForGrupoDraft,
   type PasoDosGrupoEntryMode,
 } from "../../_hooks/use-paso-dos-agregar-grupo";
 import {
@@ -66,7 +64,6 @@ import { useMobileViewportStability } from "../../_hooks/use-mobile-viewport-sta
 import { buildPasoDosWizardMovilState } from "./paso-dos-wizard-movil.state";
 import { PasoDosListaMovil } from "./paso-dos-lista-movil";
 import { PasoDosVariacionRapidaMovil } from "./paso-dos-variacion-rapida-movil";
-import { PasoDosWizardCantidadMovil } from "./paso-dos-wizard-cantidad-movil";
 import { PasoDosWizardEncabezadoMovil } from "./paso-dos-wizard-encabezado-movil";
 import { PasoDosWizardConfiguracionMovil } from "./paso-dos-wizard-configuracion-movil";
 import { PasoDosWizardFooterMovil } from "./paso-dos-wizard-footer-movil";
@@ -251,16 +248,8 @@ const CATEGORY_OPTIONS: Array<{
   },
 ];
 
-const QUICK_QUANTITIES = [1, 2, 4, 6] as const;
-
 const VISUAL_STAGES = [
   { id: 1, label: "Tipo" },
-  { id: 2, label: "Cantidad" },
-  { id: 3, label: "Datos" },
-] as const;
-
-const VISUAL_STAGES_FREE_VALUE = [
-  { id: 1, label: "Tipo", paso: 1 as const },
   { id: 2, label: "Datos", paso: 3 as const },
 ] as const;
 
@@ -461,13 +450,9 @@ export function PasoDosWizardMovil({
   );
 
   const isSingleStepFreeTotal = wizard.entryMode === "free_total_single";
-  const shouldSkipCantidadStep =
-    isSingleStepFreeTotal || shouldSkipCantidadForGrupoDraft(wizard.draft);
   const wizardStages = isSingleStepFreeTotal
     ? VISUAL_STAGES_FREE_TOTAL_SINGLE
-    : shouldSkipCantidadStep
-      ? VISUAL_STAGES_FREE_VALUE
-      : VISUAL_STAGES;
+    : VISUAL_STAGES;
 
   const {
     activePricingMode,
@@ -482,9 +467,9 @@ export function PasoDosWizardMovil({
     quotePricingMode,
   });
   const effectiveCanSubmitGroup =
-    quotePricingMode === "total_global" && isSingleStepFreeTotal
-      ? canSubmitGroup && (totalClienteManual ?? 0) > 0
-      : canSubmitGroup;
+    canSubmitGroup &&
+    canContinueFromQuantity &&
+    (quotePricingMode !== "total_global" || !isSingleStepFreeTotal || (totalClienteManual ?? 0) > 0);
   const formattedPriceValue = formatCurrencyInput(wizard.draft.precio);
   const visibleLineTemplates = wizard.visibleLineTemplates;
 
@@ -567,7 +552,13 @@ export function PasoDosWizardMovil({
         isFreeValueItem={isFreeValueComponentType(wizard.draft.subtipo)}
         isTotalGlobal={quotePricingMode === "total_global"}
         precioFormateado={formatCurrencyInput(wizard.draft.precio)}
-        onBack={wizard.onBack}
+        onBack={() => {
+          if (visualStage === 3) {
+            wizard.onGoToStep(1);
+            return;
+          }
+          wizard.onBack();
+        }}
         onClose={handleCloseWizard}
         onConfirm={wizard.onConfirm}
         onNext={wizard.onNext}
@@ -710,22 +701,16 @@ export function PasoDosWizardMovil({
                 title={
                   isSingleStepFreeTotal
                     ? "Cotiza libre por total"
-                    : shouldSkipCantidadStep && quotePricingMode === "total_global" && visualStage === 3
-                      ? "Datos del trabajo"
-                      : getStageTitle(visualStage)
+                    : getStageTitle(visualStage)
                 }
                 subtitle={
                   isSingleStepFreeTotal
                     ? "Describe el trabajo, agrega detalles y define el precio final."
                     : visualStage === 1
                       ? "Elige el tipo base del componente."
-                      : visualStage === 2
-                        ? "Indica cuantas unidades iguales van en este grupo."
-                        : shouldSkipCantidadStep
-                          ? "Redacta el trabajo y define el valor."
-                          : quotePricingMode === "total_global"
-                            ? "Completa datos comerciales y precio final antes de agregar."
-                            : "Completa sistema, medidas y valor antes de agregar."
+                      : quotePricingMode === "total_global"
+                        ? "Completa los datos y el precio final antes de agregar."
+                        : "Completa las medidas, la cantidad y el valor antes de agregar."
                 }
                 onClose={handleCloseWizard}
                 onGoToStep={wizard.onGoToStep}
@@ -746,23 +731,17 @@ export function PasoDosWizardMovil({
                   subtypeOptions={wizard.subtypeOptions}
                   subtypePreviewMarkup={subtypePreviewMarkup}
                   onSelectCategoria={wizard.onSelectCategoria}
-                  onSelectSubtipo={wizard.onSelectSubtipo}
-                />
-              ) : null}
-
-              {visualStage === 2 ? (
-                <PasoDosWizardCantidadMovil
-                  cantidadDisplayValue={cantidadDisplayValue}
-                  draft={wizard.draft}
-                  quickQuantities={QUICK_QUANTITIES}
-                  onCantidadChange={wizard.onCantidadChange}
-                  onSelectCantidad={wizard.onSelectCantidad}
+                  onSelectSubtipo={(subtipo) => {
+                    wizard.onSelectSubtipo(subtipo);
+                    wizard.onGoToStep(3);
+                  }}
                 />
               ) : null}
 
               {wizard.paso === 3 ? (
                 <PasoDosWizardConfiguracionMovil
                   activePricingMode={activePricingMode}
+                  cantidadDisplayValue={cantidadDisplayValue}
                   colorOptions={materialColorOptions}
                   draft={wizard.draft}
                   onQuickCompositionAdjustment={wizard.onQuickCompositionAdjustment}
@@ -779,6 +758,8 @@ export function PasoDosWizardMovil({
                   isSavingLineTemplate={wizard.isSavingLineTemplate}
                   onAltoChange={wizard.onAltoChange}
                   onAnchoChange={wizard.onAnchoChange}
+                  onCantidadChange={wizard.onCantidadChange}
+                  onSelectCantidad={wizard.onSelectCantidad}
                   onApplyCreatedLineTemplate={wizard.onApplyCreatedLineTemplate}
                   onCreateLineTemplate={wizard.onCreateLineTemplate}
                   onMargenChange={wizard.onMargenChange}
