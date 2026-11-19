@@ -1087,7 +1087,7 @@ export function CuadernoQuickEditSheet({
               <QuoteSupplierDisclosure
                 className={s.supplierDisclosure}
                 bodyClassName={s.supplierDisclosureBody}
-                summary={isLoadingSupplierOptions ? "Cargando…" : selectedSupplierOption?.label ?? (selectedSupplierProviderKey ? "Proveedor guardado · revisar cobertura" : supplierOptions.length === 0 ? "Sin proveedor compatible" : `${automaticSupplierLabel} · predeterminado`)}
+                summary={isLoadingSupplierOptions ? "Cargando…" : selectedSupplierProviderKey || effectiveFamilyPreference ? selectedSupplierOption?.label ?? "Proveedor guardado · revisar cobertura" : supplierOptions.length === 0 ? "Sin proveedor compatible" : `Lista automática: ${automaticSupplierLabel}`}
                 coverage={!isLoadingSupplierOptions && exactSupplierProfileCoverage
                   ? `Cobertura de compra: ${exactSupplierProfileCoverage.coveredCount}/${exactSupplierProfileCoverage.totalCount} perfiles`
                   : !isLoadingSupplierOptions && supplierResolutionRequest && !effectiveSupplierRecipe ? "Cobertura por perfil pendiente de configuración técnica." : null}
@@ -1101,7 +1101,7 @@ export function CuadernoQuickEditSheet({
                       value={selectedSupplierProviderKey}
                       onChange={(event) => setSupplierProviderKeyDraft(event.target.value)}
                     >
-                      <option value="">Predeterminado · {automaticSupplierLabel}</option>
+                      <option value="">{effectiveFamilyPreference ? `Habitual · ${automaticSupplierLabel}` : `Automático · ${automaticSupplierLabel}`}</option>
                       {selectedSupplierProviderKey && !supplierOptions.some((option) => option.providerKey === selectedSupplierProviderKey) ? (
                         <option value={selectedSupplierProviderKey}>Proveedor guardado · sin precio para esta composición</option>
                       ) : null}

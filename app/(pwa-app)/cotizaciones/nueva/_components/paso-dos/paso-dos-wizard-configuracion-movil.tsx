@@ -1802,7 +1802,7 @@ export function PasoDosWizardConfiguracionMovil({
         {supplierFamilyKey && onSupplierProviderKeyChange && effectiveSupplierRecipe?.definition.perfiles.some((profile) => profile.codigoPerfil?.trim()) ? (
           <QuoteSupplierDisclosure
             className={s.stepTwoMobileSupplierPicker}
-            summary={supplierPresentationRequests.length === 0 ? "Configuración pendiente" : supplierPresentationResolution.isResolving ? "Cargando proveedores…" : supplierProviderOptions.find((option) => option.providerKey === (draft.supplierProviderKey || familyPreferenceProviderKey))?.label ?? ((draft.supplierProviderKey || familyPreferenceProviderKey) ? "Proveedor guardado · revisar cobertura" : supplierProviderOptions.length === 0 ? "Sin proveedor compatible" : defaultSupplierLabel)}
+            summary={supplierPresentationRequests.length === 0 ? "Configuración pendiente" : supplierPresentationResolution.isResolving ? "Cargando proveedores…" : supplierProviderOptions.find((option) => option.providerKey === (draft.supplierProviderKey || familyPreferenceProviderKey))?.label ?? ((draft.supplierProviderKey || familyPreferenceProviderKey) ? "Proveedor guardado · revisar cobertura" : supplierProviderOptions.length === 0 ? "Sin proveedor compatible" : `Lista automática: ${defaultSupplierLabel}`)}
             coverage={!supplierPresentationResolution.isResolving && effectiveSupplierRecipe && guidedSupplierCoverage
               ? `Cobertura de compra: ${guidedSupplierCoverage.totalCount - guidedSupplierCoverage.pendingCodes.length}/${guidedSupplierCoverage.totalCount} perfiles`
               : !supplierPresentationResolution.isResolving && supplierPresentationRequests.length > 0 && !effectiveSupplierRecipe ? "Cobertura por perfil pendiente de configuración técnica."
@@ -1823,7 +1823,7 @@ export function PasoDosWizardConfiguracionMovil({
                     onChange={(event) => onSupplierProviderKeyChange(event.target.value)}
                     disabled={supplierPresentationResolution.isResolving && supplierProviderOptions.length === 0}
                   >
-                    <option value="">Predeterminado · {defaultSupplierLabel}</option>
+                    <option value="">{familyPreferenceProviderKey ? `Habitual · ${defaultSupplierLabel}` : `Automático · ${defaultSupplierLabel}`}</option>
                     {draft.supplierProviderKey && !supplierProviderOptions.some((option) => option.providerKey === draft.supplierProviderKey) ? <option value={draft.supplierProviderKey}>Proveedor guardado · sin cobertura compatible</option> : null}
                     {supplierProviderOptions.map((option) => (
                       <option key={option.providerKey} value={option.providerKey}>{option.label}</option>
