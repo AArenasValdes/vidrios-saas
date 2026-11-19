@@ -8235,27 +8235,16 @@
 
 .stepTwoMobileQuantityInline {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
 }
 
 .stepTwoMobileQuantityInlineStepper {
   display: grid;
-  grid-template-columns: 2.5rem 4rem 2.5rem;
-  gap: 0.4rem;
+  grid-template-columns: 52px minmax(0, 1fr) 52px;
+  gap: 0.6rem;
   align-items: center;
-}
-
-.stepTwoMobileQuantityInlineStepper .stepTwoMobileQuantityStepperButton,
-.stepTwoMobileQuantityInlineStepper .stepTwoMobileQuantityValueInput {
-  min-height: 2.5rem;
-  border-radius: 0.7rem;
-}
-
-.stepTwoMobileQuantityInlineStepper .stepTwoMobileQuantityValueInput {
-  padding-inline: 0.35rem;
-  font-size: 1rem;
 }
 
 .stepTwoMobileQuantityStepper {
