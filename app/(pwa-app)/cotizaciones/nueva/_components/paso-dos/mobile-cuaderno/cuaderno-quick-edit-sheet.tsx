@@ -1083,7 +1083,7 @@ export function CuadernoQuickEditSheet({
               />
             ) : null}
 
-            {supplierResolutionRequest ? (
+            {supplierResolutionRequest && effectiveSupplierRecipe?.definition.perfiles.some((profile) => profile.codigoPerfil?.trim()) ? (
               <QuoteSupplierDisclosure
                 className={s.supplierDisclosure}
                 bodyClassName={s.supplierDisclosureBody}
@@ -1214,14 +1214,6 @@ export function CuadernoQuickEditSheet({
                   <span className={s.variantSourceHint}>No hay precios compatibles para los perfiles de esta composición.</span>
                 ) : null}
                   {familyPreferenceError ? <span className={s.preferenceError} role="status">{familyPreferenceError}</span> : null}
-              </QuoteSupplierDisclosure>
-            ) : supplierFamilyKey ? (
-              <QuoteSupplierDisclosure
-                className={s.supplierDisclosure}
-                summary={isResolvingL25Recipe ? "Resolviendo configuración…" : "Configuración pendiente"}
-                warning="Resuelve la configuración de fabricación para identificar perfiles y proveedores compatibles."
-              >
-                <span className={s.variantSourceHint}>No se muestran códigos ni cobertura de compra hasta contar con una identidad técnica exacta.</span>
               </QuoteSupplierDisclosure>
             ) : null}
             {selectedLineIsSodalL25 && isResolvingL25Recipe ? (

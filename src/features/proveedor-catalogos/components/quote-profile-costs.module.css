@@ -86,7 +86,7 @@
 
 .action,
 .editorActions button {
-  min-height: 36px;
+  min-height: 48px;
   padding: 7px 10px;
   border: 1px solid #bfd0e6;
   border-radius: 9px;
@@ -129,7 +129,7 @@
 
 .editor input {
   width: 100%;
-  min-height: 40px;
+  min-height: 48px;
   padding: 8px 10px;
   border: 1px solid #cbd6e4;
   border-radius: 8px;
@@ -213,7 +213,7 @@
 
   .action {
     width: 100%;
-    min-height: 44px;
+    min-height: 48px;
   }
 
   .editor {
@@ -227,7 +227,7 @@
 
   .editorActions button {
     min-width: 0;
-    min-height: 44px;
+    min-height: 48px;
     padding-inline: 8px;
     overflow-wrap: anywhere;
   }

@@ -64,10 +64,6 @@ export function QuoteProfileCosts({
       const code = reference.technicalCode.trim().toLocaleUpperCase("en-US");
       if (code) referencesByCode.set(code, reference);
     }
-    for (const [code, candidates] of grouped) {
-      const row = candidates[0];
-      if (!referencesByCode.has(code) && row) referencesByCode.set(code, { technicalCode: row.technicalCode, profileName: row.profileName });
-    }
     return [...referencesByCode.entries()].map(([code, reference]) => {
       const candidates = grouped.get(code) ?? [];
       const ownRows = candidates.filter((row) => row.priceSource === "workshop" && row.providerKey.startsWith("taller:"));
@@ -93,7 +89,7 @@ export function QuoteProfileCosts({
       const display = selected ?? own ?? fallback;
       return {
         technicalCode: reference.technicalCode,
-        profileName: reference.profileName || display.profileName || display.presentationDescription || reference.technicalCode,
+        profileName: reference.profileName || display?.profileName || display?.presentationDescription || reference.technicalCode,
         workshop: own,
         selected,
         display,

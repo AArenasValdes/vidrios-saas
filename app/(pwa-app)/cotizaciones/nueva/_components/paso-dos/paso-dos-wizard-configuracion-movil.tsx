@@ -1,6 +1,7 @@
 "use client";
 
 import { QuoteSupplierDisclosure } from "@/features/proveedor-catalogos/components/quote-supplier-disclosure";
+import { QuoteProfileCosts } from "@/features/proveedor-catalogos/components/quote-profile-costs";
 
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -670,7 +671,7 @@ export function PasoDosWizardConfiguracionMovil({
   }, [draft.catalogTerminacion, draft.colorHex, selectedLineTemplate, supplierFamilyKey, effectiveSupplierRecipe, selectedLineIsSodalL25]);
   const supplierPresentationResolution = useSupplierPresentationResolution(supplierPresentationRequests, {
     includeProviderOptions: true,
-    includeProfilePrices: false,
+    includeProfilePrices: selectedLineIsSodalL25,
   });
   const supplierProviderOptions = supplierPresentationResolution.result?.providerOptions?.["guided-line-provider-preview"] ?? [];
   const familyPreferenceProviderKey = supplierPresentationResolution.result?.familyPreferences?.[supplierFamilyKey ?? ""] ?? null;
@@ -1798,7 +1799,7 @@ export function PasoDosWizardConfiguracionMovil({
             )}
           />
         ) : null}
-        {supplierFamilyKey && onSupplierProviderKeyChange ? (
+        {supplierFamilyKey && onSupplierProviderKeyChange && effectiveSupplierRecipe?.definition.perfiles.some((profile) => profile.codigoPerfil?.trim()) ? (
           <QuoteSupplierDisclosure
             className={s.stepTwoMobileSupplierPicker}
             summary={supplierPresentationRequests.length === 0 ? "Configuración pendiente" : supplierPresentationResolution.isResolving ? "Cargando proveedores…" : supplierProviderOptions.find((option) => option.providerKey === (draft.supplierProviderKey || familyPreferenceProviderKey))?.label ?? ((draft.supplierProviderKey || familyPreferenceProviderKey) ? "Proveedor guardado · revisar cobertura" : supplierProviderOptions.length === 0 ? "Sin proveedor compatible" : defaultSupplierLabel)}
@@ -1830,6 +1831,24 @@ export function PasoDosWizardConfiguracionMovil({
                   </select>
                 </label>
                 <small>{supplierPresentationResolution.isResolving ? "Cargando proveedores…" : "Puedes cambiar el proveedor para esta pieza. El precio de venta de la línea se mantiene."}</small>
+                {selectedLineIsSodalL25 && effectiveSupplierRecipe && Number(draft.lineTemplateId) > 0 ? (
+                  <details>
+                    <summary>Ver costos de perfiles</summary>
+                    <QuoteProfileCosts
+                      lineTemplateId={Number(draft.lineTemplateId)}
+                      familyKey={supplierFamilyKey}
+                      providerKey={activeSupplierProviderKey ?? "arquetipo"}
+                      finishName={resolveSupplierFinishName(draft.catalogTerminacion, draft.colorHex)}
+                      references={effectiveSupplierRecipe.definition.perfiles
+                        .filter((profile) => profile.codigoPerfil?.trim())
+                        .map((profile) => ({ technicalCode: profile.codigoPerfil, profileName: profile.nombrePerfil }))}
+                      prices={supplierPresentationResolution.result?.profilePrices?.["guided-line-provider-preview"] ?? []}
+                      canManagePrice={supplierPresentationResolution.result?.canManageSupplierPrices === true}
+                      onPricesSaved={supplierPresentationResolution.refresh}
+                      onUseWorkshopCost={onSupplierProviderKeyChange}
+                    />
+                  </details>
+                ) : null}
               </>
             ) : <small>Resuelve la configuración de fabricación antes de consultar costos por perfil.</small>}
           </QuoteSupplierDisclosure>
