@@ -27,6 +27,9 @@ export type SupplierPresentationResolutionRequest = {
   configurationKey?: string | null;
   /** Explicit purchase-price provider selected for this quote item. */
   providerKey?: string | null;
+  organizationId?: number;
+  allowOwnProfileCosts?: boolean;
+  eligibleOwnPresentationIds?: readonly string[];
 };
 
 export type SupplierProfilePricePreview = {
@@ -42,6 +45,7 @@ export type SupplierProfilePricePreview = {
   netPrice: number | null;
   currency: string | null;
   priceSource: "reference" | "provider_adjustment" | "organization_override" | "workshop" | null;
+  workshopSupplierName?: string | null;
   priceListRevision?: string | null;
   priceListPublishedOn?: string | null;
   priceListValidUntil?: string | null;
@@ -51,6 +55,30 @@ export type SupplierProfilePricePreview = {
   priceSourceSupplierSku?: string | null;
   status: "priced" | "missing_price" | "ambiguous";
 };
+
+export function isEffectiveSupplierProfilePrice(input: {
+  presentationId?: string | null; status?: SupplierProfilePricePreview["status"]; netPrice?: number | null;
+  commercialLengthMm?: number | null; currency?: string | null; finishPriceBasis?: SupplierProfilePricePreview["finishPriceBasis"];
+}): boolean {
+  return Boolean(input.presentationId?.trim()) && input.status === "priced" &&
+    input.netPrice != null && Number.isFinite(input.netPrice) && input.netPrice > 0 &&
+    input.commercialLengthMm != null && Number.isSafeInteger(input.commercialLengthMm) && input.commercialLengthMm > 0 &&
+    Boolean(input.currency?.trim()) && input.finishPriceBasis !== "base_reference_other_finish";
+}
+
+export function resolveMixedSupplierProfileCoverage(input: {
+  technicalCodes: readonly string[]; prices: readonly SupplierProfilePricePreview[]; providerKey: string | null | undefined;
+}): { totalCount: number; coveredCount: number; pendingCodes: string[] } {
+  const codes = [...new Map(input.technicalCodes.map((code) => code.trim()).filter(Boolean).map((code) => [normalizeCode(code), code] as const)).values()];
+  const pendingCodes = codes.filter((code) => {
+    const matches = input.prices.filter((row) => normalizeCode(row.technicalCode) === normalizeCode(code));
+    const own = matches.filter((row) => row.priceSource === "workshop" && isEffectiveSupplierProfilePrice(row));
+    if (own.length === 1) return false;
+    if (own.length > 1) return true;
+    return !matches.some((row) => row.providerKey === input.providerKey && isEffectiveSupplierProfilePrice(row));
+  });
+  return { totalCount: codes.length, coveredCount: codes.length - pendingCodes.length, pendingCodes };
+}
 
 export function resolveSupplierProfileCoverage(input: {
   technicalCodes: readonly string[];
@@ -288,6 +316,7 @@ export function resolveSupplierProfilePricePreviews(input: {
         netPrice: price?.unitNetPrice ?? null,
         currency: price?.currency ?? null,
         priceSource: presentation.origin === "workshop" ? "workshop" : price?.source ?? null,
+        workshopSupplierName: presentation.workshopSupplierName ?? null,
         priceListRevision: presentation.priceListRevision ?? null,
         priceListPublishedOn: presentation.priceListPublishedOn ?? null,
         priceListValidUntil: presentation.priceListValidUntil ?? null,
@@ -466,7 +495,10 @@ export function resolveSupplierPresentationsForQuoteItem(input: {
   const { request } = input;
   return [...new Set(request.technicalCodes.map(normalizeCode).filter(Boolean))].map((technicalCode) => {
     const candidates = input.presentations.filter((entry) =>
-      (!request.providerKey || entry.providerKey === request.providerKey) &&
+      ((!request.providerKey || entry.providerKey === request.providerKey) ||
+        (request.allowOwnProfileCosts === true &&
+          (normalizeUniversalAluminumFamilyKey(request.familyKey) ?? request.familyKey) === "universal:aluminio:l42" &&
+          Number.isSafeInteger(request.organizationId) && entry.providerKey === `taller:${request.organizationId}`)) &&
       entry.familyKeys.some((familyKey) =>
         (normalizeUniversalAluminumFamilyKey(familyKey) ?? familyKey) ===
         (normalizeUniversalAluminumFamilyKey(request.familyKey) ?? request.familyKey)
@@ -479,14 +511,22 @@ export function resolveSupplierPresentationsForQuoteItem(input: {
     );
 
     const universalAluminumFamily = normalizeUniversalAluminumFamilyKey(request.familyKey);
+    const isEligibleOwnCost = (entry: ConfirmedSupplierPresentation) =>
+      request.allowOwnProfileCosts !== true || !request.eligibleOwnPresentationIds ||
+      request.eligibleOwnPresentationIds.includes(entry.presentationId);
+    const ownCandidates = candidates.filter((entry) => entry.providerKey.startsWith("taller:") &&
+      request.allowOwnProfileCosts === true &&
+      (universalAluminumFamily ?? request.familyKey) === "universal:aluminio:l42" &&
+      Number.isSafeInteger(request.organizationId) && entry.providerKey === `taller:${request.organizationId}` &&
+      isEligibleOwnCost(entry));
     const preferredWorkshopCandidates = candidates.filter((entry) =>
-      entry.providerKey.startsWith("taller:") && entry.preferred === true
+      entry.providerKey.startsWith("taller:") && entry.preferred === true && isEligibleOwnCost(entry)
     );
     const arquetipoCandidates = candidates.filter((entry) => entry.providerKey === "arquetipo");
     const preferredCandidates = candidates.filter((entry) => entry.preferred === true);
     const effectiveCandidates = universalAluminumFamily
       ? request.providerKey
-        ? candidates
+        ? ownCandidates.length > 0 ? ownCandidates : candidates.filter((entry) => entry.providerKey === request.providerKey)
         : preferredWorkshopCandidates.length > 0
         ? preferredWorkshopCandidates
         : arquetipoCandidates

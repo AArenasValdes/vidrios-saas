@@ -77,6 +77,7 @@ export async function saveQuickWorkshopProfileCost(change:
       finishName: string;
       commercialLengthMm: number | null;
       netPrice: number;
+      supplierName?: string | null;
     }
   | {
       kind: "update";
@@ -85,6 +86,7 @@ export async function saveQuickWorkshopProfileCost(change:
       expectedRevision: number;
       commercialLengthMm: number | null;
       netPrice: number;
+      supplierName?: string | null;
     }
 ) {
   const response = await fetch("/api/proveedor-catalogos/taller-presentaciones", {
@@ -102,6 +104,7 @@ export async function saveQuickWorkshopProfileCost(change:
       purchaseUnit: "UN",
       commercialLengthMm: change.commercialLengthMm,
       netPrice: change.netPrice,
+      supplierName: change.supplierName ?? null,
       currency: "CLP",
       preferred: false,
     } : {
@@ -111,6 +114,7 @@ export async function saveQuickWorkshopProfileCost(change:
       purchaseUnit: "UN",
       commercialLengthMm: change.commercialLengthMm,
       netPrice: change.netPrice,
+      supplierName: change.supplierName,
       currency: "CLP",
     }),
   });

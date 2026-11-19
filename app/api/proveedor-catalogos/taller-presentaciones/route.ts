@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -26,6 +26,7 @@ const inputSchema = z.object({
   commercialLengthMm: z.number().int().positive().nullable(),
   netPrice: z.number().positive().nullable(),
   currency: z.enum(["CLP"]).nullable(),
+  supplierName: z.string().trim().max(120).nullable().optional(),
   preferred: z.boolean(),
 }).strict().refine((row) => Boolean(row.officialInputId || (row.technicalCode && row.profileName)), {
   message: "Selecciona un perfil oficial o define código y nombre privados.",
@@ -41,6 +42,7 @@ const updateSchema = z.object({
   commercialLengthMm: z.number().int().positive().nullable(),
   netPrice: z.number().positive().nullable(),
   currency: z.enum(["CLP"]).nullable(),
+  supplierName: z.string().trim().max(120).nullable().optional(),
   preferred: z.boolean().optional(),
 }).strict().refine((row) => (row.netPrice === null) === (row.currency === null), {
   message: "El precio y la moneda deben completarse juntos.",
@@ -60,9 +62,7 @@ async function authorize(lineTemplateId: number) {
   const definition = VENTORA_DEFAULT_LINE_CATALOG.find((entry) => entry.catalogKey === line?.catalog_key);
   const familyKey = definition?.catalogMetadata?.familyKey;
   const configurationKey = definition?.catalogMetadata?.configurationKey;
-  if (!line || !definition || typeof familyKey !== "string" ||
-    (!familyKey.startsWith("veratec:") && !familyKey.startsWith("thermowin:") &&
-      !(definition.catalogKey === "ventora:l25" && familyKey === "universal:aluminio:l25"))) return null;
+  if (!line || !definition || typeof familyKey !== "string" || !familyKey.trim()) return null;
   return { organizationId, familyKey, catalogKey: definition.catalogKey, configurationKey: typeof configurationKey === "string" ? configurationKey : null, userId: auth.user.id };
 }
 
@@ -93,7 +93,11 @@ export async function GET(request: Request) {
       officialInputs,
       catalogProfiles,
       ownPresentations: ownPresentations.map((row) => ({
-        ...row,
+        id: row.id, revision: row.revision, codigo_tecnico: row.codigo_tecnico,
+        nombre_perfil: row.nombre_perfil, acabado_nombre: row.acabado_nombre,
+        largo_comercial_mm: row.largo_comercial_mm, precio_neto: row.precio_neto,
+        moneda: row.moneda, unidad_compra: row.unidad_compra, preferida: row.preferida,
+        proveedor_nombre: row.proveedor_nombre ?? null,
         sku_taller: isGeneratedWorkshopPresentationKey(String(row.sku_taller)) ? null : row.sku_taller,
       })),
     }, { headers: { "Cache-Control": "no-store" } });
@@ -106,7 +110,7 @@ export async function POST(request: Request) {
     if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Datos inválidos." }, { status: 400 });
     const access = await authorize(parsed.data.lineTemplateId);
     if (!access) return NextResponse.json({ error: "No disponible." }, { status: 404 });
-    if (access.catalogKey === "ventora:l25" && !parsed.data.officialInputId) {
+    if (access.familyKey.startsWith("universal:aluminio:") && !parsed.data.officialInputId) {
       const existing = await listWorkshopPresentations(access.organizationId, access.familyKey);
       const normalize = (value: string | null | undefined) => (value ?? "").trim().normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CL");
@@ -125,13 +129,16 @@ export async function POST(request: Request) {
       technicalCode: parsed.data.technicalCode,
       recipeCode: parsed.data.recipeCode,
       profileName: parsed.data.profileName,
-      workshopSku: parsed.data.workshopSku?.trim() || `${INTERNAL_WORKSHOP_PRESENTATION_KEY_PREFIX}${randomUUID()}`,
+      workshopSku: parsed.data.workshopSku?.trim() || `${INTERNAL_WORKSHOP_PRESENTATION_KEY_PREFIX}${access.familyKey.startsWith("universal:aluminio:") && !parsed.data.officialInputId
+        ? createHash("sha256").update(JSON.stringify([access.organizationId, access.familyKey, access.configurationKey, parsed.data.technicalCode?.trim().toLocaleUpperCase("en-US"), parsed.data.finishName?.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CL")])).digest("hex").slice(0, 40)
+        : randomUUID()}`,
       description: parsed.data.description,
       finishName: parsed.data.finishName,
       purchaseUnit: parsed.data.purchaseUnit,
       commercialLengthMm: parsed.data.commercialLengthMm,
       netPrice: parsed.data.netPrice,
       currency: parsed.data.currency,
+      supplierName: parsed.data.supplierName,
       preferred: parsed.data.preferred,
       userId: access.userId,
     });
@@ -153,6 +160,7 @@ export async function PATCH(request: Request) {
       expectedRevision: parsed.data.expectedRevision, purchaseUnit: parsed.data.purchaseUnit,
       commercialLengthMm: parsed.data.commercialLengthMm, netPrice: parsed.data.netPrice,
       currency: parsed.data.currency,
+      supplierName: parsed.data.supplierName,
       ...(parsed.data.preferred === undefined ? {} : { preferred: parsed.data.preferred }),
     });
     return NextResponse.json({ row }, { headers: { "Cache-Control": "no-store" } });

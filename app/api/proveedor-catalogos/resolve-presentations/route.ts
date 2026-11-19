@@ -69,11 +69,13 @@ export async function POST(request: Request) {
         : [];
       return [familyKey, ...(normalized ? [normalized] : []), ...aliases];
     }))];
+    const shouldReadWorkshopPrices = parsed.data.includeProviderOptions === true ||
+      validItems.some((item) => item.catalogLineKey === "ventora:l42");
     const [presentations, savedPreferences, catalogPrices, workshopPrices] = await Promise.all([
       readConfirmedSupplierPresentations(organizationId, { familyKeys: supplierFamilyKeys }),
       listSupplierFamilyPreferences(organizationId),
       parsed.data.includeProviderOptions ? readSupplierPresentationPrices({ familyKeys: supplierFamilyKeys }) : Promise.resolve([]),
-      parsed.data.includeProviderOptions ? readWorkshopPresentationPrices(organizationId) : Promise.resolve([]),
+      shouldReadWorkshopPrices ? readWorkshopPresentationPrices(organizationId) : Promise.resolve([]),
     ]);
     const preferenceByFamily = new Map(savedPreferences.map((preference) => [preference.familyKey, preference.providerKey]));
     const requestedFamilies = [...new Set(validItems.map((item) => item.familyKey))];
@@ -108,7 +110,7 @@ export async function POST(request: Request) {
         const refs = documentedProfiles
           .filter((profile) => profile.codeStatus === "catalog_reference" && profile.code?.trim())
           .map((profile) => ({ code: profile.code!, name: profile.name }));
-        if (item.catalogLineKey === "ventora:l25") {
+        {
           const namesByCode = new Map(refs.map((reference) => [reference.code.trim().toLocaleUpperCase("en-US"), reference]));
           for (const code of item.technicalCodes) {
             const normalized = code.trim().toLocaleUpperCase("en-US");
@@ -317,6 +319,15 @@ export async function POST(request: Request) {
             familyPreferenceProviderKey: preferenceByFamily.get(item.familyKey),
           }),
           configurationKey: VENTORA_DEFAULT_LINE_CATALOG.find((line) => line.catalogKey === item.catalogLineKey)?.catalogMetadata?.configurationKey as string | undefined,
+          organizationId,
+          allowOwnProfileCosts: item.catalogLineKey === "ventora:l42",
+          eligibleOwnPresentationIds: item.catalogLineKey === "ventora:l42"
+            ? workshopPrices.filter((row) => row.providerKey === `taller:${organizationId}` &&
+                row.origin === "workshop" && Boolean(row.presentationId?.trim()) &&
+                row.netPrice != null && Number.isFinite(row.netPrice) && row.netPrice > 0 &&
+                row.commercialLengthMm != null && Number.isSafeInteger(row.commercialLengthMm) && row.commercialLengthMm > 0 &&
+                Boolean(row.currency?.trim())).map((row) => row.presentationId!)
+            : undefined,
         },
         presentations,
       }),

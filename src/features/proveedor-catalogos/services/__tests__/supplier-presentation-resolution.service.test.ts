@@ -1,5 +1,23 @@
 import { resolveEffectiveSupplierProviderKey, resolveSupplierFinishName, resolveSupplierPresentationsForQuoteItem, resolveSupplierPresentationFamilyKeys, resolveSupplierPriceProviderCoverage, type ConfirmedSupplierPresentation } from "../supplier-presentation-resolution.service";
 
+describe("costos mixtos L42", () => {
+  const row = (code: string, providerKey: string): ConfirmedSupplierPresentation => ({
+    presentationId: `${providerKey}-${code}`, providerKey, supplierSku: code, technicalCode: code,
+    recipeComponentCodes: [], familyKeys: ["universal:aluminio:l42"], finishCode: null,
+    finishName: "Blanco", finishResolution: "specific", commercialLengthMm: 6000,
+  });
+  const base = { itemId: "test", familyKey: "universal:aluminio:l42", finishName: "Blanco", technicalCodes: ["4201", "4202", "4229"], providerKey: "arquetipo", organizationId: 3, allowOwnProfileCosts: true };
+  it("aplica solo el perfil propio completo de la organización y conserva el proveedor de los otros", () => {
+    const own = row("4201", "taller:3");
+    const result = resolveSupplierPresentationsForQuoteItem({ request: { ...base, eligibleOwnPresentationIds: [own.presentationId] }, presentations: [own, row("4202", "arquetipo"), row("4229", "arquetipo")] });
+    expect(result.map((item) => item.providerKey)).toEqual(["taller:3", "arquetipo", "arquetipo"]);
+  });
+  it("excluye costos incompletos o de otra organización", () => {
+    const result = resolveSupplierPresentationsForQuoteItem({ request: { ...base, technicalCodes: ["4201"], eligibleOwnPresentationIds: [] }, presentations: [row("4201", "taller:3"), row("4201", "taller:4"), row("4201", "arquetipo")] });
+    expect(result[0]).toMatchObject({ status: "resolved", providerKey: "arquetipo" });
+  });
+});
+
 const variants: Array<[string, string, string, number]> = [
   ["67401VER000", "000", "Blanco", 5800],
   ["67401VER153", "153", "Nogal", 5800],

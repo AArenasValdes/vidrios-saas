@@ -14,6 +14,7 @@ export type CatalogPresentationPrice = {
   familyKeys?: string[];
   configurationKey?: string | null;
   origin?: "workshop";
+  workshopSupplierName?: string | null;
   technicalCode: string;
   /** Explicit source-recipe codes linked in technical-input evidence metadata. */
   recipeComponentCodes?: string[];

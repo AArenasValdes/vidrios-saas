@@ -125,8 +125,18 @@ describe("/api/proveedor-catalogos/taller-presentaciones · Thermowin", () => {
     expect(body.ownPresentations[0].sku_taller).toBeNull();
   });
 
-  it("no habilita familias de aluminio distintas de L25 por prefijo", async () => {
+  it("limita la lectura de L20 a la organización y familia de la línea", async () => {
     catalogKey = "ventora:l20";
+    const response = await GET(new Request("http://localhost/api/proveedor-catalogos/taller-presentaciones?lineTemplateId=72"));
+    expect(response.status).toBe(200);
+    expect(requestedOrganizationId).toBe(941);
+    expect(listWorkshopPresentations).toHaveBeenCalledWith(941, "universal:aluminio:l20");
+  });
+
+  it("rechaza una línea de otra organización", async () => {
+    (resolveAuthenticatedRouteContext as jest.Mock).mockResolvedValue({
+      user: { id: "other" }, profile: { rol: "tecnico", organizationId: 942 },
+    });
     const response = await GET(new Request("http://localhost/api/proveedor-catalogos/taller-presentaciones?lineTemplateId=72"));
     expect(response.status).toBe(404);
     expect(listWorkshopPresentations).not.toHaveBeenCalled();
@@ -148,6 +158,39 @@ describe("/api/proveedor-catalogos/taller-presentaciones · Thermowin", () => {
       organizationId: 941, familyKey: "thermowin:kom-800", userId: "maestro-id",
       technicalCode: "KOM 801", netPrice: 45000,
     }));
+  });
+
+  it.each(["Aluminera local", null])("guarda el nombre opcional %s dentro de la organización", async (supplierName) => {
+    catalogKey = "ventora:l25";
+    const response = await POST(new Request("http://localhost/api/proveedor-catalogos/taller-presentaciones", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ lineTemplateId: 75, officialInputId: null, technicalCode: "2503", recipeCode: null,
+        profileName: "Jamba", workshopSku: null, description: "Barra", finishName: "Blanco", purchaseUnit: "UN",
+        commercialLengthMm: 6000, netPrice: 45000, currency: "CLP", preferred: false, supplierName }),
+    }));
+    expect(response.status).toBe(201);
+    expect(createWorkshopPresentation).toHaveBeenCalledWith(expect.objectContaining({ organizationId: 941, supplierName }));
+  });
+
+  it.each(["Aluminera local", null])("recupera el proveedor %s de una referencia privada", async (supplierName) => {
+    catalogKey = "ventora:l25";
+    (listWorkshopPresentations as jest.Mock).mockResolvedValue([{ id: "own-1", sku_taller: "ventora-internal:1", proveedor_nombre: supplierName }]);
+    const response = await GET(new Request("http://localhost/api/proveedor-catalogos/taller-presentaciones?lineTemplateId=75"));
+    const body = await response.json();
+    expect(body.ownPresentations[0]).toMatchObject({ proveedor_nombre: supplierName, sku_taller: null });
+    expect(listWorkshopPresentations).toHaveBeenCalledWith(941, "universal:aluminio:l25");
+  });
+
+  it("actualiza el nombre del proveedor con revisión y organización", async () => {
+    catalogKey = "ventora:l25";
+    const response = await PATCH(new Request("http://localhost/api/proveedor-catalogos/taller-presentaciones", {
+      method: "PATCH", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ lineTemplateId: 75, presentationId: "cf9bb8d0-b8d1-45d7-b9d5-2069c82c42c0",
+        expectedRevision: 3, purchaseUnit: "UN", commercialLengthMm: 6000, netPrice: 45000,
+        currency: "CLP", supplierName: "  Aluminera local  " }),
+    }));
+    expect(response.status).toBe(200);
+    expect(updateWorkshopPresentationPurchase).toHaveBeenCalledWith(expect.objectContaining({ organizationId: 941, expectedRevision: 3, supplierName: "Aluminera local" }));
   });
 
   it("rechaza edición de perfil de solo lectura", async () => {
