@@ -55,6 +55,8 @@ import {
   resolveQuoteSupplierProfileReferences,
   resolveSupplierFinishName,
   resolveSupplierProfileCoverage,
+  resolveMixedSupplierProfileCoverage,
+  formatSupplierProfileCoverageNotice,
   type SupplierProfilePricePreview,
 } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 import { getLineTemplateWorkshopProfiles } from "@/features/cotizaciones/line-templates/types/line-profile-references";
@@ -581,6 +583,9 @@ export function CuadernoQuickEditSheet({
   const effectiveSupplierProviderKey = selectedSupplierProviderKey || effectiveFamilyPreference || supplierOptions.find((option) => option.providerKey === "arquetipo")?.providerKey || supplierOptions[0]?.providerKey || "";
   const selectedSupplierOption = supplierOptions.find((option) => option.providerKey === effectiveSupplierProviderKey) ?? null;
   const exactSupplierProfileCoverageNotice = effectiveSupplierRecipe
+    && selectedCatalogLineKey === "ventora:l42"
+    ? formatSupplierProfileCoverageNotice(resolveMixedSupplierProfileCoverage({ technicalCodes: supplierProfileReferences.map((profile) => profile.technicalCode), prices: supplierProfilePrices, providerKey: effectiveSupplierProviderKey }).pendingCodes)
+    : effectiveSupplierRecipe
     ? buildSupplierProfileCoverageNotice({
         technicalCodes: supplierProfileReferences.map((profile) => profile.technicalCode),
         prices: supplierProfilePrices,
@@ -588,7 +593,7 @@ export function CuadernoQuickEditSheet({
       })
     : supplierResolutionRequest ? "Configuración técnica pendiente; cobertura por perfil sin confirmar." : null;
   const exactSupplierProfileCoverage = effectiveSupplierRecipe
-    ? resolveSupplierProfileCoverage({
+    ? (selectedCatalogLineKey === "ventora:l42" ? resolveMixedSupplierProfileCoverage : resolveSupplierProfileCoverage)({
         technicalCodes: supplierProfileReferences.map((profile) => profile.technicalCode),
         prices: supplierProfilePrices,
         providerKey: effectiveSupplierProviderKey,
@@ -1153,7 +1158,7 @@ export function CuadernoQuickEditSheet({
                       ) : null}
                     </div>
                   ) : null}
-                  {supplierResolutionRequest ? selectedLineIsSodalL25 && supplierResolutionRequest.familyKey === "universal:aluminio:l25" ? (
+                  {supplierResolutionRequest ? effectiveSupplierRecipe ? (
                     <details className={s.supplierCostDetails}>
                     <summary>Ver costos de perfiles</summary>
                     <QuoteProfileCosts
@@ -1161,9 +1166,10 @@ export function CuadernoQuickEditSheet({
                       familyKey={supplierResolutionRequest.familyKey}
                       providerKey={selectedSupplierProviderKey || effectiveFamilyPreference || "arquetipo"}
                       finishName={activeSupplierFinishName}
-                      references={supplierProfileReferences}
+                      references={(effectiveSupplierRecipe?.definition.perfiles ?? []).filter((profile) => profile.codigoPerfil?.trim()).map((profile) => ({ technicalCode: profile.codigoPerfil, profileName: profile.nombrePerfil }))}
                       prices={supplierProfilePrices}
                       canManagePrice={supplierProviderResolution?.key === supplierResolutionKey && supplierProviderResolution.canManageSupplierPrices}
+                      allowMixedWorkshopCosts={selectedCatalogLineKey === "ventora:l42"}
                       onUseWorkshopCost={(providerKey) => setSupplierProviderKeyDraft(providerKey)}
                       onPricesSaved={async () => {
                         if (!supplierResolutionRequest) return;
@@ -1181,6 +1187,7 @@ export function CuadernoQuickEditSheet({
                         });
                       }}
                     />
+                    <a href={`/configuracion/empresa/mis-precios?supplier=taller&family=${encodeURIComponent(supplierResolutionRequest.familyKey)}&lineTemplateId=${Number(lineTemplateId)}`} target="_blank" rel="noreferrer">Administrar estos precios en Mis precios</a>
                     </details>
                   ) : (
                     <SupplierProfilePricePreviewComponent

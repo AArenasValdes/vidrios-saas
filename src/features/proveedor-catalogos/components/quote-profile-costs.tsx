@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { SupplierProfilePricePreview as PriceRow } from "../services/supplier-presentation-resolution.service";
-import { saveQuickWorkshopProfileCost, saveQuotePresentationPrice } from "../services/mis-precios.client.service";
+import { isEffectiveSupplierProfilePrice, type SupplierProfilePricePreview as PriceRow } from "../services/supplier-presentation-resolution.service";
+import { saveQuickWorkshopProfileCost } from "../services/mis-precios.client.service";
 import s from "./quote-profile-costs.module.css";
 
 type ProfileCost = {
@@ -31,6 +31,7 @@ export function QuoteProfileCosts({
   references,
   prices,
   canManagePrice,
+  allowMixedWorkshopCosts = false,
   onPricesSaved,
   onUseWorkshopCost,
 }: {
@@ -41,6 +42,7 @@ export function QuoteProfileCosts({
   references: readonly { technicalCode: string; profileName: string }[];
   prices: readonly PriceRow[];
   canManagePrice: boolean;
+  allowMixedWorkshopCosts?: boolean;
   onPricesSaved?: () => Promise<void> | void;
   onUseWorkshopCost?: (providerKey: string) => void;
 }) {
@@ -49,6 +51,7 @@ export function QuoteProfileCosts({
   const [draftLength, setDraftLength] = useState("");
   const [suggestedL25Length, setSuggestedL25Length] = useState(false);
   const [draftFinish, setDraftFinish] = useState(finishName ?? "");
+  const [draftSupplier, setDraftSupplier] = useState("");
   const [savingCode, setSavingCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,7 +89,7 @@ export function QuoteProfileCosts({
       };
       // The selected supplier is the effective purchase source. A saved own
       // cost remains visible as a separate option, but must not look applied.
-      const display = selected ?? own ?? fallback;
+      const display = allowMixedWorkshopCosts && own && isEffectiveSupplierProfilePrice(own) ? own : selected ?? own ?? fallback;
       return {
         technicalCode: reference.technicalCode,
         profileName: reference.profileName || display?.profileName || display?.presentationDescription || reference.technicalCode,
@@ -96,19 +99,19 @@ export function QuoteProfileCosts({
         conflict: ownRows.length > 1 || display?.status === "ambiguous",
       };
     });
-  }, [prices, providerKey, references]);
-  const pricedCount = rows.filter((row) => row.selected?.status === "priced" && row.selected.netPrice != null &&
-    row.selected.finishPriceBasis !== "base_reference_other_finish").length;
-  const hasUnappliedPrivateCost = rows.some((row) => row.workshop && row.workshop.providerKey !== providerKey);
+  }, [allowMixedWorkshopCosts, prices, providerKey, references]);
+  const pricedCount = rows.filter((row) => {
+    const effective = allowMixedWorkshopCosts && row.workshop && isEffectiveSupplierProfilePrice(row.workshop) ? row.workshop : row.selected;
+    return effective ? isEffectiveSupplierProfilePrice(effective) : false;
+  }).length;
+  const hasUnappliedPrivateCost = !allowMixedWorkshopCosts && rows.some((row) => row.workshop && row.workshop.providerKey !== providerKey);
   if (rows.length === 0) return null;
 
   function openEditor(row: ProfileCost) {
     const current = row.display;
     setError(null);
     setEditingCode(row.technicalCode);
-    setDraftCost(current?.priceSource === "organization_override" || current?.priceSource === "workshop"
-      ? String(current.netPrice ?? "")
-      : "");
+    setDraftCost(row.workshop?.netPrice != null ? String(row.workshop.netPrice) : "");
     const hasConfirmedFinishLength = Boolean(
       current?.commercialLengthMm && current.commercialLengthMm > 0 &&
       current.finishPriceBasis !== "base_reference_other_finish"
@@ -118,10 +121,9 @@ export function QuoteProfileCosts({
     setSuggestedL25Length(suggestL25Length);
     setDraftLength(row.workshop?.commercialLengthMm
       ? String(row.workshop.commercialLengthMm)
-      : hasConfirmedFinishLength
-        ? String(current?.commercialLengthMm)
-        : suggestL25Length ? "6000" : "");
+      : suggestL25Length ? "6000" : "");
     setDraftFinish(finishName ?? "");
+    setDraftSupplier(row.workshop?.workshopSupplierName ?? "");
   }
 
   async function save(row: ProfileCost) {
@@ -150,19 +152,13 @@ export function QuoteProfileCosts({
         await saveQuickWorkshopProfileCost({
           kind: "update", lineTemplateId, presentationId: row.workshop.presentationId,
           expectedRevision, commercialLengthMm: length, netPrice: cost,
-        });
-      } else if (row.selected?.presentationId && row.selected.providerKey === providerKey &&
-        row.selected.finishPriceBasis !== "base_reference_other_finish" &&
-        row.selected.commercialLengthMm != null && row.selected.commercialLengthMm > 0) {
-        await saveQuotePresentationPrice({
-          providerKey, presentationId: row.selected.presentationId, familyKey,
-          technicalCode: row.technicalCode, finishName: draftFinish.trim(), netPrice: cost, currency: "CLP",
+          supplierName: draftSupplier.trim() || (row.workshop.workshopSupplierName ? null : undefined),
         });
       } else {
         await saveQuickWorkshopProfileCost({
           kind: "create", lineTemplateId, technicalCode: row.technicalCode,
           profileName: row.profileName, finishName: draftFinish.trim(),
-          commercialLengthMm: length, netPrice: cost,
+          commercialLengthMm: length, netPrice: cost, supplierName: draftSupplier.trim() || null,
         });
       }
       setEditingCode(null);
@@ -192,11 +188,9 @@ export function QuoteProfileCosts({
           const current = row.display;
           const isEditing = editingCode === row.technicalCode;
           const hasCost = current?.status === "priced" && current.netPrice != null && current.currency != null;
-          const hasSelectedPresentation = Boolean(row.selected?.presentationId && row.selected.providerKey === providerKey &&
-            row.selected.finishPriceBasis !== "base_reference_other_finish");
           const cannotUseAmbiguous = row.conflict;
           const existingOwn = Boolean(row.workshop?.presentationId);
-          const workshopIsSelected = Boolean(row.workshop && row.workshop.providerKey === providerKey);
+          const workshopIsSelected = Boolean(row.workshop && (row.workshop.providerKey === providerKey || allowMixedWorkshopCosts && isEffectiveSupplierProfilePrice(row.workshop)));
           const canEditPrivate = existingOwn && revisionFromPreview(row.workshop) !== null;
           const canSave = canManagePrice && !cannotUseAmbiguous && (existingOwn ? canEditPrivate : true);
 
@@ -215,7 +209,7 @@ export function QuoteProfileCosts({
                 <small>{current?.finishPriceBasis === "base_reference_other_finish"
                   ? `Referencia ${current.priceSourceFinishName || "de otro acabado"}; no confirma costo físico para ${finishName || "este acabado"}.`
                   : workshopIsSelected && current?.priceSource === "workshop"
-                  ? "Costo privado aplicado a esta pieza"
+                  ? allowMixedWorkshopCosts ? "Costo propio aplicado a este perfil" : "Costo privado aplicado a esta pieza"
                   : current?.priceSource === "organization_override"
                   ? "Costo propio guardado para esta presentación"
                   : current?.providerLabel || "Referencia de compra pendiente"}</small>
@@ -238,7 +232,7 @@ export function QuoteProfileCosts({
                 </div>
               ) : null}
               {row.workshop && workshopIsSelected ? (
-                <small className={s.pending}>Costo privado de tu empresa seleccionado para esta pieza.</small>
+                <small className={s.pending}>{allowMixedWorkshopCosts ? "Costo propio aplicado a este perfil; los demás conservan su origen." : "Costo privado de tu empresa seleccionado para esta pieza."}</small>
               ) : null}
               {canManagePrice ? (
                 cannotUseAmbiguous ? <small className={s.pending}>Hay más de una referencia compatible. Revisa la presentación antes de guardar otro costo.</small> :
@@ -253,18 +247,19 @@ export function QuoteProfileCosts({
                       <input value={draftFinish} readOnly={Boolean(finishName)} required maxLength={100} onChange={(event) => setDraftFinish(event.target.value)} />
                     </label>
                   ) : null}
-                  {(!hasSelectedPresentation || row.workshop) ? (
                     <label>Largo de la tira {row.technicalCode} (mm)
                       <input type="number" inputMode="numeric" min="1" step="1" value={draftLength}
                         onChange={(event) => setDraftLength(event.target.value)} placeholder="Pendiente" />
                       {suggestedL25Length ? <small>Sugerido para Línea 25. Puedes cambiarlo.</small> : null}
                     </label>
-                  ) : null}
                   <label>Costo neto por tira {row.technicalCode} (CLP)
                     <input type="number" inputMode="decimal" min="1" step="1" value={draftCost}
                       onChange={(event) => setDraftCost(event.target.value)} />
                   </label>
-                  {!hasSelectedPresentation && !row.workshop ? <small>Se guardará como referencia privada de tu empresa, sin SKU de proveedor.</small> : null}
+                  <label>Proveedor (opcional)
+                    <input value={draftSupplier} maxLength={120} onChange={(event) => setDraftSupplier(event.target.value)} placeholder="Ej: Aluminera local" />
+                  </label>
+                  {!row.workshop ? <small>Se guardará como referencia privada de tu empresa, sin SKU de proveedor.</small> : null}
                   <div className={s.editorActions}>
                     <button type="button" onClick={() => { setEditingCode(null); setError(null); setSuggestedL25Length(false); }}>Cancelar</button>
                     <button type="button" disabled={Boolean(savingCode) || !draftCost} onClick={() => void save(row)}>

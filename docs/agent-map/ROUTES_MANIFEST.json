@@ -668,6 +668,12 @@
       "source": "app/e2e-glass-guided/page.tsx"
     },
     {
+      "path": "/laboratorio-ventora-v2",
+      "type": "page",
+      "area": "private",
+      "source": "app/laboratorio-ventora-v2/page.tsx"
+    },
+    {
       "path": "/login",
       "type": "page",
       "area": "auth",

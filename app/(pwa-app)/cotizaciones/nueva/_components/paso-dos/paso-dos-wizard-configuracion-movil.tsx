@@ -67,7 +67,7 @@ import type { QuickCompositionAdjustment } from "@/features/cotizaciones/visual-
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 import { resolveSupplierFamilyKeyForLineTemplate } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
 import { getLineTemplateWorkshopProfiles } from "@/features/cotizaciones/line-templates/types/line-profile-references";
-import { formatSupplierProfileCoverageNotice, resolveQuoteSupplierProfileReferences, resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
+import { formatSupplierProfileCoverageNotice, resolveMixedSupplierProfileCoverage, resolveQuoteSupplierProfileReferences, resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 import { useSupplierPresentationResolution } from "@/features/proveedor-catalogos/hooks/use-supplier-presentation-resolution";
 import {
   findSodalL25LineRecipe,
@@ -671,7 +671,7 @@ export function PasoDosWizardConfiguracionMovil({
   }, [draft.catalogTerminacion, draft.colorHex, selectedLineTemplate, supplierFamilyKey, effectiveSupplierRecipe, selectedLineIsSodalL25]);
   const supplierPresentationResolution = useSupplierPresentationResolution(supplierPresentationRequests, {
     includeProviderOptions: true,
-    includeProfilePrices: selectedLineIsSodalL25,
+    includeProfilePrices: true,
   });
   const supplierProviderOptions = supplierPresentationResolution.result?.providerOptions?.["guided-line-provider-preview"] ?? [];
   const familyPreferenceProviderKey = supplierPresentationResolution.result?.familyPreferences?.[supplierFamilyKey ?? ""] ?? null;
@@ -680,7 +680,11 @@ export function PasoDosWizardConfiguracionMovil({
   const activeSupplierOption = supplierProviderOptions.find((option) => option.providerKey === activeSupplierProviderKey) ?? null;
   const guidedCoverageCodes = supplierPresentationRequests[0]?.technicalCodes ?? [];
   const guidedSupplierCoverage = effectiveSupplierRecipe
-    ? {
+    ? selectedCatalogLineKey === "ventora:l42" ? resolveMixedSupplierProfileCoverage({
+        technicalCodes: guidedCoverageCodes,
+        prices: supplierPresentationResolution.result?.profilePrices?.["guided-line-provider-preview"] ?? [],
+        providerKey: activeSupplierProviderKey,
+      }) : {
         totalCount: guidedCoverageCodes.length,
         pendingCodes: activeSupplierOption?.pendingTechnicalCodes ?? guidedCoverageCodes,
       }
@@ -1831,7 +1835,7 @@ export function PasoDosWizardConfiguracionMovil({
                   </select>
                 </label>
                 <small>{supplierPresentationResolution.isResolving ? "Cargando proveedores…" : "Puedes cambiar el proveedor para esta pieza. El precio de venta de la línea se mantiene."}</small>
-                {selectedLineIsSodalL25 && effectiveSupplierRecipe && Number(draft.lineTemplateId) > 0 ? (
+                {effectiveSupplierRecipe && Number(draft.lineTemplateId) > 0 ? (
                   <details>
                     <summary>Ver costos de perfiles</summary>
                     <QuoteProfileCosts
@@ -1844,9 +1848,11 @@ export function PasoDosWizardConfiguracionMovil({
                         .map((profile) => ({ technicalCode: profile.codigoPerfil, profileName: profile.nombrePerfil }))}
                       prices={supplierPresentationResolution.result?.profilePrices?.["guided-line-provider-preview"] ?? []}
                       canManagePrice={supplierPresentationResolution.result?.canManageSupplierPrices === true}
+                      allowMixedWorkshopCosts={selectedCatalogLineKey === "ventora:l42"}
                       onPricesSaved={supplierPresentationResolution.refresh}
                       onUseWorkshopCost={onSupplierProviderKeyChange}
                     />
+                    <a href={`/configuracion/empresa/mis-precios?supplier=taller&family=${encodeURIComponent(supplierFamilyKey)}&lineTemplateId=${Number(draft.lineTemplateId)}`} target="_blank" rel="noreferrer">Administrar estos precios en Mis precios</a>
                   </details>
                 ) : null}
               </>

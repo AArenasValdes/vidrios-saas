@@ -228,7 +228,9 @@ export function MisPreciosContent({ catalog, error, busy, save, refresh }: Retur
     const params = new URLSearchParams(window.location.search);
     const family = params.get("family");
     const lineTemplateId = Number(params.get("lineTemplateId"));
-    if (params.get("supplier") !== "thermowin" || !family?.startsWith("thermowin:") ||
+    const supportedPrivateFamily = (params.get("supplier") === "thermowin" && family?.startsWith("thermowin:")) ||
+      (params.get("supplier") === "taller" && Boolean(family));
+    if (!supportedPrivateFamily || !family ||
       !Number.isSafeInteger(lineTemplateId) || lineTemplateId <= 0) return;
     setThermowinFamilyKey(family);
     setContextLineTemplateId(lineTemplateId);

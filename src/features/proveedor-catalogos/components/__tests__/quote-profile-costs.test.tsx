@@ -36,22 +36,23 @@ describe("QuoteProfileCosts", () => {
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ row: {} }) }) as jest.Mock;
   });
 
-  it("guarda el precio propio sobre la presentación confirmada existente", async () => {
+  it("guarda el costo propio sin atribuirlo a la presentación del proveedor", async () => {
     render(<QuoteProfileCosts {...shared} prices={[basePrice]} />);
     expect(screen.getByText("0 de 1 perfiles con costo")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Agregar costo" }));
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Largo de la tira 2503 (mm)" }), { target: { value: "6000" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Proveedor (opcional)" }), { target: { value: "Aluminera local" } });
     fireEvent.change(screen.getByRole("spinbutton", { name: "Costo neto por tira 2503 (CLP)" }), { target: { value: "31900" } });
     fireEvent.click(screen.getByRole("button", { name: "Guardar costo 2503" }));
 
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/proveedor-catalogos/mis-precios", expect.objectContaining({
-      method: "PUT",
-      body: expect.stringContaining('"kind":"quote_override"'),
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/proveedor-catalogos/taller-presentaciones", expect.objectContaining({
+      method: "POST",
+      body: expect.stringContaining('"technicalCode":"2503"'),
     })));
     const request = (global.fetch as jest.Mock).mock.calls[0][1];
     expect(JSON.parse(request.body)).toEqual(expect.objectContaining({
-      providerKey: "arquetipo", presentationId: basePrice.presentationId,
-      familyKey: "universal:aluminio:l25", technicalCode: "2503", finishName: "Blanco",
-      netPrice: 31900, currency: "CLP",
+      lineTemplateId: 75, technicalCode: "2503", finishName: "Blanco",
+      commercialLengthMm: 6000, netPrice: 31900, currency: "CLP", supplierName: "Aluminera local",
     }));
   });
 
@@ -117,6 +118,7 @@ describe("QuoteProfileCosts", () => {
       presentationId: "cf9bb8d0-b8d1-45d7-b9d5-2069c82c42c0", supplierSku: "",
       purchaseUnit: "UN", commercialLengthMm: 6000, netPrice: 27500, currency: "CLP",
       priceSource: "workshop", priceListRevision: "taller-v3", status: "priced",
+      workshopSupplierName: "Aluminera local",
     }]} />);
     expect(screen.getByText("0 de 1 perfiles con costo")).toBeInTheDocument();
     expect(screen.getByText(/Costo privado guardado:.*No está aplicado; proveedor seleccionado: arquetipo/i)).toBeInTheDocument();
@@ -124,6 +126,7 @@ describe("QuoteProfileCosts", () => {
     fireEvent.click(screen.getByRole("button", { name: "Usar costo propio en esta pieza" }));
     expect(shared.onUseWorkshopCost).toHaveBeenCalledWith("taller:941");
     fireEvent.click(screen.getByRole("button", { name: "Editar costo" }));
+    expect(screen.getByRole("textbox", { name: "Proveedor (opcional)" })).toHaveValue("Aluminera local");
     fireEvent.change(screen.getByRole("spinbutton", { name: "Costo neto por tira 2503 (CLP)" }), { target: { value: "28000" } });
     fireEvent.click(screen.getByRole("button", { name: "Guardar costo 2503" }));
 
@@ -132,6 +135,7 @@ describe("QuoteProfileCosts", () => {
       body: expect.stringContaining('"expectedRevision":3'),
     })));
     const request = (global.fetch as jest.Mock).mock.calls[0][1];
+    expect(JSON.parse(request.body)).toHaveProperty("supplierName", "Aluminera local");
     expect(JSON.parse(request.body)).not.toHaveProperty("preferred");
   });
 
@@ -151,6 +155,16 @@ describe("QuoteProfileCosts", () => {
     expect(screen.getByText("$18.000")).toBeInTheDocument();
     expect(screen.getByText(/Costo privado guardado:.*\$45\.000.*No está aplicado; proveedor seleccionado: arquetipo/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Usar costo propio en esta pieza" })).toBeInTheDocument();
+  });
+
+  it("muestra cobertura mixta L42 sin atribuir los demás perfiles al taller", () => {
+    const valid = { ...basePrice, status: "priced" as const, netPrice: 24375, priceSource: "reference" as const };
+    render(<QuoteProfileCosts {...shared} familyKey="universal:aluminio:l42" allowMixedWorkshopCosts
+      references={[{ technicalCode: "4201", profileName: "Marco" }, { technicalCode: "4202", profileName: "Hoja" }]}
+      prices={[{ ...valid, technicalCode: "4201", presentationId: "own-1", providerKey: "taller:941", priceSource: "workshop", netPrice: 18000 }, { ...valid, technicalCode: "4202" }]} />);
+    expect(screen.getByText("2 de 2 perfiles con costo")).toBeInTheDocument();
+    expect(screen.getByText("Costo propio aplicado a este perfil")).toBeInTheDocument();
+    expect(screen.getByText("Arquetipo")).toBeInTheDocument();
   });
 
   it("no reutiliza una referencia de Titanio como costo físico para Blanco", () => {
