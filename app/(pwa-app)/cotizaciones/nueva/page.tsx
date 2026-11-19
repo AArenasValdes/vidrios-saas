@@ -843,7 +843,7 @@ function NuevaCotizacionProductiva() {
   const handleQuotePricingModeChange = (
     mode: QuotePricingMode,
     options?: { force?: boolean }
-  ) => {
+  ): boolean => {
     if (mode === quotePricingMode) {
       setQuoteModeChosen(true);
       if (isMobileViewport) {
@@ -856,7 +856,7 @@ function NuevaCotizacionProductiva() {
       if (mode === "por_item" && draft.items.length === 0 && (!isMobileViewport || quoteModeChosen)) {
         handleOpenAddGroupSheet();
       }
-      return;
+      return true;
     }
 
     if (
@@ -864,7 +864,7 @@ function NuevaCotizacionProductiva() {
       hasStepTwoRelevantData &&
       !window.confirm("Cambiar el modo conserva los componentes cargados y ajusta las reglas de precio. ¿Quieres cambiarlo?")
     ) {
-      return;
+      return false;
     }
 
     setQuoteModeChosen(true);
@@ -898,6 +898,7 @@ function NuevaCotizacionProductiva() {
     if (isMobileViewport && mode === "por_item" && draft.items.length === 0 && quoteModeChosen) {
       handleOpenAddGroupSheet();
     }
+    return true;
   };
 
   const handleDesktopWorkspaceModeChange = (mode: "rapida" | "guiada") => {
@@ -1895,7 +1896,10 @@ function NuevaCotizacionProductiva() {
   };
 
   const handleOpenPorItemComponentCreator = () => {
+    returnToModeSelectorAfterSheetCloseRef.current = false;
     returnToTotalNotebookAfterSheetCloseRef.current = false;
+    suspendedNotebookRef.current = null;
+    pendingNextDraftRef.current = false;
     setQuoteModeChosen(true);
     setDraft((current) => ({ ...current, quotePricingMode: "por_item" }));
     setIsFreeValueItemFormOpen(false);
@@ -3395,6 +3399,7 @@ function goNextFromStep1() {
               linePricingSummary: pasoDosAgregarGrupoMovil.linePricingSummary,
               isSavingLineTemplate: isSavingQuickPriceTemplate,
               onOpen: handleOpenAddGroupSheet,
+              onOpenPorItem: handleOpenPorItemComponentCreator,
               onOpenFreeTotalNotebook: handleOpenFreeTotalNotebook,
               onOpenComponentCreator: handleOpenTotalGlobalComponentCreator,
               nestedDetailItems: totalGlobalNestedDetailItems,

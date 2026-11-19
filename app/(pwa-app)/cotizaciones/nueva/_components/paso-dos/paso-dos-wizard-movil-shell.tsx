@@ -92,6 +92,7 @@ export type WizardActions = {
   linePricingSummary: ComponentFormLinePricingSummary;
   isSavingLineTemplate: boolean;
   onOpen: () => void;
+  onOpenPorItem: () => void;
   onOpenFreeTotalNotebook: () => void;
   onOpenComponentCreator: () => void;
   nestedDetailItems?: readonly CotizacionWorkflowItem[];
@@ -374,10 +375,13 @@ export function PasoDosWizardMovil({
   };
 
   const handleSelectModeAndOpen = (mode: typeof quotePricingMode) => {
-    formulario.onQuotePricingModeChange(mode);
+    const modeChangeAccepted = formulario.onQuotePricingModeChange(mode);
     if (mode === "por_item") {
+      if (modeChangeAccepted === false) {
+        return;
+      }
       onQuoteModeChosen?.();
-      handleOpenWizard();
+      wizard.onOpenPorItem();
     }
   };
 

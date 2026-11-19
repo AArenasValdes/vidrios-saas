@@ -86,6 +86,7 @@ function createWizard(overrides: Partial<WizardActions> = {}): WizardActions {
     },
     isSavingLineTemplate: false,
     onOpen: jest.fn(),
+    onOpenPorItem: jest.fn(),
     onOpenFreeTotalNotebook: jest.fn(),
     onClose: jest.fn(),
     onGoToStep: jest.fn(),
@@ -315,10 +316,16 @@ describe("PasoDosWizardMovil", () => {
     const onQuoteModeChosen = jest.fn();
     const onEnterCuaderno = jest.fn();
     const wizard = createWizard({ isOpen: false });
+    const onQuotePricingModeChange = jest.fn();
 
     render(
       <PasoDosWizardMovil
         {...baseProps}
+        formulario={{
+          ...baseProps.formulario,
+          quotePricingMode: "total_global",
+          onQuotePricingModeChange,
+        }}
         quoteModeChosen={false}
         onQuoteModeChosen={onQuoteModeChosen}
         onEnterCuaderno={onEnterCuaderno}
@@ -337,8 +344,35 @@ describe("PasoDosWizardMovil", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Usar items" }));
+    expect(onQuotePricingModeChange).toHaveBeenCalledWith("por_item");
     expect(onQuoteModeChosen).toHaveBeenCalled();
-    expect(wizard.onOpen).toHaveBeenCalled();
+    expect(wizard.onOpenPorItem).toHaveBeenCalled();
+    expect(wizard.onOpen).not.toHaveBeenCalled();
+  });
+
+  it("no abre el asistente por ítems si el cambio de modalidad fue cancelado", () => {
+    const onQuoteModeChosen = jest.fn();
+    const wizard = createWizard({ isOpen: false });
+
+    render(
+      <PasoDosWizardMovil
+        {...baseProps}
+        formulario={{
+          ...baseProps.formulario,
+          quotePricingMode: "total_global",
+          onQuotePricingModeChange: jest.fn(() => false),
+        }}
+        quoteModeChosen={false}
+        onQuoteModeChosen={onQuoteModeChosen}
+        wizard={wizard}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Usar items" }));
+
+    expect(onQuoteModeChosen).not.toHaveBeenCalled();
+    expect(wizard.onOpenPorItem).not.toHaveBeenCalled();
+    expect(wizard.onOpen).not.toHaveBeenCalled();
   });
 
   it("muestra Tipo y Datos sin una etapa independiente de cantidad", () => {
