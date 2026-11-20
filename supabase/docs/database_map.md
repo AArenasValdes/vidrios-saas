@@ -1,5 +1,12 @@
 # Database Map - Ventora
 
+## Addendum 2026-11-20 - Nombre privado de proveedor e identidad L42
+
+- Producción `yrtrwgkaopfumpidjthk`: aplicadas `20261120030619_l42_workshop_presentation_identity_unique` y `20261120030626_workshop_presentation_supplier_name` con autorización expresa. El servidor asignó las versiones registradas; se alinearon los nombres locales.
+- `organizacion_presentaciones_taller.proveedor_nombre`: texto opcional declarado por el taller, longitud 1–120 si no es nulo; no es identidad oficial ni SKU. Índice único parcial L42 por organización, familia, configuración, código y acabado en registros activos.
+- Verificación: cero duplicados L42 antes de aplicar; una fila total y huella de campos existentes idéntica antes y después. RLS activa y policy de lectura por organización sin cambios. No se hicieron escrituras de prueba ni se verificó persistencia autenticada.
+- No existía respaldo automático disponible en el plan al aplicar. La PR #26 conserva un archivo del índice con versión antigua: reconciliarlo antes de integrarla para evitar una segunda ejecución.
+
 ## Addendum 2026-11-14 - Parámetros habituales de corte
 
 - `organization_fabrication_cut_settings` guarda una única confirmación por organización: pérdida por corte, despunte inicial por tira y procedimiento `por_pieza`.
