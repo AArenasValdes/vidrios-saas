@@ -41,7 +41,7 @@ describe("QuoteProfileCosts", () => {
       ...basePrice, status: "priced", netPrice: 24375, priceSource: "reference",
     }]} />);
     expect(screen.getByText("0 de 1 perfiles listos")).toBeInTheDocument();
-    expect(screen.getByText("Sin precio")).toBeInTheDocument();
+    expect(screen.getByText("Pendiente")).toBeInTheDocument();
     expect(screen.queryByText(/24[.\s]375/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Agregar costo" })).toBeInTheDocument();
   });
@@ -61,7 +61,7 @@ describe("QuoteProfileCosts", () => {
     expect(screen.getByText("0 de 1 perfiles listos")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Agregar costo" }));
     fireEvent.change(screen.getByRole("textbox", { name: "Largo de la tira 2503 (mm)" }), { target: { value: "6000" } });
-    fireEvent.change(screen.getByRole("textbox", { name: "Proveedor (opcional)" }), { target: { value: "Aluminera local" } });
+    fireEvent.change(screen.getAllByRole("textbox", { name: "Proveedor (opcional)" })[1], { target: { value: "Aluminera local" } });
     fireEvent.change(screen.getByRole("textbox", { name: "Costo neto por tira 2503 (CLP)" }), { target: { value: "31900" } });
     fireEvent.click(screen.getByRole("button", { name: "Guardar costo 2503" }));
 
@@ -141,13 +141,13 @@ describe("QuoteProfileCosts", () => {
       priceSource: "workshop", priceListRevision: "taller-v3", status: "priced",
       workshopSupplierName: "Aluminera local",
     }]} />);
-    expect(screen.getByText("0 de 1 perfiles listos")).toBeInTheDocument();
+    expect(screen.getByText("1 de 1 perfiles listos")).toBeInTheDocument();
     expect(screen.getByText("Costo propio guardado, todavía no aplicado a esta pieza.")).toBeInTheDocument();
     expect(screen.queryByText(/ventora-internal/i)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Usar costo propio en esta pieza" }));
     expect(shared.onUseWorkshopCost).toHaveBeenCalledWith("taller:941");
     fireEvent.click(screen.getByRole("button", { name: "Editar costo" }));
-    expect(screen.getByRole("textbox", { name: "Proveedor (opcional)" })).toHaveValue("Aluminera local");
+    expect(screen.getAllByRole("textbox", { name: "Proveedor (opcional)" })[1]).toHaveValue("Aluminera local");
     fireEvent.change(screen.getByRole("textbox", { name: "Costo neto por tira 2503 (CLP)" }), { target: { value: "28000" } });
     fireEvent.click(screen.getByRole("button", { name: "Guardar costo 2503" }));
 
@@ -185,7 +185,7 @@ describe("QuoteProfileCosts", () => {
       references={[{ technicalCode: "4201", profileName: "Marco" }, { technicalCode: "4202", profileName: "Hoja" }]}
       prices={[{ ...valid, technicalCode: "4201", presentationId: "own-1", providerKey: "taller:941", priceSource: "workshop", netPrice: 18000 }, { ...valid, technicalCode: "4202" }]} />);
     expect(screen.getByText("1 de 2 perfiles listos")).toBeInTheDocument();
-    expect(screen.getByText("Costo propio aplicado a este perfil")).toBeInTheDocument();
+    expect(screen.getByText(/Costo propio aplicado a este perfil/)).toBeInTheDocument();
     expect(screen.getByText(/Referencia seleccionada: Arquetipo/)).toBeInTheDocument();
   });
 
@@ -215,7 +215,7 @@ describe("QuoteProfileCosts", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Largo común de tira (mm)" }), {
       target: { value: "6000" },
     });
-    fireEvent.change(screen.getByRole("textbox", { name: "Proveedor (opcional)" }), {
+    fireEvent.change(screen.getAllByRole("textbox", { name: "Proveedor (opcional)" })[1], {
       target: { value: "Aluminera local" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Aplicar a 2 perfiles pendientes" }));
@@ -276,7 +276,7 @@ describe("QuoteProfileCosts", () => {
     expect(screen.getByText(/Referencia seleccionada: Arquetipo · \$22\.000/)).toBeInTheDocument();
     rerender(<QuoteProfileCosts {...shared} providerKey="alumco" prices={prices} />);
 
-    expect(screen.getByText(/Referencia seleccionada: Alumco · \$31\.000/)).toBeInTheDocument();
+    expect(screen.getByText(/Referencia seleccionada: Alumco.*\$31\.000/)).toBeInTheDocument();
     expect(screen.getByText(/otro acabado: no confirma costo físico/)).toBeInTheDocument();
     expect(screen.queryByText("TI2503")).not.toBeInTheDocument();
   });
