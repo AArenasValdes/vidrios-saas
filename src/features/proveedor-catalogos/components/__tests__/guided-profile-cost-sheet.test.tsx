@@ -81,8 +81,8 @@ it("aplica datos comunes a cinco importes sin copiar precios", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Editar precios" }));
   fireEvent.change(screen.getByLabelText("Largo de tira (mm)"), { target: { value: "6000" } });
   fireEvent.change(screen.getByLabelText("Proveedor (opcional)"), { target: { value: "Proveedor local" } });
-  fireEvent.click(screen.getByRole("button", { name: "Aplicar a pendientes" }));
-  expect(screen.getByRole("status")).toHaveTextContent("Datos preparados para 5 perfiles");
+  fireEvent.click(screen.getByRole("button", { name: "Aplicar a pendientes (5)" }));
+  expect(screen.getByRole("status")).toHaveTextContent("Datos listos para 5 perfiles");
   references.forEach((ref, index) => fireEvent.change(screen.getByLabelText(`Precio ${ref.technicalCode}`), { target: { value: String(10000 + index) } }));
   fireEvent.click(screen.getByRole("button", { name: "Guardar precios" }));
   await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(5));
@@ -99,7 +99,7 @@ it("inicia varios guardados a la vez y conserva el error del perfil fallido", as
   render(<GuidedProfileCostSheet {...props} />);
   fireEvent.click(screen.getByRole("button", { name: "Editar precios" }));
   fireEvent.change(screen.getByLabelText("Largo de tira (mm)"), { target: { value: "6000" } });
-  fireEvent.click(screen.getByRole("button", { name: "Aplicar a pendientes" }));
+  fireEvent.click(screen.getByRole("button", { name: "Aplicar a pendientes (2)" }));
   fireEvent.change(screen.getByLabelText("Precio 5001"), { target: { value: "15000" } });
   fireEvent.change(screen.getByLabelText("Precio 5002"), { target: { value: "16000" } });
   fireEvent.click(screen.getByRole("button", { name: "Guardar precios" }));
@@ -117,7 +117,38 @@ it("conserva un largo individual al aplicar datos comunes", () => {
   fireEvent.click(screen.getByText("Datos de tira 5001"));
   fireEvent.change(screen.getByLabelText("Largo 5001"), { target: { value: "5800" } });
   fireEvent.change(screen.getByLabelText("Largo de tira (mm)"), { target: { value: "6000" } });
-  fireEvent.click(screen.getByRole("button", { name: "Aplicar a pendientes" }));
+  fireEvent.click(screen.getByRole("button", { name: "Aplicar a pendientes (2)" }));
   expect(screen.getByLabelText("Largo 5001")).toHaveValue("5800");
   expect(global.fetch).not.toHaveBeenCalled();
+});
+
+it("permite preparar una actualización para todos los perfiles guardados sin copiar precios ni guardar automáticamente", async () => {
+  const ownPrices = ["5001", "5002"].map((technicalCode, index) => ({
+    technicalCode, profileName: `Perfil ${technicalCode}`, providerKey: "taller:7", providerLabel: "Mis precios",
+    presentationId: `own-${technicalCode}`, supplierSku: "", presentationDescription: `Perfil ${technicalCode} · Blanco`,
+    purchaseUnit: "UN", commercialLengthMm: 6000, netPrice: index ? 16000 : 15000, currency: "CLP",
+    priceSource: "workshop" as const, priceListRevision: "taller-v1", status: "priced" as const,
+    workshopSupplierName: "Sodal",
+  }));
+  render(<GuidedProfileCostSheet {...props} prices={ownPrices} />);
+  fireEvent.click(screen.getByRole("button", { name: "Editar precios" }));
+
+  expect(screen.getByLabelText("Largo de tira (mm)")).toHaveValue("6000");
+  expect(screen.getByLabelText("Proveedor (opcional)")).toHaveValue("Sodal");
+  expect(screen.queryByRole("button", { name: "Sin perfiles pendientes" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Datos iguales" })).toBeDisabled();
+
+  fireEvent.change(screen.getByLabelText("Largo de tira (mm)"), { target: { value: "6100" } });
+  fireEvent.change(screen.getByLabelText("Proveedor (opcional)"), { target: { value: "Sodal local" } });
+  fireEvent.click(screen.getByRole("button", { name: "Preparar para todos (2)" }));
+
+  expect(screen.getByLabelText("Precio 5001")).toHaveValue("15.000");
+  expect(screen.getByLabelText("Precio 5002")).toHaveValue("16.000");
+  expect(global.fetch).not.toHaveBeenCalled();
+
+  fireEvent.click(screen.getByRole("button", { name: "Guardar precios" }));
+  await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(2));
+  const bodies = (global.fetch as jest.Mock).mock.calls.map((call) => JSON.parse(call[1].body));
+  expect(bodies.map((body) => body.netPrice)).toEqual([15000, 16000]);
+  expect(bodies.every((body) => body.commercialLengthMm === 6100 && body.supplierName === "Sodal local")).toBe(true);
 });

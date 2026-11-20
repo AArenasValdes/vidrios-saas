@@ -23,6 +23,8 @@
 .common, .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .common button { grid-column: 1 / -1; }
 .common label, .fields label { display: grid; gap: 4px; font-size: .78rem; color: #405370; }
+.common .scope { grid-column: 1 / -1; }
+.common select { box-sizing: border-box; width: 100%; min-height: 44px; border: 1px solid #bfd0e6; border-radius: 9px; padding: 8px; background: #fff; color: #172b4d; font: inherit; font-size: 16px; }
 .preparedNotice { margin: 0; padding: 9px 10px; border-radius: 8px; background: #e6f4ec; color: #17623e !important; font-size: .8rem; line-height: 1.35; }
 .list { margin: 0; padding: 0; list-style: none; }
 .list li { border-top: 1px solid #e3eaf3; padding: 10px 0; }

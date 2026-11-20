@@ -20,6 +20,7 @@ type Props = {
 
 type Draft = { price: string; length: string; supplier: string };
 type Filter = "todos" | "pendientes" | "guardados";
+type ApplyScope = "pendientes" | "todos";
 
 function key(code: string) { return code.trim().toLocaleUpperCase("en-US"); }
 function formatPrice(value: string) {
@@ -45,18 +46,42 @@ export function GuidedProfileCostSheet({ lineTemplateId, familyKey, finishName, 
   const [sharedSupplier, setSharedSupplier] = useState("");
   const [prepared, setPrepared] = useState<{ length: string; supplier: string } | null>(null);
   const [preparedCount, setPreparedCount] = useState(0);
+  const [applyScope, setApplyScope] = useState<ApplyScope>("pendientes");
   const [message, setMessage] = useState("");
   const unique = [...new Map(references.filter((r) => r.technicalCode.trim()).map((r) => [key(r.technicalCode), r])).values()];
   const own = (code: string) => prices.filter((p) => key(p.technicalCode) === key(code) && p.priceSource === "workshop" && p.providerKey.startsWith("taller:"));
   const ready = (code: string) => { const found = own(code); return found.length === 1 && isEffectiveSupplierProfilePrice(found[0]); };
   const count = unique.filter((r) => ready(r.technicalCode)).length;
+  const pending = unique.filter((r) => !ready(r.technicalCode));
   const hasOtherUnit = unique.some((r) => own(r.technicalCode).some((p) => p.purchaseUnit && !["UN", "TR"].includes(p.purchaseUnit)));
+  const targets = applyScope === "todos" ? unique : pending;
+  const targetHasDifferentData = targets.some((r) => {
+    const saved = own(r.technicalCode)[0];
+    const draft = drafts[r.technicalCode];
+    const currentLength = draft?.length || (saved?.commercialLengthMm ? String(saved.commercialLengthMm) : "");
+    const currentSupplier = draft?.supplier ?? saved?.workshopSupplierName ?? "";
+    const resultingLength = applyScope === "todos" ? sharedLength || currentLength : currentLength || sharedLength;
+    const resultingSupplier = applyScope === "todos" ? sharedSupplier.trim() || currentSupplier : currentSupplier || sharedSupplier.trim();
+    return Boolean((sharedLength && resultingLength !== currentLength) || (sharedSupplier.trim() && resultingSupplier !== currentSupplier));
+  });
+  const canPrepare = targets.length > 0 && Boolean(sharedLength.trim() || sharedSupplier.trim()) && targetHasDifferentData;
   const sourceLabel = allowMixedWorkshopCosts && count > 0 && providerKey && !providerKey.startsWith("taller:")
     ? "Mixto"
     : providerKey?.startsWith("taller:") || !providerKey ? "Mis precios" : "Proveedor";
 
   function close() { if (!saving) { dialog.current?.close(); trigger.current?.focus(); } }
-  function open() { setDrafts({}); setErrors({}); setPrepared(null); setPreparedCount(0); setSharedLength(""); setSharedSupplier(""); setMessage(""); setSource("propios"); setFilter(count < unique.length ? "pendientes" : "todos"); dialog.current?.showModal(); }
+  function commonSavedValue(select: (code: string) => string | undefined) {
+    const values = unique.map((r) => select(r.technicalCode)).filter((value): value is string => Boolean(value));
+    const distinct = [...new Set(values)];
+    return distinct.length === 1 ? distinct[0] : "";
+  }
+  function open() {
+    setDrafts({}); setErrors({}); setPrepared(null); setPreparedCount(0); setMessage(""); setSource("propios");
+    setSharedLength(commonSavedValue((code) => { const value = own(code)[0]?.commercialLengthMm; return value ? String(value) : undefined; }));
+    setSharedSupplier(commonSavedValue((code) => own(code)[0]?.workshopSupplierName ?? undefined));
+    setApplyScope(pending.length ? "pendientes" : "todos");
+    setFilter(pending.length ? "pendientes" : "todos"); dialog.current?.showModal();
+  }
   useEffect(() => { const d = dialog.current; return () => { if (d?.open) d.close(); }; }, []);
 
   function setPrice(code: string, price: string) {
@@ -118,7 +143,45 @@ export function GuidedProfileCostSheet({ lineTemplateId, familyKey, finishName, 
         <div className={styles.scroll}>
           {source === "proveedor" ? <><p>Precios del proveedor seleccionado · solo consulta.</p><ul className={styles.list}>{unique.map((r) => { const row = prices.find((p) => key(p.technicalCode) === key(r.technicalCode) && p.providerKey === providerKey); return <li key={key(r.technicalCode)}><div className={styles.row}><strong>{r.technicalCode} · {r.profileName}</strong><span>{row?.netPrice != null && row.currency ? new Intl.NumberFormat("es-CL", { style: "currency", currency: row.currency }).format(row.netPrice) : "Sin precio"}</span></div>{row?.finishPriceBasis === "base_reference_other_finish" ? <small>Referencia de otro acabado; no es costo confirmado.</small> : null}</li>; })}</ul></> : <>
           <p className={styles.subtitle}>{finishName || "Acabado pendiente"} · {hasOtherUnit ? "Precios de compra" : "Precios de compra por tira"}</p>
-          <div className={styles.purchaseData}><strong>Datos de compra</strong><div className={styles.common}><label>Largo de tira (mm)<input inputMode="numeric" value={sharedLength} onChange={(e) => { setSharedLength(e.target.value); setPreparedCount(0); }} /></label><label>Proveedor (opcional)<input value={sharedSupplier} onChange={(e) => { setSharedSupplier(e.target.value); setPreparedCount(0); }} maxLength={120} /></label><button type="button" disabled={saving || count === unique.length || (!sharedLength.trim() && !sharedSupplier.trim())} onClick={() => { if (sharedLength && (!/^\d+$/.test(sharedLength) || Number(sharedLength) <= 0)) { setMessage("Ingresa un largo válido en milímetros."); return; } setPrepared({ length: sharedLength, supplier: sharedSupplier.trim() }); setPreparedCount(unique.filter((r) => !ready(r.technicalCode) && own(r.technicalCode).length <= 1).length); setDrafts((old) => Object.fromEntries(Object.entries(old).map(([code, d]) => [code, ready(code) ? d : { ...d, length: d.length || sharedLength, supplier: d.supplier || sharedSupplier.trim() }]))); setMessage(""); }}>{count === unique.length ? "Sin perfiles pendientes" : preparedCount > 0 ? "Actualizar datos" : "Aplicar a pendientes"}</button>{familyKey === "universal:aluminio:l25" && !sharedLength ? <button type="button" onClick={() => setSharedLength("6000")}>Sugerir 6.000 mm</button> : null}</div>{preparedCount > 0 ? <p className={styles.preparedNotice} role="status">Datos preparados para {preparedCount} perfiles. Ingresa sus precios para guardarlos.</p> : null}</div>
+          <div className={styles.purchaseData}>
+            <strong>Datos de compra</strong>
+            <div className={styles.common}>
+              <label>Largo de tira (mm)<input inputMode="numeric" value={sharedLength} onChange={(e) => { setSharedLength(e.target.value); setPrepared(null); setPreparedCount(0); }} /></label>
+              <label>Proveedor (opcional)<input value={sharedSupplier} onChange={(e) => { setSharedSupplier(e.target.value); setPrepared(null); setPreparedCount(0); }} maxLength={120} /></label>
+              <label className={styles.scope}>Aplicar a<select value={applyScope} onChange={(e) => { setApplyScope(e.target.value as ApplyScope); setPrepared(null); setPreparedCount(0); }}>
+                <option value="pendientes">Perfiles pendientes ({pending.length})</option>
+                <option value="todos">Todos los perfiles ({unique.length})</option>
+              </select></label>
+              <button type="button" disabled={saving || !canPrepare} onClick={() => {
+                if (sharedLength && (!/^\d+$/.test(sharedLength) || Number(sharedLength) <= 0)) { setMessage("Ingresa un largo válido en milímetros."); return; }
+                const targetCodes = new Set(targets.map((r) => key(r.technicalCode)));
+                setPrepared({ length: sharedLength, supplier: sharedSupplier.trim() });
+                setPreparedCount(targets.length);
+                setDrafts((old) => {
+                  const next = { ...old };
+                  for (const ref of targets) {
+                    const code = ref.technicalCode;
+                    const saved = own(code)[0];
+                    const draft = old[code];
+                    next[code] = {
+                      price: draft?.price ?? (saved?.netPrice != null ? formatPrice(String(saved.netPrice).replace(".", ",")) : ""),
+                      length: applyScope === "todos"
+                        ? sharedLength.trim() || draft?.length || (saved?.commercialLengthMm ? String(saved.commercialLengthMm) : "")
+                        : draft?.length || (saved?.commercialLengthMm ? String(saved.commercialLengthMm) : "") || sharedLength.trim(),
+                      supplier: applyScope === "todos"
+                        ? sharedSupplier.trim() || draft?.supplier || saved?.workshopSupplierName || ""
+                        : draft?.supplier || saved?.workshopSupplierName || sharedSupplier.trim(),
+                    };
+                  }
+                  for (const [code, draft] of Object.entries(old)) if (!targetCodes.has(key(code))) next[code] = draft;
+                  return next;
+                });
+                setMessage("");
+              }}>{preparedCount > 0 ? "Datos preparados" : !canPrepare ? "Datos iguales" : applyScope === "todos" ? `Preparar para todos (${unique.length})` : `Aplicar a pendientes (${pending.length})`}</button>
+              {familyKey === "universal:aluminio:l25" && !sharedLength ? <button type="button" onClick={() => setSharedLength("6000")}>Sugerir 6.000 mm</button> : null}
+            </div>
+            {preparedCount > 0 ? <p className={styles.preparedNotice} role="status">Datos listos para {preparedCount} perfiles. Los precios se conservan; revisa y guarda.</p> : null}
+          </div>
           <ul className={styles.list}>{visible.map((r) => {
             const code = r.technicalCode; const found = own(code); const draft = drafts[code];
             const unit = found[0]?.purchaseUnit;
