@@ -241,6 +241,13 @@ describe("QuoteProfileCosts", () => {
     const body = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
     expect(body.netPrice).toBe(15000.5);
     expect(body.finishName).toBe("Blanco");
+    await waitFor(() => expect(screen.getByRole("status", { name: "" })).toHaveTextContent("Costo guardado"));
+  });
+
+  it("muestra un estado vacío sin fabricar identidades técnicas", () => {
+    render(<QuoteProfileCosts {...shared} references={[]} prices={[]} />);
+    expect(screen.getByText(/Perfiles pendientes de configurar/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Agregar costo/ })).not.toBeInTheDocument();
   });
 
   it("cambia de proveedor con las vistas ya cargadas sin perder el precio seguro del acabado", () => {
