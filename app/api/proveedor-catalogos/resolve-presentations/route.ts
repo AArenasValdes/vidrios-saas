@@ -224,7 +224,7 @@ export async function POST(request: Request) {
         );
         const visibleProviderKeys = new Set([
           ...compatibleProviderKeys,
-          ...(normalizeUniversalAluminumFamilyKey(item.familyKey) ? [`taller:${organizationId}`] : []),
+          ...(item.technicalCodes.length > 0 ? [`taller:${organizationId}`] : []),
           ...(item.providerKey ? [item.providerKey] : []),
           ...(preferenceByFamily.get(item.familyKey) ? [preferenceByFamily.get(item.familyKey) as string] : []),
         ]);

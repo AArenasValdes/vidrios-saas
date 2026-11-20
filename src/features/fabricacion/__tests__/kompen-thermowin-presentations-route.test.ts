@@ -72,7 +72,9 @@ describe("/api/proveedor-catalogos/taller-presentaciones · Thermowin", () => {
     expect(requestedLineId).toBe(72);
     expect(requestedOrganizationId).toBe(941);
     expect(body.familyKey).toBe(familyKey);
-    if (key === "ventora:l25") expect(body.catalogProfiles).toEqual([]);
+    if (key === "ventora:l25") expect(body.catalogProfiles.map((profile: { code: string }) => profile.code)).toEqual([
+      "2501", "2502", "2509", "2504", "2505", "2507", "2510",
+    ]);
     else expect(body.catalogProfiles.length).toBeGreaterThan(0);
     expect(listWorkshopPresentations).toHaveBeenCalledWith(941, familyKey);
   });

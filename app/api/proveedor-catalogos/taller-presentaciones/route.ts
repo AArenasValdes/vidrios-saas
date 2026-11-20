@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SupplierCatalogDatabase } from "@/features/proveedor-catalogos/repositories/supplier-catalog-database.types";
 import { AuthRouteAccessError, resolveAuthenticatedRouteContext } from "@/features/auth/services/auth-route-access.service";
 import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
-import { getVentoraProfileReferencesForCatalogKey } from "@/features/cotizaciones/line-templates/fixtures/ventora-profile-references";
 import { canManageSupplierCatalog } from "@/features/proveedor-catalogos/services/supplier-catalog-access.service";
-import { createWorkshopPresentation, listOfficialTechnicalInputsForFamily, listWorkshopPresentations, updateWorkshopPresentationPurchase, WorkshopPresentationsSchemaMissingError } from "@/features/proveedor-catalogos/repositories/workshop-presentations.repository";
-import { INTERNAL_WORKSHOP_PRESENTATION_KEY_PREFIX, isGeneratedWorkshopPresentationKey } from "@/features/proveedor-catalogos/services/workshop-presentation-identity.service";
+import { createWorkshopPresentation, listOfficialTechnicalInputsForFamily, listWorkshopPresentations, updateWorkshopPresentationPurchase, WorkshopPresentationConflictError, WorkshopPresentationsSchemaMissingError } from "@/features/proveedor-catalogos/repositories/workshop-presentations.repository";
+import { buildQuickWorkshopPresentationKey, hasQuickWorkshopPresentationDuplicate, INTERNAL_WORKSHOP_PRESENTATION_KEY_PREFIX, isGeneratedWorkshopPresentationKey } from "@/features/proveedor-catalogos/services/workshop-presentation-identity.service";
+import { listWorkshopCatalogProfiles } from "@/features/proveedor-catalogos/services/workshop-presentation-catalog.service";
+import { workshopPurchaseUnitSchema } from "@/features/proveedor-catalogos/schemas/workshop-presentation.schema";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ const inputSchema = z.object({
   workshopSku: z.string().trim().min(1).max(100).nullable().optional(),
   description: z.string().trim().min(1).max(240),
   finishName: z.string().trim().max(100).nullable(),
-  purchaseUnit: z.enum(["M", "UN", "KG", "PAR"]),
+  purchaseUnit: workshopPurchaseUnitSchema,
   commercialLengthMm: z.number().int().positive().nullable(),
   netPrice: z.number().positive().nullable(),
   currency: z.enum(["CLP"]).nullable(),
@@ -38,7 +39,7 @@ const updateSchema = z.object({
   lineTemplateId: z.number().int().positive(),
   presentationId: z.string().uuid(),
   expectedRevision: z.number().int().positive(),
-  purchaseUnit: z.enum(["M", "UN", "KG", "PAR"]),
+  purchaseUnit: workshopPurchaseUnitSchema,
   commercialLengthMm: z.number().int().positive().nullable(),
   netPrice: z.number().positive().nullable(),
   currency: z.enum(["CLP"]).nullable(),
@@ -69,6 +70,7 @@ async function authorize(lineTemplateId: number) {
 function errorResponse(error: unknown) {
   if (error instanceof AuthRouteAccessError) return NextResponse.json({ error: error.message }, { status: error.status });
   if (error instanceof WorkshopPresentationsSchemaMissingError) return NextResponse.json({ error: error.message }, { status: 503 });
+  if (error instanceof WorkshopPresentationConflictError) return NextResponse.json({ error: error.message }, { status: 409 });
   console.error("[API] presentaciones del taller", error);
   return NextResponse.json({ error: "No pudimos cargar las presentaciones del taller." }, { status: 500 });
 }
@@ -83,11 +85,7 @@ export async function GET(request: Request) {
       listOfficialTechnicalInputsForFamily(access.familyKey),
       listWorkshopPresentations(access.organizationId, access.familyKey),
     ]);
-    const catalogProfiles = access.familyKey.startsWith("thermowin:")
-      ? getVentoraProfileReferencesForCatalogKey(access.catalogKey)?.profiles
-          .filter((profile) => profile.code && profile.codeStatus === "catalog_reference")
-          .map((profile) => ({ code: profile.code, name: profile.name, role: profile.role })) ?? []
-      : [];
+    const catalogProfiles = listWorkshopCatalogProfiles(access.catalogKey ?? "");
     return NextResponse.json({
       familyKey: access.familyKey,
       officialInputs,
@@ -110,15 +108,15 @@ export async function POST(request: Request) {
     if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Datos inválidos." }, { status: 400 });
     const access = await authorize(parsed.data.lineTemplateId);
     if (!access) return NextResponse.json({ error: "No disponible." }, { status: 404 });
-    if (access.familyKey.startsWith("universal:aluminio:") && !parsed.data.officialInputId) {
+    const isPrivateCodedIdentity = !parsed.data.officialInputId && Boolean(parsed.data.technicalCode);
+    const isQuickPrivateIdentity = isPrivateCodedIdentity && !parsed.data.workshopSku?.trim();
+    if (isPrivateCodedIdentity && parsed.data.technicalCode) {
       const existing = await listWorkshopPresentations(access.organizationId, access.familyKey);
-      const normalize = (value: string | null | undefined) => (value ?? "").trim().normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CL");
-      const duplicate = existing.some((row) =>
-        String(row.configuration_key ?? "") === (access.configurationKey ?? "") &&
-        String(row.codigo_tecnico).trim().toLocaleUpperCase("en-US") === parsed.data.technicalCode?.trim().toLocaleUpperCase("en-US") &&
-        normalize(String(row.acabado_nombre ?? "")) === normalize(parsed.data.finishName)
-      );
+      const duplicate = hasQuickWorkshopPresentationDuplicate(existing, {
+        configurationKey: access.configurationKey,
+        technicalCode: parsed.data.technicalCode,
+        finishName: parsed.data.finishName,
+      });
       if (duplicate) return NextResponse.json({ error: "Ya existe un costo privado para este perfil y acabado. Edita esa referencia para evitar duplicados." }, { status: 409 });
     }
     const row = await createWorkshopPresentation({
@@ -129,9 +127,15 @@ export async function POST(request: Request) {
       technicalCode: parsed.data.technicalCode,
       recipeCode: parsed.data.recipeCode,
       profileName: parsed.data.profileName,
-      workshopSku: parsed.data.workshopSku?.trim() || `${INTERNAL_WORKSHOP_PRESENTATION_KEY_PREFIX}${access.familyKey.startsWith("universal:aluminio:") && !parsed.data.officialInputId
-        ? createHash("sha256").update(JSON.stringify([access.organizationId, access.familyKey, access.configurationKey, parsed.data.technicalCode?.trim().toLocaleUpperCase("en-US"), parsed.data.finishName?.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CL")])).digest("hex").slice(0, 40)
-        : randomUUID()}`,
+      workshopSku: parsed.data.workshopSku?.trim() || (isQuickPrivateIdentity && parsed.data.technicalCode
+        ? buildQuickWorkshopPresentationKey({
+            organizationId: access.organizationId,
+            familyKey: access.familyKey,
+            configurationKey: access.configurationKey,
+            technicalCode: parsed.data.technicalCode,
+            finishName: parsed.data.finishName,
+          })
+        : `${INTERNAL_WORKSHOP_PRESENTATION_KEY_PREFIX}${randomUUID()}`),
       description: parsed.data.description,
       finishName: parsed.data.finishName,
       purchaseUnit: parsed.data.purchaseUnit,

@@ -31,6 +31,10 @@ export class WorkshopPresentationsSchemaMissingError extends Error {
   constructor() { super("Falta aplicar la migración de presentaciones privadas del taller."); }
 }
 
+export class WorkshopPresentationConflictError extends Error {
+  constructor(message: string) { super(message); }
+}
+
 export async function listWorkshopPresentations(organizationId: number, familyKey?: string) {
   let query = client().from("organizacion_presentaciones_taller")
     .select("*")
@@ -86,7 +90,7 @@ export async function createWorkshopPresentation(input: WorkshopPresentationInpu
     creado_por: input.userId,
   }).select("id, organization_id, family_key, configuration_key, insumo_oficial_id, codigo_tecnico, codigo_receta, nombre_perfil, sku_taller, descripcion, modo_acabado, acabado_nombre, unidad_compra, largo_comercial_mm, precio_neto, moneda, preferida, revision, creado_en").single();
   if (error) {
-    if (error.code === "23505") throw new Error("Ya existe ese SKU o una presentación elegida para el mismo perfil y acabado.");
+    if (error.code === "23505") throw new WorkshopPresentationConflictError("Ya existe ese costo para el perfil y acabado. Actualiza la referencia guardada.");
     throw new Error(error.message);
   }
   return data;
@@ -139,7 +143,7 @@ export async function updateWorkshopPresentationPurchase(input: {
   const { data, error } = await query
     .select("id, revision, unidad_compra, largo_comercial_mm, precio_neto, moneda, preferida")
     .maybeSingle();
-  if (error?.code === "23505") throw new Error("Ya hay una presentación elegida para este perfil y acabado. Desmarca la anterior primero.");
+  if (error?.code === "23505") throw new WorkshopPresentationConflictError("Ya hay una presentación elegida para este perfil y acabado. Desmarca la anterior primero.");
   if (error) throw new Error(error.message);
   if (!data) throw new Error("La presentación cambió o no pertenece a esta configuración. Recarga y vuelve a intentarlo.");
   return data;

@@ -28,7 +28,7 @@ export function TallerPresentaciones({ lineTemplateId, familyKey }: { lineTempla
   const [sku, setSku] = useState("");
   const [description, setDescription] = useState("");
   const [finish, setFinish] = useState("");
-  const [unit, setUnit] = useState<"M" | "UN" | "KG" | "PAR">("M");
+  const [unit, setUnit] = useState<"M" | "UN" | "KG" | "PAR" | "TIRA">("M");
   const [length, setLength] = useState("");
   const [price, setPrice] = useState("");
   const [preferred, setPreferred] = useState(false);
@@ -71,7 +71,7 @@ export function TallerPresentaciones({ lineTemplateId, familyKey }: { lineTempla
           lineTemplateId, officialInputId: officialInputId || null,
           technicalCode: officialInputId ? null : technicalCode.trim() || null,
           profileName: officialInputId ? null : profileName.trim() || null,
-          recipeCode: recipeCode.trim() || null, workshopSku: sku.trim(),
+          recipeCode: recipeCode.trim() || null, workshopSku: sku.trim() || null,
           description: description.trim(), finishName: finish.trim() || null,
           purchaseUnit: unit, commercialLengthMm, netPrice,
           currency: netPrice == null ? null : "CLP",
@@ -112,9 +112,9 @@ export function TallerPresentaciones({ lineTemplateId, familyKey }: { lineTempla
       </label> : null}
       {!officialInputId ? <div className={s.pair}><label>Código privado<input value={technicalCode} onChange={(event) => setTechnicalCode(event.target.value)} required maxLength={100} /></label><label>Nombre del perfil<input value={profileName} onChange={(event) => setProfileName(event.target.value)} required maxLength={160} /></label></div> : null}
       <label>Código en tu receta, si es diferente<input value={recipeCode} onChange={(event) => setRecipeCode(event.target.value)} maxLength={100} placeholder="Solo con asociación comprobada por tu taller" /></label>
-      <div className={s.pair}><label>SKU o código de compra privado<input value={sku} onChange={(event) => setSku(event.target.value)} required maxLength={100} /></label><label>Descripción de compra<input value={description} onChange={(event) => setDescription(event.target.value)} required maxLength={240} /></label></div>
+      <div className={s.pair}><label>Código de compra (opcional)<input value={sku} onChange={(event) => setSku(event.target.value)} maxLength={100} /></label><label>Descripción de compra<input value={description} onChange={(event) => setDescription(event.target.value)} required maxLength={240} /></label></div>
       <label>Acabado<input value={finish} onChange={(event) => setFinish(event.target.value)} placeholder="Vacío si es independiente" maxLength={100} /></label></> : <strong>Editar costo de {editingRow.codigo_tecnico}</strong>}
-      <label>Unidad de compra<select value={unit} onChange={(event) => setUnit(event.target.value as typeof unit)}><option value="M">Metro</option><option value="UN">Unidad / tira</option><option value="KG">Kg</option><option value="PAR">Par</option></select></label>
+      <label>Unidad de compra<select value={unit} onChange={(event) => setUnit(event.target.value as typeof unit)}><option value="M">Metro</option><option value="UN">Unidad</option><option value="TIRA">Tira comercial</option><option value="KG">Kg</option><option value="PAR">Par</option></select></label>
       <label>Proveedor (opcional)<input value={supplierName} onChange={(event) => setSupplierName(event.target.value)} maxLength={120} /></label>
       <div className={s.pair}><label>Largo comercial (mm)<input type="number" min={1} step={1} value={length} onChange={(event) => setLength(event.target.value)} placeholder="Pendiente" /></label><label>Costo neto de compra CLP<input type="number" min={1} step="0.01" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Pendiente" /></label></div>
       <label className={s.preferredChoice}><input type="checkbox" checked={preferred} onChange={(event) => setPreferred(event.target.checked)} /> Elegir esta presentación para la configuración</label>

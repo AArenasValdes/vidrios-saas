@@ -29,6 +29,7 @@ import { listSupplierFamilyPreferences } from "@/features/proveedor-catalogos/re
 import { getSupplierCatalogQuoteLineKeys } from "@/features/proveedor-catalogos/services/proveedor-catalogo-qa.service";
 import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import { buildPartialTechnicalCostSnapshot, type CatalogPresentationPrice } from "@/features/proveedor-catalogos/services/costo-tecnico-parcial.service";
+import { resolveSupplierPriceProviderCoverage } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 
 const req = (items: unknown[]) => new Request("http://localhost/api/proveedor-catalogos/resolve-presentations", {
   method: "POST",
@@ -48,7 +49,7 @@ describe("/api/proveedor-catalogos/resolve-presentations", () => {
     (readWorkshopPresentationPrices as jest.Mock).mockResolvedValue([]);
   });
 
-  it.each(["universal:aluminio:l5000", "universal:aluminio:l25", "universal:aluminio:l42"])("ofrece Mis precios en %s incluso sin costos guardados", async (familyKey) => {
+  it.each(["universal:aluminio:l5000", "universal:aluminio:l25", "universal:aluminio:l42", "veratec:sliding-7400", "thermowin:kom-700"])("ofrece Mis precios en %s incluso sin costos guardados", async (familyKey) => {
     const line = VENTORA_DEFAULT_LINE_CATALOG.find((entry) => entry.catalogKey &&
       entry.catalogMetadata?.familyKey === familyKey && getSupplierCatalogQuoteLineKeys().has(entry.catalogKey));
     if (!line?.catalogKey) throw new Error(`Falta una línea compatible para ${familyKey}.`);
@@ -65,6 +66,53 @@ describe("/api/proveedor-catalogos/resolve-presentations", () => {
     expect(body.providerOptions.pieza).toEqual(expect.arrayContaining([expect.objectContaining({
       providerKey: "taller:7", label: "Mis precios", pricedProfileCount: 0, pendingTechnicalCodes: ["5001"],
     })]));
+  });
+
+  it("aplica una presentación propia PVC cuando Mis precios está seleccionado", async () => {
+    const line = VENTORA_DEFAULT_LINE_CATALOG.find((entry) => entry.catalogKey === "ventora:veratec-7400-corredera");
+    if (!line?.catalogKey || line.catalogMetadata?.familyKey !== "veratec:sliding-7400") {
+      throw new Error("Falta la línea PVC Veratec 7400 en el catálogo canónico.");
+    }
+    const configurationKey = String(line.catalogMetadata.configurationKey ?? "");
+    const ownPrice: CatalogPresentationPrice = {
+      presentationId: "private-7401-org-7", providerKey: "taller:7", familyKeys: ["veratec:sliding-7400"],
+      configurationKey, technicalCode: "7401", recipeComponentCodes: ["7401"],
+      technicalName: "Marco corredera 2 hojas", supplierSku: "", presentationDescription: "Marco · Blanco · taller",
+      finishCode: "", finishName: "Blanco", finishResolution: "specific", purchaseUnit: "TIRA",
+      commercialLengthMm: 5800, netPrice: 18000, priceBasis: "commercial_presentation", currency: "CLP",
+      priceListId: "taller:7", priceListRevision: "taller-v1", origin: "workshop",
+    };
+    expect(resolveSupplierPriceProviderCoverage({
+      request: { itemId: "pvc-7401", familyKey: "veratec:sliding-7400", finishName: "Blanco", technicalCodes: ["7401"], configurationKey },
+      presentations: [ownPrice],
+    })).toContainEqual(expect.objectContaining({ providerKey: "taller:7", pricedProfileCount: 1 }));
+    (readConfirmedSupplierPresentations as jest.Mock).mockResolvedValue([{
+      presentationId: ownPrice.presentationId, providerKey: ownPrice.providerKey, supplierSku: "",
+      technicalCode: ownPrice.technicalCode, recipeComponentCodes: ownPrice.recipeComponentCodes,
+      familyKeys: ownPrice.familyKeys, configurationKey: ownPrice.configurationKey,
+      finishCode: null, finishName: ownPrice.finishName, finishResolution: "specific", commercialLengthMm: 5800, preferred: false,
+    }]);
+    (readSupplierPresentationPrices as jest.Mock).mockResolvedValue([]);
+    (readWorkshopPresentationPrices as jest.Mock).mockResolvedValue([ownPrice]);
+    (readSupplierNames as jest.Mock).mockResolvedValue(new Map());
+    (readOrganizationPurchasePricing as jest.Mock).mockResolvedValue({ adjustments: [], overrides: [] });
+
+    const response = await POST(new Request("http://localhost/api/proveedor-catalogos/resolve-presentations", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+        includeProviderOptions: true,
+        items: [{ itemId: "pvc-7401", catalogLineKey: line.catalogKey, familyKey: "veratec:sliding-7400",
+          finishName: "Blanco", technicalCodes: ["7401"], providerKey: "taller:7" }],
+      }),
+    }));
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.providerOptions["pvc-7401"]).toContainEqual(expect.objectContaining({
+      providerKey: "taller:7", label: "Mis precios", pricedProfileCount: 1, coveredTechnicalCodes: ["7401"],
+    }));
+    expect(body.selections["pvc-7401"][0]).toMatchObject({
+      status: "resolved", providerKey: "taller:7", presentationId: "private-7401-org-7", commercialLengthMm: 5800,
+    });
   });
 
   it("resuelve las líneas admitidas aunque otra pieza aún no tenga familia de compra", async () => {
@@ -196,10 +244,10 @@ describe("/api/proveedor-catalogos/resolve-presentations", () => {
       commercialLengthMm: 6000,
       status: "priced",
     }));
-    expect(body.providerOptions["kompen-item"]).toEqual([expect.objectContaining({
+    expect(body.providerOptions["kompen-item"]).toEqual(expect.arrayContaining([expect.objectContaining({
       providerKey: "thermowin-kompen",
       pricedProfileCount: 1,
-    })]);
+    })]));
   });
 
   it("explica el acabado Titanio disponible y lo cuenta al elegirlo", async () => {

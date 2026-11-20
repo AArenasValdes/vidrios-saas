@@ -17,6 +17,19 @@ const setup = (save = jest.fn(async () => true)) => {
   return save;
 };
 
+it("abre desde la cotización la administración privada de la línea y plantilla indicadas", async () => {
+  window.history.pushState({}, "", "/configuracion/empresa/mis-precios?supplier=taller&family=universal%3Aaluminio%3Al5000&lineTemplateId=205");
+  global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({
+    familyKey: "universal:aluminio:l5000", officialInputs: [], catalogProfiles: [], ownPresentations: [],
+  }) }) as jest.Mock;
+  render(<MisPreciosContent catalog={{ providers: [] }} error={null} busy={false} save={jest.fn(async () => true)} refresh={async () => undefined} />);
+
+  expect(await screen.findByRole("heading", { name: "Perfiles y costos del taller" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Mis costos de perfiles" })).toBeInTheDocument();
+  expect(global.fetch).toHaveBeenCalledWith("/api/proveedor-catalogos/taller-presentaciones?lineTemplateId=205", { cache: "no-store" });
+  window.history.pushState({}, "", "/");
+});
+
 it("muestra proveedores primero y busca por nombre o código", () => {
   setup();
   expect(screen.getByRole("heading", { name: "Proveedores" })).toBeInTheDocument();
