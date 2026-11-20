@@ -87,17 +87,17 @@ export function TallerPresentaciones({ lineTemplateId, familyKey }: { lineTempla
   }
 
   if (loading && !payload) return <section className={s.panel}>Cargando perfiles de esta familia…</section>;
-  if (!payload) return <section className={s.panel}><h3>Presentaciones del taller</h3><p className={s.error} role="alert">{error ?? "No pudimos cargar los datos privados."}</p></section>;
+  if (!payload) return <section className={s.panel}><h3>Mis costos de perfiles</h3><p className={s.error} role="alert">{error ?? "No pudimos cargar los datos privados."}</p></section>;
   if (payload?.familyKey !== familyKey) return null;
   return <section className={s.panel} aria-label="Presentaciones privadas del taller">
-    <div className={s.heading}><div><h3>Presentaciones del taller</h3><p>Son datos privados de tu empresa. No cambian la lista oficial ni el precio de venta.</p></div>
-      <button type="button" onClick={() => { setEditingRow(null); setSupplierName(""); setPreferred(false); setOpen((value) => !value); }}>{open ? "Cerrar" : "Agregar presentación"}</button></div>
+    <div className={s.heading}><div><h3>Mis costos de perfiles</h3><p>Costos privados de tu empresa. No cambian el precio de venta.</p></div>
+      <button type="button" onClick={() => { setEditingRow(null); setSupplierName(""); setPreferred(false); setOpen((value) => !value); }}>{open ? "Cerrar" : "Agregar perfil"}</button></div>
     {error ? <p className={s.error} role="alert">{error}</p> : null}
     {payload.ownPresentations.length ? <div className={s.rows}>{payload.ownPresentations.map((row) => <div className={s.row} key={row.id}>
       <strong>{row.codigo_tecnico} · {row.nombre_perfil}</strong><span>{row.proveedor_nombre || "Referencia privada del taller"}{row.acabado_nombre ? ` · ${row.acabado_nombre}` : " · Acabado independiente"}</span>
-      <small>{row.largo_comercial_mm ? `${row.largo_comercial_mm.toLocaleString("es-CL")} mm` : "Largo pendiente"} · {row.precio_neto ? `${new Intl.NumberFormat("es-CL", { style: "currency", currency: row.moneda || "CLP" }).format(row.precio_neto)} neto` : "Costo pendiente"} · {row.preferida ? "Elegida para esta configuración" : "Sin elegir"} · Revisión {row.revision}</small>
-      <button type="button" className={s.editButton} onClick={() => { setEditingRow(row); setUnit(row.unidad_compra as typeof unit); setLength(row.largo_comercial_mm?.toString() ?? ""); setPrice(row.precio_neto?.toString() ?? ""); setSupplierName(row.proveedor_nombre ?? ""); setPreferred(row.preferida); setOpen(true); }}>Editar presentación</button>
-    </div>)}</div> : <p className={s.empty}>Aún no hay presentaciones privadas para esta familia.</p>}
+      <small>{row.largo_comercial_mm ? `${row.largo_comercial_mm.toLocaleString("es-CL")} mm` : "Largo pendiente"} · {row.precio_neto ? `${new Intl.NumberFormat("es-CL", { style: "currency", currency: row.moneda || "CLP" }).format(row.precio_neto)} neto` : "Costo pendiente"} · {row.preferida ? "Elegida para esta configuración" : "Sin elegir"}</small>
+      <button type="button" className={s.editButton} onClick={() => { setEditingRow(row); setUnit(row.unidad_compra as typeof unit); setLength(row.largo_comercial_mm?.toString() ?? ""); setPrice(row.precio_neto?.toString() ?? ""); setSupplierName(row.proveedor_nombre ?? ""); setPreferred(row.preferida); setOpen(true); }}>Editar costo</button>
+    </div>)}</div> : <p className={s.empty}>Aún no hay costos propios para esta familia.</p>}
     {open ? <form className={s.form} onSubmit={(event) => void save(event)}>
       {!editingRow ? <><label>Perfil <select value={officialInputId} onChange={(event) => setOfficialInputId(event.target.value)}><option value="">Nuevo perfil del taller</option>{payload.officialInputs.map((input) => <option key={input.id} value={input.id}>{input.codigo_fuente} · {input.nombre}</option>)}</select></label>
       {payload.catalogProfiles.length ? <label>Referencia del catálogo

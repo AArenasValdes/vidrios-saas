@@ -36,6 +36,16 @@ describe("QuoteProfileCosts", () => {
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ row: {} }) }) as jest.Mock;
   });
 
+  it("con Mis precios no muestra valores de proveedores para perfiles sin costo propio", () => {
+    render(<QuoteProfileCosts {...shared} providerKey="taller:7" allowMixedWorkshopCosts prices={[{
+      ...basePrice, status: "priced", netPrice: 24375, priceSource: "reference",
+    }]} />);
+    expect(screen.getByText("0 de 1 perfiles con costo")).toBeInTheDocument();
+    expect(screen.getByText("Sin precio")).toBeInTheDocument();
+    expect(screen.queryByText(/24[.\s]375/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Agregar costo" })).toBeInTheDocument();
+  });
+
   it("guarda el costo propio sin atribuirlo a la presentación del proveedor", async () => {
     render(<QuoteProfileCosts {...shared} prices={[basePrice]} />);
     expect(screen.getByText("0 de 1 perfiles con costo")).toBeInTheDocument();

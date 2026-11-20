@@ -48,6 +48,25 @@ describe("/api/proveedor-catalogos/resolve-presentations", () => {
     (readWorkshopPresentationPrices as jest.Mock).mockResolvedValue([]);
   });
 
+  it.each(["universal:aluminio:l5000", "universal:aluminio:l25", "universal:aluminio:l42"])("ofrece Mis precios en %s incluso sin costos guardados", async (familyKey) => {
+    const line = VENTORA_DEFAULT_LINE_CATALOG.find((entry) => entry.catalogKey &&
+      entry.catalogMetadata?.familyKey === familyKey && getSupplierCatalogQuoteLineKeys().has(entry.catalogKey));
+    if (!line?.catalogKey) throw new Error(`Falta una línea compatible para ${familyKey}.`);
+    (readSupplierPresentationPrices as jest.Mock).mockResolvedValue([]);
+    (readSupplierNames as jest.Mock).mockResolvedValue(new Map());
+    const response = await POST(new Request("http://localhost/api/proveedor-catalogos/resolve-presentations", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+        includeProviderOptions: true, includeProfilePrices: false,
+        items: [{ itemId: "pieza", catalogLineKey: line.catalogKey, familyKey, finishName: "Blanco", technicalCodes: ["5001"] }],
+      }),
+    }));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.providerOptions.pieza).toEqual(expect.arrayContaining([expect.objectContaining({
+      providerKey: "taller:7", label: "Mis precios", pricedProfileCount: 0, pendingTechnicalCodes: ["5001"],
+    })]));
+  });
+
   it("resuelve las líneas admitidas aunque otra pieza aún no tenga familia de compra", async () => {
     const supportedKeys = getSupplierCatalogQuoteLineKeys();
     const supportedLine = VENTORA_DEFAULT_LINE_CATALOG.find((line) =>

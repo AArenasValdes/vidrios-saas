@@ -224,13 +224,14 @@ export async function POST(request: Request) {
         );
         const visibleProviderKeys = new Set([
           ...compatibleProviderKeys,
+          ...(normalizeUniversalAluminumFamilyKey(item.familyKey) ? [`taller:${organizationId}`] : []),
           ...(item.providerKey ? [item.providerKey] : []),
           ...(preferenceByFamily.get(item.familyKey) ? [preferenceByFamily.get(item.familyKey) as string] : []),
         ]);
         const coverageByProvider = new Map(coverage.map((option) => [option.providerKey, option]));
         const options = [...visibleProviderKeys].map((providerKey) => {
           const priced = coverageByProvider.get(providerKey);
-          const rawProviderName = providerKey.startsWith("taller:") ? "Precio propio del taller" : providerNames.get(providerKey) ?? providerKey;
+          const rawProviderName = providerKey === `taller:${organizationId}` ? "Mis precios" : providerKey.startsWith("taller:") ? "Precio propio del taller" : providerNames.get(providerKey) ?? providerKey;
           const providerName = displayProviderNames.get(providerKey) ?? rawProviderName.replace(/^Distribuidora\s+/i, "").trim();
           const revisions = relevantPriceRows
             .filter((row) => row.providerKey === providerKey)

@@ -72,7 +72,7 @@ export function QuoteProfileCosts({
       const ownRows = candidates.filter((row) => row.priceSource === "workshop" && row.providerKey.startsWith("taller:"));
       const own = ownRows.length === 1 ? ownRows[0] : undefined;
       const selected = candidates.find((row) => row.providerKey === providerKey);
-      const fallback = candidates[0] ?? {
+      const fallback = (!providerKey.startsWith("taller:") ? candidates[0] : undefined) ?? {
         technicalCode: reference.technicalCode,
         profileName: reference.profileName,
         providerKey: "",
@@ -89,7 +89,9 @@ export function QuoteProfileCosts({
       };
       // The selected supplier is the effective purchase source. A saved own
       // cost remains visible as a separate option, but must not look applied.
-      const display = allowMixedWorkshopCosts && own && isEffectiveSupplierProfilePrice(own) ? own : selected ?? own ?? fallback;
+      const display = providerKey.startsWith("taller:")
+        ? selected ?? fallback
+        : allowMixedWorkshopCosts && own && isEffectiveSupplierProfilePrice(own) ? own : selected ?? own ?? fallback;
       return {
         technicalCode: reference.technicalCode,
         profileName: reference.profileName || display?.profileName || display?.presentationDescription || reference.technicalCode,
