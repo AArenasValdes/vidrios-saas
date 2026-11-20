@@ -36,6 +36,17 @@ describe("QuoteProfileCosts", () => {
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ row: {} }) }) as jest.Mock;
   });
 
+  it("agrupa miles al escribir y guarda los decimales como valor numérico", async () => {
+    render(<QuoteProfileCosts {...shared} prices={[basePrice]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Agregar costo" }));
+    const price = screen.getByRole("textbox", { name: "Costo neto por tira 2503 (CLP)" });
+    fireEvent.change(price, { target: { value: "15000,50" } });
+    expect(price).toHaveValue("15.000,50");
+    fireEvent.click(screen.getByRole("button", { name: "Guardar costo 2503" }));
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+    expect(JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body).netPrice).toBe(15000.5);
+  });
+
   it("con Mis precios no muestra valores de proveedores para perfiles sin costo propio", () => {
     render(<QuoteProfileCosts {...shared} providerKey="taller:7" allowMixedWorkshopCosts prices={[{
       ...basePrice, status: "priced", netPrice: 24375, priceSource: "reference",
@@ -142,11 +153,11 @@ describe("QuoteProfileCosts", () => {
       workshopSupplierName: "Aluminera local",
     }]} />);
     expect(screen.getByText("1 de 1 perfiles listos")).toBeInTheDocument();
-    expect(screen.getByText("Costo propio guardado, todavía no aplicado a esta pieza.")).toBeInTheDocument();
+    expect(screen.getByText("Guardado · no aplicado")).toBeInTheDocument();
     expect(screen.queryByText(/ventora-internal/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Editar costo" }));
     fireEvent.click(screen.getByRole("button", { name: "Usar costo propio en esta pieza" }));
     expect(shared.onUseWorkshopCost).toHaveBeenCalledWith("taller:941");
-    fireEvent.click(screen.getByRole("button", { name: "Editar costo" }));
     expect(screen.getAllByRole("textbox", { name: "Proveedor (opcional)" })[1]).toHaveValue("Aluminera local");
     fireEvent.change(screen.getByRole("textbox", { name: "Costo neto por tira 2503 (CLP)" }), { target: { value: "28000" } });
     fireEvent.click(screen.getByRole("button", { name: "Guardar costo 2503" }));
@@ -173,9 +184,10 @@ describe("QuoteProfileCosts", () => {
     ]} references={[{ technicalCode: "2511R", profileName: "Refuerzo pierna abierta" }]} />);
 
     expect(screen.getByText("1 de 1 perfiles listos")).toBeInTheDocument();
-    expect(screen.getByText(/Referencia seleccionada: Arquetipo · \$18\.000/)).toBeInTheDocument();
     expect(screen.getByText("$45.000")).toBeInTheDocument();
-    expect(screen.getByText("Costo propio guardado, todavía no aplicado a esta pieza.")).toBeInTheDocument();
+    expect(screen.getByText("Guardado · no aplicado")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Editar costo" }));
+    expect(screen.getByText(/Referencia seleccionada: Arquetipo · \$18\.000/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Usar costo propio en esta pieza" })).toBeInTheDocument();
   });
 
@@ -185,8 +197,7 @@ describe("QuoteProfileCosts", () => {
       references={[{ technicalCode: "4201", profileName: "Marco" }, { technicalCode: "4202", profileName: "Hoja" }]}
       prices={[{ ...valid, technicalCode: "4201", presentationId: "own-1", providerKey: "taller:941", priceSource: "workshop", netPrice: 18000 }, { ...valid, technicalCode: "4202" }]} />);
     expect(screen.getByText("1 de 2 perfiles listos")).toBeInTheDocument();
-    expect(screen.getByText(/Costo propio aplicado a este perfil/)).toBeInTheDocument();
-    expect(screen.getByText(/Referencia seleccionada: Arquetipo/)).toBeInTheDocument();
+    expect(screen.getByText("Aplicado")).toBeInTheDocument();
   });
 
   it("no reutiliza una referencia de Titanio como costo físico para Blanco", () => {
@@ -196,9 +207,9 @@ describe("QuoteProfileCosts", () => {
       finishPriceBasis: "base_reference_other_finish", priceSourceFinishName: "Titanio",
       priceSourceSupplierSku: "TI2503",
     }]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Agregar costo" }));
     expect(screen.getByText(/Blanco/)).toBeInTheDocument();
     expect(screen.queryByText("TI2503")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Agregar costo" }));
     expect(screen.getByRole("radio", { name: "Solo Blanco" })).toBeChecked();
   });
 
@@ -273,6 +284,7 @@ describe("QuoteProfileCosts", () => {
     ];
     const { rerender } = render(<QuoteProfileCosts {...shared} prices={prices} />);
 
+    fireEvent.click(screen.getByRole("button", { name: "Agregar costo" }));
     expect(screen.getByText(/Referencia seleccionada: Arquetipo · \$22\.000/)).toBeInTheDocument();
     rerender(<QuoteProfileCosts {...shared} providerKey="alumco" prices={prices} />);
 

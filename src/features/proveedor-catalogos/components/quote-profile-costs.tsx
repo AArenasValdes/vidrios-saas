@@ -18,6 +18,14 @@ function formatNetPrice(amount: number, currency: string) {
   return new Intl.NumberFormat("es-CL", { style: "currency", currency, maximumFractionDigits: 2 }).format(amount);
 }
 
+function formatCostInput(value: string) {
+  const normalized = /^[0-9]+\.[0-9]{1,2}$/.test(value) ? value.replace(".", ",") : value;
+  const clean = normalized.replace(/[^0-9,]/g, "");
+  const [integer, ...decimal] = clean.split(",");
+  const grouped = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return grouped + (decimal.length ? "," + decimal.join("").slice(0, 2) : "");
+}
+
 function revisionFromPreview(row: PriceRow | undefined) {
   const match = row?.priceListRevision?.match(/^taller-v(\d+)$/);
   return match?.[1] ? Number(match[1]) : null;
@@ -129,7 +137,7 @@ export function QuoteProfileCosts({
     setError(null);
     setLastSavedCode(null);
     setEditingCode(row.technicalCode);
-    setDraftCost(row.workshop?.netPrice != null ? String(row.workshop.netPrice) : "");
+    setDraftCost(row.workshop?.netPrice != null ? formatCostInput(String(row.workshop.netPrice).replace(".", ",")) : "");
     const confirmedLength = Boolean(
       current?.commercialLengthMm && current.commercialLengthMm > 0 &&
       current.finishPriceBasis !== "base_reference_other_finish"
@@ -239,7 +247,7 @@ export function QuoteProfileCosts({
       <details className={s.sharedDefaults}>
         <summary>Reutilizar largo y proveedor <span>Opcional</span></summary>
         <div className={s.sharedBody}>
-          <p>Completa estos datos una vez y aplícalos a perfiles sin costo propio. Nunca se copia el precio ni se guarda automáticamente.</p>
+          <p>Prepara estos datos para los perfiles pendientes.</p>
           <div className={s.sharedFields}>
             <label>Largo común de tira (mm)
               <input inputMode="numeric" type="text" pattern="[0-9]*" value={sharedLength}
@@ -257,9 +265,7 @@ export function QuoteProfileCosts({
             onClick={applySharedToPending}>
             Aplicar a {pendingOwnCount} perfiles pendientes
           </button>
-          <small role="status">{appliedCount > 0
-            ? "Datos preparados para " + appliedCount + " perfiles. Abre cada uno, indica su precio y guárdalo individualmente."
-            : "Los datos solo se rellenarán cuando abras un perfil después de aplicarlos."}</small>
+          {appliedCount > 0 ? <small role="status">Datos preparados para {appliedCount} perfiles.</small> : null}
         </div>
       </details>
 
@@ -290,9 +296,6 @@ export function QuoteProfileCosts({
               <div className={s.rowMain}>
                 <div className={s.identity}>
                   <strong>{row.technicalCode} · {row.profileName}</strong>
-                  <small>{row.workshop?.commercialLengthMm
-                    ? row.workshop.commercialLengthMm.toLocaleString("es-CL") + " mm por tira"
-                    : "Largo propio pendiente"} · {finishName || "Acabado pendiente"}</small>
                 </div>
                 <div className={s.rowRight}>
                   <div className={s.cost}>
@@ -300,7 +303,7 @@ export function QuoteProfileCosts({
                       {readyOwn && row.workshop?.netPrice != null && row.workshop.currency
                         ? formatNetPrice(row.workshop.netPrice, row.workshop.currency) : "Pendiente"}
                     </strong>
-                    <small>{readyOwn ? "Costo propio listo" : "Costo propio sin completar"}</small>
+                    {readyOwn ? <small>{workshopIsSelected ? "Aplicado" : "Guardado · no aplicado"}</small> : null}
                   </div>
                   {canManagePrice ? (
                     cannotUseAmbiguous
@@ -320,30 +323,20 @@ export function QuoteProfileCosts({
                 </div>
               </div>
 
-              {externalPrice ? (
+              {externalPrice && isEditing && !providerKey.startsWith("taller:") ? (
                 <small className={s.externalPrice}>Referencia seleccionada: {current?.providerLabel || "Proveedor"} · {externalPrice}
                   {current?.finishPriceBasis === "base_reference_other_finish"
                     ? " (otro acabado: no confirma costo físico)" : null}
                 </small>
               ) : null}
               {lastSavedCode === row.technicalCode ? <small className={s.savedNotice} role="status">Costo guardado</small> : null}
-              {row.workshop && !workshopIsSelected ? (
+              {row.workshop && !workshopIsSelected && onUseWorkshopCost && isEditing ? (
                 <div className={s.otherCost}>
-                  <small>Costo propio guardado, todavía no aplicado a esta pieza.</small>
-                  {onUseWorkshopCost ? (
                     <button type="button" className={s.useOwn}
                       onClick={() => onUseWorkshopCost(row.workshop!.providerKey)}>
                       Usar costo propio en esta pieza
                     </button>
-                  ) : null}
                 </div>
-              ) : null}
-              {row.workshop && workshopIsSelected ? (
-                <small className={s.appliedNotice}>
-                  {allowMixedWorkshopCosts
-                    ? "Costo propio aplicado a este perfil; los demás mantienen su proveedor."
-                    : "Costo privado aplicado a esta pieza."}
-                </small>
               ) : null}
 
               {isEditing ? (
@@ -391,7 +384,14 @@ export function QuoteProfileCosts({
                     <label>Costo neto por tira {row.technicalCode} (CLP)
                       <input ref={priceInputRef} type="text" inputMode="decimal"
                         value={draftCost} placeholder="Ej: 15000,50" enterKeyHint="next"
-                        onChange={(event) => setDraftCost(event.target.value)}
+                        onChange={(event) => {
+                          const input = event.currentTarget;
+                          const start = input.selectionStart ?? input.value.length;
+                          const raw = input.value === draftCost + "." ? draftCost + "," : input.value;
+                          const before = formatCostInput(raw.slice(0, start));
+                          setDraftCost(formatCostInput(raw));
+                          requestAnimationFrame(() => input.setSelectionRange(before.length, before.length));
+                        }}
                         onKeyDown={(event) => {
                           if (event.key === "Enter") { event.preventDefault(); supplierInputRef.current?.focus(); }
                         }} />
