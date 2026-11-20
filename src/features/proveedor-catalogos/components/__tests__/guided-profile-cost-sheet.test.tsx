@@ -53,8 +53,28 @@ it("separa el botón de Mis precios de la advertencia de cobertura", () => {
   render(<GuidedProfileCostSheet {...props} prices={[ownPrice]} onUseWorkshopCost={jest.fn()} />);
 
   const button = screen.getByRole("button", { name: "Usar Mis precios en esta pieza" });
-  const notice = screen.getByText("Los perfiles sin costo propio quedarán pendientes.");
+  const notice = screen.getByText("Los perfiles sin costo propio quedan pendientes.");
   expect(button.parentElement).toBe(notice.parentElement);
+});
+
+it("resume proveedor, fuente y costos propios en una sola línea compacta", () => {
+  render(<GuidedProfileCostSheet {...props} />);
+
+  expect(screen.getByText("Fuente de costos").parentElement).toHaveTextContent("Proveedor");
+  expect(screen.getByText("Mis costos", { selector: "strong" }).parentElement).toHaveTextContent("0/2 perfiles listos");
+  expect(screen.getByRole("button", { name: "Editar precios" })).toBeInTheDocument();
+});
+
+it("identifica el origen mixto cuando conviven costos propios y proveedor", () => {
+  const ownPrice = {
+    technicalCode: "5001", profileName: "Riel superior", providerKey: "taller:7", providerLabel: "Mis precios",
+    presentationId: "own-5001", supplierSku: "", presentationDescription: "Riel superior · Blanco", purchaseUnit: "TIRA",
+    commercialLengthMm: 6000, netPrice: 15000, currency: "CLP", priceSource: "workshop" as const,
+    priceListRevision: "taller-v1", status: "priced" as const,
+  };
+  render(<GuidedProfileCostSheet {...props} prices={[ownPrice]} allowMixedWorkshopCosts />);
+
+  expect(screen.getByText("Fuente de costos").parentElement).toHaveTextContent("Mixto");
 });
 
 it("aplica datos comunes a cinco importes sin copiar precios", async () => {

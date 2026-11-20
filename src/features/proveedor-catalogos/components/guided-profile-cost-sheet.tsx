@@ -53,6 +53,9 @@ export function GuidedProfileCostSheet({ lineTemplateId, familyKey, finishName, 
   const count = unique.filter((r) => ready(r.technicalCode)).length;
   const hasOtherUnit = unique.some((r) => own(r.technicalCode).some((p) => p.purchaseUnit && !["UN", "TR"].includes(p.purchaseUnit)));
   const firstOwn = unique.flatMap((r) => own(r.technicalCode)).find((p) => isEffectiveSupplierProfilePrice(p));
+  const sourceLabel = allowMixedWorkshopCosts && count > 0 && providerKey && !providerKey.startsWith("taller:")
+    ? "Mixto"
+    : providerKey?.startsWith("taller:") ? "Mis precios" : providerKey ? "Proveedor" : "Pendiente";
 
   function close() { if (!saving) { dialog.current?.close(); trigger.current?.focus(); } }
   function open() { setDrafts({}); setErrors({}); setPrepared(null); setPreparedCount(0); setSharedLength(""); setSharedSupplier(""); setMessage(""); setSource("propios"); setFilter(count < unique.length ? "pendientes" : "todos"); dialog.current?.showModal(); }
@@ -104,11 +107,12 @@ export function GuidedProfileCostSheet({ lineTemplateId, familyKey, finishName, 
 
   const visible = unique.filter((r) => filter === "todos" || (filter === "guardados" ? ready(r.technicalCode) : !ready(r.technicalCode)));
   return <div className={styles.root}>
-    <div className={styles.head}><span>Mis costos: {count}/{unique.length} perfiles</span><button ref={trigger} type="button" onClick={open}>Editar precios</button></div>
+    <div className={styles.sourceSummary}><span>Fuente de costos</span><strong>{sourceLabel}</strong></div>
+    <div className={styles.head}><span><strong>Mis costos</strong><small>{count}/{unique.length} perfiles listos</small></span><button ref={trigger} type="button" onClick={open}>Editar precios</button></div>
     {firstOwn && providerKey !== firstOwn.providerKey && !allowMixedWorkshopCosts && onUseWorkshopCost ? (
       <div className={styles.applyOwnGroup}>
         <button type="button" className={styles.applyOwn} onClick={() => onUseWorkshopCost(firstOwn.providerKey)}>Usar Mis precios en esta pieza</button>
-        <small>Los perfiles sin costo propio quedarán pendientes.</small>
+        <small>Los perfiles sin costo propio quedan pendientes.</small>
       </div>
     ) : null}
     {message ? <small role="status">{message}</small> : null}
