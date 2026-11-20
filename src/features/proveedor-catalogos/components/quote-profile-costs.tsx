@@ -306,9 +306,14 @@ export function QuoteProfileCosts({
                     cannotUseAmbiguous
                       ? <small className={s.pending}>Revisar presentación ambigua</small>
                       : <button className={s.action} type="button" disabled={!canSave || Boolean(savingCode)}
-                          aria-expanded={isEditing} onClick={() => isEditing
-                            ? (setEditingCode(null), setError(null))
-                            : openEditor(row)}>
+                          aria-expanded={isEditing} onClick={() => {
+                            if (isEditing) {
+                              setEditingCode(null);
+                              setError(null);
+                            } else {
+                              openEditor(row);
+                            }
+                          }}>
                           {isEditing ? "Cerrar" : row.workshop ? "Editar costo" : "Agregar costo"}
                         </button>
                   ) : null}
