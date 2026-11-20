@@ -51,7 +51,11 @@ export function QuoteProfileCosts({
   const [draftLength, setDraftLength] = useState("");
   const [suggestedL25Length, setSuggestedL25Length] = useState(false);
   const [draftFinish, setDraftFinish] = useState(finishName ?? "");
+  const [sharedAllFinishes, setSharedAllFinishes] = useState(false);
+  const [draftAllFinishes, setDraftAllFinishes] = useState(false);
   const [draftSupplier, setDraftSupplier] = useState("");
+  const [sharedLength, setSharedLength] = useState("");
+  const [sharedSupplier, setSharedSupplier] = useState("");
   const [savingCode, setSavingCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -123,9 +127,10 @@ export function QuoteProfileCosts({
     setSuggestedL25Length(suggestL25Length);
     setDraftLength(row.workshop?.commercialLengthMm
       ? String(row.workshop.commercialLengthMm)
-      : suggestL25Length ? "6000" : "");
+      : suggestL25Length ? "6000" : sharedLength);
     setDraftFinish(finishName ?? "");
-    setDraftSupplier(row.workshop?.workshopSupplierName ?? "");
+    setDraftAllFinishes(sharedAllFinishes);
+    setDraftSupplier(row.workshop?.workshopSupplierName ?? sharedSupplier);
   }
 
   async function save(row: ProfileCost) {
@@ -140,7 +145,7 @@ export function QuoteProfileCosts({
       setError("El largo debe ser un número entero de milímetros o quedar pendiente.");
       return;
     }
-    if (!draftFinish.trim()) {
+    if (!draftAllFinishes && !draftFinish.trim()) {
       setError("Indica el acabado del perfil para guardar su costo.");
       return;
     }
@@ -159,7 +164,7 @@ export function QuoteProfileCosts({
       } else {
         await saveQuickWorkshopProfileCost({
           kind: "create", lineTemplateId, technicalCode: row.technicalCode,
-          profileName: row.profileName, finishName: draftFinish.trim(),
+          profileName: row.profileName, finishName: draftAllFinishes ? null : draftFinish.trim(),
           commercialLengthMm: length, netPrice: cost, supplierName: draftSupplier.trim() || null,
         });
       }
@@ -167,6 +172,9 @@ export function QuoteProfileCosts({
       setDraftCost("");
       setDraftLength("");
       setSuggestedL25Length(false);
+      if (length !== null) setSharedLength(String(length));
+      if (draftSupplier.trim()) setSharedSupplier(draftSupplier.trim());
+      setSharedAllFinishes(draftAllFinishes);
       await onPricesSaved?.();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No pudimos guardar el costo del perfil.");
@@ -180,6 +188,19 @@ export function QuoteProfileCosts({
       <header className={s.heading}>
         <div><h3>Mis costos de perfiles</h3><p>{pricedCount} de {rows.length} perfiles con costo</p></div>
       </header>
+      <details className={s.sharedDefaults}>
+        <summary>Datos que puedo repetir</summary>
+        <label>Largo común de tira (mm)
+          <input inputMode="numeric" type="number" min="1" step="1" value={sharedLength}
+            onChange={(event) => setSharedLength(event.target.value)} placeholder="Se copia al editar otros perfiles" />
+        </label>
+        <label>Proveedor declarado (opcional)
+          <input type="text" value={sharedSupplier} onChange={(event) => setSharedSupplier(event.target.value)}
+            placeholder="Nombre del proveedor del taller" />
+        </label>
+        <label className={s.sharedCheck}><input type="checkbox" checked={sharedAllFinishes} onChange={(event) => setSharedAllFinishes(event.target.checked)} /> Guardar costos nuevos para todos los acabados</label>
+        <small>Se propone para los próximos perfiles; precio se ingresa por perfil. En todos los acabados, el mismo costo aplica a cada color.</small>
+      </details>
       {hasUnappliedPrivateCost ? (
         <p className={s.scopeNotice}>
           Elegir costo propio cambia el proveedor de toda esta pieza. Perfiles sin costo propio quedarán pendientes.
@@ -244,11 +265,12 @@ export function QuoteProfileCosts({
               ) : null}
               {isEditing ? (
                 <div className={s.editor}>
-                  {!row.workshop ? (
+                  {!row.workshop && !draftAllFinishes ? (
                     <label>Acabado del perfil
                       <input value={draftFinish} readOnly={Boolean(finishName)} required maxLength={100} onChange={(event) => setDraftFinish(event.target.value)} />
                     </label>
                   ) : null}
+                  {!row.workshop ? <label className={s.finishCheck}><input type="checkbox" checked={draftAllFinishes} onChange={(event) => setDraftAllFinishes(event.target.checked)} /> Este costo sirve para todos los acabados</label> : null}
                     <label>Largo de la tira {row.technicalCode} (mm)
                       <input type="number" inputMode="numeric" min="1" step="1" value={draftLength}
                         onChange={(event) => setDraftLength(event.target.value)} placeholder="Pendiente" />

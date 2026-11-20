@@ -46,6 +46,16 @@ describe("QuoteProfileCosts", () => {
     expect(screen.getByRole("button", { name: "Agregar costo" })).toBeInTheDocument();
   });
 
+  it("guarda acabado independiente solo cuando el maestro elige todos los acabados", async () => {
+    render(<QuoteProfileCosts {...shared} prices={[basePrice]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Agregar costo" }));
+    fireEvent.click(screen.getByLabelText("Este costo sirve para todos los acabados"));
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Costo neto por tira 2503 (CLP)" }), { target: { value: "31900" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar costo 2503" }));
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/proveedor-catalogos/taller-presentaciones", expect.objectContaining({ method: "POST" })));
+    expect(JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body)).toEqual(expect.objectContaining({ finishName: null }));
+  });
+
   it("guarda el costo propio sin atribuirlo a la presentación del proveedor", async () => {
     render(<QuoteProfileCosts {...shared} prices={[basePrice]} />);
     expect(screen.getByText("0 de 1 perfiles con costo")).toBeInTheDocument();
