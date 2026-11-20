@@ -215,7 +215,7 @@ describe("QuoteProfileCosts", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Largo común de tira (mm)" }), {
       target: { value: "6000" },
     });
-    fireEvent.change(screen.getAllByRole("textbox", { name: "Proveedor (opcional)" })[1], {
+    fireEvent.change(screen.getByRole("textbox", { name: "Proveedor (opcional)" }), {
       target: { value: "Aluminera local" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Aplicar a 2 perfiles pendientes" }));
