@@ -19,6 +19,14 @@ El aislamiento efectivo entre organizaciones no queda demostrado por tener RLS h
 
 En una organización QA autorizada: crear un costo con y sin nombre, recuperarlo y editarlo; comprobar compatibilidad de registros antiguos, resolución mixta L42 y comportamiento L25. Verificar además permisos con dos organizaciones y un usuario sin autorización. Las pruebas simuladas no sustituyen el smoke real. La organización 3 comparte la base de producción; no asumir que una Preview sea segura para escrituras sin autorización.
 
+### Smoke mínimo preparado (pendiente de autorización de escritura)
+
+1. Confirmar que la Preview usa el commit revisado, identificar dos organizaciones de prueba y sus usuarios, y comprobar los permisos de cada sesión. Registrar si existe ya una presentación para la identidad a probar; no sobrescribirla.
+2. En la primera organización crear una referencia privada L42 para una identidad de prueba exacta, acabado y largo conocidos, con precio de prueba y proveedor declarado. Recargar y verificar valores; editar el precio y confirmar que persiste. Repetir sin nombre de proveedor usando otra identidad de prueba disponible.
+3. En la segunda organización comprobar que no se puede leer ni editar la referencia de la primera; comprobar también el rechazo de escritura con un usuario sin permisos. No usar cuentas ni precios de clientes.
+4. En una cotización nueva de prueba verificar el costo propio L42 junto con las referencias compatibles del proveedor, y comprobar L25 y el precio comercial. No alterar cotizaciones existentes ni snapshots históricos.
+5. Registrar resultados y, solo si la autorización de escritura incluye limpieza, retirar los datos creados por el smoke mediante el mecanismo autorizado. No tocar configuraciones previas.
+
 ## Reversión y límites
 
 Eliminar el índice no modifica filas, pero exige evaluar las dependencias y autorizar el cambio. Eliminar la columna destruiría los nombres que pudieran haberse guardado; no ejecutar `DROP COLUMN` como reversión automática. No alterar recetas, precios de venta ni snapshots para realizar pruebas. Mantener PR #27 en Draft mientras falte el QA real.
