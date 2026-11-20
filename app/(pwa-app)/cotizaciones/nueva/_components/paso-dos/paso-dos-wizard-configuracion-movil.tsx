@@ -1808,35 +1808,37 @@ export function PasoDosWizardConfiguracionMovil({
         {supplierFamilyKey && onSupplierProviderKeyChange && effectiveSupplierRecipe?.definition.perfiles.some((profile) => profile.codigoPerfil?.trim()) ? (
           <section className={s.stepTwoMobileSupplierPicker} aria-label="Costos de fabricación">
             <strong>Costos de fabricación</strong>
-            <label className={s.stepTwoMobileSupplierField}>
-              <span>Proveedor de compra</span>
-              <select aria-label="Proveedor de compra para esta línea" value={draft.supplierProviderKey ?? ""}
+            <div className={s.stepTwoMobileSupplierField}>
+              <div className={s.stepTwoMobileSupplierFieldHeading}>
+                <label htmlFor="guided-supplier-provider">Proveedor de compra</label>
+                {activeSupplierProviderKey ? <details className={s.stepTwoMobileSupplierPreference}>
+                  <summary>Preferencia</summary>
+                  <SupplierFamilyPreferenceControl
+                    familyKey={supplierFamilyKey}
+                    selectedProviderKey={draft.supplierProviderKey || activeSupplierProviderKey}
+                    selectedProviderLabel={supplierProviderOptions.find((option) => option.providerKey === (draft.supplierProviderKey || activeSupplierProviderKey))?.label ?? defaultSupplierLabel}
+                    preferenceProviderKey={effectiveFamilyPreference}
+                    preferenceLabel={supplierProviderOptions.find((option) => option.providerKey === effectiveFamilyPreference)?.label ?? null}
+                    canManage={canManageFamilyPreferences}
+                    onSaved={(providerKey) => {
+                      if (!supplierFamilyKey) return;
+                      setFamilyPreferenceOverride({ familyKey: supplierFamilyKey, providerKey });
+                      onSupplierProviderKeyChange?.("");
+                    }}
+                  />
+                </details> : null}
+              </div>
+              <select id="guided-supplier-provider" aria-label="Proveedor de compra para esta línea" value={draft.supplierProviderKey ?? ""}
                 onChange={(event) => onSupplierProviderKeyChange(event.target.value)}
                 disabled={supplierPresentationResolution.isResolving && supplierProviderOptions.length === 0}>
                 <option value="">{effectiveFamilyPreference ? `Habitual · ${defaultSupplierLabel}` : `Automático · ${defaultSupplierLabel}`}</option>
                 {draft.supplierProviderKey && !supplierProviderOptions.some((option) => option.providerKey === draft.supplierProviderKey) ? <option value={draft.supplierProviderKey}>Proveedor guardado · sin cobertura compatible</option> : null}
                 {supplierProviderOptions.map((option) => <option key={option.providerKey} value={option.providerKey}>{option.label}</option>)}
               </select>
-            </label>
+            </div>
             {activeSupplierProviderKey && !activeSupplierProviderKey.startsWith("taller:") && guidedSupplierCoverage?.pendingCodes.length ? <small className={s.stepTwoMobileSupplierPending} role="status">
               Faltan {guidedSupplierCoverage.pendingCodes.length} {guidedSupplierCoverage.pendingCodes.length === 1 ? "perfil" : "perfiles"} con precio compatible.
             </small> : null}
-            {activeSupplierProviderKey ? <details className={s.stepTwoMobileSupplierPreference}>
-              <summary>Preferencia para nuevas piezas</summary>
-              <SupplierFamilyPreferenceControl
-                familyKey={supplierFamilyKey}
-                selectedProviderKey={draft.supplierProviderKey || activeSupplierProviderKey}
-                selectedProviderLabel={supplierProviderOptions.find((option) => option.providerKey === (draft.supplierProviderKey || activeSupplierProviderKey))?.label ?? defaultSupplierLabel}
-                preferenceProviderKey={effectiveFamilyPreference}
-                preferenceLabel={supplierProviderOptions.find((option) => option.providerKey === effectiveFamilyPreference)?.label ?? null}
-                canManage={canManageFamilyPreferences}
-                onSaved={(providerKey) => {
-                  if (!supplierFamilyKey) return;
-                  setFamilyPreferenceOverride({ familyKey: supplierFamilyKey, providerKey });
-                  onSupplierProviderKeyChange?.("");
-                }}
-              />
-            </details> : null}
             {effectiveSupplierRecipe && Number(draft.lineTemplateId) > 0 ? <GuidedProfileCostSheet
               lineTemplateId={Number(draft.lineTemplateId)}
               familyKey={supplierFamilyKey}
@@ -1846,7 +1848,6 @@ export function PasoDosWizardConfiguracionMovil({
               canManagePrice={supplierPresentationResolution.result?.canManageSupplierPrices === true}
               providerKey={activeSupplierProviderKey}
               allowMixedWorkshopCosts={selectedCatalogLineKey === "ventora:l42"}
-              onUseWorkshopCost={onSupplierProviderKeyChange}
               onPricesSaved={supplierPresentationResolution.refresh}
             /> : null}
           </section>

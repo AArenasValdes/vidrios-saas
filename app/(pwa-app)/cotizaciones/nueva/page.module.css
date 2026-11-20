@@ -12915,6 +12915,7 @@ p.stepTwoMobileItemFabCompact {
 }
 
 .stepTwoMobileSupplierPicker {
+  position: relative;
   display: grid;
   gap: 0.35rem;
   margin-top: 0.45rem;
@@ -12928,6 +12929,14 @@ p.stepTwoMobileItemFabCompact {
 .stepTwoMobileSupplierField {
   display: grid;
   gap: 0.25rem;
+  min-width: 0;
+}
+
+.stepTwoMobileSupplierFieldHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   color: #243b6b;
   font-size: 0.76rem;
   font-weight: 700;
@@ -12964,21 +12973,24 @@ p.stepTwoMobileItemFabCompact {
 }
 
 .stepTwoMobileSupplierPreference {
-  border-top: 1px solid #e3eaf3;
-  padding-top: 0.35rem;
+  flex: 0 0 auto;
 }
 
 .stepTwoMobileSupplierPreference summary {
-  min-height: 32px;
+  min-height: 30px;
   display: flex;
   align-items: center;
   color: #526783;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
 }
 
 .stepTwoMobileSupplierPreference > div {
+  position: absolute;
+  z-index: 5;
+  right: 0.7rem;
+  left: 0.7rem;
   margin-top: 0.4rem;
 }
 

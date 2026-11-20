@@ -15,7 +15,6 @@ type Props = {
   canManagePrice: boolean;
   providerKey: string | null;
   allowMixedWorkshopCosts?: boolean;
-  onUseWorkshopCost?: (providerKey: string) => void;
   onPricesSaved?: () => Promise<void> | void;
 };
 
@@ -34,7 +33,7 @@ function parsePrice(value: string) {
   return /^\d+(?:[.,]\d{1,2})?$/.test(clean) ? Number(clean.replace(",", ".")) : NaN;
 }
 
-export function GuidedProfileCostSheet({ lineTemplateId, familyKey, finishName, references, prices, canManagePrice, providerKey, allowMixedWorkshopCosts = false, onUseWorkshopCost, onPricesSaved }: Props) {
+export function GuidedProfileCostSheet({ lineTemplateId, familyKey, finishName, references, prices, canManagePrice, providerKey, allowMixedWorkshopCosts = false, onPricesSaved }: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const [filter, setFilter] = useState<Filter>("todos");
@@ -52,7 +51,6 @@ export function GuidedProfileCostSheet({ lineTemplateId, familyKey, finishName, 
   const ready = (code: string) => { const found = own(code); return found.length === 1 && isEffectiveSupplierProfilePrice(found[0]); };
   const count = unique.filter((r) => ready(r.technicalCode)).length;
   const hasOtherUnit = unique.some((r) => own(r.technicalCode).some((p) => p.purchaseUnit && !["UN", "TR"].includes(p.purchaseUnit)));
-  const firstOwn = unique.flatMap((r) => own(r.technicalCode)).find((p) => isEffectiveSupplierProfilePrice(p));
   const sourceLabel = allowMixedWorkshopCosts && count > 0 && providerKey && !providerKey.startsWith("taller:")
     ? "Mixto"
     : providerKey?.startsWith("taller:") ? "Mis precios" : providerKey ? "Proveedor" : "Pendiente";
@@ -107,14 +105,10 @@ export function GuidedProfileCostSheet({ lineTemplateId, familyKey, finishName, 
 
   const visible = unique.filter((r) => filter === "todos" || (filter === "guardados" ? ready(r.technicalCode) : !ready(r.technicalCode)));
   return <div className={styles.root}>
-    <div className={styles.sourceSummary}><span>Fuente de costos</span><strong>{sourceLabel}</strong></div>
-    <div className={styles.head}><span><strong>Mis costos</strong><small>{count}/{unique.length} perfiles listos</small></span><button ref={trigger} type="button" onClick={open}>Editar precios</button></div>
-    {firstOwn && providerKey !== firstOwn.providerKey && !allowMixedWorkshopCosts && onUseWorkshopCost ? (
-      <div className={styles.applyOwnGroup}>
-        <button type="button" className={styles.applyOwn} onClick={() => onUseWorkshopCost(firstOwn.providerKey)}>Usar Mis precios en esta pieza</button>
-        <small>Los perfiles sin costo propio quedan pendientes.</small>
-      </div>
-    ) : null}
+    <div className={styles.head}>
+      <span><small>Fuente · {sourceLabel}</small><strong>Mis costos · {count}/{unique.length} listos</strong></span>
+      <button ref={trigger} type="button" onClick={open}>Editar precios</button>
+    </div>
     {message ? <small role="status">{message}</small> : null}
     <dialog ref={dialog} className={styles.dialog} onCancel={(event) => { if (saving) event.preventDefault(); }} onClose={() => trigger.current?.focus()}>
       <div className={styles.sheet}>

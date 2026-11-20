@@ -43,25 +43,23 @@ it("guarda dos precios propios sin cambiar proveedor de pieza", async () => {
   expect(bodies.every((body) => body.finishName === "Blanco" && body.purchaseUnit === "TIRA")).toBe(true);
 });
 
-it("separa el botón de Mis precios de la advertencia de cobertura", () => {
+it("evita un CTA duplicado para aplicar Mis precios y deja visible la edición", () => {
   const ownPrice = {
     technicalCode: "5001", profileName: "Riel superior", providerKey: "taller:7", providerLabel: "Mis precios",
     presentationId: "own-5001", supplierSku: "", presentationDescription: "Riel superior · Blanco", purchaseUnit: "TIRA",
     commercialLengthMm: 6000, netPrice: 15000, currency: "CLP", priceSource: "workshop" as const,
     priceListRevision: "taller-v1", status: "priced" as const,
   };
-  render(<GuidedProfileCostSheet {...props} prices={[ownPrice]} onUseWorkshopCost={jest.fn()} />);
+  render(<GuidedProfileCostSheet {...props} prices={[ownPrice]} />);
 
-  const button = screen.getByRole("button", { name: "Usar Mis precios en esta pieza" });
-  const notice = screen.getByText("Los perfiles sin costo propio quedan pendientes.");
-  expect(button.parentElement).toBe(notice.parentElement);
+  expect(screen.queryByRole("button", { name: "Usar Mis precios en esta pieza" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Editar precios" })).toBeInTheDocument();
 });
 
-it("resume proveedor, fuente y costos propios en una sola línea compacta", () => {
+it("resume fuente y costos propios en un bloque compacto", () => {
   render(<GuidedProfileCostSheet {...props} />);
 
-  expect(screen.getByText("Fuente de costos").parentElement).toHaveTextContent("Proveedor");
-  expect(screen.getByText("Mis costos", { selector: "strong" }).parentElement).toHaveTextContent("0/2 perfiles listos");
+  expect(screen.getByText("Fuente · Proveedor").parentElement).toHaveTextContent("Mis costos · 0/2 listos");
   expect(screen.getByRole("button", { name: "Editar precios" })).toBeInTheDocument();
 });
 
@@ -74,7 +72,7 @@ it("identifica el origen mixto cuando conviven costos propios y proveedor", () =
   };
   render(<GuidedProfileCostSheet {...props} prices={[ownPrice]} allowMixedWorkshopCosts />);
 
-  expect(screen.getByText("Fuente de costos").parentElement).toHaveTextContent("Mixto");
+  expect(screen.getByText("Fuente · Mixto").parentElement).toHaveTextContent("Mis costos · 1/2 listos");
 });
 
 it("aplica datos comunes a cinco importes sin copiar precios", async () => {
