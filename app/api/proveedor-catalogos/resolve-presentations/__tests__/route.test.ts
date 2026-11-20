@@ -508,5 +508,36 @@ describe("/api/proveedor-catalogos/resolve-presentations", () => {
     const body = await response.json();
     expect(body.selections["l42-normal"][0]).toMatchObject({ status: "resolved", providerKey: "arquetipo", presentationId: "arq-4201", commercialLengthMm: 6000 });
   });
+
+  it("no desplaza el proveedor compatible en familias no L42 si una presentación privada preferida no tiene precio neto", async () => {
+    const line = VENTORA_DEFAULT_LINE_CATALOG.find((entry) => entry.catalogKey === "ventora:l20");
+    if (!line?.catalogKey || typeof line.catalogMetadata?.familyKey !== "string") throw new Error("Falta L20");
+    const supplierPrice: CatalogPresentationPrice = {
+      presentationId: "arq-2001", providerKey: "arquetipo", familyKeys: ["universal:aluminio:l20"],
+      technicalCode: "2001", recipeComponentCodes: [], technicalName: "Riel L20", supplierSku: "ARQ-2001",
+      presentationDescription: "Riel L20 · Blanco", finishCode: "BL", finishName: "Blanco", finishResolution: "specific",
+      purchaseUnit: "TIRA", commercialLengthMm: 6000, netPrice: 18000, priceBasis: "commercial_presentation",
+      currency: "CLP", priceListId: "arq-list", priceListRevision: "2026",
+    };
+    const incompleteOwn: CatalogPresentationPrice = {
+      ...supplierPrice, presentationId: "own-2001", providerKey: "taller:7", supplierSku: "",
+      netPrice: null, commercialLengthMm: 6000, priceListId: "taller:7", priceListRevision: "taller-v1", origin: "workshop",
+    };
+    (readConfirmedSupplierPresentations as jest.Mock).mockResolvedValue([{ ...supplierPrice, preferred: true }, { ...incompleteOwn, preferred: true }]);
+    (readSupplierPresentationPrices as jest.Mock).mockResolvedValue([supplierPrice]);
+    (readWorkshopPresentationPrices as jest.Mock).mockResolvedValue([incompleteOwn]);
+    (listSupplierFamilyPreferences as jest.Mock).mockResolvedValue([]);
+    (readSupplierNames as jest.Mock).mockResolvedValue(new Map());
+    (readOrganizationPurchasePricing as jest.Mock).mockResolvedValue({ adjustments: [], overrides: [] });
+    const response = await POST(new Request("http://localhost/api/proveedor-catalogos/resolve-presentations", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ itemId: "l20-item", catalogLineKey: line.catalogKey, familyKey: line.catalogMetadata.familyKey, finishName: "Blanco", technicalCodes: ["2001"] }],
+      }),
+    }));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.selections["l20-item"][0]).toMatchObject({ status: "resolved", providerKey: "arquetipo", presentationId: "arq-2001", commercialLengthMm: 6000 });
+  });
 });
 

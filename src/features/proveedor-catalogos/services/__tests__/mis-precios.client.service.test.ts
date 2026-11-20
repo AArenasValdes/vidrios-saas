@@ -22,5 +22,12 @@ describe("saveQuickWorkshopProfileCost", () => {
     const updateBody = JSON.parse(String(fetchSpy.mock.calls[1]?.[1]?.body)) as Record<string, unknown>;
     expect(createBody).toMatchObject({ purchaseUnit: "TIRA", commercialLengthMm: 6000, supplierName: "Sodal" });
     expect(updateBody).toMatchObject({ purchaseUnit: "TIRA", commercialLengthMm: 6000, supplierName: "Sodal" });
+
+    await saveQuickWorkshopProfileCost({
+      kind: "update", lineTemplateId: 205, presentationId: "own-5002", expectedRevision: 2,
+      purchaseUnit: "UN", commercialLengthMm: 6000, netPrice: 17000, supplierName: "Sodal",
+    });
+    const preserveUnitBody = JSON.parse(String(fetchSpy.mock.calls[2]?.[1]?.body)) as Record<string, unknown>;
+    expect(preserveUnitBody).toMatchObject({ purchaseUnit: "UN", commercialLengthMm: 6000, netPrice: 17000 });
   });
 });

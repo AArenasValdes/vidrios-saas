@@ -168,6 +168,7 @@ describe("QuoteProfileCosts", () => {
     })));
     const request = (global.fetch as jest.Mock).mock.calls[0][1];
     expect(JSON.parse(request.body)).toHaveProperty("supplierName", "Aluminera local");
+    expect(JSON.parse(request.body)).toHaveProperty("purchaseUnit", "UN");
     expect(JSON.parse(request.body)).not.toHaveProperty("preferred");
   });
 

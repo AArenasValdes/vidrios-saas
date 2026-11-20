@@ -511,26 +511,39 @@ export function resolveSupplierPresentationsForQuoteItem(input: {
     );
 
     const universalAluminumFamily = normalizeUniversalAluminumFamilyKey(request.familyKey);
+    const hasAccreditedOrganization = Number.isSafeInteger(request.organizationId);
+    const isOwnWorkshopEntry = (entry: ConfirmedSupplierPresentation) =>
+      entry.providerKey.startsWith("taller:") &&
+      hasAccreditedOrganization &&
+      entry.providerKey === `taller:${request.organizationId}`;
+    const hasCompleteLength = (entry: ConfirmedSupplierPresentation) =>
+      entry.commercialLengthMm != null && Number.isSafeInteger(entry.commercialLengthMm) && entry.commercialLengthMm > 0;
     const isEligibleOwnCost = (entry: ConfirmedSupplierPresentation) =>
-      request.allowOwnProfileCosts !== true || !request.eligibleOwnPresentationIds ||
+      isOwnWorkshopEntry(entry) &&
+      hasCompleteLength(entry) &&
+      Array.isArray(request.eligibleOwnPresentationIds) &&
       request.eligibleOwnPresentationIds.includes(entry.presentationId);
-    const ownCandidates = candidates.filter((entry) => entry.providerKey.startsWith("taller:") &&
+    const ownCandidates = candidates.filter((entry) =>
       request.allowOwnProfileCosts === true &&
       (universalAluminumFamily ?? request.familyKey) === "universal:aluminio:l42" &&
-      Number.isSafeInteger(request.organizationId) && entry.providerKey === `taller:${request.organizationId}` &&
       isEligibleOwnCost(entry));
     const preferredWorkshopCandidates = candidates.filter((entry) =>
-      entry.providerKey.startsWith("taller:") && entry.preferred === true && isEligibleOwnCost(entry)
+      entry.preferred === true && isEligibleOwnCost(entry)
     );
     const arquetipoCandidates = candidates.filter((entry) => entry.providerKey === "arquetipo");
-    const preferredCandidates = candidates.filter((entry) => entry.preferred === true);
+    const nonUniversalAccreditedCandidates = candidates.filter((entry) =>
+      !entry.providerKey.startsWith("taller:") || isEligibleOwnCost(entry)
+    );
+    const preferredCandidates = nonUniversalAccreditedCandidates.filter((entry) => entry.preferred === true);
     const effectiveCandidates = universalAluminumFamily
       ? request.providerKey
         ? ownCandidates.length > 0 ? ownCandidates : candidates.filter((entry) => entry.providerKey === request.providerKey)
         : preferredWorkshopCandidates.length > 0
         ? preferredWorkshopCandidates
         : arquetipoCandidates
-      : preferredCandidates.length === 1 ? preferredCandidates : candidates;
+      : request.providerKey
+        ? candidates.filter((entry) => entry.providerKey === request.providerKey)
+        : preferredCandidates.length === 1 ? preferredCandidates : nonUniversalAccreditedCandidates;
 
     if (effectiveCandidates.length === 0) {
       return {

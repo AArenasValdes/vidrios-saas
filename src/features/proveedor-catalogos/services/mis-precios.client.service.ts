@@ -84,6 +84,7 @@ export async function saveQuickWorkshopProfileCost(change:
       lineTemplateId: number;
       presentationId: string;
       expectedRevision: number;
+      purchaseUnit?: "M" | "UN" | "KG" | "PAR" | "TIRA";
       commercialLengthMm: number | null;
       netPrice: number;
       supplierName?: string | null;
@@ -111,7 +112,7 @@ export async function saveQuickWorkshopProfileCost(change:
       lineTemplateId: change.lineTemplateId,
       presentationId: change.presentationId,
       expectedRevision: change.expectedRevision,
-      purchaseUnit: "TIRA",
+      purchaseUnit: change.purchaseUnit ?? "TIRA",
       commercialLengthMm: change.commercialLengthMm,
       netPrice: change.netPrice,
       supplierName: change.supplierName,

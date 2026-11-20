@@ -53,7 +53,7 @@ export function GuidedProfileCostSheet({ lineTemplateId, familyKey, finishName, 
   const ready = (code: string) => { const found = own(code); return found.length === 1 && isEffectiveSupplierProfilePrice(found[0]); };
   const count = unique.filter((r) => ready(r.technicalCode)).length;
   const pending = unique.filter((r) => !ready(r.technicalCode));
-  const hasOtherUnit = unique.some((r) => own(r.technicalCode).some((p) => p.purchaseUnit && !["UN", "TR"].includes(p.purchaseUnit)));
+  const hasOtherUnit = unique.some((r) => own(r.technicalCode).some((p) => p.purchaseUnit && !["UN", "TIRA"].includes(p.purchaseUnit)));
   const targets = applyScope === "todos" ? unique : pending;
   const targetHasDifferentData = targets.some((r) => {
     const saved = own(r.technicalCode)[0];
@@ -97,7 +97,7 @@ export function GuidedProfileCostSheet({ lineTemplateId, familyKey, finishName, 
       const found = own(code);
       if (!Number.isFinite(parsePrice(draft.price)) || parsePrice(draft.price) <= 0) issues[code] = "Ingresa un precio válido mayor que cero.";
       else if (found.length > 1) issues[code] = "Hay más de un costo propio; revisa su presentación.";
-      else if (found[0] && (!found[0].priceListRevision?.match(/^taller-v\d+$/) || found[0].purchaseUnit !== "UN")) issues[code] = "Este costo requiere edición detallada en Mis precios.";
+      else if (found[0] && (!found[0].priceListRevision?.match(/^taller-v\d+$/) || !["UN", "TIRA"].includes(found[0].purchaseUnit))) issues[code] = "Este costo requiere edición detallada en Mis precios.";
       else if (!found[0] && !finishName) issues[code] = "Selecciona un acabado para guardar.";
       else if (!draft.length || !/^\d+$/.test(draft.length) || Number(draft.length) <= 0) issues[code] = "Indica un largo de tira válido.";
     }
@@ -108,7 +108,7 @@ export function GuidedProfileCostSheet({ lineTemplateId, familyKey, finishName, 
     async function saveEntry([code, draft]: [string, Draft]) {
       const found = own(code)[0];
       try {
-        if (found) await saveQuickWorkshopProfileCost({ kind: "update", lineTemplateId, presentationId: found.presentationId, expectedRevision: Number(found.priceListRevision!.match(/^taller-v(\d+)$/)![1]), commercialLengthMm: Number(draft.length), netPrice: parsePrice(draft.price), supplierName: draft.supplier.trim() || (found.workshopSupplierName ? null : undefined) });
+        if (found) await saveQuickWorkshopProfileCost({ kind: "update", lineTemplateId, presentationId: found.presentationId, expectedRevision: Number(found.priceListRevision!.match(/^taller-v(\d+)$/)![1]), purchaseUnit: found.purchaseUnit === "UN" ? "UN" : "TIRA", commercialLengthMm: Number(draft.length), netPrice: parsePrice(draft.price), supplierName: draft.supplier.trim() || (found.workshopSupplierName ? null : undefined) });
         else {
           const ref = unique.find((r) => r.technicalCode === code)!;
           await saveQuickWorkshopProfileCost({ kind: "create", lineTemplateId, technicalCode: code, profileName: ref.profileName, finishName, commercialLengthMm: Number(draft.length), netPrice: parsePrice(draft.price), supplierName: draft.supplier.trim() || null });
@@ -185,7 +185,7 @@ export function GuidedProfileCostSheet({ lineTemplateId, familyKey, finishName, 
           <ul className={styles.list}>{visible.map((r) => {
             const code = r.technicalCode; const found = own(code); const draft = drafts[code];
             const unit = found[0]?.purchaseUnit;
-            return <li key={key(code)}><div className={styles.row}><label htmlFor={`price-${key(code)}`}><strong>{code} · {r.profileName}</strong><small>{ready(code) ? (providerKey === found[0].providerKey || allowMixedWorkshopCosts ? "Aplicado" : "Guardado · no aplicado") : "Pendiente"}{unit && !["UN", "TR"].includes(unit) ? ` · unidad: ${unit}` : ""}</small></label><div><input id={`price-${key(code)}`} aria-label={`Precio ${code}`} type="text" inputMode="decimal" placeholder="Precio" value={draft?.price ?? (found.length === 1 && found[0].netPrice != null ? formatPrice(String(found[0].netPrice).replace(".", ",")) : "")} disabled={!canManagePrice || saving} onChange={(e) => { const input = e.currentTarget; const pos = input.selectionStart ?? input.value.length; const previous = draft?.price ?? (found[0]?.netPrice != null ? formatPrice(String(found[0].netPrice).replace(".", ",")) : ""); const raw = input.value === previous + "." ? previous + "," : input.value; const cursor = formatPrice(raw.slice(0, pos)).length; setPrice(code, formatPrice(raw)); requestAnimationFrame(() => input.setSelectionRange(cursor, cursor)); }} /><span>$</span></div></div>
+            return <li key={key(code)}><div className={styles.row}><label htmlFor={`price-${key(code)}`}><strong>{code} · {r.profileName}</strong><small>{ready(code) ? (providerKey === found[0].providerKey || allowMixedWorkshopCosts ? "Aplicado" : "Guardado · no aplicado") : "Pendiente"}{unit && !["UN", "TIRA"].includes(unit) ? ` · unidad: ${unit}` : ""}</small></label><div><input id={`price-${key(code)}`} aria-label={`Precio ${code}`} type="text" inputMode="decimal" placeholder="Precio" value={draft?.price ?? (found.length === 1 && found[0].netPrice != null ? formatPrice(String(found[0].netPrice).replace(".", ",")) : "")} disabled={!canManagePrice || saving} onChange={(e) => { const input = e.currentTarget; const pos = input.selectionStart ?? input.value.length; const previous = draft?.price ?? (found[0]?.netPrice != null ? formatPrice(String(found[0].netPrice).replace(".", ",")) : ""); const raw = input.value === previous + "." ? previous + "," : input.value; const cursor = formatPrice(raw.slice(0, pos)).length; setPrice(code, formatPrice(raw)); requestAnimationFrame(() => input.setSelectionRange(cursor, cursor)); }} /><span>$</span></div></div>
               {draft ? <details open={Boolean(errors[code] && !draft.length) || undefined}><summary>Datos de tira {code}</summary><div className={styles.fields}><label>Largo (mm)<input aria-label={`Largo ${code}`} inputMode="numeric" value={draft.length} onChange={(e) => setDrafts((old) => ({ ...old, [code]: { ...old[code], length: e.target.value } }))} /></label><label>Proveedor (opcional)<input aria-label={`Proveedor ${code}`} value={draft.supplier} maxLength={120} onChange={(e) => setDrafts((old) => ({ ...old, [code]: { ...old[code], supplier: e.target.value } }))} /></label></div></details> : null}
               {errors[code] ? <small className={styles.error} role="alert">{errors[code]}</small> : null}
             </li>;

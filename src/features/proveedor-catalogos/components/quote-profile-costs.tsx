@@ -213,7 +213,11 @@ export function QuoteProfileCosts({
         if (!expectedRevision || !row.workshop.presentationId) throw new Error("No se pudo confirmar la revisión de este costo privado. Vuelve a cargar la pieza.");
         await saveQuickWorkshopProfileCost({
           kind: "update", lineTemplateId, presentationId: row.workshop.presentationId,
-          expectedRevision, commercialLengthMm: length, netPrice: cost,
+          expectedRevision,
+          purchaseUnit: (["M", "UN", "KG", "PAR", "TIRA"].includes(row.workshop.purchaseUnit)
+            ? row.workshop.purchaseUnit
+            : "TIRA") as "M" | "UN" | "KG" | "PAR" | "TIRA",
+          commercialLengthMm: length, netPrice: cost,
           supplierName: draftSupplier.trim() || (row.workshop.workshopSupplierName ? null : undefined),
         });
       } else {

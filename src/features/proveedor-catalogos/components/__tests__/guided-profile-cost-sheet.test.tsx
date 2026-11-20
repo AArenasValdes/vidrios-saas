@@ -150,5 +150,41 @@ it("permite preparar una actualización para todos los perfiles guardados sin co
   await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(2));
   const bodies = (global.fetch as jest.Mock).mock.calls.map((call) => JSON.parse(call[1].body));
   expect(bodies.map((body) => body.netPrice)).toEqual([15000, 16000]);
-  expect(bodies.every((body) => body.commercialLengthMm === 6100 && body.supplierName === "Sodal local")).toBe(true);
+  expect(bodies.every((body) => body.commercialLengthMm === 6100 && body.supplierName === "Sodal local" && body.purchaseUnit === "UN")).toBe(true);
+});
+
+it("permite editar un costo recién creado con unidad TIRA y rechaza unidades avanzadas como M", async () => {
+  const tiraAndMeterPrices = [
+    {
+      technicalCode: "5001", profileName: "Riel superior", providerKey: "taller:7", providerLabel: "Mis precios",
+      presentationId: "own-5001", supplierSku: "", presentationDescription: "Perfil 5001 · Blanco",
+      purchaseUnit: "TIRA", commercialLengthMm: 6000, netPrice: 15000, currency: "CLP",
+      priceSource: "workshop" as const, priceListRevision: "taller-v1", status: "priced" as const,
+      workshopSupplierName: "Sodal",
+    },
+    {
+      technicalCode: "5002", profileName: "Riel inferior", providerKey: "taller:7", providerLabel: "Mis precios",
+      presentationId: "own-5002", supplierSku: "", presentationDescription: "Perfil 5002 · Blanco",
+      purchaseUnit: "M", commercialLengthMm: 6000, netPrice: 3000, currency: "CLP",
+      priceSource: "workshop" as const, priceListRevision: "taller-v1", status: "priced" as const,
+      workshopSupplierName: "Sodal",
+    },
+  ];
+  render(<GuidedProfileCostSheet {...props} prices={tiraAndMeterPrices} />);
+  fireEvent.click(screen.getByRole("button", { name: "Editar precios" }));
+
+  expect(screen.queryByText(/unidad: TIRA/)).not.toBeInTheDocument();
+  expect(screen.getByText(/unidad: M/)).toBeInTheDocument();
+
+  fireEvent.change(screen.getByLabelText("Precio 5001"), { target: { value: "17500" } });
+  fireEvent.click(screen.getByRole("button", { name: "Guardar precios" }));
+  await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
+  const body = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
+  expect(body).toMatchObject({ presentationId: "own-5001", netPrice: 17500, purchaseUnit: "TIRA" });
+
+  fireEvent.click(screen.getByRole("button", { name: "Editar precios" }));
+  fireEvent.change(screen.getByLabelText("Precio 5002"), { target: { value: "3500" } });
+  fireEvent.click(screen.getByRole("button", { name: "Guardar precios" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Este costo requiere edición detallada en Mis precios.");
+  expect(global.fetch).toHaveBeenCalledTimes(1);
 });
