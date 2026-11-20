@@ -143,6 +143,7 @@
 }
 .action:disabled, .editorActions button:disabled, .useOwn:disabled { opacity: 0.55; cursor: not-allowed; }
 .externalPrice, .appliedNotice { display: block; margin-top: 5px; }
+.savedNotice { display: block; margin-top: 5px; color: #245bab; font-size: 0.72rem; font-weight: 650; }
 .otherCost { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 7px; margin-top: 6px; }
 .useOwn { min-height: 40px; }
 
