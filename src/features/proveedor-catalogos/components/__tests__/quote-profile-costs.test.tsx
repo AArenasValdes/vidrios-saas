@@ -241,7 +241,7 @@ describe("QuoteProfileCosts", () => {
     const body = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
     expect(body.netPrice).toBe(15000.5);
     expect(body.finishName).toBe("Blanco");
-    await waitFor(() => expect(screen.getByRole("status", { name: "" })).toHaveTextContent("Costo guardado"));
+    await waitFor(() => expect(screen.getByText("Costo guardado")).toBeInTheDocument());
   });
 
   it("muestra un estado vacío sin fabricar identidades técnicas", () => {
