@@ -60,6 +60,7 @@ export function QuoteProfileCosts({
   const priceInputRef = useRef<HTMLInputElement>(null);
   const supplierInputRef = useRef<HTMLInputElement>(null);
   const [savingCode, setSavingCode] = useState<string | null>(null);
+  const [lastSavedCode, setLastSavedCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const rows = useMemo<ProfileCost[]>(() => {
@@ -115,12 +116,18 @@ export function QuoteProfileCosts({
   ).length;
   const pendingOwnCount = rows.filter((row) => !row.conflict && !Boolean(row.workshop && isEffectiveSupplierProfilePrice(row.workshop))).length;
   const hasUnappliedPrivateCost = !allowMixedWorkshopCosts && rows.some((row) => row.workshop && row.workshop.providerKey !== providerKey);
-  if (rows.length === 0) return null;
+  if (rows.length === 0) return (
+    <section className={s.root} aria-label="Mis costos de perfiles">
+      <header className={s.heading}><h3>Mis costos de perfiles</h3></header>
+      <p className={s.note}>Perfiles pendientes de configurar. La cotización comercial puede continuar sin registrar costos de fabricación.</p>
+    </section>
+  );
 
   function openEditor(row: ProfileCost) {
     const current = row.display;
     const prepared = preparedDefaults[row.technicalCode];
     setError(null);
+    setLastSavedCode(null);
     setEditingCode(row.technicalCode);
     setDraftCost(row.workshop?.netPrice != null ? String(row.workshop.netPrice) : "");
     const confirmedLength = Boolean(
@@ -208,6 +215,7 @@ export function QuoteProfileCosts({
           commercialLengthMm: length, netPrice: cost, supplierName: draftSupplier.trim() || null,
         });
       }
+      setLastSavedCode(row.technicalCode);
       setEditingCode(null);
       setDraftCost("");
       setDraftLength("");
@@ -313,6 +321,7 @@ export function QuoteProfileCosts({
                     ? " (otro acabado: no confirma costo físico)" : null}
                 </small>
               ) : null}
+              {lastSavedCode === row.technicalCode ? <small className={s.savedNotice} role="status">Costo guardado</small> : null}
               {row.workshop && !workshopIsSelected ? (
                 <div className={s.otherCost}>
                   <small>Costo propio guardado, todavía no aplicado a esta pieza.</small>
