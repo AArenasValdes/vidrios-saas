@@ -579,9 +579,19 @@ export function CuadernoQuickEditSheet({
   const effectiveFamilyPreference = familyPreferenceOverride && familyPreferenceOverride.familyKey === supplierResolutionRequest?.familyKey
     ? familyPreferenceOverride.providerKey
     : requestedFamilyPreference;
+  const defaultSupplierOption = effectiveFamilyPreference
+    ? supplierOptions.find((option) => option.providerKey === effectiveFamilyPreference) ?? null
+    : supplierOptions.find((option) => option.providerKey === "arquetipo") ?? externalSupplierOptions[0] ?? null;
+  const defaultSupplierProviderKey = effectiveFamilyPreference || defaultSupplierOption?.providerKey || null;
+  const defaultSupplierLabel = defaultSupplierOption
+    ? `${defaultSupplierOption.label}${effectiveFamilyPreference ? " · Preferido" : ""}`
+    : effectiveFamilyPreference ? "Preferencia sin cobertura" : "Mis precios";
   const selectedSupplierProviderKey = supplierProviderKeyDraft !== null
     ? supplierProviderKeyDraft
     : storedSupplierProviderKey || effectiveFamilyPreference || "";
+  const displayedSupplierProviderKey = selectedSupplierProviderKey === defaultSupplierProviderKey ? "" : selectedSupplierProviderKey;
+  const supplierOptionsForSelect = supplierOptions.filter((option) => option.providerKey !== defaultSupplierProviderKey);
+  const isUsingFamilyPreference = !storedSupplierProviderKey && Boolean(effectiveFamilyPreference);
   const effectiveSupplierProviderKey = selectedSupplierProviderKey || effectiveFamilyPreference || supplierOptions.find((option) => option.providerKey === "arquetipo")?.providerKey || supplierOptions[0]?.providerKey || "";
   const selectedSupplierOption = supplierOptions.find((option) => option.providerKey === effectiveSupplierProviderKey) ?? null;
   const exactSupplierProfileCoverageNotice = effectiveSupplierRecipe
@@ -608,9 +618,13 @@ export function CuadernoQuickEditSheet({
         ? `Proveedor guardado sin cobertura compatible${supplierProfileReferences.length ? ` para ${supplierProfileReferences.slice(0, 3).map((profile) => profile.technicalCode).join(", ")}` : ""}.`
         : exactSupplierProfileCoverageNotice
     : null;
-  const automaticSupplierLabel = effectiveFamilyPreference
-    ? supplierOptions.find((option) => option.providerKey === effectiveFamilyPreference)?.label ?? effectiveFamilyPreference
-    : supplierOptions.find((option) => option.providerKey === "arquetipo")?.label ?? "Arquetipo 2026";
+  const supplierDisclosureSummary = isLoadingSupplierOptions
+    ? "Cargando…"
+    : isUsingFamilyPreference
+      ? defaultSupplierLabel
+      : selectedSupplierProviderKey
+        ? `${selectedSupplierOption?.label ?? "Proveedor guardado · revisar cobertura"}${selectedSupplierProviderKey === effectiveFamilyPreference ? " · Preferido" : ""}`
+        : defaultSupplierLabel;
   const canManageFamilyPreferences = supplierProviderResolution?.key === supplierResolutionKey && supplierProviderResolution.canManageFamilyPreferences;
   const saveFamilyPreference = async (providerKey: string | null) => {
     if (!supplierResolutionRequest || !providerKey && !effectiveFamilyPreference) return;
@@ -1131,7 +1145,7 @@ export function CuadernoQuickEditSheet({
               ) : supplierResolutionRequest ? <QuoteSupplierDisclosure
                 className={s.supplierDisclosure}
                 bodyClassName={s.supplierDisclosureBody}
-                summary={isLoadingSupplierOptions ? "Cargando…" : selectedSupplierProviderKey || effectiveFamilyPreference ? selectedSupplierOption?.label ?? "Proveedor guardado · revisar cobertura" : supplierOptions.length === 0 ? "Sin proveedor compatible" : `Lista automática: ${automaticSupplierLabel}`}
+                summary={supplierDisclosureSummary}
                 coverage={!isLoadingSupplierOptions && exactSupplierProfileCoverage
                   ? `Cobertura de compra: ${exactSupplierProfileCoverage.coveredCount}/${exactSupplierProfileCoverage.totalCount} perfiles`
                   : !isLoadingSupplierOptions && supplierResolutionRequest && !effectiveSupplierRecipe ? "Cobertura por perfil pendiente de configuración técnica." : null}
@@ -1142,14 +1156,14 @@ export function CuadernoQuickEditSheet({
                     <select
                       className={s.fieldInput}
                       aria-label="Proveedor de compra para esta pieza"
-                      value={selectedSupplierProviderKey}
+                      value={displayedSupplierProviderKey}
                       onChange={(event) => setSupplierProviderKeyDraft(event.target.value)}
                     >
-                      <option value="">{effectiveFamilyPreference ? `Habitual · ${automaticSupplierLabel}` : `Automático · ${automaticSupplierLabel}`}</option>
-                      {selectedSupplierProviderKey && !supplierOptions.some((option) => option.providerKey === selectedSupplierProviderKey) ? (
-                        <option value={selectedSupplierProviderKey}>Proveedor guardado · sin precio para esta composición</option>
+                      <option value="">{defaultSupplierLabel}</option>
+                      {selectedSupplierProviderKey && displayedSupplierProviderKey && !supplierOptions.some((option) => option.providerKey === selectedSupplierProviderKey) ? (
+                        <option value={selectedSupplierProviderKey}>Proveedor guardado · sin cobertura</option>
                       ) : null}
-                      {supplierOptions.map((option) => (
+                      {supplierOptionsForSelect.map((option) => (
                         <option key={option.providerKey} value={option.providerKey}>
                           {option.label}
                         </option>

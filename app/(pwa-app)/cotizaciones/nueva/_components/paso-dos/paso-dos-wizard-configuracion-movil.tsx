@@ -685,6 +685,12 @@ export function PasoDosWizardConfiguracionMovil({
   const activeSupplierProviderKey = draft.supplierProviderKey || effectiveFamilyPreference ||
     supplierProviderOptions.find((option) => option.providerKey === "arquetipo")?.providerKey || supplierProviderOptions[0]?.providerKey || null;
   const activeSupplierOption = supplierProviderOptions.find((option) => option.providerKey === activeSupplierProviderKey) ?? null;
+  const defaultSupplierOption = effectiveFamilyPreference
+    ? supplierProviderOptions.find((option) => option.providerKey === effectiveFamilyPreference) ?? null
+    : supplierProviderOptions.find((option) => option.providerKey === "arquetipo") ?? externalSupplierProviderOptions[0] ?? null;
+  const defaultSupplierProviderKey = effectiveFamilyPreference || defaultSupplierOption?.providerKey || null;
+  const displayedSupplierProviderKey = draft.supplierProviderKey === defaultSupplierProviderKey ? "" : draft.supplierProviderKey ?? "";
+  const supplierOptionsForSelect = supplierProviderOptions.filter((option) => option.providerKey !== defaultSupplierProviderKey);
   const guidedCoverageCodes = useMemo(
     () => supplierPresentationRequests[0]?.technicalCodes ?? [],
     [supplierPresentationRequests]
@@ -713,9 +719,9 @@ export function PasoDosWizardConfiguracionMovil({
         pendingCodes: activeSupplierOption?.pendingTechnicalCodes ?? guidedCoverageCodes,
       }
     : null;
-  const defaultSupplierLabel = supplierProviderOptions.find((option) => option.providerKey === effectiveFamilyPreference)?.label
-    ?? supplierProviderOptions.find((option) => option.providerKey === "arquetipo")?.label
-    ?? "Automático";
+  const defaultSupplierLabel = defaultSupplierOption
+    ? `${defaultSupplierOption.label}${effectiveFamilyPreference ? " · Preferido" : ""}`
+    : effectiveFamilyPreference ? "Preferencia sin cobertura" : "Mis precios";
   const selectedLineLabel = useMemo(() => {
     if (!draft.lineTemplateId) {
       return isGlassProduct ? "Precio manual o sin cristal" : "Precio manual o sin linea";
@@ -1848,12 +1854,12 @@ export function PasoDosWizardConfiguracionMovil({
                   />
                 </details> : null}
               </div>
-              <select id="guided-supplier-provider" aria-label="Proveedor de compra para esta línea" value={draft.supplierProviderKey ?? ""}
+              <select id="guided-supplier-provider" aria-label="Proveedor de compra para esta línea" value={displayedSupplierProviderKey}
                 onChange={(event) => onSupplierProviderKeyChange(event.target.value)}
                 disabled={supplierPresentationResolution.isResolving && supplierProviderOptions.length === 0}>
-                <option value="">{effectiveFamilyPreference ? `Habitual · ${defaultSupplierLabel}` : `Automático · ${defaultSupplierLabel}`}</option>
-                {draft.supplierProviderKey && !supplierProviderOptions.some((option) => option.providerKey === draft.supplierProviderKey) ? <option value={draft.supplierProviderKey}>Proveedor guardado · sin cobertura compatible</option> : null}
-                {supplierProviderOptions.map((option) => <option key={option.providerKey} value={option.providerKey}>{option.label}</option>)}
+                <option value="">{defaultSupplierLabel}</option>
+                {draft.supplierProviderKey && displayedSupplierProviderKey && !supplierProviderOptions.some((option) => option.providerKey === draft.supplierProviderKey) ? <option value={draft.supplierProviderKey}>Proveedor guardado · sin cobertura</option> : null}
+                {supplierOptionsForSelect.map((option) => <option key={option.providerKey} value={option.providerKey}>{option.label}</option>)}
               </select>
             </div> : null}
             {!supplierPresentationResolution.isResolving && externalSupplierProviderOptions.length > 0 && activeSupplierProviderKey && !activeSupplierProviderKey.startsWith("taller:") && guidedSupplierCoverage?.pendingCodes.length ? <small className={s.stepTwoMobileSupplierPending} role="status">
