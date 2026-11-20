@@ -45,6 +45,7 @@ export function GuidedProfileCostSheet({ lineTemplateId, familyKey, finishName, 
   const [sharedLength, setSharedLength] = useState("");
   const [sharedSupplier, setSharedSupplier] = useState("");
   const [prepared, setPrepared] = useState<{ length: string; supplier: string } | null>(null);
+  const [preparedCount, setPreparedCount] = useState(0);
   const [message, setMessage] = useState("");
   const unique = [...new Map(references.filter((r) => r.technicalCode.trim()).map((r) => [key(r.technicalCode), r])).values()];
   const own = (code: string) => prices.filter((p) => key(p.technicalCode) === key(code) && p.priceSource === "workshop" && p.providerKey.startsWith("taller:"));
@@ -54,7 +55,7 @@ export function GuidedProfileCostSheet({ lineTemplateId, familyKey, finishName, 
   const firstOwn = unique.flatMap((r) => own(r.technicalCode)).find((p) => isEffectiveSupplierProfilePrice(p));
 
   function close() { if (!saving) { dialog.current?.close(); trigger.current?.focus(); } }
-  function open() { setDrafts({}); setErrors({}); setPrepared(null); setSharedLength(""); setSharedSupplier(""); setMessage(""); setSource("propios"); setFilter(count < unique.length ? "pendientes" : "todos"); dialog.current?.showModal(); }
+  function open() { setDrafts({}); setErrors({}); setPrepared(null); setPreparedCount(0); setSharedLength(""); setSharedSupplier(""); setMessage(""); setSource("propios"); setFilter(count < unique.length ? "pendientes" : "todos"); dialog.current?.showModal(); }
   useEffect(() => { const d = dialog.current; return () => { if (d?.open) d.close(); }; }, []);
 
   function setPrice(code: string, price: string) {
@@ -65,7 +66,8 @@ export function GuidedProfileCostSheet({ lineTemplateId, familyKey, finishName, 
 
   async function save() {
     const issues: Record<string, string> = {};
-    for (const [code, draft] of Object.entries(drafts)) {
+    const entries = Object.entries(drafts);
+    for (const [code, draft] of entries) {
       const found = own(code);
       if (!Number.isFinite(parsePrice(draft.price)) || parsePrice(draft.price) <= 0) issues[code] = "Ingresa un precio válido mayor que cero.";
       else if (found.length > 1) issues[code] = "Hay más de un costo propio; revisa su presentación.";
@@ -77,7 +79,7 @@ export function GuidedProfileCostSheet({ lineTemplateId, familyKey, finishName, 
     setSaving(true); setMessage("");
     const failed: Record<string, string> = {};
     const succeeded: string[] = [];
-    for (const [code, draft] of Object.entries(drafts)) {
+    async function saveEntry([code, draft]: [string, Draft]) {
       const found = own(code)[0];
       try {
         if (found) await saveQuickWorkshopProfileCost({ kind: "update", lineTemplateId, presentationId: found.presentationId, expectedRevision: Number(found.priceListRevision!.match(/^taller-v(\d+)$/)![1]), commercialLengthMm: Number(draft.length), netPrice: parsePrice(draft.price), supplierName: draft.supplier.trim() || (found.workshopSupplierName ? null : undefined) });
@@ -88,13 +90,16 @@ export function GuidedProfileCostSheet({ lineTemplateId, familyKey, finishName, 
         succeeded.push(code);
       } catch (e) { failed[code] = e instanceof Error ? e.message : "No se pudo guardar."; }
     }
+    for (let index = 0; index < entries.length; index += 3) {
+      await Promise.all(entries.slice(index, index + 3).map(saveEntry));
+    }
     if (succeeded.length) {
       setDrafts((old) => Object.fromEntries(Object.entries(old).filter(([code]) => !succeeded.includes(code))));
       try { await onPricesSaved?.(); } catch { setMessage("Precios guardados. Vuelve a abrir para actualizar la lista."); }
     }
     setErrors(failed); setSaving(false);
     if (!Object.keys(failed).length) { setMessage("Precios guardados."); dialog.current?.close(); trigger.current?.focus(); }
-    else setMessage(`${succeeded.length} guardados; revisa los errores.`);
+    else setMessage(`${succeeded.length} ${succeeded.length === 1 ? "guardado" : "guardados"}; revisa los errores.`);
   }
 
   const visible = unique.filter((r) => filter === "todos" || (filter === "guardados" ? ready(r.technicalCode) : !ready(r.technicalCode)));
@@ -111,7 +116,7 @@ export function GuidedProfileCostSheet({ lineTemplateId, familyKey, finishName, 
         <div className={styles.scroll}>
           {source === "proveedor" ? <><p>Precios del proveedor seleccionado · solo consulta.</p><ul className={styles.list}>{unique.map((r) => { const row = prices.find((p) => key(p.technicalCode) === key(r.technicalCode) && p.providerKey === providerKey); return <li key={key(r.technicalCode)}><div className={styles.row}><strong>{r.technicalCode} · {r.profileName}</strong><span>{row?.netPrice != null && row.currency ? new Intl.NumberFormat("es-CL", { style: "currency", currency: row.currency }).format(row.netPrice) : "Sin precio"}</span></div>{row?.finishPriceBasis === "base_reference_other_finish" ? <small>Referencia de otro acabado; no es costo confirmado.</small> : null}</li>; })}</ul></> : <>
           <p className={styles.subtitle}>{finishName || "Acabado pendiente"} · {hasOtherUnit ? "Precios de compra" : "Precios de compra por tira"}</p>
-          <div className={styles.purchaseData}><strong>Datos de compra</strong><div className={styles.common}><label>Largo de tira (mm)<input inputMode="numeric" value={sharedLength} onChange={(e) => setSharedLength(e.target.value)} /></label><label>Proveedor (opcional)<input value={sharedSupplier} onChange={(e) => setSharedSupplier(e.target.value)} maxLength={120} /></label><button type="button" disabled={saving || (!sharedLength.trim() && !sharedSupplier.trim())} onClick={() => { if (sharedLength && (!/^\d+$/.test(sharedLength) || Number(sharedLength) <= 0)) { setMessage("Ingresa un largo válido en milímetros."); return; } setPrepared({ length: sharedLength, supplier: sharedSupplier.trim() }); setDrafts((old) => Object.fromEntries(Object.entries(old).map(([code, d]) => [code, ready(code) ? d : { ...d, length: d.length || sharedLength, supplier: d.supplier || sharedSupplier.trim() }]))); setMessage("Datos preparados para perfiles pendientes."); }}>Aplicar a pendientes</button>{familyKey === "universal:aluminio:l25" && !sharedLength ? <button type="button" onClick={() => setSharedLength("6000")}>Sugerir 6.000 mm</button> : null}</div></div>
+          <div className={styles.purchaseData}><strong>Datos de compra</strong><div className={styles.common}><label>Largo de tira (mm)<input inputMode="numeric" value={sharedLength} onChange={(e) => { setSharedLength(e.target.value); setPreparedCount(0); }} /></label><label>Proveedor (opcional)<input value={sharedSupplier} onChange={(e) => { setSharedSupplier(e.target.value); setPreparedCount(0); }} maxLength={120} /></label><button type="button" disabled={saving || (!sharedLength.trim() && !sharedSupplier.trim())} onClick={() => { if (sharedLength && (!/^\d+$/.test(sharedLength) || Number(sharedLength) <= 0)) { setMessage("Ingresa un largo válido en milímetros."); return; } setPrepared({ length: sharedLength, supplier: sharedSupplier.trim() }); setPreparedCount(unique.filter((r) => !ready(r.technicalCode) && own(r.technicalCode).length <= 1).length); setDrafts((old) => Object.fromEntries(Object.entries(old).map(([code, d]) => [code, ready(code) ? d : { ...d, length: d.length || sharedLength, supplier: d.supplier || sharedSupplier.trim() }]))); setMessage(""); }}>{preparedCount > 0 ? "Actualizar datos" : "Aplicar a pendientes"}</button>{familyKey === "universal:aluminio:l25" && !sharedLength ? <button type="button" onClick={() => setSharedLength("6000")}>Sugerir 6.000 mm</button> : null}</div>{preparedCount > 0 ? <p className={styles.preparedNotice} role="status">Datos preparados para {preparedCount} perfiles. Ingresa sus precios para guardarlos.</p> : null}</div>
           <ul className={styles.list}>{visible.map((r) => {
             const code = r.technicalCode; const found = own(code); const draft = drafts[code];
             const unit = found[0]?.purchaseUnit;

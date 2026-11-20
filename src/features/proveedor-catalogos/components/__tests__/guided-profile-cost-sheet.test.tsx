@@ -50,12 +50,31 @@ it("aplica datos comunes a cinco importes sin copiar precios", async () => {
   fireEvent.change(screen.getByLabelText("Largo de tira (mm)"), { target: { value: "6000" } });
   fireEvent.change(screen.getByLabelText("Proveedor (opcional)"), { target: { value: "Proveedor local" } });
   fireEvent.click(screen.getByRole("button", { name: "Aplicar a pendientes" }));
+  expect(screen.getByRole("status")).toHaveTextContent("Datos preparados para 5 perfiles");
   references.forEach((ref, index) => fireEvent.change(screen.getByLabelText(`Precio ${ref.technicalCode}`), { target: { value: String(10000 + index) } }));
   fireEvent.click(screen.getByRole("button", { name: "Guardar precios" }));
   await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(5));
   const bodies = (global.fetch as jest.Mock).mock.calls.map((call) => JSON.parse(call[1].body));
   expect(bodies.map((body) => body.netPrice)).toEqual([10000, 10001, 10002, 10003, 10004]);
   expect(bodies.every((body) => body.commercialLengthMm === 6000 && body.supplierName === "Proveedor local")).toBe(true);
+});
+
+it("inicia varios guardados a la vez y conserva el error del perfil fallido", async () => {
+  let resolveFirst!: (value: { ok: boolean; json: () => Promise<object> }) => void;
+  global.fetch = jest.fn()
+    .mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve; }))
+    .mockResolvedValueOnce({ ok: false, json: async () => ({ error: "No se pudo guardar el perfil" }) }) as jest.Mock;
+  render(<GuidedProfileCostSheet {...props} />);
+  fireEvent.click(screen.getByRole("button", { name: "Editar precios" }));
+  fireEvent.change(screen.getByLabelText("Largo de tira (mm)"), { target: { value: "6000" } });
+  fireEvent.click(screen.getByRole("button", { name: "Aplicar a pendientes" }));
+  fireEvent.change(screen.getByLabelText("Precio 5001"), { target: { value: "15000" } });
+  fireEvent.change(screen.getByLabelText("Precio 5002"), { target: { value: "16000" } });
+  fireEvent.click(screen.getByRole("button", { name: "Guardar precios" }));
+  await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(2));
+  resolveFirst({ ok: true, json: async () => ({}) });
+  await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("No se pudo guardar el perfil"));
+  expect(screen.getAllByText("1 guardado; revisa los errores.").length).toBeGreaterThan(0);
 });
 
 it("conserva un largo individual al aplicar datos comunes", () => {
