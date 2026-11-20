@@ -47,14 +47,26 @@ it("aplica datos comunes a cinco importes sin copiar precios", async () => {
   const references = Array.from({ length: 5 }, (_, index) => ({ technicalCode: `P${index + 1}`, profileName: `Perfil ${index + 1}` }));
   render(<GuidedProfileCostSheet {...props} references={references} />);
   fireEvent.click(screen.getByRole("button", { name: "Editar precios" }));
-  fireEvent.click(screen.getByText("Largo y proveedor para perfiles pendientes"));
   fireEvent.change(screen.getByLabelText("Largo de tira (mm)"), { target: { value: "6000" } });
   fireEvent.change(screen.getByLabelText("Proveedor (opcional)"), { target: { value: "Proveedor local" } });
-  fireEvent.click(screen.getByRole("button", { name: "Aplicar a perfiles pendientes" }));
+  fireEvent.click(screen.getByRole("button", { name: "Aplicar a pendientes" }));
   references.forEach((ref, index) => fireEvent.change(screen.getByLabelText(`Precio ${ref.technicalCode}`), { target: { value: String(10000 + index) } }));
   fireEvent.click(screen.getByRole("button", { name: "Guardar precios" }));
   await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(5));
   const bodies = (global.fetch as jest.Mock).mock.calls.map((call) => JSON.parse(call[1].body));
   expect(bodies.map((body) => body.netPrice)).toEqual([10000, 10001, 10002, 10003, 10004]);
   expect(bodies.every((body) => body.commercialLengthMm === 6000 && body.supplierName === "Proveedor local")).toBe(true);
+});
+
+it("conserva un largo individual al aplicar datos comunes", () => {
+  render(<GuidedProfileCostSheet {...props} />);
+  fireEvent.click(screen.getByRole("button", { name: "Editar precios" }));
+  expect(screen.getByRole("button", { name: "Pendientes (2)" })).toHaveAttribute("aria-pressed", "true");
+  fireEvent.change(screen.getByLabelText("Precio 5001"), { target: { value: "15000" } });
+  fireEvent.click(screen.getByText("Datos de tira 5001"));
+  fireEvent.change(screen.getByLabelText("Largo 5001"), { target: { value: "5800" } });
+  fireEvent.change(screen.getByLabelText("Largo de tira (mm)"), { target: { value: "6000" } });
+  fireEvent.click(screen.getByRole("button", { name: "Aplicar a pendientes" }));
+  expect(screen.getByLabelText("Largo 5001")).toHaveValue("5800");
+  expect(global.fetch).not.toHaveBeenCalled();
 });

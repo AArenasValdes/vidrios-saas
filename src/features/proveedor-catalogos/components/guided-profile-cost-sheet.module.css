@@ -6,13 +6,17 @@
 .dialog::backdrop { background: #0b183d70; }
 .sheet { display: flex; flex-direction: column; max-height: min(90dvh, 900px); background: #fff; }
 .title { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px 4px; }
-.title h3 { margin: 0; font-size: 1.05rem; }
+.title h3 { margin: 0; font-size: 1.2rem; line-height: 1.25; }
+.title p { margin: 3px 0 0; color: #53657e; font-size: .8rem; }
 .title button { min-width: 44px; min-height: 44px; border: 1px solid #d6dfec; border-radius: 10px; background: #fff; font-size: 1.4rem; color: #243b6b; }
 .filters { display: flex; gap: 6px; padding: 8px 16px; overflow-x: auto; }
-.filters button { min-height: 40px; white-space: nowrap; }
+.filters button { min-height: 44px; white-space: nowrap; padding: 6px 9px; font-size: .74rem; }
 .filters button[aria-pressed="true"] { background: #245bab; color: white; }
 .scroll { overflow-y: auto; overscroll-behavior: contain; padding: 0 16px 12px; font-size: .78rem; }
 .scroll p { color: #53657e; }
+.subtitle { margin: 4px 0 10px; font-weight: 600; }
+.purchaseData { display: grid; gap: 7px; padding: 9px 0 12px; color: #243b6b; }
+.purchaseData strong { font-size: .8rem; }
 .scroll summary { padding: 10px 0; color: #245bab; cursor: pointer; }
 .common, .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .common button { grid-column: 1 / -1; }
