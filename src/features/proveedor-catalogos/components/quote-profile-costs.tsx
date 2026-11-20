@@ -113,7 +113,7 @@ export function QuoteProfileCosts({
   const readyOwnCount = rows.filter((row) =>
     Boolean(row.workshop && isEffectiveSupplierProfilePrice(row.workshop))
   ).length;
-  const pendingOwnCount = rows.filter((row) => !row.workshop && !row.conflict).length;
+  const pendingOwnCount = rows.filter((row) => !row.conflict && !Boolean(row.workshop && isEffectiveSupplierProfilePrice(row.workshop))).length;
   const hasUnappliedPrivateCost = !allowMixedWorkshopCosts && rows.some((row) => row.workshop && row.workshop.providerKey !== providerKey);
   if (rows.length === 0) return null;
 
@@ -146,7 +146,7 @@ export function QuoteProfileCosts({
       return;
     }
     if (!length && !supplier) return;
-    const pending = rows.filter((row) => !row.workshop && !row.conflict);
+    const pending = rows.filter((row) => !row.conflict && !Boolean(row.workshop && isEffectiveSupplierProfilePrice(row.workshop)));
     setPreparedDefaults((previous) => {
       const next = { ...previous };
       for (const row of pending) {
@@ -185,7 +185,7 @@ export function QuoteProfileCosts({
       setError("El largo debe ser un número entero de milímetros o quedar pendiente.");
       return;
     }
-    if (!draftAllFinishes && !draftFinish.trim()) {
+    if (!row.workshop && !draftAllFinishes && !draftFinish.trim()) {
       setError("Indica el acabado del perfil para guardar su costo.");
       return;
     }
