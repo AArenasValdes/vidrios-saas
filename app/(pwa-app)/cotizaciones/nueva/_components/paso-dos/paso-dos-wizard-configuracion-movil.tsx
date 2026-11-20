@@ -1,6 +1,7 @@
 "use client";
 
 import { GuidedProfileCostSheet } from "@/features/proveedor-catalogos/components/guided-profile-cost-sheet";
+import { SupplierFamilyPreferenceControl } from "@/features/proveedor-catalogos/components/supplier-family-preference-control";
 
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -674,7 +675,12 @@ export function PasoDosWizardConfiguracionMovil({
   });
   const supplierProviderOptions = supplierPresentationResolution.result?.providerOptions?.["guided-line-provider-preview"] ?? [];
   const familyPreferenceProviderKey = supplierPresentationResolution.result?.familyPreferences?.[supplierFamilyKey ?? ""] ?? null;
-  const activeSupplierProviderKey = draft.supplierProviderKey || familyPreferenceProviderKey ||
+  const [familyPreferenceOverride, setFamilyPreferenceOverride] = useState<{ familyKey: string; providerKey: string | null } | null>(null);
+  const effectiveFamilyPreference = familyPreferenceOverride?.familyKey === supplierFamilyKey
+    ? familyPreferenceOverride.providerKey
+    : familyPreferenceProviderKey;
+  const canManageFamilyPreferences = supplierPresentationResolution.result?.canManageFamilyPreferences === true;
+  const activeSupplierProviderKey = draft.supplierProviderKey || effectiveFamilyPreference ||
     supplierProviderOptions.find((option) => option.providerKey === "arquetipo")?.providerKey || supplierProviderOptions[0]?.providerKey || null;
   const activeSupplierOption = supplierProviderOptions.find((option) => option.providerKey === activeSupplierProviderKey) ?? null;
   const guidedCoverageCodes = supplierPresentationRequests[0]?.technicalCodes ?? [];
@@ -691,7 +697,7 @@ export function PasoDosWizardConfiguracionMovil({
   const guidedSupplierCoverageNotice = effectiveSupplierRecipe
     ? formatSupplierProfileCoverageNotice(guidedSupplierCoverage?.pendingCodes ?? guidedCoverageCodes)
     : supplierPresentationRequests.length > 0 ? "Configuración técnica pendiente; cobertura por perfil sin confirmar." : null;
-  const defaultSupplierLabel = supplierProviderOptions.find((option) => option.providerKey === familyPreferenceProviderKey)?.label
+  const defaultSupplierLabel = supplierProviderOptions.find((option) => option.providerKey === effectiveFamilyPreference)?.label
     ?? supplierProviderOptions.find((option) => option.providerKey === "arquetipo")?.label
     ?? "Automático";
   const selectedLineLabel = useMemo(() => {
@@ -1810,13 +1816,28 @@ export function PasoDosWizardConfiguracionMovil({
               <select aria-label="Proveedor de compra para esta línea" value={draft.supplierProviderKey ?? ""}
                 onChange={(event) => onSupplierProviderKeyChange(event.target.value)}
                 disabled={supplierPresentationResolution.isResolving && supplierProviderOptions.length === 0}>
-                <option value="">{familyPreferenceProviderKey ? `Habitual · ${defaultSupplierLabel}` : `Automático · ${defaultSupplierLabel}`}</option>
+                <option value="">{effectiveFamilyPreference ? `Habitual · ${defaultSupplierLabel}` : `Automático · ${defaultSupplierLabel}`}</option>
                 {draft.supplierProviderKey && !supplierProviderOptions.some((option) => option.providerKey === draft.supplierProviderKey) ? <option value={draft.supplierProviderKey}>Proveedor guardado · sin cobertura compatible</option> : null}
                 {supplierProviderOptions.map((option) => <option key={option.providerKey} value={option.providerKey}>{option.label}</option>)}
               </select>
             </label>
-            {guidedSupplierCoverage ? <small>Proveedor: {activeSupplierOption?.pricedProfileCount ?? 0}/{guidedSupplierCoverage.totalCount} perfiles</small> : null}
+            <div className={s.stepTwoMobileSupplierCoverage}>
+              {guidedSupplierCoverage ? <span><strong>Proveedor</strong>{activeSupplierOption?.pricedProfileCount ?? 0}/{guidedSupplierCoverage.totalCount} perfiles</span> : null}
+            </div>
             {guidedSupplierCoverageNotice ? <small role="status">{guidedSupplierCoverageNotice}</small> : null}
+            <SupplierFamilyPreferenceControl
+              familyKey={supplierFamilyKey}
+              selectedProviderKey={draft.supplierProviderKey || null}
+              selectedProviderLabel={supplierProviderOptions.find((option) => option.providerKey === draft.supplierProviderKey)?.label ?? null}
+              preferenceProviderKey={effectiveFamilyPreference}
+              preferenceLabel={supplierProviderOptions.find((option) => option.providerKey === effectiveFamilyPreference)?.label ?? null}
+              canManage={canManageFamilyPreferences}
+              onSaved={(providerKey) => {
+                if (!supplierFamilyKey) return;
+                setFamilyPreferenceOverride({ familyKey: supplierFamilyKey, providerKey });
+                onSupplierProviderKeyChange?.("");
+              }}
+            />
             {effectiveSupplierRecipe && Number(draft.lineTemplateId) > 0 ? <GuidedProfileCostSheet
               lineTemplateId={Number(draft.lineTemplateId)}
               familyKey={supplierFamilyKey}

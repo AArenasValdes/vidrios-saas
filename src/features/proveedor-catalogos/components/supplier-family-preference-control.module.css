@@ -1,0 +1,36 @@
+.root {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.65rem;
+  border: 1px solid #dce7f5;
+  border-radius: 10px;
+  background: #fff;
+  color: #526783;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.root p { margin: 0; }
+.root strong { color: #243b6b; }
+
+.root button {
+  min-height: 44px;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #bfd0e6;
+  border-radius: 9px;
+  background: #f5f9ff;
+  color: #174c91;
+  font: inherit;
+  font-weight: 700;
+}
+
+.root button:disabled { cursor: wait; opacity: 0.6; }
+
+.root .remove {
+  min-height: 40px;
+  border-color: transparent;
+  background: transparent;
+  color: #526783;
+}
+
+.root small { color: #9b2c2c; }

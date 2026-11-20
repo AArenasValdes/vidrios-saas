@@ -43,6 +43,20 @@ it("guarda dos precios propios sin cambiar proveedor de pieza", async () => {
   expect(bodies.every((body) => body.finishName === "Blanco" && body.purchaseUnit === "TIRA")).toBe(true);
 });
 
+it("separa el botón de Mis precios de la advertencia de cobertura", () => {
+  const ownPrice = {
+    technicalCode: "5001", profileName: "Riel superior", providerKey: "taller:7", providerLabel: "Mis precios",
+    presentationId: "own-5001", supplierSku: "", presentationDescription: "Riel superior · Blanco", purchaseUnit: "TIRA",
+    commercialLengthMm: 6000, netPrice: 15000, currency: "CLP", priceSource: "workshop" as const,
+    priceListRevision: "taller-v1", status: "priced" as const,
+  };
+  render(<GuidedProfileCostSheet {...props} prices={[ownPrice]} onUseWorkshopCost={jest.fn()} />);
+
+  const button = screen.getByRole("button", { name: "Usar Mis precios en esta pieza" });
+  const notice = screen.getByText("Los perfiles sin costo propio quedarán pendientes.");
+  expect(button.parentElement).toBe(notice.parentElement);
+});
+
 it("aplica datos comunes a cinco importes sin copiar precios", async () => {
   const references = Array.from({ length: 5 }, (_, index) => ({ technicalCode: `P${index + 1}`, profileName: `Perfil ${index + 1}` }));
   render(<GuidedProfileCostSheet {...props} references={references} />);

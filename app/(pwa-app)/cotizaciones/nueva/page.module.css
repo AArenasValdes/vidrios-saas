@@ -12951,6 +12951,29 @@ p.stepTwoMobileItemFabCompact {
   line-height: 1.4;
 }
 
+.stepTwoMobileSupplierCoverage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.stepTwoMobileSupplierCoverage span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  background: #edf4ff;
+  color: #294d7e;
+  font-size: 0.75rem;
+}
+
+.stepTwoMobileSupplierCoverage strong {
+  color: #173e72;
+}
+
+
 .stepTwoMobileLineTriggerLabel {
   min-width: 0;
   overflow: hidden;

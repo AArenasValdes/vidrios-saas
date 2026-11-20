@@ -105,8 +105,12 @@ export function GuidedProfileCostSheet({ lineTemplateId, familyKey, finishName, 
   const visible = unique.filter((r) => filter === "todos" || (filter === "guardados" ? ready(r.technicalCode) : !ready(r.technicalCode)));
   return <div className={styles.root}>
     <div className={styles.head}><span>Mis costos: {count}/{unique.length} perfiles</span><button ref={trigger} type="button" onClick={open}>Editar precios</button></div>
-    {firstOwn && providerKey !== firstOwn.providerKey && !allowMixedWorkshopCosts && onUseWorkshopCost ? <button type="button" className={styles.applyOwn} onClick={() => onUseWorkshopCost(firstOwn.providerKey)}>Usar mis costos para esta pieza</button> : null}
-    {firstOwn && providerKey !== firstOwn.providerKey && !allowMixedWorkshopCosts ? <small>Los perfiles sin costo propio quedarán pendientes.</small> : null}
+    {firstOwn && providerKey !== firstOwn.providerKey && !allowMixedWorkshopCosts && onUseWorkshopCost ? (
+      <div className={styles.applyOwnGroup}>
+        <button type="button" className={styles.applyOwn} onClick={() => onUseWorkshopCost(firstOwn.providerKey)}>Usar Mis precios en esta pieza</button>
+        <small>Los perfiles sin costo propio quedarán pendientes.</small>
+      </div>
+    ) : null}
     {message ? <small role="status">{message}</small> : null}
     <dialog ref={dialog} className={styles.dialog} onCancel={(event) => { if (saving) event.preventDefault(); }} onClose={() => trigger.current?.focus()}>
       <div className={styles.sheet}>

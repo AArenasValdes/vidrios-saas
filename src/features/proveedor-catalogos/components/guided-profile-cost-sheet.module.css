@@ -1,7 +1,9 @@
 .root { margin-top: 10px; }
 .head { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #243b6b; font-size: .78rem; }
 .head button, .filters button, .footer button, .common button { min-height: 44px; padding: 8px 12px; border: 1px solid #bfd0e6; border-radius: 9px; background: #f7faff; color: #174c91; font: inherit; font-weight: 700; }
-.applyOwn { min-height: 44px; margin-top: 8px; padding: 8px 12px; border: 1px solid #bfd0e6; border-radius: 9px; background: #f7faff; color: #174c91; font: inherit; }
+.applyOwnGroup { display: grid; gap: 5px; margin-top: 8px; }
+.applyOwn { width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid #a9c5e8; border-radius: 9px; background: #f2f7ff; color: #174c91; font: inherit; font-weight: 700; text-align: center; }
+.applyOwnGroup small { color: #53657e; font-size: .74rem; line-height: 1.35; }
 .dialog { position: fixed; inset: auto 0 0; width: min(100%, 540px); max-width: 100%; max-height: min(90dvh, 900px); margin: auto; padding: 0; border: 0; border-radius: 18px 18px 0 0; color: #172b4d; font-family: var(--font-body), "Segoe UI", sans-serif; box-shadow: 0 -8px 35px #10245133; }
 .dialog::backdrop { background: #0b183d70; }
 .sheet { display: flex; flex-direction: column; max-height: min(90dvh, 900px); background: #fff; }
