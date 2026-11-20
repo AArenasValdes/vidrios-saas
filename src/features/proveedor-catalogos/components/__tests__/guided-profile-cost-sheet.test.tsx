@@ -40,7 +40,7 @@ it("guarda dos precios propios sin cambiar proveedor de pieza", async () => {
   await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(2));
   const bodies = (global.fetch as jest.Mock).mock.calls.map((call) => JSON.parse(call[1].body));
   expect(bodies.map((body) => body.netPrice)).toEqual([15000.5, 16000]);
-  expect(bodies.every((body) => body.finishName === "Blanco" && body.purchaseUnit === "UN")).toBe(true);
+  expect(bodies.every((body) => body.finishName === "Blanco" && body.purchaseUnit === "TIRA")).toBe(true);
 });
 
 it("aplica datos comunes a cinco importes sin copiar precios", async () => {

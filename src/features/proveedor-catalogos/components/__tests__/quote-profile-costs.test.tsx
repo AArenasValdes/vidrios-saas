@@ -105,7 +105,7 @@ describe("QuoteProfileCosts", () => {
     const request = (global.fetch as jest.Mock).mock.calls[0][1];
     expect(JSON.parse(request.body)).toEqual(expect.objectContaining({
       lineTemplateId: 75, technicalCode: "2511R", profileName: "Refuerzo pierna abierta",
-      finishName: "Blanco", purchaseUnit: "UN", commercialLengthMm: 6000,
+      finishName: "Blanco", purchaseUnit: "TIRA", commercialLengthMm: 6000,
       netPrice: 45000, currency: "CLP", preferred: false, workshopSku: null,
     }));
     expect(screen.queryByText(/ventora-internal:/i)).not.toBeInTheDocument();

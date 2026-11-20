@@ -4,7 +4,7 @@ jest.mock("server-only", () => ({}));
 jest.mock("@/lib/supabase/admin", () => ({ createAdminClient: jest.fn() }));
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { persistTechnicalCostSnapshot, readQuoteForTechnicalCost, readSupplierPresentationPrices } from "../costo-tecnico-parcial.repository";
+import { persistTechnicalCostSnapshot, readQuoteForTechnicalCost, readSupplierPresentationPrices, readWorkshopPresentationPrices } from "../costo-tecnico-parcial.repository";
 import type { TechnicalCostSnapshot } from "../../services/costo-tecnico-parcial.service";
 
 describe("persistTechnicalCostSnapshot", () => {
@@ -168,5 +168,38 @@ describe("readSupplierPresentationPrices", () => {
         { table: "catalogo_presentaciones_proveedor", column: "insumo_tecnico_id", values: ["input-5001"] },
       ]));
     }
+  });
+});
+
+describe("readWorkshopPresentationPrices", () => {
+  it("conserva el nombre opcional declarado por el taller en la lectura de costos propios", async () => {
+    const query = {} as Record<string, jest.Mock>;
+    query.select = jest.fn(() => query);
+    query.eq = jest.fn(() => query);
+    query.is = jest.fn(() => query);
+    query.order = jest.fn().mockResolvedValue({
+      data: [{
+        id: "own-5001", organization_id: 3, family_key: "universal:aluminio:l5000", configuration_key: null,
+        codigo_tecnico: "5001", codigo_receta: null, nombre_perfil: "Riel superior", sku_taller: "TALLER-5001",
+        descripcion: "Perfil 5001 · Aluminio Mate", modo_acabado: "especifico", acabado_nombre: "Aluminio Mate",
+        unidad_compra: "UN", largo_comercial_mm: 6000, precio_neto: 15000, moneda: "CLP", proveedor_nombre: "Sodal",
+        preferida: false, revision: 1, priceListId: "taller:3", priceListRevision: "taller-v1",
+      }],
+      error: null,
+    });
+    (createAdminClient as jest.Mock).mockReturnValue({ from: jest.fn(() => query) });
+
+    const prices = await readWorkshopPresentationPrices(3);
+
+    expect(query.eq).toHaveBeenCalledWith("organization_id", 3);
+    expect(prices[0]).toMatchObject({
+      technicalCode: "5001",
+      providerKey: "taller:3",
+      origin: "workshop",
+      workshopSupplierName: "Sodal",
+      purchaseUnit: "UN",
+      commercialLengthMm: 6000,
+      netPrice: 15000,
+    });
   });
 });

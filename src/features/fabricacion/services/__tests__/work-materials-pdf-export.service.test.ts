@@ -176,7 +176,8 @@ describe("work-materials-pdf-export.service", () => {
     }));
 
     expect(compactPdfText(output)).toContain("QA-ORG3-7401-BLANCO-6000-20261005");
-    expect(output).toContain("por tira");
+    expect(output).toContain("1 tira");
+    expect(output).not.toContain("$60.000 UN");
     expect(output).toContain("Precio propio del taller");
     expect(output).not.toContain("taller-v2");
     expect(output).toContain("Costo valorizado parcial: $60.000");
@@ -227,12 +228,13 @@ describe("work-materials-pdf-export.service", () => {
     const output = extractPdfText(pdf);
 
     expect(pdf.getNumberOfPages()).toBe(1);
-    expect(compactPdfText(output)).toContain("$13.477portira");
-    expect(compactPdfText(output)).toContain("$12.230portira");
-    expect(compactPdfText(output)).toContain("$14.256portira");
-    expect(compactPdfText(output)).toContain("$13.399portira");
-    expect(compactPdfText(output)).toContain("$15.970portira");
-    expect(compactPdfText(output)).toContain("$14.412portira");
+    expect(compactPdfText(output)).toContain("$13.477");
+    expect(compactPdfText(output)).toContain("$12.230");
+    expect(compactPdfText(output)).toContain("$14.256");
+    expect(compactPdfText(output)).toContain("$13.399");
+    expect(compactPdfText(output)).toContain("$15.970");
+    expect(compactPdfText(output)).toContain("$14.412");
+    expect(compactPdfText(output)).not.toContain("$13.477portira");
     expect(output).toContain("Color aluminio");
     expect(output).toContain("Proveedor");
     expect(output).toContain("Arquetipo · junio 2026");
@@ -265,6 +267,102 @@ describe("work-materials-pdf-export.service", () => {
     expect(output).toContain("$13.477");
     expect(output).toContain("Total referencial");
     expect(output).toContain("Cobertura: 1 de 7 perfiles");
+  });
+
+  it("muestra el proveedor declarado en Mis precios y suma los costos por tira de los perfiles", async () => {
+    const document = sampleDocument();
+    document.profiles.forEach((profile) => { profile.familyKey = "universal:aluminio:l5000"; });
+    document.profilePriceReferencesStatus = "loaded";
+    document.profilePriceReferences = document.profiles.map((profile) => ({
+      key: `V1:${profile.code}:taller:3:${profile.code}`,
+      itemCode: "V1",
+      line: "Serie 5000",
+      lineNames: ["Serie 5000"],
+      familyKey: "universal:aluminio:l5000",
+      finish: "Aluminio mate",
+      technicalCode: profile.code,
+      profileName: profile.description,
+      providerKey: "taller:3",
+      providerLabel: "Precio propio del taller",
+      presentationId: `workshop-${profile.code}`,
+      supplierSku: "",
+      presentationDescription: `Perfil ${profile.code} · Aluminio Mate`,
+      purchaseUnit: "UN",
+      commercialLengthMm: 6000,
+      netPrice: 15_000,
+      currency: "CLP",
+      priceSource: "workshop" as const,
+      workshopSupplierName: "Sodal",
+      status: "priced" as const,
+    }));
+
+    const output = extractPdfText(createWorkMaterialsPdf(document, {
+      companyName: "Ejemplo QA", quoteCode: "COT-QA-MIS-PRECIOS", workName: "Costos propios", issueDate: "Muestra QA",
+    }));
+
+    expect(output).toContain("Sodal · Mis precios");
+    expect(output).toContain("Suma de perfiles · CLP: $105.000");
+    expect(output).toContain("Cobertura: 7 de 7 perfiles");
+    expect(output).not.toContain("Total propio · Sodal");
+    expect(compactPdfText(output)).not.toContain("$15.000UN");
+    expect(output).not.toContain("No calculable");
+    expect(output).not.toContain("Total referencial · Sodal");
+    if (process.env.VENTORA_PDF_EXAMPLE === "1") {
+      const outputPath = path.join(pdfExampleDirectory(), "qa-lista-materiales-mis-precios.pdf");
+      mkdirSync(path.dirname(outputPath), { recursive: true });
+      const pdf = createWorkMaterialsPdf(document, {
+        companyName: "Ejemplo QA", quoteCode: "COT-QA-MIS-PRECIOS", workName: "Costos propios por perfil", issueDate: "Muestra QA",
+      });
+      writeFileSync(outputPath, Buffer.from(pdf.output("arraybuffer")));
+    }
+  });
+
+  it("usa el subtotal guardado cuando el perfil ya trae un costo propio calculado", () => {
+    const document = sampleDocument();
+    document.profiles = document.profiles.slice(0, 2).map((profile, index) => ({
+      ...profile,
+      price: {
+        sku: `TALLER-${profile.code}`,
+        providerKey: "taller:3",
+        isWorkshopCode: true,
+        sourceKind: "own" as const,
+        sourceLabel: "Precio propio del taller",
+        sourceRevision: "taller-v1",
+        pricedAt: null,
+        basis: "por unidad" as const,
+        unitPrice: 15_000,
+        subtotal: (index + 1) * 15_000,
+        currency: "CLP",
+      },
+    }));
+
+    const output = extractPdfText(createWorkMaterialsPdf(document, {
+      companyName: "Ejemplo QA", quoteCode: "COT-QA-COSTO-PERSISTIDO", workName: "Costo propio guardado", issueDate: "Muestra QA",
+    }));
+
+    expect(output).toContain("Suma de perfiles · CLP: $45.000");
+    expect(output).toContain("Cobertura: 2 de 2 perfiles");
+  });
+
+  it("no interpreta una unidad UN de un proveedor externo como si fuera una tira", () => {
+    const document = sampleDocument();
+    document.profiles[0]!.familyKey = "universal:aluminio:l5000";
+    document.profilePriceReferencesStatus = "loaded";
+    document.profilePriceReferences = [{
+      key: "V1:5001:arquetipo:p-5001", itemCode: "V1", line: "Serie 5000", lineNames: ["Serie 5000"],
+      familyKey: "universal:aluminio:l5000", finish: "Aluminio mate", technicalCode: "5001", profileName: "Riel superior",
+      providerKey: "arquetipo", providerLabel: "Arquetipo · junio 2026", presentationId: "p-5001", supplierSku: "30895001",
+      presentationDescription: "Unidad", purchaseUnit: "UN", commercialLengthMm: 6000, netPrice: 13_477,
+      currency: "CLP", priceSource: "reference", status: "priced",
+    }];
+
+    const output = extractPdfText(createWorkMaterialsPdf(document, {
+      companyName: "Ejemplo QA", quoteCode: "COT-QA-UN-EXTERNO", workName: "Unidad no comparable", issueDate: "Muestra QA",
+    }));
+
+    expect(output).toContain("No calculable");
+    expect(output).toContain("perfil con precio no sumado");
+    expect(output).not.toContain("Suma de perfiles · CLP: $13.477");
   });
 
   it("mantiene líneas, colores y totales separados por proveedor, y no aplica precios al vidrio", () => {
