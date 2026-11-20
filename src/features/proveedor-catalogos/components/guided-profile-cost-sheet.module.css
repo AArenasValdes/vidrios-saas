@@ -9,7 +9,7 @@
 .title h3 { margin: 0; color: #102a57; font-family: var(--font-heading), "Segoe UI", sans-serif; font-size: 1.28rem; font-weight: 700; line-height: 1.25; }
 .title p { margin: 3px 0 0; color: #53657e; font-size: .8rem; }
 .title button { min-width: 44px; min-height: 44px; border: 1px solid #d6dfec; border-radius: 10px; background: #fff; font-size: 1.4rem; color: #243b6b; }
-.filters { display: flex; gap: 6px; padding: 8px 16px; overflow-x: auto; }
+.filters { display: flex; gap: 6px; padding: 8px 16px; overflow-x: auto; overflow-y: hidden; }
 .filters button { min-height: 44px; white-space: nowrap; padding: 6px 9px; font-size: .74rem; }
 .filters button[aria-pressed="true"] { background: #245bab; color: white; }
 .scroll { overflow-y: auto; overscroll-behavior: contain; padding: 0 16px 12px; font-size: .875rem; }
