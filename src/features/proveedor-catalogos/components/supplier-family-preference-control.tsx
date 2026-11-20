@@ -24,7 +24,7 @@ export function SupplierFamilyPreferenceControl({
 }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const show = canManage && Boolean(familyKey) && Boolean(selectedProviderKey || preferenceProviderKey);
+  const show = Boolean(familyKey) && Boolean(selectedProviderKey || preferenceProviderKey);
 
   async function save(providerKey: string | null) {
     if (!familyKey || (!providerKey && !preferenceProviderKey)) return;
@@ -57,12 +57,15 @@ export function SupplierFamilyPreferenceControl({
       ) : (
         <p>La selección actual solo se aplica a esta pieza.</p>
       )}
-      {selectedProviderKey && selectedProviderKey !== preferenceProviderKey ? (
+      {canManage && selectedProviderKey && selectedProviderKey !== preferenceProviderKey ? (
         <button type="button" disabled={saving} onClick={() => void save(selectedProviderKey)}>
           {saving ? "Guardando preferencia…" : `Dejar ${selectedProviderLabel ?? "este proveedor"} como habitual`}
         </button>
       ) : null}
-      {preferenceProviderKey ? (
+      {!canManage && selectedProviderKey !== preferenceProviderKey ? (
+        <small role="note">Solo un administrador o maestro puede cambiar el proveedor habitual.</small>
+      ) : null}
+      {canManage && preferenceProviderKey ? (
         <button type="button" className={styles.remove} disabled={saving} onClick={() => void save(null)}>
           Quitar preferencia
         </button>

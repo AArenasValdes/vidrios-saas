@@ -49,3 +49,10 @@ it("mantiene la preferencia visible y muestra el error si el servidor rechaza el
   expect(props.onSaved).not.toHaveBeenCalled();
   expect(screen.getByRole("button", { name: "Quitar preferencia" })).toBeInTheDocument();
 });
+
+it("explica por qué no se puede cambiar el habitual en una sesión sin permiso", () => {
+  render(<SupplierFamilyPreferenceControl {...props} canManage={false} preferenceProviderKey={null} preferenceLabel={null} />);
+
+  expect(screen.getByRole("note")).toHaveTextContent("Solo un administrador o maestro puede cambiar el proveedor habitual.");
+  expect(screen.queryByRole("button", { name: /Dejar .* como habitual/ })).not.toBeInTheDocument();
+});
