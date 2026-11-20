@@ -60,7 +60,7 @@ import {
   type SupplierProfilePricePreview,
 } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 import { getLineTemplateWorkshopProfiles } from "@/features/cotizaciones/line-templates/types/line-profile-references";
-import { SupplierProfilePricePreview as SupplierProfilePricePreviewComponent } from "@/features/proveedor-catalogos/components/supplier-profile-price-preview";
+import { GuidedProfileCostSheet } from "@/features/proveedor-catalogos/components/guided-profile-cost-sheet";
 import { QuoteProfileCosts } from "@/features/proveedor-catalogos/components/quote-profile-costs";
 import {
   measureDimensionFieldLabel,
@@ -496,6 +496,7 @@ export function CuadernoQuickEditSheet({
   const supplierLineTemplate = selectedLineTemplate ??
     VENTORA_DEFAULT_LINE_CATALOG.find((line) => line.catalogKey === selectedCatalogLineKey) ?? null;
   const supplierFamilyKey = resolveSupplierFamilyKeyForLineTemplate(supplierLineTemplate);
+  const isAluminumLine = supplierLineTemplate?.material === "Aluminio";
   const supplierProfileReferences = useMemo(() => {
     const documentedProfiles = getLineTemplateWorkshopProfiles(supplierLineTemplate?.catalogMetadata)?.profiles
       .filter((profile) => profile.codeStatus === "catalog_reference" && profile.code?.trim())
@@ -566,6 +567,7 @@ export function CuadernoQuickEditSheet({
   const supplierOptions = supplierProviderResolution?.key === supplierResolutionKey
     ? supplierProviderResolution.optionsByFinish[activeSupplierFinishName ?? ""] ?? supplierProviderResolution.options
     : [];
+  const externalSupplierOptions = supplierOptions.filter((option) => !option.providerKey.startsWith("taller:"));
   const supplierProfilePrices = supplierProviderResolution?.key === supplierResolutionKey
     ? supplierProviderResolution.profilePricesByFinish[activeSupplierFinishName ?? ""] ?? supplierProviderResolution.profilePrices
     : [];
@@ -1088,8 +1090,45 @@ export function CuadernoQuickEditSheet({
               />
             ) : null}
 
-            {supplierResolutionRequest && effectiveSupplierRecipe?.definition.perfiles.some((profile) => profile.codigoPerfil?.trim()) ? (
-              <QuoteSupplierDisclosure
+            {isAluminumLine ? (
+              !supplierFamilyKey || supplierProfileReferences.length === 0 ? (
+                <section className={s.supplierDisclosure} aria-label="Costos de fabricación">
+                  <div className={s.supplierDisclosureBody}>
+                    <strong>Costos de fabricación</strong>
+                    <span className={s.variantSourceHint}>{supplierFamilyKey ? "Códigos de perfil pendientes de identificar." : "Identidad de compra pendiente de definir."}</span>
+                  </div>
+                </section>
+              ) : isLoadingSupplierOptions || externalSupplierOptions.length === 0 ? (
+                <section className={s.supplierDisclosure} aria-label="Costos de fabricación">
+                  <div className={s.supplierDisclosureBody}>
+                    <strong>Costos de fabricación</strong>
+                    {isLoadingSupplierOptions ? <span className={s.variantSourceHint} role="status">Buscando precios compatibles…</span> : <GuidedProfileCostSheet
+                      lineTemplateId={Number(lineTemplateId)}
+                      familyKey={supplierFamilyKey!}
+                      finishName={activeSupplierFinishName}
+                      references={supplierProfileReferences.map((profile) => ({ technicalCode: profile.technicalCode, profileName: profile.profileName }))}
+                      prices={supplierProfilePrices}
+                      canManagePrice={supplierProviderResolution?.key === supplierResolutionKey && supplierProviderResolution.canManageSupplierPrices}
+                      providerKey={null}
+                      onPricesSaved={async () => {
+                        if (!supplierResolutionRequest) return;
+                        const result = await resolveSupplierPresentationsForQuote([supplierResolutionRequest], { includeProviderOptions: true });
+                        setSupplierProviderResolution({
+                          key: supplierResolutionKey,
+                          options: result?.providerOptions?.[String(item.id)] ?? [],
+                          profilePrices: result?.profilePrices?.[String(item.id)] ?? [],
+                          optionsByFinish: result?.providerOptionsByFinish?.[String(item.id)] ?? {},
+                          profilePricesByFinish: result?.profilePricesByFinish?.[String(item.id)] ?? {},
+                          familyPreferenceProviderKey: result?.familyPreferences?.[String(supplierResolutionRequest.familyKey)] ?? null,
+                          canManageFamilyPreferences: result?.canManageFamilyPreferences === true,
+                          canManageSupplierPrices: result?.canManageSupplierPrices === true,
+                          error: result?.itemErrors?.[String(item.id)] ?? null,
+                        });
+                      }}
+                    />}
+                  </div>
+                </section>
+              ) : supplierResolutionRequest ? <QuoteSupplierDisclosure
                 className={s.supplierDisclosure}
                 bodyClassName={s.supplierDisclosureBody}
                 summary={isLoadingSupplierOptions ? "Cargando…" : selectedSupplierProviderKey || effectiveFamilyPreference ? selectedSupplierOption?.label ?? "Proveedor guardado · revisar cobertura" : supplierOptions.length === 0 ? "Sin proveedor compatible" : `Lista automática: ${automaticSupplierLabel}`}
@@ -1190,13 +1229,15 @@ export function CuadernoQuickEditSheet({
                     <a href={`/configuracion/empresa/mis-precios?supplier=taller&family=${encodeURIComponent(supplierResolutionRequest.familyKey)}&lineTemplateId=${Number(lineTemplateId)}`} target="_blank" rel="noreferrer">Administrar estos precios en Mis precios</a>
                     </details>
                   ) : (
-                    <SupplierProfilePricePreviewComponent
-                      prices={supplierProfilePrices}
-                      providerKey={selectedSupplierProviderKey || effectiveFamilyPreference || "arquetipo"}
+                    <GuidedProfileCostSheet
+                      lineTemplateId={Number(lineTemplateId)}
                       familyKey={supplierResolutionRequest.familyKey}
                       finishName={activeSupplierFinishName}
+                      references={supplierProfileReferences.map((profile) => ({ technicalCode: profile.technicalCode, profileName: profile.profileName }))}
+                      prices={supplierProfilePrices}
                       canManagePrice={supplierProviderResolution?.key === supplierResolutionKey && supplierProviderResolution.canManageSupplierPrices}
-                      onPriceSaved={async () => {
+                      providerKey={effectiveSupplierProviderKey || null}
+                      onPricesSaved={async () => {
                         if (!supplierResolutionRequest) return;
                         const result = await resolveSupplierPresentationsForQuote([supplierResolutionRequest], { includeProviderOptions: true });
                         setSupplierProviderResolution({
@@ -1221,7 +1262,7 @@ export function CuadernoQuickEditSheet({
                   <span className={s.variantSourceHint}>No hay precios compatibles para los perfiles de esta composición.</span>
                 ) : null}
                   {familyPreferenceError ? <span className={s.preferenceError} role="status">{familyPreferenceError}</span> : null}
-              </QuoteSupplierDisclosure>
+              </QuoteSupplierDisclosure> : null
             ) : null}
             {selectedLineIsSodalL25 && isResolvingL25Recipe ? (
               <p className={s.variantSourceHint} role="status">Resolviendo receta exacta L25…</p>

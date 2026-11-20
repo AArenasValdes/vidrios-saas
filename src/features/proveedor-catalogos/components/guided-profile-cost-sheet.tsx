@@ -53,7 +53,7 @@ export function GuidedProfileCostSheet({ lineTemplateId, familyKey, finishName, 
   const hasOtherUnit = unique.some((r) => own(r.technicalCode).some((p) => p.purchaseUnit && !["UN", "TR"].includes(p.purchaseUnit)));
   const sourceLabel = allowMixedWorkshopCosts && count > 0 && providerKey && !providerKey.startsWith("taller:")
     ? "Mixto"
-    : providerKey?.startsWith("taller:") ? "Mis precios" : providerKey ? "Proveedor" : "Pendiente";
+    : providerKey?.startsWith("taller:") || !providerKey ? "Mis precios" : "Proveedor";
 
   function close() { if (!saving) { dialog.current?.close(); trigger.current?.focus(); } }
   function open() { setDrafts({}); setErrors({}); setPrepared(null); setPreparedCount(0); setSharedLength(""); setSharedSupplier(""); setMessage(""); setSource("propios"); setFilter(count < unique.length ? "pendientes" : "todos"); dialog.current?.showModal(); }

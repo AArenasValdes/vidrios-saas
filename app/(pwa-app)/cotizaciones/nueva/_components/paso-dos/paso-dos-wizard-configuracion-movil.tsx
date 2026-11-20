@@ -659,7 +659,7 @@ export function PasoDosWizardConfiguracionMovil({
     });
     const technicalCodes = references.length > 0
       ? references.map((profile) => profile.technicalCode)
-      : selectedLineIsSodalL25 ? documentedProfiles.map((profile) => profile.code) : [];
+      : [];
     if (!selectedLineTemplate?.catalogKey || !supplierFamilyKey || technicalCodes.length === 0) return [];
     return [{
       itemId: "guided-line-provider-preview",
@@ -674,6 +674,8 @@ export function PasoDosWizardConfiguracionMovil({
     includeProfilePrices: true,
   });
   const supplierProviderOptions = supplierPresentationResolution.result?.providerOptions?.["guided-line-provider-preview"] ?? [];
+  const externalSupplierProviderOptions = supplierProviderOptions.filter((option) => !option.providerKey.startsWith("taller:"));
+  const isAluminumLine = selectedLineTemplate?.material === "Aluminio";
   const familyPreferenceProviderKey = supplierPresentationResolution.result?.familyPreferences?.[supplierFamilyKey ?? ""] ?? null;
   const [familyPreferenceOverride, setFamilyPreferenceOverride] = useState<{ familyKey: string; providerKey: string | null } | null>(null);
   const effectiveFamilyPreference = familyPreferenceOverride?.familyKey === supplierFamilyKey
@@ -683,7 +685,24 @@ export function PasoDosWizardConfiguracionMovil({
   const activeSupplierProviderKey = draft.supplierProviderKey || effectiveFamilyPreference ||
     supplierProviderOptions.find((option) => option.providerKey === "arquetipo")?.providerKey || supplierProviderOptions[0]?.providerKey || null;
   const activeSupplierOption = supplierProviderOptions.find((option) => option.providerKey === activeSupplierProviderKey) ?? null;
-  const guidedCoverageCodes = supplierPresentationRequests[0]?.technicalCodes ?? [];
+  const guidedCoverageCodes = useMemo(
+    () => supplierPresentationRequests[0]?.technicalCodes ?? [],
+    [supplierPresentationRequests]
+  );
+  const guidedCostReferences = useMemo(() => {
+    const documentedProfiles = getLineTemplateWorkshopProfiles(selectedLineTemplate?.catalogMetadata)?.profiles
+      .filter((profile) => profile.codeStatus === "catalog_reference" && profile.code?.trim())
+      .map((profile) => ({ code: profile.code!, name: profile.name })) ?? [];
+    const recipeProfiles = (effectiveSupplierRecipe?.definition.perfiles ?? []).map((profile) => ({
+      code: profile.codigoPerfil,
+      name: profile.nombrePerfil,
+    }));
+    const namesByCode = new Map([...recipeProfiles, ...documentedProfiles].map((profile) => [profile.code.trim().toLocaleUpperCase("en-US"), profile.name]));
+    return guidedCoverageCodes.map((code) => ({
+      technicalCode: code,
+      profileName: namesByCode.get(code.trim().toLocaleUpperCase("en-US")) ?? code,
+    }));
+  }, [effectiveSupplierRecipe, guidedCoverageCodes, selectedLineTemplate?.catalogMetadata]);
   const guidedSupplierCoverage = effectiveSupplierRecipe
     ? selectedCatalogLineKey === "ventora:l42" ? resolveMixedSupplierProfileCoverage({
         technicalCodes: guidedCoverageCodes,
@@ -1805,10 +1824,11 @@ export function PasoDosWizardConfiguracionMovil({
             )}
           />
         ) : null}
-        {supplierFamilyKey && onSupplierProviderKeyChange && effectiveSupplierRecipe?.definition.perfiles.some((profile) => profile.codigoPerfil?.trim()) ? (
+        {isAluminumLine ? (
           <section className={s.stepTwoMobileSupplierPicker} aria-label="Costos de fabricación">
             <strong>Costos de fabricación</strong>
-            <div className={s.stepTwoMobileSupplierField}>
+            {!supplierFamilyKey ? <small role="status">Identidad de compra pendiente de definir.</small> : guidedCostReferences.length === 0 ? <small role="status">Códigos de perfil pendientes de identificar.</small> : <>
+            {!supplierPresentationResolution.isResolving && externalSupplierProviderOptions.length > 0 && onSupplierProviderKeyChange ? <div className={s.stepTwoMobileSupplierField}>
               <div className={s.stepTwoMobileSupplierFieldHeading}>
                 <label htmlFor="guided-supplier-provider">Proveedor de compra</label>
                 {activeSupplierProviderKey ? <details className={s.stepTwoMobileSupplierPreference}>
@@ -1835,21 +1855,22 @@ export function PasoDosWizardConfiguracionMovil({
                 {draft.supplierProviderKey && !supplierProviderOptions.some((option) => option.providerKey === draft.supplierProviderKey) ? <option value={draft.supplierProviderKey}>Proveedor guardado · sin cobertura compatible</option> : null}
                 {supplierProviderOptions.map((option) => <option key={option.providerKey} value={option.providerKey}>{option.label}</option>)}
               </select>
-            </div>
-            {activeSupplierProviderKey && !activeSupplierProviderKey.startsWith("taller:") && guidedSupplierCoverage?.pendingCodes.length ? <small className={s.stepTwoMobileSupplierPending} role="status">
+            </div> : null}
+            {!supplierPresentationResolution.isResolving && externalSupplierProviderOptions.length > 0 && activeSupplierProviderKey && !activeSupplierProviderKey.startsWith("taller:") && guidedSupplierCoverage?.pendingCodes.length ? <small className={s.stepTwoMobileSupplierPending} role="status">
               Faltan {guidedSupplierCoverage.pendingCodes.length} {guidedSupplierCoverage.pendingCodes.length === 1 ? "perfil" : "perfiles"} con precio compatible.
             </small> : null}
-            {effectiveSupplierRecipe && Number(draft.lineTemplateId) > 0 ? <GuidedProfileCostSheet
+            {supplierPresentationResolution.isResolving ? <small role="status">Buscando precios compatibles…</small> : Number(draft.lineTemplateId) > 0 ? <GuidedProfileCostSheet
               lineTemplateId={Number(draft.lineTemplateId)}
-              familyKey={supplierFamilyKey}
+              familyKey={supplierFamilyKey!}
               finishName={resolveSupplierFinishName(draft.catalogTerminacion, draft.colorHex)}
-              references={effectiveSupplierRecipe.definition.perfiles.filter((profile) => profile.codigoPerfil?.trim()).map((profile) => ({ technicalCode: profile.codigoPerfil, profileName: profile.nombrePerfil }))}
+              references={guidedCostReferences}
               prices={supplierPresentationResolution.result?.profilePrices?.["guided-line-provider-preview"] ?? []}
               canManagePrice={supplierPresentationResolution.result?.canManageSupplierPrices === true}
-              providerKey={activeSupplierProviderKey}
+              providerKey={externalSupplierProviderOptions.length > 0 ? activeSupplierProviderKey : null}
               allowMixedWorkshopCosts={selectedCatalogLineKey === "ventora:l42"}
               onPricesSaved={supplierPresentationResolution.refresh}
             /> : null}
+            </>}
           </section>
         ) : null}
         {selectedLineIsSodalL25 && requiresProfileMaterial ? (
