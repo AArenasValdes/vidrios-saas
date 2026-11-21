@@ -20,6 +20,28 @@ jest.mock("@/features/proveedor-catalogos/hooks/use-supplier-presentation-resolu
         ],
       },
       familyPreferences: { "universal:aluminio:l25": "alumco" },
+      profilePrices: {
+        "guided-line-provider-preview": [
+          {
+            technicalCode: "5001",
+            profileName: "Perfil 5001",
+            providerKey: "alumco",
+            providerLabel: "Alumco · 2026",
+            presentationId: "pres-5001",
+            supplierSku: "ALU-5001",
+            presentationDescription: "Tira 6000 mm",
+            purchaseUnit: "TIRA",
+            commercialLengthMm: 6000,
+            netPrice: 12000,
+            currency: "CLP",
+            priceSource: "reference",
+            priceReferenceStatus: "confirmed",
+            finishPriceBasis: "finish_independent",
+            priceSourceFinishName: null,
+            status: "priced",
+          },
+        ],
+      },
     },
   }),
 }));
@@ -893,5 +915,55 @@ describe("PasoDosWizardConfiguracionMovil", () => {
 
     expect(screen.getByText("Veratec 7400 — Corredera 3 hojas")).toBeInTheDocument();
     expect(screen.queryByText("Veratec 7400 — Corredera 2 hojas")).not.toBeInTheDocument();
+  });
+
+  it("renderiza Costo técnico de fabricación (Costo parcial) en step=details para L5000 sin sobrescribir precio manual existente", () => {
+    const l5000Template = VENTORA_DEFAULT_LINE_CATALOG.find(
+      (item) => item.catalogKey === "ventora:l5000"
+    );
+    expect(l5000Template).toBeDefined();
+    const onPrecioChange = jest.fn();
+
+    render(
+      <PasoDosWizardConfiguracionMovil
+        {...baseProps}
+        step="details"
+        activePricingMode="valor_directo"
+        hasManualPriceOverride
+        onPrecioChange={onPrecioChange}
+        lineTemplateOptions={[
+          {
+            id: 5000,
+            nombre: l5000Template!.nombre,
+            referencia: l5000Template!.referencia,
+            catalogKey: l5000Template!.catalogKey,
+            material: "Aluminio",
+            componentSubtipo: "Ventana",
+            sistema: "Corredera",
+            configuracion: "2 hojas",
+            hojasBase: 2,
+            precioPorM2: 0,
+            minimoCobrable: 0,
+            redondeoPrecio: 1000,
+            activo: true,
+          } as unknown as CotizacionLineTemplate,
+        ]}
+        draft={{
+          ...baseProps.draft,
+          lineTemplateId: "5000",
+          referencia: l5000Template!.referencia,
+          sistema: "Corredera",
+          configuracion: "2 hojas",
+          sheetScheme: "2 hojas",
+          sheetVariant: "caracol",
+          precio: "175000",
+        }}
+      />
+    );
+
+    expect(screen.getByText("Costo técnico de fabricación")).toBeInTheDocument();
+    expect(screen.getByText("Costo parcial")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Completar costo base manual/i })).toBeInTheDocument();
+    expect(onPrecioChange).not.toHaveBeenCalled();
   });
 });

@@ -71,6 +71,7 @@ import { getSupplierCatalogQuoteLineKeys } from "@/features/proveedor-catalogos/
 import { getLineTemplateWorkshopProfiles } from "@/features/cotizaciones/line-templates/types/line-profile-references";
 import { resolveMixedSupplierProfileCoverage, resolveQuoteSupplierProfileReferences, resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 import { useSupplierPresentationResolution } from "@/features/proveedor-catalogos/hooks/use-supplier-presentation-resolution";
+import { buildGuidedTechnicalCostSuggestion } from "@/features/proveedor-catalogos/services/guided-technical-cost-suggestion.service";
 import {
   findSodalL25LineRecipe,
   isSodalL25CatalogKey,
@@ -733,6 +734,152 @@ export function PasoDosWizardConfiguracionMovil({
   const canManageFamilyPreferences = supplierPresentationResolution.result?.canManageFamilyPreferences === true;
   const activeSupplierProviderKey = draft.supplierProviderKey || effectiveFamilyPreference ||
     supplierProviderOptions.find((option) => option.providerKey === "arquetipo")?.providerKey || supplierProviderOptions[0]?.providerKey || null;
+  const effectiveGroupQuantity = draft.usaCantidadPersonalizada
+    ? Number(draft.cantidadPersonalizada) || 0
+    : draft.cantidad;
+  const technicalCostSummary = useMemo(() => {
+    if (quotePricingMode !== "por_item" || !supportsProfilePurchaseCosts || !effectiveSupplierRecipe) {
+      return null;
+    }
+    return buildGuidedTechnicalCostSuggestion({
+      recipe: effectiveSupplierRecipe,
+      organizationId: recipeOrganizationId,
+      lineTemplateId: selectedRecipeLineTemplateId,
+      lineName: selectedLineTemplate?.nombre ?? draft.referencia,
+      tipo: draft.subtipo,
+      sistema: draft.sistema,
+      anchoMm: draft.ancho ? Number(draft.ancho) : null,
+      altoMm: draft.alto ? Number(draft.alto) : null,
+      cantidad: effectiveGroupQuantity > 0 ? effectiveGroupQuantity : 1,
+      vidrio: draft.vidrio,
+      colorHex: draft.colorHex,
+      material: draft.material,
+      finishName: resolveSupplierFinishName(draft.catalogTerminacion, draft.colorHex),
+      catalogLineKey: selectedCatalogLineKey,
+      supplierFamilyKey,
+      providerKey: activeSupplierProviderKey,
+      profilePrices:
+        supplierPresentationResolution.result?.profilePrices?.["guided-line-provider-preview"] ?? [],
+    });
+  }, [
+    activeSupplierProviderKey,
+    draft.alto,
+    draft.ancho,
+    draft.catalogTerminacion,
+    draft.colorHex,
+    draft.material,
+    draft.referencia,
+    draft.sistema,
+    draft.subtipo,
+    draft.vidrio,
+    effectiveGroupQuantity,
+    effectiveSupplierRecipe,
+    quotePricingMode,
+    recipeOrganizationId,
+    selectedCatalogLineKey,
+    selectedLineTemplate?.nombre,
+    selectedRecipeLineTemplateId,
+    supplierFamilyKey,
+    supplierPresentationResolution.result?.profilePrices,
+    supportsProfilePurchaseCosts,
+  ]);
+  const technicalSuggestionContextKey = [
+    selectedCatalogLineKey ?? "",
+    selectedRecipeLineTemplateId ?? "",
+    effectiveSupplierRecipe?.id ?? "",
+    effectiveSupplierRecipe?.version ?? "",
+    draft.ancho,
+    draft.alto,
+    effectiveGroupQuantity > 0 ? effectiveGroupQuantity : 1,
+    draft.vidrio,
+    draft.colorHex,
+    draft.catalogTerminacion ?? "",
+    activeSupplierProviderKey ?? "",
+    draft.sheetScheme,
+    draft.sheetVariant,
+    draft.costInputScope,
+  ].join("|");
+  const [appliedTechnicalSuggestion, setAppliedTechnicalSuggestion] = useState<{
+    previous: {
+      pricingMode: PricingMode;
+      margenPct: string;
+      precio: string;
+      costInputScope: "group_total" | "unit";
+    };
+    contextKey: string;
+    suggestedNetTotal: number;
+  } | null>(null);
+  const isResolvingTechnicalCost =
+    supportsProfilePurchaseCosts && supplierPresentationResolution.isResolving;
+  const hasAppliedTechnicalCostSuggestion = Boolean(
+    appliedTechnicalSuggestion &&
+    !isResolvingTechnicalCost &&
+    technicalCostSummary?.status === "complete" &&
+    appliedTechnicalSuggestion.contextKey === technicalSuggestionContextKey &&
+    appliedTechnicalSuggestion.suggestedNetTotal === technicalCostSummary.suggestedNetTotal &&
+    draft.costInputScope === "group_total"
+  );
+  const isAppliedTechnicalCostSuggestionOutdated = Boolean(
+    appliedTechnicalSuggestion && !hasAppliedTechnicalCostSuggestion
+  );
+  const handleApplyTechnicalCostSuggestion = () => {
+    if (
+      isResolvingTechnicalCost ||
+      !technicalCostSummary ||
+      technicalCostSummary.status !== "complete" ||
+      technicalCostSummary.usableBaseCostGroupNet == null ||
+      technicalCostSummary.suggestedNetTotal == null
+    ) {
+      return;
+    }
+    const nextContextKey = [
+      selectedCatalogLineKey ?? "",
+      selectedRecipeLineTemplateId ?? "",
+      effectiveSupplierRecipe?.id ?? "",
+      effectiveSupplierRecipe?.version ?? "",
+      draft.ancho,
+      draft.alto,
+      effectiveGroupQuantity > 0 ? effectiveGroupQuantity : 1,
+      draft.vidrio,
+      draft.colorHex,
+      draft.catalogTerminacion ?? "",
+      activeSupplierProviderKey ?? "",
+      draft.sheetScheme,
+      draft.sheetVariant,
+      "group_total",
+    ].join("|");
+    setAppliedTechnicalSuggestion((current) => ({
+      previous: current?.previous ?? {
+        pricingMode: activePricingMode,
+        margenPct: draft.margenPct,
+        precio: draft.precio,
+        costInputScope: draft.costInputScope,
+      },
+      contextKey: nextContextKey,
+      suggestedNetTotal: technicalCostSummary.suggestedNetTotal!,
+    }));
+    onPricingModeChange("margen");
+    onMargenChange(String(technicalCostSummary.defaultMarkupPct));
+    onCostInputScopeChange("group_total");
+    onPrecioChange(String(Math.round(technicalCostSummary.usableBaseCostGroupNet)));
+  };
+  const handleRevertTechnicalCostSuggestion = () => {
+    if (!appliedTechnicalSuggestion) return;
+    const { previous } = appliedTechnicalSuggestion;
+    onPricingModeChange(previous.pricingMode);
+    onMargenChange(previous.margenPct);
+    onCostInputScopeChange(previous.costInputScope);
+    onPrecioChange(previous.precio);
+    setAppliedTechnicalSuggestion(null);
+  };
+  const handleCompleteManualBaseCost = () => {
+    setAppliedTechnicalSuggestion(null);
+    onPricingModeChange("margen");
+    if (!draft.margenPct.trim() || draft.margenPct === "0") {
+      onMargenChange("100");
+    }
+    onCostInputScopeChange("group_total");
+  };
   const activeSupplierOption = supplierProviderOptions.find((option) => option.providerKey === activeSupplierProviderKey) ?? null;
   const defaultSupplierOption = effectiveFamilyPreference
     ? supplierProviderOptions.find((option) => option.providerKey === effectiveFamilyPreference) ?? null
@@ -2604,10 +2751,26 @@ export function PasoDosWizardConfiguracionMovil({
               ? Number(draft.cantidadPersonalizada) || 0
               : draft.cantidad
           }
+          technicalCostSummary={technicalCostSummary}
+          isResolvingTechnicalCost={isResolvingTechnicalCost}
+          hasAppliedTechnicalCostSuggestion={hasAppliedTechnicalCostSuggestion}
+          isAppliedTechnicalCostSuggestionOutdated={isAppliedTechnicalCostSuggestionOutdated}
+          onApplyTechnicalCostSuggestion={handleApplyTechnicalCostSuggestion}
+          onRevertTechnicalCostSuggestion={handleRevertTechnicalCostSuggestion}
+          onCompleteManualBaseCost={handleCompleteManualBaseCost}
           onCostInputScopeChange={onCostInputScopeChange}
-          onMargenChange={onMargenChange}
-          onPrecioChange={onPrecioChange}
-          onPricingModeChange={onPricingModeChange}
+          onMargenChange={(value) => {
+            setAppliedTechnicalSuggestion(null);
+            onMargenChange(value);
+          }}
+          onPrecioChange={(value) => {
+            setAppliedTechnicalSuggestion(null);
+            onPrecioChange(value);
+          }}
+          onPricingModeChange={(mode) => {
+            setAppliedTechnicalSuggestion(null);
+            onPricingModeChange(mode);
+          }}
           priceHelp={priceHelp}
           priceLabel={priceLabel}
         />

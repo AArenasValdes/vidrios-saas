@@ -183,6 +183,12 @@ export default function CotizacionFabricacionPrintPage() {
     });
   }, [items, lineTemplates]);
   const supplierPriceRequestKey = JSON.stringify(supplierPriceRequests);
+  const supplierItemsRef = useRef(items);
+  const supplierLineTemplatesRef = useRef(lineTemplates);
+  useEffect(() => {
+    supplierItemsRef.current = items;
+    supplierLineTemplatesRef.current = lineTemplates;
+  }, [items, lineTemplates]);
   const currentSupplierReferenceResult = supplierReferenceResult?.requestKey === supplierPriceRequestKey
     ? supplierReferenceResult
     : null;
@@ -194,47 +200,53 @@ export default function CotizacionFabricacionPrintPage() {
     let cancelled = false;
     if (supplierPriceRequests.length === 0) return () => { cancelled = true; };
 
-    void resolveSupplierPresentationsForQuote(supplierPriceRequests, { includeProviderOptions: true }).then((response: SupplierPresentationResolutionResponse | null) => {
-      if (cancelled) return;
-      if (!response) {
+    const requestsSnapshot = JSON.parse(supplierPriceRequestKey) as SupplierPresentationQuoteItemRequest[];
+    void resolveSupplierPresentationsForQuote(requestsSnapshot, { includeProviderOptions: true })
+      .then((response: SupplierPresentationResolutionResponse | null) => {
+        if (cancelled) return;
+        if (!response) {
+          setSupplierReferenceResult({ requestKey: supplierPriceRequestKey, rows: [], checkedAt: null, status: "unavailable" });
+          return;
+        }
+        const itemsById = new Map(supplierItemsRef.current.map((item) => [item.id, item]));
+        const templatesById = new Map(supplierLineTemplatesRef.current.map((template) => [String(template.id), template]));
+        const rows: WorkProfilePriceReferenceRow[] = [];
+        for (const request of requestsSnapshot) {
+          const item = itemsById.get(request.itemId);
+          if (!item) continue;
+          const metadata = decodeCotizacionItemPresentationMeta(item.observaciones);
+          const template = templatesById.get(metadata.lineTemplateId);
+          for (const preview of response.profilePrices?.[request.itemId] ?? []) {
+            rows.push({
+              ...preview,
+              key: `${item.id}:${preview.technicalCode}:${preview.providerKey}:${preview.presentationId}`,
+              itemCode: item.codigo,
+              line: template?.nombre ?? item.lineaComercial,
+              lineNames: [template?.nombre ?? item.lineaComercial],
+              familyKey: request.familyKey,
+              finish: request.finishName || "Acabado sin definir",
+            });
+          }
+        }
+        const consolidatedRows = new Map<string, WorkProfilePriceReferenceRow>();
+        for (const row of rows) {
+          const key = `${row.familyKey}:${row.finish}:${row.technicalCode}:${row.profileName}:${row.providerKey}:${row.presentationId}`;
+          const current = consolidatedRows.get(key);
+          if (current) {
+            current.itemCode = [...new Set([...current.itemCode.split(", "), row.itemCode])].join(", ");
+            current.lineNames = [...new Set([...current.lineNames, ...row.lineNames])];
+            current.line = current.lineNames.join(" · ");
+          }
+          else consolidatedRows.set(key, row);
+        }
+        setSupplierReferenceResult({ requestKey: supplierPriceRequestKey, rows: [...consolidatedRows.values()], checkedAt: new Date().toISOString(), status: "loaded" });
+      })
+      .catch(() => {
+        if (cancelled) return;
         setSupplierReferenceResult({ requestKey: supplierPriceRequestKey, rows: [], checkedAt: null, status: "unavailable" });
-        return;
-      }
-      const itemsById = new Map(items.map((item) => [item.id, item]));
-      const templatesById = new Map(lineTemplates.map((template) => [String(template.id), template]));
-      const rows: WorkProfilePriceReferenceRow[] = [];
-      for (const request of supplierPriceRequests) {
-        const item = itemsById.get(request.itemId);
-        if (!item) continue;
-        const metadata = decodeCotizacionItemPresentationMeta(item.observaciones);
-        const template = templatesById.get(metadata.lineTemplateId);
-        for (const preview of response.profilePrices?.[request.itemId] ?? []) {
-          rows.push({
-            ...preview,
-            key: `${item.id}:${preview.technicalCode}:${preview.providerKey}:${preview.presentationId}`,
-            itemCode: item.codigo,
-            line: template?.nombre ?? item.lineaComercial,
-            lineNames: [template?.nombre ?? item.lineaComercial],
-            familyKey: request.familyKey,
-            finish: request.finishName || "Acabado sin definir",
-          });
-        }
-      }
-      const consolidatedRows = new Map<string, WorkProfilePriceReferenceRow>();
-      for (const row of rows) {
-        const key = `${row.familyKey}:${row.finish}:${row.technicalCode}:${row.profileName}:${row.providerKey}:${row.presentationId}`;
-        const current = consolidatedRows.get(key);
-        if (current) {
-          current.itemCode = [...new Set([...current.itemCode.split(", "), row.itemCode])].join(", ");
-          current.lineNames = [...new Set([...current.lineNames, ...row.lineNames])];
-          current.line = current.lineNames.join(" · ");
-        }
-        else consolidatedRows.set(key, row);
-      }
-      setSupplierReferenceResult({ requestKey: supplierPriceRequestKey, rows: [...consolidatedRows.values()], checkedAt: new Date().toISOString(), status: "loaded" });
-    });
+      });
     return () => { cancelled = true; };
-  }, [supplierPriceRequests, supplierPriceRequestKey, items, lineTemplates]);
+  }, [supplierPriceRequests.length, supplierPriceRequestKey]);
 
   const materialsDocument = useMemo(
     () => buildWorkMaterialsDocument({
