@@ -151,8 +151,12 @@ export function CuadernoQuickEditSheet({
   const [ancho, setAncho] = useState(item.ancho ? String(item.ancho) : "");
   const [alto, setAlto] = useState(item.alto ? String(item.alto) : "");
   const [cantidad, setCantidad] = useState(String(Math.max(1, item.cantidad || 1)));
+  const hasPersistedManualPrice = Boolean(
+    item.precioAjustadoManual || (item.origenPrecio === "manual" && item.precioUnitario > 0)
+  );
   const [precioDraft, setPrecioDraft] = useState<string | null>(null);
-  const [precioEditedManually, setPrecioEditedManually] = useState(false);
+  const [precioEditedManually, setPrecioEditedManually] = useState(hasPersistedManualPrice);
+  const [manualPricePreservedOnLineChange, setManualPricePreservedOnLineChange] = useState(false);
   const [lineTemplateIdDraft, setLineTemplateIdDraft] = useState<string | null>(null);
   const [selectedLineTemplateDraft, setSelectedLineTemplateDraft] =
     useState<CotizacionLineTemplate | null>(null);
@@ -193,6 +197,7 @@ export function CuadernoQuickEditSheet({
 
   const itemPrice = item.precioUnitario > 0 ? String(Math.round(item.precioUnitario)) : "";
   const precio = precioDraft ?? itemPrice;
+  const hasManualCommercialPrice = precioEditedManually || hasPersistedManualPrice;
   const lineTemplateId = lineTemplateIdDraft ?? form.lineTemplateId;
   const selectedLineTemplate = selectedLineTemplateDraft ?? lineTemplates.find(
     (template) => String(template.id) === lineTemplateId
@@ -813,9 +818,12 @@ export function CuadernoQuickEditSheet({
     }
     if (precio.trim()) {
       patch.costoProveedorUnitario = precio.trim();
-      if (precioEditedManually) {
+      if (hasManualCommercialPrice) {
         patch.markPriceManual = true;
       }
+    } else if (precioEditedManually) {
+      patch.costoProveedorUnitario = "";
+      patch.markPriceManual = true;
     }
     return patch;
   };
@@ -867,8 +875,18 @@ export function CuadernoQuickEditSheet({
           }
         : null
     );
-    setPrecioDraft(nextLineTemplateId ? getSuggestedPriceForTemplate(nextLineTemplateId) : "");
-    setPrecioEditedManually(false);
+    if (hasManualCommercialPrice) {
+      const preservedPrice = precioDraft ?? itemPrice;
+      setPrecioDraft(preservedPrice);
+      setPrecioEditedManually(true);
+      setManualPricePreservedOnLineChange(
+        Boolean(nextLineTemplateId) && Boolean(preservedPrice.trim())
+      );
+    } else {
+      setPrecioDraft(nextLineTemplateId ? getSuggestedPriceForTemplate(nextLineTemplateId) : "");
+      setPrecioEditedManually(false);
+      setManualPricePreservedOnLineChange(false);
+    }
   };
 
   const handleVidrioChange = (nextVidrio: string) => {
@@ -928,8 +946,14 @@ export function CuadernoQuickEditSheet({
     setFabricationSelectionDraft("");
     setSodalL25ConfigDraft(null);
     setSupplierProviderKeyDraft("");
-    setPrecioDraft(null);
-    setPrecioEditedManually(false);
+    if (hasManualCommercialPrice) {
+      setPrecioDraft((current) => current ?? itemPrice);
+      setPrecioEditedManually(true);
+    } else {
+      setPrecioDraft("");
+      setPrecioEditedManually(false);
+    }
+    setManualPricePreservedOnLineChange(false);
   };
 
   const handleColorChange = (nextColorHex: string) => {
@@ -1365,10 +1389,16 @@ export function CuadernoQuickEditSheet({
                 onChange={(event) => {
                   setPrecioDraft(event.target.value.replace(/[^\d]/g, ""));
                   setPrecioEditedManually(true);
+                  setManualPricePreservedOnLineChange(false);
                 }}
                 placeholder="CLP"
               />
             </label>
+            {manualPricePreservedOnLineChange ? (
+              <span className={s.variantSourceHint} role="status">
+                Precio manual conservado · revísalo para la nueva línea.
+              </span>
+            ) : null}
 
             <div className={s.technicalNote}>
               <strong>Cubicacion y pauta de corte</strong>
