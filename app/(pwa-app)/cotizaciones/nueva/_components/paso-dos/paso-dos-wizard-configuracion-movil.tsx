@@ -66,6 +66,7 @@ import { buildQuickCompositionBaseConfig } from "@/features/cotizaciones/visual-
 import type { QuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 import { resolveSupplierFamilyKeyForLineTemplate } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
+import { getSupplierCatalogQuoteLineKeys } from "@/features/proveedor-catalogos/services/proveedor-catalogo-qa.service";
 import { getLineTemplateWorkshopProfiles } from "@/features/cotizaciones/line-templates/types/line-profile-references";
 import { resolveMixedSupplierProfileCoverage, resolveQuoteSupplierProfileReferences, resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 import { useSupplierPresentationResolution } from "@/features/proveedor-catalogos/hooks/use-supplier-presentation-resolution";
@@ -644,7 +645,15 @@ export function PasoDosWizardConfiguracionMovil({
       ? exactL25SupplierRecipe
       : null
     : supplierRecipe;
+  const supportsProfilePurchaseCosts = Boolean(
+    requiresProfileMaterial &&
+    (selectedLineTemplate?.material === "Aluminio" || selectedLineTemplate?.material === "PVC") &&
+    selectedLineTemplate.catalogKey &&
+    getSupplierCatalogQuoteLineKeys().has(selectedLineTemplate.catalogKey) &&
+    supplierFamilyKey
+  );
   const supplierPresentationRequests = useMemo(() => {
+    if (!supportsProfilePurchaseCosts) return [];
     const recipeProfiles = (effectiveSupplierRecipe?.definition.perfiles ?? []).map((profile) => ({
       code: profile.codigoPerfil,
       name: profile.nombrePerfil,
@@ -668,14 +677,13 @@ export function PasoDosWizardConfiguracionMovil({
       finishName: resolveSupplierFinishName(draft.catalogTerminacion, draft.colorHex),
       technicalCodes,
     }];
-  }, [draft.catalogTerminacion, draft.colorHex, selectedLineTemplate, supplierFamilyKey, effectiveSupplierRecipe, selectedLineIsSodalL25]);
+  }, [draft.catalogTerminacion, draft.colorHex, selectedLineTemplate, supplierFamilyKey, effectiveSupplierRecipe, selectedLineIsSodalL25, supportsProfilePurchaseCosts]);
   const supplierPresentationResolution = useSupplierPresentationResolution(supplierPresentationRequests, {
     includeProviderOptions: true,
     includeProfilePrices: true,
   });
   const supplierProviderOptions = supplierPresentationResolution.result?.providerOptions?.["guided-line-provider-preview"] ?? [];
   const externalSupplierProviderOptions = supplierProviderOptions.filter((option) => !option.providerKey.startsWith("taller:"));
-  const isAluminumLine = selectedLineTemplate?.material === "Aluminio";
   const familyPreferenceProviderKey = supplierPresentationResolution.result?.familyPreferences?.[supplierFamilyKey ?? ""] ?? null;
   const [familyPreferenceOverride, setFamilyPreferenceOverride] = useState<{ familyKey: string; providerKey: string | null } | null>(null);
   const effectiveFamilyPreference = familyPreferenceOverride?.familyKey === supplierFamilyKey
@@ -1830,7 +1838,7 @@ export function PasoDosWizardConfiguracionMovil({
             )}
           />
         ) : null}
-        {isAluminumLine ? (
+        {supportsProfilePurchaseCosts ? (
           <section className={s.stepTwoMobileSupplierPicker} aria-label="Costos de fabricación">
             <strong>Costos de fabricación</strong>
             {!supplierFamilyKey ? <small role="status">Identidad de compra pendiente de definir.</small> : guidedCostReferences.length === 0 ? <small role="status">Códigos de perfil pendientes de identificar.</small> : <>

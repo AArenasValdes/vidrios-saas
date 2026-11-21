@@ -16,9 +16,11 @@ import {
   applyLineTemplateToComponentForm,
   buildComponentFormLinePricingSummary,
   PVC_COLOR_OPTIONS,
+  shouldRequireProfileMaterialForComponent,
   type ComponentFormState,
   mapItemToForm,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { getSupplierCatalogQuoteLineKeys } from "@/features/proveedor-catalogos/services/proveedor-catalogo-qa.service";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { GlassOptionPicker } from "@/features/cotizaciones/visual-composer/components/glass-option-picker";
 import type { QuoteConstructorItemPatch } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
@@ -496,7 +498,14 @@ export function CuadernoQuickEditSheet({
   const supplierLineTemplate = selectedLineTemplate ??
     VENTORA_DEFAULT_LINE_CATALOG.find((line) => line.catalogKey === selectedCatalogLineKey) ?? null;
   const supplierFamilyKey = resolveSupplierFamilyKeyForLineTemplate(supplierLineTemplate);
-  const isAluminumLine = supplierLineTemplate?.material === "Aluminio";
+  const requiresProfileMaterial = shouldRequireProfileMaterialForComponent(item.tipo ?? "");
+  const supportsProfilePurchaseCosts = Boolean(
+    requiresProfileMaterial &&
+    (supplierLineTemplate?.material === "Aluminio" || supplierLineTemplate?.material === "PVC") &&
+    selectedCatalogLineKey &&
+    getSupplierCatalogQuoteLineKeys().has(selectedCatalogLineKey) &&
+    supplierFamilyKey
+  );
   const supplierProfileReferences = useMemo(() => {
     const documentedProfiles = getLineTemplateWorkshopProfiles(supplierLineTemplate?.catalogMetadata)?.profiles
       .filter((profile) => profile.codeStatus === "catalog_reference" && profile.code?.trim())
@@ -522,6 +531,7 @@ export function CuadernoQuickEditSheet({
   // provider. Selecting Arquetipo/Alumco is presentation state, so it must not
   // invalidate this request and repeat the full catalog resolution.
   const supplierResolutionRequest = useMemo(() => {
+    if (!supportsProfilePurchaseCosts) return null;
     const documentedCodes = getLineTemplateWorkshopProfiles(supplierLineTemplate?.catalogMetadata)?.profiles
       .filter((profile) => profile.codeStatus === "catalog_reference" && profile.code?.trim())
       .map((profile) => profile.code!.trim()) ?? [];
@@ -542,7 +552,7 @@ export function CuadernoQuickEditSheet({
       previewFinishNames: supplierPreviewFinishNames,
       technicalCodes,
     };
-  }, [effectiveSupplierRecipe, item.id, selectedCatalogLineKey, selectedLineIsSodalL25, supplierFamilyKey, supplierLineTemplate?.catalogMetadata, supplierPreviewFinishNames, supplierProfileReferences, supplierResolutionFinishName]);
+  }, [effectiveSupplierRecipe, item.id, selectedCatalogLineKey, selectedLineIsSodalL25, supplierFamilyKey, supplierLineTemplate?.catalogMetadata, supplierPreviewFinishNames, supplierProfileReferences, supplierResolutionFinishName, supportsProfilePurchaseCosts]);
   const supplierResolutionKey = JSON.stringify(supplierResolutionRequest);
   useEffect(() => {
     if (!supplierResolutionRequest) return;
@@ -1104,7 +1114,7 @@ export function CuadernoQuickEditSheet({
               />
             ) : null}
 
-            {isAluminumLine ? (
+            {supportsProfilePurchaseCosts ? (
               !supplierFamilyKey || supplierProfileReferences.length === 0 ? (
                 <section className={s.supplierDisclosure} aria-label="Costos de fabricación">
                   <div className={s.supplierDisclosureBody}>
