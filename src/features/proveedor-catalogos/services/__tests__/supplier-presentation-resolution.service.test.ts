@@ -324,11 +324,21 @@ describe("resolver explícito de presentación para pauta", () => {
       ],
     })[0]).toMatchObject({ status: "resolved", providerKey: "arquetipo", presentationId: "arq-4201" });
 
-    // 4. Presentación de otra organización nunca se selecciona
+    // 4. Presentación de otra organización nunca se selecciona (automática ni explícita)
     expect(resolveSupplierPresentationsForQuoteItem({
       request: { itemId: "A4", familyKey: "ventora:l20", finishName: "Blanco", technicalCodes: ["2001"], organizationId: 7, eligibleOwnPresentationIds: ["own-other-org"] },
       presentations: [arquetipo, { ...incompletePreferred, presentationId: "own-other-org", providerKey: "taller:99", commercialLengthMm: 6000 }],
     })[0]).toMatchObject({ status: "resolved", providerKey: "arquetipo", presentationId: "arq-2001" });
+
+    expect(resolveSupplierPresentationsForQuoteItem({
+      request: { itemId: "A4-explicit", familyKey: "ventora:l20", finishName: "Blanco", technicalCodes: ["2001"], providerKey: "taller:99", organizationId: 7, eligibleOwnPresentationIds: ["own-other-org"] },
+      presentations: [arquetipo, { ...incompletePreferred, presentationId: "own-other-org", providerKey: "taller:99", commercialLengthMm: 6000 }],
+    })[0]).toMatchObject({ status: "missing", presentationId: null, providerKey: "taller:99" });
+
+    expect(resolveSupplierPresentationsForQuoteItem({
+      request: { itemId: "A4-no-org", familyKey: "veratec:sliding-7400", finishName: "Blanco", technicalCodes: ["7401"], providerKey: "taller:99" },
+      presentations: [{ ...incompletePreferred, presentationId: "own-other-org", providerKey: "taller:99", technicalCode: "7401", familyKeys: ["veratec:sliding-7400"], commercialLengthMm: 5800 }],
+    })[0]).toMatchObject({ status: "missing", presentationId: null });
 
     // 5. Familia no universal: preferida incompleta no desplaza proveedor compatible
     const xelena: ConfirmedSupplierPresentation = {

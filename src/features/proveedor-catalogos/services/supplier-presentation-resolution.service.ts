@@ -493,12 +493,18 @@ export function resolveSupplierPresentationsForQuoteItem(input: {
   presentations: readonly ConfirmedSupplierPresentation[];
 }): FabricacionTrabajoPresentationSelection[] {
   const { request } = input;
+  const hasAccreditedOrganization = Number.isSafeInteger(request.organizationId);
+  const isOwnWorkshopEntry = (entry: ConfirmedSupplierPresentation) =>
+    entry.providerKey.startsWith("taller:") &&
+    hasAccreditedOrganization &&
+    entry.providerKey === `taller:${request.organizationId}`;
   return [...new Set(request.technicalCodes.map(normalizeCode).filter(Boolean))].map((technicalCode) => {
     const candidates = input.presentations.filter((entry) =>
+      (!entry.providerKey.startsWith("taller:") || isOwnWorkshopEntry(entry)) &&
       ((!request.providerKey || entry.providerKey === request.providerKey) ||
         (request.allowOwnProfileCosts === true &&
           (normalizeUniversalAluminumFamilyKey(request.familyKey) ?? request.familyKey) === "universal:aluminio:l42" &&
-          Number.isSafeInteger(request.organizationId) && entry.providerKey === `taller:${request.organizationId}`)) &&
+          isOwnWorkshopEntry(entry))) &&
       entry.familyKeys.some((familyKey) =>
         (normalizeUniversalAluminumFamilyKey(familyKey) ?? familyKey) ===
         (normalizeUniversalAluminumFamilyKey(request.familyKey) ?? request.familyKey)
@@ -511,11 +517,6 @@ export function resolveSupplierPresentationsForQuoteItem(input: {
     );
 
     const universalAluminumFamily = normalizeUniversalAluminumFamilyKey(request.familyKey);
-    const hasAccreditedOrganization = Number.isSafeInteger(request.organizationId);
-    const isOwnWorkshopEntry = (entry: ConfirmedSupplierPresentation) =>
-      entry.providerKey.startsWith("taller:") &&
-      hasAccreditedOrganization &&
-      entry.providerKey === `taller:${request.organizationId}`;
     const hasCompleteLength = (entry: ConfirmedSupplierPresentation) =>
       entry.commercialLengthMm != null && Number.isSafeInteger(entry.commercialLengthMm) && entry.commercialLengthMm > 0;
     const isEligibleOwnCost = (entry: ConfirmedSupplierPresentation) =>

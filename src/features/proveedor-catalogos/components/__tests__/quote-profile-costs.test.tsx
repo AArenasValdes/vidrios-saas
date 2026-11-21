@@ -159,7 +159,7 @@ describe("QuoteProfileCosts", () => {
     fireEvent.click(screen.getByRole("button", { name: "Usar costo propio en esta pieza" }));
     expect(shared.onUseWorkshopCost).toHaveBeenCalledWith("taller:941");
     expect(screen.getAllByRole("textbox", { name: "Proveedor (opcional)" })[1]).toHaveValue("Aluminera local");
-    fireEvent.change(screen.getByRole("textbox", { name: "Costo neto por tira 2503 (CLP)" }), { target: { value: "28000" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Costo neto por unidad 2503 (CLP)" }), { target: { value: "28000" } });
     fireEvent.click(screen.getByRole("button", { name: "Guardar costo 2503" }));
 
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/proveedor-catalogos/taller-presentaciones", expect.objectContaining({
@@ -292,5 +292,37 @@ describe("QuoteProfileCosts", () => {
     expect(screen.getByText(/Referencia seleccionada: Alumco.*\$31\.000/)).toBeInTheDocument();
     expect(screen.getByText(/otro acabado: no confirma costo físico/)).toBeInTheDocument();
     expect(screen.queryByText("TI2503")).not.toBeInTheDocument();
+  });
+
+  it.each(["M", "KG", "PAR"] as const)("redirige a Mis precios para unidades no compatibles (%s) sin editarlas como tira", (unit) => {
+    render(<QuoteProfileCosts {...shared} prices={[{
+      ...basePrice, providerKey: "taller:941", providerLabel: "Precio propio del taller",
+      presentationId: `own-${unit}`, supplierSku: "", purchaseUnit: unit,
+      commercialLengthMm: 6000, netPrice: 4500, currency: "CLP",
+      priceSource: "workshop", priceListRevision: "taller-v1", status: "priced",
+    }]} />);
+
+    expect(screen.queryByRole("button", { name: "Editar costo" })).not.toBeInTheDocument();
+    const link = screen.getByRole("link", { name: `Editar en Mis precios (${unit})` });
+    expect(link).toHaveAttribute("href", expect.stringContaining("/configuracion/empresa/mis-precios?supplier=taller"));
+  });
+
+  it("conserva TIRA con etiqueta de tira al editar", async () => {
+    render(<QuoteProfileCosts {...shared} prices={[{
+      ...basePrice, providerKey: "taller:941", providerLabel: "Precio propio del taller",
+      presentationId: "own-tira", supplierSku: "", purchaseUnit: "TIRA",
+      commercialLengthMm: 6000, netPrice: 27500, currency: "CLP",
+      priceSource: "workshop", priceListRevision: "taller-v1", status: "priced",
+    }]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Editar costo" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Costo neto por tira 2503 (CLP)" }), { target: { value: "29000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar costo 2503" }));
+
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
+    expect(JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body)).toMatchObject({
+      purchaseUnit: "TIRA",
+      netPrice: 29000,
+    });
   });
 });

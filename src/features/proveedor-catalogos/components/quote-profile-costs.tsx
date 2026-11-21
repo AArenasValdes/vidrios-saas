@@ -26,6 +26,8 @@ function formatCostInput(value: string) {
   return grouped + (decimal.length ? "," + decimal.join("").slice(0, 2) : "");
 }
 
+const QUICK_EDITABLE_UNITS = new Set(["UN", "TIRA"]);
+
 function revisionFromPreview(row: PriceRow | undefined) {
   const match = row?.priceListRevision?.match(/^taller-v(\d+)$/);
   return match?.[1] ? Number(match[1]) : null;
@@ -209,14 +211,15 @@ export function QuoteProfileCosts({
     setError(null);
     try {
       if (row.workshop) {
+        if (row.workshop.purchaseUnit && !QUICK_EDITABLE_UNITS.has(row.workshop.purchaseUnit)) {
+          throw new Error("Este costo requiere edición detallada en Mis precios.");
+        }
         const expectedRevision = revisionFromPreview(row.workshop);
         if (!expectedRevision || !row.workshop.presentationId) throw new Error("No se pudo confirmar la revisión de este costo privado. Vuelve a cargar la pieza.");
         await saveQuickWorkshopProfileCost({
           kind: "update", lineTemplateId, presentationId: row.workshop.presentationId,
           expectedRevision,
-          purchaseUnit: (["M", "UN", "KG", "PAR", "TIRA"].includes(row.workshop.purchaseUnit)
-            ? row.workshop.purchaseUnit
-            : "TIRA") as "M" | "UN" | "KG" | "PAR" | "TIRA",
+          purchaseUnit: row.workshop.purchaseUnit === "UN" ? "UN" : "TIRA",
           commercialLengthMm: length, netPrice: cost,
           supplierName: draftSupplier.trim() || (row.workshop.workshopSupplierName ? null : undefined),
         });
@@ -287,9 +290,12 @@ export function QuoteProfileCosts({
           const readyOwn = Boolean(row.workshop && isEffectiveSupplierProfilePrice(row.workshop));
           const cannotUseAmbiguous = row.conflict;
           const existingOwn = Boolean(row.workshop?.presentationId);
+          const workshopUnit = row.workshop?.purchaseUnit ?? "";
+          const isUnsupportedQuickUnit = Boolean(existingOwn && workshopUnit && !QUICK_EDITABLE_UNITS.has(workshopUnit));
+          const isUnitCost = row.workshop?.purchaseUnit === "UN";
           const workshopIsSelected = Boolean(row.workshop && (row.workshop.providerKey === providerKey ||
             allowMixedWorkshopCosts && isEffectiveSupplierProfilePrice(row.workshop)));
-          const canEditPrivate = existingOwn && revisionFromPreview(row.workshop) !== null;
+          const canEditPrivate = existingOwn && revisionFromPreview(row.workshop) !== null && !isUnsupportedQuickUnit;
           const canSave = canManagePrice && !cannotUseAmbiguous && (existingOwn ? canEditPrivate : true);
           const externalPrice = current?.priceSource !== "workshop" && current?.status === "priced" &&
             current.netPrice != null && current.currency
@@ -312,6 +318,8 @@ export function QuoteProfileCosts({
                   {canManagePrice ? (
                     cannotUseAmbiguous
                       ? <small className={s.pending}>Revisar presentación ambigua</small>
+                      : isUnsupportedQuickUnit
+                        ? <a className={s.pending} href={`/configuracion/empresa/mis-precios?supplier=taller&family=${encodeURIComponent(familyKey)}&lineTemplateId=${lineTemplateId}`} target="_blank" rel="noreferrer">Editar en Mis precios ({workshopUnit})</a>
                       : <button className={s.action} type="button" disabled={!canSave || Boolean(savingCode)}
                           aria-expanded={isEditing} onClick={() => {
                             if (isEditing) {
@@ -372,7 +380,7 @@ export function QuoteProfileCosts({
                     </fieldset>
                   ) : null}
                   <div className={s.editorFields}>
-                    <label>Largo de la tira {row.technicalCode} (mm)
+                    <label>{isUnitCost ? `Largo de referencia ${row.technicalCode} (mm)` : `Largo de la tira ${row.technicalCode} (mm)`}
                       <input type="text" inputMode="numeric" pattern="[0-9]*"
                         value={draftLength} placeholder="Pendiente" enterKeyHint="next"
                         onChange={(event) => setDraftLength(event.target.value)}
@@ -385,7 +393,7 @@ export function QuoteProfileCosts({
                         </button>
                       ) : null}
                     </label>
-                    <label>Costo neto por tira {row.technicalCode} (CLP)
+                    <label>{isUnitCost ? `Costo neto por unidad ${row.technicalCode} (CLP)` : `Costo neto por tira ${row.technicalCode} (CLP)`}
                       <input ref={priceInputRef} type="text" inputMode="decimal"
                         value={draftCost} placeholder="Ej: 15000,50" enterKeyHint="next"
                         onChange={(event) => {
