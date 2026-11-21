@@ -8,6 +8,7 @@ import type { useMisPrecios } from "@/features/proveedor-catalogos/hooks/use-mis
 import type { MyPresentationPrice, MySupplierPrices } from "@/features/proveedor-catalogos/services/mis-precios.client.service";
 import s from "./page.module.css";
 import { TallerPresentaciones } from "./taller-presentaciones";
+import { TallerVidrios } from "./taller-vidrios";
 
 type SheetState = { kind: "adjustment"; providerKey: string } | { kind: "price"; providerKey: string; presentationId: string } | { kind: "filters" } | null;
 type ProductFilter = "all" | "custom" | "pending";
@@ -541,6 +542,7 @@ export function MisPreciosContent({ catalog, error, busy, save, refresh }: Retur
               {providers.map((provider) => <ProviderRow key={provider.providerKey} provider={provider} selected={provider.providerKey === selectedProvider?.providerKey} onSelect={() => { setSelectedKey(provider.providerKey); setSearch(""); setFamilyKey("all"); setProductFilter("all"); }} />)}
               {unavailableProviders.map((name) => <UnavailableProviderRow key={name} providerName={name} />)}
             </div>
+            <TallerVidrios />
           </aside>
           <section className={`${s.detailPane} ${selectedProvider ? s.mobileActive : ""}`} aria-label={selectedProvider ? `Precios de ${selectedProvider.providerName}` : "Detalle de proveedor"}>
             {selectedProvider ? (

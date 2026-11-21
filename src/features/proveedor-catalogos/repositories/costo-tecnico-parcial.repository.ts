@@ -17,7 +17,11 @@ import {
   type TechnicalCostSnapshot,
 } from "../services/costo-tecnico-parcial.service";
 import { resolveSupplierPresentationFamilyKeys, type ConfirmedSupplierPresentation } from "../services/supplier-presentation-resolution.service";
-import { listWorkshopPresentations, WorkshopPresentationsSchemaMissingError } from "./workshop-presentations.repository";
+import {
+  listWorkshopGlassCutPresentations,
+  listWorkshopPresentations,
+  WorkshopPresentationsSchemaMissingError,
+} from "./workshop-presentations.repository";
 import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import { isGeneratedWorkshopPresentationKey } from "../services/workshop-presentation-identity.service";
 
@@ -133,6 +137,11 @@ export async function readWorkshopPresentationPrices(organizationId: number): Pr
     workshopSupplierName: row.proveedor_nombre ? String(row.proveedor_nombre) : null,
     origin: "workshop" as const,
   }));
+}
+
+export async function readWorkshopGlassCutPresentations(organizationId: number) {
+  const { presentations } = await listWorkshopGlassCutPresentations(organizationId);
+  return presentations;
 }
 
 export async function readSupplierName(providerKey: string) {
@@ -309,7 +318,16 @@ export async function readSupplierPresentationPrices(input: {
     const recipeAccessoryNames = Array.isArray(evidence.recipeAccessoryNames)
       ? evidence.recipeAccessoryNames.filter((name): name is string => typeof name === "string" && name.trim().length > 0)
       : [];
-    if (presentation.largo_comercial_mm == null && recipeAccessoryNames.length === 0) return [];
+    const normalizedPurchaseUnit = String(presentation.unidad_compra ?? "").trim().toUpperCase();
+    const isNonBarAccessoryUnit = [
+      "UN", "PZ", "PZA", "PIEZA", "PIEZAS", "PCS", "PC", "UNIT", "UNIDAD", "UNIDADES",
+      "PAR", "PARES", "PAIR", "KG", "M", "MT", "MTS", "ML", "METRO", "METROS", "TUBO", "TUBOS",
+    ].includes(normalizedPurchaseUnit);
+    const hasExplicitAccessoryIdentity =
+      recipeAccessoryNames.length > 0 ||
+      (isNonBarAccessoryUnit &&
+        (recipeComponentCodes.length > 0 || Boolean(String(technicalInput.codigo_fuente ?? "").trim())));
+    if (presentation.largo_comercial_mm == null && !hasExplicitAccessoryIdentity) return [];
     return [{
       presentationId: String(presentation.id),
       providerKey,

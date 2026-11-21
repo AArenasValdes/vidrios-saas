@@ -169,6 +169,72 @@ describe("readSupplierPresentationPrices", () => {
       ]));
     }
   });
+
+  it("conserva accesorios L25 en unidad UN/M/TUBO sin largo comercial ni recipeAccessoryNames cuando tienen código técnico o recipeComponentCodes", async () => {
+    const familyKey = "universal:aluminio:l25";
+    const rowsByTable: Record<string, unknown[]> = {
+      catalogo_listas_precios: [{
+        id: "list-arq-2026",
+        proveedor_key: "arquetipo",
+        revision: "2026-10",
+        publicado_en: "2026-10-01",
+        vigente_desde: "2026-10-01",
+        vigente_hasta: null,
+        creado_en: "2026-10-01T00:00:00.000Z",
+        moneda: "CLP",
+        base_precio: "presentacion_comercial",
+      }],
+      catalogo_insumo_familias: [{ insumo_tecnico_id: "input-guia-l25", family_key: familyKey }],
+      catalogo_presentaciones_proveedor: [{
+        id: "pres-guia-l25",
+        proveedor_key: "arquetipo",
+        sku_proveedor: "ARQ-GUIA-L25",
+        descripcion: "Guía L25 inferior",
+        modo_acabado: "independiente",
+        acabado_codigo: null,
+        acabado_nombre: null,
+        unidad_compra: "UN",
+        largo_comercial_mm: null,
+        insumo_tecnico_id: "input-guia-l25",
+      }],
+      catalogo_precios_presentacion: [{
+        lista_precio_id: "list-arq-2026",
+        presentacion_id: "pres-guia-l25",
+        precio_neto: 850,
+        moneda: "CLP",
+      }],
+      catalogo_insumos_tecnicos: [{
+        id: "input-guia-l25",
+        codigo_fuente: "GUIA-L25-PROV",
+        nombre: "Guía L25",
+        evidencia: { recipeComponentCodes: ["GUIA-L25"] },
+      }],
+    };
+    const from = jest.fn((table: string) => {
+      const query = {
+        select: jest.fn(() => query),
+        eq: jest.fn(() => query),
+        in: jest.fn(() => query),
+        then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) =>
+          Promise.resolve({ data: rowsByTable[table] ?? [], error: null }).then(resolve, reject),
+      };
+      return query;
+    });
+    (createAdminClient as jest.Mock).mockReturnValue({ from });
+
+    const prices = await readSupplierPresentationPrices({ familyKeys: [familyKey] });
+
+    expect(prices).toEqual([
+      expect.objectContaining({
+        presentationId: "pres-guia-l25",
+        technicalCode: "GUIA-L25-PROV",
+        recipeComponentCodes: ["GUIA-L25"],
+        purchaseUnit: "UN",
+        commercialLengthMm: null,
+        netPrice: 850,
+      }),
+    ]);
+  });
 });
 
 describe("readWorkshopPresentationPrices", () => {

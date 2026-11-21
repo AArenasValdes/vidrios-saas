@@ -440,6 +440,12 @@
       "source": "app/api/proveedor-catalogos/taller-presentaciones/route.ts"
     },
     {
+      "path": "/api/proveedor-catalogos/taller-vidrios",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/proveedor-catalogos/taller-vidrios/route.ts"
+    },
+    {
       "path": "/api/public-landing/revalidate",
       "type": "api",
       "area": "api",

@@ -1,4 +1,6 @@
 import type { FabricacionTrabajoPresentationSelection } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
+import type { CatalogPresentationPrice } from "./costo-tecnico-parcial.service";
+import type { GlassSupplierCutPresentation } from "./glass-supplier-cut-cost.service";
 import type { SupplierProfilePricePreview } from "./supplier-presentation-resolution.service";
 
 export type SupplierPresentationQuoteItemRequest = {
@@ -34,6 +36,8 @@ export type SupplierPresentationResolutionResponse = {
   profilePrices?: Record<string, SupplierProfilePricePreview[]>;
   providerOptionsByFinish?: Record<string, Record<string, SupplierPriceProviderOption[]>>;
   profilePricesByFinish?: Record<string, Record<string, SupplierProfilePricePreview[]>>;
+  glassCutPresentations?: GlassSupplierCutPresentation[];
+  accessoryPrices?: CatalogPresentationPrice[];
   familyPreferences?: Record<string, string>;
   canManageFamilyPreferences?: boolean;
   canManageSupplierPrices?: boolean;

@@ -12,6 +12,12 @@ const catalog = {
     ] }],
 };
 
+const originalFetch = global.fetch;
+
+afterEach(() => {
+  global.fetch = originalFetch;
+});
+
 const setup = (save = jest.fn(async () => true)) => {
   render(<MisPreciosContent catalog={catalog} error={null} busy={false} save={save} refresh={async () => undefined} />);
   return save;
@@ -192,4 +198,65 @@ it("representa ausencia de precio como Pendiente, nunca como cero", () => {
   fireEvent.click(screen.getByRole("button", { name: /Editar precio de Escuadra pendiente/ }));
   expect(screen.getAllByText("Pendiente").length).toBeGreaterThan(0);
   expect(screen.queryByText("$0")).not.toBeInTheDocument();
+});
+
+it("permite registrar un precio neto de vidrio al corte (m²) en Mis precios y tolera migración pendiente", async () => {
+  const fetchMock = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes("/api/proveedor-catalogos/taller-vidrios") && init?.method === "POST") {
+      return { ok: true, status: 201, json: async () => ({ row: { id: "g-1" } }) } as Response;
+    }
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        glassProducts: [{ id: 3643, productId: "3643", name: "Incoloro monolítico 5mm", category: "monolitico", thicknessMm: 5 }],
+        presentations: [],
+        schemaPending: false,
+        canManage: true,
+      }),
+    } as Response;
+  });
+  global.fetch = fetchMock as unknown as typeof fetch;
+
+  render(<MisPreciosContent catalog={catalog} error={null} busy={false} save={jest.fn(async () => true)} refresh={async () => undefined} />);
+
+  expect(await screen.findByRole("heading", { name: "Vidrio al corte (m²)" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Agregar vidrio" }));
+  expect(screen.queryByRole("option", { name: /General por categoría/i })).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText(/Cristal de tu catálogo/i), { target: { value: "3643" } });
+  fireEvent.change(screen.getByLabelText(/Proveedor de vidrio/i), { target: { value: "Vidriería Sur" } });
+  fireEvent.change(screen.getByLabelText(/Precio neto \/ m²/i), { target: { value: "14500" } });
+  fireEvent.change(screen.getByLabelText(/Mínimo m² por paño/i), { target: { value: "0.5" } });
+  fireEvent.click(screen.getByRole("button", { name: "Guardar precio de vidrio" }));
+
+  await waitFor(() =>
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/proveedor-catalogos/taller-vidrios",
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining('"netPricePerM2":14500'),
+      })
+    )
+  );
+});
+
+it("oculta la tarjeta de vidrio al corte en Mis precios cuando schemaPending es true sin exponer mensajes SQL", async () => {
+  const fetchMock = jest.fn(async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      glassProducts: [],
+      presentations: [],
+      schemaPending: true,
+      canManage: true,
+    }),
+  }));
+  global.fetch = fetchMock as unknown as typeof fetch;
+
+  render(<MisPreciosContent catalog={catalog} error={null} busy={false} save={jest.fn(async () => true)} refresh={async () => undefined} />);
+
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/proveedor-catalogos/taller-vidrios", { cache: "no-store" }));
+  expect(screen.queryByRole("heading", { name: "Vidrio al corte (m²)" })).not.toBeInTheDocument();
+  expect(screen.queryByText(/migración/i)).not.toBeInTheDocument();
 });

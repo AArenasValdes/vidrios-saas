@@ -760,6 +760,9 @@ export function PasoDosWizardConfiguracionMovil({
       providerKey: activeSupplierProviderKey,
       profilePrices:
         supplierPresentationResolution.result?.profilePrices?.["guided-line-provider-preview"] ?? [],
+      accessoryPrices: supplierPresentationResolution.result?.accessoryPrices,
+      glassCutPresentations: supplierPresentationResolution.result?.glassCutPresentations,
+      glassTechnicalSpec: draft.glassTechnicalSpec ?? null,
     });
   }, [
     activeSupplierProviderKey,
@@ -767,6 +770,7 @@ export function PasoDosWizardConfiguracionMovil({
     draft.ancho,
     draft.catalogTerminacion,
     draft.colorHex,
+    draft.glassTechnicalSpec,
     draft.material,
     draft.referencia,
     draft.sistema,
@@ -780,6 +784,8 @@ export function PasoDosWizardConfiguracionMovil({
     selectedLineTemplate?.nombre,
     selectedRecipeLineTemplateId,
     supplierFamilyKey,
+    supplierPresentationResolution.result?.accessoryPrices,
+    supplierPresentationResolution.result?.glassCutPresentations,
     supplierPresentationResolution.result?.profilePrices,
     supportsProfilePurchaseCosts,
   ]);
