@@ -337,9 +337,16 @@ function alumcoBasePriceForFinish(
 function accessoryPurchaseUnitMatches(recipeUnit: string, purchaseUnit: string) {
   const recipe = normalizeFinish(recipeUnit);
   const purchase = normalizeFinish(purchaseUnit);
-  if (["unidad", "unidades", "pcs", "pc", "unit"].includes(recipe)) return ["pcs", "pc", "unidad", "unit"].includes(purchase);
-  if (["par", "pares", "pair"].includes(recipe)) return ["pair", "par"].includes(purchase);
-  if (["kg", "kilogramo"].includes(recipe)) return ["kg", "kilogramo"].includes(purchase);
+  const pieceUnits = ["unidad", "unidades", "pcs", "pc", "unit", "un", "pz", "pza", "pieza", "piezas"];
+  if (pieceUnits.includes(recipe)) return pieceUnits.includes(purchase);
+  const meterUnits = ["m", "mt", "mts", "metro", "metros", "ml"];
+  if (meterUnits.includes(recipe)) return meterUnits.includes(purchase);
+  const pairUnits = ["par", "pares", "pair"];
+  if (pairUnits.includes(recipe)) return pairUnits.includes(purchase);
+  const kgUnits = ["kg", "kilogramo", "kilogramos"];
+  if (kgUnits.includes(recipe)) return kgUnits.includes(purchase);
+  const tubeUnits = ["tubo", "tubos"];
+  if (tubeUnits.includes(recipe)) return tubeUnits.includes(purchase);
   return recipe === purchase;
 }
 
@@ -652,18 +659,40 @@ export function buildPartialTechnicalCostSnapshot(input: {
     for (const accessory of quoteItem.recipeAccessories ?? []) {
       const key = [accessory.recipeAccessoryCode ?? "", accessory.description, accessory.unit].join("|");
       const finishName = quoteItem.finishName?.trim() || canonicalFinishLabel(quoteItem.color, quoteItem.colorHex);
-      const accessoryCandidates = input.availablePrices.filter((entry) =>
-        entry.recipeAccessoryNames?.includes(accessory.description) === true &&
-        accessoryPurchaseUnitMatches(accessory.unit, entry.purchaseUnit) &&
-        (entry.finishResolution === "finish_independent" || normalizeFinish(entry.finishName) === normalizeFinish(finishName)) &&
-        resolvedPrice(entry, input.organizationPricing) != null
-      );
+      const accessoryCandidates = input.availablePrices.filter((entry) => {
+        if (entry.priceReferenceStatus === "not_yet_valid") return false;
+        if (!matchesCatalogFamily(entry, quoteItem.catalogLineKey, quoteItem.supplierFamilyKey)) return false;
+        if (quoteItem.supplierProviderKey && entry.providerKey && entry.providerKey !== quoteItem.supplierProviderKey) {
+          return false;
+        }
+        const matchesByName = entry.recipeAccessoryNames?.includes(accessory.description) === true;
+        const matchesByCode = Boolean(
+          accessory.recipeAccessoryCode &&
+          (entry.technicalCode === accessory.recipeAccessoryCode ||
+            entry.recipeComponentCodes?.includes(accessory.recipeAccessoryCode) === true)
+        );
+        if (!matchesByName && !matchesByCode) return false;
+        if (!accessoryPurchaseUnitMatches(accessory.unit, entry.purchaseUnit)) return false;
+        if (
+          entry.finishResolution !== "finish_independent" &&
+          normalizeFinish(entry.finishName) !== normalizeFinish(finishName)
+        ) {
+          return false;
+        }
+        return resolvedPrice(entry, input.organizationPricing) != null;
+      });
       if (accessoryCandidates.length === 1) {
         const presentation = accessoryCandidates[0];
         const resolved = resolvedPrice(presentation, input.organizationPricing);
         if (resolved) {
           const unitPrice = resolved.unitNetPrice;
-          const existingLine = lines.find((line) => line.supplierSku === presentation.supplierSku && line.technicalCode === (accessory.recipeAccessoryCode ?? accessory.description));
+          const existingLine = lines.find(
+            (line) =>
+              line.supplierSku === presentation.supplierSku &&
+              (line.providerKey ?? "") === (presentation.providerKey ?? "") &&
+              normalizeFinish(line.finishName) === normalizeFinish(presentation.finishName ?? "Sin acabado específico") &&
+              line.technicalCode === (accessory.recipeAccessoryCode ?? accessory.description)
+          );
           if (existingLine) {
             existingLine.quantity = (existingLine.quantity ?? 0) + accessory.quantity;
             existingLine.lineNet += accessory.quantity * unitPrice;
@@ -705,7 +734,10 @@ export function buildPartialTechnicalCostSnapshot(input: {
       missing.set(key, {
         technicalCode: accessory.recipeAccessoryCode,
         description: accessory.description,
-        reason: "No hay asociación a presentación y precio de proveedor respaldada documentalmente.",
+        reason:
+          accessoryCandidates.length > 1
+            ? `Identificación ambigua: hay ${accessoryCandidates.length} presentaciones compatibles para este accesorio.`
+            : "No hay asociación a presentación y precio de proveedor respaldada documentalmente.",
         quantity: (existing?.quantity ?? 0) + accessory.quantity,
         unit: accessory.unit,
       });

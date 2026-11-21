@@ -4,6 +4,12 @@ import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabri
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
+import type { GlassTechnicalSpec } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
+import {
+  resolveGlassSupplierCutCost,
+  type GlassSupplierCutPresentation,
+  type GlassSupplierCutResolution,
+} from "./glass-supplier-cut-cost.service";
 import {
   buildPartialTechnicalCostSnapshot,
   getRecipeAccessoriesFromItemSnapshot,
@@ -110,6 +116,11 @@ export function buildGuidedTechnicalCostSuggestion(input: {
   supplierFamilyKey: string | null;
   providerKey: string | null;
   profilePrices: readonly SupplierProfilePricePreview[];
+  accessoryPrices?: readonly CatalogPresentationPrice[];
+  glassCutPresentations?: readonly GlassSupplierCutPresentation[];
+  glassTechnicalSpec?: GlassTechnicalSpec | null;
+  glassProviderKey?: string | null;
+  asOfDate?: string;
   backedGlassCostNet?: number | null;
   markupPct?: number;
 }): GuidedTechnicalCostSuggestion {
@@ -222,12 +233,13 @@ export function buildGuidedTechnicalCostSuggestion(input: {
     return emptyUnavailable("No se generaron barras calculables para las medidas actuales.");
   }
 
-  const availablePrices = mapPreviewPricesToCatalogPrices({
+  const profilePricesMapped = mapPreviewPricesToCatalogPrices({
     profilePrices: input.profilePrices,
     familyKey: input.supplierFamilyKey,
     providerKey: input.providerKey,
     finishName: input.finishName,
   });
+  const availablePrices = [...profilePricesMapped, ...(input.accessoryPrices ?? [])];
 
   const recipeAccessories = getRecipeAccessoriesFromItemSnapshot(
     despiece.formal,
@@ -266,17 +278,44 @@ export function buildGuidedTechnicalCostSuggestion(input: {
     .reduce((sum, line) => sum + line.lineNet, 0);
   const accessoriesCostNet = accessoriesCostRaw > 0 ? Math.round(accessoriesCostRaw) : null;
 
-  const hasBackedGlassCost =
+  const hasExplicitBackedGlassCost =
     input.backedGlassCostNet != null &&
     Number.isFinite(input.backedGlassCostNet) &&
     input.backedGlassCostNet > 0;
-  const glassCostNet = hasBackedGlassCost ? Math.round(input.backedGlassCostNet!) : null;
+  const glassResolution: GlassSupplierCutResolution | null =
+    !hasExplicitBackedGlassCost && input.glassCutPresentations?.length
+      ? resolveGlassSupplierCutCost({
+          panes: despiece.formal.result.vidrios,
+          glassDescription: input.vidrio.trim(),
+          glassTechnicalSpec: input.glassTechnicalSpec ?? null,
+          organizationId: input.organizationId ?? null,
+          providerKey: input.glassProviderKey ?? null,
+          presentations: input.glassCutPresentations,
+          asOfDate: input.asOfDate,
+        })
+      : null;
 
-  const missingItems = costSnapshot.missing.filter((entry) => {
-    if (entry.technicalCode === null && hasBackedGlassCost) {
-      return false;
+  const hasBackedGlassCost =
+    hasExplicitBackedGlassCost || glassResolution?.status === "priced";
+  const glassCostNet = hasExplicitBackedGlassCost
+    ? Math.round(input.backedGlassCostNet!)
+    : glassResolution?.status === "priced"
+      ? glassResolution.totalNetCost
+      : null;
+
+  const isPendingGlassEntry = (entry: TechnicalCostSnapshot["missing"][number]) =>
+    entry.technicalCode === null &&
+    entry.unit == null &&
+    entry.reason.includes("catálogo de vidrios");
+
+  const missingItems = costSnapshot.missing.flatMap((entry) => {
+    if (isPendingGlassEntry(entry)) {
+      if (hasBackedGlassCost) return [];
+      if (glassResolution) {
+        return [{ ...entry, reason: glassResolution.reason }];
+      }
     }
-    return true;
+    return [entry];
   });
 
   const knownComponents = [profilesCostNet, accessoriesCostNet, glassCostNet].filter(
@@ -315,7 +354,10 @@ export function buildGuidedTechnicalCostSuggestion(input: {
       (line) => line.priceApplicationStatus === "base_reference_other_finish"
     );
   const distinctCurrencies = [
-    ...new Set(costSnapshot.lines.map((line) => line.currency).filter(Boolean)),
+    ...new Set([
+      ...costSnapshot.lines.map((line) => line.currency).filter(Boolean),
+      ...(glassResolution?.status === "priced" ? [glassResolution.currency] : []),
+    ]),
   ];
   const hasMixedCurrencies = distinctCurrencies.length > 1;
 
