@@ -109,6 +109,17 @@ export function preparePasoTresGuardado({
 
   if (estado === "creada" && draftToSave.items.length === 0 && quotePricingMode !== "total_global") {
     finalErrors.items = "Agrega al menos un componente";
+  } else if (estado === "creada" && quotePricingMode !== "total_global") {
+    const zeroPriceItemsCount = draftToSave.items.filter(
+      (item) => Number(item.precioTotal ?? 0) <= 0 || Number(item.precioUnitario ?? 0) <= 0
+    ).length;
+
+    if (zeroPriceItemsCount > 0) {
+      finalErrors.items =
+        zeroPriceItemsCount === 1
+          ? "Completa el precio comercial de todas las partidas antes de guardar."
+          : `Completa el precio comercial de las ${zeroPriceItemsCount} partidas sin precio antes de guardar.`;
+    }
   }
 
   if (estado === "creada" && quotePricingMode === "total_global") {

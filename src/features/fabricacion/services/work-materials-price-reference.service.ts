@@ -59,8 +59,23 @@ export type ResolvedProfileSupplierPrice = {
   unitPrice: number;
   currency: string;
   basis: string;
+  sourceKind: "workshop" | "reference" | "adjusted";
   source: "linked_material_price" | "exact_presentation";
 };
+
+function displayBasis(reference: PricedProfileReference, profile: WorkProfileMaterialRow) {
+  const basis = normalizeIdentity(reference.purchaseUnit);
+  const sameConfirmedLength = reference.commercialLengthMm != null &&
+    reference.commercialLengthMm === profile.commercialLengthMm;
+  // The quick workshop editor asks for a price per strip but older saved rows
+  // used UN. With an exact private presentation and matching bar length, UN
+  // represents one purchased strip. External supplier units remain untouched.
+  if (reference.priceSource === "workshop" && sameConfirmedLength) {
+    if (["un", "unidad", "unidad de compra"].includes(basis)) return "por tira";
+    if (["tr", "tira", "tiras"].includes(basis)) return "tira";
+  }
+  return reference.purchaseUnit;
+}
 
 /** One shared association path for mobile, PDF and Excel exports. */
 export function resolveProfileSupplierPrice(
@@ -77,6 +92,7 @@ export function resolveProfileSupplierPrice(
       unitPrice: linkedPrice.unitPrice,
       currency: linkedPrice.currency,
       basis: linkedPrice.basis,
+      sourceKind: linkedPrice.sourceKind === "own" ? "workshop" : linkedPrice.sourceKind === "adjusted" ? "adjusted" : "reference",
       source: "linked_material_price",
     };
   }
@@ -84,11 +100,15 @@ export function resolveProfileSupplierPrice(
   if (!reference) return null;
   return {
     providerKey: reference.providerKey,
-    providerLabel: reference.providerLabel,
+    providerLabel: reference.priceSource === "workshop"
+      ? reference.workshopSupplierName?.trim() ? `${reference.workshopSupplierName.trim()} · Mis precios` : "Mis precios"
+      : reference.providerLabel,
     supplierSku: reference.supplierSku,
     unitPrice: reference.netPrice,
     currency: reference.currency,
-    basis: reference.purchaseUnit,
+    basis: displayBasis(reference, profile),
+    sourceKind: reference.priceSource === "workshop" ? "workshop"
+      : reference.priceSource === "provider_adjustment" || reference.priceSource === "organization_override" ? "adjusted" : "reference",
     source: "exact_presentation",
   };
 }

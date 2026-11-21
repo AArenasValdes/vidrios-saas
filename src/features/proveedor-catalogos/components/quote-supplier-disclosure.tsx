@@ -14,14 +14,17 @@ type Props = {
 
 export function QuoteSupplierDisclosure({ summary, coverage, warning, children, className, bodyClassName }: Props) {
   return (
-    <section className={[styles.root, className].filter(Boolean).join(" ")} aria-label="Costos y proveedores">
-      <div className={styles.heading}>
-        <span>Costos y proveedores</span>
-        <strong>{summary}</strong>
-        {coverage ? <span className={styles.coverage}>{coverage}</span> : null}
-        {warning ? <span className={styles.warning} role="status">{warning}</span> : null}
-      </div>
+    <details className={[styles.root, className].filter(Boolean).join(" ")} aria-label="Costos y proveedores">
+      <summary className={styles.heading}>
+        <span className={styles.summaryContent}>
+          <span className={styles.title}>Costos y proveedores</span>
+          <strong>{summary}</strong>
+          {coverage ? <span className={styles.coverage}>{coverage}</span> : null}
+          {warning ? <span className={styles.warning} role="status">{warning}</span> : null}
+        </span>
+        <span className={styles.chevron} aria-hidden="true">⌄</span>
+      </summary>
       <div className={bodyClassName}>{children}</div>
-    </section>
+    </details>
   );
 }

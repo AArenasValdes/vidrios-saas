@@ -74,17 +74,20 @@ export async function saveQuickWorkshopProfileCost(change:
       lineTemplateId: number;
       technicalCode: string;
       profileName: string;
-      finishName: string;
+      finishName: string | null;
       commercialLengthMm: number | null;
       netPrice: number;
+      supplierName?: string | null;
     }
   | {
       kind: "update";
       lineTemplateId: number;
       presentationId: string;
       expectedRevision: number;
+      purchaseUnit?: "M" | "UN" | "KG" | "PAR" | "TIRA";
       commercialLengthMm: number | null;
       netPrice: number;
+      supplierName?: string | null;
     }
 ) {
   const response = await fetch("/api/proveedor-catalogos/taller-presentaciones", {
@@ -97,20 +100,22 @@ export async function saveQuickWorkshopProfileCost(change:
       recipeCode: null,
       profileName: change.profileName,
       workshopSku: null,
-      description: `Perfil ${change.technicalCode} · ${change.finishName}`,
+      description: `Perfil ${change.technicalCode}${change.finishName ? ` · ${change.finishName}` : " · todos los acabados"}`,
       finishName: change.finishName,
-      purchaseUnit: "UN",
+      purchaseUnit: "TIRA",
       commercialLengthMm: change.commercialLengthMm,
       netPrice: change.netPrice,
+      supplierName: change.supplierName ?? null,
       currency: "CLP",
       preferred: false,
     } : {
       lineTemplateId: change.lineTemplateId,
       presentationId: change.presentationId,
       expectedRevision: change.expectedRevision,
-      purchaseUnit: "UN",
+      purchaseUnit: change.purchaseUnit ?? "TIRA",
       commercialLengthMm: change.commercialLengthMm,
       netPrice: change.netPrice,
+      supplierName: change.supplierName,
       currency: "CLP",
     }),
   });

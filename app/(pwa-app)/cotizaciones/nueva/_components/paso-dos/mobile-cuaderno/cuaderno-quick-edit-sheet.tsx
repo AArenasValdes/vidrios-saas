@@ -16,9 +16,11 @@ import {
   applyLineTemplateToComponentForm,
   buildComponentFormLinePricingSummary,
   PVC_COLOR_OPTIONS,
+  shouldRequireProfileMaterialForComponent,
   type ComponentFormState,
   mapItemToForm,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { getSupplierCatalogQuoteLineKeys } from "@/features/proveedor-catalogos/services/proveedor-catalogo-qa.service";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { GlassOptionPicker } from "@/features/cotizaciones/visual-composer/components/glass-option-picker";
 import type { QuoteConstructorItemPatch } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
@@ -55,10 +57,12 @@ import {
   resolveQuoteSupplierProfileReferences,
   resolveSupplierFinishName,
   resolveSupplierProfileCoverage,
+  resolveMixedSupplierProfileCoverage,
+  formatSupplierProfileCoverageNotice,
   type SupplierProfilePricePreview,
 } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 import { getLineTemplateWorkshopProfiles } from "@/features/cotizaciones/line-templates/types/line-profile-references";
-import { SupplierProfilePricePreview as SupplierProfilePricePreviewComponent } from "@/features/proveedor-catalogos/components/supplier-profile-price-preview";
+import { GuidedProfileCostSheet } from "@/features/proveedor-catalogos/components/guided-profile-cost-sheet";
 import { QuoteProfileCosts } from "@/features/proveedor-catalogos/components/quote-profile-costs";
 import {
   measureDimensionFieldLabel,
@@ -147,8 +151,12 @@ export function CuadernoQuickEditSheet({
   const [ancho, setAncho] = useState(item.ancho ? String(item.ancho) : "");
   const [alto, setAlto] = useState(item.alto ? String(item.alto) : "");
   const [cantidad, setCantidad] = useState(String(Math.max(1, item.cantidad || 1)));
+  const hasPersistedManualPrice = Boolean(
+    item.precioAjustadoManual || (item.origenPrecio === "manual" && item.precioUnitario > 0)
+  );
   const [precioDraft, setPrecioDraft] = useState<string | null>(null);
-  const [precioEditedManually, setPrecioEditedManually] = useState(false);
+  const [precioEditedManually, setPrecioEditedManually] = useState(hasPersistedManualPrice);
+  const [manualPricePreservedOnLineChange, setManualPricePreservedOnLineChange] = useState(false);
   const [lineTemplateIdDraft, setLineTemplateIdDraft] = useState<string | null>(null);
   const [selectedLineTemplateDraft, setSelectedLineTemplateDraft] =
     useState<CotizacionLineTemplate | null>(null);
@@ -189,15 +197,19 @@ export function CuadernoQuickEditSheet({
 
   const itemPrice = item.precioUnitario > 0 ? String(Math.round(item.precioUnitario)) : "";
   const precio = precioDraft ?? itemPrice;
+  const hasManualCommercialPrice = precioEditedManually || hasPersistedManualPrice;
   const lineTemplateId = lineTemplateIdDraft ?? form.lineTemplateId;
   const selectedLineTemplate = selectedLineTemplateDraft ?? lineTemplates.find(
     (template) => String(template.id) === lineTemplateId
   ) ?? null;
-  const selectedCatalogLineKey = resolveVariantCatalogKey(
-    selectedLineTemplate,
-    form.catalogLineKey,
-    form.referencia
-  );
+  const selectedCatalogLineKey =
+    lineTemplateIdDraft !== null && !lineTemplateId
+      ? ""
+      : resolveVariantCatalogKey(
+          selectedLineTemplate,
+          lineTemplateIdDraft !== null ? null : form.catalogLineKey,
+          lineTemplateIdDraft !== null ? null : form.referencia
+        );
   const selectedLineIsSodalL25 =
     isSodalL25CatalogKey(
       resolveEffectiveSodalL25CatalogKey({
@@ -494,6 +506,14 @@ export function CuadernoQuickEditSheet({
   const supplierLineTemplate = selectedLineTemplate ??
     VENTORA_DEFAULT_LINE_CATALOG.find((line) => line.catalogKey === selectedCatalogLineKey) ?? null;
   const supplierFamilyKey = resolveSupplierFamilyKeyForLineTemplate(supplierLineTemplate);
+  const requiresProfileMaterial = shouldRequireProfileMaterialForComponent(item.tipo ?? "");
+  const supportsProfilePurchaseCosts = Boolean(
+    requiresProfileMaterial &&
+    (supplierLineTemplate?.material === "Aluminio" || supplierLineTemplate?.material === "PVC") &&
+    selectedCatalogLineKey &&
+    getSupplierCatalogQuoteLineKeys().has(selectedCatalogLineKey) &&
+    supplierFamilyKey
+  );
   const supplierProfileReferences = useMemo(() => {
     const documentedProfiles = getLineTemplateWorkshopProfiles(supplierLineTemplate?.catalogMetadata)?.profiles
       .filter((profile) => profile.codeStatus === "catalog_reference" && profile.code?.trim())
@@ -519,6 +539,7 @@ export function CuadernoQuickEditSheet({
   // provider. Selecting Arquetipo/Alumco is presentation state, so it must not
   // invalidate this request and repeat the full catalog resolution.
   const supplierResolutionRequest = useMemo(() => {
+    if (!supportsProfilePurchaseCosts) return null;
     const documentedCodes = getLineTemplateWorkshopProfiles(supplierLineTemplate?.catalogMetadata)?.profiles
       .filter((profile) => profile.codeStatus === "catalog_reference" && profile.code?.trim())
       .map((profile) => profile.code!.trim()) ?? [];
@@ -539,7 +560,7 @@ export function CuadernoQuickEditSheet({
       previewFinishNames: supplierPreviewFinishNames,
       technicalCodes,
     };
-  }, [effectiveSupplierRecipe, item.id, selectedCatalogLineKey, selectedLineIsSodalL25, supplierFamilyKey, supplierLineTemplate?.catalogMetadata, supplierPreviewFinishNames, supplierProfileReferences, supplierResolutionFinishName]);
+  }, [effectiveSupplierRecipe, item.id, selectedCatalogLineKey, selectedLineIsSodalL25, supplierFamilyKey, supplierLineTemplate?.catalogMetadata, supplierPreviewFinishNames, supplierProfileReferences, supplierResolutionFinishName, supportsProfilePurchaseCosts]);
   const supplierResolutionKey = JSON.stringify(supplierResolutionRequest);
   useEffect(() => {
     if (!supplierResolutionRequest) return;
@@ -564,6 +585,7 @@ export function CuadernoQuickEditSheet({
   const supplierOptions = supplierProviderResolution?.key === supplierResolutionKey
     ? supplierProviderResolution.optionsByFinish[activeSupplierFinishName ?? ""] ?? supplierProviderResolution.options
     : [];
+  const externalSupplierOptions = supplierOptions.filter((option) => !option.providerKey.startsWith("taller:"));
   const supplierProfilePrices = supplierProviderResolution?.key === supplierResolutionKey
     ? supplierProviderResolution.profilePricesByFinish[activeSupplierFinishName ?? ""] ?? supplierProviderResolution.profilePrices
     : [];
@@ -575,12 +597,25 @@ export function CuadernoQuickEditSheet({
   const effectiveFamilyPreference = familyPreferenceOverride && familyPreferenceOverride.familyKey === supplierResolutionRequest?.familyKey
     ? familyPreferenceOverride.providerKey
     : requestedFamilyPreference;
+  const defaultSupplierOption = effectiveFamilyPreference
+    ? supplierOptions.find((option) => option.providerKey === effectiveFamilyPreference) ?? null
+    : supplierOptions.find((option) => option.providerKey === "arquetipo") ?? externalSupplierOptions[0] ?? null;
+  const defaultSupplierProviderKey = effectiveFamilyPreference || defaultSupplierOption?.providerKey || null;
+  const defaultSupplierLabel = defaultSupplierOption
+    ? `${defaultSupplierOption.label}${effectiveFamilyPreference ? " · Preferido" : ""}`
+    : effectiveFamilyPreference ? "Preferencia sin cobertura" : "Mis precios";
   const selectedSupplierProviderKey = supplierProviderKeyDraft !== null
     ? supplierProviderKeyDraft
     : storedSupplierProviderKey || effectiveFamilyPreference || "";
+  const displayedSupplierProviderKey = selectedSupplierProviderKey === defaultSupplierProviderKey ? "" : selectedSupplierProviderKey;
+  const supplierOptionsForSelect = supplierOptions.filter((option) => option.providerKey !== defaultSupplierProviderKey);
+  const isUsingFamilyPreference = !storedSupplierProviderKey && Boolean(effectiveFamilyPreference);
   const effectiveSupplierProviderKey = selectedSupplierProviderKey || effectiveFamilyPreference || supplierOptions.find((option) => option.providerKey === "arquetipo")?.providerKey || supplierOptions[0]?.providerKey || "";
   const selectedSupplierOption = supplierOptions.find((option) => option.providerKey === effectiveSupplierProviderKey) ?? null;
   const exactSupplierProfileCoverageNotice = effectiveSupplierRecipe
+    && selectedCatalogLineKey === "ventora:l42"
+    ? formatSupplierProfileCoverageNotice(resolveMixedSupplierProfileCoverage({ technicalCodes: supplierProfileReferences.map((profile) => profile.technicalCode), prices: supplierProfilePrices, providerKey: effectiveSupplierProviderKey }).pendingCodes)
+    : effectiveSupplierRecipe
     ? buildSupplierProfileCoverageNotice({
         technicalCodes: supplierProfileReferences.map((profile) => profile.technicalCode),
         prices: supplierProfilePrices,
@@ -588,7 +623,7 @@ export function CuadernoQuickEditSheet({
       })
     : supplierResolutionRequest ? "Configuración técnica pendiente; cobertura por perfil sin confirmar." : null;
   const exactSupplierProfileCoverage = effectiveSupplierRecipe
-    ? resolveSupplierProfileCoverage({
+    ? (selectedCatalogLineKey === "ventora:l42" ? resolveMixedSupplierProfileCoverage : resolveSupplierProfileCoverage)({
         technicalCodes: supplierProfileReferences.map((profile) => profile.technicalCode),
         prices: supplierProfilePrices,
         providerKey: effectiveSupplierProviderKey,
@@ -601,9 +636,13 @@ export function CuadernoQuickEditSheet({
         ? `Proveedor guardado sin cobertura compatible${supplierProfileReferences.length ? ` para ${supplierProfileReferences.slice(0, 3).map((profile) => profile.technicalCode).join(", ")}` : ""}.`
         : exactSupplierProfileCoverageNotice
     : null;
-  const automaticSupplierLabel = effectiveFamilyPreference
-    ? supplierOptions.find((option) => option.providerKey === effectiveFamilyPreference)?.label ?? effectiveFamilyPreference
-    : supplierOptions.find((option) => option.providerKey === "arquetipo")?.label ?? "Arquetipo 2026";
+  const supplierDisclosureSummary = isLoadingSupplierOptions
+    ? "Cargando…"
+    : isUsingFamilyPreference
+      ? defaultSupplierLabel
+      : selectedSupplierProviderKey
+        ? `${selectedSupplierOption?.label ?? "Proveedor guardado · revisar cobertura"}${selectedSupplierProviderKey === effectiveFamilyPreference ? " · Preferido" : ""}`
+        : defaultSupplierLabel;
   const canManageFamilyPreferences = supplierProviderResolution?.key === supplierResolutionKey && supplierProviderResolution.canManageFamilyPreferences;
   const saveFamilyPreference = async (providerKey: string | null) => {
     if (!supplierResolutionRequest || !providerKey && !effectiveFamilyPreference) return;
@@ -779,9 +818,12 @@ export function CuadernoQuickEditSheet({
     }
     if (precio.trim()) {
       patch.costoProveedorUnitario = precio.trim();
-      if (precioEditedManually) {
+      if (hasManualCommercialPrice) {
         patch.markPriceManual = true;
       }
+    } else if (precioEditedManually) {
+      patch.costoProveedorUnitario = "";
+      patch.markPriceManual = true;
     }
     return patch;
   };
@@ -792,13 +834,28 @@ export function CuadernoQuickEditSheet({
     nextLineTemplateId: string,
     selectedTemplate?: CotizacionLineTemplate | null
   ) => {
+    const nextLineTemplate =
+      selectedTemplate ??
+      lineTemplates.find((candidate) => String(candidate.id) === nextLineTemplateId) ??
+      null;
+    const nextSupplierFamilyKey = resolveSupplierFamilyKeyForLineTemplate(nextLineTemplate);
+    const keepsSameSupplierFamily = Boolean(
+      nextLineTemplateId &&
+      supplierFamilyKey &&
+      nextSupplierFamilyKey &&
+      supplierFamilyKey === nextSupplierFamilyKey
+    );
+
     setLineTemplateIdDraft(nextLineTemplateId);
-    setSelectedLineTemplateDraft(selectedTemplate ?? null);
+    setSelectedLineTemplateDraft(nextLineTemplate);
     setFabricationSelectionDraft("");
+    if (!keepsSameSupplierFamily) {
+      setSupplierProviderKeyDraft("");
+    }
     const nextCatalogLineKey = resolveVariantCatalogKey(
-      selectedTemplate ?? null,
-      form.catalogLineKey,
-      form.referencia
+      nextLineTemplate,
+      null,
+      nextLineTemplate?.nombre ?? null
     );
     setSodalL25ConfigDraft(
       isSodalL25CatalogKey(
@@ -818,8 +875,18 @@ export function CuadernoQuickEditSheet({
           }
         : null
     );
-    setPrecioDraft(nextLineTemplateId ? getSuggestedPriceForTemplate(nextLineTemplateId) : "");
-    setPrecioEditedManually(false);
+    if (hasManualCommercialPrice) {
+      const preservedPrice = precioDraft ?? itemPrice;
+      setPrecioDraft(preservedPrice);
+      setPrecioEditedManually(true);
+      setManualPricePreservedOnLineChange(
+        Boolean(nextLineTemplateId) && Boolean(preservedPrice.trim())
+      );
+    } else {
+      setPrecioDraft(nextLineTemplateId ? getSuggestedPriceForTemplate(nextLineTemplateId) : "");
+      setPrecioEditedManually(false);
+      setManualPricePreservedOnLineChange(false);
+    }
   };
 
   const handleVidrioChange = (nextVidrio: string) => {
@@ -876,8 +943,17 @@ export function CuadernoQuickEditSheet({
     }
     setLineTemplateIdDraft("");
     setSelectedLineTemplateDraft(null);
-    setPrecioDraft(null);
-    setPrecioEditedManually(false);
+    setFabricationSelectionDraft("");
+    setSodalL25ConfigDraft(null);
+    setSupplierProviderKeyDraft("");
+    if (hasManualCommercialPrice) {
+      setPrecioDraft((current) => current ?? itemPrice);
+      setPrecioEditedManually(true);
+    } else {
+      setPrecioDraft("");
+      setPrecioEditedManually(false);
+    }
+    setManualPricePreservedOnLineChange(false);
   };
 
   const handleColorChange = (nextColorHex: string) => {
@@ -1083,11 +1159,48 @@ export function CuadernoQuickEditSheet({
               />
             ) : null}
 
-            {supplierResolutionRequest ? (
-              <QuoteSupplierDisclosure
+            {supportsProfilePurchaseCosts ? (
+              !supplierFamilyKey || supplierProfileReferences.length === 0 ? (
+                <section className={s.supplierDisclosure} aria-label="Costos de fabricación">
+                  <div className={s.supplierDisclosureBody}>
+                    <strong>Costos de fabricación</strong>
+                    <span className={s.variantSourceHint}>{supplierFamilyKey ? "Códigos de perfil pendientes de identificar." : "Identidad de compra pendiente de definir."}</span>
+                  </div>
+                </section>
+              ) : isLoadingSupplierOptions || externalSupplierOptions.length === 0 ? (
+                <section className={s.supplierDisclosure} aria-label="Costos de fabricación">
+                  <div className={s.supplierDisclosureBody}>
+                    <strong>Costos de fabricación</strong>
+                    {isLoadingSupplierOptions ? <span className={s.variantSourceHint} role="status">Buscando precios compatibles…</span> : <GuidedProfileCostSheet
+                      lineTemplateId={Number(lineTemplateId)}
+                      familyKey={supplierFamilyKey!}
+                      finishName={activeSupplierFinishName}
+                      references={supplierProfileReferences.map((profile) => ({ technicalCode: profile.technicalCode, profileName: profile.profileName }))}
+                      prices={supplierProfilePrices}
+                      canManagePrice={supplierProviderResolution?.key === supplierResolutionKey && supplierProviderResolution.canManageSupplierPrices}
+                      providerKey={null}
+                      onPricesSaved={async () => {
+                        if (!supplierResolutionRequest) return;
+                        const result = await resolveSupplierPresentationsForQuote([supplierResolutionRequest], { includeProviderOptions: true });
+                        setSupplierProviderResolution({
+                          key: supplierResolutionKey,
+                          options: result?.providerOptions?.[String(item.id)] ?? [],
+                          profilePrices: result?.profilePrices?.[String(item.id)] ?? [],
+                          optionsByFinish: result?.providerOptionsByFinish?.[String(item.id)] ?? {},
+                          profilePricesByFinish: result?.profilePricesByFinish?.[String(item.id)] ?? {},
+                          familyPreferenceProviderKey: result?.familyPreferences?.[String(supplierResolutionRequest.familyKey)] ?? null,
+                          canManageFamilyPreferences: result?.canManageFamilyPreferences === true,
+                          canManageSupplierPrices: result?.canManageSupplierPrices === true,
+                          error: result?.itemErrors?.[String(item.id)] ?? null,
+                        });
+                      }}
+                    />}
+                  </div>
+                </section>
+              ) : supplierResolutionRequest ? <QuoteSupplierDisclosure
                 className={s.supplierDisclosure}
                 bodyClassName={s.supplierDisclosureBody}
-                summary={isLoadingSupplierOptions ? "Cargando…" : selectedSupplierOption?.label ?? (selectedSupplierProviderKey ? "Proveedor guardado · revisar cobertura" : supplierOptions.length === 0 ? "Sin proveedor compatible" : `${automaticSupplierLabel} · predeterminado`)}
+                summary={supplierDisclosureSummary}
                 coverage={!isLoadingSupplierOptions && exactSupplierProfileCoverage
                   ? `Cobertura de compra: ${exactSupplierProfileCoverage.coveredCount}/${exactSupplierProfileCoverage.totalCount} perfiles`
                   : !isLoadingSupplierOptions && supplierResolutionRequest && !effectiveSupplierRecipe ? "Cobertura por perfil pendiente de configuración técnica." : null}
@@ -1098,14 +1211,14 @@ export function CuadernoQuickEditSheet({
                     <select
                       className={s.fieldInput}
                       aria-label="Proveedor de compra para esta pieza"
-                      value={selectedSupplierProviderKey}
+                      value={displayedSupplierProviderKey}
                       onChange={(event) => setSupplierProviderKeyDraft(event.target.value)}
                     >
-                      <option value="">Predeterminado · {automaticSupplierLabel}</option>
-                      {selectedSupplierProviderKey && !supplierOptions.some((option) => option.providerKey === selectedSupplierProviderKey) ? (
-                        <option value={selectedSupplierProviderKey}>Proveedor guardado · sin precio para esta composición</option>
+                      <option value="">{defaultSupplierLabel}</option>
+                      {selectedSupplierProviderKey && displayedSupplierProviderKey && !supplierOptions.some((option) => option.providerKey === selectedSupplierProviderKey) ? (
+                        <option value={selectedSupplierProviderKey}>Proveedor guardado · sin cobertura</option>
                       ) : null}
-                      {supplierOptions.map((option) => (
+                      {supplierOptionsForSelect.map((option) => (
                         <option key={option.providerKey} value={option.providerKey}>
                           {option.label}
                         </option>
@@ -1153,7 +1266,7 @@ export function CuadernoQuickEditSheet({
                       ) : null}
                     </div>
                   ) : null}
-                  {supplierResolutionRequest ? selectedLineIsSodalL25 && supplierResolutionRequest.familyKey === "universal:aluminio:l25" ? (
+                  {supplierResolutionRequest ? effectiveSupplierRecipe ? (
                     <details className={s.supplierCostDetails}>
                     <summary>Ver costos de perfiles</summary>
                     <QuoteProfileCosts
@@ -1161,9 +1274,10 @@ export function CuadernoQuickEditSheet({
                       familyKey={supplierResolutionRequest.familyKey}
                       providerKey={selectedSupplierProviderKey || effectiveFamilyPreference || "arquetipo"}
                       finishName={activeSupplierFinishName}
-                      references={supplierProfileReferences}
+                      references={(effectiveSupplierRecipe?.definition.perfiles ?? []).filter((profile) => profile.codigoPerfil?.trim()).map((profile) => ({ technicalCode: profile.codigoPerfil, profileName: profile.nombrePerfil }))}
                       prices={supplierProfilePrices}
                       canManagePrice={supplierProviderResolution?.key === supplierResolutionKey && supplierProviderResolution.canManageSupplierPrices}
+                      allowMixedWorkshopCosts={selectedCatalogLineKey === "ventora:l42"}
                       onUseWorkshopCost={(providerKey) => setSupplierProviderKeyDraft(providerKey)}
                       onPricesSaved={async () => {
                         if (!supplierResolutionRequest) return;
@@ -1181,15 +1295,18 @@ export function CuadernoQuickEditSheet({
                         });
                       }}
                     />
+                    <a href={`/configuracion/empresa/mis-precios?supplier=taller&family=${encodeURIComponent(supplierResolutionRequest.familyKey)}&lineTemplateId=${Number(lineTemplateId)}`} target="_blank" rel="noreferrer">Administrar estos precios en Mis precios</a>
                     </details>
                   ) : (
-                    <SupplierProfilePricePreviewComponent
-                      prices={supplierProfilePrices}
-                      providerKey={selectedSupplierProviderKey || effectiveFamilyPreference || "arquetipo"}
+                    <GuidedProfileCostSheet
+                      lineTemplateId={Number(lineTemplateId)}
                       familyKey={supplierResolutionRequest.familyKey}
                       finishName={activeSupplierFinishName}
+                      references={supplierProfileReferences.map((profile) => ({ technicalCode: profile.technicalCode, profileName: profile.profileName }))}
+                      prices={supplierProfilePrices}
                       canManagePrice={supplierProviderResolution?.key === supplierResolutionKey && supplierProviderResolution.canManageSupplierPrices}
-                      onPriceSaved={async () => {
+                      providerKey={effectiveSupplierProviderKey || null}
+                      onPricesSaved={async () => {
                         if (!supplierResolutionRequest) return;
                         const result = await resolveSupplierPresentationsForQuote([supplierResolutionRequest], { includeProviderOptions: true });
                         setSupplierProviderResolution({
@@ -1214,15 +1331,7 @@ export function CuadernoQuickEditSheet({
                   <span className={s.variantSourceHint}>No hay precios compatibles para los perfiles de esta composición.</span>
                 ) : null}
                   {familyPreferenceError ? <span className={s.preferenceError} role="status">{familyPreferenceError}</span> : null}
-              </QuoteSupplierDisclosure>
-            ) : supplierFamilyKey ? (
-              <QuoteSupplierDisclosure
-                className={s.supplierDisclosure}
-                summary={isResolvingL25Recipe ? "Resolviendo configuración…" : "Configuración pendiente"}
-                warning="Resuelve la configuración de fabricación para identificar perfiles y proveedores compatibles."
-              >
-                <span className={s.variantSourceHint}>No se muestran códigos ni cobertura de compra hasta contar con una identidad técnica exacta.</span>
-              </QuoteSupplierDisclosure>
+              </QuoteSupplierDisclosure> : null
             ) : null}
             {selectedLineIsSodalL25 && isResolvingL25Recipe ? (
               <p className={s.variantSourceHint} role="status">Resolviendo receta exacta L25…</p>
@@ -1280,10 +1389,16 @@ export function CuadernoQuickEditSheet({
                 onChange={(event) => {
                   setPrecioDraft(event.target.value.replace(/[^\d]/g, ""));
                   setPrecioEditedManually(true);
+                  setManualPricePreservedOnLineChange(false);
                 }}
                 placeholder="CLP"
               />
             </label>
+            {manualPricePreservedOnLineChange ? (
+              <span className={s.variantSourceHint} role="status">
+                Precio manual conservado · revísalo para la nueva línea.
+              </span>
+            ) : null}
 
             <div className={s.technicalNote}>
               <strong>Cubicacion y pauta de corte</strong>

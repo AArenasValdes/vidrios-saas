@@ -1,5 +1,23 @@
 import { resolveEffectiveSupplierProviderKey, resolveSupplierFinishName, resolveSupplierPresentationsForQuoteItem, resolveSupplierPresentationFamilyKeys, resolveSupplierPriceProviderCoverage, type ConfirmedSupplierPresentation } from "../supplier-presentation-resolution.service";
 
+describe("costos mixtos L42", () => {
+  const row = (code: string, providerKey: string): ConfirmedSupplierPresentation => ({
+    presentationId: `${providerKey}-${code}`, providerKey, supplierSku: code, technicalCode: code,
+    recipeComponentCodes: [], familyKeys: ["universal:aluminio:l42"], finishCode: null,
+    finishName: "Blanco", finishResolution: "specific", commercialLengthMm: 6000,
+  });
+  const base = { itemId: "test", familyKey: "universal:aluminio:l42", finishName: "Blanco", technicalCodes: ["4201", "4202", "4229"], providerKey: "arquetipo", organizationId: 3, allowOwnProfileCosts: true };
+  it("aplica solo el perfil propio completo de la organización y conserva el proveedor de los otros", () => {
+    const own = row("4201", "taller:3");
+    const result = resolveSupplierPresentationsForQuoteItem({ request: { ...base, eligibleOwnPresentationIds: [own.presentationId] }, presentations: [own, row("4202", "arquetipo"), row("4229", "arquetipo")] });
+    expect(result.map((item) => item.providerKey)).toEqual(["taller:3", "arquetipo", "arquetipo"]);
+  });
+  it("excluye costos incompletos o de otra organización", () => {
+    const result = resolveSupplierPresentationsForQuoteItem({ request: { ...base, technicalCodes: ["4201"], eligibleOwnPresentationIds: [] }, presentations: [row("4201", "taller:3"), row("4201", "taller:4"), row("4201", "arquetipo")] });
+    expect(result[0]).toMatchObject({ status: "resolved", providerKey: "arquetipo" });
+  });
+});
+
 const variants: Array<[string, string, string, number]> = [
   ["67401VER000", "000", "Blanco", 5800],
   ["67401VER153", "153", "Nogal", 5800],
@@ -103,9 +121,12 @@ describe("resolver explícito de presentación para pauta", () => {
     expect(ambiguous).toMatchObject({ status: "ambiguous", presentationId: null, commercialLengthMm: null });
   });
 
-  it("respeta la elección explícita privada frente a una presentación oficial", () => {
+  it("respeta la elección explícita privada frente a una presentación oficial cuando está acreditada", () => {
     const [chosen] = resolveSupplierPresentationsForQuoteItem({
-      request: { itemId: "V1", familyKey: "veratec:sliding-7400", configurationKey: "sliding-7400:corredera-2h", finishName: "Blanco", technicalCodes: ["67401VER"] },
+      request: {
+        itemId: "V1", familyKey: "veratec:sliding-7400", configurationKey: "sliding-7400:corredera-2h",
+        finishName: "Blanco", technicalCodes: ["67401VER"], organizationId: 3, eligibleOwnPresentationIds: ["own-3"],
+      },
       presentations: [presentations[0]!, {
         ...presentations[0]!, presentationId: "own-3", providerKey: "taller:3", supplierSku: "MARCO-6800-TALLER",
         configurationKey: "sliding-7400:corredera-2h", preferred: true, commercialLengthMm: 6800,
@@ -250,7 +271,7 @@ describe("resolver explícito de presentación para pauta", () => {
     expect(options).toEqual([]);
   });
 
-  it("respeta una presentación propia del taller marcada como preferida", () => {
+  it("respeta una presentación propia del taller marcada como preferida cuando está acreditada", () => {
     const arquetipo: ConfirmedSupplierPresentation = {
       presentationId: "arq-2001", providerKey: "arquetipo", supplierSku: "30892001",
       technicalCode: "2001", recipeComponentCodes: [], familyKeys: ["universal:aluminio:l20"],
@@ -263,9 +284,76 @@ describe("resolver explícito de presentación para pauta", () => {
     };
 
     expect(resolveSupplierPresentationsForQuoteItem({
-      request: { itemId: "A", familyKey: "ventora:l20", finishName: "Blanco", technicalCodes: ["2001"] },
+      request: {
+        itemId: "A", familyKey: "ventora:l20", finishName: "Blanco", technicalCodes: ["2001"],
+        organizationId: 7, eligibleOwnPresentationIds: ["own-2001"],
+      },
       presentations: [arquetipo, workshop],
     })[0]).toMatchObject({ status: "resolved", providerKey: "taller:7", supplierSku: "MI-CODIGO-2001" });
+  });
+
+  it("no deja que un costo propio incompleto, preferido, de otra org o sin eligibleOwnPresentationIds desplace a un proveedor compatible", () => {
+    const arquetipo: ConfirmedSupplierPresentation = {
+      presentationId: "arq-2001", providerKey: "arquetipo", supplierSku: "30892001",
+      technicalCode: "2001", recipeComponentCodes: [], familyKeys: ["universal:aluminio:l20"],
+      finishCode: null, finishName: null, finishResolution: "finish_independent", commercialLengthMm: 6000,
+      preferred: true,
+    };
+    const incompletePreferred: ConfirmedSupplierPresentation = {
+      ...arquetipo, presentationId: "own-2001", providerKey: "taller:7", supplierSku: "",
+      commercialLengthMm: null, preferred: true,
+    };
+    // 1. Preferida sin largo comercial (allowOwnProfileCosts=false, providerKey=null)
+    expect(resolveSupplierPresentationsForQuoteItem({
+      request: { itemId: "A1", familyKey: "ventora:l20", finishName: "Blanco", technicalCodes: ["2001"], organizationId: 7, eligibleOwnPresentationIds: [] },
+      presentations: [arquetipo, incompletePreferred],
+    })[0]).toMatchObject({ status: "resolved", providerKey: "arquetipo", presentationId: "arq-2001" });
+
+    // 2. Preferida sin eligibleOwnPresentationIds (ausencia no autoriza)
+    expect(resolveSupplierPresentationsForQuoteItem({
+      request: { itemId: "A2", familyKey: "ventora:l20", finishName: "Blanco", technicalCodes: ["2001"], organizationId: 7 },
+      presentations: [arquetipo, { ...incompletePreferred, commercialLengthMm: 6000 }],
+    })[0]).toMatchObject({ status: "resolved", providerKey: "arquetipo", presentationId: "arq-2001" });
+
+    // 3. allowOwnProfileCosts=true sin eligibleOwnPresentationIds no desplaza proveedor elegido
+    expect(resolveSupplierPresentationsForQuoteItem({
+      request: { itemId: "A3", familyKey: "universal:aluminio:l42", finishName: "Blanco", technicalCodes: ["4201"], providerKey: "arquetipo", organizationId: 7, allowOwnProfileCosts: true },
+      presentations: [
+        { ...arquetipo, presentationId: "arq-4201", technicalCode: "4201", familyKeys: ["universal:aluminio:l42"] },
+        { ...incompletePreferred, presentationId: "own-4201", technicalCode: "4201", familyKeys: ["universal:aluminio:l42"], commercialLengthMm: 6000 },
+      ],
+    })[0]).toMatchObject({ status: "resolved", providerKey: "arquetipo", presentationId: "arq-4201" });
+
+    // 4. Presentación de otra organización nunca se selecciona (automática ni explícita)
+    expect(resolveSupplierPresentationsForQuoteItem({
+      request: { itemId: "A4", familyKey: "ventora:l20", finishName: "Blanco", technicalCodes: ["2001"], organizationId: 7, eligibleOwnPresentationIds: ["own-other-org"] },
+      presentations: [arquetipo, { ...incompletePreferred, presentationId: "own-other-org", providerKey: "taller:99", commercialLengthMm: 6000 }],
+    })[0]).toMatchObject({ status: "resolved", providerKey: "arquetipo", presentationId: "arq-2001" });
+
+    expect(resolveSupplierPresentationsForQuoteItem({
+      request: { itemId: "A4-explicit", familyKey: "ventora:l20", finishName: "Blanco", technicalCodes: ["2001"], providerKey: "taller:99", organizationId: 7, eligibleOwnPresentationIds: ["own-other-org"] },
+      presentations: [arquetipo, { ...incompletePreferred, presentationId: "own-other-org", providerKey: "taller:99", commercialLengthMm: 6000 }],
+    })[0]).toMatchObject({ status: "missing", presentationId: null, providerKey: "taller:99" });
+
+    expect(resolveSupplierPresentationsForQuoteItem({
+      request: { itemId: "A4-no-org", familyKey: "veratec:sliding-7400", finishName: "Blanco", technicalCodes: ["7401"], providerKey: "taller:99" },
+      presentations: [{ ...incompletePreferred, presentationId: "own-other-org", providerKey: "taller:99", technicalCode: "7401", familyKeys: ["veratec:sliding-7400"], commercialLengthMm: 5800 }],
+    })[0]).toMatchObject({ status: "missing", presentationId: null });
+
+    // 5. Familia no universal: preferida incompleta no desplaza proveedor compatible
+    const xelena: ConfirmedSupplierPresentation = {
+      presentationId: "xel-7401", providerKey: "xelena", supplierSku: "67401VER000",
+      technicalCode: "7401", recipeComponentCodes: [], familyKeys: ["veratec:sliding-7400"],
+      finishCode: "000", finishName: "Blanco", finishResolution: "specific", commercialLengthMm: 5800,
+    };
+    const workshopVeratec: ConfirmedSupplierPresentation = {
+      ...xelena, presentationId: "own-7401", providerKey: "taller:7", supplierSku: "",
+      commercialLengthMm: null, preferred: true,
+    };
+    expect(resolveSupplierPresentationsForQuoteItem({
+      request: { itemId: "V-pref", familyKey: "veratec:sliding-7400", finishName: "Blanco", technicalCodes: ["7401"], organizationId: 7, eligibleOwnPresentationIds: [] },
+      presentations: [xelena, workshopVeratec],
+    })[0]).toMatchObject({ status: "resolved", providerKey: "xelena", presentationId: "xel-7401" });
   });
 
   it("resuelve la presentación privada solo para su configuración y acabado", () => {
@@ -275,8 +363,9 @@ describe("resolver explícito de presentación para pauta", () => {
       familyKeys: ["veratec:sliding-7400"], configurationKey: "sliding-7400:corredera-3h",
       finishCode: null, finishName: "Negro", finishResolution: "specific", commercialLengthMm: 6800,
     };
-    const request = { itemId: "V1", familyKey: "veratec:sliding-7400", finishName: "Negro", technicalCodes: ["HOJA-TALLER"] };
+    const request = { itemId: "V1", familyKey: "veratec:sliding-7400", finishName: "Negro", technicalCodes: ["HOJA-TALLER"], organizationId: 3, eligibleOwnPresentationIds: ["own-1"] };
     expect(resolveSupplierPresentationsForQuoteItem({ request: { ...request, configurationKey: "sliding-7400:corredera-3h" }, presentations: [workshop] })[0]).toMatchObject({ status: "resolved", supplierSku: "TALLER-HOJA-NEGRA", commercialLengthMm: 6800 });
+    expect(resolveSupplierPresentationsForQuoteItem({ request: { ...request, eligibleOwnPresentationIds: undefined, configurationKey: "sliding-7400:corredera-3h" }, presentations: [workshop] })[0]).toMatchObject({ status: "missing" });
     expect(resolveSupplierPresentationsForQuoteItem({ request: { ...request, configurationKey: "sliding-7400:corredera-2h" }, presentations: [workshop] })[0]).toMatchObject({ status: "missing" });
     expect(resolveSupplierPresentationsForQuoteItem({ request: { ...request, finishName: "Blanco", configurationKey: "sliding-7400:corredera-3h" }, presentations: [workshop] })[0]).toMatchObject({ status: "missing" });
     expect(resolveSupplierPresentationsForQuoteItem({ request: { ...request, configurationKey: "sliding-7400:corredera-3h" }, presentations: [{ ...workshop, commercialLengthMm: null }] })[0]).toMatchObject({ status: "missing", commercialLengthMm: null });

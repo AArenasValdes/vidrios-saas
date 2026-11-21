@@ -1,10 +1,11 @@
 "use client";
 
-import { QuoteSupplierDisclosure } from "@/features/proveedor-catalogos/components/quote-supplier-disclosure";
+import { GuidedProfileCostSheet } from "@/features/proveedor-catalogos/components/guided-profile-cost-sheet";
+import { SupplierFamilyPreferenceControl } from "@/features/proveedor-catalogos/components/supplier-family-preference-control";
 
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { LuChevronLeft, LuPencil, LuSearch, LuX } from "react-icons/lu";
+import { LuChevronLeft, LuMinus, LuPencil, LuPlus, LuSearch, LuX } from "react-icons/lu";
 
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
@@ -63,10 +64,12 @@ import { MeasureDimensionInput } from "@/features/cotizaciones/components/measur
 import { ComponentPreview } from "@/features/cotizaciones/components/component-preview";
 import { buildQuickCompositionBaseConfig } from "@/features/cotizaciones/visual-composer/services/quick-composition-adjustment.service";
 import type { QuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
+import { listLeafModules } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 import { resolveSupplierFamilyKeyForLineTemplate } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
+import { getSupplierCatalogQuoteLineKeys } from "@/features/proveedor-catalogos/services/proveedor-catalogo-qa.service";
 import { getLineTemplateWorkshopProfiles } from "@/features/cotizaciones/line-templates/types/line-profile-references";
-import { formatSupplierProfileCoverageNotice, resolveQuoteSupplierProfileReferences, resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
+import { resolveMixedSupplierProfileCoverage, resolveQuoteSupplierProfileReferences, resolveSupplierFinishName } from "@/features/proveedor-catalogos/services/supplier-presentation-resolution.service";
 import { useSupplierPresentationResolution } from "@/features/proveedor-catalogos/hooks/use-supplier-presentation-resolution";
 import {
   findSodalL25LineRecipe,
@@ -129,6 +132,7 @@ function createQuickLineFormState(
 
 type Props = {
   activePricingMode: PricingMode;
+  cantidadDisplayValue: string;
   colorOptions: readonly { label: string; hex: string }[];
   displayConfigurationOptions: readonly string[];
   displaySystemOptions: readonly string[];
@@ -142,6 +146,8 @@ type Props = {
   lineTemplateOptions: readonly CotizacionLineTemplate[];
   onAltoChange: (value: string) => void;
   onAnchoChange: (value: string) => void;
+  onCantidadChange: (value: string) => void;
+  onSelectCantidad: (cantidad: number) => void;
   onApplyCreatedLineTemplate: (template: CotizacionLineTemplate) => void;
   onCreateLineTemplate: (
     input: Omit<CreateCotizacionLineTemplateInput, "organizationId">
@@ -216,8 +222,82 @@ type Props = {
   ) => void;
 };
 
+type CantidadInlineProps = {
+  cantidad: number;
+  value: string;
+  onChange: (value: string) => void;
+  onSelect: (cantidad: number) => void;
+};
+
+function CantidadInlineMovil({ cantidad, value, onChange, onSelect }: CantidadInlineProps) {
+  const currentValue = Math.max(1, Number.parseInt(value || "", 10) || cantidad || 1);
+
+  return (
+    <div className={s.stepTwoMobileQuantityInline}>
+      <span className={s.stepTwoMobileBlockLabel}>Cantidad</span>
+      <div className={s.stepTwoMobileQuantityInlineStepper}>
+        <button
+          className={s.stepTwoMobileQuantityStepperButton}
+          onClick={() => onSelect(Math.max(1, currentValue - 1))}
+          type="button"
+          aria-label="Restar una unidad"
+        >
+          <LuMinus aria-hidden />
+        </button>
+        <input
+          aria-label="Cantidad del grupo"
+          className={s.stepTwoMobileQuantityValueInput}
+          inputMode="numeric"
+          type="text"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <button
+          className={s.stepTwoMobileQuantityStepperButton}
+          onClick={() => onSelect(currentValue + 1)}
+          type="button"
+          aria-label="Sumar una unidad"
+        >
+          <LuPlus aria-hidden />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function parseExplicitSheetSchemeLeavesCount(value?: string | null): number | null {
+  const match = (value ?? "").trim().match(/^(\d+)\s*hojas?$/i);
+  return match ? Number(match[1]) : null;
+}
+
+function resolveGuiadaLineCompatibilityLeavesCount(
+  draft: Pick<
+    PasoDosGrupoDraft,
+    "subtipo" | "configuracion" | "sheetScheme" | "guidedVisualConfig"
+  >
+): number | null {
+  const explicitFromSheetScheme = parseExplicitSheetSchemeLeavesCount(draft.sheetScheme);
+  if (explicitFromSheetScheme !== null) {
+    return explicitFromSheetScheme;
+  }
+
+  const guidedLeafCount = draft.guidedVisualConfig?.root
+    ? listLeafModules(draft.guidedVisualConfig.root).length
+    : 0;
+  if (guidedLeafCount > 1) {
+    return guidedLeafCount;
+  }
+
+  if (draft.subtipo === "Vitrina") {
+    return parseExplicitSheetSchemeLeavesCount(draft.configuracion);
+  }
+
+  return null;
+}
+
 export function PasoDosWizardConfiguracionMovil({
   activePricingMode,
+  cantidadDisplayValue,
   colorOptions,
   displayConfigurationOptions,
   displaySystemOptions,
@@ -232,6 +312,8 @@ export function PasoDosWizardConfiguracionMovil({
   lineTemplateOptions,
   onAltoChange,
   onAnchoChange,
+  onCantidadChange,
+  onSelectCantidad,
   onApplyCreatedLineTemplate,
   onCreateLineTemplate,
   onMargenChange,
@@ -461,6 +543,16 @@ export function PasoDosWizardConfiguracionMovil({
     hojasBase: draft.hojasBase,
     guidedVisualConfig: draft.guidedVisualConfig,
   });
+  const lineCompatibilityLeavesCount = useMemo(
+    () =>
+      resolveGuiadaLineCompatibilityLeavesCount({
+        subtipo: draft.subtipo,
+        configuracion: draft.configuracion,
+        sheetScheme: draft.sheetScheme,
+        guidedVisualConfig: draft.guidedVisualConfig,
+      }),
+    [draft.configuracion, draft.guidedVisualConfig, draft.sheetScheme, draft.subtipo]
+  );
   const inlineRecipeResolution = useMemo(() => {
     if (
       !canLoadInlineRecipeVariants ||
@@ -594,7 +686,15 @@ export function PasoDosWizardConfiguracionMovil({
       ? exactL25SupplierRecipe
       : null
     : supplierRecipe;
+  const supportsProfilePurchaseCosts = Boolean(
+    requiresProfileMaterial &&
+    (selectedLineTemplate?.material === "Aluminio" || selectedLineTemplate?.material === "PVC") &&
+    selectedLineTemplate.catalogKey &&
+    getSupplierCatalogQuoteLineKeys().has(selectedLineTemplate.catalogKey) &&
+    supplierFamilyKey
+  );
   const supplierPresentationRequests = useMemo(() => {
+    if (!supportsProfilePurchaseCosts) return [];
     const recipeProfiles = (effectiveSupplierRecipe?.definition.perfiles ?? []).map((profile) => ({
       code: profile.codigoPerfil,
       name: profile.nombrePerfil,
@@ -609,7 +709,7 @@ export function PasoDosWizardConfiguracionMovil({
     });
     const technicalCodes = references.length > 0
       ? references.map((profile) => profile.technicalCode)
-      : selectedLineIsSodalL25 ? documentedProfiles.map((profile) => profile.code) : [];
+      : [];
     if (!selectedLineTemplate?.catalogKey || !supplierFamilyKey || technicalCodes.length === 0) return [];
     return [{
       itemId: "guided-line-provider-preview",
@@ -618,29 +718,59 @@ export function PasoDosWizardConfiguracionMovil({
       finishName: resolveSupplierFinishName(draft.catalogTerminacion, draft.colorHex),
       technicalCodes,
     }];
-  }, [draft.catalogTerminacion, draft.colorHex, selectedLineTemplate, supplierFamilyKey, effectiveSupplierRecipe, selectedLineIsSodalL25]);
+  }, [draft.catalogTerminacion, draft.colorHex, selectedLineTemplate, supplierFamilyKey, effectiveSupplierRecipe, selectedLineIsSodalL25, supportsProfilePurchaseCosts]);
   const supplierPresentationResolution = useSupplierPresentationResolution(supplierPresentationRequests, {
     includeProviderOptions: true,
-    includeProfilePrices: false,
+    includeProfilePrices: true,
   });
   const supplierProviderOptions = supplierPresentationResolution.result?.providerOptions?.["guided-line-provider-preview"] ?? [];
+  const externalSupplierProviderOptions = supplierProviderOptions.filter((option) => !option.providerKey.startsWith("taller:"));
   const familyPreferenceProviderKey = supplierPresentationResolution.result?.familyPreferences?.[supplierFamilyKey ?? ""] ?? null;
-  const activeSupplierProviderKey = draft.supplierProviderKey || familyPreferenceProviderKey ||
+  const [familyPreferenceOverride, setFamilyPreferenceOverride] = useState<{ familyKey: string; providerKey: string | null } | null>(null);
+  const effectiveFamilyPreference = familyPreferenceOverride?.familyKey === supplierFamilyKey
+    ? familyPreferenceOverride.providerKey
+    : familyPreferenceProviderKey;
+  const canManageFamilyPreferences = supplierPresentationResolution.result?.canManageFamilyPreferences === true;
+  const activeSupplierProviderKey = draft.supplierProviderKey || effectiveFamilyPreference ||
     supplierProviderOptions.find((option) => option.providerKey === "arquetipo")?.providerKey || supplierProviderOptions[0]?.providerKey || null;
   const activeSupplierOption = supplierProviderOptions.find((option) => option.providerKey === activeSupplierProviderKey) ?? null;
-  const guidedCoverageCodes = supplierPresentationRequests[0]?.technicalCodes ?? [];
+  const defaultSupplierOption = effectiveFamilyPreference
+    ? supplierProviderOptions.find((option) => option.providerKey === effectiveFamilyPreference) ?? null
+    : supplierProviderOptions.find((option) => option.providerKey === "arquetipo") ?? externalSupplierProviderOptions[0] ?? null;
+  const defaultSupplierProviderKey = effectiveFamilyPreference || defaultSupplierOption?.providerKey || null;
+  const displayedSupplierProviderKey = draft.supplierProviderKey === defaultSupplierProviderKey ? "" : draft.supplierProviderKey ?? "";
+  const supplierOptionsForSelect = supplierProviderOptions.filter((option) => option.providerKey !== defaultSupplierProviderKey);
+  const guidedCoverageCodes = useMemo(
+    () => supplierPresentationRequests[0]?.technicalCodes ?? [],
+    [supplierPresentationRequests]
+  );
+  const guidedCostReferences = useMemo(() => {
+    const documentedProfiles = getLineTemplateWorkshopProfiles(selectedLineTemplate?.catalogMetadata)?.profiles
+      .filter((profile) => profile.codeStatus === "catalog_reference" && profile.code?.trim())
+      .map((profile) => ({ code: profile.code!, name: profile.name })) ?? [];
+    const recipeProfiles = (effectiveSupplierRecipe?.definition.perfiles ?? []).map((profile) => ({
+      code: profile.codigoPerfil,
+      name: profile.nombrePerfil,
+    }));
+    const namesByCode = new Map([...recipeProfiles, ...documentedProfiles].map((profile) => [profile.code.trim().toLocaleUpperCase("en-US"), profile.name]));
+    return guidedCoverageCodes.map((code) => ({
+      technicalCode: code,
+      profileName: namesByCode.get(code.trim().toLocaleUpperCase("en-US")) ?? code,
+    }));
+  }, [effectiveSupplierRecipe, guidedCoverageCodes, selectedLineTemplate?.catalogMetadata]);
   const guidedSupplierCoverage = effectiveSupplierRecipe
-    ? {
+    ? selectedCatalogLineKey === "ventora:l42" ? resolveMixedSupplierProfileCoverage({
+        technicalCodes: guidedCoverageCodes,
+        prices: supplierPresentationResolution.result?.profilePrices?.["guided-line-provider-preview"] ?? [],
+        providerKey: activeSupplierProviderKey,
+      }) : {
         totalCount: guidedCoverageCodes.length,
         pendingCodes: activeSupplierOption?.pendingTechnicalCodes ?? guidedCoverageCodes,
       }
     : null;
-  const guidedSupplierCoverageNotice = effectiveSupplierRecipe
-    ? formatSupplierProfileCoverageNotice(guidedSupplierCoverage?.pendingCodes ?? guidedCoverageCodes)
-    : supplierPresentationRequests.length > 0 ? "Configuración técnica pendiente; cobertura por perfil sin confirmar." : null;
-  const defaultSupplierLabel = supplierProviderOptions.find((option) => option.providerKey === familyPreferenceProviderKey)?.label
-    ?? supplierProviderOptions.find((option) => option.providerKey === "arquetipo")?.label
-    ?? "Automático";
+  const defaultSupplierLabel = defaultSupplierOption
+    ? `${defaultSupplierOption.label}${effectiveFamilyPreference ? " · Preferido" : ""}`
+    : effectiveFamilyPreference ? "Preferencia sin cobertura" : "Mis precios";
   const selectedLineLabel = useMemo(() => {
     if (!draft.lineTemplateId) {
       return isGlassProduct ? "Precio manual o sin cristal" : "Precio manual o sin linea";
@@ -676,7 +806,7 @@ export function PasoDosWizardConfiguracionMovil({
             .includes(normalizedQuery))
       );
     });
-    const leavesCount = selectedRecipeLeaves;
+    const leavesCount = lineCompatibilityLeavesCount;
     return isGlassProduct ? candidates : filterLineCatalogTemplates({
       templates: candidates,
       tab: lineCatalogTab,
@@ -691,7 +821,7 @@ export function PasoDosWizardConfiguracionMovil({
       }),
       material: requiresProfileMaterial ? lineMaterialFilter : null,
     });
-  }, [availableLineTemplates, draft.configuracion, draft.guidedVisualConfig, draft.material, draft.nombre, draft.referencia, draft.subtipo, draft.sistema, isGlassProduct, lineCatalogTab, lineMaterialFilter, lineSelectorQuery, requiresProfileMaterial, selectedRecipeLeaves]);
+  }, [availableLineTemplates, draft.configuracion, draft.guidedVisualConfig, draft.material, draft.nombre, draft.referencia, draft.subtipo, draft.sistema, isGlassProduct, lineCatalogTab, lineCompatibilityLeavesCount, lineMaterialFilter, lineSelectorQuery, requiresProfileMaterial]);
   const lineTemplateFamilyGroups = useMemo(
     () => groupLineCatalogTemplates(filteredLineTemplates),
     [filteredLineTemplates]
@@ -704,7 +834,7 @@ export function PasoDosWizardConfiguracionMovil({
       system: draft.sistema,
       configuration: draft.configuracion,
       componentLabel: `${draft.nombre ?? ""} ${draft.referencia ?? ""}`,
-      leavesCount: selectedRecipeLeaves,
+      leavesCount: lineCompatibilityLeavesCount,
       material: draft.material,
       guidedVisualConfig: draft.guidedVisualConfig,
     });
@@ -989,6 +1119,13 @@ export function PasoDosWizardConfiguracionMovil({
               : "Redacta el trabajo y define el valor."}
           </span>
         </div>
+
+        <CantidadInlineMovil
+          cantidad={draft.cantidad}
+          value={cantidadDisplayValue}
+          onChange={onCantidadChange}
+          onSelect={onSelectCantidad}
+        />
 
         <div className={s.stepTwoMobileBlockHero}>
           <div className={s.stepTwoMobileBlockLabel}>NOMBRE DEL ITEM</div>
@@ -1310,6 +1447,13 @@ export function PasoDosWizardConfiguracionMovil({
             : "Mismas medidas, mismo sistema y mismo valor inicial."}
         </span>
       </div>
+
+      <CantidadInlineMovil
+        cantidad={draft.cantidad}
+        value={cantidadDisplayValue}
+        onChange={onCantidadChange}
+        onSelect={onSelectCantidad}
+      />
 
       {isTrabajoPersonalizado ? (
         <div className={s.stepTwoMobileBlockHero}>
@@ -1735,41 +1879,54 @@ export function PasoDosWizardConfiguracionMovil({
             )}
           />
         ) : null}
-        {supplierFamilyKey && onSupplierProviderKeyChange ? (
-          <QuoteSupplierDisclosure
-            className={s.stepTwoMobileSupplierPicker}
-            summary={supplierPresentationRequests.length === 0 ? "Configuración pendiente" : supplierPresentationResolution.isResolving ? "Cargando proveedores…" : supplierProviderOptions.find((option) => option.providerKey === (draft.supplierProviderKey || familyPreferenceProviderKey))?.label ?? ((draft.supplierProviderKey || familyPreferenceProviderKey) ? "Proveedor guardado · revisar cobertura" : supplierProviderOptions.length === 0 ? "Sin proveedor compatible" : defaultSupplierLabel)}
-            coverage={!supplierPresentationResolution.isResolving && effectiveSupplierRecipe && guidedSupplierCoverage
-              ? `Cobertura de compra: ${guidedSupplierCoverage.totalCount - guidedSupplierCoverage.pendingCodes.length}/${guidedSupplierCoverage.totalCount} perfiles`
-              : !supplierPresentationResolution.isResolving && supplierPresentationRequests.length > 0 && !effectiveSupplierRecipe ? "Cobertura por perfil pendiente de configuración técnica."
-                : supplierPresentationRequests.length === 0 ? "Perfiles de compra pendientes de identificar." : null}
-            warning={supplierPresentationRequests.length === 0 ? "Completa la configuración técnica para identificar perfiles y proveedores compatibles." : supplierPresentationResolution.isResolving ? null : supplierProviderOptions.length === 0
-              ? `Sin proveedor compatible${guidedCoverageCodes.length ? ` para ${guidedCoverageCodes.slice(0, 3).join(", ")}` : ""}.`
-              : activeSupplierProviderKey && !activeSupplierOption
-                ? `Proveedor guardado sin cobertura compatible${supplierPresentationRequests[0]?.technicalCodes.length ? ` para ${supplierPresentationRequests[0].technicalCodes.slice(0, 3).join(", ")}` : ""}.`
-                : guidedSupplierCoverageNotice}
-          >
-            {supplierPresentationRequests.length > 0 ? (
-              <>
-                <label className={s.stepTwoMobileSupplierField}>
-                  <span>Proveedor de compra</span>
-                  <select
-                    aria-label="Proveedor de compra para esta línea"
-                    value={draft.supplierProviderKey ?? ""}
-                    onChange={(event) => onSupplierProviderKeyChange(event.target.value)}
-                    disabled={supplierPresentationResolution.isResolving && supplierProviderOptions.length === 0}
-                  >
-                    <option value="">Predeterminado · {defaultSupplierLabel}</option>
-                    {draft.supplierProviderKey && !supplierProviderOptions.some((option) => option.providerKey === draft.supplierProviderKey) ? <option value={draft.supplierProviderKey}>Proveedor guardado · sin cobertura compatible</option> : null}
-                    {supplierProviderOptions.map((option) => (
-                      <option key={option.providerKey} value={option.providerKey}>{option.label}</option>
-                    ))}
-                  </select>
-                </label>
-                <small>{supplierPresentationResolution.isResolving ? "Cargando proveedores…" : "Puedes cambiar el proveedor para esta pieza. El precio de venta de la línea se mantiene."}</small>
-              </>
-            ) : <small>Resuelve la configuración de fabricación antes de consultar costos por perfil.</small>}
-          </QuoteSupplierDisclosure>
+        {supportsProfilePurchaseCosts ? (
+          <section className={s.stepTwoMobileSupplierPicker} aria-label="Costos de fabricación">
+            <strong>Costos de fabricación</strong>
+            {!supplierFamilyKey ? <small role="status">Identidad de compra pendiente de definir.</small> : guidedCostReferences.length === 0 ? <small role="status">Códigos de perfil pendientes de identificar.</small> : <>
+            {!supplierPresentationResolution.isResolving && externalSupplierProviderOptions.length > 0 && onSupplierProviderKeyChange ? <div className={s.stepTwoMobileSupplierField}>
+              <div className={s.stepTwoMobileSupplierFieldHeading}>
+                <label htmlFor="guided-supplier-provider">Proveedor de compra</label>
+                {activeSupplierProviderKey ? <details className={s.stepTwoMobileSupplierPreference}>
+                  <summary>Preferencia</summary>
+                  <SupplierFamilyPreferenceControl
+                    familyKey={supplierFamilyKey}
+                    selectedProviderKey={draft.supplierProviderKey || activeSupplierProviderKey}
+                    selectedProviderLabel={supplierProviderOptions.find((option) => option.providerKey === (draft.supplierProviderKey || activeSupplierProviderKey))?.label ?? defaultSupplierLabel}
+                    preferenceProviderKey={effectiveFamilyPreference}
+                    preferenceLabel={supplierProviderOptions.find((option) => option.providerKey === effectiveFamilyPreference)?.label ?? null}
+                    canManage={canManageFamilyPreferences}
+                    onSaved={(providerKey) => {
+                      if (!supplierFamilyKey) return;
+                      setFamilyPreferenceOverride({ familyKey: supplierFamilyKey, providerKey });
+                      onSupplierProviderKeyChange?.("");
+                    }}
+                  />
+                </details> : null}
+              </div>
+              <select id="guided-supplier-provider" aria-label="Proveedor de compra para esta línea" value={displayedSupplierProviderKey}
+                onChange={(event) => onSupplierProviderKeyChange(event.target.value)}
+                disabled={supplierPresentationResolution.isResolving && supplierProviderOptions.length === 0}>
+                <option value="">{defaultSupplierLabel}</option>
+                {draft.supplierProviderKey && displayedSupplierProviderKey && !supplierProviderOptions.some((option) => option.providerKey === draft.supplierProviderKey) ? <option value={draft.supplierProviderKey}>Proveedor guardado · sin cobertura</option> : null}
+                {supplierOptionsForSelect.map((option) => <option key={option.providerKey} value={option.providerKey}>{option.label}</option>)}
+              </select>
+            </div> : null}
+            {!supplierPresentationResolution.isResolving && externalSupplierProviderOptions.length > 0 && activeSupplierProviderKey && !activeSupplierProviderKey.startsWith("taller:") && guidedSupplierCoverage?.pendingCodes.length ? <small className={s.stepTwoMobileSupplierPending} role="status">
+              Faltan {guidedSupplierCoverage.pendingCodes.length} {guidedSupplierCoverage.pendingCodes.length === 1 ? "perfil" : "perfiles"} con precio compatible.
+            </small> : null}
+            {supplierPresentationResolution.isResolving ? <small role="status">Buscando precios compatibles…</small> : Number(draft.lineTemplateId) > 0 ? <GuidedProfileCostSheet
+              lineTemplateId={Number(draft.lineTemplateId)}
+              familyKey={supplierFamilyKey!}
+              finishName={resolveSupplierFinishName(draft.catalogTerminacion, draft.colorHex)}
+              references={guidedCostReferences}
+              prices={supplierPresentationResolution.result?.profilePrices?.["guided-line-provider-preview"] ?? []}
+              canManagePrice={supplierPresentationResolution.result?.canManageSupplierPrices === true}
+              providerKey={externalSupplierProviderOptions.length > 0 ? activeSupplierProviderKey : null}
+              allowMixedWorkshopCosts={selectedCatalogLineKey === "ventora:l42"}
+              onPricesSaved={supplierPresentationResolution.refresh}
+            /> : null}
+            </>}
+          </section>
         ) : null}
         {selectedLineIsSodalL25 && requiresProfileMaterial ? (
           <div className={s.stepTwoMobileBlockSecundario}>

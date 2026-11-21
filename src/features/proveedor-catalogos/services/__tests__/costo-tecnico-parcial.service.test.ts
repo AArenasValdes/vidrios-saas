@@ -482,6 +482,7 @@ describe("buildPartialTechnicalCostSnapshot", () => {
     const workshop = price({
       presentationId: "own-1", providerKey: "taller:3", origin: "workshop",
       technicalCode: "MARCO-TALLER", supplierSku: "TALLER-MARCO-BLANCO",
+      workshopSupplierName: "Sodal",
       finishCode: "", finishName: "Blanco", commercialLengthMm: 6800,
       netPrice: 32000, priceListId: "taller:3", priceListRevision: "taller-v1",
     });
@@ -490,7 +491,7 @@ describe("buildPartialTechnicalCostSnapshot", () => {
       quoteItems: [{ code: "V1", color: "Ventana", finishName: "Blanco" }, { code: "V2", color: "Ventana", finishName: "Blanco" }],
       availablePrices: [workshop],
     });
-    expect(result?.lines[0]).toMatchObject({ bars: 1, lineNet: 32000, effectivePriceSource: "workshop", priceListRevision: "taller-v1" });
+    expect(result?.lines[0]).toMatchObject({ bars: 1, lineNet: 32000, effectivePriceSource: "workshop", priceListRevision: "taller-v1", workshopSupplierName: "Sodal" });
     expect(result?.status).toBe("partial");
     const missingPrice = buildPartialTechnicalCostSnapshot({
       workSnapshot: pauta([{ code: "MARCO-TALLER", item: "V1", length: 2800 }]),

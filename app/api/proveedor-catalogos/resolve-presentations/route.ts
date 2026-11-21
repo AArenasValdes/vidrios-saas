@@ -73,7 +73,7 @@ export async function POST(request: Request) {
       readConfirmedSupplierPresentations(organizationId, { familyKeys: supplierFamilyKeys }),
       listSupplierFamilyPreferences(organizationId),
       parsed.data.includeProviderOptions ? readSupplierPresentationPrices({ familyKeys: supplierFamilyKeys }) : Promise.resolve([]),
-      parsed.data.includeProviderOptions ? readWorkshopPresentationPrices(organizationId) : Promise.resolve([]),
+      readWorkshopPresentationPrices(organizationId),
     ]);
     const preferenceByFamily = new Map(savedPreferences.map((preference) => [preference.familyKey, preference.providerKey]));
     const requestedFamilies = [...new Set(validItems.map((item) => item.familyKey))];
@@ -108,7 +108,7 @@ export async function POST(request: Request) {
         const refs = documentedProfiles
           .filter((profile) => profile.codeStatus === "catalog_reference" && profile.code?.trim())
           .map((profile) => ({ code: profile.code!, name: profile.name }));
-        if (item.catalogLineKey === "ventora:l25") {
+        {
           const namesByCode = new Map(refs.map((reference) => [reference.code.trim().toLocaleUpperCase("en-US"), reference]));
           for (const code of item.technicalCodes) {
             const normalized = code.trim().toLocaleUpperCase("en-US");
@@ -222,13 +222,14 @@ export async function POST(request: Request) {
         );
         const visibleProviderKeys = new Set([
           ...compatibleProviderKeys,
+          ...(item.technicalCodes.length > 0 ? [`taller:${organizationId}`] : []),
           ...(item.providerKey ? [item.providerKey] : []),
           ...(preferenceByFamily.get(item.familyKey) ? [preferenceByFamily.get(item.familyKey) as string] : []),
         ]);
         const coverageByProvider = new Map(coverage.map((option) => [option.providerKey, option]));
         const options = [...visibleProviderKeys].map((providerKey) => {
           const priced = coverageByProvider.get(providerKey);
-          const rawProviderName = providerKey.startsWith("taller:") ? "Precio propio del taller" : providerNames.get(providerKey) ?? providerKey;
+          const rawProviderName = providerKey === `taller:${organizationId}` ? "Mis precios" : providerKey.startsWith("taller:") ? "Precio propio del taller" : providerNames.get(providerKey) ?? providerKey;
           const providerName = displayProviderNames.get(providerKey) ?? rawProviderName.replace(/^Distribuidora\s+/i, "").trim();
           const revisions = relevantPriceRows
             .filter((row) => row.providerKey === providerKey)
@@ -308,6 +309,13 @@ export async function POST(request: Request) {
         }))] as const;
       }));
     }
+    const eligibleOwnPresentationIds = workshopPrices
+      .filter((row) => row.providerKey === `taller:${organizationId}` &&
+        row.origin === "workshop" && Boolean(row.presentationId?.trim()) &&
+        row.netPrice != null && Number.isFinite(row.netPrice) && row.netPrice > 0 &&
+        row.commercialLengthMm != null && Number.isSafeInteger(row.commercialLengthMm) && row.commercialLengthMm > 0 &&
+        Boolean(row.currency?.trim()))
+      .map((row) => row.presentationId!);
     const selections = Object.fromEntries(validItems.map((item) => [item.itemId,
       resolveSupplierPresentationsForQuoteItem({
         request: {
@@ -317,6 +325,9 @@ export async function POST(request: Request) {
             familyPreferenceProviderKey: preferenceByFamily.get(item.familyKey),
           }),
           configurationKey: VENTORA_DEFAULT_LINE_CATALOG.find((line) => line.catalogKey === item.catalogLineKey)?.catalogMetadata?.configurationKey as string | undefined,
+          organizationId,
+          allowOwnProfileCosts: item.catalogLineKey === "ventora:l42",
+          eligibleOwnPresentationIds,
         },
         presentations,
       }),

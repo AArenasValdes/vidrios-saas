@@ -264,6 +264,13 @@ Los archivos descritos aquí deben seguir siendo reutilizables y coherentes con 
 - **Dependencias**: `mapItemToForm`, `LineTemplatePicker`, `COLOR_OPTIONS`, `ALUMINUM_COLOR_OPTIONS`, `PVC_COLOR_OPTIONS`, `encodeCotizacionItemPresentationMeta`.
 - **Riesgos**: Es transaccional: línea, vidrio, material, color y precio se mantienen locales hasta **Guardar cambios**; cerrar no puede persistir cambios parciales. Cambios confirmados de material/color deben previsualizarse con `colorHex` en miniatura y no conservar una línea incompatible. Las líneas se filtran por material preferido pero deben permitir Cristal cuando el usuario lo elige.
 
+### Componente: SupplierFamilyPreferenceControl
+
+- **Archivo**: `src/features/proveedor-catalogos/components/supplier-family-preference-control.tsx`
+- **Proposito**: Permite guardar o quitar el proveedor habitual de una familia usando el endpoint autenticado existente. Distingue esa preferencia de la selección temporal de una pieza y muestra estado/error del guardado.
+- **Usado en**: Guiada móvil dentro de Costos de fabricación. Constructor móvil mantiene por ahora sus controles equivalentes.
+- **Riesgos**: Solo habilitar para usuarios con permiso y proveedores confirmados compatibles; nunca cambiar el precio de venta ni omitir las reglas de organización del endpoint.
+
 ### Componente: CuadernoComposicionMovil
 
 - **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/mobile-cuaderno/cuaderno-composicion-movil.tsx`

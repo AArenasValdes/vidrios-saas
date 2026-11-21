@@ -3,6 +3,34 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 
 import { usePasoDosAgregarGrupoMovil } from "../use-paso-dos-agregar-grupo-movil";
+import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
+
+const l42CatalogEntry = VENTORA_DEFAULT_LINE_CATALOG.find((line) => line.catalogKey === "ventora:l42")!;
+const l42Template = {
+  id: "tmpl-l42",
+  organizationId: 1,
+  catalogKey: l42CatalogEntry.catalogKey ?? "ventora:l42",
+  nombre: l42CatalogEntry.nombre,
+  categoria: "aluminio" as const,
+  unidadCobro: "m2" as const,
+  material: "Aluminio" as const,
+  vidrioPrincipalRecomendado: null,
+  costoBase: 0,
+  precioM2Sugerido: 185000,
+  minimoCobrable: 0,
+  redondeoPrecio: 1000,
+  mermaPct: 0,
+  margenObjetivoPct: null,
+  proveedor: null,
+  vigenciaDesde: null,
+  vigenciaHasta: null,
+  catalogMetadata: l42CatalogEntry.catalogMetadata ?? null,
+  isActive: true,
+  sortOrder: 1,
+  creadoEn: null,
+  actualizadoEn: null,
+  eliminadoEn: null,
+};
 
 const catalogGlass = {
   id: 3643,
@@ -35,7 +63,7 @@ function ProbePasoDosAgregarGrupoMovil() {
     items: [],
     pricingMode: "margen",
     provider: "",
-    activeLineTemplates: [catalogGlass],
+    activeLineTemplates: [catalogGlass, l42Template],
   });
 
   return (
@@ -43,6 +71,8 @@ function ProbePasoDosAgregarGrupoMovil() {
       <span data-testid="abierto">{wizard.isOpen ? "si" : "no"}</span>
       <span data-testid="paso">{String(wizard.paso)}</span>
       <span data-testid="subtipo">{wizard.draft.subtipo}</span>
+      <span data-testid="material">{wizard.draft.material}</span>
+      <span data-testid="sistema">{wizard.draft.sistema}</span>
       <span data-testid="cantidad">{String(wizard.draft.cantidad)}</span>
       <span data-testid="linea">{wizard.draft.referencia}</span>
       <span data-testid="vidrio">{wizard.draft.vidrio}</span>
@@ -50,6 +80,10 @@ function ProbePasoDosAgregarGrupoMovil() {
       <span data-testid="vidrio-spec">{wizard.draft.glassTechnicalSpec?.thicknessMm ?? "pendiente"}</span>
       <span data-testid="linea-id">{wizard.draft.lineTemplateId}</span>
       <span data-testid="proveedor">{wizard.draft.supplierProviderKey}</span>
+      <span data-testid="fabricacion-hojas">{wizard.draft.fabricacionHojas == null ? "" : String(wizard.draft.fabricacionHojas)}</span>
+      <span data-testid="fabricacion-tipologia">{wizard.draft.fabricacionTipologia}</span>
+      <span data-testid="catalog-line-key">{wizard.draft.catalogLineKey}</span>
+      <span data-testid="recipe-id">{wizard.draft.fabricationRecipeId}</span>
       <span data-testid="precio">{wizard.draft.precio}</span>
       <span data-testid="modo">{wizard.draft.pricingMode}</span>
       <span data-testid="margen-pct">{wizard.draft.margenPct}</span>
@@ -85,6 +119,18 @@ function ProbePasoDosAgregarGrupoMovil() {
       </button>
       <button type="button" onClick={() => wizard.updatePrecio("333000")}>
         precio manual
+      </button>
+      <button type="button" onClick={() => wizard.selectLineTemplate("tmpl-l42")}>
+        elegir l42
+      </button>
+      <button type="button" onClick={() => wizard.updateSistema("Proyectante")}>
+        sistema proyectante
+      </button>
+      <button type="button" onClick={() => wizard.updateSistema("Corredera")}>
+        sistema corredera
+      </button>
+      <button type="button" onClick={() => wizard.updateMaterial("PVC")}>
+        material pvc
       </button>
       <button type="button" onClick={() => wizard.updateSupplierProviderKey("alumco")}>
         elegir alumco
@@ -297,5 +343,41 @@ describe("usePasoDosAgregarGrupoMovil", () => {
     expect(screen.getByTestId("modo")).toHaveTextContent("precio_directo");
     expect(screen.getByTestId("precio")).toHaveTextContent("333000");
     expect(screen.getByTestId("precio-manual")).toHaveTextContent("si");
+  });
+
+  it("limpia estado técnico residual (fabricacionHojas, catalogLineKey, proveedor) al cambiar sistema o material", () => {
+    render(<ProbePasoDosAgregarGrupoMovil />);
+
+    act(() => {
+      fireEvent.click(screen.getByText("abrir"));
+      fireEvent.click(screen.getByText("sistema proyectante"));
+      fireEvent.click(screen.getByText("elegir l42"));
+      fireEvent.click(screen.getByText("elegir alumco"));
+    });
+
+    expect(screen.getByTestId("fabricacion-hojas")).toHaveTextContent("1");
+    expect(screen.getByTestId("fabricacion-tipologia")).toHaveTextContent("proyectante");
+    expect(screen.getByTestId("catalog-line-key")).toHaveTextContent("ventora:l42");
+    expect(screen.getByTestId("proveedor")).toHaveTextContent("alumco");
+
+    act(() => {
+      fireEvent.click(screen.getByText("sistema corredera"));
+    });
+
+    expect(screen.getByTestId("sistema")).toHaveTextContent("Corredera");
+    expect(screen.getByTestId("fabricacion-hojas")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("fabricacion-tipologia")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("catalog-line-key")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("recipe-id")).toBeEmptyDOMElement();
+
+    act(() => {
+      fireEvent.click(screen.getByText("material pvc"));
+    });
+
+    expect(screen.getByTestId("material")).toHaveTextContent("PVC");
+    expect(screen.getByTestId("linea-id")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("proveedor")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("fabricacion-hojas")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("catalog-line-key")).toBeEmptyDOMElement();
   });
 });

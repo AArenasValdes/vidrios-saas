@@ -8233,6 +8233,20 @@
   box-shadow: 0 12px 22px rgba(23, 34, 56, 0.06);
 }
 
+.stepTwoMobileQuantityInline {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.stepTwoMobileQuantityInlineStepper {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 52px;
+  gap: 0.6rem;
+  align-items: center;
+}
+
 .stepTwoMobileQuantityStepper {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr) 52px;
@@ -12901,21 +12915,37 @@ p.stepTwoMobileItemFabCompact {
 }
 
 .stepTwoMobileSupplierPicker {
-  margin-top: 0.6rem;
+  position: relative;
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid #d6dfec;
+  border-radius: 12px;
+  background: #f8fbff;
+  color: #243b6b;
 }
 
 .stepTwoMobileSupplierField {
   display: grid;
-  gap: 0.35rem;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.stepTwoMobileSupplierFieldHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   color: #243b6b;
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   font-weight: 700;
 }
 
 .stepTwoMobileSupplierField select {
   width: 100%;
-  min-height: 3rem;
-  padding: 0.55rem 0.7rem;
+  min-height: 2.65rem;
+  padding: 0.45rem 0.65rem;
   border: 1px solid #b9c9e0;
   border-radius: 10px;
   background: #fff;
@@ -12929,6 +12959,57 @@ p.stepTwoMobileItemFabCompact {
   font-size: 0.74rem;
   line-height: 1.4;
 }
+
+.stepTwoMobileSupplierCoverage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.stepTwoMobileSupplierPending {
+  margin: 0;
+  color: #865b11 !important;
+  font-size: 0.72rem !important;
+}
+
+.stepTwoMobileSupplierPreference {
+  flex: 0 0 auto;
+}
+
+.stepTwoMobileSupplierPreference summary {
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  color: #526783;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.stepTwoMobileSupplierPreference > div {
+  position: absolute;
+  z-index: 5;
+  right: 0.7rem;
+  left: 0.7rem;
+  margin-top: 0.4rem;
+}
+
+.stepTwoMobileSupplierCoverage span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  background: #edf4ff;
+  color: #294d7e;
+  font-size: 0.75rem;
+}
+
+.stepTwoMobileSupplierCoverage strong {
+  color: #173e72;
+}
+
 
 .stepTwoMobileLineTriggerLabel {
   min-width: 0;

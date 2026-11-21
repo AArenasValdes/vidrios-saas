@@ -168,7 +168,7 @@ import { usePasoTresGuardado } from "./_hooks/use-paso-tres-guardado";
 import { usePersistenciaNuevaCotizacion } from "./_hooks/use-persistencia-nueva-cotizacion";
 import s from "./page.module.css";
 
-function NuevaCotizacionPageContent() {
+function NuevaCotizacionProductiva() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("edit");
@@ -842,7 +842,7 @@ function NuevaCotizacionPageContent() {
   const handleQuotePricingModeChange = (
     mode: QuotePricingMode,
     options?: { force?: boolean }
-  ) => {
+  ): boolean => {
     if (mode === quotePricingMode) {
       setQuoteModeChosen(true);
       if (isMobileViewport) {
@@ -855,7 +855,7 @@ function NuevaCotizacionPageContent() {
       if (mode === "por_item" && draft.items.length === 0 && (!isMobileViewport || quoteModeChosen)) {
         handleOpenAddGroupSheet();
       }
-      return;
+      return true;
     }
 
     if (
@@ -863,7 +863,7 @@ function NuevaCotizacionPageContent() {
       hasStepTwoRelevantData &&
       !window.confirm("Cambiar el modo conserva los componentes cargados y ajusta las reglas de precio. ¿Quieres cambiarlo?")
     ) {
-      return;
+      return false;
     }
 
     setQuoteModeChosen(true);
@@ -897,6 +897,7 @@ function NuevaCotizacionPageContent() {
     if (isMobileViewport && mode === "por_item" && draft.items.length === 0 && quoteModeChosen) {
       handleOpenAddGroupSheet();
     }
+    return true;
   };
 
   const handleDesktopWorkspaceModeChange = (mode: "rapida" | "guiada") => {
@@ -1319,6 +1320,9 @@ function NuevaCotizacionPageContent() {
         next.colorHex = resolveMaterialColorHex(material, cur.colorHex);
         if (cur.lineTemplateId) {
           next.lineTemplateId = "";
+        }
+        if (material !== cur.material) {
+          next.supplierProviderKey = "";
         }
       }
       if (key === "referencia" && value !== cur.referencia && cur.lineTemplateId) {
@@ -1894,7 +1898,10 @@ function NuevaCotizacionPageContent() {
   };
 
   const handleOpenPorItemComponentCreator = () => {
+    returnToModeSelectorAfterSheetCloseRef.current = false;
     returnToTotalNotebookAfterSheetCloseRef.current = false;
+    suspendedNotebookRef.current = null;
+    pendingNextDraftRef.current = false;
     setQuoteModeChosen(true);
     setDraft((current) => ({ ...current, quotePricingMode: "por_item" }));
     setIsFreeValueItemFormOpen(false);
@@ -2288,6 +2295,7 @@ function NuevaCotizacionPageContent() {
           : {
               ...form,
               lineTemplateId: "",
+              supplierProviderKey: "",
               referencia: "",
               precioPorM2: "",
               minimoCobrable: "",
@@ -2316,6 +2324,7 @@ function NuevaCotizacionPageContent() {
           form = {
             ...form,
             lineTemplateId: "",
+            supplierProviderKey: "",
             referencia: "",
             precioPorM2: "",
             minimoCobrable: "",
@@ -2324,6 +2333,12 @@ function NuevaCotizacionPageContent() {
             origenPrecio: "manual",
             cubicationSnapshot: null,
           };
+        } else if (
+          patch.supplierProviderKey === undefined &&
+          form.supplierProviderKey &&
+          !form.lineTemplateId
+        ) {
+          form.supplierProviderKey = "";
         }
       }
       if (markPriceManual) {
@@ -3394,6 +3409,7 @@ function goNextFromStep1() {
               linePricingSummary: pasoDosAgregarGrupoMovil.linePricingSummary,
               isSavingLineTemplate: isSavingQuickPriceTemplate,
               onOpen: handleOpenAddGroupSheet,
+              onOpenPorItem: handleOpenPorItemComponentCreator,
               onOpenFreeTotalNotebook: handleOpenFreeTotalNotebook,
               onOpenComponentCreator: handleOpenTotalGlobalComponentCreator,
               nestedDetailItems: totalGlobalNestedDetailItems,
@@ -3657,7 +3673,7 @@ function goNextFromStep1() {
 export default function NuevaCotizacionPage() {
   return (
     <Suspense fallback={null}>
-      <NuevaCotizacionPageContent />
+      <NuevaCotizacionProductiva />
     </Suspense>
   );
 }

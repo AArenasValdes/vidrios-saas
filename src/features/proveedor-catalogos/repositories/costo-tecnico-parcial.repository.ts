@@ -130,6 +130,7 @@ export async function readWorkshopPresentationPrices(organizationId: number): Pr
     currency: row.moneda ? String(row.moneda) : null,
     priceListId: `taller:${organizationId}`,
     priceListRevision: `taller-v${Number(row.revision)}`,
+    workshopSupplierName: row.proveedor_nombre ? String(row.proveedor_nombre) : null,
     origin: "workshop" as const,
   }));
 }

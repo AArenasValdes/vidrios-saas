@@ -54,6 +54,7 @@ export type WorkMaterialPrice = {
   isWorkshopCode: boolean;
   sourceKind?: "reference" | "own" | "adjusted";
   sourceLabel: string;
+  workshopSupplierName?: string | null;
   sourceRevision: string;
   pricedAt: string | null;
   basis: "por metro" | "por tira" | "por unidad";
@@ -369,7 +370,7 @@ function materialPrice(input: {
     isWorkshopCode,
     sourceKind: isWorkshopCode ? "own" : line.effectivePriceSource === "provider_adjustment" || line.effectivePriceSource === "organization_override" ? "adjusted" : "reference",
     sourceLabel: isWorkshopCode
-      ? "Precio propio del taller"
+      ? (line.workshopSupplierName?.trim() ? `${line.workshopSupplierName.trim()} · Mis precios` : "Precio propio del taller")
       : line.providerKey?.trim().toLocaleLowerCase("es-CL") === "arquetipo"
         ? "Arquetipo · junio 2026"
         : line.providerKey?.trim().toLocaleLowerCase("es-CL") === "alumco"

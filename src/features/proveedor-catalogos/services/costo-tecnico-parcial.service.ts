@@ -14,6 +14,7 @@ export type CatalogPresentationPrice = {
   familyKeys?: string[];
   configurationKey?: string | null;
   origin?: "workshop";
+  workshopSupplierName?: string | null;
   technicalCode: string;
   /** Explicit source-recipe codes linked in technical-input evidence metadata. */
   recipeComponentCodes?: string[];
@@ -64,6 +65,7 @@ type CostLine = {
   /** Canonical code of the technical input, when different from the recipe code. */
   supplierTechnicalCode?: string;
   technicalName: string;
+  workshopSupplierName?: string | null;
   supplierSku: string;
   finishCode: string;
   finishName: string;
@@ -545,6 +547,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
         technicalCode: group[0].technicalCode,
         ...(selected.technicalCode !== group[0].technicalCode ? { supplierTechnicalCode: selected.technicalCode } : {}),
         technicalName: group[0].technicalName,
+        workshopSupplierName: selected.origin === "workshop" ? selected.workshopSupplierName ?? null : null,
         supplierSku: selected.supplierSku,
         finishCode: selected.finishCode,
         finishName: selected.finishName ?? "Sin acabado específico",
@@ -607,6 +610,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
       technicalCode: acceptedCuts[0].technicalCode,
       ...(presentation.technicalCode !== acceptedCuts[0].technicalCode ? { supplierTechnicalCode: presentation.technicalCode } : {}),
       technicalName: acceptedCuts[0].technicalName,
+      workshopSupplierName: presentation.origin === "workshop" ? presentation.workshopSupplierName ?? null : null,
       supplierSku: presentation.priceApplicationStatus === "base_reference_other_finish" ? "" : presentation.supplierSku,
       finishCode: presentation.priceApplicationStatus === "base_reference_other_finish" ? "" : presentation.finishCode,
       finishName: presentation.finishName ?? "Sin acabado específico",

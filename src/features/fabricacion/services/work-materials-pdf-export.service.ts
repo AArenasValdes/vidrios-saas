@@ -7,7 +7,7 @@ import {
   DISTRIBUCION_REFERENCIAL_PIE,
   isReferentialOnlyWorkOrder,
 } from "./fabricacion-aviso-presentacion.service";
-import { calculateProfileReferenceTotal, formatProfilePriceBasis, resolveProfileSupplierPrice } from "./work-materials-price-reference.service";
+import { calculateProfileReferenceTotal, resolveExactProfilePriceReference, resolveProfileSupplierPrice } from "./work-materials-price-reference.service";
 import {
   drawFabricationPdfContinuationHeader,
   drawFabricationPdfFooters,
@@ -269,12 +269,16 @@ export function createWorkMaterialsPdf(
     { title: "Unitario", width: 24, align: "right" },
     { title: "Total", width: 23, align: "right" },
   ];
-  const profilesWithReferences = document.profiles.map((profile) => ({
-    profile,
-    supplierPrice: resolveProfileSupplierPrice(profile, document.profilePriceReferences),
-    storedCost: profile.price && profile.price.sourceKind !== "reference" ? profile.price : null,
-  }));
-  const profileRows = profilesWithReferences.map(({ profile, supplierPrice, storedCost }) => {
+  const profilesWithReferences = document.profiles.map((profile) => {
+    const exactReference = resolveExactProfilePriceReference(profile, document.profilePriceReferences);
+    return {
+      profile,
+      supplierPrice: resolveProfileSupplierPrice(profile, document.profilePriceReferences),
+      storedCost: profile.price && profile.price.sourceKind !== "reference" ? profile.price : null,
+      declaredWorkshopName: exactReference?.priceSource === "workshop" ? exactReference.workshopSupplierName?.trim() || null : null,
+    };
+  });
+  const profileRows = profilesWithReferences.map(({ profile, supplierPrice, storedCost, declaredWorkshopName }) => {
     const referenceTotal = supplierPrice
       ? calculateProfileReferenceTotal(profile, { unitPrice: supplierPrice.unitPrice, basis: supplierPrice.basis })
       : null;
@@ -291,13 +295,19 @@ export function createWorkMaterialsPdf(
         `${clean(profile.code)}${supplierPrice?.supplierSku ? `\nSKU ${supplierPrice.supplierSku}` : storedCost?.sku ? `\nSKU ${storedCost.sku}` : profile.supplierSku ? `\nSKU ${profile.supplierSku}` : ""}`,
         `${clean(profile.description)}\n${clean(profile.line)}`,
         clean(profile.configuredFinish, "Acabado sin definir"),
-        supplierPrice?.providerLabel ?? (storedCost ? priceDescription(storedCost) : referenceStatus),
+        supplierPrice?.providerLabel ?? (storedCost
+          ? storedCost.workshopSupplierName?.trim()
+            ? `${storedCost.workshopSupplierName.trim()} · Mis precios`
+            : declaredWorkshopName ? `${declaredWorkshopName} · Mis precios` : priceDescription(storedCost)
+          : referenceStatus),
         `${profile.bars} ${profile.bars === 1 ? "tira" : "tiras"}\n${formatLength(profile.commercialLengthMm)}`,
         supplierPrice
-          ? `${formatMoney(supplierPrice.unitPrice, supplierPrice.currency)} ${formatProfilePriceBasis(supplierPrice.basis)}`
-          : storedCost ? `${formatMoney(storedCost.unitPrice, storedCost.currency)}\n${storedCost.basis}` : referenceStatus,
+          ? formatMoney(supplierPrice.unitPrice, supplierPrice.currency)
+          : storedCost ? formatMoney(storedCost.unitPrice, storedCost.currency) : referenceStatus,
         supplierPrice
-          ? referenceTotal == null ? "No calculable" : `${formatMoney(referenceTotal, supplierPrice.currency)}\nreferencial`
+          ? referenceTotal == null ? "No calculable" : supplierPrice.sourceKind === "workshop"
+            ? formatMoney(referenceTotal, supplierPrice.currency)
+            : `${formatMoney(referenceTotal, supplierPrice.currency)}\nreferencial`
           : storedCost ? formatMoney(storedCost.subtotal, storedCost.currency) : referenceStatus,
       ],
       smallIndices: [0, 1, 3, 4, 6],
@@ -305,29 +315,68 @@ export function createWorkMaterialsPdf(
     };
   });
   y = drawSection(pdf, "Perfiles", profileColumns, profileRows, y, "Sin perfiles en pauta conjunta", pageContext);
-  if (profilesWithReferences.some(({ supplierPrice }) => supplierPrice != null)) {
-    pdf.setFont("helvetica", "normal");
-    const totalsBySource = new Map<string, { provider: string; currency: string; amount: number; count: number }>();
-    for (const { profile, supplierPrice } of profilesWithReferences) {
-      const provider = supplierPrice?.providerLabel;
-      const providerKey = supplierPrice?.providerKey ?? provider;
-      const currency = supplierPrice?.currency;
-      if (!supplierPrice || !provider || !providerKey || !currency) continue;
+  const profilePriceAmounts = profilesWithReferences.flatMap(({ profile, supplierPrice, storedCost, declaredWorkshopName }) => {
+    if (supplierPrice) {
       const amount = calculateProfileReferenceTotal(profile, { unitPrice: supplierPrice.unitPrice, basis: supplierPrice.basis });
-      if (amount == null) continue;
-      const key = `${providerKey}:${currency}`;
-      const current = totalsBySource.get(key) ?? { provider, currency, amount: 0, count: 0 };
-      current.amount += amount;
+      return amount == null ? [{ profileKey: profile.key, amount: null, provider: supplierPrice.providerLabel, currency: supplierPrice.currency, sourceKind: supplierPrice.sourceKind }] :
+        [{ profileKey: profile.key, amount, provider: supplierPrice.providerLabel, currency: supplierPrice.currency, sourceKind: supplierPrice.sourceKind }];
+    }
+    if (!storedCost) return [];
+    return [{
+      profileKey: profile.key,
+      amount: Number.isFinite(storedCost.subtotal) ? storedCost.subtotal : null,
+      provider: storedCost.workshopSupplierName?.trim()
+        ? `${storedCost.workshopSupplierName.trim()} · Mis precios`
+        : declaredWorkshopName ? `${declaredWorkshopName} · Mis precios` : storedCost.sourceLabel,
+      currency: storedCost.currency,
+      sourceKind: storedCost.sourceKind === "own" || storedCost.isWorkshopCode ? "workshop" as const : storedCost.sourceKind === "adjusted" ? "adjusted" as const : "reference" as const,
+    }];
+  });
+  if (profilePriceAmounts.length > 0) {
+    pdf.setFont("helvetica", "normal");
+    const calculatedAmounts = profilePriceAmounts.filter((row): row is typeof row & { amount: number } => row.amount != null);
+    const totalsBySource = new Map<string, { provider: string; currency: string; sourceKind: "workshop" | "reference" | "adjusted"; amount: number; count: number }>();
+    for (const row of calculatedAmounts) {
+      const key = `${row.provider}:${row.currency}:${row.sourceKind}`;
+      const current = totalsBySource.get(key) ?? { provider: row.provider, currency: row.currency, sourceKind: row.sourceKind, amount: 0, count: 0 };
+      current.amount += row.amount;
       current.count += 1;
       totalsBySource.set(key, current);
     }
-    const coverage = profilesWithReferences.filter(({ supplierPrice }) => supplierPrice).length;
-    const totalLines = [...totalsBySource.values()].map((total) =>
-      `Total referencial · ${total.provider} · ${total.currency}: ${formatMoney(total.amount, total.currency)} (${total.count} perfiles)`
-    );
-    const totalText = totalLines.length ? totalLines.join("\n") : "No se puede calcular el total: la unidad de compra no coincide con tiras de la pauta.";
-    const note = `${totalText}\nCalculado desde el precio unitario y la cantidad de compra de la pauta. Referencia de proveedor; no es un costo guardado ni una cotización confirmada. Cobertura: ${coverage} de ${document.profiles.length} perfiles.`;
-    const noteLines = pdf.splitTextToSize(note, PAGE_WIDTH - MARGIN * 2) as string[];
+    const calculatedProfileCount = new Set(calculatedAmounts.map((row) => row.profileKey)).size;
+    const currencies = [...new Set(calculatedAmounts.map((row) => row.currency))];
+    const totalLines = currencies.map((currency) => {
+      const currencyRows = calculatedAmounts.filter((row) => row.currency === currency);
+      const amount = currencyRows.reduce((sum, row) => sum + row.amount, 0);
+      const currencyProfileCount = new Set(currencyRows.map((row) => row.profileKey)).size;
+      const coverageLabel = currencyProfileCount < document.profiles.length
+        ? ` (${currencyProfileCount} de ${document.profiles.length} perfiles con total calculable)`
+        : "";
+      return `Suma de perfiles · ${currency}: ${formatMoney(amount, currency)}${coverageLabel}`;
+    });
+    const sourceTotals = [...totalsBySource.values()];
+    const showSourceBreakdown = sourceTotals.length > 1 || sourceTotals.some((total) => total.sourceKind !== "workshop");
+    const sourceLines = (showSourceBreakdown ? sourceTotals : []).map((total) => {
+      const label = total.sourceKind === "workshop" ? `Total propio · ${total.provider.replace(/ · Mis precios$/, "")}`
+        : total.sourceKind === "adjusted" ? `Total ajustado · ${total.provider}`
+          : `Total referencial · ${total.provider}`;
+      return `${label} · ${total.currency}: ${formatMoney(total.amount, total.currency)} (${total.count} perfiles)`;
+    });
+    const uncalculatedCount = profilePriceAmounts.filter((row) => row.amount == null).length;
+    const totalLinesWithWarnings = [
+      ...totalLines,
+      ...sourceLines,
+      ...(uncalculatedCount ? [`${uncalculatedCount} perfil${uncalculatedCount === 1 ? "" : "es"} con precio no sumado: falta una unidad de compra compatible con la pauta.`] : []),
+    ];
+    const hasWorkshopCosts = profilePriceAmounts.some((row) => row.sourceKind === "workshop");
+    const sourceNote = hasWorkshopCosts
+      ? "Incluye costos propios guardados por el taller y referencias de compra disponibles."
+      : "Incluye referencias de compra disponibles; no son una cotización confirmada del proveedor.";
+    const noteWidth = PAGE_WIDTH - MARGIN * 2;
+    const summaryLines = pdf.splitTextToSize(totalLinesWithWarnings.join("\n"), noteWidth) as string[];
+    const note = `Calculado desde el precio unitario y la cantidad de compra de la pauta. ${sourceNote} No representa ni modifica el precio de venta comercial. Cobertura: ${calculatedProfileCount} de ${document.profiles.length} perfiles.`;
+    const detailLines = pdf.splitTextToSize(note, noteWidth) as string[];
+    const noteLines = [...summaryLines, ...detailLines];
     const noteHeight = noteLines.length * 3.5 + 5;
     if (y + noteHeight > CONTENT_BOTTOM) {
       pdf.addPage("a4", "portrait");
@@ -337,11 +386,11 @@ export function createWorkMaterialsPdf(
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(9);
     pdf.setTextColor(...COLORS.ink);
-    pdf.text(noteLines.slice(0, totalLines.length || 1), MARGIN, y + 3.2, { lineHeightFactor: 1.2 });
+    if (summaryLines.length) pdf.text(summaryLines, MARGIN, y + 3.2, { lineHeightFactor: 1.2 });
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(8.2);
     pdf.setTextColor(...COLORS.muted);
-    pdf.text(noteLines.slice(totalLines.length || 1), MARGIN, y + 3.2 + (totalLines.length || 1) * 3.5, { lineHeightFactor: 1.2 });
+    if (detailLines.length) pdf.text(detailLines, MARGIN, y + 3.2 + summaryLines.length * 3.5, { lineHeightFactor: 1.2 });
     y += noteHeight;
   }
 

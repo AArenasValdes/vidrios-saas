@@ -86,6 +86,7 @@ function createWizard(overrides: Partial<WizardActions> = {}): WizardActions {
     },
     isSavingLineTemplate: false,
     onOpen: jest.fn(),
+    onOpenPorItem: jest.fn(),
     onOpenFreeTotalNotebook: jest.fn(),
     onClose: jest.fn(),
     onGoToStep: jest.fn(),
@@ -315,10 +316,16 @@ describe("PasoDosWizardMovil", () => {
     const onQuoteModeChosen = jest.fn();
     const onEnterCuaderno = jest.fn();
     const wizard = createWizard({ isOpen: false });
+    const onQuotePricingModeChange = jest.fn();
 
     render(
       <PasoDosWizardMovil
         {...baseProps}
+        formulario={{
+          ...baseProps.formulario,
+          quotePricingMode: "total_global",
+          onQuotePricingModeChange,
+        }}
         quoteModeChosen={false}
         onQuoteModeChosen={onQuoteModeChosen}
         onEnterCuaderno={onEnterCuaderno}
@@ -337,11 +344,38 @@ describe("PasoDosWizardMovil", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Usar items" }));
+    expect(onQuotePricingModeChange).toHaveBeenCalledWith("por_item");
     expect(onQuoteModeChosen).toHaveBeenCalled();
-    expect(wizard.onOpen).toHaveBeenCalled();
+    expect(wizard.onOpenPorItem).toHaveBeenCalled();
+    expect(wizard.onOpen).not.toHaveBeenCalled();
   });
 
-  it("debe mostrar etapa 1 con pasos y toggle guiada|constructor", () => {
+  it("no abre el asistente por ítems si el cambio de modalidad fue cancelado", () => {
+    const onQuoteModeChosen = jest.fn();
+    const wizard = createWizard({ isOpen: false });
+
+    render(
+      <PasoDosWizardMovil
+        {...baseProps}
+        formulario={{
+          ...baseProps.formulario,
+          quotePricingMode: "total_global",
+          onQuotePricingModeChange: jest.fn(() => false),
+        }}
+        quoteModeChosen={false}
+        onQuoteModeChosen={onQuoteModeChosen}
+        wizard={wizard}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Usar items" }));
+
+    expect(onQuoteModeChosen).not.toHaveBeenCalled();
+    expect(wizard.onOpenPorItem).not.toHaveBeenCalled();
+    expect(wizard.onOpen).not.toHaveBeenCalled();
+  });
+
+  it("muestra Tipo y Datos sin una etapa independiente de cantidad", () => {
     const onEnterCuaderno = jest.fn();
     const wizard = createWizard({ paso: 1 });
     render(
@@ -363,8 +397,8 @@ describe("PasoDosWizardMovil", () => {
 
     expect(screen.getByText("Que vas a agregar?")).toBeInTheDocument();
     expect(screen.getByText("Tipo")).toBeInTheDocument();
-    expect(screen.getByText("Cantidad")).toBeInTheDocument();
     expect(screen.getByText("Datos")).toBeInTheDocument();
+    expect(screen.queryByText("Cantidad del grupo")).not.toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Guiada" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Constructor" })).toBeInTheDocument();
     expect(screen.queryByText("Cancelar")).not.toBeInTheDocument();
@@ -373,7 +407,7 @@ describe("PasoDosWizardMovil", () => {
     expect(wizard.onClose).toHaveBeenCalled();
   });
 
-  it("oculta el toggle Guiada|Constructor en cantidad y datos", () => {
+  it("muestra cantidad dentro de Datos y conserva el toggle solo en Tipo", () => {
     const onEnterCuaderno = jest.fn();
     const cuaderno = {
       lineTemplates: [],
@@ -390,11 +424,12 @@ describe("PasoDosWizardMovil", () => {
         {...baseProps}
         onEnterCuaderno={onEnterCuaderno}
         cuaderno={cuaderno}
-        wizard={createWizard({ paso: 2 })}
+        wizard={createWizard({ paso: 3 })}
       />
     );
 
-    expect(screen.getByText("Cuantas unidades?")).toBeInTheDocument();
+    expect(screen.getByText("Datos del grupo")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Cantidad del grupo" })).toHaveValue("2");
     expect(screen.queryByRole("tab", { name: "Guiada" })).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Constructor" })).not.toBeInTheDocument();
 
@@ -424,15 +459,13 @@ describe("PasoDosWizardMovil", () => {
     expect(screen.getByRole("tab", { name: "Constructor" })).toBeInTheDocument();
   });
 
-  it("debe mostrar etapa 2 con CTA continuar", () => {
-    const wizard = createWizard({ paso: 2 });
+  it("al seleccionar un tipo avanza directo a Datos", () => {
+    const wizard = createWizard({ paso: 1 });
     render(<PasoDosWizardMovil {...baseProps} wizard={wizard} />);
 
-    expect(screen.getByText("Cuantas unidades?")).toBeInTheDocument();
-    expect(screen.getByText("Continuar")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByText("Continuar"));
-    expect(wizard.onNext).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Ventana Libre" }));
+    expect(wizard.onSelectSubtipo).toHaveBeenCalledWith("Ventana");
+    expect(wizard.onGoToStep).toHaveBeenCalledWith(3);
   });
 
   it("debe mostrar etapa 3 con CTA agregar componente", () => {
@@ -442,8 +475,46 @@ describe("PasoDosWizardMovil", () => {
     expect(screen.getByText("Datos del grupo")).toBeInTheDocument();
     expect(screen.getByText("Agregar componente")).toBeInTheDocument();
 
+    fireEvent.change(screen.getByRole("textbox", { name: "Cantidad del grupo" }), {
+      target: { value: "4" },
+    });
+    expect(wizard.onCantidadChange).toHaveBeenCalledWith("4");
+    fireEvent.click(screen.getByRole("button", { name: "Restar una unidad" }));
+    expect(wizard.onSelectCantidad).toHaveBeenCalledWith(1);
+    fireEvent.click(screen.getByRole("button", { name: "Sumar una unidad" }));
+    expect(wizard.onSelectCantidad).toHaveBeenCalledWith(3);
+
     fireEvent.click(screen.getByText("Agregar componente"));
     expect(wizard.onConfirm).toHaveBeenCalled();
+  });
+
+  it("mantiene la cantidad inicial en uno en el formulario Datos", () => {
+    const wizard = createWizard({
+      paso: 3,
+      draft: {
+        ...createWizard().draft,
+        cantidad: 1,
+        usaCantidadPersonalizada: false,
+        cantidadPersonalizada: "",
+      },
+    });
+    render(<PasoDosWizardMovil {...baseProps} wizard={wizard} />);
+
+    expect(screen.getByRole("textbox", { name: "Cantidad del grupo" })).toHaveValue("1");
+  });
+
+  it("no permite agregar si la cantidad personalizada quedó vacía", () => {
+    const wizard = createWizard({
+      paso: 3,
+      draft: {
+        ...createWizard().draft,
+        usaCantidadPersonalizada: true,
+        cantidadPersonalizada: "",
+      },
+    });
+    render(<PasoDosWizardMovil {...baseProps} wizard={wizard} />);
+
+    expect(screen.getByRole("button", { name: "Agregar componente" })).toBeDisabled();
   });
 
   it("monta el selector de líneas sobre el documento para cubrir toda la pantalla", () => {

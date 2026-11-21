@@ -77,7 +77,7 @@ type UsePasoDosPresentacionParams = {
   total: string;
   mostrarIva: boolean;
   onGoToSummary: () => void;
-  onQuotePricingModeChange: (mode: QuotePricingMode) => void;
+  onQuotePricingModeChange: (mode: QuotePricingMode) => boolean | void;
   onPricingModeSelection: (mode: "margen" | "precio_directo") => void;
   onComponentChange: <K extends keyof ComponentFormState>(key: K, value: ComponentFormState[K]) => void;
   onSelectLineTemplate: (templateId: string) => void;

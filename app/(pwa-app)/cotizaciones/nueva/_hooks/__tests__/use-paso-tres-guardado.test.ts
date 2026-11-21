@@ -143,4 +143,139 @@ describe("preparePasoTresGuardado", () => {
     expect(resultado.step1Errors).toEqual({});
     expect(resultado.finalErrors).toEqual({});
   });
+
+  it("permite guardar como borrador cuando un componente tiene precio $0", () => {
+    const itemSinPrecio = calculateComponentItem({
+      id: "item-zero",
+      codigo: "V1",
+      tipo: "Ventana",
+      nombre: "Ventana corredera",
+      ancho: 1200,
+      alto: 1000,
+      cantidad: 1,
+      costoProveedorUnitario: 0,
+      margenPct: 0,
+      precioAjustadoManual: true,
+      origenPrecio: "manual",
+    });
+
+    const resultado = preparePasoTresGuardado({
+      estado: "borrador",
+      draft: {
+        clienteNombre: "Jose Fuentes",
+        clienteTelefono: "",
+        obra: "Casa central",
+        direccion: "",
+        validez: "15 dias",
+        descuentoPct: 0,
+        flete: 0,
+        observaciones: "",
+        quotePricingMode: "por_item",
+        items: [itemSinPrecio],
+      },
+      applyQuickEditDraftsToItems: (items) => items,
+    });
+
+    expect(resultado.finalErrors).toEqual({});
+  });
+
+  it("impide emitir cotizacion definitiva por_item si un componente tiene precio $0 (unico o junto a partidas validas)", () => {
+    const itemValido = calculateComponentItem({
+      id: "item-ok",
+      codigo: "V1",
+      tipo: "Ventana",
+      nombre: "Ventana valida",
+      ancho: 1200,
+      alto: 1000,
+      cantidad: 1,
+      costoProveedorUnitario: 180000,
+      margenPct: 0,
+    });
+    const itemSinPrecio = calculateComponentItem({
+      id: "item-zero",
+      codigo: "V2",
+      tipo: "Ventana",
+      nombre: "Ventana borrada",
+      ancho: 1200,
+      alto: 1000,
+      cantidad: 1,
+      costoProveedorUnitario: 0,
+      margenPct: 0,
+      precioAjustadoManual: true,
+      origenPrecio: "manual",
+    });
+
+    const soloCero = preparePasoTresGuardado({
+      estado: "creada",
+      draft: {
+        clienteNombre: "Jose Fuentes",
+        clienteTelefono: "",
+        obra: "Casa central",
+        direccion: "",
+        validez: "15 dias",
+        descuentoPct: 0,
+        flete: 0,
+        observaciones: "",
+        quotePricingMode: "por_item",
+        items: [itemSinPrecio],
+      },
+      applyQuickEditDraftsToItems: (items) => items,
+    });
+
+    expect(soloCero.finalErrors.items).toMatch(/precio/i);
+
+    const mixto = preparePasoTresGuardado({
+      estado: "creada",
+      draft: {
+        clienteNombre: "Jose Fuentes",
+        clienteTelefono: "",
+        obra: "Casa central",
+        direccion: "",
+        validez: "15 dias",
+        descuentoPct: 0,
+        flete: 0,
+        observaciones: "",
+        quotePricingMode: "por_item",
+        items: [itemValido, itemSinPrecio],
+      },
+      applyQuickEditDraftsToItems: (items) => items,
+    });
+
+    expect(mixto.finalErrors.items).toMatch(/precio/i);
+  });
+
+  it("permite emitir cotizacion definitiva por_item con precio manual valido", () => {
+    const itemManual = calculateComponentItem({
+      id: "item-manual",
+      codigo: "V1",
+      tipo: "Ventana",
+      nombre: "Ventana manual",
+      ancho: 1200,
+      alto: 1000,
+      cantidad: 1,
+      costoProveedorUnitario: 175000,
+      margenPct: 0,
+      precioAjustadoManual: true,
+      origenPrecio: "manual",
+    });
+
+    const resultado = preparePasoTresGuardado({
+      estado: "creada",
+      draft: {
+        clienteNombre: "Jose Fuentes",
+        clienteTelefono: "",
+        obra: "Casa central",
+        direccion: "",
+        validez: "15 dias",
+        descuentoPct: 0,
+        flete: 0,
+        observaciones: "",
+        quotePricingMode: "por_item",
+        items: [itemManual],
+      },
+      applyQuickEditDraftsToItems: (items) => items,
+    });
+
+    expect(resultado.finalErrors).toEqual({});
+  });
 });
