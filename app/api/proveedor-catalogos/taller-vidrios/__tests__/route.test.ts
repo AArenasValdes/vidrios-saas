@@ -6,6 +6,7 @@ import {
   listOrganizationGlassProducts,
   listWorkshopGlassCutPresentations,
   updateWorkshopGlassCutPresentation,
+  WorkshopGlassIdentityError,
   WorkshopPresentationsSchemaMissingError,
 } from "@/features/proveedor-catalogos/repositories/workshop-presentations.repository";
 
@@ -23,6 +24,13 @@ jest.mock("@/features/auth/services/auth-route-access.service", () => ({
 jest.mock("@/features/proveedor-catalogos/repositories/workshop-presentations.repository", () => ({
   WorkshopPresentationsSchemaMissingError: class extends Error {},
   WorkshopPresentationConflictError: class extends Error {},
+  WorkshopGlassIdentityError: class extends Error {
+    status: number;
+    constructor(message: string, status = 400) {
+      super(message);
+      this.status = status;
+    }
+  },
   listOrganizationGlassProducts: jest.fn(),
   listWorkshopGlassCutPresentations: jest.fn(),
   createWorkshopGlassCutPresentation: jest.fn(),
@@ -77,12 +85,70 @@ describe("/api/proveedor-catalogos/taller-vidrios", () => {
     expect(unauth.status).toBe(401);
   });
 
+  it("exige cristal de catálogo válido, rechaza identidades contradictorias y valida propiedad por organización", async () => {
+    const missingTemplate = await POST(
+      new Request("http://localhost/api/proveedor-catalogos/taller-vidrios", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: "monolitico",
+          thicknessMm: 5,
+          description: "Incoloro 5mm",
+          supplierName: "Vidriería Sur",
+          netPricePerM2: 14500,
+          currency: "CLP",
+        }),
+      })
+    );
+    expect(missingTemplate.status).toBe(400);
+
+    const contradictoryIdentity = await POST(
+      new Request("http://localhost/api/proveedor-catalogos/taller-vidrios", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          glassLineTemplateId: 3643,
+          glassProductId: "9999",
+          category: "monolitico",
+          thicknessMm: 5,
+          description: "Incoloro 5mm",
+          supplierName: "Vidriería Sur",
+          netPricePerM2: 14500,
+          currency: "CLP",
+        }),
+      })
+    );
+    expect(contradictoryIdentity.status).toBe(400);
+
+    createGlassMock.mockRejectedValueOnce(
+      new WorkshopGlassIdentityError("El cristal seleccionado no pertenece a esta organización.", 403)
+    );
+    const foreignOrg = await POST(
+      new Request("http://localhost/api/proveedor-catalogos/taller-vidrios", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          glassLineTemplateId: 777,
+          glassProductId: "777",
+          category: "monolitico",
+          thicknessMm: 5,
+          description: "Incoloro 5mm",
+          supplierName: "Vidriería Sur",
+          netPricePerM2: 14500,
+          currency: "CLP",
+        }),
+      })
+    );
+    expect(foreignOrg.status).toBe(403);
+  });
+
   it("crea y actualiza presentación de vidrio al corte (M2) validando vigencia y precio positivo", async () => {
     const invalidDates = await POST(
       new Request("http://localhost/api/proveedor-catalogos/taller-vidrios", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          glassLineTemplateId: 3643,
           category: "monolitico",
           thicknessMm: 5,
           description: "Incoloro 5mm",
@@ -160,6 +226,7 @@ describe("/api/proveedor-catalogos/taller-vidrios", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          glassLineTemplateId: 3643,
           category: "monolitico",
           thicknessMm: 5,
           description: "Incoloro 5mm",

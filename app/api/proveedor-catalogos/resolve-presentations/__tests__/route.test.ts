@@ -10,6 +10,7 @@ jest.mock("@/features/proveedor-catalogos/repositories/costo-tecnico-parcial.rep
   readOrganizationPurchasePricing: jest.fn(),
   readSupplierNames: jest.fn(),
   readSupplierPresentationPrices: jest.fn(),
+  readWorkshopGlassCutPresentations: jest.fn(async () => []),
   readWorkshopPresentationPrices: jest.fn(),
 }));
 jest.mock("@/features/proveedor-catalogos/repositories/supplier-family-preferences.repository", () => ({
@@ -23,6 +24,7 @@ import {
   readOrganizationPurchasePricing,
   readSupplierNames,
   readSupplierPresentationPrices,
+  readWorkshopGlassCutPresentations,
   readWorkshopPresentationPrices,
 } from "@/features/proveedor-catalogos/repositories/costo-tecnico-parcial.repository";
 import { listSupplierFamilyPreferences } from "@/features/proveedor-catalogos/repositories/supplier-family-preferences.repository";
@@ -47,6 +49,7 @@ describe("/api/proveedor-catalogos/resolve-presentations", () => {
     (readConfirmedSupplierPresentations as jest.Mock).mockResolvedValue([]);
     (listSupplierFamilyPreferences as jest.Mock).mockResolvedValue([]);
     (readWorkshopPresentationPrices as jest.Mock).mockResolvedValue([]);
+    (readWorkshopGlassCutPresentations as jest.Mock).mockResolvedValue([]);
   });
 
   it.each(["universal:aluminio:l5000", "universal:aluminio:l25", "universal:aluminio:l42", "veratec:sliding-7400", "thermowin:kom-700"])("ofrece Mis precios en %s incluso sin costos guardados", async (familyKey) => {
@@ -538,6 +541,125 @@ describe("/api/proveedor-catalogos/resolve-presentations", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.selections["l20-item"][0]).toMatchObject({ status: "resolved", providerKey: "arquetipo", presentationId: "arq-2001", commercialLengthMm: 6000 });
+  });
+
+  it("conserva accesorios L25 por código técnico o recipeComponentCodes sin recipeAccessoryNames y evita duplicarlos", async () => {
+    const line = VENTORA_DEFAULT_LINE_CATALOG.find((entry) => entry.catalogKey === "ventora:l25");
+    if (!line?.catalogKey || typeof line.catalogMetadata?.familyKey !== "string") throw new Error("Falta L25");
+    const l25AccessoryCatalog: CatalogPresentationPrice = {
+      presentationId: "arq-guia-l25",
+      providerKey: "arquetipo",
+      familyKeys: ["universal:aluminio:l25"],
+      technicalCode: "PROV-GUIA-L25",
+      recipeComponentCodes: ["GUIA-L25"],
+      technicalName: "Guía L25",
+      supplierSku: "ARQ-GUIA-L25",
+      presentationDescription: "Guía L25 · UN",
+      finishCode: "",
+      finishName: null,
+      finishResolution: "finish_independent",
+      purchaseUnit: "UN",
+      commercialLengthMm: null,
+      netPrice: 850,
+      priceBasis: "commercial_presentation",
+      currency: "CLP",
+      priceListId: "arq-list",
+      priceListRevision: "2026",
+    };
+    const l25WorkshopFelpa: CatalogPresentationPrice = {
+      presentationId: "own-felpa-l25",
+      providerKey: "taller:7",
+      familyKeys: ["universal:aluminio:l25"],
+      technicalCode: "FELPA7x6gen",
+      recipeComponentCodes: [],
+      technicalName: "Felpa 7x6 3P",
+      supplierSku: "TALLER-FELPA",
+      presentationDescription: "Felpa 7x6 · M",
+      finishCode: "",
+      finishName: null,
+      finishResolution: "finish_independent",
+      purchaseUnit: "M",
+      commercialLengthMm: null,
+      netPrice: 400,
+      priceBasis: "commercial_presentation",
+      currency: "CLP",
+      priceListId: "taller:7",
+      priceListRevision: "taller-v1",
+      origin: "workshop",
+    };
+
+    (readConfirmedSupplierPresentations as jest.Mock).mockResolvedValue([]);
+    (readSupplierPresentationPrices as jest.Mock).mockResolvedValue([
+      l25AccessoryCatalog,
+      // Repetida con el mismo presentationId para probar deduplicación
+      l25AccessoryCatalog,
+    ]);
+    (readWorkshopPresentationPrices as jest.Mock).mockResolvedValue([l25WorkshopFelpa]);
+    (readSupplierNames as jest.Mock).mockResolvedValue(new Map([["arquetipo", "Distribuidora Arquetipo"]]));
+    (readOrganizationPurchasePricing as jest.Mock).mockResolvedValue({ adjustments: [], overrides: [] });
+
+    const response = await POST(new Request("http://localhost/api/proveedor-catalogos/resolve-presentations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        includeProviderOptions: true,
+        items: [{
+          itemId: "l25-item",
+          catalogLineKey: line.catalogKey,
+          familyKey: line.catalogMetadata.familyKey,
+          finishName: "Blanco",
+          technicalCodes: ["2501"],
+        }],
+      }),
+    }));
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.accessoryPrices).toHaveLength(2);
+    expect(body.accessoryPrices).toEqual(expect.arrayContaining([
+      expect.objectContaining({ presentationId: "arq-guia-l25", technicalCode: "PROV-GUIA-L25", recipeComponentCodes: ["GUIA-L25"] }),
+      expect.objectContaining({ presentationId: "own-felpa-l25", technicalCode: "FELPA7x6gen" }),
+    ]));
+
+    // Consumo en buildPartialTechnicalCostSnapshot con 2 unidades comerciales: no duplica líneas de accesorio
+    const snapshot = buildPartialTechnicalCostSnapshot({
+      workSnapshot: {
+        schemaVersion: 1,
+        calculatedAt: "2026-11-21T12:00:00.000Z",
+        bars: [{
+          material: "Aluminio",
+          codigoPerfil: "2501",
+          nombrePerfil: "Riel L25",
+          acabadoKey: "blanco",
+          acabadoLabel: "Blanco",
+          largoComercialMm: 6000,
+          despunteInicialMm: 0,
+          perdidaCorteMm: 4,
+          desperdicioMm: 4796,
+          aprovechamientoPct: 20,
+          cortes: [{ itemId: "i1", codigoItem: "V1", nombreItem: "L25", codigoPerfil: "2501", largoMm: 1200, cantidadTotalItem: 1, corteIndice: 1, funcion: "Riel" }],
+        }],
+        glassSummary: [],
+      },
+      quoteItems: [{
+        code: "V1",
+        color: "Blanco",
+        finishName: "Blanco",
+        catalogLineKey: "ventora:l25",
+        supplierFamilyKey: "universal:aluminio:l25",
+        recipeAccessories: [
+          { itemCode: "V1", recipeAccessoryCode: "GUIA-L25", description: "Guía L25", quantity: 4, unit: "Pz" },
+          { itemCode: "V1", recipeAccessoryCode: "FELPA7x6gen", description: "Felpa 7x6 3P", quantity: 10, unit: "Mt" },
+        ],
+      }],
+      availablePrices: body.accessoryPrices,
+    });
+
+    expect(snapshot?.lines.filter((row) => row.bars === 0)).toHaveLength(2);
+    expect(snapshot?.lines).toEqual(expect.arrayContaining([
+      expect.objectContaining({ technicalCode: "GUIA-L25", quantity: 4, lineNet: 3400 }),
+      expect.objectContaining({ technicalCode: "FELPA7x6gen", quantity: 10, lineNet: 4000 }),
+    ]));
   });
 });
 

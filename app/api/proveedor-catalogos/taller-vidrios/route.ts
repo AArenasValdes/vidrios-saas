@@ -8,6 +8,7 @@ import {
   listOrganizationGlassProducts,
   listWorkshopGlassCutPresentations,
   updateWorkshopGlassCutPresentation,
+  WorkshopGlassIdentityError,
   WorkshopPresentationConflictError,
   WorkshopPresentationsSchemaMissingError,
 } from "@/features/proveedor-catalogos/repositories/workshop-presentations.repository";
@@ -31,6 +32,9 @@ function errorResponse(error: unknown) {
       { error: "Falta aplicar la migración de precios de vidrio al corte del taller." },
       { status: 503 }
     );
+  }
+  if (error instanceof WorkshopGlassIdentityError) {
+    return NextResponse.json({ error: error.message }, { status: error.status });
   }
   if (error instanceof WorkshopPresentationConflictError) {
     return NextResponse.json({ error: error.message }, { status: 409 });
@@ -89,7 +93,7 @@ export async function POST(request: Request) {
     const organizationId = Number(auth.profile.organizationId);
     const row = await createWorkshopGlassCutPresentation({
       organizationId,
-      glassLineTemplateId: parsed.data.glassLineTemplateId ?? null,
+      glassLineTemplateId: parsed.data.glassLineTemplateId,
       glassProductId: parsed.data.glassProductId ?? null,
       category: parsed.data.category,
       thicknessMm: parsed.data.thicknessMm,

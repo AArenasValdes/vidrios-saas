@@ -160,6 +160,10 @@ export function TallerVidrios() {
       setError("Ingresa un precio neto de compra positivo por m².");
       return;
     }
+    if (!editingRow && !glassLineTemplateId) {
+      setError("Selecciona un cristal de tu catálogo privado.");
+      return;
+    }
     if (!editingRow && (!Number.isFinite(parsedThickness) || parsedThickness <= 0)) {
       setError("El espesor en milímetros debe ser mayor a 0.");
       return;
@@ -186,8 +190,8 @@ export function TallerVidrios() {
                 validUntil: validUntil.trim() || null,
               }
             : {
-                glassLineTemplateId: glassLineTemplateId ? Number(glassLineTemplateId) : null,
-                glassProductId: glassLineTemplateId || null,
+                glassLineTemplateId: Number(glassLineTemplateId),
+                glassProductId: glassLineTemplateId,
                 category,
                 thicknessMm: parsedThickness,
                 description: description.trim() || `${CATEGORY_LABELS[category]} ${parsedThickness}mm`,
@@ -303,9 +307,13 @@ export function TallerVidrios() {
             <>
               {payload.glassProducts.length > 0 ? (
                 <label>
-                  Cristal de tu catálogo (opcional)
-                  <select value={glassLineTemplateId} onChange={(event) => handleSelectProduct(event.target.value)}>
-                    <option value="">General por categoría y espesor</option>
+                  Cristal de tu catálogo
+                  <select
+                    value={glassLineTemplateId}
+                    onChange={(event) => handleSelectProduct(event.target.value)}
+                    required
+                  >
+                    <option value="">Elegir cristal de tu catálogo</option>
                     {payload.glassProducts.map((product) => (
                       <option key={product.id} value={product.id}>
                         {product.name}
@@ -313,7 +321,11 @@ export function TallerVidrios() {
                     ))}
                   </select>
                 </label>
-              ) : null}
+              ) : (
+                <p className={s.hint} role="status">
+                  Primero agrega un cristal en <strong>Mis líneas y precios</strong> para asociarle su costo de compra al corte.
+                </p>
+              )}
               <div className={s.pair}>
                 <label>
                   Categoría
@@ -396,7 +408,7 @@ export function TallerVidrios() {
               <input type="date" value={validUntil} onChange={(event) => setValidUntil(event.target.value)} />
             </label>
           </div>
-          <button type="submit" disabled={saving}>
+          <button type="submit" disabled={saving || (!editingRow && payload.glassProducts.length === 0)}>
             {saving ? "Guardando…" : editingRow ? "Guardar nueva revisión" : "Guardar precio de vidrio"}
           </button>
         </form>

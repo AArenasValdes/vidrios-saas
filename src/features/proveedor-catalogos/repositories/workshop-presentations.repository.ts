@@ -38,6 +38,14 @@ export class WorkshopPresentationConflictError extends Error {
   constructor(message: string) { super(message); }
 }
 
+export class WorkshopGlassIdentityError extends Error {
+  status: number;
+  constructor(message: string, status = 400) {
+    super(message);
+    this.status = status;
+  }
+}
+
 function isWorkshopSchemaMissingError(error: { code?: string | null; message?: string | null } | null | undefined) {
   const code = error?.code ?? "";
   return code === "42P01" || code === "42703" || code === "PGRST204" || code === "PGRST205";
@@ -269,7 +277,7 @@ export async function listWorkshopGlassCutPresentations(organizationId: number):
 
 export async function createWorkshopGlassCutPresentation(input: {
   organizationId: number;
-  glassLineTemplateId: number | null;
+  glassLineTemplateId: number;
   glassProductId: string | null;
   category: Exclude<GlassTechnicalCategory, "pendiente" | "otro">;
   thicknessMm: number;
@@ -284,21 +292,28 @@ export async function createWorkshopGlassCutPresentation(input: {
   userId: string;
 }) {
   const admin = client();
-  let resolvedGlassProductId = input.glassProductId?.trim() || null;
-  if (input.glassLineTemplateId != null) {
-    const { data: tpl, error: tplError } = await admin
-      .from("cotizacion_line_templates")
-      .select("id, categoria")
-      .eq("id", input.glassLineTemplateId)
-      .eq("organization_id", input.organizationId)
-      .is("eliminado_en", null)
-      .maybeSingle();
-    if (tplError) throw new Error(tplError.message);
-    if (!tpl || tpl.categoria !== "vidrio") {
-      throw new Error("El cristal seleccionado no pertenece a esta organización.");
-    }
-    resolvedGlassProductId = resolvedGlassProductId || String(tpl.id);
+  if (!Number.isSafeInteger(input.glassLineTemplateId) || input.glassLineTemplateId <= 0) {
+    throw new WorkshopGlassIdentityError("Selecciona un cristal válido de tu catálogo.", 400);
   }
+  if (input.glassProductId?.trim() && input.glassProductId.trim() !== String(input.glassLineTemplateId)) {
+    throw new WorkshopGlassIdentityError(
+      "El identificador del cristal no coincide con el cristal seleccionado del catálogo.",
+      400
+    );
+  }
+  const { data: tpl, error: tplError } = await admin
+    .from("cotizacion_line_templates")
+    .select("id, organization_id, categoria")
+    .eq("id", input.glassLineTemplateId)
+    .eq("organization_id", input.organizationId)
+    .eq("categoria", "vidrio")
+    .is("eliminado_en", null)
+    .maybeSingle();
+  if (tplError) throw new Error(tplError.message);
+  if (!tpl) {
+    throw new WorkshopGlassIdentityError("El cristal seleccionado no pertenece a esta organización.", 403);
+  }
+  const resolvedGlassProductId = String(tpl.id);
   const providerKey =
     input.providerKey?.trim() || `taller:${input.organizationId}:${normalizeProviderSlug(input.supplierName)}`;
   const technicalCode = `VID-${input.category.toUpperCase()}-${String(input.thicknessMm).replace(".", "_")}MM`;
@@ -326,7 +341,7 @@ export async function createWorkshopGlassCutPresentation(input: {
       tipo_insumo: "vidrio",
       provider_key: providerKey,
       glass_product_id: resolvedGlassProductId,
-      glass_line_template_id: input.glassLineTemplateId,
+      glass_line_template_id: Number(tpl.id),
       forma_compra_vidrio: "supplier_cut",
       categoria_vidrio: input.category,
       espesor_mm: input.thicknessMm,

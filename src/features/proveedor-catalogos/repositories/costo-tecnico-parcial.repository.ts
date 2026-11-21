@@ -318,7 +318,16 @@ export async function readSupplierPresentationPrices(input: {
     const recipeAccessoryNames = Array.isArray(evidence.recipeAccessoryNames)
       ? evidence.recipeAccessoryNames.filter((name): name is string => typeof name === "string" && name.trim().length > 0)
       : [];
-    if (presentation.largo_comercial_mm == null && recipeAccessoryNames.length === 0) return [];
+    const normalizedPurchaseUnit = String(presentation.unidad_compra ?? "").trim().toUpperCase();
+    const isNonBarAccessoryUnit = [
+      "UN", "PZ", "PZA", "PIEZA", "PIEZAS", "PCS", "PC", "UNIT", "UNIDAD", "UNIDADES",
+      "PAR", "PARES", "PAIR", "KG", "M", "MT", "MTS", "ML", "METRO", "METROS", "TUBO", "TUBOS",
+    ].includes(normalizedPurchaseUnit);
+    const hasExplicitAccessoryIdentity =
+      recipeAccessoryNames.length > 0 ||
+      (isNonBarAccessoryUnit &&
+        (recipeComponentCodes.length > 0 || Boolean(String(technicalInput.codigo_fuente ?? "").trim())));
+    if (presentation.largo_comercial_mm == null && !hasExplicitAccessoryIdentity) return [];
     return [{
       presentationId: String(presentation.id),
       providerKey,

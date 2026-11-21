@@ -334,9 +334,38 @@ export async function POST(request: Request) {
         presentations,
       }),
     ]));
-    const accessoryPrices = [...catalogPrices, ...workshopPrices].filter(
-      (row) => Boolean(row.recipeAccessoryNames?.length)
+    const normalizedRequestedFamilies = new Set(
+      supplierFamilyKeys.map((key) => normalizeUniversalAluminumFamilyKey(key) ?? key)
     );
+    const accessoryUnitSet = new Set([
+      "UN", "PZ", "PZA", "PIEZA", "PIEZAS", "PCS", "PC", "UNIT", "UNIDAD", "UNIDADES",
+      "PAR", "PARES", "PAIR", "KG", "M", "MT", "MTS", "ML", "METRO", "METROS", "TUBO", "TUBOS",
+    ]);
+    const accessoryByKey = new Map<string, (typeof workshopPrices)[number]>();
+    for (const row of [...catalogPrices, ...workshopPrices]) {
+      if (row.purchaseUnit?.trim().toUpperCase() === "M2") continue;
+      const matchesRequestedFamily =
+        !row.familyKeys?.length ||
+        row.familyKeys.some((familyKey) => {
+          const normalized = normalizeUniversalAluminumFamilyKey(familyKey) ?? familyKey;
+          return normalizedRequestedFamilies.has(normalized) || normalizedRequestedFamilies.has(familyKey);
+        });
+      if (!matchesRequestedFamily) continue;
+      const normalizedUnit = row.purchaseUnit?.trim().toUpperCase() ?? "";
+      const isAccessoryCandidate =
+        Boolean(row.recipeAccessoryNames?.length) ||
+        row.commercialLengthMm == null ||
+        Boolean(row.recipeComponentCodes?.length) ||
+        accessoryUnitSet.has(normalizedUnit);
+      if (!isAccessoryCandidate) continue;
+      const dedupeKey =
+        row.presentationId?.trim() ||
+        [row.providerKey ?? "", row.supplierSku, row.technicalCode, row.finishName ?? "", row.purchaseUnit].join("|");
+      if (!accessoryByKey.has(dedupeKey)) {
+        accessoryByKey.set(dedupeKey, row);
+      }
+    }
+    const accessoryPrices = [...accessoryByKey.values()];
     return NextResponse.json({
       enabled: true,
       selections,

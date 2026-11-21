@@ -223,6 +223,7 @@ it("permite registrar un precio neto de vidrio al corte (m²) en Mis precios y t
 
   expect(await screen.findByRole("heading", { name: "Vidrio al corte (m²)" })).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Agregar vidrio" }));
+  expect(screen.queryByRole("option", { name: /General por categoría/i })).not.toBeInTheDocument();
   fireEvent.change(screen.getByLabelText(/Cristal de tu catálogo/i), { target: { value: "3643" } });
   fireEvent.change(screen.getByLabelText(/Proveedor de vidrio/i), { target: { value: "Vidriería Sur" } });
   fireEvent.change(screen.getByLabelText(/Precio neto \/ m²/i), { target: { value: "14500" } });

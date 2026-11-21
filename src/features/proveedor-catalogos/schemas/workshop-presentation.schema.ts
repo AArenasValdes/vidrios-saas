@@ -22,7 +22,7 @@ const optionalIsoDateSchema = z
 
 export const workshopGlassCutInputSchema = z
   .object({
-    glassLineTemplateId: z.number().int().positive().nullable().optional(),
+    glassLineTemplateId: z.number().int().positive("Selecciona un cristal de tu catálogo."),
     glassProductId: z.string().trim().min(1).max(120).nullable().optional(),
     category: workshopGlassCategorySchema,
     thicknessMm: z.number().finite().positive().max(100),
@@ -36,6 +36,10 @@ export const workshopGlassCutInputSchema = z
     validUntil: optionalIsoDateSchema,
   })
   .strict()
+  .refine(
+    (row) => row.glassProductId == null || row.glassProductId === String(row.glassLineTemplateId),
+    { message: "El identificador del cristal no coincide con el cristal seleccionado del catálogo." }
+  )
   .refine(
     (row) => !row.validFrom || !row.validUntil || row.validUntil >= row.validFrom,
     { message: "La vigencia hasta no puede ser anterior a vigencia desde." }
