@@ -720,4 +720,70 @@ describe("despiece de líneas universales con precio Arquetipo", () => {
     expect(resolved.recipe?.variant).toBe("pierna_abierta_jamba_2009");
     expect(resolved.recipe?.sourceReference).toContain("ventora:taller-confirmado:universal:l20");
   });
+
+  it("no asigna la receta de L42 a L35 ni a líneas no respaldadas y conserva L42 y L32", () => {
+    expect(resolveUniversalPricedLineFallbacks({
+      catalogKey: "ventora:l35",
+      lineTemplateId: 35,
+      organizationId: 1,
+      lineName: "AM-35 · Puerta abatible y vaivén",
+      variant: null,
+      typology: null,
+      recipes: [],
+    })).toEqual([]);
+
+    expect(resolveUniversalPricedLineFallbacks({
+      catalogKey: "ventora:l35",
+      lineTemplateId: 35,
+      organizationId: 1,
+      lineName: "AM-35 · Puerta abatible y vaivén",
+      variant: null,
+      typology: "proyectante",
+      leavesCount: 1,
+      recipes: [],
+    })).toEqual([]);
+
+    expect(resolveUniversalPricedLineFallback({
+      catalogKey: "ventora:l35",
+      lineTemplateId: 35,
+      organizationId: 1,
+      lineName: "AM-35 · Puerta abatible y vaivén",
+      variant: null,
+      recipes: [],
+    })).toBeNull();
+
+    expect(resolveUniversalPricedLineFallbacks({
+      catalogKey: "ventora:linea-no-respaldada",
+      lineTemplateId: 999,
+      organizationId: 1,
+      lineName: "Línea sin respaldo",
+      variant: null,
+      typology: null,
+      recipes: [],
+    })).toEqual([]);
+
+    const l42 = resolveUniversalPricedLineFallback({
+      catalogKey: "ventora:l42",
+      lineTemplateId: 42,
+      organizationId: 1,
+      lineName: "AL-42",
+      variant: "normal",
+      leavesCount: 1,
+      recipes: [],
+    });
+    expect(Array.from(new Set(l42?.definition.perfiles.map((p) => p.codigoPerfil)))).toEqual(["4201", "4202", "4229"]);
+    expect(l42?.status).toBe("validated");
+
+    const l32 = resolveUniversalPricedLineFallback({
+      catalogKey: "ventora:l32",
+      lineTemplateId: 32,
+      organizationId: 1,
+      lineName: "AL-32 · Ventana proyectante",
+      variant: "normal",
+      leavesCount: 1,
+      recipes: [],
+    });
+    expect(Array.from(new Set(l32?.definition.perfiles.map((p) => p.codigoPerfil)))).toEqual(["3201", "3202", "3208"]);
+    expect(l32?.status).toBe("validated");
+  });
 });

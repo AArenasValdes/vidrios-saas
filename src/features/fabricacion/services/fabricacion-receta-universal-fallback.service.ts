@@ -357,7 +357,7 @@ function buildReferenceRecipe(input: UniversalFallbackInput): FabricationRecipeR
     if (input.variant && input.variant !== "normal") return null;
     definition = crearRecetaSerie32ProyectanteNormal({ lineName: input.lineName });
     sourceReference = "ventora:serie-32-proyectante:normal:referencia";
-  } else {
+  } else if (line === "L42") {
     const normalizedVariant = input.variant?.trim().toLocaleLowerCase("es-CL") ?? "";
     const acceptedNormalVariants = new Set(["normal", "estandar", "estándar", "al-42 normal"]);
     if (normalizedVariant && !acceptedNormalVariants.has(normalizedVariant)) return null;
@@ -368,6 +368,8 @@ function buildReferenceRecipe(input: UniversalFallbackInput): FabricationRecipeR
       lineName: input.lineName,
     });
     sourceReference = "ventora:serie-42-proyectante:normal:referencia";
+  } else {
+    return null;
   }
 
   if (
