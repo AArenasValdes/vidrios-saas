@@ -274,11 +274,40 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     }));
   };
 
+function clearStaleLeafFabricationOverrides() {
+  return {
+    cubicationSnapshot: null,
+    fabricationRecipeId: "",
+    fabricacionHojas: null,
+    fabricacionModulos: null,
+    fabricacionVariante: "",
+    fabricacionConfiguracionId: "",
+    fabricacionComposicionId: "",
+    fabricacionAnchoHojaAMm: null,
+    fabricacionSnapshot: null,
+  };
+}
+
+function clearStaleFabricationSelection() {
+  return {
+    ...clearStaleLeafFabricationOverrides(),
+    fabricacionTipologia: "",
+    fabricacionApertura: "",
+    fabricacionHerraje: "",
+    catalogLineKey: "",
+    fabricacionGlazing: "",
+    fabricacionLeg: "",
+    fabricacionReinforcement: "",
+  };
+}
+
   const updateMaterial = (material: PasoDosGrupoDraft["material"]) => {
     setDraft((current) => ({
       ...current,
       material,
       lineTemplateId: "",
+      supplierProviderKey: "",
+      ...clearStaleFabricationSelection(),
       referencia: "",
       precioPorM2: "",
       minimoCobrable: "",
@@ -349,8 +378,17 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
         configuracion: nextConfig,
         guidedVisualConfig: null,
         quickCompositionAdjustment: null,
-        cubicationSnapshot: null,
-        fabricacionSnapshot: null,
+        ...clearStaleFabricationSelection(),
+        ...(current.sistema !== sistema && current.catalogLineKey
+          ? {
+              lineTemplateId: "",
+              supplierProviderKey: "",
+              referencia: "",
+              precioPorM2: "",
+              minimoCobrable: "",
+              redondeoPrecio: "1000",
+            }
+          : {}),
         ...resolveVitrinaHojasBasePatch({ tipo: current.subtipo, configuracion: nextConfig }),
         ...(shouldKeepComposition
           ? {}
@@ -385,8 +423,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
         configuracion,
         guidedVisualConfig: null,
         quickCompositionAdjustment: null,
-        cubicationSnapshot: null,
-        fabricacionSnapshot: null,
+        ...clearStaleLeafFabricationOverrides(),
         ...resolveVitrinaHojasBasePatch({ tipo: current.subtipo, configuracion }),
         ...(shouldKeepComposition
           ? {}
@@ -427,8 +464,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
       sheetScheme,
       guidedVisualConfig: null,
       quickCompositionAdjustment: null,
-      cubicationSnapshot: null,
-      fabricacionSnapshot: null,
+      ...clearStaleLeafFabricationOverrides(),
       sheetVariant: resolveDefaultSheetVariantForLine({
         catalogLineKey: current.catalogLineKey,
         sheetScheme,

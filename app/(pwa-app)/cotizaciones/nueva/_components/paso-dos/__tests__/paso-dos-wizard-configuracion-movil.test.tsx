@@ -26,6 +26,8 @@ jest.mock("@/features/proveedor-catalogos/hooks/use-supplier-presentation-resolu
 
 import { PasoDosWizardConfiguracionMovil } from "../paso-dos-wizard-configuracion-movil";
 import { createDefaultGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
+import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 
 beforeAll(() => {
   Object.defineProperty(window, "scrollTo", { value: jest.fn(), writable: true });
@@ -783,5 +785,113 @@ describe("PasoDosWizardConfiguracionMovil", () => {
     expect(onSelectLineTemplate).not.toHaveBeenCalled();
     expect(screen.getByRole("heading", { name: "Agregar precio de la línea" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Elegir línea" })).not.toBeInTheDocument();
+  });
+
+  it("filtra Compatibles en Guiada móvil sin restringir hojas por el default Ventana hojasBase=2 y respetando sheetScheme explícito", () => {
+    const catalogTemplates: CotizacionLineTemplate[] = VENTORA_DEFAULT_LINE_CATALOG.map((entry, idx) => ({
+      id: entry.catalogKey ?? `cat-${idx}`,
+      organizationId: "org-1",
+      catalogKey: entry.catalogKey ?? null,
+      nombre: entry.nombre,
+      categoria: entry.categoria ?? (entry.material === "PVC" ? "pvc" : "aluminio"),
+      unidadCobro: entry.unidadCobro ?? "m2",
+      material: entry.material,
+      vidrioPrincipalRecomendado: entry.vidrioPrincipalRecomendado ?? null,
+      costoBase: entry.costoBase ?? 0,
+      precioM2Sugerido: 185000,
+      minimoCobrable: 0,
+      redondeoPrecio: 1000,
+      mermaPct: 0,
+      margenObjetivoPct: null,
+      proveedor: entry.proveedor ?? null,
+      vigenciaDesde: null,
+      vigenciaHasta: null,
+      catalogMetadata: entry.catalogMetadata ?? null,
+      isActive: true,
+      sortOrder: idx,
+      creadoEn: "2026-09-03T00:00:00.000Z",
+      actualizadoEn: "2026-09-03T00:00:00.000Z",
+      eliminadoEn: null,
+    }));
+
+    const { rerender } = render(
+      <PasoDosWizardConfiguracionMovil
+        {...baseProps}
+        displaySystemOptions={["Proyectante", "Corredera"]}
+        displayConfigurationOptions={["Normal"]}
+        lineTemplateOptions={catalogTemplates}
+        draft={{
+          ...baseProps.draft,
+          subtipo: "Ventana",
+          hojasBase: 2,
+          material: "Aluminio",
+          sistema: "Proyectante",
+          configuracion: "Normal",
+          sheetScheme: "",
+          fabricacionHojas: null,
+        }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Precio manual o sin linea/i }));
+    expect(screen.queryByText(/0 líneas disponibles/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Serie 42 — Proyectante / paño fijo")).toBeInTheDocument();
+    expect(screen.getByText("Serie 32 — Proyectante / paño fijo")).toBeInTheDocument();
+    expect(screen.queryByText("Serie 20 — Corredera 2 hojas")).not.toBeInTheDocument();
+    expect(screen.queryByText("Serie 5000 — Corredera 2 hojas")).not.toBeInTheDocument();
+    expect(screen.queryByText("Serie 35 — Puerta abatible y vaivén")).not.toBeInTheDocument();
+    expect(screen.queryByText("Veratec 7400 — Corredera 2 hojas")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar selector" }));
+    rerender(
+      <PasoDosWizardConfiguracionMovil
+        {...baseProps}
+        displaySystemOptions={["Corredera", "Proyectante"]}
+        displayConfigurationOptions={["2 hojas"]}
+        lineTemplateOptions={catalogTemplates}
+        draft={{
+          ...baseProps.draft,
+          subtipo: "Ventana",
+          hojasBase: 2,
+          material: "PVC",
+          sistema: "Corredera",
+          configuracion: "",
+          sheetScheme: "",
+          fabricacionHojas: null,
+        }}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Precio manual o sin linea/i }));
+
+    expect(screen.getByText("Veratec 7400 — Corredera 2 hojas")).toBeInTheDocument();
+    expect(screen.getByText("Veratec 7400 — Corredera 3 hojas")).toBeInTheDocument();
+    expect(screen.getByText("WinHouse New S75 — Doble riel")).toBeInTheDocument();
+    expect(screen.queryByText("Serie 42 — Proyectante / paño fijo")).not.toBeInTheDocument();
+    expect(screen.queryByText("Serie 35 — Puerta abatible y vaivén")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Elegans 60/i)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar selector" }));
+    rerender(
+      <PasoDosWizardConfiguracionMovil
+        {...baseProps}
+        displaySystemOptions={["Corredera", "Proyectante"]}
+        displayConfigurationOptions={["2 hojas"]}
+        lineTemplateOptions={catalogTemplates}
+        draft={{
+          ...baseProps.draft,
+          subtipo: "Ventana",
+          hojasBase: 2,
+          material: "PVC",
+          sistema: "Corredera",
+          configuracion: "",
+          sheetScheme: "3 hojas",
+          fabricacionHojas: null,
+        }}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Precio manual o sin linea/i }));
+
+    expect(screen.getByText("Veratec 7400 — Corredera 3 hojas")).toBeInTheDocument();
+    expect(screen.queryByText("Veratec 7400 — Corredera 2 hojas")).not.toBeInTheDocument();
   });
 });

@@ -64,6 +64,7 @@ import { MeasureDimensionInput } from "@/features/cotizaciones/components/measur
 import { ComponentPreview } from "@/features/cotizaciones/components/component-preview";
 import { buildQuickCompositionBaseConfig } from "@/features/cotizaciones/visual-composer/services/quick-composition-adjustment.service";
 import type { QuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
+import { listLeafModules } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 import { resolveSupplierFamilyKeyForLineTemplate } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
 import { getSupplierCatalogQuoteLineKeys } from "@/features/proveedor-catalogos/services/proveedor-catalogo-qa.service";
@@ -262,6 +263,36 @@ function CantidadInlineMovil({ cantidad, value, onChange, onSelect }: CantidadIn
       </div>
     </div>
   );
+}
+
+function parseExplicitSheetSchemeLeavesCount(value?: string | null): number | null {
+  const match = (value ?? "").trim().match(/^(\d+)\s*hojas?$/i);
+  return match ? Number(match[1]) : null;
+}
+
+function resolveGuiadaLineCompatibilityLeavesCount(
+  draft: Pick<
+    PasoDosGrupoDraft,
+    "subtipo" | "configuracion" | "sheetScheme" | "guidedVisualConfig"
+  >
+): number | null {
+  const explicitFromSheetScheme = parseExplicitSheetSchemeLeavesCount(draft.sheetScheme);
+  if (explicitFromSheetScheme !== null) {
+    return explicitFromSheetScheme;
+  }
+
+  const guidedLeafCount = draft.guidedVisualConfig?.root
+    ? listLeafModules(draft.guidedVisualConfig.root).length
+    : 0;
+  if (guidedLeafCount > 1) {
+    return guidedLeafCount;
+  }
+
+  if (draft.subtipo === "Vitrina") {
+    return parseExplicitSheetSchemeLeavesCount(draft.configuracion);
+  }
+
+  return null;
 }
 
 export function PasoDosWizardConfiguracionMovil({
@@ -512,6 +543,16 @@ export function PasoDosWizardConfiguracionMovil({
     hojasBase: draft.hojasBase,
     guidedVisualConfig: draft.guidedVisualConfig,
   });
+  const lineCompatibilityLeavesCount = useMemo(
+    () =>
+      resolveGuiadaLineCompatibilityLeavesCount({
+        subtipo: draft.subtipo,
+        configuracion: draft.configuracion,
+        sheetScheme: draft.sheetScheme,
+        guidedVisualConfig: draft.guidedVisualConfig,
+      }),
+    [draft.configuracion, draft.guidedVisualConfig, draft.sheetScheme, draft.subtipo]
+  );
   const inlineRecipeResolution = useMemo(() => {
     if (
       !canLoadInlineRecipeVariants ||
@@ -765,7 +806,7 @@ export function PasoDosWizardConfiguracionMovil({
             .includes(normalizedQuery))
       );
     });
-    const leavesCount = selectedRecipeLeaves;
+    const leavesCount = lineCompatibilityLeavesCount;
     return isGlassProduct ? candidates : filterLineCatalogTemplates({
       templates: candidates,
       tab: lineCatalogTab,
@@ -780,7 +821,7 @@ export function PasoDosWizardConfiguracionMovil({
       }),
       material: requiresProfileMaterial ? lineMaterialFilter : null,
     });
-  }, [availableLineTemplates, draft.configuracion, draft.guidedVisualConfig, draft.material, draft.nombre, draft.referencia, draft.subtipo, draft.sistema, isGlassProduct, lineCatalogTab, lineMaterialFilter, lineSelectorQuery, requiresProfileMaterial, selectedRecipeLeaves]);
+  }, [availableLineTemplates, draft.configuracion, draft.guidedVisualConfig, draft.material, draft.nombre, draft.referencia, draft.subtipo, draft.sistema, isGlassProduct, lineCatalogTab, lineCompatibilityLeavesCount, lineMaterialFilter, lineSelectorQuery, requiresProfileMaterial]);
   const lineTemplateFamilyGroups = useMemo(
     () => groupLineCatalogTemplates(filteredLineTemplates),
     [filteredLineTemplates]
@@ -793,7 +834,7 @@ export function PasoDosWizardConfiguracionMovil({
       system: draft.sistema,
       configuration: draft.configuracion,
       componentLabel: `${draft.nombre ?? ""} ${draft.referencia ?? ""}`,
-      leavesCount: selectedRecipeLeaves,
+      leavesCount: lineCompatibilityLeavesCount,
       material: draft.material,
       guidedVisualConfig: draft.guidedVisualConfig,
     });
