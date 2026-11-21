@@ -216,14 +216,7 @@ export function TallerVidrios() {
     }
   }
 
-  if (loading && !payload) {
-    return (
-      <section className={s.panel} aria-label="Vidrio al corte">
-        Cargando precios de vidrio al corte…
-      </section>
-    );
-  }
-  if (!payload) return null;
+  if (loading || !payload || payload.schemaPending) return null;
 
   return (
     <section className={s.panel} aria-label="Vidrio al corte por m²">
@@ -232,7 +225,7 @@ export function TallerVidrios() {
           <h3>Vidrio al corte (m²)</h3>
           <p>Costo neto de compra al proveedor por m² (no modifica tu precio de venta).</p>
         </div>
-        {payload.canManage !== false && !payload.schemaPending ? (
+        {payload.canManage !== false ? (
           <button
             type="button"
             onClick={() => {
@@ -250,11 +243,6 @@ export function TallerVidrios() {
         ) : null}
       </div>
 
-      {payload.schemaPending ? (
-        <p className={s.hint}>
-          Pendiente aplicar la migración SQL de vidrio al corte para guardar nuevas tarifas privadas.
-        </p>
-      ) : null}
       {error ? (
         <p className={s.error} role="alert">
           {error}

@@ -240,3 +240,23 @@ it("permite registrar un precio neto de vidrio al corte (m²) en Mis precios y t
     )
   );
 });
+
+it("oculta la tarjeta de vidrio al corte en Mis precios cuando schemaPending es true sin exponer mensajes SQL", async () => {
+  const fetchMock = jest.fn(async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      glassProducts: [],
+      presentations: [],
+      schemaPending: true,
+      canManage: true,
+    }),
+  }));
+  global.fetch = fetchMock as unknown as typeof fetch;
+
+  render(<MisPreciosContent catalog={catalog} error={null} busy={false} save={jest.fn(async () => true)} refresh={async () => undefined} />);
+
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/proveedor-catalogos/taller-vidrios", { cache: "no-store" }));
+  expect(screen.queryByRole("heading", { name: "Vidrio al corte (m²)" })).not.toBeInTheDocument();
+  expect(screen.queryByText(/migración/i)).not.toBeInTheDocument();
+});
