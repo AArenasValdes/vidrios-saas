@@ -222,5 +222,83 @@ describe("resolveGlassSupplierCutCost", () => {
       asOfDate: "2026-11-21",
     });
     expect(fullSheetRejected.status).toBe("missing");
+
+    // 1. Con productId explícito, NO admite presentación sin glassProductId (aunque coincidan categoría y espesor)
+    const missingProductIdOnPresentation = resolveGlassSupplierCutCost({
+      panes,
+      glassDescription: "Incoloro monolítico 5mm",
+      glassTechnicalSpec: sampleSpec,
+      organizationId: 99,
+      presentations: [makePresentation({ glassProductId: null })],
+      asOfDate: "2026-11-21",
+    });
+    expect(missingProductIdOnPresentation.status).toBe("missing");
+
+    // 2. historical_reference con origin: "workshop" sin reconfirmación explícita NO habilita priced
+    const unconfirmedWorkshopHistorical = resolveGlassSupplierCutCost({
+      panes,
+      glassDescription: "Incoloro monolítico 5mm",
+      glassTechnicalSpec: sampleSpec,
+      organizationId: 99,
+      presentations: [
+        makePresentation({
+          origin: "workshop",
+          priceReferenceStatus: "historical_reference",
+        }),
+      ],
+      asOfDate: "2026-11-21",
+    });
+    expect(unconfirmedWorkshopHistorical.status).toBe("incompatible");
+
+    const confirmedWorkshopHistorical = resolveGlassSupplierCutCost({
+      panes,
+      glassDescription: "Incoloro monolítico 5mm",
+      glassTechnicalSpec: sampleSpec,
+      organizationId: 99,
+      presentations: [
+        makePresentation({
+          origin: "workshop",
+          priceReferenceStatus: "historical_reference",
+          workshopPriceConfirmed: true,
+          netPricePerM2: 10000,
+        }),
+      ],
+      asOfDate: "2026-11-21",
+    });
+    expect(confirmedWorkshopHistorical.status).toBe("priced");
+
+    // 3. La suma de lineNet por paño siempre coincide exactamente con totalNetCost tras redondeo
+    const multiPaneRounding = resolveGlassSupplierCutCost({
+      panes: [
+        {
+          vidrioId: "p1",
+          nombre: "Paño 1",
+          anchoMm: 600,
+          altoMm: 554,
+          cantidadPiezas: 1,
+          totalM2: 0.3324,
+          trazabilidad: [],
+        },
+        {
+          vidrioId: "p2",
+          nombre: "Paño 2",
+          anchoMm: 600,
+          altoMm: 554,
+          cantidadPiezas: 1,
+          totalM2: 0.3324,
+          trazabilidad: [],
+        },
+      ],
+      glassDescription: "Incoloro monolítico 5mm",
+      glassTechnicalSpec: sampleSpec,
+      organizationId: 99,
+      presentations: [makePresentation({ netPricePerM2: 1000 })],
+      asOfDate: "2026-11-21",
+    });
+    expect(multiPaneRounding.status).toBe("priced");
+    if (multiPaneRounding.status !== "priced") throw new Error("expected priced");
+    const sumPaneNet = multiPaneRounding.panes.reduce((sum, pane) => sum + pane.lineNet, 0);
+    expect(sumPaneNet).toBe(664);
+    expect(multiPaneRounding.totalNetCost).toBe(sumPaneNet);
   });
 });

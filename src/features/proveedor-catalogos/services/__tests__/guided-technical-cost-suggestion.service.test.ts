@@ -941,5 +941,41 @@ describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", (
     expect(estimateWithWrongOrgGlass.status).not.toBe("complete");
     expect(estimateWithWrongOrgGlass.glassCostNet).toBeNull();
     expect(estimateWithWrongOrgGlass.usableBaseCostGroupNet).toBeNull();
+
+    // historical_reference con origin: "workshop" sin reconfirmar tampoco habilita Costo verificado en Guiada
+    const unconfirmedWorkshopHistory = buildGuidedTechnicalCostSuggestion({
+      recipe: l5000,
+      organizationId: 99,
+      lineTemplateId: 5000,
+      anchoMm: 1200,
+      altoMm: 1500,
+      cantidad: 1,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l5000",
+      supplierFamilyKey: "universal:aluminio:l5000",
+      providerKey: "alumco",
+      profilePrices: makePreviewPrices(l5000Codes, {
+        providerKey: "alumco",
+        priceSource: "workshop",
+        priceReferenceStatus: "historical_reference",
+      }),
+      accessoryPrices: makeL5000AccessoryPrices("alumco"),
+      glassCutPresentations: [
+        makeGlassCutPresentation({
+          organizationId: 99,
+          origin: "workshop",
+          priceReferenceStatus: "historical_reference",
+        }),
+      ],
+      asOfDate: "2026-11-21",
+    });
+
+    expect(unconfirmedWorkshopHistory.status).toBe("partial");
+    expect(unconfirmedWorkshopHistory.usableBaseCostGroupNet).toBeNull();
+    expect(unconfirmedWorkshopHistory.glassCostNet).toBeNull();
+    expect(unconfirmedWorkshopHistory.nonVerifiedReasons[0]).toMatch(/histórica/i);
   });
 });

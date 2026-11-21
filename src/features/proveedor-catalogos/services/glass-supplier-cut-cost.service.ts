@@ -24,6 +24,7 @@ export type GlassSupplierCutPresentation = {
   validFrom?: string | null;
   validUntil?: string | null;
   origin?: "supplier" | "workshop";
+  workshopPriceConfirmed?: boolean;
 };
 
 export type GlassSupplierCutPaneValuation = {
@@ -96,7 +97,10 @@ function normalizeIsoDateOnly(value: string) {
 }
 
 function isWithinValidityWindow(
-  presentation: Pick<GlassSupplierCutPresentation, "validFrom" | "validUntil" | "priceReferenceStatus" | "origin">,
+  presentation: Pick<
+    GlassSupplierCutPresentation,
+    "validFrom" | "validUntil" | "priceReferenceStatus" | "origin" | "workshopPriceConfirmed"
+  >,
   asOfDate: string
 ): { valid: boolean; reason?: string } {
   const normalizedAsOf = normalizeIsoDateOnly(asOfDate);
@@ -105,8 +109,14 @@ function isWithinValidityWindow(
   if (presentation.priceReferenceStatus === "not_yet_valid") {
     return { valid: false, reason: "La lista de precios del vidrio aún no entra en vigencia." };
   }
-  if (presentation.priceReferenceStatus === "historical_reference" && presentation.origin !== "workshop") {
-    return { valid: false, reason: "El precio del vidrio proviene de una referencia histórica sin vigencia activa." };
+  if (
+    presentation.priceReferenceStatus === "historical_reference" &&
+    !(presentation.origin === "workshop" && presentation.workshopPriceConfirmed === true)
+  ) {
+    return {
+      valid: false,
+      reason: "El precio del vidrio proviene de una referencia histórica sin vigencia activa ni confirmación propia.",
+    };
   }
   if (normalizedValidFrom && normalizedAsOf < normalizedValidFrom) {
     return { valid: false, reason: "La presentación de compra de vidrio aún no inicia vigencia." };
@@ -188,10 +198,7 @@ export function resolveGlassSupplierCutCost(input: {
       return false;
     }
     if (input.providerKey && entry.providerKey !== input.providerKey) return false;
-    if (expectedProductId && entry.glassProductId && entry.glassProductId !== expectedProductId) {
-      return false;
-    }
-    if (expectedProductId && !entry.glassProductId && expectedCategory === "pendiente") {
+    if (expectedProductId && entry.glassProductId?.trim() !== expectedProductId) {
       return false;
     }
     if (expectedCategory !== "pendiente" && entry.category !== expectedCategory) return false;
@@ -273,7 +280,7 @@ export function resolveGlassSupplierCutCost(input: {
     };
   });
 
-  const totalNetCost = Math.round(totalBillableM2 * chosen.netPricePerM2);
+  const totalNetCost = valuedPanes.reduce((sum, pane) => sum + pane.lineNet, 0);
   return {
     status: "priced",
     presentationId: chosen.presentationId,

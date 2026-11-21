@@ -329,12 +329,12 @@ export function buildGuidedTechnicalCostSuggestion(input: {
     costSnapshot.lines.some(
       (line) =>
         line.priceReferenceStatus === "historical_reference" &&
-        line.effectivePriceSource === "reference"
+        line.effectivePriceSource !== "organization_override"
     ) ||
     usedPreviewRows.some(
       (row) =>
         row.priceReferenceStatus === "historical_reference" &&
-        (row.priceSource === "reference" || row.priceSource == null)
+        row.priceSource !== "organization_override"
     );
   const hasNotYetValidPrice =
     costSnapshot.lines.some((line) => line.priceReferenceStatus === "not_yet_valid") ||
