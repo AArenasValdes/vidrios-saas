@@ -1,6 +1,11 @@
 import { buildGuidedTechnicalCostSuggestion } from "../guided-technical-cost-suggestion.service";
 import type { SupplierProfilePricePreview } from "../supplier-presentation-resolution.service";
+import type { CatalogPresentationPrice } from "../costo-tecnico-parcial.service";
+import type { GlassSupplierCutPresentation } from "../glass-supplier-cut-cost.service";
 import { resolveUniversalPricedLineFallbacks } from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
+import { buildAllSodalL25Recipes } from "@/features/fabricacion/fixtures/sodal-l25-zeta-recipes";
+import { SODAL_L25_FORMULA_VERSION } from "@/features/fabricacion/zeta/sodal-l25-profile-roles";
+import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import {
   calculateComponentItem,
   calculateCotizacionWorkflowTotals,
@@ -45,6 +50,96 @@ function makePreviewPrices(
   }));
 }
 
+function makeL5000AccessoryPrices(providerKey = "alumco"): CatalogPresentationPrice[] {
+  return [
+    {
+      presentationId: "acc-carros",
+      providerKey,
+      familyKeys: ["universal:aluminio:l5000"],
+      technicalCode: "ACC-CARRO",
+      recipeAccessoryNames: ["Carros o rodamientos"],
+      technicalName: "Carros o rodamientos",
+      supplierSku: "ALU-CARRO",
+      presentationDescription: "Carro corredera",
+      finishCode: "",
+      finishName: null,
+      finishResolution: "finish_independent",
+      purchaseUnit: "UN",
+      commercialLengthMm: null,
+      netPrice: 2500,
+      currency: "CLP",
+      priceBasis: "commercial_presentation",
+      priceListId: "pl-acc",
+      priceListRevision: "2026-11",
+      priceReferenceStatus: "within_stated_validity",
+    },
+    {
+      presentationId: "acc-cierre",
+      providerKey,
+      familyKeys: ["universal:aluminio:l5000"],
+      technicalCode: "ACC-CIERRE",
+      recipeAccessoryNames: ["Cierre o seguro"],
+      technicalName: "Cierre o seguro",
+      supplierSku: "ALU-CIERRE",
+      presentationDescription: "Cierre central",
+      finishCode: "",
+      finishName: null,
+      finishResolution: "finish_independent",
+      purchaseUnit: "UN",
+      commercialLengthMm: null,
+      netPrice: 3000,
+      currency: "CLP",
+      priceBasis: "commercial_presentation",
+      priceListId: "pl-acc",
+      priceListRevision: "2026-11",
+      priceReferenceStatus: "within_stated_validity",
+    },
+    {
+      presentationId: "acc-felpa",
+      providerKey,
+      familyKeys: ["universal:aluminio:l5000"],
+      technicalCode: "ACC-FELPA",
+      recipeAccessoryNames: ["Felpa o sello"],
+      technicalName: "Felpa o sello",
+      supplierSku: "ALU-FELPA",
+      presentationDescription: "Felpa corredera",
+      finishCode: "",
+      finishName: null,
+      finishResolution: "finish_independent",
+      purchaseUnit: "UN",
+      commercialLengthMm: null,
+      netPrice: 1000,
+      currency: "CLP",
+      priceBasis: "commercial_presentation",
+      priceListId: "pl-acc",
+      priceListRevision: "2026-11",
+      priceReferenceStatus: "within_stated_validity",
+    },
+  ];
+}
+
+function makeGlassCutPresentation(
+  overrides: Partial<GlassSupplierCutPresentation> = {}
+): GlassSupplierCutPresentation {
+  return {
+    presentationId: "glass-cut-mono-5mm",
+    providerKey: "vidrieriacentral",
+    organizationId: 3,
+    category: "monolitico",
+    thicknessMm: 5,
+    glassDescription: "Incoloro monolítico 5mm",
+    purchaseMode: "supplier_cut",
+    purchaseUnit: "M2",
+    netPricePerM2: 10000,
+    minBillableM2PerPane: null,
+    currency: "CLP",
+    priceReferenceStatus: "within_stated_validity",
+    validFrom: "2026-01-01",
+    validUntil: "2026-12-31",
+    ...overrides,
+  };
+}
+
 describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", () => {
   it("calcula costo verificado, recargo 100% y precio neto sugerido sin IVA en Paso 2 y valida Paso 3 en ambos modos tributarios", () => {
     const recipe = getL5000Recipe();
@@ -69,16 +164,23 @@ describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", (
       supplierFamilyKey: "universal:aluminio:l5000",
       providerKey: "alumco",
       profilePrices: prices,
-      backedGlassCostNet: 15000,
+      accessoryPrices: makeL5000AccessoryPrices("alumco"),
+      glassCutPresentations: [makeGlassCutPresentation()],
+      asOfDate: "2026-11-21",
     });
 
     expect(suggestion.status).toBe("complete");
     expect(suggestion.defaultMarkupPct).toBe(100);
     expect(suggestion.profilesCostNet).toBe(105000);
-    expect(suggestion.glassCostNet).toBe(15000);
-    expect(suggestion.usableBaseCostGroupNet).toBe(120000);
-    expect(suggestion.markupAmountNet).toBe(120000);
-    expect(suggestion.suggestedNetTotal).toBe(240000);
+    expect(suggestion.accessoriesCostNet).toBe(9000);
+    expect(suggestion.glassCostNet).toBeGreaterThan(0);
+    const expectedBase =
+      suggestion.profilesCostNet! +
+      suggestion.accessoriesCostNet! +
+      suggestion.glassCostNet!;
+    expect(suggestion.usableBaseCostGroupNet).toBe(expectedBase);
+    expect(suggestion.markupAmountNet).toBe(expectedBase);
+    expect(suggestion.suggestedNetTotal).toBe(expectedBase * 2);
 
     // Paso 2 -> Paso 3 integration (group_total scope)
     const item = calculateComponentItem({
@@ -96,31 +198,33 @@ describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", (
       origenPrecio: "margen",
     });
 
-    expect(item.precioUnitario).toBe(240000);
-    expect(item.precioTotal).toBe(240000);
+    expect(item.precioUnitario).toBe(expectedBase * 2);
+    expect(item.precioTotal).toBe(expectedBase * 2);
 
     const totalsWithVat = calculateCotizacionWorkflowTotals([item], 0, 0, {
       mostrarIva: true,
       commercialRoundingIncrement: 1,
     });
-    expect(totalsWithVat.neto).toBe(240000);
-    expect(totalsWithVat.iva).toBe(45600);
-    expect(totalsWithVat.total).toBe(285600);
+    expect(totalsWithVat.neto).toBe(expectedBase * 2);
+    expect(totalsWithVat.iva).toBe(Math.round(expectedBase * 2 * 0.19));
+    expect(totalsWithVat.total).toBe(expectedBase * 2 + totalsWithVat.iva);
 
     const totalsWithVatRounded = calculateCotizacionWorkflowTotals([item], 0, 0, {
       mostrarIva: true,
       commercialRoundingIncrement: 1000,
     });
-    expect(totalsWithVatRounded.total).toBe(286000);
+    expect(totalsWithVatRounded.total).toBe(
+      Math.ceil(totalsWithVat.total / 1000) * 1000
+    );
 
     const totalsFinalPrices = calculateCotizacionWorkflowTotals([item], 0, 0, {
       mostrarIva: false,
       commercialRoundingIncrement: 1,
     });
-    expect(totalsFinalPrices.total).toBe(240000);
+    expect(totalsFinalPrices.total).toBe(expectedBase * 2);
   });
 
-  it("evita duplicar costos por cantidad cuando costInputScope es group_total y escala tiras al aumentar cantidad o dimensiones", () => {
+  it("evita duplicar costos por cantidad cuando costInputScope es group_total y escala tiras, vidrio y accesorios al aumentar cantidad", () => {
     const recipe = getL5000Recipe();
     const codes = [...new Set(recipe.definition.perfiles.map((p) => p.codigoPerfil))];
     const prices = makePreviewPrices(codes, { netPrice: 15000 });
@@ -140,16 +244,18 @@ describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", (
       supplierFamilyKey: "universal:aluminio:l5000",
       providerKey: "alumco",
       profilePrices: prices,
-      backedGlassCostNet: 15000,
+      accessoryPrices: makeL5000AccessoryPrices("alumco"),
+      glassCutPresentations: [makeGlassCutPresentation()],
+      asOfDate: "2026-11-21",
     });
 
-    const threeUnits = buildGuidedTechnicalCostSuggestion({
+    const twoUnits = buildGuidedTechnicalCostSuggestion({
       recipe,
       organizationId: 3,
       lineTemplateId: 5000,
-      anchoMm: 2200,
-      altoMm: 1800,
-      cantidad: 3,
+      anchoMm: 1200,
+      altoMm: 1500,
+      cantidad: 2,
       vidrio: "Incoloro monolítico 5mm",
       colorHex: "#a8a8a8",
       material: "Aluminio",
@@ -158,23 +264,29 @@ describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", (
       supplierFamilyKey: "universal:aluminio:l5000",
       providerKey: "alumco",
       profilePrices: prices,
-      backedGlassCostNet: 45000,
+      accessoryPrices: makeL5000AccessoryPrices("alumco"),
+      glassCutPresentations: [makeGlassCutPresentation()],
+      asOfDate: "2026-11-21",
     });
 
-    expect(threeUnits.profilesCostNet!).toBeGreaterThan(oneUnit.profilesCostNet!);
+    expect(oneUnit.status).toBe("complete");
+    expect(twoUnits.status).toBe("complete");
+    // Sin doble multiplicación: accesorios escalan exactamente x2 y vidrio x2 respecto a 1 unidad
+    expect(twoUnits.accessoriesCostNet).toBe(oneUnit.accessoriesCostNet! * 2);
+    expect(twoUnits.glassCostNet).toBe(oneUnit.glassCostNet! * 2);
 
     const groupItem = calculateComponentItem({
       codigo: "V1",
       tipo: "Ventana",
-      nombre: "Ventana x3",
-      cantidad: 3,
-      costoProveedorUnitario: threeUnits.usableBaseCostGroupNet!,
+      nombre: "Ventana x2",
+      cantidad: 2,
+      costoProveedorUnitario: twoUnits.usableBaseCostGroupNet!,
       margenPct: 100,
       costInputScope: "group_total",
       origenPrecio: "margen",
     });
-    expect(groupItem.costoProveedorTotal).toBe(threeUnits.usableBaseCostGroupNet);
-    expect(groupItem.precioTotal).toBe(threeUnits.suggestedNetTotal);
+    expect(groupItem.costoProveedorTotal).toBe(twoUnits.usableBaseCostGroupNet);
+    expect(groupItem.precioTotal).toBe(twoUnits.suggestedNetTotal);
 
     const unitItem = calculateComponentItem({
       codigo: "V2",
@@ -210,7 +322,6 @@ describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", (
       supplierFamilyKey: "universal:aluminio:l5000",
       providerKey: "alumco",
       profilePrices: prices,
-      backedGlassCostNet: null,
     });
 
     expect(partial.status).toBe("partial");
@@ -298,7 +409,8 @@ describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", (
       supplierFamilyKey: "universal:aluminio:l42",
       providerKey: "alumco",
       profilePrices: makePreviewPrices(l42Codes, { netPrice: 12000 }),
-      backedGlassCostNet: 15000,
+      glassCutPresentations: [makeGlassCutPresentation()],
+      asOfDate: "2026-11-21",
     });
 
     expect(l42Result.isRecipeValidated).toBe(false);
@@ -327,7 +439,9 @@ describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", (
         priceReferenceStatus: "historical_reference",
         priceSource: "reference",
       }),
-      backedGlassCostNet: 15000,
+      accessoryPrices: makeL5000AccessoryPrices("alumco"),
+      glassCutPresentations: [makeGlassCutPresentation()],
+      asOfDate: "2026-11-21",
     });
 
     expect(historicalResult.isRecipeValidated).toBe(true);
@@ -410,10 +524,14 @@ describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", (
       supplierFamilyKey: "universal:aluminio:l20",
       providerKey: "alumco",
       profilePrices: mixedPrices,
-      backedGlassCostNet: 15000,
+      accessoryPrices: makeL5000AccessoryPrices("alumco"),
+      glassCutPresentations: [makeGlassCutPresentation()],
+      asOfDate: "2026-11-21",
     });
     expect(mixedResult.status).toBe("partial");
     expect(mixedResult.usableBaseCostGroupNet).toBeNull();
+    expect(mixedResult.knownNetTotal).toBeNull();
+    expect(mixedResult.currency).toBeNull();
     expect(mixedResult.nonVerifiedReasons).toContain("Las presentaciones seleccionadas mezclan más de una moneda.");
   });
 
@@ -437,11 +555,17 @@ describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", (
       supplierFamilyKey: "universal:aluminio:l5000",
       providerKey: "alumco",
       profilePrices: basePrices,
-      backedGlassCostNet: 15000,
+      accessoryPrices: makeL5000AccessoryPrices("alumco"),
+      glassCutPresentations: [makeGlassCutPresentation()],
+      asOfDate: "2026-11-21",
     });
     expect(baseComplete.status).toBe("complete");
-    expect(baseComplete.usableBaseCostGroupNet).toBe(120000);
-    expect(baseComplete.suggestedNetTotal).toBe(240000);
+    const expectedBase =
+      baseComplete.profilesCostNet! +
+      baseComplete.accessoriesCostNet! +
+      baseComplete.glassCostNet!;
+    expect(baseComplete.usableBaseCostGroupNet).toBe(expectedBase);
+    expect(baseComplete.suggestedNetTotal).toBe(expectedBase * 2);
 
     // Cambio de medidas y cantidad recalcula costo/sugerencia
     const largerQty = buildGuidedTechnicalCostSuggestion({
@@ -459,7 +583,9 @@ describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", (
       supplierFamilyKey: "universal:aluminio:l5000",
       providerKey: "alumco",
       profilePrices: basePrices,
-      backedGlassCostNet: 120000,
+      accessoryPrices: makeL5000AccessoryPrices("alumco"),
+      glassCutPresentations: [makeGlassCutPresentation()],
+      asOfDate: "2026-11-21",
     });
     expect(largerQty.status).toBe("complete");
     expect(largerQty.usableBaseCostGroupNet!).toBeGreaterThan(baseComplete.usableBaseCostGroupNet!);
@@ -480,9 +606,376 @@ describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", (
       supplierFamilyKey: "universal:aluminio:l5000",
       providerKey: "arquetipo",
       profilePrices: basePrices,
-      backedGlassCostNet: 15000,
+      glassCutPresentations: [makeGlassCutPresentation()],
+      asOfDate: "2026-11-21",
     });
     expect(switchedProvider.status).toBe("partial");
     expect(switchedProvider.suggestedNetTotal).toBeNull();
+  });
+
+  it("completa perfiles + vidrio supplier_cut + accesorios en L5000 y L25 (incluyendo Pz/Mt/Tubo) manteniendo L42 testing bloqueada", () => {
+    const l5000 = getL5000Recipe();
+    const l5000Codes = [...new Set(l5000.definition.perfiles.map((p) => p.codigoPerfil))];
+    const l5000AccessoryPrices: CatalogPresentationPrice[] = [
+      {
+        presentationId: "acc-carros",
+        providerKey: "alumco",
+        familyKeys: ["universal:aluminio:l5000"],
+        technicalCode: "ACC-CARRO",
+        recipeAccessoryNames: ["Carros o rodamientos"],
+        technicalName: "Carros o rodamientos",
+        supplierSku: "ALU-CARRO",
+        presentationDescription: "Carro corredera",
+        finishCode: "",
+        finishName: null,
+        finishResolution: "finish_independent",
+        purchaseUnit: "UN",
+        commercialLengthMm: null,
+        netPrice: 2500,
+        currency: "CLP",
+        priceBasis: "commercial_presentation",
+        priceListId: "pl-acc",
+        priceListRevision: "2026-11",
+        priceReferenceStatus: "within_stated_validity",
+      },
+      {
+        presentationId: "acc-cierre",
+        providerKey: "alumco",
+        familyKeys: ["universal:aluminio:l5000"],
+        technicalCode: "ACC-CIERRE",
+        recipeAccessoryNames: ["Cierre o seguro"],
+        technicalName: "Cierre o seguro",
+        supplierSku: "ALU-CIERRE",
+        presentationDescription: "Cierre central",
+        finishCode: "",
+        finishName: null,
+        finishResolution: "finish_independent",
+        purchaseUnit: "UN",
+        commercialLengthMm: null,
+        netPrice: 3000,
+        currency: "CLP",
+        priceBasis: "commercial_presentation",
+        priceListId: "pl-acc",
+        priceListRevision: "2026-11",
+        priceReferenceStatus: "within_stated_validity",
+      },
+      {
+        presentationId: "acc-felpa",
+        providerKey: "alumco",
+        familyKeys: ["universal:aluminio:l5000"],
+        technicalCode: "ACC-FELPA",
+        recipeAccessoryNames: ["Felpa o sello"],
+        technicalName: "Felpa o sello",
+        supplierSku: "ALU-FELPA",
+        presentationDescription: "Felpa corredera",
+        finishCode: "",
+        finishName: null,
+        finishResolution: "finish_independent",
+        purchaseUnit: "UN",
+        commercialLengthMm: null,
+        netPrice: 1000,
+        currency: "CLP",
+        priceBasis: "commercial_presentation",
+        priceListId: "pl-acc",
+        priceListRevision: "2026-11",
+        priceReferenceStatus: "within_stated_validity",
+      },
+    ];
+    const glassCutPresentation: GlassSupplierCutPresentation = {
+      presentationId: "glass-cut-5mm",
+      providerKey: "vidrieriacentral",
+      category: "monolitico",
+      thicknessMm: 5,
+      glassDescription: "Incoloro monolítico 5mm",
+      purchaseMode: "supplier_cut",
+      purchaseUnit: "M2",
+      netPricePerM2: 10000,
+      minBillableM2PerPane: null,
+      currency: "CLP",
+      priceReferenceStatus: "within_stated_validity",
+      validFrom: "2026-01-01",
+      validUntil: "2026-12-31",
+    };
+
+    const l5000Complete = buildGuidedTechnicalCostSuggestion({
+      recipe: l5000,
+      organizationId: 99,
+      lineTemplateId: 5000,
+      anchoMm: 1200,
+      altoMm: 1500,
+      cantidad: 1,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l5000",
+      supplierFamilyKey: "universal:aluminio:l5000",
+      providerKey: "alumco",
+      profilePrices: makePreviewPrices(l5000Codes, { providerKey: "alumco", netPrice: 15000 }),
+      accessoryPrices: l5000AccessoryPrices,
+      glassCutPresentations: [glassCutPresentation],
+      asOfDate: "2026-11-21",
+    });
+
+    expect(l5000Complete.status).toBe("complete");
+    expect(l5000Complete.profilesCostNet).toBe(105000);
+    // 2 carros (2*2500) + 1 cierre (3000) + 1 felpa (1000) = 9000
+    expect(l5000Complete.accessoriesCostNet).toBe(9000);
+    expect(l5000Complete.glassCostNet).toBeGreaterThan(0);
+    expect(l5000Complete.suggestedNetTotal).toBe(l5000Complete.usableBaseCostGroupNet! * 2);
+
+    // Accesorio ambiguo (2 presentaciones compatibles) fuerza Costo parcial
+    const l5000AmbiguousAcc = buildGuidedTechnicalCostSuggestion({
+      recipe: l5000,
+      organizationId: 99,
+      lineTemplateId: 5000,
+      anchoMm: 1200,
+      altoMm: 1500,
+      cantidad: 1,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l5000",
+      supplierFamilyKey: "universal:aluminio:l5000",
+      providerKey: "alumco",
+      profilePrices: makePreviewPrices(l5000Codes, { providerKey: "alumco", netPrice: 15000 }),
+      accessoryPrices: [
+        ...l5000AccessoryPrices,
+        {
+          ...l5000AccessoryPrices[0]!,
+          presentationId: "acc-carros-dup",
+          supplierSku: "ALU-CARRO-2",
+        },
+      ],
+      glassCutPresentations: [glassCutPresentation],
+      asOfDate: "2026-11-21",
+    });
+    expect(l5000AmbiguousAcc.status).toBe("partial");
+    expect(l5000AmbiguousAcc.missingItems.some((m) => /Identificación ambigua/i.test(m.reason))).toBe(true);
+
+    // L25 Pierna cerrada + Normal: accesorios Zeta en Pz -> UN, Mt -> M, TUBO -> Tubo
+    const bundle = buildAllSodalL25Recipes().find(
+      (entry) => entry.recipeId === "monolitico_pierna_cerrada_2h_1800x1500"
+    )!;
+    const l25Record: FabricationRecipeRecord = {
+      id: bundle.recipeId,
+      organizationId: null,
+      lineTemplateId: 25,
+      scope: "ventora",
+      providerName: "SODAL",
+      lineName: "L25",
+      typology: bundle.definition.identidad.tipologia,
+      leavesCount: bundle.identity.leaves,
+      variant: bundle.identity.variantSlug,
+      version: 1,
+      status: "validated",
+      definition: bundle.definition,
+      sourceType: "manufacturer",
+      sourceReference: bundle.sourceReference,
+      sourceName: "SODAL",
+      sourceRevision: SODAL_L25_FORMULA_VERSION,
+      parentRecipeId: null,
+      validatedAt: "2026-10-07T00:00:00.000Z",
+      validatedBy: "qa",
+      createdAt: "2026-10-07T00:00:00.000Z",
+      updatedAt: "2026-10-07T00:00:00.000Z",
+      eliminadoEn: null,
+    };
+    const l25Codes = [...new Set(l25Record.definition.perfiles.map((p) => p.codigoPerfil))];
+    const l25AccessoryPrices: CatalogPresentationPrice[] = l25Record.definition.accesorios.map(
+      (acc, index) => ({
+        presentationId: `l25-acc-${index}`,
+        providerKey: "arquetipo",
+        familyKeys: ["universal:aluminio:l25"],
+        technicalCode: acc.codigo,
+        recipeAccessoryNames: [acc.nombre],
+        technicalName: acc.nombre,
+        supplierSku: `ARQ-${acc.codigo}`,
+        presentationDescription: acc.nombre,
+        finishCode: "",
+        finishName: null,
+        finishResolution: "finish_independent",
+        // Simula unidades persistidas de organizacion_presentaciones_taller / catalogo (UN, M, Tubo)
+        purchaseUnit:
+          acc.unidad === "Pz" ? "UN" : acc.unidad === "Mt" ? "M" : acc.unidad ?? "UN",
+        commercialLengthMm: null,
+        netPrice: 500,
+        currency: "CLP",
+        priceBasis: "commercial_presentation",
+        priceListId: "pl-l25",
+        priceListRevision: "2026-11",
+        priceReferenceStatus: "within_stated_validity",
+      })
+    );
+
+    const l25Qty2 = buildGuidedTechnicalCostSuggestion({
+      recipe: l25Record,
+      organizationId: 99,
+      lineTemplateId: 25,
+      anchoMm: 1800,
+      altoMm: 1500,
+      cantidad: 2,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l25",
+      supplierFamilyKey: "universal:aluminio:l25",
+      providerKey: "arquetipo",
+      profilePrices: makePreviewPrices(l25Codes, { providerKey: "arquetipo", netPrice: 12000 }),
+      accessoryPrices: l25AccessoryPrices,
+      glassCutPresentations: [glassCutPresentation],
+      asOfDate: "2026-11-21",
+    });
+
+    expect(l25Qty2.status).toBe("complete");
+    expect(l25Qty2.accessoriesCostNet).toBeGreaterThan(0);
+    // Para cantidad 2 de 1800x1500: vidrio = 2 * (2 paños 835x1372 = 2.2912 m2) * 10000 = ~45825
+    expect(l25Qty2.glassCostNet).toBeGreaterThan(40000);
+
+    // L42 testing jamás promociona a complete aunque perfiles + vidrio tengan precio
+    const l42Testing = resolveUniversalPricedLineFallbacks({
+      catalogKey: "ventora:l42",
+      lineTemplateId: 42,
+      organizationId: 99,
+      lineName: "Serie 42",
+      variant: "arquetipo_sin_camara_monolitico",
+      leavesCount: 1,
+      typology: "proyectante",
+      glassName: "Incoloro monolítico 5mm",
+      includeDocumentedVariants: true,
+      recipes: [],
+    })[0]!;
+    const l42Codes = [...new Set(l42Testing.definition.perfiles.map((p) => p.codigoPerfil))];
+    const l42WithGlass = buildGuidedTechnicalCostSuggestion({
+      recipe: l42Testing,
+      organizationId: 99,
+      lineTemplateId: 42,
+      anchoMm: 1000,
+      altoMm: 1000,
+      cantidad: 1,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l42",
+      supplierFamilyKey: "universal:aluminio:l42",
+      providerKey: "alumco",
+      profilePrices: makePreviewPrices(l42Codes, { providerKey: "alumco", netPrice: 12000 }),
+      glassCutPresentations: [glassCutPresentation],
+      asOfDate: "2026-11-21",
+    });
+    expect(l42WithGlass.status).toBe("partial");
+    expect(l42WithGlass.isRecipeValidated).toBe(false);
+    expect(l42WithGlass.accessoriesCostNet).toBeNull();
+    expect(l42WithGlass.usableBaseCostGroupNet).toBeNull();
+  });
+
+  it("un vidrio valorizado nunca elimina accesorios pendientes sin código técnico y conserva identidad inequívoca", () => {
+    const l5000 = getL5000Recipe();
+    const l5000Codes = [...new Set(l5000.definition.perfiles.map((p) => p.codigoPerfil))];
+    const glassOnlyPresentations = [makeGlassCutPresentation({ organizationId: 99 })];
+
+    const withValuedGlassAndMissingAccessories = buildGuidedTechnicalCostSuggestion({
+      recipe: l5000,
+      organizationId: 99,
+      lineTemplateId: 5000,
+      anchoMm: 1200,
+      altoMm: 1500,
+      cantidad: 1,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l5000",
+      supplierFamilyKey: "universal:aluminio:l5000",
+      providerKey: "alumco",
+      profilePrices: makePreviewPrices(l5000Codes, { providerKey: "alumco", netPrice: 15000 }),
+      accessoryPrices: [],
+      glassCutPresentations: glassOnlyPresentations,
+      asOfDate: "2026-11-21",
+    });
+
+    expect(withValuedGlassAndMissingAccessories.status).toBe("partial");
+    expect(withValuedGlassAndMissingAccessories.glassCostNet).toBeGreaterThan(0);
+    expect(withValuedGlassAndMissingAccessories.usableBaseCostGroupNet).toBeNull();
+    expect(withValuedGlassAndMissingAccessories.missingItems).toHaveLength(3);
+    expect(
+      withValuedGlassAndMissingAccessories.missingItems.every(
+        (item) =>
+          item.itemKind === "accessory" &&
+          item.technicalCode === null &&
+          item.identityKey?.startsWith("accessory|")
+      )
+    ).toBe(true);
+    expect(
+      withValuedGlassAndMissingAccessories.missingItems.map((item) => item.description).sort()
+    ).toEqual(["Carros o rodamientos", "Cierre o seguro", "Felpa o sello"]);
+
+    // Estimación comercial por acabado alternativo + vidrio de otra organización jamás promociona a complete
+    const estimateWithWrongOrgGlass = buildGuidedTechnicalCostSuggestion({
+      recipe: l5000,
+      organizationId: 99,
+      lineTemplateId: 5000,
+      anchoMm: 1200,
+      altoMm: 1500,
+      cantidad: 1,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#111111",
+      material: "Aluminio",
+      finishName: "Negro",
+      catalogLineKey: "ventora:l5000",
+      supplierFamilyKey: "universal:aluminio:l5000",
+      providerKey: "alumco",
+      profilePrices: makePreviewPrices(l5000Codes, {
+        providerKey: "alumco",
+        priceSourceFinishName: "Titanio",
+        finishPriceBasis: "base_reference_other_finish",
+      }),
+      accessoryPrices: makeL5000AccessoryPrices("alumco"),
+      glassCutPresentations: [makeGlassCutPresentation({ organizationId: 3 })],
+      asOfDate: "2026-11-21",
+    });
+
+    expect(estimateWithWrongOrgGlass.status).not.toBe("complete");
+    expect(estimateWithWrongOrgGlass.glassCostNet).toBeNull();
+    expect(estimateWithWrongOrgGlass.usableBaseCostGroupNet).toBeNull();
+
+    // historical_reference con origin: "workshop" sin reconfirmar tampoco habilita Costo verificado en Guiada
+    const unconfirmedWorkshopHistory = buildGuidedTechnicalCostSuggestion({
+      recipe: l5000,
+      organizationId: 99,
+      lineTemplateId: 5000,
+      anchoMm: 1200,
+      altoMm: 1500,
+      cantidad: 1,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l5000",
+      supplierFamilyKey: "universal:aluminio:l5000",
+      providerKey: "alumco",
+      profilePrices: makePreviewPrices(l5000Codes, {
+        providerKey: "alumco",
+        priceSource: "workshop",
+        priceReferenceStatus: "historical_reference",
+      }),
+      accessoryPrices: makeL5000AccessoryPrices("alumco"),
+      glassCutPresentations: [
+        makeGlassCutPresentation({
+          organizationId: 99,
+          origin: "workshop",
+          priceReferenceStatus: "historical_reference",
+        }),
+      ],
+      asOfDate: "2026-11-21",
+    });
+
+    expect(unconfirmedWorkshopHistory.status).toBe("partial");
+    expect(unconfirmedWorkshopHistory.usableBaseCostGroupNet).toBeNull();
+    expect(unconfirmedWorkshopHistory.glassCostNet).toBeNull();
+    expect(unconfirmedWorkshopHistory.nonVerifiedReasons[0]).toMatch(/histórica/i);
   });
 });
