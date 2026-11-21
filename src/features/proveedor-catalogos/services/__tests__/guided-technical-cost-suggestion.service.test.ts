@@ -1,0 +1,269 @@
+import { buildGuidedTechnicalCostSuggestion } from "../guided-technical-cost-suggestion.service";
+import type { SupplierProfilePricePreview } from "../supplier-presentation-resolution.service";
+import { resolveUniversalPricedLineFallbacks } from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
+import {
+  calculateComponentItem,
+  calculateCotizacionWorkflowTotals,
+} from "@/features/cotizaciones/services/cotizaciones-workflow.service";
+
+function getL5000Recipe() {
+  return resolveUniversalPricedLineFallbacks({
+    catalogKey: "ventora:l5000",
+    lineTemplateId: 5000,
+    organizationId: 3,
+    lineName: "Serie 5000",
+    variant: "caracol",
+    leavesCount: 2,
+    typology: "corredera",
+    glassName: "Incoloro monolítico 5mm",
+    recipes: [],
+  })[0]!;
+}
+
+function makePreviewPrices(
+  codes: readonly string[],
+  overrides: Partial<SupplierProfilePricePreview> = {}
+): SupplierProfilePricePreview[] {
+  return codes.map((code, index) => ({
+    technicalCode: code,
+    profileName: `Perfil ${code}`,
+    providerKey: "alumco",
+    providerLabel: "Alumco · 2026",
+    presentationId: `pres-${code}-${index}`,
+    supplierSku: `ALU-${code}`,
+    presentationDescription: "Tira 6000 mm",
+    purchaseUnit: "TIRA",
+    commercialLengthMm: 6000,
+    netPrice: 12000,
+    currency: "CLP",
+    priceSource: "reference",
+    priceReferenceStatus: "confirmed",
+    finishPriceBasis: "specific_finish",
+    priceSourceFinishName: "Mate",
+    status: "priced",
+    ...overrides,
+  }));
+}
+
+describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", () => {
+  it("calcula costo verificado, recargo 100% y precio neto sugerido sin IVA en Paso 2 y valida Paso 3 en ambos modos tributarios", () => {
+    const recipe = getL5000Recipe();
+    const codes = [...new Set(recipe.definition.perfiles.map((p) => p.codigoPerfil))];
+    const prices = makePreviewPrices(codes, { netPrice: 15000 });
+
+    const suggestion = buildGuidedTechnicalCostSuggestion({
+      recipe,
+      organizationId: 3,
+      lineTemplateId: 5000,
+      lineName: "Serie 5000",
+      tipo: "Ventana",
+      sistema: "Corredera",
+      anchoMm: 1200,
+      altoMm: 1500,
+      cantidad: 1,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l5000",
+      supplierFamilyKey: "universal:aluminio:l5000",
+      providerKey: "alumco",
+      profilePrices: prices,
+      backedGlassCostNet: 15000,
+    });
+
+    expect(suggestion.status).toBe("complete");
+    expect(suggestion.defaultMarkupPct).toBe(100);
+    expect(suggestion.profilesCostNet).toBe(105000);
+    expect(suggestion.glassCostNet).toBe(15000);
+    expect(suggestion.usableBaseCostGroupNet).toBe(120000);
+    expect(suggestion.markupAmountNet).toBe(120000);
+    expect(suggestion.suggestedNetTotal).toBe(240000);
+
+    // Paso 2 -> Paso 3 integration (group_total scope)
+    const item = calculateComponentItem({
+      codigo: "V1",
+      tipo: "Ventana",
+      lineaComercial: "Serie 5000",
+      vidrio: "Incoloro monolítico 5mm",
+      nombre: "Ventana corredera",
+      ancho: 1200,
+      alto: 1500,
+      cantidad: 1,
+      costoProveedorUnitario: suggestion.usableBaseCostGroupNet!,
+      margenPct: suggestion.defaultMarkupPct,
+      costInputScope: "group_total",
+      origenPrecio: "margen",
+    });
+
+    expect(item.precioUnitario).toBe(240000);
+    expect(item.precioTotal).toBe(240000);
+
+    const totalsWithVat = calculateCotizacionWorkflowTotals([item], 0, 0, {
+      mostrarIva: true,
+      commercialRoundingIncrement: 1,
+    });
+    expect(totalsWithVat.neto).toBe(240000);
+    expect(totalsWithVat.iva).toBe(45600);
+    expect(totalsWithVat.total).toBe(285600);
+
+    const totalsWithVatRounded = calculateCotizacionWorkflowTotals([item], 0, 0, {
+      mostrarIva: true,
+      commercialRoundingIncrement: 1000,
+    });
+    expect(totalsWithVatRounded.total).toBe(286000);
+
+    const totalsFinalPrices = calculateCotizacionWorkflowTotals([item], 0, 0, {
+      mostrarIva: false,
+      commercialRoundingIncrement: 1,
+    });
+    expect(totalsFinalPrices.total).toBe(240000);
+  });
+
+  it("evita duplicar costos por cantidad cuando costInputScope es group_total y escala tiras al aumentar cantidad o dimensiones", () => {
+    const recipe = getL5000Recipe();
+    const codes = [...new Set(recipe.definition.perfiles.map((p) => p.codigoPerfil))];
+    const prices = makePreviewPrices(codes, { netPrice: 15000 });
+
+    const oneUnit = buildGuidedTechnicalCostSuggestion({
+      recipe,
+      organizationId: 3,
+      lineTemplateId: 5000,
+      anchoMm: 1200,
+      altoMm: 1500,
+      cantidad: 1,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l5000",
+      supplierFamilyKey: "universal:aluminio:l5000",
+      providerKey: "alumco",
+      profilePrices: prices,
+      backedGlassCostNet: 15000,
+    });
+
+    const threeUnits = buildGuidedTechnicalCostSuggestion({
+      recipe,
+      organizationId: 3,
+      lineTemplateId: 5000,
+      anchoMm: 2200,
+      altoMm: 1800,
+      cantidad: 3,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l5000",
+      supplierFamilyKey: "universal:aluminio:l5000",
+      providerKey: "alumco",
+      profilePrices: prices,
+      backedGlassCostNet: 45000,
+    });
+
+    expect(threeUnits.profilesCostNet!).toBeGreaterThan(oneUnit.profilesCostNet!);
+
+    const groupItem = calculateComponentItem({
+      codigo: "V1",
+      tipo: "Ventana",
+      nombre: "Ventana x3",
+      cantidad: 3,
+      costoProveedorUnitario: threeUnits.usableBaseCostGroupNet!,
+      margenPct: 100,
+      costInputScope: "group_total",
+      origenPrecio: "margen",
+    });
+    expect(groupItem.costoProveedorTotal).toBe(threeUnits.usableBaseCostGroupNet);
+    expect(groupItem.precioTotal).toBe(threeUnits.suggestedNetTotal);
+
+    const unitItem = calculateComponentItem({
+      codigo: "V2",
+      tipo: "Ventana",
+      nombre: "Ventana unitaria",
+      cantidad: 3,
+      costoProveedorUnitario: 50000,
+      margenPct: 100,
+      costInputScope: "unit",
+      origenPrecio: "margen",
+    });
+    expect(unitItem.costoProveedorTotal).toBe(150000);
+    expect(unitItem.precioTotal).toBe(300000);
+  });
+
+  it("devuelve Costo parcial cuando falta precio de vidrio o algún perfil y nunca aplica recargo automático sobre suma parcial", () => {
+    const recipe = getL5000Recipe();
+    const codes = [...new Set(recipe.definition.perfiles.map((p) => p.codigoPerfil))];
+    const prices = makePreviewPrices(codes, { netPrice: 10000 });
+
+    const partial = buildGuidedTechnicalCostSuggestion({
+      recipe,
+      organizationId: 3,
+      lineTemplateId: 5000,
+      anchoMm: 1200,
+      altoMm: 1500,
+      cantidad: 1,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l5000",
+      supplierFamilyKey: "universal:aluminio:l5000",
+      providerKey: "alumco",
+      profilePrices: prices,
+      backedGlassCostNet: null,
+    });
+
+    expect(partial.status).toBe("partial");
+    expect(partial.profilesCostNet).toBeGreaterThan(0);
+    expect(partial.glassCostNet).toBeNull();
+    expect(partial.usableBaseCostGroupNet).toBeNull();
+    expect(partial.suggestedNetTotal).toBeNull();
+    expect(partial.missingItems.length).toBeGreaterThan(0);
+  });
+
+  it("devuelve unavailable cuando faltan precios de proveedor, acabado incompatible o receta sin pauta", () => {
+    const recipe = getL5000Recipe();
+    const codes = [...new Set(recipe.definition.perfiles.map((p) => p.codigoPerfil))];
+    const matePrices = makePreviewPrices(codes, {
+      providerKey: "alumco",
+      priceSourceFinishName: "Mate",
+    });
+
+    const wrongProvider = buildGuidedTechnicalCostSuggestion({
+      recipe,
+      organizationId: 3,
+      lineTemplateId: 5000,
+      anchoMm: 1200,
+      altoMm: 1500,
+      cantidad: 1,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#2a2a2a",
+      material: "Aluminio",
+      finishName: "Negro",
+      catalogLineKey: "ventora:l5000",
+      supplierFamilyKey: "universal:aluminio:l5000",
+      providerKey: "arquetipo",
+      profilePrices: matePrices,
+    });
+
+    expect(wrongProvider.status).toBe("unavailable");
+    expect(wrongProvider.usableBaseCostGroupNet).toBeNull();
+    expect(wrongProvider.suggestedNetTotal).toBeNull();
+
+    const noRecipe = buildGuidedTechnicalCostSuggestion({
+      recipe: null,
+      anchoMm: 1200,
+      altoMm: 1500,
+      cantidad: 1,
+      vidrio: "Incoloro 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l5000",
+      supplierFamilyKey: "universal:aluminio:l5000",
+      providerKey: "alumco",
+      profilePrices: matePrices,
+    });
+    expect(noRecipe.status).toBe("unavailable");
+  });
+});

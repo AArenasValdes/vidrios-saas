@@ -3,8 +3,13 @@
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type { CostInputScope } from "@/features/cotizaciones/types/pricing-mode";
 import { QUOTE_PROFITABILITY_COPY } from "@/features/cotizaciones/services/quote-studio-financial.service";
+import type { GuidedTechnicalCostSuggestion } from "@/features/proveedor-catalogos/services/guided-technical-cost-suggestion.service";
 
 import s from "../../page.module.css";
+
+function formatNetClp(value: number) {
+  return `$ ${Math.round(value).toLocaleString("es-CL")}`;
+}
 
 type Props = {
   activePricingMode: PricingMode;
@@ -14,6 +19,12 @@ type Props = {
   costoIngresado: number;
   cantidad: number;
   hideMargenOption?: boolean;
+  technicalCostSummary?: GuidedTechnicalCostSuggestion | null;
+  isResolvingTechnicalCost?: boolean;
+  hasAppliedTechnicalCostSuggestion?: boolean;
+  onApplyTechnicalCostSuggestion?: () => void;
+  onRevertTechnicalCostSuggestion?: () => void;
+  onCompleteManualBaseCost?: () => void;
   onCostInputScopeChange: (scope: CostInputScope) => void;
   onMargenChange: (value: string) => void;
   onPrecioChange: (value: string) => void;
@@ -28,6 +39,12 @@ export function PasoDosWizardPrecioMovil({
   formattedPriceValue,
   marginValue,
   hideMargenOption = false,
+  technicalCostSummary = null,
+  isResolvingTechnicalCost = false,
+  hasAppliedTechnicalCostSuggestion = false,
+  onApplyTechnicalCostSuggestion,
+  onRevertTechnicalCostSuggestion,
+  onCompleteManualBaseCost,
   onCostInputScopeChange,
   onMargenChange,
   onPrecioChange,
@@ -131,6 +148,168 @@ export function PasoDosWizardPrecioMovil({
       ) : null}
 
       <span className={s.stepTwoMobileBlockHelp}>{priceHelp}</span>
+
+      {isResolvingTechnicalCost || technicalCostSummary ? (
+        <section
+          aria-label="Costo técnico de fabricación"
+          style={{
+            marginTop: "12px",
+            padding: "12px",
+            borderRadius: "12px",
+            border: "1px solid #d9e2ec",
+            background: "#f8fafc",
+            display: "grid",
+            gap: "8px",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+            <strong style={{ fontSize: "0.86rem", color: "#102a43" }}>
+              Costo técnico de fabricación
+            </strong>
+            {isResolvingTechnicalCost ? (
+              <span className={s.stepTwoMobileInlineHelp}>Calculando…</span>
+            ) : technicalCostSummary?.status === "complete" ? (
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  color: "#0f5132",
+                  background: "#d1e7dd",
+                  padding: "2px 8px",
+                  borderRadius: "999px",
+                }}
+              >
+                Costo verificado
+              </span>
+            ) : technicalCostSummary?.status === "partial" ? (
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  color: "#664d03",
+                  background: "#fff3cd",
+                  padding: "2px 8px",
+                  borderRadius: "999px",
+                }}
+              >
+                Costo parcial
+              </span>
+            ) : (
+              <span className={s.stepTwoMobileInlineHelp}>No disponible</span>
+            )}
+          </div>
+
+          {!isResolvingTechnicalCost && technicalCostSummary ? (
+            <>
+              {technicalCostSummary.status === "unavailable" ? (
+                <span className={s.stepTwoMobileInlineHelp}>
+                  {technicalCostSummary.reason ?? "Faltan datos para calcular el costo técnico."}
+                </span>
+              ) : (
+                <div style={{ display: "grid", gap: "4px", fontSize: "0.82rem", color: "#334e68" }}>
+                  <div>
+                    Perfiles conocidos:{" "}
+                    <strong>
+                      {technicalCostSummary.profilesCostNet != null
+                        ? formatNetClp(technicalCostSummary.profilesCostNet)
+                        : "Pendiente"}
+                    </strong>
+                  </div>
+                  <div>
+                    Vidrio:{" "}
+                    <strong>
+                      {technicalCostSummary.glassCostNet != null
+                        ? formatNetClp(technicalCostSummary.glassCostNet)
+                        : "Pendiente de precio de compra"}
+                    </strong>
+                  </div>
+                  {technicalCostSummary.accessoriesCostNet != null ? (
+                    <div>
+                      Accesorios:{" "}
+                      <strong>{formatNetClp(technicalCostSummary.accessoriesCostNet)}</strong>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
+              {technicalCostSummary.status === "partial" ? (
+                <div style={{ display: "grid", gap: "6px" }}>
+                  <span className={s.stepTwoMobileInlineHelp}>
+                    Costo conocido parcial:{" "}
+                    <strong>
+                      {technicalCostSummary.knownNetTotal != null
+                        ? formatNetClp(technicalCostSummary.knownNetTotal)
+                        : "$ 0"}
+                    </strong>
+                    {" · No incluye "}
+                    {technicalCostSummary.missingItems
+                      .slice(0, 2)
+                      .map((entry) => entry.description)
+                      .join(", ") || "materiales pendientes"}
+                    . No se aplica recargo automático sobre suma parcial.
+                  </span>
+                  {onCompleteManualBaseCost ? (
+                    <button
+                      type="button"
+                      className={s.stepTwoMobileSecondaryLink}
+                      onClick={onCompleteManualBaseCost}
+                      style={{ justifySelf: "start" }}
+                    >
+                      Completar costo base manual
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {technicalCostSummary.status === "complete" &&
+              technicalCostSummary.usableBaseCostGroupNet != null &&
+              technicalCostSummary.markupAmountNet != null &&
+              technicalCostSummary.suggestedNetTotal != null ? (
+                <div style={{ display: "grid", gap: "6px", borderTop: "1px solid #d9e2ec", paddingTop: "8px" }}>
+                  <div style={{ fontSize: "0.82rem", color: "#102a43" }}>
+                    Costo base neto (grupo):{" "}
+                    <strong>{formatNetClp(technicalCostSummary.usableBaseCostGroupNet)}</strong>
+                    {" · "}Recargo {technicalCostSummary.defaultMarkupPct}%:{" "}
+                    <strong>+{formatNetClp(technicalCostSummary.markupAmountNet)}</strong>
+                  </div>
+                  <div style={{ fontSize: "0.88rem", color: "#102a43" }}>
+                    Precio neto sugerido:{" "}
+                    <strong>{formatNetClp(technicalCostSummary.suggestedNetTotal)}</strong>
+                  </div>
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                    {hasAppliedTechnicalCostSuggestion && onRevertTechnicalCostSuggestion ? (
+                      <>
+                        <span className={s.stepTwoMobileInlineHelp}>Sugerencia aplicada</span>
+                        <button
+                          type="button"
+                          className={s.stepTwoMobileSecondaryLink}
+                          onClick={onRevertTechnicalCostSuggestion}
+                        >
+                          Revertir
+                        </button>
+                      </>
+                    ) : onApplyTechnicalCostSuggestion ? (
+                      <button
+                        type="button"
+                        className={s.stepTwoMobileChoiceChip}
+                        onClick={onApplyTechnicalCostSuggestion}
+                      >
+                        Usar sugerencia ({formatNetClp(technicalCostSummary.suggestedNetTotal)})
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+
+              {activePricingMode === "margen" && technicalCostSummary.status !== "complete" ? (
+                <span className={s.stepTwoMobileInlineHelp}>
+                  Costo base manual (incluye faltantes no verificados).
+                </span>
+              ) : null}
+            </>
+          ) : null}
+        </section>
+      ) : null}
     </div>
   );
 }
