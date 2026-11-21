@@ -18,6 +18,15 @@ import {
   VERATEC_7400_4H_CATALOG_KEY,
   VERATEC_7400_4H_VARIANTS,
 } from "@/features/fabricacion/fixtures/veratec-preliminary-recipes";
+import {
+  applyLineTemplateToComponentForm,
+  buildItemFromForm,
+  createEmptyComponentForm,
+  isCubicationPersonalizadoAssistMode,
+  mapItemToForm,
+} from "@/features/cotizaciones/new-quote/workflow-ui";
+import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
+import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
 const mockUseFabricationRecipes = jest.fn();
@@ -531,5 +540,195 @@ describe("PautaCubicacionPanel con recetas persistidas", () => {
       )
     );
     expect(onFormalSnapshot.mock.calls[0]?.[0]).not.toHaveProperty("qaPreliminary");
+  });
+
+  it("mantiene paridad Veratec 7400 entre Constructor desktop y Cotización guiada (PautaCubicacionPanel)", async () => {
+    const l42Template = {
+      id: 210,
+      nombre: "Serie 42 — Proyectante / paño fijo",
+      categoria: "aluminio",
+      material: "Aluminio",
+      catalogKey: "ventora:l42",
+      catalogMetadata: {
+        familyKey: "universal:aluminio:l42",
+        lineConfiguration: "AL-42 normal · Proyectante / paño fijo",
+      },
+      vidrioPrincipalRecomendado: "Incoloro monolítico 5mm",
+      precioM2Sugerido: 80000,
+      minimoCobrable: 35000,
+      redondeoPrecio: 1000,
+    } as unknown as CotizacionLineTemplate;
+    const veratecTemplate = {
+      id: 1135,
+      nombre: "Veratec 7400 — Corredera 2 hojas",
+      categoria: "pvc",
+      material: "PVC",
+      catalogKey: VERATEC_7400_CATALOG_KEY,
+      catalogMetadata: {
+        familyKey: "veratec:sliding-7400",
+        lineConfiguration: "Corredera Sliding 7400 · 2 hojas",
+      },
+      vidrioPrincipalRecomendado: "Incoloro monolítico 5mm",
+      precioM2Sugerido: 80000,
+      minimoCobrable: 35000,
+      redondeoPrecio: 1000,
+    } as unknown as CotizacionLineTemplate;
+
+    const baseForm = createEmptyComponentForm([], "", "precio_directo");
+    const presetForm = applyLineTemplateToComponentForm(
+      {
+        ...baseForm,
+        codigo: "V2",
+        tipo: "Ventana",
+        nombre: "Ventana corredera",
+        ancho: "1200",
+        alto: "1500",
+        cantidad: "1",
+        hojasBase: 1,
+        sistema: "Personalizado",
+        configuracion: "Personalizado",
+        sheetScheme: "Personalizado",
+        isCustomScheme: true,
+        guidedVisualConfig: createQuoteConstructorPresetConfig("corredera", {
+          widthMm: 1200,
+          heightMm: 1500,
+        }),
+      },
+      l42Template,
+      { fabricationRecipes: [], organizationId: 3 }
+    );
+    const initialV2 = buildItemFromForm(presetForm, [], "item-v2", {
+      lineTemplates: [l42Template, veratecTemplate],
+      fabricationRecipes: [],
+      organizationId: 3,
+    });
+    const updatedV2Form = applyLineTemplateToComponentForm(
+      mapItemToForm(initialV2),
+      veratecTemplate,
+      { fabricationRecipes: [], organizationId: 3 }
+    );
+    const rebuiltV2 = buildItemFromForm(updatedV2Form, [initialV2], "item-v2", {
+      lineTemplates: [l42Template, veratecTemplate],
+      fabricationRecipes: [],
+      organizationId: 3,
+    });
+
+    const constructorDespiece = resolveFabricacionDespieceForQuoteItem({
+      item: rebuiltV2,
+      recipes: [],
+      organizationId: 3,
+      lineTemplateId: veratecTemplate.id,
+      lineCatalogKey: veratecTemplate.catalogKey,
+      supplierFamilyKey: "veratec:sliding-7400",
+    });
+    expect(constructorDespiece.estado).toBe("calculado");
+    expect(constructorDespiece.formal?.pauta.length).toBeGreaterThan(0);
+
+    const syncedV2 = {
+      ...rebuiltV2,
+      fabricacionSnapshot: constructorDespiece.formal,
+      cubicationSnapshot: constructorDespiece.cubication,
+    };
+    const guidedForm = mapItemToForm(syncedV2);
+    const personalizadoAssistMode = isCubicationPersonalizadoAssistMode({
+      tipo: guidedForm.tipo,
+      sistema: guidedForm.sistema,
+      sheetScheme: guidedForm.sheetScheme,
+      configuracion: guidedForm.configuracion,
+      isCustomScheme: guidedForm.isCustomScheme,
+    });
+
+    mockUseFabricationRecipes.mockReturnValue({
+      organizationId: 3,
+      recipes: [],
+      isLoading: false,
+    });
+    Object.defineProperty(global, "fetch", {
+      configurable: true,
+      writable: true,
+      value: jest.fn(async () => ({ ok: false, json: async () => ({}) })),
+    });
+    const onFormalSnapshot = jest.fn();
+
+    render(
+      <PautaCubicacionPanel
+        componentForm={guidedForm}
+        selectedTemplate={veratecTemplate}
+        personalizadoAssistMode={personalizadoAssistMode}
+        onCubicationSnapshotChange={jest.fn()}
+        onFabricacionSnapshotChange={onFormalSnapshot}
+        onFabricationRecipeIdChange={jest.fn()}
+        onFabricacionContextoChange={jest.fn()}
+      />
+    );
+
+    expect(guidedForm.sistema).toBe("Corredera");
+    expect(guidedForm.sheetScheme).toBe("2 hojas");
+    expect(guidedForm.sheetVariant).toBe("2 móviles");
+    expect(personalizadoAssistMode).toBe(false);
+    expect(document.body.textContent).not.toContain("Sin despiece de perfiles para esta configuración.");
+    expect(document.body.textContent).not.toContain("Composición Personalizado: la pauta se arma a mano.");
+    expect(document.body.textContent).toContain("Veratec 7400 — Corredera 2 hojas");
+    expect(document.body.textContent).toContain("41.22 ml");
+    expect(document.body.textContent).toContain("40 cortes");
+  });
+
+  it("conserva modo Personalizado para composiciones Veratec 7400 modificadas en Constructor", () => {
+    const veratecTemplate = {
+      id: 1135,
+      nombre: "Veratec 7400 — Corredera 2 hojas",
+      categoria: "pvc",
+      material: "PVC",
+      catalogKey: VERATEC_7400_CATALOG_KEY,
+      catalogMetadata: {
+        familyKey: "veratec:sliding-7400",
+        lineConfiguration: "Corredera Sliding 7400 · 2 hojas",
+      },
+      vidrioPrincipalRecomendado: "Incoloro monolítico 5mm",
+      precioM2Sugerido: 80000,
+      minimoCobrable: 35000,
+      redondeoPrecio: 1000,
+    } as unknown as CotizacionLineTemplate;
+
+    const baseForm = createEmptyComponentForm([], "", "precio_directo");
+    const customConfig = {
+      ...createQuoteConstructorPresetConfig("corredera", { widthMm: 1800, heightMm: 1500 }),
+      quickCompositionStructural: true,
+    };
+    const customForm = applyLineTemplateToComponentForm(
+      {
+        ...baseForm,
+        codigo: "V3",
+        tipo: "Ventana",
+        nombre: "Ventana corredera",
+        ancho: "1800",
+        alto: "1500",
+        cantidad: "1",
+        hojasBase: 1,
+        sistema: "Personalizado",
+        configuracion: "Personalizado",
+        sheetScheme: "",
+        isCustomScheme: true,
+        guidedVisualConfig: customConfig,
+      },
+      veratecTemplate,
+      { fabricationRecipes: [], organizationId: 3 }
+    );
+    const rebuiltCustom = buildItemFromForm(customForm, [], "item-v3", {
+      lineTemplates: [veratecTemplate],
+      fabricationRecipes: [],
+      organizationId: 3,
+    });
+    const roundTripped = mapItemToForm(rebuiltCustom);
+    expect(roundTripped.sistema).toBe("Personalizado");
+    expect(
+      isCubicationPersonalizadoAssistMode({
+        tipo: roundTripped.tipo,
+        sistema: roundTripped.sistema,
+        sheetScheme: roundTripped.sheetScheme,
+        configuracion: roundTripped.configuracion,
+        isCustomScheme: roundTripped.isCustomScheme,
+      })
+    ).toBe(true);
   });
 });

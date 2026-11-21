@@ -3040,12 +3040,13 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
 function normalizeVeratec7400DefaultConstructorPreset(
   form: ComponentFormState
 ): ComponentFormState {
+  const sheetScheme = form.sheetScheme?.trim() ?? "";
   if (
     form.catalogLineKey !== VERATEC_7400_CATALOG_KEY ||
     normalizeSearchValue(form.tipo) !== "ventana" ||
     form.sistema?.trim() !== "Personalizado" ||
     form.configuracion?.trim() !== "Personalizado" ||
-    form.sheetScheme?.trim() !== "Personalizado" ||
+    (sheetScheme !== "" && sheetScheme !== "Personalizado") ||
     !form.guidedVisualConfig ||
     form.guidedVisualConfig.quickCompositionStructural ||
     hasQuickCompositionStructuralChanges(form.quickCompositionAdjustment)
