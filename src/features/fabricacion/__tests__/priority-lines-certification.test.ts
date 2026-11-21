@@ -73,10 +73,11 @@ function makePrice(input: {
   return {
     presentationId: input.id,
     providerKey: input.providerKey,
-    familyKey: input.familyKey,
+    familyKeys: [input.familyKey],
     technicalCode: input.technicalCode,
     technicalName: `Perfil ${input.technicalCode}`,
     supplierSku: `${input.providerKey}-${input.technicalCode}`,
+    presentationDescription: "Tira 6000 mm",
     finishResolution: "specific",
     finishCode: "M",
     finishName: input.finishName ?? "Mate",
@@ -89,8 +90,8 @@ function makePrice(input: {
     priceListRevision: "2026-11",
     priceListPublishedOn: "2026-11-01",
     priceListValidUntil: null,
-    priceReferenceStatus: "confirmed",
-    origin: "supplier",
+    priceReferenceStatus: "within_stated_validity",
+    origin: undefined,
   };
 }
 
@@ -297,7 +298,7 @@ describe("Certificación de las 4 configuraciones prioritarias", () => {
     expect(costSnapshot?.status).toBe("partial");
     expect(costSnapshot?.missing.some((entry) => entry.technicalCode === null)).toBe(true);
 
-    // Negative check: wrong finish / wrong family must not price L5000 cuts
+    // Negative check: wrong family with SAME finish ("Mate") must not price L5000 cuts
     const wrongFamilySnapshot = buildPartialTechnicalCostSnapshot({
       workSnapshot,
       quoteItems: [
@@ -308,7 +309,7 @@ describe("Certificación de las 4 configuraciones prioritarias", () => {
           finishName: "Mate",
           catalogLineKey: "ventora:l5000",
           supplierFamilyKey: "universal:aluminio:l5000",
-          providerKey: "alumco",
+          supplierProviderKey: "alumco",
         },
       ],
       availablePrices: profileCodes.map((code, idx) =>
@@ -317,7 +318,7 @@ describe("Certificación de las 4 configuraciones prioritarias", () => {
           familyKey: "universal:aluminio:l20",
           providerKey: "alumco",
           technicalCode: code,
-          finishName: "Negro",
+          finishName: "Mate",
           netPrice: 10000,
         })
       ),

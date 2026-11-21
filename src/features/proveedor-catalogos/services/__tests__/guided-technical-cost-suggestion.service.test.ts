@@ -37,7 +37,7 @@ function makePreviewPrices(
     netPrice: 12000,
     currency: "CLP",
     priceSource: "reference",
-    priceReferenceStatus: "confirmed",
+    priceReferenceStatus: "within_stated_validity",
     finishPriceBasis: "specific_finish",
     priceSourceFinishName: "Mate",
     status: "priced",
@@ -265,5 +265,74 @@ describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", (
       profilePrices: matePrices,
     });
     expect(noRecipe.status).toBe("unavailable");
+  });
+
+  it("nunca marca Costo verificado (complete) cuando la receta no está validada físicamente o la fuente es histórica/no vigente", () => {
+    const l42TestingRecipe = resolveUniversalPricedLineFallbacks({
+      catalogKey: "ventora:l42",
+      lineTemplateId: 42,
+      organizationId: 3,
+      lineName: "Serie 42",
+      variant: "arquetipo_sin_camara_monolitico",
+      leavesCount: 1,
+      typology: "proyectante",
+      glassName: "Incoloro monolítico 5mm",
+      includeDocumentedVariants: true,
+      recipes: [],
+    })[0]!;
+    expect(l42TestingRecipe.status).toBe("testing");
+
+    const l42Codes = [...new Set(l42TestingRecipe.definition.perfiles.map((p) => p.codigoPerfil))];
+    const l42Result = buildGuidedTechnicalCostSuggestion({
+      recipe: l42TestingRecipe,
+      organizationId: 3,
+      lineTemplateId: 42,
+      anchoMm: 1000,
+      altoMm: 1000,
+      cantidad: 1,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l42",
+      supplierFamilyKey: "universal:aluminio:l42",
+      providerKey: "alumco",
+      profilePrices: makePreviewPrices(l42Codes, { netPrice: 12000 }),
+      backedGlassCostNet: 15000,
+    });
+
+    expect(l42Result.isRecipeValidated).toBe(false);
+    expect(l42Result.status).toBe("partial");
+    expect(l42Result.usableBaseCostGroupNet).toBeNull();
+    expect(l42Result.suggestedNetTotal).toBeNull();
+    expect(l42Result.nonVerifiedReasons[0]).toMatch(/sin validación física/i);
+
+    const validatedL5000 = getL5000Recipe();
+    const l5000Codes = [...new Set(validatedL5000.definition.perfiles.map((p) => p.codigoPerfil))];
+    const historicalResult = buildGuidedTechnicalCostSuggestion({
+      recipe: validatedL5000,
+      organizationId: 3,
+      lineTemplateId: 5000,
+      anchoMm: 1200,
+      altoMm: 1500,
+      cantidad: 1,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l5000",
+      supplierFamilyKey: "universal:aluminio:l5000",
+      providerKey: "alumco",
+      profilePrices: makePreviewPrices(l5000Codes, {
+        priceReferenceStatus: "historical_reference",
+        priceSource: "reference",
+      }),
+      backedGlassCostNet: 15000,
+    });
+
+    expect(historicalResult.isRecipeValidated).toBe(true);
+    expect(historicalResult.status).toBe("partial");
+    expect(historicalResult.usableBaseCostGroupNet).toBeNull();
+    expect(historicalResult.suggestedNetTotal).toBeNull();
   });
 });

@@ -783,41 +783,97 @@ export function PasoDosWizardConfiguracionMovil({
     supplierPresentationResolution.result?.profilePrices,
     supportsProfilePurchaseCosts,
   ]);
-  const [appliedTechnicalSuggestionPrevious, setAppliedTechnicalSuggestionPrevious] = useState<{
-    pricingMode: PricingMode;
-    margenPct: string;
-    precio: string;
-    costInputScope: "group_total" | "unit";
+  const technicalSuggestionContextKey = [
+    selectedCatalogLineKey ?? "",
+    selectedRecipeLineTemplateId ?? "",
+    effectiveSupplierRecipe?.id ?? "",
+    effectiveSupplierRecipe?.version ?? "",
+    draft.ancho,
+    draft.alto,
+    effectiveGroupQuantity > 0 ? effectiveGroupQuantity : 1,
+    draft.vidrio,
+    draft.colorHex,
+    draft.catalogTerminacion ?? "",
+    activeSupplierProviderKey ?? "",
+    draft.sheetScheme,
+    draft.sheetVariant,
+    draft.costInputScope,
+  ].join("|");
+  const [appliedTechnicalSuggestion, setAppliedTechnicalSuggestion] = useState<{
+    previous: {
+      pricingMode: PricingMode;
+      margenPct: string;
+      precio: string;
+      costInputScope: "group_total" | "unit";
+    };
+    contextKey: string;
+    suggestedNetTotal: number;
   } | null>(null);
+  const isResolvingTechnicalCost =
+    supportsProfilePurchaseCosts && supplierPresentationResolution.isResolving;
+  const hasAppliedTechnicalCostSuggestion = Boolean(
+    appliedTechnicalSuggestion &&
+    !isResolvingTechnicalCost &&
+    technicalCostSummary?.status === "complete" &&
+    appliedTechnicalSuggestion.contextKey === technicalSuggestionContextKey &&
+    appliedTechnicalSuggestion.suggestedNetTotal === technicalCostSummary.suggestedNetTotal &&
+    draft.costInputScope === "group_total"
+  );
+  const isAppliedTechnicalCostSuggestionOutdated = Boolean(
+    appliedTechnicalSuggestion && !hasAppliedTechnicalCostSuggestion
+  );
   const handleApplyTechnicalCostSuggestion = () => {
     if (
+      isResolvingTechnicalCost ||
       !technicalCostSummary ||
       technicalCostSummary.status !== "complete" ||
-      technicalCostSummary.usableBaseCostGroupNet == null
+      technicalCostSummary.usableBaseCostGroupNet == null ||
+      technicalCostSummary.suggestedNetTotal == null
     ) {
       return;
     }
-    setAppliedTechnicalSuggestionPrevious({
-      pricingMode: activePricingMode,
-      margenPct: draft.margenPct,
-      precio: draft.precio,
-      costInputScope: draft.costInputScope,
-    });
+    const nextContextKey = [
+      selectedCatalogLineKey ?? "",
+      selectedRecipeLineTemplateId ?? "",
+      effectiveSupplierRecipe?.id ?? "",
+      effectiveSupplierRecipe?.version ?? "",
+      draft.ancho,
+      draft.alto,
+      effectiveGroupQuantity > 0 ? effectiveGroupQuantity : 1,
+      draft.vidrio,
+      draft.colorHex,
+      draft.catalogTerminacion ?? "",
+      activeSupplierProviderKey ?? "",
+      draft.sheetScheme,
+      draft.sheetVariant,
+      "group_total",
+    ].join("|");
+    setAppliedTechnicalSuggestion((current) => ({
+      previous: current?.previous ?? {
+        pricingMode: activePricingMode,
+        margenPct: draft.margenPct,
+        precio: draft.precio,
+        costInputScope: draft.costInputScope,
+      },
+      contextKey: nextContextKey,
+      suggestedNetTotal: technicalCostSummary.suggestedNetTotal!,
+    }));
     onPricingModeChange("margen");
     onMargenChange(String(technicalCostSummary.defaultMarkupPct));
     onCostInputScopeChange("group_total");
     onPrecioChange(String(Math.round(technicalCostSummary.usableBaseCostGroupNet)));
   };
   const handleRevertTechnicalCostSuggestion = () => {
-    if (!appliedTechnicalSuggestionPrevious) return;
-    onPricingModeChange(appliedTechnicalSuggestionPrevious.pricingMode);
-    onMargenChange(appliedTechnicalSuggestionPrevious.margenPct);
-    onCostInputScopeChange(appliedTechnicalSuggestionPrevious.costInputScope);
-    onPrecioChange(appliedTechnicalSuggestionPrevious.precio);
-    setAppliedTechnicalSuggestionPrevious(null);
+    if (!appliedTechnicalSuggestion) return;
+    const { previous } = appliedTechnicalSuggestion;
+    onPricingModeChange(previous.pricingMode);
+    onMargenChange(previous.margenPct);
+    onCostInputScopeChange(previous.costInputScope);
+    onPrecioChange(previous.precio);
+    setAppliedTechnicalSuggestion(null);
   };
   const handleCompleteManualBaseCost = () => {
-    setAppliedTechnicalSuggestionPrevious(null);
+    setAppliedTechnicalSuggestion(null);
     onPricingModeChange("margen");
     if (!draft.margenPct.trim() || draft.margenPct === "0") {
       onMargenChange("100");
@@ -2696,22 +2752,23 @@ export function PasoDosWizardConfiguracionMovil({
               : draft.cantidad
           }
           technicalCostSummary={technicalCostSummary}
-          isResolvingTechnicalCost={supportsProfilePurchaseCosts && supplierPresentationResolution.isResolving}
-          hasAppliedTechnicalCostSuggestion={Boolean(appliedTechnicalSuggestionPrevious)}
+          isResolvingTechnicalCost={isResolvingTechnicalCost}
+          hasAppliedTechnicalCostSuggestion={hasAppliedTechnicalCostSuggestion}
+          isAppliedTechnicalCostSuggestionOutdated={isAppliedTechnicalCostSuggestionOutdated}
           onApplyTechnicalCostSuggestion={handleApplyTechnicalCostSuggestion}
           onRevertTechnicalCostSuggestion={handleRevertTechnicalCostSuggestion}
           onCompleteManualBaseCost={handleCompleteManualBaseCost}
           onCostInputScopeChange={onCostInputScopeChange}
           onMargenChange={(value) => {
-            setAppliedTechnicalSuggestionPrevious(null);
+            setAppliedTechnicalSuggestion(null);
             onMargenChange(value);
           }}
           onPrecioChange={(value) => {
-            setAppliedTechnicalSuggestionPrevious(null);
+            setAppliedTechnicalSuggestion(null);
             onPrecioChange(value);
           }}
           onPricingModeChange={(mode) => {
-            setAppliedTechnicalSuggestionPrevious(null);
+            setAppliedTechnicalSuggestion(null);
             onPricingModeChange(mode);
           }}
           priceHelp={priceHelp}

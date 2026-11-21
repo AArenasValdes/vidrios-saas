@@ -22,6 +22,7 @@ type Props = {
   technicalCostSummary?: GuidedTechnicalCostSuggestion | null;
   isResolvingTechnicalCost?: boolean;
   hasAppliedTechnicalCostSuggestion?: boolean;
+  isAppliedTechnicalCostSuggestionOutdated?: boolean;
   onApplyTechnicalCostSuggestion?: () => void;
   onRevertTechnicalCostSuggestion?: () => void;
   onCompleteManualBaseCost?: () => void;
@@ -38,10 +39,13 @@ export function PasoDosWizardPrecioMovil({
   costInputScope,
   formattedPriceValue,
   marginValue,
+  costoIngresado,
+  cantidad,
   hideMargenOption = false,
   technicalCostSummary = null,
   isResolvingTechnicalCost = false,
   hasAppliedTechnicalCostSuggestion = false,
+  isAppliedTechnicalCostSuggestionOutdated = false,
   onApplyTechnicalCostSuggestion,
   onRevertTechnicalCostSuggestion,
   onCompleteManualBaseCost,
@@ -52,6 +56,19 @@ export function PasoDosWizardPrecioMovil({
   priceHelp,
   priceLabel,
 }: Props) {
+  const effectiveQty = Number.isFinite(cantidad) && cantidad > 0 ? Math.round(cantidad) : 1;
+  const manualBaseGroupCost =
+    activePricingMode === "margen" && Number.isFinite(costoIngresado) && costoIngresado > 0
+      ? costInputScope === "unit"
+        ? Math.round(costoIngresado * effectiveQty)
+        : Math.round(costoIngresado)
+      : 0;
+  const isManualBaseBelowKnownCost =
+    activePricingMode === "margen" &&
+    technicalCostSummary?.knownNetTotal != null &&
+    manualBaseGroupCost > 0 &&
+    manualBaseGroupCost < technicalCostSummary.knownNetTotal;
+
   const pricingOptions = hideMargenOption
     ? [{ value: "precio_directo" as const, label: "Valor directo" }]
     : [
@@ -144,10 +161,35 @@ export function PasoDosWizardPrecioMovil({
               ? "Aplica a todas las unidades del grupo."
               : "Se multiplicará por la cantidad."}
           </span>
+          {costInputScope === "unit" && costoIngresado > 0 && effectiveQty > 1 ? (
+            <span className={s.stepTwoMobileInlineHelp}>
+              Equivalente grupo ({effectiveQty} u): {formatNetClp(costoIngresado)} / u ×{" "}
+              {effectiveQty} u = <strong>{formatNetClp(manualBaseGroupCost)}</strong> base total
+            </span>
+          ) : null}
         </div>
       ) : null}
 
       <span className={s.stepTwoMobileBlockHelp}>{priceHelp}</span>
+
+      {isManualBaseBelowKnownCost ? (
+        <div
+          role="alert"
+          style={{
+            marginTop: "8px",
+            padding: "8px 10px",
+            borderRadius: "10px",
+            border: "1px solid #f59f00",
+            background: "#fff9db",
+            color: "#664d03",
+            fontSize: "0.8rem",
+          }}
+        >
+          El costo base ingresado ({formatNetClp(manualBaseGroupCost)}) es menor que los materiales
+          conocidos ({formatNetClp(technicalCostSummary!.knownNetTotal!)}). Verifica que incluya el
+          total completo y no solo la diferencia.
+        </div>
+      ) : null}
 
       {isResolvingTechnicalCost || technicalCostSummary ? (
         <section
@@ -207,6 +249,17 @@ export function PasoDosWizardPrecioMovil({
                 </span>
               ) : (
                 <div style={{ display: "grid", gap: "4px", fontSize: "0.82rem", color: "#334e68" }}>
+                  <span className={s.stepTwoMobileInlineHelp}>
+                    Solo materiales (perfiles, vidrio y accesorios). No incluye mano de obra ni
+                    instalación.
+                  </span>
+                  {!technicalCostSummary.isRecipeValidated ? (
+                    <span className={s.stepTwoMobileInlineHelp}>
+                      Receta sin validación física de taller (estado{" "}
+                      {technicalCostSummary.recipeStatus ?? "pendiente"}). No acredita fabricación
+                      validada.
+                    </span>
+                  ) : null}
                   <div>
                     Perfiles conocidos:{" "}
                     <strong>
@@ -241,12 +294,17 @@ export function PasoDosWizardPrecioMovil({
                         ? formatNetClp(technicalCostSummary.knownNetTotal)
                         : "$ 0"}
                     </strong>
-                    {" · No incluye "}
-                    {technicalCostSummary.missingItems
-                      .slice(0, 2)
-                      .map((entry) => entry.description)
-                      .join(", ") || "materiales pendientes"}
-                    . No se aplica recargo automático sobre suma parcial.
+                    {" · "}
+                    {technicalCostSummary.nonVerifiedReasons[0]
+                      ? `${technicalCostSummary.nonVerifiedReasons[0]} `
+                      : null}
+                    {technicalCostSummary.missingItems.length > 0
+                      ? `Falta ${technicalCostSummary.missingItems
+                          .slice(0, 2)
+                          .map((entry) => entry.description)
+                          .join(", ")}. `
+                      : null}
+                    No se aplica recargo automático sobre suma parcial.
                   </span>
                   {onCompleteManualBaseCost ? (
                     <button
@@ -267,11 +325,24 @@ export function PasoDosWizardPrecioMovil({
               technicalCostSummary.suggestedNetTotal != null ? (
                 <div style={{ display: "grid", gap: "6px", borderTop: "1px solid #d9e2ec", paddingTop: "8px" }}>
                   <div style={{ fontSize: "0.82rem", color: "#102a43" }}>
-                    Costo base neto (grupo):{" "}
+                    Costo base neto ({effectiveQty > 1 ? `grupo ${effectiveQty} u` : "grupo"}):{" "}
                     <strong>{formatNetClp(technicalCostSummary.usableBaseCostGroupNet)}</strong>
                     {" · "}Recargo {technicalCostSummary.defaultMarkupPct}%:{" "}
                     <strong>+{formatNetClp(technicalCostSummary.markupAmountNet)}</strong>
                   </div>
+                  {effectiveQty > 1 ? (
+                    <div style={{ fontSize: "0.78rem", color: "#486581" }}>
+                      Equivalente por unidad:{" "}
+                      <strong>
+                        {formatNetClp(Math.round(technicalCostSummary.usableBaseCostGroupNet / effectiveQty))}
+                      </strong>
+                      {" → "}
+                      <strong>
+                        {formatNetClp(Math.round(technicalCostSummary.suggestedNetTotal / effectiveQty))}
+                      </strong>{" "}
+                      / u neto
+                    </div>
+                  ) : null}
                   <div style={{ fontSize: "0.88rem", color: "#102a43" }}>
                     Precio neto sugerido:{" "}
                     <strong>{formatNetClp(technicalCostSummary.suggestedNetTotal)}</strong>
@@ -288,22 +359,53 @@ export function PasoDosWizardPrecioMovil({
                           Revertir
                         </button>
                       </>
-                    ) : onApplyTechnicalCostSuggestion ? (
-                      <button
-                        type="button"
-                        className={s.stepTwoMobileChoiceChip}
-                        onClick={onApplyTechnicalCostSuggestion}
-                      >
-                        Usar sugerencia ({formatNetClp(technicalCostSummary.suggestedNetTotal)})
-                      </button>
-                    ) : null}
+                    ) : (
+                      <>
+                        {onApplyTechnicalCostSuggestion ? (
+                          <button
+                            type="button"
+                            className={s.stepTwoMobileChoiceChip}
+                            onClick={onApplyTechnicalCostSuggestion}
+                          >
+                            Usar sugerencia ({formatNetClp(technicalCostSummary.suggestedNetTotal)})
+                          </button>
+                        ) : null}
+                        {isAppliedTechnicalCostSuggestionOutdated && onRevertTechnicalCostSuggestion ? (
+                          <button
+                            type="button"
+                            className={s.stepTwoMobileSecondaryLink}
+                            onClick={onRevertTechnicalCostSuggestion}
+                          >
+                            Revertir
+                          </button>
+                        ) : null}
+                      </>
+                    )}
                   </div>
+                </div>
+              ) : null}
+
+              {isAppliedTechnicalCostSuggestionOutdated ? (
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                  <span className={s.stepTwoMobileInlineHelp}>
+                    La configuración cambió: la sugerencia anterior quedó desactualizada.
+                  </span>
+                  {technicalCostSummary.status !== "complete" && onRevertTechnicalCostSuggestion ? (
+                    <button
+                      type="button"
+                      className={s.stepTwoMobileSecondaryLink}
+                      onClick={onRevertTechnicalCostSuggestion}
+                    >
+                      Revertir
+                    </button>
+                  ) : null}
                 </div>
               ) : null}
 
               {activePricingMode === "margen" && technicalCostSummary.status !== "complete" ? (
                 <span className={s.stepTwoMobileInlineHelp}>
-                  Costo base manual (incluye faltantes no verificados).
+                  Costo base manual: representa el total completo de la base (no se suma encima del
+                  parcial).
                 </span>
               ) : null}
             </>

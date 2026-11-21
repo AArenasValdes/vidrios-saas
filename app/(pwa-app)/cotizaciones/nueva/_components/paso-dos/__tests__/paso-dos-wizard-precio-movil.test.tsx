@@ -7,6 +7,8 @@ import type { GuidedTechnicalCostSuggestion } from "@/features/proveedor-catalog
 
 const completeSummary: GuidedTechnicalCostSuggestion = {
   status: "complete",
+  recipeStatus: "validated",
+  isRecipeValidated: true,
   profilesCostNet: 105000,
   glassCostNet: 15000,
   accessoriesCostNet: null,
@@ -17,12 +19,15 @@ const completeSummary: GuidedTechnicalCostSuggestion = {
   suggestedNetTotal: 240000,
   currency: "CLP",
   missingItems: [],
+  nonVerifiedReasons: [],
   reason: null,
   costSnapshot: null,
 };
 
 const partialSummary: GuidedTechnicalCostSuggestion = {
   status: "partial",
+  recipeStatus: "validated",
+  isRecipeValidated: true,
   profilesCostNet: 90000,
   glassCostNet: null,
   accessoriesCostNet: null,
@@ -39,6 +44,7 @@ const partialSummary: GuidedTechnicalCostSuggestion = {
       reason: "Falta presentación de compra del vidrio.",
     },
   ],
+  nonVerifiedReasons: [],
   reason: null,
   costSnapshot: null,
 };
@@ -129,9 +135,100 @@ describe("PasoDosWizardPrecioMovil — Costo técnico y sugerencia comercial", (
     expect(screen.getByText("Costo parcial")).toBeInTheDocument();
     expect(screen.getByText(/No se aplica recargo automático sobre suma parcial/i)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Usar sugerencia/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/Costo base manual \(incluye faltantes no verificados\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Costo base manual: representa el total completo de la base/i)).toBeInTheDocument();
+    expect(screen.getByText(/No incluye mano de obra ni instalación/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Completar costo base manual" }));
     expect(onCompleteManual).toHaveBeenCalledTimes(1);
+  });
+
+  it("advierte si el costo base manual es menor que los materiales conocidos y muestra equivalencia Por unidad vs grupo", () => {
+    const { rerender } = render(
+      <PasoDosWizardPrecioMovil
+        activePricingMode="margen"
+        costInputScope="group_total"
+        formattedPriceValue="$ 80.000"
+        marginValue="100"
+        costoIngresado={80000}
+        cantidad={2}
+        technicalCostSummary={partialSummary}
+        onCostInputScopeChange={jest.fn()}
+        onMargenChange={jest.fn()}
+        onPrecioChange={jest.fn()}
+        onPricingModeChange={jest.fn()}
+        priceHelp="Costo base"
+        priceLabel="Costo base"
+      />
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/menor que los materiales conocidos/i);
+
+    rerender(
+      <PasoDosWizardPrecioMovil
+        activePricingMode="margen"
+        costInputScope="unit"
+        formattedPriceValue="$ 60.000"
+        marginValue="100"
+        costoIngresado={60000}
+        cantidad={2}
+        technicalCostSummary={{
+          ...partialSummary,
+          isRecipeValidated: false,
+          recipeStatus: "testing",
+          nonVerifiedReasons: ["Receta en estado testing sin validación física de taller."],
+        }}
+        onCostInputScopeChange={jest.fn()}
+        onMargenChange={jest.fn()}
+        onPrecioChange={jest.fn()}
+        onPricingModeChange={jest.fn()}
+        priceHelp="Costo base"
+        priceLabel="Costo base"
+      />
+    );
+
+    // 60.000 / u * 2 = 120.000 >= 90.000 known -> no under-cost warning, and transparent equivalence shown
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByText(/\$ 60\.000 \/ u × 2 u/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/sin validación física de taller/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText("Costo verificado")).not.toBeInTheDocument();
+  });
+
+  it("permite actualizar o revertir cuando la configuración cambia tras aplicar sugerencia", () => {
+    const onApply = jest.fn();
+    const onRevert = jest.fn();
+
+    render(
+      <PasoDosWizardPrecioMovil
+        activePricingMode="margen"
+        costInputScope="group_total"
+        formattedPriceValue="$ 120.000"
+        marginValue="100"
+        costoIngresado={120000}
+        cantidad={2}
+        technicalCostSummary={{
+          ...completeSummary,
+          usableBaseCostGroupNet: 220000,
+          markupAmountNet: 220000,
+          suggestedNetTotal: 440000,
+        }}
+        hasAppliedTechnicalCostSuggestion={false}
+        isAppliedTechnicalCostSuggestionOutdated
+        onApplyTechnicalCostSuggestion={onApply}
+        onRevertTechnicalCostSuggestion={onRevert}
+        onCostInputScopeChange={jest.fn()}
+        onMargenChange={jest.fn()}
+        onPrecioChange={jest.fn()}
+        onPricingModeChange={jest.fn()}
+        priceHelp="Costo base"
+        priceLabel="Costo base"
+      />
+    );
+
+    expect(screen.getByText(/La configuración cambió: la sugerencia anterior quedó desactualizada/i)).toBeInTheDocument();
+    expect(screen.getByText(/Equivalente por unidad/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Usar sugerencia \(\$ 440\.000\)/i }));
+    expect(onApply).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "Revertir" }));
+    expect(onRevert).toHaveBeenCalledTimes(1);
   });
 });

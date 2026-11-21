@@ -19,6 +19,8 @@ export type GuidedTechnicalCostSuggestionStatus = "complete" | "partial" | "unav
 
 export type GuidedTechnicalCostSuggestion = {
   status: GuidedTechnicalCostSuggestionStatus;
+  recipeStatus: FabricationRecipeRecord["status"] | null;
+  isRecipeValidated: boolean;
   profilesCostNet: number | null;
   glassCostNet: number | null;
   accessoriesCostNet: number | null;
@@ -33,6 +35,7 @@ export type GuidedTechnicalCostSuggestion = {
     description: string;
     reason: string;
   }>;
+  nonVerifiedReasons: string[];
   reason: string | null;
   costSnapshot: TechnicalCostSnapshot | null;
 };
@@ -117,6 +120,8 @@ export function buildGuidedTechnicalCostSuggestion(input: {
 
   const emptyUnavailable = (reason: string): GuidedTechnicalCostSuggestion => ({
     status: "unavailable",
+    recipeStatus: input.recipe?.status ?? null,
+    isRecipeValidated: input.recipe?.status === "validated",
     profilesCostNet: null,
     glassCostNet: null,
     accessoriesCostNet: null,
@@ -127,6 +132,7 @@ export function buildGuidedTechnicalCostSuggestion(input: {
     suggestedNetTotal: null,
     currency: null,
     missingItems: [],
+    nonVerifiedReasons: [],
     reason,
     costSnapshot: null,
   });
@@ -281,8 +287,66 @@ export function buildGuidedTechnicalCostSuggestion(input: {
       ? knownComponents.reduce((sum, value) => sum + value, 0)
       : null;
 
+  const usedPresentationIds = new Set(
+    costSnapshot.lines
+      .map((line) => line.presentationId)
+      .filter((id): id is string => Boolean(id))
+  );
+  const usedPreviewRows = input.profilePrices.filter((row) =>
+    usedPresentationIds.has(row.presentationId)
+  );
+  const hasHistoricalReferenceOnly =
+    costSnapshot.lines.some(
+      (line) =>
+        line.priceReferenceStatus === "historical_reference" &&
+        line.effectivePriceSource === "reference"
+    ) ||
+    usedPreviewRows.some(
+      (row) =>
+        row.priceReferenceStatus === "historical_reference" &&
+        (row.priceSource === "reference" || row.priceSource == null)
+    );
+  const hasNotYetValidPrice =
+    costSnapshot.lines.some((line) => line.priceReferenceStatus === "not_yet_valid") ||
+    usedPreviewRows.some((row) => row.priceReferenceStatus === "not_yet_valid");
+  const hasCommercialEstimateOnly =
+    costSnapshot.totalCostClassification === "commercial_estimate" ||
+    costSnapshot.lines.some(
+      (line) => line.priceApplicationStatus === "base_reference_other_finish"
+    );
+  const hasMixedCurrencies = costSnapshot.currency == null;
+
+  const isRecipeValidated = input.recipe.status === "validated";
+  const nonVerifiedReasons: string[] = [];
+  if (!isRecipeValidated) {
+    nonVerifiedReasons.push(
+      `Receta en estado ${input.recipe.status} sin validación física de taller.`
+    );
+  }
+  if (hasHistoricalReferenceOnly) {
+    nonVerifiedReasons.push(
+      "Incluye referencia histórica de lista sin vigencia activa ni ajuste propio confirmado."
+    );
+  }
+  if (hasNotYetValidPrice) {
+    nonVerifiedReasons.push("Incluye lista de precios que aún no entra en vigencia.");
+  }
+  if (hasCommercialEstimateOnly) {
+    nonVerifiedReasons.push(
+      "Incluye estimación comercial desde otro acabado sin presentación física exacta."
+    );
+  }
+  if (hasMixedCurrencies) {
+    nonVerifiedReasons.push("Las presentaciones seleccionadas mezclan más de una moneda.");
+  }
+
   const isRecipeConfirmedOrCalculable =
-    costSnapshot.lines.length > 0 && missingItems.length === 0 && knownNetTotal != null && knownNetTotal > 0;
+    isRecipeValidated &&
+    costSnapshot.lines.length > 0 &&
+    missingItems.length === 0 &&
+    nonVerifiedReasons.length === 0 &&
+    knownNetTotal != null &&
+    knownNetTotal > 0;
 
   if (isRecipeConfirmedOrCalculable) {
     const usableBaseCostGroupNet = knownNetTotal;
@@ -290,6 +354,8 @@ export function buildGuidedTechnicalCostSuggestion(input: {
     const suggestedNetTotal = usableBaseCostGroupNet + markupAmountNet;
     return {
       status: "complete",
+      recipeStatus: input.recipe.status,
+      isRecipeValidated,
       profilesCostNet,
       glassCostNet,
       accessoriesCostNet,
@@ -298,8 +364,9 @@ export function buildGuidedTechnicalCostSuggestion(input: {
       defaultMarkupPct,
       markupAmountNet,
       suggestedNetTotal,
-      currency: costSnapshot.currency ?? "CLP",
+      currency: costSnapshot.currency,
       missingItems: [],
+      nonVerifiedReasons: [],
       reason: null,
       costSnapshot,
     };
@@ -308,6 +375,8 @@ export function buildGuidedTechnicalCostSuggestion(input: {
   if (knownNetTotal != null && knownNetTotal > 0) {
     return {
       status: "partial",
+      recipeStatus: input.recipe.status,
+      isRecipeValidated,
       profilesCostNet,
       glassCostNet,
       accessoriesCostNet,
@@ -322,13 +391,16 @@ export function buildGuidedTechnicalCostSuggestion(input: {
         description,
         reason,
       })),
-      reason: null,
+      nonVerifiedReasons,
+      reason: nonVerifiedReasons[0] ?? null,
       costSnapshot,
     };
   }
 
   return {
     status: "unavailable",
+    recipeStatus: input.recipe.status,
+    isRecipeValidated,
     profilesCostNet: null,
     glassCostNet,
     accessoriesCostNet: null,
@@ -343,7 +415,10 @@ export function buildGuidedTechnicalCostSuggestion(input: {
       description,
       reason,
     })),
-    reason: "Faltan precios de compra compatibles para valorizar esta configuración.",
+    nonVerifiedReasons,
+    reason:
+      nonVerifiedReasons[0] ??
+      "Faltan precios de compra compatibles para valorizar esta configuración.",
     costSnapshot,
   };
 }
