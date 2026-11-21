@@ -202,9 +202,21 @@ export function PasoDosWizardPrecioMovil({
             background: "#f8fafc",
             display: "grid",
             gap: "8px",
+            minWidth: 0,
+            maxWidth: "100%",
+            overflowWrap: "anywhere",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "8px",
+              flexWrap: "wrap",
+              minWidth: 0,
+            }}
+          >
             <strong style={{ fontSize: "0.86rem", color: "#102a43" }}>
               Costo técnico de fabricación
             </strong>

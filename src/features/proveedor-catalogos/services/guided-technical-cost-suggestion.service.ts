@@ -314,7 +314,10 @@ export function buildGuidedTechnicalCostSuggestion(input: {
     costSnapshot.lines.some(
       (line) => line.priceApplicationStatus === "base_reference_other_finish"
     );
-  const hasMixedCurrencies = costSnapshot.currency == null;
+  const distinctCurrencies = [
+    ...new Set(costSnapshot.lines.map((line) => line.currency).filter(Boolean)),
+  ];
+  const hasMixedCurrencies = distinctCurrencies.length > 1;
 
   const isRecipeValidated = input.recipe.status === "validated";
   const nonVerifiedReasons: string[] = [];

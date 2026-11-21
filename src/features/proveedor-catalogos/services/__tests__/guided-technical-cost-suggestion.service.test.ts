@@ -335,4 +335,154 @@ describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", (
     expect(historicalResult.usableBaseCostGroupNet).toBeNull();
     expect(historicalResult.suggestedNetTotal).toBeNull();
   });
+
+  it("distingue sin precios valorizados (no mezcla de monedas), precios en CLP y mezcla real de monedas", () => {
+    const l20Recipe = resolveUniversalPricedLineFallbacks({
+      catalogKey: "ventora:l20",
+      lineTemplateId: 20,
+      organizationId: 3,
+      lineName: "Serie 20",
+      variant: "pierna_abierta_jamba_2009",
+      leavesCount: 2,
+      typology: "corredera",
+      glassName: "Incoloro monolítico 5mm",
+      recipes: [],
+    })[0]!;
+    const codes = [...new Set(l20Recipe.definition.perfiles.map((p) => p.codigoPerfil))];
+
+    // 1. 0 perfiles valorizados (ej. Alumco L20 sin precios compatibles) -> NO debe reportar mezcla de monedas
+    const zeroPriced = buildGuidedTechnicalCostSuggestion({
+      recipe: l20Recipe,
+      organizationId: 3,
+      lineTemplateId: 20,
+      anchoMm: 1200,
+      altoMm: 1500,
+      cantidad: 1,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l20",
+      supplierFamilyKey: "universal:aluminio:l20",
+      providerKey: "alumco",
+      profilePrices: [],
+    });
+    expect(zeroPriced.status).toBe("unavailable");
+    expect(zeroPriced.reason).toBe("Faltan precios de compra compatibles para valorizar esta configuración.");
+    expect(zeroPriced.nonVerifiedReasons).not.toContain("Las presentaciones seleccionadas mezclan más de una moneda.");
+
+    // 2. Perfiles valorizados en CLP -> sin mezcla de monedas
+    const clpPartial = buildGuidedTechnicalCostSuggestion({
+      recipe: l20Recipe,
+      organizationId: 3,
+      lineTemplateId: 20,
+      anchoMm: 1200,
+      altoMm: 1500,
+      cantidad: 1,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l20",
+      supplierFamilyKey: "universal:aluminio:l20",
+      providerKey: "arquetipo",
+      profilePrices: makePreviewPrices(codes, { providerKey: "arquetipo", currency: "CLP" }),
+    });
+    expect(clpPartial.status).toBe("partial");
+    expect(clpPartial.currency).toBe("CLP");
+    expect(clpPartial.nonVerifiedReasons).not.toContain("Las presentaciones seleccionadas mezclan más de una moneda.");
+
+    // 3. Monedas múltiples reales (CLP + USD) -> bloquea complete y reporta mezcla de monedas
+    const mixedPrices = makePreviewPrices(codes, { providerKey: "alumco", currency: "CLP" });
+    mixedPrices[0] = { ...mixedPrices[0]!, currency: "USD" };
+    const mixedResult = buildGuidedTechnicalCostSuggestion({
+      recipe: l20Recipe,
+      organizationId: 3,
+      lineTemplateId: 20,
+      anchoMm: 1200,
+      altoMm: 1500,
+      cantidad: 1,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l20",
+      supplierFamilyKey: "universal:aluminio:l20",
+      providerKey: "alumco",
+      profilePrices: mixedPrices,
+      backedGlassCostNet: 15000,
+    });
+    expect(mixedResult.status).toBe("partial");
+    expect(mixedResult.usableBaseCostGroupNet).toBeNull();
+    expect(mixedResult.nonVerifiedReasons).toContain("Las presentaciones seleccionadas mezclan más de una moneda.");
+  });
+
+  it("certifica flujo determinista completo: sugerencia 100%, cambios de medidas/cantidad/proveedor/receta y Paso 3", () => {
+    const l5000 = getL5000Recipe();
+    const l5000Codes = [...new Set(l5000.definition.perfiles.map((p) => p.codigoPerfil))];
+    const basePrices = makePreviewPrices(l5000Codes, { providerKey: "alumco", netPrice: 15000 });
+
+    const baseComplete = buildGuidedTechnicalCostSuggestion({
+      recipe: l5000,
+      organizationId: 3,
+      lineTemplateId: 5000,
+      anchoMm: 1200,
+      altoMm: 1500,
+      cantidad: 1,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l5000",
+      supplierFamilyKey: "universal:aluminio:l5000",
+      providerKey: "alumco",
+      profilePrices: basePrices,
+      backedGlassCostNet: 15000,
+    });
+    expect(baseComplete.status).toBe("complete");
+    expect(baseComplete.usableBaseCostGroupNet).toBe(120000);
+    expect(baseComplete.suggestedNetTotal).toBe(240000);
+
+    // Cambio de medidas y cantidad recalcula costo/sugerencia
+    const largerQty = buildGuidedTechnicalCostSuggestion({
+      recipe: l5000,
+      organizationId: 3,
+      lineTemplateId: 5000,
+      anchoMm: 2200,
+      altoMm: 2000,
+      cantidad: 4,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l5000",
+      supplierFamilyKey: "universal:aluminio:l5000",
+      providerKey: "alumco",
+      profilePrices: basePrices,
+      backedGlassCostNet: 120000,
+    });
+    expect(largerQty.status).toBe("complete");
+    expect(largerQty.usableBaseCostGroupNet!).toBeGreaterThan(baseComplete.usableBaseCostGroupNet!);
+
+    // Cambio de proveedor sin precios compatibles invalida sugerencia (mantiene solo vidrio conocido como parcial)
+    const switchedProvider = buildGuidedTechnicalCostSuggestion({
+      recipe: l5000,
+      organizationId: 3,
+      lineTemplateId: 5000,
+      anchoMm: 1200,
+      altoMm: 1500,
+      cantidad: 1,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l5000",
+      supplierFamilyKey: "universal:aluminio:l5000",
+      providerKey: "arquetipo",
+      profilePrices: basePrices,
+      backedGlassCostNet: 15000,
+    });
+    expect(switchedProvider.status).toBe("partial");
+    expect(switchedProvider.suggestedNetTotal).toBeNull();
+  });
 });
