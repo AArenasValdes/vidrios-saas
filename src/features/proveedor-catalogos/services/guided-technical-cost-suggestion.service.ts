@@ -37,6 +37,8 @@ export type GuidedTechnicalCostSuggestion = {
   suggestedNetTotal: number | null;
   currency: string | null;
   missingItems: Array<{
+    itemKind?: TechnicalCostSnapshot["missing"][number]["itemKind"];
+    identityKey?: string;
     technicalCode: string | null;
     description: string;
     reason: string;
@@ -121,7 +123,6 @@ export function buildGuidedTechnicalCostSuggestion(input: {
   glassTechnicalSpec?: GlassTechnicalSpec | null;
   glassProviderKey?: string | null;
   asOfDate?: string;
-  backedGlassCostNet?: number | null;
   markupPct?: number;
 }): GuidedTechnicalCostSuggestion {
   const defaultMarkupPct =
@@ -278,35 +279,29 @@ export function buildGuidedTechnicalCostSuggestion(input: {
     .reduce((sum, line) => sum + line.lineNet, 0);
   const accessoriesCostNet = accessoriesCostRaw > 0 ? Math.round(accessoriesCostRaw) : null;
 
-  const hasExplicitBackedGlassCost =
-    input.backedGlassCostNet != null &&
-    Number.isFinite(input.backedGlassCostNet) &&
-    input.backedGlassCostNet > 0;
-  const glassResolution: GlassSupplierCutResolution | null =
-    !hasExplicitBackedGlassCost && input.glassCutPresentations?.length
-      ? resolveGlassSupplierCutCost({
-          panes: despiece.formal.result.vidrios,
-          glassDescription: input.vidrio.trim(),
-          glassTechnicalSpec: input.glassTechnicalSpec ?? null,
-          organizationId: input.organizationId ?? null,
-          providerKey: input.glassProviderKey ?? null,
-          presentations: input.glassCutPresentations,
-          asOfDate: input.asOfDate,
-        })
-      : null;
+  const glassResolution: GlassSupplierCutResolution | null = input.glassCutPresentations?.length
+    ? resolveGlassSupplierCutCost({
+        panes: despiece.formal.result.vidrios,
+        glassDescription: input.vidrio.trim(),
+        glassTechnicalSpec: input.glassTechnicalSpec ?? null,
+        organizationId: input.organizationId ?? null,
+        providerKey: input.glassProviderKey ?? null,
+        presentations: input.glassCutPresentations,
+        asOfDate: input.asOfDate,
+      })
+    : null;
 
-  const hasBackedGlassCost =
-    hasExplicitBackedGlassCost || glassResolution?.status === "priced";
-  const glassCostNet = hasExplicitBackedGlassCost
-    ? Math.round(input.backedGlassCostNet!)
-    : glassResolution?.status === "priced"
-      ? glassResolution.totalNetCost
-      : null;
+  const hasBackedGlassCost = glassResolution?.status === "priced";
+  const glassCostNet =
+    glassResolution?.status === "priced" ? glassResolution.totalNetCost : null;
 
   const isPendingGlassEntry = (entry: TechnicalCostSnapshot["missing"][number]) =>
-    entry.technicalCode === null &&
-    entry.unit == null &&
-    entry.reason.includes("catálogo de vidrios");
+    entry.itemKind === "glass" ||
+    entry.identityKey?.startsWith("glass|") === true ||
+    (entry.itemKind == null &&
+      entry.technicalCode === null &&
+      entry.unit == null &&
+      entry.reason.includes("catálogo de vidrios"));
 
   const missingItems = costSnapshot.missing.flatMap((entry) => {
     if (isPendingGlassEntry(entry)) {
@@ -321,10 +316,6 @@ export function buildGuidedTechnicalCostSuggestion(input: {
   const knownComponents = [profilesCostNet, accessoriesCostNet, glassCostNet].filter(
     (value): value is number => value != null && value > 0
   );
-  const knownNetTotal =
-    knownComponents.length > 0
-      ? knownComponents.reduce((sum, value) => sum + value, 0)
-      : null;
 
   const usedPresentationIds = new Set(
     costSnapshot.lines
@@ -360,6 +351,13 @@ export function buildGuidedTechnicalCostSuggestion(input: {
     ]),
   ];
   const hasMixedCurrencies = distinctCurrencies.length > 1;
+  const knownNetTotal =
+    !hasMixedCurrencies && knownComponents.length > 0
+      ? knownComponents.reduce((sum, value) => sum + value, 0)
+      : null;
+  const resolvedCurrency = hasMixedCurrencies
+    ? null
+    : (distinctCurrencies[0] ?? costSnapshot.currency ?? "CLP");
 
   const isRecipeValidated = input.recipe.status === "validated";
   const nonVerifiedReasons: string[] = [];
@@ -390,6 +388,7 @@ export function buildGuidedTechnicalCostSuggestion(input: {
     costSnapshot.lines.length > 0 &&
     missingItems.length === 0 &&
     nonVerifiedReasons.length === 0 &&
+    !hasMixedCurrencies &&
     knownNetTotal != null &&
     knownNetTotal > 0;
 
@@ -409,7 +408,7 @@ export function buildGuidedTechnicalCostSuggestion(input: {
       defaultMarkupPct,
       markupAmountNet,
       suggestedNetTotal,
-      currency: costSnapshot.currency,
+      currency: resolvedCurrency,
       missingItems: [],
       nonVerifiedReasons: [],
       reason: null,
@@ -417,7 +416,21 @@ export function buildGuidedTechnicalCostSuggestion(input: {
     };
   }
 
-  if (knownNetTotal != null && knownNetTotal > 0) {
+  const mapMissingItem = ({
+    itemKind,
+    identityKey,
+    technicalCode,
+    description,
+    reason,
+  }: TechnicalCostSnapshot["missing"][number]) => ({
+    ...(itemKind ? { itemKind } : {}),
+    ...(identityKey ? { identityKey } : {}),
+    technicalCode,
+    description,
+    reason,
+  });
+
+  if ((knownNetTotal != null && knownNetTotal > 0) || knownComponents.length > 0) {
     return {
       status: "partial",
       recipeStatus: input.recipe.status,
@@ -430,12 +443,8 @@ export function buildGuidedTechnicalCostSuggestion(input: {
       defaultMarkupPct,
       markupAmountNet: null,
       suggestedNetTotal: null,
-      currency: costSnapshot.currency ?? "CLP",
-      missingItems: missingItems.map(({ technicalCode, description, reason }) => ({
-        technicalCode,
-        description,
-        reason,
-      })),
+      currency: resolvedCurrency,
+      missingItems: missingItems.map(mapMissingItem),
       nonVerifiedReasons,
       reason: nonVerifiedReasons[0] ?? null,
       costSnapshot,
@@ -454,12 +463,8 @@ export function buildGuidedTechnicalCostSuggestion(input: {
     defaultMarkupPct,
     markupAmountNet: null,
     suggestedNetTotal: null,
-    currency: costSnapshot.currency ?? "CLP",
-    missingItems: missingItems.map(({ technicalCode, description, reason }) => ({
-      technicalCode,
-      description,
-      reason,
-    })),
+    currency: resolvedCurrency,
+    missingItems: missingItems.map(mapMissingItem),
     nonVerifiedReasons,
     reason:
       nonVerifiedReasons[0] ??

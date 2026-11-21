@@ -90,20 +90,28 @@ function parseThicknessFromText(text: string): number | null {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
+function normalizeIsoDateOnly(value: string) {
+  const trimmed = value.trim();
+  return /^\d{4}-\d{2}-\d{2}/.test(trimmed) ? trimmed.slice(0, 10) : trimmed;
+}
+
 function isWithinValidityWindow(
   presentation: Pick<GlassSupplierCutPresentation, "validFrom" | "validUntil" | "priceReferenceStatus" | "origin">,
   asOfDate: string
 ): { valid: boolean; reason?: string } {
+  const normalizedAsOf = normalizeIsoDateOnly(asOfDate);
+  const normalizedValidFrom = presentation.validFrom ? normalizeIsoDateOnly(presentation.validFrom) : null;
+  const normalizedValidUntil = presentation.validUntil ? normalizeIsoDateOnly(presentation.validUntil) : null;
   if (presentation.priceReferenceStatus === "not_yet_valid") {
     return { valid: false, reason: "La lista de precios del vidrio aún no entra en vigencia." };
   }
   if (presentation.priceReferenceStatus === "historical_reference" && presentation.origin !== "workshop") {
     return { valid: false, reason: "El precio del vidrio proviene de una referencia histórica sin vigencia activa." };
   }
-  if (presentation.validFrom && asOfDate < presentation.validFrom) {
+  if (normalizedValidFrom && normalizedAsOf < normalizedValidFrom) {
     return { valid: false, reason: "La presentación de compra de vidrio aún no inicia vigencia." };
   }
-  if (presentation.validUntil && asOfDate > presentation.validUntil) {
+  if (normalizedValidUntil && normalizedAsOf > normalizedValidUntil) {
     return { valid: false, reason: "La vigencia comercial del precio de compra de vidrio expiró." };
   }
   return { valid: true };
@@ -172,9 +180,11 @@ export function resolveGlassSupplierCutCost(input: {
 
   const scopedPresentations = input.presentations.filter((entry) => {
     if (entry.purchaseMode !== "supplier_cut" || entry.purchaseUnit !== "M2") return false;
+    if (!entry.presentationId?.trim() || !entry.providerKey?.trim()) return false;
     if (!Number.isFinite(entry.netPricePerM2) || entry.netPricePerM2 <= 0) return false;
     if (!entry.currency?.trim()) return false;
-    if (entry.organizationId != null && input.organizationId != null && entry.organizationId !== input.organizationId) {
+    if (entry.category === "pendiente") return false;
+    if (entry.organizationId != null && entry.organizationId !== input.organizationId) {
       return false;
     }
     if (input.providerKey && entry.providerKey !== input.providerKey) return false;

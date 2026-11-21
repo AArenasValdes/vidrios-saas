@@ -174,5 +174,53 @@ describe("resolveGlassSupplierCutCost", () => {
       asOfDate: "2026-11-21",
     });
     expect(ambiguous.status).toBe("ambiguous");
+
+    // Presentación privada de una organización NUNCA aplica si falta organizationId del llamador
+    const missingCallerOrg = resolveGlassSupplierCutCost({
+      panes,
+      glassDescription: "Incoloro monolítico 5mm",
+      glassTechnicalSpec: sampleSpec,
+      organizationId: null,
+      presentations: [makePresentation({ organizationId: 99 })],
+      asOfDate: "2026-11-21",
+    });
+    expect(missingCallerOrg.status).toBe("missing");
+
+    // Vigencia con timestamp ISO el mismo día (2026-11-21T00:00:00Z vs 2026-11-21) sí es válida
+    const sameDayValidFrom = resolveGlassSupplierCutCost({
+      panes,
+      glassDescription: "Incoloro monolítico 5mm",
+      glassTechnicalSpec: sampleSpec,
+      organizationId: 99,
+      presentations: [makePresentation({ validFrom: "2026-11-21T00:00:00Z", netPricePerM2: 10000 })],
+      asOfDate: "2026-11-21",
+    });
+    expect(sameDayValidFrom.status).toBe("priced");
+
+    // Vigencia futura (not_yet_valid o validFrom > asOfDate), modo full_sheet o categoría pendiente se rechazan
+    const futureValidFrom = resolveGlassSupplierCutCost({
+      panes,
+      glassDescription: "Incoloro monolítico 5mm",
+      glassTechnicalSpec: sampleSpec,
+      organizationId: 99,
+      presentations: [makePresentation({ validFrom: "2026-12-01" })],
+      asOfDate: "2026-11-21",
+    });
+    expect(futureValidFrom.status).toBe("incompatible");
+
+    const fullSheetRejected = resolveGlassSupplierCutCost({
+      panes,
+      glassDescription: "Incoloro monolítico 5mm",
+      glassTechnicalSpec: sampleSpec,
+      organizationId: 99,
+      presentations: [
+        {
+          ...makePresentation(),
+          purchaseMode: "full_sheet" as unknown as "supplier_cut",
+        },
+      ],
+      asOfDate: "2026-11-21",
+    });
+    expect(fullSheetRejected.status).toBe("missing");
   });
 });

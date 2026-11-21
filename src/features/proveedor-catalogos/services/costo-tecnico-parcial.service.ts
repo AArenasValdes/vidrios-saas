@@ -94,6 +94,8 @@ type CostLine = {
   quantity?: number;
 };
 
+export type TechnicalCostMissingItemKind = "profile" | "glass" | "accessory";
+
 export type TechnicalCostSnapshot = {
   schemaVersion: 1 | 2;
   status: "no_data" | "partial" | "complete";
@@ -103,7 +105,15 @@ export type TechnicalCostSnapshot = {
   currency: string | null;
   knownNetTotal: number | null;
   lines: CostLine[];
-  missing: Array<{ technicalCode: string | null; description: string; reason: string; quantity?: number; unit?: string }>;
+  missing: Array<{
+    itemKind?: TechnicalCostMissingItemKind;
+    identityKey?: string;
+    technicalCode: string | null;
+    description: string;
+    reason: string;
+    quantity?: number;
+    unit?: string;
+  }>;
   assumptions: string[];
   sourcePautaCapturedAt: string;
 };
@@ -373,13 +383,15 @@ export function buildPartialTechnicalCostSnapshot(input: {
 
   const itemColors = new Map(input.quoteItems.map((item) => [item.code.trim(), item]));
   const cutsByGroup = new Map<string, PendingCut[]>();
-  const missing = new Map<string, { technicalCode: string | null; description: string; reason: string; quantity?: number; unit?: string }>();
+  const missing = new Map<string, TechnicalCostSnapshot["missing"][number]>();
   for (const entry of snapshot.missingPresentations ?? []) {
     const relatedCut = snapshot.bars
       .flatMap((bar) => bar.cortes)
       .find((cut) => cut.itemId === entry.itemId && cut.codigoPerfil.trim() === entry.technicalCode.trim());
-    const key = `${entry.technicalCode}|${entry.finishKey}`;
+    const key = `profile|${entry.technicalCode}|${entry.finishKey}`;
     missing.set(key, {
+      itemKind: "profile",
+      identityKey: key,
       technicalCode: entry.technicalCode,
       description: relatedCut?.funcion || entry.supplierSku || entry.technicalCode,
       reason: entry.reason,
@@ -397,8 +409,10 @@ export function buildPartialTechnicalCostSnapshot(input: {
         matchesRecipeComponent(entry, cut.codigoPerfil) && entry.finishResolution === "finish_independent" && resolvedPrice(entry, input.organizationPricing) != null
       );
       if (!finishName && independentCandidates.length === 0) {
-        const key = `${cut.codigoPerfil}|finish`;
+        const key = `profile|${cut.codigoPerfil}|finish`;
         missing.set(key, {
+          itemKind: "profile",
+          identityKey: key,
           technicalCode: cut.codigoPerfil,
           description: cut.funcion || cut.codigoPerfil,
           reason: color ? `El acabado “${color}” no tiene equivalencia explícita en el catálogo QA.` : "La cotización no conserva el acabado comercial del ítem.",
@@ -428,8 +442,10 @@ export function buildPartialTechnicalCostSnapshot(input: {
           .filter((entry) => entry.providerKey === "alumco" && entry.finishResolution === "specific" && normalizeFinish(entry.finishName) === "titanio")
           .map((entry) => alumcoBasePriceForFinish(entry, finishName));
         if (matchingPresentations.length > 0) {
-          const key = `${cut.codigoPerfil}|${finishName}|physical-presentation`;
+          const key = `profile|${cut.codigoPerfil}|${finishName}|physical-presentation`;
           missing.set(key, {
+            itemKind: "profile",
+            identityKey: key,
             technicalCode: cut.codigoPerfil,
             description: cut.funcion || cut.codigoPerfil,
             reason: `Se usa el precio de Titanio solo como base comercial para ${finishName}; faltan el precio específico y la presentación física de ese acabado. No se asigna SKU Titanio.`,
@@ -440,8 +456,10 @@ export function buildPartialTechnicalCostSnapshot(input: {
         entry.commercialLengthMm != null && resolvedPrice(entry, input.organizationPricing) != null
       );
       if (candidates.length === 0) {
-        const key = `${cut.codigoPerfil}|${finishName}`;
+        const key = `profile|${cut.codigoPerfil}|${finishName}`;
         missing.set(key, {
+          itemKind: "profile",
+          identityKey: key,
           technicalCode: cut.codigoPerfil,
           description: cut.funcion || cut.codigoPerfil,
           reason: matchingPresentations.length === 0
@@ -528,7 +546,10 @@ export function buildPartialTechnicalCostSnapshot(input: {
       left.candidate.supplierSku.localeCompare(right.candidate.supplierSku));
     if (fittingCandidates.length === 0) {
       const first = group[0];
-      missing.set(`${first.technicalCode}|${first.presentation.finishName}|length`, {
+      const key = `profile|${first.technicalCode}|${first.presentation.finishName}|length`;
+      missing.set(key, {
+        itemKind: "profile",
+        identityKey: key,
         technicalCode: first.technicalCode,
         description: first.technicalName,
         reason: "Ninguna presentación asociada tiene largo suficiente y precio utilizable para los cortes guardados.",
@@ -589,8 +610,10 @@ export function buildPartialTechnicalCostSnapshot(input: {
       const target = existing ?? { usedMm: cut.trimMm, cuts: [] };
       if (!existing) bars.push(target);
       if (target.usedMm + cut.cutLengthMm + cut.kerfMm > length || cut.cutLengthMm + cut.kerfMm > capacity) {
-        const key = `${cut.technicalCode}|${cut.presentation.finishName}|length`;
+        const key = `profile|${cut.technicalCode}|${cut.presentation.finishName}|length`;
         missing.set(key, {
+          itemKind: "profile",
+          identityKey: key,
           technicalCode: cut.technicalCode,
           description: cut.technicalName,
           reason: `El corte de ${cut.cutLengthMm} mm no cabe en la presentación de ${length} mm con despunte y pérdida guardados.`,
@@ -649,7 +672,10 @@ export function buildPartialTechnicalCostSnapshot(input: {
   // Glass remains pending until a separate, documented price source is available.
   for (const quoteItem of input.quoteItems) {
     const description = quoteItem.glassDescription?.trim() || "Vidrio";
-    missing.set(`glass|${description}`, {
+    const glassKey = `glass|${description}`;
+    missing.set(glassKey, {
+      itemKind: "glass",
+      identityKey: glassKey,
       technicalCode: null,
       description,
       reason: "El costo base ingresado en el catálogo de vidrios no se incluye en este resumen. Falta una presentación de compra del proveedor con precio.",
@@ -657,7 +683,7 @@ export function buildPartialTechnicalCostSnapshot(input: {
   }
   for (const quoteItem of input.quoteItems) {
     for (const accessory of quoteItem.recipeAccessories ?? []) {
-      const key = [accessory.recipeAccessoryCode ?? "", accessory.description, accessory.unit].join("|");
+      const key = ["accessory", accessory.recipeAccessoryCode ?? "", accessory.description, accessory.unit].join("|");
       const finishName = quoteItem.finishName?.trim() || canonicalFinishLabel(quoteItem.color, quoteItem.colorHex);
       const accessoryCandidates = input.availablePrices.filter((entry) => {
         if (entry.priceReferenceStatus === "not_yet_valid") return false;
@@ -688,6 +714,8 @@ export function buildPartialTechnicalCostSnapshot(input: {
           const unitPrice = resolved.unitNetPrice;
           const existingLine = lines.find(
             (line) =>
+              line.bars === 0 &&
+              line.purchaseUnit === presentation.purchaseUnit &&
               line.supplierSku === presentation.supplierSku &&
               (line.providerKey ?? "") === (presentation.providerKey ?? "") &&
               normalizeFinish(line.finishName) === normalizeFinish(presentation.finishName ?? "Sin acabado específico") &&
@@ -732,6 +760,8 @@ export function buildPartialTechnicalCostSnapshot(input: {
       }
       const existing = missing.get(key);
       missing.set(key, {
+        itemKind: "accessory",
+        identityKey: key,
         technicalCode: accessory.recipeAccessoryCode,
         description: accessory.description,
         reason:
