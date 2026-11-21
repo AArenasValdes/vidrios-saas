@@ -197,11 +197,14 @@ export function CuadernoQuickEditSheet({
   const selectedLineTemplate = selectedLineTemplateDraft ?? lineTemplates.find(
     (template) => String(template.id) === lineTemplateId
   ) ?? null;
-  const selectedCatalogLineKey = resolveVariantCatalogKey(
-    selectedLineTemplate,
-    form.catalogLineKey,
-    form.referencia
-  );
+  const selectedCatalogLineKey =
+    lineTemplateIdDraft !== null && !lineTemplateId
+      ? ""
+      : resolveVariantCatalogKey(
+          selectedLineTemplate,
+          lineTemplateIdDraft !== null ? null : form.catalogLineKey,
+          lineTemplateIdDraft !== null ? null : form.referencia
+        );
   const selectedLineIsSodalL25 =
     isSodalL25CatalogKey(
       resolveEffectiveSodalL25CatalogKey({
@@ -823,13 +826,28 @@ export function CuadernoQuickEditSheet({
     nextLineTemplateId: string,
     selectedTemplate?: CotizacionLineTemplate | null
   ) => {
+    const nextLineTemplate =
+      selectedTemplate ??
+      lineTemplates.find((candidate) => String(candidate.id) === nextLineTemplateId) ??
+      null;
+    const nextSupplierFamilyKey = resolveSupplierFamilyKeyForLineTemplate(nextLineTemplate);
+    const keepsSameSupplierFamily = Boolean(
+      nextLineTemplateId &&
+      supplierFamilyKey &&
+      nextSupplierFamilyKey &&
+      supplierFamilyKey === nextSupplierFamilyKey
+    );
+
     setLineTemplateIdDraft(nextLineTemplateId);
-    setSelectedLineTemplateDraft(selectedTemplate ?? null);
+    setSelectedLineTemplateDraft(nextLineTemplate);
     setFabricationSelectionDraft("");
+    if (!keepsSameSupplierFamily) {
+      setSupplierProviderKeyDraft("");
+    }
     const nextCatalogLineKey = resolveVariantCatalogKey(
-      selectedTemplate ?? null,
-      form.catalogLineKey,
-      form.referencia
+      nextLineTemplate,
+      null,
+      nextLineTemplate?.nombre ?? null
     );
     setSodalL25ConfigDraft(
       isSodalL25CatalogKey(
@@ -907,6 +925,9 @@ export function CuadernoQuickEditSheet({
     }
     setLineTemplateIdDraft("");
     setSelectedLineTemplateDraft(null);
+    setFabricationSelectionDraft("");
+    setSodalL25ConfigDraft(null);
+    setSupplierProviderKeyDraft("");
     setPrecioDraft(null);
     setPrecioEditedManually(false);
   };

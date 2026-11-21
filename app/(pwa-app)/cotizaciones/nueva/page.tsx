@@ -1322,6 +1322,9 @@ function NuevaCotizacionProductiva() {
         if (cur.lineTemplateId) {
           next.lineTemplateId = "";
         }
+        if (material !== cur.material) {
+          next.supplierProviderKey = "";
+        }
       }
       if (key === "referencia" && value !== cur.referencia && cur.lineTemplateId) {
         next.lineTemplateId = "";
@@ -2293,6 +2296,7 @@ function NuevaCotizacionProductiva() {
           : {
               ...form,
               lineTemplateId: "",
+              supplierProviderKey: "",
               referencia: "",
               precioPorM2: "",
               minimoCobrable: "",
@@ -2321,6 +2325,7 @@ function NuevaCotizacionProductiva() {
           form = {
             ...form,
             lineTemplateId: "",
+            supplierProviderKey: "",
             referencia: "",
             precioPorM2: "",
             minimoCobrable: "",
@@ -2329,6 +2334,12 @@ function NuevaCotizacionProductiva() {
             origenPrecio: "manual",
             cubicationSnapshot: null,
           };
+        } else if (
+          patch.supplierProviderKey === undefined &&
+          form.supplierProviderKey &&
+          !form.lineTemplateId
+        ) {
+          form.supplierProviderKey = "";
         }
       }
       if (markPriceManual) {
