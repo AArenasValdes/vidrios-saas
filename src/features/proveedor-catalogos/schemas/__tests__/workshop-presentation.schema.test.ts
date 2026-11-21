@@ -1,7 +1,7 @@
 import { workshopPurchaseUnitSchema } from "../workshop-presentation.schema";
 
 describe("unidad de compra de presentación del taller", () => {
-  it.each(["M", "UN", "KG", "PAR", "TIRA"])("acepta %s en el contrato compartido", (unit) => {
+  it.each(["M", "UN", "KG", "PAR", "TIRA", "M2", "TUBO"])("acepta %s en el contrato compartido", (unit) => {
     expect(workshopPurchaseUnitSchema.safeParse(unit).success).toBe(true);
   });
 

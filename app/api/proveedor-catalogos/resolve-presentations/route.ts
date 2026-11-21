@@ -7,6 +7,7 @@ import {
   readOrganizationPurchasePricing,
   readSupplierNames,
   readSupplierPresentationPrices,
+  readWorkshopGlassCutPresentations,
   readWorkshopPresentationPrices,
 } from "@/features/proveedor-catalogos/repositories/costo-tecnico-parcial.repository";
 import { getSupplierCatalogQuoteLineKeys } from "@/features/proveedor-catalogos/services/proveedor-catalogo-qa.service";
@@ -69,11 +70,12 @@ export async function POST(request: Request) {
         : [];
       return [familyKey, ...(normalized ? [normalized] : []), ...aliases];
     }))];
-    const [presentations, savedPreferences, catalogPrices, workshopPrices] = await Promise.all([
+    const [presentations, savedPreferences, catalogPrices, workshopPrices, glassCutPresentations] = await Promise.all([
       readConfirmedSupplierPresentations(organizationId, { familyKeys: supplierFamilyKeys }),
       listSupplierFamilyPreferences(organizationId),
       parsed.data.includeProviderOptions ? readSupplierPresentationPrices({ familyKeys: supplierFamilyKeys }) : Promise.resolve([]),
       readWorkshopPresentationPrices(organizationId),
+      parsed.data.includeProfilePrices !== false ? readWorkshopGlassCutPresentations(organizationId) : Promise.resolve([]),
     ]);
     const preferenceByFamily = new Map(savedPreferences.map((preference) => [preference.familyKey, preference.providerKey]));
     const requestedFamilies = [...new Set(validItems.map((item) => item.familyKey))];
@@ -332,6 +334,9 @@ export async function POST(request: Request) {
         presentations,
       }),
     ]));
+    const accessoryPrices = [...catalogPrices, ...workshopPrices].filter(
+      (row) => Boolean(row.recipeAccessoryNames?.length)
+    );
     return NextResponse.json({
       enabled: true,
       selections,
@@ -339,6 +344,8 @@ export async function POST(request: Request) {
       profilePrices,
       providerOptionsByFinish,
       profilePricesByFinish,
+      glassCutPresentations,
+      accessoryPrices,
       familyPreferences,
       itemErrors,
       canManageFamilyPreferences: canManageSupplierCatalog(auth.profile.rol),

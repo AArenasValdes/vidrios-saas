@@ -17,7 +17,11 @@ import {
   type TechnicalCostSnapshot,
 } from "../services/costo-tecnico-parcial.service";
 import { resolveSupplierPresentationFamilyKeys, type ConfirmedSupplierPresentation } from "../services/supplier-presentation-resolution.service";
-import { listWorkshopPresentations, WorkshopPresentationsSchemaMissingError } from "./workshop-presentations.repository";
+import {
+  listWorkshopGlassCutPresentations,
+  listWorkshopPresentations,
+  WorkshopPresentationsSchemaMissingError,
+} from "./workshop-presentations.repository";
 import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import { isGeneratedWorkshopPresentationKey } from "../services/workshop-presentation-identity.service";
 
@@ -133,6 +137,11 @@ export async function readWorkshopPresentationPrices(organizationId: number): Pr
     workshopSupplierName: row.proveedor_nombre ? String(row.proveedor_nombre) : null,
     origin: "workshop" as const,
   }));
+}
+
+export async function readWorkshopGlassCutPresentations(organizationId: number) {
+  const { presentations } = await listWorkshopGlassCutPresentations(organizationId);
+  return presentations;
 }
 
 export async function readSupplierName(providerKey: string) {
