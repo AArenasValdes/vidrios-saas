@@ -167,7 +167,6 @@ import { usePasoDosVariaciones } from "./_hooks/use-paso-dos-variaciones";
 import { usePasoTresGuardado } from "./_hooks/use-paso-tres-guardado";
 import { usePersistenciaNuevaCotizacion } from "./_hooks/use-persistencia-nueva-cotizacion";
 import s from "./page.module.css";
-import V2QuoteLab from "@/features/cotizaciones/v2-lab/v2-quote-lab";
 
 function NuevaCotizacionProductiva() {
   const router = useRouter();
@@ -3671,18 +3670,10 @@ function goNextFromStep1() {
   );
 }
 
-function NuevaCotizacionPageContent() {
-  const searchParams = useSearchParams();
-  if (searchParams.get("v2") === "1") {
-    return <V2QuoteLab />;
-  }
-  return <NuevaCotizacionProductiva />;
-}
-
 export default function NuevaCotizacionPage() {
   return (
     <Suspense fallback={null}>
-      <NuevaCotizacionPageContent />
+      <NuevaCotizacionProductiva />
     </Suspense>
   );
 }

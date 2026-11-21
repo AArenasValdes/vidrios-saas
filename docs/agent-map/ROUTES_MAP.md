@@ -18,15 +18,6 @@ Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las
 | Billing/subscriptions | Billing + Operativa | Webhook firmado, ledger, plan y acceso |
 | APIs | Owner de la ruta consumidora | Contrato, auth, RLS y errores seguros |
 
-## Ruta: `/laboratorio-ventora-v2`
-
-- **Tipo**: Redirección de laboratorio en rama de diseño.
-- **Archivo principal**: `app/laboratorio-ventora-v2/page.tsx`.
-- **Propósito**: Redirigir al experimento `/cotizaciones/nueva?v2=1`.
-- **Datos**: El experimento usa datos simulados y no guarda cotizaciones.
-
----
-
 ## Ruta: / (Landing)
 
 - **Tipo**: Publica
