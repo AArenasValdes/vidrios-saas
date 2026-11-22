@@ -446,11 +446,8 @@ describe("despiece de líneas universales con precio Arquetipo", () => {
       // source and its validated 18-variant path remain untouched.
       expect(resolved.preliminary).toBe(false);
       expect(resolved.recipe?.status).toBe("testing");
-    } else if (line.line === "L45") {
-      expect(resolved.preliminary).toBe(true);
-      expect(resolved.recipe?.status).toBe("testing");
     } else {
-      expect(resolved.preliminary).toBe(false);
+      expect(resolved.preliminary).toBe(true);
       expect(resolved.recipe?.status).toBe("testing");
     }
   });
@@ -684,6 +681,7 @@ describe("despiece de líneas universales con precio Arquetipo", () => {
     });
 
     expect(resolved.estado).toBe("calculado");
+    expect(resolved.preliminary).toBe(true);
     expect(resolved.recipe?.id).toBe("org-l20-custom");
     expect(resolved.formal?.result.perfiles[0]?.medidaMm).toBe(
       (baseline.formal?.result.perfiles[0]?.medidaMm ?? 0) - 10

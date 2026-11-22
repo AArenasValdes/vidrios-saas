@@ -40,6 +40,7 @@ import {
 } from "@/features/fabricacion/services/veratec-quote-composition.service";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 import { isSodalL25FormulaDerivedRecipe } from "@/features/fabricacion/services/fabricacion-evidence-gate.service";
+import { isZetaConfirmedSourceReference } from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
 import {
   isL20CatalogKey,
   resolveL20AperturaForCatalogKey,
@@ -1290,17 +1291,17 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   const barsAvailable = Boolean(
     formal.pautaBarras?.calculable && (formal.pautaBarras.barras?.length ?? 0) > 0
   );
-  const isReadySharedOrWorkshopRecipe =
-    (recipe.id.startsWith("ventora:universal:") &&
-      !recipe.id.startsWith("ventora:universal:l45:")) ||
-    recipe.sourceReference?.startsWith("taller:personalizada:") === true;
+  const isRecognizedL25ZetaOperationalRecipe =
+    isSodalL25CatalogKey(catalogKey) &&
+    isZetaConfirmedSourceReference(recipe.sourceReference) &&
+    recipe.status === "testing" &&
+    recipe.sourceReference?.startsWith("taller:personalizada:") !== true;
+  // Toda receta sin validación física del taller se mantiene preliminar aunque
+  // provenga del catálogo universal o de una personalización en prueba/borrador,
+  // salvo las recetas Zeta L25 reconocidas que conservan su semántica operativa vigente.
   const preliminary =
-    resolution.estado === "receta_no_validada" &&
-    !isSodalL25CatalogKey(catalogKey) &&
-    // El catálogo compartido y la receta propia del taller son bases listas
-    // para usar en nuevas cotizaciones. WinHouse/S75 y otras recetas locales
-    // de prueba conservan su estado interno de revisión aunque calculen cortes.
-    !isReadySharedOrWorkshopRecipe;
+    (resolution.estado === "receta_no_validada" || recipe.status !== "validated") &&
+    !isRecognizedL25ZetaOperationalRecipe;
 
   const cubication = fabricacionSnapshotToLegacyCubicationSnapshot(formal);
   const serie45GlassSupport =
