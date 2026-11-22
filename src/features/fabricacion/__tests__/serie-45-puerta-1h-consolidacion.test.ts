@@ -262,6 +262,53 @@ describe("Línea 45 — consolidación Puerta abatible 1H (ventora:serie-45-puer
     expect(resEspejo.estado).toBe("composicion_sin_receta");
     expect(resEspejo.formal).toBeNull();
 
+    // Un borrador documental reparado (version 2, status draft, sodal+indalum)
+    // sigue sujeto a la guarda documental hasta validación de taller.
+    const repairedDocumentaryDraft: FabricationRecipeRecord = {
+      id: "draft-repaired-v2",
+      organizationId: 1,
+      lineTemplateId: 45,
+      scope: "organization",
+      providerName: "SODAL / Indalum",
+      lineName: "Línea 45 — Puerta",
+      typology: "puerta_abatible",
+      leavesCount: 1,
+      variant: SERIE_45_VARIANT,
+      version: 2,
+      status: "draft",
+      definition: crearRecetaSerie45Practicable({ lineName: "Línea 45 — Puerta" }),
+      sourceType: "manufacturer",
+      sourceReference: SERIE_45_SOURCE_REFERENCE,
+      sourceName: "SODAL / Indalum",
+      sourceRevision: null,
+      parentRecipeId: null,
+      validatedAt: null,
+      validatedBy: null,
+      createdAt: "2026-11-22T00:00:00.000Z",
+      updatedAt: "2026-11-22T00:00:00.000Z",
+      eliminadoEn: null,
+    };
+    const resDraftEspejo = resolveFabricacionDespieceForQuoteItem({
+      item: buildSerie45QuoteItem({ vidrio: "Espejo 4mm" }),
+      recipes: [repairedDocumentaryDraft],
+      organizationId: 1,
+      lineTemplateId: 45,
+      lineCatalogKey: SERIE_45_CATALOG_KEY,
+    });
+    expect(resDraftEspejo.estado).toBe("composicion_sin_receta");
+    expect(resDraftEspejo.formal).toBeNull();
+
+    const resDraftDvh = resolveFabricacionDespieceForQuoteItem({
+      item: buildSerie45QuoteItem({ ancho: 1500, alto: 2000, vidrio: "DVH 4+12+4" }),
+      recipes: [repairedDocumentaryDraft],
+      organizationId: 1,
+      lineTemplateId: 45,
+      lineCatalogKey: SERIE_45_CATALOG_KEY,
+    });
+    expect(resDraftDvh.estado).toBe("calculado");
+    expect(resDraftDvh.preliminary).toBe(true);
+    expect(resDraftDvh.message).toBe(SERIE_45_BEAD_DVH_NOTE);
+
     const resUnresolved = resolveFabricacionDespieceForQuoteItem({
       item: buildSerie45QuoteItem({ vidrio: "Vidrio por definir" }),
       recipes: [],

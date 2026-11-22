@@ -10,7 +10,8 @@ export type Serie45GlassSupport =
 
 const INCOMPATIBLE_GLAZING_RE = /\b(espejo|policarbonato|acrilico)\b/;
 const DVH_GLAZING_RE = /\b(dvh|termopanel|doble\s+vidriado|doble\s+vidrio)\b/;
-const MONOLITHIC_GLAZING_RE = /\b(monolitic[oa]|float|crudo|simple|incoloro|templad[oa]|blindex)\b/;
+const MONOLITHIC_GLAZING_RE =
+  /(?:\b(?:monolitic[oa]|float|crudo|simple|incoloro|templad[oa]|blindex)\b|^\d+(?:[.,]\d+)?\s*mm$)/;
 const UNRESOLVED_GLASS_RE = /^(?:|vidrio\s+por\s+definir|por\s+definir|pendiente|sin\s+definir)$/;
 
 export const SERIE_45_BEAD_MONOLITHIC_NOTE =
@@ -36,6 +37,9 @@ export function isWorkshopOwnedSerie45Recipe(
 ): boolean {
   const source = recipe.sourceReference?.trim() ?? "";
   if (source.startsWith("taller:personalizada:")) return true;
+  if (source.startsWith("sodal+indalum:serie-45-practicable")) {
+    return recipe.status === "validated" && recipe.scope === "organization";
+  }
   if (source.startsWith("ventora:")) return false;
   return (
     recipe.scope === "organization" &&
