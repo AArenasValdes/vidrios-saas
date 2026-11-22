@@ -36,18 +36,21 @@ function normalizeText(value: string | null | undefined): string {
  * preservarse sin aplicar restricciones documentales de la pauta base.
  */
 export function isWorkshopOwnedSerie45Recipe(
-  recipe: Pick<FabricationRecipeRecord, "scope" | "sourceType" | "sourceReference" | "status" | "version">,
+  recipe: Pick<FabricationRecipeRecord, "scope" | "sourceType" | "sourceReference" | "status" | "version" | "definition">,
 ): boolean {
   const source = recipe.sourceReference?.trim() ?? "";
   if (source.startsWith("taller:personalizada:")) return true;
-  if (source.startsWith("sodal+indalum:serie-45-practicable")) {
-    return recipe.status === "validated" && recipe.scope === "organization";
+  if (recipe.status === "validated" && recipe.scope === "organization") return true;
+  if (
+    source.startsWith("ventora:") ||
+    source.startsWith("sodal+indalum:serie-45-practicable") ||
+    isCurrentSerie45PracticableRecipe(recipe.definition)
+  ) {
+    return false;
   }
-  if (source.startsWith("ventora:")) return false;
   return (
     recipe.scope === "organization" &&
-    (recipe.status === "validated" ||
-      recipe.version > 1 ||
+    (recipe.version > 1 ||
       recipe.sourceType === "workshop" ||
       recipe.sourceType === "manual")
   );
