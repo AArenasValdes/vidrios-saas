@@ -40,6 +40,7 @@ import {
 } from "@/features/fabricacion/services/veratec-quote-composition.service";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 import { isSodalL25FormulaDerivedRecipe } from "@/features/fabricacion/services/fabricacion-evidence-gate.service";
+import { isZetaConfirmedSourceReference } from "@/features/fabricacion/fixtures/sodal-l25-zeta-catalog";
 import {
   isL20CatalogKey,
   resolveL20AperturaForCatalogKey,
@@ -1290,11 +1291,17 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   const barsAvailable = Boolean(
     formal.pautaBarras?.calculable && (formal.pautaBarras.barras?.length ?? 0) > 0
   );
+  const isRecognizedL25ZetaOperationalRecipe =
+    isSodalL25CatalogKey(catalogKey) &&
+    isZetaConfirmedSourceReference(recipe.sourceReference) &&
+    recipe.status === "testing" &&
+    recipe.sourceReference?.startsWith("taller:personalizada:") !== true;
   // Toda receta sin validación física del taller se mantiene preliminar aunque
-  // provenga del catálogo universal o de una personalización en prueba/borrador.
+  // provenga del catálogo universal o de una personalización en prueba/borrador,
+  // salvo las recetas Zeta L25 reconocidas que conservan su semántica operativa vigente.
   const preliminary =
     (resolution.estado === "receta_no_validada" || recipe.status !== "validated") &&
-    !isSodalL25CatalogKey(catalogKey);
+    !isRecognizedL25ZetaOperationalRecipe;
 
   const cubication = fabricacionSnapshotToLegacyCubicationSnapshot(formal);
   const serie45GlassSupport =

@@ -429,16 +429,47 @@ describe("B-06 — estados preliminares reales vs validación de taller", () => 
     }
   });
 
-  it("no altera la resolución especial de L25 SODAL/Zeta", () => {
-    const bundle = buildAllSodalL25Recipes().find(
+  it("restringe la excepción L25 exclusivamente a recetas Zeta reconocidas (privada testing/draft vs privada validated vs Zeta)", () => {
+    const bundles = buildAllSodalL25Recipes();
+    const zeta2h = bundles.find(
       (candidate) => candidate.recipeId === "monolitico_pierna_abierta_2h_1800x1500"
     )!;
-    const config = parseSodalL25VariantSlug(bundle.identity.variantSlug);
-    const l25Record: FabricationRecipeRecord = {
+    const zeta3h = bundles.find(
+      (candidate) => candidate.recipeId === "dvh_pierna_abierta_3h_3000x1500"
+    )!;
+
+    const buildL25Item = (bundle: typeof zeta2h) => {
+      const config = parseSodalL25VariantSlug(bundle.identity.variantSlug);
+      return buildWorkflowItem({
+        catalogKey: "ventora:l25",
+        lineName: "L25",
+        system: "Corredera",
+        typology: "corredera",
+        leaves: bundle.identity.leaves,
+        modules: bundle.identity.leaves,
+        variant: bundle.identity.variantSlug,
+        glass:
+          config?.glazing === "dvh"
+            ? "Termopanel 4+12+4"
+            : "Incoloro monolítico 4 mm",
+        widthMm: bundle.confirmed.testDimensions.widthMm,
+        heightMm: bundle.confirmed.testDimensions.heightMm,
+        extraMeta: {
+          fabricacionGlazing: config?.glazing,
+          fabricacionLeg: config?.leg,
+          fabricacionReinforcement: config?.reinforcement,
+        },
+      });
+    };
+
+    const baseL25Record = (
+      bundle: typeof zeta2h,
+      overrides: Partial<FabricationRecipeRecord> = {}
+    ): FabricationRecipeRecord => ({
       id: bundle.recipeId,
-      organizationId: null,
+      organizationId: 1,
       lineTemplateId: 101,
-      scope: "ventora",
+      scope: "organization",
       providerName: "SODAL",
       lineName: "L25",
       typology: bundle.definition.identidad.tipologia,
@@ -457,34 +488,130 @@ describe("B-06 — estados preliminares reales vs validación de taller", () => 
       createdAt: "2026-10-07T00:00:00.000Z",
       updatedAt: "2026-10-07T00:00:00.000Z",
       eliminadoEn: null,
+      ...overrides,
+    });
+
+    const l25Item2h = buildL25Item(zeta2h);
+
+    const completeWorkshopL25Definition = {
+      ...zeta2h.definition,
+      estado: "lista_para_validar" as const,
+      datosPendientes: undefined,
+      perfiles: zeta2h.definition.perfiles.map((profile) => ({
+        ...profile,
+        datosPendientes: undefined,
+      })),
     };
 
-    const item = buildWorkflowItem({
-      catalogKey: "ventora:l25",
-      lineName: "L25",
-      system: "Corredera",
-      typology: "corredera",
-      leaves: bundle.identity.leaves,
-      modules: bundle.identity.leaves,
-      variant: bundle.identity.variantSlug,
-      widthMm: bundle.confirmed.testDimensions.widthMm,
-      heightMm: bundle.confirmed.testDimensions.heightMm,
-      extraMeta: {
-        fabricacionGlazing: config?.glazing,
-        fabricacionLeg: config?.leg,
-        fabricacionReinforcement: config?.reinforcement,
-      },
+    // 1. L25 privada en testing -> calcula, pero NO aparece validada (preliminary: true)
+    const privateTesting = baseL25Record(zeta2h, {
+      id: "org-1-l25-custom-testing",
+      scope: "organization",
+      organizationId: 1,
+      status: "testing",
+      sourceType: "manual",
+      sourceReference: "taller:personalizada:l25-custom",
+      sourceRevision: null,
+      definition: completeWorkshopL25Definition,
     });
-
-    const resolved = resolveFabricacionDespieceForQuoteItem({
-      item,
-      recipes: [l25Record],
+    const resolvedPrivateTesting = resolveFabricacionDespieceForQuoteItem({
+      item: l25Item2h,
+      recipes: [privateTesting],
       organizationId: 1,
     });
+    expect(resolvedPrivateTesting.estado).toBe("calculado");
+    expect(resolvedPrivateTesting.barsAvailable).toBe(true);
+    expect(resolvedPrivateTesting.preliminary).toBe(true);
+    expect(resolvedPrivateTesting.recipe?.id).toBe("org-1-l25-custom-testing");
+    expect(resolvedPrivateTesting.message).toBe(
+      "Despiece disponible. La receta aún requiere validación del taller."
+    );
 
-    expect(resolved.estado).toBe("calculado");
-    expect(resolved.preliminary).toBe(false);
-    expect(resolved.recipe?.id).toBe(bundle.recipeId);
+    // 2. L25 en draft (slot genérico o borrador) -> NO aparece validada (preliminary: true)
+    const genericDraft = baseL25Record(zeta2h, {
+      id: "org-1-l25-generic-draft",
+      scope: "organization",
+      organizationId: 1,
+      status: "draft",
+      sourceType: "manual",
+      sourceReference: "base-ventora:corredera:2",
+      sourceRevision: null,
+      definition: {
+        ...completeWorkshopL25Definition,
+        permitirCalculoPreliminarConPendientes: true,
+      },
+    });
+    const resolvedGenericDraft = resolveFabricacionDespieceForQuoteItem({
+      item: l25Item2h,
+      recipes: [genericDraft],
+      organizationId: 1,
+    });
+    expect(resolvedGenericDraft.estado).toBe("calculado");
+    expect(resolvedGenericDraft.preliminary).toBe(true);
+    expect(resolvedGenericDraft.recipe?.id).toBe("org-1-l25-generic-draft");
+
+    const zetaDraft = baseL25Record(zeta2h, {
+      id: "org-1-l25-zeta-draft",
+      status: "draft",
+      definition: {
+        ...zeta2h.definition,
+        estado: "lista_para_validar",
+        permitirCalculoPreliminarConPendientes: true,
+      },
+    });
+    const resolvedZetaDraft = resolveFabricacionDespieceForQuoteItem({
+      item: l25Item2h,
+      recipes: [zetaDraft],
+      organizationId: 1,
+    });
+    expect(resolvedZetaDraft.estado).toBe("calculado");
+    expect(resolvedZetaDraft.preliminary).toBe(true);
+
+    // 3. L25 privada validated -> preliminary: false
+    const privateValidated = baseL25Record(zeta2h, {
+      id: "org-1-l25-custom-validated",
+      scope: "organization",
+      organizationId: 1,
+      status: "validated",
+      sourceType: "manual",
+      sourceReference: "taller:personalizada:l25-custom",
+      sourceRevision: null,
+      validatedAt: "2026-10-20T00:00:00.000Z",
+      validatedBy: "taller@ventora.cl",
+      definition: {
+        ...completeWorkshopL25Definition,
+        estado: "validada",
+      },
+    });
+    const resolvedPrivateValidated = resolveFabricacionDespieceForQuoteItem({
+      item: l25Item2h,
+      recipes: [privateValidated],
+      organizationId: 1,
+    });
+    expect(resolvedPrivateValidated.estado).toBe("calculado");
+    expect(resolvedPrivateValidated.barsAvailable).toBe(true);
+    expect(resolvedPrivateValidated.preliminary).toBe(false);
+    expect(resolvedPrivateValidated.recipe?.id).toBe("org-1-l25-custom-validated");
+    expect(resolvedPrivateValidated.message).toBeNull();
+
+    // 4. L25 Zeta confirmada (zeta:confirmed:sodal/l25/...) -> conserva semántica operativa vigente
+    for (const bundle of [zeta2h, zeta3h]) {
+      const zetaRecord = baseL25Record(bundle, {
+        scope: "ventora",
+        organizationId: null,
+      });
+      const resolvedZeta = resolveFabricacionDespieceForQuoteItem({
+        item: buildL25Item(bundle),
+        recipes: [zetaRecord],
+        organizationId: 1,
+      });
+      expect(resolvedZeta.estado).toBe("calculado");
+      expect(resolvedZeta.barsAvailable).toBe(true);
+      expect(resolvedZeta.preliminary).toBe(false);
+      expect(resolvedZeta.recipe?.id).toBe(bundle.recipeId);
+      expect(resolvedZeta.recipe?.status).toBe("testing");
+      expect(resolvedZeta.recipe?.sourceReference).toBe(bundle.sourceReference);
+    }
   });
 
   it("preserva snapshots históricos congelados sin recalcular ni sobreescribir su recipeStatus", () => {
