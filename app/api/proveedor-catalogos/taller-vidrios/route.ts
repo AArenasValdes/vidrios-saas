@@ -20,6 +20,7 @@ import {
   canManageSupplierCatalog,
   canReadSupplierCatalog,
 } from "@/features/proveedor-catalogos/services/supplier-catalog-access.service";
+import { mapWorkshopGlassCutRowToPresentation } from "@/features/proveedor-catalogos/services/glass-supplier-cut-cost.service";
 
 export const dynamic = "force-dynamic";
 
@@ -107,7 +108,8 @@ export async function POST(request: Request) {
       validUntil: parsed.data.validUntil ?? null,
       userId: auth.user.id,
     });
-    return NextResponse.json({ row }, { status: 201 });
+    const presentation = mapWorkshopGlassCutRowToPresentation(row, organizationId);
+    return NextResponse.json({ row, presentation }, { status: 201 });
   } catch (error) {
     return errorResponse(error);
   }
@@ -144,7 +146,8 @@ export async function PATCH(request: Request) {
       validFrom: parsed.data.validFrom ?? null,
       validUntil: parsed.data.validUntil ?? null,
     });
-    return NextResponse.json({ row });
+    const presentation = mapWorkshopGlassCutRowToPresentation(row, organizationId);
+    return NextResponse.json({ row, presentation });
   } catch (error) {
     return errorResponse(error);
   }

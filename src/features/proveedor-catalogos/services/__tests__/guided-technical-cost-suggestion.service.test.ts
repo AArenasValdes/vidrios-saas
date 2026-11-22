@@ -10,6 +10,7 @@ import {
   calculateComponentItem,
   calculateCotizacionWorkflowTotals,
 } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
+import { buildQuoteStudioFinancialSummary } from "@/features/cotizaciones/services/quote-studio-financial.service";
 
 function getL5000Recipe() {
   return resolveUniversalPricedLineFallbacks({
@@ -23,6 +24,24 @@ function getL5000Recipe() {
     glassName: "Incoloro monolítico 5mm",
     recipes: [],
   })[0]!;
+}
+
+/** Fixture aislado de test donde las medidas de corte del vidrio sí están confirmadas. */
+function getConfirmedGlassL5000Fixture() {
+  const recipe = getL5000Recipe();
+  return {
+    ...recipe,
+    definition: {
+      ...recipe.definition,
+      vidrios: recipe.definition.vidrios.map((glass) => ({
+        ...glass,
+        reglaAncho: { ...glass.reglaAncho, ajusteMm: -50 },
+        reglaAlto: { ...glass.reglaAlto, ajusteMm: -100 },
+        observaciones: "Descuento de corte confirmado para fixture de prueba.",
+        datosPendientes: undefined,
+      })),
+    },
+  };
 }
 
 function makePreviewPrices(
@@ -142,7 +161,7 @@ function makeGlassCutPresentation(
 
 describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", () => {
   it("calcula costo verificado, recargo 100% y precio neto sugerido sin IVA en Paso 2 y valida Paso 3 en ambos modos tributarios", () => {
-    const recipe = getL5000Recipe();
+    const recipe = getConfirmedGlassL5000Fixture();
     const codes = [...new Set(recipe.definition.perfiles.map((p) => p.codigoPerfil))];
     const prices = makePreviewPrices(codes, { netPrice: 15000 });
 
@@ -225,7 +244,7 @@ describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", (
   });
 
   it("evita duplicar costos por cantidad cuando costInputScope es group_total y escala tiras, vidrio y accesorios al aumentar cantidad", () => {
-    const recipe = getL5000Recipe();
+    const recipe = getConfirmedGlassL5000Fixture();
     const codes = [...new Set(recipe.definition.perfiles.map((p) => p.codigoPerfil))];
     const prices = makePreviewPrices(codes, { netPrice: 15000 });
 
@@ -536,7 +555,7 @@ describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", (
   });
 
   it("certifica flujo determinista completo: sugerencia 100%, cambios de medidas/cantidad/proveedor/receta y Paso 3", () => {
-    const l5000 = getL5000Recipe();
+    const l5000 = getConfirmedGlassL5000Fixture();
     const l5000Codes = [...new Set(l5000.definition.perfiles.map((p) => p.codigoPerfil))];
     const basePrices = makePreviewPrices(l5000Codes, { providerKey: "alumco", netPrice: 15000 });
 
@@ -613,8 +632,8 @@ describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", (
     expect(switchedProvider.suggestedNetTotal).toBeNull();
   });
 
-  it("completa perfiles + vidrio supplier_cut + accesorios en L5000 y L25 (incluyendo Pz/Mt/Tubo) manteniendo L42 testing bloqueada", () => {
-    const l5000 = getL5000Recipe();
+  it("completa perfiles + vidrio supplier_cut + accesorios en receta confirmada y L25 (incluyendo Pz/Mt/Tubo) manteniendo L42 testing bloqueada", () => {
+    const l5000 = getConfirmedGlassL5000Fixture();
     const l5000Codes = [...new Set(l5000.definition.perfiles.map((p) => p.codigoPerfil))];
     const l5000AccessoryPrices: CatalogPresentationPrice[] = [
       {
@@ -977,5 +996,131 @@ describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", (
     expect(unconfirmedWorkshopHistory.usableBaseCostGroupNet).toBeNull();
     expect(unconfirmedWorkshopHistory.glassCostNet).toBeNull();
     expect(unconfirmedWorkshopHistory.nonVerifiedReasons[0]).toMatch(/histórica/i);
+  });
+
+  it("impide marcar como Costo verificado el vidrio nominal 0 mm de L5000 y L20, mantiene cálculo provisional y no contamina Paso 3", () => {
+    const l5000Nominal = getL5000Recipe();
+    const l5000Codes = [...new Set(l5000Nominal.definition.perfiles.map((p) => p.codigoPerfil))];
+    const sodalGlass = makeGlassCutPresentation({
+      presentationId: "sodal-qa-5mm",
+      providerKey: "taller:3:sodal",
+      netPricePerM2: 14500,
+    });
+
+    // Caso 1: L5000 1800x1500 con $14.500/m² y accesorios faltantes -> Costo parcial ($39.150 vidrio provisional)
+    const l5000PartialMissingAcc = buildGuidedTechnicalCostSuggestion({
+      recipe: l5000Nominal,
+      organizationId: 3,
+      lineTemplateId: 5000,
+      anchoMm: 1800,
+      altoMm: 1500,
+      cantidad: 1,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l5000",
+      supplierFamilyKey: "universal:aluminio:l5000",
+      providerKey: "alumco",
+      profilePrices: makePreviewPrices(l5000Codes, { providerKey: "alumco", netPrice: 13889 }),
+      accessoryPrices: [],
+      glassCutPresentations: [sodalGlass],
+      asOfDate: "2026-11-21",
+    });
+
+    expect(l5000PartialMissingAcc.status).toBe("partial");
+    expect(l5000PartialMissingAcc.glassCostNet).toBe(39150);
+    expect(l5000PartialMissingAcc.glassMeasurementStatus).toBe("nominal_unconfirmed");
+    expect(l5000PartialMissingAcc.glassCostIsProvisional).toBe(true);
+    expect(l5000PartialMissingAcc.usableBaseCostGroupNet).toBeNull();
+    expect(l5000PartialMissingAcc.suggestedNetTotal).toBeNull();
+    expect(l5000PartialMissingAcc.nonVerifiedReasons[0]).toMatch(/geometría nominal/i);
+
+    // Paso 3 con ítem en precio_directo no contabiliza la suma parcial ni calcula rentabilidad verificada
+    const itemWithoutAutoCost = calculateComponentItem({
+      codigo: "V2",
+      tipo: "Ventana",
+      lineaComercial: "Serie 5000",
+      vidrio: "Incoloro monolítico 5mm",
+      nombre: "Ventana corredera 2 hojas",
+      ancho: 1800,
+      alto: 1500,
+      cantidad: 1,
+      costoProveedorUnitario: 0,
+      precioUnitario: 216000,
+      origenPrecio: "precio_directo",
+    });
+    const paso3 = buildQuoteStudioFinancialSummary({
+      items: [itemWithoutAutoCost],
+      quotePricingMode: "por_item",
+      neto: 216000,
+      total: 257040,
+    });
+    expect(paso3.materialCostSource).toBe("none");
+    expect(paso3.costBasisStatus).toBe("sin_materiales");
+    expect(paso3.costoMateriales).toBe(0);
+    expect(paso3.isProfitabilityComplete).toBe(false);
+
+    // Caso 2: Incluso si perfiles y todos los accesorios tienen precio en L5000, vidrio nominal bloquea Costo verificado
+    const l5000FullPricesNominalGlass = buildGuidedTechnicalCostSuggestion({
+      recipe: l5000Nominal,
+      organizationId: 3,
+      lineTemplateId: 5000,
+      anchoMm: 1800,
+      altoMm: 1500,
+      cantidad: 1,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l5000",
+      supplierFamilyKey: "universal:aluminio:l5000",
+      providerKey: "alumco",
+      profilePrices: makePreviewPrices(l5000Codes, { providerKey: "alumco", netPrice: 13889 }),
+      accessoryPrices: makeL5000AccessoryPrices("alumco"),
+      glassCutPresentations: [sodalGlass],
+      asOfDate: "2026-11-21",
+    });
+    expect(l5000FullPricesNominalGlass.status).toBe("partial");
+    expect(l5000FullPricesNominalGlass.glassCostNet).toBe(39150);
+    expect(l5000FullPricesNominalGlass.glassCostIsProvisional).toBe(true);
+    expect(l5000FullPricesNominalGlass.usableBaseCostGroupNet).toBeNull();
+    expect(l5000FullPricesNominalGlass.suggestedNetTotal).toBeNull();
+
+    // Caso 3: L20 fallback universal también usa vidrio nominal 0 mm sin confirmar
+    const l20Nominal = resolveUniversalPricedLineFallbacks({
+      catalogKey: "ventora:l20",
+      lineTemplateId: 20,
+      organizationId: 3,
+      lineName: "Serie 20",
+      variant: "estandar",
+      leavesCount: 2,
+      typology: "corredera",
+      glassName: "Incoloro monolítico 5mm",
+      recipes: [],
+    })[0]!;
+    const l20Codes = [...new Set(l20Nominal.definition.perfiles.map((p) => p.codigoPerfil))];
+    const l20NominalCost = buildGuidedTechnicalCostSuggestion({
+      recipe: l20Nominal,
+      organizationId: 3,
+      lineTemplateId: 20,
+      anchoMm: 1800,
+      altoMm: 1500,
+      cantidad: 1,
+      vidrio: "Incoloro monolítico 5mm",
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      finishName: "Mate",
+      catalogLineKey: "ventora:l20",
+      supplierFamilyKey: "universal:aluminio:l20",
+      providerKey: "alumco",
+      profilePrices: makePreviewPrices(l20Codes, { providerKey: "alumco", netPrice: 12000 }),
+      glassCutPresentations: [sodalGlass],
+      asOfDate: "2026-11-21",
+    });
+    expect(l20NominalCost.status).toBe("partial");
+    expect(l20NominalCost.glassMeasurementStatus).toBe("nominal_unconfirmed");
+    expect(l20NominalCost.glassCostIsProvisional).toBe(true);
+    expect(l20NominalCost.usableBaseCostGroupNet).toBeNull();
   });
 });
