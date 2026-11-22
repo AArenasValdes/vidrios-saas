@@ -727,4 +727,124 @@ describe("QuoteConstructorWorkspace", () => {
     expect(quantityAfterSwitch.value).toBe("0");
     expect(screen.getAllByText("Cantidad inválida").length).toBeGreaterThan(0);
   });
+
+  it("preserva un snapshot histórico congelado al reabrir o cambiar precio, y sí recalcula si cambia el ancho", () => {
+    const frozenSnapshot: FabricacionCotizacionSnapshot = {
+      schemaVersion: 1,
+      tipo: "fabricacion_receta_snapshot",
+      recipeId: "veratec:workbook:monolitico_4mm",
+      recipeDefinitionId: "uuid-historico-1",
+      recipeVersion: 1,
+      recipeStatus: "testing",
+      recipeScope: "ventora",
+      lineTemplateId: 7400,
+      recipeIdentity: {
+        recetaId: "uuid-historico-1",
+        codigo: "V-7400",
+        nombre: "Veratec 7400",
+        tipologia: "corredera",
+        hojas: 2,
+        modulos: 2,
+        apertura: "corredera",
+        herraje: "estandar",
+        variante: "monolitico_4mm",
+      },
+      input: {
+        anchoTotalMm: 1200,
+        altoTotalMm: 1000,
+        cantidad: 1,
+        hojas: 2,
+        modulos: 2,
+        variante: "monolitico_4mm",
+      },
+      selectedVariant: "monolitico_4mm",
+      result: {
+        calculable: true,
+        perfiles: [
+          {
+            componenteId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            codigoPerfil: "7401",
+            nombrePerfil: "Marco",
+            funcion: "Marco",
+            medidaMm: 1200,
+            cantidadPiezas: 2,
+            totalLinealMm: 2400,
+            observaciones: undefined,
+          },
+        ],
+        vidrios: [
+          {
+            vidrioId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            nombre: "Vidrio hoja",
+            anchoMm: 540,
+            altoMm: 900,
+            cantidadPiezas: 2,
+            totalM2: 0.97,
+            trazabilidad: [],
+          },
+        ],
+        accesorios: [],
+        totalLinealMm: 2400,
+        totalVidrioM2: 0.97,
+        advertencias: [],
+      },
+      pauta: [],
+      vidrios: [],
+      advertencias: [],
+      pautaBarras: null,
+      calculatedAt: "2026-09-01T10:00:00.000Z",
+    };
+
+    const resolverMock =
+      fabricationResolutionService.resolveFabricacionDespieceForQuoteItem as jest.Mock;
+    resolverMock.mockImplementation(({ item: currentItem }: { item: CotizacionWorkflowItem }) => ({
+      estado: "calculado",
+      formal: {
+        ...frozenSnapshot,
+        recipeVersion: 2,
+        input: {
+          ...frozenSnapshot.input,
+          anchoTotalMm: currentItem.ancho,
+        },
+        calculatedAt: "2026-11-22T12:00:00.000Z",
+      },
+      cubication: {
+        schemaVersion: 1,
+        status: "calculable",
+        widthMm: currentItem.ancho,
+        heightMm: currentItem.alto,
+        cuts: [],
+        glass: [],
+        bars: [],
+        warnings: [],
+        source: "auto",
+      },
+      recipe: null,
+      barsAvailable: false,
+      preliminary: false,
+      message: null,
+    }));
+
+    const historicalItem: CotizacionWorkflowItem = {
+      ...item("a", "VEN-01"),
+      fabricacionSnapshot: frozenSnapshot,
+    };
+
+    const props = renderWorkspace({ items: [historicalItem] });
+    expect(props.onUpdateItem).not.toHaveBeenCalled();
+
+    // Edición comercial menor (nombre/precio) no debe disparar resincronización del snapshot:
+    const widthInput = screen.getAllByLabelText(/Ancho/)[0];
+    fireEvent.change(widthInput, { target: { value: "1350" } });
+    fireEvent.blur(widthInput);
+
+    expect(props.onUpdateItem).toHaveBeenCalledWith(
+      "a",
+      expect.objectContaining({ ancho: "1350" })
+    );
+    expect(props.onUpdateItem).not.toHaveBeenCalledWith(
+      "a",
+      expect.objectContaining({ fabricacionSnapshot: expect.anything() })
+    );
+  });
 });

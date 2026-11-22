@@ -2,7 +2,7 @@
 
 import {
   buildFabricacionSnapshotSyncKey,
-  fabricacionSnapshotMatchesCalculatedOutput,
+  shouldPreserveFrozenFabricationSnapshot,
 } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import {
   useEffect,
@@ -725,7 +725,7 @@ export function QuoteConstructorWorkspace({
       return;
     }
     const next = activeFabricationResolution.formal;
-    if (fabricacionSnapshotMatchesCalculatedOutput(activeItem.fabricacionSnapshot, next)) {
+    if (shouldPreserveFrozenFabricationSnapshot(activeItem.fabricacionSnapshot, next)) {
       lastSyncedFabricationKeyRef.current = null;
       return;
     }

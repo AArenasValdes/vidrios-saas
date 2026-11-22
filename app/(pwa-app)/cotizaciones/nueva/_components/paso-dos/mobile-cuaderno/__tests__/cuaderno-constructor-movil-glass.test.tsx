@@ -19,9 +19,12 @@ jest.mock("@/features/fabricacion/hooks/use-fabrication-recipes", () => ({
 jest.mock("@/features/fabricacion/services/fabricacion-despiece-cotizacion.service", () => ({
   resolveFabricacionDespieceForQuoteItem: (...args: unknown[]) => mockResolveFabrication(...args),
 }));
+const mockShouldPreserveFrozenSnapshot = jest.fn(() => false);
 jest.mock("@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service", () => ({
   buildFabricacionSnapshotSyncKey: () => "l25-snapshot-sync-key",
   fabricacionSnapshotMatchesCalculatedOutput: () => false,
+  shouldPreserveFrozenFabricationSnapshot: (...args: unknown[]) =>
+    mockShouldPreserveFrozenSnapshot(...args),
 }));
 
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
@@ -329,5 +332,93 @@ describe("CuadernoConstructorMovil glass identity", () => {
     fireEvent.click(screen.getByRole("button", { name: /Cubicación y despiece/i }));
     expect(await screen.findByText(message)).toBeInTheDocument();
     expect(onUpdateItem).not.toHaveBeenCalled();
+  });
+
+  it("preserves a frozen historical L25 snapshot on reopen or minor commercial edit", () => {
+    const actualSnapshotService = jest.requireActual(
+      "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service"
+    ) as typeof import("@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service");
+    mockShouldPreserveFrozenSnapshot.mockImplementation((...args: unknown[]) =>
+      actualSnapshotService.shouldPreserveFrozenFabricationSnapshot(
+        args[0] as never,
+        args[1] as never
+      )
+    );
+
+    const frozenSnapshot = {
+      schemaVersion: 1,
+      tipo: "fabricacion_receta_snapshot",
+      recipeId: "l25-exact-recipe",
+      recipeDefinitionId: "def-1",
+      recipeVersion: 1,
+      recipeStatus: "validated",
+      recipeScope: "ventora",
+      lineTemplateId: 75,
+      recipeIdentity: {
+        recetaId: "def-1",
+        codigo: "L25",
+        nombre: "L25",
+        tipologia: "corredera",
+        hojas: 2,
+        modulos: 2,
+        variante: "monolithic_open_normal",
+      },
+      input: {
+        anchoTotalMm: 1200,
+        altoTotalMm: 1000,
+        cantidad: 3,
+        hojas: 2,
+        modulos: 2,
+        variante: "monolithic_open_normal",
+      },
+      selectedVariant: "monolithic_open_normal",
+      result: {
+        calculable: true,
+        perfiles: [],
+        vidrios: [],
+        accesorios: [],
+        totalLinealMm: 0,
+        totalVidrioM2: 0,
+        advertencias: [],
+      },
+      pauta: [],
+      vidrios: [],
+      advertencias: [],
+      pautaBarras: null,
+      calculatedAt: "2026-09-01T10:00:00.000Z",
+    } as never;
+
+    mockResolveFabrication.mockReturnValue({
+      estado: "calculado",
+      formal: {
+        ...(frozenSnapshot as object),
+        recipeVersion: 2,
+        calculatedAt: "2026-11-22T12:00:00.000Z",
+      },
+      cubication: { status: "calculable" } as never,
+      recipe: { id: "l25-exact-recipe" },
+      barsAvailable: true,
+      preliminary: false,
+      message: null,
+    });
+
+    const item = baseItem({
+      lineaComercial: "L25 SODAL",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        logicalComponentId: "logical-window-1",
+        lineTemplateId: "75",
+        catalogLineKey: "ventora:l25",
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 2,
+        fabricacionModulos: 2,
+        fabricacionVariante: "monolithic_open_normal",
+      }),
+      fabricacionSnapshot: frozenSnapshot,
+    });
+    const onUpdateItem = jest.fn();
+
+    renderConstructor(item, onUpdateItem);
+    expect(onUpdateItem).not.toHaveBeenCalled();
+    mockShouldPreserveFrozenSnapshot.mockImplementation(() => false);
   });
 });

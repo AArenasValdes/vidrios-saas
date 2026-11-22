@@ -32,10 +32,50 @@ function ordered<T>(values: readonly T[], project: (value: T) => unknown = (valu
   });
 }
 
+const VOLATILE_UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const FALLBACK_ID_PREFIXES = [
+  "veratec:workbook:",
+  "ventora:universal:",
+  "ventora:documental:",
+  "ventora:system:",
+  "arquetipo:",
+  "winhouse:",
+  "fallback:",
+] as const;
+
+function hasFallbackIdPrefix(value: string | null | undefined): boolean {
+  if (!value) return false;
+  return FALLBACK_ID_PREFIXES.some((prefix) => value.startsWith(prefix));
+}
+
+function isFallbackRecipeSnapshot(snapshot: FabricacionCotizacionSnapshot): boolean {
+  return hasFallbackIdPrefix(snapshot.recipeId);
+}
+
+/**
+ * Diferencia IDs internos volátiles (UUIDs efímeros regenerados en fallbacks o
+ * IDs determinísticos de fallback) de IDs técnicos/persistidos reales.
+ */
+function normalizeComparableInternalId(
+  id: string,
+  snapshot: FabricacionCotizacionSnapshot
+): string {
+  if (hasFallbackIdPrefix(id) || id.startsWith("uuid-")) {
+    return "__volatile__";
+  }
+  if (isFallbackRecipeSnapshot(snapshot) && VOLATILE_UUID_PATTERN.test(id)) {
+    return "__volatile__";
+  }
+  return id;
+}
+
 /**
  * Compara la salida técnica mostrada en cubicación, despiece y pauta.
- * Se omite `calculatedAt`: recalcular sin cambios no debe reescribir el borrador,
- * pero un cambio de código o nombre de perfil sí debe actualizarlo.
+ * Se omite `calculatedAt` y los IDs internos volátiles regenerados por
+ * recetas fallback, pero se conservan los IDs técnicos/persistidos reales y
+ * cualquier cambio en identidad, medidas, cantidades, códigos o vidrios.
  */
 export function fabricacionSnapshotMatchesCalculatedOutput(
   current: FabricacionCotizacionSnapshot | null | undefined,
@@ -46,10 +86,20 @@ export function fabricacionSnapshotMatchesCalculatedOutput(
   const project = (snapshot: FabricacionCotizacionSnapshot) => ({
     recipeId: snapshot.recipeId,
     recipeVersion: snapshot.recipeVersion,
+    recipeIdentity: {
+      codigo: snapshot.recipeIdentity.codigo,
+      nombre: snapshot.recipeIdentity.nombre,
+      tipologia: snapshot.recipeIdentity.tipologia,
+      hojas: snapshot.recipeIdentity.hojas,
+      modulos: snapshot.recipeIdentity.modulos,
+      apertura: snapshot.recipeIdentity.apertura ?? null,
+      herraje: snapshot.recipeIdentity.herraje ?? null,
+      variante: snapshot.recipeIdentity.variante,
+    },
     input: snapshot.input,
     glassSelection: snapshot.glassSelection ?? null,
     vidrios: ordered(snapshot.result.vidrios, (glass) => ({
-      vidrioId: glass.vidrioId,
+      vidrioId: normalizeComparableInternalId(glass.vidrioId, snapshot),
       nombre: glass.nombre,
       anchoMm: glass.anchoMm,
       altoMm: glass.altoMm,
@@ -58,7 +108,7 @@ export function fabricacionSnapshotMatchesCalculatedOutput(
       trazabilidad: ordered(glass.trazabilidad),
     })),
     perfiles: ordered(snapshot.result.perfiles, (perfil) => ({
-      componenteId: perfil.componenteId,
+      componenteId: normalizeComparableInternalId(perfil.componenteId, snapshot),
       codigoPerfil: perfil.codigoPerfil,
       nombrePerfil: perfil.nombrePerfil,
       funcion: perfil.funcion,
@@ -80,7 +130,7 @@ export function fabricacionSnapshotMatchesCalculatedOutput(
             usadoMm: barra.usadoMm,
             sobranteMm: barra.sobranteMm,
             cortes: ordered(barra.cortes, (corte) => ({
-              componenteId: corte.componenteId,
+              componenteId: normalizeComparableInternalId(corte.componenteId, snapshot),
               codigoPerfil: corte.codigoPerfil,
               funcion: corte.funcion,
               corte: corte.corte ?? null,
@@ -92,6 +142,34 @@ export function fabricacionSnapshotMatchesCalculatedOutput(
   });
 
   return JSON.stringify(project(current)) === JSON.stringify(project(next));
+}
+
+/**
+ * Determina si un snapshot histórico congelado debe preservarse durante la
+ * reapertura de una cotización o una edición comercial menor.
+ * Solo permite resincronizar automáticamente cuando el ítem aún no tiene
+ * snapshot o cuando cambiaron sus entradas técnicas efectivas (medidas,
+ * cantidad, vidrio, línea o variante).
+ */
+export function shouldPreserveFrozenFabricationSnapshot(
+  current: FabricacionCotizacionSnapshot | null | undefined,
+  next: FabricacionCotizacionSnapshot
+): boolean {
+  if (!current) return false;
+  if (fabricacionSnapshotMatchesCalculatedOutput(current, next)) return true;
+
+  const projectTechnicalInputs = (snapshot: FabricacionCotizacionSnapshot) => ({
+    lineTemplateId: snapshot.lineTemplateId ?? null,
+    selectedVariant: snapshot.selectedVariant,
+    supplierFamilyKey: snapshot.supplierFamilyKey ?? null,
+    input: snapshot.input,
+    glassSelection: snapshot.glassSelection ?? null,
+  });
+
+  return (
+    JSON.stringify(projectTechnicalInputs(current)) ===
+    JSON.stringify(projectTechnicalInputs(next))
+  );
 }
 
 /** Stable key for syncing calculations when fallback recipes recreate UUIDs. */
@@ -106,7 +184,7 @@ export function buildFabricacionSnapshotSyncKey(
     input: snapshot.input,
     glassSelection: snapshot.glassSelection ?? null,
     glassPanes: ordered(snapshot.result.vidrios, (glass) => ({
-      id: glass.vidrioId,
+      id: normalizeComparableInternalId(glass.vidrioId, snapshot),
       name: glass.nombre,
       widthMm: glass.anchoMm,
       heightMm: glass.altoMm,
