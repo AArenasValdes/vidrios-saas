@@ -1,5 +1,6 @@
 import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import { resolveUniversalPricedLineFallbacks } from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
+import { crearRecetasSodalP2A } from "@/features/fabricacion/fixtures/sodal-p2a-recipes";
 import { buildFabricationQuoteSummary } from "@/features/cotizaciones/line-templates/types/fabrication-quote-summary";
 import { prepareFabricacionSnapshotsForQuoteSave } from "@/features/cotizaciones/services/fabricacion-trabajo-snapshot-lifecycle.service";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
@@ -95,6 +96,105 @@ describe("smoke de despiece Aluminio en cotización y resumen", () => {
       ]);
       expect(summary.items).toHaveLength(1);
       expect(summary.items[0]?.snapshot.cuts.length).toBeGreaterThan(0);
+    }
+  });
+
+  it.each([
+    { width: 900, height: 2100, expected4604: 2082, expected4602: 782, expected4601: 2079, expected4603: 782 },
+    { width: 1500, height: 1000, expected4604: 982, expected4602: 1382, expected4601: 979, expected4603: 1382 },
+  ])("Serie 4600 calcula ejes distintos en cotizacion y resumen ($width x $height)", (sample) => {
+    const testCase = cases.find((entry) => entry.key === "ventora:serie-4600-puerta-vaiven")!;
+    const universalCandidates = resolveUniversalPricedLineFallbacks({
+      catalogKey: testCase.key,
+      lineTemplateId: 101,
+      organizationId: 1,
+      lineName: testCase.name,
+      variant: null,
+      leavesCount: testCase.leaves,
+      typology: testCase.typology,
+      glassName: testCase.glass,
+      includeDocumentedVariants: true,
+      recipes: [],
+    });
+    expect(universalCandidates).toHaveLength(1);
+    const mechanicalDef = crearRecetasSodalP2A({
+      catalogKey: "ventora:serie-4600-puerta-vaiven",
+      lineName: testCase.name,
+    })[0]!;
+    const candidates: FabricationRecipeRecord[] = [
+      ...universalCandidates,
+      {
+        ...universalCandidates[0]!,
+        id: "taller:serie-4600:mecanico",
+        scope: "organization",
+        variant: mechanicalDef.identidad.variante,
+        definition: mechanicalDef,
+      },
+    ];
+
+    for (const recipe of candidates) {
+      const item: CotizacionWorkflowItem = {
+        ...quoteItem(recipe, testCase),
+        ancho: sample.width,
+        alto: sample.height,
+      };
+      const resolved = resolveFabricacionDespieceForQuoteItem({
+        item,
+        recipes: [recipe],
+        organizationId: 1,
+      });
+
+      expect(resolved.estado).toBe("calculado");
+      expect(resolved.formal?.result.calculable).toBe(true);
+      const isHydraulic = recipe.definition.identidad.variante.toLowerCase().includes("hidr");
+      if (isHydraulic) {
+        expect(resolved.formal?.pauta.find((p) => p.codigoPerfil === "4604")?.medidaMm).toBe(sample.expected4604);
+        expect(resolved.formal?.pauta.find((p) => p.codigoPerfil === "4602")?.medidaMm).toBe(sample.expected4602);
+      } else {
+        expect(resolved.formal?.pauta.find((p) => p.codigoPerfil === "4601")?.medidaMm).toBe(sample.expected4601);
+        expect(resolved.formal?.pauta.find((p) => p.codigoPerfil === "4603")?.medidaMm).toBe(sample.expected4603);
+      }
+    }
+  });
+
+  it("Serie 4600 rechaza medidas invalidas o <= 0 en cotizacion sin emitir cortes", () => {
+    const testCase = cases.find((entry) => entry.key === "ventora:serie-4600-puerta-vaiven")!;
+    const candidates = resolveUniversalPricedLineFallbacks({
+      catalogKey: testCase.key,
+      lineTemplateId: 101,
+      organizationId: 1,
+      lineName: testCase.name,
+      variant: null,
+      leavesCount: testCase.leaves,
+      typology: testCase.typology,
+      glassName: testCase.glass,
+      includeDocumentedVariants: true,
+      recipes: [],
+    });
+
+    for (const recipe of candidates) {
+      for (const dims of [
+        { ancho: 0, alto: 2100 },
+        { ancho: 900, alto: 0 },
+        { ancho: -900, alto: 2100 },
+      ]) {
+        const resolved = resolveFabricacionDespieceForQuoteItem({
+          item: { ...quoteItem(recipe, testCase), ...dims },
+          recipes: [recipe],
+          organizationId: 1,
+        });
+        expect(resolved.estado).toBe("sin_medidas");
+        expect(resolved.formal).toBeNull();
+        expect(resolved.cubication).toBeNull();
+      }
+
+      const tooSmall = resolveFabricacionDespieceForQuoteItem({
+        item: { ...quoteItem(recipe, testCase), ancho: 10, alto: 10 },
+        recipes: [recipe],
+        organizationId: 1,
+      });
+      expect(tooSmall.formal?.result.calculable).toBe(false);
+      expect(tooSmall.cubication?.cuts ?? []).toHaveLength(0);
     }
   });
 });

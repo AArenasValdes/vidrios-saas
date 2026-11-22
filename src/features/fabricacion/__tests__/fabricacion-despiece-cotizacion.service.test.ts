@@ -64,6 +64,7 @@ import {
   crearRecetaVeratecBahar5200,
   VERATEC_BAHAR_5200_PLEGABLE_VARIANTS,
 } from "@/features/fabricacion/fixtures/veratec-bahar-5200-recipes";
+import { crearRecetaVeratecElegansBatiente } from "@/features/fabricacion/fixtures/veratec-workbook-recipes";
 import { resolveMobileComponentFabricacionSummary } from "@/features/fabricacion/services/mobile-component-fabricacion-summary.service";
 import { construirFabricacionTrabajoSnapshot } from "@/features/fabricacion/services/fabricacion-trabajo-snapshot.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
@@ -75,6 +76,10 @@ import {
   mapItemToForm,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
+import { evaluateLineCompatibility } from "@/features/cotizaciones/line-templates/services/line-template-compatibility.service";
+import { filterLineCatalogTemplates } from "@/features/cotizaciones/line-templates/services/line-option-presentation.service";
+import { FABRICACION_RECIPE_SCHEMA_VERSION } from "@/features/fabricacion/types/fabricacion-domain";
 import {
   VERATEC_7400_PRELIMINARY_GLASS_CASES,
   VERATEC_7400_UNSUPPORTED_3MM_CASE,
@@ -598,15 +603,6 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
       sourceName: "Veratec · pauta de corte facilitada",
     },
     {
-      catalogKey: "ventora:veratec-elegans-60-ventana-hoja-interior",
-      lineTemplateId: "9007",
-      typology: "abatible",
-      leaves: 1,
-      variant: "",
-      expectedProfileCount: 8,
-      sourceName: "Veratec · pauta de corte facilitada",
-    },
-    {
       catalogKey: "ventora:veratec-bahar-5200-ventana-interior",
       lineTemplateId: "9002",
       typology: "abatible",
@@ -970,14 +966,259 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
     }
   );
 
-  it("resuelve la ventana exterior Elegans 60 con la fórmula documental de su propia línea", () => {
-    const catalogKey = "ventora:veratec-elegans-60-ventana-hoja-exterior";
-    const item = {
+  it("bloquea el fallback documental de Elegans 60 sin receta privada, mantiene elegibilidad comercial, respeta receta propia y preserva snapshot histórico", () => {
+    const elegansCases = [
+      {
+        catalogKey: "ventora:veratec-elegans-60-fijo",
+        lineTemplateId: "9005",
+        tipo: "Paño fijo",
+        sistema: "Fijo",
+        typology: "pano_fijo" as const,
+        apertura: "fijo",
+        openingType: "Fijo",
+      },
+      {
+        catalogKey: "ventora:veratec-elegans-60-ventana-hoja-interior",
+        lineTemplateId: "9007",
+        tipo: "Ventana",
+        sistema: "Abatible",
+        typology: "abatible" as const,
+        apertura: "abatible",
+        openingType: "Abatir",
+      },
+      {
+        catalogKey: "ventora:veratec-elegans-60-ventana-hoja-exterior",
+        lineTemplateId: "9008",
+        tipo: "Ventana",
+        sistema: "Abatible",
+        typology: "abatible" as const,
+        apertura: "abatible",
+        openingType: "Abatir",
+      },
+      {
+        catalogKey: "ventora:veratec-elegans-60-puerta-hoja-interior",
+        lineTemplateId: "9009",
+        tipo: "Puerta",
+        sistema: "Abatible",
+        typology: "puerta_abatible" as const,
+        apertura: "abatible",
+        openingType: "Abatir",
+      },
+      {
+        catalogKey: "ventora:veratec-elegans-60-puerta-hoja-exterior",
+        lineTemplateId: "9010",
+        tipo: "Puerta",
+        sistema: "Abatible",
+        typology: "puerta_abatible" as const,
+        apertura: "abatible",
+        openingType: "Abatir",
+      },
+    ];
+
+    // (a) Sin receta privada no emite cortes por fallback documental (652xx Bahar).
+    for (const testCase of elegansCases) {
+      const item = {
+        ...quoteItem({ lineTemplateId: testCase.lineTemplateId, ancho: 1200, alto: 1500 }),
+        tipo: testCase.tipo,
+        lineaComercial: `Elegans 60 · ${testCase.catalogKey}`,
+        observaciones: encodeCotizacionItemPresentationMeta({
+          lineTemplateId: testCase.lineTemplateId,
+          catalogLineKey: testCase.catalogKey,
+          sistema: testCase.sistema,
+          fabricacionTipologia: testCase.typology,
+          fabricacionApertura: testCase.apertura,
+          fabricacionHojas: 1,
+          fabricacionModulos: 1,
+        }),
+      };
+
+      const resolved = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 3 });
+      expect(resolved.estado).toBe("sin_receta");
+      expect(resolved.formal).toBeNull();
+      expect(resolved.cubication).toBeNull();
+      expect(resolved.recipe).toBeNull();
+    }
+
+    // (b) Sigue siendo elegible comercialmente en el catálogo de Guiada/Constructor.
+    for (const testCase of elegansCases) {
+      const catalogEntry = VENTORA_DEFAULT_LINE_CATALOG.find(
+        (entry) => entry.catalogKey === testCase.catalogKey,
+      );
+      expect(catalogEntry).toBeDefined();
+      const template: CotizacionLineTemplate = {
+        id: Number(testCase.lineTemplateId),
+        organizationId: 3,
+        catalogKey: catalogEntry!.catalogKey,
+        nombre: catalogEntry!.nombre,
+        categoria: catalogEntry!.categoria,
+        unidadCobro: catalogEntry!.unidadCobro,
+        material: catalogEntry!.material,
+        vidrioPrincipalRecomendado: catalogEntry!.vidrioPrincipalRecomendado,
+        costoBase: catalogEntry!.costoBase,
+        precioM2Sugerido: catalogEntry!.precioM2Sugerido,
+        minimoCobrable: catalogEntry!.minimoCobrable,
+        redondeoPrecio: catalogEntry!.redondeoPrecio,
+        mermaPct: catalogEntry!.mermaPct,
+        margenObjetivoPct: catalogEntry!.margenObjetivoPct,
+        proveedor: catalogEntry!.proveedor,
+        vigenciaDesde: null,
+        vigenciaHasta: null,
+        catalogMetadata: catalogEntry!.catalogMetadata,
+        isActive: true,
+        sortOrder: 1,
+        creadoEn: null,
+        actualizadoEn: null,
+        eliminadoEn: null,
+      };
+      const context = {
+        componentType: testCase.tipo,
+        openingType: testCase.openingType,
+        leavesCount: 1,
+        material: "PVC",
+      };
+      expect(evaluateLineCompatibility({ line: template, context })).toMatchObject({
+        commercial: "compatible",
+      });
+      expect(filterLineCatalogTemplates({ templates: [template], tab: "compatible", context })).toEqual([template]);
+    }
+
+    // (c) Receta privada compatible del taller sí calcula y prevalece.
+    const privateRecipe = recipeRecord({
+      id: "taller-elegans-60-ext",
+      organizationId: 3,
+      lineTemplateId: 9008,
+      scope: "organization",
+      providerName: "VERATEC",
+      lineName: "Elegans 60 · Ventana hoja exterior",
+      typology: "abatible",
+      leavesCount: 1,
+      variant: "estandar",
+      status: "validated",
+      sourceType: "manual",
+      sourceReference: "taller:personalizada:elegans-60",
+      definition: {
+        schemaVersion: FABRICACION_RECIPE_SCHEMA_VERSION,
+        version: 1,
+        estado: "validada",
+        identidad: {
+          recetaId: "taller-elegans-60-ext-def",
+          codigo: "TALLER-ELEGANS-60-EXT",
+          nombre: "Elegans 60 · Receta propia",
+          tipologia: "abatible",
+          hojas: 1,
+          modulos: 1,
+          apertura: "abatible",
+          herraje: null,
+          variante: "estandar",
+        },
+        perfiles: [
+          {
+            id: "elegans-marco-h",
+            codigoPerfil: "66311VER",
+            nombrePerfil: "Marco Elegans 60",
+            funcion: "Marco horizontal",
+            largoComercialMm: 5800,
+            reglaMedida: { base: "ancho_total", ajusteMm: 6 },
+            reglaCantidad: { tipo: "fija", cantidad: 2 },
+            requerido: true,
+            corte: "45°/45°",
+          },
+          {
+            id: "elegans-hoja-h",
+            codigoPerfil: "66312VER",
+            nombrePerfil: "Hoja ventana exterior Elegans 60",
+            funcion: "Hoja horizontal",
+            largoComercialMm: 5800,
+            reglaMedida: { base: "ancho_total", ajusteMm: -58 },
+            reglaCantidad: { tipo: "fija", cantidad: 2 },
+            requerido: true,
+            corte: "45°/45°",
+          },
+        ],
+        vidrios: [],
+        accesorios: [],
+        configuracionCorte: {
+          perdidaCorteMm: null,
+          despunteInicialMm: null,
+          sobranteMinimoAprovechableMm: null,
+          largoComercialDefaultMm: 5800,
+        },
+        notasValidacion: ["Receta propia de prueba."],
+      },
+    });
+    const privateItem = {
       ...quoteItem({ lineTemplateId: "9008", ancho: 1200, alto: 1500 }),
       lineaComercial: "Elegans 60 · Ventana hoja exterior",
       observaciones: encodeCotizacionItemPresentationMeta({
         lineTemplateId: "9008",
-        catalogLineKey: catalogKey,
+        catalogLineKey: "ventora:veratec-elegans-60-ventana-hoja-exterior",
+        sistema: "Abatible",
+        fabricacionTipologia: "abatible",
+        fabricacionApertura: "abatible",
+        fabricacionHojas: 1,
+        fabricacionModulos: 1,
+        fabricacionVariante: "estandar",
+      }),
+    };
+    const resolvedPrivate = resolveFabricacionDespieceForQuoteItem({
+      item: privateItem,
+      recipes: [privateRecipe],
+      organizationId: 3,
+    });
+    expect(resolvedPrivate.estado).toBe("calculado");
+    expect(resolvedPrivate.formal?.result.calculable).toBe(true);
+    expect(resolvedPrivate.formal?.pauta.map((p) => p.codigoPerfil)).toEqual(["66311VER", "66312VER"]);
+
+    // (d) Snapshot histórico congelado se preserva aunque no haya receta activa ni fallback.
+    const frozenSnapshot = resolvedPrivate.formal!;
+    const historicalItem = {
+      ...privateItem,
+      fabricacionSnapshot: frozenSnapshot,
+    };
+    const resolvedHistorical = resolveFabricacionDespieceForQuoteItem({
+      item: historicalItem,
+      recipes: [],
+      organizationId: 3,
+    });
+    expect(resolvedHistorical.formal).toEqual(frozenSnapshot);
+    expect(resolvedHistorical.cubication?.cuts.length).toBeGreaterThan(0);
+    expect(resolvedHistorical.cubication?.cuts.map((cut) => cut.profileCode)).toEqual(["66311VER", "66312VER"]);
+  });
+
+  it("bloquea una receta documental legacy de Elegans 60 persistida con perfiles 652xx y prioriza receta privada legítima", () => {
+    const obsoleteDefinition = crearRecetaVeratecElegansBatiente({
+      lineName: "Elegans 60 · Ventana hoja exterior",
+      variant: "elegans_ventana_hoja_exterior",
+    });
+    const legacyPersistedRecipe = recipeRecord({
+      id: "legacy-db-elegans-65209",
+      organizationId: 3,
+      lineTemplateId: 9008,
+      scope: "organization",
+      providerName: "VERATEC",
+      lineName: "Elegans 60 · Ventana hoja exterior",
+      typology: "abatible",
+      leavesCount: 1,
+      variant: obsoleteDefinition.identidad.variante,
+      status: "validated",
+      sourceType: "copied",
+      sourceReference: "pauta-de-corte-veratec.xlsx#ABATIR-EXT-Y-PROY",
+      definition: obsoleteDefinition,
+    });
+    const legacyMigrationCopy = recipeRecord({
+      ...legacyPersistedRecipe,
+      id: "legacy-migration-copy-65209",
+      sourceType: "manual",
+      sourceReference: "taller:migrada-con-652xx",
+    });
+
+    const item = {
+      ...quoteItem({ lineTemplateId: "9008", ancho: 1200, alto: 1500 }),
+      tipo: "Ventana",
+      lineaComercial: "Elegans 60 · Ventana hoja exterior",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "9008",
+        catalogLineKey: "ventora:veratec-elegans-60-ventana-hoja-exterior",
         sistema: "Abatible",
         fabricacionTipologia: "abatible",
         fabricacionApertura: "abatible",
@@ -986,12 +1227,100 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
       }),
     };
 
-    const resolved = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 3 });
-    expect(resolved.estado).toBe("calculado");
-    expect(resolved.preliminary).toBe(true);
-    expect(resolved.recipe?.sourceReference).toContain("ABATIR-EXT-Y-PROY");
-    expect(resolved.formal?.pauta.length).toBe(8);
-    expect(resolved.formal?.validationStatus).not.toBe("validated");
+    const blocked = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [legacyPersistedRecipe, legacyMigrationCopy],
+      organizationId: 3,
+    });
+    expect(blocked.estado).toBe("sin_receta");
+    expect(blocked.formal).toBeNull();
+    expect(blocked.cubication).toBeNull();
+    expect(blocked.recipe).toBeNull();
+
+    const legitimatePrivate = recipeRecord({
+      id: "taller-elegans-60-oficial-cotiz",
+      organizationId: 3,
+      lineTemplateId: 9008,
+      scope: "organization",
+      providerName: "VERATEC",
+      lineName: "Elegans 60 · Ventana hoja exterior",
+      typology: "abatible",
+      leavesCount: 1,
+      variant: "estandar",
+      status: "validated",
+      sourceType: "manual",
+      sourceReference: "taller:personalizada:elegans-60",
+      definition: {
+        schemaVersion: FABRICACION_RECIPE_SCHEMA_VERSION,
+        version: 1,
+        estado: "validada",
+        identidad: {
+          recetaId: "taller-elegans-60-oficial-def",
+          codigo: "TALLER-ELEGANS-60-OFICIAL",
+          nombre: "Elegans 60 · Receta oficial taller",
+          tipologia: "abatible",
+          hojas: 1,
+          modulos: 1,
+          apertura: "abatible",
+          herraje: null,
+          variante: "estandar",
+        },
+        perfiles: [
+          {
+            id: "elegans-oficial-marco",
+            codigoPerfil: "66311VER",
+            nombrePerfil: "Marco Elegans 60",
+            funcion: "Marco horizontal",
+            largoComercialMm: 5800,
+            reglaMedida: { base: "ancho_total", ajusteMm: 6 },
+            reglaCantidad: { tipo: "fija", cantidad: 2 },
+            requerido: true,
+            corte: "45°/45°",
+          },
+          {
+            id: "elegans-oficial-hoja",
+            codigoPerfil: "66312VER",
+            nombrePerfil: "Hoja ventana exterior Elegans 60",
+            funcion: "Hoja horizontal",
+            largoComercialMm: 5800,
+            reglaMedida: { base: "ancho_total", ajusteMm: -58 },
+            reglaCantidad: { tipo: "fija", cantidad: 2 },
+            requerido: true,
+            corte: "45°/45°",
+          },
+        ],
+        vidrios: [],
+        accesorios: [],
+        configuracionCorte: {
+          perdidaCorteMm: null,
+          despunteInicialMm: null,
+          sobranteMinimoAprovechableMm: null,
+          largoComercialDefaultMm: 5800,
+        },
+        notasValidacion: ["Receta privada legítima Elegans 60."],
+      },
+    });
+
+    const coexisting = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [legacyPersistedRecipe, legacyMigrationCopy, legitimatePrivate],
+      organizationId: 3,
+    });
+    expect(coexisting.estado).toBe("calculado");
+    expect(coexisting.recipe?.id).toBe("taller-elegans-60-oficial-cotiz");
+    expect(coexisting.formal?.pauta.map((p) => p.codigoPerfil)).toEqual(["66311VER", "66312VER"]);
+
+    const frozenSnapshot = coexisting.formal!;
+    const historicalWithObsoleteInDb = resolveFabricacionDespieceForQuoteItem({
+      item: { ...item, fabricacionSnapshot: frozenSnapshot },
+      recipes: [legacyPersistedRecipe],
+      organizationId: 3,
+    });
+    expect(historicalWithObsoleteInDb.formal).toEqual(frozenSnapshot);
+    expect(historicalWithObsoleteInDb.cubication?.cuts.map((c) => c.profileCode)).toEqual([
+      "66311VER",
+      "66312VER",
+    ]);
   });
 
   it("resuelve Línea 12 como despiece validado aunque exista un borrador antiguo", () => {

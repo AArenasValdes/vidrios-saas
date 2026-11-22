@@ -4,12 +4,9 @@ import {
   crearRecetaVeratec7400Monorriel,
   VERATEC_COMPACT_SLIDING_VARIANTS,
   VERATEC_ELEGANS_BATIENTE_VARIANTS,
-  VERATEC_ELEGANS_FIXED_VARIANTS,
   VERATEC_7400_WORKBOOK_3H_VARIANTS,
   VERATEC_7400_MONORAIL_VARIANTS,
   VERATEC_WORKBOOK_SOURCE_REVISION,
-  crearRecetaVeratecElegansBatiente,
-  crearRecetaVeratecElegansFijo,
 } from "@/features/fabricacion/fixtures/veratec-workbook-recipes";
 import {
   crearRecetaVeratec7400CuatroHojasChicas,
@@ -164,41 +161,16 @@ export function resolveVeratecWorkbookFallback(input: {
     })];
   }
 
-  const elegansBatiente = VERATEC_ELEGANS_BATIENTE_VARIANTS.find(
-    (candidate) => candidate.catalogKey === input.catalogKey,
-  );
-  if (elegansBatiente) {
-    if (!requestedVariant(elegansBatiente.slug)) return [];
-    const definition = crearRecetaVeratecElegansBatiente({
-      lineName: input.lineName,
-      variant: elegansBatiente.slug,
-    });
-    return [createRecord({
-      lineTemplateId: input.lineTemplateId,
-      organizationId: input.organizationId,
-      lineName: input.lineName,
-      definition,
-      sourceReference: elegansBatiente.sourceReference,
-    })];
-  }
-
-  if (input.catalogKey === "ventora:veratec-elegans-60-fijo") {
-    const requestedFixedVariant = VERATEC_ELEGANS_FIXED_VARIANTS.find(
-      (candidate) => candidate.slug === normalizedRequestedVariant,
-    );
-    const fixedVariant = requestedFixedVariant ?? VERATEC_ELEGANS_FIXED_VARIANTS[0];
-    if (!fixedVariant || !requestedVariant(fixedVariant.slug)) return [];
-    const definition = crearRecetaVeratecElegansFijo({
-      lineName: input.lineName,
-      variant: fixedVariant.slug,
-    });
-    return [createRecord({
-      lineTemplateId: input.lineTemplateId,
-      organizationId: input.organizationId,
-      lineName: input.lineName,
-      definition,
-      sourceReference: fixedVariant.sourceReference,
-    })];
+  if (
+    input.catalogKey === "ventora:veratec-elegans-60-fijo" ||
+    VERATEC_ELEGANS_BATIENTE_VARIANTS.some(
+      (candidate) => candidate.catalogKey === input.catalogKey,
+    )
+  ) {
+    // Las hojas del Excel asociadas antes a Elegans 60 citan códigos Bahar 652xx
+    // incompatibles con los perfiles oficiales Elegans 60 (663xx/664xx). Se bloquea
+    // el fallback documental hasta contar con fórmulas atribuibles a Elegans 60.
+    return [];
   }
 
   if (input.catalogKey === "ventora:veratec-7400-corredera-3h") {

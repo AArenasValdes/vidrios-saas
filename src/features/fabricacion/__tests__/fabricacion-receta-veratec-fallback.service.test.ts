@@ -57,25 +57,22 @@ describe("fallback documental Veratec", () => {
     expect(records.map((record) => record.variant)).toEqual(expected);
   });
 
-  it("resuelve bases Elegans desde su propia pauta y no desde fórmulas Bahar", () => {
-    for (const catalogKey of [
-      "ventora:veratec-elegans-60-fijo",
-      "ventora:veratec-elegans-60-ventana-hoja-interior",
-      "ventora:veratec-elegans-60-ventana-hoja-exterior",
-      "ventora:veratec-elegans-60-puerta-hoja-interior",
-      "ventora:veratec-elegans-60-puerta-hoja-exterior",
-    ]) {
-      const recipes = resolveVeratecWorkbookFallback({ ...base, catalogKey, variant: null });
-      expect(recipes).toHaveLength(1);
-      expect(recipes[0]).toMatchObject({
-        scope: "ventora",
-        status: "testing",
-        sourceType: "supplier",
-        sourceName: "Veratec · pauta de corte facilitada",
-        validatedAt: null,
-        validatedBy: null,
-      });
-      expect(recipes[0]?.sourceReference).toContain("pauta-de-corte-veratec.xlsx#");
+  it("bloquea el fallback documental de Elegans 60 para evitar cortes falsos con códigos Bahar 652xx", () => {
+    for (const [catalogKey, variant] of [
+      ["ventora:veratec-elegans-60-fijo", null],
+      ["ventora:veratec-elegans-60-fijo", "elegans_fijo_marco_normal"],
+      ["ventora:veratec-elegans-60-fijo", "elegans_fijo_marco_rebajado"],
+      ["ventora:veratec-elegans-60-ventana-hoja-interior", null],
+      ["ventora:veratec-elegans-60-ventana-hoja-interior", "elegans_ventana_hoja_interior"],
+      ["ventora:veratec-elegans-60-ventana-hoja-exterior", null],
+      ["ventora:veratec-elegans-60-ventana-hoja-exterior", "elegans_ventana_hoja_exterior"],
+      ["ventora:veratec-elegans-60-puerta-hoja-interior", null],
+      ["ventora:veratec-elegans-60-puerta-hoja-interior", "elegans_puerta_hoja_interior"],
+      ["ventora:veratec-elegans-60-puerta-hoja-exterior", null],
+      ["ventora:veratec-elegans-60-puerta-hoja-exterior", "elegans_puerta_hoja_exterior"],
+    ] as const) {
+      const recipes = resolveVeratecWorkbookFallback({ ...base, catalogKey, variant });
+      expect(recipes).toEqual([]);
     }
   });
 
