@@ -10,7 +10,11 @@ import {
 import { buildAllSodal4800Recipes } from "@/features/fabricacion/fixtures/sodal-4800-zeta-recipes";
 import { loadEvidenceSidecarByRecipeId } from "@/features/fabricacion/zeta/zeta-evidence-sidecar-loader";
 import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
-import { resolveFabricationRecipe } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
+import {
+  SODAL_4800_CATALOG_KEY,
+  filterRecipesForCatalogResolution,
+  resolveFabricationRecipe,
+} from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
 import {
   resolveUniversalPricedLineFallback,
   resolveUniversalPricedLineFallbacks,
@@ -438,5 +442,163 @@ describe("Serie 4800 — cobertura P1 Corredera Normal 2H", () => {
     expect(frozenRes.formal?.result.perfiles.find((p) => p.codigoPerfil === "4804")?.medidaMm).toBe(
       580,
     );
+  });
+
+  it("no descarta en filterRecipesForCatalogResolution una receta taller:personalizada: validada con vidrio -42 mm, respeta variante, aislamiento por empresa y bloqueos documentales", () => {
+    const baseNormal = crearRecetaSerie4800Corredera({
+      lineName: "Serie 4800 Taller Privada",
+      variant: SERIE_4800_VARIANT_NORMAL,
+    });
+    const customNormalDef = {
+      ...baseNormal,
+      estado: "validada" as const,
+      identidad: {
+        ...baseNormal.identidad,
+        codigo: "SODAL-4800-PRIVADA-V2",
+      },
+      perfiles: baseNormal.perfiles.map((p) =>
+        p.codigoPerfil === "4806" ? { ...p, codigoPerfil: "4896" } : p,
+      ),
+      vidrios: baseNormal.vidrios.map((g) => ({
+        ...g,
+        reglaAncho: { ...g.reglaAncho, ajusteMm: -42 },
+      })),
+    };
+    const workshopOrg1: FabricationRecipeRecord = {
+      id: "workshop-org1-4800-42",
+      organizationId: 1,
+      lineTemplateId: 4800,
+      scope: "organization",
+      providerName: "Taller Org 1",
+      lineName: "Serie 4800 — Corredera 2 hojas",
+      typology: "corredera",
+      leavesCount: 2,
+      variant: SERIE_4800_VARIANT_NORMAL,
+      version: 2,
+      status: "validated",
+      definition: customNormalDef,
+      sourceType: "workshop",
+      sourceReference: "taller:personalizada:serie-4800:normal:v2",
+      sourceName: "Taller Org 1",
+      sourceRevision: null,
+      parentRecipeId: null,
+      validatedAt: "2026-11-21T00:00:00.000Z",
+      validatedBy: "qa@ventora.cl",
+      createdAt: "2026-11-21T00:00:00.000Z",
+      updatedAt: "2026-11-21T00:00:00.000Z",
+      eliminadoEn: null,
+    };
+    const obsoleteLegacy: FabricationRecipeRecord = {
+      ...workshopOrg1,
+      id: "legacy-p2a-4800",
+      organizationId: null,
+      scope: "ventora",
+      status: "draft",
+      version: 1,
+      sourceType: "manufacturer",
+      sourceReference: "SODAL-P2A-4800",
+      sourceName: "SODAL",
+      definition: {
+        ...customNormalDef,
+        estado: "borrador",
+        identidad: { ...customNormalDef.identidad, codigo: "SODAL-4800-LEGACY" },
+      },
+    };
+    const zetaDoc = buildZetaPa56Record(4800);
+
+    // 1) filterRecipesForCatalogResolution preserva la receta privada (-42 mm + código/perfil distinto),
+    // mientras excluye un borrador obsoleto incompatible.
+    const filtered = filterRecipesForCatalogResolution(
+      [workshopOrg1, obsoleteLegacy, zetaDoc],
+      SODAL_4800_CATALOG_KEY,
+    );
+    expect(filtered.map((r) => r.id)).toContain("workshop-org1-4800-42");
+    expect(filtered.map((r) => r.id)).toContain(zetaDoc.id);
+    expect(filtered.map((r) => r.id)).not.toContain("legacy-p2a-4800");
+
+    // 2) Org 1 resuelve su receta privada en 2H Normal (1800/2 - 42 = 858 mm), no Diamond (-44 = 856 mm).
+    const directResolution = resolveFabricationRecipe([workshopOrg1, zetaDoc], {
+      organizationId: 1,
+      lineTemplateId: 4800,
+      catalogKey: SERIE_4800_CATALOG_KEY,
+      tipologia: "corredera",
+      hojas: 2,
+      variante: SERIE_4800_VARIANT_NORMAL,
+      anchoTotalMm: 1800,
+      altoTotalMm: 1500,
+      glassName: "Incoloro monolítico 5mm",
+    });
+    expect(directResolution.estado).toBe("receta_unica");
+    expect(directResolution.receta?.id).toBe("workshop-org1-4800-42");
+
+    const org1QuoteRes = resolveFabricacionDespieceForQuoteItem({
+      item: buildSerie4800QuoteItem({
+        ancho: 1800,
+        alto: 1500,
+        hojas: 2,
+        variante: SERIE_4800_VARIANT_NORMAL,
+        vidrio: "Incoloro monolítico 5mm",
+      }),
+      recipes: [workshopOrg1, zetaDoc],
+      organizationId: 1,
+      lineTemplateId: 4800,
+      lineCatalogKey: SERIE_4800_CATALOG_KEY,
+    });
+    expect(org1QuoteRes.estado).toBe("calculado");
+    expect(org1QuoteRes.preliminary).toBe(false);
+    expect(org1QuoteRes.recipe?.id).toBe("workshop-org1-4800-42");
+    expect(org1QuoteRes.formal?.result.vidrios[0]?.anchoMm).toBe(858);
+    expect(org1QuoteRes.formal?.result.perfiles.some((p) => p.codigoPerfil === "4896")).toBe(true);
+
+    // 3) Respeta variante: Org 1 pidiendo Reforzada no recibe la receta privada de Normal y queda bloqueada.
+    const org1ReforzadaRes = resolveFabricacionDespieceForQuoteItem({
+      item: buildSerie4800QuoteItem({
+        ancho: 1800,
+        alto: 1500,
+        hojas: 2,
+        variante: SERIE_4800_VARIANT_REFORZADA,
+        vidrio: "Incoloro monolítico 5mm",
+      }),
+      recipes: [workshopOrg1, zetaDoc],
+      organizationId: 1,
+      lineTemplateId: 4800,
+      lineCatalogKey: SERIE_4800_CATALOG_KEY,
+    });
+    expect(org1ReforzadaRes.estado).toBe("receta_incompleta");
+    expect(org1ReforzadaRes.formal).toBeNull();
+
+    // 4) Aislamiento por organización + restricciones documentales vigentes en Org 2.
+    const org2FloatRes = resolveFabricacionDespieceForQuoteItem({
+      item: buildSerie4800QuoteItem({
+        ancho: 1800,
+        alto: 1500,
+        hojas: 2,
+        variante: SERIE_4800_VARIANT_NORMAL,
+        vidrio: "Incoloro monolítico 5mm",
+      }),
+      recipes: [workshopOrg1, zetaDoc],
+      organizationId: 2,
+      lineTemplateId: 4800,
+      lineCatalogKey: SERIE_4800_CATALOG_KEY,
+    });
+    expect(org2FloatRes.preliminary).toBe(true);
+    expect(org2FloatRes.recipe?.id).not.toBe("workshop-org1-4800-42");
+    expect(org2FloatRes.formal?.result.vidrios[0]?.anchoMm).toBe(856);
+
+    const org2Cti5Res = resolveFabricacionDespieceForQuoteItem({
+      item: buildSerie4800QuoteItem({
+        ancho: 1800,
+        alto: 1500,
+        hojas: 2,
+        variante: SERIE_4800_VARIANT_NORMAL,
+        vidrio: "CTI5 Cristal Templado Incoloro 5mm",
+      }),
+      recipes: [workshopOrg1, zetaDoc],
+      organizationId: 2,
+      lineTemplateId: 4800,
+      lineCatalogKey: SERIE_4800_CATALOG_KEY,
+    });
+    expect(org2Cti5Res.estado).toBe("receta_incompleta");
+    expect(org2Cti5Res.formal).toBeNull();
   });
 });

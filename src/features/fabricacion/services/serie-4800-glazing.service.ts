@@ -140,6 +140,7 @@ export function classifySerie4800GlassSupport(input: {
  */
 export function evaluateSerie4800DocumentaryQuoteGuard(input: {
   catalogKey: string | null | undefined;
+  organizationId?: number | null;
   typology?: string | null;
   hojas?: number | null;
   variante?: string | null;
@@ -163,6 +164,9 @@ export function evaluateSerie4800DocumentaryQuoteGuard(input: {
     (input.activeRecipes ?? []).some(
       (recipe) =>
         isWorkshopOwnedSerie4800Recipe(recipe) &&
+        (recipe.scope !== "organization" ||
+          input.organizationId == null ||
+          recipe.organizationId === input.organizationId) &&
         (!normalizedVariant ||
           normalizeGlassText(recipe.variant ?? recipe.definition.identidad.variante) ===
             normalizedVariant),

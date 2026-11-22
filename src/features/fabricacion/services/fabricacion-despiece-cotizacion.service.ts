@@ -686,11 +686,15 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
         (recipe) =>
           recipe.lineTemplateId === lineTemplateId &&
           !recipe.eliminadoEn &&
-          recipe.status !== "archived",
+          recipe.status !== "archived" &&
+          (recipe.scope !== "organization" ||
+            input.organizationId == null ||
+            recipe.organizationId === input.organizationId),
       )
     : [];
   const serie4800Guard = evaluateSerie4800DocumentaryQuoteGuard({
     catalogKey,
+    organizationId: input.organizationId,
     typology: tipologia,
     hojas,
     variante: presentation.fabricacionVariante || null,
@@ -1114,6 +1118,7 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   const recipe = resolution.receta;
   const serie4800MatchedGuard = evaluateSerie4800DocumentaryQuoteGuard({
     catalogKey,
+    organizationId: input.organizationId,
     typology: tipologia,
     hojas,
     variante:

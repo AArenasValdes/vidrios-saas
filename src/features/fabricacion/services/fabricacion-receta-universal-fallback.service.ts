@@ -597,7 +597,10 @@ export function resolveUniversalPricedLineFallbacks(input: {
     (recipe) =>
       recipe.lineTemplateId === input.lineTemplateId &&
       !recipe.eliminadoEn &&
-      recipe.status !== "archived",
+      recipe.status !== "archived" &&
+      (recipe.scope !== "organization" ||
+        input.organizationId == null ||
+        recipe.organizationId === input.organizationId),
   );
   const workshopConfirmedLine = USER_CONFIRMED_UNIVERSAL_WORKSHOP_LINE_KEYS.has(catalogKey);
   const isL42 = isL42CatalogKey(catalogKey);

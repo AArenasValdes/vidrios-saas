@@ -98,6 +98,7 @@ export function isSodalL25ZetaValidatedRecipe(recipe: FabricationRecipeRecord): 
 }
 
 function isSodalP2A4800Fallback(recipe: FabricationRecipeRecord): boolean {
+  if (isWorkshopOwnedSerie4800Recipe(recipe)) return false;
   if (isSerie4800FormulaSourceReference(recipe.sourceReference)) return false;
   if (isCurrentSerie4800CorrederaRecipe(recipe.definition)) return false;
   const code = recipe.definition.identidad.codigo?.toUpperCase() ?? "";
@@ -127,7 +128,8 @@ export function filterRecipesForCatalogResolution(
       (recipe) =>
         !recipe.eliminadoEn &&
         recipe.status !== "archived" &&
-        (isZeta4800SourceReference(recipe.sourceReference) ||
+        (isWorkshopOwnedSerie4800Recipe(recipe) ||
+          isZeta4800SourceReference(recipe.sourceReference) ||
           isSerie4800FormulaRecord(recipe))
     );
   }
