@@ -73,4 +73,94 @@ describe("recetas P2A documentadas por SODAL", () => {
     expect(result.vidrios[0]).toMatchObject({ anchoMm: 556, altoMm: 1907, cantidadPiezas: 2 });
     expect(result.accesorios).toHaveLength(0);
   });
+
+  it.each([
+    { width: 900, height: 2100, expected4604: 2082, expected4602: 782, expected4601: 2079, expected4603: 782 },
+    { width: 1500, height: 1000, expected4604: 982, expected4602: 1382, expected4601: 979, expected4603: 1382 },
+  ])("Serie 4600 corta 4604/4601 segun alto y 4602/4603 segun ancho ($width x $height)", (sample) => {
+    const [mechanical, hydraulic] = crearRecetasSodalP2A({
+      catalogKey: "ventora:serie-4600-puerta-vaiven",
+      lineName: "Serie 4600",
+    });
+
+    expect(hydraulic.perfiles.find((p) => p.codigoPerfil === "4604")?.reglaMedida).toEqual({
+      base: "alto_total",
+      ajusteMm: -18,
+    });
+    expect(mechanical.perfiles.find((p) => p.codigoPerfil === "4601")?.reglaMedida).toEqual({
+      base: "alto_total",
+      ajusteMm: -21,
+    });
+
+    const hydraulicResult = calcularCubicacionYPauta(hydraulic, {
+      anchoTotalMm: sample.width,
+      altoTotalMm: sample.height,
+      cantidad: 1,
+      hojas: 1,
+      modulos: 1,
+      variante: hydraulic.identidad.variante,
+    });
+    expect(hydraulicResult.calculable).toBe(true);
+    expect(hydraulicResult.perfiles.find((p) => p.codigoPerfil === "4604")).toMatchObject({
+      medidaMm: sample.expected4604,
+      cantidadPiezas: 2,
+    });
+    expect(hydraulicResult.perfiles.find((p) => p.codigoPerfil === "4602")).toMatchObject({
+      medidaMm: sample.expected4602,
+      cantidadPiezas: 2,
+    });
+    expect(hydraulicResult.vidrios[0]).toMatchObject({
+      anchoMm: sample.width - 102,
+      altoMm: sample.height - 192,
+      cantidadPiezas: 1,
+    });
+
+    const mechanicalResult = calcularCubicacionYPauta(mechanical, {
+      anchoTotalMm: sample.width,
+      altoTotalMm: sample.height,
+      cantidad: 1,
+      hojas: 1,
+      modulos: 1,
+      variante: mechanical.identidad.variante,
+    });
+    expect(mechanicalResult.calculable).toBe(true);
+    expect(mechanicalResult.perfiles.find((p) => p.codigoPerfil === "4601")).toMatchObject({
+      medidaMm: sample.expected4601,
+      cantidadPiezas: 2,
+    });
+    expect(mechanicalResult.perfiles.find((p) => p.codigoPerfil === "4603")).toMatchObject({
+      medidaMm: sample.expected4603,
+      cantidadPiezas: 2,
+    });
+    expect(mechanicalResult.vidrios[0]).toMatchObject({
+      anchoMm: sample.width - 102,
+      altoMm: sample.height - 195,
+      cantidadPiezas: 1,
+    });
+  });
+
+  it.each([
+    { width: 0, height: 2100, label: "ancho cero" },
+    { width: 900, height: 0, label: "alto cero" },
+    { width: -900, height: 2100, label: "ancho negativo" },
+    { width: 900, height: -2100, label: "alto negativo" },
+    { width: 100, height: 200, label: "vano menor al descuento del zocalo" },
+  ])("Serie 4600 no es calculable con medidas invalidas ($label)", ({ width, height }) => {
+    const recipes = crearRecetasSodalP2A({
+      catalogKey: "ventora:serie-4600-puerta-vaiven",
+      lineName: "Serie 4600",
+    });
+
+    for (const recipe of recipes) {
+      const result = calcularCubicacionYPauta(recipe, {
+        anchoTotalMm: width,
+        altoTotalMm: height,
+        cantidad: 1,
+        hojas: 1,
+        modulos: 1,
+        variante: recipe.identidad.variante,
+      });
+      expect(result.calculable).toBe(false);
+    }
+  });
 });

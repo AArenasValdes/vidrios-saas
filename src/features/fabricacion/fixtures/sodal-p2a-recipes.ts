@@ -317,11 +317,11 @@ function create4600(input: RecipeInput, hydraulic: boolean): FabricacionReceta {
     modules: 1,
     profiles: hydraulic
       ? [
-          profile(createId, { code: "4604", name: "Pierna", functionName: "Pierna de puerta", base: "ancho_total", adjustmentMm: -18, quantity: 2, cut: "—" }),
+          profile(createId, { code: "4604", name: "Pierna", functionName: "Pierna de puerta", base: "alto_total", adjustmentMm: -18, quantity: 2, cut: "—" }),
           profile(createId, { code: "4602", name: "Zócalo quicio MAB", functionName: "Zócalo quicio", base: "ancho_total", adjustmentMm: -118, quantity: 2, cut: "—" }),
         ]
       : [
-          profile(createId, { code: "4601", name: "Perfil de puerta", functionName: "Perfil de puerta", base: "ancho_total", adjustmentMm: -21, quantity: 2, cut: "—" }),
+          profile(createId, { code: "4601", name: "Perfil de puerta", functionName: "Perfil de puerta", base: "alto_total", adjustmentMm: -21, quantity: 2, cut: "—" }),
           profile(createId, { code: "4603", name: "Zócalo quicio Scanavini", functionName: "Zócalo quicio", base: "ancho_total", adjustmentMm: -118, quantity: 2, cut: "—" }),
         ],
     glasses: [glass(createId, hydraulic
