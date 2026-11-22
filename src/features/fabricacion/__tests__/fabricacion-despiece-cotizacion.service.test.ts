@@ -64,6 +64,7 @@ import {
   crearRecetaVeratecBahar5200,
   VERATEC_BAHAR_5200_PLEGABLE_VARIANTS,
 } from "@/features/fabricacion/fixtures/veratec-bahar-5200-recipes";
+import { crearRecetaVeratecElegansBatiente } from "@/features/fabricacion/fixtures/veratec-workbook-recipes";
 import { resolveMobileComponentFabricacionSummary } from "@/features/fabricacion/services/mobile-component-fabricacion-summary.service";
 import { construirFabricacionTrabajoSnapshot } from "@/features/fabricacion/services/fabricacion-trabajo-snapshot.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
@@ -1182,6 +1183,144 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
     expect(resolvedHistorical.formal).toEqual(frozenSnapshot);
     expect(resolvedHistorical.cubication?.cuts.length).toBeGreaterThan(0);
     expect(resolvedHistorical.cubication?.cuts.map((cut) => cut.profileCode)).toEqual(["66311VER", "66312VER"]);
+  });
+
+  it("bloquea una receta documental legacy de Elegans 60 persistida con perfiles 652xx y prioriza receta privada legítima", () => {
+    const obsoleteDefinition = crearRecetaVeratecElegansBatiente({
+      lineName: "Elegans 60 · Ventana hoja exterior",
+      variant: "elegans_ventana_hoja_exterior",
+    });
+    const legacyPersistedRecipe = recipeRecord({
+      id: "legacy-db-elegans-65209",
+      organizationId: 3,
+      lineTemplateId: 9008,
+      scope: "organization",
+      providerName: "VERATEC",
+      lineName: "Elegans 60 · Ventana hoja exterior",
+      typology: "abatible",
+      leavesCount: 1,
+      variant: obsoleteDefinition.identidad.variante,
+      status: "validated",
+      sourceType: "copied",
+      sourceReference: "pauta-de-corte-veratec.xlsx#ABATIR-EXT-Y-PROY",
+      definition: obsoleteDefinition,
+    });
+    const legacyMigrationCopy = recipeRecord({
+      ...legacyPersistedRecipe,
+      id: "legacy-migration-copy-65209",
+      sourceType: "manual",
+      sourceReference: "taller:migrada-con-652xx",
+    });
+
+    const item = {
+      ...quoteItem({ lineTemplateId: "9008", ancho: 1200, alto: 1500 }),
+      tipo: "Ventana",
+      lineaComercial: "Elegans 60 · Ventana hoja exterior",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "9008",
+        catalogLineKey: "ventora:veratec-elegans-60-ventana-hoja-exterior",
+        sistema: "Abatible",
+        fabricacionTipologia: "abatible",
+        fabricacionApertura: "abatible",
+        fabricacionHojas: 1,
+        fabricacionModulos: 1,
+      }),
+    };
+
+    const blocked = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [legacyPersistedRecipe, legacyMigrationCopy],
+      organizationId: 3,
+    });
+    expect(blocked.estado).toBe("sin_receta");
+    expect(blocked.formal).toBeNull();
+    expect(blocked.cubication).toBeNull();
+    expect(blocked.recipe).toBeNull();
+
+    const legitimatePrivate = recipeRecord({
+      id: "taller-elegans-60-oficial-cotiz",
+      organizationId: 3,
+      lineTemplateId: 9008,
+      scope: "organization",
+      providerName: "VERATEC",
+      lineName: "Elegans 60 · Ventana hoja exterior",
+      typology: "abatible",
+      leavesCount: 1,
+      variant: "estandar",
+      status: "validated",
+      sourceType: "manual",
+      sourceReference: "taller:personalizada:elegans-60",
+      definition: {
+        schemaVersion: FABRICACION_RECIPE_SCHEMA_VERSION,
+        version: 1,
+        estado: "validada",
+        identidad: {
+          recetaId: "taller-elegans-60-oficial-def",
+          codigo: "TALLER-ELEGANS-60-OFICIAL",
+          nombre: "Elegans 60 · Receta oficial taller",
+          tipologia: "abatible",
+          hojas: 1,
+          modulos: 1,
+          apertura: "abatible",
+          herraje: null,
+          variante: "estandar",
+        },
+        perfiles: [
+          {
+            id: "elegans-oficial-marco",
+            codigoPerfil: "66311VER",
+            nombrePerfil: "Marco Elegans 60",
+            funcion: "Marco horizontal",
+            largoComercialMm: 5800,
+            reglaMedida: { base: "ancho_total", ajusteMm: 6 },
+            reglaCantidad: { tipo: "fija", cantidad: 2 },
+            requerido: true,
+            corte: "45°/45°",
+          },
+          {
+            id: "elegans-oficial-hoja",
+            codigoPerfil: "66312VER",
+            nombrePerfil: "Hoja ventana exterior Elegans 60",
+            funcion: "Hoja horizontal",
+            largoComercialMm: 5800,
+            reglaMedida: { base: "ancho_total", ajusteMm: -58 },
+            reglaCantidad: { tipo: "fija", cantidad: 2 },
+            requerido: true,
+            corte: "45°/45°",
+          },
+        ],
+        vidrios: [],
+        accesorios: [],
+        configuracionCorte: {
+          perdidaCorteMm: null,
+          despunteInicialMm: null,
+          sobranteMinimoAprovechableMm: null,
+          largoComercialDefaultMm: 5800,
+        },
+        notasValidacion: ["Receta privada legítima Elegans 60."],
+      },
+    });
+
+    const coexisting = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [legacyPersistedRecipe, legacyMigrationCopy, legitimatePrivate],
+      organizationId: 3,
+    });
+    expect(coexisting.estado).toBe("calculado");
+    expect(coexisting.recipe?.id).toBe("taller-elegans-60-oficial-cotiz");
+    expect(coexisting.formal?.pauta.map((p) => p.codigoPerfil)).toEqual(["66311VER", "66312VER"]);
+
+    const frozenSnapshot = coexisting.formal!;
+    const historicalWithObsoleteInDb = resolveFabricacionDespieceForQuoteItem({
+      item: { ...item, fabricacionSnapshot: frozenSnapshot },
+      recipes: [legacyPersistedRecipe],
+      organizationId: 3,
+    });
+    expect(historicalWithObsoleteInDb.formal).toEqual(frozenSnapshot);
+    expect(historicalWithObsoleteInDb.cubication?.cuts.map((c) => c.profileCode)).toEqual([
+      "66311VER",
+      "66312VER",
+    ]);
   });
 
   it("resuelve Línea 12 como despiece validado aunque exista un borrador antiguo", () => {

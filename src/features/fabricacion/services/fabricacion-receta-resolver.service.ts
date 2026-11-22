@@ -119,12 +119,107 @@ function isSerie4800FormulaRecord(recipe: FabricationRecipeRecord): boolean {
   );
 }
 
+const VERATEC_ELEGANS_60_CATALOG_KEYS = new Set<string>([
+  "ventora:veratec-elegans-60-fijo",
+  "ventora:veratec-elegans-60-ventana-hoja-interior",
+  "ventora:veratec-elegans-60-ventana-hoja-exterior",
+  "ventora:veratec-elegans-60-puerta-hoja-interior",
+  "ventora:veratec-elegans-60-puerta-hoja-exterior",
+]);
+
+function isVeratecElegans60CatalogKey(catalogKey: string | null | undefined): boolean {
+  const normalized = catalogKey?.trim().toLowerCase() ?? "";
+  return Boolean(
+    normalized &&
+      (VERATEC_ELEGANS_60_CATALOG_KEYS.has(normalized) ||
+        normalized.startsWith("ventora:veratec-elegans-60-")),
+  );
+}
+
+function hasBahar652ProfileCode(recipe: FabricationRecipeRecord): boolean {
+  return (recipe.definition?.perfiles ?? []).some((perfil) =>
+    /^652\d{2}/i.test((perfil.codigoPerfil ?? "").trim()),
+  );
+}
+
+function recipeHasElegans60Identity(recipe: FabricationRecipeRecord): boolean {
+  const codigo = (recipe.definition?.identidad?.codigo ?? "").trim().toUpperCase();
+  const variant = (recipe.variant ?? recipe.definition?.identidad?.variante ?? "").trim().toLowerCase();
+  const lineName = (recipe.lineName ?? "").trim().toLowerCase();
+  const recipeName = (recipe.definition?.identidad?.nombre ?? "").trim().toLowerCase();
+  const sourceRef = (recipe.sourceReference ?? "").trim().toLowerCase();
+  const recipeId = (recipe.id ?? "").trim().toLowerCase();
+  return Boolean(
+    recipeId.startsWith("veratec:workbook:elegans_") ||
+      sourceRef.startsWith("veratec:workbook:elegans_") ||
+      (codigo.startsWith("VERATEC-ELEGANS-") && !codigo.startsWith("VERATEC-ELEGANS-70")) ||
+      (variant.startsWith("elegans_") && !variant.startsWith("elegans_70")) ||
+      /\belegans\s*60\b/.test(lineName) ||
+      /\belegans\s*60\b/.test(recipeName) ||
+      (/\belegans\b/.test(lineName) && !/\belegans\s*70\b/.test(lineName)) ||
+      (/\belegans\b/.test(recipeName) && !/\belegans\s*70\b/.test(recipeName)),
+  );
+}
+
+/**
+ * Excluye recetas documentales obsoletas de Elegans 60 contaminadas con códigos
+ * Bahar 652xx o provenientes de las hojas del Excel Veratec atribuidas por error
+ * a Elegans 60, incluso si fueron persistidas o copiadas en la organización.
+ * Preserva Bahar 5200 (donde 652xx es legítimo) y recetas privadas legítimas de Elegans 60.
+ */
+export function isObsoleteElegans60DocumentaryRecipe(
+  recipe: FabricationRecipeRecord,
+  catalogKey?: string | null,
+): boolean {
+  const normalizedCatalogKey = catalogKey?.trim().toLowerCase() ?? "";
+  if (normalizedCatalogKey && !isVeratecElegans60CatalogKey(normalizedCatalogKey)) {
+    return false;
+  }
+
+  const isElegansContext =
+    isVeratecElegans60CatalogKey(normalizedCatalogKey) || recipeHasElegans60Identity(recipe);
+  if (!isElegansContext) {
+    return false;
+  }
+
+  if (hasBahar652ProfileCode(recipe)) {
+    return true;
+  }
+
+  const recipeId = (recipe.id ?? "").trim().toLowerCase();
+  const sourceRef = (recipe.sourceReference ?? "").trim().toLowerCase();
+  const codigo = (recipe.definition?.identidad?.codigo ?? "").trim().toUpperCase();
+  if (
+    recipeId.startsWith("veratec:workbook:elegans_") ||
+    sourceRef.startsWith("veratec:workbook:elegans_") ||
+    sourceRef.includes("pauta-de-corte-veratec.xlsx#")
+  ) {
+    return true;
+  }
+
+  if (
+    codigo.startsWith("VERATEC-ELEGANS-") &&
+    !codigo.startsWith("VERATEC-ELEGANS-70") &&
+    (recipe.scope !== "organization" ||
+      recipe.sourceType === "supplier" ||
+      recipe.sourceType === "manufacturer")
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 export function filterRecipesForCatalogResolution(
   recipes: FabricationRecipeRecord[],
   catalogKey: string | null | undefined
 ): FabricationRecipeRecord[] {
+  const withoutObsoleteElegans60 = recipes.filter(
+    (recipe) => !isObsoleteElegans60DocumentaryRecipe(recipe, catalogKey),
+  );
+
   if (catalogKey === SODAL_4800_CATALOG_KEY) {
-    return recipes.filter(
+    return withoutObsoleteElegans60.filter(
       (recipe) =>
         !recipe.eliminadoEn &&
         recipe.status !== "archived" &&
@@ -135,15 +230,17 @@ export function filterRecipesForCatalogResolution(
   }
 
   if (catalogKey !== SODAL_L25_CATALOG_KEY) {
-    return recipes;
+    return withoutObsoleteElegans60;
   }
 
-  const zetaValidated = recipes.filter((recipe) => isSodalL25ZetaValidatedRecipe(recipe));
+  const zetaValidated = withoutObsoleteElegans60.filter((recipe) =>
+    isSodalL25ZetaValidatedRecipe(recipe)
+  );
   if (zetaValidated.length > 0) {
     return zetaValidated;
   }
 
-  return recipes.filter(
+  return withoutObsoleteElegans60.filter(
     (recipe) => !recipe.eliminadoEn && recipe.status !== "archived"
   );
 }
@@ -440,6 +537,20 @@ function resolverRecetaFabricacionCompatibleInternal(
 
     if (recipe.eliminadoEn) {
       descartadas.push(discard(recipe, "La receta esta archivada."));
+      return false;
+    }
+    if (
+      isObsoleteElegans60DocumentaryRecipe(
+        recipe,
+        (effectiveInput as ResolveFabricationRecipeInput).catalogKey,
+      )
+    ) {
+      descartadas.push(
+        discard(
+          recipe,
+          "Receta documental obsoleta de Elegans 60 con códigos Bahar 652xx o pauta Excel incompatible.",
+        ),
+      );
       return false;
     }
     if (recipe.lineTemplateId !== effectiveInput.lineTemplateId) {
