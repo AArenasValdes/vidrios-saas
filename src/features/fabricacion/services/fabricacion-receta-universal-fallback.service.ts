@@ -11,6 +11,9 @@ import {
   type SodalCatalogo2026RecipeKey,
 } from "@/features/fabricacion/fixtures/sodal-catalogo-2026-recipes";
 import {
+  SERIE_45_SOURCE_REFERENCE,
+} from "@/features/fabricacion/fixtures/serie-45-practicable-recipe";
+import {
   SERIE_4800_CATALOG_KEY,
   SERIE_4800_SOURCE_REFERENCE_NORMAL,
   SERIE_4800_SOURCE_REFERENCE_REFORZADA,
@@ -432,6 +435,10 @@ function buildReferenceRecipe(input: UniversalFallbackInput): FabricationRecipeR
       ? "sodal:catalogo-general-2018:p41:s33-2h"
       : "sodal:catalogo-rpt:s33-rpt-2h";
   } else if (line === "L15" || line === "L4000" || line === "L45") {
+    if (line === "L45") {
+      if (input.typology && input.typology !== "puerta_abatible") return null;
+      if (input.leavesCount != null && input.leavesCount !== 1) return null;
+    }
     const catalogKey = line === "L15"
       ? P2U_CATALOG_KEYS.line15
       : line === "L4000"
@@ -440,7 +447,7 @@ function buildReferenceRecipe(input: UniversalFallbackInput): FabricationRecipeR
     const candidates = crearRecetasP2U({ catalogKey, lineName: input.lineName });
     const matching = candidates.filter((candidate) => {
       if (input.variant && candidate.identidad.variante !== input.variant) return false;
-      return line === "L45" || input.leavesCount == null || candidate.identidad.hojas === input.leavesCount;
+      return input.leavesCount == null || candidate.identidad.hojas === input.leavesCount;
     });
     if (matching.length !== 1) return null;
     definition = matching[0]!;
@@ -450,7 +457,7 @@ function buildReferenceRecipe(input: UniversalFallbackInput): FabricationRecipeR
       ? "ventora:line-15-corredera:2h:v1"
       : line === "L4000"
         ? "ventora:line-4000-corredera:2h:v1"
-        : "sodal+indalum:serie-45-practicable:puerta:1h";
+        : SERIE_45_SOURCE_REFERENCE;
   } else if (line === "L20" || line === "L5000") {
     const templateId = line as PlantillaVentoraCorrederaId;
     const acceptedVariants = line === "L20"

@@ -1194,6 +1194,14 @@ export function DespieceReviewSurface({
                       {GLASS_PRELIMINARY_WARNING}
                     </p>
                   ) : null}
+                  {activeResolution?.preliminary &&
+                  activeResolution.message &&
+                  activeResolution.message !== GLASS_PRELIMINARY_WARNING ? (
+                    <p className={styles.glassNote} role="note">
+                      <LuCircleAlert aria-hidden />
+                      {activeResolution.message}
+                    </p>
+                  ) : null}
                   {(preview?.accessoryUnits ?? 0) > 0 ? (
                     <p className={styles.glassNote} role="note">
                       <LuCircleAlert aria-hidden />
