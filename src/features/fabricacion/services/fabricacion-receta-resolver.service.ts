@@ -8,6 +8,11 @@ import {
   isSerie4800FormulaSourceReference,
 } from "@/features/fabricacion/fixtures/serie-4800-corredera-recipe";
 import {
+  classifySerie4800GlassSupport,
+  isDocumentarySerie4800Recipe,
+  isWorkshopOwnedSerie4800Recipe,
+} from "@/features/fabricacion/services/serie-4800-glazing.service";
+import {
   buildSodalL25VariantSlug,
   isZetaConfirmedSourceReference,
   SODAL_L25_CATALOG_KEY,
@@ -197,33 +202,89 @@ export function resolveFabricationRecipe(
     : null;
 
   if (input.catalogKey === SODAL_4800_CATALOG_KEY) {
+    const preDiscarded: FabricacionRecetaDescartada[] = [];
+    const glassClassification = selectedGlass?.trim()
+      ? classifySerie4800GlassSupport({ glassName: selectedGlass })
+      : null;
+
+    const glassScopedRecipes = filteredForResolution.filter((recipe) => {
+      if (isWorkshopOwnedSerie4800Recipe(recipe)) return true;
+      if (!glassClassification) return true;
+
+      if (glassClassification.kind === "compatible_monolithic_float") {
+        if (isZeta4800SourceReference(recipe.sourceReference)) {
+          preDiscarded.push(
+            discard(
+              recipe,
+              "La referencia Zeta PA-56 corresponde a CTI5 templado 5mm y no se equipara con float monolítico.",
+            ),
+          );
+          return false;
+        }
+        return true;
+      }
+
+      if (glassClassification.kind === "tempered_cti5_not_equated") {
+        if (isSerie4800FormulaRecord(recipe)) {
+          preDiscarded.push(
+            discard(
+              recipe,
+              "La fórmula Diamond aplica a vidrio float monolítico; no equipara cristal templado CTI5.",
+            ),
+          );
+          return false;
+        }
+        return true;
+      }
+
+      if (isDocumentarySerie4800Recipe(recipe)) {
+        preDiscarded.push(discard(recipe, glassClassification.reason));
+        return false;
+      }
+      return true;
+    });
+
     const observed = isObservedSodal4800Measure({
       leaves: selectedLeaves ?? 0,
       widthMm: input.anchoTotalMm ?? 0,
       heightMm: input.altoTotalMm ?? 0,
     });
-    if (!observed) {
-      const formulaRecipes = filteredForResolution.filter(isSerie4800FormulaRecord);
-      if (formulaRecipes.length === 0) {
-        return {
-          estado: "sin_receta",
-          receta: null,
-          candidatas: [],
-          descartadas: filteredForResolution.map((recipe) =>
-            discard(recipe, "Medida no observada en evidencia Zeta L-4800.")
-          ),
-          advertencias: ["L-4800 solo admite 2H 1800×1500 o 3H 3000×1500."],
-        };
-      }
-      return resolverRecetaFabricacionCompatibleInternal(formulaRecipes, {
-        ...input,
-        hojas: selectedLeaves,
-        glassName: selectedGlass,
-        variante,
-        topology,
-        allowPreliminaryNonValidated: Boolean(input.previewListaParaProbar),
-      }, controlledPreviewRecipeId);
+    const scopedCandidates = observed
+      ? glassScopedRecipes
+      : glassScopedRecipes.filter((recipe) => {
+          if (isSerie4800FormulaRecord(recipe) || isWorkshopOwnedSerie4800Recipe(recipe)) {
+            return true;
+          }
+          preDiscarded.push(discard(recipe, "Medida no observada en evidencia Zeta L-4800."));
+          return false;
+        });
+
+    if (scopedCandidates.length === 0) {
+      return {
+        estado: "sin_receta",
+        receta: null,
+        candidatas: [],
+        descartadas: preDiscarded,
+        advertencias: [
+          glassClassification && glassClassification.kind !== "compatible_monolithic_float"
+            ? glassClassification.reason
+            : "L-4800 Zeta solo admite 2H 1800×1500 o 3H 3000×1500.",
+        ],
+      };
     }
+
+    const resolved4800 = resolverRecetaFabricacionCompatibleInternal(scopedCandidates, {
+      ...input,
+      hojas: selectedLeaves,
+      glassName: selectedGlass,
+      variante,
+      topology,
+      allowPreliminaryNonValidated: Boolean(input.previewListaParaProbar),
+    }, controlledPreviewRecipeId);
+    return {
+      ...resolved4800,
+      descartadas: [...preDiscarded, ...resolved4800.descartadas],
+    };
   }
 
   return resolverRecetaFabricacionCompatibleInternal(filteredForResolution, {

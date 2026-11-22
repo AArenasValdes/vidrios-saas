@@ -47,7 +47,10 @@ import {
 } from "@/features/fabricacion/services/fabricacion-line-variant.service";
 import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import { resolveAperturaForRecipeMatch } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import { resolveUniversalPricedLineFallbacks } from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
 import { resolveVeratecWorkbookFallback } from "@/features/fabricacion/services/fabricacion-receta-veratec-fallback.service";
+import { SERIE_4800_CATALOG_KEY } from "@/features/fabricacion/fixtures/serie-4800-corredera-recipe";
+import { evaluateSerie4800DocumentaryQuoteGuard } from "@/features/fabricacion/services/serie-4800-glazing.service";
 import { isVeratec7400FourMobileComposition } from "@/features/fabricacion/services/veratec-quote-composition.service";
 import { evaluarRecetaListaParaProbar } from "@/features/fabricacion/services/fabricacion-receta-lista-para-probar.service";
 import { buildFabricationRecipeSummary } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
@@ -590,6 +593,26 @@ export function PautaCubicacionPanel({
         );
       }
     }
+    if (resolution.estado === "sin_receta" && catalogKey === SERIE_4800_CATALOG_KEY) {
+      const fallbacks4800 = resolveUniversalPricedLineFallbacks({
+        catalogKey,
+        lineTemplateId: numericLineTemplateId,
+        organizationId,
+        lineName: selectedTemplate?.nombre || catalogKey,
+        variant: componentForm.fabricacionVariante || null,
+        leavesCount: effectiveFabricacionHojas,
+        typology: explicitTipologia,
+        glassName: componentForm.vidrio || null,
+        includeDocumentedVariants: true,
+        recipes: persistedRecipes,
+      });
+      if (fallbacks4800.length > 0) {
+        resolution = resolveFabricationRecipe(
+          [...persistedRecipes, ...fallbacks4800],
+          recipeInput,
+        );
+      }
+    }
     const candidates = dedupeConstructorRecipeCandidates(
       resolution.candidatas,
       componentForm.fabricationRecipeId
@@ -661,6 +684,31 @@ export function PautaCubicacionPanel({
     formalResolution?.estado === "receta_no_validada"
       ? formalResolution.receta
       : null;
+  const serie4800Guard = useMemo(
+    () =>
+      evaluateSerie4800DocumentaryQuoteGuard({
+        catalogKey,
+        typology: explicitTipologia,
+        hojas: effectiveFabricacionHojas,
+        variante:
+          componentForm.fabricacionVariante ||
+          selectedPersistedRecipe?.variant ||
+          selectedPersistedRecipe?.definition.identidad.variante ||
+          null,
+        glassName: componentForm.vidrio,
+        activeRecipes: persistedRecipes,
+        matchedRecipe: selectedPersistedRecipe,
+      }),
+    [
+      catalogKey,
+      componentForm.fabricacionVariante,
+      componentForm.vidrio,
+      effectiveFabricacionHojas,
+      explicitTipologia,
+      persistedRecipes,
+      selectedPersistedRecipe,
+    ],
+  );
   const qaPreliminaryCandidate = useMemo(() => {
     if (
       !selectedPersistedRecipe ||
@@ -745,7 +793,7 @@ export function PautaCubicacionPanel({
     return () => { cancelled = true; };
   }, [organizationId, qaPreliminaryCandidate]);
   const selectedPersistedRecipeReady = useMemo(() => {
-    if (!selectedPersistedRecipe) return false;
+    if (!selectedPersistedRecipe || serie4800Guard) return false;
     const compositionComplete = buildFabricationRecipeSummary(
       selectedPersistedRecipe.definition
     ).compositionComplete;
@@ -778,6 +826,7 @@ export function PautaCubicacionPanel({
     qaPreliminaryCandidate,
     selectedPersistedRecipe,
     calculatedVeratecPreliminaryRecipe,
+    serie4800Guard,
     universalAluminumPreliminaryCandidate,
     widthMm,
   ]);
@@ -1474,6 +1523,8 @@ export function PautaCubicacionPanel({
     ? "Selecciona la configuración L25 para generar la pauta de corte."
     : needsS75LeafAWidth && !s75LeafAWidthValid
       ? "Indica el ancho de la hoja A; la hoja B se calcula con el ancho restante."
+    : serie4800Guard
+      ? serie4800Guard.message
     : needsVariantChoice
     ? "Elige la variante de fabricación para esta configuración."
     : !selectedTemplate
@@ -1582,6 +1633,7 @@ export function PautaCubicacionPanel({
 
 
   if (
+    !serie4800Guard &&
     needsVariantChoice &&
     selectedTemplate &&
     (formalResolution?.estado === "multiples_recetas" || recipeSelection)

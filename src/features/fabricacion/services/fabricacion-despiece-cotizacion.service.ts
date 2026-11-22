@@ -21,6 +21,11 @@ import {
   SODAL_CATALOGO_2026_SOURCE_PREFIX,
   USER_CONFIRMED_UNIVERSAL_WORKSHOP_LINE_KEYS,
 } from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
+import { SERIE_4800_CATALOG_KEY } from "@/features/fabricacion/fixtures/serie-4800-corredera-recipe";
+import {
+  evaluateSerie4800DocumentaryQuoteGuard,
+  isWorkshopOwnedSerie4800Recipe,
+} from "@/features/fabricacion/services/serie-4800-glazing.service";
 import { resolveVeratecWorkbookFallback } from "@/features/fabricacion/services/fabricacion-receta-veratec-fallback.service";
 import {
   isVeratec7400FourMobileComposition,
@@ -676,6 +681,35 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     };
   }
 
+  const activeLineRecipesFor4800 = catalogKey === SERIE_4800_CATALOG_KEY
+    ? input.recipes.filter(
+        (recipe) =>
+          recipe.lineTemplateId === lineTemplateId &&
+          !recipe.eliminadoEn &&
+          recipe.status !== "archived",
+      )
+    : [];
+  const serie4800Guard = evaluateSerie4800DocumentaryQuoteGuard({
+    catalogKey,
+    typology: tipologia,
+    hojas,
+    variante: presentation.fabricacionVariante || null,
+    glassName: input.item.vidrio,
+    technicalSpec: presentation.glassTechnicalSpec,
+    activeRecipes: activeLineRecipesFor4800,
+  });
+  if (serie4800Guard) {
+    return {
+      estado: serie4800Guard.blockedEstado,
+      formal: null,
+      cubication: null,
+      recipe: null,
+      barsAvailable: false,
+      preliminary: false,
+      message: serie4800Guard.message,
+    };
+  }
+
   const recipeResolutionInput = {
     organizationId: input.organizationId,
     lineTemplateId,
@@ -1078,6 +1112,29 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   }
 
   const recipe = resolution.receta;
+  const serie4800MatchedGuard = evaluateSerie4800DocumentaryQuoteGuard({
+    catalogKey,
+    typology: tipologia,
+    hojas,
+    variante:
+      presentation.fabricacionVariante ||
+      recipe.variant ||
+      recipe.definition.identidad.variante,
+    glassName: input.item.vidrio,
+    technicalSpec: presentation.glassTechnicalSpec,
+    matchedRecipe: recipe,
+  });
+  if (serie4800MatchedGuard && !isWorkshopOwnedSerie4800Recipe(recipe)) {
+    return {
+      estado: serie4800MatchedGuard.blockedEstado,
+      formal: null,
+      cubication: null,
+      recipe,
+      barsAvailable: false,
+      preliminary: true,
+      message: serie4800MatchedGuard.message,
+    };
+  }
   if (resolution.estado === "receta_no_validada") {
     const preview = evaluarRecetaListaParaProbar(recipe.definition);
     const bypassRecipeMetadataGate = isSodalL25FormulaDerivedRecipe(recipe);

@@ -10,11 +10,21 @@ import {
   crearRecetasSodalCatalogo2026,
   type SodalCatalogo2026RecipeKey,
 } from "@/features/fabricacion/fixtures/sodal-catalogo-2026-recipes";
+import {
+  SERIE_4800_CATALOG_KEY,
+  SERIE_4800_SOURCE_REFERENCE_NORMAL,
+  SERIE_4800_SOURCE_REFERENCE_REFORZADA,
+  SERIE_4800_VARIANT_NORMAL,
+  SERIE_4800_VARIANT_REFORZADA,
+  crearRecetaSerie4800Corredera,
+} from "@/features/fabricacion/fixtures/serie-4800-corredera-recipe";
+import { isDocumentarySerie4800Recipe } from "@/features/fabricacion/services/serie-4800-glazing.service";
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import { resolveUniversalAluminumLineKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
 const SPECIALIZED_UNIVERSAL_LINE_NAMES: Readonly<Record<string, string>> = {
+  "ventora:serie-4800-corredera-2h": "Serie 4800",
   "ventora:s33-corredera-2h": "S33",
   "ventora:s33-rpt-corredera-2h": "S33-RPT",
   "ventora:optima-s28-corredera-2h": "S28",
@@ -140,6 +150,7 @@ type UniversalFallbackInput = {
   typology?: string | null;
   glassName?: string | null;
   configurationId?: string | null;
+  includeDocumentedVariants?: boolean;
 };
 
 const L42_ARQUETIPO_NO_CHAMBER_VARIANT = "arquetipo_sin_camara_monolitico";
@@ -272,6 +283,109 @@ function buildSodalCatalogo2026Recipes(input: UniversalFallbackInput): Fabricati
     updatedAt: "2026-10-07T00:00:00.000Z",
     eliminadoEn: null,
   }));
+}
+
+function buildSerie4800DocumentaryFallbacks(
+  input: UniversalFallbackInput,
+  activeLineRecipes: readonly FabricationRecipeRecord[],
+): FabricationRecipeRecord[] {
+  if ((input.typology && input.typology !== "corredera") || (input.leavesCount != null && input.leavesCount !== 2)) {
+    return [];
+  }
+
+  // Recetas propias del taller o fórmulas ya persistidas en BD mantienen precedencia.
+  const hasPersistedNonZetaActiveRecipe = activeLineRecipes.some(
+    (recipe) =>
+      !isDocumentarySerie4800Recipe(recipe) ||
+      recipe.sourceReference === SERIE_4800_SOURCE_REFERENCE_NORMAL ||
+      recipe.sourceReference === SERIE_4800_SOURCE_REFERENCE_REFORZADA,
+  );
+  if (hasPersistedNonZetaActiveRecipe) {
+    return [];
+  }
+
+  const normalizedVariant = input.variant?.trim().toLocaleLowerCase("es-CL") ?? "";
+  if (normalizedVariant === SERIE_4800_VARIANT_REFORZADA) {
+    return [];
+  }
+  if (normalizedVariant && normalizedVariant !== SERIE_4800_VARIANT_NORMAL) {
+    return [];
+  }
+
+  const normalDefinition = crearRecetaSerie4800Corredera({
+    lineName: input.lineName,
+    variant: SERIE_4800_VARIANT_NORMAL,
+  });
+  const normalRecord: FabricationRecipeRecord = {
+    id: `ventora:documental:serie-4800:${SERIE_4800_VARIANT_NORMAL}`,
+    organizationId: input.organizationId,
+    lineTemplateId: input.lineTemplateId,
+    scope: "ventora",
+    providerName: "SODAL",
+    lineName: input.lineName,
+    typology: normalDefinition.identidad.tipologia,
+    leavesCount: normalDefinition.identidad.hojas,
+    variant: SERIE_4800_VARIANT_NORMAL,
+    version: normalDefinition.version,
+    status: "testing",
+    definition: normalDefinition,
+    sourceType: "manufacturer",
+    sourceReference: SERIE_4800_SOURCE_REFERENCE_NORMAL,
+    sourceName: "SODAL",
+    sourceRevision: "Diamond",
+    parentRecipeId: null,
+    validatedAt: null,
+    validatedBy: null,
+    createdAt: "2026-09-20T00:00:00.000Z",
+    updatedAt: "2026-09-20T00:00:00.000Z",
+    eliminadoEn: null,
+  };
+
+  if (normalizedVariant === SERIE_4800_VARIANT_NORMAL) {
+    return [normalRecord];
+  }
+
+  // Sin variante explícita nunca elegimos Normal en silencio: solo devolvemos
+  // opciones seleccionables cuando el llamador acepta variantes documentales.
+  if (input.includeDocumentedVariants !== true) {
+    return [];
+  }
+
+  const reinforcedBase = crearRecetaSerie4800Corredera({
+    lineName: input.lineName,
+    variant: SERIE_4800_VARIANT_REFORZADA,
+  });
+  const reinforcedRecord: FabricationRecipeRecord = {
+    id: `ventora:documental:serie-4800:${SERIE_4800_VARIANT_REFORZADA}`,
+    organizationId: input.organizationId,
+    lineTemplateId: input.lineTemplateId,
+    scope: "ventora",
+    providerName: "SODAL",
+    lineName: input.lineName,
+    typology: reinforcedBase.identidad.tipologia,
+    leavesCount: reinforcedBase.identidad.hojas,
+    variant: SERIE_4800_VARIANT_REFORZADA,
+    version: reinforcedBase.version,
+    status: "draft",
+    definition: {
+      ...reinforcedBase,
+      datosPendientes: [
+        "Variante Reforzada (4810/4811) pendiente de confirmación física en esta etapa; habilitada Corredera Normal 2H.",
+      ],
+    },
+    sourceType: "manufacturer",
+    sourceReference: SERIE_4800_SOURCE_REFERENCE_REFORZADA,
+    sourceName: "SODAL",
+    sourceRevision: "Diamond",
+    parentRecipeId: null,
+    validatedAt: null,
+    validatedBy: null,
+    createdAt: "2026-09-20T00:00:00.000Z",
+    updatedAt: "2026-09-20T00:00:00.000Z",
+    eliminadoEn: null,
+  };
+
+  return [normalRecord, reinforcedRecord];
 }
 
 function buildReferenceRecipe(input: UniversalFallbackInput): FabricationRecipeRecord | null {
@@ -509,6 +623,23 @@ export function resolveUniversalPricedLineFallbacks(input: {
   if (hasWorkshopCustomizedRecipe && !includeArquetipoNoChamber) return [];
 
   const isSodal2026 = SODAL_CATALOGO_2026_KEYS.has(catalogKey);
+  if (catalogKey === SERIE_4800_CATALOG_KEY) {
+    return buildSerie4800DocumentaryFallbacks(
+      {
+        catalogKey: catalogKey as UniversalPricedLineKey,
+        lineTemplateId: input.lineTemplateId,
+        organizationId: input.organizationId,
+        lineName: input.lineName,
+        variant: input.variant,
+        leavesCount: input.leavesCount,
+        typology: input.typology,
+        glassName: input.glassName,
+        configurationId: input.configurationId,
+        includeDocumentedVariants: input.includeDocumentedVariants,
+      },
+      activeLineRecipes,
+    );
+  }
   const replaceableStructuralDrafts = isSodal2026 && activeLineRecipes.every(
     (recipe) => recipe.status !== "validated" && isReplaceableUniversalStructuralRecipe(recipe),
   );
