@@ -1164,6 +1164,7 @@
 
   .surface {
     width: 100%;
+    max-width: 100vw;
     height: 100%;
     height: 100dvh;
     max-height: none;
@@ -1268,6 +1269,10 @@
 
   .pieceDetail {
     flex: 0 0 auto;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     gap: 0.75rem;
     padding: 0.85rem;
     overflow: visible;
@@ -1319,32 +1324,58 @@
   }
 
   .tableBlock {
+    width: 100%;
     min-width: 0;
+    max-width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
 
+  .tableReading,
+  .tableReadingDetail {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
   .tableReading .tableHead,
-  .tableReading .tableRow {
-    grid-template-columns: minmax(3.25rem, 0.65fr) minmax(0, 1fr) 5.25rem 2.75rem;
+  .tableReading .tableRow,
+  .tableReadingDetail .tableHead,
+  .tableReadingDetail .tableRow {
+    grid-template-columns: minmax(3rem, 0.55fr) minmax(0, 1fr) 4.75rem 4.25rem;
+    width: 100%;
+    min-width: 0;
   }
 
   .tableReading .tableHead span:nth-child(5),
-  .tableReading .tableRow .totalCell {
-    display: none;
-  }
-
-  .tableReadingDetail .tableHead,
-  .tableReadingDetail .tableRow {
-    grid-template-columns: minmax(3.25rem, 0.6fr) minmax(0, 1fr) 5rem 2.5rem;
-  }
-
+  .tableReading .tableRow .totalCell,
   .tableReadingDetail .tableHead span:nth-child(5),
   .tableReadingDetail .tableRow .totalCell {
     display: none;
   }
 
-  .tableHead span,
+  .tableReading .tableHead span:nth-child(4),
+  .tableReading .tableRow .readCell:nth-child(4),
+  .tableReadingDetail .tableHead span:nth-child(4),
+  .tableReadingDetail .tableRow .readCell:nth-child(4) {
+    border-right: none;
+  }
+
+  .tableReading .functionReadCell,
+  .tableReadingDetail .functionReadCell,
+  .tableReadingDetail .formulaLine {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .tableHead span {
+    padding: 0.5rem 0.35rem;
+    font-size: 0.62rem;
+    letter-spacing: 0.02em;
+  }
+
   .tableRow label,
   .tableRow strong,
   .tableRow button,
@@ -1352,7 +1383,7 @@
   .tableRow .functionReadCell,
   .tableRow .functionEditCell,
   .tableRow .totalCell {
-    padding: 0.55rem 0.45rem;
+    padding: 0.55rem 0.35rem;
     font-size: 0.74rem;
   }
 
