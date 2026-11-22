@@ -1,5 +1,8 @@
 import type { GlassTechnicalSpec } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
-import { SERIE_45_CATALOG_KEY } from "@/features/fabricacion/fixtures/serie-45-practicable-recipe";
+import {
+  SERIE_45_CATALOG_KEY,
+  isCurrentSerie45PracticableRecipe,
+} from "@/features/fabricacion/fixtures/serie-45-practicable-recipe";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
 export type Serie45GlassSupport =
@@ -47,6 +50,18 @@ export function isWorkshopOwnedSerie45Recipe(
       recipe.version > 1 ||
       recipe.sourceType === "workshop" ||
       recipe.sourceType === "manual")
+  );
+}
+
+/** Identifica recetas documentales base de Línea 45 (incluso si la plantilla legacy no guarda catalogKey). */
+export function isDocumentarySerie45Recipe(
+  recipe: Pick<FabricationRecipeRecord, "scope" | "sourceType" | "sourceReference" | "status" | "version" | "definition">,
+): boolean {
+  if (isWorkshopOwnedSerie45Recipe(recipe)) return false;
+  const source = recipe.sourceReference?.trim() ?? "";
+  return (
+    source.startsWith("sodal+indalum:serie-45-practicable") ||
+    isCurrentSerie45PracticableRecipe(recipe.definition)
   );
 }
 
@@ -132,7 +147,17 @@ export function evaluateSerie45DocumentaryQuoteGuard(input: {
   blockedEstado: "composicion_sin_receta" | "receta_incompleta";
   message: string;
 } | null {
-  if (input.catalogKey !== SERIE_45_CATALOG_KEY) return null;
+  const isSerie45Target =
+    input.catalogKey === SERIE_45_CATALOG_KEY ||
+    Boolean(input.matchedRecipe && isDocumentarySerie45Recipe(input.matchedRecipe)) ||
+    (input.activeRecipes ?? []).some(
+      (recipe) =>
+        isDocumentarySerie45Recipe(recipe) &&
+        (recipe.scope !== "organization" ||
+          input.organizationId == null ||
+          recipe.organizationId === input.organizationId),
+    );
+  if (!isSerie45Target) return null;
 
   if (input.matchedRecipe && isWorkshopOwnedSerie45Recipe(input.matchedRecipe)) {
     return null;

@@ -309,6 +309,41 @@ describe("Línea 45 — consolidación Puerta abatible 1H (ventora:serie-45-puer
     expect(resDraftDvh.preliminary).toBe(true);
     expect(resDraftDvh.message).toBe(SERIE_45_BEAD_DVH_NOTE);
 
+    // Incluso si la plantilla legacy en BD no conserva catalogLineKey, la guarda y
+    // el aviso de junquillo 4534 siguen aplicando sobre la receta documental.
+    const legacyItemWithoutCatalogKey: CotizacionWorkflowItem = {
+      ...buildSerie45QuoteItem({ ancho: 1500, alto: 2000, vidrio: "Espejo 4mm" }),
+      observaciones: encodeCotizacionItemPresentationMeta({
+        lineTemplateId: "45",
+        catalogLineKey: null,
+        sistema: "Abatible",
+        fabricacionTipologia: "puerta_abatible",
+        fabricacionHojas: 1,
+        fabricacionModulos: 1,
+        fabricacionVariante: SERIE_45_VARIANT,
+      }),
+    };
+    const resLegacyEspejo = resolveFabricacionDespieceForQuoteItem({
+      item: legacyItemWithoutCatalogKey,
+      recipes: [repairedDocumentaryDraft],
+      organizationId: 1,
+      lineTemplateId: 45,
+      lineCatalogKey: null,
+    });
+    expect(resLegacyEspejo.estado).toBe("composicion_sin_receta");
+    expect(resLegacyEspejo.formal).toBeNull();
+
+    const resLegacyDvh = resolveFabricacionDespieceForQuoteItem({
+      item: { ...legacyItemWithoutCatalogKey, vidrio: "DVH 4+12+4" },
+      recipes: [repairedDocumentaryDraft],
+      organizationId: 1,
+      lineTemplateId: 45,
+      lineCatalogKey: null,
+    });
+    expect(resLegacyDvh.estado).toBe("calculado");
+    expect(resLegacyDvh.preliminary).toBe(true);
+    expect(resLegacyDvh.message).toBe(SERIE_45_BEAD_DVH_NOTE);
+
     const resUnresolved = resolveFabricacionDespieceForQuoteItem({
       item: buildSerie45QuoteItem({ vidrio: "Vidrio por definir" }),
       recipes: [],

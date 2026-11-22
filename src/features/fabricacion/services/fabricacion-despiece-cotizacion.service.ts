@@ -25,6 +25,7 @@ import { SERIE_45_CATALOG_KEY } from "@/features/fabricacion/fixtures/serie-45-p
 import {
   classifySerie45GlassSupport,
   evaluateSerie45DocumentaryQuoteGuard,
+  isDocumentarySerie45Recipe,
   isWorkshopOwnedSerie45Recipe,
 } from "@/features/fabricacion/services/serie-45-glazing.service";
 import { SERIE_4800_CATALOG_KEY } from "@/features/fabricacion/fixtures/serie-4800-corredera-recipe";
@@ -720,17 +721,15 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     };
   }
 
-  const activeLineRecipesFor45 = catalogKey === SERIE_45_CATALOG_KEY
-    ? input.recipes.filter(
-        (recipe) =>
-          recipe.lineTemplateId === lineTemplateId &&
-          !recipe.eliminadoEn &&
-          recipe.status !== "archived" &&
-          (recipe.scope !== "organization" ||
-            input.organizationId == null ||
-            recipe.organizationId === input.organizationId),
-      )
-    : [];
+  const activeLineRecipesFor45 = input.recipes.filter(
+    (recipe) =>
+      recipe.lineTemplateId === lineTemplateId &&
+      !recipe.eliminadoEn &&
+      recipe.status !== "archived" &&
+      (recipe.scope !== "organization" ||
+        input.organizationId == null ||
+        recipe.organizationId === input.organizationId),
+  );
   const serie45Guard = evaluateSerie45DocumentaryQuoteGuard({
     catalogKey,
     organizationId: input.organizationId,
@@ -1305,7 +1304,7 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
 
   const cubication = fabricacionSnapshotToLegacyCubicationSnapshot(formal);
   const serie45GlassSupport =
-    catalogKey === SERIE_45_CATALOG_KEY &&
+    (catalogKey === SERIE_45_CATALOG_KEY || isDocumentarySerie45Recipe(recipe)) &&
     preliminary &&
     !isWorkshopOwnedSerie45Recipe(recipe)
       ? classifySerie45GlassSupport({
