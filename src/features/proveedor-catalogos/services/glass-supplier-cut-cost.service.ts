@@ -294,3 +294,62 @@ export function resolveGlassSupplierCutCost(input: {
     panes: valuedPanes,
   };
 }
+
+export type PersistedWorkshopGlassRow = {
+  id: string;
+  revision?: number | null;
+  descripcion?: string | null;
+  precio_neto?: number | null;
+  moneda?: string | null;
+  proveedor_nombre?: string | null;
+  provider_key?: string | null;
+  glass_product_id?: string | null;
+  glass_line_template_id?: number | null;
+  categoria_vidrio?: string | null;
+  espesor_mm?: number | null;
+  minimo_cobrable_m2?: number | null;
+  vigente_desde?: string | null;
+  vigente_hasta?: string | null;
+  organization_id?: number | null;
+};
+
+export type MappedWorkshopGlassPresentation = GlassSupplierCutPresentation & {
+  id: string;
+  revision: number;
+  glassLineTemplateId: number | null;
+};
+
+export function mapWorkshopGlassCutRowToPresentation(
+  row: PersistedWorkshopGlassRow | null | undefined,
+  fallbackOrganizationId?: number
+): MappedWorkshopGlassPresentation | null {
+  if (!row || !row.id || row.precio_neto == null || !row.moneda || !row.categoria_vidrio) {
+    return null;
+  }
+  const category = row.categoria_vidrio as GlassTechnicalCategory;
+  if (category === "pendiente") return null;
+  const orgId = row.organization_id != null ? Number(row.organization_id) : fallbackOrganizationId;
+  return {
+    id: String(row.id),
+    revision: Number(row.revision ?? 1),
+    presentationId: String(row.id),
+    providerKey: row.provider_key?.trim() || (orgId != null ? `taller:${orgId}` : "taller"),
+    providerLabel: row.proveedor_nombre ? String(row.proveedor_nombre) : "Proveedor del taller",
+    ...(orgId != null ? { organizationId: orgId } : {}),
+    glassLineTemplateId: row.glass_line_template_id == null ? null : Number(row.glass_line_template_id),
+    glassProductId: row.glass_product_id ? String(row.glass_product_id) : null,
+    category,
+    thicknessMm: row.espesor_mm == null ? null : Number(row.espesor_mm),
+    glassDescription: row.descripcion ? String(row.descripcion) : null,
+    purchaseMode: "supplier_cut",
+    purchaseUnit: "M2",
+    netPricePerM2: Number(row.precio_neto),
+    minBillableM2PerPane: row.minimo_cobrable_m2 == null ? null : Number(row.minimo_cobrable_m2),
+    currency: String(row.moneda).trim().toUpperCase(),
+    priceReferenceStatus: "within_stated_validity",
+    validFrom: row.vigente_desde ? String(row.vigente_desde) : null,
+    validUntil: row.vigente_hasta ? String(row.vigente_hasta) : null,
+    origin: "workshop",
+    workshopPriceConfirmed: true,
+  };
+}

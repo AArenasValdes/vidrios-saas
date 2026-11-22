@@ -287,6 +287,16 @@ export function PasoDosWizardPrecioMovil({
                         ? formatNetClp(technicalCostSummary.glassCostNet)
                         : "Pendiente de precio de compra"}
                     </strong>
+                    {technicalCostSummary.glassCostNet != null &&
+                    technicalCostSummary.glassCostIsProvisional ? (
+                      <span
+                        className={s.stepTwoMobileInlineHelp}
+                        style={{ display: "block", color: "#8d5b00", marginTop: "2px" }}
+                      >
+                        Provisional: geometría nominal con descuentos de corte pendientes de
+                        confirmar.
+                      </span>
+                    ) : null}
                   </div>
                   {technicalCostSummary.accessoriesCostNet != null ? (
                     <div>

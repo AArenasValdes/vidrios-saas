@@ -260,3 +260,82 @@ it("oculta la tarjeta de vidrio al corte en Mis precios cuando schemaPending es 
   expect(screen.queryByRole("heading", { name: "Vidrio al corte (m²)" })).not.toBeInTheDocument();
   expect(screen.queryByText(/migración/i)).not.toBeInTheDocument();
 });
+
+it("actualiza de inmediato la tarjeta de vidrio al corte tras POST 201 sin recargar la página", async () => {
+  let getCount = 0;
+  const fetchMock = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes("/api/proveedor-catalogos/taller-vidrios") && init?.method === "POST") {
+      return {
+        ok: true,
+        status: 201,
+        json: async () => ({
+          row: {
+            id: "g-201",
+            revision: 1,
+            descripcion: "Float incoloro QA 5mmm",
+            precio_neto: 14500,
+            moneda: "CLP",
+            proveedor_nombre: "Sodal",
+            provider_key: "taller:3:sodal",
+            glass_product_id: "3755",
+            glass_line_template_id: 3755,
+            categoria_vidrio: "monolitico",
+            espesor_mm: 5,
+          },
+          presentation: {
+            id: "g-201",
+            revision: 1,
+            presentationId: "g-201",
+            providerKey: "taller:3:sodal",
+            providerLabel: "Sodal",
+            organizationId: 3,
+            glassLineTemplateId: 3755,
+            glassProductId: "3755",
+            category: "monolitico",
+            thicknessMm: 5,
+            glassDescription: "Float incoloro QA 5mmm",
+            purchaseMode: "supplier_cut",
+            purchaseUnit: "M2",
+            netPricePerM2: 14500,
+            minBillableM2PerPane: null,
+            currency: "CLP",
+            priceReferenceStatus: "within_stated_validity",
+            validFrom: null,
+            validUntil: null,
+            origin: "workshop",
+            workshopPriceConfirmed: true,
+          },
+        }),
+      } as Response;
+    }
+    getCount += 1;
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        glassProducts: [{ id: 3755, productId: "3755", name: "Float incoloro QA 5mmm", category: "monolitico", thicknessMm: 5 }],
+        // Incluso si una revalidación inmediata aún viene vacía, no vuelve a mostrar estado vacío.
+        presentations: [],
+        schemaPending: false,
+        canManage: true,
+      }),
+    } as Response;
+  });
+  global.fetch = fetchMock as unknown as typeof fetch;
+
+  render(<MisPreciosContent catalog={catalog} error={null} busy={false} save={jest.fn(async () => true)} refresh={async () => undefined} />);
+
+  expect(await screen.findByText("Aún no registras precios de compra de vidrio al corte.")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Agregar vidrio" }));
+  fireEvent.change(screen.getByLabelText(/Cristal de tu catálogo/i), { target: { value: "3755" } });
+  fireEvent.change(screen.getByLabelText(/Proveedor de vidrio/i), { target: { value: "Sodal" } });
+  fireEvent.change(screen.getByLabelText(/Precio neto \/ m²/i), { target: { value: "14500" } });
+  fireEvent.click(screen.getByRole("button", { name: "Guardar precio de vidrio" }));
+
+  expect(await screen.findByText(/Sodal · Monolítico 5 mm/)).toBeInTheDocument();
+  expect(screen.getByText("Float incoloro QA 5mmm")).toBeInTheDocument();
+  expect(screen.getByText(/\$14\.500 \/ m² neto/)).toBeInTheDocument();
+  expect(screen.queryByText("Aún no registras precios de compra de vidrio al corte.")).not.toBeInTheDocument();
+  expect(getCount).toBeGreaterThanOrEqual(2);
+});

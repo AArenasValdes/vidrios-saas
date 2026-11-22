@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  mapWorkshopGlassCutRowToPresentation,
+  type PersistedWorkshopGlassRow,
+} from "@/features/proveedor-catalogos/services/glass-supplier-cut-cost.service";
 import s from "./taller-presentaciones.module.css";
 
 type GlassCategory = "monolitico" | "laminado" | "dvh" | "templado" | "espejo";
@@ -69,7 +73,18 @@ export function TallerVidrios() {
   const [validFrom, setValidFrom] = useState("");
   const [validUntil, setValidUntil] = useState("");
 
-  async function load() {
+  function mergePresentationList(
+    presentations: GlassPresentationRow[],
+    saved: GlassPresentationRow
+  ): GlassPresentationRow[] {
+    const existingIndex = presentations.findIndex((item) => item.id === saved.id);
+    if (existingIndex >= 0) {
+      return presentations.map((item) => (item.id === saved.id ? saved : item));
+    }
+    return [...presentations, saved];
+  }
+
+  async function load(savedFallback?: GlassPresentationRow | null) {
     setError(null);
     try {
       const response = await fetch("/api/proveedor-catalogos/taller-vidrios", { cache: "no-store" });
@@ -79,14 +94,20 @@ export function TallerVidrios() {
       }
       const data = (await response.json()) as Partial<Payload>;
       if (!response.ok) throw new Error(data.error || "No pudimos cargar los precios de vidrio.");
+      const nextPresentations = Array.isArray(data.presentations) ? data.presentations : [];
       setPayload({
         glassProducts: Array.isArray(data.glassProducts) ? data.glassProducts : [],
-        presentations: Array.isArray(data.presentations) ? data.presentations : [],
+        presentations:
+          savedFallback && !nextPresentations.some((item) => item.id === savedFallback.id)
+            ? [...nextPresentations, savedFallback]
+            : nextPresentations,
         schemaPending: data.schemaPending,
         canManage: data.canManage,
       });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "No disponible.");
+      if (!savedFallback) {
+        setError(cause instanceof Error ? cause.message : "No disponible.");
+      }
     } finally {
       setLoading(false);
     }
@@ -204,11 +225,60 @@ export function TallerVidrios() {
               }
         ),
       });
-      const result = (await response.json()) as { error?: string };
+      const result = (await response.json()) as {
+        error?: string;
+        row?: PersistedWorkshopGlassRow;
+        presentation?: GlassPresentationRow | null;
+      };
       if (!response.ok) throw new Error(result.error || "No pudimos guardar el precio de vidrio.");
+
+      const mappedFromRow = mapWorkshopGlassCutRowToPresentation(result.row);
+      const savedPresentation: GlassPresentationRow | null =
+        result.presentation ??
+        (mappedFromRow
+          ? {
+              ...mappedFromRow,
+              glassProductId: mappedFromRow.glassProductId ?? null,
+              category: mappedFromRow.category as GlassCategory,
+            }
+          : result.row?.id
+            ? {
+                id: String(result.row.id),
+                revision: editingRow ? editingRow.revision + 1 : 1,
+                glassLineTemplateId: editingRow
+                  ? editingRow.glassLineTemplateId
+                  : Number(glassLineTemplateId),
+                glassProductId: editingRow
+                  ? editingRow.glassProductId
+                  : glassLineTemplateId,
+                category: editingRow ? editingRow.category : category,
+                thicknessMm: editingRow ? editingRow.thicknessMm : parsedThickness,
+                glassDescription: editingRow
+                  ? editingRow.glassDescription
+                  : description.trim() || `${CATEGORY_LABELS[category]} ${parsedThickness}mm`,
+                providerLabel: supplierName.trim() || "Proveedor del taller",
+                netPricePerM2: parsedPrice,
+                minBillableM2PerPane: parsedMin,
+                currency: "CLP",
+                validFrom: validFrom.trim() || null,
+                validUntil: validUntil.trim() || null,
+              }
+            : null);
+
+      if (savedPresentation) {
+        setPayload((prev) =>
+          prev
+            ? {
+                ...prev,
+                presentations: mergePresentationList(prev.presentations, savedPresentation),
+              }
+            : prev
+        );
+      }
+
       setOpen(false);
       resetForm();
-      await load();
+      await load(savedPresentation);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No pudimos guardar.");
     } finally {

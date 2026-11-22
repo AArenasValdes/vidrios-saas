@@ -23,12 +23,16 @@ import {
 
 export type GuidedTechnicalCostSuggestionStatus = "complete" | "partial" | "unavailable";
 
+export type GuidedGlassMeasurementStatus = "confirmed" | "nominal_unconfirmed" | "none";
+
 export type GuidedTechnicalCostSuggestion = {
   status: GuidedTechnicalCostSuggestionStatus;
   recipeStatus: FabricationRecipeRecord["status"] | null;
   isRecipeValidated: boolean;
   profilesCostNet: number | null;
   glassCostNet: number | null;
+  glassMeasurementStatus?: GuidedGlassMeasurementStatus;
+  glassCostIsProvisional?: boolean;
   accessoriesCostNet: number | null;
   knownNetTotal: number | null;
   usableBaseCostGroupNet: number | null;
@@ -47,6 +51,30 @@ export type GuidedTechnicalCostSuggestion = {
   reason: string | null;
   costSnapshot: TechnicalCostSnapshot | null;
 };
+
+function hasUnconfirmedNominalGlassRules(
+  definition: FabricationRecipeRecord["definition"]
+): GuidedGlassMeasurementStatus {
+  if (!definition.vidrios.length) return "none";
+  const hasNominalPending = definition.vidrios.some((glass) => {
+    const pendingText = (glass.datosPendientes ?? []).join(" ");
+    const obsText = glass.observaciones ?? "";
+    if (
+      /descuento|medida|dimension/i.test(pendingText) ||
+      /confirmar descuentos/i.test(obsText)
+    ) {
+      return true;
+    }
+    const widthAdj = glass.reglaAncho.ajusteMm;
+    const heightAdj = glass.reglaAlto.ajusteMm;
+    return (
+      (widthAdj == null || widthAdj === 0) &&
+      (heightAdj == null || heightAdj === 0) &&
+      (/opcional sugerido/i.test(obsText) || (glass.datosPendientes?.length ?? 0) > 0)
+    );
+  });
+  return hasNominalPending ? "nominal_unconfirmed" : "confirmed";
+}
 
 export const DEFAULT_TECHNICAL_MARKUP_PCT = 100;
 
@@ -136,6 +164,8 @@ export function buildGuidedTechnicalCostSuggestion(input: {
     isRecipeValidated: input.recipe?.status === "validated",
     profilesCostNet: null,
     glassCostNet: null,
+    glassMeasurementStatus: input.recipe ? hasUnconfirmedNominalGlassRules(input.recipe.definition) : "none",
+    glassCostIsProvisional: false,
     accessoriesCostNet: null,
     knownNetTotal: null,
     usableBaseCostGroupNet: null,
@@ -294,6 +324,9 @@ export function buildGuidedTechnicalCostSuggestion(input: {
   const hasBackedGlassCost = glassResolution?.status === "priced";
   const glassCostNet =
     glassResolution?.status === "priced" ? glassResolution.totalNetCost : null;
+  const glassMeasurementStatus = hasUnconfirmedNominalGlassRules(input.recipe.definition);
+  const glassCostIsProvisional =
+    glassCostNet != null && glassMeasurementStatus === "nominal_unconfirmed";
 
   const isPendingGlassEntry = (entry: TechnicalCostSnapshot["missing"][number]) =>
     entry.itemKind === "glass" ||
@@ -382,6 +415,11 @@ export function buildGuidedTechnicalCostSuggestion(input: {
   if (hasMixedCurrencies) {
     nonVerifiedReasons.push("Las presentaciones seleccionadas mezclan más de una moneda.");
   }
+  if (glassCostIsProvisional) {
+    nonVerifiedReasons.push(
+      "El vidrio usa geometría nominal con descuentos de corte pendientes de confirmar; su costo es provisional."
+    );
+  }
 
   const isRecipeConfirmedOrCalculable =
     isRecipeValidated &&
@@ -402,6 +440,8 @@ export function buildGuidedTechnicalCostSuggestion(input: {
       isRecipeValidated,
       profilesCostNet,
       glassCostNet,
+      glassMeasurementStatus,
+      glassCostIsProvisional,
       accessoriesCostNet,
       knownNetTotal,
       usableBaseCostGroupNet,
@@ -437,6 +477,8 @@ export function buildGuidedTechnicalCostSuggestion(input: {
       isRecipeValidated,
       profilesCostNet,
       glassCostNet,
+      glassMeasurementStatus,
+      glassCostIsProvisional,
       accessoriesCostNet,
       knownNetTotal,
       usableBaseCostGroupNet: null,
@@ -457,6 +499,8 @@ export function buildGuidedTechnicalCostSuggestion(input: {
     isRecipeValidated,
     profilesCostNet: null,
     glassCostNet,
+    glassMeasurementStatus,
+    glassCostIsProvisional,
     accessoriesCostNet: null,
     knownNetTotal: null,
     usableBaseCostGroupNet: null,

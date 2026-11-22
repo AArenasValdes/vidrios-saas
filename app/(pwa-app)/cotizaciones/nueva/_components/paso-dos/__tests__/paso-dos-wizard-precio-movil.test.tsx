@@ -231,4 +231,53 @@ describe("PasoDosWizardPrecioMovil — Costo técnico y sugerencia comercial", (
     fireEvent.click(screen.getByRole("button", { name: "Revertir" }));
     expect(onRevert).toHaveBeenCalledTimes(1);
   });
+
+  it("muestra cálculo provisional de vidrio con advertencia cuando las dimensiones son nominales sin confirmar", () => {
+    render(
+      <PasoDosWizardPrecioMovil
+        activePricingMode="precio_directo"
+        costInputScope="group_total"
+        formattedPriceValue="$ 216.000"
+        marginValue="100"
+        costoIngresado={0}
+        cantidad={1}
+        technicalCostSummary={{
+          ...partialSummary,
+          profilesCostNet: 97221,
+          glassCostNet: 39150,
+          glassMeasurementStatus: "nominal_unconfirmed",
+          glassCostIsProvisional: true,
+          knownNetTotal: 136371,
+          missingItems: [
+            {
+              itemKind: "accessory",
+              identityKey: "accessory|carros",
+              technicalCode: null,
+              description: "Carros o rodamientos",
+              reason: "Falta presentación de compra.",
+            },
+          ],
+          nonVerifiedReasons: [
+            "El vidrio usa geometría nominal con descuentos de corte pendientes de confirmar; su costo es provisional.",
+          ],
+          reason:
+            "El vidrio usa geometría nominal con descuentos de corte pendientes de confirmar; su costo es provisional.",
+        }}
+        onCostInputScopeChange={jest.fn()}
+        onMargenChange={jest.fn()}
+        onPrecioChange={jest.fn()}
+        onPricingModeChange={jest.fn()}
+        priceHelp="Valor directo"
+        priceLabel="Valor directo"
+      />
+    );
+
+    expect(screen.getByText("Costo parcial")).toBeInTheDocument();
+    expect(screen.queryByText("Costo verificado")).not.toBeInTheDocument();
+    expect(screen.getByText("$ 39.150")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Provisional: geometría nominal con descuentos de corte pendientes de confirmar/i)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/\$ 136\.371/)).toBeInTheDocument();
+  });
 });
