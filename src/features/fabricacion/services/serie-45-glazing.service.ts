@@ -1,9 +1,19 @@
 import type { GlassTechnicalSpec } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
-import {
-  SERIE_45_CATALOG_KEY,
-  isCurrentSerie45PracticableRecipe,
-} from "@/features/fabricacion/fixtures/serie-45-practicable-recipe";
+import { SERIE_45_CATALOG_KEY } from "@/features/fabricacion/fixtures/serie-45-practicable-recipe";
+import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
+
+function matchesSerie45DocumentarySignature(recipe: FabricacionReceta): boolean {
+  const codes = new Set(recipe.perfiles.map((profile) => profile.codigoPerfil.trim()));
+  const glass = recipe.vidrios[0];
+  return (
+    codes.has("4522") &&
+    codes.has("4531") &&
+    codes.has("4534") &&
+    glass?.reglaAncho.ajusteMm === -170 &&
+    glass?.reglaAlto.ajusteMm === -183
+  );
+}
 
 export type Serie45GlassSupport =
   | { kind: "compatible_monolithic"; beadNote: string }
@@ -44,7 +54,7 @@ export function isWorkshopOwnedSerie45Recipe(
   if (
     source.startsWith("ventora:") ||
     source.startsWith("sodal+indalum:serie-45-practicable") ||
-    isCurrentSerie45PracticableRecipe(recipe.definition)
+    matchesSerie45DocumentarySignature(recipe.definition)
   ) {
     return false;
   }
@@ -64,7 +74,7 @@ export function isDocumentarySerie45Recipe(
   const source = recipe.sourceReference?.trim() ?? "";
   return (
     source.startsWith("sodal+indalum:serie-45-practicable") ||
-    isCurrentSerie45PracticableRecipe(recipe.definition)
+    matchesSerie45DocumentarySignature(recipe.definition)
   );
 }
 
