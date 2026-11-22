@@ -354,6 +354,82 @@ describe("Línea 45 — consolidación Puerta abatible 1H (ventora:serie-45-puer
     expect(resUnresolved.estado).toBe("receta_incompleta");
     expect(resUnresolved.formal).toBeNull();
 
+    // Laminado sin spec estructurada (incluso con "incoloro") queda pendiente de revisión.
+    const resLaminadoByName = resolveFabricacionDespieceForQuoteItem({
+      item: buildSerie45QuoteItem({ vidrio: "Laminado incoloro 5+5" }),
+      recipes: [],
+      organizationId: 1,
+      lineTemplateId: 45,
+      lineCatalogKey: SERIE_45_CATALOG_KEY,
+    });
+    expect(resLaminadoByName.estado).toBe("composicion_sin_receta");
+    expect(resLaminadoByName.formal).toBeNull();
+    expect(resLaminadoByName.message).toMatch(/laminado/i);
+
+    // technicalSpec.category === "laminado" prevalece sobre "incoloro"
+    const resLaminadoBySpec = resolveFabricacionDespieceForQuoteItem({
+      item: buildSerie45QuoteItem({
+        vidrio: "Vidrio incoloro",
+        glassTechnicalSpec: {
+          version: 1,
+          productId: null,
+          category: "laminado",
+          thicknessMm: 10,
+          manualCutStatus: "pending_validation",
+          technicalReviewConfirmed: false,
+          sheetWidthMm: null,
+          sheetHeightMm: null,
+          provenance: "catalog",
+          sourceProductId: null,
+          sourceValues: null,
+          hasConflict: false,
+        },
+      }),
+      recipes: [],
+      organizationId: 1,
+      lineTemplateId: 45,
+      lineCatalogKey: SERIE_45_CATALOG_KEY,
+    });
+    expect(resLaminadoBySpec.estado).toBe("composicion_sin_receta");
+    expect(resLaminadoBySpec.formal).toBeNull();
+
+    // "incoloro" genérico tampoco prevalece sobre categoría pendiente ni sin espesor/composición
+    const resPendingCategoryWithIncoloro = resolveFabricacionDespieceForQuoteItem({
+      item: buildSerie45QuoteItem({
+        vidrio: "Vidrio incoloro",
+        glassTechnicalSpec: {
+          version: 1,
+          productId: null,
+          category: "pendiente",
+          thicknessMm: null,
+          manualCutStatus: "pending_validation",
+          technicalReviewConfirmed: false,
+          sheetWidthMm: null,
+          sheetHeightMm: null,
+          provenance: "catalog",
+          sourceProductId: null,
+          sourceValues: null,
+          hasConflict: false,
+        },
+      }),
+      recipes: [],
+      organizationId: 1,
+      lineTemplateId: 45,
+      lineCatalogKey: SERIE_45_CATALOG_KEY,
+    });
+    expect(resPendingCategoryWithIncoloro.estado).toBe("receta_incompleta");
+    expect(resPendingCategoryWithIncoloro.formal).toBeNull();
+
+    const resBareIncoloro = resolveFabricacionDespieceForQuoteItem({
+      item: buildSerie45QuoteItem({ vidrio: "Incoloro" }),
+      recipes: [],
+      organizationId: 1,
+      lineTemplateId: 45,
+      lineCatalogKey: SERIE_45_CATALOG_KEY,
+    });
+    expect(resBareIncoloro.estado).toBe("receta_incompleta");
+    expect(resBareIncoloro.formal).toBeNull();
+
     const res2Hojas = resolveFabricacionDespieceForQuoteItem({
       item: buildSerie45QuoteItem({ hojas: 2, vidrio: "Incoloro monolítico 5mm" }),
       recipes: [],

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { LuChevronDown } from "react-icons/lu";
 
+import type { GlassTechnicalSpec } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
 import { CubicationAdjustmentChoiceDialog } from "@/components/ui/cubication-adjustment-choice-dialog";
 import {
   getLineTemplateCubicationConfig,
@@ -113,6 +114,7 @@ export type PautaCubicacionFormSlice = {
   tipo?: string;
   sistema?: string;
   vidrio?: string;
+  glassTechnicalSpec?: GlassTechnicalSpec | null;
   catalogTerminacion?: string;
   /** Variante/herraje elegido cuando hay varias recetas activas compatibles. */
   fabricationRecipeId?: string;
@@ -702,6 +704,7 @@ export function PautaCubicacionPanel({
           selectedPersistedRecipe?.definition.identidad.variante ||
           null,
         glassName: componentForm.vidrio,
+        technicalSpec: componentForm.glassTechnicalSpec,
         activeRecipes: persistedRecipes,
         matchedRecipe: selectedPersistedRecipe,
       }) ??
@@ -711,12 +714,14 @@ export function PautaCubicacionPanel({
         typology: explicitTipologia,
         hojas: effectiveFabricacionHojas,
         glassName: componentForm.vidrio,
+        technicalSpec: componentForm.glassTechnicalSpec,
         activeRecipes: persistedRecipes,
         matchedRecipe: selectedPersistedRecipe,
       }),
     [
       catalogKey,
       componentForm.fabricacionVariante,
+      componentForm.glassTechnicalSpec,
       componentForm.vidrio,
       effectiveFabricacionHojas,
       explicitTipologia,

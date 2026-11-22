@@ -22,10 +22,13 @@ export type Serie45GlassSupport =
   | { kind: "unresolved_glazing"; reason: string };
 
 const INCOMPATIBLE_GLAZING_RE = /\b(espejo|policarbonato|acrilico)\b/;
+const LAMINATED_GLAZING_RE = /\b(laminad[oa]s?|pvb|sgp|triplex)\b/;
+const LAMINATED_TWO_PLY_RE = /\b\d+(?:[.,]\d+)?\s*\+\s*\d+(?:[.,]\d+)?\b/;
 const DVH_GLAZING_RE = /\b(dvh|termopanel|doble\s+vidriado|doble\s+vidrio)\b/;
+const DVH_THREE_PART_RE = /\b\d+(?:[.,]\d+)?\s*\+\s*\d+(?:[.,]\d+)?\s*\+\s*\d+(?:[.,]\d+)?\b/;
 const MONOLITHIC_GLAZING_RE =
-  /(?:\b(?:monolitic[oa]|float|crudo|simple|incoloro|templad[oa]|blindex)\b|^\d+(?:[.,]\d+)?\s*mm$)/;
-const UNRESOLVED_GLASS_RE = /^(?:|vidrio\s+por\s+definir|por\s+definir|pendiente|sin\s+definir)$/;
+  /(?:\b(?:monolitic[oa]|float|crudo|simple|templad[oa]|blindex)\b|^\d+(?:[.,]\d+)?\s*mm$|^(?:incoloro|claro|bronce|gris|verde|azul)\s+\d+(?:[.,]\d+)?\s*mm$)/;
+const UNRESOLVED_GLASS_RE = /^(?:|vidrio\s+por\s+definir)$|\b(?:por\s+definir|sin\s+definir|sin\s+confirmar|pendiente)\b/;
 
 export const SERIE_45_BEAD_MONOLITHIC_NOTE =
   "Cálculo preliminar. Junquillo 4534 es referencia base; confirmar espesor y junquillo en taller.";
@@ -98,6 +101,20 @@ export function classifySerie45GlassSupport(input: {
     };
   }
 
+  const isDvh = spec?.category === "dvh" || DVH_GLAZING_RE.test(normalized);
+  const isTwoPlyWithoutDvh =
+    !isDvh &&
+    !DVH_THREE_PART_RE.test(normalized) &&
+    LAMINATED_TWO_PLY_RE.test(normalized);
+
+  if (spec?.category === "laminado" || LAMINATED_GLAZING_RE.test(normalized) || isTwoPlyWithoutDvh) {
+    return {
+      kind: "incompatible_glazing",
+      reason:
+        "Vidrio laminado no cuenta con validación documental en Línea 45 (espesor y junquillo 4534 por confirmar); la composición queda pendiente de revisión.",
+    };
+  }
+
   if (
     spec?.category === "espejo" ||
     spec?.category === "otro" ||
@@ -110,26 +127,29 @@ export function classifySerie45GlassSupport(input: {
     };
   }
 
-  if (spec?.category === "dvh" || DVH_GLAZING_RE.test(normalized)) {
+  if (spec?.category === "pendiente" || UNRESOLVED_GLASS_RE.test(normalized)) {
+    return {
+      kind: "unresolved_glazing",
+      reason:
+        "Selecciona y confirma un vidrio monolítico o DVH para calcular el despiece preliminar de Línea 45 y verificar junquillo 4534.",
+    };
+  }
+
+  if (isDvh) {
     return {
       kind: "compatible_dvh_pending_bead",
       beadNote: SERIE_45_BEAD_DVH_NOTE,
     };
   }
 
-  if (UNRESOLVED_GLASS_RE.test(normalized) && spec?.category !== "monolitico" && spec?.category !== "templado") {
+  if (spec?.category === "monolitico" || spec?.category === "templado") {
     return {
-      kind: "unresolved_glazing",
-      reason:
-        "Selecciona un vidrio monolítico o DVH para calcular el despiece preliminar de Línea 45 y verificar junquillo.",
+      kind: "compatible_monolithic",
+      beadNote: SERIE_45_BEAD_MONOLITHIC_NOTE,
     };
   }
 
-  if (
-    spec?.category === "monolitico" ||
-    spec?.category === "templado" ||
-    MONOLITHIC_GLAZING_RE.test(normalized)
-  ) {
+  if (!spec && MONOLITHIC_GLAZING_RE.test(normalized)) {
     return {
       kind: "compatible_monolithic",
       beadNote: SERIE_45_BEAD_MONOLITHIC_NOTE,
