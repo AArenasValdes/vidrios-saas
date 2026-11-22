@@ -49,6 +49,8 @@ import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/s
 import { resolveAperturaForRecipeMatch } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import { resolveUniversalPricedLineFallbacks } from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
 import { resolveVeratecWorkbookFallback } from "@/features/fabricacion/services/fabricacion-receta-veratec-fallback.service";
+import { SERIE_45_CATALOG_KEY } from "@/features/fabricacion/fixtures/serie-45-practicable-recipe";
+import { evaluateSerie45DocumentaryQuoteGuard } from "@/features/fabricacion/services/serie-45-glazing.service";
 import { SERIE_4800_CATALOG_KEY } from "@/features/fabricacion/fixtures/serie-4800-corredera-recipe";
 import { evaluateSerie4800DocumentaryQuoteGuard } from "@/features/fabricacion/services/serie-4800-glazing.service";
 import { isVeratec7400FourMobileComposition } from "@/features/fabricacion/services/veratec-quote-composition.service";
@@ -593,8 +595,11 @@ export function PautaCubicacionPanel({
         );
       }
     }
-    if (resolution.estado === "sin_receta" && catalogKey === SERIE_4800_CATALOG_KEY) {
-      const fallbacks4800 = resolveUniversalPricedLineFallbacks({
+    if (
+      resolution.estado === "sin_receta" &&
+      (catalogKey === SERIE_4800_CATALOG_KEY || catalogKey === SERIE_45_CATALOG_KEY)
+    ) {
+      const fallbacks = resolveUniversalPricedLineFallbacks({
         catalogKey,
         lineTemplateId: numericLineTemplateId,
         organizationId,
@@ -606,9 +611,9 @@ export function PautaCubicacionPanel({
         includeDocumentedVariants: true,
         recipes: persistedRecipes,
       });
-      if (fallbacks4800.length > 0) {
+      if (fallbacks.length > 0) {
         resolution = resolveFabricationRecipe(
-          [...persistedRecipes, ...fallbacks4800],
+          [...persistedRecipes, ...fallbacks],
           recipeInput,
         );
       }
@@ -688,6 +693,7 @@ export function PautaCubicacionPanel({
     () =>
       evaluateSerie4800DocumentaryQuoteGuard({
         catalogKey,
+        organizationId,
         typology: explicitTipologia,
         hojas: effectiveFabricacionHojas,
         variante:
@@ -698,6 +704,15 @@ export function PautaCubicacionPanel({
         glassName: componentForm.vidrio,
         activeRecipes: persistedRecipes,
         matchedRecipe: selectedPersistedRecipe,
+      }) ??
+      evaluateSerie45DocumentaryQuoteGuard({
+        catalogKey,
+        organizationId,
+        typology: explicitTipologia,
+        hojas: effectiveFabricacionHojas,
+        glassName: componentForm.vidrio,
+        activeRecipes: persistedRecipes,
+        matchedRecipe: selectedPersistedRecipe,
       }),
     [
       catalogKey,
@@ -705,6 +720,7 @@ export function PautaCubicacionPanel({
       componentForm.vidrio,
       effectiveFabricacionHojas,
       explicitTipologia,
+      organizationId,
       persistedRecipes,
       selectedPersistedRecipe,
     ],

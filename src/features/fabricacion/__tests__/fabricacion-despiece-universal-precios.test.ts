@@ -446,6 +446,9 @@ describe("despiece de líneas universales con precio Arquetipo", () => {
       // source and its validated 18-variant path remain untouched.
       expect(resolved.preliminary).toBe(false);
       expect(resolved.recipe?.status).toBe("testing");
+    } else if (line.line === "L45") {
+      expect(resolved.preliminary).toBe(true);
+      expect(resolved.recipe?.status).toBe("testing");
     } else {
       expect(resolved.preliminary).toBe(false);
       expect(resolved.recipe?.status).toBe("testing");

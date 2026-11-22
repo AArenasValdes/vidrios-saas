@@ -21,6 +21,12 @@ import {
   SODAL_CATALOGO_2026_SOURCE_PREFIX,
   USER_CONFIRMED_UNIVERSAL_WORKSHOP_LINE_KEYS,
 } from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
+import { SERIE_45_CATALOG_KEY } from "@/features/fabricacion/fixtures/serie-45-practicable-recipe";
+import {
+  classifySerie45GlassSupport,
+  evaluateSerie45DocumentaryQuoteGuard,
+  isWorkshopOwnedSerie45Recipe,
+} from "@/features/fabricacion/services/serie-45-glazing.service";
 import { SERIE_4800_CATALOG_KEY } from "@/features/fabricacion/fixtures/serie-4800-corredera-recipe";
 import {
   evaluateSerie4800DocumentaryQuoteGuard,
@@ -714,6 +720,38 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     };
   }
 
+  const activeLineRecipesFor45 = catalogKey === SERIE_45_CATALOG_KEY
+    ? input.recipes.filter(
+        (recipe) =>
+          recipe.lineTemplateId === lineTemplateId &&
+          !recipe.eliminadoEn &&
+          recipe.status !== "archived" &&
+          (recipe.scope !== "organization" ||
+            input.organizationId == null ||
+            recipe.organizationId === input.organizationId),
+      )
+    : [];
+  const serie45Guard = evaluateSerie45DocumentaryQuoteGuard({
+    catalogKey,
+    organizationId: input.organizationId,
+    typology: tipologia,
+    hojas,
+    glassName: input.item.vidrio,
+    technicalSpec: presentation.glassTechnicalSpec,
+    activeRecipes: activeLineRecipesFor45,
+  });
+  if (serie45Guard) {
+    return {
+      estado: serie45Guard.blockedEstado,
+      formal: null,
+      cubication: null,
+      recipe: null,
+      barsAvailable: false,
+      preliminary: false,
+      message: serie45Guard.message,
+    };
+  }
+
   const recipeResolutionInput = {
     organizationId: input.organizationId,
     lineTemplateId,
@@ -1140,6 +1178,26 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
       message: serie4800MatchedGuard.message,
     };
   }
+  const serie45MatchedGuard = evaluateSerie45DocumentaryQuoteGuard({
+    catalogKey,
+    organizationId: input.organizationId,
+    typology: tipologia,
+    hojas,
+    glassName: input.item.vidrio,
+    technicalSpec: presentation.glassTechnicalSpec,
+    matchedRecipe: recipe,
+  });
+  if (serie45MatchedGuard && !isWorkshopOwnedSerie45Recipe(recipe)) {
+    return {
+      estado: serie45MatchedGuard.blockedEstado,
+      formal: null,
+      cubication: null,
+      recipe,
+      barsAvailable: false,
+      preliminary: true,
+      message: serie45MatchedGuard.message,
+    };
+  }
   if (resolution.estado === "receta_no_validada") {
     const preview = evaluarRecetaListaParaProbar(recipe.definition);
     const bypassRecipeMetadataGate = isSodalL25FormulaDerivedRecipe(recipe);
@@ -1234,7 +1292,8 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     formal.pautaBarras?.calculable && (formal.pautaBarras.barras?.length ?? 0) > 0
   );
   const isReadySharedOrWorkshopRecipe =
-    recipe.id.startsWith("ventora:universal:") ||
+    (recipe.id.startsWith("ventora:universal:") &&
+      !recipe.id.startsWith("ventora:universal:l45:")) ||
     recipe.sourceReference?.startsWith("taller:personalizada:") === true;
   const preliminary =
     resolution.estado === "receta_no_validada" &&
@@ -1245,6 +1304,21 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     !isReadySharedOrWorkshopRecipe;
 
   const cubication = fabricacionSnapshotToLegacyCubicationSnapshot(formal);
+  const serie45GlassSupport =
+    catalogKey === SERIE_45_CATALOG_KEY &&
+    preliminary &&
+    !isWorkshopOwnedSerie45Recipe(recipe)
+      ? classifySerie45GlassSupport({
+          glassName: input.item.vidrio,
+          technicalSpec: presentation.glassTechnicalSpec,
+        })
+      : null;
+  const serie45PreliminaryMessage =
+    serie45GlassSupport &&
+    (serie45GlassSupport.kind === "compatible_monolithic" ||
+      serie45GlassSupport.kind === "compatible_dvh_pending_bead")
+      ? serie45GlassSupport.beadNote
+      : null;
 
   const compositionRequiresManualReview = Boolean(
     (presentation.guidedVisualConfig?.quickCompositionStructural ||
@@ -1262,9 +1336,10 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     message: compositionRequiresManualReview
       ? "Despiece base Veratec 7400 de 4 hojas móviles. La composición visual tiene ajustes; revisa y corrige los cortes antes de confirmar la pauta."
       : barsAvailable
-      ? preliminary
-        ? "Despiece disponible. La receta aún requiere validación del taller."
-        : null
+      ? serie45PreliminaryMessage ??
+        (preliminary
+          ? "Despiece disponible. La receta aún requiere validación del taller."
+          : null)
       : tieneLargosComercialesPendientes(recipe.definition)
         ? "Agrega largos comerciales para calcular tiras."
         : "No se pudo armar la pauta de tiras con esta receta.",
