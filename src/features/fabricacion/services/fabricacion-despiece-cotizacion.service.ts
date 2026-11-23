@@ -1288,6 +1288,19 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
       variante: recipe.definition.identidad.variante,
     },
   });
+  // La selección procede del ítem actual, igual que en el guardado. Si un
+  // snapshot legacy no congeló selección, no completar su identidad durante
+  // una reapertura automática: podría reemplazar su despiece histórico.
+  if (
+    (presentation.vidrioLineTemplateId || presentation.glassTechnicalSpec) &&
+    (!input.item.fabricacionSnapshot || input.item.fabricacionSnapshot.glassSelection)
+  ) {
+    formal.glassSelection = {
+      productId: presentation.vidrioLineTemplateId || null,
+      displayName: input.item.vidrio || null,
+      technicalSpec: presentation.glassTechnicalSpec,
+    };
+  }
   const barsAvailable = Boolean(
     formal.pautaBarras?.calculable && (formal.pautaBarras.barras?.length ?? 0) > 0
   );
@@ -1331,6 +1344,9 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
     formal,
     cubication,
     recipe,
+    ...(resolution.estado === "receta_unica" && resolution.candidatas.length > 1
+      ? { candidateRecipes: resolution.candidatas }
+      : {}),
     barsAvailable,
     preliminary,
     message: compositionRequiresManualReview

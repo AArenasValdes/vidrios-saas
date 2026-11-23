@@ -26,6 +26,39 @@ export type CotizacionMirrorFormat = "single" | "divided";
 export type CotizacionMirrorPaneDirection = "vertical" | "horizontal";
 export type CotizacionMirrorInteriorLine = "fine" | "marked";
 
+export type FabricationSelectionFields = {
+  fabricacionTipologia: string;
+  fabricacionVariante: string;
+  fabricacionApertura: string;
+  fabricacionHerraje: string;
+  fabricacionHojas: number | null;
+  fabricacionModulos: number | null;
+};
+export type FabricationSelectionOrigin = {
+  version: 1;
+  recipeId: string;
+  contextKey: string;
+  original: FabricationSelectionFields;
+  selected: FabricationSelectionFields;
+};
+
+function parseFabricationSelectionOrigin(value: string | undefined): FabricationSelectionOrigin | null {
+  if (!value) return null;
+  try {
+    const data: unknown = JSON.parse(decodeURIComponent(value));
+    if (!data || typeof data !== "object") return null;
+    const obj = data as Record<string, unknown>;
+    const validFields = (fields: unknown): fields is FabricationSelectionFields => {
+      if (!fields || typeof fields !== "object") return false;
+      const f = fields as Record<string, unknown>;
+      return ["fabricacionTipologia", "fabricacionVariante", "fabricacionApertura", "fabricacionHerraje"].every((key) => typeof f[key] === "string") &&
+        ["fabricacionHojas", "fabricacionModulos"].every((key) => f[key] === null || (typeof f[key] === "number" && Number.isFinite(f[key])));
+    };
+    if (obj.version !== 1 || typeof obj.recipeId !== "string" || !obj.recipeId || typeof obj.contextKey !== "string" || !obj.contextKey || !validFields(obj.original) || !validFields(obj.selected)) return null;
+    return { version: 1, recipeId: obj.recipeId, contextKey: obj.contextKey, original: obj.original, selected: obj.selected };
+  } catch { return null; }
+}
+
 export type CotizacionItemPresentationMeta = {
   colorHex: string;
   material: ComponentMaterial;
@@ -86,6 +119,7 @@ export type CotizacionItemPresentationMeta = {
   fabricacionLeg: string;
   fabricacionReinforcement: string;
   fabricationRecipeId: string;
+  fabricationSelectionOrigin: FabricationSelectionOrigin | null;
   supplierProviderKey: string;
   raw: string;
 };
@@ -309,6 +343,7 @@ export function encodeCotizacionItemPresentationMeta(input: {
   fabricacionLeg?: string | null;
   fabricacionReinforcement?: string | null;
   fabricationRecipeId?: string | null;
+  fabricationSelectionOrigin?: FabricationSelectionOrigin | null;
   supplierProviderKey?: string | null;
   raw?: string;
 }) {
@@ -506,6 +541,7 @@ export function encodeCotizacionItemPresentationMeta(input: {
     `[flg:${fabricacionLeg}]` +
     `[frf:${fabricacionReinforcement}]` +
     `[frid:${fabricationRecipeId}]` +
+    (input.fabricationSelectionOrigin ? `[fso:${encodeURIComponent(JSON.stringify(input.fabricationSelectionOrigin))}]` : "") +
     `[spk:${supplierProviderKey}]` +
     `[cub:${cubicationSnapshot}]`;
 
@@ -656,6 +692,7 @@ export function decodeCotizacionItemPresentationMeta(
     source.match(/\[frf:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const fabricationRecipeId =
     source.match(/\[frid:([^\]]*)\]/)?.[1]?.trim() ?? "";
+  const fabricationSelectionOrigin = parseFabricationSelectionOrigin(source.match(/\[fso:([^\]]*)\]/)?.[1]);
   const supplierProviderKey =
     source.match(/\[spk:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const cubicationSnapshot = parseCubicationSnapshot(
@@ -720,6 +757,7 @@ export function decodeCotizacionItemPresentationMeta(
     .replace(/\[flg:[^\]]*\]/g, "")
     .replace(/\[frf:[^\]]*\]/g, "")
     .replace(/\[frid:[^\]]*\]/g, "")
+    .replace(/\[fso:[^\]]*\]/g, "")
     .replace(/\[spk:[^\]]*\]/g, "")
     .replace(/\[cub:[^\]]*\]/g, "")
     .trim();
@@ -780,6 +818,7 @@ export function decodeCotizacionItemPresentationMeta(
     fabricacionLeg,
     fabricacionReinforcement,
     fabricationRecipeId,
+    fabricationSelectionOrigin,
     supplierProviderKey,
     raw,
   };

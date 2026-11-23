@@ -26,6 +26,14 @@ import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import { resolveUniversalAluminumLineKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
+function createUniversalFallbackIdGenerator(
+  lineTemplateId: number,
+  scopeKey: string,
+): () => string {
+  let nextId = 0;
+  return () => `ventora:universal:${lineTemplateId}:${scopeKey}:${nextId++}`;
+}
+
 const SPECIALIZED_UNIVERSAL_LINE_NAMES: Readonly<Record<string, string>> = {
   "ventora:serie-4800-corredera-2h": "Serie 4800",
   "ventora:s33-corredera-2h": "S33",
@@ -169,7 +177,7 @@ function isL42CatalogKey(catalogKey: string): boolean {
 function buildArquetipoL42NoChamberRecipe(
   input: UniversalFallbackInput,
 ): FabricationRecipeRecord {
-  const definition = crearRecetaSerie42Sodal({ lineName: input.lineName });
+  const definition = crearRecetaSerie42Sodal({ lineName: input.lineName, createId: createUniversalFallbackIdGenerator(input.lineTemplateId, L42_ARQUETIPO_NO_CHAMBER_VARIANT) });
   definition.identidad = {
     ...definition.identidad,
     codigo: "ARQUETIPO-L42-SIN-CAMARA-MONOLITICO-1H",
@@ -224,6 +232,7 @@ function buildSodalCatalogo2026Recipes(input: UniversalFallbackInput): Fabricati
     definitions = crearRecetasSodalCatalogo2026({
       catalogKey: input.catalogKey as SodalCatalogo2026RecipeKey,
       lineName: input.lineName,
+      createId: createUniversalFallbackIdGenerator(input.lineTemplateId, input.catalogKey),
     });
   } else {
     const sodalKey = input.catalogKey as
@@ -231,7 +240,11 @@ function buildSodalCatalogo2026Recipes(input: UniversalFallbackInput): Fabricati
       | "ventora:multislide-s83-8h"
       | "ventora:serie-3200-puerta-abatible-1h"
       | "ventora:serie-4600-puerta-vaiven";
-    definitions = crearRecetasSodalP2A({ catalogKey: sodalKey, lineName: input.lineName });
+    definitions = crearRecetasSodalP2A({
+      catalogKey: sodalKey,
+      lineName: input.lineName,
+      createId: createUniversalFallbackIdGenerator(input.lineTemplateId, input.catalogKey),
+    });
     if (input.catalogKey === "ventora:serie-4600-puerta-vaiven") {
       // El catálogo SODAL 2026 documenta el quicio hidráulico MAB, no la
       // alternativa mecánica que existe en la referencia antigua.
@@ -318,6 +331,7 @@ function buildSerie4800DocumentaryFallbacks(
   const normalDefinition = crearRecetaSerie4800Corredera({
     lineName: input.lineName,
     variant: SERIE_4800_VARIANT_NORMAL,
+    createId: createUniversalFallbackIdGenerator(input.lineTemplateId, `serie-4800:${SERIE_4800_VARIANT_NORMAL}`),
   });
   const normalRecord: FabricationRecipeRecord = {
     id: `ventora:documental:serie-4800:${SERIE_4800_VARIANT_NORMAL}`,
@@ -357,6 +371,7 @@ function buildSerie4800DocumentaryFallbacks(
   const reinforcedBase = crearRecetaSerie4800Corredera({
     lineName: input.lineName,
     variant: SERIE_4800_VARIANT_REFORZADA,
+    createId: createUniversalFallbackIdGenerator(input.lineTemplateId, `serie-4800:${SERIE_4800_VARIANT_REFORZADA}`),
   });
   const reinforcedRecord: FabricationRecipeRecord = {
     id: `ventora:documental:serie-4800:${SERIE_4800_VARIANT_REFORZADA}`,
@@ -411,6 +426,7 @@ function buildReferenceRecipe(input: UniversalFallbackInput): FabricationRecipeR
     definition = crearRecetasP2U({
       catalogKey: P2U_CATALOG_KEYS.line12,
       lineName: input.lineName,
+      createId: createUniversalFallbackIdGenerator(input.lineTemplateId, "l12"),
     })[0]!;
     // En el cotizador, “corredera frontal” describe la disposición comercial
     // del shower. La receta confirmada es única para Shower 2H, aunque la
@@ -428,6 +444,7 @@ function buildReferenceRecipe(input: UniversalFallbackInput): FabricationRecipeR
     definition = crearRecetasSodalP2A({
       catalogKey: input.catalogKey as "ventora:s33-corredera-2h" | "ventora:s33-rpt-corredera-2h",
       lineName: input.lineName,
+      createId: createUniversalFallbackIdGenerator(input.lineTemplateId, line.toLowerCase()),
     })[0]!;
     sourceType = "manufacturer";
     sourceName = "SODAL";
@@ -444,7 +461,11 @@ function buildReferenceRecipe(input: UniversalFallbackInput): FabricationRecipeR
       : line === "L4000"
         ? P2U_CATALOG_KEYS.line4000
         : P2U_CATALOG_KEYS.line45;
-    const candidates = crearRecetasP2U({ catalogKey, lineName: input.lineName });
+    const candidates = crearRecetasP2U({
+      catalogKey,
+      lineName: input.lineName,
+      createId: createUniversalFallbackIdGenerator(input.lineTemplateId, line.toLowerCase()),
+    });
     const matching = candidates.filter((candidate) => {
       if (input.variant && candidate.identidad.variante !== input.variant) return false;
       return input.leavesCount == null || candidate.identidad.hojas === input.leavesCount;
@@ -464,7 +485,9 @@ function buildReferenceRecipe(input: UniversalFallbackInput): FabricationRecipeR
       ? new Set(["estandar", "pierna_abierta_jamba_2009"])
       : new Set(["estandar", "caracol"]);
     if (input.variant && !acceptedVariants.has(input.variant)) return null;
-    definition = crearRecetaPlantillaVentoraCorredera2H(templateId);
+    definition = crearRecetaPlantillaVentoraCorredera2H(templateId, {
+      createId: createUniversalFallbackIdGenerator(input.lineTemplateId, line.toLowerCase()),
+    });
     if (input.variant) {
       definition = {
         ...definition,
@@ -476,7 +499,10 @@ function buildReferenceRecipe(input: UniversalFallbackInput): FabricationRecipeR
     if (input.typology && input.typology !== "proyectante") return null;
     if (input.leavesCount != null && input.leavesCount !== 1) return null;
     if (input.variant && input.variant !== "normal") return null;
-    definition = crearRecetaSerie32ProyectanteNormal({ lineName: input.lineName });
+    definition = crearRecetaSerie32ProyectanteNormal({
+      lineName: input.lineName,
+      createId: createUniversalFallbackIdGenerator(input.lineTemplateId, "l32"),
+    });
     sourceReference = "ventora:serie-32-proyectante:normal:referencia";
   } else if (line === "L42") {
     const normalizedVariant = input.variant?.trim().toLocaleLowerCase("es-CL") ?? "";
@@ -487,6 +513,7 @@ function buildReferenceRecipe(input: UniversalFallbackInput): FabricationRecipeR
     definition = crearRecetaSerie42Proyectante({
       variant: "normal",
       lineName: input.lineName,
+      createId: createUniversalFallbackIdGenerator(input.lineTemplateId, "l42"),
     });
     sourceReference = "ventora:serie-42-proyectante:normal:referencia";
   } else {

@@ -90,6 +90,7 @@ export type QuoteConstructorItemPatch = Partial<
     | "fabricacionLeg"
     | "fabricacionReinforcement"
     | "fabricationRecipeId"
+    | "fabricationSelectionOrigin"
     | "supplierProviderKey"
     | "fabricacionAnchoHojaAMm"
     | "fabricacionHojas"

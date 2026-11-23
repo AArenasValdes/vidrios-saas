@@ -54,6 +54,7 @@ import type { FabricacionTrabajoBarra } from "@/features/fabricacion/types/fabri
 import {
   buildFabricacionSnapshotSyncKey,
   fabricacionSnapshotMatchesCalculatedOutput,
+  shouldPreserveFrozenFabricationSnapshot,
 } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import {
   resolveFabricacionDespieceForQuoteItem,
@@ -696,7 +697,7 @@ export function DespieceReviewSurface({
       return;
     }
     if (
-      fabricacionSnapshotMatchesCalculatedOutput(
+      shouldPreserveFrozenFabricationSnapshot(
         selectedItem.fabricacionSnapshot,
         resolution.formal
       )

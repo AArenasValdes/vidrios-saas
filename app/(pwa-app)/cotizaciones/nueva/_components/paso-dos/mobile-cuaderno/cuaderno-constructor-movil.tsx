@@ -12,7 +12,7 @@ import {
 } from "@/features/cotizaciones/new-quote/quote-piece-domain";
 import {
   buildFabricacionSnapshotSyncKey,
-  fabricacionSnapshotMatchesCalculatedOutput,
+  shouldPreserveFrozenFabricationSnapshot,
 } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
@@ -138,7 +138,7 @@ function SodalL25SnapshotSynchronizer({
       return;
     }
     const snapshot = resolution.formal;
-    if (fabricacionSnapshotMatchesCalculatedOutput(item.fabricacionSnapshot, snapshot)) {
+    if (shouldPreserveFrozenFabricationSnapshot(item.fabricacionSnapshot, snapshot)) {
       lastSyncedKeyRef.current = null;
       return;
     }

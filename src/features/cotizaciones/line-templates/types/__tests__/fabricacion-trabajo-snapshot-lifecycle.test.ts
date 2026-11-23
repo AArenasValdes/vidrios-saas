@@ -1,3 +1,6 @@
+import { crearRecetaWinHouseS60Candidata, WINHOUSE_S60_VARIANTS } from "@/features/fabricacion/fixtures/winhouse-s60-recipes";
+import { resolveVeratecWorkbookFallback } from "@/features/fabricacion/services/fabricacion-receta-veratec-fallback.service";
+import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import {
   ensureLogicalComponentIdsForQuoteSave,
   getFabricationRecipeLineTemplateIdsForSnapshotResolution,
@@ -417,6 +420,155 @@ describe("fabricacion-trabajo-snapshot lifecycle", () => {
     expect(prepared.items[0]?.fabricacionSnapshot).toBeNull();
   });
 
+  it("conserva el snapshot de L20 ante cambios solo comerciales de nombre y descripción", () => {
+    const previous = workflowItem({ fabricacionSnapshot: itemSnapshot });
+    const edited = { ...previous, nombre: "Ventana comedor", descripcion: "Marco blanco", precioUnitario: 99999 };
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: [previous], items: [edited] });
+    expect(prepared.itemIdsToResolve.size).toBe(0);
+    expect(prepared.items[0]?.fabricacionSnapshot).toBe(itemSnapshot);
+    expect(prepared.shouldRebuildTrabajoSnapshot).toBe(false);
+  });
+
+  it("comprueba que edición comercial de L20 no cambia despiece resuelto", () => {
+    const previous = workflowItem();
+    const edited = { ...previous, nombre: "Ventana comedor", descripcion: "Marco blanco" };
+    const resolve = (item: CotizacionWorkflowItem) => resolveFabricacionDespieceForQuoteItem({
+      item, recipes: [], organizationId: 1, lineTemplateId: 220, lineCatalogKey: "ventora:l20",
+    });
+    const before = resolve(previous);
+    const after = resolve(edited);
+    expect(before.estado).toBe("calculado");
+    expect(after.estado).toBe("calculado");
+    const cuts = (result: typeof before) => result.formal?.result.perfiles.map((profile) => ({
+      codigo: profile.codigoPerfil, funcion: profile.funcion,
+      medidaMm: profile.medidaMm, cantidad: profile.cantidadPiezas,
+    }));
+    expect(cuts(before)?.length).toBeGreaterThan(0);
+    expect(cuts(after)).toEqual(cuts(before));
+  });
+  it("invalida L20 legacy cuando el texto cambia la tipología inferida", () => {
+    const meta = encodeCotizacionItemPresentationMeta({ lineTemplateId: "220", catalogLineKey: "ventora:l20" });
+    const previous = workflowItem({ observaciones: meta, nombre: "Ventana corredera", descripcion: "", fabricacionSnapshot: itemSnapshot });
+    const edited = { ...previous, nombre: "Ventana proyectante" };
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: [previous], items: [edited] });
+    expect(prepared.itemIdsToResolve).toEqual(new Set([previous.id]));
+    expect(prepared.items[0]?.fabricacionSnapshot).toBeNull();
+  });
+
+  it("invalida L20 legacy cuando el texto cambia la cantidad inferida de hojas", () => {
+    const meta = encodeCotizacionItemPresentationMeta({ lineTemplateId: "220", catalogLineKey: "ventora:l20", fabricacionTipologia: "corredera" });
+    const previous = workflowItem({ observaciones: meta, nombre: "Ventana corredera 2 hojas", descripcion: "", fabricacionSnapshot: itemSnapshot });
+    const edited = { ...previous, nombre: "Ventana corredera 3 hojas" };
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: [previous], items: [edited] });
+    expect(prepared.itemIdsToResolve).toEqual(new Set([previous.id]));
+    expect(prepared.items[0]?.fabricacionSnapshot).toBeNull();
+  });
+
+  it("invalida si el nuevo nombre introduce un conflicto pivotante", () => {
+    const previous = workflowItem({ tipo: "Puerta", nombre: "Puerta corredera", fabricacionSnapshot: itemSnapshot });
+    const edited = { ...previous, nombre: "Puerta pivotante" };
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: [previous], items: [edited] });
+    expect(prepared.itemIdsToResolve).toEqual(new Set([previous.id]));
+    expect(prepared.items[0]?.fabricacionSnapshot).toBeNull();
+  });
+
+  it("mantiene comparación conservadora del texto de familias especiales", () => {
+    const meta = encodeCotizacionItemPresentationMeta({ lineTemplateId: "5200", catalogLineKey: "ventora:veratec-bahar-5200-ventana-exterior", fabricacionTipologia: "abatible" });
+    const previous = workflowItem({ observaciones: meta, lineaComercial: "Bahar 5200", nombre: "Ventana abatible", fabricacionSnapshot: itemSnapshot });
+    const edited = { ...previous, nombre: "Ventana proyectante" };
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: [previous], items: [edited] });
+    expect(prepared.itemIdsToResolve).toEqual(new Set([previous.id]));
+    expect(prepared.items[0]?.fabricacionSnapshot).toBeNull();
+  });
+  it.each(["veratec", "winhouse"] as const)("conserva snapshot legacy %s al editar solo descripción comercial", (system) => {
+    const isS60 = system === "winhouse";
+    const lineTemplateId = isS60 ? 560 : 1396;
+    const catalogKey = isS60 ? "ventora:winhouse-s60" : "ventora:veratec-7400-corredera";
+    const lineName = isS60 ? "WinHouse S60" : "Veratec 7400";
+    const baseRecipe = resolveVeratecWorkbookFallback({ catalogKey: "ventora:veratec-7400-corredera", lineTemplateId: 1396, organizationId: 1, lineName: "Veratec 7400", variant: "monolitico_4mm", recipes: [] })[0]!;
+    const variant = WINHOUSE_S60_VARIANTS.fijoMonolitico;
+    const privateRecipe = { ...baseRecipe, id: "private-s60-fijo", lineTemplateId: 560, scope: "organization" as const, lineName, typology: "pano_fijo" as const, leavesCount: 1, variant, status: "draft" as const, definition: crearRecetaWinHouseS60Candidata({ lineName, variant }), sourceReference: "taller:personalizada:s60" };
+    const recipes = isS60 ? [privateRecipe] : [];
+    const previous = workflowItem({ lineaComercial: lineName, vidrio: "Monolítico 4 mm", nombre: "Ventana", descripcion: isS60 ? "fijo" : "Corredera 2 hojas", ancho: 1200, alto: 1500, observaciones: encodeCotizacionItemPresentationMeta({ lineTemplateId: String(lineTemplateId), catalogLineKey: catalogKey, sistema: isS60 ? "Fijo" : "Corredera", fabricacionHojas: isS60 ? 1 : 2, fabricacionModulos: isS60 ? 1 : 2 }) });
+    const resolve = (item: CotizacionWorkflowItem) => resolveFabricacionDespieceForQuoteItem({ item, recipes, organizationId: 1, lineTemplateId, lineCatalogKey: catalogKey });
+    const initial = resolve(previous);
+    expect(initial.estado).toBe("calculado");
+    const saved = { ...previous, fabricacionSnapshot: initial.formal };
+    const edited = { ...saved, descripcion: `${saved.descripcion} - entrega coordinada` };
+    const direct = resolve({ ...edited, fabricacionSnapshot: null });
+    expect(direct.estado).toBe("calculado");
+    const cuts = (value: typeof initial) => value.formal?.result.perfiles.map((profile) => [profile.codigoPerfil, profile.medidaMm, profile.cantidadPiezas]);
+    expect(cuts(direct)).toEqual(cuts(initial));
+    const glass = (value: typeof initial) => value.formal?.result.vidrios.map((pane) => [pane.nombre, pane.anchoMm, pane.altoMm, pane.cantidadPiezas]);
+    expect(glass(direct)).toEqual(glass(initial));
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: [saved], items: [edited] });
+    expect(prepared.itemIdsToResolve.size).toBe(0);
+    expect(prepared.items[0]?.fabricacionSnapshot).toEqual(saved.fabricacionSnapshot);
+    const renamed = { ...saved, nombre: "Ventana comedor" };
+    const renamedLive = resolve({ ...renamed, fabricacionSnapshot: null });
+    expect(cuts(renamedLive)).toEqual(cuts(initial));
+    const renamedSave = prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: [saved], items: [renamed] });
+    expect(renamedSave.itemIdsToResolve.size).toBe(0);
+    expect(renamedSave.items[0]?.fabricacionSnapshot).toEqual(saved.fabricacionSnapshot);
+    const reopened = structuredClone(prepared.items[0]!);
+    expect(prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: prepared.items, items: [reopened] }).items[0]?.fabricacionSnapshot).toEqual(saved.fabricacionSnapshot);
+    if (isS60) {
+      const technical = { ...saved, descripcion: "proyectante" };
+      const changed = prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: [saved], items: [technical] });
+      expect(changed.itemIdsToResolve).toEqual(new Set([saved.id]));
+      expect(changed.items[0]?.fabricacionSnapshot).toBeNull();
+      expect(resolve({ ...technical, fabricacionSnapshot: null }).estado).toBe("sin_receta");
+    }
+  });
+  it("conserva snapshot L32 estructurado al cambiar solo el nombre comercial", () => {
+    const item = workflowItem({ lineaComercial: "L32", vidrio: "Monolítico 4 mm", nombre: "Ventana oficina", descripcion: "Proyectante", ancho: 1200, alto: 1000, observaciones: encodeCotizacionItemPresentationMeta({ lineTemplateId: "32", catalogLineKey: "ventora:l32", sistema: "Proyectante", fabricacionTipologia: "proyectante", fabricacionHojas: 1, fabricacionModulos: 1, fabricacionVariante: "normal" }) });
+    const resolve = (piece: CotizacionWorkflowItem) => resolveFabricacionDespieceForQuoteItem({ item: piece, recipes: [], organizationId: 1, lineTemplateId: 32, lineCatalogKey: "ventora:l32" });
+    const initial = resolve(item);
+    expect(initial.estado).toBe("calculado");
+    const historical = { ...item, fabricacionSnapshot: initial.formal };
+    const renamed = { ...historical, nombre: "Ventana dormitorio" };
+    const current = resolve({ ...renamed, fabricacionSnapshot: null });
+    const cuts = (value: typeof initial) => value.formal?.result.perfiles.map((profile) => [profile.codigoPerfil, profile.medidaMm, profile.cantidadPiezas]);
+    expect(current.estado).toBe("calculado");
+    expect(cuts(current)).toEqual(cuts(initial));
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: [historical], items: [renamed] });
+    expect(prepared.itemIdsToResolve.size).toBe(0);
+    expect(prepared.items[0]?.fabricacionSnapshot).toEqual(historical.fabricacionSnapshot);
+    const technical = { ...historical, observaciones: encodeCotizacionItemPresentationMeta({ lineTemplateId: "32", catalogLineKey: "ventora:l32", sistema: "Proyectante", fabricacionTipologia: "pano_fijo", fabricacionHojas: 1, fabricacionModulos: 1, fabricacionVariante: "normal" }) };
+    const invalidated = prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: [historical], items: [technical] });
+    expect(invalidated.itemIdsToResolve).toEqual(new Set([historical.id]));
+    expect(invalidated.items[0]?.fabricacionSnapshot).toBeNull();
+  });
+  it("invalida WinHouse S60 si el nombre cambia la tipología efectiva", () => {
+    const previous = workflowItem({ lineaComercial: "WinHouse S60", nombre: "Ventana fija", descripcion: "fijo", observaciones: encodeCotizacionItemPresentationMeta({ lineTemplateId: "560", catalogLineKey: "ventora:winhouse-s60", sistema: "Fijo", fabricacionHojas: 1 }), fabricacionSnapshot: itemSnapshot });
+    const edited = { ...previous, nombre: "Ventana proyectante" };
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: [previous], items: [edited] });
+    expect(prepared.itemIdsToResolve).toEqual(new Set([previous.id]));
+    expect(prepared.items[0]?.fabricacionSnapshot).toBeNull();
+  });
+
+  it("invalida Veratec si el nombre introduce conflicto pivotante", () => {
+    const previous = workflowItem({ tipo: "Puerta", lineaComercial: "Veratec 7400", nombre: "Puerta corredera", descripcion: "2 hojas", observaciones: encodeCotizacionItemPresentationMeta({ lineTemplateId: "1396", catalogLineKey: "ventora:veratec-7400-corredera", sistema: "Corredera", fabricacionTipologia: "corredera", fabricacionHojas: 2 }), fabricacionSnapshot: itemSnapshot });
+    const edited = { ...previous, nombre: "Puerta pivotante" };
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: [previous], items: [edited] });
+    expect(prepared.itemIdsToResolve).toEqual(new Set([previous.id]));
+    expect(prepared.items[0]?.fabricacionSnapshot).toBeNull();
+  });
+  it("invalida Veratec 7400 legacy si cambian las hojas inferidas del texto", () => {
+    const previous = workflowItem({ lineaComercial: "Veratec 7400", nombre: "Ventana", descripcion: "Corredera 2 hojas", observaciones: encodeCotizacionItemPresentationMeta({ lineTemplateId: "1396", catalogLineKey: "ventora:veratec-7400-corredera", sistema: "Corredera" }), fabricacionSnapshot: itemSnapshot });
+    const edited = { ...previous, descripcion: "Corredera 3 hojas" };
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: [previous], items: [edited] });
+    expect(prepared.itemIdsToResolve).toEqual(new Set([previous.id]));
+    expect(prepared.items[0]?.fabricacionSnapshot).toBeNull();
+  });
+
+  it("conserva el control textual para la recuperación legacy Veratec 4H", () => {
+    const previous = workflowItem({ lineaComercial: "Veratec 7400 4 hojas chicas", nombre: "Ventana", descripcion: "4 hojas 2 móviles", observaciones: encodeCotizacionItemPresentationMeta({ lineTemplateId: "1396", catalogLineKey: "ventora:veratec-7400-corredera", sistema: "Corredera" }), fabricacionSnapshot: itemSnapshot });
+    const edited = { ...previous, descripcion: "4 hojas 4 móviles" };
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: [previous], items: [edited] });
+    expect(prepared.itemIdsToResolve).toEqual(new Set([previous.id]));
+    expect(prepared.items[0]?.fabricacionSnapshot).toBeNull();
+  });
   it("no completa una pauta histórica ausente al guardar cambios comerciales", () => {
     const oldItem = workflowItem();
     const unchangedTechnicalInput = workflowItem({ precioUnitario: 160000, precioTotal: 160000 });

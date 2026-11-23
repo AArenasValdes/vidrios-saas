@@ -1,3 +1,7 @@
+import { hasPivotanteSlidingRecipeConflict, inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
+import { resolveFabricacionHojasForRecipeMatch } from "@/features/fabricacion/services/fabricacion-hojas-resolver.service";
+import { resolveWinHouseS60QuoteTypology } from "@/features/fabricacion/services/winhouse-s60-quote-config.service";
+import { WINHOUSE_S60_CATALOG_KEY } from "@/features/fabricacion/fixtures/winhouse-s60-recipes";
 import { construirFabricacionTrabajoSnapshot } from "@/features/fabricacion/services/fabricacion-trabajo-snapshot.service";
 import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
@@ -33,13 +37,49 @@ export function shouldResolveSupplierPresentationsForQuoteSave(input: {
 
 function fabricationInputKey(item: CotizacionWorkflowItem) {
   const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+  // Acotado a L20 2H con identidad estructurada. Las familias que infieren
+  // geometría desde texto (p. ej. Bahar, S60 y Veratec) siguen conservadoras.
+  const structuredL20 = meta.catalogLineKey === "ventora:l20" &&
+    meta.fabricacionTipologia === "corredera" &&
+    meta.fabricacionHojas === 2 && meta.fabricacionModulos === 2 &&
+    !/bahar\s*5200/i.test(item.lineaComercial);
+  // En L32 proyectante 1H con identidad completa, el nombre es comercial.
+  const structuredL32 = meta.catalogLineKey === "ventora:l32" &&
+    meta.fabricacionTipologia === "proyectante" &&
+    meta.fabricacionHojas === 1 && meta.fabricacionModulos === 1 &&
+    !/bahar\s*5200/i.test(item.lineaComercial);
+  // Estas dos rutas usan el texto para tipología y hojas. Comparar el resultado
+  // de los mismos resolutores evita recalcular por notas comerciales inocuas.
+  // La recuperación legacy de Veratec 4H usa otra expresión de composición.
+  const legacyS60 = meta.catalogLineKey === WINHOUSE_S60_CATALOG_KEY &&
+    !/bahar\s*5200/i.test(item.lineaComercial);
+  const legacyVeratec7400 = meta.catalogLineKey === "ventora:veratec-7400-corredera" &&
+    !/4\s+hojas\s+chicas/i.test(item.lineaComercial) &&
+    !/bahar\s*5200/i.test(item.lineaComercial);
+  const compareLegacyDescription = legacyS60 || legacyVeratec7400;
+  const inferredDescriptionIdentity = compareLegacyDescription ? {
+    tipologia: legacyS60
+      ? resolveWinHouseS60QuoteTypology({ selectedTypology: meta.fabricacionTipologia, componentType: item.tipo, componentName: item.nombre, description: item.descripcion })
+      : meta.fabricacionTipologia || inferirTipologiaFabricacionPieza({ tipo: item.tipo, sistema: meta.sistema, nombre: item.nombre, descripcion: item.descripcion }),
+    hojas: resolveFabricacionHojasForRecipeMatch(item, meta),
+  } : null;
+  const pivotanteConflict = (structuredL20 || compareLegacyDescription) && hasPivotanteSlidingRecipeConflict({
+    commercialType: item.tipo,
+    commercialSystem: meta.sistema,
+    commercialConfiguration: meta.configuracion,
+    commercialName: item.nombre,
+    technicalTypology: meta.fabricacionTipologia,
+    technicalOpening: meta.fabricacionApertura,
+  });
   return JSON.stringify({
     tipoItem: item.tipoItem ?? "componente",
     tipo: item.tipo,
     lineaComercial: item.lineaComercial,
     vidrio: item.vidrio,
-    nombre: item.nombre,
-    descripcion: item.descripcion,
+    nombre: structuredL20 || structuredL32 || compareLegacyDescription ? null : item.nombre,
+    descripcion: structuredL20 || compareLegacyDescription ? null : item.descripcion,
+    inferredDescriptionIdentity,
+    pivotanteConflict,
     ancho: item.ancho,
     alto: item.alto,
     cantidad: item.cantidad,

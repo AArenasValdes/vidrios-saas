@@ -29,6 +29,13 @@ import {
 } from "@/features/fabricacion/fixtures/veratec-bahar-5200-recipes";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
+const VERATEC_WORKBOOK_FALLBACK_TIMESTAMP = "2026-10-07T00:00:00.000Z";
+
+function createVeratecFallbackIdGenerator(lineTemplateId: number, variantSlug: string): () => string {
+  let nextId = 0;
+  return () => `veratec:workbook:${lineTemplateId}:${variantSlug}:${nextId++}`;
+}
+
 function createRecord(input: {
   lineTemplateId: number;
   organizationId: number | null;
@@ -38,7 +45,6 @@ function createRecord(input: {
   sourceType?: FabricationRecipeRecord["sourceType"];
   sourceName?: string;
 }): FabricationRecipeRecord {
-  const now = new Date().toISOString();
   return {
     id: `veratec:workbook:${input.definition.identidad.variante}`,
     organizationId: input.organizationId,
@@ -59,8 +65,8 @@ function createRecord(input: {
     parentRecipeId: null,
     validatedAt: null,
     validatedBy: null,
-    createdAt: now,
-    updatedAt: now,
+    createdAt: VERATEC_WORKBOOK_FALLBACK_TIMESTAMP,
+    updatedAt: VERATEC_WORKBOOK_FALLBACK_TIMESTAMP,
     eliminadoEn: null,
   };
 }
@@ -115,7 +121,11 @@ export function resolveVeratecWorkbookFallback(input: {
     ) ?? baharCandidates.find((candidate) => candidate.catalogKey === input.catalogKey);
   if (bahar) {
     if (!requestedVariant(bahar.slug)) return [];
-    const definition = crearRecetaVeratecBahar5200({ lineName: input.lineName, variant: bahar.slug });
+    const definition = crearRecetaVeratecBahar5200({
+      lineName: input.lineName,
+      variant: bahar.slug,
+      createId: createVeratecFallbackIdGenerator(input.lineTemplateId, bahar.slug),
+    });
     return [createRecord({
       lineTemplateId: input.lineTemplateId,
       organizationId: input.organizationId,
@@ -134,6 +144,7 @@ export function resolveVeratecWorkbookFallback(input: {
         const definition = crearRecetaVeratec7400Corredera({
           lineName: input.lineName,
           variant: variant.slug,
+          createId: createVeratecFallbackIdGenerator(input.lineTemplateId, variant.slug),
         });
         return createRecord({
           lineTemplateId: input.lineTemplateId,
@@ -151,7 +162,11 @@ export function resolveVeratecWorkbookFallback(input: {
   );
   if (compact) {
     if (!requestedVariant(compact.slug)) return [];
-    const definition = crearRecetaVeratecCompactSliding({ lineName: input.lineName, variant: compact.slug });
+    const definition = crearRecetaVeratecCompactSliding({
+      lineName: input.lineName,
+      variant: compact.slug,
+      createId: createVeratecFallbackIdGenerator(input.lineTemplateId, compact.slug),
+    });
     return [createRecord({
       lineTemplateId: input.lineTemplateId,
       organizationId: input.organizationId,
@@ -178,7 +193,11 @@ export function resolveVeratecWorkbookFallback(input: {
       requestedVariant(candidate.slug)
     );
     return variants.map((variant) => {
-      const definition = crearRecetaVeratec7400Workbook3H({ lineName: input.lineName, variant: variant.slug });
+      const definition = crearRecetaVeratec7400Workbook3H({
+        lineName: input.lineName,
+        variant: variant.slug,
+        createId: createVeratecFallbackIdGenerator(input.lineTemplateId, variant.slug),
+      });
       return createRecord({
         lineTemplateId: input.lineTemplateId,
         organizationId: input.organizationId,
@@ -194,7 +213,11 @@ export function resolveVeratecWorkbookFallback(input: {
       requestedVariant(candidate.slug)
     );
     return variants.map((variant) => {
-      const definition = crearRecetaVeratec7400Monorriel({ lineName: input.lineName, variant: variant.slug });
+      const definition = crearRecetaVeratec7400Monorriel({
+        lineName: input.lineName,
+        variant: variant.slug,
+        createId: createVeratecFallbackIdGenerator(input.lineTemplateId, variant.slug),
+      });
       return createRecord({
         lineTemplateId: input.lineTemplateId,
         organizationId: input.organizationId,
@@ -210,15 +233,13 @@ export function resolveVeratecWorkbookFallback(input: {
       requestedVariant(candidate.slug)
     );
     return variants.map((variant) => {
-      let nextProfileId = 0;
       const definition = crearRecetaVeratec7400CuatroHojasChicas({
         lineName: input.lineName,
         variant: variant.slug,
         // This fallback is recalculated during render. Stable IDs keep an
         // unchanged recipe snapshot equal across renders and prevent a
         // useEffect -> setState loop in the quote review surface.
-        createId: () =>
-          `veratec:workbook:${input.lineTemplateId}:${variant.slug}:${nextProfileId++}`,
+        createId: createVeratecFallbackIdGenerator(input.lineTemplateId, variant.slug),
       });
       return createRecord({
         lineTemplateId: input.lineTemplateId,
@@ -233,7 +254,11 @@ export function resolveVeratecWorkbookFallback(input: {
   if (input.catalogKey === "ventora:veratec-inova-corredera-2h") {
     const variant = VERATEC_INOVA_VARIANTS[0];
     if (!requestedVariant(variant.slug)) return [];
-    const definition = crearRecetaVeratecInova({ lineName: input.lineName, variant: variant.slug });
+    const definition = crearRecetaVeratecInova({
+      lineName: input.lineName,
+      variant: variant.slug,
+      createId: createVeratecFallbackIdGenerator(input.lineTemplateId, variant.slug),
+    });
     return [createRecord({
       lineTemplateId: input.lineTemplateId,
       organizationId: input.organizationId,
@@ -247,7 +272,11 @@ export function resolveVeratecWorkbookFallback(input: {
   const elevadora = VERATEC_ELEVADORA_VARIANTS.find((candidate) => candidate.catalogKey === input.catalogKey);
   if (elevadora) {
     if (!requestedVariant(elevadora.slug)) return [];
-    const definition = crearRecetaVeratecElevadora({ lineName: input.lineName, variant: elevadora.slug });
+    const definition = crearRecetaVeratecElevadora({
+      lineName: input.lineName,
+      variant: elevadora.slug,
+      createId: createVeratecFallbackIdGenerator(input.lineTemplateId, elevadora.slug),
+    });
     return [createRecord({
       lineTemplateId: input.lineTemplateId,
       organizationId: input.organizationId,
