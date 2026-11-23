@@ -1154,6 +1154,25 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   }
 
   const recipe = resolution.receta;
+  // Esta pauta se atribuye a ALAR, pero sus descuentos y roles no coinciden
+  // con la fuente primaria. No recalcularla hasta identificar su procedencia.
+  // Las recetas propias llevan identidad distinta y conservan su precedencia.
+  if (
+    catalogKey === "ventora:serie-15-corredera-2h" &&
+    hojas === 2 &&
+    recipe.sourceReference === "ventora:line-15-corredera:2h:v1" &&
+    recipe.sourceType !== "manual" && recipe.sourceType !== "workshop"
+  ) {
+    return {
+      estado: "receta_incompleta",
+      formal: null,
+      cubication: null,
+      recipe,
+      barsAvailable: false,
+      preliminary: true,
+      message: "La pauta de Línea 15 está pendiente: su fuente y los perfiles aún requieren confirmación.",
+    };
+  }
   const serie4800MatchedGuard = evaluateSerie4800DocumentaryQuoteGuard({
     catalogKey,
     organizationId: input.organizationId,

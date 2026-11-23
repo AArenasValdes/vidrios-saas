@@ -1,5 +1,10 @@
 # Changelog Agent Map - Ventora
 
+## 2026-11-23 - Línea 15 2H: pauta documental pendiente
+
+- La fuente atribuida a la pauta precargada difiere del catálogo ALAR. La resolución viva de cotización mantiene pendiente la referencia documental identificada y preserva recetas propias y snapshots históricos.
+- El [expediente](../fabricacion/linea-15/EXPEDIENTE_L15_2H.md) registra discrepancias, evidencia faltante y límites del laboratorio/editor. No se modificaron fórmulas ni se validó la línea en taller.
+
 Historial de cambios en la documentacion del mapa tecnico.
 
 ## 2026-11-03 - Identidad y matriz de geometría de paños
