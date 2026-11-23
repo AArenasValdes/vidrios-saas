@@ -4,6 +4,7 @@ import { enriquecerCodigosPerfilRecetaFabricacion } from "@/features/fabricacion
 import type {
   FabricacionEntradaCalculo,
   FabricacionReceta,
+  FabricacionTrazabilidadRegla,
 } from "@/features/fabricacion/types/fabricacion-domain";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import {
@@ -51,7 +52,7 @@ function hasFallbackIdPrefix(value: string | null | undefined): boolean {
 }
 
 function isFallbackRecipeSnapshot(snapshot: FabricacionCotizacionSnapshot): boolean {
-  return hasFallbackIdPrefix(snapshot.recipeId);
+  return snapshot.recipeScope !== "organization" && hasFallbackIdPrefix(snapshot.recipeId);
 }
 
 /**
@@ -62,15 +63,33 @@ function normalizeComparableInternalId(
   id: string,
   snapshot: FabricacionCotizacionSnapshot
 ): string {
-  if (hasFallbackIdPrefix(id) || id.startsWith("uuid-")) {
+  if (!isFallbackRecipeSnapshot(snapshot)) return id;
+  if (hasFallbackIdPrefix(id) || id.startsWith("uuid-") || /^sodal-2026-\d+-[a-z0-9]+$/.test(id)) {
     return "__volatile__";
   }
-  if (isFallbackRecipeSnapshot(snapshot) && VOLATILE_UUID_PATTERN.test(id)) {
+  if (VOLATILE_UUID_PATTERN.test(id)) {
     return "__volatile__";
   }
   return id;
 }
 
+/** Preserva base, fórmula, entradas y sufijos de regla; solo cambia el ID interno. */
+function normalizeFallbackTrace(
+  trace: FabricacionTrazabilidadRegla,
+  snapshot: FabricacionCotizacionSnapshot
+): FabricacionTrazabilidadRegla {
+  const match = trace.componenteId.match(/^(.*?)(:ancho|:alto)?$/);
+  if (!match) return trace;
+  const baseId = match[1];
+  const normalized = normalizeComparableInternalId(baseId, snapshot);
+  if (normalized === baseId || !trace.reglaId.startsWith(`${trace.componenteId}:`)) return trace;
+  const component = `${normalized}${match[2] ?? ""}`;
+  return {
+    ...trace,
+    componenteId: component,
+    reglaId: `${component}${trace.reglaId.slice(trace.componenteId.length)}`,
+  };
+}
 /**
  * Compara la salida técnica mostrada en cubicación, despiece y pauta.
  * Se omite `calculatedAt` y los IDs internos volátiles regenerados por
@@ -105,7 +124,7 @@ export function fabricacionSnapshotMatchesCalculatedOutput(
       altoMm: glass.altoMm,
       cantidadPiezas: glass.cantidadPiezas,
       totalM2: glass.totalM2,
-      trazabilidad: ordered(glass.trazabilidad),
+      trazabilidad: ordered(glass.trazabilidad, (trace) => normalizeFallbackTrace(trace, snapshot)),
     })),
     perfiles: ordered(snapshot.result.perfiles, (perfil) => ({
       componenteId: normalizeComparableInternalId(perfil.componenteId, snapshot),
@@ -190,7 +209,7 @@ export function buildFabricacionSnapshotSyncKey(
       heightMm: glass.altoMm,
       quantity: glass.cantidadPiezas,
       totalM2: glass.totalM2,
-      trace: ordered(glass.trazabilidad),
+      trace: ordered(glass.trazabilidad, (trace) => normalizeFallbackTrace(trace, snapshot)),
     })),
     selectedVariant: snapshot.selectedVariant,
     supplierFamilyKey: snapshot.supplierFamilyKey ?? null,
