@@ -1,4 +1,7 @@
-import { hasPivotanteSlidingRecipeConflict } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
+import { hasPivotanteSlidingRecipeConflict, inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
+import { resolveFabricacionHojasForRecipeMatch } from "@/features/fabricacion/services/fabricacion-hojas-resolver.service";
+import { resolveWinHouseS60QuoteTypology } from "@/features/fabricacion/services/winhouse-s60-quote-config.service";
+import { WINHOUSE_S60_CATALOG_KEY } from "@/features/fabricacion/fixtures/winhouse-s60-recipes";
 import { construirFabricacionTrabajoSnapshot } from "@/features/fabricacion/services/fabricacion-trabajo-snapshot.service";
 import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
@@ -40,6 +43,21 @@ function fabricationInputKey(item: CotizacionWorkflowItem) {
     meta.fabricacionTipologia === "corredera" &&
     meta.fabricacionHojas === 2 && meta.fabricacionModulos === 2 &&
     !/bahar\s*5200/i.test(item.lineaComercial);
+  // Estas dos rutas usan el texto para tipología y hojas. Comparar el resultado
+  // de los mismos resolutores evita recalcular por notas comerciales inocuas.
+  // La recuperación legacy de Veratec 4H usa otra expresión de composición.
+  const legacyS60 = meta.catalogLineKey === WINHOUSE_S60_CATALOG_KEY &&
+    !/bahar\s*5200/i.test(item.lineaComercial);
+  const legacyVeratec7400 = meta.catalogLineKey === "ventora:veratec-7400-corredera" &&
+    !/4\s+hojas\s+chicas/i.test(item.lineaComercial) &&
+    !/bahar\s*5200/i.test(item.lineaComercial);
+  const compareLegacyDescription = legacyS60 || legacyVeratec7400;
+  const inferredDescriptionIdentity = compareLegacyDescription ? {
+    tipologia: legacyS60
+      ? resolveWinHouseS60QuoteTypology({ selectedTypology: meta.fabricacionTipologia, componentType: item.tipo, componentName: item.nombre, description: item.descripcion })
+      : meta.fabricacionTipologia || inferirTipologiaFabricacionPieza({ tipo: item.tipo, sistema: meta.sistema, nombre: item.nombre, descripcion: item.descripcion }),
+    hojas: resolveFabricacionHojasForRecipeMatch(item, meta),
+  } : null;
   const pivotanteConflict = structuredL20 && hasPivotanteSlidingRecipeConflict({
     commercialType: item.tipo,
     commercialSystem: meta.sistema,
@@ -54,7 +72,8 @@ function fabricationInputKey(item: CotizacionWorkflowItem) {
     lineaComercial: item.lineaComercial,
     vidrio: item.vidrio,
     nombre: structuredL20 ? null : item.nombre,
-    descripcion: structuredL20 ? null : item.descripcion,
+    descripcion: structuredL20 || compareLegacyDescription ? null : item.descripcion,
+    inferredDescriptionIdentity,
     pivotanteConflict,
     ancho: item.ancho,
     alto: item.alto,
