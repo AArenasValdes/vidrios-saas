@@ -1,10 +1,23 @@
-# Línea 4000 Columbia corredera — destajes oficiales
+# Línea 4000 corredera — transcripción histórica de destajes
 
 Fecha: **2026-09-20**  
 X = **ancho total del vano**. Y = **alto total del vano**.  
 Equivalente Ventora: `ventora:serie-4000-corredera-2h` · Línea 4000 — Corredera 2 hojas.
 
 Estado `lista_para_validar`; no es validación de taller.
+
+## Expediente de discrepancia de la corredera 2H
+
+La transcripción del 20 de septiembre no identifica el manual, modelo ni página de origen. El catálogo Alumet de junio de 2012 identifica la Columbia **VC4000M-AMNC**, con dos hojas móviles, vidrio monolítico y riel normal. La jamba publicada es **4003, Y − 3**; la transcripción usa **4005, Y − 53**. Para el vidrio, Alumet indica **X/2 − 42 × (Y − 76)** y la transcripción emplea **X/2 + 34 × (Y − 105)**. [Catálogo Alumet, p. 21](https://www.alumet.cl/wp-content/uploads/2020/02/202700803-ALUMET-ALUMCO-ALUMINIO.pdf#page=21)
+
+| Vano en mm | Vidrio por hoja en la receta existente | Vidrio por hoja en la ficha de Alumet |
+|---|---|---|
+| 1200 × 1000 | 634 × 895 | 558 × 924 |
+| 1400 × 1100 | 734 × 995 | 658 × 1024 |
+
+En cotización, el fallback `ventora:universal:l4000:2h`, su semilla `ventora:line-4000-corredera:2h:v1`, las copias con esa ascendencia y los registros 2H de origen ambiguo quedan pendientes. Una receta compatible con origen independiente trazable en el taller conserva su elegibilidad. Los cortes congelados siguen disponibles para consultar la pieza original.
+
+**Pendiente para habilitar el despiece documental** — Identificar fabricante, modelo y revisión de la pauta transcrita, verificar roles, códigos, descuentos y vidrio contra la fuente primaria y contrastar el armado físico con el taller. Los valores siguientes registran lo que hacía el fixture.
 
 ## Vidrio / cristal (2H)
 
