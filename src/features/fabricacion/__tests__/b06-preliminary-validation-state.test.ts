@@ -69,17 +69,6 @@ function buildWorkflowItem(input: {
 describe("B-06 — estados preliminares reales vs validación de taller", () => {
   const testingCatalogCases = [
     {
-      label: "L4000",
-      catalogKey: "ventora:serie-4000-corredera-2h",
-      lineName: "Línea 4000",
-      system: "Corredera",
-      typology: "corredera",
-      leaves: 2,
-      modules: 2,
-      glass: "Incoloro monolítico 4 mm",
-      expectedRecipeIdPrefix: "ventora:universal:l4000:",
-    },
-    {
       label: "S28",
       catalogKey: "ventora:optima-s28-corredera-2h",
       lineName: "Óptima S-28",
@@ -167,12 +156,12 @@ describe("B-06 — estados preliminares reales vs validación de taller", () => 
     }
   );
 
-  it("mantiene pendiente la receta documental L15 incluso en estado draft", () => {
+  it.each([15, 4000])("mantiene pendiente la receta documental L%i incluso en estado draft", (line) => {
     const universalTesting = resolveUniversalPricedLineFallback({
-      catalogKey: "ventora:serie-15-corredera-2h",
+      catalogKey: `ventora:serie-${line}-corredera-2h`,
       lineTemplateId: 101,
       organizationId: 1,
-      lineName: "Línea 15",
+      lineName: `Línea ${line}`,
       variant: null,
       leavesCount: 2,
       recipes: [],
@@ -189,8 +178,8 @@ describe("B-06 — estados preliminares reales vs validación de taller", () => 
     };
 
     const item = buildWorkflowItem({
-      catalogKey: "ventora:serie-15-corredera-2h",
-      lineName: "Línea 15",
+      catalogKey: `ventora:serie-${line}-corredera-2h`,
+      lineName: `Línea ${line}`,
       system: "Corredera",
       typology: "corredera",
       leaves: 2,

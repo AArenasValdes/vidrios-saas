@@ -291,7 +291,7 @@ describe("auditoría despiece cotización por líneas con receta", () => {
         organizationId: 1,
       });
 
-      if (auditCase.lineTemplateId === 1515) {
+      if (auditCase.lineTemplateId === 1515 || auditCase.lineTemplateId === 4000) {
         // La procedencia de esta receta sintética es desconocida.
         expect(resolved.estado).toBe("receta_incompleta");
         expect(resolved.formal).toBeNull();
