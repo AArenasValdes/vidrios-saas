@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { useState } from "react";
 
@@ -9,7 +9,9 @@ import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotiz
 import { useOrganizationMeasureUnit } from "@/features/organization-profile/hooks/use-organization-measure-unit";
 import { WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY } from "@/features/fabricacion/fixtures/winhouse-new-s75-recipes";
 import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
-import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { decodeCotizacionItemPresentationMeta, encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { prepareFabricacionSnapshotsForQuoteSave, resolveFabricacionSnapshotsIndependently } from "@/features/cotizaciones/services/fabricacion-trabajo-snapshot-lifecycle.service";
+import { resolveUniversalPricedLineFallbacks } from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
 import { QuoteConstructorWorkspace } from "../quote-constructor-workspace";
 import * as fabricationResolutionService from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
@@ -847,4 +849,99 @@ describe("QuoteConstructorWorkspace", () => {
       expect.objectContaining({ fabricacionSnapshot: expect.anything() })
     );
   });
+
+  it.each([[false, false, false], [true, false, false], [true, true, false], [true, true, true]])("permite cambiar A por B: variantes distintas %s, Constructor reabierto %s, vidrio cambiado %s", async (differentVariants, remountConstructor, changeGlass) => {
+    const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+    const actual = jest.requireActual<typeof fabricationResolutionService>("@/features/fabricacion/services/fabricacion-despiece-cotizacion.service");
+    const base = resolveUniversalPricedLineFallbacks({ catalogKey: "ventora:l20", lineTemplateId: 20, organizationId: 1, lineName: "L20", variant: "estandar", recipes: [] })[0]!;
+    const recipeA = { ...base, id: "recipe-A", scope: "organization" as const, sourceReference: "taller:personalizada:l20", status: "validated" as const };
+    recipeA.definition = clone(recipeA.definition);
+    if (differentVariants) recipeA.definition.identidad.variante = "variante-a";
+    const recipeB = clone(recipeA);
+    if (differentVariants) recipeB.definition.identidad.variante = "variante-b";
+    recipeB.id = "recipe-B";
+    recipeB.definition.perfiles[0]!.reglaMedida.ajusteMm -= 100;
+    const foreign = { ...clone(recipeA), id: "other-org", organizationId: 2 };
+    const incompatible = clone(recipeA);
+    incompatible.id = "incompatible-3h";
+    incompatible.definition.identidad.hojas = 3;
+    const recipes = [recipeA, recipeB, foreign, incompatible];
+    const initial: CotizacionWorkflowItem = {
+      ...item("a", "VEN-01"), lineaComercial: "L20", vidrio: "Monolítico 4 mm", nombre: "Ventana", fabricacionSnapshot: null,
+      observaciones: encodeCotizacionItemPresentationMeta({ lineTemplateId: "20", catalogLineKey: "ventora:l20", sistema: "Corredera", fabricacionTipologia: "corredera", fabricacionHojas: 2, fabricacionModulos: 2, fabricacionVariante: differentVariants ? "" : "estandar", raw: "Nota comercial" }),
+    };
+    const resolve = (piece: CotizacionWorkflowItem) => actual.resolveFabricacionDespieceForQuoteItem({ item: piece, recipes, organizationId: 1, lineTemplateId: 20, lineCatalogKey: "ventora:l20" });
+    jest.mocked(fabricationResolutionService.resolveFabricacionDespieceForQuoteItem).mockImplementation(({ item: piece }) => resolve(piece));
+    const transitions: Array<{ id: string; snapshot: unknown; cubication: unknown }> = [];
+    let currentItem = initial;
+    let previousSaved: CotizacionWorkflowItem[] = [];
+    let persisted: CotizacionWorkflowItem[] = [];
+    function ParentHarness() {
+      const [items, setItems] = useState([initial]);
+      const [constructorInstance, setConstructorInstance] = useState(0);
+      currentItem = items[0]!;
+      const updateItem: ComponentProps<typeof QuoteConstructorWorkspace>["onUpdateItem"] = (itemId, patch) => {
+        setItems((current) => current.map((piece) => {
+          if (piece.id !== itemId) return piece;
+          const form = { ...mapItemToForm(piece), ...patch };
+          const rebuilt = buildItemFromForm(form, current, itemId);
+          const next = preserveExplicitFabricationSnapshot(rebuilt, patch.fabricacionSnapshot);
+          if (patch.fabricationRecipeId) transitions.push({ id: patch.fabricationRecipeId, snapshot: next.fabricacionSnapshot, cubication: decodeCotizacionItemPresentationMeta(next.observaciones).cubicationSnapshot });
+          return next;
+        }));
+      };
+      const saveAndReopen = () => {
+        const prepared = prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: previousSaved, items });
+        persisted = JSON.parse(JSON.stringify(resolveFabricacionSnapshotsIndependently({ items: prepared.items, itemIdsToResolve: prepared.itemIdsToResolve, resolveSnapshot: (piece) => resolve(piece).formal }))) as CotizacionWorkflowItem[];
+        setItems(clone(persisted));
+      };
+      return <><QuoteConstructorWorkspace key={constructorInstance} items={items} quotePricingMode="por_item" lineTemplates={[]} glassOptions={[]} activeItemId="a" totalClienteManual={null} formatCurrencyInput={(value) => value} onActiveItemChange={() => {}} onAddPreset={() => {}} onUpdateItem={updateItem} onDuplicateItem={() => {}} onRemoveItem={() => {}} onMoveItem={() => {}} onEditAdvanced={() => {}} onRecalculateTemplatePrice={() => {}} onGlobalTotalChange={() => {}} onGoToSummary={() => {}} onOpenDespieceReview={() => {}} /><button type="button" onClick={saveAndReopen}>Guardar y reabrir prueba</button><button type="button" onClick={() => { setItems(clone(items)); setConstructorInstance((value) => value + 1); }}>Reabrir Constructor</button><button type="button" onClick={() => updateItem("a", { vidrio: "DVH 6 mm" })}>Cambiar vidrio prueba</button></>;
+    }
+    render(<ParentHarness />);
+    const selector = screen.getByLabelText("Variante de fabricación") as HTMLSelectElement;
+    const optionIds = Array.from(selector.options, (option) => option.value);
+    expect(optionIds).toEqual(expect.arrayContaining([recipeA.id, recipeB.id]));
+    expect(optionIds).not.toContain(foreign.id);
+    expect(optionIds).not.toContain(incompatible.id);
+    fireEvent.change(selector, { target: { value: recipeA.id } });
+    await waitFor(() => expect(currentItem.fabricacionSnapshot?.recipeId).toBe(recipeA.id));
+    expect(resolve(currentItem).estado).toBe("calculado");
+    const snapshotA = clone(currentItem.fabricacionSnapshot!);
+    previousSaved = [clone(currentItem)];
+    const decoded = decodeCotizacionItemPresentationMeta(currentItem.observaciones);
+    expect(decoded.raw).toBe("Nota comercial");
+    expect(decoded.fabricationSelectionOrigin?.version).toBe(1);
+    const decodedAgain = decodeCotizacionItemPresentationMeta(encodeCotizacionItemPresentationMeta(decoded));
+    expect(decodedAgain.fabricationSelectionOrigin).toEqual(decoded.fabricationSelectionOrigin);
+    expect(decodedAgain.raw).toBe("Nota comercial");
+    if (remountConstructor) fireEvent.click(screen.getByRole("button", { name: "Reabrir Constructor" }));
+    if (changeGlass) {
+      fireEvent.click(screen.getByRole("button", { name: "Cambiar vidrio prueba" }));
+      const remaining = screen.queryByLabelText("Variante de fabricación") as HTMLSelectElement | null;
+      expect(Array.from(remaining?.options ?? [], (option) => option.value)).not.toContain(recipeB.id);
+      return;
+    }
+    const selectorAgain = screen.getByLabelText("Variante de fabricación") as HTMLSelectElement;
+    expect(selectorAgain.value).toBe(recipeA.id);
+    expect(currentItem.fabricacionSnapshot).toEqual(snapshotA);
+    fireEvent.change(selectorAgain, { target: { value: recipeB.id } });
+    expect(transitions).toEqual(expect.arrayContaining([expect.objectContaining({ id: recipeB.id, snapshot: null, cubication: null })]));
+    await waitFor(() => expect(decodeCotizacionItemPresentationMeta(currentItem.observaciones).fabricationRecipeId).toBe(recipeB.id));
+    expect(decodeCotizacionItemPresentationMeta(currentItem.observaciones).fabricationSelectionOrigin?.original).toEqual(decoded.fabricationSelectionOrigin?.original);
+    fireEvent.click(screen.getByRole("button", { name: "Guardar y reabrir prueba" }));
+    await waitFor(() => expect(persisted[0]?.fabricacionSnapshot?.recipeId).toBe(recipeB.id));
+    expect(resolve(currentItem).estado).toBe("calculado");
+    const snapshotB = persisted[0]!.fabricacionSnapshot!;
+    expect(snapshotB.result.perfiles[0]!.codigoPerfil).toBe(recipeB.definition.perfiles[0]!.codigoPerfil);
+    expect(snapshotB.result.perfiles[0]!.medidaMm).toBe(snapshotA.result.perfiles[0]!.medidaMm - 100);
+    await waitFor(() => expect(currentItem.fabricacionSnapshot).toEqual(snapshotB));
+    fireEvent.click(screen.getByRole("button", { name: "Reabrir Constructor" }));
+    const afterSaveSelector = screen.getByLabelText("Variante de fabricación") as HTMLSelectElement;
+    expect(afterSaveSelector.value).toBe(recipeB.id);
+    expect(Array.from(afterSaveSelector.options, (option) => option.value)).toContain(recipeA.id);
+    const unchanged = prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: persisted, items: [clone(currentItem)] });
+    expect(unchanged.itemIdsToResolve.size).toBe(0);
+    expect(unchanged.items[0]!.fabricacionSnapshot).toEqual(snapshotB);
+  });
+
 });

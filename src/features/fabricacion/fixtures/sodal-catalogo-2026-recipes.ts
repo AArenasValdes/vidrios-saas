@@ -222,7 +222,8 @@ function createS28(input: RecipeInput, leaves: 2 | 3): FabricacionReceta {
       widthAdjustmentMm: isTwo ? -107 : -86,
       heightBase: "alto_total",
       heightAdjustmentMm: -171,
-      quantity: 2,
+      // SODAL 2026 p. 23 muestra tres hojas, pero la tabla indica dos vidrios. Tres vidrios es una inferencia geométrica pendiente de confirmación física en taller.
+      quantity: leaves,
     })],
     accessories,
     sourcePage: "23",

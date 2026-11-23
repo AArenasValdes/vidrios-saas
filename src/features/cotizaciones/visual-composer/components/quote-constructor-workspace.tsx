@@ -48,6 +48,7 @@ import {
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import { decodeCotizacionItemPresentationMeta, encodeCotizacionItemPresentationMeta, type CotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import {
   WINHOUSE_NEW_S75_DOUBLE_CATALOG_KEY,
@@ -93,6 +94,14 @@ import {
 } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 
 import s from "./quote-constructor-workspace.module.css";
+
+function selectionContextKey(item: CotizacionWorkflowItem, meta: CotizacionItemPresentationMeta): string {
+  return JSON.stringify([item.tipo, item.lineaComercial, item.vidrio, item.ancho, item.alto, item.cantidad,
+    meta.lineTemplateId, meta.catalogLineKey, meta.sistema, meta.configuracion,
+    meta.fabricacionConfiguracionId, meta.fabricacionComposicionId, meta.fabricacionAnchoHojaAMm,
+    meta.vidrioLineTemplateId, meta.glassTechnicalSpec, meta.sheetScheme, meta.sheetVariant,
+    meta.fabricacionGlazing, meta.fabricacionLeg, meta.fabricacionReinforcement]);
+}
 
 type Props = {
   items: CotizacionWorkflowItem[];
@@ -593,7 +602,37 @@ export function QuoteConstructorWorkspace({
     });
     return result;
   }, [activeForm, activeItem, activeTemplate, fabricationRecipes, organizationId]);
-  const activeRecipeCandidates = activeFabricationResolution?.candidateRecipes ?? [];
+  const currentMeta = activeItem ? decodeCotizacionItemPresentationMeta(activeItem.observaciones) : null;
+  const origin = currentMeta?.fabricationSelectionOrigin;
+  const selectionFields = ["fabricacionTipologia", "fabricacionVariante", "fabricacionApertura", "fabricacionHerraje", "fabricacionHojas", "fabricacionModulos"] as const;
+  const canResolveAlternatives = Boolean(activeItem && currentMeta && origin &&
+    origin.recipeId === currentMeta.fabricationRecipeId && origin.contextKey === selectionContextKey(activeItem, currentMeta) &&
+    selectionFields.every((field) => currentMeta[field] === origin.selected[field]));
+  const alternativeResolution = canResolveAlternatives && activeItem && currentMeta && origin
+    ? resolveFabricacionDespieceForQuoteItem({
+        item: {
+          ...activeItem,
+          fabricacionSnapshot: null,
+          observaciones: encodeCotizacionItemPresentationMeta({
+            ...currentMeta,
+            fabricacionTipologia: origin.original.fabricacionTipologia,
+            fabricacionVariante: origin.original.fabricacionVariante,
+            fabricacionApertura: origin.original.fabricacionApertura,
+            fabricacionHerraje: origin.original.fabricacionHerraje,
+            fabricacionHojas: origin.original.fabricacionHojas,
+            fabricacionModulos: origin.original.fabricacionModulos,
+            fabricationRecipeId: "",
+            cubicationSnapshot: null,
+          }),
+        },
+        recipes: fabricationRecipes,
+        organizationId,
+        lineTemplateId: activeForm?.lineTemplateId || activeTemplate?.id,
+        lineCatalogKey: activeTemplate?.catalogKey ?? inferWinHouseCatalogKey(activeItem),
+        supplierFamilyKey: resolveSupplierFamilyKeyForLineTemplate(activeTemplate),
+      })
+    : null;
+  const activeRecipeCandidates = alternativeResolution?.candidateRecipes ?? activeFabricationResolution?.candidateRecipes ?? [];
   const lastSyncedFabricationKeyRef = useRef<string | null>(null);
   const activeView = activeItem
     ? buildPieceDomainView(
@@ -1903,7 +1942,8 @@ export function QuoteConstructorWorkspace({
                       }
                     />
                   ) : null}
-                  {activeFabricationResolution?.estado === "multiples_recetas" &&
+                  {(activeFabricationResolution?.estado === "multiples_recetas" ||
+                    activeFabricationResolution?.estado === "calculado") &&
                   activeRecipeCandidates.length > 1 &&
                   activeItem ? (
                     <label className={s.inspectorField}>
@@ -1917,8 +1957,31 @@ export function QuoteConstructorWorkspace({
                           );
                           if (!recipe) return;
                           const identity = recipe.definition.identidad;
+                          const original = canResolveAlternatives && origin ? origin.original : currentMeta && {
+                            fabricacionTipologia: currentMeta.fabricacionTipologia,
+                            fabricacionVariante: currentMeta.fabricacionVariante,
+                            fabricacionApertura: currentMeta.fabricacionApertura,
+                            fabricacionHerraje: currentMeta.fabricacionHerraje,
+                            fabricacionHojas: currentMeta.fabricacionHojas,
+                            fabricacionModulos: currentMeta.fabricacionModulos,
+                          };
+                          const selectionOrigin = original && currentMeta ? {
+                            version: 1 as const,
+                            recipeId: recipe.id,
+                            contextKey: selectionContextKey(activeItem, currentMeta),
+                            original,
+                            selected: {
+                              fabricacionTipologia: identity.tipologia,
+                              fabricacionVariante: identity.variante,
+                              fabricacionApertura: identity.apertura ?? "",
+                              fabricacionHerraje: identity.herraje ?? "",
+                              fabricacionHojas: identity.hojas,
+                              fabricacionModulos: identity.modulos,
+                            },
+                          } : null;
                           onUpdateItem(activeItem.id, {
                             fabricationRecipeId: recipe.id,
+                            fabricationSelectionOrigin: selectionOrigin,
                             fabricacionTipologia: identity.tipologia,
                             fabricacionVariante: identity.variante,
                             fabricacionApertura: identity.apertura ?? "",

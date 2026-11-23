@@ -43,6 +43,11 @@ function fabricationInputKey(item: CotizacionWorkflowItem) {
     meta.fabricacionTipologia === "corredera" &&
     meta.fabricacionHojas === 2 && meta.fabricacionModulos === 2 &&
     !/bahar\s*5200/i.test(item.lineaComercial);
+  // En L32 proyectante 1H con identidad completa, el nombre es comercial.
+  const structuredL32 = meta.catalogLineKey === "ventora:l32" &&
+    meta.fabricacionTipologia === "proyectante" &&
+    meta.fabricacionHojas === 1 && meta.fabricacionModulos === 1 &&
+    !/bahar\s*5200/i.test(item.lineaComercial);
   // Estas dos rutas usan el texto para tipología y hojas. Comparar el resultado
   // de los mismos resolutores evita recalcular por notas comerciales inocuas.
   // La recuperación legacy de Veratec 4H usa otra expresión de composición.
@@ -58,7 +63,7 @@ function fabricationInputKey(item: CotizacionWorkflowItem) {
       : meta.fabricacionTipologia || inferirTipologiaFabricacionPieza({ tipo: item.tipo, sistema: meta.sistema, nombre: item.nombre, descripcion: item.descripcion }),
     hojas: resolveFabricacionHojasForRecipeMatch(item, meta),
   } : null;
-  const pivotanteConflict = structuredL20 && hasPivotanteSlidingRecipeConflict({
+  const pivotanteConflict = (structuredL20 || compareLegacyDescription) && hasPivotanteSlidingRecipeConflict({
     commercialType: item.tipo,
     commercialSystem: meta.sistema,
     commercialConfiguration: meta.configuracion,
@@ -71,7 +76,7 @@ function fabricationInputKey(item: CotizacionWorkflowItem) {
     tipo: item.tipo,
     lineaComercial: item.lineaComercial,
     vidrio: item.vidrio,
-    nombre: structuredL20 ? null : item.nombre,
+    nombre: structuredL20 || structuredL32 || compareLegacyDescription ? null : item.nombre,
     descripcion: structuredL20 || compareLegacyDescription ? null : item.descripcion,
     inferredDescriptionIdentity,
     pivotanteConflict,

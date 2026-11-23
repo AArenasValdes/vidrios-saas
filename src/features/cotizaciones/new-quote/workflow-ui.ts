@@ -71,6 +71,7 @@ import {
   type CotizacionMirrorInteriorLine,
   type CotizacionMirrorPaneDirection,
   type CotizacionItemFreeValueIvaMode,
+  type FabricationSelectionOrigin,
 } from "@/utils/cotizacion-item-presentation";
 import { setGuidedVisualDimensions, type GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import type { QuickCompositionAdjustment } from "@/features/cotizaciones/visual-composer/types/quick-composition-adjustment";
@@ -230,6 +231,7 @@ export type ComponentFormState = {
   cubicationSnapshot?: CotizacionItemCubicationSnapshot | null;
   /** Variante de receta elegida cuando hay varias activas compatibles. */
   fabricationRecipeId?: string;
+  fabricationSelectionOrigin?: FabricationSelectionOrigin | null;
   /** Proveedor del precio de compra de perfiles, independiente de la receta. */
   supplierProviderKey?: string;
   /** Contexto tecnico explicito; los items antiguos pueden seguir sin estos datos. */
@@ -2676,6 +2678,7 @@ export function buildSuggestedComponentForm(
     guidedVisualConfig: current.guidedVisualConfig ?? null,
     cubicationSnapshot: current.cubicationSnapshot ?? null,
     fabricationRecipeId: current.fabricationRecipeId ?? "",
+    fabricationSelectionOrigin: current.fabricationSelectionOrigin ?? null,
     supplierProviderKey: current.supplierProviderKey ?? "",
     fabricacionTipologia: current.fabricacionTipologia ?? "",
     fabricacionHojas: current.fabricacionHojas ?? null,
@@ -2884,6 +2887,7 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     fabricacionLeg,
     fabricacionReinforcement,
     fabricationRecipeId,
+    fabricationSelectionOrigin,
     supplierProviderKey,
   } =
     decodeCotizacionItemPresentationMeta(item.observaciones);
@@ -2985,6 +2989,7 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     cubicationSnapshot: formalCubicationSnapshot ?? cubicationSnapshot,
     fabricationRecipeId:
       fabricationRecipeId || item.fabricacionSnapshot?.recipeId || "",
+    fabricationSelectionOrigin,
     supplierProviderKey,
     fabricacionTipologia:
       fabricacionTipologia ||
@@ -3484,6 +3489,7 @@ export function buildItemFromForm(
       fabricacionLeg: syncedForm.fabricacionLeg,
       fabricacionReinforcement: syncedForm.fabricacionReinforcement,
       fabricationRecipeId: syncedForm.fabricationRecipeId,
+      fabricationSelectionOrigin: syncedForm.fabricationSelectionOrigin,
       supplierProviderKey: syncedForm.supplierProviderKey,
       cubicationSnapshot: formalFabricationSnapshot ? null : cubicationSnapshot,
       raw: syncedForm.observaciones,
@@ -3569,6 +3575,7 @@ export function applyQuotePricingToItems(
       fabricacionLeg,
       fabricacionReinforcement,
       fabricationRecipeId,
+      fabricationSelectionOrigin,
       supplierProviderKey,
     } = decodeCotizacionItemPresentationMeta(item.observaciones);
 
@@ -3648,6 +3655,7 @@ export function applyQuotePricingToItems(
         fabricacionLeg,
         fabricacionReinforcement,
         fabricationRecipeId,
+        fabricationSelectionOrigin,
         supplierProviderKey,
         cubicationSnapshot: null,
         raw,

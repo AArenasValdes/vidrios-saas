@@ -8,7 +8,7 @@
 | Identidad Ventora | Fuente | Variantes cubiertas | Estado de la evidencia |
 |---|---|---|---|
 | Óptima S-28 — corredera 2 hojas | Catálogo SODAL 2026, p. 23 | Termopanel 20 mm | Pauta completa de perfiles, vidrio y quincallería; respetar la composición de vidrio publicada. |
-| Óptima S-28 — corredera 3 hojas | Catálogo SODAL 2026, p. 23 | Termopanel 20 mm | Pauta completa de perfiles, vidrio y quincallería; respetar la composición de vidrio publicada. |
+| Óptima S-28 — corredera 3 hojas | Catálogo SODAL 2026, p. 23 | Termopanel 20 mm | Tres vidrios inferidos por la geometría de tres hojas; la tabla del catálogo presenta una discrepancia en la cantidad. Pendiente de confirmación física en taller. |
 | S-38 RPT — proyectante | Catálogo SODAL 2026, p. 29 | Proyectante | Pauta completa de perfiles, vidrio y accesorios. Solo compatible con termopanel según la ficha. |
 | S-38 RPT — paño fijo | Catálogo SODAL 2026, p. 29 | Junquillo S383 o S387 | La ficha publica dos perfiles alternativos con la misma fórmula. Se presentan como variantes explícitas; no se suman entre sí. |
 | Serie 3200 — puerta abatible 1 hoja | Catálogo SODAL 2026, p. 7 | Bastidor 3221 o 3225 | Pautas separadas de perfil y vidrio. No se infiere equivalencia entre etiquetas L/ST/TP y códigos de bastidor. |

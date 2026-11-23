@@ -177,7 +177,7 @@ function isL42CatalogKey(catalogKey: string): boolean {
 function buildArquetipoL42NoChamberRecipe(
   input: UniversalFallbackInput,
 ): FabricationRecipeRecord {
-  const definition = crearRecetaSerie42Sodal({ lineName: input.lineName });
+  const definition = crearRecetaSerie42Sodal({ lineName: input.lineName, createId: createUniversalFallbackIdGenerator(input.lineTemplateId, L42_ARQUETIPO_NO_CHAMBER_VARIANT) });
   definition.identidad = {
     ...definition.identidad,
     codigo: "ARQUETIPO-L42-SIN-CAMARA-MONOLITICO-1H",
@@ -232,6 +232,7 @@ function buildSodalCatalogo2026Recipes(input: UniversalFallbackInput): Fabricati
     definitions = crearRecetasSodalCatalogo2026({
       catalogKey: input.catalogKey as SodalCatalogo2026RecipeKey,
       lineName: input.lineName,
+      createId: createUniversalFallbackIdGenerator(input.lineTemplateId, input.catalogKey),
     });
   } else {
     const sodalKey = input.catalogKey as
