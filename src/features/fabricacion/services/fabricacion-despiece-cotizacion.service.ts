@@ -211,6 +211,16 @@ function attachFrozenDespieceFallback(
   if (!frozen || frozen.pauta.length === 0) {
     return result;
   }
+  const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
+  // En L15 no presentar cortes históricos como resultado de una edición explícita.
+  if (
+    result.estado === "receta_incompleta" &&
+    presentation.catalogLineKey === "ventora:serie-15-corredera-2h" &&
+    (item.ancho !== frozen.input.anchoTotalMm || item.alto !== frozen.input.altoTotalMm || item.cantidad !== frozen.input.cantidad ||
+      Boolean(presentation.fabricationRecipeId && presentation.fabricationRecipeId !== frozen.recipeId) ||
+      Boolean(presentation.fabricacionVariante && presentation.fabricacionVariante !== frozen.selectedVariant) ||
+      Boolean(frozen.glassSelection?.displayName && item.vidrio && frozen.glassSelection.displayName.trim() !== item.vidrio.trim()))
+  ) return result;
   return {
     ...result,
     cubication: fabricacionSnapshotToLegacyCubicationSnapshot(frozen),
@@ -221,6 +231,42 @@ function attachFrozenDespieceFallback(
         frozen.pautaBarras?.calculable && (frozen.pautaBarras.barras?.length ?? 0) > 0
       ),
   };
+}
+
+/** L15: only a traceable independent workshop origin may bypass the disputed base. */
+function isIndependentLine15WorkshopRecipe(
+  recipe: FabricationRecipeRecord,
+  recipes: readonly FabricationRecipeRecord[],
+  organizationId: number | null,
+): boolean {
+  if (organizationId == null || recipe.scope !== "organization" || recipe.organizationId !== organizationId) return false;
+  const visiting = new Set<string>();
+  const checked = new Map<string, boolean>();
+  const visit = (current: FabricationRecipeRecord): boolean => {
+    const known = checked.get(current.id);
+    if (known !== undefined) return known;
+    if (visiting.has(current.id)) return false;
+    visiting.add(current.id);
+    if (current.scope !== "organization" || current.organizationId !== organizationId || current.lineTemplateId !== recipe.lineTemplateId) return false;
+    const resolveReference = (reference: string): boolean => {
+      if (reference === "ventora:line-15-corredera:2h:v1" || reference === "ventora:universal:l15:2h") return false;
+      if (reference.startsWith("taller:personalizada:")) {
+        try { return resolveReference(decodeURIComponent(reference.slice("taller:personalizada:".length))); }
+        catch { return false; }
+      }
+      const parent = recipes.find((candidate) => candidate.id === reference);
+      if (parent) return visit(parent);
+      return reference === "blank-start" || reference.startsWith("configuracion-taller:") || reference.startsWith("configuracion-catalogo-taller:");
+    };
+    const reference = current.sourceReference?.trim() ?? "";
+    const result = current.id !== "ventora:universal:l15:2h" &&
+      (!current.parentRecipeId || resolveReference(current.parentRecipeId)) &&
+      Boolean(reference) && resolveReference(reference);
+    visiting.delete(current.id);
+    checked.set(current.id, result);
+    return result;
+  };
+  return visit(recipe);
 }
 
 /** El Constructor guarda sistema/config como "Personalizado"; no es apertura de receta. */
@@ -1154,6 +1200,24 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   }
 
   const recipe = resolution.receta;
+  // Esta pauta se atribuye a ALAR, pero sus descuentos y roles no coinciden
+  // con la fuente primaria. No recalcularla hasta identificar su procedencia.
+  // Las recetas propias llevan identidad distinta y conservan su precedencia.
+  if (
+    catalogKey === "ventora:serie-15-corredera-2h" &&
+    hojas === 2 &&
+    !isIndependentLine15WorkshopRecipe(recipe, input.recipes, input.organizationId)
+  ) {
+    return {
+      estado: "receta_incompleta",
+      formal: null,
+      cubication: null,
+      recipe,
+      barsAvailable: false,
+      preliminary: true,
+      message: "La pauta de Línea 15 está pendiente: su fuente y los perfiles aún requieren confirmación.",
+    };
+  }
   const serie4800MatchedGuard = evaluateSerie4800DocumentaryQuoteGuard({
     catalogKey,
     organizationId: input.organizationId,

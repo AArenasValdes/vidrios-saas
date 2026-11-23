@@ -69,17 +69,6 @@ function buildWorkflowItem(input: {
 describe("B-06 — estados preliminares reales vs validación de taller", () => {
   const testingCatalogCases = [
     {
-      label: "L15",
-      catalogKey: "ventora:serie-15-corredera-2h",
-      lineName: "Línea 15",
-      system: "Corredera",
-      typology: "corredera",
-      leaves: 2,
-      modules: 2,
-      glass: "Incoloro monolítico 4 mm",
-      expectedRecipeIdPrefix: "ventora:universal:l15:",
-    },
-    {
       label: "L4000",
       catalogKey: "ventora:serie-4000-corredera-2h",
       lineName: "Línea 4000",
@@ -178,7 +167,7 @@ describe("B-06 — estados preliminares reales vs validación de taller", () => 
     }
   );
 
-  it("mantiene preliminary: true para recetas universales en estado draft", () => {
+  it("mantiene pendiente la receta documental L15 incluso en estado draft", () => {
     const universalTesting = resolveUniversalPricedLineFallback({
       catalogKey: "ventora:serie-15-corredera-2h",
       lineTemplateId: 101,
@@ -214,8 +203,8 @@ describe("B-06 — estados preliminares reales vs validación de taller", () => 
       organizationId: 1,
     });
 
-    expect(resolved.estado).toBe("calculado");
-    expect(resolved.barsAvailable).toBe(true);
+    expect(resolved.estado).toBe("receta_incompleta");
+    expect(resolved.barsAvailable).toBe(false);
     expect(resolved.preliminary).toBe(true);
     expect(resolved.recipe?.id).toBe(universalDraft.id);
     expect(resolved.recipe?.status).toBe("draft");
@@ -623,9 +612,17 @@ describe("B-06 — estados preliminares reales vs validación de taller", () => 
       leaves: 2,
       modules: 2,
     });
+    const originalTesting = resolveUniversalPricedLineFallback({
+      catalogKey: "ventora:serie-15-corredera-2h", lineTemplateId: 101,
+      organizationId: 1, lineName: "Línea 15", variant: null, leavesCount: 2, recipes: [],
+    })!;
+    const historicWorkshopRecipe: FabricationRecipeRecord = {
+      ...originalTesting, id: "historica-l15", scope: "organization", organizationId: 1,
+      sourceType: "manual", sourceReference: "blank-start",
+    };
     const testingResolved = resolveFabricacionDespieceForQuoteItem({
       item: l15Item,
-      recipes: [],
+      recipes: [historicWorkshopRecipe],
       organizationId: 1,
     });
     expect(testingResolved.formal?.recipeStatus).toBe("testing");

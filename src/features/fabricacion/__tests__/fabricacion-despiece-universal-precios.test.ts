@@ -431,6 +431,12 @@ describe("despiece de líneas universales con precio Arquetipo", () => {
       recipes: line.line === "L25" ? [l25RecipeRecord()] : [],
       organizationId: 1,
     });
+    if (line.line === "L15") {
+      expect(resolved.estado).toBe("receta_incompleta");
+      expect(resolved.formal).toBeNull();
+      expect(resolved.barsAvailable).toBe(false);
+      return;
+    }
     expect(resolved.estado).toBe("calculado");
     expect(resolved.formal?.result.calculable).toBe(true);
     expect(resolved.formal?.result.perfiles.length).toBeGreaterThan(0);
