@@ -222,7 +222,7 @@ function createS28(input: RecipeInput, leaves: 2 | 3): FabricacionReceta {
       widthAdjustmentMm: isTwo ? -107 : -86,
       heightBase: "alto_total",
       heightAdjustmentMm: -171,
-      // Catálogo SODAL 2026 p. 23 define 3 hojas (6×S282, 6×carros) y paño X/3 − 86 × Y − 171 por hoja = 3 vidrios físicos (corrige errata "2" de la tabla 3H).
+      // SODAL 2026 p. 23 muestra tres hojas, pero la tabla indica dos vidrios. Tres vidrios es una inferencia geométrica pendiente de confirmación física en taller.
       quantity: leaves,
     })],
     accessories,
