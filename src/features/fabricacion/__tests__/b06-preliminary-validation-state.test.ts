@@ -618,7 +618,7 @@ describe("B-06 — estados preliminares reales vs validación de taller", () => 
     })!;
     const historicWorkshopRecipe: FabricationRecipeRecord = {
       ...originalTesting, id: "historica-l15", scope: "organization", organizationId: 1,
-      sourceType: "manual", sourceReference: "taller:personalizada:l15-historica",
+      sourceType: "manual", sourceReference: "blank-start",
     };
     const testingResolved = resolveFabricacionDespieceForQuoteItem({
       item: l15Item,

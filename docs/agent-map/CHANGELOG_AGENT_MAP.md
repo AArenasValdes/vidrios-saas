@@ -2,7 +2,7 @@
 
 ## 2026-11-23 - Línea 15 2H: pauta documental pendiente
 
-- La fuente atribuida a la pauta precargada difiere del catálogo ALAR. La resolución viva de cotización mantiene pendiente la referencia documental identificada y preserva recetas propias y snapshots históricos.
+- La fuente atribuida a la pauta precargada difiere del catálogo ALAR. La resolución viva de cotización mantiene pendientes la receta documental, sus copias y la procedencia ambigua; preserva las recetas independientes trazables y los snapshots históricos.
 - El [expediente](../fabricacion/linea-15/EXPEDIENTE_L15_2H.md) registra discrepancias, evidencia faltante y límites del laboratorio/editor. No se modificaron fórmulas ni se validó la línea en taller.
 
 Historial de cambios en la documentacion del mapa tecnico.

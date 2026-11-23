@@ -271,7 +271,7 @@ describe("auditoría despiece cotización por líneas con receta", () => {
   ];
 
   it.each(cases.map((entry) => [entry.label, entry] as const))(
-    "%s calcula despiece en cotización",
+    "%s resuelve su estado de despiece en cotización",
     (_label, auditCase) => {
       const recipe = recipeRecord({
         id: `audit-${auditCase.lineTemplateId}`,
@@ -291,6 +291,12 @@ describe("auditoría despiece cotización por líneas con receta", () => {
         organizationId: 1,
       });
 
+      if (auditCase.lineTemplateId === 1515) {
+        // La procedencia de esta receta sintética es desconocida.
+        expect(resolved.estado).toBe("receta_incompleta");
+        expect(resolved.formal).toBeNull();
+        return;
+      }
       expect(resolved.estado).toBe("calculado");
       expect(resolved.formal?.result.calculable).toBe(true);
       expect(resolved.formal?.result.perfiles.length).toBeGreaterThan(0);
