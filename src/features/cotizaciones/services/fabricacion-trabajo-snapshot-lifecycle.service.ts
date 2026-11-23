@@ -1,3 +1,4 @@
+import { hasPivotanteSlidingRecipeConflict } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
 import { construirFabricacionTrabajoSnapshot } from "@/features/fabricacion/services/fabricacion-trabajo-snapshot.service";
 import type { FabricacionTrabajoSnapshot } from "@/features/fabricacion/types/fabricacion-trabajo-snapshot";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
@@ -33,13 +34,28 @@ export function shouldResolveSupplierPresentationsForQuoteSave(input: {
 
 function fabricationInputKey(item: CotizacionWorkflowItem) {
   const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+  // Acotado a L20 2H con identidad estructurada. Las familias que infieren
+  // geometría desde texto (p. ej. Bahar, S60 y Veratec) siguen conservadoras.
+  const structuredL20 = meta.catalogLineKey === "ventora:l20" &&
+    meta.fabricacionTipologia === "corredera" &&
+    meta.fabricacionHojas === 2 && meta.fabricacionModulos === 2 &&
+    !/bahar\s*5200/i.test(item.lineaComercial);
+  const pivotanteConflict = structuredL20 && hasPivotanteSlidingRecipeConflict({
+    commercialType: item.tipo,
+    commercialSystem: meta.sistema,
+    commercialConfiguration: meta.configuracion,
+    commercialName: item.nombre,
+    technicalTypology: meta.fabricacionTipologia,
+    technicalOpening: meta.fabricacionApertura,
+  });
   return JSON.stringify({
     tipoItem: item.tipoItem ?? "componente",
     tipo: item.tipo,
     lineaComercial: item.lineaComercial,
     vidrio: item.vidrio,
-    nombre: item.nombre,
-    descripcion: item.descripcion,
+    nombre: structuredL20 ? null : item.nombre,
+    descripcion: structuredL20 ? null : item.descripcion,
+    pivotanteConflict,
     ancho: item.ancho,
     alto: item.alto,
     cantidad: item.cantidad,

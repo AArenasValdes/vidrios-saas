@@ -659,7 +659,7 @@ function resolverRecetaFabricacionCompatibleInternal(
     };
   }
 
-  const validatedByIdentity = new Map<string, FabricationRecipeRecord>();
+  const validatedByIdentity = new Map<string, FabricationRecipeRecord[]>();
   compatible
     .filter((recipe) => statusAllowsAutomaticUse(recipe.status))
     .forEach((recipe) => {
@@ -672,13 +672,29 @@ function resolverRecetaFabricacionCompatibleInternal(
         recipe.sourceReference ?? "",
         recipe.definition.identidad.recetaId,
       ].join("|");
-      const current = validatedByIdentity.get(key);
-      if (!current || recipe.version > current.version) {
-        validatedByIdentity.set(key, recipe);
+      const current = validatedByIdentity.get(key) ?? [];
+      if (current.length === 0 || recipe.version > current[0].version) {
+        validatedByIdentity.set(key, [recipe]);
+        return;
+      }
+      if (recipe.version < current[0].version) return;
+
+      // Dos registros privados pueden compartir identidad/version y diferir
+      // en reglas. No elegir uno arbitrariamente ni perder la selección real.
+      if (recipe.scope === "organization") {
+        const duplicateIndex = current.findIndex(
+          (candidate) => JSON.stringify(candidate.definition) === JSON.stringify(recipe.definition)
+        );
+        if (duplicateIndex < 0) {
+          current.push(recipe);
+        } else if (recipe.id === input.preferredRecipeId) {
+          current[duplicateIndex] = recipe;
+        }
+      } else if (recipe.id === input.preferredRecipeId) {
+        current[0] = recipe;
       }
     });
-  const validated = Array.from(validatedByIdentity.values());
-
+  const validated = Array.from(validatedByIdentity.values()).flat();
   const preferred = validated.find(
     (recipe) => recipe.id === input.preferredRecipeId
   );

@@ -1,3 +1,4 @@
+import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import {
   ensureLogicalComponentIdsForQuoteSave,
   getFabricationRecipeLineTemplateIdsForSnapshotResolution,
@@ -417,6 +418,66 @@ describe("fabricacion-trabajo-snapshot lifecycle", () => {
     expect(prepared.items[0]?.fabricacionSnapshot).toBeNull();
   });
 
+  it("conserva el snapshot de L20 ante cambios solo comerciales de nombre y descripción", () => {
+    const previous = workflowItem({ fabricacionSnapshot: itemSnapshot });
+    const edited = { ...previous, nombre: "Ventana comedor", descripcion: "Marco blanco", precioUnitario: 99999 };
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: [previous], items: [edited] });
+    expect(prepared.itemIdsToResolve.size).toBe(0);
+    expect(prepared.items[0]?.fabricacionSnapshot).toBe(itemSnapshot);
+    expect(prepared.shouldRebuildTrabajoSnapshot).toBe(false);
+  });
+
+  it("comprueba que edición comercial de L20 no cambia despiece resuelto", () => {
+    const previous = workflowItem();
+    const edited = { ...previous, nombre: "Ventana comedor", descripcion: "Marco blanco" };
+    const resolve = (item: CotizacionWorkflowItem) => resolveFabricacionDespieceForQuoteItem({
+      item, recipes: [], organizationId: 1, lineTemplateId: 220, lineCatalogKey: "ventora:l20",
+    });
+    const before = resolve(previous);
+    const after = resolve(edited);
+    expect(before.estado).toBe("calculado");
+    expect(after.estado).toBe("calculado");
+    const cuts = (result: typeof before) => result.formal?.result.perfiles.map((profile) => ({
+      codigo: profile.codigoPerfil, funcion: profile.funcion,
+      medidaMm: profile.medidaMm, cantidad: profile.cantidadPiezas,
+    }));
+    expect(cuts(before)?.length).toBeGreaterThan(0);
+    expect(cuts(after)).toEqual(cuts(before));
+  });
+  it("invalida L20 legacy cuando el texto cambia la tipología inferida", () => {
+    const meta = encodeCotizacionItemPresentationMeta({ lineTemplateId: "220", catalogLineKey: "ventora:l20" });
+    const previous = workflowItem({ observaciones: meta, nombre: "Ventana corredera", descripcion: "", fabricacionSnapshot: itemSnapshot });
+    const edited = { ...previous, nombre: "Ventana proyectante" };
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: [previous], items: [edited] });
+    expect(prepared.itemIdsToResolve).toEqual(new Set([previous.id]));
+    expect(prepared.items[0]?.fabricacionSnapshot).toBeNull();
+  });
+
+  it("invalida L20 legacy cuando el texto cambia la cantidad inferida de hojas", () => {
+    const meta = encodeCotizacionItemPresentationMeta({ lineTemplateId: "220", catalogLineKey: "ventora:l20", fabricacionTipologia: "corredera" });
+    const previous = workflowItem({ observaciones: meta, nombre: "Ventana corredera 2 hojas", descripcion: "", fabricacionSnapshot: itemSnapshot });
+    const edited = { ...previous, nombre: "Ventana corredera 3 hojas" };
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: [previous], items: [edited] });
+    expect(prepared.itemIdsToResolve).toEqual(new Set([previous.id]));
+    expect(prepared.items[0]?.fabricacionSnapshot).toBeNull();
+  });
+
+  it("invalida si el nuevo nombre introduce un conflicto pivotante", () => {
+    const previous = workflowItem({ tipo: "Puerta", nombre: "Puerta corredera", fabricacionSnapshot: itemSnapshot });
+    const edited = { ...previous, nombre: "Puerta pivotante" };
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: [previous], items: [edited] });
+    expect(prepared.itemIdsToResolve).toEqual(new Set([previous.id]));
+    expect(prepared.items[0]?.fabricacionSnapshot).toBeNull();
+  });
+
+  it("mantiene comparación conservadora del texto de familias especiales", () => {
+    const meta = encodeCotizacionItemPresentationMeta({ lineTemplateId: "5200", catalogLineKey: "ventora:veratec-bahar-5200-ventana-exterior", fabricacionTipologia: "abatible" });
+    const previous = workflowItem({ observaciones: meta, lineaComercial: "Bahar 5200", nombre: "Ventana abatible", fabricacionSnapshot: itemSnapshot });
+    const edited = { ...previous, nombre: "Ventana proyectante" };
+    const prepared = prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: [previous], items: [edited] });
+    expect(prepared.itemIdsToResolve).toEqual(new Set([previous.id]));
+    expect(prepared.items[0]?.fabricacionSnapshot).toBeNull();
+  });
   it("no completa una pauta histórica ausente al guardar cambios comerciales", () => {
     const oldItem = workflowItem();
     const unchangedTechnicalInput = workflowItem({ precioUnitario: 160000, precioTotal: 160000 });
