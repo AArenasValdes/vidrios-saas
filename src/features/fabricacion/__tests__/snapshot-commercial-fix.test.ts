@@ -172,6 +172,19 @@ describe("persistencia simulada y documentos internos de líneas universales", (
       expect(glassReopened?.items[0]?.fabricacionSnapshot?.recipeId).toBe(snapshot.recipeId);
       expect(glassReopened?.items[0]?.precioUnitario).toBe(manualPrice);
       expect(await service.getWorkflowById(saved.id, 999, { ensureApprovalToken: false })).toBeNull();
+
+      const changedRecipeDraft = mapRecordToDraft(glassReopened!);
+      const changedItem = changedRecipeDraft.items[0]!;
+      const changedMeta = decodeCotizacionItemPresentationMeta(changedItem.observaciones);
+      changedItem.observaciones = encodeCotizacionItemPresentationMeta({
+        ...changedMeta, fabricationRecipeId: "receta-no-disponible", fabricacionVariante: "variante-no-disponible",
+      });
+      await service.saveWorkflow({ organizationId: 3, existingId: glassReopened!.id, existingCode: glassReopened!.codigo,
+        existingClientId: glassReopened!.clientId, existingProjectId: glassReopened!.projectId,
+        draft: changedRecipeDraft, estado: glassReopened!.estado });
+      const incompatible = await service.getWorkflowById(saved.id, 3, { ensureApprovalToken: false });
+      expect(incompatible?.items[0]?.fabricacionSnapshot).toBeNull();
+      expect(incompatible?.items[0]?.precioUnitario).toBe(manualPrice);
     } finally {
       if (oldUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL; else process.env.NEXT_PUBLIC_SUPABASE_URL = oldUrl;
       if (oldKey === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY; else process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = oldKey;
