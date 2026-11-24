@@ -35,7 +35,7 @@ export function shouldResolveSupplierPresentationsForQuoteSave(input: {
     (input.itemCountToResolve ?? 0) > 0 || input.shouldRebuildTrabajoSnapshot === true;
 }
 
-function fabricationInputKey(item: CotizacionWorkflowItem) {
+function fabricationInputKey(item: CotizacionWorkflowItem, hydratedRecipeId?: string) {
   const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
   // Acotado a L20 2H con identidad estructurada. Las familias que infieren
   // geometría desde texto (p. ej. Bahar, S60 y Veratec) siguen conservadoras.
@@ -103,7 +103,7 @@ function fabricationInputKey(item: CotizacionWorkflowItem) {
     fabricacionGlazing: meta.fabricacionGlazing,
     fabricacionLeg: meta.fabricacionLeg,
     fabricacionReinforcement: meta.fabricacionReinforcement,
-    fabricationRecipeId: meta.fabricationRecipeId,
+    fabricationRecipeId: meta.fabricationRecipeId || hydratedRecipeId || "",
     sheetScheme: meta.sheetScheme,
     sheetVariant: meta.sheetVariant,
     guidedVisualConfig: meta.guidedVisualConfig,
@@ -176,7 +176,14 @@ export function prepareFabricacionSnapshotsForQuoteSave(input: {
   const items = input.items.map((item) => {
     if (item.tipoItem === "item_libre_con_valor") return item;
     const previous = existingById.get(item.id);
-    const changed = previous != null && fabricationInputKey(previous) !== fabricationInputKey(item);
+    const previousRecipeId = previous && decodeCotizacionItemPresentationMeta(previous.observaciones).fabricationRecipeId;
+    const nextRecipeId = decodeCotizacionItemPresentationMeta(item.observaciones).fabricationRecipeId;
+    // Repricing can hydrate the saved recipe ID from the frozen snapshot. Treat
+    // that specific legacy transition as unchanged, while detecting a new or
+    // explicitly removed recipe selection.
+    const hydratedRecipeId = previous && !previousRecipeId && nextRecipeId &&
+      nextRecipeId === previous.fabricacionSnapshot?.recipeId ? nextRecipeId : undefined;
+    const changed = previous != null && fabricationInputKey(previous, hydratedRecipeId) !== fabricationInputKey(item);
     const supplierChanged = previous != null && supplierProviderKey(previous) !== supplierProviderKey(item);
 
     if (supplierChanged) {

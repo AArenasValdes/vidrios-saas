@@ -72,6 +72,22 @@ function createDraft(overrides: Record<string, unknown> = {}) {
 }
 
 describe("use-paso-dos-agregar-grupo helpers", () => {
+  it("invalida los snapshots al cambiar el vidrio y los conserva si no cambia", () => {
+    const historical = { recipeId: "historica" };
+    const draft = createDraft({
+      catalogLineKey: "ventora:l42",
+      fabricacionSnapshot: historical,
+      cubicationSnapshot: { recipeId: "historica" },
+    }) as unknown as PasoDosGrupoDraft;
+    const apply = (displayName: string) => applyGlassSelectionToPasoDosGrupoDraft({
+      draft, selection: { displayName }, items: [], pricingMode: "precio_directo",
+      provider: "", lineTemplates: [],
+    });
+    expect(apply(draft.vidrio).fabricacionSnapshot).toBe(historical);
+    expect(apply("Incoloro monolitico 6mm")).toMatchObject({
+      fabricacionSnapshot: null, cubicationSnapshot: null,
+    });
+  });
   it("conserva el vidrio de catálogo 3643 desde el borrador hasta guardar, reabrir y editar", () => {
     const glass = {
       id: 3643,

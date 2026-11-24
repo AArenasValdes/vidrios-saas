@@ -1132,12 +1132,16 @@ export function applyGlassSelectionToPasoDosGrupoDraft(input: {
   const form = buildPasoDosGrupoComponentForm(input);
   const selected = applyGlassSelectionToComponentForm(form, input.selection, input.lineTemplates);
   const sodalAware = applySodalL25VidrioToForm(input.draft, selected.vidrio);
+  const glassChanged = selected.vidrio !== input.draft.vidrio ||
+    selected.vidrioLineTemplateId !== input.draft.vidrioLineTemplateId ||
+    JSON.stringify(selected.glassTechnicalSpec ?? null) !== JSON.stringify(input.draft.glassTechnicalSpec ?? null);
 
   return {
     ...sodalAware,
     vidrio: selected.vidrio,
     vidrioLineTemplateId: selected.vidrioLineTemplateId,
     glassTechnicalSpec: selected.glassTechnicalSpec,
+    ...(glassChanged ? { fabricacionSnapshot: null, cubicationSnapshot: null } : {}),
   };
 }
 
@@ -1826,7 +1830,13 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   };
 
   const updateFabricationRecipeId = (fabricationRecipeId: string) => {
-    setDraft((current) => ({ ...current, fabricationRecipeId }));
+    setDraft((current) => ({
+      ...current,
+      fabricationRecipeId,
+      ...(current.fabricationRecipeId !== fabricationRecipeId
+        ? { fabricacionSnapshot: null, cubicationSnapshot: null }
+        : {}),
+    }));
   };
 
   const updateSupplierProviderKey = (supplierProviderKey: string) => {

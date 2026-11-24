@@ -599,7 +599,9 @@ export function PautaCubicacionPanel({
     }
     if (
       resolution.estado === "sin_receta" &&
-      (catalogKey === SERIE_4800_CATALOG_KEY || catalogKey === SERIE_45_CATALOG_KEY)
+      (catalogKey === SERIE_4800_CATALOG_KEY || catalogKey === SERIE_45_CATALOG_KEY ||
+        ((catalogKey === "ventora:l42" || catalogKey === "ventora:arquetipo-l42-proyectante") &&
+          organizationId != null && !persistedRecipeError && !componentForm.fabricacionSnapshot))
     ) {
       const fallbacks = resolveUniversalPricedLineFallbacks({
         catalogKey,
@@ -641,6 +643,7 @@ export function PautaCubicacionPanel({
     componentForm.fabricacionModulos,
     componentForm.fabricacionVariante,
     componentForm.fabricationRecipeId,
+    componentForm.fabricacionSnapshot,
     componentForm.vidrio,
     componentForm.sistema,
     effectiveFabricacionHojas,
@@ -650,6 +653,7 @@ export function PautaCubicacionPanel({
     isSodalL25Line,
     numericLineTemplateId,
     organizationId,
+    persistedRecipeError,
     persistedRecipes,
     pieceApertura,
     sodalConfig,
@@ -685,7 +689,8 @@ export function PautaCubicacionPanel({
     selectedTemplate?.nombre,
     sodalConfig,
   ]);
-  const useFormalDomain = persistedRecipes.length > 0 || Boolean(formalResolution?.receta);
+  const useFormalDomain = persistedRecipes.length > 0 || Boolean(formalResolution?.receta) ||
+    formalResolution?.estado === "multiples_recetas";
   const selectedPersistedRecipe =
     formalResolution?.estado === "receta_unica" ||
     formalResolution?.estado === "receta_no_validada"

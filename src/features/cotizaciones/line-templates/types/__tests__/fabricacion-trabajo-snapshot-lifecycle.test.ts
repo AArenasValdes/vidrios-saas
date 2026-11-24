@@ -119,6 +119,21 @@ function workflowItem(overrides: Partial<CotizacionWorkflowItem> = {}): Cotizaci
 }
 
 describe("fabricacion-trabajo-snapshot lifecycle", () => {
+  it("reconoce la receta hidratada desde el snapshot y detecta una selección distinta o retirada", () => {
+    const snapshot = { ...itemSnapshot, recipeId: "receta-congelada" };
+    const originalMeta = decodeCotizacionItemPresentationMeta(workflowItem().observaciones);
+    const previous = workflowItem({ fabricacionSnapshot: snapshot });
+    const withRecipe = (recipeId: string) => ({ ...previous, observaciones: encodeCotizacionItemPresentationMeta({ ...originalMeta, fabricationRecipeId: recipeId }) });
+    const check = (oldItem: CotizacionWorkflowItem, newItem: CotizacionWorkflowItem) => prepareFabricacionSnapshotsForQuoteSave({ existingId: "quote-1", existingItems: [oldItem], items: [newItem] });
+
+    expect(check(previous, withRecipe("receta-congelada")).itemIdsToResolve.size).toBe(0);
+    expect(check(previous, withRecipe("receta-nueva")).itemIdsToResolve).toEqual(new Set([previous.id]));
+    expect(check(withRecipe("receta-congelada"), previous).itemIdsToResolve).toEqual(new Set([previous.id]));
+    expect(check(previous, { ...withRecipe("receta-congelada"), ancho: previous.ancho + 1 }).itemIdsToResolve).toEqual(new Set([previous.id]));
+    expect(check(previous, { ...withRecipe("receta-congelada"), vidrio: "Otro vidrio" }).itemIdsToResolve).toEqual(new Set([previous.id]));
+    const differentVariant = { ...withRecipe("receta-congelada"), observaciones: encodeCotizacionItemPresentationMeta({ ...originalMeta, fabricationRecipeId: "receta-congelada", fabricacionVariante: "otra" }) };
+    expect(check(previous, differentVariant).itemIdsToResolve).toEqual(new Set([previous.id]));
+  });
   it("resuelve presentaciones para altas, borradores y recalculo técnico, no al editar solo datos comerciales", () => {
     expect(shouldResolveSupplierPresentationsForQuoteSave()).toBe(true);
     expect(shouldResolveSupplierPresentationsForQuoteSave({ existingId: "draft-1", finalizingDraft: true })).toBe(true);
