@@ -50,6 +50,11 @@ export function renderGithubSummary({ report, integration }) {
       }),
       "",
       "Fuente: fixtures locales. Supabase y datos privados de organizaciones no fueron consultados.",
+      "",
+      "### Cobertura de recorridos",
+      "",
+      "El inventario no acredita ejecución por modo o dispositivo. Ver cada fila de line-integration.json.",
+      "Smoke autenticado y recetas de organización QA: no ejecutados en este job.",
     );
   } else {
     lines.push("", "El informe de integración local falta o está incompleto; revisar el artefacto del job.");

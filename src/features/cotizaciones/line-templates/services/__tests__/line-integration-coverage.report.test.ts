@@ -72,6 +72,24 @@ it("genera informe determinista de todas las líneas y configuraciones declarada
         perfilesReferenciales: integrityRow?.codigosReferenciales.length ?? 0,
         codigosRecetaDocumentados: integrityRow?.codigosDocumentadosReceta.length ?? 0,
         nota: "Sólo inventario estático; la resolución por variante exacta no fue ejecutada aquí.",
+      }, coberturaDespiece: {
+        familia: typeof metadata.familyKey === "string" ? metadata.familyKey : null,
+        lineTemplateId: null,
+        sistema: configuration?.openingType ?? null,
+        variante: null,
+        vidrio: null,
+        medidas: null,
+        estadoEsperado: "no_determinado",
+        estadoObtenido: "no_comprobado",
+        diferencias: [],
+        prueba: null,
+        evidencia: "Inventario local de configuraciones explícitas; resolución y superficies no ejecutadas por esta fila.",
+        recorridos: [
+          { modo: "guiada", dispositivo: "movil", estado: "no_comprobado" },
+          { modo: "constructor", dispositivo: "movil", estado: "no_comprobado" },
+          { modo: "guiada", dispositivo: "escritorio", estado: "no_comprobado" },
+          { modo: "constructor", dispositivo: "escritorio", estado: "no_comprobado" },
+        ],
       } });
     }
   }
@@ -89,6 +107,7 @@ it("genera informe determinista de todas las líneas y configuraciones declarada
     version: 1,
     origin: "fixtures_locales",
     remote: { estado: "no_comprobada", consultas: 0, escrituras: 0 },
+    qaAutenticado: { estado: "no_ejecutado", causa: "No hay entorno QA aislado documentado ni credenciales seguras configuradas para esta ejecución." },
     fixtures: { lineasDeclaradas: expectedLineKeys.size, configuracionesDeclaradas: totals.configuraciones },
     denominadores: {
       ...totals,

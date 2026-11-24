@@ -56,6 +56,13 @@ export type IntegrationInput = {
 export type IntegrationRow = Pick<IntegrationInput, "catalogKey" | "configurationId" | "name" | "scope"> & {
   capas: IntegrationCheck[];
   expectativaReceta: IntegrationInput["recipe"]["expectation"];
+  coberturaDespiece?: {
+    familia: string | null; lineTemplateId: number | null; sistema: string | null;
+    variante: string | null; vidrio: string | null; medidas: null;
+    estadoEsperado: string; estadoObtenido: string; diferencias: string[];
+    prueba: string | null; evidencia: string;
+    recorridos: Array<{ modo: string; dispositivo: string; estado: string }>;
+  };
   referenciaTecnica?: { estadoCatalogo: string; listaParaProbar: boolean; evidencia: string; perfilesReferenciales: number; codigosRecetaDocumentados: number; nota: string };
 };
 

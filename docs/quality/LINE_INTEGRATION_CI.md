@@ -12,6 +12,8 @@ Extensión de `pnpm fabrication:verify`. No añade un verificador alternativo ni
 
 ## Qué verifica realmente
 
+Cada fila del inventario incluye `coberturaDespiece` con identidad disponible y cuatro recorridos de interfaz. Estos se marcan `no_comprobado` mientras la fila no esté vinculada a una ejecución específica. Un resultado de Jest aislado no certifica automáticamente la paridad de todos los modos ni un navegador real. El informe registra el smoke autenticado QA como no ejecutado cuando no existe configuración de QA aislada en el job.
+
 - Catálogo: presencia de clave, duplicación, pares explícitos de tipología/apertura, advertencias de nomenclatura. No demuestra presentación visual en Guiada y Constructor.
 - Venta: precio base declarado en catálogo; normalmente pendiente, ya que el valor privado del taller no se consulta.
 - Compra: utilidad `checkExactPurchase` solo valida identidad estricta cuando recibe una presentación/registro de prueba. Ausencia de metadatos en histórico es `pendiente`; candidatos múltiples son `ambiguo`. Los perfiles reales no se vuelven a asociar de forma implícita.
