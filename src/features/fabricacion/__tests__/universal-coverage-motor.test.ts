@@ -7,6 +7,16 @@ import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-pr
 
 type Case = ReturnType<typeof buildUniversalCoverageMotorCases>[number];
 const cases = buildUniversalCoverageMotorCases();
+// PA-50 a PA-53 registran 2400 mm junto a cortes de 3000 mm. Los
+// originales no están disponibles para conciliar la discrepancia.
+const conflictIds = new Set([
+  "dvh_pierna_abierta_reforzada_3h_2400x1500",
+  "dvh_pierna_cerrada_3h_2400x1500",
+  "monolitico_pierna_abierta_3h_2400x1500",
+  "monolitico_pierna_abierta_reforzada_3h_2400x1500",
+]);
+const conflictCases = cases.filter((row) => conflictIds.has(row.evidenceId));
+const comparableCases = cases.filter((row) => !conflictIds.has(row.evidenceId));
 
 function record(row: Case, organizationId = 1): FabricationRecipeRecord {
   return {
@@ -43,12 +53,13 @@ function item(row: Case, cantidad = 1): CotizacionWorkflowItem {
 describe("cobertura del motor por evidencia canónica L25", () => {
   it("mantiene una fila por observación y una fuente identificable", () => {
     expect(cases).toHaveLength(22);
+    expect(conflictCases).toHaveLength(conflictIds.size);
     expect(new Set(cases.map((row) => row.evidenceId)).size).toBe(cases.length);
     expect(new Set(cases.map((row) => row.recipeId)).size).toBe(18);
     expect(cases.every((row) => row.sourceReference.startsWith("zeta:confirmed:sodal/l25/"))).toBe(true);
   });
 
-  it.each(cases.map((row) => [row.evidenceId, row] as const))(
+  it.each(comparableCases.map((row) => [row.evidenceId, row] as const))(
     "%s: comparación del resolvedor con el archivo de evidencia",
     (_id, row) => {
       const single = resolveFabricacionDespieceForQuoteItem({ item: item(row), recipes: [record(row)], organizationId: 1 });
@@ -61,6 +72,33 @@ describe("cobertura del motor por evidencia canónica L25", () => {
 
     },
   );
+
+  describe("CONFLICTO: evidencia 2400 mm pendiente de conciliación", () => {
+    it.each(conflictCases.map((row) => [row.evidenceId, row] as const))(
+      "%s: registra la discrepancia con el motor y la coincidencia con 3000 mm",
+      (_id, row) => {
+        const baseline = cases.find((candidate) => candidate.evidenceId === row.recipeId);
+        expect(baseline).toBeDefined();
+        const profileValues = (entry: Case) => entry.confirmed.profiles.map((p) => [p.code, p.quantity, p.lengthMm]);
+        const glassValues = (entry: Case) => entry.confirmed.glass.map((v) => [v.quantity, v.widthMm, v.heightMm]);
+        expect(row.dimensions.widthMm).toBe(2400);
+        expect(baseline!.dimensions.widthMm).toBe(3000);
+        expect(profileValues(row)).toEqual(profileValues(baseline!));
+        expect(glassValues(row)).toEqual(glassValues(baseline!));
+
+        const result = resolveFabricacionDespieceForQuoteItem({ item: item(row), recipes: [record(row)], organizationId: 1 });
+        expect(result.estado).toBe("calculado");
+        expect(result.formal?.result.perfiles.map((p) => [p.codigoPerfil, p.cantidadPiezas, p.medidaMm]))
+          .not.toEqual(profileValues(row));
+        expect(result.formal?.result.vidrios.map((v) => [v.cantidadPiezas, v.anchoMm, v.altoMm]))
+          .not.toEqual(glassValues(row));
+      },
+    );
+
+    for (const row of conflictCases) {
+      it.todo(`${row.evidenceId}: conciliar fuente original y verificar igualdad numérica`);
+    }
+  });
 
   it.each(cases.map((row) => [row.evidenceId, row] as const))(
     "%s: duplicar cantidad conserva las medidas y duplica piezas",

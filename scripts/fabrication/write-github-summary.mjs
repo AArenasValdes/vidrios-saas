@@ -40,7 +40,7 @@ export function renderGithubSummary({ report, integration }) {
   if (validIntegration) {
     lines.push(
       "",
-      `### Inventario local: ${denominators.lineas} líneas · ${denominators.configuraciones} configuraciones`,
+      `### Inventario local: ${denominators.lineas} líneas · ${denominators.configuraciones} filas comerciales`,
       "",
       "| Capa | Aprobado | Pendiente | Ambiguo | Fallido | No comprobado |",
       "| --- | ---: | ---: | ---: | ---: | ---: |",

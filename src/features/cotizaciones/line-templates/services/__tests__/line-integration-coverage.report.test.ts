@@ -107,11 +107,11 @@ it("genera informe determinista de todas las líneas y configuraciones declarada
     version: 1,
     origin: "fixtures_locales",
     remote: { estado: "no_comprobada", consultas: 0, escrituras: 0 },
-    qaAutenticado: { estado: "no_ejecutado", causa: "No hay entorno QA aislado documentado ni credenciales seguras configuradas para esta ejecución." },
+    qaAutenticado: { estado: "no_ejecutado", causa: "Este job no ejecuta el smoke autenticado. No se ha verificado la disponibilidad de una organización QA aislada." },
     fixtures: { lineasDeclaradas: expectedLineKeys.size, configuracionesDeclaradas: totals.configuraciones },
     denominadores: {
       ...totals,
-      unidades: "Una verificación por configuración y por capa; NO representa perfiles ni paños individuales.",
+      unidades: "Filas comerciales declaradas, no configuraciones técnicas ejecutadas; cada capa se cuenta por fila comercial.",
       perfilesCompra: { requeridos: null, evaluados: 0, motivo: "Presentaciones privadas no consultadas" },
       referenciasVidrio: { declaradas: null, evaluadas: 0, motivo: "Snapshots y medidas manuales no consultados" },
     },
