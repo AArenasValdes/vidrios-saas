@@ -204,6 +204,12 @@ export function resolveMobileComponentFabricacionSummary(
       : null,
   ].filter((row): row is { label: string; value: string } => Boolean(row));
 
+  if (showReviewUi && (item.fabricacionSnapshot ?? liveResolution?.formal)?.advertencias.some((warning) => warning.codigo === "COMPOSICION_VIDRIO_PENDIENTE")) {
+    return { status: "preliminary", statusLabel: "Despiece parcial", showReviewUi, contextualLineLabel, technicalBrief,
+      canOpenPauta: true, canOpenDespiece: true, configRows,
+      materialRows: [{ label: "Vidrio y junquillo", value: "Pendientes" }] };
+  }
+
   if (showReviewUi && liveResolution?.geometryOnly) {
     return {
       status: "preliminary",

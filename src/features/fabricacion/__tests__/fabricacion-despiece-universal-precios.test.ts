@@ -95,6 +95,30 @@ function l25RecipeRecord(): FabricationRecipeRecord {
 }
 
 describe("despiece de líneas universales con precio Arquetipo", () => {
+  it("L42 DVH conserva solo perfiles estructurales y deja vidrio y junquillo pendientes", () => {
+    const item = { ...itemFor(pricedLines.find((line) => line.line === "L42")!), alto: 1200, vidrio: "DVH 4+12+4" };
+    const snapshot = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 }).formal!;
+    expect(snapshot.pauta.some((profile) => profile.codigoPerfil === "4229")).toBe(false);
+    expect(snapshot.pauta.some((profile) => profile.codigoPerfil === "4201")).toBe(true);
+    expect(snapshot.result.vidrios).toEqual([]);
+    expect(snapshot.advertencias.some((entry) => entry.codigo === "COMPOSICION_VIDRIO_PENDIENTE")).toBe(true);
+  });
+  it("L42 registra el nombre del vidrio realmente seleccionado en los cortes nuevos", () => {
+    const item = { ...itemFor(pricedLines.find((line) => line.line === "L42")!), vidrio: "Monolítico 5 mm" };
+    const snapshot = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 }).formal!;
+    expect(snapshot.result.vidrios[0]?.nombre).toBe("Monolítico 5 mm");
+  });
+  it.each(["DVH 5+12+5", "DVH 4+12+4+1"])("L42 no extiende la confirmación estructural 4+12+4 a %s", (glass) => {
+    const item = { ...itemFor(pricedLines.find((line) => line.line === "L42")!), vidrio: glass };
+    const snapshot = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 }).formal!;
+    expect(snapshot.pauta).toEqual([]);
+    expect(snapshot.result.vidrios).toEqual([]);
+  });
+  it("L42 no etiqueta como 4 mm un vidrio monolítico de 6 mm", () => {
+    const item = { ...itemFor(pricedLines.find((line) => line.line === "L42")!), vidrio: "Monolítico 6 mm" };
+    const snapshot = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 }).formal!;
+    expect(snapshot.result.vidrios[0]?.nombre).toBe("Monolítico 6 mm");
+  });
   it("congela la selección de vidrio por nombre en una cotización nueva", () => {
     const item = { ...itemFor(pricedLines.find((line) => line.line === "L42")!), vidrio: "Monolítico 5 mm" };
     const resolved = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 });

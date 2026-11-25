@@ -87,6 +87,7 @@ type ReviewTab = "pieza" | "consolidado";
 
 type DespieceUiStatus =
   | "calculado_con_receta"
+  | "despiece_parcial"
   | "geometria_parcial"
   | "configuracion_incompleta"
   | "estimacion_geometrica"
@@ -96,6 +97,7 @@ type DespieceUiStatus =
 
 const DESPIECE_UI_STATUS_LABELS: Record<DespieceUiStatus, string> = {
   calculado_con_receta: "Despiece calculado",
+  despiece_parcial: "Despiece parcial",
   geometria_parcial: "Geometría calculada · material pendiente",
   configuracion_incompleta: "Fabricación no configurada",
   estimacion_geometrica: "Estimación geométrica",
@@ -251,6 +253,7 @@ function despieceStatusToneClass(status: DespieceUiStatus) {
     case "calculado_con_receta":
       return styles.statusOk;
     case "composicion_por_revisar":
+    case "despiece_parcial":
     case "configuracion_incompleta":
     case "estimacion_geometrica":
     case "requiere_seleccion":
@@ -327,6 +330,7 @@ function resolveDespieceUiStatus(input: {
   const { snapshot, preview, resolution } = input;
   if (resolution?.estado === "composicion_sin_receta") return "composicion_por_revisar";
   if (resolution?.estado === "multiples_recetas") return "requiere_seleccion";
+  if (resolution?.formal?.advertencias.some((warning) => warning.codigo === "COMPOSICION_VIDRIO_PENDIENTE")) return "despiece_parcial";
   if (resolution?.geometryOnly) return "geometria_parcial";
   if (resolution?.estado === "calculado" && preview && preview.cuts.length > 0) {
     return "calculado_con_receta";
@@ -1090,6 +1094,9 @@ export function DespieceReviewSurface({
                       <LuCircleAlert aria-hidden />
                       {BARS_INCOMPLETE_WARNING}
                     </p>
+                  ) : null}
+                  {pieceUiStatus === "despiece_parcial" ? (
+                    <p className={styles.compactWarning} role="status">Faltan junquillo compatible y medidas de vidrio para la composición seleccionada.</p>
                   ) : null}
                   {geometryOnly ? (
                     <p className={styles.compactWarning} role="status" data-testid="veratec-geometry-only-warning">

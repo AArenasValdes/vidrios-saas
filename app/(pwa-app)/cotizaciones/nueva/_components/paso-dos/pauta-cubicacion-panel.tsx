@@ -1076,7 +1076,10 @@ export function PautaCubicacionPanel({
   const preview = activeSnapshot ? cubicationSnapshotToPreview(activeSnapshot) : null;
   const hasCuts = Boolean(preview && preview.cuts.length > 0);
   const isManual = activeSnapshot?.source === "manual";
-  const statusLabel = personalizadoAssistMode
+  const partialGlass = formalSnapshot?.advertencias.some((warning) => warning.codigo === "COMPOSICION_VIDRIO_PENDIENTE") ?? false;
+  const statusLabel = partialGlass
+    ? "Despiece parcial"
+    : personalizadoAssistMode
     ? "Borrador manual"
     : isManual
       ? "Ajustada manualmente"
@@ -1093,7 +1096,7 @@ export function PautaCubicacionPanel({
           : cubicationConfig
             ? LINE_TEMPLATE_CUBICATION_STATUS_LABELS[cubicationConfig.status]
             : "Sin configurar";
-  const isValidated = personalizadoAssistMode
+  const isValidated = partialGlass ? false : personalizadoAssistMode
     ? false
     : isManual
       ? false
@@ -1909,6 +1912,7 @@ export function PautaCubicacionPanel({
           Proveedor pendiente: esta línea todavía no tiene familia de compra configurada.
         </div>
       ) : null}
+      {partialGlass ? <p role="status">Faltan junquillo compatible y medidas de vidrio para la composición seleccionada.</p> : null}
 
       {s75GeometryControl}
       {s75LeafWidthControl}

@@ -292,6 +292,33 @@ export function construirSnapshotFabricacionCotizacion(input: {
     : { categoria: dvh ? "dvh" : monolithic ? "monolitico" : null,
         espesorMm: dvh ? null : namedThickness };
   const result = calcularCubicacionYPauta(definition, input.entrada, selectedGlass);
+  const l42NormalMonolithic = definition.identidad.codigo === "AL-42-PROY-NORMAL-V1" &&
+    definition.vidrios.length === 1 && definition.vidrios[0]?.nombre === "Monolítico 4 mm" &&
+    definition.perfiles.some((profile) => profile.codigoPerfil === "4229" && profile.nombrePerfil === "Junquillo 4229 horizontal") &&
+    definition.perfiles.some((profile) => profile.codigoPerfil === "4229" && profile.nombrePerfil === "Junquillo 4229 vertical");
+  if (l42NormalMonolithic) {
+    if (selectedGlass.categoria === "dvh" || dvh || specification?.category === "dvh") {
+      // El titular confirmó el 25-11-2026 que 4201 y 4202 de L42 Normal
+      // conservan sus cortes con DVH 4+12+4; no confirmó junquillo ni vidrio.
+      const components = name.match(/\d+(?:[.,]\d+)?/g) ?? [];
+      const confirmedComposition = selectedGlass.categoria === "dvh" && components.length === 3 &&
+        components[0] === "4" && components[1] === "12" && components[2] === "4";
+      result.perfiles = confirmedComposition ? result.perfiles.filter((perfil) => !(perfil.codigoPerfil === "4229" &&
+        (perfil.nombrePerfil === "Junquillo 4229 horizontal" || perfil.nombrePerfil === "Junquillo 4229 vertical"))) : [];
+      result.vidrios = [];
+      result.totalLinealMm = result.perfiles.reduce((sum, perfil) => sum + perfil.totalLinealMm, 0);
+      result.totalVidrioM2 = 0;
+      result.advertencias.push({
+        codigo: "COMPOSICION_VIDRIO_PENDIENTE",
+        nivel: "advertencia",
+        mensaje: confirmedComposition
+          ? "Despiece parcial: faltan junquillo compatible y medidas de vidrio para la composición DVH seleccionada."
+          : "Composición DVH pendiente: faltan cortes estructurales confirmados, junquillo y medidas de vidrio.",
+      });
+    } else if (selectedGlass.categoria === "monolitico" && name) {
+      result.vidrios = result.vidrios.map((vidrio) => vidrio.nombre === "Monolítico 4 mm" ? { ...vidrio, nombre: name } : vidrio);
+    }
+  }
   const parametrosCorte = resolveFabricacionParametrosCorte({
     recipeConfiguration: definition.configuracionCorte,
     organizationSettings: input.organizationCutSettings,

@@ -179,6 +179,7 @@ describe("persistencia simulada y documentos internos de líneas universales", (
       expect(glassReopened?.items[0]?.fabricacionSnapshot?.recipeId).toBe(snapshot.recipeId);
       expect(glassReopened?.items[0]?.precioUnitario).toBe(manualPrice);
       if (testCase.name === "L42") {
+        expect(glassReopened?.items[0]?.fabricacionSnapshot?.result.vidrios[0]?.nombre).toBe("Incoloro monolítico 5mm");
         const changedSummary = buildFabricationQuoteSummary(glassReopened!.items, { trabajoSnapshot: glassReopened!.fabricacionTrabajoSnapshot! });
         const changedMaterials = buildWorkMaterialsDocument({ summary: changedSummary, items: glassReopened!.items });
         expect(changedMaterials.accessories.map((entry) => entry.description)).toContain("Burlete cuña 5 mm");
@@ -217,7 +218,35 @@ describe("persistencia simulada y documentos internos de líneas universales", (
           workName: metadata.work, issueDate: metadata.issueDate });
         expect(Buffer.from(unknownPdf.output("arraybuffer")).toString("latin1")).not.toContain("Burlete cu");
         expect(Buffer.from(unknownPdf.output("arraybuffer")).toString("latin1")).not.toContain("Base 42");
-        glassReopened = unknown;
+        const dvhDraft = mapRecordToDraft(unknown!);
+        dvhDraft.items[0]!.vidrio = "DVH 4+12+4";
+        await service.saveWorkflow({ organizationId: 3, existingId: unknown!.id, existingCode: unknown!.codigo,
+          existingClientId: unknown!.clientId, existingProjectId: unknown!.projectId,
+          draft: dvhDraft, estado: unknown!.estado });
+        const dvh = await service.getWorkflowById(saved.id, 3, { ensureApprovalToken: false });
+        const dvhSnapshot = dvh!.items[0]!.fabricacionSnapshot!;
+        expect(dvhSnapshot.result.vidrios).toEqual([]);
+        expect(dvhSnapshot.pauta.some((profile) => profile.codigoPerfil === "4229")).toBe(false);
+        const dvhSummary = buildFabricationQuoteSummary(dvh!.items, { trabajoSnapshot: dvh!.fabricacionTrabajoSnapshot! });
+        expect(dvhSummary.items[0]?.statusLabel).toBe("Despiece parcial");
+        expect(dvhSummary.profileCoverage?.status).toBe("partial");
+        const dvhMaterials = buildWorkMaterialsDocument({ summary: dvhSummary, items: dvh!.items });
+        const dvhOrder = buildFabricationWorkOrder({ summary: dvhSummary, materials: dvhMaterials, quoteItems: dvh!.items });
+        expect(dvhOrder.documentStatus.state).toBe("partial");
+        expect(dvhOrder.preliminaryCutGroups.some((group) => group.technicalCode === "4201")).toBe(true);
+        expect(dvhOrder.preliminaryCutGroups.some((group) => group.technicalCode === "4229")).toBe(false);
+        expect(dvhOrder.pending.some((pending) => /junquillo/i.test(pending.action))).toBe(true);
+        expect(dvhMaterials.glassOrder.every((row) => row.widthMm == null && row.heightMm == null)).toBe(true);
+        const dvhWorkbook = buildWorkMaterialsWorkbook(XLSX, { ...metadata, kind: "materials", document: dvhMaterials, workOrder: dvhOrder });
+        expect(JSON.stringify(dvhWorkbook.Sheets)).not.toContain('"v":"4229"');
+        expect(JSON.stringify(dvhWorkbook.Sheets)).toContain("DOCUMENTO PARCIAL");
+        const dvhPdf = createWorkMaterialsPdf(dvhMaterials, { companyName: metadata.companyName, quoteCode: metadata.quoteCode,
+          workName: metadata.work, issueDate: metadata.issueDate }, null, dvhOrder);
+        expect(Buffer.from(dvhPdf.output("arraybuffer")).toString("latin1")).not.toContain("4229");
+        expect(Buffer.from(dvhPdf.output("arraybuffer")).toString("latin1")).toContain("DOCUMENTO PARCIAL");
+        const dvhAgain = await service.getWorkflowById(saved.id, 3, { ensureApprovalToken: false });
+        expect(dvhAgain?.items[0]?.fabricacionSnapshot).toEqual(dvhSnapshot);
+        glassReopened = dvh;
       }
       expect(await service.getWorkflowById(saved.id, 999, { ensureApprovalToken: false })).toBeNull();
 

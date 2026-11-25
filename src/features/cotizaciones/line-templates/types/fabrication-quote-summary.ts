@@ -242,6 +242,9 @@ export function buildFabricationQuoteSummary(
       /ventana|puerta|pano fijo|vitrina|shower|mampara|cierre/.test(normalizedType)
     );
     const hasCuts = Boolean(snapshot?.cuts.length);
+    const partialGlass = (item.fabricacionSnapshot ?? liveResolution?.formal)?.advertencias.some(
+      (warning) => warning.codigo === "COMPOSICION_VIDRIO_PENDIENTE"
+    ) ?? false;
     const sourceStatus = item.fabricacionSnapshot?.recipeStatus ?? meta.cubicationSnapshot?.status;
     const operationalStatus: FabricationProfileCoverageItem["state"] = !requiresProfiles
       ? "not_required"
@@ -249,7 +252,7 @@ export function buildFabricationQuoteSummary(
         ? "incompatible"
         : !hasCuts
           ? "missing_snapshot"
-          : Boolean(liveResolution?.geometryOnly)
+          : partialGlass || Boolean(liveResolution?.geometryOnly)
             ? "preliminary"
             : sourceStatus === "validated" || sourceStatus === "validada"
               ? "ready"
@@ -257,7 +260,7 @@ export function buildFabricationQuoteSummary(
     const reason = operationalStatus === "missing_snapshot" ? "No existe snapshot técnico con cortes guardados."
       : operationalStatus === "unvalidated" ? "La receta guardada no está validada para pauta operativa."
         : operationalStatus === "incompatible" ? l25CompositionIssue ?? "La identidad comercial contradice la tipología del snapshot técnico."
-          : operationalStatus === "preliminary" ? "El despiece es preliminar y requiere revisión técnica."
+          : operationalStatus === "preliminary" ? partialGlass ? "Despiece parcial: faltan junquillo compatible y medidas de vidrio." : "El despiece es preliminar y requiere revisión técnica."
             : null;
     profileCoverageItems.push({
       itemId: String(item.id), codigo: (item.codigo ?? "").trim() || "-",
@@ -294,6 +297,8 @@ export function buildFabricationQuoteSummary(
         : (item.fabricacionSnapshot?.recipeIdentity.herraje ?? "-"),
       statusLabel: identityConflict
         ? "Identidad incompatible · revisar snapshot histórico"
+        : partialGlass
+          ? "Despiece parcial"
         : snapshot.source === "manual"
         ? "Ajustada para esta cotización"
         : geometryOnly
