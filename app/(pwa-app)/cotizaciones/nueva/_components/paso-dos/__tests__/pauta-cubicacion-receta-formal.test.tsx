@@ -97,7 +97,7 @@ describe("PautaCubicacionPanel con recetas persistidas", () => {
       nombre: "Ventana proyectante", ancho: "1200", alto: "1000", cantidad: "1",
       lineTemplateId: "210", catalogLineKey: "ventora:l42", tipo: "Ventana proyectante",
       sistema: "Proyectante", fabricacionTipologia: "proyectante",
-      fabricacionHojas: 1, fabricacionVariante: "normal",
+      fabricacionHojas: 1, fabricacionVariante: "normal", vidrio: "Monolítico 5 mm",
     };
     const item = buildItemFromForm(form, [], "item-l42", {
       lineTemplates: [template], fabricationRecipes: [], organizationId: 3,
@@ -115,6 +115,8 @@ describe("PautaCubicacionPanel con recetas persistidas", () => {
     );
     await waitFor(() => expect(onFormalSnapshot).toHaveBeenCalledWith(expect.objectContaining({
       recipeId: constructor.formal?.recipeId, selectedVariant: "normal", pauta: constructor.formal?.pauta,
+      result: expect.objectContaining({ accesorios: constructor.formal?.result.accesorios }),
+      glassSelection: expect.objectContaining({ displayName: "Monolítico 5 mm" }),
     })));
     const frozen = { ...constructor.formal!, recipeId: "historica" };
     onFormalSnapshot.mockClear();

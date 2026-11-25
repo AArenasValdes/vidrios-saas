@@ -114,6 +114,7 @@ export type PautaCubicacionFormSlice = {
   tipo?: string;
   sistema?: string;
   vidrio?: string;
+  vidrioLineTemplateId?: string;
   glassTechnicalSpec?: GlassTechnicalSpec | null;
   catalogTerminacion?: string;
   /** Variante/herraje elegido cuando hay varias recetas activas compatibles. */
@@ -870,6 +871,9 @@ export function PautaCubicacionPanel({
 
     const built = construirSnapshotFabricacionCotizacion({
       recipe: selectedPersistedRecipe,
+      glassSelection: { productId: componentForm.vidrioLineTemplateId || null, displayName: componentForm.vidrio || null,
+        technicalSpec: componentForm.glassTechnicalSpec ?? null },
+      storeGlassSelection: !componentForm.fabricacionSnapshot || Boolean(componentForm.fabricacionSnapshot.glassSelection),
       supplierFamilyKey:
         typeof selectedTemplate?.catalogMetadata?.familyKey === "string"
           ? selectedTemplate.catalogMetadata.familyKey
@@ -897,6 +901,10 @@ export function PautaCubicacionPanel({
       },
     };
   }, [
+    componentForm.vidrio,
+    componentForm.vidrioLineTemplateId,
+    componentForm.glassTechnicalSpec,
+    componentForm.fabricacionSnapshot,
     explicitTipologia,
     formalResolution?.estado,
     heightMm,
@@ -1521,6 +1529,9 @@ export function PautaCubicacionPanel({
 
     const snapshot = construirSnapshotFabricacionCotizacion({
       recipe,
+      glassSelection: { productId: componentForm.vidrioLineTemplateId || null, displayName: componentForm.vidrio || null,
+        technicalSpec: componentForm.glassTechnicalSpec ?? null },
+      storeGlassSelection: true,
       supplierFamilyKey:
         typeof selectedTemplate?.catalogMetadata?.familyKey === "string"
           ? selectedTemplate.catalogMetadata.familyKey

@@ -2299,6 +2299,8 @@ export function PasoDosAgregarGrupoSheet({
                       tipo: draft.subtipo,
                       sistema: draft.sistema,
                       vidrio: draft.vidrio,
+                      vidrioLineTemplateId: draft.vidrioLineTemplateId,
+                      glassTechnicalSpec: draft.glassTechnicalSpec,
                       fabricationRecipeId: draft.fabricationRecipeId,
                       supplierProviderKey: draft.supplierProviderKey,
                       fabricacionTipologia: draft.fabricacionTipologia,

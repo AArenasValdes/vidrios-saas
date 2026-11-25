@@ -1192,6 +1192,9 @@ function NuevaCotizacionProductiva() {
           vidrio: String(value),
           vidrioLineTemplateId: "",
           glassTechnicalSpec: null,
+          ...(cur.vidrio !== String(value) || cur.vidrioLineTemplateId || cur.glassTechnicalSpec
+            ? { fabricacionSnapshot: null, cubicationSnapshot: null }
+            : {}),
         } as ComponentFormState;
       }
 

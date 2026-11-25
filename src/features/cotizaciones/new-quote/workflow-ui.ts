@@ -2547,25 +2547,26 @@ export function applyGlassSelectionToComponentForm(
   const template = productId
     ? lineTemplates.find((candidate) => String(candidate.id) === productId && candidate.categoria === "vidrio")
     : undefined;
-  if (!template || !template.nombre) {
-    return {
+  const next: ComponentFormState = !template || !template.nombre
+    ? {
       ...form,
       vidrio: selection.displayName,
       vidrioLineTemplateId: "",
       glassTechnicalSpec: null,
-    };
-  }
-  const resolvedId = String(template.id);
-  return {
+    }
+    : {
     ...form,
     vidrio: template.nombre,
-    vidrioLineTemplateId: resolvedId,
+    vidrioLineTemplateId: String(template.id),
     glassTechnicalSpec: resolveGlassTechnicalSpecForProduct({
-      productId: resolvedId,
+      productId: String(template.id),
       catalogMetadata: template.catalogMetadata,
-      existing: form.glassTechnicalSpec?.productId === resolvedId ? form.glassTechnicalSpec : null,
+      existing: form.glassTechnicalSpec?.productId === String(template.id) ? form.glassTechnicalSpec : null,
     }),
   };
+  const changed = form.vidrio !== next.vidrio || form.vidrioLineTemplateId !== next.vidrioLineTemplateId ||
+    JSON.stringify(form.glassTechnicalSpec ?? null) !== JSON.stringify(next.glassTechnicalSpec ?? null);
+  return changed ? { ...next, fabricacionSnapshot: null, cubicationSnapshot: null } : next;
 }
 
 export function filterGlassOptions(query: string) {

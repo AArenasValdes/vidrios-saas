@@ -95,6 +95,66 @@ function l25RecipeRecord(): FabricationRecipeRecord {
 }
 
 describe("despiece de líneas universales con precio Arquetipo", () => {
+  it("congela la selección de vidrio por nombre en una cotización nueva", () => {
+    const item = { ...itemFor(pricedLines.find((line) => line.line === "L42")!), vidrio: "Monolítico 5 mm" };
+    const resolved = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 });
+    expect(resolved.formal?.glassSelection).toMatchObject({ displayName: "Monolítico 5 mm", productId: null });
+  });
+  it("no muestra a la vez burletes incompatibles al seleccionar vidrio de 5 mm", () => {
+    const item = { ...itemFor(pricedLines.find((line) => line.line === "L42")!), vidrio: "Monolítico 5 mm" };
+    const resolved = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 });
+    const names = resolved.formal?.result.accesorios.map((accessory) => accessory.nombre) ?? [];
+    expect(names).not.toContain("Burlete cuña 4 mm");
+    expect(names).toContain("Burlete cuña 5 mm");
+  });
+  it.each([
+    ["Monolítico 4 mm", "Burlete cuña 4 mm", "Burlete cuña 5 mm"],
+    ["Monolítico 5 mm", "Burlete cuña 5 mm", "Burlete cuña 4 mm"],
+  ])("selecciona solo el burlete compatible para %s", (glass, selected, other) => {
+    const item = { ...itemFor(pricedLines.find((line) => line.line === "L42")!), vidrio: glass };
+    const result = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 });
+    const names = result.formal?.result.accesorios.map((entry) => entry.nombre) ?? [];
+    expect(names).toContain(selected);
+    expect(names).not.toContain(other);
+    expect(result.formal?.advertencias.some((entry) => entry.codigo === "ACCESORIO_VIDRIO_PENDIENTE")).toBe(false);
+  });
+  it.each(["Monolítico 6 mm", "Termopanel 4+12+4"])("deja pendiente el burlete para %s", (glass) => {
+    const item = { ...itemFor(pricedLines.find((line) => line.line === "L42")!), vidrio: glass };
+    const result = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 });
+    const names = result.formal?.result.accesorios.map((entry) => entry.nombre) ?? [];
+    expect(names).not.toContain("Burlete cuña 4 mm");
+    expect(names).not.toContain("Burlete cuña 5 mm");
+    expect(result.formal?.advertencias.some((entry) => entry.codigo === "ACCESORIO_VIDRIO_PENDIENTE")).toBe(true);
+  });
+  it("mantiene cortes de perfiles al cambiar monolítico 4 a 5 mm", () => {
+    const item = itemFor(pricedLines.find((line) => line.line === "L42")!);
+    const first = resolveFabricacionDespieceForQuoteItem({ item: { ...item, vidrio: "Monolítico 4 mm" }, recipes: [], organizationId: 1 });
+    const second = resolveFabricacionDespieceForQuoteItem({ item: { ...item, vidrio: "Monolítico 5 mm" }, recipes: [], organizationId: 1 });
+    const cuts = (result: typeof first) => result.formal?.pauta.map(({ codigoPerfil, medidaMm, cantidadPiezas }) =>
+      ({ codigoPerfil, medidaMm, cantidadPiezas }));
+    expect(cuts(first)).toEqual(cuts(second));
+  });
+  it("aplica la compatibilidad a la receta L42 guardada antes de existir el nuevo campo", () => {
+    const line = pricedLines.find((entry) => entry.line === "L42")!;
+    const base = resolveUniversalPricedLineFallback({
+      catalogKey: line.catalogKey, lineTemplateId: 101, organizationId: 1,
+      lineName: "L42", variant: "normal", leavesCount: 1, recipes: [],
+    })!;
+    const legacy = { ...base, id: "receta-taller", scope: "organization" as const,
+      sourceType: "manual" as const, sourceReference: "blank-start",
+      definition: { ...base.definition, accesorios: base.definition.accesorios.map((entry) => {
+        const original = { ...entry };
+        delete original.compatibilidadVidrio;
+        return original;
+      }) },
+    };
+    const item = { ...itemFor(line), vidrio: "Monolítico 5 mm" };
+    const result = resolveFabricacionDespieceForQuoteItem({ item, recipes: [legacy], organizationId: 1 });
+    expect(result.formal?.recipeId).toBe("receta-taller");
+    expect(result.formal?.result.accesorios.map((entry) => entry.nombre)).toContain("Burlete cuña 5 mm");
+    expect(result.formal?.result.accesorios.map((entry) => entry.nombre)).not.toContain("Burlete cuña 4 mm");
+    expect(legacy.definition.accesorios.every((entry) => !("compatibilidadVidrio" in entry))).toBe(true);
+  });
   it.each(["ventora:l42", "ventora:arquetipo-l42-proyectante"])(
     "normaliza variante estándar de AL-42 (%s)",
     (catalogKey) => {

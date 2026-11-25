@@ -1,4 +1,5 @@
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
+import { normalizeGlassTechnicalSpec } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
 import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
 import { enriquecerCodigosPerfilRecetaFabricacion } from "@/features/fabricacion/services/fabricacion-receta-codigos.service";
 import type {
@@ -255,6 +256,8 @@ export function construirSnapshotFabricacionCotizacion(input: {
   organizationCutSettings?: FabricacionParametrosCorteConfirmados | null;
   jobCutSettings?: FabricacionParametrosCorteConfirmados | null;
   calculatedAt?: string;
+  glassSelection?: FabricacionCotizacionSnapshot["glassSelection"];
+  storeGlassSelection?: boolean;
 }): FabricacionCotizacionSnapshot {
   const definition = enriquecerCodigosPerfilRecetaFabricacion({
     receta: cloneReceta(input.recipe.definition),
@@ -262,7 +265,33 @@ export function construirSnapshotFabricacionCotizacion(input: {
     sourceReference: input.recipe.sourceReference,
     lineName: input.recipe.lineName,
   });
-  const result = calcularCubicacionYPauta(definition, input.entrada);
+  // Las recetas Normal guardadas antes de esta condición conservan las dos
+  // alternativas explícitas. Solo se anotan cuando ambas identidades coinciden.
+  if (definition.identidad.codigo === "AL-42-PROY-NORMAL-V1") {
+    const four = definition.accesorios.find((entry) => entry.codigo === "C-424" && entry.nombre === "Burlete cuña 4 mm");
+    const five = definition.accesorios.find((entry) => entry.codigo === "C-425" && entry.nombre === "Burlete cuña 5 mm");
+    if (four && five && !four.compatibilidadVidrio && !five.compatibilidadVidrio) {
+      four.compatibilidadVidrio = { grupo: "burlete-cuna", categoria: "monolitico", espesorMm: 4 };
+      five.compatibilidadVidrio = { grupo: "burlete-cuna", categoria: "monolitico", espesorMm: 5 };
+    }
+    const base = definition.accesorios.find((entry) => entry.codigo === "C-425" && entry.nombre === "Base 42" && entry.observaciones?.includes("Confirmar aplicación según vidrio."));
+    if (base && base.aplicacionPendiente === undefined) base.aplicacionPendiente = true;
+  }
+  const specification = normalizeGlassTechnicalSpec(input.glassSelection?.technicalSpec);
+  const name = input.glassSelection?.displayName?.trim() ?? "";
+  const dvh = /\b(?:dvh|termopanel|doble\s+vidriado)\b/i.test(name);
+  const monolithic = /\b(?:monol[ií]tico|float)\b/i.test(name);
+  const thickness = name.match(/\b(\d+(?:[.,]\d+)?)\s*mm\b/i);
+  const namedThickness = thickness ? Number(thickness[1]?.replace(",", ".")) : null;
+  const nameConflicts = specification && ((dvh && specification.category !== "dvh") ||
+    (monolithic && specification.category !== "monolitico") ||
+    (!dvh && namedThickness != null && specification.thicknessMm != null && namedThickness !== specification.thicknessMm));
+  const selectedGlass = specification
+    ? { categoria: specification.hasConflict || nameConflicts ? null : specification.category,
+        espesorMm: specification.hasConflict || nameConflicts ? null : specification.thicknessMm }
+    : { categoria: dvh ? "dvh" : monolithic ? "monolitico" : null,
+        espesorMm: dvh ? null : namedThickness };
+  const result = calcularCubicacionYPauta(definition, input.entrada, selectedGlass);
   const parametrosCorte = resolveFabricacionParametrosCorte({
     recipeConfiguration: definition.configuracionCorte,
     organizationSettings: input.organizationCutSettings,
@@ -283,6 +312,7 @@ export function construirSnapshotFabricacionCotizacion(input: {
     recipeStatus: input.recipe.status,
     recipeScope: input.recipe.scope,
     lineTemplateId: input.recipe.lineTemplateId,
+    ...(input.storeGlassSelection && input.glassSelection ? { glassSelection: input.glassSelection } : {}),
     ...(input.supplierFamilyKey ? { supplierFamilyKey: input.supplierFamilyKey } : {}),
     recipeIdentity: definition.identidad,
     input: {

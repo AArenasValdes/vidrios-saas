@@ -253,7 +253,8 @@ function validarEntradaCalculo(
 
 export function calcularCubicacionYPauta(
   receta: FabricacionReceta,
-  entrada: FabricacionEntradaCalculo
+  entrada: FabricacionEntradaCalculo,
+  vidrioSeleccionado?: { categoria: string | null; espesorMm: number | null } | null
 ): FabricacionResultadoCubicacion {
   const validacionReceta = validarRecetaFabricacion(receta);
   const entradaParse = validarEntradaCalculo(entrada);
@@ -365,8 +366,38 @@ export function calcularCubicacionYPauta(
     ];
   });
 
+  const gruposVidrio = new Map<string, FabricacionAccesorio[]>();
+  for (const accesorio of receta.accesorios) {
+    if (!accesorio.compatibilidadVidrio || !accesorioCumpleCondicion(accesorio, entradaNormalizada)) continue;
+    const grupo = accesorio.compatibilidadVidrio.grupo;
+    gruposVidrio.set(grupo, [...(gruposVidrio.get(grupo) ?? []), accesorio]);
+  }
+  for (const [grupo, alternativas] of gruposVidrio) {
+    const compatibles = alternativas.filter(({ compatibilidadVidrio }) =>
+      compatibilidadVidrio?.categoria === vidrioSeleccionado?.categoria &&
+      compatibilidadVidrio?.espesorMm === vidrioSeleccionado?.espesorMm);
+    if (compatibles.length !== 1) {
+      advertencias.push({
+        codigo: "ACCESORIO_VIDRIO_PENDIENTE", nivel: "advertencia",
+        mensaje: `Accesorio pendiente para el vidrio seleccionado: ${grupo}.`,
+      });
+    }
+  }
   const accesorios = receta.accesorios.flatMap((accesorio) => {
     if (!accesorioCumpleCondicion(accesorio, entradaNormalizada)) return [];
+    if (accesorio.aplicacionPendiente) {
+      advertencias.push({ codigo: "ACCESORIO_APLICACION_PENDIENTE", nivel: "advertencia",
+        mensaje: `Accesorio pendiente de aplicación: ${accesorio.nombre}.`, componenteId: accesorio.id });
+      return [];
+    }
+    const compatibility = accesorio.compatibilidadVidrio;
+    if (compatibility) {
+      const group = gruposVidrio.get(compatibility.grupo) ?? [];
+      const matches = group.filter((entry) =>
+        entry.compatibilidadVidrio?.categoria === vidrioSeleccionado?.categoria &&
+        entry.compatibilidadVidrio?.espesorMm === vidrioSeleccionado?.espesorMm);
+      if (matches.length !== 1 || matches[0]?.id !== accesorio.id) return [];
+    }
     if (accesorio.formulaCantidad) {
       if (accesorio.formulaCantidad === "perimetro_perfiles_hoja_m") {
         const totalPerimetroMm = perfiles
