@@ -106,7 +106,7 @@ describe("resolveManualGlassPaneSlots", () => {
   it("cuenta módulos explícitos aunque cada módulo tenga palillos decorativos", () => {
     let visual = createDefaultGuidedVisualConfig({ widthMm: 1800, heightMm: 1400 });
     visual = splitModule(visual, listLeafModules(visual.root)[0]!.id, "vertical", 0.5);
-    for (const module of listLeafModules(visual.root)) visual = applyPalilloPresetToModule(visual, module.id, "v1");
+    for (const leafModule of listLeafModules(visual.root)) visual = applyPalilloPresetToModule(visual, leafModule.id, "v1");
 
     const result = resolveManualGlassPaneSlots({ componentType: "Paño fijo", guidedVisualConfig: visual });
 

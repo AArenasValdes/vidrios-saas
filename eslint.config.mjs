@@ -22,8 +22,18 @@ const eslintConfig = defineConfig([
     "supabase/docs/database.types.ts",
   ]),
   {
+    // CommonJS utiliza require por definición; la regla sigue activa en los demás archivos.
+    files: ["**/*.cjs"],
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
+  {
     // Estas reglas del React Compiler siguen visibles, pero la deuda histórica
     // no debe bloquear el gate de lint mientras se corrige por feature.
+    // Next registra este plugin solo para sus patrones de archivos; el override
+    // también alcanza .cjs y debe registrar la misma instancia para ellos.
+    plugins: {
+      "react-hooks": nextVitals.find((config) => config.plugins?.["react-hooks"]).plugins["react-hooks"],
+    },
     rules: {
       "react-hooks/immutability": "warn",
       "react-hooks/preserve-manual-memoization": "warn",
