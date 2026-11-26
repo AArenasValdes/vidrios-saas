@@ -150,6 +150,13 @@ export function buildWorkMaterialsWorkbook(XLSX: typeof XLSXModule, input: Build
       [15, 40, 24, 16, 20, 24, 22, 22],
       { 6: "#,##0.0000 \"m²\"" }
     ), "Vidrios");
+    const glazingPending = input.workOrder?.documentStatus.pendingComponents.filter((component) => /burlete pendiente|faltan junquillo compatible/i.test(component.reason)) ?? [];
+    if (glazingPending.length) {
+      XLSX.utils.book_append_sheet(workbook, buildSheet(XLSX, input, "Componentes pendientes",
+        ["Partida", "Componente", "Motivo pendiente"],
+        glazingPending.map((component) => [component.codigo, component.nombre, component.reason]),
+        [18, 42, 76], {}), "Componentes pendientes");
+    }
     const profilePriceReferences = input.document.profilePriceReferences ?? [];
     if (input.includeSupplierPriceReferences !== false && (profilePriceReferences.length || input.document.profilePriceReferencesStatus === "loaded" || input.document.profilePriceReferencesStatus === "loading" || input.document.profilePriceReferencesStatus === "unavailable")) {
       XLSX.utils.book_append_sheet(workbook, buildSheet(

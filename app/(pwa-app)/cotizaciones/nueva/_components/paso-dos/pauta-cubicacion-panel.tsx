@@ -1912,7 +1912,7 @@ export function PautaCubicacionPanel({
           Proveedor pendiente: esta línea todavía no tiene familia de compra configurada.
         </div>
       ) : null}
-      {partialGlass ? <p role="status">Faltan junquillo compatible y medidas de vidrio para la composición seleccionada.</p> : null}
+      {partialGlass ? <p role="status">{formalSnapshot?.advertencias.find((warning) => warning.codigo === "COMPOSICION_VIDRIO_PENDIENTE")?.mensaje}</p> : null}
 
       {s75GeometryControl}
       {s75LeafWidthControl}

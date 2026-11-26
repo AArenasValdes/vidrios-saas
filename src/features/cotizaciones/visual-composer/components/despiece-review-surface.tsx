@@ -1096,7 +1096,7 @@ export function DespieceReviewSurface({
                     </p>
                   ) : null}
                   {pieceUiStatus === "despiece_parcial" ? (
-                    <p className={styles.compactWarning} role="status">Faltan junquillo compatible y medidas de vidrio para la composición seleccionada.</p>
+                    <p className={styles.compactWarning} role="status">{activeResolution?.formal?.advertencias.find((warning) => warning.codigo === "COMPOSICION_VIDRIO_PENDIENTE")?.mensaje}</p>
                   ) : null}
                   {geometryOnly ? (
                     <p className={styles.compactWarning} role="status" data-testid="veratec-geometry-only-warning">

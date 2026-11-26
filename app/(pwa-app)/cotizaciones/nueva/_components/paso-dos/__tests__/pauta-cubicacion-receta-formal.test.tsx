@@ -108,7 +108,27 @@ describe("PautaCubicacionPanel con recetas persistidas", () => {
       result: expect.objectContaining({ vidrios: [] }),
     })));
     expect(screen.getByText("Despiece parcial")).toBeInTheDocument();
-    expect(screen.getByText(/Faltan junquillo compatible y medidas de vidrio/)).toBeInTheDocument();
+    expect(screen.getByText(/faltan junquillo compatible y medidas de vidrio/i)).toBeInTheDocument();
+  });
+
+  it("Guiada y Constructor muestran L42 6 mm parcial con los mismos accesorios", async () => {
+    const template = { ...selectedTemplate, id: 210, nombre: "Serie 42", catalogKey: "ventora:l42" } as CotizacionLineTemplate;
+    const form = { ...createEmptyComponentForm([], "", "precio_directo"), codigo: "V1",
+      nombre: "Ventana proyectante", ancho: "1200", alto: "1200", cantidad: "1",
+      lineTemplateId: "210", catalogLineKey: "ventora:l42", tipo: "Ventana proyectante",
+      sistema: "Proyectante", fabricacionTipologia: "proyectante", fabricacionHojas: 1,
+      fabricacionVariante: "normal", vidrio: "Monolítico 6 mm" };
+    const item = buildItemFromForm(form, [], "item-l42", { lineTemplates: [template], fabricationRecipes: [], organizationId: 3 });
+    const constructor = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 3, lineTemplateId: 210, lineCatalogKey: "ventora:l42" });
+    mockUseFabricationRecipes.mockReturnValue({ organizationId: 3, recipes: [], isLoading: false });
+    const onFormalSnapshot = jest.fn();
+    render(<PautaCubicacionPanel componentForm={form} selectedTemplate={template}
+      onCubicationSnapshotChange={jest.fn()} onFabricacionSnapshotChange={onFormalSnapshot} />);
+    await waitFor(() => expect(onFormalSnapshot).toHaveBeenCalledWith(expect.objectContaining({
+      result: expect.objectContaining({ accesorios: constructor.formal?.result.accesorios }),
+    })));
+    expect(screen.getByText(/Burlete pendiente/i)).toBeInTheDocument();
+    expect(screen.getByText("Despiece parcial")).toBeInTheDocument();
   });
 
   it("iguala la pauta L42 Normal de Constructor cuando no hay receta persistida", async () => {

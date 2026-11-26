@@ -242,6 +242,20 @@ export function createWorkMaterialsPdf(
     y += height;
   }
 
+  for (const component of (workOrder?.documentStatus.pendingComponents ?? []).filter((entry) => /burlete pendiente|faltan junquillo compatible/i.test(entry.reason))) {
+    const lines = pdf.splitTextToSize(`${component.codigo}: ${component.reason}`, PAGE_WIDTH - MARGIN * 2) as string[];
+    const height = lines.length * 4 + 3;
+    if (y + height > CONTENT_BOTTOM) {
+      pdf.addPage("a4", "portrait");
+      y = drawFabricationPdfContinuationHeader(pdf, "Lista de materiales", metadata.quoteCode, logoDataUrl);
+    }
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.setTextColor(...COLORS.muted);
+    pdf.text(lines, MARGIN, y + 4, { lineHeightFactor: 1.2 });
+    y += height;
+  }
+
   if (document.pricing) {
     pdf.setFillColor(245, 248, 252);
     pdf.setDrawColor(...COLORS.rule);

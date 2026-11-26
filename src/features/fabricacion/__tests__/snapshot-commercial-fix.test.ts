@@ -209,15 +209,25 @@ describe("persistencia simulada y documentos internos de líneas universales", (
         expect(unknown?.items[0]?.fabricacionSnapshot?.advertencias.some((entry) => entry.codigo === "ACCESORIO_VIDRIO_PENDIENTE")).toBe(true);
         const unknownSummary = buildFabricationQuoteSummary(unknown!.items, { trabajoSnapshot: unknown!.fabricacionTrabajoSnapshot! });
         const unknownMaterials = buildWorkMaterialsDocument({ summary: unknownSummary, items: unknown!.items });
+        expect(unknownSummary.items[0]?.statusLabel).toBe("Despiece parcial");
+        const unknownOrder = buildFabricationWorkOrder({ summary: unknownSummary, materials: unknownMaterials, quoteItems: unknown!.items });
+        expect(unknownOrder.documentStatus.state).toBe("partial");
+        expect(unknownOrder.pending.some((entry) => /burlete pendiente/i.test(entry.action))).toBe(true);
+        expect(unknownOrder.preliminaryCutGroups.some((entry) => entry.technicalCode === "4229")).toBe(false);
         expect(unknownMaterials.accessories.map((entry) => entry.description)).not.toContain("Burlete cuña 4 mm");
         expect(unknownMaterials.accessories.map((entry) => entry.description)).not.toContain("Burlete cuña 5 mm");
-        const unknownWorkbook = buildWorkMaterialsWorkbook(XLSX, { ...metadata, kind: "materials", document: unknownMaterials });
+        const unknownWorkbook = buildWorkMaterialsWorkbook(XLSX, { ...metadata, kind: "materials", document: unknownMaterials, workOrder: unknownOrder });
         expect(JSON.stringify(unknownWorkbook.Sheets)).not.toContain("Burlete cuña");
         expect(JSON.stringify(unknownWorkbook.Sheets)).not.toContain('"v":"C-425"');
         const unknownPdf = createWorkMaterialsPdf(unknownMaterials, { companyName: metadata.companyName, quoteCode: metadata.quoteCode,
-          workName: metadata.work, issueDate: metadata.issueDate });
+          workName: metadata.work, issueDate: metadata.issueDate }, null, unknownOrder);
         expect(Buffer.from(unknownPdf.output("arraybuffer")).toString("latin1")).not.toContain("Burlete cu");
         expect(Buffer.from(unknownPdf.output("arraybuffer")).toString("latin1")).not.toContain("Base 42");
+        const serializedWorkbook = XLSX.write(unknownWorkbook, { type: "buffer", bookType: "xlsx" });
+        const reopenedWorkbook = XLSX.read(serializedWorkbook, { type: "buffer" });
+        expect(JSON.stringify(reopenedWorkbook.Sheets)).toMatch(/Burlete pendiente/i);
+        expect(Buffer.from(unknownPdf.output("arraybuffer")).toString("latin1")).toContain("DOCUMENTO PARCIAL");
+        expect(Buffer.from(unknownPdf.output("arraybuffer")).toString("latin1")).toContain("Burlete pendiente");
         const dvhDraft = mapRecordToDraft(unknown!);
         dvhDraft.items[0]!.vidrio = "DVH 4+12+4";
         await service.saveWorkflow({ organizationId: 3, existingId: unknown!.id, existingCode: unknown!.codigo,
@@ -240,10 +250,12 @@ describe("persistencia simulada y documentos internos de líneas universales", (
         const dvhWorkbook = buildWorkMaterialsWorkbook(XLSX, { ...metadata, kind: "materials", document: dvhMaterials, workOrder: dvhOrder });
         expect(JSON.stringify(dvhWorkbook.Sheets)).not.toContain('"v":"4229"');
         expect(JSON.stringify(dvhWorkbook.Sheets)).toContain("DOCUMENTO PARCIAL");
+        expect(JSON.stringify(XLSX.read(XLSX.write(dvhWorkbook, { type: "buffer", bookType: "xlsx" }), { type: "buffer" }).Sheets)).toMatch(/faltan junquillo compatible/i);
         const dvhPdf = createWorkMaterialsPdf(dvhMaterials, { companyName: metadata.companyName, quoteCode: metadata.quoteCode,
           workName: metadata.work, issueDate: metadata.issueDate }, null, dvhOrder);
         expect(Buffer.from(dvhPdf.output("arraybuffer")).toString("latin1")).not.toContain("4229");
         expect(Buffer.from(dvhPdf.output("arraybuffer")).toString("latin1")).toContain("DOCUMENTO PARCIAL");
+        expect(Buffer.from(dvhPdf.output("arraybuffer")).toString("latin1")).toMatch(/faltan junquillo compatible/i);
         const dvhAgain = await service.getWorkflowById(saved.id, 3, { ensureApprovalToken: false });
         expect(dvhAgain?.items[0]?.fabricacionSnapshot).toEqual(dvhSnapshot);
         glassReopened = dvh;

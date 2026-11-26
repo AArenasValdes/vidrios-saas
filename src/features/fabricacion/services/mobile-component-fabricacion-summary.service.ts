@@ -207,7 +207,7 @@ export function resolveMobileComponentFabricacionSummary(
   if (showReviewUi && (item.fabricacionSnapshot ?? liveResolution?.formal)?.advertencias.some((warning) => warning.codigo === "COMPOSICION_VIDRIO_PENDIENTE")) {
     return { status: "preliminary", statusLabel: "Despiece parcial", showReviewUi, contextualLineLabel, technicalBrief,
       canOpenPauta: true, canOpenDespiece: true, configRows,
-      materialRows: [{ label: "Vidrio y junquillo", value: "Pendientes" }] };
+      materialRows: [{ label: "Pendiente", value: (item.fabricacionSnapshot ?? liveResolution?.formal)?.advertencias.find((warning) => warning.codigo === "COMPOSICION_VIDRIO_PENDIENTE")?.mensaje ?? "Revisar composición" }] };
   }
 
   if (showReviewUi && liveResolution?.geometryOnly) {

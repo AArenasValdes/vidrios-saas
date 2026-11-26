@@ -317,6 +317,12 @@ export function construirSnapshotFabricacionCotizacion(input: {
       });
     } else if (selectedGlass.categoria === "monolitico" && name) {
       result.vidrios = result.vidrios.map((vidrio) => vidrio.nombre === "Monolítico 4 mm" ? { ...vidrio, nombre: name } : vidrio);
+      if (selectedGlass.espesorMm === 6) {
+        result.perfiles = result.perfiles.filter((perfil) => perfil.codigoPerfil !== "4229");
+        result.totalLinealMm = result.perfiles.reduce((sum, perfil) => sum + perfil.totalLinealMm, 0);
+        result.advertencias.push({ codigo: "COMPOSICION_VIDRIO_PENDIENTE", nivel: "advertencia",
+          mensaje: "Burlete pendiente y junquillo 4229 sin compatibilidad acreditada para vidrio de 6 mm." });
+      }
     }
   }
   const parametrosCorte = resolveFabricacionParametrosCorte({

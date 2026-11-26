@@ -118,6 +118,9 @@ describe("despiece de líneas universales con precio Arquetipo", () => {
     const item = { ...itemFor(pricedLines.find((line) => line.line === "L42")!), vidrio: "Monolítico 6 mm" };
     const snapshot = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 }).formal!;
     expect(snapshot.result.vidrios[0]?.nombre).toBe("Monolítico 6 mm");
+    expect(snapshot.pauta.some((perfil) => perfil.codigoPerfil === "4229")).toBe(false);
+    expect(snapshot.pauta.some((perfil) => perfil.codigoPerfil === "4201")).toBe(true);
+    expect(snapshot.advertencias.some((warning) => /burlete pendiente/i.test(warning.mensaje))).toBe(true);
   });
   it("congela la selección de vidrio por nombre en una cotización nueva", () => {
     const item = { ...itemFor(pricedLines.find((line) => line.line === "L42")!), vidrio: "Monolítico 5 mm" };

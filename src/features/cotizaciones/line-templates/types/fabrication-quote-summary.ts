@@ -242,9 +242,10 @@ export function buildFabricationQuoteSummary(
       /ventana|puerta|pano fijo|vitrina|shower|mampara|cierre/.test(normalizedType)
     );
     const hasCuts = Boolean(snapshot?.cuts.length);
-    const partialGlass = (item.fabricacionSnapshot ?? liveResolution?.formal)?.advertencias.some(
+    const partialGlassWarning = (item.fabricacionSnapshot ?? liveResolution?.formal)?.advertencias.find(
       (warning) => warning.codigo === "COMPOSICION_VIDRIO_PENDIENTE"
-    ) ?? false;
+    );
+    const partialGlass = Boolean(partialGlassWarning);
     const sourceStatus = item.fabricacionSnapshot?.recipeStatus ?? meta.cubicationSnapshot?.status;
     const operationalStatus: FabricationProfileCoverageItem["state"] = !requiresProfiles
       ? "not_required"
@@ -260,7 +261,7 @@ export function buildFabricationQuoteSummary(
     const reason = operationalStatus === "missing_snapshot" ? "No existe snapshot técnico con cortes guardados."
       : operationalStatus === "unvalidated" ? "La receta guardada no está validada para pauta operativa."
         : operationalStatus === "incompatible" ? l25CompositionIssue ?? "La identidad comercial contradice la tipología del snapshot técnico."
-          : operationalStatus === "preliminary" ? partialGlass ? "Despiece parcial: faltan junquillo compatible y medidas de vidrio." : "El despiece es preliminar y requiere revisión técnica."
+          : operationalStatus === "preliminary" ? partialGlassWarning?.mensaje ?? "El despiece es preliminar y requiere revisión técnica."
             : null;
     profileCoverageItems.push({
       itemId: String(item.id), codigo: (item.codigo ?? "").trim() || "-",
