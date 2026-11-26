@@ -373,7 +373,9 @@ describe("Certificación de las 4 configuraciones prioritarias", () => {
     expect(despiece.estado).toBe("calculado");
     expect(despiece.formal?.recipeStatus).toBe("validated");
     expect(despiece.formal?.pauta.length).toBeGreaterThan(0);
-    expect(despiece.formal?.vidrios.length).toBeGreaterThan(0);
+    // La receta universal aún usa medidas nominales sin descuento acreditado.
+    expect(despiece.formal?.vidrios).toEqual([]);
+    expect(despiece.formal?.advertencias.some((warning) => warning.codigo === "COMPOSICION_VIDRIO_PENDIENTE")).toBe(true);
 
     const workSnapshot = construirFabricacionTrabajoSnapshot({
       items: [

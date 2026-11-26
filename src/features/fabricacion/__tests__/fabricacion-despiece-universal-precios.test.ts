@@ -95,6 +95,42 @@ function l25RecipeRecord(): FabricationRecipeRecord {
 }
 
 describe("despiece de líneas universales con precio Arquetipo", () => {
+  it.each(["L20", "L5000"] as const)("%s no confirma accesorios genéricos sin cantidad acreditada", (lineName) => {
+    const item = itemFor(pricedLines.find((line) => line.line === lineName)!);
+    const snapshot = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 }).formal!;
+    expect(snapshot.result.accesorios).toEqual([]);
+    expect(snapshot.advertencias.some((warning) => /accesorios pendientes/i.test(warning.mensaje))).toBe(true);
+  });
+  it.each([
+    ["L20", ["2001", "2002", "2009"]],
+    ["L5000", ["5003"]],
+  ] as const)("%s conserva únicamente perfiles estructurales identificables para DVH", (lineName, expectedCodes) => {
+    const line = pricedLines.find((entry) => entry.line === lineName)!;
+    const item = { ...itemFor(line), vidrio: "DVH 4+12+4" };
+    const snapshot = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 }).formal!;
+    expect(snapshot.pauta.map((profile) => profile.codigoPerfil).sort()).toEqual([...expectedCodes].sort());
+    expect(snapshot.result.vidrios).toEqual([]);
+    expect(snapshot.result.accesorios).toEqual([]);
+  });
+  it.each(["L20", "L5000"] as const)("%s deja pendientes medidas de vidrio genéricas sin reconciliar con catálogo", (lineName) => {
+    const line = pricedLines.find((entry) => entry.line === lineName)!;
+    const item = { ...itemFor(line), ancho: 1400, alto: 1200, vidrio: "Monolítico 4 mm" };
+    const snapshot = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 }).formal!;
+    expect(snapshot.result.vidrios).toEqual([]);
+    expect(snapshot.advertencias.some((warning) => /vidrio.*pendiente/i.test(warning.mensaje))).toBe(true);
+  });
+  it.each(["L20", "L5000"] as const)("%s no presenta como completo DVH sin compatibilidad demostrada", (lineName) => {
+    const line = pricedLines.find((entry) => entry.line === lineName)!;
+    const item = { ...itemFor(line), vidrio: "DVH 4+12+4" };
+    const snapshot = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 }).formal!;
+    expect(snapshot.advertencias.some((warning) => warning.codigo === "COMPOSICION_VIDRIO_PENDIENTE")).toBe(true);
+  });
+  it.each(["L20", "L5000"] as const)("%s no presenta como completo monolítico 6 mm sin compatibilidad demostrada", (lineName) => {
+    const line = pricedLines.find((entry) => entry.line === lineName)!;
+    const item = { ...itemFor(line), vidrio: "Monolítico 6 mm" };
+    const snapshot = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 }).formal!;
+    expect(snapshot.advertencias.some((warning) => warning.codigo === "COMPOSICION_VIDRIO_PENDIENTE")).toBe(true);
+  });
   it("L42 DVH conserva solo perfiles estructurales y deja vidrio y junquillo pendientes", () => {
     const item = { ...itemFor(pricedLines.find((line) => line.line === "L42")!), alto: 1200, vidrio: "DVH 4+12+4" };
     const snapshot = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 }).formal!;

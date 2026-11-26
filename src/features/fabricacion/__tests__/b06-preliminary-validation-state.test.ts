@@ -8,6 +8,7 @@ import {
 } from "@/features/fabricacion/fixtures/serie-4800-corredera-recipe";
 import { buildFabricationQuoteSummary } from "@/features/cotizaciones/line-templates/types/fabrication-quote-summary";
 import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
 import { resolveUniversalPricedLineFallback } from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
 import { resolveMobileComponentFabricacionSummary } from "@/features/fabricacion/services/mobile-component-fabricacion-summary.service";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
@@ -662,6 +663,13 @@ describe("B-06 — estados preliminares reales vs validación de taller", () => 
       recipes: [],
       organizationId: 1,
     });
+    // Reconstituir el resultado anterior al guard de vidrio para representar
+    // un snapshot histórico; el cálculo nuevo debe permanecer parcial.
+    expect(l20Validated.formal?.advertencias.some((warning) => warning.codigo === "COMPOSICION_VIDRIO_PENDIENTE")).toBe(true);
+    const historicalResult = calcularCubicacionYPauta(l20Validated.recipe!.definition, l20Validated.formal!.input);
+    const historicalSnapshot = { ...l20Validated.formal!, result: historicalResult,
+      pauta: historicalResult.perfiles, vidrios: historicalResult.vidrios,
+      advertencias: historicalResult.advertencias, calculatedAt: "2026-01-01T00:00:00.000Z" };
     const frozenValidatedItem = buildWorkflowItem({
       id: "item-frozen-validated",
       catalogKey: "ventora:linea-historica",
@@ -670,14 +678,15 @@ describe("B-06 — estados preliminares reales vs validación de taller", () => 
       typology: "corredera",
       leaves: 2,
       modules: 2,
-      fabricacionSnapshot: l20Validated.formal,
+      fabricacionSnapshot: historicalSnapshot,
     });
     const rehydratedValidated = resolveFabricacionDespieceForQuoteItem({
       item: frozenValidatedItem,
       recipes: [],
       organizationId: 1,
     });
-    expect(rehydratedValidated.formal).toBe(l20Validated.formal);
+    expect(rehydratedValidated.formal).toBe(historicalSnapshot);
+    expect(rehydratedValidated.formal).toEqual(historicalSnapshot);
     expect(rehydratedValidated.formal?.recipeStatus).toBe("validated");
     expect(rehydratedValidated.barsAvailable).toBe(true);
     expect(

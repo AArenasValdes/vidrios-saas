@@ -1,4 +1,5 @@
 import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
 import { construirFabricacionTrabajoSnapshot } from "@/features/fabricacion/services/fabricacion-trabajo-snapshot.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
@@ -309,9 +310,20 @@ export function buildGuidedTechnicalCostSuggestion(input: {
     .reduce((sum, line) => sum + line.lineNet, 0);
   const accessoriesCostNet = accessoriesCostRaw > 0 ? Math.round(accessoriesCostRaw) : null;
 
-  const glassResolution: GlassSupplierCutResolution | null = input.glassCutPresentations?.length
+  const glassMeasurementStatus = hasUnconfirmedNominalGlassRules(input.recipe.definition);
+  const namedGlassThickness = input.vidrio.match(/(?:^|\D)(\d+(?:[.,]\d+)?)\s*mm\b/i);
+  const statedThickness = namedGlassThickness ? Number(namedGlassThickness[1]?.replace(",", ".")) : null;
+  const glassSelectionConflict = Boolean(input.glassTechnicalSpec?.hasConflict ||
+    (statedThickness != null && input.glassTechnicalSpec?.thicknessMm != null && statedThickness !== input.glassTechnicalSpec.thicknessMm));
+  const canEstimateNominalGlass = glassMeasurementStatus === "nominal_unconfirmed" &&
+    /(?:monol[ií]tico|float)/i.test(input.vidrio) && /(?:^|\D)[45]\s*mm\b/i.test(input.vidrio) &&
+    !glassSelectionConflict && (!input.glassTechnicalSpec || input.glassTechnicalSpec.category === "monolitico");
+  const costGlassPanes = canEstimateNominalGlass && despiece.formal.result.vidrios.length === 0
+    ? calcularCubicacionYPauta(input.recipe.definition, despiece.formal.input).vidrios
+    : despiece.formal.result.vidrios;
+  const glassResolution: GlassSupplierCutResolution | null = !glassSelectionConflict && input.glassCutPresentations?.length
     ? resolveGlassSupplierCutCost({
-        panes: despiece.formal.result.vidrios,
+        panes: costGlassPanes,
         glassDescription: input.vidrio.trim(),
         glassTechnicalSpec: input.glassTechnicalSpec ?? null,
         organizationId: input.organizationId ?? null,
@@ -324,7 +336,6 @@ export function buildGuidedTechnicalCostSuggestion(input: {
   const hasBackedGlassCost = glassResolution?.status === "priced";
   const glassCostNet =
     glassResolution?.status === "priced" ? glassResolution.totalNetCost : null;
-  const glassMeasurementStatus = hasUnconfirmedNominalGlassRules(input.recipe.definition);
   const glassCostIsProvisional =
     glassCostNet != null && glassMeasurementStatus === "nominal_unconfirmed";
 
@@ -345,6 +356,19 @@ export function buildGuidedTechnicalCostSuggestion(input: {
     }
     return [entry];
   });
+  const calculatedAccessoryIds = new Set(despiece.formal.result.accesorios.map((accessory) => accessory.accesorioId));
+  for (const accessory of input.recipe.definition.accesorios) {
+    if (calculatedAccessoryIds.has(accessory.id) || accessory.codigo.trim() ||
+      !(accessory.datosPendientes ?? []).some((pending) => /confirmar.*cantidad/i.test(pending))) continue;
+    missingItems.push({ itemKind: "accessory", identityKey: `accessory|${accessory.id}`,
+      technicalCode: null, description: accessory.nombre, reason: "Accesorio y cantidad pendientes de confirmación." });
+  }
+  const safeCostSnapshot = missingItems.length > 0 || glassCostIsProvisional
+    ? { ...costSnapshot, status: costSnapshot.lines.length ? "partial" as const : "no_data" as const,
+        missing: [...missingItems, ...(glassCostIsProvisional ? [{ itemKind: "glass" as const,
+          identityKey: "glass|nominal-unconfirmed", technicalCode: null, description: input.vidrio,
+          reason: "Medidas de corte pendientes de confirmación; costo nominal solo referencial." }] : [])] }
+    : costSnapshot;
 
   const knownComponents = [profilesCostNet, accessoriesCostNet, glassCostNet].filter(
     (value): value is number => value != null && value > 0
@@ -452,7 +476,7 @@ export function buildGuidedTechnicalCostSuggestion(input: {
       missingItems: [],
       nonVerifiedReasons: [],
       reason: null,
-      costSnapshot,
+      costSnapshot: safeCostSnapshot,
     };
   }
 
@@ -489,7 +513,7 @@ export function buildGuidedTechnicalCostSuggestion(input: {
       missingItems: missingItems.map(mapMissingItem),
       nonVerifiedReasons,
       reason: nonVerifiedReasons[0] ?? null,
-      costSnapshot,
+      costSnapshot: safeCostSnapshot,
     };
   }
 
@@ -513,6 +537,6 @@ export function buildGuidedTechnicalCostSuggestion(input: {
     reason:
       nonVerifiedReasons[0] ??
       "Faltan precios de compra compatibles para valorizar esta configuración.",
-    costSnapshot,
+    costSnapshot: safeCostSnapshot,
   };
 }

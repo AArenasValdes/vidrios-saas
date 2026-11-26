@@ -128,8 +128,18 @@ describe("persistencia simulada y documentos internos de líneas universales", (
       const expectedCuts = work.bars.flatMap((bar) => bar.cortes.map((cut) => `${bar.codigoPerfil}|${cut.largoMm}`)).sort();
       const orderCuts = order.cutGroups.flatMap((group) => group.cuts.flatMap((cut) => Array.from({ length: cut.quantity }, () => `${group.technicalCode}|${cut.lengthMm}`))).sort();
       expect(expectedCuts.length).toBeGreaterThan(0);
-      expect(orderCuts).toEqual(expectedCuts);
-      expect(order.materials.profiles.length).toBeGreaterThan(0);
+      if (testCase.name === "L42") {
+        expect(orderCuts).toEqual(expectedCuts);
+        expect(order.materials.profiles.length).toBeGreaterThan(0);
+      } else {
+        // El vidrio nominal de estas bases está pendiente. Los cortes se conservan
+        // para revisión, pero no pertenecen a la pauta operativa completa.
+        const preliminaryCuts = order.preliminaryCutGroups.flatMap((group) => group.cuts.flatMap((cut) => Array.from({ length: cut.quantity }, () => `${group.technicalCode}|${cut.lengthMm}`))).sort();
+        expect(orderCuts).toEqual([]);
+        expect(preliminaryCuts).toEqual(expectedCuts);
+        expect(order.documentStatus.state).toBe("partial");
+        expect(order.documentStatus.label).toContain("NO APTO PARA FABRICACIÓN");
+      }
       expect(order.pricing.status).not.toBe("complete");
 
       const before = structuredClone(snapshot);

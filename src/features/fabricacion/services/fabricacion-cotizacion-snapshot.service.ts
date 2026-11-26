@@ -292,6 +292,37 @@ export function construirSnapshotFabricacionCotizacion(input: {
     : { categoria: dvh ? "dvh" : monolithic ? "monolitico" : null,
         espesorMm: dvh ? null : namedThickness };
   const result = calcularCubicacionYPauta(definition, input.entrada, selectedGlass);
+  const genericSlidingLine = input.recipe.scope === "ventora" &&
+    (input.recipe.id.startsWith("ventora:universal:l20:") && definition.identidad.codigo === "L20-2H-V1" ? "l20"
+      : input.recipe.id.startsWith("ventora:universal:l5000:") && definition.identidad.codigo === "L5000-2H-V1" ? "l5000" : null);
+  if (genericSlidingLine) {
+    // La base contiene medidas nominales de vidrio sin descuentos verificados.
+    const nominalGlassIds = new Set(definition.vidrios.filter((glass) =>
+      (glass.reglaAncho.ajusteMm ?? 0) === 0 && (glass.reglaAlto.ajusteMm ?? 0) === 0 &&
+      (glass.datosPendientes ?? []).some((pending) => /confirmar descuento/i.test(pending))
+    ).map((glass) => glass.id));
+    result.vidrios = result.vidrios.filter((glass) => !nominalGlassIds.has(glass.vidrioId));
+    result.totalVidrioM2 = result.vidrios.reduce((sum, glass) => sum + glass.totalM2, 0);
+    const pendingAccessoryIds = new Set(definition.accesorios
+      .filter((accessory) => !accessory.codigo.trim() && (accessory.datosPendientes ?? []).some((pending) => /confirmar.*cantidad/i.test(pending)))
+      .map((accessory) => accessory.id));
+    result.accesorios = result.accesorios.filter((accessory) => !pendingAccessoryIds.has(accessory.accesorioId));
+    const unsupportedComposition = selectedGlass.categoria === "dvh" || dvh || specification?.category === "dvh" ||
+      (selectedGlass.categoria === "monolitico" && selectedGlass.espesorMm === 6);
+    if (unsupportedComposition) {
+      // 5001/5002 tienen roles invertidos entre SODAL y ALAR; no se infiere equivalencia.
+      const structuralCodes = genericSlidingLine === "l20" ? new Set(["2001", "2002", "2009"]) : new Set(["5003"]);
+      result.perfiles = result.perfiles.filter((profile) => structuralCodes.has(profile.codigoPerfil));
+      result.totalLinealMm = result.perfiles.reduce((sum, profile) => sum + profile.totalLinealMm, 0);
+      result.accesorios = [];
+      result.vidrios = [];
+      result.totalVidrioM2 = 0;
+    }
+    if (unsupportedComposition || nominalGlassIds.size > 0 || pendingAccessoryIds.size > 0) result.advertencias.push({ codigo: "COMPOSICION_VIDRIO_PENDIENTE", nivel: "advertencia",
+      mensaje: unsupportedComposition
+        ? `Vidrio pendiente de conciliación; perfiles ${genericSlidingLine === "l20" ? "2004, 2005, 2006, 2010 y 2019" : "5001, 5002 y 5004–5007"} y accesorios pendientes de compatibilidad.`
+        : "Vidrio pendiente de conciliación: la receta base no especifica descuentos acreditados. Accesorios pendientes de aplicación y cantidad." });
+  }
   const l42NormalMonolithic = definition.identidad.codigo === "AL-42-PROY-NORMAL-V1" &&
     definition.vidrios.length === 1 && definition.vidrios[0]?.nombre === "Monolítico 4 mm" &&
     definition.perfiles.some((profile) => profile.codigoPerfil === "4229" && profile.nombrePerfil === "Junquillo 4229 horizontal") &&
