@@ -57,7 +57,6 @@ import { applyManualCutsAdjustmentToLineCatalogMetadata } from "@/features/cotiz
 import { buildCubicationSnapshotFromCatalogMetadata } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import {
-  DEFAULT_MARGIN_PCT,
   normalizePricingMode,
   type PricingMode,
 } from "@/features/cotizaciones/types/pricing-mode";
@@ -92,7 +91,7 @@ import {
   StepKey,
   validateComponentForm,
   validateStep1,
-  applyQuotePricingToItems,
+  applyComponentPricingModeSelectionToForm,
   applyLineTemplateToComponentForm,
   buildComponentFormLinePricingSummary,
   buildFreeValueItemFromForm,
@@ -1344,15 +1343,6 @@ function NuevaCotizacionProductiva() {
             : cur.pricingMode === "precio_directo"
               ? "manual"
               : "margen";
-      }
-      if (key === "margenPct" && cur.pricingMode === "margen") {
-        const nextMarginValue = String(value || "0");
-        setDraft((current) => ({
-          ...current,
-          items: applyQuotePricingToItems(current.items, "margen", nextMarginValue, {
-            quotePricingMode,
-          }),
-        }));
       }
       if (
         key === "ancho" ||
@@ -2698,54 +2688,15 @@ function NuevaCotizacionProductiva() {
   }
 
   function handlePricingModeSelection(pricingMode: PricingMode) {
-    let resolvedMarginValue = "0";
-
-    setComponentForm((current) => {
-      const nextMarginValue =
-        pricingMode === "precio_directo"
-          ? "0"
-          : pricingMode === "margen"
-            ? String(DEFAULT_MARGIN_PCT)
-            : "0";
-      resolvedMarginValue = nextMarginValue;
-
-      const hasTemplate = Boolean(
-        current.referencia.trim() && current.precioPorM2.trim()
-      );
-
-      const next = buildSuggestedComponentForm({
+    setComponentForm((current) =>
+      applyComponentPricingModeSelectionToForm({
+        current,
+        pricingMode,
         items: draft.items,
-        tipo: current.tipo,
         provider: suggestionProvider,
-        pricingMode,
         defaultMargin: organizationProfile?.margenDefecto,
-        current: {
-          ...current,
-          pricingMode,
-          margenPct: nextMarginValue,
-          ...(pricingMode === "margen" && hasTemplate && !current.precioAjustadoManual
-            ? { costoProveedorUnitario: "" }
-            : {}),
-        },
-      });
-
-      const normalizedNext = {
-        ...next,
-        pricingMode,
-      };
-
-      return current.referencia.trim() && current.precioPorM2.trim()
-        ? syncTemplatePricingInComponentForm(normalizedNext, {
-            forceSuggestedPrice: !current.precioAjustadoManual,
-          })
-        : normalizedNext;
-    });
-    setDraft((current) => ({
-      ...current,
-      items: applyQuotePricingToItems(current.items, pricingMode, resolvedMarginValue, {
-        quotePricingMode,
-      }),
-    }));
+      })
+    );
     setFieldErrors((current) => ({
       ...current,
       costoProveedorUnitario: undefined,

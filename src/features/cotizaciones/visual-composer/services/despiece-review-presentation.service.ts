@@ -7,6 +7,46 @@ export type DespieceReviewSelectionPrompt = {
   message: string | null;
 };
 
+export type DespieceGlassSummaryMetrics = {
+  /** Superficie técnica de corte de vidrio calculada; null si vidrios está vacío o pendiente. */
+  areaVidrioCalculadaM2: number | null;
+  /** Superficie comercial proyectada del vano; diferenciada de la superficie técnica de vidrio. */
+  areaComercialVanoM2: number | null;
+  /** Aprovechamiento vidrio/vano en %, o null si falta superficie de vidrio acreditada. */
+  aprovechamientoVidrioPct: number | null;
+};
+
+/**
+ * Deriva métricas de vidrio para el resumen de despiece sin convertir el área
+ * comercial del vano en superficie técnica de vidrio ni reportar 100% sin vidrios.
+ */
+export function resolveDespieceGlassSummaryMetrics(input: {
+  previewGlassTotalM2?: number | null;
+  areaVidrioM2?: number | null;
+  areaVanoM2?: number | null;
+}): DespieceGlassSummaryMetrics {
+  const areaVidrioCalculadaM2 =
+    input.previewGlassTotalM2 != null && input.previewGlassTotalM2 > 0
+      ? input.previewGlassTotalM2
+      : input.areaVidrioM2 != null && input.areaVidrioM2 > 0
+        ? input.areaVidrioM2
+        : null;
+  const areaComercialVanoM2 =
+    input.areaVanoM2 != null && input.areaVanoM2 > 0 ? input.areaVanoM2 : null;
+  const aprovechamientoVidrioPct =
+    areaVidrioCalculadaM2 != null &&
+    areaComercialVanoM2 != null &&
+    areaComercialVanoM2 > 0
+      ? Math.min(100, Math.round((areaVidrioCalculadaM2 / areaComercialVanoM2) * 100))
+      : null;
+
+  return {
+    areaVidrioCalculadaM2,
+    areaComercialVanoM2,
+    aprovechamientoVidrioPct,
+  };
+}
+
 export type MissingPresentationGroup = {
   technicalCode: string;
   finishKey: string;

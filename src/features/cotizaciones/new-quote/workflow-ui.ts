@@ -2374,6 +2374,53 @@ export function syncTemplatePricingInComponentForm(
   return nextForm;
 }
 
+/**
+ * Cambia el modo de cobro únicamente del formulario del componente activo, sin
+ * alterar ni duplicar el precio de otras partidas ya cargadas en la cotización.
+ */
+export function applyComponentPricingModeSelectionToForm(input: {
+  current: ComponentFormState;
+  pricingMode: PricingMode;
+  items: CotizacionWorkflowItem[];
+  provider: PreferredProvider;
+  defaultMargin?: number;
+}): ComponentFormState {
+  const nextMarginValue =
+    input.pricingMode === "margen" ? String(DEFAULT_MARGIN_PCT) : "0";
+  const hasTemplate = Boolean(
+    input.current.referencia.trim() && input.current.precioPorM2.trim()
+  );
+
+  const next = buildSuggestedComponentForm({
+    items: input.items,
+    tipo: input.current.tipo,
+    provider: input.provider,
+    pricingMode: input.pricingMode,
+    defaultMargin: input.defaultMargin,
+    current: {
+      ...input.current,
+      pricingMode: input.pricingMode,
+      margenPct: nextMarginValue,
+      ...(input.pricingMode === "margen" &&
+      hasTemplate &&
+      !input.current.precioAjustadoManual
+        ? { costoProveedorUnitario: "" }
+        : {}),
+    },
+  });
+
+  const normalizedNext: ComponentFormState = {
+    ...next,
+    pricingMode: input.pricingMode,
+  };
+
+  return hasTemplate
+    ? syncTemplatePricingInComponentForm(normalizedNext, {
+        forceSuggestedPrice: !input.current.precioAjustadoManual,
+      })
+    : normalizedNext;
+}
+
 export function applyLineTemplateToComponentForm(
   form: ComponentFormState,
   template: Pick<

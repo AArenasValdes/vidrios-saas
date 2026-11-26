@@ -64,7 +64,11 @@ import {
   buildConsolidatedGlassSheetOptimizations,
   buildVidrioDespieceForQuoteItem,
 } from "@/features/fabricacion/services/vidrio-plancha-optimizacion.service";
-import { groupMissingPresentations, resolveDespieceReviewSelectionPrompt } from "@/features/cotizaciones/visual-composer/services/despiece-review-presentation.service";
+import {
+  groupMissingPresentations,
+  resolveDespieceGlassSummaryMetrics,
+  resolveDespieceReviewSelectionPrompt,
+} from "@/features/cotizaciones/visual-composer/services/despiece-review-presentation.service";
 import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
 import { formatVariantDisplayLabel } from "@/features/fabricacion/services/fabricacion-line-variant.service";
 import { resolveUniversalPricedLineFallbacks } from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
@@ -937,15 +941,15 @@ export function DespieceReviewSurface({
     });
   };
 
-  const areaCalculated =
-    selectedView?.technicalSummary.areaVidrioM2 ??
-    selectedView?.technicalSummary.areaVanoM2 ??
-    null;
-  const areaProjected = selectedView?.technicalSummary.areaVanoM2 ?? null;
-  const glassYield =
-    areaCalculated != null && areaProjected != null && areaProjected > 0
-      ? Math.min(100, Math.round((areaCalculated / areaProjected) * 100))
-      : null;
+  const {
+    areaVidrioCalculadaM2: areaCalculated,
+    areaComercialVanoM2: areaProjected,
+    aprovechamientoVidrioPct: glassYield,
+  } = resolveDespieceGlassSummaryMetrics({
+    previewGlassTotalM2: preview?.glass?.totalM2 ?? null,
+    areaVidrioM2: selectedView?.technicalSummary.areaVidrioM2 ?? null,
+    areaVanoM2: selectedView?.technicalSummary.areaVanoM2 ?? null,
+  });
 
   const pieceUiStatus = resolveDespieceUiStatus({
     snapshot: activeSnapshot,
@@ -1524,16 +1528,20 @@ export function DespieceReviewSurface({
                   <p className={styles.listEyebrow}>Resumen</p>
                   <div className={styles.summaryCard}>
                     <span>
-                      <small>Área calculada</small>
-                      <strong>{areaCalculated != null ? formatM2(areaCalculated) : "—"}</strong>
+                      <small>Área de vidrio calculada</small>
+                      <strong className={areaCalculated == null ? styles.notCalculable : undefined}>
+                        {areaCalculated != null ? formatM2(areaCalculated) : "Pendiente"}
+                      </strong>
                     </span>
                     <span>
-                      <small>Área proyectada</small>
+                      <small>Área comercial (vano)</small>
                       <strong>{areaProjected != null ? formatM2(areaProjected) : "—"}</strong>
                     </span>
                     <span>
                       <small>Aprovechamiento de vidrio</small>
-                      <strong>{glassYield != null ? `${glassYield}%` : "—"}</strong>
+                      <strong className={glassYield == null ? styles.notCalculable : undefined}>
+                        {glassYield != null ? `${glassYield}%` : "No calculable"}
+                      </strong>
                     </span>
                   </div>
 

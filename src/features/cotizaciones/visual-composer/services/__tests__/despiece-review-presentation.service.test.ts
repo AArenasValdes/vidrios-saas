@@ -1,7 +1,11 @@
 import { VERATEC_7400_CATALOG_KEY } from "@/features/fabricacion/fixtures/veratec-7400-corredera-recipe";
 import type { FabricacionDespieceCotizacionResult } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 
-import { groupMissingPresentations, resolveDespieceReviewSelectionPrompt } from "../despiece-review-presentation.service";
+import {
+  groupMissingPresentations,
+  resolveDespieceGlassSummaryMetrics,
+  resolveDespieceReviewSelectionPrompt,
+} from "../despiece-review-presentation.service";
 
 const multipleRecipes: FabricacionDespieceCotizacionResult = {
   estado: "multiples_recetas",
@@ -71,5 +75,49 @@ describe("groupMissingPresentations", () => {
       { technicalCode: "7401", finishKey: "#ffffff", reason: repeated.reason, supplierSku: null, cutCount: 4 },
       { technicalCode: "7402", finishKey: "#ffffff", reason: "No hay presentación confirmada.", supplierSku: null, cutCount: 1 },
     ]);
+  });
+});
+
+describe("resolveDespieceGlassSummaryMetrics", () => {
+  it("mantiene vidrio calculado y aprovechamiento pendientes cuando vidrios está vacío", () => {
+    expect(
+      resolveDespieceGlassSummaryMetrics({
+        previewGlassTotalM2: null,
+        areaVidrioM2: 0,
+        areaVanoM2: 1.68,
+      })
+    ).toEqual({
+      areaVidrioCalculadaM2: null,
+      areaComercialVanoM2: 1.68,
+      aprovechamientoVidrioPct: null,
+    });
+  });
+
+  it("calcula superficie técnica y aprovechamiento real cuando existen vidrios acreditados", () => {
+    expect(
+      resolveDespieceGlassSummaryMetrics({
+        previewGlassTotalM2: 1.42,
+        areaVidrioM2: null,
+        areaVanoM2: 1.68,
+      })
+    ).toEqual({
+      areaVidrioCalculadaM2: 1.42,
+      areaComercialVanoM2: 1.68,
+      aprovechamientoVidrioPct: 85,
+    });
+  });
+
+  it("usa areaVidrioM2 de snapshot histórico cuando preview no está presente", () => {
+    expect(
+      resolveDespieceGlassSummaryMetrics({
+        previewGlassTotalM2: null,
+        areaVidrioM2: 1.44,
+        areaVanoM2: 1.8,
+      })
+    ).toEqual({
+      areaVidrioCalculadaM2: 1.44,
+      areaComercialVanoM2: 1.8,
+      aprovechamientoVidrioPct: 80,
+    });
   });
 });
