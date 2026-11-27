@@ -32,6 +32,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm fabrication:verify
       - run: pnpm run build
+        env:
+          # Solo permite compilar; no apunta a una organización ni contiene credenciales reales.
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-build-placeholder
       - name: Resumen de verificación
         if: always()
         run: node scripts/fabrication/write-github-summary.mjs
