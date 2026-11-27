@@ -986,4 +986,128 @@ describe("orden de fabricación y materiales", () => {
     expect(pdfText(pendingPdf)).toContain("Pendiente");
     expect(pdfText(pendingPdf)).toContain("Remanente teórico");
   });
+
+  it("conserva distribución teórica por barras en preliminaryCutGroups para Serie 5000 (caso 1509 V1 5mm + V2 DVH) sin promover a confirmada", () => {
+    const v1Snapshot = {
+      version: 1 as const,
+      recipeId: "ventora:universal:l5000:estandar",
+      recipeVersion: 1,
+      recipeStatus: "validated" as const,
+      lineTemplateId: 205,
+      lineName: "Serie 5000",
+      providerName: "Ventora",
+      supplierFamilyKey: "universal:aluminio:l5000",
+      recipeIdentity: {
+        recetaId: "ventora:universal:205:l5000:0",
+        codigo: "L5000-2H-V1",
+        nombre: "L5000 - base corredera",
+        tipologia: "corredera",
+        hojas: 2,
+        modulos: 2,
+        apertura: "corredera",
+        herraje: null,
+        variante: "estandar",
+      },
+      selectedVariant: "estandar",
+      input: { anchoTotalMm: 1400, altoTotalMm: 1200, cantidad: 1, hojas: 2, modulos: 2, variante: "estandar" },
+      pauta: [
+        { codigoPerfil: "5001", nombrePerfil: "Riel superior", tipo: "marco", funcion: "Riel superior", medidaMm: 1400, cantidadPiezas: 1, totalLinealMm: 1400, corte: "90°", trazabilidad: [] },
+        { codigoPerfil: "5002", nombrePerfil: "Riel inferior", tipo: "marco", funcion: "Riel inferior", medidaMm: 1400, cantidadPiezas: 1, totalLinealMm: 1400, corte: "90°", trazabilidad: [] },
+        { codigoPerfil: "5003", nombrePerfil: "Jamba", tipo: "marco", funcion: "Jamba", medidaMm: 1197, cantidadPiezas: 2, totalLinealMm: 2394, corte: "90°", trazabilidad: [] },
+        { codigoPerfil: "5005", nombrePerfil: "Zócalo", tipo: "hoja", funcion: "Zócalo", medidaMm: 698, cantidadPiezas: 2, totalLinealMm: 1396, corte: "90°", trazabilidad: [] },
+        { codigoPerfil: "5004", nombrePerfil: "Cabezal", tipo: "hoja", funcion: "Cabezal", medidaMm: 698, cantidadPiezas: 2, totalLinealMm: 1396, corte: "90°", trazabilidad: [] },
+        { codigoPerfil: "5006", nombrePerfil: "Pierna", tipo: "hoja", funcion: "Pierna", medidaMm: 1182, cantidadPiezas: 2, totalLinealMm: 2364, corte: "90°", trazabilidad: [] },
+        { codigoPerfil: "5007", nombrePerfil: "Traslapo", tipo: "hoja", funcion: "Traslapo", medidaMm: 1182, cantidadPiezas: 2, totalLinealMm: 2364, corte: "90°", trazabilidad: [] },
+      ],
+      vidrios: [],
+      pautaBarras: {
+        calculable: true,
+        totalBarras: 7,
+        totalUsadoMm: 12714,
+        totalSobranteMm: 29286,
+        barras: [
+          { materialKey: "5001", codigoPerfil: "5001", nombrePerfil: "Riel superior", indice: 1, largoComercialMm: 6000, despunteInicialMm: 0, usadoMm: 1400, perdidaCortesMm: 0, sobranteMm: 4600, sobranteAprovechable: true, cortes: [{ componenteId: "c1", codigoPerfil: "5001", funcion: "Riel superior", largoMm: 1400 }] },
+          { materialKey: "5002", codigoPerfil: "5002", nombrePerfil: "Riel inferior", indice: 1, largoComercialMm: 6000, despunteInicialMm: 0, usadoMm: 1400, perdidaCortesMm: 0, sobranteMm: 4600, sobranteAprovechable: true, cortes: [{ componenteId: "c2", codigoPerfil: "5002", funcion: "Riel inferior", largoMm: 1400 }] },
+          { materialKey: "5003", codigoPerfil: "5003", nombrePerfil: "Jamba", indice: 1, largoComercialMm: 6000, despunteInicialMm: 0, usadoMm: 2394, perdidaCortesMm: 0, sobranteMm: 3606, sobranteAprovechable: true, cortes: [{ componenteId: "c3", codigoPerfil: "5003", funcion: "Jamba", largoMm: 1197 }, { componenteId: "c3", codigoPerfil: "5003", funcion: "Jamba", largoMm: 1197 }] },
+          { materialKey: "5005", codigoPerfil: "5005", nombrePerfil: "Zócalo", indice: 1, largoComercialMm: 6000, despunteInicialMm: 0, usadoMm: 1396, perdidaCortesMm: 0, sobranteMm: 4604, sobranteAprovechable: true, cortes: [{ componenteId: "c4", codigoPerfil: "5005", funcion: "Zócalo", largoMm: 698 }, { componenteId: "c4", codigoPerfil: "5005", funcion: "Zócalo", largoMm: 698 }] },
+          { materialKey: "5004", codigoPerfil: "5004", nombrePerfil: "Cabezal", indice: 1, largoComercialMm: 6000, despunteInicialMm: 0, usadoMm: 1396, perdidaCortesMm: 0, sobranteMm: 4604, sobranteAprovechable: true, cortes: [{ componenteId: "c5", codigoPerfil: "5004", funcion: "Cabezal", largoMm: 698 }, { componenteId: "c5", codigoPerfil: "5004", funcion: "Cabezal", largoMm: 698 }] },
+          { materialKey: "5006", codigoPerfil: "5006", nombrePerfil: "Pierna", indice: 1, largoComercialMm: 6000, despunteInicialMm: 0, usadoMm: 2364, perdidaCortesMm: 0, sobranteMm: 3636, sobranteAprovechable: true, cortes: [{ componenteId: "c6", codigoPerfil: "5006", funcion: "Pierna", largoMm: 1182 }, { componenteId: "c6", codigoPerfil: "5006", funcion: "Pierna", largoMm: 1182 }] },
+          { materialKey: "5007", codigoPerfil: "5007", nombrePerfil: "Traslapo", indice: 1, largoComercialMm: 6000, despunteInicialMm: 0, usadoMm: 2364, perdidaCortesMm: 0, sobranteMm: 3636, sobranteAprovechable: true, cortes: [{ componenteId: "c7", codigoPerfil: "5007", funcion: "Traslapo", largoMm: 1182 }, { componenteId: "c7", codigoPerfil: "5007", funcion: "Traslapo", largoMm: 1182 }] },
+        ],
+      },
+      result: {
+        perfiles: [],
+        vidrios: [],
+        accesorios: [],
+        advertencias: [{ codigo: "COMPOSICION_VIDRIO_PENDIENTE", nivel: "advertencia" as const, mensaje: "Vidrio pendiente de conciliación: la receta base no especifica descuentos acreditados. Accesorios pendientes de aplicación y cantidad." }],
+        totalLinealMm: 12714,
+        totalVidrioM2: 0,
+        calculable: true,
+      },
+      calculatedAt: "2026-11-27T14:25:00.000Z",
+    };
+    const v2Snapshot = {
+      ...v1Snapshot,
+      pauta: [
+        { codigoPerfil: "5003", nombrePerfil: "Jamba", tipo: "marco", funcion: "Jamba", medidaMm: 1197, cantidadPiezas: 2, totalLinealMm: 2394, corte: "90°", trazabilidad: [] },
+      ],
+      pautaBarras: {
+        calculable: true,
+        totalBarras: 1,
+        totalUsadoMm: 2394,
+        totalSobranteMm: 3606,
+        barras: [
+          { materialKey: "5003", codigoPerfil: "5003", nombrePerfil: "Jamba", indice: 1, largoComercialMm: 6000, despunteInicialMm: 0, usadoMm: 2394, perdidaCortesMm: 0, sobranteMm: 3606, sobranteAprovechable: true, cortes: [{ componenteId: "c3", codigoPerfil: "5003", funcion: "Jamba", largoMm: 1197 }, { componenteId: "c3", codigoPerfil: "5003", funcion: "Jamba", largoMm: 1197 }] },
+        ],
+      },
+      result: {
+        ...v1Snapshot.result,
+        totalLinealMm: 2394,
+        advertencias: [{ codigo: "COMPOSICION_VIDRIO_PENDIENTE", nivel: "advertencia" as const, mensaje: "Vidrio pendiente de conciliación; perfiles 5001, 5002 y 5004–5007 y accesorios pendientes de compatibilidad." }],
+      },
+    };
+    const q1509Summary = summary(null);
+    q1509Summary.totalProfilesMl = 0;
+    q1509Summary.profileCoverage = {
+      status: "partial",
+      jointPlanStatus: "blocked",
+      requiredCount: 2,
+      readyCount: 0,
+      pendingCount: 2,
+      items: [
+        { itemId: "v1", codigo: "V1", nombre: "Ventana corredera 2 hojas", state: "preliminary", reason: v1Snapshot.result.advertencias[0]!.mensaje },
+        { itemId: "v2", codigo: "V2", nombre: "Ventana corredera 2 hojas", state: "preliminary", reason: v2Snapshot.result.advertencias[0]!.mensaje },
+      ],
+    };
+    q1509Summary.items = [
+      { itemId: "v1", codigo: "V1", nombre: "Ventana corredera 2 hojas", operationalStatus: "preliminary", profilesMl: 12.714, fabricacionSnapshot: v1Snapshot, snapshot: { cuts: [] } },
+      { itemId: "v2", codigo: "V2", nombre: "Ventana corredera 2 hojas", operationalStatus: "preliminary", profilesMl: 2.394, fabricacionSnapshot: v2Snapshot, snapshot: { cuts: [] } },
+    ] as unknown as FabricationQuoteSummary["items"];
+
+    const order = buildFabricationWorkOrder({
+      summary: q1509Summary,
+      materials: { ...materials(), profiles: [], accessories: [], glassOrder: [], hasJointCuttingPlan: false },
+      technicalCostSnapshot: null,
+    });
+
+    expect(order.cutGroups).toEqual([]);
+    expect(order.documentStatus.state).toBe("partial");
+    expect(order.documentStatus.label).toContain("NO APTO PARA FABRICACIÓN");
+    expect(order.preliminaryCutGroups).toHaveLength(8);
+    expect(order.preliminaryCutGroups.every((g) => g.barIndex === 1 && g.commercialLengthMm === 6000)).toBe(true);
+    expect(order.preliminaryCutGroups.reduce((sum, g) => sum + (g.usedMm ?? 0), 0)).toBe(15108);
+    expect(order.preliminaryCutGroups.reduce((sum, g) => sum + (g.theoreticalRemnantMm ?? 0), 0)).toBe(32892);
+    expect(order.materials.accessories).toEqual([]);
+    expect(order.glass).toEqual([]);
+
+    const pdf = createFabricationWorkOrderPdf(order, {
+      companyName: "Vidrios Gonzalez", quoteCode: "COT-271126-002", workName: "QA-PROD-14A4-L5000", issueDate: "27 nov 2026",
+    }, null, "profile-cuts");
+    const text = pdfText(pdf);
+    expect(text).toContain("DOCUMENTO PARCIAL");
+    expect(text).toContain("NO APTO PARA FABRICACIÓN");
+    expect(text).toContain("Tira 1 · 6.000 mm (teórica)");
+    expect(text).toContain("5001");
+    expect(text).toContain("5003");
+  });
 });

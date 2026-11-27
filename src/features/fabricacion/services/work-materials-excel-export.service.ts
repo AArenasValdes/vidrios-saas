@@ -237,13 +237,17 @@ export function buildWorkMaterialsWorkbook(XLSX: typeof XLSXModule, input: Build
         XLSX,
         input,
         "Despiece estructural preliminar · acristalamiento pendiente",
-        ["Código de perfil", "Perfil", "Partida", "Componente", "Función", "Cantidad", "Largo geométrico (mm)"],
+        ["Código de perfil", "Perfil", "Partida", "Componente", "Función", "Cantidad", "Largo geométrico (mm)", "Distribución teórica", "Sobrante teórico (mm)"],
         preliminaryGroups.flatMap((group) => group.cuts.map((cut) => [
           group.technicalCode, group.profileName, cut.itemCode, cut.component,
           cut.functionName, cut.quantity, cut.lengthMm,
+          group.barIndex != null && group.commercialLengthMm != null
+            ? `Tira ${group.barIndex} · ${group.commercialLengthMm} mm (teórica)`
+            : "No calculada",
+          group.barIndex != null && group.theoreticalRemnantMm != null ? group.theoreticalRemnantMm : "—",
         ])),
-        [20, 34, 17, 32, 24, 14, 25],
-        { 5: "#,##0", 6: "#,##0 \"mm\"" },
+        [20, 34, 17, 32, 24, 14, 25, 28, 22],
+        { 5: "#,##0", 6: "#,##0 \"mm\"", 8: "#,##0 \"mm\"" },
         "Geometría de revisión separada de la pauta operativa. No representa cantidades de compra ni distribución de barras.",
         "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN. Acristalamiento pendiente; no usar estos cortes como pauta operativa."
       ), "Despiece preliminar");
