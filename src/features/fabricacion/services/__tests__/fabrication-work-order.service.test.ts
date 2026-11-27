@@ -1110,4 +1110,209 @@ describe("orden de fabricación y materiales", () => {
     expect(text).toContain("5001");
     expect(text).toContain("5003");
   });
+
+  it("preserva distribución teórica por barras para recetas PVC sin validar (1510 Veratec 7400 y 1511 WinHouse New S75) sin promover a confirmada ni confundir con incompatible", async () => {
+    const buildBars = (
+      specs: Array<{ code: string; name: string; lengthMm: number; bars: Array<{ index: number; cuts: Array<{ func: string; mm: number }> }> }>
+    ) => specs.flatMap((spec) =>
+      spec.bars.map((bar) => {
+        const usedMm = bar.cuts.reduce((sum, cut) => sum + cut.mm, 0);
+        return {
+          materialKey: spec.code || spec.name,
+          codigoPerfil: spec.code,
+          nombrePerfil: spec.name,
+          indice: bar.index,
+          largoComercialMm: spec.lengthMm,
+          despunteInicialMm: 0,
+          usadoMm: usedMm,
+          perdidaCortesMm: 0,
+          sobranteMm: spec.lengthMm - usedMm,
+          sobranteAprovechable: true,
+          cortes: bar.cuts.map((cut, idx) => ({
+            componenteId: `${spec.code || spec.name}-${idx}`,
+            codigoPerfil: spec.code,
+            funcion: cut.func,
+            largoMm: cut.mm,
+          })),
+        };
+      })
+    );
+
+    // Caso 1510: Veratec 7400 V1 (40 cortes, 37.616 mm, 11 barras de 5.800 mm, sobrante 26.184 mm)
+    const v7400Pauta = [
+      { codigoPerfil: "7401", nombrePerfil: "Marco corredera 2 hojas", tipo: "marco", funcion: "Marco", medidaMm: 1406, cantidadPiezas: 2, totalLinealMm: 2812, corte: "45°", trazabilidad: [] },
+      { codigoPerfil: "7401", nombrePerfil: "Marco corredera 2 hojas", tipo: "marco", funcion: "Marco", medidaMm: 1206, cantidadPiezas: 2, totalLinealMm: 2412, corte: "45°", trazabilidad: [] },
+      { codigoPerfil: "AB01016-E", nombrePerfil: "Riel Anodizado Nat.", tipo: "marco", funcion: "Riel", medidaMm: 1288, cantidadPiezas: 2, totalLinealMm: 2576, corte: "90°", trazabilidad: [] },
+      { codigoPerfil: "7414", nombrePerfil: "Hoja corredera grande", tipo: "hoja", funcion: "Hoja", medidaMm: 704, cantidadPiezas: 4, totalLinealMm: 2816, corte: "45°", trazabilidad: [] },
+      { codigoPerfil: "7414", nombrePerfil: "Hoja corredera grande", tipo: "hoja", funcion: "Hoja", medidaMm: 1112, cantidadPiezas: 4, totalLinealMm: 4448, corte: "45°", trazabilidad: [] },
+      { codigoPerfil: "7418", nombrePerfil: "Traslapo hoja corredera grande", tipo: "hoja", funcion: "Traslapo", medidaMm: 1106, cantidadPiezas: 2, totalLinealMm: 2212, corte: "90°", trazabilidad: [] },
+      { codigoPerfil: "6306", nombrePerfil: "Junquillo para vidrio 4 mm", tipo: "hoja", funcion: "Junquillo", medidaMm: 552, cantidadPiezas: 4, totalLinealMm: 2208, corte: "45°", trazabilidad: [] },
+      { codigoPerfil: "6306", nombrePerfil: "Junquillo para vidrio 4 mm", tipo: "hoja", funcion: "Junquillo", medidaMm: 1033, cantidadPiezas: 4, totalLinealMm: 4132, corte: "45°", trazabilidad: [] },
+      { codigoPerfil: "69014STL001", nombrePerfil: "ref_marco corredera", tipo: "marco", funcion: "Refuerzo de marco", medidaMm: 630, cantidadPiezas: 4, totalLinealMm: 2520, corte: "90°", trazabilidad: [] },
+      { codigoPerfil: "69014STL001", nombrePerfil: "ref_marco corredera", tipo: "marco", funcion: "Refuerzo de marco", medidaMm: 1130, cantidadPiezas: 4, totalLinealMm: 4520, corte: "90°", trazabilidad: [] },
+      { codigoPerfil: "69069STL000", nombrePerfil: "ref_hoja corredera grande", tipo: "hoja", funcion: "Refuerzo de hoja", medidaMm: 620, cantidadPiezas: 4, totalLinealMm: 2480, corte: "90°", trazabilidad: [] },
+      { codigoPerfil: "69069STL000", nombrePerfil: "ref_hoja corredera grande", tipo: "hoja", funcion: "Refuerzo de hoja", medidaMm: 1120, cantidadPiezas: 4, totalLinealMm: 4480, corte: "90°", trazabilidad: [] },
+    ];
+    const v7400Bars = buildBars([
+      { code: "7401", name: "Marco corredera 2 hojas", lengthMm: 5800, bars: [{ index: 1, cuts: [{ func: "Marco", mm: 1406 }, { func: "Marco", mm: 1406 }, { func: "Marco", mm: 1206 }, { func: "Marco", mm: 1206 }] }] },
+      { code: "AB01016-E", name: "Riel Anodizado Nat.", lengthMm: 5800, bars: [{ index: 1, cuts: [{ func: "Riel", mm: 1288 }, { func: "Riel", mm: 1288 }] }] },
+      { code: "7414", name: "Hoja corredera grande", lengthMm: 5800, bars: [
+        { index: 1, cuts: [{ func: "Hoja", mm: 1112 }, { func: "Hoja", mm: 1112 }, { func: "Hoja", mm: 1112 }, { func: "Hoja", mm: 1112 }, { func: "Hoja", mm: 704 }] },
+        { index: 2, cuts: [{ func: "Hoja", mm: 704 }, { func: "Hoja", mm: 704 }, { func: "Hoja", mm: 704 }] },
+      ] },
+      { code: "7418", name: "Traslapo hoja corredera grande", lengthMm: 5800, bars: [{ index: 1, cuts: [{ func: "Traslapo", mm: 1106 }, { func: "Traslapo", mm: 1106 }] }] },
+      { code: "6306", name: "Junquillo para vidrio 4 mm", lengthMm: 5800, bars: [
+        { index: 1, cuts: [{ func: "Junquillo", mm: 1033 }, { func: "Junquillo", mm: 1033 }, { func: "Junquillo", mm: 1033 }, { func: "Junquillo", mm: 1033 }, { func: "Junquillo", mm: 552 }, { func: "Junquillo", mm: 552 }] },
+        { index: 2, cuts: [{ func: "Junquillo", mm: 552 }, { func: "Junquillo", mm: 552 }] },
+      ] },
+      { code: "69014STL001", name: "ref_marco corredera", lengthMm: 5800, bars: [
+        { index: 1, cuts: [{ func: "Refuerzo de marco", mm: 1130 }, { func: "Refuerzo de marco", mm: 1130 }, { func: "Refuerzo de marco", mm: 1130 }, { func: "Refuerzo de marco", mm: 1130 }, { func: "Refuerzo de marco", mm: 630 }] },
+        { index: 2, cuts: [{ func: "Refuerzo de marco", mm: 630 }, { func: "Refuerzo de marco", mm: 630 }, { func: "Refuerzo de marco", mm: 630 }] },
+      ] },
+      { code: "69069STL000", name: "ref_hoja corredera grande", lengthMm: 5800, bars: [
+        { index: 1, cuts: [{ func: "Refuerzo de hoja", mm: 1120 }, { func: "Refuerzo de hoja", mm: 1120 }, { func: "Refuerzo de hoja", mm: 1120 }, { func: "Refuerzo de hoja", mm: 1120 }, { func: "Refuerzo de hoja", mm: 620 }] },
+        { index: 2, cuts: [{ func: "Refuerzo de hoja", mm: 620 }, { func: "Refuerzo de hoja", mm: 620 }, { func: "Refuerzo de hoja", mm: 620 }] },
+      ] },
+    ]);
+    const q1510Summary = summary(null);
+    q1510Summary.totalProfilesMl = 0;
+    q1510Summary.profileCoverage = {
+      status: "partial",
+      jointPlanStatus: "blocked",
+      requiredCount: 2,
+      readyCount: 0,
+      pendingCount: 2,
+      items: [
+        { itemId: "v1-1510", codigo: "V1", nombre: "Ventana corredera 2 hojas", state: "unvalidated", reason: "La receta guardada no está validada para pauta operativa." },
+        { itemId: "v2-1510", codigo: "V2", nombre: "Ventana corredera 2 hojas", state: "missing_snapshot", reason: "No existe snapshot técnico con cortes guardados." },
+      ],
+    };
+    q1510Summary.items = [
+      {
+        itemId: "v1-1510", codigo: "V1", nombre: "Ventana corredera 2 hojas", operationalStatus: "unvalidated",
+        profilesMl: 37.616,
+        fabricacionSnapshot: {
+          recipeStatus: "testing",
+          pauta: v7400Pauta,
+          pautaBarras: { calculable: true, barras: v7400Bars, advertencias: [], totalUsadoMm: 37616, totalPerdidaCortesMm: 0, totalSobranteMm: 26184 },
+        },
+        snapshot: { cuts: [] },
+      },
+    ] as unknown as FabricationQuoteSummary["items"];
+
+    const order1510 = buildFabricationWorkOrder({
+      summary: q1510Summary,
+      materials: { ...materials(), profiles: [], accessories: [], glassOrder: [], hasJointCuttingPlan: false },
+      technicalCostSnapshot: null,
+    });
+    expect(order1510.cutGroups).toEqual([]);
+    expect(order1510.documentStatus.state).toBe("partial");
+    expect(order1510.documentStatus.label).toContain("NO APTO PARA FABRICACIÓN");
+    expect(order1510.reviewCutGroups).toHaveLength(11);
+    expect(order1510.reviewCutGroups.every((g) => g.reviewReasonKind === "unvalidated" && g.commercialLengthMm === 5800 && g.barIndex != null)).toBe(true);
+    expect(order1510.reviewCutGroups.reduce((sum, g) => sum + (g.usedMm ?? 0), 0)).toBe(37616);
+    expect(order1510.reviewCutGroups.reduce((sum, g) => sum + (g.theoreticalRemnantMm ?? 0), 0)).toBe(26184);
+
+    const pdf1510 = createFabricationWorkOrderPdf(order1510, {
+      companyName: "Vidrios Gonzalez", quoteCode: "COT-271126-003", workName: "QA-PROD-PVC-7400", issueDate: "27 nov 2026",
+    }, null, "profile-cuts");
+    const text1510 = pdfText(pdf1510);
+    expect(text1510).toContain("DOCUMENTO PARCIAL");
+    expect(text1510).toContain("Revisión técnica · recetas sin validar");
+    expect(text1510).toContain("Receta sin validar · no operativa");
+    expect(text1510).toContain("Tira 1 · 5.800 mm (teórica)");
+    expect(text1510).not.toContain("Snapshot incompatible · no operativo");
+
+    // Caso 1511: WinHouse New S75 V2 (36 cortes, 39.478 mm, 12 barras de 6.000 mm, sobrante 32.522 mm, códigos Pendiente)
+    const s75Pauta = [
+      { codigoPerfil: "", nombrePerfil: "Marco New S75", tipo: "marco", funcion: "Marco horizontal", medidaMm: 1805, cantidadPiezas: 2, totalLinealMm: 3610, corte: "45°", trazabilidad: [] },
+      { codigoPerfil: "", nombrePerfil: "Marco New S75", tipo: "marco", funcion: "Marco vertical", medidaMm: 1205, cantidadPiezas: 2, totalLinealMm: 2410, corte: "45°", trazabilidad: [] },
+      { codigoPerfil: "", nombrePerfil: "Refuerzo de marco Box 1,2 mm", tipo: "marco", funcion: "Refuerzo marco horizontal", medidaMm: 1720, cantidadPiezas: 2, totalLinealMm: 3440, corte: "90°", trazabilidad: [] },
+      { codigoPerfil: "", nombrePerfil: "Refuerzo de marco Box 1,2 mm", tipo: "marco", funcion: "Refuerzo marco vertical", medidaMm: 1120, cantidadPiezas: 2, totalLinealMm: 2240, corte: "90°", trazabilidad: [] },
+      { codigoPerfil: "", nombrePerfil: "Hoja corredera 80 mm", tipo: "hoja", funcion: "Hoja horizontal", medidaMm: 905, cantidadPiezas: 4, totalLinealMm: 3620, corte: "45°", trazabilidad: [] },
+      { codigoPerfil: "", nombrePerfil: "Hoja corredera 80 mm", tipo: "hoja", funcion: "Hoja vertical", medidaMm: 1125, cantidadPiezas: 4, totalLinealMm: 4500, corte: "45°", trazabilidad: [] },
+      { codigoPerfil: "", nombrePerfil: "Refuerzo múltiple hoja 1,2 mm", tipo: "hoja", funcion: "Refuerzo hoja horizontal", medidaMm: 756, cantidadPiezas: 4, totalLinealMm: 3024, corte: "90°", trazabilidad: [] },
+      { codigoPerfil: "", nombrePerfil: "Refuerzo múltiple hoja 1,2 mm", tipo: "hoja", funcion: "Refuerzo hoja vertical", medidaMm: 976, cantidadPiezas: 4, totalLinealMm: 3904, corte: "90°", trazabilidad: [] },
+      { codigoPerfil: "", nombrePerfil: "Junquillo hoja 80 mm", tipo: "hoja", funcion: "Junquillo horizontal", medidaMm: 776, cantidadPiezas: 4, totalLinealMm: 3104, corte: "45°", trazabilidad: [] },
+      { codigoPerfil: "", nombrePerfil: "Junquillo hoja 80 mm", tipo: "hoja", funcion: "Junquillo vertical", medidaMm: 996, cantidadPiezas: 4, totalLinealMm: 3984, corte: "45°", trazabilidad: [] },
+      { codigoPerfil: "", nombrePerfil: "Traslapo hoja 80 mm", tipo: "hoja", funcion: "Traslapo", medidaMm: 1118, cantidadPiezas: 2, totalLinealMm: 2236, corte: "90°", trazabilidad: [] },
+      { codigoPerfil: "", nombrePerfil: "Riel aluminio New S75", tipo: "marco", funcion: "Riel", medidaMm: 1703, cantidadPiezas: 2, totalLinealMm: 3406, corte: "90°", trazabilidad: [] },
+    ];
+    const s75Bars = buildBars([
+      { code: "", name: "Marco New S75", lengthMm: 6000, bars: [
+        { index: 1, cuts: [{ func: "Marco horizontal", mm: 1805 }, { func: "Marco horizontal", mm: 1805 }, { func: "Marco vertical", mm: 1205 }] },
+        { index: 2, cuts: [{ func: "Marco vertical", mm: 1205 }] },
+      ] },
+      { code: "", name: "Refuerzo de marco Box 1,2 mm", lengthMm: 6000, bars: [
+        { index: 1, cuts: [{ func: "Refuerzo marco horizontal", mm: 1720 }, { func: "Refuerzo marco horizontal", mm: 1720 }, { func: "Refuerzo marco vertical", mm: 1120 }, { func: "Refuerzo marco vertical", mm: 1120 }] },
+      ] },
+      { code: "", name: "Hoja corredera 80 mm", lengthMm: 6000, bars: [
+        { index: 1, cuts: [{ func: "Hoja vertical", mm: 1125 }, { func: "Hoja vertical", mm: 1125 }, { func: "Hoja vertical", mm: 1125 }, { func: "Hoja vertical", mm: 1125 }, { func: "Hoja horizontal", mm: 905 }] },
+        { index: 2, cuts: [{ func: "Hoja horizontal", mm: 905 }, { func: "Hoja horizontal", mm: 905 }, { func: "Hoja horizontal", mm: 905 }] },
+      ] },
+      { code: "", name: "Refuerzo múltiple hoja 1,2 mm", lengthMm: 6000, bars: [
+        { index: 1, cuts: [{ func: "Refuerzo hoja vertical", mm: 976 }, { func: "Refuerzo hoja vertical", mm: 976 }, { func: "Refuerzo hoja vertical", mm: 976 }, { func: "Refuerzo hoja vertical", mm: 976 }, { func: "Refuerzo hoja horizontal", mm: 756 }, { func: "Refuerzo hoja horizontal", mm: 756 }] },
+        { index: 2, cuts: [{ func: "Refuerzo hoja horizontal", mm: 756 }, { func: "Refuerzo hoja horizontal", mm: 756 }] },
+      ] },
+      { code: "", name: "Junquillo hoja 80 mm", lengthMm: 6000, bars: [
+        { index: 1, cuts: [{ func: "Junquillo vertical", mm: 996 }, { func: "Junquillo vertical", mm: 996 }, { func: "Junquillo vertical", mm: 996 }, { func: "Junquillo vertical", mm: 996 }, { func: "Junquillo horizontal", mm: 776 }, { func: "Junquillo horizontal", mm: 776 }] },
+        { index: 2, cuts: [{ func: "Junquillo horizontal", mm: 776 }, { func: "Junquillo horizontal", mm: 776 }] },
+      ] },
+      { code: "", name: "Traslapo hoja 80 mm", lengthMm: 6000, bars: [
+        { index: 1, cuts: [{ func: "Traslapo", mm: 1118 }, { func: "Traslapo", mm: 1118 }] },
+      ] },
+      { code: "", name: "Riel aluminio New S75", lengthMm: 6000, bars: [
+        { index: 1, cuts: [{ func: "Riel", mm: 1703 }, { func: "Riel", mm: 1703 }] },
+      ] },
+    ]);
+    // Ensure 12 bars total (split Refuerzo de marco into 2 bars as in 1511: 12 bars × 6000 = 72000, 72000 - 39478 = 32522)
+    s75Bars.splice(2, 1,
+      { materialKey: "Refuerzo de marco Box 1,2 mm", codigoPerfil: "", nombrePerfil: "Refuerzo de marco Box 1,2 mm", indice: 1, largoComercialMm: 6000, despunteInicialMm: 0, usadoMm: 4560, perdidaCortesMm: 0, sobranteMm: 1440, sobranteAprovechable: true, cortes: [{ componenteId: "rm1", codigoPerfil: "", funcion: "Refuerzo marco horizontal", largoMm: 1720 }, { componenteId: "rm2", codigoPerfil: "", funcion: "Refuerzo marco horizontal", largoMm: 1720 }, { componenteId: "rm3", codigoPerfil: "", funcion: "Refuerzo marco vertical", largoMm: 1120 }] },
+      { materialKey: "Refuerzo de marco Box 1,2 mm", codigoPerfil: "", nombrePerfil: "Refuerzo de marco Box 1,2 mm", indice: 2, largoComercialMm: 6000, despunteInicialMm: 0, usadoMm: 1120, perdidaCortesMm: 0, sobranteMm: 4880, sobranteAprovechable: true, cortes: [{ componenteId: "rm4", codigoPerfil: "", funcion: "Refuerzo marco vertical", largoMm: 1120 }] },
+    );
+    const q1511Summary = summary(null);
+    q1511Summary.totalProfilesMl = 0;
+    q1511Summary.profileCoverage = {
+      status: "partial",
+      jointPlanStatus: "blocked",
+      requiredCount: 2,
+      readyCount: 0,
+      pendingCount: 2,
+      items: [
+        { itemId: "v1-1511", codigo: "V1", nombre: "Ventana proyectante 1 hoja", state: "missing_snapshot", reason: "No existe snapshot técnico con cortes guardados." },
+        { itemId: "v2-1511", codigo: "V2", nombre: "Ventana corredera", state: "unvalidated", reason: "La receta guardada no está validada para pauta operativa." },
+      ],
+    };
+    q1511Summary.items = [
+      {
+        itemId: "v2-1511", codigo: "V2", nombre: "Ventana corredera", operationalStatus: "unvalidated",
+        profilesMl: 39.478,
+        fabricacionSnapshot: {
+          recipeStatus: "draft",
+          pauta: s75Pauta,
+          pautaBarras: { calculable: true, barras: s75Bars, advertencias: [], totalUsadoMm: 39478, totalPerdidaCortesMm: 0, totalSobranteMm: 32522 },
+        },
+        snapshot: { cuts: [] },
+      },
+    ] as unknown as FabricationQuoteSummary["items"];
+
+    const order1511 = buildFabricationWorkOrder({
+      summary: q1511Summary,
+      materials: { ...materials(), profiles: [], accessories: [], glassOrder: [], hasJointCuttingPlan: false },
+      technicalCostSnapshot: null,
+    });
+    expect(order1511.cutGroups).toEqual([]);
+    expect(order1511.reviewCutGroups).toHaveLength(12);
+    expect(order1511.reviewCutGroups.every((g) => g.reviewReasonKind === "unvalidated" && g.technicalCode === "Pendiente" && g.commercialLengthMm === 6000)).toBe(true);
+    expect(order1511.reviewCutGroups.reduce((sum, g) => sum + (g.usedMm ?? 0), 0)).toBe(39478);
+    expect(order1511.reviewCutGroups.reduce((sum, g) => sum + (g.theoreticalRemnantMm ?? 0), 0)).toBe(32522);
+
+    const pdf1511 = createFabricationWorkOrderPdf(order1511, {
+      companyName: "Vidrios Gonzalez", quoteCode: "COT-271126-004", workName: "QA-PROD-PVC-CFG2", issueDate: "27 nov 2026",
+    }, null, "profile-cuts");
+    const text1511 = pdfText(pdf1511);
+    expect(text1511).toContain("Pendiente · Marco New S75");
+    expect(text1511).toContain("Tira 1 · 6.000 mm (teórica)");
+    expect(text1511).toContain("Receta sin validar · no operativa");
+  });
 });

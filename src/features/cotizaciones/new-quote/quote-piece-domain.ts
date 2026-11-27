@@ -337,6 +337,35 @@ export function derivePieceTechnicalStatus(
   return "sin_configurar";
 }
 
+export function hasDocumentaryFabricationBlock(
+  item: CotizacionWorkflowItem,
+  lineTemplate: CotizacionLineTemplate | null | undefined = null
+): boolean {
+  if (item.tipoItem === "item_libre_con_valor") return false;
+  if (item.fabricacionSnapshot) return false;
+
+  const meta = getPiecePresentationMeta(item);
+  const catalogKey = (meta.catalogLineKey || lineTemplate?.catalogKey || "").trim();
+  const normalizedLine = (item.lineaComercial || lineTemplate?.nombre || meta.referencia || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const isVeratec7400Corredera2H =
+    catalogKey === "ventora:veratec-7400-corredera" ||
+    (normalizedLine.includes("veratec 7400") &&
+      !normalizedLine.includes("3 hojas") &&
+      !normalizedLine.includes("4 hojas") &&
+      !normalizedLine.includes("monorriel"));
+
+  if (!isVeratec7400Corredera2H) return false;
+
+  const variant = (meta.fabricacionVariante || "").trim().toLowerCase();
+  if (variant === "termopanel_20mm" || variant === "termopanel_24mm") return true;
+
+  const glass = (item.vidrio || "").trim();
+  return /\b(dvh|termopanel)\b/i.test(glass) || /\b\d{1,2}\s*\+\s*\d{1,2}\s*\+\s*\d{1,2}\b/.test(glass);
+}
+
 export function buildPieceDomainView(
   item: CotizacionWorkflowItem,
   pricingMode: QuotePricingMode,

@@ -451,23 +451,41 @@ export function createFabricationWorkOrderPdf(
     ], preliminaryCuts, y, "Sin cortes geométricos", runningTitle, metadata.quoteCode, logoDataUrl);
   }
   if (order.reviewCutGroups.length > 0) {
+    const onlyUnvalidatedReview = order.reviewCutGroups.every((group) => group.reviewReasonKind === "unvalidated");
     const reviewCuts = order.reviewCutGroups.map((group): Row => {
+      const isUnvalidated = group.reviewReasonKind === "unvalidated";
       const componentCell = kind === "profile-cuts"
         ? [...new Set(group.cuts.map((cut) => cut.itemCode))].join(", ") || "Componente pendiente"
         : [...new Set(group.cuts.map((cut) => `${cut.itemCode} · ${cut.component}`))].join("\n") || "Componente pendiente";
+      const barDistributionLine = group.barIndex != null && group.commercialLengthMm != null
+        ? `Tira ${group.barIndex} · ${mm(group.commercialLengthMm)} (teórica)`
+        : null;
+      const remnantDetail = group.barIndex != null && group.theoreticalRemnantMm != null
+        ? `${group.usedMm != null ? `Usado ${mm(group.usedMm)} · ` : ""}Sobrante ${mm(group.theoreticalRemnantMm)}`
+        : null;
       const cutsCell = group.cuts.map((cut) => kind === "profile-cuts"
         ? formatProfileCutLine(cut, group)
         : `${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n");
+      const reasonText = order.documentStatus.pendingComponents.find((component) => component.itemId === group.itemId)?.reason
+        ?? (isUnvalidated ? "La receta guardada no está validada para pauta operativa." : "Revisar identidad y receta antes de usar estos cortes.");
+      const statusCell = isUnvalidated
+        ? "Receta sin validar · no operativa"
+        : kind === "profile-cuts"
+          ? "Snapshot incompatible · no operativo"
+          : "Snapshot histórico · no operativo";
       return { cells: [
-        `${group.technicalCode} · ${group.profileName}\n${componentCell}`,
+        `${group.technicalCode} · ${group.profileName}\n${componentCell}${barDistributionLine ? `\n${barDistributionLine}` : ""}`,
         cutsCell,
-        kind === "profile-cuts" ? "Snapshot incompatible · no operativo" : "Snapshot histórico · no operativo",
+        statusCell,
         kind === "profile-cuts"
-          ? order.documentStatus.pendingComponents.find((component) => component.itemId === group.itemId)?.reason ?? "Revisar identidad y receta antes de usar estos cortes."
-          : "Revisión pendiente",
+          ? (remnantDetail ? `${remnantDetail}\n${reasonText}` : reasonText)
+          : (remnantDetail ?? "Revisión pendiente"),
       ] };
     });
-    y = drawTable(pdf, "Revisión técnica · cortes históricos", kind === "profile-cuts" ? [
+    const reviewTitle = onlyUnvalidatedReview
+      ? "Revisión técnica · recetas sin validar"
+      : "Revisión técnica · cortes históricos";
+    y = drawTable(pdf, reviewTitle, kind === "profile-cuts" ? [
       { title: "Perfil y componente", width: 43 }, { title: "Cortes conservados", width: 67 },
       { title: "Estado", width: 31 }, { title: "Causa / uso", width: 41 },
     ] : [

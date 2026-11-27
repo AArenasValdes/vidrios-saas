@@ -35,6 +35,8 @@ export type WorkOrderCutGroup = {
   familyKey?: string | null;
   supplierProviderKey?: string | null;
   supplierPresentationId?: string | null;
+  /** En reviewCutGroups, distingue una receta testing/draft de un snapshot incompatible. */
+  reviewReasonKind?: "unvalidated" | "incompatible";
   cuts: WorkOrderCut[];
 };
 export type WorkOrderGlass = {
@@ -200,8 +202,11 @@ function buildHistoricCutGroups(summary: FabricationQuoteSummary, kind: "ready" 
     const barCutCount = pautaBarras?.calculable
       ? pautaBarras.barras.reduce((sum, bar) => sum + bar.cortes.filter((cut) => Number.isFinite(cut.largoMm) && cut.largoMm > 0).length, 0)
       : 0;
+    const reviewReasonKind: WorkOrderCutGroup["reviewReasonKind"] = kind === "review"
+      ? (state === "incompatible" ? "incompatible" : "unvalidated")
+      : undefined;
     if (
-      kind !== "review" &&
+      state !== "incompatible" &&
       pautaBarras?.calculable &&
       pautaBarras.barras.length > 0 &&
       barCutCount > 0 &&
@@ -235,6 +240,7 @@ function buildHistoricCutGroups(summary: FabricationQuoteSummary, kind: "ready" 
           theoreticalRemnantMm: bar.sobranteMm,
           trimMm: pautaBarras.parametrosFisicos?.despunteInicialMm ?? null,
           kerfMm: pautaBarras.parametrosFisicos?.perdidaCorteMm ?? null,
+          ...(reviewReasonKind ? { reviewReasonKind } : {}),
           cuts: [...barCuts.values()],
         });
       }
@@ -250,7 +256,9 @@ function buildHistoricCutGroups(summary: FabricationQuoteSummary, kind: "ready" 
         group = {
           key, itemId: item.itemId, technicalCode: code, profileName: cut.profileName,
           barIndex: null, commercialLengthMm: null, usedMm: null,
-          theoreticalRemnantMm: null, trimMm: null, kerfMm: null, cuts: [],
+          theoreticalRemnantMm: null, trimMm: null, kerfMm: null,
+          ...(reviewReasonKind ? { reviewReasonKind } : {}),
+          cuts: [],
         };
         byProfile.set(key, group);
       }
@@ -387,7 +395,14 @@ export function buildFabricationWorkOrder(input: {
     addPending("cut-plan", "Pauta de corte", "Guardar una pauta técnica para este trabajo.");
   }
   if (reviewCutGroups.length > 0) {
-    addPending("historical-cuts-review", "Cortes históricos por revisar", "Los snapshots draft o incompatibles se conservan para consulta y se excluyen de la pauta operativa.");
+    const onlyUnvalidated = reviewCutGroups.every((group) => group.reviewReasonKind === "unvalidated");
+    addPending(
+      "historical-cuts-review",
+      onlyUnvalidated ? "Recetas sin validar · revisión teórica" : "Cortes históricos por revisar",
+      onlyUnvalidated
+        ? "Los cortes de recetas en prueba o borrador se conservan para revisión teórica y se excluyen de la pauta operativa."
+        : "Los snapshots draft o incompatibles se conservan para consulta y se excluyen de la pauta operativa."
+    );
   }
 
   const glass = materials.glassOrder.map((row): WorkOrderGlass => {

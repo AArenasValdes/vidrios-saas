@@ -1,5 +1,6 @@
 import {
   buildPieceDomainView,
+  hasDocumentaryFabricationBlock,
   isPieceCommerciallyComplete,
   type PieceDomainView,
 } from "@/features/cotizaciones/new-quote/quote-piece-domain";
@@ -10,12 +11,14 @@ import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotiz
 /** Badge único prioritario en tarjeta del cuaderno móvil (diseño Fase 1). */
 export type CuadernoPiecePriorityStatus =
   | "lista"
+  | "bloqueo_documental"
   | "falta_precio"
   | "faltan_datos"
   | "sin_configurar";
 
 export const CUADERNO_PIECE_PRIORITY_LABELS: Record<CuadernoPiecePriorityStatus, string> = {
   lista: "Lista",
+  bloqueo_documental: "Revisión documental",
   falta_precio: "Falta precio",
   faltan_datos: "Faltan datos",
   sin_configurar: "Sin configurar",
@@ -40,6 +43,9 @@ export function deriveCuadernoPiecePriorityStatus(
     (item.tipo === "Ventana" || item.tipo === "Puerta")
   ) {
     return "sin_configurar";
+  }
+  if (hasDocumentaryFabricationBlock(item, lineTemplate)) {
+    return "bloqueo_documental";
   }
   return "lista";
 }

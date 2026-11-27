@@ -480,7 +480,11 @@ export function PasoDosCuadernoMovil({
           </div>
         ) : (
           items.map((item) => {
-            const view = buildCuadernoPieceView(item, quotePricingMode);
+            const itemMeta = decodeCotizacionItemPresentationMeta(item.observaciones);
+            const itemTemplate =
+              lineTemplates.find((template) => String(template.id) === itemMeta.lineTemplateId) ??
+              null;
+            const view = buildCuadernoPieceView(item, quotePricingMode, itemTemplate);
             const isActive = activeItemId === item.id;
             return (
               <div

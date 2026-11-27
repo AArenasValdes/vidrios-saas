@@ -369,6 +369,18 @@ export function CompactCutsView({
   const preliminaryWasteMm = preliminaryGroups.some((group) => group.theoreticalRemnantMm != null)
     ? preliminaryGroups.reduce((sum, group) => sum + (group.theoreticalRemnantMm ?? 0), 0)
     : null;
+  const unvalidatedReviewGroups = workOrder.reviewCutGroups.filter(
+    (group) => group.reviewReasonKind === "unvalidated"
+  );
+  const reviewOnly = cutGroups.length === 0 && preliminaryGroups.length === 0 && unvalidatedReviewGroups.length > 0;
+  const reviewProfilesMl = unvalidatedReviewGroups.reduce(
+    (sum, group) => sum + group.cuts.reduce((cutSum, cut) => cutSum + cut.quantity * cut.lengthMm, 0),
+    0
+  ) / 1000;
+  const reviewBarsCount = unvalidatedReviewGroups.filter((group) => group.barIndex != null).length;
+  const reviewWasteMm = unvalidatedReviewGroups.some((group) => group.theoreticalRemnantMm != null)
+    ? unvalidatedReviewGroups.reduce((sum, group) => sum + (group.theoreticalRemnantMm ?? 0), 0)
+    : null;
   const safeTrabajoSnapshot = summary.totalBars == null ? null : summary.trabajoSnapshot;
 
   const totalWaste =
@@ -378,7 +390,9 @@ export function CompactCutsView({
         ? formatMm(cutGroups.reduce((acc, g) => acc + (g.theoreticalRemnantMm ?? 0), 0))
         : preliminaryOnly && preliminaryWasteMm != null
           ? formatMm(preliminaryWasteMm)
-          : "—";
+          : reviewOnly && reviewWasteMm != null
+            ? formatMm(reviewWasteMm)
+            : "—";
 
   const totalBarsCount =
     safeTrabajoSnapshot?.totalBars != null
@@ -387,7 +401,9 @@ export function CompactCutsView({
         ? String(summary.totalBars)
         : preliminaryOnly && preliminaryBarsCount > 0
           ? String(preliminaryBarsCount)
-          : "—";
+          : reviewOnly && reviewBarsCount > 0
+            ? String(reviewBarsCount)
+            : "—";
 
   const consolidated = useMemo(
     () =>
@@ -421,6 +437,17 @@ export function CompactCutsView({
                   {preliminaryBarsCount > 0
                     ? "Distribución teórica por pieza"
                     : "Revisión geométrica"}
+                </>
+              ) : reviewOnly ? (
+                <>
+                  {unvalidatedReviewGroups.length}{" "}
+                  {unvalidatedReviewGroups.length === 1
+                    ? "tira o perfil sin validar"
+                    : "tiras o perfiles sin validar"}{" "}
+                  ·{" "}
+                  {reviewBarsCount > 0
+                    ? "Distribución teórica por pieza"
+                    : "Revisión técnica"}
                 </>
               ) : (
                 <>
@@ -465,15 +492,27 @@ export function CompactCutsView({
         <div className={s.mCompactMetricStrip} aria-label="Totales de cortes">
           <div className={s.mCompactMetricCell}>
             <span className={s.mCompactMetricLabel}>
-              {preliminaryOnly ? "Largo preliminar" : "Largo en cortes"}
+              {preliminaryOnly
+                ? "Largo preliminar"
+                : reviewOnly
+                  ? "Largo en revisión"
+                  : "Largo en cortes"}
             </span>
             <strong className={s.mCompactMetricValue}>
-              {formatMl(preliminaryOnly ? preliminaryProfilesMl : summary.totalProfilesMl)}
+              {formatMl(
+                preliminaryOnly
+                  ? preliminaryProfilesMl
+                  : reviewOnly
+                    ? reviewProfilesMl
+                    : summary.totalProfilesMl
+              )}
             </strong>
           </div>
           <div className={s.mCompactMetricCell}>
             <span className={s.mCompactMetricLabel}>
-              {preliminaryOnly && preliminaryBarsCount > 0 ? "Tiras teóricas" : "Tiras"}
+              {(preliminaryOnly && preliminaryBarsCount > 0) || (reviewOnly && reviewBarsCount > 0)
+                ? "Tiras teóricas"
+                : "Tiras"}
             </span>
             <strong className={s.mCompactMetricValue}>{totalBarsCount}</strong>
           </div>
@@ -487,7 +526,9 @@ export function CompactCutsView({
           <p className={s.mEmpty}>
             {preliminaryOnly
               ? "Sin pauta operativa confirmada · ver despiece preliminar abajo."
-              : "No hay cortes guardados para este trabajo."}
+              : reviewOnly
+                ? "Sin pauta operativa confirmada · ver revisión de receta abajo."
+                : "No hay cortes guardados para este trabajo."}
           </p>
         ) : (
           <ul className={s.mCompactList} aria-label="Cortes agrupados por perfil">
@@ -572,15 +613,30 @@ export function CompactCutsView({
           </section>
         ) : null}
         {workOrder.reviewCutGroups.length > 0 ? (
-          <section aria-label="Cortes históricos excluidos">
-            <h3>Snapshots históricos · solo revisión</h3>
-            <p>Estos cortes se conservan para consulta; no forman parte de la pauta operativa.</p>
+          <section aria-label="Cortes en revisión técnica">
+            <h3>
+              {workOrder.reviewCutGroups.every((group) => group.reviewReasonKind === "unvalidated")
+                ? "Recetas sin validar · revisión teórica"
+                : "Snapshots históricos · solo revisión"}
+            </h3>
+            <p role="note">
+              {workOrder.reviewCutGroups.some((group) => group.reviewReasonKind === "unvalidated")
+                ? <><strong>Documento parcial · no apto para fabricación.</strong> Receta sin validar; los cortes y barras teóricas se conservan solo para revisión.</>
+                : "Estos cortes se conservan para consulta; no forman parte de la pauta operativa."}
+            </p>
             <ul className={s.mCompactList}>
               {workOrder.reviewCutGroups.map((group) => <li key={group.key} className={s.mCutBarCard}>
                 <strong>{group.technicalCode} · {group.profileName}</strong>
                 {group.cuts.map((cut, index) => <small key={`${group.key}:${cut.itemCode}:${index}`}>
                   {cut.itemCode} · {cut.component} · {cut.functionName}: {cut.quantity} × {formatMm(cut.lengthMm)}
                 </small>)}
+                <span>
+                  {group.barIndex != null && group.commercialLengthMm != null
+                    ? `Tira #${group.barIndex} · ${formatMm(group.commercialLengthMm)} (teórica)${group.usedMm != null ? ` · Usado ${formatMm(group.usedMm)}` : ""}${group.theoreticalRemnantMm != null ? ` · Sobrante teórico ${formatMm(group.theoreticalRemnantMm)}` : ""}`
+                    : group.reviewReasonKind === "unvalidated"
+                      ? "Receta sin validar · distribución por tira no calculada."
+                      : "Snapshot incompatible · no operativo."}
+                </span>
               </li>)}
             </ul>
           </section>

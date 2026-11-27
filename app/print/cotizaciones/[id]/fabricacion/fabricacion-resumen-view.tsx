@@ -714,16 +714,24 @@ export function FabricacionResumenView({
                 {summary.totalProfilesMl === 0 &&
                 summary.items.some((row) => row.operationalStatus === "preliminary" && row.profilesMl > 0)
                   ? "Perfiles (preliminar)"
-                  : "Perfiles"}
+                  : summary.totalProfilesMl === 0 &&
+                      summary.items.some((row) => row.operationalStatus === "unvalidated" && row.profilesMl > 0)
+                    ? "Perfiles (sin validar)"
+                    : "Perfiles"}
               </dt>
               <dd>
                 {formatMl(
                   summary.totalProfilesMl > 0
                     ? summary.totalProfilesMl
-                    : summary.items.reduce(
-                        (sum, row) => sum + (row.operationalStatus === "preliminary" ? row.profilesMl : 0),
-                        0
-                      )
+                    : summary.items.some((row) => row.operationalStatus === "preliminary" && row.profilesMl > 0)
+                      ? summary.items.reduce(
+                          (sum, row) => sum + (row.operationalStatus === "preliminary" ? row.profilesMl : 0),
+                          0
+                        )
+                      : summary.items.reduce(
+                          (sum, row) => sum + (row.operationalStatus === "unvalidated" ? row.profilesMl : 0),
+                          0
+                        )
                 )}
               </dd>
             </div>

@@ -111,6 +111,27 @@ describe("cuaderno-piece-status", () => {
     expect(deriveCuadernoPiecePriorityStatus(baseItem(), "por_item")).toBe("lista");
   });
 
+  it("no marca Lista en Veratec 7400 DVH cuando existe bloqueo documental sin snapshot", () => {
+    const blockedVeratecDvh = baseItem({
+      lineaComercial: "Veratec 7400 — Corredera 2 hojas",
+      vidrio: "DVH 4+12+4",
+      precioUnitario: 216000,
+      fabricacionSnapshot: null,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        material: "PVC",
+        catalogLineKey: "ventora:veratec-7400-corredera",
+        fabricacionVariante: "termopanel_20mm",
+        guidedVisualConfig: createQuoteConstructorPresetConfig("corredera_2", {
+          widthMm: 1800,
+          heightMm: 1500,
+        }),
+      }),
+    });
+    expect(deriveCuadernoPiecePriorityStatus(blockedVeratecDvh, "por_item")).toBe(
+      "bloqueo_documental"
+    );
+  });
+
   it("encuentra la primera incompleta y cuenta faltantes", () => {
     const items = [
       baseItem({ id: "a", precioUnitario: 90000 }),
