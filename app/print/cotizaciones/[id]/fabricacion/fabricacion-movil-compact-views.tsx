@@ -634,7 +634,7 @@ export function CompactCutsView({
                   {group.barIndex != null && group.commercialLengthMm != null
                     ? `Tira #${group.barIndex} · ${formatMm(group.commercialLengthMm)} (teórica)${group.usedMm != null ? ` · Usado ${formatMm(group.usedMm)}` : ""}${group.theoreticalRemnantMm != null ? ` · Sobrante teórico ${formatMm(group.theoreticalRemnantMm)}` : ""}`
                     : group.reviewReasonKind === "unvalidated"
-                      ? "Receta sin validar · distribución por tira no calculada."
+                      ? "Receta sin validar · cortes sin distribución por tira."
                       : "Snapshot incompatible · no operativo."}
                 </span>
               </li>)}

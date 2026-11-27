@@ -31,6 +31,7 @@ jobs:
           run_install: false
       - run: pnpm install --frozen-lockfile
       - run: pnpm fabrication:verify
+      - run: pnpm run build
       - name: Resumen de verificación
         if: always()
         run: node scripts/fabrication/write-github-summary.mjs
