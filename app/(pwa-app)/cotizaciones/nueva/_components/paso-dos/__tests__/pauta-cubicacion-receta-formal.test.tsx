@@ -27,6 +27,7 @@ import {
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import { resolveUniversalPricedLineFallback } from "@/features/fabricacion/services/fabricacion-receta-universal-fallback.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 
 const mockUseFabricationRecipes = jest.fn();
@@ -87,6 +88,123 @@ describe("PautaCubicacionPanel con recetas persistidas", () => {
 
   afterEach(() => {
     Reflect.deleteProperty(global, "fetch");
+  });
+
+  it("Guiada y Constructor mantienen L42 DVH parcial con los mismos cortes", async () => {
+    const template = { ...selectedTemplate, id: 210, nombre: "Serie 42", catalogKey: "ventora:l42" } as CotizacionLineTemplate;
+    const form = { ...createEmptyComponentForm([], "", "precio_directo"), codigo: "V1",
+      nombre: "Ventana proyectante", ancho: "1200", alto: "1200", cantidad: "1",
+      lineTemplateId: "210", catalogLineKey: "ventora:l42", tipo: "Ventana proyectante",
+      sistema: "Proyectante", fabricacionTipologia: "proyectante", fabricacionHojas: 1,
+      fabricacionVariante: "normal", vidrio: "DVH 4+12+4" };
+    const item = buildItemFromForm(form, [], "item-l42", { lineTemplates: [template], fabricationRecipes: [], organizationId: 3 });
+    const constructor = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 3, lineTemplateId: 210, lineCatalogKey: "ventora:l42" });
+    mockUseFabricationRecipes.mockReturnValue({ organizationId: 3, recipes: [], isLoading: false });
+    const onFormalSnapshot = jest.fn();
+    render(<PautaCubicacionPanel componentForm={form} selectedTemplate={template}
+      onCubicationSnapshotChange={jest.fn()} onFabricacionSnapshotChange={onFormalSnapshot} />);
+    await waitFor(() => expect(onFormalSnapshot).toHaveBeenCalledWith(expect.objectContaining({
+      pauta: constructor.formal?.pauta,
+      result: expect.objectContaining({ vidrios: [] }),
+    })));
+    expect(screen.getByText("Despiece parcial")).toBeInTheDocument();
+    expect(screen.getByText(/faltan junquillo compatible y medidas de vidrio/i)).toBeInTheDocument();
+  });
+
+  it("Guiada y Constructor muestran L42 6 mm parcial con los mismos accesorios", async () => {
+    const template = { ...selectedTemplate, id: 210, nombre: "Serie 42", catalogKey: "ventora:l42" } as CotizacionLineTemplate;
+    const form = { ...createEmptyComponentForm([], "", "precio_directo"), codigo: "V1",
+      nombre: "Ventana proyectante", ancho: "1200", alto: "1200", cantidad: "1",
+      lineTemplateId: "210", catalogLineKey: "ventora:l42", tipo: "Ventana proyectante",
+      sistema: "Proyectante", fabricacionTipologia: "proyectante", fabricacionHojas: 1,
+      fabricacionVariante: "normal", vidrio: "Monolítico 6 mm" };
+    const item = buildItemFromForm(form, [], "item-l42", { lineTemplates: [template], fabricationRecipes: [], organizationId: 3 });
+    const constructor = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 3, lineTemplateId: 210, lineCatalogKey: "ventora:l42" });
+    mockUseFabricationRecipes.mockReturnValue({ organizationId: 3, recipes: [], isLoading: false });
+    const onFormalSnapshot = jest.fn();
+    render(<PautaCubicacionPanel componentForm={form} selectedTemplate={template}
+      onCubicationSnapshotChange={jest.fn()} onFabricacionSnapshotChange={onFormalSnapshot} />);
+    await waitFor(() => expect(onFormalSnapshot).toHaveBeenCalledWith(expect.objectContaining({
+      result: expect.objectContaining({ accesorios: constructor.formal?.result.accesorios }),
+    })));
+    expect(screen.getByText(/Burlete pendiente/i)).toBeInTheDocument();
+    expect(screen.getByText("Despiece parcial")).toBeInTheDocument();
+  });
+
+  it("iguala la pauta L42 Normal de Constructor cuando no hay receta persistida", async () => {
+    const template = { ...selectedTemplate, id: 210, nombre: "Serie 42", catalogKey: "ventora:l42" } as CotizacionLineTemplate;
+    const form = {
+      ...createEmptyComponentForm([], "", "precio_directo"), codigo: "V1",
+      nombre: "Ventana proyectante", ancho: "1200", alto: "1000", cantidad: "1",
+      lineTemplateId: "210", catalogLineKey: "ventora:l42", tipo: "Ventana proyectante",
+      sistema: "Proyectante", fabricacionTipologia: "proyectante",
+      fabricacionHojas: 1, fabricacionVariante: "normal", vidrio: "Monolítico 5 mm",
+    };
+    const item = buildItemFromForm(form, [], "item-l42", {
+      lineTemplates: [template], fabricationRecipes: [], organizationId: 3,
+    });
+    const constructor = resolveFabricacionDespieceForQuoteItem({
+      item, recipes: [], organizationId: 3, lineTemplateId: 210, lineCatalogKey: "ventora:l42",
+    });
+    expect(constructor.estado).toBe("calculado");
+    expect(constructor.formal?.pauta.length).toBeGreaterThan(0);
+    mockUseFabricationRecipes.mockReturnValue({ organizationId: 3, recipes: [], isLoading: false });
+    const onFormalSnapshot = jest.fn();
+    const { rerender } = render(
+      <PautaCubicacionPanel componentForm={form} selectedTemplate={template}
+        onCubicationSnapshotChange={jest.fn()} onFabricacionSnapshotChange={onFormalSnapshot} />
+    );
+    await waitFor(() => expect(onFormalSnapshot).toHaveBeenCalledWith(expect.objectContaining({
+      recipeId: constructor.formal?.recipeId, selectedVariant: "normal", pauta: constructor.formal?.pauta,
+      result: expect.objectContaining({ accesorios: constructor.formal?.result.accesorios }),
+      glassSelection: expect.objectContaining({ displayName: "Monolítico 5 mm" }),
+    })));
+    const frozen = { ...constructor.formal!, recipeId: "historica" };
+    onFormalSnapshot.mockClear();
+    rerender(
+      <PautaCubicacionPanel componentForm={{ ...form, fabricacionSnapshot: frozen }}
+        selectedTemplate={template} onCubicationSnapshotChange={jest.fn()}
+        onFabricacionSnapshotChange={onFormalSnapshot} />
+    );
+    expect(onFormalSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("prioriza la receta privada L42 sin aceptar una geometría de dos hojas", async () => {
+    const base = resolveUniversalPricedLineFallback({
+      catalogKey: "ventora:l42", lineTemplateId: 210, organizationId: 3,
+      lineName: "Serie 42", variant: "normal", leavesCount: 1, recipes: [],
+    })!;
+    const own = { ...base, id: "propia", sourceType: "manual" as const,
+      sourceReference: "blank-start", organizationId: 3, scope: "organization" as const };
+    mockUseFabricationRecipes.mockReturnValue({ organizationId: 3, recipes: [own], isLoading: false });
+    const onFormalSnapshot = jest.fn();
+    const form = { ancho: "1200", alto: "1000", cantidad: "1", lineTemplateId: "210",
+      catalogLineKey: "ventora:l42", tipo: "Ventana proyectante", sistema: "Proyectante",
+      fabricacionTipologia: "proyectante", fabricacionHojas: 1, fabricacionVariante: "normal" };
+    const template = { ...selectedTemplate, id: 210, catalogKey: "ventora:l42" };
+    const { rerender } = render(<PautaCubicacionPanel componentForm={form} selectedTemplate={template}
+      onCubicationSnapshotChange={jest.fn()} onFabricacionSnapshotChange={onFormalSnapshot} />);
+    await waitFor(() => expect(onFormalSnapshot).toHaveBeenCalledWith(expect.objectContaining({ recipeId: "propia" })));
+    onFormalSnapshot.mockClear();
+    rerender(<PautaCubicacionPanel componentForm={{ ...form, fabricacionHojas: 2 }}
+      selectedTemplate={template} onCubicationSnapshotChange={jest.fn()} onFabricacionSnapshotChange={onFormalSnapshot} />);
+    expect(onFormalSnapshot.mock.calls.every(([snapshot]) => snapshot == null)).toBe(true);
+  });
+
+  it.each([
+    { organizationId: null, error: null, isLoading: false },
+    { organizationId: 3, error: "error de carga", isLoading: false },
+    { organizationId: 3, error: null, isLoading: true },
+  ])("no genera fallback L42 sin datos de recetas confiables: %p", async (state) => {
+    mockUseFabricationRecipes.mockReturnValue({ ...state, recipes: [] });
+    const onFormalSnapshot = jest.fn();
+    render(<PautaCubicacionPanel
+      componentForm={{ ancho: "1200", alto: "1500", cantidad: "1", lineTemplateId: "210",
+        catalogLineKey: "ventora:l42", tipo: "Ventana proyectante", sistema: "Proyectante",
+        fabricacionTipologia: "proyectante", fabricacionHojas: 1, fabricacionVariante: "normal" }}
+      selectedTemplate={{ ...selectedTemplate, id: 210, catalogKey: "ventora:l42" }}
+      onCubicationSnapshotChange={jest.fn()} onFabricacionSnapshotChange={onFormalSnapshot} />);
+    await waitFor(() => expect(onFormalSnapshot).not.toHaveBeenCalled());
   });
 
   it("selecciona automaticamente una receta validada unica", async () => {

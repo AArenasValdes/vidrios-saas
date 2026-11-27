@@ -114,6 +114,7 @@ export type PautaCubicacionFormSlice = {
   tipo?: string;
   sistema?: string;
   vidrio?: string;
+  vidrioLineTemplateId?: string;
   glassTechnicalSpec?: GlassTechnicalSpec | null;
   catalogTerminacion?: string;
   /** Variante/herraje elegido cuando hay varias recetas activas compatibles. */
@@ -599,7 +600,9 @@ export function PautaCubicacionPanel({
     }
     if (
       resolution.estado === "sin_receta" &&
-      (catalogKey === SERIE_4800_CATALOG_KEY || catalogKey === SERIE_45_CATALOG_KEY)
+      (catalogKey === SERIE_4800_CATALOG_KEY || catalogKey === SERIE_45_CATALOG_KEY ||
+        ((catalogKey === "ventora:l42" || catalogKey === "ventora:arquetipo-l42-proyectante") &&
+          organizationId != null && !persistedRecipeError && !componentForm.fabricacionSnapshot))
     ) {
       const fallbacks = resolveUniversalPricedLineFallbacks({
         catalogKey,
@@ -641,6 +644,7 @@ export function PautaCubicacionPanel({
     componentForm.fabricacionModulos,
     componentForm.fabricacionVariante,
     componentForm.fabricationRecipeId,
+    componentForm.fabricacionSnapshot,
     componentForm.vidrio,
     componentForm.sistema,
     effectiveFabricacionHojas,
@@ -650,6 +654,7 @@ export function PautaCubicacionPanel({
     isSodalL25Line,
     numericLineTemplateId,
     organizationId,
+    persistedRecipeError,
     persistedRecipes,
     pieceApertura,
     sodalConfig,
@@ -685,7 +690,8 @@ export function PautaCubicacionPanel({
     selectedTemplate?.nombre,
     sodalConfig,
   ]);
-  const useFormalDomain = persistedRecipes.length > 0 || Boolean(formalResolution?.receta);
+  const useFormalDomain = persistedRecipes.length > 0 || Boolean(formalResolution?.receta) ||
+    formalResolution?.estado === "multiples_recetas";
   const selectedPersistedRecipe =
     formalResolution?.estado === "receta_unica" ||
     formalResolution?.estado === "receta_no_validada"
@@ -865,6 +871,9 @@ export function PautaCubicacionPanel({
 
     const built = construirSnapshotFabricacionCotizacion({
       recipe: selectedPersistedRecipe,
+      glassSelection: { productId: componentForm.vidrioLineTemplateId || null, displayName: componentForm.vidrio || null,
+        technicalSpec: componentForm.glassTechnicalSpec ?? null },
+      storeGlassSelection: !componentForm.fabricacionSnapshot || Boolean(componentForm.fabricacionSnapshot.glassSelection),
       supplierFamilyKey:
         typeof selectedTemplate?.catalogMetadata?.familyKey === "string"
           ? selectedTemplate.catalogMetadata.familyKey
@@ -892,6 +901,10 @@ export function PautaCubicacionPanel({
       },
     };
   }, [
+    componentForm.vidrio,
+    componentForm.vidrioLineTemplateId,
+    componentForm.glassTechnicalSpec,
+    componentForm.fabricacionSnapshot,
     explicitTipologia,
     formalResolution?.estado,
     heightMm,
@@ -1063,7 +1076,10 @@ export function PautaCubicacionPanel({
   const preview = activeSnapshot ? cubicationSnapshotToPreview(activeSnapshot) : null;
   const hasCuts = Boolean(preview && preview.cuts.length > 0);
   const isManual = activeSnapshot?.source === "manual";
-  const statusLabel = personalizadoAssistMode
+  const partialGlass = formalSnapshot?.advertencias.some((warning) => warning.codigo === "COMPOSICION_VIDRIO_PENDIENTE") ?? false;
+  const statusLabel = partialGlass
+    ? "Despiece parcial"
+    : personalizadoAssistMode
     ? "Borrador manual"
     : isManual
       ? "Ajustada manualmente"
@@ -1080,7 +1096,7 @@ export function PautaCubicacionPanel({
           : cubicationConfig
             ? LINE_TEMPLATE_CUBICATION_STATUS_LABELS[cubicationConfig.status]
             : "Sin configurar";
-  const isValidated = personalizadoAssistMode
+  const isValidated = partialGlass ? false : personalizadoAssistMode
     ? false
     : isManual
       ? false
@@ -1516,6 +1532,9 @@ export function PautaCubicacionPanel({
 
     const snapshot = construirSnapshotFabricacionCotizacion({
       recipe,
+      glassSelection: { productId: componentForm.vidrioLineTemplateId || null, displayName: componentForm.vidrio || null,
+        technicalSpec: componentForm.glassTechnicalSpec ?? null },
+      storeGlassSelection: true,
       supplierFamilyKey:
         typeof selectedTemplate?.catalogMetadata?.familyKey === "string"
           ? selectedTemplate.catalogMetadata.familyKey
@@ -1893,6 +1912,7 @@ export function PautaCubicacionPanel({
           Proveedor pendiente: esta línea todavía no tiene familia de compra configurada.
         </div>
       ) : null}
+      {partialGlass ? <p role="status">{formalSnapshot?.advertencias.find((warning) => warning.codigo === "COMPOSICION_VIDRIO_PENDIENTE")?.mensaje}</p> : null}
 
       {s75GeometryControl}
       {s75LeafWidthControl}

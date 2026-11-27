@@ -1342,6 +1342,11 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
       : recipe,
     supplierFamilyKey: input.supplierFamilyKey,
     organizationCutSettings: input.organizationCutSettings,
+    glassSelection: {
+      productId: presentation.vidrioLineTemplateId || null,
+      displayName: input.item.vidrio || null,
+      technicalSpec: presentation.glassTechnicalSpec,
+    },
     entrada: {
       anchoTotalMm: ancho,
       anchoHojaAMm: presentation.fabricacionAnchoHojaAMm,
@@ -1356,7 +1361,7 @@ function resolveLiveFabricacionDespieceForQuoteItem(input: {
   // snapshot legacy no congeló selección, no completar su identidad durante
   // una reapertura automática: podría reemplazar su despiece histórico.
   if (
-    (presentation.vidrioLineTemplateId || presentation.glassTechnicalSpec) &&
+    (input.item.vidrio?.trim() || presentation.vidrioLineTemplateId || presentation.glassTechnicalSpec) &&
     (!input.item.fabricacionSnapshot || input.item.fabricacionSnapshot.glassSelection)
   ) {
     formal.glassSelection = {

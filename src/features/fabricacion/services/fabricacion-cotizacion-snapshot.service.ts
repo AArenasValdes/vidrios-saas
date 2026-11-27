@@ -1,4 +1,5 @@
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
+import { normalizeGlassTechnicalSpec } from "@/features/cotizaciones/line-templates/types/glass-technical-spec";
 import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
 import { enriquecerCodigosPerfilRecetaFabricacion } from "@/features/fabricacion/services/fabricacion-receta-codigos.service";
 import type {
@@ -255,6 +256,8 @@ export function construirSnapshotFabricacionCotizacion(input: {
   organizationCutSettings?: FabricacionParametrosCorteConfirmados | null;
   jobCutSettings?: FabricacionParametrosCorteConfirmados | null;
   calculatedAt?: string;
+  glassSelection?: FabricacionCotizacionSnapshot["glassSelection"];
+  storeGlassSelection?: boolean;
 }): FabricacionCotizacionSnapshot {
   const definition = enriquecerCodigosPerfilRecetaFabricacion({
     receta: cloneReceta(input.recipe.definition),
@@ -262,7 +265,97 @@ export function construirSnapshotFabricacionCotizacion(input: {
     sourceReference: input.recipe.sourceReference,
     lineName: input.recipe.lineName,
   });
-  const result = calcularCubicacionYPauta(definition, input.entrada);
+  // Las recetas Normal guardadas antes de esta condición conservan las dos
+  // alternativas explícitas. Solo se anotan cuando ambas identidades coinciden.
+  if (definition.identidad.codigo === "AL-42-PROY-NORMAL-V1") {
+    const four = definition.accesorios.find((entry) => entry.codigo === "C-424" && entry.nombre === "Burlete cuña 4 mm");
+    const five = definition.accesorios.find((entry) => entry.codigo === "C-425" && entry.nombre === "Burlete cuña 5 mm");
+    if (four && five && !four.compatibilidadVidrio && !five.compatibilidadVidrio) {
+      four.compatibilidadVidrio = { grupo: "burlete-cuna", categoria: "monolitico", espesorMm: 4 };
+      five.compatibilidadVidrio = { grupo: "burlete-cuna", categoria: "monolitico", espesorMm: 5 };
+    }
+    const base = definition.accesorios.find((entry) => entry.codigo === "C-425" && entry.nombre === "Base 42" && entry.observaciones?.includes("Confirmar aplicación según vidrio."));
+    if (base && base.aplicacionPendiente === undefined) base.aplicacionPendiente = true;
+  }
+  const specification = normalizeGlassTechnicalSpec(input.glassSelection?.technicalSpec);
+  const name = input.glassSelection?.displayName?.trim() ?? "";
+  const dvh = /\b(?:dvh|termopanel|doble\s+vidriado)\b/i.test(name);
+  const monolithic = /\b(?:monol[ií]tico|float)\b/i.test(name);
+  const thickness = name.match(/\b(\d+(?:[.,]\d+)?)\s*mm\b/i);
+  const namedThickness = thickness ? Number(thickness[1]?.replace(",", ".")) : null;
+  const nameConflicts = specification && ((dvh && specification.category !== "dvh") ||
+    (monolithic && specification.category !== "monolitico") ||
+    (!dvh && namedThickness != null && specification.thicknessMm != null && namedThickness !== specification.thicknessMm));
+  const selectedGlass = specification
+    ? { categoria: specification.hasConflict || nameConflicts ? null : specification.category,
+        espesorMm: specification.hasConflict || nameConflicts ? null : specification.thicknessMm }
+    : { categoria: dvh ? "dvh" : monolithic ? "monolitico" : null,
+        espesorMm: dvh ? null : namedThickness };
+  const result = calcularCubicacionYPauta(definition, input.entrada, selectedGlass);
+  const genericSlidingLine = input.recipe.scope === "ventora" &&
+    (input.recipe.id.startsWith("ventora:universal:l20:") && definition.identidad.codigo === "L20-2H-V1" ? "l20"
+      : input.recipe.id.startsWith("ventora:universal:l5000:") && definition.identidad.codigo === "L5000-2H-V1" ? "l5000" : null);
+  if (genericSlidingLine) {
+    // La base contiene medidas nominales de vidrio sin descuentos verificados.
+    const nominalGlassIds = new Set(definition.vidrios.filter((glass) =>
+      (glass.reglaAncho.ajusteMm ?? 0) === 0 && (glass.reglaAlto.ajusteMm ?? 0) === 0 &&
+      (glass.datosPendientes ?? []).some((pending) => /confirmar descuento/i.test(pending))
+    ).map((glass) => glass.id));
+    result.vidrios = result.vidrios.filter((glass) => !nominalGlassIds.has(glass.vidrioId));
+    result.totalVidrioM2 = result.vidrios.reduce((sum, glass) => sum + glass.totalM2, 0);
+    const pendingAccessoryIds = new Set(definition.accesorios
+      .filter((accessory) => !accessory.codigo.trim() && (accessory.datosPendientes ?? []).some((pending) => /confirmar.*cantidad/i.test(pending)))
+      .map((accessory) => accessory.id));
+    result.accesorios = result.accesorios.filter((accessory) => !pendingAccessoryIds.has(accessory.accesorioId));
+    const unsupportedComposition = selectedGlass.categoria === "dvh" || dvh || specification?.category === "dvh" ||
+      (selectedGlass.categoria === "monolitico" && selectedGlass.espesorMm === 6);
+    if (unsupportedComposition) {
+      // 5001/5002 tienen roles invertidos entre SODAL y ALAR; no se infiere equivalencia.
+      const structuralCodes = genericSlidingLine === "l20" ? new Set(["2001", "2002", "2009"]) : new Set(["5003"]);
+      result.perfiles = result.perfiles.filter((profile) => structuralCodes.has(profile.codigoPerfil));
+      result.totalLinealMm = result.perfiles.reduce((sum, profile) => sum + profile.totalLinealMm, 0);
+      result.accesorios = [];
+      result.vidrios = [];
+      result.totalVidrioM2 = 0;
+    }
+    if (unsupportedComposition || nominalGlassIds.size > 0 || pendingAccessoryIds.size > 0) result.advertencias.push({ codigo: "COMPOSICION_VIDRIO_PENDIENTE", nivel: "advertencia",
+      mensaje: unsupportedComposition
+        ? `Vidrio pendiente de conciliación; perfiles ${genericSlidingLine === "l20" ? "2004, 2005, 2006, 2010 y 2019" : "5001, 5002 y 5004–5007"} y accesorios pendientes de compatibilidad.`
+        : "Vidrio pendiente de conciliación: la receta base no especifica descuentos acreditados. Accesorios pendientes de aplicación y cantidad." });
+  }
+  const l42NormalMonolithic = definition.identidad.codigo === "AL-42-PROY-NORMAL-V1" &&
+    definition.vidrios.length === 1 && definition.vidrios[0]?.nombre === "Monolítico 4 mm" &&
+    definition.perfiles.some((profile) => profile.codigoPerfil === "4229" && profile.nombrePerfil === "Junquillo 4229 horizontal") &&
+    definition.perfiles.some((profile) => profile.codigoPerfil === "4229" && profile.nombrePerfil === "Junquillo 4229 vertical");
+  if (l42NormalMonolithic) {
+    if (selectedGlass.categoria === "dvh" || dvh || specification?.category === "dvh") {
+      // El titular confirmó el 25-11-2026 que 4201 y 4202 de L42 Normal
+      // conservan sus cortes con DVH 4+12+4; no confirmó junquillo ni vidrio.
+      const components = name.match(/\d+(?:[.,]\d+)?/g) ?? [];
+      const confirmedComposition = selectedGlass.categoria === "dvh" && components.length === 3 &&
+        components[0] === "4" && components[1] === "12" && components[2] === "4";
+      result.perfiles = confirmedComposition ? result.perfiles.filter((perfil) => !(perfil.codigoPerfil === "4229" &&
+        (perfil.nombrePerfil === "Junquillo 4229 horizontal" || perfil.nombrePerfil === "Junquillo 4229 vertical"))) : [];
+      result.vidrios = [];
+      result.totalLinealMm = result.perfiles.reduce((sum, perfil) => sum + perfil.totalLinealMm, 0);
+      result.totalVidrioM2 = 0;
+      result.advertencias.push({
+        codigo: "COMPOSICION_VIDRIO_PENDIENTE",
+        nivel: "advertencia",
+        mensaje: confirmedComposition
+          ? "Despiece parcial: faltan junquillo compatible y medidas de vidrio para la composición DVH seleccionada."
+          : "Composición DVH pendiente: faltan cortes estructurales confirmados, junquillo y medidas de vidrio.",
+      });
+    } else if (selectedGlass.categoria === "monolitico" && name) {
+      result.vidrios = result.vidrios.map((vidrio) => vidrio.nombre === "Monolítico 4 mm" ? { ...vidrio, nombre: name } : vidrio);
+      if (selectedGlass.espesorMm === 6) {
+        result.perfiles = result.perfiles.filter((perfil) => perfil.codigoPerfil !== "4229");
+        result.totalLinealMm = result.perfiles.reduce((sum, perfil) => sum + perfil.totalLinealMm, 0);
+        result.advertencias.push({ codigo: "COMPOSICION_VIDRIO_PENDIENTE", nivel: "advertencia",
+          mensaje: "Burlete pendiente y junquillo 4229 sin compatibilidad acreditada para vidrio de 6 mm." });
+      }
+    }
+  }
   const parametrosCorte = resolveFabricacionParametrosCorte({
     recipeConfiguration: definition.configuracionCorte,
     organizationSettings: input.organizationCutSettings,
@@ -283,6 +376,7 @@ export function construirSnapshotFabricacionCotizacion(input: {
     recipeStatus: input.recipe.status,
     recipeScope: input.recipe.scope,
     lineTemplateId: input.recipe.lineTemplateId,
+    ...(input.storeGlassSelection && input.glassSelection ? { glassSelection: input.glassSelection } : {}),
     ...(input.supplierFamilyKey ? { supplierFamilyKey: input.supplierFamilyKey } : {}),
     recipeIdentity: definition.identidad,
     input: {

@@ -95,6 +95,129 @@ function l25RecipeRecord(): FabricationRecipeRecord {
 }
 
 describe("despiece de líneas universales con precio Arquetipo", () => {
+  it.each(["L20", "L5000"] as const)("%s no confirma accesorios genéricos sin cantidad acreditada", (lineName) => {
+    const item = itemFor(pricedLines.find((line) => line.line === lineName)!);
+    const snapshot = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 }).formal!;
+    expect(snapshot.result.accesorios).toEqual([]);
+    expect(snapshot.advertencias.some((warning) => /accesorios pendientes/i.test(warning.mensaje))).toBe(true);
+  });
+  it.each([
+    ["L20", ["2001", "2002", "2009"]],
+    ["L5000", ["5003"]],
+  ] as const)("%s conserva únicamente perfiles estructurales identificables para DVH", (lineName, expectedCodes) => {
+    const line = pricedLines.find((entry) => entry.line === lineName)!;
+    const item = { ...itemFor(line), vidrio: "DVH 4+12+4" };
+    const snapshot = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 }).formal!;
+    expect(snapshot.pauta.map((profile) => profile.codigoPerfil).sort()).toEqual([...expectedCodes].sort());
+    expect(snapshot.result.vidrios).toEqual([]);
+    expect(snapshot.result.accesorios).toEqual([]);
+  });
+  it.each(["L20", "L5000"] as const)("%s deja pendientes medidas de vidrio genéricas sin reconciliar con catálogo", (lineName) => {
+    const line = pricedLines.find((entry) => entry.line === lineName)!;
+    const item = { ...itemFor(line), ancho: 1400, alto: 1200, vidrio: "Monolítico 4 mm" };
+    const snapshot = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 }).formal!;
+    expect(snapshot.result.vidrios).toEqual([]);
+    expect(snapshot.advertencias.some((warning) => /vidrio.*pendiente/i.test(warning.mensaje))).toBe(true);
+  });
+  it.each(["L20", "L5000"] as const)("%s no presenta como completo DVH sin compatibilidad demostrada", (lineName) => {
+    const line = pricedLines.find((entry) => entry.line === lineName)!;
+    const item = { ...itemFor(line), vidrio: "DVH 4+12+4" };
+    const snapshot = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 }).formal!;
+    expect(snapshot.advertencias.some((warning) => warning.codigo === "COMPOSICION_VIDRIO_PENDIENTE")).toBe(true);
+  });
+  it.each(["L20", "L5000"] as const)("%s no presenta como completo monolítico 6 mm sin compatibilidad demostrada", (lineName) => {
+    const line = pricedLines.find((entry) => entry.line === lineName)!;
+    const item = { ...itemFor(line), vidrio: "Monolítico 6 mm" };
+    const snapshot = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 }).formal!;
+    expect(snapshot.advertencias.some((warning) => warning.codigo === "COMPOSICION_VIDRIO_PENDIENTE")).toBe(true);
+  });
+  it("L42 DVH conserva solo perfiles estructurales y deja vidrio y junquillo pendientes", () => {
+    const item = { ...itemFor(pricedLines.find((line) => line.line === "L42")!), alto: 1200, vidrio: "DVH 4+12+4" };
+    const snapshot = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 }).formal!;
+    expect(snapshot.pauta.some((profile) => profile.codigoPerfil === "4229")).toBe(false);
+    expect(snapshot.pauta.some((profile) => profile.codigoPerfil === "4201")).toBe(true);
+    expect(snapshot.result.vidrios).toEqual([]);
+    expect(snapshot.advertencias.some((entry) => entry.codigo === "COMPOSICION_VIDRIO_PENDIENTE")).toBe(true);
+  });
+  it("L42 registra el nombre del vidrio realmente seleccionado en los cortes nuevos", () => {
+    const item = { ...itemFor(pricedLines.find((line) => line.line === "L42")!), vidrio: "Monolítico 5 mm" };
+    const snapshot = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 }).formal!;
+    expect(snapshot.result.vidrios[0]?.nombre).toBe("Monolítico 5 mm");
+  });
+  it.each(["DVH 5+12+5", "DVH 4+12+4+1"])("L42 no extiende la confirmación estructural 4+12+4 a %s", (glass) => {
+    const item = { ...itemFor(pricedLines.find((line) => line.line === "L42")!), vidrio: glass };
+    const snapshot = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 }).formal!;
+    expect(snapshot.pauta).toEqual([]);
+    expect(snapshot.result.vidrios).toEqual([]);
+  });
+  it("L42 no etiqueta como 4 mm un vidrio monolítico de 6 mm", () => {
+    const item = { ...itemFor(pricedLines.find((line) => line.line === "L42")!), vidrio: "Monolítico 6 mm" };
+    const snapshot = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 }).formal!;
+    expect(snapshot.result.vidrios[0]?.nombre).toBe("Monolítico 6 mm");
+    expect(snapshot.pauta.some((perfil) => perfil.codigoPerfil === "4229")).toBe(false);
+    expect(snapshot.pauta.some((perfil) => perfil.codigoPerfil === "4201")).toBe(true);
+    expect(snapshot.advertencias.some((warning) => /burlete pendiente/i.test(warning.mensaje))).toBe(true);
+  });
+  it("congela la selección de vidrio por nombre en una cotización nueva", () => {
+    const item = { ...itemFor(pricedLines.find((line) => line.line === "L42")!), vidrio: "Monolítico 5 mm" };
+    const resolved = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 });
+    expect(resolved.formal?.glassSelection).toMatchObject({ displayName: "Monolítico 5 mm", productId: null });
+  });
+  it("no muestra a la vez burletes incompatibles al seleccionar vidrio de 5 mm", () => {
+    const item = { ...itemFor(pricedLines.find((line) => line.line === "L42")!), vidrio: "Monolítico 5 mm" };
+    const resolved = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 });
+    const names = resolved.formal?.result.accesorios.map((accessory) => accessory.nombre) ?? [];
+    expect(names).not.toContain("Burlete cuña 4 mm");
+    expect(names).toContain("Burlete cuña 5 mm");
+  });
+  it.each([
+    ["Monolítico 4 mm", "Burlete cuña 4 mm", "Burlete cuña 5 mm"],
+    ["Monolítico 5 mm", "Burlete cuña 5 mm", "Burlete cuña 4 mm"],
+  ])("selecciona solo el burlete compatible para %s", (glass, selected, other) => {
+    const item = { ...itemFor(pricedLines.find((line) => line.line === "L42")!), vidrio: glass };
+    const result = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 });
+    const names = result.formal?.result.accesorios.map((entry) => entry.nombre) ?? [];
+    expect(names).toContain(selected);
+    expect(names).not.toContain(other);
+    expect(result.formal?.advertencias.some((entry) => entry.codigo === "ACCESORIO_VIDRIO_PENDIENTE")).toBe(false);
+  });
+  it.each(["Monolítico 6 mm", "Termopanel 4+12+4"])("deja pendiente el burlete para %s", (glass) => {
+    const item = { ...itemFor(pricedLines.find((line) => line.line === "L42")!), vidrio: glass };
+    const result = resolveFabricacionDespieceForQuoteItem({ item, recipes: [], organizationId: 1 });
+    const names = result.formal?.result.accesorios.map((entry) => entry.nombre) ?? [];
+    expect(names).not.toContain("Burlete cuña 4 mm");
+    expect(names).not.toContain("Burlete cuña 5 mm");
+    expect(result.formal?.advertencias.some((entry) => entry.codigo === "ACCESORIO_VIDRIO_PENDIENTE")).toBe(true);
+  });
+  it("mantiene cortes de perfiles al cambiar monolítico 4 a 5 mm", () => {
+    const item = itemFor(pricedLines.find((line) => line.line === "L42")!);
+    const first = resolveFabricacionDespieceForQuoteItem({ item: { ...item, vidrio: "Monolítico 4 mm" }, recipes: [], organizationId: 1 });
+    const second = resolveFabricacionDespieceForQuoteItem({ item: { ...item, vidrio: "Monolítico 5 mm" }, recipes: [], organizationId: 1 });
+    const cuts = (result: typeof first) => result.formal?.pauta.map(({ codigoPerfil, medidaMm, cantidadPiezas }) =>
+      ({ codigoPerfil, medidaMm, cantidadPiezas }));
+    expect(cuts(first)).toEqual(cuts(second));
+  });
+  it("aplica la compatibilidad a la receta L42 guardada antes de existir el nuevo campo", () => {
+    const line = pricedLines.find((entry) => entry.line === "L42")!;
+    const base = resolveUniversalPricedLineFallback({
+      catalogKey: line.catalogKey, lineTemplateId: 101, organizationId: 1,
+      lineName: "L42", variant: "normal", leavesCount: 1, recipes: [],
+    })!;
+    const legacy = { ...base, id: "receta-taller", scope: "organization" as const,
+      sourceType: "manual" as const, sourceReference: "blank-start",
+      definition: { ...base.definition, accesorios: base.definition.accesorios.map((entry) => {
+        const original = { ...entry };
+        delete original.compatibilidadVidrio;
+        return original;
+      }) },
+    };
+    const item = { ...itemFor(line), vidrio: "Monolítico 5 mm" };
+    const result = resolveFabricacionDespieceForQuoteItem({ item, recipes: [legacy], organizationId: 1 });
+    expect(result.formal?.recipeId).toBe("receta-taller");
+    expect(result.formal?.result.accesorios.map((entry) => entry.nombre)).toContain("Burlete cuña 5 mm");
+    expect(result.formal?.result.accesorios.map((entry) => entry.nombre)).not.toContain("Burlete cuña 4 mm");
+    expect(legacy.definition.accesorios.every((entry) => !("compatibilidadVidrio" in entry))).toBe(true);
+  });
   it.each(["ventora:l42", "ventora:arquetipo-l42-proyectante"])(
     "normaliza variante estándar de AL-42 (%s)",
     (catalogKey) => {

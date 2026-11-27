@@ -40,6 +40,15 @@ function getConfirmedGlassL5000Fixture() {
         observaciones: "Descuento de corte confirmado para fixture de prueba.",
         datosPendientes: undefined,
       })),
+      // El escenario completo necesita también cantidades y códigos confirmados;
+      // los precios de proveedor no convierten una sugerencia en confirmación.
+      accesorios: recipe.definition.accesorios.map((accessory) => ({
+        ...accessory,
+        codigo: accessory.nombre === "Carros o rodamientos" ? "ACC-CARRO"
+          : accessory.nombre === "Cierre o seguro" ? "ACC-CIERRE" : "ACC-FELPA",
+        observaciones: "Cantidad confirmada para fixture de prueba.",
+        datosPendientes: undefined,
+      })),
     },
   };
 }
@@ -160,6 +169,29 @@ function makeGlassCutPresentation(
 }
 
 describe("buildGuidedTechnicalCostSuggestion & Paso 2 -> Paso 3 integración", () => {
+  it("no estima vidrio nominal cuando la ficha contradice el espesor indicado", () => {
+    const recipe = getL5000Recipe();
+    const result = buildGuidedTechnicalCostSuggestion({ recipe, organizationId: 3, lineTemplateId: 5000,
+      anchoMm: 1800, altoMm: 1500, cantidad: 1, vidrio: "Incoloro monolítico 5mm", colorHex: "#a8a8a8", material: "Aluminio",
+      finishName: "Mate", catalogLineKey: "ventora:l5000", supplierFamilyKey: "universal:aluminio:l5000",
+      providerKey: "alumco", profilePrices: makePreviewPrices([...new Set(recipe.definition.perfiles.map((profile) => profile.codigoPerfil))]),
+      glassTechnicalSpec: { version: 1, productId: null, thicknessMm: 6, category: "monolitico", manualCutStatus: "confirmed", technicalReviewConfirmed: true,
+        sheetWidthMm: null, sheetHeightMm: null, provenance: "catalog", sourceProductId: null, sourceValues: null, hasConflict: false },
+      glassCutPresentations: [makeGlassCutPresentation({ thicknessMm: 6 })], asOfDate: "2026-11-21" });
+    expect(result.glassCostNet).toBeNull();
+    expect(result.glassCostIsProvisional).toBe(false);
+  });
+  it.each(["Incoloro monolítico 6mm", "DVH 4+12+4"])("no estima vidrio nominal incompatible %s", (vidrio) => {
+    const recipe = getL5000Recipe();
+    const result = buildGuidedTechnicalCostSuggestion({ recipe, organizationId: 3, lineTemplateId: 5000,
+      anchoMm: 1800, altoMm: 1500, cantidad: 1, vidrio, colorHex: "#a8a8a8", material: "Aluminio",
+      finishName: "Mate", catalogLineKey: "ventora:l5000", supplierFamilyKey: "universal:aluminio:l5000",
+      providerKey: "alumco", profilePrices: makePreviewPrices([...new Set(recipe.definition.perfiles.map((profile) => profile.codigoPerfil))]),
+      glassCutPresentations: [makeGlassCutPresentation()], asOfDate: "2026-11-21" });
+    expect(result.glassCostNet).toBeNull();
+    expect(result.glassCostIsProvisional).toBe(false);
+    expect(result.usableBaseCostGroupNet).toBeNull();
+  });
   it("calcula costo verificado, recargo 100% y precio neto sugerido sin IVA en Paso 2 y valida Paso 3 en ambos modos tributarios", () => {
     const recipe = getConfirmedGlassL5000Fixture();
     const codes = [...new Set(recipe.definition.perfiles.map((p) => p.codigoPerfil))];

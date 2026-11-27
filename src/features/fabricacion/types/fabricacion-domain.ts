@@ -212,6 +212,14 @@ export type FabricacionAccesorio = {
   reglaCantidad: FabricacionReglaCantidad;
   requerido: boolean;
   condicion?: FabricacionCondicion;
+  /** La aplicación requiere confirmación y no representa una cantidad ejecutable. */
+  aplicacionPendiente?: boolean;
+  /** Alternativas documentadas que dependen de la selección de vidrio. */
+  compatibilidadVidrio?: {
+    grupo: string;
+    categoria: "monolitico" | "dvh";
+    espesorMm: number;
+  };
   /** Fórmula textual de consumo cuando la fuente expresa metros/tramos. */
   formulaCantidad?: string;
   unidad?: string;

@@ -10,6 +10,7 @@ import {
   buildUpcomingComponentCodes,
   buildSuggestedComponentForm,
   createEmptyFreeValueItemForm,
+  createEmptyComponentForm,
   filterLineTemplatesForComponent,
   prioritizeLineTemplatesByMaterial,
   mapItemToForm,
@@ -117,6 +118,15 @@ function createBaseItem() {
 }
 
 describe("workflow-ui paso 2", () => {
+  it("invalida el despiece al cambiar el vidrio y conserva un histórico si no cambia", () => {
+    const snapshot = { recipeId: "historica" } as NonNullable<ReturnType<typeof createEmptyComponentForm>["fabricacionSnapshot"]>;
+    const form = { ...createEmptyComponentForm(), vidrio: "Monolítico 4 mm", fabricacionSnapshot: snapshot };
+    const unchanged = applyGlassSelectionToComponentForm(form, { displayName: "Monolítico 4 mm" }, []);
+    expect(unchanged.fabricacionSnapshot).toBe(snapshot);
+    const changed = applyGlassSelectionToComponentForm(form, { displayName: "Monolítico 5 mm" }, []);
+    expect(changed.fabricacionSnapshot).toBeNull();
+    expect(changed.cubicationSnapshot).toBeNull();
+  });
   it("descarta identidad técnica de una línea anterior si la nueva no resuelve receta", () => {
     const previousSketch = createDefaultGuidedVisualConfig({ widthMm: 1320, heightMm: 980 });
     const nextLine = applyLineTemplateToComponentForm(

@@ -136,6 +136,12 @@ export const fabricacionAccesorioSchema = z
     reglaCantidad: fabricacionReglaCantidadSchema,
     requerido: z.boolean(),
     condicion: fabricacionCondicionSchema.optional(),
+    aplicacionPendiente: z.boolean().optional(),
+    compatibilidadVidrio: z.object({
+      grupo: z.string().trim().min(1),
+      categoria: z.enum(["monolitico", "dvh"]),
+      espesorMm: z.number().positive().finite(),
+    }).strict().optional(),
     formulaCantidad: z.string().min(1).optional(),
     unidad: z.string().min(1).optional(),
     clasificacion: z

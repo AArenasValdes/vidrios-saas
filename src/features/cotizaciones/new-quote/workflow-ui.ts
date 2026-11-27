@@ -2374,6 +2374,53 @@ export function syncTemplatePricingInComponentForm(
   return nextForm;
 }
 
+/**
+ * Cambia el modo de cobro únicamente del formulario del componente activo, sin
+ * alterar ni duplicar el precio de otras partidas ya cargadas en la cotización.
+ */
+export function applyComponentPricingModeSelectionToForm(input: {
+  current: ComponentFormState;
+  pricingMode: PricingMode;
+  items: CotizacionWorkflowItem[];
+  provider: PreferredProvider;
+  defaultMargin?: number;
+}): ComponentFormState {
+  const nextMarginValue =
+    input.pricingMode === "margen" ? String(DEFAULT_MARGIN_PCT) : "0";
+  const hasTemplate = Boolean(
+    input.current.referencia.trim() && input.current.precioPorM2.trim()
+  );
+
+  const next = buildSuggestedComponentForm({
+    items: input.items,
+    tipo: input.current.tipo,
+    provider: input.provider,
+    pricingMode: input.pricingMode,
+    defaultMargin: input.defaultMargin,
+    current: {
+      ...input.current,
+      pricingMode: input.pricingMode,
+      margenPct: nextMarginValue,
+      ...(input.pricingMode === "margen" &&
+      hasTemplate &&
+      !input.current.precioAjustadoManual
+        ? { costoProveedorUnitario: "" }
+        : {}),
+    },
+  });
+
+  const normalizedNext: ComponentFormState = {
+    ...next,
+    pricingMode: input.pricingMode,
+  };
+
+  return hasTemplate
+    ? syncTemplatePricingInComponentForm(normalizedNext, {
+        forceSuggestedPrice: !input.current.precioAjustadoManual,
+      })
+    : normalizedNext;
+}
+
 export function applyLineTemplateToComponentForm(
   form: ComponentFormState,
   template: Pick<
@@ -2547,25 +2594,26 @@ export function applyGlassSelectionToComponentForm(
   const template = productId
     ? lineTemplates.find((candidate) => String(candidate.id) === productId && candidate.categoria === "vidrio")
     : undefined;
-  if (!template || !template.nombre) {
-    return {
+  const next: ComponentFormState = !template || !template.nombre
+    ? {
       ...form,
       vidrio: selection.displayName,
       vidrioLineTemplateId: "",
       glassTechnicalSpec: null,
-    };
-  }
-  const resolvedId = String(template.id);
-  return {
+    }
+    : {
     ...form,
     vidrio: template.nombre,
-    vidrioLineTemplateId: resolvedId,
+    vidrioLineTemplateId: String(template.id),
     glassTechnicalSpec: resolveGlassTechnicalSpecForProduct({
-      productId: resolvedId,
+      productId: String(template.id),
       catalogMetadata: template.catalogMetadata,
-      existing: form.glassTechnicalSpec?.productId === resolvedId ? form.glassTechnicalSpec : null,
+      existing: form.glassTechnicalSpec?.productId === String(template.id) ? form.glassTechnicalSpec : null,
     }),
   };
+  const changed = form.vidrio !== next.vidrio || form.vidrioLineTemplateId !== next.vidrioLineTemplateId ||
+    JSON.stringify(form.glassTechnicalSpec ?? null) !== JSON.stringify(next.glassTechnicalSpec ?? null);
+  return changed ? { ...next, fabricacionSnapshot: null, cubicationSnapshot: null } : next;
 }
 
 export function filterGlassOptions(query: string) {
