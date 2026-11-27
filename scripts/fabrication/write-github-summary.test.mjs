@@ -23,7 +23,7 @@ test("el resumen muestra estado, commit, pruebas, cobertura y alcance local", ()
   const output = renderGithubSummary(sample());
   assert.match(output, /Resultado:\*\* Aprobado/);
   assert.match(output, /24 aprobadas en 7 suites/);
-  assert.match(output, /2 líneas · 3 configuraciones/);
+  assert.match(output, /2 líneas · 3 filas comerciales/);
   assert.match(output, /fixtures locales/);
   assert.match(output, /Supabase y datos privados.*no fueron consultados/);
 });
