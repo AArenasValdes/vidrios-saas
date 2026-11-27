@@ -38,6 +38,7 @@ import {
   buildPieceDomainView,
   formatPieceTechnicalSummaryLines,
   getPiecePresentationMeta,
+  hasDocumentaryFabricationBlock,
   isPieceCommerciallyComplete,
   type PieceDomainView,
 } from "@/features/cotizaciones/new-quote/quote-piece-domain";
@@ -842,17 +843,26 @@ export function QuoteConstructorWorkspace({
       : [];
   const activeRequiredGaps = activeGaps.filter((gap) => gap.required);
   const activeRecommendedGaps = activeGaps.filter((gap) => !gap.required);
+  const activeHasDocumentaryBlock = Boolean(
+    activeItem &&
+      (hasDocumentaryFabricationBlock(activeItem, activeTemplate) ||
+        (activeFabricationResolution?.estado === "receta_incompleta" &&
+          !activeFabricationResolution.formal))
+  );
   const activeIsConfirmed =
     Boolean(activeItem) &&
     activeEffectivelyComplete &&
+    !activeHasDocumentaryBlock &&
     confirmedPieceIds.has(activeItem!.id);
   const activeCommercialLabel = activeHasLocalErrors
     ? "Faltan medidas"
-    : activeIsConfirmed
-      ? "Lista"
-      : activeEffectivelyComplete
-        ? "Completa"
-        : activeView?.commercialLabel ?? "";
+    : activeHasDocumentaryBlock
+      ? "Revisión documental"
+      : activeIsConfirmed
+        ? "Lista"
+        : activeEffectivelyComplete
+          ? "Completa"
+          : activeView?.commercialLabel ?? "";
 
   useEffect(() => {
     if (!activeItemId && visualItems[0]) onActiveItemChange(visualItems[0].id);
@@ -1232,15 +1242,26 @@ export function QuoteConstructorWorkspace({
                 const hasLocalErrors = itemHasLocalFieldErrors(itemDrafts);
                 const isEffectivelyComplete =
                   view.isCommerciallyComplete && !hasLocalErrors;
+                const itemTemplate = resolveLineTemplate(
+                  lineTemplates,
+                  mapItemToForm(item).lineTemplateId
+                );
+                const itemHasDocumentaryBlock =
+                  hasDocumentaryFabricationBlock(item, itemTemplate) ||
+                  (active && activeHasDocumentaryBlock);
                 const isConfirmed =
-                  isEffectivelyComplete && confirmedPieceIds.has(item.id);
+                  isEffectivelyComplete &&
+                  !itemHasDocumentaryBlock &&
+                  confirmedPieceIds.has(item.id);
                 const commercialLabel = hasLocalErrors
                   ? "Faltan medidas"
-                  : isConfirmed
-                    ? "Lista"
-                    : isEffectivelyComplete
-                      ? "Completa"
-                      : view.commercialLabel;
+                  : itemHasDocumentaryBlock
+                    ? "Revisión documental"
+                    : isConfirmed
+                      ? "Lista"
+                      : isEffectivelyComplete
+                        ? "Completa"
+                        : view.commercialLabel;
                 const anchoDraft = itemDrafts?.ancho;
                 const altoDraft = itemDrafts?.alto;
                 const cantidadDraft = itemDrafts?.cantidad;
@@ -1335,10 +1356,12 @@ export function QuoteConstructorWorkspace({
                       <div className={s.badgeRow}>
                         <span
                           className={
-                            isConfirmed || isEffectivelyComplete ? s.ready : s.pending
+                            !itemHasDocumentaryBlock && (isConfirmed || isEffectivelyComplete)
+                              ? s.ready
+                              : s.pending
                           }
                         >
-                          {isConfirmed || isEffectivelyComplete ? (
+                          {!itemHasDocumentaryBlock && (isConfirmed || isEffectivelyComplete) ? (
                             <LuCheck aria-hidden />
                           ) : (
                             <LuCircleAlert aria-hidden />
@@ -1606,10 +1629,22 @@ export function QuoteConstructorWorkspace({
                 ) : (
                   <>
                     <div className={s.checklistHeader}>
-                      <LuCheck aria-hidden />
-                      <strong>Lista para confirmar</strong>
+                      {activeHasDocumentaryBlock ? (
+                        <LuCircleAlert aria-hidden />
+                      ) : (
+                        <LuCheck aria-hidden />
+                      )}
+                      <strong>
+                        {activeHasDocumentaryBlock
+                          ? "Revisión documental pendiente"
+                          : "Lista para confirmar"}
+                      </strong>
                     </div>
-                    <p>Revisa el precio y marca la pieza como lista cuando esté OK.</p>
+                    <p>
+                      {activeHasDocumentaryBlock
+                        ? "Existe un bloqueo documental que impide generar el snapshot de fabricación."
+                        : "Revisa el precio y marca la pieza como lista cuando esté OK."}
+                    </p>
                     {activeRecommendedGaps.length > 0 ? (
                       <div className={s.checklistChipsSoft}>
                         <span>Opcional:</span>

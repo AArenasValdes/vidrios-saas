@@ -254,18 +254,28 @@ export function buildWorkMaterialsWorkbook(XLSX: typeof XLSXModule, input: Build
     }
     const reviewGroups = input.workOrder?.reviewCutGroups ?? [];
     if (reviewGroups.length > 0) {
+      const onlyUnvalidatedReview = reviewGroups.every((group) => group.reviewReasonKind === "unvalidated");
       XLSX.utils.book_append_sheet(workbook, buildSheet(
         XLSX,
         input,
-        "Revisión técnica · cortes históricos",
-        ["Código de perfil", "Perfil", "Partida", "Componente", "Función", "Cantidad", "Largo guardado (mm)"],
+        onlyUnvalidatedReview ? "Revisión técnica · recetas sin validar" : "Revisión técnica · cortes históricos",
+        ["Código de perfil", "Perfil", "Partida", "Componente", "Función", "Cantidad", "Largo guardado (mm)", "Estado", "Distribución teórica", "Sobrante teórico (mm)"],
         reviewGroups.flatMap((group) => group.cuts.map((cut) => [
           group.technicalCode, group.profileName, cut.itemCode, cut.component,
           cut.functionName, cut.quantity, cut.lengthMm,
+          group.reviewReasonKind === "unvalidated"
+            ? "Receta sin validar · no operativa"
+            : "Snapshot incompatible · no operativo",
+          group.barIndex != null && group.commercialLengthMm != null
+            ? `Tira ${group.barIndex} · ${group.commercialLengthMm} mm (teórica)`
+            : "No calculada",
+          group.barIndex != null && group.theoreticalRemnantMm != null ? group.theoreticalRemnantMm : "—",
         ])),
-        [20, 34, 17, 32, 24, 14, 25],
-        { 5: "#,##0", 6: "#,##0 \"mm\"" },
-        "Snapshot histórico conservado para consulta. No constituye una pauta operativa.",
+        [20, 34, 17, 32, 24, 14, 25, 32, 28, 22],
+        { 5: "#,##0", 6: "#,##0 \"mm\"", 9: "#,##0 \"mm\"" },
+        onlyUnvalidatedReview
+          ? "Receta en prueba o borrador conservada para revisión teórica. No constituye una pauta operativa."
+          : "Snapshot histórico conservado para consulta. No constituye una pauta operativa.",
         "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN. Revisar identidad y estado técnico antes de cualquier uso."
       ), "Revisión histórica");
     }
