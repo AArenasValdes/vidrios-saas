@@ -1,6 +1,8 @@
 /** @jest-environment jsdom */
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { LINE_4000_CATALOG_KEY, crearRecetaLine4000Corredera } from "@/features/fabricacion/fixtures/line-4000-corredera-recipe";
+import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 
 import { PautaCubicacionPanel } from "@/app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/pauta-cubicacion-panel";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
@@ -240,6 +242,34 @@ describe("PautaCubicacionPanel con recetas persistidas", () => {
       )
     );
     expect(screen.getByText("Validada por tu taller")).toBeInTheDocument();
+  });
+
+  it("mantiene la L4000 documental pendiente en Guiada y muestra su histórico hasta cambiar las medidas", () => {
+    const copy = {
+      ...recipe("copia", "2h", ""), definition: crearRecetaLine4000Corredera({ lineName: "L4000" }),
+      sourceType: "copied" as const, sourceReference: "ventora:universal:l4000:2h",
+    };
+    mockUseFabricationRecipes.mockReturnValue({ organizationId: 10, recipes: [copy], isLoading: false });
+    const form = {
+      ancho: "1200", alto: "1000", cantidad: "1", lineTemplateId: "50", tipo: "Ventana",
+      sistema: "Corredera", fabricacionTipologia: "corredera", fabricacionHojas: 2, catalogLineKey: LINE_4000_CATALOG_KEY,
+    };
+    const props = {
+      selectedTemplate: { ...selectedTemplate, nombre: "L4000", catalogKey: LINE_4000_CATALOG_KEY },
+      onFabricacionSnapshotChange: jest.fn(), onCubicationSnapshotChange: jest.fn(),
+    };
+    const { rerender } = render(<PautaCubicacionPanel {...props} componentForm={form} />);
+    expect(screen.getByText(/Pauta de Línea 4000 de dos hojas pendiente/)).toBeInTheDocument();
+    expect(props.onFabricacionSnapshotChange).not.toHaveBeenCalled();
+    const frozen = construirSnapshotFabricacionCotizacion({ recipe: copy, entrada: {
+      anchoTotalMm: 1200, altoTotalMm: 1000, cantidad: 1, hojas: 2, modulos: 2, variante: "2h",
+    } });
+    rerender(<PautaCubicacionPanel {...props} componentForm={{ ...form, fabricacionSnapshot: frozen }} />);
+    expect(screen.getByText("Snapshot guardado")).toBeInTheDocument();
+    expect(props.onFabricacionSnapshotChange).not.toHaveBeenCalled();
+    rerender(<PautaCubicacionPanel {...props} componentForm={{ ...form, ancho: "1400", fabricacionSnapshot: frozen }} />);
+    expect(screen.getByText(/Pauta de Línea 4000 de dos hojas pendiente/)).toBeInTheDocument();
+    expect(props.onFabricacionSnapshotChange.mock.calls).toEqual([[null]]);
   });
 
   it("solo con autorización QA genera un snapshot preliminar de Veratec draft sin promover la receta", async () => {

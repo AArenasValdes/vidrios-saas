@@ -59,6 +59,30 @@ describe("contrato de familia y compatibilidad", () => {
     });
   });
 
+  it("publica AL-42 Fijo como configuración cotizable, separada del proyectante y sin afirmar receta", () => {
+    const fixedCatalog = VENTORA_DEFAULT_LINE_CATALOG.find((candidate) =>
+      candidate.catalogKey === "ventora:l42:configuration:ventora:l42:pano-fijo"
+    );
+    expect(fixedCatalog).toBeDefined();
+    if (!fixedCatalog) throw new Error("Falta la identidad documental AL-42 Fijo.");
+
+    const result = evaluateLineCompatibility({
+      line: line({
+        catalogKey: fixedCatalog.catalogKey,
+        nombre: fixedCatalog.nombre,
+        catalogMetadata: fixedCatalog.catalogMetadata,
+      }),
+      context: {
+        componentType: "Paño fijo",
+        openingType: "Fijo",
+        leavesCount: 1,
+        material: "Aluminio",
+      },
+    });
+
+    expect(result).toMatchObject({ commercial: "compatible", commercialEvidence: "explicit", recipe: "not_checked", commercialPrice: "configured" });
+  });
+
   it("agrupa familias declaradas y reúne líneas propias en un solo bloque sin reordenar", () => {
     const grouped = groupLineTemplatesByFamily([
       line({ id: 1, catalogKey: "ventora:winhouse-new-s75-doble-riel", nombre: "S75 doble" }),

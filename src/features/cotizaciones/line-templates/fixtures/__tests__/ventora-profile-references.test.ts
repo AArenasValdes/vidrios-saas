@@ -129,6 +129,24 @@ describe("ventora profile references", () => {
     ).toBe(true);
   });
 
+  it("separa los perfiles de L32 Fijo de la lista documentada de Proyectante", () => {
+    const fixed = getVentoraProfileReferencesForCatalogKey("ventora:l32:configuration:ventora:l32:pano-fijo");
+    const projecting = getVentoraProfileReferencesForCatalogKey("ventora:l32");
+
+    expect(fixed?.profiles).toEqual([]);
+    expect(projecting?.profiles.map((profile) => profile.code)).toEqual(["3201", "3202", "3204", "3205", "3208"]);
+  });
+
+  it("limita las referencias documentales del L42 Fijo a sus perfiles propios", () => {
+    const fixed = getVentoraProfileReferencesForCatalogKey("ventora:l42:configuration:ventora:l42:pano-fijo");
+    const projecting = getVentoraProfileReferencesForCatalogKey("ventora:l42");
+
+    expect(fixed?.profiles.map((profile) => profile.code)).toEqual(["4209", "4229"]);
+    expect(fixed?.profiles.every((profile) => profile.source?.includes("9c02bf64-530c-48b6-b5c5-cdc2bd0391c6"))).toBe(true);
+    expect(projecting?.profiles.map((profile) => profile.code)).toContain("4201");
+    expect(fixed?.profiles.map((profile) => profile.code)).not.toContain("4201");
+  });
+
   it("expone códigos del estudio para S60 sin marcar receta validada", () => {
     const payload = getVentoraProfileReferencesForCatalogKey("ventora:winhouse-s60");
 
