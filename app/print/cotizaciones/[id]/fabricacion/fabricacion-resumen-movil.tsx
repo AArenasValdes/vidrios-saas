@@ -767,7 +767,7 @@ export function FabricacionResumenMovil({
               </section>
 
               <section className={s.mSummarySection}>
-                <div className={s.mSummaryHeading}><h2>Despieces para revisar</h2><span>{summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).length} con despiece · {summary.items.filter((row) => row.geometryOnly).length} preliminares · {workOrder.documentStatus.pendingComponents.length} pendientes</span></div>
+                <div className={s.mSummaryHeading}><h2>Despieces para revisar</h2><span>{summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).length} con despiece · {summary.items.filter((row) => row.operationalStatus === "preliminary" || Boolean(row.geometryOnly)).length} preliminares · {workOrder.documentStatus.pendingComponents.length} pendientes</span></div>
                 {workOrder.documentStatus.state === "partial" ? (
                   <section className={s.compositionReviewNotice} aria-label="Estado del documento de fabricación">
                     <strong>{isReferentialOnlyWorkOrder(workOrder) ? DISTRIBUCION_REFERENCIAL_LABEL : workOrder.documentStatus.label}</strong>
@@ -791,7 +791,22 @@ export function FabricacionResumenMovil({
               </section>
 
               <section className={s.mTotals} aria-label="Indicadores del trabajo">
-                <SummaryMetricCell label="Perfiles" value={formatMl(summary.totalProfilesMl)} />
+                <SummaryMetricCell
+                  label={
+                    summary.totalProfilesMl === 0 &&
+                    summary.items.some((row) => row.operationalStatus === "preliminary" && row.profilesMl > 0)
+                      ? "Perfiles (preliminar)"
+                      : "Perfiles"
+                  }
+                  value={formatMl(
+                    summary.totalProfilesMl > 0
+                      ? summary.totalProfilesMl
+                      : summary.items.reduce(
+                          (sum, row) => sum + (row.operationalStatus === "preliminary" ? row.profilesMl : 0),
+                          0
+                        )
+                  )}
+                />
                 <SummaryMetricCell label="Vidrio" value={formatM2(summary.totalGlassM2)} />
                 <SummaryMetricCell label="Tiras" value={summary.totalBars == null ? "—" : String(summary.totalBars)} />
                 <SummaryMetricCell label="Con pauta completa" value={`${summary.profileCoverage?.readyCount ?? summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).length}/${summary.profileCoverage?.requiredCount ?? summary.totalItems}`} />

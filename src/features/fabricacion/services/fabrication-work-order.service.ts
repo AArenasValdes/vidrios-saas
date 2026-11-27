@@ -195,6 +195,51 @@ function buildHistoricCutGroups(summary: FabricationQuoteSummary, kind: "ready" 
           quantity: cut.quantity,
           lengthMm: cut.lengthMm,
         }));
+    const pautaBarras = item.fabricacionSnapshot?.pautaBarras;
+    const expectedCutCount = cuts.reduce((sum, cut) => sum + (cut.quantity > 0 && cut.lengthMm > 0 ? cut.quantity : 0), 0);
+    const barCutCount = pautaBarras?.calculable
+      ? pautaBarras.barras.reduce((sum, bar) => sum + bar.cortes.filter((cut) => Number.isFinite(cut.largoMm) && cut.largoMm > 0).length, 0)
+      : 0;
+    if (
+      kind !== "review" &&
+      pautaBarras?.calculable &&
+      pautaBarras.barras.length > 0 &&
+      barCutCount > 0 &&
+      barCutCount === expectedCutCount
+    ) {
+      for (const [barNumber, bar] of pautaBarras.barras.entries()) {
+        const barCuts = new Map<string, WorkOrderCut>();
+        for (const cut of bar.cortes) {
+          if (!Number.isFinite(cut.largoMm) || cut.largoMm <= 0) continue;
+          const cutKey = `${cut.funcion}|${cut.largoMm}`;
+          const existing = barCuts.get(cutKey);
+          if (existing) existing.quantity += 1;
+          else barCuts.set(cutKey, {
+            itemCode: item.codigo,
+            component: item.nombre,
+            functionName: cut.funcion || "Función pendiente",
+            quantity: 1,
+            lengthMm: cut.largoMm,
+          });
+        }
+        if (barCuts.size === 0) continue;
+        groups.push({
+          key: `${item.itemId}|${bar.materialKey || bar.codigoPerfil}|${bar.largoComercialMm}|${bar.indice}|${barNumber}`,
+          itemId: item.itemId,
+          technicalCode: bar.codigoPerfil || "Pendiente",
+          profileName: bar.nombrePerfil || "Perfil sin descripción",
+          finish: null,
+          barIndex: bar.indice,
+          commercialLengthMm: bar.largoComercialMm,
+          usedMm: bar.usadoMm,
+          theoreticalRemnantMm: bar.sobranteMm,
+          trimMm: pautaBarras.parametrosFisicos?.despunteInicialMm ?? null,
+          kerfMm: pautaBarras.parametrosFisicos?.perdidaCorteMm ?? null,
+          cuts: [...barCuts.values()],
+        });
+      }
+      continue;
+    }
     const byProfile = new Map<string, WorkOrderCutGroup>();
     for (const cut of cuts) {
       if (cut.quantity <= 0 || cut.lengthMm <= 0) continue;

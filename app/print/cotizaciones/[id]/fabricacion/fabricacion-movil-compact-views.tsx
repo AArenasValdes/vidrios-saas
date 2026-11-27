@@ -359,6 +359,16 @@ export function CompactCutsView({
 
   const fileBase = `cortes-perfiles-${sanitizeFileNamePart(quoteCode || "cotizacion", 32)}`;
   const cutGroups = workOrder.cutGroups;
+  const preliminaryGroups = workOrder.preliminaryCutGroups;
+  const preliminaryOnly = cutGroups.length === 0 && preliminaryGroups.length > 0;
+  const preliminaryProfilesMl = preliminaryGroups.reduce(
+    (sum, group) => sum + group.cuts.reduce((cutSum, cut) => cutSum + (cut.lengthMm * cut.quantity) / 1000, 0),
+    0
+  );
+  const preliminaryBarsCount = preliminaryGroups.filter((group) => group.barIndex != null).length;
+  const preliminaryWasteMm = preliminaryGroups.some((group) => group.theoreticalRemnantMm != null)
+    ? preliminaryGroups.reduce((sum, group) => sum + (group.theoreticalRemnantMm ?? 0), 0)
+    : null;
   const safeTrabajoSnapshot = summary.totalBars == null ? null : summary.trabajoSnapshot;
 
   const totalWaste =
@@ -366,14 +376,18 @@ export function CompactCutsView({
       ? formatMm(safeTrabajoSnapshot.totalWasteMm)
       : cutGroups.some((g) => g.theoreticalRemnantMm != null)
         ? formatMm(cutGroups.reduce((acc, g) => acc + (g.theoreticalRemnantMm ?? 0), 0))
-        : "—";
+        : preliminaryOnly && preliminaryWasteMm != null
+          ? formatMm(preliminaryWasteMm)
+          : "—";
 
   const totalBarsCount =
     safeTrabajoSnapshot?.totalBars != null
       ? String(safeTrabajoSnapshot.totalBars)
       : summary.totalBars != null
         ? String(summary.totalBars)
-        : "—";
+        : preliminaryOnly && preliminaryBarsCount > 0
+          ? String(preliminaryBarsCount)
+          : "—";
 
   const consolidated = useMemo(
     () =>
@@ -397,9 +411,28 @@ export function CompactCutsView({
           <div>
             <h2 className={s.mCompactSectionTitle}>Pauta de cortes de perfiles</h2>
             <p className={s.mCompactSectionSubtitle}>
-              {cutGroups.length}{" "}
-              {cutGroups.length === 1 ? "tira o perfil" : "tiras o perfiles"} ·{" "}
-              {workOrder.hasJointBars ? workOrder.cutPlanPhysicalState === "teorica" ? DISTRIBUCION_REFERENCIAL_LABEL : "Pauta conjunta" : "Por componente"}
+              {preliminaryOnly ? (
+                <>
+                  {preliminaryGroups.length}{" "}
+                  {preliminaryGroups.length === 1
+                    ? "tira o perfil preliminar"
+                    : "tiras o perfiles preliminares"}{" "}
+                  ·{" "}
+                  {preliminaryBarsCount > 0
+                    ? "Distribución teórica por pieza"
+                    : "Revisión geométrica"}
+                </>
+              ) : (
+                <>
+                  {cutGroups.length}{" "}
+                  {cutGroups.length === 1 ? "tira o perfil" : "tiras o perfiles"} ·{" "}
+                  {workOrder.hasJointBars
+                    ? workOrder.cutPlanPhysicalState === "teorica"
+                      ? DISTRIBUCION_REFERENCIAL_LABEL
+                      : "Pauta conjunta"
+                    : "Por componente"}
+                </>
+              )}
             </p>
           </div>
           <WorkDocumentExportActions
@@ -431,11 +464,17 @@ export function CompactCutsView({
 
         <div className={s.mCompactMetricStrip} aria-label="Totales de cortes">
           <div className={s.mCompactMetricCell}>
-            <span className={s.mCompactMetricLabel}>Largo en cortes</span>
-            <strong className={s.mCompactMetricValue}>{formatMl(summary.totalProfilesMl)}</strong>
+            <span className={s.mCompactMetricLabel}>
+              {preliminaryOnly ? "Largo preliminar" : "Largo en cortes"}
+            </span>
+            <strong className={s.mCompactMetricValue}>
+              {formatMl(preliminaryOnly ? preliminaryProfilesMl : summary.totalProfilesMl)}
+            </strong>
           </div>
           <div className={s.mCompactMetricCell}>
-            <span className={s.mCompactMetricLabel}>Tiras</span>
+            <span className={s.mCompactMetricLabel}>
+              {preliminaryOnly && preliminaryBarsCount > 0 ? "Tiras teóricas" : "Tiras"}
+            </span>
             <strong className={s.mCompactMetricValue}>{totalBarsCount}</strong>
           </div>
           <div className={s.mCompactMetricCell}>
@@ -445,7 +484,11 @@ export function CompactCutsView({
         </div>
 
         {cutGroups.length === 0 ? (
-          <p className={s.mEmpty}>No hay cortes guardados para este trabajo.</p>
+          <p className={s.mEmpty}>
+            {preliminaryOnly
+              ? "Sin pauta operativa confirmada · ver despiece preliminar abajo."
+              : "No hay cortes guardados para este trabajo."}
+          </p>
         ) : (
           <ul className={s.mCompactList} aria-label="Cortes agrupados por perfil">
             {cutGroups.map((group) => {
@@ -519,7 +562,11 @@ export function CompactCutsView({
               {workOrder.preliminaryCutGroups.map((group) => <li key={group.key} className={s.mCutBarCard}>
                 <strong>{group.technicalCode} · {group.profileName}</strong>
                 {group.cuts.map((cut) => <small key={`${group.key}:${cut.itemCode}:${cut.functionName}:${cut.lengthMm}`}>{cut.itemCode} · {cut.component} · {cut.functionName}: {cut.quantity} × {formatMm(cut.lengthMm)}</small>)}
-                <span>Distribución por tira no calculada.</span>
+                <span>
+                  {group.barIndex != null && group.commercialLengthMm != null
+                    ? `Tira #${group.barIndex} · ${formatMm(group.commercialLengthMm)} (teórica)${group.usedMm != null ? ` · Usado ${formatMm(group.usedMm)}` : ""}${group.theoreticalRemnantMm != null ? ` · Sobrante teórico ${formatMm(group.theoreticalRemnantMm)}` : ""}`
+                    : "Distribución por tira no calculada."}
+                </span>
               </li>)}
             </ul>
           </section>

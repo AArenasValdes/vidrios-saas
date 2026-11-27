@@ -426,13 +426,19 @@ export function createFabricationWorkOrderPdf(
           ? formatProfileCutLine(cut, group)
           : `${cut.itemCode} · ${cut.functionName}\n${cut.quantity} × ${mm(cut.lengthMm)}`).join("\n")
         : "Sin cortes de geometría disponibles";
+      const distributionText = group.barIndex != null && group.commercialLengthMm != null
+        ? `Tira ${group.barIndex} · ${mm(group.commercialLengthMm)} (teórica)`
+        : "Distribución no calculada";
+      const remnantText = group.barIndex != null && group.theoreticalRemnantMm != null
+        ? `${distributionText}\nSobrante ${mm(group.theoreticalRemnantMm)}`
+        : "No aplica";
       return kind === "profile-cuts"
-        ? { cells: [`${profile}\nDistribución no calculada`, cutRows, "No aplica"] }
+        ? { cells: [`${profile}\n${distributionText}`, cutRows, remnantText] }
         : { cells: [
-            `${profile}\n${clean(group.line, "Línea pendiente")} · Color aluminio: ${clean(group.finish, "Pendiente")}\nDistribución no calculada`,
+            `${profile}\n${clean(group.line, "Línea pendiente")} · Color aluminio: ${clean(group.finish, "Pendiente")}\n${distributionText}`,
             cutRows,
             "No asociar a proveedor",
-            "No aplica",
+            remnantText,
           ] };
     });
     const preliminaryTitle = "Despiece estructural preliminar · acristalamiento pendiente";

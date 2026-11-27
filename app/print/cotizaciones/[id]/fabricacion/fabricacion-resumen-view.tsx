@@ -683,7 +683,7 @@ export function FabricacionResumenView({
         <section className={s.desktopSummarySection} aria-label="Resumen de fabricación">
           <div className={s.desktopSummaryHeading}>
             <h2>Despieces disponibles para revisión</h2>
-            <span>{summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).length} con despiece · {summary.items.filter((row) => row.geometryOnly).length} preliminares · {workOrder.documentStatus.pendingComponents.length} pendientes · {summary.totalItems} componentes</span>
+            <span>{summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).length} con despiece · {summary.items.filter((row) => row.operationalStatus === "preliminary" || Boolean(row.geometryOnly)).length} preliminares · {workOrder.documentStatus.pendingComponents.length} pendientes · {summary.totalItems} componentes</span>
           </div>
           {workOrder.documentStatus.state === "partial" ? (
             <section className={s.compositionReviewNotice} aria-label="Estado del documento de fabricación">
@@ -709,7 +709,24 @@ export function FabricacionResumenView({
             </div>
           ) : <p className={s.emptyState}>Esta cotización aún no tiene componentes con pauta guardada.</p>}
           <dl className={s.desktopSummaryMetrics} aria-label="Indicadores del trabajo">
-            <div><dt>Perfiles</dt><dd>{formatMl(summary.totalProfilesMl)}</dd></div>
+            <div>
+              <dt>
+                {summary.totalProfilesMl === 0 &&
+                summary.items.some((row) => row.operationalStatus === "preliminary" && row.profilesMl > 0)
+                  ? "Perfiles (preliminar)"
+                  : "Perfiles"}
+              </dt>
+              <dd>
+                {formatMl(
+                  summary.totalProfilesMl > 0
+                    ? summary.totalProfilesMl
+                    : summary.items.reduce(
+                        (sum, row) => sum + (row.operationalStatus === "preliminary" ? row.profilesMl : 0),
+                        0
+                      )
+                )}
+              </dd>
+            </div>
             <div><dt>Vidrio</dt><dd>{formatM2(summary.totalGlassM2)}</dd></div>
             <div><dt>Tiras</dt><dd>{summary.totalBars ?? "—"}</dd></div>
             <div><dt>Con pauta completa</dt><dd>{summary.profileCoverage?.readyCount ?? summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).length}/{summary.profileCoverage?.requiredCount ?? summary.totalItems}</dd></div>
@@ -744,7 +761,7 @@ export function FabricacionResumenView({
             <LuLayoutGrid aria-hidden />
             <span>Componentes</span>
             <strong>
-              {summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).length} con despiece · {summary.items.filter((row) => row.geometryOnly).length} preliminares · {workOrder.documentStatus.pendingComponents.length} pendientes
+              {summary.items.filter((row) => row.operationalStatus === "ready" || (!row.operationalStatus && !row.geometryOnly)).length} con despiece · {summary.items.filter((row) => row.operationalStatus === "preliminary" || Boolean(row.geometryOnly)).length} preliminares · {workOrder.documentStatus.pendingComponents.length} pendientes
             </strong>
           </div>
         </section>
