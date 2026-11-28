@@ -525,6 +525,79 @@ describe("FabricacionResumenView", () => {
 });
 
 describe("helpers de fabricación", () => {
+  it("suma por nombre físico sin código las funciones horizontal y vertical de la barra", () => {
+    const snapshot = buildL5000Snapshot();
+    const cuts = [
+      { label: "Marco New S75", profileCode: "", profileName: "Marco New S75", functionLabel: "Marco horizontal", quantity: 2, lengthMm: 1805, totalLinealMm: 3610 },
+      { label: "Marco New S75", profileCode: "", profileName: "Marco New S75", functionLabel: "Marco vertical", quantity: 2, lengthMm: 1205, totalLinealMm: 2410 },
+    ];
+    snapshot.cuts = cuts;
+    snapshot.bars = [{index:1,profileCode:"",profileName:"Marco New S75",barLengthMm:6000,usedMm:5410,wasteMm:590,cuts:[{...cuts[0]!,quantity:1,totalLinealMm:1805},{...cuts[1]!,quantity:1,totalLinealMm:1205}]}];
+    const original = JSON.stringify(snapshot);
+    expect(buildCubicacionPerfilRows(snapshot)).toEqual([expect.objectContaining({code:"",label:"Marco New S75",materialNeededMm:6020,barCount:1})]);
+    expect(JSON.stringify(snapshot)).toBe(original);
+  });
+
+  it("mantiene separados nombres similares sin código", () => {
+    const snapshot = buildL5000Snapshot();
+    const cuts = [
+      {label:"Marco A",profileCode:"",profileName:"Marco A",functionLabel:"Marco horizontal",quantity:1,lengthMm:1500,totalLinealMm:1500},
+      {label:"Marco B",profileCode:"",profileName:"Marco B",functionLabel:"Marco horizontal",quantity:1,lengthMm:1000,totalLinealMm:1000},
+    ];
+    snapshot.cuts=cuts;
+    snapshot.bars=cuts.map((cut,i)=>({index:i+1,profileCode:"",profileName:cut.profileName,barLengthMm:6000,usedMm:cut.lengthMm,wasteMm:6000-cut.lengthMm,cuts:[cut]}));
+    expect(buildCubicacionPerfilRows(snapshot)).toEqual(expect.arrayContaining([
+      expect.objectContaining({label:"Marco A",materialNeededMm:1500}),
+      expect.objectContaining({label:"Marco B",materialNeededMm:1000}),
+    ]));
+  });
+
+  it("deja pendiente la identidad de una barra sin código ni nombre identificable", () => {
+    const snapshot=buildL5000Snapshot();
+    snapshot.cuts=[{label:"Marco A",profileName:"Marco A",functionLabel:"Marco",quantity:1,lengthMm:1000,totalLinealMm:1000}];
+    snapshot.bars=[{index:1,usedMm:1000,wasteMm:5000,barLengthMm:6000,cuts:[]}];
+    expect(buildCubicacionPerfilRows(snapshot).find(row=>row.barCount===1)).toMatchObject({materialNeededMm:null});
+  });
+
+  it("resuelve perfiles sin nombre ni código mediante función inequívoca", () => {
+    const snapshot=buildL5000Snapshot();
+    const cut={label:"Por asignar",profileCode:"",profileName:"",functionLabel:"Riel único",quantity:2,lengthMm:1000,totalLinealMm:2000};
+    snapshot.cuts=[cut];
+    snapshot.bars=[{index:1,usedMm:2000,wasteMm:4000,barLengthMm:6000,cuts:[cut]}];
+    expect(buildCubicacionPerfilRows(snapshot)).toEqual([expect.objectContaining({materialNeededMm:2000,barCount:1})]);
+  });
+
+  it("identifica barras mixtas como pendientes, sin atribuirles el total de un perfil", () => {
+    const snapshot=buildL5000Snapshot();
+    const cuts=[{label:"A",profileCode:"A",profileName:"Marco",functionLabel:"Marco",quantity:1,lengthMm:1000,totalLinealMm:1000},{label:"B",profileCode:"B",profileName:"Hoja",functionLabel:"Hoja",quantity:1,lengthMm:1000,totalLinealMm:1000}];
+    snapshot.cuts=cuts;
+    snapshot.bars=[{index:1,usedMm:2000,wasteMm:4000,barLengthMm:6000,cuts}];
+    expect(buildCubicacionPerfilRows(snapshot)).toEqual(expect.arrayContaining([expect.objectContaining({label:"Varios perfiles",materialNeededMm:null})]));
+  });
+
+  it("no atribuye por nombre una barra cuyos cortes contradicen la función guardada", () => {
+    const snapshot=buildL5000Snapshot();
+    const cut={label:"Marco",profileCode:"",profileName:"Marco",functionLabel:"Marco horizontal",quantity:1,lengthMm:1000,totalLinealMm:1000};
+    snapshot.cuts=[cut];
+    snapshot.bars=[{index:1,profileCode:"",profileName:"Marco",usedMm:1000,wasteMm:5000,barLengthMm:6000,cuts:[{...cut,functionLabel:"Hoja"}]}];
+    expect(buildCubicacionPerfilRows(snapshot).find(row=>row.barCount===1)).toMatchObject({materialNeededMm:null});
+  });
+
+  it("no atribuye una barra cuando su nombre contradice el perfil de sus cortes", () => {
+    const snapshot=buildL5000Snapshot();
+    const cut={label:"Marco",profileCode:"",profileName:"Marco",functionLabel:"Vertical",quantity:1,lengthMm:1000,totalLinealMm:1000};
+    snapshot.cuts=[cut];
+    snapshot.bars=[{index:1,profileCode:"",profileName:"Marco",usedMm:1000,wasteMm:5000,barLengthMm:6000,cuts:[{...cut,label:"Hoja",profileName:"Hoja"}]}];
+    expect(buildCubicacionPerfilRows(snapshot).find(row=>row.barCount===1)).toMatchObject({materialNeededMm:null});
+  });
+
+  it("muestra cortes con perfil identificado aunque falte su barra", () => {
+    const snapshot=buildL5000Snapshot();
+    const cuts=[{label:"A",profileCode:"A",profileName:"Marco",functionLabel:"Marco",quantity:1,lengthMm:1000,totalLinealMm:1000},{label:"B",profileCode:"B",profileName:"Hoja",functionLabel:"Hoja",quantity:1,lengthMm:1500,totalLinealMm:1500}];
+    snapshot.cuts=cuts;
+    snapshot.bars=[{index:1,profileCode:"A",profileName:"Marco",usedMm:1000,wasteMm:5000,barLengthMm:6000,cuts:[cuts[0]!]}];
+    expect(buildCubicacionPerfilRows(snapshot)).toEqual(expect.arrayContaining([expect.objectContaining({code:"A",materialNeededMm:1000,barCount:1}),expect.objectContaining({code:"B",materialNeededMm:1500,barCount:0})]));
+  });
   it("deja Por asignar con baja jerarquía y formatea cortes", () => {
     expect(isUnassignedProfileLabel("Por asignar")).toBe(true);
     expect(isUnassignedProfileLabel("Perfil sin código")).toBe(true);

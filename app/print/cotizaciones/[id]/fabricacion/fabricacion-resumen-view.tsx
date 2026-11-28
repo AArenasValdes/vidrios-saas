@@ -181,6 +181,7 @@ export function isValidatedFabricationStatus(label: string) {
 
 type ProfileBarGroup = {
   key: string;
+  identityKey: string;
   label: string;
   code: string;
   barLengthMm: number | null;
@@ -191,7 +192,7 @@ export type CubicacionPerfilRow = {
   identityKey: string;
   code: string;
   label: string;
-  materialNeededMm: number;
+  materialNeededMm: number | null;
   barCount: number;
   barLengthMm: number | null;
 };
@@ -201,20 +202,20 @@ function normalizeProfileText(value: string | null | undefined) {
 }
 
 function resolveBarIdentity(bar: CotizacionLineTemplateCuttingBar) {
-  const explicitCode = normalizeProfileText(bar.profileCode);
-  const cutLabels = Array.from(
+  const rawCode = normalizeProfileText(bar.profileCode);
+  const explicitCode = isUnassignedProfileLabel(rawCode) ? "" : rawCode;
+  const cutCodes = Array.from(
     new Set(
       bar.cuts
-        .map((cut) => normalizeProfileText(cut.profileCode) || normalizeProfileText(cut.label))
+        .map((cut) => resolveCutProfileCode(cut))
         .filter((label) => label && !isUnassignedProfileLabel(label))
     )
   );
-  const hasMixedProfiles = cutLabels.length > 1 && !explicitCode;
-  const code = explicitCode && !isUnassignedProfileLabel(explicitCode)
-    ? explicitCode
-    : hasMixedProfiles
-      ? ""
-      : cutLabels[0] ?? "";
+  const cutNames = Array.from(new Set(bar.cuts.map((cut) => normalizeProfileText(cut.profileName)).filter((name) => name && !isUnassignedProfileLabel(name))));
+  const hasMixedProfiles = cutCodes.length > 1 || (!explicitCode && cutNames.length > 1) ||
+    Boolean(explicitCode && cutCodes.some((code) => code !== explicitCode));
+  const code = hasMixedProfiles ? "" : explicitCode && !isUnassignedProfileLabel(explicitCode)
+    ? explicitCode : cutCodes[0] ?? "";
   const functionLabel = normalizeProfileText(
     bar.cuts.find((cut) => normalizeProfileText(cut.profileName))?.profileName
   ) || normalizeProfileText(
@@ -231,7 +232,13 @@ function resolveBarIdentity(bar: CotizacionLineTemplateCuttingBar) {
         ? bar.usedMm + bar.wasteMm
         : null;
 
-  return { code, label, barLengthMm };
+  const identityKey = hasMixedProfiles ? "" : resolveProfileIdentityKey({
+    code,
+    label: explicitName || cutNames[0],
+    functionLabel: bar.cuts.length && bar.cuts.every((cut) => cut.functionLabel === bar.cuts[0]?.functionLabel)
+      ? bar.cuts[0]?.functionLabel : null,
+  });
+  return { code, label, barLengthMm, identityKey };
 }
 
 function resolveProfileIdentityKey(input: {
@@ -243,9 +250,10 @@ function resolveProfileIdentityKey(input: {
   if (code && !isUnassignedProfileLabel(code)) {
     return `code:${code}`;
   }
-  const functionLabel =
-    normalizeProfileText(input.functionLabel) || normalizeProfileText(input.label);
-  return `fn:${functionLabel || "unknown"}`;
+  const label = normalizeProfileText(input.label);
+  if (label && !isUnassignedProfileLabel(label) && label !== "Varios perfiles" && label !== "—") return `name:${label}`;
+  const functionLabel = normalizeProfileText(input.functionLabel);
+  return functionLabel && !isUnassignedProfileLabel(functionLabel) ? `fn:${functionLabel}` : "";
 }
 
 function resolveCutIdentityKey(
@@ -254,15 +262,12 @@ function resolveCutIdentityKey(
   return resolveProfileIdentityKey({
     code: resolveCutProfileCode(cut),
     functionLabel: cut.functionLabel,
-    label: resolveCutProfileName(cut),
+    label: normalizeProfileText(cut.profileName),
   });
 }
 
 function resolveBarGroupIdentityKey(group: ProfileBarGroup) {
-  return resolveProfileIdentityKey({
-    code: group.code,
-    label: group.label,
-  });
+  return group.identityKey;
 }
 
 export function formatTirasPerfilDetail(barCount: number, barLengthMm: number | null) {
@@ -278,10 +283,13 @@ export function buildCubicacionPerfilRows(
   snapshot: CotizacionItemCubicationSnapshot
 ): CubicacionPerfilRow[] {
   const materialByKey = new Map<string, number>();
+  const cutLabels = new Map<string, { code: string; label: string }>();
   const orderKeys: string[] = [];
 
   snapshot.cuts.forEach((cut) => {
     const key = resolveCutIdentityKey(cut);
+    if (!key || !Number.isFinite(cut.totalLinealMm) || cut.totalLinealMm <= 0) return;
+    if (!cutLabels.has(key)) cutLabels.set(key, { code: resolveCutProfileCode(cut), label: resolveCutProfileName(cut) });
     materialByKey.set(
       key,
       (materialByKey.get(key) ?? 0) + (cut.totalLinealMm > 0 ? cut.totalLinealMm : 0)
@@ -292,14 +300,40 @@ export function buildCubicacionPerfilRows(
   });
 
   const groups = groupBarsByProfile(snapshot.bars);
+  const groupMatchesCuts = (group: ProfileBarGroup) => {
+    const key = resolveBarGroupIdentityKey(group);
+    if (!key) return false;
+    const available = new Map<string, number>();
+    for (const cut of snapshot.cuts.filter((entry) => resolveCutIdentityKey(entry) === key)) {
+      const signature = JSON.stringify([normalizeProfileText(cut.functionLabel), cut.lengthMm]);
+      available.set(signature, (available.get(signature) ?? 0) + cut.quantity);
+    }
+    const barCuts = group.bars.flatMap((bar) => bar.cuts);
+    if (barCuts.length === 0) return Boolean(group.code && available.size);
+    for (const cut of barCuts) {
+      const barCutIdentity = resolveCutIdentityKey(cut);
+      if (barCutIdentity && !barCutIdentity.startsWith("fn:") && barCutIdentity !== key) return false;
+      const signature = JSON.stringify([normalizeProfileText(cut.functionLabel), cut.lengthMm]);
+      const count = cut.quantity > 0 ? cut.quantity : 1;
+      const remaining = available.get(signature) ?? 0;
+      if (remaining < count) return false;
+      available.set(signature, remaining - count);
+    }
+    return true;
+  };
   const rows = groups.map((group) => ({
-    identityKey: resolveBarGroupIdentityKey(group),
+    identityKey: resolveBarGroupIdentityKey(group) || group.key,
     code: group.code,
     label: group.label,
-    materialNeededMm: materialByKey.get(resolveBarGroupIdentityKey(group)) ?? 0,
+    materialNeededMm: groupMatchesCuts(group) ? materialByKey.get(resolveBarGroupIdentityKey(group)) ?? null : null,
     barCount: group.bars.length,
     barLengthMm: group.barLengthMm,
   }));
+
+  for (const [key, info] of cutLabels) {
+    if (groups.some((group) => resolveBarGroupIdentityKey(group) === key)) continue;
+    rows.push({ identityKey: key, code: info.code, label: info.label, materialNeededMm: materialByKey.get(key) ?? null, barCount: 0, barLengthMm: null });
+  }
 
   rows.sort((left, right) => {
     const leftIndex = orderKeys.indexOf(left.identityKey);
@@ -326,7 +360,8 @@ export function groupBarsByProfile(
 
   bars.forEach((bar) => {
     const identity = resolveBarIdentity(bar);
-    const key = `${identity.code || identity.label}::${identity.barLengthMm ?? ""}`;
+    const identityKey = identity.identityKey;
+    const key = identityKey ? `${identityKey}::${identity.barLengthMm ?? ""}` : `pending:${groups.size}`;
     const existing = groups.get(key);
     if (existing) {
       existing.bars.push(bar);
@@ -334,6 +369,7 @@ export function groupBarsByProfile(
     }
     groups.set(key, {
       key,
+      identityKey,
       label: identity.label,
       code: identity.code,
       barLengthMm: identity.barLengthMm,
@@ -450,10 +486,10 @@ function CubicacionTirasPorPerfil({ row }: { row: FabricationSummaryItem }) {
               <strong>
                 {formatPautaProfileHeading(profileRow.code, profileRow.label)}
               </strong>
-              <span>{formatMm(profileRow.materialNeededMm)} necesarios</span>
+              <span>{profileRow.materialNeededMm == null ? "Medida necesaria pendiente de identificar" : `${formatMm(profileRow.materialNeededMm)} necesarios`}</span>
             </div>
             <em className={s.tiraPill}>
-              {formatTirasPerfilDetail(profileRow.barCount, profileRow.barLengthMm)}
+              {profileRow.barCount === 0 ? "Distribución pendiente" : formatTirasPerfilDetail(profileRow.barCount, profileRow.barLengthMm)}
             </em>
           </li>
         ))}
