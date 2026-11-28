@@ -81,6 +81,40 @@ function materials(): WorkMaterialsDocument {
   };
 }
 
+it.each([64, 72, 0])("conserva cortes y barras históricas cuando hay %i cortes distribuidos de 72", (distributed) => {
+  const work = summary(null);
+  work.profileCoverage = {
+    status: "partial", jointPlanStatus: "blocked", requiredCount: 1, readyCount: 0, pendingCount: 1,
+    items: [{ itemId: "v2", codigo: "V2", nombre: "Corredera", state: "unvalidated", reason: "Receta sin validar" }],
+  };
+  const barCount = distributed === 0 ? 0 : 15;
+  const bars = Array.from({ length: barCount }, (_, i) => {
+    const count = Math.floor(distributed / barCount) + (i < distributed % barCount ? 1 : 0);
+    return { materialKey: "hoja", codigoPerfil: "H", nombrePerfil: "Hoja", indice: i + 1,
+      largoComercialMm: 5800, usadoMm: count * 1000, sobranteMm: 5800 - count * 1000,
+      cortes: Array.from({ length: count }, () => ({ codigoPerfil: "H", funcion: "Hoja", largoMm: 1000 })) };
+  });
+  work.items = [{ itemId: "v2", codigo: "V2", nombre: "Corredera", operationalStatus: "unvalidated",
+    fabricacionSnapshot: { recipeStatus: "draft", pauta: [
+      { codigoPerfil: "H", nombrePerfil: "Hoja", funcion: "Hoja", medidaMm: 1000, cantidadPiezas: distributed || 64 },
+      { codigoPerfil: "M", nombrePerfil: "Marco", funcion: "Marco", medidaMm: 1506, cantidadPiezas: distributed === 72 ? 0 : 8 },
+    ], pautaBarras: { calculable: true, barras: bars, advertencias: distributed === 64 ? [{ codigo: "PERFIL_SIN_DATOS_DE_BARRA", mensaje: "Marco: agrega el largo comercial para calcular barras." }] : [] } }, snapshot: { cuts: [] },
+  }] as unknown as FabricationQuoteSummary["items"];
+  const order = buildFabricationWorkOrder({ summary: work, materials: { ...materials(), profiles: [], accessories: [], glassOrder: [], hasJointCuttingPlan: false } });
+  const groups = order.reviewCutGroups;
+  expect(groups.filter(g => g.barIndex !== null)).toHaveLength(barCount);
+  expect(groups.filter(g => g.barIndex === null).flatMap(g => g.cuts).reduce((n,c)=>n+c.quantity,0)).toBe(distributed === 72 ? 0 : distributed === 64 ? 8 : 72);
+  expect(groups.flatMap(g => g.cuts).reduce((n,c)=>n+c.quantity,0)).toBe(72);
+  expect(order.documentStatus.label).toContain("NO APTO PARA FABRICACIÓN");
+  if (distributed === 64) {
+    expect(order.pending.some(p => p.action.includes("Marco: agrega el largo comercial"))).toBe(true);
+    const pdf = createFabricationWorkOrderPdf(order, {companyName:"QA",quoteCode:"1091",workName:"QA",issueDate:"27 nov 2026"}, null, "profile-cuts");
+    expect(pdfText(pdf)).toContain("5.800 mm");
+    expect(pdfText(pdf)).toContain("Marco");
+    expect(pdfText(pdf)).toContain("Cortes sin distribución");
+  }
+});
+
 it("rotula el origen de Alumco con su nombre en la orden", () => {
   expect(workOrderPriceSource({
     sku: "TI5001A", providerKey: "alumco", isWorkshopCode: false, sourceKind: "reference",

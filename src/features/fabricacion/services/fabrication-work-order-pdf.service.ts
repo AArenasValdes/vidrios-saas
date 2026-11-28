@@ -459,7 +459,7 @@ export function createFabricationWorkOrderPdf(
         : [...new Set(group.cuts.map((cut) => `${cut.itemCode} · ${cut.component}`))].join("\n") || "Componente pendiente";
       const barDistributionLine = group.barIndex != null && group.commercialLengthMm != null
         ? `Tira ${group.barIndex} · ${mm(group.commercialLengthMm)} (teórica)`
-        : null;
+        : "Cortes sin distribución";
       const remnantDetail = group.barIndex != null && group.theoreticalRemnantMm != null
         ? `${group.usedMm != null ? `Usado ${mm(group.usedMm)} · ` : ""}Sobrante ${mm(group.theoreticalRemnantMm)}`
         : null;

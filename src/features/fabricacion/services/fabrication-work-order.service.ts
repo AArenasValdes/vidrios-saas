@@ -198,10 +198,22 @@ function buildHistoricCutGroups(summary: FabricationQuoteSummary, kind: "ready" 
           lengthMm: cut.lengthMm,
         }));
     const pautaBarras = item.fabricacionSnapshot?.pautaBarras;
-    const expectedCutCount = cuts.reduce((sum, cut) => sum + (cut.quantity > 0 && cut.lengthMm > 0 ? cut.quantity : 0), 0);
-    const barCutCount = pautaBarras?.calculable
-      ? pautaBarras.barras.reduce((sum, bar) => sum + bar.cortes.filter((cut) => Number.isFinite(cut.largoMm) && cut.largoMm > 0).length, 0)
-      : 0;
+    const cutKey = (code: string, fn: string, length: number) => JSON.stringify([code, fn, length]);
+    const expected = new Map<string, number>();
+    for (const cut of cuts) {
+      if (cut.quantity <= 0 || cut.lengthMm <= 0) continue;
+      const key = cutKey(cut.technicalCode || "", cut.functionName || "", cut.lengthMm);
+      expected.set(key, (expected.get(key) ?? 0) + cut.quantity);
+    }
+    const distributed = new Map<string, number>();
+    for (const bar of pautaBarras?.barras ?? []) {
+      for (const cut of bar.cortes) {
+        if (!Number.isFinite(cut.largoMm) || cut.largoMm <= 0) continue;
+        const key = cutKey(bar.codigoPerfil || "", cut.funcion || "", cut.largoMm);
+        distributed.set(key, (distributed.get(key) ?? 0) + 1);
+      }
+    }
+    const barsMatchCuts = [...distributed].every(([key, quantity]) => quantity <= (expected.get(key) ?? 0));
     const reviewReasonKind: WorkOrderCutGroup["reviewReasonKind"] = kind === "review"
       ? (state === "incompatible" ? "incompatible" : "unvalidated")
       : undefined;
@@ -209,8 +221,8 @@ function buildHistoricCutGroups(summary: FabricationQuoteSummary, kind: "ready" 
       state !== "incompatible" &&
       pautaBarras?.calculable &&
       pautaBarras.barras.length > 0 &&
-      barCutCount > 0 &&
-      barCutCount === expectedCutCount
+      distributed.size > 0 &&
+      barsMatchCuts
     ) {
       for (const [barNumber, bar] of pautaBarras.barras.entries()) {
         const barCuts = new Map<string, WorkOrderCut>();
@@ -244,11 +256,16 @@ function buildHistoricCutGroups(summary: FabricationQuoteSummary, kind: "ready" 
           cuts: [...barCuts.values()],
         });
       }
-      continue;
     }
     const byProfile = new Map<string, WorkOrderCutGroup>();
     for (const cut of cuts) {
       if (cut.quantity <= 0 || cut.lengthMm <= 0) continue;
+      const remainingKey = cutKey(cut.technicalCode || "", cut.functionName || "", cut.lengthMm);
+      const assigned = state !== "incompatible" && pautaBarras?.calculable && barsMatchCuts
+        ? Math.min(cut.quantity, distributed.get(remainingKey) ?? 0) : 0;
+      if (assigned) distributed.set(remainingKey, (distributed.get(remainingKey) ?? 0) - assigned);
+      const remainingQuantity = cut.quantity - assigned;
+      if (remainingQuantity <= 0) continue;
       const code = cut.technicalCode || "Pendiente";
       const key = `${item.itemId}|${code}|${cut.profileName}`;
       let group = byProfile.get(key);
@@ -266,7 +283,7 @@ function buildHistoricCutGroups(summary: FabricationQuoteSummary, kind: "ready" 
         itemCode: item.codigo,
         component: item.nombre,
         functionName: cut.functionName,
-        quantity: cut.quantity,
+        quantity: remainingQuantity,
         lengthMm: cut.lengthMm,
       });
     }
@@ -363,6 +380,18 @@ export function buildFabricationWorkOrder(input: {
     : buildHistoricCutGroups(summary, "ready");
   const preliminaryCutGroups = buildHistoricCutGroups(summary, "preliminary");
   const reviewCutGroups = buildHistoricCutGroups(summary, "review");
+  const historicGroups = [...rawCutGroups, ...preliminaryCutGroups, ...reviewCutGroups];
+  const partiallyDistributedItemIds = new Set(historicGroups.filter((group) => group.barIndex != null && group.itemId).map((group) => group.itemId));
+  const hasPartialBarDistribution = historicGroups.some((group) => group.barIndex == null && group.itemId && partiallyDistributedItemIds.has(group.itemId));
+  if (hasPartialBarDistribution) {
+    addPending("partial-bar-distribution", "Cortes sin distribución", "Algunos cortes no tienen barra asignada; revisar largos comerciales antes de fabricar.");
+    for (const item of summary.items) {
+      if (!partiallyDistributedItemIds.has(item.itemId)) continue;
+      for (const [index, warning] of (item.fabricacionSnapshot?.pautaBarras?.advertencias ?? []).entries()) {
+        addPending(`bar-warning:${item.itemId}:${index}`, `${item.codigo}: ${warning.codigo}`, warning.mensaje);
+      }
+    }
+  }
   if (preliminaryCutGroups.length > 0) {
     addPending("structural-geometry", "Despiece estructural preliminar", "Acristalamiento pendiente. Revisar los cortes por separado; no apto para fabricación.");
   }
@@ -459,8 +488,8 @@ export function buildFabricationWorkOrder(input: {
     preliminaryCutGroups,
     reviewCutGroups,
     documentStatus: {
-      state: coverageIsPartial || contaminatedJointSnapshot || cutPlanPhysicalState === "teorica" || cutPlanPhysicalState === "incompatible" ? "partial" : "complete",
-      label: coverageIsPartial || contaminatedJointSnapshot || cutPlanPhysicalState === "teorica" || cutPlanPhysicalState === "incompatible"
+      state: coverageIsPartial || hasPartialBarDistribution || contaminatedJointSnapshot || cutPlanPhysicalState === "teorica" || cutPlanPhysicalState === "incompatible" ? "partial" : "complete",
+      label: coverageIsPartial || hasPartialBarDistribution || contaminatedJointSnapshot || cutPlanPhysicalState === "teorica" || cutPlanPhysicalState === "incompatible"
         ? "DOCUMENTO PARCIAL · NO APTO PARA FABRICACIÓN"
         : "DOCUMENTO INTERNO · REVISIÓN",
       pendingComponents,
