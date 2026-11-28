@@ -102,7 +102,8 @@ import { getLineTemplateWorkshopProfiles } from "@/features/cotizaciones/line-te
 import { resolveSupplierFamilyKeyForLineTemplate } from "@/features/cotizaciones/line-templates/services/line-template-family.service";
 import { VENTORA_DEFAULT_LINE_CATALOG } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 import { SupplierProfilePricePreview } from "@/features/proveedor-catalogos/components/supplier-profile-price-preview";
-import { resolveUniversalAluminumLineKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
+import { blocksLine4000Recipe, matchesLine4000FrozenInputs, LINE_4000_PENDING_MESSAGE } from "@/features/fabricacion/services/line-4000-documentary-guard.service";
+import { normalizeUniversalAluminumFamilyKey, resolveUniversalAluminumLineKey } from "@/features/cotizaciones/line-templates/services/default-line-catalog";
 
 import editor from "./pauta-cubicacion-panel.module.css";
 
@@ -267,6 +268,16 @@ function resolveActiveCubicationSnapshotInternal(input: {
     input.savedCubicationSnapshot,
     dims
   );
+  // Esta vista legacy de medidas carece del registro de procedencia de la receta.
+  if (normalizeUniversalAluminumFamilyKey(input.componentForm.catalogLineKey || input.selectedTemplate?.catalogKey) === "universal:aluminio:l4000" &&
+      input.componentForm.fabricacionHojas === 2) {
+    const frozen = input.componentForm.fabricacionSnapshot;
+    if (frozen) return matchesLine4000FrozenInputs(frozen, {
+      ...input.componentForm, widthMm, heightMm, quantity, lineTemplateId: Number(lineTemplateId),
+    }) ? fabricacionSnapshotToLegacyCubicationSnapshot(frozen) : null;
+    if (draftMatches) return input.componentForm.cubicationSnapshot ?? null;
+    return savedMatches ? input.savedCubicationSnapshot ?? null : null;
+  }
   const recipe = input.selectedTemplate
     ? resolveRecipeFromMetadata(input.selectedTemplate.catalogMetadata, {
         preferredRecipeId: input.componentForm.fabricationRecipeId ?? null,
@@ -443,6 +454,8 @@ export function PautaCubicacionPanel({
     componentForm.catalogLineKey ||
     selectedTemplate?.catalogKey ||
     null;
+  const line4000TwoLeaves = normalizeUniversalAluminumFamilyKey(catalogKey) === "universal:aluminio:l4000" &&
+    effectiveFabricacionHojas === 2 && explicitTipologia === "corredera";
   const compositionNeedsRecipeReview = Boolean(
     (componentForm.guidedVisualConfig?.quickCompositionStructural ||
       hasQuickCompositionStructuralChanges(componentForm.quickCompositionAdjustment)) &&
@@ -599,8 +612,8 @@ export function PautaCubicacionPanel({
       }
     }
     if (
-      resolution.estado === "sin_receta" &&
-      (catalogKey === SERIE_4800_CATALOG_KEY || catalogKey === SERIE_45_CATALOG_KEY ||
+      resolution.estado === "sin_receta" && catalogKey &&
+      (catalogKey === SERIE_4800_CATALOG_KEY || catalogKey === SERIE_45_CATALOG_KEY || line4000TwoLeaves ||
         ((catalogKey === "ventora:l42" || catalogKey === "ventora:arquetipo-l42-proyectante") &&
           organizationId != null && !persistedRecipeError && !componentForm.fabricacionSnapshot))
     ) {
@@ -648,6 +661,7 @@ export function PautaCubicacionPanel({
     componentForm.vidrio,
     componentForm.sistema,
     effectiveFabricacionHojas,
+    line4000TwoLeaves,
     explicitTipologia,
     heightMm,
     isLoadingPersistedRecipes,
@@ -690,13 +704,20 @@ export function PautaCubicacionPanel({
     selectedTemplate?.nombre,
     sodalConfig,
   ]);
-  const useFormalDomain = persistedRecipes.length > 0 || Boolean(formalResolution?.receta) ||
+  const useFormalDomain = line4000TwoLeaves || persistedRecipes.length > 0 || Boolean(formalResolution?.receta) ||
     formalResolution?.estado === "multiples_recetas";
   const selectedPersistedRecipe =
     formalResolution?.estado === "receta_unica" ||
     formalResolution?.estado === "receta_no_validada"
       ? formalResolution.receta
       : null;
+  const blockedLine4000 = selectedPersistedRecipe
+    ? blocksLine4000Recipe(catalogKey, selectedPersistedRecipe, persistedRecipes, organizationId)
+    : line4000TwoLeaves;
+  const frozenLine4000 = (blockedLine4000 || line4000TwoLeaves) && !compositionNeedsRecipeReview && componentForm.fabricacionSnapshot &&
+    matchesLine4000FrozenInputs(componentForm.fabricacionSnapshot, {
+      ...componentForm, widthMm, heightMm, quantity, lineTemplateId: numericLineTemplateId,
+    }) ? componentForm.fabricacionSnapshot : null;
   const serie4800Guard = useMemo(
     () =>
       evaluateSerie4800DocumentaryQuoteGuard({
@@ -759,6 +780,7 @@ export function PautaCubicacionPanel({
   }, [catalogKey, componentForm.fabricationRecipeId, formalResolution?.receta?.id, heightMm, quantity, selectedPersistedRecipe, widthMm]);
   const universalAluminumPreliminaryCandidate = useMemo(() => {
     if (
+      blockedLine4000 ||
       !selectedPersistedRecipe ||
       selectedPersistedRecipe.status === "validated" ||
       !resolveUniversalAluminumLineKey(catalogKey) ||
@@ -774,7 +796,7 @@ export function PautaCubicacionPanel({
         modulos: selectedPersistedRecipe.definition.identidad.modulos,
         variante: selectedPersistedRecipe.definition.identidad.variante,
       }).calculable;
-  }, [catalogKey, heightMm, quantity, selectedPersistedRecipe, widthMm]);
+  }, [blockedLine4000, catalogKey, heightMm, quantity, selectedPersistedRecipe, widthMm]);
   const calculatedVeratecPreliminaryRecipe = useMemo(() => {
     if (
       !selectedPersistedRecipe ||
@@ -820,7 +842,7 @@ export function PautaCubicacionPanel({
     return () => { cancelled = true; };
   }, [organizationId, qaPreliminaryCandidate]);
   const selectedPersistedRecipeReady = useMemo(() => {
-    if (!selectedPersistedRecipe || serie4800Guard) return false;
+    if (!selectedPersistedRecipe || serie4800Guard || blockedLine4000) return false;
     const compositionComplete = buildFabricationRecipeSummary(
       selectedPersistedRecipe.definition
     ).compositionComplete;
@@ -854,10 +876,12 @@ export function PautaCubicacionPanel({
     selectedPersistedRecipe,
     calculatedVeratecPreliminaryRecipe,
     serie4800Guard,
+    blockedLine4000,
     universalAluminumPreliminaryCandidate,
     widthMm,
   ]);
   const formalSnapshot = useMemo(() => {
+    if (frozenLine4000 || blockedLine4000) return frozenLine4000;
     if (
       !selectedPersistedRecipe ||
       !selectedPersistedRecipeReady ||
@@ -905,6 +929,8 @@ export function PautaCubicacionPanel({
     componentForm.vidrioLineTemplateId,
     componentForm.glassTechnicalSpec,
     componentForm.fabricacionSnapshot,
+    blockedLine4000,
+    frozenLine4000,
     explicitTipologia,
     formalResolution?.estado,
     heightMm,
@@ -929,7 +955,7 @@ export function PautaCubicacionPanel({
     [formalSnapshot]
   );
   useEffect(() => {
-    if (!useFormalDomain) return;
+    if (!useFormalDomain || frozenLine4000 || (line4000TwoLeaves && isLoadingPersistedRecipes)) return;
 
     if (!formalSnapshot || !selectedPersistedRecipe) {
       if (componentForm.fabricacionSnapshot) {
@@ -967,6 +993,9 @@ export function PautaCubicacionPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     componentForm.fabricacionSnapshot,
+    frozenLine4000,
+    isLoadingPersistedRecipes,
+    line4000TwoLeaves,
     formalLegacySnapshot,
     formalSnapshot,
     pieceApertura,
@@ -1030,7 +1059,7 @@ export function PautaCubicacionPanel({
       : null;
   const autoSnapshot = useFormalDomain ? formalLegacySnapshot : legacyAutoSnapshot;
   useEffect(() => {
-    if (compositionNeedsRecipeReview || !personalizadoAssistMode || !selectedTemplate || widthMm <= 0 || heightMm <= 0) {
+    if (blockedLine4000 || compositionNeedsRecipeReview || !personalizadoAssistMode || !selectedTemplate || widthMm <= 0 || heightMm <= 0) {
       return;
     }
     const hasUsableManual =
@@ -1054,6 +1083,7 @@ export function PautaCubicacionPanel({
   }, [
     compositionNeedsRecipeReview,
     personalizadoAssistMode,
+    blockedLine4000,
     selectedTemplate?.id,
     widthMm,
     heightMm,
@@ -1064,7 +1094,7 @@ export function PautaCubicacionPanel({
     savedCubicationSnapshot?.source,
   ]);
 
-  const legacyActiveSnapshot = resolveActiveCubicationSnapshot({
+  const legacyActiveSnapshot = useFormalDomain ? null : resolveActiveCubicationSnapshot({
     componentForm,
     selectedTemplate,
     savedCubicationSnapshot,
@@ -1077,7 +1107,7 @@ export function PautaCubicacionPanel({
   const hasCuts = Boolean(preview && preview.cuts.length > 0);
   const isManual = activeSnapshot?.source === "manual";
   const partialGlass = formalSnapshot?.advertencias.some((warning) => warning.codigo === "COMPOSICION_VIDRIO_PENDIENTE") ?? false;
-  const statusLabel = partialGlass
+  const statusLabel = frozenLine4000 ? "Snapshot guardado" : partialGlass
     ? "Despiece parcial"
     : personalizadoAssistMode
     ? "Borrador manual"
@@ -1519,6 +1549,7 @@ export function PautaCubicacionPanel({
         quantity,
       });
     if (
+      blocksLine4000Recipe(catalogKey, recipe, persistedRecipes, organizationId) ||
       !compositionComplete ||
       !technicalGate ||
       (needsS75LeafAWidth && !s75LeafAWidthValid) ||
@@ -1555,7 +1586,7 @@ export function PautaCubicacionPanel({
     );
   };
 
-  const waitingReason = persistedRecipeError
+  const waitingReason = frozenLine4000 ? null : persistedRecipeError
     ? `No se pudo cargar la receta de fabricación: ${persistedRecipeError}`
     : compositionNeedsRecipeReview
       ? "La composición cambió. La pauta automática queda pendiente hasta tener una receta compatible."
@@ -1563,6 +1594,8 @@ export function PautaCubicacionPanel({
     ? "Selecciona la configuración L25 para generar la pauta de corte."
     : needsS75LeafAWidth && !s75LeafAWidthValid
       ? "Indica el ancho de la hoja A; la hoja B se calcula con el ancho restante."
+    : blockedLine4000 && !needsVariantChoice
+      ? LINE_4000_PENDING_MESSAGE
     : serie4800Guard
       ? serie4800Guard.message
     : needsVariantChoice

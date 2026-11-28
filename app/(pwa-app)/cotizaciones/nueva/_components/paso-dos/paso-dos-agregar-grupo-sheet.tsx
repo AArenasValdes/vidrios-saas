@@ -1014,11 +1014,8 @@ export function PasoDosAgregarGrupoSheet({
     });
     const measuresCubicationPreview = resolveActiveCubicationPreview({
       componentForm: {
-        ancho: draft.ancho,
-        alto: draft.alto,
+        ...draft,
         cantidad: String(Math.max(1, draft.cantidad)),
-        lineTemplateId: draft.lineTemplateId,
-        cubicationSnapshot: draft.cubicationSnapshot,
       },
       selectedTemplate: selectedLineTemplate,
       personalizadoAssistMode,

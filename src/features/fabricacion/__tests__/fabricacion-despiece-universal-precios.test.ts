@@ -554,7 +554,7 @@ describe("despiece de líneas universales con precio Arquetipo", () => {
       recipes: line.line === "L25" ? [l25RecipeRecord()] : [],
       organizationId: 1,
     });
-    if (line.line === "L15") {
+    if (line.line === "L15" || line.line === "L4000") {
       expect(resolved.estado).toBe("receta_incompleta");
       expect(resolved.formal).toBeNull();
       expect(resolved.barsAvailable).toBe(false);

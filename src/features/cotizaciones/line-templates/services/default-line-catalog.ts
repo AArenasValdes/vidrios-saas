@@ -429,7 +429,7 @@ const VENTORA_DEFAULT_LINE_DEFINITIONS: VentoraDefaultLineDefinition[] = [
     familyLabel: "Línea 4000 · Aluminio universal",
     compatibility: { componentTypes: ["Ventana"], openingTypes: ["Corredera"], leavesCounts: [2], materials: ["Aluminio"] },
     identitySource: "Línea 4000 · identidad universal confirmada por el taller",
-    cuttingGuideSource: "Despiece oficial Línea 4000 Columbia corredera 2 hojas",
+    cuttingGuideSource: "Línea 4000 corredera 2 hojas · pendiente de fuente primaria",
   },
   {
     catalogKey: "ventora:serie-45-puerta",
