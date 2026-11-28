@@ -280,7 +280,7 @@ function DetailResumen({
           {profileRows.map((profileRow) => (
             <li key={`${row.itemId}-${profileRow.identityKey}`}>
               <strong>{formatMobileProfileHeading(profileRow.code, profileRow.label)}</strong>
-              <span>{formatMm(profileRow.materialNeededMm)}</span>
+              <span>{profileRow.materialNeededMm == null ? "Medida necesaria pendiente de identificar" : formatMm(profileRow.materialNeededMm)}</span>
             </li>
           ))}
         </ul>
